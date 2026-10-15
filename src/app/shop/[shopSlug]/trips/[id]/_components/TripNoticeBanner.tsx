@@ -518,6 +518,7 @@ const NOTICE_KEYS: Record<
   "party-paid-short": { form: "roster", tone: "warning", key: "trips.notices.partyPaidShort" },
   "party-over": { form: "roster", tone: "danger", key: "trips.notices.partyOver" },
   "party-nothing-owed": { form: "roster", tone: "danger", key: "trips.notices.partyNothingOwed" },
+  "party-changed": { form: "roster", tone: "danger", key: "trips.notices.partyChanged" },
   conditions: { form: "conditions", tone: "success", key: "trips.notices.conditions" },
   "conditions-cleared": {
     form: "conditions",

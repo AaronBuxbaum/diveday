@@ -3,7 +3,6 @@
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
 import { markPartyPaid, previewPartyPayment } from "@/db/payment-marks";
-import { recordShopActivity } from "@/db/shop-activity";
 import { getShopCurrency } from "@/db/stripe-accounts";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { readManualPaymentMark } from "@/lib/payment-marks";
@@ -48,7 +47,7 @@ async function readPartyPaymentForm(shopSlug: string, tripId: string, formData: 
 function partyRefusalUrl(
   back: string,
   bookingId: string,
-  kind: "over" | "nothing_owed" | "refused" | "not_found",
+  kind: "over" | "nothing_owed" | "refused" | "not_found" | "changed",
 ) {
   const code =
     kind === "over"
@@ -57,7 +56,9 @@ function partyRefusalUrl(
         ? "party-nothing-owed"
         : kind === "refused"
           ? "payment-online"
-          : "invalid";
+          : kind === "changed"
+            ? "party-changed"
+            : "invalid";
   return noticeUrl(back, code, { bid: bookingId });
 }
 
@@ -96,7 +97,9 @@ export async function previewPartyPaymentAction(
  * seat and each seat of the party in turn, each its balance owed first and
  * never more; no seat is written off, so recording money is all the right it
  * asks, the same as a single Paid mark. Each seat gets its own line in the
- * activity log, and the amount and method ride on its payment trail.
+ * activity log (written with the payment), and the amount and method ride on
+ * its payment trail. The form carries the owed total the preview showed; if
+ * the party owes something else by now, nothing is taken.
  */
 export async function markPartyPaidAction(shopSlug: string, tripId: string, formData: FormData) {
   const { back, bookingId, db, s, currency, mark } = await readPartyPaymentForm(
@@ -105,7 +108,12 @@ export async function markPartyPaidAction(shopSlug: string, tripId: string, form
     formData,
   );
   if (mark.kind !== "money") return;
+  // What the preview said the party owed. A form without it, or with junk,
+  // cannot be matched against anything, so it is the same "preview again".
+  const expected = String(formData.get("expectedOwed") ?? "");
+  if (!/^\d{1,12}$/.test(expected)) redirect(partyRefusalUrl(back, bookingId, "changed"));
   const result = await markPartyPaid(db, {
+    expectedOwedCents: Number(expected),
     shopId: s.user.shopId,
     tripId,
     leadBookingId: bookingId,
@@ -115,13 +123,6 @@ export async function markPartyPaidAction(shopSlug: string, tripId: string, form
     recordedByPersonId: s.user.personId,
   });
   if (result.kind !== "split") redirect(partyRefusalUrl(back, bookingId, result.kind));
-  for (const share of result.shares) {
-    await recordShopActivity(db, {
-      shopId: s.user.shopId,
-      actorPersonId: s.user.personId,
-      write: { code: "party_marked_paid", bookingId: share.bookingId },
-    });
-  }
   revalidateAndRedirect(
     back,
     noticeUrl(back, result.unspentCents > 0 ? "party-paid-short" : "party-paid", {

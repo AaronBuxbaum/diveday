@@ -147,6 +147,7 @@
     "partyPaidShort": "Payment taken. Some seats in the party still owe the rest.",
     "partyOver": "That’s more than the party owes. Enter the amount that was taken.",
     "partyNothingOwed": "No seat in this party owes anything.",
+    "partyChanged": "What this party owes changed while you were looking. Nothing was taken. Show the split again.",
     "conditions": "Crew prediction published. Divers will see it now.",
     "conditionsCleared": "Crew prediction cleared. Divers will see the automated outlook when it is available.",
     "notAuthorized": "Trip setup is limited to owners, managers, and instructors. Ask one of them to make this change.",

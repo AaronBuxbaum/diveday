@@ -147,6 +147,7 @@
     "partyPaidShort": "Pago cobrado. Algunas plazas del grupo aún deben el resto.",
     "partyOver": "Es más de lo que debe el grupo. Escribe el importe que se cobró de verdad.",
     "partyNothingOwed": "Ninguna plaza de este grupo debe nada.",
+    "partyChanged": "Lo que debe este grupo cambió mientras mirabas. No se cobró nada. Vuelve a mostrar el reparto.",
     "conditions": "Previsión de la tripulación publicada. Los buceadores ya pueden verla.",
     "conditionsCleared": "Previsión de la tripulación borrada. Los buceadores verán el pronóstico automático cuando esté disponible.",
     "notAuthorized": "La configuración de la salida está limitada a propietarios, gerentes e instructores: pídeselo a uno de ellos.",

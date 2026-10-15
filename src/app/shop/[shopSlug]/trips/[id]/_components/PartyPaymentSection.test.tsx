@@ -28,6 +28,7 @@ const PREVIEW: PartyPreview = {
     { bookingId: "seat-2", personName: "Ada Quinn", amountCents: 3_000, settles: false },
   ],
   unspentCents: 21_000,
+  owedCents: 36_000,
 };
 
 function section(preview: PartyPreview | null) {
@@ -68,7 +69,7 @@ describe("PartyPaymentSection", () => {
     expect(
       within(split).getByRole("button", { name: "Take $150.00 for the party" }),
     ).toBeInTheDocument();
-    // The confirm carries only the lead, the amount and the method, never the split.
+    // The confirm carries only the lead, the amount and the method, never the split, and the owed total it was shown so a changed party is refused.
     const fields = [...split.querySelectorAll("input[type=hidden]")].map((input) => [
       input.getAttribute("name"),
       input.getAttribute("value"),
@@ -77,6 +78,7 @@ describe("PartyPaymentSection", () => {
       ["bookingId", "lead-1"],
       ["amount", "150"],
       ["method", "cash"],
+      ["expectedOwed", "36000"],
     ]);
   });
 

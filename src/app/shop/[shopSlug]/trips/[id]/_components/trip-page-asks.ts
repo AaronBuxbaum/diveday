@@ -87,7 +87,12 @@ export async function paymentAsks(
     paymentMarkRetry: retry && bookingId ? { bookingId, ...retry } : undefined,
     partyPreview:
       ask && split?.kind === "split"
-        ? { ...ask, shares: split.shares, unspentCents: split.unspentCents }
+        ? {
+            ...ask,
+            shares: split.shares,
+            unspentCents: split.unspentCents,
+            owedCents: split.owedCents,
+          }
         : undefined,
   };
 }

@@ -96,6 +96,7 @@ export function PartyPaymentSection({
             value={String(minorToMajor(preview.amountCents, party.currency))}
           />
           <input type="hidden" name="method" value={preview.method} />
+          <input type="hidden" name="expectedOwed" value={String(preview.owedCents)} />
           <p className="text-sm font-medium">
             {t("trips.roster.partyPay.splitHeading", {
               amount: formatMoneyCents(preview.amountCents, party.currency, party.locale),

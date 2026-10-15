@@ -186,6 +186,8 @@ export type PartyPreview = {
   method: ManualPaymentMethodCode;
   shares: { bookingId: string; personName: string; amountCents: number; settles: boolean }[];
   unspentCents: number;
+  /** The party's total owed when the split was read; the confirm form returns it so a changed party is not paid blind. */
+  owedCents: number;
 };
 
 export type RosterActions = {

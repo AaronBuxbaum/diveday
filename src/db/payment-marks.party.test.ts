@@ -47,6 +47,8 @@ async function aPartyOfThree() {
     tripId: trip.id,
     leadBookingId: lead.bookingId,
     method: "cash" as const,
+    // What the preview would have shown: the whole party owes three fares.
+    expectedOwedCents: FARE * 3,
     currency: "usd",
     recordedByPersonId: leadRow?.personId ?? "",
   };
@@ -91,7 +93,11 @@ describe("markPartyPaid", () => {
       method: "cash",
     });
     // The lead, then the deposit seat's remaining 9,000, then 1,000 on the last.
-    await markPartyPaid(db, { ...base, amountCents: FARE + 9_000 + 1_000 });
+    await markPartyPaid(db, {
+      ...base,
+      expectedOwedCents: FARE * 3 - 3_000,
+      amountCents: FARE + 9_000 + 1_000,
+    });
     expect(await held(leadId)).toEqual({ status: "paid", amountCents: FARE });
     expect(await held(seatIds[0] as string)).toEqual({ status: "paid", amountCents: FARE });
     expect(await held(seatIds[1] as string)).toEqual({
@@ -137,7 +143,11 @@ describe("markPartyPaid", () => {
       provider: "stripe",
       providerRef: "pi_whole",
     });
-    const result = await markPartyPaid(db, { ...base, amountCents: FARE * 2 });
+    const result = await markPartyPaid(db, {
+      ...base,
+      expectedOwedCents: FARE * 2,
+      amountCents: FARE * 2,
+    });
     expect(result.kind).toBe("split");
     expect(await held(leadId)).toEqual({ status: "paid", amountCents: FARE });
     expect((await getBookingPayment(db, shop.id, seatIds[0] as string))?.provider).toBe("stripe");
@@ -147,9 +157,30 @@ describe("markPartyPaid", () => {
   it("says so when no seat owes anything", async () => {
     const { base, db } = await aPartyOfThree();
     await markPartyPaid(db, { ...base, amountCents: FARE * 3 });
-    expect(await markPartyPaid(db, { ...base, amountCents: 100 })).toEqual({
+    expect(await markPartyPaid(db, { ...base, expectedOwedCents: 0, amountCents: 100 })).toEqual({
       kind: "nothing_owed",
     });
+  });
+
+  it("takes a payment once: a replay of the same confirm is refused and adds nothing (#2605)", async () => {
+    const { leadId, seatIds, base, db } = await aPartyOfThree();
+    const first = await markPartyPaid(db, { ...base, amountCents: 10_000 });
+    expect(first.kind).toBe("split");
+    const replay = await markPartyPaid(db, { ...base, amountCents: 10_000 });
+    expect(replay).toEqual({ kind: "changed" });
+    expect(await held(leadId)).toEqual({ status: "deposit_paid", amountCents: 10_000 });
+    for (const id of seatIds) expect(await held(id)).toBeNull();
+  });
+
+  it("refuses a confirm whose preview named a different owed total, and writes nothing", async () => {
+    const { leadId, seatIds, base, db } = await aPartyOfThree();
+    const result = await markPartyPaid(db, {
+      ...base,
+      expectedOwedCents: FARE * 3 + 1,
+      amountCents: FARE,
+    });
+    expect(result).toEqual({ kind: "changed" });
+    for (const id of [leadId, ...seatIds]) expect(await held(id)).toBeNull();
   });
 
   it("does not pay a cancelled seat", async () => {

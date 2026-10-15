@@ -16,6 +16,7 @@ import {
 import type { AppDb, DbExecutor } from "./client";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { bookingPayments, bookings, courses, people, shops, trips } from "./schema";
+import { recordShopActivityWithin } from "./shop-activity";
 import { tripRosterOrder, tripRosterWhere } from "./trips-roster";
 
 export type PaymentMarkFacts = {
@@ -257,7 +258,8 @@ export async function previewPartyPayment(
   return split;
 }
 
-export type PartyPaidResult = PartySplitRead;
+/** `changed`: the party owes something other than what the preview showed (a payment or a cancel landed in between), so nothing was written. */
+export type PartyPaidResult = PartySplitRead | { kind: "changed" };
 
 /**
  * **One payment for a whole party** (issue #2605): the lead's seat and every
@@ -271,6 +273,16 @@ export type PartyPaidResult = PartySplitRead;
  * more than the right to record money: a payment that runs out leaves a
  * deposit on one seat and the rest owing. A hand mark on a seat paid online or
  * from a package is refused for the whole party, as it is for the seat alone.
+ *
+ * **Not replay-safe on its own, so the confirm names what it was shown**:
+ * `expectedOwedCents` is the party's total owed on the preview. Under the row
+ * locks the owed total is read again, and a different figure (a double
+ * submit, a second staffer, a seat cancelled meanwhile) writes nothing and
+ * answers `changed`, so the staffer previews again. The write is additive, so
+ * without this a replayed confirm would take the same cash twice.
+ *
+ * The activity lines go in the same transaction, one per seat the payment
+ * reached: the books and the log agree or neither is written.
  */
 export async function markPartyPaid(
   db: AppDb,
@@ -278,11 +290,14 @@ export async function markPartyPaid(
     method: ManualPaymentMethodCode;
     currency: string;
     recordedByPersonId: string;
+    expectedOwedCents: number;
   },
 ): Promise<PartyPaidResult> {
   return db.transaction(async (tx) => {
     const read = await readPartySplit(tx, input, true);
+    if (read.kind === "nothing_owed" && input.expectedOwedCents > 0) return { kind: "changed" };
     if (read.kind !== "split") return read;
+    if (read.owedCents !== input.expectedOwedCents) return { kind: "changed" };
     const { payments, ...result } = read;
     for (const share of result.shares) {
       const current = payments.get(share.bookingId) ?? null;
@@ -312,6 +327,11 @@ export async function markPartyPaid(
         recordedByPersonId: input.recordedByPersonId,
       });
       if (!saved) throw new Error("party payment: a locked seat refused its own write");
+      await recordShopActivityWithin(tx, {
+        shopId: input.shopId,
+        actorPersonId: input.recordedByPersonId,
+        write: { code: "party_marked_paid", bookingId: share.bookingId },
+      });
     }
     return result;
   });

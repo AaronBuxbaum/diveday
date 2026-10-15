@@ -93,9 +93,10 @@ async function activityLines(db: AppDb, bookingId: string, code: string) {
  * action is filed in `actions.authz.test.ts`'s roster of intent.
  */
 describe("marking a party paid", () => {
-  function partyForm(leadBookingId: string, amount: string, method = "cash") {
+  function partyForm(leadBookingId: string, amount: string, method = "cash", owed = "36000") {
     const data = new FormData();
     data.set("bookingId", leadBookingId);
+    data.set("expectedOwed", owed);
     data.set("amount", amount);
     data.set("method", method);
     return data;
@@ -164,6 +165,25 @@ describe("marking a party paid", () => {
       }
     },
   );
+
+  it("takes nothing when the form carries no owed total, or a stale one (issue 2605)", async () => {
+    const { db, shop, tripId, owner } = await context();
+    const { leadBookingId, friends } = await partyOfThree(db, shop.id, tripId);
+    signIn(shop, owner);
+    const missing = partyForm(leadBookingId, "100");
+    missing.delete("expectedOwed");
+    expect(await redirectedTo(() => markPartyPaidAction(shop.slug, tripId, missing))).toContain(
+      "notice=party-changed",
+    );
+    expect(
+      await redirectedTo(() =>
+        markPartyPaidAction(shop.slug, tripId, partyForm(leadBookingId, "100", "cash", "35000")),
+      ),
+    ).toContain("notice=party-changed");
+    for (const id of [leadBookingId, ...friends]) {
+      expect(await getBookingPayment(db, shop.id, id)).toBeNull();
+    }
+  });
 
   it("refuses more than the party owes, and writes nothing", async () => {
     const { db, shop, tripId, owner } = await context();
