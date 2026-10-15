@@ -47,6 +47,7 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
+import { availableParallelism, loadavg } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -62,13 +63,47 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const E2E_CHUNK = 25;
 
 /**
- * Playwright workers a local run uses. One, so CI's 15-second test ceiling stays the bar: a cloud
- * container runs a built server several times slower than CI does, and with the default two
- * workers (two Next servers on four cores) readiness.spec.ts:131 timed out here while CI passed
- * it; alone it passed in 14.9s (2026-10-15). The old fallback Chromium was ruled out the same
- * day: a Playwright whose pinned browser is the one the container ships failed identically.
+ * Cores one Playwright worker needs locally: its own Next server, its Chromium and its runner.
+ * Measured 2026-10-15 on an idle four-core cloud container: two workers timed out on specs CI
+ * passes (readiness.spec.ts:131, diver-merge.spec.ts:42, at CI's 15-second ceiling), one worker
+ * passed them (readiness alone in 14.9s). The container's older fallback Chromium was ruled out
+ * the same day: a Playwright pinned to that same browser failed identically.
  */
-export const E2E_WORKERS = 1;
+export const CORES_PER_E2E_WORKER = 3;
+
+/**
+ * As many Playwright workers as the box has free compute for, and no more (Aaron, 2026-10-15:
+ * "We shouldn't run more than we have compute for, but we also shouldn't be single-threading
+ * the problem"): free cores (cores minus the one-minute load, so another thread's gate counts)
+ * over CORES_PER_E2E_WORKER, at least one, at most CI's own cores/2. Read just before each step,
+ * so the count follows the load. An `E2E_WORKERS` the operator set wins.
+ */
+export function e2eWorkers({ cores, load, override } = {}) {
+  const set = Number(override);
+  if (Number.isFinite(set) && set > 0) {
+    return { workers: Math.floor(set), formula: `E2E_WORKERS=${override} set by the operator` };
+  }
+  const free = Math.max(0, cores - load);
+  const workers = Math.max(
+    1,
+    Math.min(Math.floor(free / CORES_PER_E2E_WORKER), Math.floor(cores / 2)),
+  );
+  return {
+    workers,
+    formula:
+      `max(1, min(floor((${cores} cores - ${load.toFixed(1)} load) / ` +
+      `${CORES_PER_E2E_WORKER}), ${cores}/2))`,
+  };
+}
+
+/** e2eWorkers for this box, now. */
+function e2eWorkersHere() {
+  return e2eWorkers({
+    cores: availableParallelism(),
+    load: loadavg()[0],
+    override: process.env.E2E_WORKERS,
+  });
+}
 
 /** The line e2e/browser.ts prints when the pinned Chromium is missing. */
 const BROWSER_FALLBACK = /^e2e: the Chromium pinned by @playwright\/test is not installed.*$/m;
@@ -150,7 +185,7 @@ export function plan({ changed, specs }) {
         name: chunks.length === 1 ? "e2e specs" : `e2e specs ${i + 1}/${chunks.length}`,
         command: "pnpm",
         args: ["e2e:run", ...chunk, "--reporter=line"],
-        env: { E2E_WORKERS: String(E2E_WORKERS) },
+        workers: true,
       });
     });
   }
@@ -368,8 +403,8 @@ function main() {
   const skipped = notRunHere({ docsOnly, testsOnly, specs, allSpecs: allSpecFiles() });
   if (args.includes("--plan")) {
     for (const step of steps) {
-      const env = Object.entries(step.env ?? {}).map(([key, value]) => `${key}=${value} `);
-      console.log(`  step ${step.name}: ${env.join("")}${step.command} ${step.args.join(" ")}`);
+      const env = step.workers ? `E2E_WORKERS=${e2eWorkersHere().workers} ` : "";
+      console.log(`  step ${step.name}: ${env}${step.command} ${step.args.join(" ")}`);
     }
     for (const line of skipped) console.log(`  not run here: ${line}`);
     return;
@@ -379,6 +414,7 @@ function main() {
   mkdirSync(logs, { recursive: true });
   const ran = [];
   let browserNote;
+  const workerCounts = [];
   for (const step of steps) {
     if (step.build) {
       try {
@@ -391,10 +427,18 @@ function main() {
     const log = path.join(logs, `${step.name.replace(/\W+/g, "-")}.log`);
     const fd = openSync(log, "w");
     const started = Date.now();
-    process.stdout.write(`… ${step.name}\n`);
+    let env = process.env;
+    if (step.workers) {
+      const { workers, formula } = e2eWorkersHere();
+      env = { ...process.env, E2E_WORKERS: String(workers) };
+      workerCounts.push({ step: step.name, workers, formula });
+      process.stdout.write(`… ${step.name} on ${workers} worker(s): ${formula}\n`);
+    } else {
+      process.stdout.write(`… ${step.name}\n`);
+    }
     const result = runStep(step.command, step.args, {
       cwd: ROOT,
-      env: { ...process.env, ...step.env },
+      env,
       stdio: ["ignore", fd, fd],
       timeoutMs: SUBPROCESS_TIMEOUTS.verifyPushStep,
     });
@@ -409,12 +453,12 @@ function main() {
         why = `\nIt rewrote generated files; look at them, commit them, and run verify:push again:\n${after}`;
       }
     }
-    const fallback = step.env?.E2E_WORKERS && readFileSync(log, "utf8").match(BROWSER_FALLBACK);
+    const fallback = step.workers && readFileSync(log, "utf8").match(BROWSER_FALLBACK);
     if (fallback && !browserNote) {
       browserNote = fallback[0];
       // Said once, pass or fail: the older Chromium is not why a functional spec fails here
-      // (E2E_WORKERS above), so nobody chases it again.
-      console.log(`${browserNote}\n(not a cause of functional failures; see E2E_WORKERS)`);
+      // (CORES_PER_E2E_WORKER above), so nobody chases it again.
+      console.log(`${browserNote}\n(not a cause of functional failures; see CORES_PER_E2E_WORKER)`);
     }
     if (failed) {
       console.error(`✗ ${step.name} (${seconds}s) — full log: ${log}\n${tail(log)}${why}`);
@@ -435,7 +479,7 @@ function main() {
     at: new Date().toISOString(),
     steps: ran,
     specs,
-    e2eWorkers: specs.length > 0 ? E2E_WORKERS : undefined,
+    e2eWorkers: workerCounts.length > 0 ? workerCounts : undefined,
     browser: browserNote ?? undefined,
     notRunHere: skipped,
     baseCi: verdict.unknown

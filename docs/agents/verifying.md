@@ -95,12 +95,15 @@ common git dir too, so a push from any worktree finds it):
    name rather than file by file), or a hub route (one more than ten specs visit), ranked by how
    much of the diff's vocabulary a spec names, then narrowest first. Every selected spec runs, in
    steps of 25: until 2026-10-15 a time budget left the rest to CI, and on #2619 that was 30 of
-   129, one of which went red there. The specs run on one Playwright worker (`E2E_WORKERS=1`), so
-   CI's 15-second test ceiling stays the bar: a cloud container runs a built server several
-   times slower than CI, and with two workers `readiness.spec.ts:131` timed out here while CI
-   passed it (alone: 14.9s; why it is that slow is #2624). The container's older fallback Chromium, which the run names once,
-   is not the cause: a Playwright pinned to that same browser failed identically. A diff of only
-   unit tests runs no spec and builds nothing.
+   129, one of which went red there. The run uses as many Playwright workers as the box has free
+   compute for, and no more (Aaron, 2026-10-15): `max(1, min(floor((cores - one-minute load) /
+   3), cores/2))`, read before each step and printed with it; an `E2E_WORKERS` you set wins. Three
+   cores per worker because each brings its own Next server and Chromium: on an idle four-core
+   cloud container two workers timed out on specs CI passes (`readiness.spec.ts:131`,
+   `diver-merge.spec.ts:42`), and one passed them, so CI's 15-second test ceiling stays the bar
+   (why a built server is that slow here is #2624). The container's older fallback Chromium,
+   which the run names once, is not the cause: a Playwright pinned to that same browser failed
+   identically. A diff of only unit tests runs no spec and builds nothing.
    `--commit <sha>` replays one commit; over 104 commits the median reach fell from 65 specs to
    19 with the name walk.
 
@@ -144,7 +147,9 @@ So `verify:push` reads the layer below's latest CI before anything else (`script
   `src/test/failed-files-reporter.ts`; Playwright annotates each failed spec), and the stamp
   means they passed here. A red job that names no file is refused until the author reads its log
   and names the files: `pnpm verify:push --base-red <file…>`, which then run here too. Visual
-  capture and reg-suit are left out: a push approves those (**visual-triage**).
+  capture and reg-suit are left out: a push approves those (**visual-triage**). So is every run
+  the base got from an event a PR never runs on (a schedule or the Run workflow button: CodeQL,
+  Simulate a day, Follow-ups): its red is not something this layer inherits or can fix.
 - **Unreadable** (no `gh`, no network): a line saying so, and on. The gate fails open; CI still
   answers.
 

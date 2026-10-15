@@ -66,15 +66,6 @@ describe("the base's verdict", () => {
     expect(verdict.pending).toEqual(["Playwright shard 1/6"]);
   });
 
-  it("leaves out the scheduled tracker check, which reads issues rather than the commit", () => {
-    const verdict = baseVerdict(
-      [run(13, "Every needs-triage issue is actionable cold, and no claim is dead", "failure")],
-      () => [],
-    );
-    expect(verdict.red).toEqual([]);
-    expect(verdict.unnamed).toEqual([]);
-  });
-
   it("takes the newest attempt of a re-run job and ignores other apps' checks", () => {
     const runs = [
       run(10, "Unit tests shard 1/4", "failure"),
@@ -140,16 +131,51 @@ describe("reading GitHub", () => {
     const asked = [];
     const gh = (args) => {
       asked.push(args[0]);
-      return args[0].includes("/annotations")
-        ? [fails("src/db/a.test.ts")]
-        : { check_runs: [run(1, "Unit tests shard 1/4", "failure")] };
+      if (args[0].includes("/annotations")) return [fails("src/db/a.test.ts")];
+      if (args[0].includes("/actions/runs")) return { workflow_runs: [] };
+      return { check_runs: [run(1, "Unit tests shard 1/4", "failure")] };
     };
     const verdict = readBaseVerdict("abc1234", { repo: "o/r", gh });
     expect(verdict.files).toEqual(["src/db/a.test.ts"]);
     expect(asked).toEqual([
       "repos/o/r/commits/abc1234/check-runs?per_page=100",
+      "repos/o/r/actions/runs?head_sha=abc1234&per_page=100",
       "repos/o/r/check-runs/1/annotations",
     ]);
+  });
+
+  it("leaves out runs a PR never gets: main b340c3c00's schedule-only reds (2026-10-15)", () => {
+    const suite = (id, name, suiteId) => ({
+      ...run(id, name, "failure"),
+      check_suite: { id: suiteId },
+      head_sha: "b340c3c0068ffb7d117975ce804c76a0699dd840",
+    });
+    const gh = (args) => {
+      if (args[0].includes("/annotations")) return [fails("e2e/booking.spec.ts")];
+      if (args[0].includes("/actions/runs")) {
+        // The runs endpoint matches only a full sha, so the abbreviated base finds nothing.
+        if (!args[0].includes("head_sha=b340c3c0068ffb7d")) return { workflow_runs: [] };
+        return {
+          workflow_runs: [
+            { event: "schedule", check_suite_id: 10 },
+            { event: "schedule", check_suite_id: 11 },
+            { event: "workflow_dispatch", check_suite_id: 12 },
+            { event: "push", check_suite_id: 13 },
+          ],
+        };
+      }
+      return {
+        check_runs: [
+          suite(1, "Analyze (javascript-typescript)", 10),
+          suite(2, "Simulate a day", 11),
+          suite(3, "Every needs-triage issue is actionable cold, and no claim is dead", 12),
+          suite(4, "Playwright shard 2/6", 13),
+        ],
+      };
+    };
+    const verdict = readBaseVerdict("b340c3c00", { repo: "o/r", gh });
+    expect(verdict.red).toEqual(["Playwright shard 2/6"]);
+    expect(verdict.unnamed).toEqual([]);
   });
 
   it("is unknown, not green, when gh fails or GitHub has no run yet", () => {
