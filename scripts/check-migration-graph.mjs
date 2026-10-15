@@ -162,21 +162,6 @@ polices.`,
 // `originUUID` is drizzle-kit's sentinel for "no parent" on the first snapshot.
 const ORIGIN_UUID = "00000000-0000-0000-0000-000000000000";
 
-// Dangling edges known on 2026-10-12, as `folder -> missing id`. Like
-// `KNOWN_UNSNAPSHOTTED` this is a list of holes, not of acceptable shapes.
-//
-// `20260904174946_medical-clearance-declined` names `3eaed088-…`, the head
-// before the squash to a single baseline (#1343) replaced every older folder.
-// Its child `graceful_whiplash` also names the baseline's line through
-// `converge-prior-gear-fk-names`, so the graph still reaches the root. The
-// repair is pointing that one `prevIds` at the baseline's id
-// (`d211c512-a964-4718-bf0f-57e12a04f446`); drizzle-orm never reads
-// `snapshot.json`, so nothing applied changes. It is an edit to migration
-// history and needs the owner's word, so it waits on its own change.
-const KNOWN_DANGLING = new Set([
-  "20260904174946_medical-clearance-declined -> 3eaed088-b80d-4189-8f61-9787bfee04c6",
-]);
-
 const snapshots = withSnapshot.map((name) => {
   const raw = JSON.parse(readFileSync(path.join(MIGRATIONS_PATH, name, "snapshot.json"), "utf8"));
   return { name, id: raw.id, prevIds: Array.isArray(raw.prevIds) ? raw.prevIds : [] };
@@ -185,7 +170,6 @@ const knownIds = new Set(snapshots.map((snapshot) => snapshot.id));
 const dangling = snapshots.flatMap(({ name, prevIds }) =>
   prevIds
     .filter((prevId) => prevId !== ORIGIN_UUID && !knownIds.has(prevId))
-    .filter((prevId) => !KNOWN_DANGLING.has(`${name} -> ${prevId}`))
     .map((prevId) => ({ name, prevId })),
 );
 
