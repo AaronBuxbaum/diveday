@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { createCounterRental } from "@/db/gear-counter-rentals";
 import { gearItems, gearReservations, people, shops } from "@/db/schema";
+import { livePerson } from "@/db/trips-live";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS } from "@/lib/clock";
 
@@ -61,7 +62,7 @@ async function returnTheBenchedUnitWithAConcern(
   const [holder] = await db
     .select({ id: people.id })
     .from(people)
-    .where(and(eq(people.shopId, shopId), eq(people.fullName, CONCERN_HOLDER)))
+    .where(and(eq(people.shopId, shopId), eq(people.fullName, CONCERN_HOLDER), livePerson()))
     .limit(1);
   if (!unit || !holder) return null;
   const [already] = await db
@@ -114,7 +115,7 @@ async function lendAMaskToSomeoneWithNoWaiver(
   const [existing] = await db
     .select({ id: people.id })
     .from(people)
-    .where(and(eq(people.shopId, shopId), eq(people.fullName, RENTER)))
+    .where(and(eq(people.shopId, shopId), eq(people.fullName, RENTER), livePerson()))
     .limit(1);
   if (existing) return { personId: existing.id, label: mask.label };
   const [renter] = await db

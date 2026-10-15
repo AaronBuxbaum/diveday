@@ -380,10 +380,9 @@ describe("the waiver group", () => {
     );
     expect(door?.querySelector("span")?.className).toContain("text-warning-strong");
     expect(group).toHaveAttribute("open");
-    expect(within(group).getByRole("link", { name: "View the physician’s decision" })).toHaveAttribute(
-      "href",
-      expect.stringMatching(/\/divers\/[^/]+\/waivers\/w-refused$/),
-    );
+    expect(
+      within(group).getByRole("link", { name: "View the physician’s decision" }),
+    ).toHaveAttribute("href", expect.stringMatching(/\/divers\/[^/]+\/waivers\/w-refused$/));
   });
 
   it("keeps a physician's refusal behind a door, drawn as a refusal", () => {
