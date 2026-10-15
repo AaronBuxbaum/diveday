@@ -269,14 +269,14 @@ jobs:
     name: Safety-file coverage floors
     needs: unit-tests
     if: ${{ !cancelled() && needs.unit-tests.result == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: unit-blob-*
           path: .vitest/blob
@@ -285,7 +285,7 @@ jobs:
       - run: node scripts/coverage-floors.mjs coverage/coverage-summary.json
       # The merged numbers, so a floor can be raised from them without a local full run:
       # download this, then `node scripts/coverage-floors.mjs --write <path>`.
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
           name: coverage-summary
@@ -1387,6 +1387,7 @@ jobs:
       - visual-report
       - changes
       - real-postgres
+      - coverage-floors
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: {}
