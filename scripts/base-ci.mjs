@@ -27,9 +27,13 @@ import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 /** Red jobs the gate's own steps answer for: green here is the fix carried. */
 export const COVERED_LOCALLY = /^(?:Lint|Typecheck|Repository safeguards)$/;
 
-/** Jobs that are not a test verdict, or are approved by a push rather than passed. */
+/**
+ * Jobs that are not a test verdict on the commit: approved by a push rather than passed, or (the
+ * follow-ups job) run on a schedule against the live issue tracker, so a malformed issue turns it
+ * red on every commit and no change of code can turn it green.
+ */
 export const NOT_A_VERDICT =
-  /^(?:Visual capture|reg-suit|Plan the visual|Deploy a preview|Resolve the head|Detect what changed|cdk )/;
+  /^(?:Visual capture|reg-suit|Plan the visual|Deploy a preview|Resolve the head|Detect what changed|cdk |Every needs-triage issue is actionable cold)/;
 
 const UNIT_FILE = /\.test\.(?:ts|tsx|mts|mjs|js)$/;
 const SPEC_FILE = /^e2e\/.+\.spec\.ts$/;

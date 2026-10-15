@@ -66,6 +66,15 @@ describe("the base's verdict", () => {
     expect(verdict.pending).toEqual(["Playwright shard 1/6"]);
   });
 
+  it("leaves out the scheduled tracker check, which reads issues rather than the commit", () => {
+    const verdict = baseVerdict(
+      [run(13, "Every needs-triage issue is actionable cold, and no claim is dead", "failure")],
+      () => [],
+    );
+    expect(verdict.red).toEqual([]);
+    expect(verdict.unnamed).toEqual([]);
+  });
+
   it("takes the newest attempt of a re-run job and ignores other apps' checks", () => {
     const runs = [
       run(10, "Unit tests shard 1/4", "failure"),
