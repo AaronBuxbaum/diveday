@@ -128,3 +128,43 @@ test("a staffer marks a message done and moves it back", async ({ page }) => {
   await page.getByRole("button", { name: "Move back to waiting" }).click();
   await expect(page.getByRole("heading", { name: /Needs you · 3/ })).toBeVisible();
 });
+
+/**
+ * **Saved answers** (fifth loop, item 15): a reply the desk just wrote is
+ * kept with "Save this answer", with the diver's name taken out; it comes back
+ * as a chip above the reply box, filled for whoever the record is; and the
+ * Inbox lists it with a soft Delete and Put back.
+ */
+test("a staffer saves an answer, uses it as a chip, and deletes it softly", async ({ page }) => {
+  test.setTimeout(45_000);
+  await page.goto("/shop/blue-mantis/inbox");
+  await page.getByRole("link", { name: "Open the record for Priya Sharma" }).click();
+  const conversation = page.getByRole("region", { name: "Conversation" });
+
+  const composer = page.getByLabel("Reply by email to priya.sharma@mail.example", { exact: true });
+  await composer.fill("Hi Priya, the gate opens at 7:10 on dive days.");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(conversation.getByText(/the gate opens at 7:10/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Save this answer" }).click();
+  await expect(page.getByText(/^Saved\. It’s above the reply box now/)).toBeVisible();
+
+  // The chip, named from the answer without the diver's name in it.
+  const chips = page.getByRole("group", { name: "Saved answers" });
+  const chip = chips.getByRole("button", { name: "Hi, the gate opens at 7:10 on dive days." });
+  await expect(chip).toBeVisible();
+  await chip.click();
+  await expect(composer).toHaveValue("Hi Priya, the gate opens at 7:10 on dive days.");
+
+  await page.goto("/shop/blue-mantis/inbox#saved-answers");
+  const saved = page.getByRole("region", { name: "Saved answers" });
+  await expect(saved.getByText("Hi {name}, the gate opens at 7:10 on dive days.")).toBeVisible();
+  await saved
+    .getByRole("button", { name: "Delete Hi, the gate opens at 7:10 on dive days." })
+    .click();
+  await expect(page.getByText("Saved answer deleted.")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Put back Hi, the gate opens at 7:10 on dive days." })
+    .click();
+  await expect(page.getByText("Saved answer put back.")).toBeVisible();
+});

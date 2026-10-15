@@ -20,6 +20,9 @@ import { replyToDiverAction } from "../details-actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 
+/** The answers to a send that left a reply on the record (`sendStaffReply`). */
+const RECORDED_SEND_CODES = new Set(["reply-sent", "reply-send-failed", "reply-not-configured"]);
+
 /**
  * **The conversation** — what this diver wrote to the shop and what the shop
  * wrote back, in one column, oldest first (ADR 20260907-two-way-inbox).
@@ -99,13 +102,13 @@ export function ConversationSection({
   // Nothing to answer *on*: SMS is recorded and cannot be answered yet, and a
   // closed WhatsApp window is the case worth a sentence.
   const closedWhatsApp = Boolean(latest && latest.message.channel === "whatsapp" && !whatsAppOpen);
-  // The reply that just went out, for "Save this answer": only on the answer
-  // to a send, so the offer is about words the reader has just written.
+  // The reply just written, for "Save this answer": only on the answer to a
+  // send that recorded one, so the offer is about words the reader has just
+  // typed. Whether the provider took it does not change the words, so a send
+  // that did not go out may still be kept.
   const justSent =
-    status?.code === "reply-sent" && saveAnswerAction
-      ? entries
-          .filter((entry) => entry.direction === "outbound" && entry.reply.status === "sent")
-          .at(-1)
+    status?.code && RECORDED_SEND_CODES.has(status.code) && saveAnswerAction
+      ? entries.filter((entry) => entry.direction === "outbound").at(-1)
       : undefined;
 
   return (
