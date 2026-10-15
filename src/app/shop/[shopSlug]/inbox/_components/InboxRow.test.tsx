@@ -38,6 +38,7 @@ function renderRow(
   overrides: Partial<InboxMessageRow["message"]> = {},
   personName: string | null = "Priya Sharma",
   seat: MessageSeat | null = null,
+  now: Date = new Date("2026-07-01T12:00:00.000Z"),
 ) {
   const { container } = render(
     <ul>
@@ -46,6 +47,7 @@ function renderRow(
         shopSlug="blue-mantis"
         locale="en-US"
         timezone="America/Cancun"
+        now={now}
         t={t}
         deleteAction={vi.fn()}
         doneAction={vi.fn()}
@@ -290,6 +292,15 @@ describe("a message from somebody with a boat to catch", () => {
     runningLateAt: null,
   };
   const LATE = { channel: "whatsapp" as const, subject: null, body: "Running about 15 min late" };
+
+  // Fourth review, item 45: "Oct 14, 7:00 AM" and "Wednesday 1:30 PM" on
+  // that same Wednesday left the desk to work out whether the boat was this
+  // afternoon or next week.
+  it("says today on the stamp and the seat when both are today at the shop", () => {
+    renderRow(LATE, "Diego Alvarez", SEAT, new Date("2026-07-21T15:00:00.000Z"));
+    expect(screen.getByText(/^Today, 8:30\sAM/)).toBeInTheDocument();
+    expect(screen.getByText(/Booked on Night Dive, today 11:30\sPM/)).toBeInTheDocument();
+  });
 
   it("names the departure, and offers to mark the sender running late on it", async () => {
     renderRow(LATE, "Diego Alvarez", SEAT);

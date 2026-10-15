@@ -5,7 +5,13 @@ import { menuRowClass } from "@/components/ui/menu";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
 import type { MessageSeat } from "@/db/running-late";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
-import { formatDateTimeTz, formatTime, formatWeekdayTime } from "@/lib/format";
+import {
+  formatDateTimeTz,
+  formatNearDay,
+  formatTime,
+  formatTimeTz,
+  formatWeekdayTime,
+} from "@/lib/format";
 import { type InboxChannel, inboxMessageAnchor } from "@/lib/inbox";
 import { shopPath } from "@/lib/staff-notices";
 
@@ -101,6 +107,7 @@ export function InboxRow({
   shopSlug,
   locale,
   timezone,
+  now,
   t,
   deleteAction,
   doneAction,
@@ -111,6 +118,8 @@ export function InboxRow({
   shopSlug: string;
   locale: string;
   timezone: string;
+  /** The page's clock, for "Today" and "Tomorrow" on the stamp and the seat. */
+  now: Date;
   t: StaffTranslator;
   /** A prop rather than an import so this renders under jsdom. */
   deleteAction: (formData: FormData) => Promise<void>;
@@ -151,7 +160,7 @@ export function InboxRow({
     seat
       ? t("inbox.seat", {
           trip: seat.title,
-          when: formatWeekdayTime(seat.startsAt, locale, timezone),
+          when: seatWhen(seat.startsAt, { now, locale, timezone, t }),
         })
       : null,
     seat?.runningLateAt
@@ -172,7 +181,7 @@ export function InboxRow({
       trailing={
         <div className="flex items-center gap-1">
           <span className="text-sm text-muted tabular-nums">
-            {formatDateTimeTz(message.receivedAt, locale, timezone)}
+            {receivedWhen(message.receivedAt, { now, locale, timezone, t })}
           </span>
           <RowMenu label={t("inbox.menu.label", { name })}>
             {/* An "Ask to move" (H-126) is about another date, never this
@@ -244,4 +253,26 @@ export function InboxRow({
       </div>
     </LedgerRow>
   );
+}
+
+type When = { now: Date; locale: string; timezone: string; t: StaffTranslator };
+
+/**
+ * When a message arrived: "Today, 7:00 AM EDT" within a day of now, the date
+ * further out (fourth review, item 45). A running-late text is about a boat
+ * leaving in hours, and "Oct 14" on Oct 14 made the desk do the arithmetic.
+ */
+function receivedWhen(at: Date, { now, locale, timezone, t }: When): string {
+  const day = formatNearDay(at, now, locale, timezone);
+  return day
+    ? t("inbox.nearStamp", { day, time: formatTimeTz(at, locale, timezone) })
+    : formatDateTimeTz(at, locale, timezone);
+}
+
+/** The seat's departure, mid-sentence: "today 1:30 PM", or "Saturday 8:00 AM". */
+function seatWhen(at: Date, { now, locale, timezone, t }: When): string {
+  const day = formatNearDay(at, now, locale, timezone, { lead: false });
+  return day
+    ? t("inbox.nearSeat", { day, time: formatTime(at, locale, timezone) })
+    : formatWeekdayTime(at, locale, timezone);
 }

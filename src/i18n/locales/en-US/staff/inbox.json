@@ -20,6 +20,8 @@
   },
   "attachments": "{count, plural, one {# attachment, still with the sender} other {# attachments, still with the sender}}",
   "seat": "Booked on {trip}, {when}",
+  "nearStamp": "{day}, {time}",
+  "nearSeat": "{day} {time}",
   "late": {
     "action": "Mark running late",
     "actionFor": "Mark {name} running late for {trip}",
