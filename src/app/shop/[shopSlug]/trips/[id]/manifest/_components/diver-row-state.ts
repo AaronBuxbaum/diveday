@@ -88,8 +88,11 @@ export function diverRowState(
   // blocker a diver was boarded over (after a dive, #2380) outranks a medical
   // warning outranks the crew's duty of care to a minor outranks
   // an advisory outranks a birthday. Everything not chosen here still
-  // reaches the reader: it is in the panel one tap away, and
-  // unconditionally on paper.
+  // reaches paper, unconditionally. On screen the panel one tap away
+  // carries what a loser of this chain must not lose: the medical
+  // warnings (in its facts), a medical hold (`medicalHoldInPanel`), the
+  // age with the minor flag, and an advisory the strip does not name. A
+  // buddy alert and a birthday the capsule did not take are on paper only.
   //
   // **The medical warnings** (`medicalWarningChips`, strongest first):
   // a rider riding only under a "no" or an open referral (H-109), an
@@ -151,6 +154,12 @@ export function diverRowState(
                     : diver.birthday
                       ? "birthday"
                       : null;
+  // **The hold the capsule did not take** (#2380 review): a split team
+  // after a dive outranks it, `blockedAtDock` is quiet after a dive, and a
+  // referred or refused record draws no waiver fact, so without this the
+  // hold has no place on screen. The panel names it; the capsule never
+  // twice. Gated on the kind, as the panel's minor age is.
+  const medicalHoldInPanel = capsuleKind === "medicalHold" ? null : medicalHold;
   return {
     diverStatus,
     ready,
@@ -164,6 +173,7 @@ export function diverRowState(
     lateAt,
     medicalDays,
     medicalHold,
+    medicalHoldInPanel,
     splitAfterDive,
     capsuleKind,
   };
