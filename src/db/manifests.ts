@@ -1782,11 +1782,27 @@ export async function recordRollCall(
     // read to gate; every other status stores nothing.
     let readinessSnapshot: ReadinessSnapshot | null = null;
     if (input.status === "boarded") {
-      const readiness = await getBookingReadiness(tx, input.shopId, booking.id);
-      if (checkpoint === "departure" && readiness?.status !== "ready") {
-        return { ok: false, reason: "not_ready" };
+      if (checkpoint === "departure") {
+        const readiness = await getBookingReadiness(tx, input.shopId, booking.id);
+        if (readiness?.status !== "ready") return { ok: false, reason: "not_ready" };
+        readinessSnapshot = readinessSnapshotOf(readiness);
+      } else {
+        // The snapshot is a record, so a failed read costs the record and not
+        // the count: a savepoint, so even a failed query leaves the transaction
+        // usable for the insert below (issue #2414 review).
+        try {
+          const readiness = await tx.transaction((savepoint) =>
+            getBookingReadiness(savepoint, input.shopId, booking.id),
+          );
+          readinessSnapshot = readiness ? readinessSnapshotOf(readiness) : null;
+        } catch (error) {
+          log("roll_call.readiness_snapshot_skipped", "error", {
+            tripId: input.tripId,
+            checkpoint,
+            error: error instanceof Error ? error.message : "unknown",
+          });
+        }
       }
-      readinessSnapshot = readiness ? readinessSnapshotOf(readiness) : null;
     }
 
     const [event] = await tx
