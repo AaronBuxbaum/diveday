@@ -653,7 +653,7 @@ describe("what today made", () => {
     expect(screen.getByText(/Wreck run: \$60/)).toBeInTheDocument();
   });
 
-  it("says nothing more about one boat's tips than the sentence already does", () => {
+  it("names the boat when only one boat was tipped (issue #2469)", () => {
     renderSpine({
       departures: [],
       evening: evening([closed({ tripId: "t1" })], {
@@ -664,7 +664,8 @@ describe("what today made", () => {
       }),
     });
 
-    expect(screen.getByText("And $80 in tips.")).toBeInTheDocument();
+    expect(screen.getByText("And $80 in tips on Manta.")).toBeInTheDocument();
+    expect(screen.queryByText("And $80 in tips.")).toBeNull();
     expect(screen.queryByText(/Manta:/)).toBeNull();
   });
 
