@@ -1404,11 +1404,13 @@ describe("a parent signs a minor seat's release", () => {
       bookingId: lead.bookingId,
       purpose: "readiness",
     });
+    if (!leadLink) throw new Error("expected a readiness link");
     const miaLink = await issueBookingCapability(db, {
       shopId: shop.id,
       bookingId: mia.bookingId,
       purpose: "readiness",
     });
+    if (!miaLink) throw new Error("expected a readiness link");
     expect(
       await partyLeadReturnToken(db, {
         shopId: shop.id,
@@ -1431,4 +1433,3 @@ describe("a parent signs a minor seat's release", () => {
     }
   });
 });
-

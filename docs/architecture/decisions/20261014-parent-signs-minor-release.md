@@ -23,10 +23,9 @@ own device, as the child's parent or guardian.**
    `openMinorSeatWaiver` (`src/db/seat-claims.ts`) re-reads that the seat is:
    - in this lead's party and shop, and not cancelled
    - unclaimed, declared a minor, and not held (#2125)
-   - a person this booking made, never a diver the shop knows: no email (or the lead's), no other
-     booking, and no release filed anywhere but this seat. The record decides, not its email: a
-     walk-in has no address either, and a staff merge can point the seat at one
-   - a record still standing: neither the seat's person nor the lead is removed or erased
+   - a person this booking made: no email (or the lead's), no other booking, no release elsewhere.
+     The record decides, not the email: a merge can point the seat at a known walk-in
+   - neither the seat's person nor the lead removed or erased
    - one the page will ask a guardian for (a date of birth saying adult refuses)
    - still claimable
    - owing a release by readiness's rule (`waiver_not_sent`, `waiver_pending`, `waiver_expired`,
@@ -40,10 +39,9 @@ own device, as the child's parent or guardian.**
    `guardian_signature_missing` are unchanged.
 5. **The seat stays the lead's.** A later claim supersedes a release that is not the claimant's,
    as every claim does.
-6. **A minor seat's claim page says a parent or guardian signs with them**, and, only where the
-   door above exists, that the booker can sign from their own page. Where it refuses (a teen with an
-   address of their own), the lead's panel says to send the seat its link, a parent or guardian
-   beside them; where the child's medical referred them, it says a physician's sign-off is needed. The claim refusal stays the neutral `unable` (H-22, #2288).
+6. **A minor seat's claim page says a parent or guardian signs with them**, and that the booker can
+   sign from their own page only where that door exists. Where it refuses, the lead's panel says to
+   send the seat its link; after a medical referral, that a physician's sign-off is needed. The claim refusal stays the neutral `unable` (H-22, #2288).
 
 ## Consequences
 
@@ -54,6 +52,5 @@ own device, as the child's parent or guardian.**
 
 ## Alternatives considered
 
-- **Only through the child's claim link, naming the guardian there.** Needs a child's email families
-  often lack, and a second device.
+- **Only through the child's claim link.** Needs a child's email and a second device.
 - **Counter only.** What happened before, on dive morning.

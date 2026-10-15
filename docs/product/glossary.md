@@ -169,6 +169,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - First-timer track
 - Held
 - Horizon
+- Hotel pickup
 - Implausible-station advisory
 - Imported payment history
 - Imported waiver acceptance

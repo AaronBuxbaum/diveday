@@ -273,8 +273,7 @@ export async function recordMoveAsk(
     .limit(1);
   if (!seat) return { status: "not_found" };
   const note = truncateInboundBody(input.note ?? "").slice(0, MOVE_ASK_NOTE_MAX_LENGTH);
-  const fromAddress =
-    normalizeEmailAddress(seat.email) ?? normalizePhoneAddress(seat.phone) ?? "";
+  const fromAddress = normalizeEmailAddress(seat.email) ?? normalizePhoneAddress(seat.phone) ?? "";
   const [filed] = await db
     .insert(inboundMessages)
     .values({

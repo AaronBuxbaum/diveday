@@ -186,6 +186,7 @@ describe("the signing doors", () => {
       bookingId: lead.bookingId,
       purpose: "readiness",
     });
+    if (!leadLink) throw new Error("expected a readiness link");
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: seat.bookingId });
     if (!issued.ok) throw new Error(`waiver request refused: ${issued.reason}`);
     cookieJar.set("diveday_party_return", leadLink.token);

@@ -802,7 +802,7 @@ async function minorSeatDoor(
     return null;
   }
   const readiness = await getBookingReadiness(db, shopId, booking.id);
-  const codes = new Set(readiness?.blockers.map((blocker) => blocker.code) ?? []);
+  const codes = new Set<string>(readiness?.blockers.map((blocker) => blocker.code) ?? []);
   const owed = [...PARENT_SIGNABLE_BLOCKERS].some((code) => codes.has(code));
   const parentsDoor =
     lead !== null &&

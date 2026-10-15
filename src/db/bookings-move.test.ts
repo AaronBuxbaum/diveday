@@ -6,8 +6,8 @@ import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
 import { createBooking, listSeatMoveTargets, moveBooking } from "./bookings";
 import { formBuddyTeam } from "./buddy-pairs";
-import { hasMoveAsk, recordMoveAsk } from "./inbound-messages";
 import type { AppDb } from "./client";
+import { hasMoveAsk, recordMoveAsk } from "./inbound-messages";
 import { listTripActivity } from "./operations";
 import {
   bookings,
