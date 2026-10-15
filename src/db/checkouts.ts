@@ -11,7 +11,7 @@ import { allocateSettledTotal } from "@/lib/payments/settlement";
 import { discountOffCents, type PromoDiscount, promoDiscountOf } from "@/lib/promo-codes";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { countConsumedEntitlementsForBookings } from "./dive-packages";
-import { enqueueCheckoutIntegrationEvent } from "./integration-events";
+import { checkoutPaidKey, enqueueCheckoutIntegrationEvent } from "./integration-events";
 import { boundLockWaits } from "./lock-bounds";
 import {
   claimBookingsForCheckout,
@@ -1447,7 +1447,7 @@ export async function markCheckoutPaidBySessionId(
       shopId: updated.shopId,
       checkoutId: updated.id,
       eventType: "order.paid",
-      idempotencyKey: `checkout:${updated.id}:paid`,
+      idempotencyKey: checkoutPaidKey(updated.id),
     });
     return updated;
   });

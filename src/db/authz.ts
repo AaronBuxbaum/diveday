@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { cache } from "react";
 import {
+  canBackfillIntegrations,
   canCallDayBlowout,
   canConfigureTrips,
   canDeleteDiver,
@@ -139,6 +140,10 @@ export const canPersonManagePaymentSettings = (db: DbExecutor, shopId: string, p
 /** Live DB-checked companion of the owner-only billing gate (src/lib/authz.ts). */
 export const canPersonManageBilling = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManageBilling);
+
+/** Live DB-checked companion of the owner-only integration backfill gate (src/lib/authz.ts). */
+export const canPersonBackfillIntegrations = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canBackfillIntegrations);
 
 export const canPersonManageMessagingSettings = (
   db: DbExecutor,

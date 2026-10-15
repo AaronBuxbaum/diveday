@@ -135,6 +135,16 @@ export function canManageBilling(roles: readonly Role[] | undefined): boolean {
 }
 
 /**
+ * Send the checkouts, tips and refunds that completed before an integration
+ * was connected to it (issue #2606). Owner only, stricter than connecting the
+ * integration: it posts history into a shop's books, which may have a closed
+ * period or a month the owner reconciled by hand, and nothing recalls it.
+ */
+export function canBackfillIntegrations(roles: readonly Role[] | undefined): boolean {
+  return (roles ?? []).some((role) => role === "owner");
+}
+
+/**
  * Read the shop's activity log (D5, `src/db/shop-activity.ts`): who refunded,
  * who wrote a seat past a missing card, who changed a departure, across the
  * whole team. It is an account of the staff's own work, named person by

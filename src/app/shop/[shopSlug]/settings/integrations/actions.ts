@@ -2,8 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { canPersonManageShopSettings } from "@/db/authz";
+import { canPersonBackfillIntegrations, canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { runIntegrationBackfill } from "@/db/integration-backfill";
+import { getShopById } from "@/db/shops";
 import {
   createIntegrationOAuthState,
   disconnectShopIntegration,
@@ -31,6 +33,7 @@ import { publicAppUrl } from "@/lib/notifications";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { backfillSince } from "./earlier-checkouts";
 
 type Notice =
   | "connected"
@@ -43,7 +46,12 @@ type Notice =
   | "not-authorized"
   | "failed"
   | "encryption-key-unset"
-  | "encryption-key-invalid";
+  | "encryption-key-invalid"
+  | "earlier-sent"
+  | "earlier-partial"
+  | "earlier-none"
+  | "earlier-not-owner"
+  | "earlier-invalid";
 
 const shopifyDomainSchema = z.object({
   shopDomain: single(z.string().trim().min(1).max(120), ""),
@@ -262,4 +270,32 @@ export async function disconnectIntegrationAction(formData: FormData): Promise<v
     done(path, "invalid");
   await disconnectShopIntegration(db, session.user.shopId, provider);
   done(path, "disconnected");
+}
+
+const earlierForm = z.object({ integrationId: single(z.uuid()), since: formValue() });
+
+/**
+ * **"Send earlier checkouts"** (issue #2606): queue the checkouts, tips and
+ * refunds this provider has never been handed. Owner only, checked live on
+ * every call and not only by the page drawing the card; the preview the owner
+ * confirmed is not trusted, the run recomputes what is unsent.
+ */
+export async function sendEarlierCheckoutsAction(formData: FormData): Promise<void> {
+  const { db, session, path } = await integrationContext();
+  if (!(await canPersonBackfillIntegrations(db, session.user.shopId, session.user.personId))) {
+    done(path, "earlier-not-owner");
+  }
+  const parsed = parseForm(earlierForm, formData);
+  const shop = await getShopById(db, session.user.shopId);
+  const since = parsed.ok && shop ? backfillSince(parsed.data.since, shop.timezone) : null;
+  if (!parsed.ok || !since) done(path, "earlier-invalid");
+  const result = await runIntegrationBackfill(db, {
+    shopId: session.user.shopId,
+    integrationId: parsed.data.integrationId,
+    since,
+  });
+  if (!result.ok) done(path, "earlier-invalid");
+  const sent = result.sent.checkouts + result.sent.tips + result.sent.refunds;
+  if (result.remaining > 0) done(path, "earlier-partial", { count: result.remaining });
+  done(path, sent === 0 ? "earlier-none" : "earlier-sent", { count: sent });
 }

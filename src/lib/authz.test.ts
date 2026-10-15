@@ -3,6 +3,7 @@ import { messagesFor } from "@/i18n/messages";
 import { DIVER_LOCALES, type DiverLocale } from "@/i18n/settings";
 import {
   ALL_ROLES,
+  canBackfillIntegrations,
   canCallDayBlowout,
   canConfigureTrips,
   canDeleteDiver,
@@ -304,6 +305,15 @@ describe("canReadPrivateRecapPulse and the promise on the recap form", () => {
       }
     });
   }
+});
+
+describe("canBackfillIntegrations", () => {
+  it("is the owner's alone, because it posts history into the shop's books", () => {
+    expect(canBackfillIntegrations(["owner"])).toBe(true);
+    expect(canBackfillIntegrations(["manager"])).toBe(false);
+    expect(canBackfillIntegrations(["captain", "crew", "divemaster", "instructor"])).toBe(false);
+    expect(canBackfillIntegrations(undefined)).toBe(false);
+  });
 });
 
 describe("canManageBilling", () => {

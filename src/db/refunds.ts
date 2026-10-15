@@ -8,7 +8,7 @@ import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { releasePackageCoverageForBooking } from "./bookings";
 import { lockSeatsInOrder } from "./checkouts";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
-import { enqueueCheckoutIntegrationEvent } from "./integration-events";
+import { checkoutRefundKey, enqueueCheckoutIntegrationEvent } from "./integration-events";
 import { boundLockWaits } from "./lock-bounds";
 import { applyStripeRefundedTotalToOrder } from "./orders";
 import {
@@ -355,7 +355,7 @@ async function enqueueCheckoutRefundEvent(
     shopId: checkout.shopId,
     checkoutId: checkout.id,
     eventType: "order.refunded",
-    idempotencyKey: `checkout:${checkout.id}:refund:${checkout.refundedCents}`,
+    idempotencyKey: checkoutRefundKey(checkout.id, checkout.refundedCents),
     refundCents,
   });
 }
