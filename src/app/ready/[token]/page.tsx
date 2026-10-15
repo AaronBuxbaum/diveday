@@ -44,13 +44,14 @@ import { buttonClass } from "@/components/ui/button";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { type AppDb, getDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
+import { diverCrewWithAway } from "@/db/crew-away-diver";
 import { countSpendableDives } from "@/db/dive-packages";
 import { getBookedCard, getReadyPageData } from "@/db/ready";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { latestTripStage } from "@/db/trip-stages";
-import { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trips";
+import { getTripWithBooked, listTripDives } from "@/db/trips";
 import { buildAfterStateProps } from "@/features/recap-after-state";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
@@ -339,11 +340,9 @@ async function DiverReadinessPage({
       getTripWithBooked(db, shop.id, data.trip.id),
       listTripDives(db, shop.id, data.trip.id),
       listTripChangeEvents(db, shop.id, data.trip.id),
-      // Only the crew who agreed to be named (issue #1181, D21). This thread is
-      // reached by a capability URL rather than indexed, but the consent is the
-      // person's answer about divers, not about search engines — so it is the
-      // same filter and the same words as the public page.
-      tripPublicCrew(db, shop.id, data.trip.id),
+      // The crew who agreed to be named (issue #1181, D21), the same filter as
+      // the public page, each marked away on this departure's days (item 12).
+      diverCrewWithAway(db, shop.id, data.trip.id, detail.shop.timezone),
       // Where the crew last said this boat was (ADR
       // 20260904-reef-all-the-way-down, Budget rule 4). Read whatever its age;
       // `liveStageOf` below decides whether it still speaks, so a stage nobody
