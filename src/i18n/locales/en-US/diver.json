@@ -1147,7 +1147,12 @@
     "waiverComplete": "Waiver complete",
     "waiverNeeded": "Waiver still needed",
     "copyReminder": "Copy reminder link",
-    "claimedNeedsWaiver": "Ask them to finish their waiver from their own link."
+    "claimedNeedsWaiver": "Ask them to finish their waiver from their own link.",
+    "payForSeat": "Pay for this seat",
+    "payingSeat": "Opening payment…",
+    "payForSeatNote": "Pay online now. The seat stays theirs to claim.",
+    "seatPaidNotice": "Payment received for their seat. We’re confirming it with your shop. Nothing more to do.",
+    "payUnavailable": "We couldn’t open the payment page for that seat. It’s still held. Try again, or pay at the shop."
   },
   "rental": {
     "ownGear": "Bringing own gear, so no rental needed.",

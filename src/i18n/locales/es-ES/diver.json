@@ -1147,7 +1147,12 @@
     "waiverComplete": "Exención completada",
     "waiverNeeded": "Falta completar la exención",
     "copyReminder": "Copiar enlace de recordatorio",
-    "claimedNeedsWaiver": "Pídele que termine su exención desde su propio enlace."
+    "claimedNeedsWaiver": "Pídele que termine su exención desde su propio enlace.",
+    "payForSeat": "Pagar esta plaza",
+    "payingSeat": "Abriendo el pago…",
+    "payForSeatNote": "Paga ahora en línea. La plaza sigue siendo suya para reclamar.",
+    "seatPaidNotice": "Pago recibido por su plaza. Lo estamos confirmando con tu centro. No tienes que hacer nada más.",
+    "payUnavailable": "No hemos podido abrir la página de pago de esa plaza. Sigue reservada. Inténtalo otra vez o paga en el centro."
   },
   "rental": {
     "ownGear": "Traes tu propio equipo, así que no hace falta alquiler.",

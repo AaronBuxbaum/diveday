@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { addPartySeat, selfCancelBooking } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
+import { startPartySeatCheckout } from "@/db/party-seat-checkout";
 import {
   planReadinessLinkRescue,
   type ReadinessLinkRescue,
@@ -55,6 +56,49 @@ export async function payFromReady(token: string) {
   }).catch(() => null);
   const url = outcome?.ok ? outcome.checkout.checkoutUrl : null;
   if (!url) redirect(`${base(token)}?error=pay`);
+  redirect(url);
+}
+
+/**
+ * **A party lead pays for one seat they added** (issue #2474). The seat's id
+ * arrives in the form, so it is the db function that decides whether it is
+ * this lead's, unclaimed, unpaid and on this departure; here only the page's
+ * own gate (`canPayPartySeats`) and a per-IP bucket come first. Every refusal
+ * is the same quiet notice: the seat stays held, and a failure never reads as
+ * a lost seat.
+ */
+export async function payForPartySeatFromReady(token: string, formData: FormData) {
+  const ip = await clientIp();
+  if (!(await checkRateLimit(rateLimitKey("booking", ip), RATE_LIMITS.booking)).allowed) {
+    redirect(bounceTarget(token, "rate_limited"));
+  }
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  refuseWhileHeld(token, ctx.data);
+  const origin = publicAppUrl();
+  const seatBookingId = formData.get("seatBookingId");
+  if (
+    !ctx.data.canPayPartySeats ||
+    !origin ||
+    !ctx.data.person.email ||
+    typeof seatBookingId !== "string"
+  ) {
+    redirect(`${base(token)}?error=seat-pay`);
+  }
+  const returnBase = `${origin}${base(token)}`;
+  const t = diverTranslator(recipientLocale(ctx.ownLocale, ctx.data.shop.defaultLocale));
+  const outcome = await startPartySeatCheckout(ctx.db, {
+    shopId: ctx.data.shop.id,
+    tripId: ctx.data.trip.id,
+    leadBookingId: ctx.bookingId,
+    seatBookingId,
+    customerEmail: ctx.data.person.email,
+    successUrl: `${returnBase}?pay=seat-paid#party-seats`,
+    cancelUrl: `${returnBase}?pay=cancelled#party-seats`,
+    describeLine: (parts) => describeCheckoutLine(t, parts),
+  }).catch(() => null);
+  const url = outcome?.ok ? outcome.checkout.checkoutUrl : null;
+  if (!url) redirect(`${base(token)}?error=seat-pay#party-seats`);
   redirect(url);
 }
 
