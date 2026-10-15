@@ -35,6 +35,7 @@ import {
   openTripAbout,
   openTripFromBoard,
   openTripTab,
+  publicTripUrl,
   requireCourseForm,
   STAFF_DAY_HEADING,
   saveDiveIntent,
@@ -2626,6 +2627,24 @@ for (const scheme of ["light", "dark"] as const) {
        * nothing ever looks at again. Nothing is deleted by that slice; this is
        * the baseline that proves it.
        */
+      /**
+       * **A full boat, and the wait list a party joins whole** (fourth UX
+       * review, items 31 and 34). The seeded wreck ships 10 of 10: the page
+       * offers other departures, then the wait-list form, which asks how many
+       * divers and only the lead's details.
+       */
+      test(`a full boat's page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis");
+        await page
+          .locator("li")
+          .filter({ hasText: "Wreck Trip — Spiegel Grove" })
+          .getByRole("link", { name: "Wreck Trip — Spiegel Grove" })
+          .click();
+        await page.getByRole("heading", { name: "Join the wait list" }).waitFor();
+        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await capture(page, "public-trip-full", scheme);
+      });
+
       test(`the pitch's door opens onto the whole briefing (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis");
         await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
@@ -5066,6 +5085,13 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByText("Change the days it runs").click();
         await page.getByRole("group", { name: "Repeats on" }).waitFor();
         await capture(page, "trip-repeating-cadence", scheme);
+
+        // And what a diver reads on the same departure: the header's run line,
+        // "Runs every … · next …" (fourth UX review, item 35).
+        await page.goto(publicTripUrl(page.url().split(/[?#]/)[0] ?? page.url()));
+        await page.getByText(/^Runs every /).waitFor();
+        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await capture(page, "public-trip-run-line", scheme);
       });
 
       // The blow-out confirm — the one deliberate step between the captain's
