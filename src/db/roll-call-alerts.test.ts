@@ -21,8 +21,20 @@ afterEach(() => {
   pushFault.throws = false;
 });
 
-import { bookings, people, personRoles, rollCallEvents, shops, trips } from "./schema";
+import {
+  bookings,
+  people,
+  personRoles,
+  rollCallCrewEvents,
+  rollCallEvents,
+  shopShoreAlertTokens,
+  shops,
+  tripAssignments,
+  trips,
+  userAccounts,
+} from "./schema";
 import { setShopShoreAlertContact } from "./shops";
+import { resolveShoreAlertStopToken } from "./shore-alert-tokens";
 import { createTrip, listStaff } from "./trips";
 
 /**
@@ -117,8 +129,8 @@ describe("sendStaleRollCallAlerts", () => {
       expect(notification).toMatchObject({
         tripId: trip.id,
         diveNumber: 1,
-        unaccounted: 1,
-        missing: false,
+        notBackAboard: 0,
+        awaiting: 1,
       });
       expect(notification.rollCallUrl).toBe(
         `${ORIGIN}/shop/${ctx.shop.slug}/trips/${trip.id}/manifest?checkpoint=after_dive_1`,
@@ -144,7 +156,53 @@ describe("sendStaleRollCallAlerts", () => {
     await mark("after_dive_1", "not_boarded");
     const { sent, provider } = recorder();
     await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider });
-    expect(sent[0]).toMatchObject({ kind: "roll_call_stale", missing: true, unaccounted: 1 });
+    expect(sent[0]).toMatchObject({ kind: "roll_call_stale", notBackAboard: 1, awaiting: 0 });
+  });
+
+  // EAP review on H-118: the alert counted one row and said its one number.
+  // One diver recorded not back aboard, another and a divemaster with no
+  // result: "1 recorded not back aboard; 2 more have no result yet".
+  it("sums diver and crew rows, and keeps the two counts apart", async () => {
+    const { db, shop, trip, mark } = await departure(2 * HOUR);
+    await mark("after_dive_1", "not_boarded");
+    const [second] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Bea Soto" })
+      .returning();
+    const [staff, crewMember] = await listStaff(db, shop.id);
+    if (!second || !staff || !crewMember) throw new Error("fixture people missing");
+    const [seat] = await db
+      .insert(bookings)
+      .values({ bookedAs: "diver", shopId: shop.id, tripId: trip.id, personId: second.id })
+      .returning();
+    if (!seat) throw new Error("booking insert failed");
+    const boardedAt = new Date(trip.endsAt.getTime() - 3 * HOUR);
+    await db.insert(rollCallEvents).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: seat.id,
+      recordedByPersonId: staff.person.id,
+      status: "boarded",
+      checkpoint: "departure",
+      occurredAt: boardedAt,
+    });
+    await db.insert(tripAssignments).values({ tripId: trip.id, personId: crewMember.person.id });
+    await db.insert(rollCallCrewEvents).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: crewMember.person.id,
+      recordedByPersonId: staff.person.id,
+      status: "boarded",
+      checkpoint: "departure",
+      occurredAt: boardedAt,
+    });
+    const { sent, provider } = recorder();
+    await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider });
+    const owners = sent.filter((notification) => notification.kind === "roll_call_stale");
+    expect(owners.length).toBeGreaterThan(0);
+    for (const notification of owners) {
+      expect(notification).toMatchObject({ diveNumber: 1, notBackAboard: 1, awaiting: 2 });
+    }
   });
 
   it("stays quiet once everyone is counted back aboard", async () => {
@@ -248,41 +306,65 @@ describe("sendStaleRollCallAlerts", () => {
 
   describe("the shore contact (H-118)", () => {
     const SHORE = "shore@example.com";
-    async function consentedShore() {
+    async function consentedShore(confirmed = true) {
       const [staff] = await listStaff(ctx.db, ctx.shop.id);
       if (!staff) throw new Error("fixture staff missing");
       await setShopShoreAlertContact(ctx.db, ctx.shop.id, {
         email: SHORE,
         consentAt: new Date(NOW.getTime() - 48 * HOUR),
         consentByPersonId: staff.person.id,
+        confirmedAt: confirmed ? new Date(NOW.getTime() - 47 * HOUR) : null,
       });
     }
     const toShore = (sent: Notification[]) =>
       sent.filter((notification) => notification.kind === "roll_call_stale_shore");
+    const claims = async (tripId: string) => {
+      const [row] = await ctx.db
+        .select({ owners: trips.rollCallAlertedAt, shore: trips.rollCallShoreAlertedAt })
+        .from(trips)
+        .where(eq(trips.id, tripId));
+      return row;
+    };
 
-    it("emails a consented shore contact once, with no link and nobody named", async () => {
+    it("emails a confirmed shore contact once, with a stop link and nobody named", async () => {
       await consentedShore();
+      await ctx.db
+        .update(shops)
+        .set({ contactPhone: "+1 305 555 0100" })
+        .where(eq(shops.id, ctx.shop.id));
       const { db, trip } = await departure(2 * HOUR);
       const { sent, provider } = recorder();
       const summary = await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider });
       expect(summary).toMatchObject({ alerted: 1, shoreEmails: 1 });
       const shore = toShore(sent);
       expect(shore).toHaveLength(1);
-      expect(shore[0]).toMatchObject({
+      const [message] = shore;
+      if (message?.kind !== "roll_call_stale_shore") throw new Error("expected the shore alert");
+      expect(message).toMatchObject({
         to: SHORE,
         tripId: trip.id,
         diveNumber: 1,
-        unaccounted: 1,
-        missing: false,
+        notBackAboard: 0,
+        awaiting: 1,
         shopName: ctx.shop.name,
+        shopPhone: "+1 305 555 0100",
         locale: ctx.shop.defaultLocale,
+        alertedAt: NOW,
       });
-      const payload = JSON.stringify(shore[0]);
+      const payload = JSON.stringify(message);
       expect(payload).not.toContain("Ana Ruiz");
-      expect(payload).not.toContain(ORIGIN);
+      expect(payload).not.toContain("/shop/");
       expect(payload).not.toContain("personId");
+      // The one link stops these alerts, and resolves to this shop.
+      expect(message.stopUrl.startsWith(`${ORIGIN}/unsubscribe/`)).toBe(true);
+      const token = message.stopUrl.slice(`${ORIGIN}/unsubscribe/`.length);
+      expect(await resolveShoreAlertStopToken(db, token)).toMatchObject({
+        shopId: ctx.shop.id,
+        alreadyStopped: false,
+      });
       // The owners still hear, as before.
       expect(sent.some((notification) => notification.kind === "roll_call_stale")).toBe(true);
+      expect(await claims(trip.id)).toEqual({ owners: NOW, shore: NOW });
 
       const again = recorder();
       await sendStaleRollCallAlerts(db, {
@@ -302,7 +384,17 @@ describe("sendStaleRollCallAlerts", () => {
       expect(toShore(sent)).toEqual([]);
     });
 
-    it("cannot hold an address without its consent", async () => {
+    // Security review on H-118: nothing goes to an address its inbox has not confirmed.
+    it("sends nothing to an address its inbox has not confirmed", async () => {
+      await consentedShore(false);
+      const { db } = await departure(2 * HOUR);
+      const { sent, provider } = recorder();
+      await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider });
+      expect(toShore(sent)).toEqual([]);
+      expect(await db.select().from(shopShoreAlertTokens)).toEqual([]);
+    });
+
+    it("cannot hold an address without its consent, or a confirmation without an address", async () => {
       const [staff] = await listStaff(ctx.db, ctx.shop.id);
       if (!staff) throw new Error("fixture staff missing");
       // Each refusal in a savepoint of its own, so the next one is asked.
@@ -315,24 +407,57 @@ describe("sendStaleRollCallAlerts", () => {
       await expect(
         refused({ shoreAlertConsentAt: NOW, shoreAlertConsentByPersonId: staff.person.id }),
       ).rejects.toThrow();
+      await expect(refused({ shoreAlertConfirmedAt: NOW })).rejects.toThrow();
     });
 
-    it("keeps the claim when only the shore contact was reached", async () => {
+    // Owner review #2 on H-118: Today's "Owners alerted" must stay true.
+    it("never marks the owners alerted when only the shore contact was reached", async () => {
       await consentedShore();
       const { db, trip } = await departure(2 * HOUR);
       const { sent, provider } = recorder("failed", SHORE);
       expect(
         await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider }),
-      ).toMatchObject({ alerted: 1, released: 0, shoreEmails: 1 });
+      ).toMatchObject({ alerted: 1, released: 1, shoreEmails: 1 });
       expect(toShore(sent)).toHaveLength(1);
-      const [row] = await db
-        .select({ alertedAt: trips.rollCallAlertedAt })
-        .from(trips)
-        .where(eq(trips.id, trip.id));
-      expect(row?.alertedAt).toEqual(NOW);
+      expect(await claims(trip.id)).toEqual({ owners: null, shore: NOW });
+
+      // The owners are asked again next pass; the shore contact is not.
+      const retry = recorder();
+      const later = new Date(NOW.getTime() + HOUR);
+      await sendStaleRollCallAlerts(db, { now: later, origin: ORIGIN, provider: retry.provider });
+      expect(toShore(retry.sent)).toEqual([]);
+      expect(retry.sent.some((notification) => notification.kind === "roll_call_stale")).toBe(true);
+      expect(await claims(trip.id)).toEqual({ owners: later, shore: NOW });
     });
 
-    it("gives the claim back when the shore contact was not reached either", async () => {
+    // EAP review #3 on H-118: a failed shore send is tried again next pass.
+    it("tries the shore contact again next pass when only their send failed", async () => {
+      await consentedShore();
+      const { db, trip } = await departure(2 * HOUR);
+      const failingShore: NotificationProvider = {
+        async send(notification) {
+          return notification.kind === "roll_call_stale_shore"
+            ? { status: "failed", retryable: true, errorCode: "throttled" }
+            : { status: "sent", providerMessageId: "msg" };
+        },
+      };
+      expect(
+        await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider: failingShore }),
+      ).toMatchObject({ alerted: 1, shoreEmails: 0 });
+      expect(await claims(trip.id)).toEqual({ owners: NOW, shore: null });
+
+      const retry = recorder();
+      const later = new Date(NOW.getTime() + HOUR);
+      expect(
+        await sendStaleRollCallAlerts(db, { now: later, origin: ORIGIN, provider: retry.provider }),
+      ).toMatchObject({ shoreEmails: 1 });
+      expect(retry.sent.map((notification) => notification.kind)).toEqual([
+        "roll_call_stale_shore",
+      ]);
+      expect(await claims(trip.id)).toEqual({ owners: NOW, shore: later });
+    });
+
+    it("gives both claims back when nobody was reached", async () => {
       await consentedShore();
       const { db, trip } = await departure(2 * HOUR);
       const { sent, provider } = recorder("failed");
@@ -340,11 +465,7 @@ describe("sendStaleRollCallAlerts", () => {
         await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider }),
       ).toMatchObject({ alerted: 0, released: 1 });
       expect(toShore(sent)).toHaveLength(1);
-      const [row] = await db
-        .select({ alertedAt: trips.rollCallAlertedAt })
-        .from(trips)
-        .where(eq(trips.id, trip.id));
-      expect(row?.alertedAt).toBeNull();
+      expect(await claims(trip.id)).toEqual({ owners: null, shore: null });
     });
 
     it("never tells the shore contact about a rehearsal, a canceled departure or a demo", async () => {
@@ -367,24 +488,52 @@ describe("sendStaleRollCallAlerts", () => {
       expect(second.sent).toEqual([]);
     });
 
-    it("does not send a second copy to an owner who is also the shore contact", async () => {
-      const { db } = await departure(2 * HOUR);
+    async function ownerIsShore() {
       const owners = await ownerEmails();
-      const [ownerId] = [...owners];
-      const probe = recorder();
-      await sendStaleRollCallAlerts(db, { now: NOW, origin: ORIGIN, provider: probe.provider });
-      const ownerAddress = probe.sent.find((n) => n.kind === "roll_call_stale")?.to;
-      if (!ownerAddress || !ownerId) throw new Error("expected an owner's alert");
+      const [account] = await ctx.db
+        .select({ personId: userAccounts.personId, email: userAccounts.email })
+        .from(userAccounts)
+        .where(and(inArray(userAccounts.personId, [...owners]), eq(userAccounts.status, "active")))
+        .limit(1);
+      const ownerAddress = account?.email;
+      const ownerId = account?.personId;
+      if (!ownerAddress || !ownerId) throw new Error("expected an owner with a login");
       await setShopShoreAlertContact(ctx.db, ctx.shop.id, {
         email: ownerAddress.toUpperCase(),
         consentAt: NOW,
         consentByPersonId: ownerId,
+        confirmedAt: NOW,
       });
+      return ownerAddress;
+    }
+
+    it("does not send a second copy to an owner who is also the shore contact", async () => {
+      const ownerAddress = await ownerIsShore();
       const next = await departure(2 * HOUR, { title: "Second boat" });
       const { sent, provider } = recorder();
       await sendStaleRollCallAlerts(next.db, { now: NOW, origin: ORIGIN, provider });
       expect(toShore(sent)).toEqual([]);
       expect(sent.filter((n) => n.to.toLowerCase() === ownerAddress.toLowerCase())).toHaveLength(1);
+      expect(await claims(next.trip.id)).toEqual({ owners: NOW, shore: NOW });
+    });
+
+    // Owner review #9 on H-118: the owners' copy failing must not swallow the shore copy.
+    it("still sends the shore copy when that owner's own copy failed", async () => {
+      const ownerAddress = await ownerIsShore();
+      const next = await departure(2 * HOUR, { title: "Third boat" });
+      const sent: Notification[] = [];
+      const provider: NotificationProvider = {
+        async send(notification) {
+          sent.push(notification);
+          return notification.kind === "roll_call_stale" &&
+            notification.to.toLowerCase() === ownerAddress.toLowerCase()
+            ? { status: "failed", retryable: false, errorCode: "test" }
+            : { status: "sent", providerMessageId: `msg-${sent.length}` };
+        },
+      };
+      await sendStaleRollCallAlerts(next.db, { now: NOW, origin: ORIGIN, provider });
+      expect(toShore(sent)).toHaveLength(1);
+      expect((await claims(next.trip.id))?.shore).toEqual(NOW);
     });
   });
 });

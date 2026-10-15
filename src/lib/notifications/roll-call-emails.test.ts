@@ -7,7 +7,11 @@ import {
   notificationTripTitle,
 } from "./kinds";
 import { messageFor } from "./render";
-import { rollCallStaleEmail, rollCallStaleShoreEmail } from "./roll-call-emails";
+import {
+  rollCallStaleEmail,
+  rollCallStaleShoreEmail,
+  shoreAlertConfirmationEmail,
+} from "./roll-call-emails";
 
 const base = {
   locale: "en-US" as const,
@@ -15,8 +19,8 @@ const base = {
   shopName: "Blue <Mantis>",
   tripTitle: "Two-Tank Reef",
   diveNumber: 2,
-  unaccounted: 2,
-  missing: false,
+  notBackAboard: 0,
+  awaiting: 2,
   rollCallUrl: "https://diveday.example/shop/blue/trips/t/manifest?checkpoint=after_dive_2",
   endsAt: new Date("2026-10-14T20:00:00Z"),
   timezone: "America/New_York",
@@ -31,15 +35,29 @@ describe("rollCallStaleEmail", () => {
     expect(email.subject).toBe("Blue <Mantis>: roll call still open on Two-Tank Reef");
     expect(email.text).toContain("Hi Ana");
     expect(text).toContain(
-      "The roll call after dive 2 on Two-Tank Reef is still open after the boat was due back at 4:00 PM EDT. 2 people are not marked aboard.",
+      "The roll call after dive 2 on Two-Tank Reef is still open after the boat was due back at 4:00 PM EDT. 2 people have no result yet: nobody has recorded them missing or back aboard.",
     );
+    expect(text).not.toContain("not marked");
     expect(email.html).toContain(`href="${base.rollCallUrl.replaceAll("&", "&amp;")}"`);
   });
 
   it("says a stated missing person in its own words", () => {
-    const email = rollCallStaleEmail({ ...base, missing: true, unaccounted: 1 });
+    const email = rollCallStaleEmail({ ...base, notBackAboard: 1, awaiting: 0 });
     expect(email.text.replaceAll("\u00a0", " ")).toContain(
-      "On Two-Tank Reef, 1 person is recorded not back aboard after dive 2, after the boat was due back at 4:00 PM EDT.",
+      "is still open after the boat was due back at 4:00 PM EDT. 1 person is recorded not back aboard.",
+    );
+  });
+
+  // Dive-domain review (EAP) on H-118: one missing diver beside five with no
+  // result must not read as "1 person".
+  it("says both numbers when some are recorded missing and more have no result", () => {
+    const email = rollCallStaleEmail({ ...base, notBackAboard: 1, awaiting: 6 });
+    expect(email.text).toContain(
+      "1 person is recorded not back aboard; 6 more have no result yet: nobody has recorded them missing or back aboard.",
+    );
+    const es = rollCallStaleEmail({ ...base, locale: "es-ES", notBackAboard: 2, awaiting: 1 });
+    expect(es.text).toContain(
+      "2 personas constan como no de vuelta a bordo; 1 más sigue sin resultado",
     );
   });
 
@@ -112,7 +130,7 @@ describe("the roll_call_stale kind", () => {
         "diveNumber",
         "kind",
         "locale",
-        "missing",
+        "notBackAboard",
         "personId",
         "recipientName",
         "rollCallUrl",
@@ -122,7 +140,7 @@ describe("the roll_call_stale kind", () => {
         "tripId",
         "timezone",
         "tripTitle",
-        "unaccounted",
+        "awaiting",
       ].sort(),
     );
   });
@@ -143,61 +161,124 @@ describe("the roll_call_stale kind", () => {
 
 /** H-118: the shore contact's copy, to somebody outside the shop's accounts. */
 describe("the roll_call_stale_shore kind", () => {
-  const { recipientName: _name, rollCallUrl: _url, ...shore } = base;
+  const { recipientName: _name, rollCallUrl: _url, ...facts } = base;
+  const shore = {
+    ...facts,
+    shopPhone: "+1 305 555 0100",
+    alertedAt: new Date("2026-10-14T21:06:00Z"),
+    stopUrl: "https://diveday.example/unsubscribe/stop-token",
+  };
   const notification = notificationSchema.parse({
     kind: "roll_call_stale_shore",
     shopId: "11111111-1111-4111-8111-111111111111",
     tripId: "33333333-3333-4333-8333-333333333333",
     to: "shore@example.com",
     ...shore,
-    alertedAt: new Date("2026-10-14T17:00:00Z"),
   });
+  const plain = (text: string) => text.replaceAll("\u00a0", " ");
 
-  it("names the shop, the departure, the dive, the count and the time", () => {
-    const email = rollCallStaleShoreEmail(shore);
+  it("names the shop, the departure, the dive, both counts and the time", () => {
+    const email = rollCallStaleShoreEmail({ ...shore, notBackAboard: 1, awaiting: 2 });
     expect(email.subject).toBe("Blue <Mantis>: roll call still open on Two-Tank Reef");
-    expect(email.text.replaceAll("\u00a0", " ")).toContain(
-      "The roll call after dive 2 on Two-Tank Reef is still open after the boat was due back at 4:00 PM EDT. 2 people are not marked aboard.",
+    expect(plain(email.text)).toContain(
+      "The roll call after dive 2 on Two-Tank Reef is still open after the boat was due back at 4:00 PM EDT. 1 person is recorded not back aboard; 2 more have no result yet",
     );
     expect(email.text).toContain("Blue <Mantis> lists you as its shore contact");
     expect(email.html).toContain("Blue &lt;Mantis&gt; lists you");
   });
 
-  it("carries no link, no greeting by name and no person", () => {
+  // Dive-domain review (EAP #2): the reader has to know what to do, when this
+  // was true, and that nothing follows it.
+  it("says to call the shop first, on its number, when it was sent, and that nothing follows", () => {
+    const text = plain(rollCallStaleShoreEmail(shore).text);
+    expect(text).toContain("Call Blue <Mantis> first, on +1 305 555 0100.");
+    expect(text).toContain("Sent Oct 14, 5:06 PM EDT.");
+    expect(text).toContain("the only message you will get about this departure");
+    const noPhone = plain(rollCallStaleShoreEmail({ ...shore, shopPhone: null }).text);
+    expect(noPhone).toContain("Call Blue <Mantis> first.");
+  });
+
+  it("carries one link, the one that stops these alerts, and no person", () => {
     const email = rollCallStaleShoreEmail(shore);
-    expect(email.html).not.toContain("href");
-    expect(email.text).not.toMatch(/https?:/);
+    expect(email.html.match(/href=/g)).toHaveLength(1);
+    expect(email.html).toContain(`href="${shore.stopUrl}"`);
+    expect(email.text.match(/https?:\/\/\S+/g)).toEqual([shore.stopUrl]);
     expect(email.text).not.toContain("Ana");
     expect(Object.keys(notification).sort()).toEqual(
       [
         "alertedAt",
+        "awaiting",
         "endsAt",
         "diveNumber",
         "kind",
         "locale",
-        "missing",
+        "notBackAboard",
         "shopId",
         "shopName",
+        "shopPhone",
+        "stopUrl",
         "to",
         "tripId",
         "timezone",
         "tripTitle",
-        "unaccounted",
       ].sort(),
     );
     expect(messageFor(notification).text).not.toContain("Ana");
   });
 
   it("says a stated missing person, in the shop's language", () => {
-    const email = rollCallStaleShoreEmail({ ...shore, locale: "es-ES", missing: true });
+    const email = rollCallStaleShoreEmail({
+      ...shore,
+      locale: "es-ES",
+      notBackAboard: 1,
+      awaiting: 0,
+    });
     expect(email.subject).toBe("Blue <Mantis>: pase de lista aún abierto en Two-Tank Reef");
-    expect(email.text).toContain("constan como no de vuelta a bordo");
+    expect(email.text).toContain("consta como no de vuelta a bordo");
     expect(email.text).toContain("contacto en tierra");
+    expect(email.text).toContain("Llama primero a Blue <Mantis>");
   });
 
   it("goes once per departure, and is never queued to arrive late", () => {
     expect(notificationIdempotencyKey(notification)).toBe(
       "roll-call-stale-shore/33333333-3333-4333-8333-333333333333",
+    );
+    expect(notificationIsQueueable(notification)).toBe(false);
+  });
+});
+
+/** H-118 review: the link a saved shore address receives before any alert. */
+describe("the shore_alert_confirmation kind", () => {
+  const input = {
+    locale: "en-US" as const,
+    shopName: "Blue <Mantis>",
+    confirmUrl: "https://diveday.example/confirm-contact/abc",
+    expiresAt: new Date("2026-10-22T16:00:00Z"),
+    timezone: "America/New_York",
+  };
+
+  it("says what agreeing means, links the confirm page and says how to ignore it", () => {
+    const email = shoreAlertConfirmationEmail(input);
+    expect(email.subject).toBe("Blue <Mantis> asks you to be its shore contact");
+    expect(email.text).toContain(input.confirmUrl);
+    expect(email.text).toContain("roll call");
+    expect(email.text).toContain("ignore");
+    expect(email.html).toContain("Blue &lt;Mantis&gt;");
+    expect(shoreAlertConfirmationEmail({ ...input, locale: "es-ES" }).subject).toBe(
+      "Blue <Mantis> te pide ser su contacto en tierra",
+    );
+  });
+
+  it("goes once per link, and is never queued", () => {
+    const notification = notificationSchema.parse({
+      kind: "shore_alert_confirmation",
+      shopId: "11111111-1111-4111-8111-111111111111",
+      tokenId: "44444444-4444-4444-8444-444444444444",
+      to: "shore@example.com",
+      ...input,
+    });
+    expect(notificationIdempotencyKey(notification)).toBe(
+      "shore-alert-confirmation/44444444-4444-4444-8444-444444444444",
     );
     expect(notificationIsQueueable(notification)).toBe(false);
   });

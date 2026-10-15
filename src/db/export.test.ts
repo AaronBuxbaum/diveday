@@ -326,6 +326,7 @@ const EXCLUDED_TABLES = [
   "crew_notices", // crew news waiting to be told, and the stamp of when it was — delivery plumbing; the crew list itself is exported as trip_assignments
   "weekly_digest_sends", // the Monday email's send claims and opt-out link hashes — delivery plumbing and bearer credentials, never exported
   "shop_contact_email_confirmation_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
+  "shop_shore_alert_tokens", // the shore contact's confirm and stop links (H-118): bearer credentials, same reasoning
   // The shop's own Meta access token (sealed) plus the provider linkage around
   // it. Never exported, for both reasons already on this list: it is a live
   // credential like user_accounts, and a phone number id is provider linkage
@@ -393,18 +394,17 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // Setup-checklist progress, not a shop record (issue #712): a shop
     // restoring from a backup *should* be asked about its units again.
     "units_confirmed_at",
-    // Proof that the shop controls its contact address, which is what lets it
-    // become the Reply-To on mail DiveDay sends (issue #1288). The proof is
-    // DiveDay's own, not a fact the shop entered: a restored shop is asked to
-    // confirm again, and a CSV cannot vouch for an address on its behalf.
+    // Proof the shop controls its contact address, so it may be Reply-To (issue
+    // #1288): DiveDay's own, so a restored shop is asked to confirm again.
     "contact_email_confirmed_at",
     // The inbound reply address's routing token (ADR 20260907-two-way-inbox):
     // a credential in all but name, so a restored shop is minted a fresh one.
     "inbound_email_token",
-    // H-118: a consent to be emailed, recorded here; a CSV cannot vouch for it.
+    // H-118: a consent and its confirmation, recorded here; a CSV cannot vouch for them.
     "shore_alert_email",
     "shore_alert_consent_at",
     "shore_alert_consent_by_person_id",
+    "shore_alert_confirmed_at",
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
   trip_lenses: ["shop_id"],
@@ -434,16 +434,15 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "recap_shoutout", // recap copy travels with recap_photos.csv
     "recap_auto_send_paused", // auto-send countdown / pause is ephemeral operational state
     "recap_auto_send_at",
-    // When this installation alerted the owners about a stale after-dive roll
-    // call: once-per-departure send state, like `recap_auto_send_at`. The
-    // roll-call events it was about travel in their own file.
+    // When this installation alerted the owners, and the shore contact (H-118),
+    // about a stale after-dive roll call: once-per-departure send state, like
+    // `recap_auto_send_at`. The roll-call events travel in their own file.
     "roll_call_alerted_at",
+    "roll_call_shore_alerted_at",
     // How many times this installation has re-issued the calendar events whose
-    // UIDs are `trip-<uuid>@diveday` — a counter about *our* published
-    // revisions, not a fact the shop entered. A re-imported bundle mints new
-    // trip ids and therefore new UIDs, so no subscriber anywhere holds a
-    // revision to compare it against and the number would mean nothing on the
-    // far side. Same class as `pending_checkout_intent_id`.
+    // UIDs are `trip-<uuid>@diveday`: a counter about *our* published revisions.
+    // A re-imported bundle mints new trip ids and so new UIDs, and no subscriber
+    // holds a revision to compare. Same class as `pending_checkout_intent_id`.
     "revision",
     // A pending "the divers still have the old time" between a move and its
     // notice: in-flight messaging state on this installation, cleared by the

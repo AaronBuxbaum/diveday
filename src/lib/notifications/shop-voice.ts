@@ -49,8 +49,10 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "lost_item_found":
     case "course_certified":
     case "course_inquiry_received":
-    // The shore contact is told by the shop it agreed to hear from (H-118).
+    // The shore contact is asked, and later told, by the shop it agreed to
+    // hear from (H-118).
     case "roll_call_stale_shore":
+    case "shore_alert_confirmation":
       return notification.shopName;
     case "welcome":
     case "email_verification":

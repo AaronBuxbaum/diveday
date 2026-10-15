@@ -123,6 +123,8 @@ import {
   reviewReplies,
   rollCallCrewEvents,
   rollCallEvents,
+  shopShoreAlertTokens,
+  shops,
   specialtyCertifications,
   staffCredentials,
   staffReplies,
@@ -2014,6 +2016,30 @@ async function scrubPiiBlob(
       )
       .returning({ id: notificationSendQueue.id });
     logFuzzyMatch(ctx, "send_queue_address", dropped.length);
+  }
+  // **The shop's shore contact** (H-118 security review). A shop can name
+  // somebody it also has as a diver as the address its stale roll-call alerts
+  // go to. That address is the diver's, held in the shop's settings with the
+  // consent and confirmation that vouch for it, and in the links minted for
+  // it; erasing the diver takes all of it, and the shop has no shore contact
+  // until it saves one again. By address only, case-insensitively, the same
+  // handle every other address sweep here uses.
+  if (ctx.email) {
+    const address = ctx.email.toLowerCase();
+    const cleared = await tx
+      .update(shops)
+      .set({
+        shoreAlertEmail: null,
+        shoreAlertConsentAt: null,
+        shoreAlertConsentByPersonId: null,
+        shoreAlertConfirmedAt: null,
+      })
+      .where(and(eq(shops.id, shopId), sql`lower(${shops.shoreAlertEmail}) = ${address}`))
+      .returning({ id: shops.id });
+    logFuzzyMatch(ctx, "shore_alert_email", cleared.length);
+    await tx
+      .delete(shopShoreAlertTokens)
+      .where(and(eq(shopShoreAlertTokens.shopId, shopId), eq(shopShoreAlertTokens.email, address)));
   }
   // The number, for the lead that gave one and no address. Runs after the
   // address sweep so the count is the rows the number reached that the address

@@ -1,6 +1,6 @@
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
-import { formatTimeTz } from "@/lib/format";
+import { formatDateTimeTz, formatTimeTz } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
 import { firstNameOf } from "@/lib/person-name";
 import { emailButton, type NotificationEmail } from "./email";
@@ -16,34 +16,59 @@ export type RollCallStaleEmailInput = {
   shopName: string;
   tripTitle: string;
   diveNumber: number;
-  unaccounted: number;
-  missing: boolean;
+  /** Recorded not back aboard, across the departure's diver and crew rows. */
+  notBackAboard: number;
+  /** No result yet: nobody has recorded them missing or back aboard. */
+  awaiting: number;
   rollCallUrl: string;
   /** When the boat was due back: the departure's end, said in the shop's zone. */
   endsAt: Date;
   timezone: string;
 };
 
+type Translator = ReturnType<typeof diverTranslator>;
+
 /**
- * "The roll call after dive 2 on Two-Tank Reef is still open", and the roll
- * call. A count and a link; who is unaccounted for stays behind the manifest's
- * sign-in (`src/lib/notifications/kinds.ts`).
+ * "The roll call after dive 2 on Two-Tank Reef is still open after the boat
+ * was due back at 4:00 PM EDT", then both counts in their own words: the ones
+ * recorded not back aboard, and the ones nobody has recorded either way (EAP
+ * review on H-118). Never one number that could mean either.
+ */
+function staleSentences(
+  t: Translator,
+  input: Pick<
+    RollCallStaleEmailInput,
+    "locale" | "tripTitle" | "diveNumber" | "notBackAboard" | "awaiting" | "endsAt" | "timezone"
+  >,
+): string {
+  const open = t("notifications.rollCallStale.body", {
+    dive: input.diveNumber,
+    tripTitle: input.tripTitle,
+    time: formatTimeTz(input.endsAt, input.locale, input.timezone),
+  });
+  const counts =
+    input.notBackAboard > 0 && input.awaiting > 0
+      ? t("notifications.rollCallStale.countsBoth", {
+          missing: input.notBackAboard,
+          awaiting: input.awaiting,
+        })
+      : input.notBackAboard > 0
+        ? t("notifications.rollCallStale.countsMissing", { missing: input.notBackAboard })
+        : t("notifications.rollCallStale.countsAwaiting", { awaiting: input.awaiting });
+  return `${open} ${counts}`;
+}
+
+/**
+ * The owners' alert: the sentences above and the roll call. A count and a
+ * link; who is unaccounted for stays behind the manifest's sign-in
+ * (`src/lib/notifications/kinds.ts`).
  */
 export function rollCallStaleEmail(input: RollCallStaleEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.recipientName, t("notifications.common.genericName"));
   const greetingText = t("notifications.common.greeting", { firstName });
   const greetingHtml = t("notifications.common.greeting", { firstName: escapeHtml(firstName) });
-  const values = {
-    count: input.unaccounted,
-    dive: input.diveNumber,
-    tripTitle: input.tripTitle,
-    time: formatTimeTz(input.endsAt, input.locale, input.timezone),
-  };
-  const body = t(
-    input.missing ? "notifications.rollCallStale.bodyMissing" : "notifications.rollCallStale.body",
-    values,
-  );
+  const body = staleSentences(t, input);
   const open = t("notifications.rollCallStale.open");
   return {
     subject: t("notifications.rollCallStale.subject", {
@@ -55,41 +80,75 @@ export function rollCallStaleEmail(input: RollCallStaleEmailInput): Notification
   };
 }
 
-export type RollCallStaleShoreEmailInput = {
-  locale: DiverLocale;
-  shopName: string;
-  tripTitle: string;
-  diveNumber: number;
-  unaccounted: number;
-  missing: boolean;
-  endsAt: Date;
-  timezone: string;
+export type RollCallStaleShoreEmailInput = Omit<
+  RollCallStaleEmailInput,
+  "recipientName" | "rollCallUrl"
+> & {
+  /** The shop's own phone, or null when it has none on file. */
+  shopPhone: string | null;
+  /** When the pass ran. */
+  alertedAt: Date;
+  /** The link that takes this address off the shop. */
+  stopUrl: string;
 };
 
 /**
  * The shore contact's copy (H-118): the same facts as the owners', in the
- * shop's language, with no greeting by name, no link and nobody aboard named.
- * It says why it came, so a reader who forgot agreeing knows whom to ask.
+ * shop's language, with no greeting by name and nobody aboard named. Then what
+ * to do (call the shop first, on its number when it has one), when this was
+ * sent and that nothing follows it, why it came, and the one link: the one
+ * that stops these alerts (EAP and security reviews on H-118).
  */
 export function rollCallStaleShoreEmail(input: RollCallStaleShoreEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const values = {
-    count: input.unaccounted,
-    dive: input.diveNumber,
-    tripTitle: input.tripTitle,
-    time: formatTimeTz(input.endsAt, input.locale, input.timezone),
-  };
-  const body = t(
-    input.missing ? "notifications.rollCallStale.bodyMissing" : "notifications.rollCallStale.body",
-    values,
-  );
+  const body = staleSentences(t, input);
+  const action = input.shopPhone
+    ? t("notifications.rollCallStale.shoreCallPhone", {
+        shopName: input.shopName,
+        phone: input.shopPhone,
+      })
+    : t("notifications.rollCallStale.shoreCall", { shopName: input.shopName });
+  const sent = t("notifications.rollCallStale.shoreSent", {
+    when: formatDateTimeTz(input.alertedAt, input.locale, input.timezone),
+  });
   const why = t("notifications.rollCallStale.shoreWhy", { shopName: input.shopName });
+  const stop = t("notifications.rollCallStale.shoreStop");
+  const paragraphs = [body, action, sent, why];
   return {
     subject: t("notifications.rollCallStale.subject", {
       shopName: input.shopName,
       tripTitle: input.tripTitle,
     }),
-    text: `${body}\n\n${why}\n`,
-    html: `<p>${escapeHtml(body)}</p><p>${escapeHtml(why)}</p>`,
+    text: `${paragraphs.join("\n\n")}\n\n${stop}:\n${input.stopUrl}\n`,
+    html: `${paragraphs.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}<p><a href="${escapeHtml(input.stopUrl)}">${escapeHtml(stop)}</a></p>`,
+  };
+}
+
+export type ShoreAlertConfirmationEmailInput = {
+  locale: DiverLocale;
+  shopName: string;
+  confirmUrl: string;
+  expiresAt: Date;
+  timezone: string;
+};
+
+/**
+ * To the address a shop saved as its shore contact, before anything else
+ * goes to it (H-118 review): what agreeing means, one button, the expiry, and
+ * that ignoring it sends nothing.
+ */
+export function shoreAlertConfirmationEmail(
+  input: ShoreAlertConfirmationEmailInput,
+): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const body = t("notifications.shoreAlertConfirmation.body", { shopName: input.shopName });
+  const confirm = t("notifications.shoreAlertConfirmation.confirm");
+  const expiry = t("notifications.shoreAlertConfirmation.expiry", {
+    expiresAt: formatDateTimeTz(input.expiresAt, input.locale, input.timezone),
+  });
+  return {
+    subject: t("notifications.shoreAlertConfirmation.subject", { shopName: input.shopName }),
+    text: `${body}\n\n${confirm}:\n${input.confirmUrl}\n\n${expiry}\n`,
+    html: `<p>${escapeHtml(body)}</p>${emailButton(input.confirmUrl, confirm)}<p>${escapeHtml(expiry)}</p>`,
   };
 }

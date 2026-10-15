@@ -41,7 +41,11 @@ import {
   wrapEmailHtml,
 } from "./email";
 import type { Notification } from "./kinds";
-import { rollCallStaleEmail, rollCallStaleShoreEmail } from "./roll-call-emails";
+import {
+  rollCallStaleEmail,
+  rollCallStaleShoreEmail,
+  shoreAlertConfirmationEmail,
+} from "./roll-call-emails";
 import { shopVoiceOf } from "./shop-voice";
 import { weeklyDigestEmail } from "./weekly-digest-email";
 import { gearServiceDueEmail, workOrderReadyEmail } from "./work-order-emails";
@@ -150,6 +154,9 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   }
   if (notification.kind === "roll_call_stale") return rollCallStaleEmail(notification);
   if (notification.kind === "roll_call_stale_shore") return rollCallStaleShoreEmail(notification);
+  if (notification.kind === "shore_alert_confirmation") {
+    return shoreAlertConfirmationEmail(notification);
+  }
   if (notification.kind === "departure_note") return departureNoteEmail(notification);
   if (notification.kind === "lost_item_found") return lostItemEmail(notification);
   if (notification.kind === "course_certified") return courseCertifiedEmail(notification);

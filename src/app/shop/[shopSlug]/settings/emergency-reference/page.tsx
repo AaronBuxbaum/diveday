@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { canPersonManageShopSettings } from "@/db/authz";
+import { getDb } from "@/db/client";
+import { shoreAlertConsentRecorderName } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
@@ -39,6 +41,7 @@ export default async function EmergencyReferenceSettingsPage({
   });
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
+  const consentByName = await shoreAlertConsentRecorderName(await getDb(), shop);
 
   return (
     <SettingsEditorPage
@@ -48,7 +51,7 @@ export default async function EmergencyReferenceSettingsPage({
       description={t("settings.main.emergency.intro")}
       banner={noticeFromParam(notice, emergencyReferenceNoticeMessages(t))}
     >
-      <EmergencyReferenceForm shop={shop} t={t} locale={locale} />
+      <EmergencyReferenceForm shop={shop} t={t} locale={locale} consentByName={consentByName} />
     </SettingsEditorPage>
   );
 }

@@ -235,32 +235,75 @@ describe("the emergency reference editor", () => {
   it("asks for the shore contact's alert address beside an unticked consent box", async () => {
     const form = await emergencyForm();
     expect(inputNamesIn(form)).toEqual(
-      expect.arrayContaining(["shoreAlertEmail", "shoreAlertConsent"]),
+      expect.arrayContaining(["shoreAlertEmail", "shoreAlertConsent", "shoreAlertConsentFor"]),
     );
     const [consent] = findElements<{ name?: string; defaultChecked?: boolean }>(
       form,
       ChoiceRow,
     ).filter((row) => row.props.name === "shoreAlertConsent");
     expect(consent?.props.defaultChecked).toBe(false);
+    // Drawn empty, the box vouches for no address yet.
+    expect(named(form, "shoreAlertConsentFor")[0]?.props).toMatchObject({ value: "" });
   });
 
-  it("keeps the box ticked, and says when, once a consent is on file", async () => {
+  // Owner review #4: the free-text line is for a person, never a recipient.
+  it("says DiveDay never messages the free-text shore contact", async () => {
+    const [field] = findElements<{ description?: unknown; children?: unknown }>(
+      await emergencyForm(),
+      Field,
+    ).filter(
+      (candidate) =>
+        (candidate.props.children as ReactElement<{ name?: string }> | undefined)?.props?.name ===
+        "emergencyShoreContact",
+    );
+    expect(field?.props.description).toBe(EMERGENCY.shoreContactDescription);
+  });
+
+  // Owner review #3: a demo shop's form says it sends nothing.
+  it("says a demo shop sends nothing", async () => {
+    expect(renderToStaticMarkup(await emergencyForm())).toContain(EMERGENCY.shoreAlertDemo);
+  });
+
+  async function onFile(confirmedAt: Date | null, demo = true) {
     const { shop } = await demoShop(async (db, shopId) => {
       await db
         .update(shops)
         .set({
+          isDemo: demo,
           shoreAlertEmail: "shore@example.com",
           shoreAlertConsentAt: new Date("2026-10-15T14:30:00Z"),
           shoreAlertConsentByPersonId: shopId,
+          shoreAlertConfirmedAt: confirmedAt,
         })
         .where(eq(shops.id, shopId));
     });
-    const html = renderToStaticMarkup(EmergencyReferenceForm({ shop, t, locale: "en-US" }));
+    return shop;
+  }
+
+  it("draws the box ticked for the address on file, and says who recorded it and when", async () => {
+    const shop = await onFile(new Date("2026-10-16T09:00:00Z"));
+    const form = EmergencyReferenceForm({ shop, t, locale: "en-US", consentByName: "Dana Reyes" });
+    // The tick speaks for this address only (owner review #1).
+    expect(named(form, "shoreAlertConsentFor")[0]?.props).toMatchObject({
+      value: "shore@example.com",
+    });
+    const html = renderToStaticMarkup(form).replaceAll("\u00a0", " ");
     expect(html).toContain('value="shore@example.com"');
     expect(html).toMatch(
       /name="shoreAlertConsent"[^>]*checked=""|checked=""[^>]*name="shoreAlertConsent"/,
     );
-    expect(html).toContain("Recorded Oct");
+    expect(html).toMatch(/Recorded Oct 15[^<]* by Dana Reyes/);
+    expect(html).toContain("They confirmed Oct 16");
+  });
+
+  it("says a saved address is waiting for its confirmation, with a way to send the link again", async () => {
+    const shop = await onFile(null, false);
+    const html = renderToStaticMarkup(
+      EmergencyReferenceForm({ shop, t, locale: "en-US", consentByName: "Dana Reyes" }),
+    );
+    expect(html).toContain(EMERGENCY.shoreAlertWaiting);
+    expect(html).toContain(EMERGENCY.shoreAlertResend);
+    expect(html).not.toContain("They confirmed");
   });
 });
 

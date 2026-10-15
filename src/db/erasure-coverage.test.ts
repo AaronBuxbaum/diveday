@@ -392,9 +392,11 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
 
   // The shop's own record of itself. A diver is not on any of these.
   shops:
-    "the business: its name, its front-desk address and phone, its timezone and its own words. Erasing a diver does not touch the shop they dived with",
+    "the business: its name, its front-desk address and phone, its timezone and its own words. Erasing a diver does not touch the shop they dived with, except the shore contact's alert address (H-118), which the erasure clears when it is the diver's",
   shop_contact_email_confirmation_tokens:
     "the front-desk address's own proof of ownership (issue #1288) — the shop’s address, not a diver’s",
+  shop_shore_alert_tokens:
+    "the shore contact's confirm and stop links (H-118). No key to a person, but the address can be a diver's: the erasure sweeps the rows by `email`, beside the shop's own `shore_alert_email`",
   shop_whatsapp_accounts:
     "the shop’s own WhatsApp sender: a number, a template and sealed credentials",
   shop_stripe_accounts: "the shop’s Connect account and what it is enabled for",
@@ -404,8 +406,7 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
     "what the shop pays DiveDay: Stripe ids on DiveDay’s own account, a status and a few dates. The business is the customer, never a diver",
   shop_integrations: "a provider connection the shop made, and the sealed credentials behind it",
   shop_backup_destinations: "where the shop sends its own backups, and the sealed key to get there",
-  shop_backup_deliveries:
-    "whether one of those bundles arrived; a period key, a byte count and a status",
+  shop_backup_deliveries: "whether one of those bundles arrived: a period key, byte count, status",
   boats: "the shop’s vessels",
   courses: "the shop’s course catalog, copied from a template and then its own",
   waiver_templates:
@@ -435,8 +436,7 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
 
   // Plumbing: provider coordination and delivery ledgers, holding no person.
   notification_rate_limit_state: "provider coordination keyed by ceiling and period",
-  stripe_webhook_events:
-    "the platform's delivery ledger, pruned by retention; it carries no payload",
+  stripe_webhook_events: "the platform's delivery ledger, pruned by retention; no payload",
   sms_opt_outs:
     "a phone number that replied STOP, and nothing else. Keeping it after an erasure is what keeps the promise: removing it would let a later booking with that number text someone who said stop",
   media_deletion_attempts:

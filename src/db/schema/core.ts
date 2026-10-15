@@ -329,6 +329,16 @@ export const shops = pgTable(
     shoreAlertConsentAt: timestamp("shore_alert_consent_at", { withTimezone: true }),
     shoreAlertConsentByPersonId: uuid("shore_alert_consent_by_person_id"),
     /**
+     * When the shore contact proved the address is theirs and agreed, by the
+     * link DiveDay sent to it (H-118 review; the same proof the front-desk
+     * address takes, issue #1288). Null until then, and cleared with any
+     * change of address: the shop's tick says they agreed, this says the
+     * inbox did. Nothing is sent to the address before it is set
+     * (`shoreAlertRecipient`), and the link in every alert that stops them
+     * clears all four columns.
+     */
+    shoreAlertConfirmedAt: timestamp("shore_alert_confirmed_at", { withTimezone: true }),
+    /**
      * How many minutes before departure divers are asked to be at the dock. The
      * shop's real muster time varies (gear setup, cert check, briefing), so it is
      * configurable rather than a hardcoded "30 minutes" in every confirmation and
@@ -465,6 +475,11 @@ export const shops = pgTable(
         and ${table.shoreAlertConsentByPersonId} is null)
         or (${table.shoreAlertEmail} is not null and ${table.shoreAlertConsentAt} is not null
         and ${table.shoreAlertConsentByPersonId} is not null)`,
+    ),
+    // A confirmation vouches for an address; there is none without one.
+    check(
+      "shops_shore_alert_confirmed_has_address",
+      sql`${table.shoreAlertConfirmedAt} is null or ${table.shoreAlertEmail} is not null`,
     ),
     check(
       "shops_customer_regulator_service_months_choice",

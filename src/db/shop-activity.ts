@@ -321,6 +321,12 @@ export type ShopActivityWrite =
   | {
       code: "review_replied" | "review_reply_edited" | "review_reply_deleted";
       reviewId: string;
+    }
+  | {
+      code:
+        | "shore_alert_contact_set"
+        | "shore_alert_contact_changed"
+        | "shore_alert_contact_cleared";
     };
 
 /**
@@ -458,7 +464,7 @@ async function writeShopActivity(
       subjectPersonId: null,
       entry: { code: write.code, params: { actor: actor.name } },
     };
-  } else {
+  } else if ("tripId" in write) {
     if (!isUuid(write.tripId)) return false;
     const [departure] = await db
       .select({ id: trips.id })
@@ -470,6 +476,17 @@ async function writeShopActivity(
     if (!departure) return false;
     values = {
       tripId: departure.id,
+      bookingId: null,
+      orderId: null,
+      subjectPersonId: null,
+      entry: { code: write.code, params: { actor: actor.name } },
+    };
+  } else {
+    // A shop-level line about the shop's own settings (the shore contact's
+    // alert address, H-118): naming nobody but the staffer who acted, and
+    // never the address.
+    values = {
+      tripId: null,
       bookingId: null,
       orderId: null,
       subjectPersonId: null,

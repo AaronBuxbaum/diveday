@@ -440,6 +440,8 @@ describe("every settings mutation refuses the daily crew", () => {
   /**
    * H-118: the shore contact's alert address saves only with the box that
    * records their consent, keeps who and when, and clearing it clears both.
+   * The seeded shop is a demo, which sends nothing and says so; the link and
+   * the rest are `shore-alert-actions.test.ts`.
    */
   it("saves a shore contact's alert address only with its consent", async () => {
     const { db, shop, owner } = await context();
@@ -474,7 +476,7 @@ describe("every settings mutation refuses the daily crew", () => {
 
     expect(
       await redirectedTo(() => saveEmergencyReferenceAction(form("shore@example.com", true))),
-    ).toBe(`${page}emergency-saved`);
+    ).toBe(`${page}shore-alert-saved-demo`);
     const saved = await stored();
     expect(saved).toMatchObject({
       email: "shore@example.com",
@@ -484,7 +486,7 @@ describe("every settings mutation refuses the daily crew", () => {
     expect(saved.consentAt).toBeInstanceOf(Date);
 
     expect(await redirectedTo(() => saveEmergencyReferenceAction(form("", false)))).toBe(
-      `${page}emergency-saved`,
+      `${page}shore-alert-cleared`,
     );
     expect(await stored()).toMatchObject({ email: null, consentAt: null, by: null });
   });

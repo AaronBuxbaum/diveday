@@ -236,6 +236,15 @@ type ActivityParamShapes = {
   review_reply_edited: { actor: string };
   review_reply_deleted: { actor: string };
   /**
+   * **Who set the shore contact's alert address** (H-118 security review):
+   * the address roll-call alerts go to outside the shop's accounts, added,
+   * replaced or removed. Shop-level lines; no address in them, so an erasure
+   * has nothing here to reach.
+   */
+  shore_alert_contact_set: { actor: string };
+  shore_alert_contact_changed: { actor: string };
+  shore_alert_contact_cleared: { actor: string };
+  /**
    * An erasure ran over this line.
    *
    * A code rather than a blanked payload, so the row reads the same way it
@@ -343,6 +352,9 @@ export const ACTIVITY_CODES = [
   "review_replied",
   "review_reply_edited",
   "review_reply_deleted",
+  "shore_alert_contact_set",
+  "shore_alert_contact_changed",
+  "shore_alert_contact_cleared",
   "redacted",
   "demo_charter_confirmed",
   "demo_second_dive_moved",

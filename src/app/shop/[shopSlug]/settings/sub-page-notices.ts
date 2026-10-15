@@ -56,6 +56,19 @@ export function emergencyReferenceNoticeMessages(t: StaffTranslator): NoticeMess
       tone: "danger",
       text: t("settings.main.notice.shoreAlertConsentMissing"),
     },
+    "shore-alert-confirmation-sent": {
+      tone: "success",
+      text: t("settings.main.notice.shoreAlertConfirmationSent"),
+    },
+    "shore-alert-confirmation-not-sent": {
+      tone: "warning",
+      text: t("settings.main.notice.shoreAlertConfirmationNotSent"),
+    },
+    "shore-alert-saved-demo": {
+      tone: "success",
+      text: t("settings.main.notice.shoreAlertSavedDemo"),
+    },
+    "shore-alert-cleared": { tone: "success", text: t("settings.main.notice.shoreAlertCleared") },
   };
 }
 
