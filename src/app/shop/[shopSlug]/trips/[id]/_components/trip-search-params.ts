@@ -27,6 +27,14 @@ export type TripPageSearchParams = {
   markStatus?: string;
   markAmount?: string;
   markMethod?: string;
+  /**
+   * A party payment waiting to be confirmed (issue #2605): the lead's seat, the
+   * amount in cents and the method. The page works the split out again from the
+   * database; none of these is shown as typed.
+   */
+  partyLead?: string;
+  partyAmount?: string;
+  partyMethod?: string;
   /** The reschedule notice a retime held, and how many seats it tells. */
   held?: string;
   tell?: string;

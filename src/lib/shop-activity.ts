@@ -88,6 +88,7 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   payment_waived: "money",
   payment_marked_refunded: "money",
   payment_balance_written_off: "money",
+  party_marked_paid: "money",
   note_added: "records",
   note_deleted: "records",
   record_exported: "records",

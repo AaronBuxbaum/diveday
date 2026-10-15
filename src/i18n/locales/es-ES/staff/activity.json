@@ -43,6 +43,7 @@
     "payment_waived": "{actor} marcó la plaza de {diver} como exonerada",
     "payment_marked_refunded": "{actor} marcó la plaza de {diver} como reembolsada",
     "payment_balance_written_off": "{actor} dio por saldado el resto de la plaza de {diver}",
+    "party_marked_paid": "{actor} cobró la parte de {diver} del pago del grupo",
     "departure_added": "{actor} puso la salida en el calendario",
     "series_added": "{actor} puso una salida recurrente en el calendario",
     "departure_moved": "{actor} movió la salida",

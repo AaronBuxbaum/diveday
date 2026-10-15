@@ -1,5 +1,6 @@
 import { readTypedMoney } from "./forgiving-fields";
 import { majorToMinor } from "./money";
+import { uuidParam } from "./uuid";
 
 /**
  * **The roster's Paid mark** (batch 6 item 1, H-decision "a hand-marked
@@ -75,6 +76,19 @@ export const MARK_RETRY_PARAMS = {
 
 /** The largest amount the sheet will be pre-filled with: $1,000,000.00 in cents. */
 const MARK_RETRY_MAX_CENTS = 100_000_000;
+
+/**
+ * One submission of the Paid mark's form, read once: the mark itself, and what
+ * a refusal of it carries back (issue #2607).
+ */
+export function readPaymentMarkForm(formData: FormData, status: string, currency: string) {
+  const amountRaw = formData.get("amount") === null ? null : String(formData.get("amount"));
+  const methodRaw = formData.get("method") === null ? null : String(formData.get("method"));
+  return {
+    mark: readManualPaymentMark(status, amountRaw, methodRaw, currency),
+    retry: markRetryParams(status, amountRaw, methodRaw, currency),
+  };
+}
 
 export type MarkRetry = {
   status: "paid" | "deposit_paid";
@@ -188,4 +202,86 @@ export function heldAfterMark(
   }
   if (reading.kind === "no_money" && nextStatus === "paid" && handDeposit) return handDeposit;
   return { amountCents: null, method: null };
+}
+
+/** A party seat as the party mark sees it: what it owes, and whether a hand mark may touch it. */
+export type PartySeatOwing = {
+  bookingId: string;
+  /** What the seat still owes, or null when it owes nothing or names no price. */
+  owedCents: number | null;
+  /** The seat was paid through DiveDay (Stripe or a package): a hand mark would lose the payment's pointer. */
+  handMarkRefused: boolean;
+};
+
+export type PartyShare = {
+  bookingId: string;
+  amountCents: number;
+  /** The share clears the seat's balance. Otherwise it is a deposit on a seat the money ran out on. */
+  settles: boolean;
+};
+
+export type PartySplit =
+  /** `unspentCents` is what the party still owes after this payment. */
+  | { kind: "split"; shares: PartyShare[]; unspentCents: number }
+  | { kind: "over"; owedCents: number }
+  | { kind: "nothing_owed" }
+  | { kind: "refused"; bookingId: string };
+
+/**
+ * **Split one payment across a party** (issue #2605). Each seat in turn takes
+ * its balance owed, never more, so a seat is never overpaid and never written
+ * off: when the money runs out the seat it runs out on takes the rest as a
+ * deposit, and the seats after it are left alone and still owe. A payment
+ * larger than the whole party owes is refused rather than spread, since the
+ * extra has no seat to land on.
+ *
+ * The seats arrive in the order the money should be applied (the lead's own
+ * first). A seat paid through DiveDay that still owes refuses the whole mark:
+ * the single-seat mark refuses it for the same reason, and applying the rest
+ * of the party around it would leave the staffer unsure what was taken.
+ */
+export function splitPartyPayment(
+  amountCents: number,
+  seats: readonly PartySeatOwing[],
+): PartySplit {
+  const owing = seats.filter((seat) => seat.owedCents !== null && seat.owedCents > 0);
+  const refused = owing.find((seat) => seat.handMarkRefused);
+  if (refused) return { kind: "refused", bookingId: refused.bookingId };
+  const owedCents = owing.reduce((sum, seat) => sum + (seat.owedCents ?? 0), 0);
+  if (owedCents === 0) return { kind: "nothing_owed" };
+  if (amountCents > owedCents) return { kind: "over", owedCents };
+  const shares: PartyShare[] = [];
+  let remaining = amountCents;
+  for (const seat of owing) {
+    if (remaining <= 0) break;
+    const owed = seat.owedCents ?? 0;
+    const share = Math.min(owed, remaining);
+    shares.push({ bookingId: seat.bookingId, amountCents: share, settles: share === owed });
+    remaining -= share;
+  }
+  return { kind: "split", shares, unspentCents: owedCents - amountCents };
+}
+
+export type PartyAsk = {
+  leadBookingId: string;
+  amountCents: number;
+  method: ManualPaymentMethodCode;
+};
+
+/**
+ * Read a party payment waiting to be confirmed back off the page's query
+ * string (issue #2605). Hand-editable, so each value is validated on its own;
+ * anything unreadable means there is nothing to confirm.
+ */
+export function readPartyAsk(raw: {
+  lead?: string;
+  amount?: string;
+  method?: string;
+}): PartyAsk | null {
+  const leadBookingId = uuidParam(raw.lead);
+  if (!leadBookingId) return null;
+  if (raw.amount === undefined || !/^[1-9]\d{0,8}$/.test(raw.amount)) return null;
+  const amountCents = Number(raw.amount);
+  if (amountCents > MARK_RETRY_MAX_CENTS || !isManualPaymentMethod(raw.method)) return null;
+  return { leadBookingId, amountCents, method: raw.method };
 }

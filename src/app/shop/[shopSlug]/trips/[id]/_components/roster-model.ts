@@ -18,7 +18,7 @@ import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import type { ElearningQuery } from "@/lib/elearning-check";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { isDiver } from "@/lib/participant-types";
-import type { MarkRetry } from "@/lib/payment-marks";
+import type { ManualPaymentMethodCode, MarkRetry } from "@/lib/payment-marks";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { waiverState } from "@/lib/waivers";
 import type { ElearningCheckResult } from "../elearning-actions";
@@ -157,6 +157,8 @@ export type RosterRows = {
   keepOpenBookingId?: string;
   /** The Paid mark that just bounced (issue #2607): reopens that seat's sheet holding what was typed. */
   paymentMarkRetry?: { bookingId: string } & MarkRetry;
+  /** A party payment waiting on its confirm (issue #2605). */
+  partyPreview?: PartyPreview;
   /**
    * The seat whose paper release was just refused for a co-signer sharing the
    * diver's name (issue #1573). That one row's form offers the staffer's
@@ -173,11 +175,28 @@ export type RosterRows = {
 };
 
 /** The server actions a row posts to. */
+/**
+ * The server's own split of a party payment, shown before it is taken
+ * (issue #2605). `amountCents` and `method` ride the confirm form; the
+ * shares are for reading, and the confirm works them out again.
+ */
+export type PartyPreview = {
+  leadBookingId: string;
+  amountCents: number;
+  method: ManualPaymentMethodCode;
+  shares: { bookingId: string; personName: string; amountCents: number; settles: boolean }[];
+  unspentCents: number;
+};
+
 export type RosterActions = {
   /** A reducer, not a plain form action: a refusal hands the typed values
    * back to the control rather than redirecting (`PaperWaiverAction`). */
   markRosterWaiverInPersonAction: PaperWaiverAction;
   markPaymentAction: (formData: FormData) => void;
+  /** "Mark the party paid", step one: the server works the split out and sends the page back to show it. */
+  previewPartyPaymentAction: (formData: FormData) => void;
+  /** Step two: take the payment (issue #2605). */
+  markPartyPaidAction: (formData: FormData) => void;
   removeBookingAction: (formData: FormData) => void;
   /**
    * "Coming as": change what this seat is for (ADR

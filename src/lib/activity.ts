@@ -204,6 +204,11 @@ type ActivityParamShapes = {
    */
   payment_balance_written_off: { actor: string; diver: string };
   /**
+   * A seat took its share of one payment for a whole party (issue #2605),
+   * one line per seat. The amount is on the payment trail; this says who took it.
+   */
+  party_marked_paid: { actor: string; diver: string };
+  /**
    * **Who changed the board**: the schedule builder's four acts, which wrote
    * no actor anywhere until the activity log asked. Each is recorded on the
    * departure it changed; a repeating departure is one line, on its first
@@ -324,6 +329,7 @@ export const ACTIVITY_CODES = [
   "payment_waived",
   "payment_marked_refunded",
   "payment_balance_written_off",
+  "party_marked_paid",
   "departure_added",
   "series_added",
   "departure_moved",

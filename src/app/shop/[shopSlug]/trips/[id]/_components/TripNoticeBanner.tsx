@@ -513,6 +513,11 @@ const NOTICE_KEYS: Record<
   "payment-method": { form: "roster", tone: "danger", key: "trips.notices.paymentMethod" },
   "payment-short": { form: "roster", tone: "danger", key: "trips.notices.paymentShort" },
   "payment-online": { form: "roster", tone: "danger", key: "trips.notices.paymentOnline" },
+  "party-preview": { form: "roster", tone: "warning", key: "trips.notices.partyPreview" },
+  "party-paid": { form: "roster", tone: "success", key: "trips.notices.partyPaid" },
+  "party-paid-short": { form: "roster", tone: "warning", key: "trips.notices.partyPaidShort" },
+  "party-over": { form: "roster", tone: "danger", key: "trips.notices.partyOver" },
+  "party-nothing-owed": { form: "roster", tone: "danger", key: "trips.notices.partyNothingOwed" },
   conditions: { form: "conditions", tone: "success", key: "trips.notices.conditions" },
   "conditions-cleared": {
     form: "conditions",

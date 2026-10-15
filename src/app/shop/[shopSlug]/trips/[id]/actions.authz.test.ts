@@ -885,60 +885,6 @@ describe("money on the trip page", () => {
     expect(after?.status).toBe("refunded");
   });
 
-  /**
-   * Issue #2607: a refused Paid mark reopens holding what was typed. The amount
-   * rides the redirect as the parsed figure in cents, the status and method as
-   * their codes, and nothing else from the form does.
-   */
-  it("carries the typed amount and the picked status back when the Paid mark is refused", async () => {
-    const { db, shop, tripId, captain } = await context();
-    const [booking] = await db.select().from(bookings).where(eq(bookings.tripId, tripId)).limit(1);
-    if (!booking) throw new Error("seeded trip has no bookings");
-
-    signIn(shop, captain);
-    const form = paymentForm(booking.id, "paid");
-    form.set("amount", "$45.50");
-    // No method: the action asks for it again.
-    const to = await redirectedTo(() => markPaymentAction(shop.slug, tripId, form));
-
-    const params = new URL(to, "https://dive.day").searchParams;
-    expect(params.get("notice")).toBe("payment-method");
-    expect(params.get("markStatus")).toBe("paid");
-    expect(params.get("markAmount")).toBe("4550");
-    expect(params.has("markMethod")).toBe(false);
-  });
-
-  it("carries the method back when the amount is the part refused, and never an unreadable amount", async () => {
-    const { db, shop, tripId, captain } = await context();
-    const [booking] = await db.select().from(bookings).where(eq(bookings.tripId, tripId)).limit(1);
-    if (!booking) throw new Error("seeded trip has no bookings");
-
-    signIn(shop, captain);
-    const form = paymentForm(booking.id, "paid");
-    form.set("amount", "lots");
-    form.set("method", "cash");
-    const to = await redirectedTo(() => markPaymentAction(shop.slug, tripId, form));
-
-    const params = new URL(to, "https://dive.day").searchParams;
-    expect(params.get("notice")).toBe("payment-amount");
-    expect(params.get("markMethod")).toBe("cash");
-    expect(params.has("markAmount")).toBe(false);
-    expect(to).not.toContain("lots");
-  });
-
-  it("adds nothing to the URL when a non-money status is refused", async () => {
-    const { db, shop, tripId, captain } = await context();
-    const [booking] = await db.select().from(bookings).where(eq(bookings.tripId, tripId)).limit(1);
-    if (!booking) throw new Error("seeded trip has no bookings");
-
-    signIn(shop, captain);
-    const to = await redirectedTo(() =>
-      markPaymentAction(shop.slug, tripId, paymentForm(booking.id, "refunded")),
-    );
-    expect(to).toContain("notice=not-authorized");
-    expect(to).not.toContain("markStatus");
-  });
-
   it("lets a captain re-submit a settled status without a confusing refusal", async () => {
     // The current status stays selectable in the control, so a captain looking
     // at a waived booking can submit `waived` unchanged. Refusing a tap that

@@ -110,6 +110,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Free term
 - Paid after close
 - Paid mark
+- Party payment
 - Pass-through fee
 - Payments restricted
 - Payout

@@ -24,7 +24,10 @@ import { laterMeetingDates } from "@/lib/trip-days";
 import { clearConditionsAction, saveConditionsAction } from "../conditions-actions";
 import { updateTripCrewAction } from "../crew-actions";
 import { saveDetails } from "../details-actions";
-import { cancelOffCadenceSeriesAction, updateSeriesCadenceAction } from "../series-actions";
+import {
+  cancelOffCadenceSeriesAction as cancelOffCadence,
+  updateSeriesCadenceAction,
+} from "../series-actions";
 import { saveRequirementsAction } from "../terms-actions";
 import { ConditionsOutlookSlot, ConditionsSection } from "./ConditionsSection";
 import { CrewSection } from "./CrewSection";
@@ -58,7 +61,6 @@ export type TripAboutRowsContext = {
   /** A retime's held reschedule notice, on the save that set it going. */
   held?: string;
   tell?: string;
-  /** True when this staffer may not refund; a call-off leaves the card refunds for an owner or manager (H-123). */
   refundsHeld?: boolean;
 };
 
@@ -93,7 +95,6 @@ export function tripAboutRows(context: TripAboutRowsContext) {
     tideLines,
     held,
     tell,
-    refundsHeld = false,
   } = context;
   const {
     trip,
@@ -114,8 +115,6 @@ export function tripAboutRows(context: TripAboutRowsContext) {
   } = overview;
   const { crewIds, tripRoleByPerson, crewGap, onShiftIds, clashes } = crew;
   const { ratingLapsedNote, languageGapNote, underTargetNote, overRatioWarning } = crewNotes;
-  // One notice per About row, resolved once: a refusal that lands inside a
-  // closed row is a form the staffer cannot see failed.
   const detailsStatus = noticeForForm(tripNotice, "details");
   const conditionsStatus = noticeForForm(tripNotice, "conditions");
   const requirementsStatus = noticeForForm(tripNotice, "requirements");
@@ -451,13 +450,8 @@ export function tripAboutRows(context: TripAboutRowsContext) {
             weekdayNames={weekdayNames(locale)}
             status={seriesStatus}
             cadenceAction={updateSeriesCadenceAction.bind(null, shopSlug, tripId, series.id)}
-            cancelOffCadenceAction={cancelOffCadenceSeriesAction.bind(
-              null,
-              shopSlug,
-              tripId,
-              series.id,
-            )}
-            refundsHeld={refundsHeld}
+            cancelOffCadenceAction={cancelOffCadence.bind(null, shopSlug, tripId, series.id)}
+            refundsHeld={context.refundsHeld}
             locale={locale}
           />
         ) : undefined,

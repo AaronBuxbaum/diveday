@@ -306,7 +306,8 @@ export type ShopActivityWrite =
         | "seat_refunded"
         | "payment_waived"
         | "payment_marked_refunded"
-        | "payment_balance_written_off";
+        | "payment_balance_written_off"
+        | "party_marked_paid";
       bookingId: string;
     }
   | {
