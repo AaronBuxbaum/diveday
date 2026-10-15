@@ -34,7 +34,9 @@ readiness lapsing after boarding. The dive-domain review of the record asked for
 
 Past events carry null and say nothing; there is no backfill (H-49). Each after-dive `boarded` tap
 now reads readiness inside its transaction, as the dock tap already did. A blocker added to the
-engine later renders through `readinessBlockerText`, so an unknown stored code needs no migration.
+engine later renders through `readinessBlockerText`, so an unknown stored code needs no migration. **Erasure** nulls `readiness_blockers` (the list names
+why one person could not board, such as a physician's review) and keeps `readiness_status`, so the
+row still says the count was made while blocked.
 
 ## Alternatives considered
 

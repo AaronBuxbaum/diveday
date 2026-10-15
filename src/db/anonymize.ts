@@ -1145,6 +1145,22 @@ async function scrubBookingRows(
         ),
       );
 
+    // The blockers a `boarded` event kept (ADR 20261015-roll-call-records-
+    // readiness, issue #2414) are the reasons one person could not board: a
+    // physician's review, a missing card. They are about the person, so they go
+    // with the note; `readiness_status` stays, saying only that this count was
+    // made while blocked. The shape check allows a `blocked` status with no list.
+    await tx
+      .update(rollCallEvents)
+      .set({ readinessBlockers: null })
+      .where(
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          inArray(rollCallEvents.bookingId, bookingIds),
+          isNotNull(rollCallEvents.readinessBlockers),
+        ),
+      );
+
     await tx
       .update(rollCallCrewEvents)
       .set({ note: null })

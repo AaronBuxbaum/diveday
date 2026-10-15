@@ -2,6 +2,8 @@ import { desc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { anonymizeDiver } from "./anonymize";
+import { loadShopExportBundleInput } from "./export";
 import { listCountedAboardBlockedByTrip, recordRollCall } from "./manifests";
 import {
   createSpecialtyCertification,
@@ -170,5 +172,56 @@ describe("a roll-call event keeps what readiness said", () => {
         readinessBlockers: [{ code: "certification_missing" }],
       }),
     ).rejects.toThrow();
+  });
+});
+
+/**
+ * **The blockers are about a person, so an erasure takes them** (issue #2414
+ * review). A `blocked` snapshot lists the codes that stopped one diver, which
+ * can be a physician's review or a missing card: the row stays as the boarding
+ * fact, the list does not.
+ */
+describe("erasing a diver counted aboard while blocked", () => {
+  it("nulls the blocker list on the roll-call row and in roll_call_events.csv", async () => {
+    const { db, shop, base, booking, newest, boardAtDock } = await seat("Night Dive");
+    await boardAtDock();
+    const recorded = await recordRollCall(db, {
+      ...base,
+      status: "boarded",
+      checkpoint: "after_dive_1",
+    });
+    expect(recorded.ok).toBe(true);
+    expect((await newest())?.blockers?.length).toBeGreaterThan(0);
+
+    const exportedBlockers = async () => {
+      const input = await loadShopExportBundleInput(db, shop.id);
+      const file = input?.tables.find((candidate) => candidate.file === "roll_call_events.csv");
+      if (!file) throw new Error("roll_call_events.csv missing");
+      const bookingColumn = file.header.indexOf("booking_id");
+      const blockerColumn = file.header.indexOf("readiness_blockers");
+      return file.rows
+        .filter((row) => row[bookingColumn] === base.bookingId)
+        .map((row) => row[blockerColumn] ?? null);
+    };
+    expect((await exportedBlockers()).some((cell) => cell !== null)).toBe(true);
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: booking.person.id,
+      actorPersonId: base.recordedByPersonId,
+    });
+    expect(erased.ok).toBe(true);
+
+    const rows = await db
+      .select({
+        status: rollCallEvents.status,
+        blockers: rollCallEvents.readinessBlockers,
+      })
+      .from(rollCallEvents)
+      .where(eq(rollCallEvents.bookingId, base.bookingId));
+    // The boarding fact stays; the list of why the person was blocked goes.
+    expect(rows.some((row) => row.status === "boarded")).toBe(true);
+    expect(rows.every((row) => row.blockers === null)).toBe(true);
+    expect((await exportedBlockers()).every((cell) => cell === null)).toBe(true);
   });
 });
