@@ -37,11 +37,16 @@ export function repoSlug(env = process.env) {
   return /^[\w.-]+\/[\w.-]+$/.test(named) ? named : DEFAULT_REPO;
 }
 
-/** The real runner: `gh api <args>`, bounded, with an optional JSON document on stdin. */
-function ghApi(args, input) {
-  return runBounded("gh", ["api", ...args], {
+/**
+ * The real runner: `gh api <args>`, bounded, with an optional JSON document on stdin. The buffer is 32 MB because a page of 100 closed pull requests is about
+ * 2.3 MB, and spawnSync's 1 MB default cut gh off with an empty stderr (the nightly
+ * expire-claims run, 2026-10-15).
+ */
+export function ghApi(args, input, run = runBounded) {
+  return run("gh", ["api", ...args], {
     encoding: "utf8",
     input,
+    maxBuffer: 32 * 1024 * 1024,
     stdio: ["pipe", "pipe", "pipe"],
     timeoutMs: SUBPROCESS_TIMEOUTS.ghCli,
   });
