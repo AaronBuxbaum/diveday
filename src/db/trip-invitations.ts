@@ -1,7 +1,12 @@
 import { and, asc, eq, gt, inArray, isNull, ne, or } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
-import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
+import {
+  type NotificationDelivery,
+  type NotificationProvider,
+  publicAppUrl,
+  recipientLocale,
+} from "@/lib/notifications";
 import { seatRefusal } from "@/lib/participant-types";
 import { publicTripPath } from "@/lib/public-routes";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
@@ -306,10 +311,14 @@ export async function deliverTripInvitation(
     now: invitedAt,
   });
   if (!recorded) return "fallback";
-  return sendTripInvitation(db, input, context, invitedAt, provider);
+  return (await sendTripInvitation(db, input, context, invitedAt, provider)).delivery;
 }
 
-/** A cold invitation's send under its claim, given back when the mail does not go. */
+/**
+ * A cold invitation's send under its claim, given back when the mail does not
+ * go. A retryable failure keeps it: that mail is on the retry queue and will
+ * still go, so a second submit inside the window would send a second (#2133).
+ */
 async function sendClaimedTripInvitation(
   db: AppDb,
   input: { shopId: string; shopSlug: string; invitationId: string },
@@ -317,14 +326,19 @@ async function sendClaimedTripInvitation(
   claim: DirectSendClaim,
   provider: NotificationProvider | undefined,
 ): Promise<TripInvitationDelivery> {
-  let delivery: TripInvitationDelivery = "fallback";
+  let send: TripInvitationSend = { delivery: "fallback", queued: false };
   try {
-    delivery = await sendTripInvitation(db, input, context, claim.at, provider);
+    send = await sendTripInvitation(db, input, context, claim.at, provider);
   } finally {
-    if (delivery !== "sent") await releaseDirectSend(db, input.shopId, input.invitationId, claim);
+    if (send.delivery !== "sent" && !send.queued) {
+      await releaseDirectSend(db, input.shopId, input.invitationId, claim);
+    }
   }
-  return delivery;
+  return send.delivery;
 }
+
+/** The send's answer, and whether its mail is queued to go later. */
+type TripInvitationSend = { delivery: TripInvitationDelivery; queued: boolean };
 
 type TripInvitationContext = NonNullable<Awaited<ReturnType<typeof getTripInvitation>>>;
 
@@ -335,7 +349,7 @@ async function sendTripInvitation(
   context: TripInvitationContext,
   invitedAt: Date,
   provider: NotificationProvider | undefined,
-): Promise<TripInvitationDelivery> {
+): Promise<TripInvitationSend> {
   const origin = publicAppUrl();
   const shared = {
     invitationId: context.invitation.id,
@@ -352,11 +366,11 @@ async function sendTripInvitation(
     const person = context.person;
     // A record deleted since the invitation was made is not somebody to sell
     // a seat to (`findCourtesyEmailRecipientByAddress` is blind to them too).
-    if (!person?.email || person.deletedAt) return "fallback";
+    if (!person?.email || person.deletedAt) return { delivery: "fallback", queued: false };
     // Before anything about the send itself: a diver who opted out is
     // `opted_out` whether or not this deployment could have emailed them.
-    if (person.courtesyEmailOptOutAt) return "opted_out";
-    if (!origin) return "fallback";
+    if (person.courtesyEmailOptOutAt) return { delivery: "opted_out", queued: false };
+    if (!origin) return { delivery: "fallback", queued: false };
     const unsubscribeToken = await issuePersonCourtesyEmailUnsubscribeToken(db, {
       shopId: input.shopId,
       personId: person.id,
@@ -377,11 +391,11 @@ async function sendTripInvitation(
       },
       provider,
     );
-    return delivery.status === "sent" ? "sent" : "fallback";
+    return sendOf(delivery);
   }
 
   const email = context.person?.email ?? context.request?.email ?? null;
-  if (!email || !origin) return "fallback";
+  if (!email || !origin) return { delivery: "fallback", queued: false };
   const delivery = await sendNotification(
     db,
     {
@@ -394,7 +408,16 @@ async function sendTripInvitation(
     },
     provider,
   );
-  return delivery.status === "sent" ? "sent" : "fallback";
+  return sendOf(delivery);
+}
+
+/** A delivery read as a send: a retryable failure is on the retry queue (`sendNotification`). */
+function sendOf(delivery: NotificationDelivery): TripInvitationSend {
+  if (delivery.status === "sent") return { delivery: "sent", queued: false };
+  return {
+    delivery: "fallback",
+    queued: delivery.status === "failed" && delivery.retryable === true,
+  };
 }
 
 /** A cold invitation's taken send: the mark it wrote, and the one it replaced. */

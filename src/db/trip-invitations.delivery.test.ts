@@ -29,7 +29,8 @@ const { sendNotification } = await import("./notifications");
 const { recordCourseInquiry } = await import("./course-inquiries");
 const { getCourseBySlug } = await import("./courses");
 const { listBookableDivers } = await import("./divers");
-const { people, personCourtesyEmailUnsubscribeTokens, tripInvitations } = await import("./schema");
+const { notificationSendQueue, people, personCourtesyEmailUnsubscribeTokens, tripInvitations } =
+  await import("./schema");
 const {
   createDirectTripInvitation,
   createTripRequestInvitations,
@@ -288,6 +289,34 @@ describe("deliverTripInvitation", () => {
       expect(await stampOf(ctx, invitationId)).toBeInstanceOf(Date);
       await expect(deliverTripInvitation(ctx.db, input)).resolves.toBe("sent");
       expect(sendNotification).toHaveBeenCalledTimes(2);
+    });
+
+    it("keeps the window when the mail is queued for retry, so a staff retry cannot send a second", async () => {
+      const ctx = await context();
+      const { invitationId } = await directInvitation(ctx);
+      const input = {
+        shopId: ctx.shop.id,
+        shopSlug: ctx.shop.slug,
+        tripId: ctx.trip.id,
+        invitationId,
+      };
+      // The real send, so a thrown provider error lands on the retry queue.
+      const actual = await vi.importActual<typeof import("./notifications")>("./notifications");
+      vi.mocked(sendNotification).mockImplementation(actual.sendNotification);
+      let calls = 0;
+      const provider = {
+        async send() {
+          calls += 1;
+          if (calls === 1) throw new Error("provider down");
+          return { status: "sent" as const, providerMessageId: "m-2" };
+        },
+      };
+
+      await expect(deliverTripInvitation(ctx.db, input, provider)).resolves.toBe("fallback");
+      await expect(deliverTripInvitation(ctx.db, input, provider)).resolves.toBe("fallback");
+
+      expect(calls).toBe(1);
+      expect(await ctx.db.select().from(notificationSendQueue)).toHaveLength(1);
     });
 
     it("refuses at 23 hours and sends again once 24 hours have passed", async () => {
