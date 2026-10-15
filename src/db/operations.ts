@@ -502,6 +502,8 @@ export type TripActivityEntry =
         | "seat_claimed"
         | "seat_self_cancelled"
         | "seat_self_refunded"
+        | "seat_holder_cancelled"
+        | "seat_holder_refunded"
         | "incident_report_filed"
         | "incident_report_addendum_added"
         | "departure_note_sent";
@@ -574,7 +576,11 @@ export async function recordDiverSelfCancel(
   },
 ) {
   const [booking] = await db
-    .select({ tripId: bookings.tripId, personId: bookings.personId })
+    .select({
+      tripId: bookings.tripId,
+      personId: bookings.personId,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+    })
     .from(bookings)
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
     .limit(1);
@@ -597,10 +603,22 @@ export async function recordDiverSelfCancel(
       },
     });
   }
+  // A seat whose identity is held for review (issue #2467, #2082) is matched to
+  // this person on a guess, and whoever held the link is not known to be them:
+  // the line says "the diver on this seat", never their name. The event still
+  // carries the matched person as its actor, which the column requires.
+  const held = booking.identityUnconfirmedAt !== null;
+  const code = held
+    ? input.refunded
+      ? "seat_holder_refunded"
+      : "seat_holder_cancelled"
+    : input.refunded
+      ? "seat_self_refunded"
+      : "seat_self_cancelled";
   return recordTripActivity(db, {
     shopId: input.shopId,
     tripId: booking.tripId,
     actorPersonId: booking.personId,
-    entry: { code: input.refunded ? "seat_self_refunded" : "seat_self_cancelled" },
+    entry: { code },
   });
 }

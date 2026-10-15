@@ -161,6 +161,13 @@ type ActivityParamShapes = {
   seat_self_cancelled: { actor: string };
   /** …and the shop's cancellation window refunded them by card. */
   seat_self_refunded: { actor: string };
+  /**
+   * The same two acts on a seat whose identity is held for review (issue
+   * #2467, #2082): whoever held the link cancelled, and the person the seat was
+   * matched to on a guess is not named as the one who did.
+   */
+  seat_holder_cancelled: { actor: string };
+  seat_holder_refunded: { actor: string };
   /** A party lead's own cancel took an unclaimed seat they booked with it (batch 6 item 10). */
   party_seat_self_cancelled: { actor: string; diver: string };
   /** …and the shop's cancellation window refunded that seat by card. */
@@ -318,6 +325,8 @@ export const ACTIVITY_CODES = [
   "seat_claimed",
   "seat_self_cancelled",
   "seat_self_refunded",
+  "seat_holder_cancelled",
+  "seat_holder_refunded",
   "party_seat_self_cancelled",
   "party_seat_self_refunded",
   "medical_clearance_opened",

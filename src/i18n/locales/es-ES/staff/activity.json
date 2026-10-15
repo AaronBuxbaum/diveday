@@ -32,6 +32,8 @@
     "seat_claimed": "{actor} reclamó su lugar",
     "seat_self_cancelled": "{actor} canceló su propia plaza desde su enlace de la salida",
     "seat_self_refunded": "{actor} canceló su propia plaza desde su enlace de la salida y recibió el reembolso en su tarjeta",
+    "seat_holder_cancelled": "El buceador de esta plaza la canceló desde su enlace de la salida",
+    "seat_holder_refunded": "El buceador de esta plaza la canceló desde su enlace de la salida y se le reembolsó por tarjeta",
     "party_seat_self_cancelled": "{actor} canceló la plaza de {diver} junto con la suya, desde su enlace de la salida",
     "party_seat_self_refunded": "{actor} canceló la plaza de {diver} junto con la suya, desde su enlace de la salida, y se reembolsó en la tarjeta",
     "medical_clearance_opened": "{actor} abrió la evaluación médica de {diver}",
