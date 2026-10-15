@@ -5402,13 +5402,14 @@
     "rollCallStale": {
       "subject": "{shopName}: pase de lista aún abierto en {tripTitle}",
       "body": "El pase de lista después de la inmersión {dive} de {tripTitle} sigue abierto pasada la hora de regreso del barco ({time}).",
+      "bodyDated": "El pase de lista después de la inmersión {dive} de {tripTitle} sigue abierto pasada la hora de regreso del barco ({date}, {time}).",
       "countsMissing": "{missing, plural, one {# persona consta} other {# personas constan}} como no de vuelta a bordo.",
       "countsAwaiting": "{awaiting, plural, one {# persona sigue sin resultado: nadie ha anotado aún si falta o si ha vuelto a bordo} other {# personas siguen sin resultado: nadie ha anotado aún si faltan o si han vuelto a bordo}}.",
       "countsBoth": "{missing, plural, one {# persona consta} other {# personas constan}} como no de vuelta a bordo; {awaiting, plural, one {# más sigue sin resultado: nadie ha anotado aún si falta o si ha vuelto a bordo} other {# más siguen sin resultado: nadie ha anotado aún si faltan o si han vuelto a bordo}}.",
       "open": "Abrir el pase de lista",
       "shoreCall": "Llama primero a {shopName}.",
       "shoreCallPhone": "Llama primero a {shopName}, al {phone}.",
-      "shoreSent": "Enviado: {when}. Es el único mensaje que recibirás sobre esta salida: no llegará ningún aviso de que todo está en orden.",
+      "shoreSent": "Enviado: {when}. Es el único mensaje que recibirás sobre esta salida. DiveDay no envía ningún aviso de que todo está en orden; pregunta a {shopName}.",
       "shoreWhy": "Recibes este aviso porque {shopName} te tiene como su contacto en tierra para los avisos del pase de lista, y lo confirmaste.",
       "shoreStop": "Dejar de recibir estos avisos"
     },

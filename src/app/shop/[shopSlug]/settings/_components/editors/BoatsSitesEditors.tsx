@@ -116,6 +116,18 @@ export function EmergencyReferenceForm({
   const onFile = shop.shoreAlertEmail !== null && consentAt !== null;
   const waiting = onFile && confirmedAt === null && !shop.isDemo;
   const when = (at: Date) => formatDateTimeTz(at, locale, shop.timezone);
+  // The number an alert tells the shore contact to call is the shop's own
+  // phone (dive-domain re-review #2), so the shop sees which one it is.
+  const phone = shop.contactPhone?.trim();
+  const shoreAlertDescription = [
+    t("settings.main.emergency.shoreAlertEmailDescription"),
+    phone
+      ? t("settings.main.emergency.shoreAlertPhone", { phone })
+      : t("settings.main.emergency.shoreAlertNoPhone"),
+    shop.isDemo ? t("settings.main.emergency.shoreAlertDemo") : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
     <>
       <form
@@ -181,11 +193,7 @@ export function EmergencyReferenceForm({
         <FieldGrid columns={1}>
           <Field
             label={t("settings.main.emergency.shoreAlertEmailLabel")}
-            description={
-              shop.isDemo
-                ? `${t("settings.main.emergency.shoreAlertEmailDescription")} ${t("settings.main.emergency.shoreAlertDemo")}`
-                : t("settings.main.emergency.shoreAlertEmailDescription")
-            }
+            description={shoreAlertDescription}
           >
             <input
               name="shoreAlertEmail"

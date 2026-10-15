@@ -5402,13 +5402,14 @@
     "rollCallStale": {
       "subject": "{shopName}: roll call still open on {tripTitle}",
       "body": "The roll call after dive {dive} on {tripTitle} is still open after the boat was due back at {time}.",
+      "bodyDated": "The roll call after dive {dive} on {tripTitle} is still open after the boat was due back on {date} at {time}.",
       "countsMissing": "{missing, plural, one {# person is} other {# people are}} recorded not back aboard.",
       "countsAwaiting": "{awaiting, plural, one {# person has} other {# people have}} no result yet: nobody has recorded them missing or back aboard.",
       "countsBoth": "{missing, plural, one {# person is} other {# people are}} recorded not back aboard; {awaiting, plural, one {# more has} other {# more have}} no result yet: nobody has recorded them missing or back aboard.",
       "open": "Open the roll call",
       "shoreCall": "Call {shopName} first.",
       "shoreCallPhone": "Call {shopName} first, on {phone}.",
-      "shoreSent": "Sent {when}. This is the only message you will get about this departure: no all-clear follows.",
+      "shoreSent": "Sent {when}. This is the only message you will get about this departure. DiveDay sends no all-clear; ask {shopName}.",
       "shoreWhy": "You’re getting this because {shopName} lists you as its shore contact for roll-call alerts, and you confirmed it.",
       "shoreStop": "Stop these alerts"
     },

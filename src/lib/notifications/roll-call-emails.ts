@@ -1,6 +1,7 @@
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
-import { formatDateTimeTz, formatTimeTz } from "@/lib/format";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { formatDateTimeTz, formatShortDate, formatTimeTz } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
 import { firstNameOf } from "@/lib/person-name";
 import { emailButton, type NotificationEmail } from "./email";
@@ -24,6 +25,8 @@ export type RollCallStaleEmailInput = {
   /** When the boat was due back: the departure's end, said in the shop's zone. */
   endsAt: Date;
   timezone: string;
+  /** When the pass ran: the due-back time carries its date when that was another day. */
+  alertedAt: Date;
 };
 
 type Translator = ReturnType<typeof diverTranslator>;
@@ -38,14 +41,32 @@ function staleSentences(
   t: Translator,
   input: Pick<
     RollCallStaleEmailInput,
-    "locale" | "tripTitle" | "diveNumber" | "notBackAboard" | "awaiting" | "endsAt" | "timezone"
+    | "locale"
+    | "tripTitle"
+    | "diveNumber"
+    | "notBackAboard"
+    | "awaiting"
+    | "endsAt"
+    | "timezone"
+    | "alertedAt"
   >,
 ): string {
-  const open = t("notifications.rollCallStale.body", {
+  const words = {
     dive: input.diveNumber,
     tripTitle: input.tripTitle,
     time: formatTimeTz(input.endsAt, input.locale, input.timezone),
-  });
+  };
+  // A pass after the shop's midnight says which day the boat was due back
+  // (dive-domain re-review #4); the same day reads as a bare time.
+  const sameDay =
+    calendarDateInTimezone(input.endsAt, input.timezone) ===
+    calendarDateInTimezone(input.alertedAt, input.timezone);
+  const open = sameDay
+    ? t("notifications.rollCallStale.body", words)
+    : t("notifications.rollCallStale.bodyDated", {
+        ...words,
+        date: formatShortDate(input.endsAt, input.locale, input.timezone),
+      });
   const counts =
     input.notBackAboard > 0 && input.awaiting > 0
       ? t("notifications.rollCallStale.countsBoth", {
@@ -86,8 +107,6 @@ export type RollCallStaleShoreEmailInput = Omit<
 > & {
   /** The shop's own phone, or null when it has none on file. */
   shopPhone: string | null;
-  /** When the pass ran. */
-  alertedAt: Date;
   /** The link that takes this address off the shop. */
   stopUrl: string;
 };
@@ -110,6 +129,7 @@ export function rollCallStaleShoreEmail(input: RollCallStaleShoreEmailInput): No
     : t("notifications.rollCallStale.shoreCall", { shopName: input.shopName });
   const sent = t("notifications.rollCallStale.shoreSent", {
     when: formatDateTimeTz(input.alertedAt, input.locale, input.timezone),
+    shopName: input.shopName,
   });
   const why = t("notifications.rollCallStale.shoreWhy", { shopName: input.shopName });
   const stop = t("notifications.rollCallStale.shoreStop");

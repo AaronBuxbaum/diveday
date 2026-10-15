@@ -127,6 +127,14 @@ type AlertingGap = {
  * the Today rows lead with), and the two counts summed across the rows. A
  * diver and a crew member are different people, so the sums never count
  * anybody twice.
+ *
+ * The rows are the ones Today shows, and the detector gives a departure at
+ * most one diver row and one crew row (`listRollCallGaps`, src/db/today.ts):
+ * each side's stated-missing dive, else its earliest open dive. So the counts
+ * are those two dives' counts, which may be different dives; a second open
+ * dive on the same side is not in the sum (dive-domain re-review #5). A
+ * missing person on any dive still leads, because the detector searches every
+ * dive for one first.
  */
 function alertingGap(gaps: readonly OpenRollCall[]): AlertingGap | null {
   const afterDive = gaps.filter((gap) => isStaleRollCallReason(gap.reason) && !gap.stale);

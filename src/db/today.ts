@@ -384,6 +384,11 @@ export type OpenRollCall = {
    * or null. Optional so a gap assembled by hand says nothing about it.
    */
   alertedAt?: Date | null;
+  /**
+   * When the shop's shore contact was sent the same alert (H-118,
+   * `trips.roll_call_shore_alerted_at`), or null. Optional for the same reason.
+   */
+  shoreAlertedAt?: Date | null;
 };
 
 /**
@@ -498,6 +503,7 @@ export async function listRollCallGaps(
       priceCents: trips.priceCents,
       plannedDives: trips.plannedDives,
       alertedAt: trips.rollCallAlertedAt,
+      shoreAlertedAt: trips.rollCallShoreAlertedAt,
     })
     .from(trips)
     .where(
@@ -693,6 +699,7 @@ export async function listRollCallGaps(
       underway,
       stale,
       alertedAt: trip.alertedAt,
+      shoreAlertedAt: trip.shoreAlertedAt,
     };
 
     // A human said a diver did not come back. That outranks every other gap on

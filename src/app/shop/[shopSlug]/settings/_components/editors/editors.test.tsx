@@ -302,8 +302,27 @@ describe("the emergency reference editor", () => {
       EmergencyReferenceForm({ shop, t, locale: "en-US", consentByName: "Dana Reyes" }),
     );
     expect(html).toContain(EMERGENCY.shoreAlertWaiting);
+    // Dive-domain re-review #3: it may never have arrived; say what to do.
+    expect(html).toContain("Send the link again if they didn’t get it.");
     expect(html).toContain(EMERGENCY.shoreAlertResend);
     expect(html).not.toContain("They confirmed");
+  });
+
+  // Dive-domain re-review #2: the shop sees which number its alerts give.
+  it("says which phone the alerts tell the shore contact to call, or that there is none", async () => {
+    const shop = await onFile(null, false);
+    const withPhone = renderToStaticMarkup(
+      EmergencyReferenceForm({
+        shop: { ...shop, contactPhone: "+1 305 555 0100" },
+        t,
+        locale: "en-US",
+      }),
+    );
+    expect(withPhone).toContain("Alerts tell them to call +1 305 555 0100.");
+    const noPhone = renderToStaticMarkup(
+      EmergencyReferenceForm({ shop: { ...shop, contactPhone: null }, t, locale: "en-US" }),
+    );
+    expect(noPhone).toContain(EMERGENCY.shoreAlertNoPhone);
   });
 });
 

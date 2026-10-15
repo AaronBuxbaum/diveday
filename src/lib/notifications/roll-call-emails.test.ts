@@ -25,6 +25,7 @@ const base = {
   rollCallUrl: "https://diveday.example/shop/blue/trips/t/manifest?checkpoint=after_dive_2",
   endsAt: new Date("2026-10-14T20:00:00Z"),
   timezone: "America/New_York",
+  alertedAt: new Date("2026-10-14T21:06:00Z"),
 };
 
 /** Batch 6, item 6: the owner's alert for a roll call still open after the boat is due home. */
@@ -74,6 +75,17 @@ describe("rollCallStaleEmail", () => {
     const email = rollCallStaleEmail({ ...base, locale: "es-ES" });
     expect(email.text).toContain("pasada la hora de regreso del barco (16:00");
     expect(email.text).not.toMatch(/media hora|half an hour/);
+  });
+
+  // Dive-domain re-review #4: a pass after midnight must not read as today.
+  it("dates the time the boat was due back when that was not the day it is sent", () => {
+    const nextDay = { ...base, alertedAt: new Date("2026-10-15T05:06:00Z") };
+    expect(rollCallStaleEmail(nextDay).text.replaceAll("\u00a0", " ")).toContain(
+      "is still open after the boat was due back on Wed, Oct 14 at 4:00 PM EDT.",
+    );
+    expect(
+      rollCallStaleEmail({ ...nextDay, locale: "es-ES" }).text.replaceAll("\u00a0", " "),
+    ).toContain("pasada la hora de regreso del barco (mié, 14 oct, 16:00");
   });
 
   it("escapes what it interpolates into the html", () => {
@@ -195,6 +207,8 @@ describe("the roll_call_stale_shore kind", () => {
     expect(text).toContain("Call Blue <Mantis> first, on +1 305 555 0100.");
     expect(text).toContain("Sent Oct 14, 5:06 PM EDT.");
     expect(text).toContain("the only message you will get about this departure");
+    // Dive-domain re-review #8: silence is not the all-clear; the shop is.
+    expect(text).toContain("DiveDay sends no all-clear; ask Blue <Mantis>.");
     const noPhone = plain(rollCallStaleShoreEmail({ ...shore, shopPhone: null }).text);
     expect(noPhone).toContain("Call Blue <Mantis> first.");
   });
