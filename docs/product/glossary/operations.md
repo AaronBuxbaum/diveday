@@ -1207,6 +1207,10 @@
   5, and 10 and the affirmative answers in an applicable Box are
   physician referrals; a parent question can therefore be yes and still clear when its Box is all
   no. Unknown or incomplete questionnaires **fail closed** (review required), never waved through.
+  On a signed release every staff role sees the prompts that flagged; the **full answers** are
+  owner/manager-only, behind "Show answers", and each read writes `medical_answers_read` to the
+  diver's activity trail before the answers are returned (issue #2157). A read that cannot be
+  logged shows nothing, and a page render logs nothing.
 - **Waiver activity** — the staff-facing chronological explanation of stored waiver evidence:
   a link was issued, a diver started, signed, needs medical review, or had a pending link replaced.
   It is derived from timestamps on the evidence records and never exposes the raw completion token.
