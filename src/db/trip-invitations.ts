@@ -1,6 +1,7 @@
-import { and, asc, eq, gt, gte, inArray, isNull, ne, or } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, isNull, notInArray, or } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
+import { rowCanBeReactivated } from "@/lib/no-show";
 import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { seatRefusal } from "@/lib/participant-types";
 import { publicTripPath } from "@/lib/public-routes";
@@ -47,7 +48,7 @@ export async function createTripRequestInvitations(
 
   return db.transaction(async (tx) => {
     const [trip] = await tx
-      .select({ id: trips.id })
+      .select({ id: trips.id, startsAt: trips.startsAt })
       .from(trips)
       .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
       .limit(1);
@@ -99,7 +100,7 @@ export async function createDirectTripInvitation(
 ): Promise<boolean> {
   return db.transaction(async (tx) => {
     const [trip] = await tx
-      .select({ id: trips.id })
+      .select({ id: trips.id, startsAt: trips.startsAt })
       .from(trips)
       .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
       .limit(1);
@@ -130,18 +131,17 @@ export async function createDirectTripInvitation(
     if (!person) return false;
 
     const [booking] = await tx
-      .select({ id: bookings.id })
+      .select({ status: bookings.status })
       .from(bookings)
       .where(
         and(
           eq(bookings.shopId, input.shopId),
           eq(bookings.tripId, input.tripId),
           eq(bookings.personId, input.personId),
-          ne(bookings.status, "cancelled"),
         ),
       )
       .limit(1);
-    if (booking) return false;
+    if (booking && !rowCanBeReactivated(booking.status, trip.startsAt)) return false;
 
     const inserted = await tx
       .insert(tripInvitations)
@@ -382,9 +382,10 @@ export async function deliverTripInvitation(
  * evidence. "Already gone" is the scheduled time, not `hasSailed`'s grace: the
  * diver books later, from an email.
  *
- * Any booking row on it, a no-show included, refuses too: `bookings` is
- * unique on (trip, person) and the booking form answers `already_booked` for
- * a row that is not cancelled.
+ * Any live booking row on it refuses too: `bookings` is unique on (trip,
+ * person) and the booking form answers `already_booked` for a row it cannot
+ * reactivate. A cancelled row and a no-show on a departure still ahead can be
+ * booked again, so they do not refuse (#2484, `rowCanBeReactivated`).
  */
 export async function departureOpenToDiver(
   db: DbExecutor,
@@ -415,7 +416,9 @@ export async function departureOpenToDiver(
         eq(bookings.shopId, input.shopId),
         eq(bookings.tripId, trip.id),
         eq(bookings.personId, input.personId),
-        ne(bookings.status, "cancelled"),
+        // A cancelled row, or a no-show on a departure still ahead, can be
+        // booked again (`rowCanBeReactivated`); the departure is future here.
+        notInArray(bookings.status, ["cancelled", "no_show"]),
       ),
     )
     .limit(1);

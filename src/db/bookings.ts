@@ -17,6 +17,7 @@ import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { seatName } from "@/lib/held-seat";
 import { normalizeEmailAddress } from "@/lib/inbox";
+import { rowCanBeReactivated } from "@/lib/no-show";
 import {
   holdsRegisterKind,
   isDiver,
@@ -1085,7 +1086,9 @@ async function writeSeat(
     .where(and(eq(bookings.tripId, trip.id), eq(bookings.personId, person.id)))
     .limit(1);
   if (existing) {
-    if (existing.status !== "cancelled") return { ok: false, reason: "already_booked" };
+    if (!rowCanBeReactivated(existing.status, trip.startsAt)) {
+      return { ok: false, reason: "already_booked" };
+    }
     await tx
       .update(bookings)
       .set({

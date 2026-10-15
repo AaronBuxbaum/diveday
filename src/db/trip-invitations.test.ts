@@ -471,12 +471,24 @@ describe("trip invitations", () => {
     });
 
     /**
-     * F2 (the review asked for seat-held statuses here). A `no_show` row on the
-     * offered departure still refuses the offer on purpose: `bookings` is
-     * unique on (trip, person) and the booking form answers `already_booked`
-     * for any row that is not cancelled, so the link would not seat them.
+     * #2484: a `no_show` row on a departure still ahead is booked again the way
+     * a cancelled one is, so the offer is not refused for it. A live booking
+     * still is, and so is a no-show once the departure has started.
      */
-    it("refuses a departure the diver already has a booking row on, whatever its status", async () => {
+    it("refuses a departure the diver holds a live booking row on", async () => {
+      const ctx = await invitationContext();
+      const booked = await createBooking(ctx.db, {
+        actor: "staff",
+        shopId: ctx.shop.id,
+        tripId: ctx.firstTrip.id,
+        fullName: "Still Booked",
+        email: "still.booked@example.com",
+      });
+      if (!booked.ok) throw new Error("booking failed");
+      await expectNothingSent(ctx, booked.personId);
+    });
+
+    it("offers a departure to a diver marked no-show on it while it is still ahead", async () => {
       const ctx = await invitationContext();
       const booked = await createBooking(ctx.db, {
         actor: "staff",
@@ -490,7 +502,21 @@ describe("trip invitations", () => {
         .update(bookings)
         .set({ status: "no_show" })
         .where(eq(bookings.id, booked.bookingId));
-      await expectNothingSent(ctx, booked.personId);
+      const mail = fakeEmail();
+      await expect(
+        offerDepartureToDiver(
+          ctx.db,
+          {
+            shopId: ctx.shop.id,
+            shopSlug: ctx.shop.slug,
+            tripId: ctx.firstTrip.id,
+            personId: booked.personId,
+            createdByPersonId: ctx.author.id,
+          },
+          mail.provider,
+        ),
+      ).resolves.toBe("sent");
+      expect(mail.sent).toHaveLength(1);
     });
   });
 });
