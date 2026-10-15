@@ -73,10 +73,15 @@ export type ClaimPageData = {
   seatName: string;
   /**
    * The booker said this seat is "Under 18" (`bookings.minor_declared_at`):
-   * the page says a parent or guardian signs the release with them, and that
-   * the parent who booked can sign it from their own page (H-116).
+   * the page says a parent or guardian signs the release with them (H-116).
    */
   minorDeclared: boolean;
+  /**
+   * The booker could sign this seat's release from their own page now (the
+   * panel's `sign`), so the page may say so. False where that door refuses,
+   * such as a teen with an address of their own (dive-domain review F4).
+   */
+  parentCanSign: boolean;
 };
 
 export async function getClaimPageData(
@@ -96,6 +101,14 @@ export async function getClaimPageData(
     .limit(1);
   if (!row) return null;
   if (!claimableNow(row.booking, row.trip, now)) return null;
+  const leadBookingId = row.booking.partyLeadBookingId;
+  const lead =
+    row.booking.minorDeclaredAt !== null && leadBookingId
+      ? await leadSigningContext(db, row.shop.id, leadBookingId)
+      : null;
+  const door = lead
+    ? await minorSeatDoor(db, row.shop.id, lead, row, { now, claimable: true })
+    : null;
   return {
     shopId: row.shop.id,
     shopName: row.shop.name,
@@ -110,6 +123,7 @@ export async function getClaimPageData(
     endsAt: row.trip.endsAt,
     seatName: seatName(row.person.fullName, row.booking),
     minorDeclared: row.booking.minorDeclaredAt !== null,
+    parentCanSign: door === "sign",
   };
 }
 
@@ -540,6 +554,15 @@ export type PartySeatClaim = {
    */
   signForMinor: boolean;
   /**
+   * What the panel says on a minor seat with no "Sign" button (dive-domain
+   * review F4 and N7 of layer r4-1): `send_link` when a release is owed but
+   * the parent's door refuses (the seat has an address of its own), so the
+   * path left is the seat's link with a parent or guardian beside them;
+   * `physician` when the child's medical referred them, which only the shop
+   * can clear. Null otherwise.
+   */
+  minorNote: "send_link" | "physician" | null;
+  /**
    * A fresh claim capability for an unclaimed seat, or null for a claimed one
    * (nothing left to hand out) — and null when issuing failed, which the
    * panel renders as the seat's name with no link rather than an error.
@@ -610,6 +633,7 @@ export async function issuePartySeatClaims(
   const seats: PartySeatClaim[] = [];
   for (const row of rows) {
     const claimable = claimableNow(row.booking, row.trip, now);
+    const door = await minorSeatDoor(db, input.shopId, lead, row, { now, claimable });
     seats.push({
       bookingId: row.booking.id,
       // A held seat goes by the name it was booked under: the matched
@@ -618,11 +642,8 @@ export async function issuePartySeatClaims(
       claimed: row.booking.claimedAt !== null,
       waiverSigned: waiverState(row.waiver, now) === "complete",
       participantType: row.booking.participantType,
-      signForMinor:
-        lead !== null &&
-        minorSeatSignable(row.booking, row.person, { ...lead, now, claimable }) &&
-        (await seatPersonIsThisBookings(db, input.shopId, row.booking)) &&
-        (await minorSeatWaiverOwed(db, input.shopId, row.booking.id)),
+      signForMinor: door === "sign",
+      minorNote: door === "send_link" || door === "physician" ? door : null,
       claim: claimable
         ? await issueBookingCapability(db, {
             shopId: input.shopId,
@@ -742,10 +763,54 @@ const PARENT_SIGNABLE_BLOCKERS = new Set([
   "guardian_signature_missing",
 ]);
 
-/** Whether this seat still owes the signature a parent can give, by readiness' own rule. */
-async function minorSeatWaiverOwed(db: AppDb, shopId: string, bookingId: string): Promise<boolean> {
-  const readiness = await getBookingReadiness(db, shopId, bookingId);
-  return Boolean(readiness?.blockers.some((blocker) => PARENT_SIGNABLE_BLOCKERS.has(blocker.code)));
+/**
+ * **What the lead's panel and the seat's claim page may say about a minor
+ * seat's release**, one answer for both and for `openMinorSeatWaiver`:
+ *
+ * - `sign`: the parent's door (`minorSeatSignable`, `seatPersonIsThisBookings`)
+ *   and a release still owed by readiness's own rule
+ * - `physician`: the parent's door, but the child's medical referred them,
+ *   which the parent's signature does not answer (it blocks, and must)
+ * - `send_link`: a release is owed and the parent's door refuses, so the
+ *   seat's own link, with a parent or guardian beside them, is the path
+ * - null: nothing to say (not a minor seat, claimed, held, past claiming, or
+ *   nothing owed)
+ */
+async function minorSeatDoor(
+  db: AppDb,
+  shopId: string,
+  lead: { leadEmail: string | null; timezone: string } | null,
+  row: {
+    booking: Pick<
+      typeof bookings.$inferSelect,
+      "id" | "personId" | "claimedAt" | "minorDeclaredAt" | "identityUnconfirmedAt"
+    >;
+    person: Pick<
+      typeof people.$inferSelect,
+      "email" | "dateOfBirth" | "deletedAt" | "anonymizedAt"
+    >;
+  },
+  context: { now: Date; claimable: boolean },
+): Promise<"sign" | "send_link" | "physician" | null> {
+  const { booking, person } = row;
+  if (
+    !context.claimable ||
+    booking.claimedAt !== null ||
+    booking.minorDeclaredAt === null ||
+    booking.identityUnconfirmedAt !== null
+  ) {
+    return null;
+  }
+  const readiness = await getBookingReadiness(db, shopId, booking.id);
+  const codes = new Set(readiness?.blockers.map((blocker) => blocker.code) ?? []);
+  const owed = [...PARENT_SIGNABLE_BLOCKERS].some((code) => codes.has(code));
+  const parentsDoor =
+    lead !== null &&
+    minorSeatSignable(booking, person, { ...lead, ...context }) &&
+    (await seatPersonIsThisBookings(db, shopId, booking));
+  if (parentsDoor && owed) return "sign";
+  if (parentsDoor && codes.has("medical_review")) return "physician";
+  return owed ? "send_link" : null;
 }
 
 /**
@@ -797,11 +862,9 @@ export async function openMinorSeatWaiver(
   const lead = await leadSigningContext(db, input.shopId, input.leadBookingId);
   if (!lead) return { ok: false };
   const claimable = claimableNow(row.booking, row.trip, now);
-  if (!minorSeatSignable(row.booking, row.person, { ...lead, now, claimable })) {
+  if ((await minorSeatDoor(db, input.shopId, lead, row, { now, claimable })) !== "sign") {
     return { ok: false };
   }
-  if (!(await seatPersonIsThisBookings(db, input.shopId, row.booking))) return { ok: false };
-  if (!(await minorSeatWaiverOwed(db, input.shopId, row.booking.id))) return { ok: false };
   const issued = await issueWaiverRequest(db, {
     shopId: input.shopId,
     bookingId: row.booking.id,

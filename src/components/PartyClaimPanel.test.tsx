@@ -112,4 +112,33 @@ describe("PartyClaimPanel", () => {
     expect(screen.queryByRole("button", { name: "Sign Mia’s waiver" })).toBeNull();
     expect(container).toBeTruthy();
   });
+
+  /** Dive-domain review F4 and N7 of layer r4-1: a minor seat with no button says why. */
+  it("tells the organizer the path left when they cannot sign", () => {
+    const base = {
+      claimed: false,
+      waiverSigned: false,
+      claimUrl: null,
+      signForMinor: false,
+    };
+    render(
+      <PartyClaimPanel
+        locale="en-US"
+        seats={[
+          { ...base, bookingId: "seat-tess", seatName: "Tess", minorNote: "send_link" as const },
+          { ...base, bookingId: "seat-kai", seatName: "Kai", minorNote: "physician" as const },
+        ]}
+        signWaiverAction={async () => {}}
+      />,
+    );
+    expect(
+      screen.getByText("Send Tess their link; a parent or guardian signs with them."),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Kai’s medical answers need a physician’s sign-off. The shop will say what it needs.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /waiver/ })).toBeNull();
+  });
 });

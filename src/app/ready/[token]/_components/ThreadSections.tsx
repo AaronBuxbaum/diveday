@@ -69,6 +69,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
     claimed: seat.claimed,
     waiverSigned: seat.waiverSigned,
     signForMinor: seat.signForMinor,
+    minorNote: seat.minorNote,
     claimUrl: seat.claim
       ? claimOrigin
         ? new URL(claimLinkPath(seat.claim.token), `${claimOrigin}/`).toString()

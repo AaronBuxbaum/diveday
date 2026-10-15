@@ -1303,4 +1303,90 @@ describe("a parent signs a minor seat's release", () => {
       }),
     ).toEqual({ ok: false });
   });
+
+  /**
+   * Dive-domain review F4 of layer r4-1: a teen with an address of their own
+   * gets no parent's door (the security rule stands), so neither their claim
+   * page nor the lead's panel may promise one. The panel says the path that
+   * is left: send the link, and a parent or guardian signs with them.
+   */
+  it("promises the parent's door only where it exists, and says the link otherwise", async () => {
+    const { db, shop, open } = await seededContext();
+    const outcome = await createBookingParty(db, [
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Pat Parent",
+        email: "pat.parent@example.com",
+      },
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Kai Kid",
+        minorDeclared: true,
+      },
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Tess Teen",
+        email: "tess.teen@example.com",
+        minorDeclared: true,
+      },
+    ]);
+    if (!outcome.ok) throw new Error(`party booking failed: ${outcome.reason}`);
+    const [lead, kai, tess] = outcome.bookings;
+    if (!lead || !kai || !tess) throw new Error("party booking incomplete");
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(seats.find((seat) => seat.bookingId === kai.bookingId)).toMatchObject({
+      signForMinor: true,
+      minorNote: null,
+    });
+    expect(seats.find((seat) => seat.bookingId === tess.bookingId)).toMatchObject({
+      signForMinor: false,
+      minorNote: "send_link",
+    });
+    const kaiPage = await getClaimPageData(
+      db,
+      await claimTokenFor(db, shop.id, lead.bookingId, kai.bookingId),
+    );
+    const tessPage = await getClaimPageData(
+      db,
+      await claimTokenFor(db, shop.id, lead.bookingId, tess.bookingId),
+    );
+    expect(kaiPage).toMatchObject({ minorDeclared: true, parentCanSign: true });
+    expect(tessPage).toMatchObject({ minorDeclared: true, parentCanSign: false });
+  });
+
+  /**
+   * Dive-domain review N7 of layer r4-1: a physician referral on the child's
+   * form closes the parent's door (it must block), and the panel says why
+   * rather than going silent.
+   */
+  it("says a physician's form is needed when the child's medical referred them", async () => {
+    const { db, shop, lead, mia } = await familyParty();
+    const opened = await openMinorSeatWaiver(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+      seatBookingId: mia.bookingId,
+    });
+    expect(opened).toMatchObject({ ok: true });
+    await db
+      .update(waiverRecords)
+      .set({ status: "medical_review", signedAt: new Date(nowMs()) })
+      .where(eq(waiverRecords.bookingId, mia.bookingId));
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(seats.find((seat) => seat.bookingId === mia.bookingId)).toMatchObject({
+      signForMinor: false,
+      minorNote: "physician",
+    });
+  });
 });

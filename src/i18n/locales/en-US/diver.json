@@ -1156,7 +1156,10 @@
     "minorSignPending": "Opening…",
     "minorSignBody": "{name} is under 18, so you sign their release with them, as their parent or guardian.",
     "minorWaiverUnavailable": "That waiver can’t be opened from here now. Contact the shop and they can help.",
-    "minorNote": "{seatName} is under 18, so a parent or guardian signs the release with them. If you booked this seat, you can sign it from your own booking page.",
+    "minorNote": "{seatName} is under 18, so a parent or guardian signs the release with them.",
+    "minorNoteParentSigns": "If you booked this seat, you can sign it from your own booking page.",
+    "minorSendLink": "Send {name} their link; a parent or guardian signs with them.",
+    "minorPhysician": "{name}’s medical answers need a physician’s sign-off. The shop will say what it needs.",
     "claimedNeedsWaiver": "Ask them to finish their waiver from their own link."
   },
   "rental": {

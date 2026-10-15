@@ -20,6 +20,11 @@ export type PartyClaimSeat = {
    * unclaimed "Under 18" seat still owing one. Absent reads as no.
    */
   signForMinor?: boolean;
+  /**
+   * What a minor seat with no "Sign" button says instead: send the seat its
+   * link, or a physician's sign-off is needed. Absent says nothing.
+   */
+  minorNote?: "send_link" | "physician" | null;
 };
 
 /**
@@ -128,6 +133,15 @@ export function PartyClaimPanel({
                   {t("seatClaim.minorSign", { name: seat.seatName })}
                 </SubmitButton>
               </form>
+            ) : null}
+            {seat.minorNote === "send_link" ? (
+              <p className="mt-2 text-sm text-muted">
+                {t("seatClaim.minorSendLink", { name: seat.seatName })}
+              </p>
+            ) : seat.minorNote === "physician" ? (
+              <p className="mt-2 text-sm text-muted">
+                {t("seatClaim.minorPhysician", { name: seat.seatName })}
+              </p>
             ) : null}
             {seat.claimed && !seat.waiverSigned ? (
               <p className="mt-2 text-sm text-muted">{t("seatClaim.claimedNeedsWaiver")}</p>

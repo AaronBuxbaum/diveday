@@ -1156,7 +1156,10 @@
     "minorSignPending": "Abriendo…",
     "minorSignBody": "{name} es menor de 18 años, así que firmas su exención como su madre, padre o tutor.",
     "minorWaiverUnavailable": "Ahora no se puede abrir esa exención desde aquí. Contacta con el centro y te ayudarán.",
-    "minorNote": "{seatName} es menor de 18 años, así que su madre, padre o tutor también firma la exención. Si reservaste esta plaza, puedes firmarla desde tu propia página de reserva.",
+    "minorNote": "{seatName} es menor de 18 años, así que su madre, padre o tutor también firma la exención.",
+    "minorNoteParentSigns": "Si reservaste esta plaza, puedes firmarla desde tu propia página de reserva.",
+    "minorSendLink": "Envíale su enlace a {name}; su madre, padre o tutor firma a su lado.",
+    "minorPhysician": "Las respuestas médicas de {name} necesitan el visto bueno de un médico. El centro te dirá qué necesita.",
     "claimedNeedsWaiver": "Pídele que termine su exención desde su propio enlace."
   },
   "rental": {

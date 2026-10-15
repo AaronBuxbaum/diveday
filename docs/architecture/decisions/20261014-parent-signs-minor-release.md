@@ -40,8 +40,10 @@ own device, as the child's parent or guardian.**
    `guardian_signature_missing` are unchanged.
 5. **The seat stays the lead's.** A later claim supersedes a release that is not the claimant's,
    as every claim does.
-6. **A minor seat's claim page says a parent or guardian signs with them**, and that the booker can
-   sign from their own page. The claim refusal stays the neutral `unable` (H-22, #2288).
+6. **A minor seat's claim page says a parent or guardian signs with them**, and, only where the
+   door above exists, that the booker can sign from their own page. Where it refuses (a teen with an
+   address of their own), the lead's panel says to send the seat its link, a parent or guardian
+   beside them; where the child's medical referred them, it says a physician's sign-off is needed. The claim refusal stays the neutral `unable` (H-22, #2288).
 
 ## Consequences
 
