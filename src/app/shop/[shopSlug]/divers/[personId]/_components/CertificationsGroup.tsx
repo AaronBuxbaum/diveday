@@ -8,7 +8,7 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
 import { InsetGroup } from "@/components/ui/ledger";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { agencyCheckQuery } from "@/lib/agency-check";
+import { agencyCheckOffered, agencyCheckQuery } from "@/lib/agency-check";
 import {
   type CertificationCardKind,
   certificationCardRowState,
@@ -132,6 +132,25 @@ function agencyCheckActions(shopSlug: string, personId: string) {
     action: agencyCheckAction.bind(null, shopSlug, personId),
     addListed: addAgencyListedCardsAction.bind(null, shopSlug, personId),
   };
+}
+
+/**
+ * The lookup the extension would type for this card, or null when there is
+ * none to offer. PADI's waits for the shop's own switch (H-121); off, the card
+ * keeps its "(member sign-in)" link.
+ */
+function offeredCheckQuery(
+  card: { agency: Parameters<typeof agencyCheckQuery>[0]["agency"]; identifier: string | null },
+  person: { fullName: string; dateOfBirth: string | null },
+  shop: Shop,
+) {
+  if (!agencyCheckOffered(card.agency, shop)) return null;
+  return agencyCheckQuery({
+    agency: card.agency,
+    fullName: person.fullName,
+    dateOfBirth: person.dateOfBirth,
+    identifier: card.identifier,
+  });
 }
 
 /**
@@ -464,14 +483,7 @@ export function CertificationsGroup({
               check={{
                 certificationId: card.id,
                 awaiting: awaiting || needsImportConfirm(card),
-                query: selfDeclared
-                  ? null
-                  : agencyCheckQuery({
-                      agency: card.agency,
-                      fullName: diver.person.fullName,
-                      dateOfBirth: diver.person.dateOfBirth,
-                      identifier: card.identifier,
-                    }),
+                query: selfDeclared ? null : offeredCheckQuery(card, diver.person, shop),
                 ...agencyCheck,
               }}
             />

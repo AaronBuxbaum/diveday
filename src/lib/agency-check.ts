@@ -100,6 +100,18 @@ export function isCheckableAgency(agency: string): agency is CheckableAgency {
 }
 
 /**
+ * Whether this shop is offered the extension's check for this agency. PADI's
+ * checks (DiveChek here, eLearning in `elearning-check.ts`) run in a staffer's
+ * browser signed in under the shop's own PADI membership, and have not been
+ * tried against the live site yet (#2259), so they wait for the shop's own
+ * switch, off by default (`shops.padi_checks_enabled`, H-121). Off, a PADI card
+ * keeps its "(member sign-in)" link and nothing offers or accepts a check.
+ */
+export function agencyCheckOffered(agency: string, shop: { padiChecksEnabled: boolean }): boolean {
+  return agency !== "padi" || shop.padiChecksEnabled;
+}
+
+/**
  * Whether a card at this level is one the extension checks. Divemaster and
  * instructor are not, at any agency: a professional rating is looked up on the
  * agency's professional tool, so a pending pro card keeps its link.
@@ -387,6 +399,8 @@ const NO_RECORD_WORDS = [
   "no result found",
   "no records",
   "no record found",
+  // NAUI's own wording.
+  "no record was found",
   "no certifications found",
   "no certification found",
   "no matching",

@@ -39,7 +39,9 @@ function fillAgencyForm(query, spec, signInPath) {
   // Whole words, so "Research" is not a search. A box says it searches with
   // these; a signed-in search's own button may also say check or verify.
   const BOX_SEARCH = /\b(search|find|look ?up|buscar)\b/i;
-  const BUTTON_SEARCH = /\b(search|find|look ?up|check|chek|divechek|verify|buscar|verificar)\b/i;
+  // PADI's own DiveChek instructions say its button reads "Run Report".
+  const BUTTON_SEARCH =
+    /\b(search|find|look ?up|check|chek|divechek|verify|run ?report|buscar|verificar)\b/i;
   const SUBMITS = 'button, input[type="submit"]';
 
   /** Words as a person reads them: "searchFirstName" and "search_first" are two words each. */
@@ -316,6 +318,19 @@ function fillAgencyForm(query, spec, signInPath) {
             SUBMITS,
           ),
         ).find(visible) || null;
+    if (!button) return { ok: false, missing: ["submit"] };
+  } else if (spec.either) {
+    // CMAS: one page, two searches, each with its own button ("Search by code"
+    // under the code, "Manual Search" under the names and birth date), in one
+    // form or none. The search performed is the button after its last box.
+    const last = boxes[boxes.length - 1];
+    button =
+      Array.from(document.querySelectorAll(SUBMITS)).find(
+        (element) =>
+          visible(element) &&
+          element.type !== "reset" &&
+          Boolean(last.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING),
+      ) || null;
     if (!button) return { ok: false, missing: ["submit"] };
   } else {
     button =

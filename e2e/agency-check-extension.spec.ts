@@ -46,8 +46,15 @@ const LISTED_LEAD = "SSI also shows these certifications. Add them? Each waits f
 type AgencyPages = {
   /** SSI's result lists nitrox and Deep under the level card. */
   ssiListsMore: boolean;
-  /** Signed out of PADI: DiveChek shows its sign-in form, or sends the tab to PADI's sign-in host. */
-  padi: "sign-in-form" | "sign-in-redirect";
+  /**
+   * DiveChek, on pro.padi.com. Signed out: it shows its sign-in form, or sends
+   * the tab to PADI's sign-in host. Signed in: it sends the tab on to the same
+   * page on pros.padi.com, PADI's other Pros' Site host, which answers with
+   * DiveChek's form and its "Run Report" button.
+   */
+  padi: "sign-in-form" | "sign-in-redirect" | "signed-in-on-pros";
+  /** The card number DiveChek's result row shows. */
+  padiCardNumber: string;
   /** Every request a fake agency page received, as `METHOD url`. */
   requests: string[];
   /** Anything typed into the PADI sign-in form, by box name. */
@@ -111,16 +118,48 @@ const PADI_SIGN_IN = html(
   </script>`,
 );
 
-/** Every host the extension may open (`extension/agencies.js`), and PADI's sign-in host. */
+/**
+ * DiveChek signed in: its form, then the one diver's record. PADI's own
+ * instructions name the button "Run Report".
+ */
+function divechekPage(url: URL, cardNumber: string): string {
+  const first = url.searchParams.get("first_name");
+  const last = url.searchParams.get("last_name");
+  const born = url.searchParams.get("dob");
+  if (first === null || last === null || born === null) {
+    return html(
+      "DiveChek | PADI Pros",
+      `<h1>DiveChek</h1>
+      <form method="get" action="/divechek">
+        <label>First Name <input name="first_name"></label>
+        <label>Last Name <input name="last_name"></label>
+        <label>Date of Birth <input name="dob"></label>
+        <button type="submit">Run Report</button>
+      </form>`,
+    );
+  }
+  return html(
+    "DiveChek | PADI Pros",
+    `<h1>DiveChek</h1>
+    <p>1 diver found</p>
+    <p>${escapeHtml(first)} ${escapeHtml(last)}</p>
+    <p>Date of Birth: ${escapeHtml(born)}</p>
+    <p>Open Water Diver 06/15/2015 ${escapeHtml(cardNumber)}</p>`,
+  );
+}
+
+/** Every host the extension may open or be sent to (`extension/agencies.js`), and PADI's sign-in host. */
 const AGENCY_HOSTS = [
   "my.divessi.com",
   "www.naui.org",
   "www.tdisdi.com",
   "www.gue.com",
   "portal.cmas.org",
+  "pro.padi.com",
   "pros.padi.com",
   "login.padi.com",
 ];
+const PADI_HOSTS = ["pro.padi.com", "pros.padi.com"];
 
 /**
  * The agencies' pages, served over HTTPS on a loopback port that Chromium is
@@ -163,13 +202,21 @@ async function serveAgencyPages(pages: AgencyPages, dir: string): Promise<https.
       if (url.hostname === "my.divessi.com" && url.pathname === "/online_diver_check") {
         return send(200, ssiPage(url, pages.ssiListsMore));
       }
-      if (url.hostname === "pros.padi.com" && url.pathname === "/__typed") {
+      if (PADI_HOSTS.includes(url.hostname) && url.pathname === "/__typed") {
         pages.typedIntoSignIn.push(url.searchParams.get("box") ?? "?");
         return send(204);
       }
-      if (url.hostname === "pros.padi.com" && url.pathname === "/divechek") {
+      if (url.hostname === "pro.padi.com" && url.pathname === "/divechek") {
+        if (pages.padi === "signed-in-on-pros") {
+          return send(302, "", { location: "https://pros.padi.com/divechek" });
+        }
         return pages.padi === "sign-in-redirect"
           ? send(302, "", { location: "https://login.padi.com/sign-in?return=%2Fdivechek" })
+          : send(200, PADI_SIGN_IN);
+      }
+      if (url.hostname === "pros.padi.com" && url.pathname === "/divechek") {
+        return pages.padi === "signed-in-on-pros"
+          ? send(200, divechekPage(url, pages.padiCardNumber))
           : send(200, PADI_SIGN_IN);
       }
       if (url.hostname === "login.padi.com") return send(200, PADI_SIGN_IN);
@@ -214,6 +261,7 @@ const test = base.extend<{ agencyPages: AgencyPages; extensionId: string }>({
     await use({
       ssiListsMore: false,
       padi: "sign-in-form",
+      padiCardNumber: "",
       requests: [],
       typedIntoSignIn: [],
     });
@@ -305,6 +353,36 @@ async function diverWithPendingSsiCard(page: Page, prefix: string) {
   return { name, cardNumber, cards };
 }
 
+/**
+ * A new diver born 12 April 1990 with a pending PADI Open Water card, made on
+ * the diver pages; the page is on their record after. The seeded demo runs the
+ * PADI checks (`shops.padi_checks_enabled`), so the card offers one.
+ */
+async function diverWithPendingPadiCard(page: Page) {
+  const stamp = Date.now();
+  const name = `Padi Realext${stamp}`;
+  await page.goto(`/shop/${SHOP}/divers`);
+  await page.getByRole("searchbox", { name: "Search divers" }).fill(name);
+  await page.getByRole("button", { name: "Add diver", exact: true }).click();
+  await expect(page).toHaveURL(/\/divers\/[0-9a-f-]+(\?edit=1)?$/);
+  await page.getByLabel("Date of birth").fill("1990-04-12");
+  await page.getByRole("button", { name: "Save details" }).click();
+  await expect(page.getByRole("status")).toContainText("Diver details updated");
+  const group = await openDiverFileGroup(page, "Certification records");
+  await group.getByText("Add certification", { exact: true }).click();
+  const form = page
+    .locator("form", { has: page.getByRole("button", { name: "Capture for review", exact: true }) })
+    .filter({ visible: true });
+  await form.locator('select[name="agency"]').selectOption("padi");
+  await form.locator('select[name="card"]').selectOption("level:open_water");
+  const cardNumber = `1506AB${String(stamp).slice(-4)}`;
+  await form.getByLabel("Certification number").fill(cardNumber);
+  await form.getByRole("button", { name: "Capture for review", exact: true }).click();
+  const cards = await openDiverFileGroup(page, "Certification records");
+  await expect(cards.getByRole("button", { name: "Check with PADI" })).toBeVisible();
+  return { name, cardNumber, cards };
+}
+
 test("DiveDay sees the installed extension, and settings says this browser has it", async ({
   page,
   extensionId,
@@ -353,31 +431,13 @@ test("signed out of PADI, the check says to sign in first and types nothing into
 }) => {
   test.setTimeout(90_000);
   void extensionId;
-  const stamp = Date.now();
-  const name = `Padi Realext${stamp}`;
-  await page.goto(`/shop/${SHOP}/divers`);
-  await page.getByRole("searchbox", { name: "Search divers" }).fill(name);
-  await page.getByRole("button", { name: "Add diver", exact: true }).click();
-  await expect(page).toHaveURL(/\/divers\/[0-9a-f-]+(\?edit=1)?$/);
-  await page.getByLabel("Date of birth").fill("1990-04-12");
-  await page.getByRole("button", { name: "Save details" }).click();
-  await expect(page.getByRole("status")).toContainText("Diver details updated");
-  const group = await openDiverFileGroup(page, "Certification records");
-  await group.getByText("Add certification", { exact: true }).click();
-  const form = page
-    .locator("form", { has: page.getByRole("button", { name: "Capture for review", exact: true }) })
-    .filter({ visible: true });
-  await form.locator('select[name="agency"]').selectOption("padi");
-  await form.locator('select[name="card"]').selectOption("level:open_water");
-  await form.getByLabel("Certification number").fill(`1506AB${String(stamp).slice(-4)}`);
-  await form.getByRole("button", { name: "Capture for review", exact: true }).click();
-  const cards = await openDiverFileGroup(page, "Certification records");
+  const { cards } = await diverWithPendingPadiCard(page);
   const signInFirst = cards.getByText("Sign in to the PADI Pros’ Site first, then check again.");
 
   // DiveChek's own address showing PADI's sign-in form.
   await cards.getByRole("button", { name: "Check with PADI" }).click();
   await expect(signInFirst).toBeVisible({ timeout: 20_000 });
-  expect(agencyPages.requests).toContain("GET https://pros.padi.com/divechek");
+  expect(agencyPages.requests).toContain("GET https://pro.padi.com/divechek");
   expect(agencyPages.typedIntoSignIn).toEqual([]);
   expect(agencyPages.requests.filter((request) => request.startsWith("POST"))).toEqual([]);
   await expect(cards.getByText("Couldn’t read PADI’s page.")).toHaveCount(0);
@@ -396,6 +456,45 @@ test("signed out of PADI, the check says to sign in first and types nothing into
   expect(agencyPages.typedIntoSignIn).toEqual([]);
   expect(agencyPages.requests.filter((request) => request.startsWith("POST"))).toEqual([]);
   await expect(reloaded.getByRole("button", { name: "Check with PADI" })).toBeEnabled();
+});
+
+test("signed in to PADI, DiveChek sent on to pros.padi.com is read, its Run Report pressed, and the card certified", async ({
+  page,
+  extensionId,
+  agencyPages,
+}) => {
+  test.setTimeout(90_000);
+  void extensionId;
+  agencyPages.padi = "signed-in-on-pros";
+  const { name, cardNumber, cards } = await diverWithPendingPadiCard(page);
+  agencyPages.padiCardNumber = cardNumber;
+
+  await cards.getByRole("button", { name: "Check with PADI" }).click();
+
+  const toast = page
+    .getByRole("status")
+    .filter({ hasText: "PADI shows this certification. Marked certified." });
+  await expect(toast).toBeVisible({ timeout: 20_000 });
+  await expect(cards.getByText(/^Checked with PADI by /)).toBeVisible();
+  await expect(
+    cards.getByText("Sign in to the PADI Pros’ Site first, then check again."),
+  ).toHaveCount(0);
+  // The tab opened PADI's own host, was sent on to the other, and Run Report searched there.
+  expect(agencyPages.requests).toContain("GET https://pro.padi.com/divechek");
+  const [first, last] = name.split(" ");
+  const searched = new URL(
+    "https://pros.padi.com/divechek?" +
+      new URLSearchParams({
+        first_name: first ?? "",
+        last_name: last ?? "",
+        dob: "04/12/1990",
+      }).toString(),
+  );
+  expect(agencyPages.requests).toContain(`GET ${searched.href}`);
+  expect(agencyPages.typedIntoSignIn).toEqual([]);
+
+  await toast.getByRole("button", { name: "Undo" }).click();
+  await expect(cards.getByRole("button", { name: "Check with PADI" })).toBeVisible();
 });
 
 test("Check all on a departure settles its rows one at a time through the extension", async ({

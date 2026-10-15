@@ -10,7 +10,7 @@ import { savePackingAction } from "../../booking-actions";
 import { CounterQrCard } from "../../CounterQrCard";
 import { CertCheckExtensionStatus } from "../CertCheckExtensionStatus";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
-import { BOOKINGS_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
+import { BOOKINGS_GROUP, featureRow, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
 
 /** The Bookings & waivers group: the waiver template, the counter's QR door, and the packing list. */
 export function BookingsGroup({
@@ -75,6 +75,10 @@ export function BookingsGroup({
             </a>
           ) : null}
         </SettingsRow>
+
+        {/* PADI's checks (H-121): the shop's own opt-in, under its own PADI
+            membership, beside the extension that runs them. */}
+        {featureRow(view, "padiChecks")}
 
         <SettingsRow
           heading={t("settings.main.packing.heading")}

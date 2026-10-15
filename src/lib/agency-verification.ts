@@ -111,14 +111,16 @@ export const AGENCY_VERIFICATION_PAGES: Readonly<
   // Pro Chek is a different tool and checks professionals, not divers.
   // The link and the extension's DiveChek lookup (`checkUrl`) are on one host,
   // the Pros' Site the eLearning check uses, so a staffer signed in for one is
-  // signed in for the other. PADI has also answered at pro.padi.com; which host
-  // is the live one, and DiveChek's path on it, are a best guess until a
-  // signed-in PADI Pro has tried them (#2259).
+  // signed in for the other. pro.padi.com is the host PADI's own pages send
+  // pros to (its sign-in page and 2024 member brochure); pros.padi.com also
+  // answers, and the extension reads either (`origins` in
+  // `extension/agencies.js`). DiveChek's path is a best guess until a
+  // signed-in PADI Pro has tried it (#2259).
   padi: {
-    url: "https://pros.padi.com/",
+    url: "https://pro.padi.com/",
     searchesBy: "card_number_or_name_and_birth_date",
     kind: "member_sign_in",
-    checkUrl: "https://pros.padi.com/divechek",
+    checkUrl: "https://pro.padi.com/divechek",
   },
 };
 

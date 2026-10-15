@@ -428,6 +428,11 @@
         "heading": "Our year",
         "label": "Show “Our year” on your schedule",
         "description": "The year so far in counts at the foot of your public schedule: divers, boats out, and sites. Never money. Off until you turn it on."
+      },
+      "padiChecks": {
+        "heading": "PADI checks (beta)",
+        "label": "Check PADI cards and eLearning",
+        "description": "Runs under your own PADI membership, in a browser signed in to the PADI Pros’ Site."
       }
     },
     "crewSchedule": {

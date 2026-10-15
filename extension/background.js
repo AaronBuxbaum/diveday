@@ -25,7 +25,9 @@ const SIGN_IN_PATH = new RegExp(SIGN_IN_PATH_SOURCE, "i");
  * Whether a page behind the shop's own sign-in landed somewhere other than
  * its lookup: a sign-in page on another host (whose address this extension
  * may not even read, having no permission there) or a sign-in address on its
- * own. The staffer is told to sign in, never "couldn't read the page".
+ * own. A host in `spec.origins` is the same signed-in site (PADI answers at
+ * pro.padi.com and pros.padi.com), so a redirect between them is not a
+ * sign-out. The staffer is told to sign in, never "couldn't read the page".
  */
 async function landedOnSignIn(tabId, spec) {
   if (!spec.signIn) return false;
@@ -38,7 +40,8 @@ async function landedOnSignIn(tabId, spec) {
   if (!tab.url) return true;
   try {
     const at = new URL(tab.url);
-    return at.origin !== new URL(spec.url).origin || SIGN_IN_PATH.test(at.pathname);
+    const site = Array.isArray(spec.origins) ? spec.origins : [new URL(spec.url).origin];
+    return !site.includes(at.origin) || SIGN_IN_PATH.test(at.pathname);
   } catch {
     return true;
   }

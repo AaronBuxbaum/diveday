@@ -45,6 +45,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Levels
 - Minor
 - Other agency
+- PADI checks
 - PADI Scuba Diver
 - Prior visit
 - RAID

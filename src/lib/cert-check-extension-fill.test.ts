@@ -163,6 +163,46 @@ describe("fillAgencyForm", () => {
     expect(value('[aria-label="Family Name"]')).toBe("Ortiz");
   });
 
+  /** CMAS's portal: one page, "Search by code" above "Manual Search" (read 2026-10-15). */
+  const cmasPortal = (wrap: (inner: string) => string) => `
+    ${wrap(`<input aria-label="CMAS Code"><button id="by-code">Search by code</button>`)}
+    ${wrap(`<input aria-label="Given Name"><input aria-label="Family Name">
+      <input aria-label="Birthdate"><button id="manual">Manual Search</button>`)}`;
+  const cmasSpec = AGENCIES.cmas;
+  const pressed = () => {
+    const clicks: string[] = [];
+    for (const id of ["by-code", "manual"]) {
+      document.getElementById(id)?.addEventListener("click", (event) => {
+        event.preventDefault();
+        clicks.push(id);
+      });
+    }
+    return clicks;
+  };
+
+  it.each([
+    ["one form for both searches", (inner: string) => inner, true],
+    ["no form at all", (inner: string) => `<div>${inner}</div>`, false],
+  ])("presses CMAS's Search by code for a card number, on %s", (_, wrap, oneForm) => {
+    document.body.innerHTML = oneForm ? `<form>${cmasPortal(wrap)}</form>` : cmasPortal(wrap);
+    const clicks = pressed();
+    expect(fillAgencyForm(lena, cmasSpec)).toEqual({ ok: true });
+    expect(value('[aria-label="CMAS Code"]')).toBe("123456");
+    expect(clicks).toEqual(["by-code"]);
+  });
+
+  it.each([
+    ["one form for both searches", (inner: string) => inner, true],
+    ["no form at all", (inner: string) => `<div>${inner}</div>`, false],
+  ])("presses CMAS's Manual Search for a name and birth date, on %s", (_, wrap, oneForm) => {
+    document.body.innerHTML = oneForm ? `<form>${cmasPortal(wrap)}</form>` : cmasPortal(wrap);
+    const clicks = pressed();
+    expect(fillAgencyForm({ ...lena, cardNumber: null }, cmasSpec)).toEqual({ ok: true });
+    expect(value('[aria-label="Family Name"]')).toBe("Ortiz");
+    expect(value('[aria-label="Birthdate"]')).toBe("1990-04-12");
+    expect(clicks).toEqual(["manual"]);
+  });
+
   it("types the student's email into PADI's search, and only the email", () => {
     document.body.innerHTML = `
       <form><input type="email" aria-label="Student email"><button>Search</button></form>`;
@@ -254,6 +294,38 @@ describe("fillAgencyForm on PADI DiveChek", () => {
     expect(value("#l")).toBe("Ortiz");
     expect(value("#d")).toBe("04/12/1990");
     expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
+  it("presses DiveChek's own Run Report button", () => {
+    document.body.innerHTML = `
+      <form>
+        <label for="f">First Name</label><input id="f">
+        <label for="l">Last Name</label><input id="l">
+        <label for="d">Date of Birth</label><input id="d">
+        <button type="reset">Clear</button><button id="run">Run Report</button>
+      </form>`;
+    const onSubmit = submitted();
+    const run = vi.fn();
+    document.getElementById("run")?.addEventListener("click", run);
+    expect(fillAgencyForm(lena, divechek)).toEqual({ ok: true });
+    expect(run).toHaveBeenCalledOnce();
+    expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
+  it("never reads a Report button that does not run one as a search", () => {
+    document.body.innerHTML = `
+      <form>
+        <label for="f">First Name</label><input id="f">
+        <label for="l">Last Name</label><input id="l">
+        <label for="d">Date of Birth</label><input id="d">
+        <button>Report a problem</button>
+      </form>`;
+    const onSubmit = submitted();
+    expect(fillAgencyForm(lena, divechek)).toEqual({
+      ok: false,
+      missing: ["name", "birthDate"],
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it("types nothing on a page that asks for a password, and says the staffer is signed out", () => {

@@ -84,6 +84,44 @@ describe("the extension's copy of the protocol", () => {
     expect(listeners).toHaveLength(1);
   });
 
+  it("reads a PADI tab sent between PADI's hosts as signed in, and anywhere else as signed out", async () => {
+    const { readFileSync } = await import("node:fs");
+    const vm = await import("node:vm");
+    const source = (file: string) =>
+      readFileSync(new URL(`../../extension/${file}`, import.meta.url), "utf8");
+    let at = "";
+    const worker: Record<string, unknown> = {
+      chrome: {
+        runtime: { id: "test", onMessage: { addListener: () => {} } },
+        tabs: { get: async () => ({ url: at }) },
+      },
+      URL,
+      importScripts: (...files: string[]) => {
+        for (const file of files) vm.runInContext(source(file), worker, { filename: file });
+      },
+    };
+    vm.createContext(worker);
+    vm.runInContext(source("background.js"), worker, { filename: "background.js" });
+    const landedOnSignIn = worker.landedOnSignIn as (
+      tabId: number,
+      spec: unknown,
+    ) => Promise<boolean>;
+    const padi = (worker.DiveDayCertCheck as { AGENCIES: Record<string, unknown> }).AGENCIES.padi;
+    const cases: [string, boolean][] = [
+      ["https://pro.padi.com/divechek", false],
+      ["https://pros.padi.com/divechek", false],
+      ["https://pro.padi.com/me/dashboard", false],
+      ["https://pros.padi.com/sign-in?return=%2Fdivechek", true],
+      ["https://login.padi.com/sign-in", true],
+      ["https://pro.padi.com.example.net/divechek", true],
+      ["", true],
+    ];
+    for (const [url, signedOut] of cases) {
+      at = url;
+      expect(await landedOnSignIn(1, padi), url).toBe(signedOut);
+    }
+  });
+
   it("reads anything else the extension says as a form it could not fill", () => {
     expect(extensionFailureReason("signed_out")).toBe("signed_out");
     expect(extensionFailureReason("Sign in, then <b>click here</b>")).toBe("fill_failed");
@@ -109,14 +147,34 @@ describe("the extension's agencies", () => {
     }
   });
 
-  it("asks for no host it does not open", () => {
+  it("asks for no host it does not open or may be sent to", () => {
     const pages = [
       ...Object.values(agencies),
-      ...Object.values(extension.ELEARNING as Record<string, { url: string }>),
-    ];
-    expect(manifest.host_permissions).toHaveLength(
-      new Set(pages.map((a) => new URL(a.url).origin)).size,
+      ...Object.values(extension.ELEARNING as Record<string, { url: string; origins?: string[] }>),
+    ] as { url: string; origins?: string[] }[];
+    const origins = new Set(pages.flatMap((a) => [new URL(a.url).origin, ...(a.origins ?? [])]));
+    expect(manifest.host_permissions.slice().sort()).toEqual(
+      [...origins].map((origin) => `${origin}/*`).sort(),
     );
+  });
+
+  it("opens PADI on pro.padi.com, the host PADI's own pages send pros to", () => {
+    const elearning = extension.ELEARNING as Record<string, { url: string }>;
+    expect(new URL(agencies.padi?.url ?? "").origin).toBe("https://pro.padi.com");
+    expect(new URL(elearning.padi?.url ?? "").origin).toBe("https://pro.padi.com");
+    expect(new URL(AGENCY_VERIFICATION_PAGES.padi?.url ?? "").origin).toBe("https://pro.padi.com");
+  });
+
+  it("reads PADI on both its hosts, so a staffer sent from one to the other is still signed in", () => {
+    const padi = [agencies.padi, (extension.ELEARNING as Record<string, { url: string }>).padi] as (
+      | { url: string; origins?: string[] }
+      | undefined
+    )[];
+    for (const spec of padi) {
+      expect(spec?.origins).toEqual(["https://pro.padi.com", "https://pros.padi.com"]);
+    }
+    expect(manifest.host_permissions).toContain("https://pro.padi.com/*");
+    expect(manifest.host_permissions).toContain("https://pros.padi.com/*");
   });
 
   it("reads eLearning only for the agencies the app checks it for", () => {

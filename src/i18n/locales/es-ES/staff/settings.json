@@ -428,6 +428,11 @@
         "heading": "Nuestro año",
         "label": "Mostrar “Nuestro año” en tu calendario",
         "description": "El año hasta hoy en cifras al pie de tu calendario público: buceadores, salidas y sitios. Nunca dinero. Apagado hasta que lo actives."
+      },
+      "padiChecks": {
+        "heading": "Verificación con PADI (beta)",
+        "label": "Verificar tarjetas y eLearning de PADI",
+        "description": "Se hace con tu propia membresía PADI, en un navegador con sesión iniciada en el PADI Pros’ Site."
       }
     },
     "crewSchedule": {
