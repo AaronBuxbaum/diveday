@@ -44,6 +44,10 @@ import {
 const ADVANCED_CHARTER = "Advanced Drift — French Reef Wall";
 const DEEP_CHARTER = "Deep Adventure — USCGC Duane";
 const AOW_COURSE = "Advanced Open Water Diver — two-day course";
+// How far out src/db/seed-cert-gates.ts puts each departure (`at(31, …)`,
+// `at(29, …)`), so the lookup opens the board on that week.
+const CHARTERS = { daysOut: 31 };
+const COURSE = { daysOut: 29 };
 
 test.describe("as owner", () => {
   signedInAsOwner();
@@ -55,7 +59,7 @@ test.describe("as owner", () => {
     // visitor — two full page journeys, same aggregate-cost reasoning as
     // booking.spec.ts's own multi-navigation tests.
     test.setTimeout(30_000);
-    const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER);
+    const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER, CHARTERS);
 
     // Read it as a diver would: no session at all.
     await page.context().clearCookies();
@@ -107,7 +111,7 @@ test.describe("as owner", () => {
     // Readiness is what stops them at the dock, and it is unchanged: nothing
     // clears a boarding decision but a card a staffer has sighted.
     test.setTimeout(30_000);
-    const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER);
+    const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER, CHARTERS);
     await page.context().clearCookies();
     await page.goto(`/s/blue-mantis/trips/${tripId}`);
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
@@ -136,7 +140,7 @@ test.describe("as owner", () => {
     // (owner, 2026-10-05): the depth is on each dive's row, and the booking
     // form is where a diver names their card.
     test.setTimeout(30_000);
-    const tripId = await seededTripId(page, "blue-mantis", DEEP_CHARTER);
+    const tripId = await seededTripId(page, "blue-mantis", DEEP_CHARTER, CHARTERS);
     await page.context().clearCookies();
     await page.goto(`/s/blue-mantis/trips/${tripId}`);
     await expect(page.getByRole("heading", { name: DEEP_CHARTER })).toBeVisible();
@@ -155,7 +159,7 @@ test.describe("as owner", () => {
   test("the Divers tab names the level the charter wants and the level the diver holds", async ({
     page,
   }) => {
-    const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER);
+    const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER, CHARTERS);
     await page.goto(`/shop/blue-mantis/trips/${tripId}?diverq=Diego+Alvarez`);
     await page.getByRole("button", { name: "Add Diego Alvarez to the trip" }).click();
 
@@ -190,7 +194,7 @@ test.describe("as owner", () => {
     // clears admission on the next attempt (H-24). So the tamper doesn't bypass
     // a gate — it manufactures the prompt that gets a staffer to bypass one
     // (security review finding).
-    const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER);
+    const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER, CHARTERS);
     await page.goto(
       `/shop/blue-mantis/trips/${tripId}?notice=diver-trip-prerequisite&gate=~~deep~0`,
     );
@@ -218,7 +222,7 @@ test.describe("as owner", () => {
   test("the global Add-booking door says a missing specialty certification is missing, whatever the diver's level", async ({
     page,
   }) => {
-    const tripId = await seededTripId(page, "blue-mantis", DEEP_CHARTER);
+    const tripId = await seededTripId(page, "blue-mantis", DEEP_CHARTER, CHARTERS);
     // Odile Marchand holds a verified Instructor card — the top rung — and no
     // specialty card at all. Nothing about her level can explain this refusal.
     await page.goto(`/shop/blue-mantis/bookings/new/${tripId}?diverq=Odile+Marchand`);
@@ -282,7 +286,7 @@ test.describe("as owner", () => {
     // for, so an AOW session's deep dive at a site marked `advanced_open_water`
     // + Deep must never refuse the student the course exists to create.
     test.setTimeout(30_000);
-    const tripId = await seededTripId(page, "blue-mantis", AOW_COURSE);
+    const tripId = await seededTripId(page, "blue-mantis", AOW_COURSE, COURSE);
 
     await page.goto(`/shop/blue-mantis/trips/${tripId}?diverq=Kwame+Asante`);
     await page.getByRole("button", { name: "Add Kwame Asante to the trip" }).click();

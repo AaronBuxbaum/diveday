@@ -59,6 +59,8 @@ test.describe("ask to move", () => {
     const row = page.locator("li").filter({ hasText: "Rafa Ortiz" }).filter({ visible: true });
     await openRosterDetails(row);
     await row.getByRole("combobox").selectOption("paid");
+    // The Paid mark asks how the money came in (batch 6 item 1, H-119).
+    await row.getByRole("radio", { name: "Cash" }).check();
     await row.getByRole("button", { name: "Update" }).click();
     await expect(row.getByText("Payment: Paid")).toBeVisible();
 
