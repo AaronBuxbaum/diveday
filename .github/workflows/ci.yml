@@ -217,7 +217,11 @@ jobs:
       # run once, in `repo-safeguards`, instead of a quarter of them in each
       # shard. They are bounded by reading the repository, not by test count,
       # so dealing them four ways bought nothing and cost each shard the walk.
-      - run: pnpm exec vitest run --project '!guards' --reporter=dot --reporter=./src/test/duration-reporter.ts --reporter=./src/test/failed-files-reporter.ts --shard=${{ matrix.shard }}/4
+      #
+      # `--coverage.enabled` and the blob reporter feed `coverage-floors` below: v8 coverage of
+      # the eleven safety files `vitest.config.ts` names, carried in this shard's blob so that job
+      # can merge all four without running a test (test review 2026-10-14, decision 6).
+      - run: pnpm exec vitest run --project '!guards' --reporter=dot --reporter=./src/test/duration-reporter.ts --reporter=./src/test/failed-files-reporter.ts --reporter=blob --coverage.enabled --shard=${{ matrix.shard }}/4
         env:
           DIVEDAY_TEST_DURATIONS_OUT: test-durations/shard-${{ matrix.shard }}.json
       - uses: actions/upload-artifact@v7
@@ -227,11 +231,53 @@ jobs:
           path: test-durations/
           if-no-files-found: ignore
           retention-days: 30
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: unit-blob-${{ matrix.shard }}
+          path: .vitest/blob/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
       - uses: actions/cache/save@v6
         if: ${{ !cancelled() && matrix.shard == 1 && steps.pglite-template.outputs.cache-hit != 'true' }}
         with:
           path: node_modules/.cache/diveday
           key: ${{ steps.pglite-template.outputs.cache-primary-key }}
+
+  # Branch coverage on the safety-critical files may not drop (test review 2026-10-14, decision 6;
+  # ADR 20261015-coverage-and-mutation-testing). No second test run: the four shards above
+  # recorded coverage into their blob reports, and `--merge-reports` folds them into one
+  # json-summary, which `scripts/coverage-floors.mjs` holds to `scripts/coverage-floors.json`.
+  # A shard that failed still uploads its blob, but a red shard already fails the run, so this
+  # waits for all four to pass rather than reading a partial number as a fall.
+  coverage-floors:
+    name: Safety-file coverage floors
+    needs: unit-tests
+    if: ${{ !cancelled() && needs.unit-tests.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: unit-blob-*
+          path: .vitest/blob
+          merge-multiple: true
+      - run: pnpm exec vitest run --merge-reports --reporter=dot --coverage.enabled
+      - run: node scripts/coverage-floors.mjs coverage/coverage-summary.json
+      # The merged numbers, so a floor can be raised from them without a local full run:
+      # download this, then `node scripts/coverage-floors.mjs --write <path>`.
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage-summary
+          path: coverage/coverage-summary.json
+          if-no-files-found: ignore
+          retention-days: 30
 
   unit-tests-docs:
     name: Unit tests that read docs

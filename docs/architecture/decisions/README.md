@@ -392,5 +392,6 @@ script again.
 | 20261014-incident-kind-severity | An incident report files with… |
 | 20261014-phone-line-type-metadata | Use libphonenumber-js's mobile metadata to… |
 | 20261014-starting-content-is-measured-and-vetted | Starting content is measured by… |
+| 20261015-coverage-and-mutation-testing | Measure the safety files with… |
 
 <!-- adr-index:end -->

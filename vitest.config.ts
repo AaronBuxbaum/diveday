@@ -31,6 +31,30 @@ export default defineConfig({
     // still observe every call. Pass `--silent=false` to watch a passing test's logs while
     // debugging one.
     silent: "passed-only",
+    // Off unless asked for (`--coverage.enabled`). CI's unit shards ask, and the
+    // `coverage-floors` job merges their blob reports and holds each file below
+    // to its branch-coverage floor (scripts/coverage-floors.mjs, which names the
+    // same list; ADR 20261015-coverage-and-mutation-testing). The safety files
+    // only: a whole-tree number would mostly measure reachability, which is
+    // already near total.
+    coverage: {
+      provider: "v8",
+      include: [
+        "src/lib/readiness.ts",
+        "src/lib/trip-admission.ts",
+        "src/lib/waivers.ts",
+        "src/lib/roll-call.ts",
+        "src/lib/trips.ts",
+        "src/lib/authz.ts",
+        "src/db/bookings.ts",
+        "src/db/checkouts.ts",
+        "src/db/refunds.ts",
+        "src/db/promo-caps.ts",
+        "src/db/account-security.ts",
+      ],
+      reporter: ["json-summary", "text-summary"],
+      reportsDirectory: "coverage",
+    },
     setupFiles: ["./src/test/setup.ts"],
     // `scripts/` is in scope too: a few repo scripts carry real parsing and
     // formatting logic that nothing else would exercise (scripts/visual-report-lib.mjs

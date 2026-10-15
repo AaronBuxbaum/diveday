@@ -49,32 +49,31 @@ import { E2E_FROZEN_CLOCK } from "./servers";
 import { mintOnboardFormPath } from "./setup-link";
 
 /**
- * Visual regression coverage. Two hundred and sixty-one key surfaces × light/dark, each
- * captured at a phone and a desktop viewport — 1,044 screenshots per run (see
- * ADR 20260729-reg-suit-visual-regression). Keep this count in sync when
- * adding a surface; each `capture()` call costs 4 screenshots per CI run — 6
- * for a surface named in `TABLET_SURFACES`, which takes a third viewport.
- * `grep -c 'await capture(page,' e2e/visual.spec.ts` is the number — the prose
- * has drifted from it before (it read 48 while the grep said 56, 71 while the
+ * Visual regression coverage. Two hundred and ninety-seven `capture()` calls,
+ * each shot in light at a phone and a desktop viewport and in dark at the
+ * desktop viewport alone (`DARK_VIEWPORTS`) — 912 screenshots per run, down
+ * from 1,218 when dark took both widths (see ADR
+ * 20260729-reg-suit-visual-regression). Keep this count in sync when adding a
+ * surface; each `capture()` call costs 3 screenshots per CI run — 4 for a
+ * surface named in `TABLET_SURFACES`, which takes a third viewport in light.
+ * `grep -c 'await capture(page,' e2e/visual.spec.ts` reads one more than the
+ * number of calls, because it also matches this sentence — the prose has
+ * drifted from it before (it read 48 while the grep said 56, 71 while the
  * grep said 72, 83 while the grep said 93, and 98 while the grep said 108), so
- * trust the grep and correct
- * the prose. The trailing comma in that pattern is load-bearing: without it the
- * grep also matches this very sentence and reads one high, which is how the
- * "correct the prose" instruction above ended up chasing a number that was
- * never right.
+ * trust the grep, subtract the one, and correct the prose.
  *
- * Six more come from the `print` block at the bottom: the manifest, prep,
- * trip-packet, day-packet, departure-log and paper-pass pages as they render
- * for the printer. Print
+ * Eight more come from the `print` block at the bottom: the manifest, prep,
+ * trip-packet, day-packet, departure-log and paper-pass pages, among others,
+ * as they render for the printer. Print
  * is its own concern, not a light/dark one — the `@media print` token override
  * collapses both schemes to one black-and-white palette — so each is captured
  * once, at a US-Letter width (or a wider sheet's own), via `capturePrint()`.
  *
- * `captureStickyFoot()` adds 4 more (one surface × light/dark × both widths),
- * and `TABLET_SURFACES` adds 12 — six surfaces a shop runs on a tablet get a
- * third, portrait width, at one screenshot per scheme rather than two. The
- * extra width is a small addition, not the 50% a third viewport applied to
- * every surface would have cost.
+ * `captureStickyFoot()` adds 6 more (two surfaces × light at both widths and
+ * dark at the desktop), `captureFolded()` 1 (light, phone), and
+ * `TABLET_SURFACES` 6 — six surfaces a shop runs on a tablet get a third,
+ * portrait width in light. The extra width is a small addition, not the 50% a
+ * third viewport applied to every surface would have cost.
  *
  * Four of them are the same surface twice, in a second language: see
  * {@link SPANISH}. A Spanish sibling takes the standard pair and keys its own
@@ -94,7 +93,7 @@ import { mintOnboardFormPath } from "./setup-link";
  * docs/product/archive/comprehensive-review-20260802.md).
  *
  * So the rule is now: **one surface, one `test()`.** A surface that breaks
- * loses exactly its own PNGs — four, or six for a `TABLET_SURFACES` one —
+ * loses exactly its own PNGs — three, or four for a `TABLET_SURFACES` one —
  * every sibling is still shot in the same run,
  * and the reg-suit report shows the whole blast radius at once. The handful of
  * groups left are the ones where a second test could not reproduce the state
@@ -121,7 +120,7 @@ import { mintOnboardFormPath } from "./setup-link";
  * is how you read it. A *failed* test here means the surface could not be
  * reached at all, which is the case the split above is about.
  *
- * `capture()` loops over both viewports itself, resizing the page for each and
+ * `capture()` loops over its scheme's viewports itself, resizing the page for each and
  * restoring the base viewport afterward, so `landing-light` becomes
  * `landing-light-vw-390.png` and `landing-light-vw-1280.png`. The widths match
  * scripts/screenshot.mjs — phone 390, desktop 1280 — so the design-review PNGs
@@ -188,6 +187,22 @@ const VIEWPORTS = [
  */
 /** The phone of `VIEWPORTS`, named — the fold is a phone behaviour and shoots there alone. */
 const PHONE_VIEWPORT = VIEWPORTS[0];
+
+/**
+ * **Dark mode is photographed at the desktop width only** (owner decision 1 of
+ * the 2026-10-14 test review; ADR 20260729-reg-suit-visual-regression,
+ * amendment 2026-10-15). Light keeps every width. The two schemes share one
+ * layout and differ only in tokens, so a dark capture at a second width mostly
+ * re-photographed the light one's geometry: about 300 of the suite's 1,220
+ * images, a quarter of its capture minutes and of every UI pull request's
+ * review. The price is a dark-only bug that shows at phone width alone.
+ */
+const DARK_VIEWPORTS = [VIEWPORTS[1]] as const;
+
+/** The widths a capture in `scheme` is shot at, before any per-surface extra. */
+function schemeViewports(scheme: "light" | "dark") {
+  return scheme === "dark" ? DARK_VIEWPORTS : VIEWPORTS;
+}
 
 const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
 
@@ -1581,7 +1596,11 @@ async function capture(
   // rather than inheriting a third width: those sets are about the *device* a
   // surface runs on, and a second language has nothing new to say at 820px
   // that it does not say louder at 390.
-  const viewports = [...VIEWPORTS, ...(TABLET_SURFACES.has(baseline) ? [TABLET_VIEWPORT] : [])];
+  // Dark takes the desktop width alone, tablet included (`DARK_VIEWPORTS`).
+  const viewports =
+    scheme === "dark"
+      ? [...DARK_VIEWPORTS]
+      : [...VIEWPORTS, ...(TABLET_SURFACES.has(baseline) ? [TABLET_VIEWPORT] : [])];
   // Light only: geometry does not change with the scheme, and checking one
   // scheme is the owner's standing rule for anything that is not colour work.
   // The import happens here, inside the flag, so an unset flag loads nothing.
@@ -1636,11 +1655,10 @@ async function capture(
 async function captureStickyFoot(page: Page, name: string, scheme: "light" | "dark") {
   const baseViewport = page.viewportSize();
   await waitForClientFills(page);
-  // Both viewports, like `capture()` — the phone is where a bar pinned to the
-  // bottom edge earns its place, so photographing only the desktop would leave
-  // the case that motivated it unbaselined.
+  // The same widths as `capture()` — both in light, where the phone is the case
+  // a bar pinned to the bottom edge earns its place; desktop alone in dark.
   await withTransitionsOff(page, async () => {
-    for (const viewport of VIEWPORTS) {
+    for (const viewport of schemeViewports(scheme)) {
       await page.setViewportSize(viewport);
       await paintWholeDocument(page);
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
@@ -1675,7 +1693,7 @@ async function captureStickyFoot(page: Page, name: string, scheme: "light" | "da
  * The wait is on the label's own computed opacity reaching 1 — the state the
  * shot is of, not a guess at how long it takes to get there.
  */
-async function captureFolded(page: Page, name: string, scheme: "light" | "dark") {
+async function captureFolded(page: Page, name: string, scheme: "light") {
   const baseViewport = page.viewportSize();
   await waitForClientFills(page);
   await withTransitionsOff(page, async () => {
@@ -1700,8 +1718,8 @@ async function captureFolded(page: Page, name: string, scheme: "light" | "dark")
  * padding, `print:hidden` chrome removed — so the baseline is the document a
  * shop actually prints, not the interactive page. One shot at the current
  * (Letter-width) viewport: print output is scheme- and viewport-independent, so
- * the light/dark × phone/desktop matrix the on-screen `capture` runs would be
- * four identical copies here. `@page` margins never show in a screenshot; the
+ * the light and dark widths the on-screen `capture` runs would be
+ * three identical copies here. `@page` margins never show in a screenshot; the
  * padding visible in the baseline is the container's own (`print:px-*`), the
  * gutter that survives a "None margins" print dialog.
  *
@@ -3989,10 +4007,12 @@ for (const scheme of ["light", "dark"] as const) {
        * this surface saw the *ashore* row, and the one a crew reads at the rail
        * with the gate already behind somebody was never looked at.
        *
-       * Priya Sharma is the seeded blocked diver (waiver not sent), so boarding
-       * her is the shortest honest route into the state. The reset restores the
-       * schedule before the next test, which is what makes it safe to board her
-       * here.
+       * `?blockedAboard=1` boards the first diver the gate clears, by name
+       * (Diego Alvarez in the seed), then supersedes the release he signed, so
+       * the row reads "Signed waiver lapsed." — a signature that no longer
+       * stands, never "not sent yet" (`waiver_lapsed`, which renamed it). The
+       * reset restores the schedule before the next test, which is what makes
+       * it safe to board him here.
        */
       test(`a station names a blocker aboard (${scheme})`, async ({ page, request }) => {
         // **Through the trouble-states route, because it cannot be clicked.**
@@ -4008,7 +4028,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page
           .getByRole("listitem")
           .filter({ hasText: "Aboard" })
-          .filter({ hasText: "Waiver not signed, not sent yet." })
+          .filter({ hasText: "Signed waiver lapsed." })
           .first()
           .waitFor();
         await capture(page, "today-blocked-aboard", scheme);
@@ -5144,13 +5164,18 @@ for (const scheme of ["light", "dark"] as const) {
        * 20260907-nothing-from-nowhere, decision 5; issue #1422). The capture is
        * the only thing that can catch the label arriving at the wrong size, in
        * the wrong place, or on top of the shop's mark rather than beside it.
+       *
+       * Light only: the fold is a phone behaviour, and dark is photographed at
+       * the desktop width alone (`DARK_VIEWPORTS`).
        */
-      test(`the bar folds the page's title in on a phone (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/divers");
-        await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
-        await page.locator("main ul li").first().waitFor();
-        await captureFolded(page, "chrome-folded-title", scheme);
-      });
+      if (scheme === "light") {
+        test("the bar folds the page's title in on a phone (light)", async ({ page }) => {
+          await page.goto("/shop/blue-mantis/divers");
+          await page.getByRole("heading", { level: 1, name: "Divers" }).waitFor();
+          await page.locator("main ul li").first().waitFor();
+          await captureFolded(page, "chrome-folded-title", "light");
+        });
+      }
 
       /**
        * The form the front desk fills in most often, and the one the command

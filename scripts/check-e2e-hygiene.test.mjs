@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { ACKNOWLEDGEMENT, findHygieneViolations } from "./check-e2e-hygiene.mjs";
+import {
+  ACKNOWLEDGEMENT,
+  auditLongLiterals,
+  auditQuarantines,
+  findHygieneViolations,
+  findLongLiterals,
+  findQuarantines,
+  QUARANTINE_CAP,
+} from "./check-e2e-hygiene.mjs";
 
 const ruleIds = (source) => findHygieneViolations(source).map((v) => v.rule);
 
@@ -566,5 +574,121 @@ describe("pre-hydration clicks", () => {
       "});",
     ].join("\n");
     expect(ruleIds(source)).toEqual([]);
+  });
+});
+
+describe("quarantine", () => {
+  const tagged = (marker) =>
+    [marker, 'test("a flaky walk", { tag: "@quarantine" }, async ({ page }) => {});'].join("\n");
+  const audit = (source, today = "2026-10-15") =>
+    auditQuarantines(
+      findQuarantines(source).map((q) => ({ file: "e2e/x.spec.ts", ...q })),
+      today,
+    );
+
+  it("passes a tag with an issue and an expiry inside seven days", () => {
+    expect(audit(tagged("// diveday:quarantine #1234 until 2026-10-22: hydration race"))).toEqual(
+      [],
+    );
+  });
+
+  it("reads the marker above a test call split over lines, and a tag in the title", () => {
+    const source = [
+      "// diveday:quarantine #1234 until 2026-10-20: dropped click",
+      "test(",
+      '  "the board opens @quarantine",',
+      "  async ({ page }) => {},",
+      ");",
+    ].join("\n");
+    expect(findQuarantines(source)).toEqual([{ line: 3, issue: 1234, until: "2026-10-20" }]);
+    expect(audit(source)).toEqual([]);
+  });
+
+  it("refuses a tag with no marker, no issue, or no date", () => {
+    expect(audit(tagged(""))).toHaveLength(1);
+    expect(audit(tagged("// diveday:quarantine until 2026-10-20: no issue"))).toHaveLength(1);
+    expect(audit(tagged("// diveday:quarantine #1234: no date"))).toHaveLength(1);
+  });
+
+  it("refuses an expiry more than seven days out", () => {
+    const [problem] = audit(tagged("// diveday:quarantine #1234 until 2026-10-23: too long"));
+    expect(problem).toMatch(/more than 7 days out/);
+  });
+
+  it("turns red the day after the expiry, and not on it", () => {
+    const source = tagged("// diveday:quarantine #1234 until 2026-10-15: lapsing");
+    expect(audit(source, "2026-10-15")).toEqual([]);
+    expect(audit(source, "2026-10-16")[0]).toMatch(/expired on 2026-10-15/);
+  });
+
+  it("caps how many tests are quarantined at once", () => {
+    const one = { file: "e2e/x.spec.ts", line: 1, issue: 1, until: "2026-10-20" };
+    const many = Array.from({ length: QUARANTINE_CAP + 1 }, () => one);
+    expect(auditQuarantines(many, "2026-10-15")).toEqual([
+      expect.stringMatching(/at most 3 may be at once/),
+    ]);
+    expect(auditQuarantines(many.slice(1), "2026-10-15")).toEqual([]);
+  });
+
+  it("ignores the word in a comment", () => {
+    expect(findQuarantines("// a test tagged @quarantine runs nightly")).toEqual([]);
+  });
+});
+
+describe("long literals", () => {
+  const sentence = "Thanks. The shop will read your words before they go up.";
+
+  it("counts getByText and toContainText literals of forty characters or more", () => {
+    const source = [
+      `await expect(page.getByText("${sentence}")).toBeVisible();`,
+      `await expect(page.getByRole("status")).toContainText('${sentence}');`,
+      'await expect(page.getByText("Saved.")).toBeVisible();',
+    ].join("\n");
+    expect(findLongLiterals(source).map((hit) => hit.line)).toEqual([1, 2]);
+  });
+
+  it("finds a literal the formatter moved to its own line", () => {
+    const source = ["await expect(", "  page.getByText(", `    "${sentence}",`, "  ),", ")"].join(
+      "\n",
+    );
+    expect(findLongLiterals(source)).toEqual([{ line: 2, text: sentence }]);
+  });
+
+  it("measures a template literal without its interpolations", () => {
+    expect(findLongLiterals("page.getByText(`${count} reviews published to your page.`)")).toEqual(
+      [],
+    );
+    expect(
+      findLongLiterals("page.getByText(`${count} reviews published to your schedule page.`)"),
+    ).toHaveLength(1);
+  });
+
+  it("leaves a role query, a regular expression and a message key alone", () => {
+    const source = [
+      `page.getByRole("heading", { name: "${sentence}" });`,
+      "page.getByText(/^Thanks. The shop will read your words before they go up.$/);",
+      'page.getByText(diver("reviews.savedPending"));',
+    ].join("\n");
+    expect(findLongLiterals(source)).toEqual([]);
+  });
+
+  it("refuses growth, asks to bank a fall, and drops a clean file", () => {
+    const hit = { line: 1, text: sentence };
+    const counts = new Map([
+      ["e2e/grew.spec.ts", [hit, hit]],
+      ["e2e/fell.spec.ts", [hit]],
+      ["e2e/held.spec.ts", [hit]],
+    ]);
+    const allowed = {
+      "e2e/grew.spec.ts": 1,
+      "e2e/fell.spec.ts": 2,
+      "e2e/held.spec.ts": 1,
+      "e2e/clean.spec.ts": 1,
+    };
+    const failures = auditLongLiterals(counts, allowed);
+    expect(failures).toHaveLength(3);
+    expect(failures[0]).toMatch(/grew.*baseline allows 1/s);
+    expect(failures[1]).toMatch(/fell.*down to 1 from 2/);
+    expect(failures[2]).toMatch(/clean.*clean or gone/);
   });
 });
