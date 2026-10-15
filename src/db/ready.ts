@@ -678,6 +678,7 @@ export async function getReadyPageData(
     // have consented. The staff surfaces read the consented one.
     welcomeOffer: offerableWelcomeCue({
       lastDivedAt: welcomeInputs.get(bookingId)?.lastDivedAt ?? null,
+      nonDiver: welcomeInputs.get(bookingId)?.nonDiver ?? false,
       tripEndsAt: trip.endsAt,
       now,
     }),

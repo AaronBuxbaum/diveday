@@ -97,6 +97,7 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
       const cue = welcomeCueFor({
         sharedAt: seat.sharedAt,
         lastDivedAt: seat.lastDivedAt,
+        nonDiver: seat.nonDiver,
         tripEndsAt: trip.endsAt,
         now,
       });

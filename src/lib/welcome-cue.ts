@@ -12,7 +12,10 @@ import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
  *
  * Framework-free and code-only — the words are `src/i18n/welcome-cue-labels.ts`.
  */
-export type WelcomeCue = { kind: "first_trip" } | { kind: "returning"; years: number };
+export type WelcomeCue =
+  /** `nonDiver`: a snorkeler's or a rider's first seat, which is not a "first dive". */
+  | { kind: "first_trip"; nonDiver?: true }
+  | { kind: "returning"; years: number };
 
 /**
  * How long a gap has to be before coming back is worth a word.
@@ -35,6 +38,8 @@ type CueInput = {
    * the app.
    */
   lastDivedAt: Date | null;
+  /** This seat is a snorkeler's or a rider's, so its first time is not a first dive. */
+  nonDiver?: boolean;
   tripEndsAt: Date;
   now?: Date;
 };
@@ -57,11 +62,12 @@ type CueInput = {
  */
 export function offerableWelcomeCue({
   lastDivedAt,
+  nonDiver = false,
   tripEndsAt,
   now = nowDate(),
 }: CueInput): WelcomeCue | null {
   if (now.getTime() > tripEndsAt.getTime() + DEPARTURE_BUFFER_MS) return null;
-  if (!lastDivedAt) return { kind: "first_trip" };
+  if (!lastDivedAt) return nonDiver ? { kind: "first_trip", nonDiver: true } : { kind: "first_trip" };
   const years = Math.floor((now.getTime() - lastDivedAt.getTime()) / YEAR_MS);
   return years >= WELCOME_GAP_YEARS ? { kind: "returning", years } : null;
 }

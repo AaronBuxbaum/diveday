@@ -21,6 +21,13 @@ describe("welcomeCueText", () => {
     expect(welcomeCueText(es, { kind: "first_trip" })).toBe("Primera inmersión con nosotros");
   });
 
+  it("never calls a snorkeler's or a rider's first seat a dive", () => {
+    expect(welcomeCueText(en, { kind: "first_trip", nonDiver: true })).toBe("First time with us");
+    expect(welcomeCueText(es, { kind: "first_trip", nonDiver: true })).toBe(
+      "Primera vez con nosotros",
+    );
+  });
+
   it("agrees with the number of years, at one and at two, in both locales", () => {
     expect(welcomeCueText(en, { kind: "returning", years: 1 })).toBe("Back after 1 year");
     expect(welcomeCueText(en, { kind: "returning", years: 2 })).toBe("Back after 2 years");
@@ -53,6 +60,14 @@ describe("sayHelloSentences", () => {
     // `Intl.ListFormat`, never a hand-rolled ", " — which would put an English
     // "and" into the Spanish sentence.
     expect(sentences[0]).toContain("Ben Okafor and Lina Costa");
+  });
+
+  it("says first time, not first dive, for the first-timers who are not diving", () => {
+    const sentences = sayHelloSentences(en, "en-US", [
+      { name: "Ben Okafor", cue: { kind: "first_trip" } },
+      { name: "Lina Costa", cue: { kind: "first_trip", nonDiver: true } },
+    ]);
+    expect(sentences).toEqual(["Ben Okafor: first dive with us.", "Lina Costa: first time with us."]);
   });
 
   it("joins the names in the reader's own language", () => {

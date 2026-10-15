@@ -13,7 +13,8 @@ import type { StaffTranslator } from "./staff-messages";
 
 /**
  * The line under a diver's name on the roster and the manifest: "First dive
- * with us", "Back after 3 years".
+ * with us", "Back after 3 years"; "First time with us" under a snorkeler or a
+ * rider, whose seat is not a dive.
  *
  * Its own line, so it opens with a capital like every other line under a name,
  * and unpunctuated because it is a label, not a sentence (fourth review, item
@@ -22,9 +23,8 @@ import type { StaffTranslator } from "./staff-messages";
  * "First Time With Us": a title-cased cue is a badge with the shape filed off.
  */
 export function welcomeCueText(t: StaffTranslator, cue: WelcomeCue): string {
-  return cue.kind === "first_trip"
-    ? t("shared.welcomeCue.firstTrip")
-    : t("shared.welcomeCue.returning", { years: cue.years });
+  if (cue.kind === "returning") return t("shared.welcomeCue.returning", { years: cue.years });
+  return cue.nonDiver ? t("shared.welcomeCue.firstTime") : t("shared.welcomeCue.firstTrip");
 }
 
 /**
@@ -32,7 +32,8 @@ export function welcomeCueText(t: StaffTranslator, cue: WelcomeCue): string {
  * continue from.
  *
  * The first-timers collapse into one sentence with their names joined through
- * `Intl.ListFormat`; each returning diver takes a sentence of their own,
+ * `Intl.ListFormat` (a second for snorkelers and riders, whose first time is
+ * not a first dive); each returning diver takes a sentence of their own,
  * because the number of years is theirs and averaging it would invent a fact.
  */
 export function sayHelloSentences(
@@ -40,17 +41,23 @@ export function sayHelloSentences(
   locale: string,
   cues: ReadonlyArray<{ name: string; cue: WelcomeCue }>,
 ): string[] {
-  const firstTimers = cues.filter((entry) => entry.cue.kind === "first_trip");
   const list = cachedListFormat(locale, { type: "conjunction" });
-  const sentences =
-    firstTimers.length > 0
-      ? [
-          t("today.sayHello.firstTrip", {
-            count: firstTimers.length,
-            names: list.format(firstTimers.map((entry) => entry.name)),
-          }),
-        ]
-      : [];
+  const sentences: string[] = [];
+  for (const [nonDiver, key] of [
+    [false, "today.sayHello.firstTrip"],
+    [true, "today.sayHello.firstTime"],
+  ] as const) {
+    const firstTimers = cues.filter(
+      (entry) => entry.cue.kind === "first_trip" && Boolean(entry.cue.nonDiver) === nonDiver,
+    );
+    if (firstTimers.length === 0) continue;
+    sentences.push(
+      t(key, {
+        count: firstTimers.length,
+        names: list.format(firstTimers.map((entry) => entry.name)),
+      }),
+    );
+  }
   for (const entry of cues) {
     if (entry.cue.kind !== "returning") continue;
     sentences.push(t("today.sayHello.returning", { name: entry.name, years: entry.cue.years }));

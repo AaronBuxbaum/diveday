@@ -29,6 +29,18 @@ describe("welcomeCueFor", () => {
     ).toEqual({ kind: "first_trip" });
   });
 
+  it("marks a first seat that is not a dive, so its words can say so", () => {
+    expect(
+      welcomeCueFor({
+        sharedAt: NOW,
+        lastDivedAt: null,
+        nonDiver: true,
+        tripEndsAt: TRIP_ENDS,
+        now: NOW,
+      }),
+    ).toEqual({ kind: "first_trip", nonDiver: true });
+  });
+
   it("counts the whole years a returning diver has been away", () => {
     expect(
       welcomeCueFor({

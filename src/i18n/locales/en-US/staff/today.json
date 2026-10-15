@@ -285,6 +285,7 @@
   },
   "sayHello": {
     "firstTrip": "{names}: first dive with us.",
+    "firstTime": "{names}: first time with us.",
     "returning": "{name} is back after {years, plural, one {# year} other {# years}}."
   },
   "unfinished": {

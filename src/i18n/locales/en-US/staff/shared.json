@@ -520,6 +520,7 @@
   },
   "welcomeCue": {
     "firstTrip": "First dive with us",
+    "firstTime": "First time with us",
     "returning": "Back after {years, plural, one {# year} other {# years}}",
     "dockLine": "Say hello to {name}: {card}.",
     "dockLineNoCard": "Say hello to {name}.",
