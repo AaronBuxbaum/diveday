@@ -295,6 +295,30 @@ describe("medicalHoldAfterDive", () => {
     ).toBeNull();
   });
 
+  /**
+   * **A missing mark is not carried, so the hold comes back** (#2380 review).
+   * Only the dock's not-boarded carries forward; a not-back at after_dive_1
+   * leaves after_dive_2 awaiting. That awaiting row is no alarm, and the diver
+   * boarded at the dock, so it wears the hold again. Pinned as it stands.
+   */
+  it("wears the hold on the awaiting row after a not-back nobody has touched since", () => {
+    const checkpoints: RollCallCheckpoint[] = ["departure", "after_dive_1", "after_dive_2"];
+    const effective = carryForwardNotBoarded([standing("boarded"), standing("not_boarded")]);
+    const at = (index: number) => {
+      const checkpoint = checkpoints[index] as RollCallCheckpoint;
+      return medicalHoldAfterDive({
+        checkpoint,
+        boardedEarlier: boardedBefore(effective.slice(0, index)),
+        notBackAboard: isNotBackAboard(checkpoint, effective[index]),
+        blockerCodes: ["medical_not_cleared"],
+      });
+    };
+    // The alarm at after_dive_1 carries nothing else.
+    expect(at(1)).toBeNull();
+    expect(effective[2]).toBeUndefined();
+    expect(at(2)).toBe("medical_not_cleared");
+  });
+
   it("leaves blockedAtRail's answer for the same diver unchanged (decision 4)", () => {
     expect(
       blockedAtRail({
