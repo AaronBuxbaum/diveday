@@ -247,7 +247,7 @@ export async function recordTripInvitation(
  */
 export type TripInvitationDelivery = "sent" | "fallback" | "opted_out";
 
-/** How long after its last stamp a cold invitation may not be emailed again (#2133). */
+/** How long after its last email a cold invitation may not be emailed again (#2133). */
 const DIRECT_RESEND_WINDOW_MS = 24 * HOUR_MS;
 
 /**
@@ -265,20 +265,22 @@ const DIRECT_RESEND_WINDOW_MS = 24 * HOUR_MS;
  *   person (`trip_invitations_source_reference_check`), which is what lets the
  *   unsubscribe link be required: the token is keyed to that person.
  *
- * The stamp is written first in every case, as it always was: "Contacted" is
- * the record that staff reached out, by email or by hand.
+ * The `invitedAt` stamp is written first in every case, as it always was:
+ * "Contacted" is the record that staff reached out, by email or by hand.
  *
- * **A cold invitation is not sent twice in a day** (Aaron, 2026-10-13, issue
- * #2133). Every send stamps a fresh `invitedAt`, and with it a new unsubscribe
- * token and idempotency key, so a repeat inside `DIRECT_RESEND_WINDOW_MS` of
- * the last stamp is refused before anything is written or sent: the composer
- * fallback, so staff can still write by hand, and the window does not slide
- * forward on a refusal. The window is read and stamped under one row lock
- * (`claimDirectSend`), so two submits that land together send once. Any
- * staff role may still send; a reply to a date
- * request is service mail and is not throttled. An offer from the counter
- * (`offerDepartureToDiver`) passes the stamp its own claim took (#2480) and
- * is held by that claim instead.
+ * **A cold invitation is not emailed twice in a day** (Aaron, 2026-10-13,
+ * issue #2133). Every send stamps a fresh `invitedAt`, and with it a new
+ * unsubscribe token and idempotency key, so the window is held by its own
+ * mark, `emailedAt`: a repeat inside `DIRECT_RESEND_WINDOW_MS` of the last
+ * email is refused before anything is written or sent, with the composer
+ * fallback so staff can still write by hand, and the window does not slide
+ * forward on a refusal. The mark is read and taken under one row lock
+ * (`claimDirectSend`), so two submits that land together send once, and it
+ * is given back when the mail does not go (`releaseDirectSend`), so a failed
+ * send or a missing address never locks the diver out. Any staff role may
+ * still send; a reply to a date request is service mail and is not throttled.
+ * An offer from the counter (`offerDepartureToDiver`) passes the claim it took
+ * itself.
  */
 export async function deliverTripInvitation(
   db: AppDb,
@@ -294,21 +296,36 @@ export async function deliverTripInvitation(
 ): Promise<TripInvitationDelivery> {
   const context = await getTripInvitation(db, input.shopId, input.tripId, input.invitationId);
   if (!context) return "fallback";
-  let invitedAt: Date;
   if (context.invitation.source === "direct" && !input.invitedAt) {
-    const claimed = await claimDirectSend(db, input.shopId, input.invitationId);
-    if (!claimed) return "fallback";
-    invitedAt = claimed;
-  } else {
-    invitedAt = input.invitedAt ?? nowDate();
-    const recorded = await recordTripInvitation(db, {
-      shopId: input.shopId,
-      tripId: input.tripId,
-      invitationId: input.invitationId,
-      now: invitedAt,
-    });
-    if (!recorded) return "fallback";
+    const claim = await claimDirectSend(db, input.shopId, input.invitationId);
+    if (!claim) return "fallback";
+    let delivery: TripInvitationDelivery = "fallback";
+    try {
+      delivery = await sendTripInvitation(db, input, context, claim.at, provider);
+    } finally {
+      if (delivery !== "sent") await releaseDirectSend(db, input.shopId, input.invitationId, claim);
+    }
+    return delivery;
   }
+  const invitedAt = input.invitedAt ?? nowDate();
+  const recorded = await recordTripInvitation(db, {
+    shopId: input.shopId,
+    tripId: input.tripId,
+    invitationId: input.invitationId,
+    now: invitedAt,
+  });
+  if (!recorded) return "fallback";
+  return sendTripInvitation(db, input, context, invitedAt, provider);
+}
+
+/** The send itself, once the stamp (and for a cold invitation, the claim) is written. */
+async function sendTripInvitation(
+  db: AppDb,
+  input: { shopId: string; shopSlug: string },
+  context: NonNullable<Awaited<ReturnType<typeof getTripInvitation>>>,
+  invitedAt: Date,
+  provider: NotificationProvider | undefined,
+): Promise<TripInvitationDelivery> {
   const origin = publicAppUrl();
   const shared = {
     invitationId: context.invitation.id,
@@ -370,20 +387,24 @@ export async function deliverTripInvitation(
   return delivery.status === "sent" ? "sent" : "fallback";
 }
 
+/** A cold invitation's taken send: the mark it wrote, and the one it replaced. */
+type DirectSendClaim = { at: Date; previous: Date | null };
+
 /**
  * **Take a cold invitation's send, or learn it is not this call's** (#2133).
- * The row is locked, read and stamped in one transaction, so two submits that
+ * The row is locked, read and marked in one transaction, so two submits that
  * land together cannot both pass the window: the second waits for the first's
- * stamp and is refused. Returns the stamp the send writes.
+ * mark and is refused. The claim writes both `emailedAt` (the window) and
+ * `invitedAt` ("Contacted").
  */
 async function claimDirectSend(
   db: AppDb,
   shopId: string,
   invitationId: string,
-): Promise<Date | null> {
+): Promise<DirectSendClaim | null> {
   return db.transaction(async (tx) => {
     const [row] = await tx
-      .select({ invitedAt: tripInvitations.invitedAt })
+      .select({ emailedAt: tripInvitations.emailedAt })
       .from(tripInvitations)
       .where(
         and(
@@ -396,15 +417,38 @@ async function claimDirectSend(
       .for("update");
     if (!row) return null;
     const now = nowDate();
-    if (row.invitedAt && now.getTime() - row.invitedAt.getTime() < DIRECT_RESEND_WINDOW_MS) {
+    if (row.emailedAt && now.getTime() - row.emailedAt.getTime() < DIRECT_RESEND_WINDOW_MS) {
       return null;
     }
     await tx
       .update(tripInvitations)
-      .set({ invitedAt: now })
+      .set({ emailedAt: now, invitedAt: now })
       .where(and(eq(tripInvitations.id, invitationId), eq(tripInvitations.shopId, shopId)));
-    return now;
+    return { at: now, previous: row.emailedAt };
   });
+}
+
+/**
+ * Give the claim back after mail that did not go: the window goes back to the
+ * last email that did, only while the mark is still this claim's. `invitedAt`
+ * stays, because "Contacted" is still true (staff reach the diver by hand).
+ */
+async function releaseDirectSend(
+  db: AppDb,
+  shopId: string,
+  invitationId: string,
+  claim: DirectSendClaim,
+) {
+  await db
+    .update(tripInvitations)
+    .set({ emailedAt: claim.previous })
+    .where(
+      and(
+        eq(tripInvitations.id, invitationId),
+        eq(tripInvitations.shopId, shopId),
+        eq(tripInvitations.emailedAt, claim.at),
+      ),
+    );
 }
 
 /**

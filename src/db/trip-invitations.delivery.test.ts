@@ -269,12 +269,33 @@ describe("deliverTripInvitation", () => {
       expect(sendNotification).toHaveBeenCalledTimes(1);
     });
 
+    it("sends on the next submit when the last one's mail did not go, still marked contacted", async () => {
+      const ctx = await context();
+      const { invitationId } = await directInvitation(ctx);
+      const input = {
+        shopId: ctx.shop.id,
+        shopSlug: ctx.shop.slug,
+        tripId: ctx.trip.id,
+        invitationId,
+      };
+      vi.mocked(sendNotification).mockResolvedValueOnce({
+        status: "failed",
+        retryable: false,
+        errorCode: "rejected",
+      });
+
+      await expect(deliverTripInvitation(ctx.db, input)).resolves.toBe("fallback");
+      expect(await stampOf(ctx, invitationId)).toBeInstanceOf(Date);
+      await expect(deliverTripInvitation(ctx.db, input)).resolves.toBe("sent");
+      expect(sendNotification).toHaveBeenCalledTimes(2);
+    });
+
     it("refuses at 23 hours and sends again once 24 hours have passed", async () => {
       const { ctx, input } = await sentOnce();
       const at = (hours: number) =>
         ctx.db
           .update(tripInvitations)
-          .set({ invitedAt: new Date(nowDate().getTime() - hours * HOUR_MS) })
+          .set({ emailedAt: new Date(nowDate().getTime() - hours * HOUR_MS) })
           .where(eq(tripInvitations.id, input.invitationId));
 
       await at(23);
