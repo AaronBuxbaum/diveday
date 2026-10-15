@@ -383,6 +383,7 @@
     "waitlistHeading": "Anótate en la lista de espera",
     "waitlistBody": "Si se libera una plaza, el centro ya tendrá tus datos.",
     "waitlistJoining": "Apuntándote…",
+    "waitlistPartyHint": "Basta con que una persona se anote por todo el grupo.",
     "wantAnyTripAlertsInstead": "¿No te convence esta? ¿Prefieres alertas de ofertas para cualquier salida?",
     "joinLastMinuteDealAlerts": "Anótate en la lista de última hora",
     "waitlistConfirmedHeading": "Estás en la lista de espera, {name}.",
@@ -458,7 +459,7 @@
       "refresherCourse": "Cuéntame sobre el curso de repaso.",
       "noGate": "Ninguna de estas opciones cambia si puedes reservar."
     },
-    "alternativeSameRun": "Próxima fecha, {date}"
+    "alternativeSameRun": "Próxima fecha con plazas, {date}"
   },
   "bookingGear": {
     "heading": "Equipo de alquiler",
@@ -4179,7 +4180,7 @@
       "footer": "La plaza no está reservada a tu nombre, así que no esperes demasiado. ¡Nos vemos en el barco!",
       "subjectParty": "Se liberaron {seats} plazas en {tripTitle}",
       "bodyParty": "Se acaban de liberar {seats} plazas en {tripTitle}, y te las ofrecemos para tu grupo.",
-      "rolledBody": "El {filled} se llenó. El {date} tiene lugar, y te ofrecemos {seats, plural, one {una plaza} other {# plazas}} en {tripTitle}."
+      "rolledBody": "La salida del {sailed} ya zarpó. El {date} tiene lugar, y te ofrecemos {seats, plural, one {una plaza} other {# plazas}} en {tripTitle}."
     },
     "tripInvitation": {
       "subject": "Una invitación de {shopName}: {tripTitle}",

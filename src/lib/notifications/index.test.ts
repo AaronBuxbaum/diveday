@@ -737,12 +737,14 @@ describe("waitlistInviteEmail for a party and for a rolled lead", () => {
     expect(email.text).toContain("2 seats just opened on Saturday Two-Tank");
   });
 
-  it("says the date they asked for filled and this one has room (fourth review, item 31)", () => {
+  // "has sailed", not "filled": the roll carries every date that sailed with
+  // leads, and one may have sailed with a seat free (dive-domain review r4-4, N6).
+  it("says the date they asked for has sailed and this one has room (fourth review, item 31)", () => {
     const email = waitlistInviteEmail({
       ...base,
-      filledStartsAt: new Date("2026-10-17T12:00:00.000Z"),
+      sailedStartsAt: new Date("2026-10-17T12:00:00.000Z"),
     });
-    expect(email.text).toMatch(/Sat,\sOct\s17 filled\. Sat,\sOct\s24 has room/);
+    expect(email.text).toMatch(/Sat,\sOct\s17 has sailed\. Sat,\sOct\s24 has room/);
     expect(email.text).not.toContain("just opened");
     expect(email.html).toContain("<strong>Saturday Two-Tank</strong>");
   });

@@ -290,7 +290,7 @@ export async function rollSailedSeriesWaitlists(
         now,
         // Its own sentence: the date they asked for filled, this one has room
         // (fourth review, item 31).
-        filledStartsAt: row.startsAt,
+        sailedStartsAt: row.startsAt,
       });
       if (invited.ok) {
         outcome.invited += 1;

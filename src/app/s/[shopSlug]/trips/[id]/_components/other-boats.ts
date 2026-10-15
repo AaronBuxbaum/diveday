@@ -1,5 +1,5 @@
 import type { DiverLocale } from "@/i18n/settings";
-import { formatDayParts, formatTime } from "@/lib/format";
+import { formatDayParts, formatShortDate, formatTime } from "@/lib/format";
 import { publicTripPath } from "@/lib/public-routes";
 import { similarDepartures } from "@/lib/similar-departures";
 import { spotsRemaining } from "@/lib/trips";
@@ -54,8 +54,9 @@ export function fullTripAlternatives(trip: PublicTrip, board: Board, where: Othe
     title: row.title,
     reason: row.reason,
     // Preformatted in the shop's own zone, like every other date this page
-    // hands a client component.
-    when: formatDayParts(row.startsAt, where.locale, where.timeZone),
+    // hands a client component, and in the header's own words ("Sat, Oct 24"),
+    // so the run line and this one read as one calendar.
+    when: formatShortDate(row.startsAt, where.locale, where.timeZone),
     href: `${publicTripPath(where.shopSlug, row.tripId)}${where.isEmbed ? "?embed=1" : ""}`,
   }));
 }

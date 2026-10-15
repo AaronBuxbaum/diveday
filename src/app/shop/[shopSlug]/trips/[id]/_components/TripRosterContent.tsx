@@ -23,6 +23,7 @@ import { isFull, seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { recordPaperCourseFormAction } from "../course-actions";
 import { AddDiverSection } from "./AddDiverSection";
+import { carryTargetLabel } from "./carry-target-label";
 import { DepartureNoteSection } from "./DepartureNoteSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
@@ -513,7 +514,7 @@ function CarryWaitlistForm({
           <select id="carry-waitlist-to" name="toTripId" required className={controlClass}>
             {targets.map((target) => (
               <option key={target.id} value={target.id}>
-                {target.label}
+                {carryTargetLabel(target, t)}
               </option>
             ))}
           </select>

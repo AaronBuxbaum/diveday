@@ -220,7 +220,8 @@ export type RosterActions = {
 /** The departures a seat may move to, already worded with their zone. */
 export type SeatMove = {
   action: (formData: FormData) => void;
-  targets: readonly { id: string; label: string }[];
+  /** Each with the seats it still sells (`listSeatMoveTargets`). */
+  targets: readonly { id: string; label: string; seatsLeft: number }[];
 };
 
 /**

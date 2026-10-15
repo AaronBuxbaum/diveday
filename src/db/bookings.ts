@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { checkMinimumAge, isPlausibleDateOfBirth } from "@/lib/age";
+import { sellableSeats } from "@/lib/boat-safety";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
@@ -70,7 +71,12 @@ import {
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { getShopCurrency } from "./stripe-accounts";
 import { liveTrip } from "./trips-live";
-import { heldSeatCounts, sellableCapacity } from "./trips-queries";
+import {
+  heldSeatCounts,
+  liveBookingJoin,
+  sellableCapacity,
+  tripBoatCertifiedPassengers,
+} from "./trips-queries";
 
 /**
  * A booking names its diver one of two ways: a walk-in supplies a name (and,
@@ -2022,7 +2028,10 @@ export async function moveBooking(
  * scheduled, not held, not rehearsals, not yet left, and of the same kind
  * (another session of the same course, or another dive). The roster's "Move
  * to another departure" lists these; `moveBooking` is still the gate, so a
- * departure that fills between the list and the tap is refused there.
+ * departure that fills between the list and the tap is refused there. Each
+ * says the seats it still sells (certificate-capped, seat-holding bookings
+ * counted), so "Carry the wait list" never offers a full boat as though it
+ * could help (dive-domain review r4-4, N9).
  */
 export async function listSeatMoveTargets(
   db: AppDb,
@@ -2030,16 +2039,24 @@ export async function listSeatMoveTargets(
   tripId: string,
   now: Date = nowDate(),
   limit = 30,
-): Promise<{ id: string; title: string; startsAt: Date }[]> {
+): Promise<{ id: string; title: string; startsAt: Date; seatsLeft: number }[]> {
   const [trip] = await db
     .select({ courseId: trips.courseId })
     .from(trips)
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .limit(1);
   if (!trip) return [];
-  return db
-    .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt })
+  const rows = await db
+    .select({
+      id: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+      capacity: trips.capacity,
+      certifiedPassengers: tripBoatCertifiedPassengers(),
+      held: sql<number>`count(${bookings.id})::int`,
+    })
     .from(trips)
+    .leftJoin(bookings, liveBookingJoin)
     .where(
       and(
         eq(trips.shopId, shopId),
@@ -2052,8 +2069,15 @@ export async function listSeatMoveTargets(
         trip.courseId ? eq(trips.courseId, trip.courseId) : isNull(trips.courseId),
       ),
     )
+    .groupBy(trips.id)
     .orderBy(asc(trips.startsAt))
     .limit(limit);
+  return rows.map(({ id, title, startsAt, capacity, certifiedPassengers, held }) => ({
+    id,
+    title,
+    startsAt,
+    seatsLeft: Math.max(0, sellableSeats(capacity, certifiedPassengers) - Number(held)),
+  }));
 }
 
 export type SetParticipantTypeOutcome =

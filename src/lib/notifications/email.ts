@@ -138,7 +138,7 @@ type WaitlistInviteEmailInput = {
    * this one (fourth review, item 31): the invite then says that date filled
    * and this one has room, rather than offering a date they never asked for.
    */
-  filledStartsAt?: Date;
+  sailedStartsAt?: Date;
 };
 
 type TripInvitationEmailInput = {
@@ -1001,9 +1001,9 @@ export function waitlistInviteEmail(input: WaitlistInviteEmailInput): Notificati
   // A rolled lead hears why the date moved; a party hears its count; anyone
   // else, that a seat opened.
   const bodyFor = (tripTitle: string) =>
-    input.filledStartsAt
+    input.sailedStartsAt
       ? t("notifications.waitlistInvite.rolledBody", {
-          filled: formatShortDate(input.filledStartsAt, input.locale, input.timezone),
+          sailed: formatShortDate(input.sailedStartsAt, input.locale, input.timezone),
           date,
           seats,
           tripTitle,

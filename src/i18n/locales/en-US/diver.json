@@ -383,6 +383,7 @@
     "waitlistHeading": "Join the wait list",
     "waitlistBody": "If a spot opens, the shop will have your details ready.",
     "waitlistJoining": "Joining…",
+    "waitlistPartyHint": "One of you is enough: join once for the whole group.",
     "wantAnyTripAlertsInstead": "Not set on this one? Want any-trip deal alerts instead?",
     "joinLastMinuteDealAlerts": "Join the last-minute list",
     "waitlistConfirmedHeading": "You’re on the wait list, {name}.",
@@ -458,7 +459,7 @@
       "refresherCourse": "Tell me about the refresher course.",
       "noGate": "None of these changes whether you can book."
     },
-    "alternativeSameRun": "Next date, {date}"
+    "alternativeSameRun": "Next date with room, {date}"
   },
   "bookingGear": {
     "heading": "Rental gear",
@@ -4179,7 +4180,7 @@
       "footer": "The seat isn’t held for you, so don’t wait too long. See you on the boat!",
       "subjectParty": "{seats} seats opened up on {tripTitle}",
       "bodyParty": "{seats} seats just opened on {tripTitle}, and we’re offering them to your party.",
-      "rolledBody": "{filled} filled. {date} has room, and we’re offering you {seats, plural, one {a seat} other {# seats}} on {tripTitle}."
+      "rolledBody": "{sailed} has sailed. {date} has room, and we’re offering you {seats, plural, one {a seat} other {# seats}} on {tripTitle}."
     },
     "tripInvitation": {
       "subject": "An invitation from {shopName}: {tripTitle}",

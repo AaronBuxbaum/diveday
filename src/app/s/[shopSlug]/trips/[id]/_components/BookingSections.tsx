@@ -202,7 +202,7 @@ export function TripFullSection({
     tripId: string;
     title: string;
     href: string;
-    when: { weekday: string; day: string; month: string };
+    when: string;
     reason: "same_run" | "same_course" | "same_site";
   }[];
 }) {
@@ -254,9 +254,7 @@ export function TripFullSection({
                     : alternative.reason === "same_course"
                       ? "alternativeSameCourse"
                       : "alternativeSameSite",
-                  {
-                    date: `${alternative.when.weekday} ${alternative.when.day} ${alternative.when.month}`,
-                  },
+                  { date: alternative.when },
                 )}
               </span>
             </li>
@@ -294,6 +292,9 @@ export function TripFullSection({
           contactEmail={contactEmail}
           contactPhone={contactPhone}
         />
+        {/* Two joiners from one couple would each count the couple, so the
+            shop reads demand that is not there (dive-domain review r4-4, N8). */}
+        {trip.capacity > 1 ? <p className="text-sm text-muted">{t("waitlistPartyHint")}</p> : null}
         {/* The same optional question the shop-wide deal list asks, in the same
             words, so a staffer working either list is reading one claim rather
             than two (FU-20260813). It describes the person joining — the lead

@@ -52,7 +52,7 @@ test("a full date in a weekly run points at the next one, and a party waits whol
   await page.goto(publicUrl);
   await expect(page.getByRole("heading", { name: "This boat’s full" })).toBeVisible();
   // The alternative is the run's own next date, linked by its title.
-  const nextDate = page.getByRole("listitem").filter({ hasText: /Next date, / });
+  const nextDate = page.getByRole("listitem").filter({ hasText: /Next date with room, / });
   await expect(nextDate.getByRole("link", { name: title })).toBeVisible();
 
   // Item 34: a party of two joins as one lead, asking for two seats.

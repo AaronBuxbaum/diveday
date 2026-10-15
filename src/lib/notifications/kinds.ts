@@ -344,7 +344,7 @@ const waitlistInviteSchema = z.object({
   /** The waiting party's size (fourth review, item 34). */
   partySize: z.number().int().min(1).max(MAX_PUBLIC_PARTY_SIZE).optional(),
   /** The run's date that filled, for an invite the nightly roll sent (item 31). */
-  filledStartsAt: z.date().optional(),
+  sailedStartsAt: z.date().optional(),
 });
 
 /**

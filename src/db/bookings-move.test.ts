@@ -390,6 +390,22 @@ describe("listSeatMoveTargets", () => {
   });
 });
 
+describe("listSeatMoveTargets, with the seats each has left", () => {
+  // "Carry the wait list" offered boats with no seat as if they could help
+  // (dive-domain review r4-4, N9): each target says what it has left.
+  it("counts the seats a target still sells", async () => {
+    const { db, shop, from, to } = await setup(2);
+    await seatOn(db, shop.id, to.id, "Ola Seated");
+    const target = (await listSeatMoveTargets(db, shop.id, from.id)).find(
+      (row) => row.id === to.id,
+    );
+    expect(target?.seatsLeft).toBe(1);
+    await seatOn(db, shop.id, to.id, "Pia Seated");
+    const full = (await listSeatMoveTargets(db, shop.id, from.id)).find((row) => row.id === to.id);
+    expect(full?.seatsLeft).toBe(0);
+  });
+});
+
 describe("moveBooking between sessions of one course", () => {
   /**
    * Age is measured on the day the session runs (H-08), so the same student

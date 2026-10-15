@@ -79,7 +79,7 @@ export async function inviteWaitlistDiver(
      * here: the invite says it filled and this date has room (fourth review,
      * item 31).
      */
-    filledStartsAt?: Date;
+    sailedStartsAt?: Date;
   },
 ): Promise<InviteWaitlistDiverResult> {
   const [ctx] = await db
@@ -124,7 +124,7 @@ export async function inviteWaitlistDiver(
       invitedAt,
       unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
       partySize: ctx.entry.partySize,
-      ...(input.filledStartsAt ? { filledStartsAt: input.filledStartsAt } : {}),
+      ...(input.sailedStartsAt ? { sailedStartsAt: input.sailedStartsAt } : {}),
     }).catch(() => ({ status: "failed" as const }));
     delivery = result.status === "sent" ? "sent" : "unconfigured";
   }

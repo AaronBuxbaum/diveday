@@ -37,7 +37,8 @@ describe("fullTripAlternatives", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ tripId: "b", reason: "same_site" });
     expect(rows[0]?.href).toBe("/s/blue-mantis/trips/b");
-    expect(rows[0]?.when.weekday).toBeTruthy();
+    // Worded as the header words a date, never assembled from parts.
+    expect(rows[0]?.when).toMatch(/^Sun, Jul\s26$/);
   });
 
   it("keeps a framed reader inside the frame", () => {
