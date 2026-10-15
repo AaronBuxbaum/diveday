@@ -449,7 +449,7 @@ export async function undoAgencyCheck(
 ): Promise<{ ok: true; archived: number } | { ok: false }> {
   return db.transaction(async (tx) => {
     const [card] = await tx
-      .select({ id: certifications.id })
+      .select({ id: certifications.id, reviewedAt: certifications.reviewedAt })
       .from(certifications)
       .where(
         and(
@@ -462,10 +462,14 @@ export async function undoAgencyCheck(
       )
       .for("update")
       .limit(1);
-    if (!card) return { ok: false } as const;
+    if (!card?.reviewedAt) return { ok: false } as const;
     const undone = await unreviewCertification(tx, {
       shopId: input.shopId,
       certificationId: input.certificationId,
+      // The row is locked and was just read: this Undo reverses the review it
+      // finds, which is an agency check's by the filter above.
+      reviewedAt: card.reviewedAt,
+      reversingAgencyCheck: true,
     });
     if (!undone.ok) return { ok: false } as const;
     const archive = {

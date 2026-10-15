@@ -9,6 +9,7 @@ import type { CardUnreviewRefusal, CertificationLevel, SiteCertRequirement } fro
 import {
   BLOCKER_CATEGORY,
   calculateReadiness,
+  cardUndoRefusal,
   combineCertRequirements,
   combineSiteRequirements,
   isUnsightedSelfDeclaration,
@@ -714,12 +715,20 @@ export async function reviewCertification(
  */
 export async function unreviewCertification(
   db: DbExecutor,
-  input: { shopId: string; certificationId: string },
+  input: {
+    shopId: string;
+    certificationId: string;
+    /** The `reviewedAt` the Undo was offered for: a later review is `stale` (issue #2612). */
+    reviewedAt: Date;
+    /** Only the agency check's own Undo (`undoAgencyCheck`) reverses an agency-checked review. */
+    reversingAgencyCheck?: boolean;
+  },
 ): Promise<{ ok: true } | { ok: false; reason: CardUnreviewRefusal }> {
   const [existing] = await db
     .select({
       status: certifications.status,
       reviewedAt: certifications.reviewedAt,
+      agencyCheckedAt: certifications.agencyCheckedAt,
       selfDeclaredAt: certifications.selfDeclaredAt,
       issuedByShopAt: certifications.issuedByShopAt,
       importedAt: certifications.importedAt,
@@ -736,6 +745,10 @@ export async function unreviewCertification(
   if (!existing) return { ok: false, reason: "not_found" };
   const target = unreviewedCardState(existing);
   if (!target.ok) return target;
+  const refusal = cardUndoRefusal(existing, input.reviewedAt, {
+    reversingAgencyCheck: input.reversingAgencyCheck,
+  });
+  if (refusal) return { ok: false, reason: refusal };
   const [row] = await db
     .update(certifications)
     .set({
@@ -750,16 +763,20 @@ export async function unreviewCertification(
         eq(certifications.id, input.certificationId),
         eq(certifications.shopId, input.shopId),
         isNull(certifications.deletedAt),
+        // The review that was offered, still: a review landing between the read
+        // above and this write matches no row (issue #2612).
+        eq(certifications.reviewedAt, input.reviewedAt),
+        ...(input.reversingAgencyCheck ? [] : [isNull(certifications.agencyCheckedAt)]),
       ),
     )
     .returning({ id: certifications.id });
-  return row ? { ok: true } : { ok: false, reason: "not_found" };
+  return row ? { ok: true } : { ok: false, reason: "stale" };
 }
 
 /** The specialty twin of {@link unreviewCertification}; same decision, same guards. */
 export async function unreviewSpecialtyCertification(
   db: AppDb,
-  input: { shopId: string; certificationId: string },
+  input: { shopId: string; certificationId: string; reviewedAt: Date },
 ): Promise<{ ok: true } | { ok: false; reason: CardUnreviewRefusal }> {
   const [existing] = await db
     .select({
@@ -787,6 +804,8 @@ export async function unreviewSpecialtyCertification(
   if (!existing) return { ok: false, reason: "not_found" };
   const target = unreviewedCardState(existing);
   if (!target.ok) return target;
+  const refusal = cardUndoRefusal(existing, input.reviewedAt);
+  if (refusal) return { ok: false, reason: refusal };
   const [row] = await db
     .update(specialtyCertifications)
     .set({
@@ -800,10 +819,11 @@ export async function unreviewSpecialtyCertification(
         eq(specialtyCertifications.id, input.certificationId),
         eq(specialtyCertifications.shopId, input.shopId),
         isNull(specialtyCertifications.deletedAt),
+        eq(specialtyCertifications.reviewedAt, input.reviewedAt),
       ),
     )
     .returning({ id: specialtyCertifications.id });
-  return row ? { ok: true } : { ok: false, reason: "not_found" };
+  return row ? { ok: true } : { ok: false, reason: "stale" };
 }
 
 /**

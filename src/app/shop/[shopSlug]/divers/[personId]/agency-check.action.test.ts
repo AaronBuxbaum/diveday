@@ -721,7 +721,11 @@ describe("addAgencyListedCardsAction", () => {
     expect(sighted.ok && sighted.certification.identifier).toBe("SDI-5005");
     // A number that may be a sighting is not taken back by a status flip.
     expect(
-      await unreviewNitroxCertification(db, { shopId: shop.id, certificationId: nitroxId }),
+      await unreviewNitroxCertification(db, {
+        shopId: shop.id,
+        certificationId: nitroxId,
+        reviewedAt: new Date(),
+      }),
     ).toEqual({ ok: false, reason: "sighted_card" });
   });
 

@@ -673,7 +673,14 @@ function listedAtACardNumberingAgency(card: {
  * Why undoing a "Mark certified" tap was refused — never a silent no-op, since
  * the whole promise of the toast is that the card went back.
  */
-export type CardUnreviewRefusal = "not_found" | "not_reviewed" | "sighted_card";
+export type CardUnreviewRefusal =
+  | "not_found"
+  | "not_reviewed"
+  | "sighted_card"
+  /** The card has been reviewed since the review this Undo was offered for. */
+  | "stale"
+  /** An agency check made the review; its own Undo takes it back, this one never does. */
+  | "agency_checked";
 
 /**
  * **What a card should look like once its review is taken back.**
@@ -713,6 +720,31 @@ export function unreviewedCardState(card: {
   }
   if (!card.reviewedAt) return { ok: false, reason: "not_reviewed" };
   return { ok: true, status: card.importedAt ? "verified" : "pending" };
+}
+
+/**
+ * **Whether an Undo still belongs to the review it was offered for** (issue
+ * #2612). The toast's form carries the `reviewedAt` it was rendered with; a
+ * card re-reviewed since (by a second tap, or by the agency check, which writes
+ * its evidence into the note) is no longer the review the staffer saw, and
+ * undoing it would wipe a later check and its evidence. The one-tap Undo also
+ * never reverses an agency-checked review, as the agency check's own Undo
+ * never reverses a one-tap one. Null means the Undo may proceed.
+ *
+ * Structural, like {@link unreviewedCardState}, so all three tables share it.
+ * Run it after that decision: a card with no review at all is `not_reviewed`,
+ * not stale.
+ */
+export function cardUndoRefusal(
+  card: { reviewedAt?: Date | null; agencyCheckedAt?: Date | null },
+  offeredReviewedAt: Date,
+  options: { reversingAgencyCheck?: boolean } = {},
+): "stale" | "agency_checked" | null {
+  if (!card.reviewedAt || card.reviewedAt.getTime() !== offeredReviewedAt.getTime()) {
+    return "stale";
+  }
+  if (card.agencyCheckedAt && !options.reversingAgencyCheck) return "agency_checked";
+  return null;
 }
 
 /** Shared rank check for course admission and final trip readiness. */

@@ -116,6 +116,7 @@ export function MarkCertifiedControl({
           fields={{
             certificationId: undo.certificationId,
             cardType: undo.cardType,
+            reviewedAt: undo.reviewedAt,
             intent: "undo",
           }}
           pendingLabel={copy.undoPending}

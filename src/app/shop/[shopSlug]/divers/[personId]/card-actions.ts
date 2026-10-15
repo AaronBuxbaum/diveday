@@ -114,6 +114,7 @@ const cardForm = z.object({
   intent: formValue(),
   pageText: formValue(),
   refresh: formValue(),
+  reviewedAt: formValue(),
   sightedAgency: formValue(),
   sightedIdentifier: formValue(),
   sightedLevel: formValue(),
@@ -540,7 +541,12 @@ export type MarkCertifiedResult =
        * taken back (see `unreviewedCardState`), so a toast is never offered
        * with an Undo the server would refuse.
        */
-      undo?: { certificationId: string; cardType: CardType };
+      undo?: {
+        certificationId: string;
+        cardType: CardType;
+        /** The review this Undo reverses, as the ISO instant (issue #2612): a later review makes it stale. */
+        reviewedAt: string;
+      };
     }
   | { ok: false; reason: "invalid" | "sighting-required" | "duplicate-card" | "not-undoable" };
 
@@ -583,12 +589,19 @@ export async function markCertifiedAction(
   const input = { shopId: staff.user.shopId, certificationId };
 
   if (fields.intent === "undo") {
+    // The Undo reverses the review it was offered for and no other (issue
+    // #2612). A post that names no instant, or a nonsense one, reverses nothing.
+    const offered = typeof fields.reviewedAt === "string" ? new Date(fields.reviewedAt) : null;
+    if (!offered || Number.isNaN(offered.getTime())) {
+      return { ok: false, reason: "not-undoable" };
+    }
+    const undoInput = { ...input, reviewedAt: offered };
     const undone =
       cardType.data === "level"
-        ? await unreviewCertification(db, input)
+        ? await unreviewCertification(db, undoInput)
         : cardType.data === "specialty"
-          ? await unreviewSpecialtyCertification(db, input)
-          : await unreviewNitroxCertification(db, input);
+          ? await unreviewSpecialtyCertification(db, undoInput)
+          : await unreviewNitroxCertification(db, undoInput);
     revalidatePath(base);
     return undone.ok ? { ok: true, effect: "undone" } : { ok: false, reason: "not-undoable" };
   }
@@ -627,7 +640,10 @@ export async function markCertifiedAction(
     effect: card.importedAt ? "confirmed" : "certified",
     // Only a review its Undo can take back: never a sighting, nor a card an
     // agency check listed where the agency numbers each card.
-    undo: unreviewedCardState(card).ok ? { certificationId, cardType: cardType.data } : undefined,
+    undo:
+      unreviewedCardState(card).ok && card.reviewedAt
+        ? { certificationId, cardType: cardType.data, reviewedAt: card.reviewedAt.toISOString() }
+        : undefined,
   };
 }
 

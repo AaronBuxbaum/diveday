@@ -1,7 +1,12 @@
 import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { isDiver } from "@/lib/participant-types";
-import { type CardUnreviewRefusal, needsCardSighting, unreviewedCardState } from "@/lib/readiness";
+import {
+  type CardUnreviewRefusal,
+  cardUndoRefusal,
+  needsCardSighting,
+  unreviewedCardState,
+} from "@/lib/readiness";
 import { shopOffersNitrox } from "@/lib/rentals";
 import type { AppDb } from "./client";
 import { isUniqueConstraintViolation } from "./query-helpers";
@@ -162,7 +167,7 @@ export async function reviewNitroxCertification(
  */
 export async function unreviewNitroxCertification(
   db: AppDb,
-  input: { shopId: string; certificationId: string },
+  input: { shopId: string; certificationId: string; reviewedAt: Date },
 ): Promise<{ ok: true } | { ok: false; reason: CardUnreviewRefusal }> {
   const [existing] = await db
     .select({
@@ -190,6 +195,8 @@ export async function unreviewNitroxCertification(
   if (!existing) return { ok: false, reason: "not_found" };
   const target = unreviewedCardState(existing);
   if (!target.ok) return target;
+  const refusal = cardUndoRefusal(existing, input.reviewedAt);
+  if (refusal) return { ok: false, reason: refusal };
   const [row] = await db
     .update(nitroxCertifications)
     .set({
@@ -203,10 +210,11 @@ export async function unreviewNitroxCertification(
         eq(nitroxCertifications.id, input.certificationId),
         eq(nitroxCertifications.shopId, input.shopId),
         isNull(nitroxCertifications.deletedAt),
+        eq(nitroxCertifications.reviewedAt, input.reviewedAt),
       ),
     )
     .returning({ id: nitroxCertifications.id });
-  return row ? { ok: true } : { ok: false, reason: "not_found" };
+  return row ? { ok: true } : { ok: false, reason: "stale" };
 }
 
 /**
