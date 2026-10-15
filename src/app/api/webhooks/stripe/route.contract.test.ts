@@ -84,7 +84,8 @@ const { markOrderPaidByInvoiceId, markOrderVoidedByInvoiceId, recordOrderPayment
 const { recordStripeChargeRefund } = await import("@/db/refunds");
 const { recordStripeRefundFailure } = await import("@/db/refund-failures");
 const { recordStripeDispute } = await import("@/db/payment-disputes");
-const { recordStripePayout } = await import("@/db/payouts");
+const { recordStripePayout, summarizeStripePayout } = await import("@/db/payouts");
+const { after } = await import("next/server");
 const { applyStripeAccountStatus, disconnectShopStripeAccount } = await import(
   "@/db/stripe-accounts"
 );
@@ -150,6 +151,8 @@ beforeEach(() => {
   vi.mocked(recordStripeChargeRefund).mockReset().mockResolvedValue({ status: "already_recorded" });
   vi.mocked(recordStripeDispute).mockReset().mockResolvedValue({ status: "not_found" });
   vi.mocked(recordStripePayout).mockReset().mockResolvedValue({ status: "not_found" });
+  vi.mocked(summarizeStripePayout).mockReset();
+  vi.mocked(after).mockReset();
   vi.mocked(applyStripeAccountStatus)
     .mockReset()
     .mockResolvedValue({ account: null, newlyRestricted: false });
@@ -393,6 +396,39 @@ describe("payout.canceled", () => {
         payout: expect.objectContaining({ status: "canceled", failureCode: null }),
       }),
     );
+  });
+});
+
+describe("payout.paid summary, after the response (issue #2464)", () => {
+  it("asks Stripe after answering, and a failing summary never fails the delivery", async () => {
+    vi.mocked(recordStripePayout).mockResolvedValue({
+      status: "recorded",
+      needsSummary: true,
+      payout: {} as never,
+    });
+    vi.mocked(summarizeStripePayout).mockRejectedValue(new Error("db down"));
+    expect((await deliver("payout.paid")).status).toBe(200);
+    // Nothing asked yet: the response did not wait on Stripe.
+    expect(summarizeStripePayout).not.toHaveBeenCalled();
+    expect(after).toHaveBeenCalledTimes(1);
+    const [task] = vi.mocked(after).mock.calls[0] ?? [];
+    await expect((task as () => Promise<void>)()).resolves.toBeUndefined();
+    expect(summarizeStripePayout).toHaveBeenCalledWith(FAKE_DB, expect.anything(), {
+      stripeAccountId: ACCOUNT,
+      payoutId: "po_1QsAVmLkdIwHu7ixPayoutA",
+      automatic: true,
+    });
+  });
+
+  it("schedules nothing for a payout already summarized, or one that never arrived", async () => {
+    vi.mocked(recordStripePayout).mockResolvedValue({
+      status: "recorded",
+      needsSummary: false,
+      payout: {} as never,
+    });
+    await deliver("payout.paid");
+    await deliver("payout.failed");
+    expect(after).not.toHaveBeenCalled();
   });
 });
 

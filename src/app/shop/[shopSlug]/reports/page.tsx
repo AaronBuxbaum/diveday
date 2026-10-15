@@ -31,7 +31,7 @@ import {
   parseMonthKey,
 } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
-import { formatShortDate, formatTimeZoneName, monthNames } from "@/lib/format";
+import { formatTimeZoneName, monthNames } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import {
   compareMonthlyReports,
@@ -49,7 +49,7 @@ import { summarizeShopYear } from "@/lib/shop-year";
 import { shopPath } from "@/lib/staff-notices";
 import { shopMonthBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
-import { DepartureLedger, type DepartureRow } from "./_components/DepartureLedger";
+import { DepartureLedger, departureLedgerRows } from "./_components/DepartureLedger";
 import { EmptySeats } from "./_components/EmptySeats";
 import { type MonthFigure, MonthFigures } from "./_components/MonthFigures";
 import {
@@ -508,31 +508,14 @@ export default async function ReportsPage({
     },
   ];
 
-  // The ledger's rows. Every fact carries its own noun: a ledger row has no
-  // column header above it to borrow one from, which is also what lets the
-  // phone keep all three facts instead of hiding two behind a breakpoint.
-  const departureRows: DepartureRow[] = trips.map((trip) => ({
-    tripId: trip.tripId,
-    href: `/shop/${shopSlug}/trips/${trip.tripId}`,
-    title: trip.title,
-    date: formatShortDate(trip.startsAt, locale, tz),
-    seats: t("reports.row.seats", { booked: trip.activeBookings, capacity: trip.capacity }),
-    crew: t("reports.row.crew", { count: crewCounts.get(trip.tripId) ?? 0 }),
-    // A departure nobody booked has no waivers to collect, so it says nothing
-    // about them. Otherwise the row says the one thing a staffer acts on: how
-    // many are still out, or that none are.
-    waivers:
-      trip.activeBookings > 0
-        ? trip.waiverComplete >= trip.activeBookings
-          ? { fact: t("reports.row.waiversAllIn"), outstanding: false }
-          : {
-              fact: t("reports.row.waiversToCollect", {
-                count: trip.activeBookings - trip.waiverComplete,
-              }),
-              outstanding: true,
-            }
-        : null,
-  }));
+  const departureRows = departureLedgerRows({
+    trips,
+    crewCounts,
+    shopSlug,
+    locale,
+    timeZone: tz,
+    t,
+  });
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">

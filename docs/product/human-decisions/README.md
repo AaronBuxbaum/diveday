@@ -182,6 +182,7 @@ A status change is made in the file and here; `pnpm gates` reads the files, not 
 | [H-122](H-122-cancelling-a-run-refunds-in-full.md) | Implemented | 2026-10-13 | Does cancelling every upcoming date of a run refund each seat in full? | Decided 2026-10-13 (Aaron Buxbaum, on issue #2452): yes, every card-paid seat on every date goes back in full, as for any departure the shop cancels. No per-date window. |
 | [H-123](H-123-call-off-queues-refunds-for-a-refund-holder.md) | Implemented | 2026-10-13 | Which roles may trigger a cancellation that refunds money? | Decided 2026-10-13 (Aaron Buxbaum, on issue #2459): the split. Anyone permitted may call a departure or run off, but the refunds it triggers wait for an owner or manager (`canRefund`) to release. A caller who holds the refund right sends them at once. |
 | [H-124](H-124-party-payment-split.md) | Implemented | 2026-10-15 | How does one cash payment divide across a party? | Decided 2026-10-15 (issue #2605's recommendation): each seat takes its balance owed in turn, never more; a payment that runs out leaves a deposit on one seat and the rest owing, never a write-off; more than the party owes is refused; a seat paid online refuses the whole party. |
+| [H-125](H-125-crew-see-tips-on-their-own-boats.md) | Implemented | 2026-10-15 | May crew without the money permission see tips on their own boats? | Decided 2026-10-15 (issue #2470's recommendation): yes, the reader's own share of tips on departures they crewed and no other shop money; not precedent for more. |
 
 ## Human verification queue
 

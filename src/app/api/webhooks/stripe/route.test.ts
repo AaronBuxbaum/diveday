@@ -931,66 +931,6 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
       });
     });
 
-    it("a paid payout still needing its summary asks Stripe after the response, and never fails the delivery", async () => {
-      vi.mocked(recordStripePayout).mockResolvedValue({
-        status: "recorded",
-        needsSummary: true,
-        payout: {} as never,
-      });
-      vi.mocked(summarizeStripePayout).mockRejectedValue(new Error("db down"));
-      const response = await post({
-        id: "evt_po_after",
-        type: "payout.paid",
-        account: "acct_1",
-        data: {
-          object: {
-            id: "po_9",
-            amount: 100,
-            currency: "usd",
-            arrival_date: 1_800_000_000,
-            status: "paid",
-            automatic: false,
-          },
-        },
-      });
-      expect(response.status).toBe(200);
-      // Nothing asked yet: the response did not wait on Stripe.
-      expect(summarizeStripePayout).not.toHaveBeenCalled();
-      expect(after).toHaveBeenCalledTimes(1);
-      const [task] = vi.mocked(after).mock.calls[0] ?? [];
-      await expect((task as () => Promise<void>)()).resolves.toBeUndefined();
-      expect(summarizeStripePayout).toHaveBeenCalledWith(FAKE_DB, expect.anything(), {
-        stripeAccountId: "acct_1",
-        payoutId: "po_9",
-        automatic: false,
-      });
-      expect(Sentry.captureException).not.toHaveBeenCalled();
-    });
-
-    it("a payout already summarized, or one that failed, schedules nothing", async () => {
-      vi.mocked(recordStripePayout).mockResolvedValue({
-        status: "recorded",
-        needsSummary: false,
-        payout: {} as never,
-      });
-      await post({
-        id: "evt_po_done",
-        type: "payout.paid",
-        account: "acct_1",
-        data: {
-          object: {
-            id: "po_9",
-            amount: 100,
-            currency: "usd",
-            arrival_date: 1_800_000_000,
-            status: "paid",
-            automatic: true,
-          },
-        },
-      });
-      expect(after).not.toHaveBeenCalled();
-    });
-
     it("a payout with no connected account, or a malformed one, changes nothing", async () => {
       const object = {
         id: "po_1",
