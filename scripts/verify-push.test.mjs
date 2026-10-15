@@ -7,12 +7,12 @@ import {
   excerpt,
   notRunHere,
   plan,
-  sourceScanTests,
+  UNIT_SHARDS,
   writeStamps,
 } from "./verify-push.mjs";
 
 const names = (steps) => steps.map((step) => step.name);
-const base = { specs: [], scans: ["src/components/ui/form.test.tsx"] };
+const base = { specs: [] };
 
 describe("the pre-push plan", () => {
   it("runs every local check CI's red jobs came from, cheapest first", () => {
@@ -23,19 +23,32 @@ describe("the pre-push plan", () => {
       "typecheck",
       "check:repo",
       "guards",
-      "source scans",
-      "related tests",
+      "unit tests 1/4",
+      "unit tests 2/4",
+      "unit tests 3/4",
+      "unit tests 4/4",
       "e2e build",
       "e2e specs",
     ]);
-    expect(steps.find((s) => s.name === "related tests").args).toContain("src/lib/x.ts");
     expect(steps.at(-1).args).toContain("e2e/a.spec.ts");
   });
 
-  it("names the schema guards instead of a --changed run that would be the whole suite", () => {
-    const steps = plan({ ...base, changed: ["src/db/schema/trips.ts"] });
-    expect(names(steps)).toContain("schema guards");
-    expect(names(steps)).not.toContain("related tests");
+  it("runs the whole unit suite as CI shards it, whatever the diff touches", () => {
+    const units = plan({ ...base, changed: ["package.json"] }).filter((step) =>
+      step.name.startsWith("unit tests"),
+    );
+    expect(units).toHaveLength(UNIT_SHARDS);
+    for (const [i, step] of units.entries()) {
+      expect(step.args).toEqual([
+        "exec",
+        "vitest",
+        "run",
+        "--project",
+        "!guards",
+        "--reporter=dot",
+        `--shard=${i + 1}/${UNIT_SHARDS}`,
+      ]);
+    }
   });
 
   it("regenerates the export snapshot only when seed, schema or export changed", () => {
@@ -54,34 +67,6 @@ describe("the pre-push plan", () => {
       "check:repo",
       "guards",
     ]);
-  });
-});
-
-describe("the related tests", () => {
-  it("follow the changed code only, so a package.json edit does not select the whole suite", () => {
-    const steps = plan({
-      ...base,
-      changed: ["package.json", "scripts/a.mjs", "scripts/gone.mjs"],
-      existing: (f) => f !== "scripts/gone.mjs",
-    });
-    const related = steps.find((s) => s.name === "related tests");
-    expect(related.args).toContain("scripts/a.mjs");
-    expect(related.args).not.toContain("package.json");
-    expect(related.args).not.toContain("scripts/gone.mjs");
-  });
-});
-
-describe("the source scans", () => {
-  it("include the tests that read files and that vitest --changed never selects", () => {
-    const scans = sourceScanTests();
-    for (const file of [
-      "src/components/ui/form.test.tsx",
-      "src/components/ui/button.test.ts",
-      "src/components/account/EntryShell.test.tsx",
-      "src/db/erasure-coverage.test.ts",
-    ]) {
-      expect(scans).toContain(file);
-    }
   });
 });
 
@@ -226,7 +211,7 @@ describe("the stamp", () => {
 describe("a large browser selection", () => {
   it("runs in steps of E2E_CHUNK specs, so none outlives its hour", () => {
     const specs = Array.from({ length: E2E_CHUNK * 2 + 1 }, (_, i) => `e2e/s${i}.spec.ts`);
-    const steps = plan({ ...base, changed: ["src/lib/x.ts"], existing: () => true, specs });
+    const steps = plan({ ...base, changed: ["src/lib/x.ts"], specs });
     const runs = steps.filter((step) => step.name.startsWith("e2e specs"));
     expect(runs.map((step) => step.name)).toEqual([
       "e2e specs 1/3",
@@ -250,7 +235,6 @@ describe("what a green run says it did not run", () => {
       allSpecs,
     });
     expect(lines).toEqual([
-      expect.stringMatching(/^unit tests that neither read source/),
       "1 Playwright specs the diff neither names nor reaches",
       expect.stringMatching(/^visual captures/),
     ]);
@@ -263,11 +247,11 @@ describe("what a green run says it did not run", () => {
       specs: ["e2e/a.spec.ts:12", "e2e/b.spec.ts"],
       allSpecs,
     });
-    expect(lines).toHaveLength(2);
+    expect(lines).toHaveLength(1);
   });
 
-  it("says why no spec ran when only tests changed, and leaves out units for a docs diff", () => {
-    expect(notRunHere({ docsOnly: false, testsOnly: true, specs: [], allSpecs })[1]).toBe(
+  it("says why no spec ran when only tests or docs changed", () => {
+    expect(notRunHere({ docsOnly: false, testsOnly: true, specs: [], allSpecs })[0]).toBe(
       "all 2 Playwright specs (no page code changed)",
     );
     expect(notRunHere({ docsOnly: true, testsOnly: false, specs: [], allSpecs })).toHaveLength(2);
