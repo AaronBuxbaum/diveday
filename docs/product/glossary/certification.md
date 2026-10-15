@@ -97,7 +97,8 @@
   it found two divers or more, certify nothing ("PADI lists more than one diver by this name"). A
   record ends at the first line that could be someone else's (another name, or a name and another
   birth date) or at the page's own furniture, its birth date comes before its level, and it carries
-  the card's number when the card has one. An instructor named on the row is the trainer, not a limit. A **Junior certification**
+  the card's number when the card has one. Only those records, and the words saying why or how many,
+  leave the staffer's browser. An instructor named on the row is the trainer, not a limit. A **Junior certification**
   reads as its level for a diver 15 or older on the day of the check; under 15 it says "PADI shows a
   Junior card. Under 15, record it by hand." A signed-out browser says "Sign in to the PADI Pros'
   Site first" and stops a "Check all". A best guess of PADI's page until a staffer tries it (#2259).

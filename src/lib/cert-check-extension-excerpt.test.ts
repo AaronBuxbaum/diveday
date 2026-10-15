@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from "vitest";
-import { judgeAgencyPage, RECORD_LINES } from "./agency-check";
+import { DIVECHEK_RECORD, judgeAgencyPage, RECORD_LINES } from "./agency-check";
 import { judgeElearningPage } from "./elearning-check";
 
 /**
@@ -16,9 +16,14 @@ await loadExtensionScript("protocol.js");
 await loadExtensionScript("fill.js");
 await loadExtensionScript("agencies.js");
 await loadExtensionScript("shape.js");
-const { excerptAround, excerptAroundName } = (
+const {
+  excerptAround,
+  excerptAroundName,
+  DIVECHEK_RECORD: extensionReading,
+} = (
   globalThis as unknown as {
     DiveDayCertCheck: {
+      DIVECHEK_RECORD: unknown;
       excerptAround: (text: string, email: string, firstName: string, lastName: string) => string;
       excerptAroundName: (text: string, firstName: string, lastName: string) => string;
     };
@@ -192,6 +197,10 @@ describe("excerptAround", () => {
 });
 
 describe("excerptAroundName", () => {
+  it("reads a DiveChek record with the server's own words", () => {
+    expect(extensionReading).toEqual(JSON.parse(JSON.stringify(DIVECHEK_RECORD)));
+  });
+
   it("hands back only this diver's lines, and how many divers were found", () => {
     const page = [
       "PADI Pros’ Site",
@@ -215,10 +224,48 @@ describe("excerptAroundName", () => {
   });
 
   it("hands back no more lines under a name than the server reads as one record", () => {
-    const page = ["Lena Ortiz", "a", "b", "c", "d", "Mark Lee", "e"].join("\n");
+    const page = [
+      "Lena Ortiz",
+      "Date of Birth: 12 Apr 1990",
+      "Open Water Diver 15 Jun 2015",
+      "Rescue Diver 2016",
+      "Deep Diver 2017",
+      "Night Diver 2018",
+    ].join("\n");
     expect(excerptAroundName(page, "Lena", "Ortiz").split("\n")).toEqual(
-      ["Lena Ortiz", "a", "b", "c", "d"].slice(0, RECORD_LINES + 1),
+      page.split("\n").slice(0, RECORD_LINES + 1),
     );
+  });
+
+  /** Domain review R9 (operational) 1: the record ends where the server ends it. */
+  it("never hands back a neighbour's lines inside the four-line window", () => {
+    const page = [
+      "DiveChek",
+      "Lena Ortiz",
+      "Date of Birth: 12 Apr 1990",
+      "Open Water Diver 15 Jun 2015 1506AB1234",
+      "Mark Lee",
+      "Date of Birth: 1 Feb 1980",
+      "Advanced Open Water Diver 1 Jan 2016",
+    ].join("\n");
+    const excerpt = excerptAroundName(page, "Lena", "Ortiz");
+    expect(excerpt.split("\n")).toEqual([
+      "Lena Ortiz",
+      "Date of Birth: 12 Apr 1990",
+      "Open Water Diver 15 Jun 2015 1506AB1234",
+    ]);
+    const neighbour = page
+      .replace("Mark Lee", "Mark Lee 1 Feb 1980")
+      .replace("Date of Birth: 1 Feb 1980\n", "");
+    expect(excerptAroundName(neighbour, "Lena", "Ortiz")).not.toContain("Mark Lee");
+  });
+
+  /** Domain review R9, nit: an address on a line saying why never comes back. */
+  it("hands back only the words saying why from a line carrying an address", () => {
+    const page = ["DiveChek", "No results for mark.lee@example.com", "Help: help@example.com"];
+    const excerpt = excerptAroundName(page.join("\n"), "Lena", "Ortiz");
+    expect(excerpt).not.toContain("@");
+    expect(excerpt).not.toContain("mark");
   });
 
   it("keeps a name split over two labelled lines, either order, so a second diver laid out that way still shows", () => {
@@ -379,6 +426,36 @@ describe("excerptAroundName", () => {
       ],
     ],
     [
+      "a count line with two counts on it",
+      [
+        "DiveChek",
+        "1 diver selected, 3 divers found",
+        "Lena Ortiz",
+        "Date of Birth: 12 Apr 1990",
+        "Open Water Diver 15 Jun 2015 1506AB1234",
+      ],
+    ],
+    [
+      "a count inside a sentence after another count",
+      [
+        "DiveChek",
+        "Showing 1 diver per page, 2 divers found",
+        "Lena Ortiz",
+        "Date of Birth: 12 Apr 1990",
+        "Open Water Diver 15 Jun 2015 1506AB1234",
+      ],
+    ],
+    [
+      "a no-results line carrying an address under the record",
+      [
+        "DiveChek",
+        "Lena Ortiz",
+        "Date of Birth: 12 Apr 1990",
+        "Open Water Diver 15 Jun 2015 1506AB1234",
+        "No results for lena@example.com",
+      ],
+    ],
+    [
       "a namesake under another diver's pair cut at the record's end",
       [
         "DiveChek",
@@ -407,28 +484,28 @@ describe("excerptAroundName", () => {
         cardNumber: null,
         today: "2026-10-15",
         pageText,
-      }).verdict;
-    expect(judge(page)).not.toBe("match");
-    expect(judge(excerptAroundName(page, "Lena", "Ortiz"))).toBe(judge(page));
+      });
+    expect(judge(page).verdict).not.toBe("match");
+    expect(judge(excerptAroundName(page, "Lena", "Ortiz"))).toEqual(judge(page));
   });
 
   it("marks lines that were not neighbors on the page, so no record runs across them", () => {
-    const page = ["Lena Ortiz", "a", "b", "c", "d", "e", "f", "Lena Ortiz", "g", "", "h"];
+    const page = ["Lena Ortiz", "1", "2", "3", "4", "5", "6", "Lena Ortiz", "7", "", "8"];
     expect(excerptAroundName(page.join("\n"), "Lena", "Ortiz").split("\n")).toEqual([
       "Lena Ortiz",
-      "a",
-      "b",
-      "c",
-      "d",
+      "1",
+      "2",
+      "3",
+      "4",
       "…",
       "Lena Ortiz",
-      "g",
-      "h",
+      "7",
+      "8",
     ]);
   });
 
-  /** Security review S4: a page without the diver hands back only why. */
-  it("keeps only the lines that say why, from a page that never names the diver", () => {
+  /** Security review S4: a page without the diver hands back only why, each word once. */
+  it("keeps only the words that say why, from a page that never names the diver", () => {
     const page = [
       "Welcome back, Coral Coast Divers",
       "Recent students: Sam Reyes, Mia Chen",
@@ -437,11 +514,11 @@ describe("excerptAroundName", () => {
       "Password",
       ...Array(100).fill("Mark Lee"),
     ].join("\n");
-    expect(excerptAroundName(page, "Lena", "Ortiz")).toBe("Sign in\nPassword");
+    expect(excerptAroundName(page, "Lena", "Ortiz")).toBe("sign in\npassword");
     const none = ["DiveChek", "Sam Reyes", "No results found", "Mia Chen"].join("\n");
-    expect(excerptAroundName(none, "Lena", "Ortiz")).toBe("No results found");
+    expect(excerptAroundName(none, "Lena", "Ortiz")).toBe("no results");
     const many = Array(30).fill("Password").join("\n");
-    expect(excerptAroundName(many, "Lena", "Ortiz").split("\n")).toHaveLength(10);
+    expect(excerptAroundName(many, "Lena", "Ortiz")).toBe("password");
   });
 });
 

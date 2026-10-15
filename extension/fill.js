@@ -590,80 +590,163 @@ function excerptAround(text, email, firstName, lastName) {
 }
 
 /**
- * Only the part of a signed-in lookup page about the diver searched for: each
- * line naming them (first and last name in either order, accents and case
- * aside) and the `AFTER` lines under it, the most the server reads as one
- * record (`RECORD_LINES` in src/lib/agency-check.ts), plus the words of any
- * line saying how many divers were found, which say nothing about anyone. When
- * no line names them, only the lines saying why: no result, several divers, or
- * a sign-in, at most `WHY_LINES`. Read with the shop's own PADI sign-in, the
- * rest of the page is not DiveDay's to take.
+ * Only the part of a DiveChek page the server reads about the diver searched
+ * for: each of their records, from the line naming them (first and last name
+ * in either order, accents and case aside, or split over two labelled lines)
+ * to the line where the server ends it (`readAgencyPage` in
+ * src/lib/agency-check.ts): the first line that could be someone else's, or
+ * the `recordLines`-th line under the name. Every other line comes back only
+ * as the words on it that say why or how many ("no results", "2 divers
+ * found", "sign in"), once each, above the records: never a neighbour's name,
+ * birth date or card, and nothing around a count. A "no results" line
+ * straight under a record, which unsays it for the server, comes back there
+ * as its words. Read with the shop's own PADI sign-in, the rest of the page
+ * is not DiveDay's to take. Only PADI's lookup is behind a sign-in, so only a
+ * DiveChek page comes here (background.js).
  *
- * The excerpt must judge as the whole page does, so it reads lines as the
- * judge does (spaces collapsed, blank lines gone), and a `GAP` line stands
- * between lines that were not neighbors on the page: the judge ends a record
- * there, and never pairs labelled name lines across it.
+ * The excerpt must judge as the whole page does, verdict and evidence alike,
+ * so it reads lines as the server does (spaces collapsed, blank lines gone),
+ * ends a record with the server's own words (`DIVECHEK_RECORD` in
+ * protocol.js), keeps a kept labelled name line's page partner, and puts a
+ * `GAP` line, which ends a record and never pairs, between lines that were
+ * not neighbors on the page.
  * @param {string} text
  * @param {string} firstName
  * @param {string} lastName
  */
 function excerptAroundName(text, firstName, lastName) {
-  const AFTER = 4;
-  const WHY_LINES = 10;
+  const reading = globalThis.DiveDayCertCheck?.DIVECHEK_RECORD;
+  if (!reading) throw new Error("excerptAroundName needs protocol.js");
   const GAP = "…";
-  const COUNT = /(^| )\d+ divers?( found)?( |$)/;
-  const WHY =
-    /(^| )(no results?|no records?|no matching|no diver|not found|no certifications? found|could not find|unable to find|0 results|sign ?in|log ?in|password|session (has )?expired)( |$)/;
-  const NO_RECORD =
-    /(^| )(no results?|no records?|no matching|no diver|not found|no certifications? found|could not find|unable to find|0 results)( |$)/;
-  // foldText in src/lib/agency-check.ts, wrapped in spaces.
+  // foldText in src/lib/agency-check.ts.
   const fold = (value) =>
-    ` ${String(value || "")
+    String(value || "")
       .normalize("NFD")
       .replace(/\p{M}/gu, "")
       .toLowerCase()
       .replace(/[^\p{L}\p{N}&]+/gu, " ")
-      .trim()} `;
+      .trim();
+  const hasWords = (line, phrase) => phrase.length > 0 && ` ${line} `.includes(` ${phrase} `);
+  const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const first = fold(firstName);
   const last = fold(lastName);
-  const lines = text
+  const raw = text
     .split(/\r?\n/)
     .map((line) => line.replace(/\s+/g, " ").trim())
     .filter(Boolean);
-  const folded = lines.map(fold);
-  const names = (line) => {
-    const plain = line.replace(/&/g, " ").replace(/ +/g, " ");
-    return (
-      first.trim() !== "" && last.trim() !== "" && plain.includes(first) && plain.includes(last)
+  const lines = raw.map(fold);
+
+  // The words that say why or how many, each a whole phrase of the line.
+  const noRecordWords = reading.noRecordWords.map(fold);
+  const saysNoRecord = (line) => noRecordWords.some((phrase) => hasWords(line, phrase));
+  const COUNT = /(?<=^| )\d+ divers?( found)?(?= |$)/g;
+  const SIGN_IN = /(?<=^| )(sign ?in|log ?in|password|session (has )?expired)(?= |$)/g;
+  const whyWords = (line) => [
+    ...noRecordWords.filter((phrase) => hasWords(line, phrase)),
+    ...[...line.matchAll(COUNT)].map((match) => match[0]),
+    ...[...line.matchAll(SIGN_IN)].map((match) => match[0]),
+  ];
+
+  // Dates as the server reads them (`datesOn`).
+  const DATE_ON_LINE =
+    /(?<![\p{L}\p{N}])(?:(\d{4}) (\d{1,2}) (\d{1,2})|(\d{1,2}) (\d{1,2}) (\d{4})|(\d{1,2}) ([a-z]+) (\d{4})|([a-z]+) (\d{1,2}) (\d{4}))(?![\p{L}\p{N}])/gu;
+  const monthNumber = (word) => {
+    const index = reading.monthNames.findIndex(
+      (name) =>
+        word === name || word === name.slice(0, 3) || (name === "september" && word === "sept"),
     );
+    return index === -1 ? null : index + 1;
   };
-  // A name split over two adjacent labelled lines ("First name: Lena" over
-  // "Last name: Ortiz", either order, Spanish labels too), read exactly as the
-  // judge reads it (`splitNamesOf` in src/lib/agency-check.ts): each line one
-  // label and the name after it, paired top to bottom once, a pair with a
-  // stray labelled line beside it refused, the given line starting with the
-  // first name and the family line ending with the last, a few more words at
-  // most. The pair, and the record under it, is kept like one name line.
-  const LABELS = {
-    given: ["first name", "given name", "forename", "nombre"],
-    family: ["last name", "family name", "surname", "apellido", "apellidos"],
+  const isoDate = (year, month, day) =>
+    month < 1 || month > 12 || day < 1 || day > 31 ? null : `${year}-${month}-${day}`;
+  const hasDate = (line) => {
+    for (const m of line.matchAll(DATE_ON_LINE)) {
+      let date = null;
+      if (m[1]) {
+        date = isoDate(Number(m[1]), Number(m[2]), Number(m[3]));
+      } else if (m[4]) {
+        const a = Number(m[4]);
+        const b = Number(m[5]);
+        const year = Number(m[6]);
+        if (a > 12) date = isoDate(year, b, a);
+        else if (b > 12) date = isoDate(year, a, b);
+        else date = reading.dates === "mdy" ? isoDate(year, a, b) : isoDate(year, b, a);
+      } else if (m[7]) {
+        const month = monthNumber(m[8]);
+        date = month ? isoDate(Number(m[9]), month, Number(m[7])) : null;
+      } else if (m[10]) {
+        const month = monthNumber(m[10]);
+        date = month ? isoDate(Number(m[12]), month, Number(m[11])) : null;
+      }
+      if (date) return true;
+    }
+    return false;
   };
-  const EXTRA_WORDS = 3;
+
+  // A record's words as the server reads them (`readAgencyPage`).
+  const levelWording = reading.levelWording.map(fold);
+  const listedWording = reading.listedWording.map(fold);
+  const limiting = reading.limitingWords.map(fold);
+  const furniture = reading.furnitureWords.map(fold);
+  const controls = reading.searchControlLines.map(fold);
+  const trainer = reading.trainerWords.map(fold);
+  const recordLineWords = new Set(reading.recordLineWords);
+  const withoutCardNames = (line) =>
+    listedWording
+      .reduce((rest, phrase) => ` ${rest} `.split(` ${phrase} `).join(" "), line)
+      .replace(/ +/g, " ")
+      .trim();
+  const isFurniture = (line) =>
+    furniture.some((phrase) => line === phrase || line.startsWith(`${phrase} `)) ||
+    controls.some((control) => line === control);
+  const limits = (line) => limiting.some((word) => hasWords(withoutCardNames(line), word));
+  const ratingWords = (line) =>
+    levelWording.some((phrase) => hasWords(line, phrase)) ||
+    listedWording.some((phrase) => hasWords(line, phrase)) ||
+    limiting.some((word) => hasWords(line, word));
+  const recordLinePhrases = [...levelWording, ...listedWording, ...limiting].sort(
+    (a, b) => b.length - a.length,
+  );
+  const isRecordLine = (line) => {
+    let rest = ` ${line} `;
+    for (const phrase of recordLinePhrases) rest = rest.split(` ${phrase} `).join("  ");
+    return rest
+      .trim()
+      .split(/ +/)
+      .every((word) => !word || /\p{N}/u.test(word) || recordLineWords.has(word));
+  };
+
+  // The diver's name on one line, as the server reads it.
+  const forward = new RegExp(`(^| )${escapeRegExp(first)}( \\S+)* ${escapeRegExp(last)}( |$)`);
+  const reversed = new RegExp(`(^| )${escapeRegExp(last)} ?, ?${escapeRegExp(first)}( |$)`);
+  const commaFolded = raw.map((line) =>
+    line
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}&,]+/gu, " ")
+      .replace(/ ?, ?/g, " , ")
+      .trim(),
+  );
+  const namesDiver = (index) => forward.test(lines[index]) || reversed.test(commaFolded[index]);
+
+  // A name split over two adjacent labelled lines, as the server reads it
+  // (`splitNamesOf`): paired top to bottom once, a pair with a stray labelled
+  // line beside it refused.
   const partOf = (index) => {
-    const line = folded[index].trim();
     for (const part of ["given", "family"]) {
-      for (const label of LABELS[part]) {
-        if (!line.startsWith(`${label} `)) continue;
+      for (const label of reading.nameLabels[part]) {
+        if (!lines[index].startsWith(`${label} `)) continue;
         const labelWords = label.split(" ").length;
-        const tokens = lines[index].split(" ").filter(Boolean);
+        const tokens = raw[index].split(" ").filter(Boolean);
         let consumed = 0;
         let at = 0;
         while (at < tokens.length && consumed < labelWords) {
-          consumed += fold(tokens[at]).trim().split(" ").filter(Boolean).length;
+          consumed += fold(tokens[at]).split(" ").filter(Boolean).length;
           at += 1;
         }
         if (consumed !== labelWords) return null;
-        return { part, words: line.slice(label.length + 1).split(" ") };
+        return { part, words: lines[index].slice(label.length + 1).split(" ") };
       }
     }
     return null;
@@ -682,61 +765,78 @@ function excerptAroundName(text, firstName, lastName) {
     }
   }
   const stray = (index) => parts[index] != null && !partner.has(index);
-  const firstWords = first.trim().split(" ");
-  const lastWords = last.trim().split(" ");
-  const splitAt = (index) => {
+  const firstWords = first.split(" ");
+  const lastWords = last.split(" ");
+  const splitNameAt = (index) => {
     if (partner.get(index) !== index + 1 || stray(index - 1) || stray(index + 2)) return false;
     const a = parts[index];
     const b = parts[index + 1];
     const given = a.part === "given" ? a : b;
     const family = a.part === "given" ? b : a;
-    return (
-      given.words.slice(0, firstWords.length).join(" ") === firstWords.join(" ") &&
-      family.words.slice(-lastWords.length).join(" ") === lastWords.join(" ") &&
-      given.words.length <= firstWords.length + EXTRA_WORDS &&
-      family.words.length <= lastWords.length + EXTRA_WORDS
-    );
+    if (
+      given.words.slice(0, firstWords.length).join(" ") !== first ||
+      family.words.slice(-lastWords.length).join(" ") !== last ||
+      given.words.length > firstWords.length + reading.splitNameExtraWords ||
+      family.words.length > lastWords.length + reading.splitNameExtraWords
+    ) {
+      return false;
+    }
+    const name = `${given.words.join(" ")} ${family.words.join(" ")}`;
+    return !/\p{N}/u.test(name) && !ratingWords(name) && !trainer.some((w) => hasWords(name, w));
   };
-  const named = folded.map((line, index) => names(line) || splitAt(index));
-  if (!named.some(Boolean)) {
-    return lines
-      .map((line, index) => {
-        if (WHY.test(folded[index])) return line;
-        const count = folded[index].match(COUNT);
-        return count ? count[0].trim() : null;
-      })
-      .filter((line) => line !== null)
-      .slice(0, WHY_LINES)
-      .join("\n");
-  }
+
+  // Each record of the diver's, ended where the server ends a DiveChek record.
   const kept = new Map();
-  folded.forEach((line, index) => {
-    // The count's own words, never the rest of the line around them, which
-    // may name the shop.
-    const count = line.match(COUNT);
-    if (count && !kept.has(index)) kept.set(index, count[0].trim());
-    if (!named[index]) return;
-    let end = Math.min(lines.length - 1, index + AFTER + (splitAt(index) ? 1 : 0));
-    // A "no results" line straight under the record unsays it for the judge.
-    if (end + 1 < lines.length && NO_RECORD.test(folded[end + 1])) end += 1;
-    for (let at = index; at <= end; at += 1) kept.set(at, lines[at]);
-  });
+  const below = new Map();
+  if (first !== "" && last !== "") {
+    for (let index = 0; index < lines.length; index += 1) {
+      const split = splitNameAt(index);
+      if (!split && !namesDiver(index)) continue;
+      const nameEnd = split ? index + 1 : index;
+      const ownDate = !split && hasDate(lines[index]);
+      let to = nameEnd + 1;
+      while (to < lines.length && to <= nameEnd + reading.recordLines) {
+        const line = lines[to];
+        if (saysNoRecord(line)) break;
+        if (isFurniture(line)) {
+          if (limits(line)) to += 1;
+          break;
+        }
+        if (split && !isRecordLine(line)) break;
+        if (namesDiver(to) || splitNameAt(to)) break;
+        const birthDateLine = to === nameEnd + 1 && !ownDate && hasDate(line);
+        if (!birthDateLine && !ratingWords(line) && (!/\d/.test(line) || hasDate(line))) break;
+        to += 1;
+      }
+      for (let at = index; at < to; at += 1) kept.set(at, raw[at]);
+      if (to < lines.length && saysNoRecord(lines[to])) below.set(to, whyWords(lines[to])[0]);
+    }
+  }
   // Labelled name lines keep their page pairing: a kept line's partner, and a
   // stray labelled line beside a kept pair, are kept with it.
   for (const index of [...kept.keys()]) {
     const other = partner.get(index);
     if (other === undefined) continue;
-    kept.set(other, lines[other]);
+    kept.set(other, raw[other]);
     const above = Math.min(index, other) - 1;
-    const below = Math.max(index, other) + 1;
-    if (stray(above)) kept.set(above, lines[above]);
-    if (stray(below)) kept.set(below, lines[below]);
+    const under = Math.max(index, other) + 1;
+    if (stray(above)) kept.set(above, raw[above]);
+    if (stray(under)) kept.set(under, raw[under]);
   }
-  const out = [];
+
+  const why = new Set();
+  lines.forEach((line, index) => {
+    if (!kept.has(index)) for (const words of whyWords(line)) why.add(words);
+  });
+  const out = [...why];
   let previous = null;
-  for (const index of [...kept.keys()].sort((a, b) => a - b)) {
-    if (previous !== null && index !== previous + 1) out.push(GAP);
-    out.push(kept.get(index));
+  const indices = [...new Set([...kept.keys(), ...below.keys()])].sort((a, b) => a - b);
+  for (const index of indices) {
+    const whole = kept.has(index);
+    // A "no results" line's words sit straight under their record, and
+    // nothing runs on from them.
+    if (previous !== null && (index !== previous + 1 || !kept.has(previous))) out.push(GAP);
+    out.push(whole ? kept.get(index) : below.get(index));
     previous = index;
   }
   return out.join("\n");

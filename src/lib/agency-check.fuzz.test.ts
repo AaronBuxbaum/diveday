@@ -27,7 +27,7 @@ import {
  * - **The diver's clean record does match**, so the generator is not vacuous.
  * - **Deterministic, and blind to unrelated rows**: the verdict is the same
  *   when the blocks are shuffled and when noise is appended after them.
- * - **The extension's DiveChek excerpt judges as the whole page does**
+ * - **The extension's DiveChek excerpt judges as the whole page does**, verdict and evidence
  *   (`excerptAroundName` in `extension/fill.js`).
  *
  * On a public lookup the diver's record is followed by neutral lines and the
@@ -40,6 +40,7 @@ import {
  * anywhere. A failure prints its seed.
  */
 
+await import(/* @vite-ignore */ new URL("../../extension/protocol.js", import.meta.url).href);
 await import(/* @vite-ignore */ new URL("../../extension/fill.js", import.meta.url).href);
 const { excerptAroundName } = (
   globalThis as unknown as {
@@ -235,6 +236,8 @@ function block(input: {
   levelLine: string;
   /** A candidate list's row: the name lines and nothing else. */
   nameOnly?: boolean;
+  /** A labelled name line of nobody's straight above the name: no pair beside it is read. */
+  stray?: string;
 }): string[] {
   const { agency, r, shape } = input;
   const first = writeName(input.first, r);
@@ -242,7 +245,10 @@ function block(input: {
   const { dates } = AGENCY_CHECKS[agency];
   const date = input.birthDate ? writeDate(input.birthDate, dates, r) : null;
   const [givenLabel, familyLabel] = r.pick(SPLIT_LABELS);
-  const splitLines = [`${givenLabel}: ${first}`, `${familyLabel}: ${last}`];
+  // A split name may carry a middle name or a particle, as the judge allows.
+  const given = input.middle && r.chance(0.3) ? `${first} ${writeName(input.middle, r)}` : first;
+  const family = r.chance(0.2) ? `${r.pick(["de", "van der", "de la"])} ${last}` : last;
+  const splitLines = [`${givenLabel}: ${given}`, `${familyLabel}: ${family}`];
   const nameLines =
     shape === "split"
       ? r.chance(0.5)
@@ -253,7 +259,7 @@ function block(input: {
         : shape === "middle"
           ? [`${first} ${writeName(input.middle, r)} ${last}`]
           : [`${first} ${last}`];
-  const lines = [...nameLines];
+  const lines = input.stray ? [input.stray, ...nameLines] : [...nameLines];
   if (input.nameOnly) return lines;
   if (date && shape === "inline") lines[0] = `${lines[0]} ${date}`;
   else if (date) lines.push(`Date of Birth: ${date}`);
@@ -284,7 +290,11 @@ type Case = {
     identified: boolean;
     levelHolds: boolean;
     limited: boolean;
+    /** A stray labelled line sits above the split name, so no reader pairs it. */
+    strayed: boolean;
   };
+  /** How many divers the page's count line says it found, when it has one. */
+  count: number | null;
   namesakes: { birthDate: string; number: string }[];
   otherNames: string[];
 };
@@ -320,6 +330,11 @@ function generate(agency: CheckableAgency, seed: number): Case {
           ? withBirthDate
           : withBirthDate || withNumber;
   const present = r.chance(0.85);
+  // A stray labelled line above the diver's split name: the pair is never read.
+  const stray =
+    shape === "split" && r.chance(0.15)
+      ? `${r.pick(["First name", "Surname", "Nombre"])}: ${r.pick(r.pick(OTHERS))}`
+      : undefined;
 
   const blocks: Case["blocks"] = [];
   if (present) {
@@ -333,6 +348,7 @@ function generate(agency: CheckableAgency, seed: number): Case {
         birthDate: withBirthDate ? birthDate : null,
         number: withNumber ? number : null,
         levelLine: targetLevel,
+        stray,
       }),
     });
   }
@@ -386,9 +402,23 @@ function generate(agency: CheckableAgency, seed: number): Case {
   }
 
   const header = [...HEADER[agency]];
+  let count: number | null = null;
   if (agency === "padi" && r.chance(0.4)) {
     const named = blocks.filter((b) => b.kind !== "other").length;
-    if (named > 0) header.push(named === 1 ? "1 diver found" : `${named} divers found`);
+    if (named > 0) {
+      count = named;
+      const found = named === 1 ? "1 diver found" : `${named} divers found`;
+      // The count alone, or inside a sentence beside another count.
+      header.push(
+        r.pick([
+          found,
+          `Showing 1 diver of ${found}`,
+          `1 diver on this page · ${found}`,
+          `1 diver selected, ${found}`,
+          `Coral Coast Divers: ${found}`,
+        ]),
+      );
+    }
   }
   if (!present && namesakes.length === 0 && r.chance(0.5)) header.push("No record was found.");
   const footer = r.shuffle(NOISE).slice(0, 2);
@@ -409,7 +439,16 @@ function generate(agency: CheckableAgency, seed: number): Case {
     blocks: r.shuffle(blocks),
     header,
     footer,
-    target: { present, shape, withBirthDate, identified, levelHolds, limited },
+    target: {
+      present,
+      shape,
+      withBirthDate,
+      identified: identified && !stray,
+      levelHolds,
+      limited,
+      strayed: stray !== undefined,
+    },
+    count,
     namesakes,
     otherNames,
   };
@@ -426,7 +465,9 @@ function render(c: Case, blocks: Case["blocks"]): string {
     if (b.kind === "target" && c.agency !== "padi") lines.push(...NOISE.slice(0, 5));
   }
   lines.push(...c.footer);
-  return lines.join("\n");
+  // Blank lines anywhere, which no reader counts as a line: the same for every order.
+  const r = random(c.seed ^ 0xb1a4);
+  return lines.flatMap((line) => (r.chance(0.1) ? [line, r.pick(["", "   "])] : [line])).join("\n");
 }
 
 function check(c: Case, r: Random): void {
@@ -438,12 +479,11 @@ function check(c: Case, r: Random): void {
   // DiveChek's own count: the birth dates under the diver's name, or a line
   // saying two divers or more.
   const birthDates = new Set([
-    ...(target.present && target.withBirthDate ? [c.query.birthDate] : []),
+    ...(target.present && target.withBirthDate && !target.strayed ? [c.query.birthDate] : []),
     ...c.namesakes.map((namesake) => namesake.birthDate),
   ]);
   const severalDivers =
-    c.agency === "padi" &&
-    (birthDates.size >= 2 || c.header.some((line) => /^[2-9] divers found$/.test(line)));
+    c.agency === "padi" && (birthDates.size >= 2 || (c.count !== null && c.count >= 2));
 
   expect(judge(page), why).toEqual(verdict);
 
@@ -487,9 +527,7 @@ function check(c: Case, r: Random): void {
   // judge as the whole page does.
   if (c.agency === "padi") {
     const excerpt = excerptAroundName(page, c.query.firstName, c.query.lastName);
-    expect(judge(excerpt).verdict === "match", `excerpt: ${why}\nexcerpt:\n${excerpt}`).toBe(
-      verdict.verdict === "match",
-    );
+    expect(judge(excerpt), `excerpt: ${why}\nexcerpt:\n${excerpt}`).toEqual(verdict);
   }
 }
 

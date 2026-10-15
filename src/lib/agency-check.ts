@@ -335,8 +335,11 @@ export const PASS_OVER_WORDING: Record<CheckableAgency, readonly string[]> = {
  *   naming the diver again, a line with neither a digit nor a rating's words
  *   (another diver's bare name), or a line carrying a date that is not the
  *   birth date and no rating's words (another diver's name and birth date).
- *   Never more than {@link RECORD_LINES} lines under the name, the same lines
- *   the extension hands back (`extension/fill.js`, `excerptAroundName`).
+ *   Never more than {@link RECORD_LINES} lines under the name. The extension
+ *   hands back each such record ended exactly here (`excerptAroundName` in
+ *   `extension/fill.js`, reading {@link DIVECHEK_RECORD}), every other line
+ *   only as its words saying why or how many, with a "…" line, empty once
+ *   folded, between lines that were not neighbors.
  * - **The birth date comes before the level**: on the name line or the line
  *   under it, and the level on that line or below.
  * - **The card number too**, when the card has one on file.
@@ -457,8 +460,8 @@ const SEARCH_CONTROL_LINES = [
 
 /**
  * Lines under the diver's name line that can belong to their record. The
- * extension hands back the same number from a signed-in page (`AFTER` in
- * `extension/fill.js`); a test holds the two together.
+ * extension's DiveChek excerpt ends a record at the same line
+ * ({@link DIVECHEK_RECORD}).
  */
 export const RECORD_LINES = 4;
 /** The most of the agency's words kept as evidence on the card. */
@@ -1209,6 +1212,31 @@ const RECORD_LINE_WORDS = new Set([
   ...MONTH_NAMES.map((name) => name.slice(0, 3)),
   "sept",
 ]);
+
+/**
+ * **What the extension reads to end a DiveChek record where the judge does**
+ * (`DIVECHEK_RECORD` in `extension/protocol.js`, read by `excerptAroundName`
+ * in `extension/fill.js`): PADI's words for its levels and cards, the limits,
+ * the lines a record ends at, and how a name splits over labelled lines. The
+ * excerpt hands back only the diver's records as the judge reads them, so a
+ * word changed here is changed there; `cert-check-extension-excerpt.test.ts`
+ * fails if the two drift.
+ */
+export const DIVECHEK_RECORD = {
+  recordLines: RECORD_LINES,
+  dates: AGENCY_CHECKS.padi.dates,
+  levelWording: Object.values(LEVEL_WORDING.padi).flat(),
+  listedWording: [...Object.values(LISTED_CARD_WORDING.padi).flat(), ...PASS_OVER_WORDING.padi],
+  limitingWords: LIMITING_WORDS,
+  trainerWords: TRAINER_WORDS,
+  noRecordWords: NO_RECORD_WORDS,
+  furnitureWords: PAGE_FURNITURE_WORDS,
+  searchControlLines: SEARCH_CONTROL_LINES,
+  recordLineWords: [...RECORD_LINE_WORDS],
+  monthNames: MONTH_NAMES,
+  nameLabels: NAME_PART_LABELS,
+  splitNameExtraWords: SPLIT_NAME_EXTRA_WORDS,
+};
 
 /**
  * **The other cards an agency's page lists for this diver** (layer 3 of the
