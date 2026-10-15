@@ -265,7 +265,7 @@ export async function countSpendableDives(
 
 /**
  * How many package dives this booking spent: one per planned tank (H-115).
- * `/ready` says it beside the money ("Uses 2 of your 5 package dives"), so a
+ * `/ready` says it beside the money ("Uses 2 package dives (3 left)"), so a
  * two-tank boat spending two is never a surprise.
  */
 export async function countDivesSpentOnBooking(

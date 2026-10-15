@@ -21,12 +21,14 @@ describe("payStepLines", () => {
     );
   });
 
-  it("says a package dive is a tank: a two-tank boat uses two of the five (fourth UX review, item 9)", () => {
-    expect(payStepLines(t, money, receipt, { left: 3, usedHere: 2 }).paidLine).toBe(
-      "$180 · Uses 2 of your 5 package dives, one per tank",
+  // Fourth UX review item 9; dive-domain review N8 of layer r4-1: what is
+  // left, never a total that looks like the card shrank.
+  it("says a package dive is a tank, and how many are left", () => {
+    expect(payStepLines(t, money, receipt, { left: 6, usedHere: 2 }).paidLine).toBe(
+      "$180 · Uses 2 package dives (6 left), one per tank",
     );
     expect(payStepLines(t, money, receipt, { left: 0, usedHere: 1 }).paidLine).toBe(
-      "$180 · Uses 1 of your 1 package dive, one per tank",
+      "$180 · Uses 1 package dive (0 left), one per tank",
     );
   });
 
@@ -52,7 +54,7 @@ describe("atShopMoneyLine (fourth UX review, item 5)", () => {
 
   it("counts the lead's unclaimed party seats, and leaves a claimed seat to its claimant", () => {
     expect(atShopMoneyLine(t, "en-US", "usd", owes, trip, [seat(false), seat(true)])).toBe(
-      "2 seats: $190.00, due at the shop.",
+      "2 seats: $190.00, due at the shop. 1 claimed seat is paid from its own page.",
     );
   });
 

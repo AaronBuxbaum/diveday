@@ -203,7 +203,14 @@
 - **Optional feature** — a feature a shop can switch off in Settings: diver reviews, date
   requests, the last-minute list and tips (`src/lib/shop-features.ts`, one `shops.*_enabled`
   column each, all on for a new shop). Off hides the feature on every surface that offers it and
-  deletes nothing (ADR 20261005-optional-shop-features).
+  deletes nothing (ADR 20261005-optional-shop-features). Not every shop switch is one of these:
+  **Hotel pickup** is a service the shop says it runs, off for a new shop.
+- **Hotel pickup** — whether the shop collects divers from where they are staying
+  (`shops.offers_hotel_pickup`, Settings › Dock-day rhythm, off for a new shop; the demo shop has
+  it on). Only when it is on does a diver's `/ready` ask "Want a pickup?" and where they are
+  staying (`bookings.hotel_pickup_location`, refused by the server otherwise). Staff then set the
+  seat's pickup time (`bookings.pickup_time`), and the night-before brief gives that
+  time and place instead of the dock arrival time. A **seat move** clears the pickup time.
 - **Working shift** — a dated availability window for a staff member. It is not a crew assignment:
   the shift says who is available, while the trip assignment says who is actually on that
   manifest. Overlapping shifts for one person are rejected.

@@ -230,7 +230,7 @@ describe("selling and spending a package", () => {
 
   it("spends one dive per tank, and counts what the booking spent (H-115)", async () => {
     // A package dive is one tank: a two-tank boat takes two of the five, and
-    // /ready says "Uses 2 of your 5 package dives" from this count.
+    // /ready says "Uses 2 package dives (3 left)" from this count.
     const { db, shop, person, booking } = await sold({ diveCount: 5 });
     expect(await countDivesSpentOnBooking(db, shop.id, booking.id)).toBe(0);
     await consumeEntitlementsForBooking(db, {

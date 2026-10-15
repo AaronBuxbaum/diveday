@@ -45,7 +45,7 @@ export function payStepLines(
         ? t("ready.packageDivesUsed", {
             line: paid,
             used: packageDives.usedHere,
-            count: packageDives.usedHere + packageDives.left,
+            left: packageDives.left,
           })
         : packageDives.left > 0
           ? t("ready.packageDivesLeft", { line: paid, count: packageDives.left })
@@ -87,7 +87,12 @@ export function atShopMoneyLine(
   const terms = partyMoneyTerms(trip, trip.course, types, false);
   if (terms?.due !== "at_shop") return null;
   const amount = formatMoneyCents(terms.amountCents, toShopCurrency(currency), locale);
-  return terms.seats > 1
-    ? t("notifications.bookingConfirmation.moneyPartyAtShop", { seats: terms.seats, amount })
-    : t("notifications.bookingConfirmation.moneyAtShop", { amount });
+  const line =
+    terms.seats > 1
+      ? t("notifications.bookingConfirmation.moneyPartyAtShop", { seats: terms.seats, amount })
+      : t("notifications.bookingConfirmation.moneyAtShop", { amount });
+  // The figure drops when a seat is claimed; say why, so the lead does not
+  // read it as a discount (dive-domain review N5 of layer r4-1).
+  const claimed = partySeats.filter((seat) => seat.claimed).length;
+  return claimed > 0 ? `${line} ${t("ready.partyClaimedSeatsPayOwn", { count: claimed })}` : line;
 }
