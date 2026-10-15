@@ -1,0 +1,65 @@
+name: E2E nightly
+
+# The browser tests no pull request runs (testing review decision 4,
+# docs/engineering/testing.md "Flakes"):
+#
+# - Every test tagged `@quarantine`. playwright.config.ts leaves them out of
+#   every other run; DIVEDAY_RUN_QUARANTINE=1 lets them back in here, so a
+#   quarantined flake is still exercised every night while its issue is open.
+#   `pnpm check:e2e-hygiene` holds each tag to an issue and a 7-day expiry.
+# - The flake hunt: the specs that failed on any CI run in the last 7 days
+#   (`scripts/e2e-recent-failures.mjs`, from the failed Playwright jobs'
+#   annotations), each run five times. A real break already fixed passes five
+#   times; a flake fails one of them, which is the evidence a quarantine needs.
+#
+# Off the pull-request path on purpose: it blocks nothing, and a red night is
+# read in the morning rather than stalling someone's unrelated change.
+on:
+  schedule:
+    # 06:00 UTC, before simulate-day (06:30) and ci.yml's nightly (07:00).
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-nightly
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  nightly:
+    name: Quarantined tests and the flake hunt
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+      checks: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DIVEDAY_RUN_QUARANTINE: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/playwright-shell
+      - run: pnpm e2e:build
+      - name: Quarantined tests
+        run: pnpm exec playwright test --grep @quarantine --pass-with-no-tests
+      - name: Specs that failed in the last 7 days, five times each
+        if: ${{ !cancelled() }}
+        run: |
+          mapfile -t specs < <(node scripts/e2e-recent-failures.mjs --days 7 --max 8)
+          if [ "${#specs[@]}" -eq 0 ]; then
+            echo "No spec failed on CI in the last 7 days." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          printf -- '- `%s`\n' "${specs[@]}" >> "$GITHUB_STEP_SUMMARY"
+          pnpm exec playwright test --repeat-each=5 "${specs[@]}"
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: e2e-nightly-report
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7

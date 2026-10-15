@@ -56,6 +56,7 @@
     "check:agents": "node scripts/check-agents.mjs",
     "check:follow-ups": "node scripts/check-follow-ups.mjs",
     "check:e2e-fixtures": "node scripts/check-e2e-fixtures.mjs",
+    "check:critical-journeys": "node scripts/check-critical-journeys.mjs",
     "check:e2e-hygiene": "node scripts/check-e2e-hygiene.mjs",
     "check:route-coverage": "node scripts/check-route-coverage.mjs",
     "check:loading-skeletons": "node scripts/check-loading-skeletons.mjs",

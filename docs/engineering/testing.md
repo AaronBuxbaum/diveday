@@ -14,8 +14,8 @@ every other section stands.
 | Component | Vitest `ui` + Testing Library, colocated `.test.tsx` | interactive widgets: what a person clicks and sees, by role and label | class names, server pages |
 | Fetch boundary | Vitest + MSW, e.g. `offline-manifest-store.test.ts` | client code calling one of our own `/api/*` routes ([ADR 20260719](../architecture/decisions/20260719-msw-offline-sync-only.md)) | server-side providers |
 | Request-level | Playwright's `request` fixture, or a route-handler unit test | redirects, sitemap, feeds, webhooks, status probes, refusals | a browser |
-| Browser | Playwright, `e2e/*.spec.ts` | every important flow: the happy path plus the refusals that protect safety or money | exact wording, layout, edge cases a rules test can carry |
-| Screenshots | reg-suit + S3, `e2e/visual.spec.ts` | every important surface, populated and in trouble states: light and dark × phone and desktop, plus print ([ADR 20260729](../architecture/decisions/20260729-reg-suit-visual-regression.md)) | proving behavior |
+| Browser | Playwright, `e2e/*.spec.ts` | the [critical journeys](#critical-journeys) and the flows a change touches: the happy path plus the refusals that protect safety or money; found by role and message key | exact wording, layout, edge cases a rules test can carry |
+| Screenshots | reg-suit + S3, `e2e/visual.spec.ts` | a surface's populated and trouble states, per [captures.md](../../.claude/skills/e2e-and-visual/captures.md): light and dark × phone and desktop, plus print ([ADR 20260729](../architecture/decisions/20260729-reg-suit-visual-regression.md)) | proving behavior |
 | Repo checks | `pnpm check:repo` (`scripts/check-*.mjs`) and the Vitest `guards` project | every rule that reads source: "every X has Y", no raw colour, one way imports | a single page's markup |
 | Nightly and weekly | `simulate-day.yml`, `persona-bots.yml`, ci.yml's schedule | a whole shop day, persona walks, real Postgres against what other branches merged | blocking a PR |
 
@@ -49,7 +49,8 @@ assertion: the screenshot shows the overlap gone.
 1. A new rule or branch: a rules test, the refusal included. Always.
 2. New stored data: a database test. If it locks or can race: a real-Postgres test.
 3. A new or changed flow: extend the spec that walks it; a new spec file only for a new kind of
-   user or a new entry point.
+   user or a new entry point. A new journey a shop could not run a day without gets a row in
+   [Critical journeys](#critical-journeys).
 4. A new screen or state: a capture in `e2e/visual.spec.ts`, in the matrix above;
    [captures.md](../../.claude/skills/e2e-and-visual/captures.md) says which states earn one.
 5. A wording-only change: no new test.
@@ -57,6 +58,33 @@ assertion: the screenshot shows the overlap gone.
 
 Safety-critical logic (manifests, roll call, readiness, cert gating, medical, waivers, nitrox,
 erasure) merges with tests for the failure paths, not only the happy path.
+
+## Critical journeys
+
+The walks a shop cannot lose, each with the browser test that proves it. This list is the e2e
+floor, not "every important flow" (testing review decision 2, 2026-10-14):
+`pnpm check:critical-journeys` (in `check:repo`) fails when a row's spec is gone or its test is
+renamed, deleted or skipped. Renaming a journey's test renames its row in the same change.
+
+| Journey | Spec | Test |
+| --- | --- | --- |
+| A diver books a seat | `e2e/booking.spec.ts` | full loop: staff schedules, visitor books, staff sees the roster |
+| A diver pays online at booking | `e2e/booking.spec.ts` | a diver's card payment at booking settles their Pay step |
+| A full boat takes a wait list, not a seat | `e2e/booking.spec.ts` | a full boat lets a diver join the wait list without taking a seat |
+| The charter's gate refuses a booking | `e2e/trip-admission.spec.ts` | the public trip page states what the charter requires above the form, and says so again when the booking is refused |
+| A diver signs a waiver with a medical yes | `e2e/waivers.spec.ts` | one waiver button sends a resumable link and a medical yes surfaces follow-up |
+| A minor's waiver needs a parent | `e2e/guardian-co-signature.spec.ts` | a minor's release asks for a parent, refuses without one, and names who co-signed |
+| Staff verify a certification | `e2e/certifications.spec.ts` | staff captures and verifies level and specialty certifications before either can be trusted |
+| The counter checks a diver in | `e2e/check-in.spec.ts` | counter check-in finds a diver's boat, confirms live readiness, and keeps blocked rows out of the line |
+| Roll call on the live manifest | `e2e/manifest.spec.ts` | live manifest retains blocked divers and records an explicit not-boarded result |
+| Roll call offline | `e2e/manifest.spec.ts` | captain saves the full checkpoint manifest, reloads it offline, and reconciles roll call |
+| A canceled booking flags its refund | `e2e/refunds.spec.ts` | canceling a paid counter booking inside the free-cancellation window flags a manual refund |
+| Staff sign in and out | `e2e/auth.spec.ts` | staff sign-in lands on the shop dashboard and sign-out locks it again |
+| A role is refused what it may not touch | `e2e/role-permissions.spec.ts` | the daily crew (captain) is denied money, legal, deletion, and trip config |
+| One shop never reaches another's | `e2e/tenant-isolation.spec.ts` | a second shop's owner reaches none of Blue Mantis's staff surfaces |
+| A diver prepares from their own link | `e2e/readiness.spec.ts` | a booked diver's readiness page lets them act and answers its questions |
+| A deleted diver can be erased | `e2e/divers.spec.ts` | erase is absent on a live diver's record and appears once they are deleted |
+| The shop exports its data | `e2e/export.spec.ts` | staff download the whole shop as documented CSVs |
 
 ## What runs when
 
@@ -66,12 +94,26 @@ erasure) merges with tests for the failure paths, not only the happy path.
 | Before a push | `pnpm verify:push`: regen and a clean tree, check:repo and `guards`, every source-reading test, `vitest related`, and the specs `pnpm e2e:affected` names ([verifying.md](../agents/verifying.md#the-pre-push-gate)) |
 | Every pull request | repo checks, lint, typecheck, all unit tests (4 shards), the build, every Playwright spec (6 shards), the captures `visual-affected` selects (up to 8 shards); real Postgres when `src/db/**` or `drizzle/**` changed |
 | Push to `main` | all of the above with every capture: the next baseline |
-| Nightly | real Postgres (ci.yml's schedule), the one-day simulation, CodeQL, the follow-up scan |
+| Nightly | real Postgres (ci.yml's schedule), the one-day simulation, quarantined tests and the flake hunt (`e2e-nightly.yml`), CodeQL, the follow-up scan |
 | Weekly | the persona walk, the shard-duration refresh |
 
 **Flakes.** Playwright runs `retries: 0` locally and in CI, so a flake fails the run that meets it.
-A failing or flaky test is part of the work that meets it, even when unrelated: fixed, never
-skipped or given a wider timeout, after searching open PRs for a fix in flight (AGENTS.md).
+A failing or flaky test is part of the work that meets it, even when unrelated: fixed, after
+searching open PRs for a fix in flight, or quarantined; never skipped, never given a wider timeout
+(AGENTS.md, testing review decision 4).
+
+- **Flaky needs evidence**: it failed and passed on one sha with no code change, or failed in the
+  nightly flake hunt.
+- **Quarantine** is the tag `@quarantine` (in the title or the `tag:` option) with, on its line
+  or the four above, `// diveday:quarantine #<open issue> until <YYYY-MM-DD>: <what flakes>`.
+  `pnpm check:e2e-hygiene` refuses a tag without both, an expiry more than 7 days out, an expired
+  one (so a lapsed quarantine turns every branch red the next day), and more than 3 at once. The
+  fix removes the tag; the date is never moved.
+- **Where it runs**: `playwright.config.ts`'s `grepInvert` leaves quarantined tests out of every
+  PR, push-gate and local run. `.github/workflows/e2e-nightly.yml` sets
+  `DIVEDAY_RUN_QUARANTINE=1` and runs them every night, then runs each spec that failed on CI in
+  the last 7 days five times (`--repeat-each=5`, `scripts/e2e-recent-failures.mjs`, at most 8
+  specs).
 
 ## Selection
 
@@ -508,6 +550,12 @@ the full suite locally with identical pass counts across repeated runs.
 
 ## Conventions
 
+- **A spec never quotes a sentence.** A `getByText`/`toContainText` string of 40+ characters is
+  counted per file by `pnpm check:e2e-hygiene` (`e2e-long-literals` in `scripts/ratchets.json`,
+  testing review decision 8): the count may only fall, so a new one is refused. Find the element by
+  role and name, or read the sentence from its bundle by key (`diverTranslator("en-US")`,
+  `staffTranslator("en-US")`; `.claude/rules/e2e.md` shows both). Seed data (a shop's tagline, a
+  diver's review) is not copy: import its constant from the seed, or quote fewer words.
 - **Prefer `getByRole`/`getByLabel` over `getByText` in Playwright specs**, but don't hand-roll the
   visibility filter — `e2e/fixtures.ts`'s `page` fixture patches `getByText`, `getByRole`,
   `getByLabel`, and `getByPlaceholder` to `.filter({ visible: true })` automatically, so a
