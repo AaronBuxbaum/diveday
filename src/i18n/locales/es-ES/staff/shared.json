@@ -584,7 +584,7 @@
   },
   "boatWork": {
     "missingSize": "{count} sin talla",
-    "kitUnasked": "{count} sin consultar por su equipo",
+    "kitUnasked": "{count} sin preguntar por su equipo",
     "ungatedNitrox": "{count, plural, one {# buceador quiere} other {# buceadores quieren}} nitrox sin certificación verificada",
     "missingContact": "{count, plural, one {# persona no tiene} other {# personas no tienen}} contacto de emergencia",
     "openOrders": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}"

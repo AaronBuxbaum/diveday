@@ -87,8 +87,9 @@
   the diver's items outright (`src/db/lost-items.ts`). The Boat tab's "Left aboard" form opens
   at Heading in, Home, or once the departure is Back (`leftAboardOpen`; see **At sea**,
   [operations.md](operations.md)).
-- **Dock line** — the one sentence under a consented first-timer's "first time with us" on the
-  arrivals roster: the first name to greet and the level they hold ("Say hello to Priya: Open
+- **Dock line** — the one sentence under a consented first-timer's "First dive with us" on the
+  arrivals roster ("First time with us" under a snorkeler or a rider, whose seat is not a dive, and
+  a no-show or a non-diving seat never counts as a prior dive; `src/db/welcome-cues.ts`): the first name to greet and the level they hold ("Say hello to Priya: Open
   Water."). It names a level only when a card at that level is **verified** (`verifiedLevel` on
   `listCertificationSummaries`, `src/db/self-declared-cards.ts`); any card nobody has verified,
   whether the diver typed it or a staffer did, is what the diver *says* ("says Open Water", es

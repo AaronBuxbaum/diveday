@@ -24,7 +24,9 @@
   divemaster who crews one of today's boats, the list leads with that boat's rows, every
   danger-tone row about any boat (a diver unaccounted for is everyone's to see), and any row about
   the reader themself, such as their own credential coming due; the rest — other boats' work and
-  the desk's — folds into one closed line, "N more for other boats and the desk", never gone.
+  the desk's — folds into one closed line, "N more for other boats and the desk", never gone. A
+  trip page's "Needs you · N" counts that boat's rows through the same lens, so a divemaster and
+  the owner can read different numbers for one boat: it is the reader's share, not the boat's list.
 - **Not ready** — the **by-departure view** of Today's work queue (`?view=departures`), not a page
   of its own: the same blocked divers the urgency view ranks chronologically, grouped instead under
   the boat each one holds up, with a per-departure batch waiver send. It had its own route until
