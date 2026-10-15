@@ -38,6 +38,10 @@ export type AgencyCheckCopy = {
   severalRecords: string;
   /** The agency's page could not be read at all (the extension came back without it). */
   unreadable: string;
+  /** The agency's page asks whether the staffer is human: open it and check there. */
+  captcha: string;
+  /** The agency's lookup page is not the shape the extension knows. */
+  pageChanged: string;
   /** A template: `{name}`. The page came back, but did not show this diver cleanly. */
   notFoundOnPage: string;
   /** DiveDay's own server did not answer: reload to see where the card stands. */
@@ -141,6 +145,8 @@ export function agencyCheckCopy(
         : t("divers.certifications.agencyCheck.noRecord", { agency: name, identity }),
     severalRecords: t("divers.certifications.agencyCheck.severalRecords", { agency: name }),
     unreadable: t("divers.certifications.agencyCheck.unreadable", { agency: name }),
+    captcha: t("divers.certifications.agencyCheck.captcha", { agency: name }),
+    pageChanged: t("divers.certifications.agencyCheck.pageChanged", { agency: name }),
     // The agency now, the diver in the browser: one host holds many divers.
     notFoundOnPage: fill(t.raw("divers.certifications.agencyCheck.notFoundOnPage"), {
       agency: name,

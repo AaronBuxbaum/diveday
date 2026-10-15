@@ -78,6 +78,8 @@
       "noRecordCmas": "El portal de CMAS no muestra esta certificación. Las federaciones todavía están añadiendo las suyas, así que pregunta a la federación que figura en la certificación.",
       "severalRecords": "{agency} muestra más de un buceador con este nombre.",
       "unreadable": "No se pudo leer la página de {agency}.",
+      "captcha": "{agency} pide confirmar que eres una persona. Verifica en su página.",
+      "pageChanged": "La página de {agency} cambió y DiveDay ya está avisado. Verifica en su página.",
       "notFoundOnPage": "No se encontró a {name} en la página de {agency}. Ábrela y revísala.",
       "noAnswer": "DiveDay no respondió. Recarga para ver cómo quedó esta certificación.",
       "signedOut": "Inicia sesión en el PADI Pros’ Site primero y vuelve a verificar.",

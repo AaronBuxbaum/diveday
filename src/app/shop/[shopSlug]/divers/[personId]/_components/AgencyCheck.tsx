@@ -15,6 +15,7 @@ import {
   agencyCheckMatchedText,
   agencyCheckOutcomeText,
 } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-outcome";
+import { reportFailedCheck } from "@/app/shop/[shopSlug]/_components/agency-check/report-failed-check";
 import { UndoToast } from "@/components/UndoToast";
 import { FormStatus } from "@/components/ui/form";
 import { requestAgencyPage, useCertCheckExtension } from "@/components/useCertCheckExtension";
@@ -93,6 +94,7 @@ export function AgencyCheck({
     const reply = await requestAgencyPage(query);
     setAsking(false);
     if (!reply.ok) {
+      reportFailedCheck(query.agency, reply);
       setFailure(agencyCheckFailure(reply.reason));
       return;
     }

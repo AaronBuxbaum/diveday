@@ -364,8 +364,10 @@
     "certCheck": {
       "heading": "Verificación de certificaciones",
       "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y marca la certificación como certificada cuando la agencia la muestra. Verifica SSI, NAUI, SDI, GUE y CMAS, y PADI cuando actives “Verificación con PADI (beta)” en Reservas y exenciones, en Chrome o Edge en una computadora.",
-      "added": "Añadida a este navegador",
+      "added": "Añadida a este navegador ({version})",
       "notAdded": "Sin añadir",
+      "outdated": "Actualiza la extensión: este navegador tiene la versión {version} y DiveDay necesita la {minimum}.",
+      "try": "Prueba las verificaciones",
       "install": "Añadir a Chrome"
     },
     "integrations": {
@@ -1071,5 +1073,23 @@
     "partnerLinkField": "Enlace de referido",
     "showRequired": "Elige la salida de esta tarjeta.",
     "fromFareharbor": "¿Te cambias desde FareHarbor? <link>Mira qué inserción sustituye a cada uno de sus widgets</link>."
+  },
+  "certChecks": {
+    "title": "Prueba las verificaciones",
+    "description": "Solo páginas de muestra en este navegador: no se busca en ninguna agencia y ningún dato de un buceador sale de él.",
+    "run": "Ejecutar las verificaciones",
+    "running": "Ejecutando…",
+    "extension": "Extensión",
+    "samples": "Búsquedas de muestra",
+    "padi": "Sesión en el PADI Pros’ Site",
+    "report": "Informe de la sesión",
+    "passed": "Correcta",
+    "failed": "Fallida",
+    "notListed": "No está en esta versión",
+    "signedIn": "Sesión iniciada",
+    "signedOut": "Sin sesión",
+    "noTab": "Ninguna pestaña de PADI abierta",
+    "noAnswer": "Sin respuesta",
+    "copy": "Copiar informe"
   }
 }

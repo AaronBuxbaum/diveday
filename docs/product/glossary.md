@@ -43,10 +43,12 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Intro-session in-water ratio
 - Junior certification
 - Levels
+- Minimum extension version
 - Minor
 - Other agency
 - PADI checks
 - PADI Scuba Diver
+- Page-shape report
 - Prior visit
 - RAID
 - Readiness
@@ -59,6 +61,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Target diver:divemaster ratio
 - Temperature unit
 - Trip admission
+- Try the checks
 - Verified certification
 
 ## Day of the dive

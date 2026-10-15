@@ -5,7 +5,7 @@ import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { type BrowserContext, chromium, type Page } from "@playwright/test";
 import { chromiumExecutableOverride, DETERMINISTIC_RENDERING_ARGS } from "./browser";
-import { test as base, expect } from "./fixtures";
+import { test as base, expect, makeActivitySafe } from "./fixtures";
 import { findTripOnBoard, openDiverFileGroup, openTripTab, rosterRow } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 
@@ -47,6 +47,11 @@ type AgencyPages = {
   /** SSI's result lists nitrox and Deep under the level card. */
   ssiListsMore: boolean;
   /**
+   * SSI's lookup as it is, with its boxes renamed past recognising (a
+   * redesign), or with reCAPTCHA's box on its form.
+   */
+  ssiForm: "as-is" | "renamed" | "captcha";
+  /**
    * DiveChek, on pro.padi.com. Signed out: it shows its sign-in form, or sends
    * the tab to PADI's sign-in host. Signed in: it sends the tab on to the same
    * page on pros.padi.com, PADI's other Pros' Site host, which answers with
@@ -74,16 +79,28 @@ function escapeHtml(value: string): string {
 }
 
 /** SSI's public Online Diver Check: name and card number, then the diver's record. */
-function ssiPage(url: URL, listsMore: boolean): string {
+function ssiPage(url: URL, listsMore: boolean, form: AgencyPages["ssiForm"]): string {
   const name = url.searchParams.get("diver_name");
   const number = url.searchParams.get("card_number");
   if (name === null || number === null) {
+    if (form === "renamed") {
+      return html(
+        "Online Diver Check",
+        `<h1>Online Diver Check</h1>
+        <form method="get" action="/online_diver_check">
+          <label>Taucher <input name="q1"></label>
+          <label>Ausweis <input name="q2"></label>
+          <button type="submit">Search</button>
+        </form>`,
+      );
+    }
     return html(
       "Online Diver Check",
       `<h1>Online Diver Check</h1>
       <form method="get" action="/online_diver_check">
         <label>Diver name <input name="diver_name"></label>
         <label>Card number <input name="card_number"></label>
+        ${form === "captcha" ? '<div class="g-recaptcha" style="width:304px;height:78px"></div>' : ""}
         <button type="submit">Search</button>
       </form>`,
     );
@@ -209,7 +226,7 @@ async function serveAgencyPages(pages: AgencyPages, dir: string): Promise<https.
         response.end(body);
       };
       if (url.hostname === "my.divessi.com" && url.pathname === "/online_diver_check") {
-        return send(200, ssiPage(url, pages.ssiListsMore));
+        return send(200, ssiPage(url, pages.ssiListsMore, pages.ssiForm));
       }
       if (PADI_HOSTS.includes(url.hostname) && url.pathname === "/__typed") {
         pages.typedIntoSignIn.push(url.searchParams.get("box") ?? "?");
@@ -274,6 +291,7 @@ const test = base.extend<{ agencyPages: AgencyPages; extensionId: string }>({
   agencyPages: async ({}, use) => {
     await use({
       ssiListsMore: false,
+      ssiForm: "as-is",
       padi: "sign-in-form",
       padiCardNumber: "",
       requests: [],
@@ -406,7 +424,9 @@ test("DiveDay sees the installed extension, and settings says this browser has i
   const row = page
     .locator("details")
     .filter({ has: page.getByRole("heading", { name: "Certification checks", exact: true }) });
-  await expect(row.getByText("Added to this browser", { exact: true })).toBeVisible();
+  await expect(
+    row.getByText(`Added to this browser (${extensionVersion})`, { exact: true }),
+  ).toBeVisible();
   await expect(row.getByText("Not added", { exact: true })).toHaveCount(0);
 });
 
@@ -600,4 +620,94 @@ test("after a match, the other cards SSI's page lists are offered, and the ticke
   await expect(nitrox.getByText("Listed on SSI’s page.")).toBeVisible();
   await expect(nitrox.getByRole("button", { name: "Mark certified" })).toBeVisible();
   await expect(cards.getByRole("listitem").filter({ hasText: "SSI · Deep" })).toHaveCount(0);
+});
+
+test("a captcha on SSI's form is the staffer's to answer: nothing is typed, and the row says so", async ({
+  page,
+  extensionId,
+  agencyPages,
+}) => {
+  test.setTimeout(60_000);
+  void extensionId;
+  const { cards } = await diverWithPendingSsiCard(page, "Cy");
+  agencyPages.ssiForm = "captcha";
+  agencyPages.requests.length = 0;
+
+  await cards.getByRole("button", { name: "Check with SSI" }).click();
+
+  await expect(cards.getByText("SSI is asking if you’re human. Check on its page.")).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(cards.getByRole("link", { name: "Check with SSI" })).toBeVisible();
+  // The form was opened and never sent.
+  expect(agencyPages.requests).toContain("GET https://my.divessi.com/online_diver_check");
+  expect(agencyPages.requests.filter((request) => request.includes("diver_name="))).toEqual([]);
+  await expect(cards.getByText(/^Checked with SSI by /)).toHaveCount(0);
+});
+
+test("SSI's page with its boxes renamed reads as a changed page, and nothing is sent", async ({
+  page,
+  extensionId,
+  agencyPages,
+}) => {
+  test.setTimeout(60_000);
+  void extensionId;
+  const { cards } = await diverWithPendingSsiCard(page, "Rene");
+  agencyPages.ssiForm = "renamed";
+  agencyPages.requests.length = 0;
+
+  await cards.getByRole("button", { name: "Check with SSI" }).click();
+
+  await expect(
+    cards.getByText("SSI’s page has changed, and DiveDay has been told. Check on its page."),
+  ).toBeVisible({ timeout: 30_000 });
+  expect(agencyPages.requests.filter((request) => request.includes("diver_name="))).toEqual([]);
+  await expect(cards.getByText(/^Checked with SSI by /)).toHaveCount(0);
+});
+
+test("Try the checks runs every sample lookup in the extension, reads PADI's tab, and reports no person", async ({
+  page,
+  context,
+  extensionId,
+  agencyPages,
+}) => {
+  test.setTimeout(90_000);
+  void extensionId;
+  await page.goto(`/shop/${SHOP}/settings`);
+  const row = page
+    .locator("details")
+    .filter({ has: page.getByRole("heading", { name: "Certification checks", exact: true }) });
+  await row.getByRole("heading", { name: "Certification checks", exact: true }).click();
+  await row.getByRole("link", { name: "Try the checks" }).click();
+  await expect(page).toHaveURL(`/shop/${SHOP}/settings/cert-checks`);
+  await page.getByRole("heading", { level: 1, name: "Try the checks" }).waitFor();
+  await expect(page.getByText(`Added to this browser (${extensionVersion})`)).toBeVisible();
+
+  await page.getByRole("button", { name: "Run the checks" }).click();
+
+  const samples = page.getByRole("list", { name: "Sample lookups" });
+  for (const agency of ["SSI", "NAUI", "SDI", "GUE", "CMAS"]) {
+    await expect(samples.getByRole("listitem").filter({ hasText: agency })).toContainText(
+      "Passed",
+      { timeout: 30_000 },
+    );
+  }
+  await expect(page.getByText("No PADI tab open")).toBeVisible();
+  // No agency was searched: the samples are the extension's own pages.
+  expect(agencyPages.requests).toEqual([]);
+  const report = page.getByText(/"report": "diveday-cert-check-try"/);
+  await expect(report).toContainText(`"extension": "${extensionVersion}"`);
+  await expect(report).not.toContainText("Alex");
+  await expect(report).not.toContainText("Sample");
+
+  // A signed-in Pros' Site tab is read for that alone: nothing is searched in it.
+  agencyPages.padi = "signed-in-on-pros";
+  const padi = makeActivitySafe(await context.newPage());
+  await padi.goto("https://pros.padi.com/divechek");
+  await padi.getByRole("button", { name: "Run Report" }).waitFor();
+  agencyPages.requests.length = 0;
+  await page.bringToFront();
+  await page.getByRole("button", { name: "Run the checks" }).click();
+  await expect(page.getByText("Signed in", { exact: true })).toBeVisible({ timeout: 30_000 });
+  expect(agencyPages.requests.filter((request) => request.includes("first_name="))).toEqual([]);
 });

@@ -24,7 +24,7 @@ const extension = (
         spec: unknown,
         signInPath?: string,
       ) => { ok: true } | { ok: false; missing: string[] };
-      excerptAround: (text: string, email: string) => string;
+      excerptAround: (text: string, email: string, firstName: string, lastName: string) => string;
       pageAsksToSignIn: (signInPath?: string) => boolean;
       excerptAroundName: (text: string, firstName: string, lastName: string) => string;
       AGENCIES: Record<string, unknown>;
@@ -311,23 +311,68 @@ describe("fillAgencyForm", () => {
 });
 
 describe("excerptAround", () => {
+  /** Every address in a text, lowercased. */
+  const addresses = (text: string) =>
+    [...text.matchAll(/[^\s@]+@[^\s@]+\.[^\s@]+/g)].map((match) => match[0].toLowerCase());
+
   it("hands back only the lines near the student's email", () => {
     const page = [
       ...Array.from({ length: 20 }, (_, index) => `Other ${index}\tother${index}@example.com`),
       "Lena Ortiz\tLena@Example.com\tOpen Water Diver Online\tComplete",
       ...Array.from({ length: 20 }, (_, index) => `Later ${index}\tlater${index}@example.com`),
     ].join("\n");
-    const excerpt = excerptAround(page, "lena@example.com");
-    expect(excerpt).toContain("Lena Ortiz");
-    expect(excerpt).not.toContain("other0@example.com");
-    expect(excerpt).not.toContain("later19@example.com");
+    const excerpt = excerptAround(page, "lena@example.com", "Lena", "Ortiz");
+    expect(excerpt).toBe("Lena Ortiz\tLena@Example.com\tOpen Water Diver Online\tComplete");
   });
 
-  it("keeps the top of a page that never names the email, to say why", () => {
-    const page = ["Search results", "No results found", ...Array(100).fill("row")].join("\n");
-    const excerpt = excerptAround(page, "lena@example.com");
+  /** Security review (MEDIUM): a Pros' Site list is other students' names and emails. */
+  it("never hands back another student's address or the lines around it", () => {
+    const page = [
+      "Students",
+      "Sam Reyes",
+      "sam@example.com",
+      "Open Water Diver Online",
+      "In progress",
+      "Lena Ortiz",
+      "lena@example.com",
+      "Open Water Diver Online",
+      "Complete",
+      "Mia Chen",
+      "mia@example.com",
+      "Advanced Open Water Diver Online",
+    ].join("\n");
+    const excerpt = excerptAround(page, "lena@example.com", "Lena", "Ortiz");
+    expect(excerpt.split("\n")).toEqual([
+      "Lena Ortiz",
+      "lena@example.com",
+      "Open Water Diver Online",
+      "Complete",
+    ]);
+    expect(addresses(excerpt)).toEqual(["lena@example.com"]);
+    expect(excerpt).not.toContain("Mia Chen");
+    expect(excerpt).not.toContain("Sam Reyes");
+  });
+
+  it("drops a line carrying another address beside the student's", () => {
+    const page = ["Lena Ortiz lena@example.com", "Family: mum@example.com", "Complete"].join("\n");
+    const excerpt = excerptAround(page, "lena@example.com", "Lena", "Ortiz");
+    expect(addresses(excerpt)).toEqual(["lena@example.com"]);
+  });
+
+  it("hands back only why, at most ten lines, from a page that never names the email", () => {
+    const page = [
+      "Search results",
+      "Sam Reyes sam@example.com Open Water Diver Online Complete",
+      "No results found",
+      "No results found for mia@example.com",
+      ...Array(100).fill("Mia Chen mia@example.com"),
+      ...Array(20).fill("No results"),
+    ].join("\n");
+    const excerpt = excerptAround(page, "lena@example.com", "Lena", "Ortiz");
     expect(excerpt).toContain("No results found");
-    expect(excerpt.split("\n")).toHaveLength(40);
+    expect(excerpt).not.toContain("Sam Reyes");
+    expect(addresses(excerpt)).toEqual([]);
+    expect(excerpt.split("\n").length).toBeLessThanOrEqual(10);
   });
 });
 
@@ -654,6 +699,47 @@ describe("excerptAroundName", () => {
     expect(excerptAroundName(page, "Lena", "Ortiz").split("\n")).toEqual(
       ["Lena Ortiz", "a", "b", "c", "d"].slice(0, RECORD_LINES + 1),
     );
+  });
+
+  it("keeps a name split over two labelled lines, either order, so a second diver laid out that way still shows", () => {
+    const page = [
+      "PADI Pros’ Site",
+      "Welcome back, Coral Coast Divers",
+      "First name: Lena",
+      "Last name: Ortiz",
+      "Date of Birth: 12 Apr 1990",
+      "Open Water Diver",
+      "Apellidos: Ortiz",
+      "Nombre: Léna",
+      "Date of Birth: 3 Sep 1987",
+      "Advanced Open Water Diver",
+      "Card 1",
+      "Card 2",
+      "Footer",
+      "Recent students: Sam Reyes",
+    ].join("\n");
+    const excerpt = excerptAroundName(page, "Lena", "Ortiz");
+    expect(excerpt.split("\n")).toEqual([
+      "First name: Lena",
+      "Last name: Ortiz",
+      "Date of Birth: 12 Apr 1990",
+      "Open Water Diver",
+      "Apellidos: Ortiz",
+      "Nombre: Léna",
+      "Date of Birth: 3 Sep 1987",
+      "Advanced Open Water Diver",
+      "Card 1",
+      "Card 2",
+    ]);
+    expect(excerpt).not.toContain("Coral Coast Divers");
+    expect(excerpt).not.toContain("Sam Reyes");
+  });
+
+  it("never reads a first name and someone else's last name, or lines apart, as the diver's", () => {
+    const apart = ["First name: Lena", "Date of Birth: 12 Apr 1990", "Last name: Ortiz"].join("\n");
+    expect(excerptAroundName(apart, "Lena", "Ortiz")).toBe("");
+    const other = ["First name: Lena", "Last name: Ortiz Smith"].join("\n");
+    expect(excerptAroundName(other, "Lena", "Ortiz")).toBe("");
   });
 
   it("reads a 'Last, First' name line as the diver's", () => {

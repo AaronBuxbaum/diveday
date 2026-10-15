@@ -31,7 +31,7 @@ const PADI_CHECKS_OFF =
 async function installFakeExtension(page: Page, mode: Mode) {
   await page.addInitScript((answer) => {
     const announce = () => {
-      document.documentElement.setAttribute("data-diveday-cert-check", "1.2.0");
+      document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
       window.dispatchEvent(new Event("diveday-cert-check-ready"));
     };
     if (document.readyState === "loading") {

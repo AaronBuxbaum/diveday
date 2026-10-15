@@ -7,10 +7,14 @@ The extension decides nothing. It fills in the agency's form, waits for the answ
 ## Files
 
 - `manifest.json`: Manifest V3. Host permissions are the agencies' lookup sites only, PADI's two Pros' Site hosts (`pro.padi.com` and `pros.padi.com`) among them; the content script runs only on DiveDay's staff pages, `https://dive.day/shop/*`.
-- `protocol.js`: the wire format. The app's copy is `src/lib/cert-check-extension.ts`.
+- `protocol.js`: the wire format, the version, and `PAGE_SHAPE_WORDS`, the only words a page-shape report may carry. The app's copies are `src/lib/cert-check-extension.ts` and `src/lib/page-shape.ts`. The app talks only to a copy at or above `MIN_EXTENSION_VERSION` there; an older one gets the agency's link and Settings says to update.
 - `agencies.js`: the lookup page for each agency, which must match `src/lib/agency-verification.ts`, and the eLearning page for each agency it reads (`ELEARNING`, PADI only). PADI opens on `pro.padi.com`, where PADI's own pages send pros, and `origins` lists both PADI hosts, so a tab sent from one to the other is still the signed-in site.
 - `fill.js`: finds each box by its name, label or placeholder and the button that sends them, and types nothing until all are found. On a page behind the shop's sign-in (`signIn` in `agencies.js`, PADI) it fills only boxes that search (a search box or landmark, the box's own words, or a form's search button when the form holds no box the lookup does not fill), only on the page the lookup opened when its address names one (DiveChek's `/divechek`), a student's email only into a box that searches or says it is the student's, never on a sign-in, sign-up, account or profile address (`SIGN_IN_PATH` in `protocol.js`) or a page with a password box or an email box that does not search, and presses only the search's own button (Search, Find, Look up, Check, Chek, Verify, or DiveChek's "Run Report"), never a reset and never a bare submit. A box or button inside a hidden block is not on the page. On CMAS's portal, which has a "Search by code" and a "Manual Search", it presses the first search button after the boxes it filled, in the nearest block around them: the code's for a card number, Manual Search for names and birth date, never a date picker's toggle.
-- `background.js`: opens the page in a background tab, runs `fill.js`, reads the answer once three reads a second apart agree, closes the tab. Every lookup is filled and read only on its own site (`origins`, or its address's host). For a signed-in page it answers `signed_out` when PADI shows its sign-in or sends the tab to a host outside the spec's `origins`, before the search and again once the answer settles (`pageAsksToSignIn` in `fill.js`), and hands back only the lines about the diver or student searched for: for a diver, each line naming them and the four under it (`RECORD_LINES` in `src/lib/agency-check.ts`), or, when none does, only the lines saying why, at most ten.
+- `background.js`: opens the page in a background tab, runs `fill.js`, reads the answer once three reads a second apart agree, closes the tab. Every lookup is filled and read only on its own site (`origins`, or its address's host). For a signed-in page it answers `signed_out` when PADI shows its sign-in or sends the tab to a host outside the spec's `origins`, before the search and again once the answer settles (`pageAsksToSignIn` in `fill.js`), and hands back only the lines about the diver or student searched for: for a student, the lines carrying their email, their name line above and up to six under, never a line with another address or the one just above it, or only the lines saying why; for a diver, each line naming them (or a name split over two adjacent labelled lines, "First name: Lena" over "Last name: Ortiz", either order, Spanish labels too) and the four under it (`RECORD_LINES` in `src/lib/agency-check.ts`), or, when none does, only the lines saying why, at most ten.
+  A check that ends short of a page's text on the lookup's own site says why with a fixed reason: `captcha` (a captcha on the form, where nothing is typed, or on the answer, whose text is not handed back), `page_changed` (no box or button where the lookup expects one), `timeout` or `fill_failed`, with the page's shape beside it. It answers `hello` with its version and the agencies it checks, and the two requests of Settings' "Try the checks": `dry-run` and `padi-session`.
+- `shape.js`: `describePageShape`, the page-shape report: the path without its query string, title, top headings, each box's tag, type and label words, buttons' words, counts, password and captcha flags, every word cut to `PAGE_SHAPE_WORDS` and the diver's names always "_". Never a value, a cell or a line of the page.
+- `sample.html` and `sample.js`: "Try the checks"' dry run. A form shaped by one agency's `fields`, filled by `fill.js` with a made-up diver; the form stops the submit and the page tells the service worker what was found, typed and pressed. No agency is opened. PADI has none.
+- `icons/`: the 16, 48 and 128 px icons the manifest names (`icons`); the stores ask for the 128.
 - `bridge.js`: on DiveDay's pages, sets the `data-diveday-cert-check` marker and carries messages.
 
 `src/lib/cert-check-extension.test.ts` and `src/lib/cert-check-extension-fill.test.ts` test this folder, and `e2e/agency-check-extension.spec.ts` installs it in a real Chromium against stand-in agency pages: `pnpm e2e:run e2e/agency-check-extension.spec.ts --reporter=line` after `pnpm e2e:build`, with the full Chromium (`pnpm exec playwright install chromium`; the headless shell cannot load an extension).
@@ -22,7 +26,7 @@ The extension decides nothing. It fills in the agency's form, waits for the answ
 3. Choose "Load unpacked" and pick this folder.
 4. Open a diver's record with a pending level card from one of the six agencies. "Check with <agency>" is now a button. A PADI card needs the diver's birth date on file and the shop's "PADI checks (beta)" switch on.
 
-Settings, Bookings & waivers, "Certification checks", says whether this browser has it.
+Settings, Bookings & waivers, "Certification checks", says whether this browser has it and which version, and its "Try the checks" runs the extension on its own sample pages, reads whether a PADI Pros' Site tab is signed in, and gives a report to copy and send back. Run it first, before a real check.
 
 ## Test the PADI eLearning check
 
@@ -30,7 +34,7 @@ The PADI page is a best guess (#2259). To test it for real:
 
 1. Load the extension as above and sign in to the PADI Pros' Site in the same browser.
 2. Open a PADI course session with learning materials, and a student whose eLearning you know is finished. Open their row's details and press "Check eLearning with PADI".
-3. If it answers "Couldn't read PADI's page", open `https://pro.padi.com/` yourself, find where a student's eLearning is searched, and correct `ELEARNING.padi` in `agencies.js` (the page address) and, if the search box is not found, `PATTERNS.email` in `fill.js`.
+3. If it answers "Couldn't read PADI's page" or "PADI's page has changed", the `agency_check.page_shape` log line for it holds the page's boxes and buttons; open `https://pro.padi.com/` yourself, find where a student's eLearning is searched, and correct `ELEARNING.padi` in `agencies.js` (the page address) and, if the search box is not found, `PATTERNS.email` in `fill.js`.
 4. If it reads the page but gets the answer wrong, copy the page's text into a new case in `src/lib/elearning-check.test.ts` and fix `judgeElearningPage`.
 
 ## Test DiveChek against the real page
@@ -46,7 +50,7 @@ The DiveChek page is a best guess, like the eLearning page (#2259), and the same
 
 ## Publish
 
-1. Bump `version` in `manifest.json` and `VERSION` in `protocol.js` together. A test holds them equal.
+1. Bump `version` in `manifest.json` and `VERSION` in `protocol.js` together. A test holds them equal. When the fix must reach every browser before it checks again, raise `MIN_EXTENSION_VERSION` in `src/lib/cert-check-extension.ts` to it, and the stand-in versions the e2e specs announce.
 2. Zip this folder's contents, leaving out this README.
 3. Upload to the Chrome Web Store developer dashboard. The listing needs a privacy policy URL and a reason for each host permission: "Fills in this agency's public certification lookup form when the user asks, and reads the answer."
 4. Edge Add-ons accepts the same zip.

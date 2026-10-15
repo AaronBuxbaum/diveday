@@ -4,13 +4,25 @@ import { AGENCY_VERIFICATION_PAGES } from "./agency-verification";
 import {
   CHECK_REQUEST_TYPE,
   CHECK_RESULT_TYPE,
+  DRY_RUN_REQUEST_TYPE,
+  dryRunPassed,
   ELEARNING_REQUEST_TYPE,
   EXTENSION_FAILURE_REASONS,
   EXTENSION_MARKER_ATTRIBUTE,
   EXTENSION_MESSAGE_SOURCE,
   EXTENSION_READY_EVENT,
+  extensionChecks,
+  extensionFailure,
   extensionFailureReason,
+  extensionPresence,
+  HELLO_REQUEST_TYPE,
+  MIN_EXTENSION_VERSION,
+  PADI_SESSION_REQUEST_TYPE,
   PAGE_MESSAGE_SOURCE,
+  parseExtensionDryRun,
+  parseExtensionHello,
+  parsePadiSession,
+  versionAtLeast,
 } from "./cert-check-extension";
 import { ELEARNING_AGENCIES } from "./elearning-check";
 
@@ -38,9 +50,24 @@ describe("the extension's copy of the protocol", () => {
       EXTENSION_SOURCE: EXTENSION_MESSAGE_SOURCE,
       REQUEST_TYPE: CHECK_REQUEST_TYPE,
       ELEARNING_REQUEST_TYPE,
+      HELLO_REQUEST_TYPE,
+      DRY_RUN_REQUEST_TYPE,
+      PADI_SESSION_REQUEST_TYPE,
       RESULT_TYPE: CHECK_RESULT_TYPE,
       PAGE_TEXT_MAX_LENGTH,
     });
+  });
+
+  it("names an icon at each size the stores ask for, each a PNG of that size", async () => {
+    const { readFileSync } = await import("node:fs");
+    const icons = (manifest as { icons?: Record<string, string> }).icons ?? {};
+    expect(Object.keys(icons).sort()).toEqual(["128", "16", "48"]);
+    for (const [size, file] of Object.entries(icons)) {
+      const png = readFileSync(new URL(`../../extension/${file}`, import.meta.url));
+      expect(png.subarray(1, 4).toString(), file).toBe("PNG");
+      expect(png.readUInt32BE(16), file).toBe(Number(size));
+      expect(png.readUInt32BE(20), file).toBe(Number(size));
+    }
   });
 
   it("reports the manifest's version", () => {
@@ -53,8 +80,12 @@ describe("the extension's copy of the protocol", () => {
       new URL("../../extension/background.js", import.meta.url),
       "utf8",
     );
-    const reasons = new Set([...worker.matchAll(/reason: "([a-z_]+)"/g)].map((m) => m[1]));
+    const reasons = new Set(
+      [...worker.matchAll(/(?:reason: |failed\()"([a-z_]+)"/g)].map((m) => m[1]),
+    );
     expect(reasons).toContain("signed_out");
+    expect(reasons).toContain("captcha");
+    expect(reasons).toContain("page_changed");
     for (const reason of reasons) expect(EXTENSION_FAILURE_REASONS).toContain(reason);
   });
 
@@ -134,6 +165,10 @@ describe("the extension's copy of the protocol", () => {
     /** What the page asks once searched: a sign-in, or nothing. */
     asksToSignInAfter?: boolean;
     elearning?: boolean;
+    /** What the filler answers; a fill that worked by default. */
+    fill?: { ok: boolean; missing?: string[] };
+    /** The page's shape (shape.js), before the form is filled and after. */
+    shape?: (filled: boolean) => object | null;
   }) {
     const { readFileSync } = await import("node:fs");
     const vm = await import("node:vm");
@@ -154,8 +189,12 @@ describe("the extension's copy of the protocol", () => {
           executeScript: async ({ func }: { func: { name: string } }) => {
             ran.push(func.name);
             if (func.name === "fillAgencyForm") {
-              filled = true;
-              return [{ result: { ok: true } }];
+              const answer = options.fill ?? { ok: true };
+              filled = answer.ok;
+              return [{ result: answer }];
+            }
+            if (func.name === "describePageShape") {
+              return [{ result: options.shape ? options.shape(filled) : null }];
             }
             if (func.name === "pageAsksToSignIn") {
               return [{ result: filled && options.asksToSignInAfter === true }];
@@ -205,6 +244,8 @@ describe("the extension's copy of the protocol", () => {
     });
     expect(reply).toEqual({ ok: false, reason: "fill_failed" });
     expect(ran).not.toContain("fillAgencyForm");
+    // Not even its shape is read.
+    expect(ran).not.toContain("describePageShape");
   });
 
   it("hands back nothing from a public lookup sent to another site by its search", async () => {
@@ -252,6 +293,142 @@ describe("the extension's copy of the protocol", () => {
       after: "https://pros.padi.com/divechek?first_name=Lena",
     });
     expect(reply).toMatchObject({ ok: true, pageText: "Lena Ortiz\nOpen Water Diver" });
+  });
+
+  const FORM_SHAPE = {
+    path: "/online diver check",
+    title: "online diver check",
+    headings: [],
+    boxes: [{ tag: "input", type: "text", words: "_" }],
+    buttons: ["search"],
+    forms: 1,
+    frames: 0,
+    password: false,
+    captcha: false,
+  };
+
+  it("types nothing on a page asking whether the staffer is human, and says so with its shape", async () => {
+    const shape = { ...FORM_SHAPE, captcha: true };
+    const { reply, ran } = await workerCheck({
+      agency: "ssi",
+      before: "https://my.divessi.com/online_diver_check",
+      after: "https://my.divessi.com/online_diver_check",
+      shape: () => shape,
+    });
+    expect(reply).toEqual({ ok: false, reason: "captcha", pageShape: shape });
+    expect(ran).not.toContain("fillAgencyForm");
+  });
+
+  it("reads a lookup page with no box where the lookup expects one as a changed page, with its shape", async () => {
+    const { reply, ran } = await workerCheck({
+      agency: "ssi",
+      before: "https://my.divessi.com/online_diver_check",
+      after: "https://my.divessi.com/online_diver_check",
+      fill: { ok: false, missing: ["name"] },
+      shape: () => FORM_SHAPE,
+    });
+    expect(reply).toEqual({ ok: false, reason: "page_changed", pageShape: FORM_SHAPE });
+    expect(ran.filter((name) => name === "fillAgencyForm").length).toBeGreaterThan(0);
+  });
+
+  it("hands back no text from an answer asking whether the staffer is human", async () => {
+    const answered = { ...FORM_SHAPE, captcha: true };
+    const { reply } = await workerCheck({
+      agency: "ssi",
+      before: "https://my.divessi.com/online_diver_check",
+      after: "https://my.divessi.com/online_diver_check?diver_name=Lena",
+      shape: (filled) => (filled ? answered : FORM_SHAPE),
+    });
+    expect(reply).toEqual({ ok: false, reason: "captcha", pageShape: answered });
+  });
+
+  it("answers hello with its version and the agencies it checks", async () => {
+    const { readFileSync } = await import("node:fs");
+    const vm = await import("node:vm");
+    const source = (file: string) =>
+      readFileSync(new URL(`../../extension/${file}`, import.meta.url), "utf8");
+    let listener:
+      | ((message: unknown, sender: unknown, reply: (r: unknown) => void) => unknown)
+      | null = null;
+    const worker: Record<string, unknown> = {
+      chrome: {
+        runtime: {
+          id: "test",
+          onMessage: { addListener: (fn: typeof listener) => (listener = fn) },
+          getURL: (path: string) => `chrome-extension://test/${path}`,
+        },
+      },
+      URL,
+      importScripts: (...files: string[]) => {
+        for (const file of files) vm.runInContext(source(file), worker, { filename: file });
+      },
+    };
+    vm.createContext(worker);
+    vm.runInContext(source("background.js"), worker, { filename: "background.js" });
+    const answers: unknown[] = [];
+    const ask = (url: string) =>
+      listener?.(
+        { type: HELLO_REQUEST_TYPE },
+        { id: "test", tab: { id: 1 }, frameId: 0, url },
+        (answer) => answers.push(answer),
+      );
+    ask("https://dive.day/shop/blue-mantis/settings");
+    // Not from a page outside DiveDay's staff pages.
+    ask("https://example.com/shop/x");
+    expect(answers).toEqual([
+      {
+        ok: true,
+        version: manifest.version,
+        agencies: Object.keys(AGENCY_CHECKS),
+        elearning: [...ELEARNING_AGENCIES],
+      },
+    ]);
+  });
+
+  it("says whether a PADI Pros' Site tab is signed in, opening nothing and typing nothing", async () => {
+    const { readFileSync } = await import("node:fs");
+    const vm = await import("node:vm");
+    const source = (file: string) =>
+      readFileSync(new URL(`../../extension/${file}`, import.meta.url), "utf8");
+    let tabs: { id: number; url?: string }[] = [];
+    let asks = true;
+    const ran: string[] = [];
+    const worker: Record<string, unknown> = {
+      chrome: {
+        runtime: { id: "test", onMessage: { addListener: () => {} } },
+        tabs: {
+          query: async ({ url }: { url: string[] }) => {
+            expect(url).toEqual(["https://pro.padi.com/*", "https://pros.padi.com/*"]);
+            return tabs;
+          },
+          create: async () => {
+            throw new Error("opened a tab");
+          },
+        },
+        scripting: {
+          executeScript: async ({ func }: { func: { name: string } }) => {
+            ran.push(func.name);
+            return [{ result: asks }];
+          },
+        },
+      },
+      URL,
+      importScripts: (...files: string[]) => {
+        for (const file of files) vm.runInContext(source(file), worker, { filename: file });
+      },
+    };
+    vm.createContext(worker);
+    vm.runInContext(source("background.js"), worker, { filename: "background.js" });
+    const padiSession = worker.padiSession as () => Promise<unknown>;
+    expect(await padiSession()).toEqual({ ok: true, padi: "no_tab" });
+    tabs = [{ id: 1, url: "https://pros.padi.com/sign-in?return=%2F" }];
+    expect(await padiSession()).toEqual({ ok: true, padi: "signed_out" });
+    expect(ran).toEqual([]);
+    tabs = [{ id: 2, url: "https://pro.padi.com/me/dashboard" }];
+    expect(await padiSession()).toEqual({ ok: true, padi: "signed_out" });
+    asks = false;
+    expect(await padiSession()).toEqual({ ok: true, padi: "signed_in" });
+    expect(new Set(ran)).toEqual(new Set(["pageAsksToSignIn"]));
   });
 
   it("reads anything else the extension says as a form it could not fill", () => {
@@ -351,5 +528,84 @@ describe("the extension's agencies", () => {
   it("talks only to DiveDay's own staff pages", () => {
     const matches = manifest.content_scripts.flatMap((script) => script.matches);
     expect(matches).toEqual(["https://dive.day/shop/*"]);
+  });
+});
+
+describe("the extension's version", () => {
+  it("compares versions part by part, never as text", () => {
+    expect(versionAtLeast("1.5.0", "1.5.0")).toBe(true);
+    expect(versionAtLeast("1.10.0", "1.5.0")).toBe(true);
+    expect(versionAtLeast("2.0.0", "1.5.0")).toBe(true);
+    expect(versionAtLeast("1.4.9", "1.5.0")).toBe(false);
+    expect(versionAtLeast("1.5", "1.5.0")).toBe(false);
+    expect(versionAtLeast("1.5.0-beta", "1.5.0")).toBe(false);
+    expect(versionAtLeast(null, "1.5.0")).toBe(false);
+  });
+
+  it("is a copy the app talks to only at or above the minimum, which this copy meets", () => {
+    expect(extensionPresence(null)).toEqual({ state: "absent" });
+    expect(extensionPresence("1.2.0")).toEqual({ state: "outdated", version: "1.2.0" });
+    expect(extensionPresence("<b>9</b>")).toEqual({ state: "outdated", version: "<b>9</b>" });
+    expect(extensionPresence(MIN_EXTENSION_VERSION)).toEqual({
+      state: "current",
+      version: MIN_EXTENSION_VERSION,
+    });
+    expect(versionAtLeast(manifest.version, MIN_EXTENSION_VERSION)).toBe(true);
+  });
+
+  it("offers an agency only when a current copy says it checks it", () => {
+    const hello = parseExtensionHello({
+      ok: true,
+      version: manifest.version,
+      agencies: ["ssi", "padi"],
+      elearning: ["padi"],
+    });
+    expect(extensionChecks(hello, "ssi")).toBe(true);
+    expect(extensionChecks(hello, "naui")).toBe(false);
+    expect(extensionChecks(hello && { ...hello, version: "1.4.0" }, "ssi")).toBe(false);
+    expect(extensionChecks(null, "ssi")).toBe(false);
+    expect(parseExtensionHello({ ok: true, version: "1.5.0", agencies: ["<script>"] })).toBeNull();
+    expect(parseExtensionHello({ ok: true, version: "x", agencies: [], elearning: [] })).toBeNull();
+  });
+});
+
+describe("what a failed check carries back", () => {
+  const shape = {
+    path: "/divechek",
+    title: "",
+    headings: [],
+    boxes: [],
+    buttons: ["search"],
+    forms: 1,
+    frames: 0,
+    password: false,
+    captcha: true,
+  };
+
+  it("keeps a reason it knows and a shape that parses, and drops anything else", () => {
+    expect(extensionFailure({ reason: "captcha", pageShape: shape })).toEqual({
+      ok: false,
+      reason: "captcha",
+      pageShape: shape,
+    });
+    expect(
+      extensionFailure({ reason: "page_changed", pageShape: { ...shape, title: "Ada" } }),
+    ).toEqual({ ok: false, reason: "page_changed" });
+    expect(extensionFailure({ reason: "Ada Lovelace", pageText: "Ada" })).toEqual({
+      ok: false,
+      reason: "fill_failed",
+    });
+  });
+
+  it("reads a dry run as passed only when every box was found, typed and sent", () => {
+    const run = (fields: Record<string, unknown>) =>
+      parseExtensionDryRun({ ok: true, filled: true, typed: true, submitted: true, ...fields });
+    expect(dryRunPassed(run({}))).toBe(true);
+    expect(dryRunPassed(run({ typed: false }))).toBe(false);
+    expect(dryRunPassed(run({ submitted: "yes" }))).toBe(false);
+    expect(dryRunPassed(parseExtensionDryRun({ ok: false, reason: "timeout" }))).toBe(false);
+    expect(run({ missing: ["name", "<b>", 3] })).toMatchObject({ missing: ["name"] });
+    expect(parsePadiSession({ ok: true, padi: "signed_in" })).toBe("signed_in");
+    expect(parsePadiSession({ ok: true, padi: "Ada" })).toBeNull();
   });
 });

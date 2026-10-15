@@ -24,6 +24,9 @@ vi.mock("@/components/useCertCheckExtension", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/components/useCertCheckExtension")>()),
   requestAgencyPage: vi.fn(),
 }));
+vi.mock("@/app/actions/agency-check-report", () => ({
+  reportAgencyCheckPageAction: vi.fn(async () => {}),
+}));
 const routerRefresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: routerRefresh }) }));
 const { requestAgencyPage } = await import("@/components/useCertCheckExtension");
@@ -56,7 +59,7 @@ afterEach(() => {
 });
 
 function withExtension() {
-  document.documentElement.setAttribute("data-diveday-cert-check", "1.1.0");
+  document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
 }
 
 /** A departure of these cards, one row per diver, under one host. */

@@ -61,6 +61,25 @@
   a signed-out **DiveChek check** stops it at once. The staffer can stop it. A re-run skips the cards
   the page already settled. Never a bulk confirm: nothing is certified that its agency's page did
   not show.
+- **Page-shape report** — what an **Agency check** that could not finish sends back instead of the
+  page's text (ADR 20261008-cert-check-extension): the page's structure only, in a form's own words.
+  The path (never its query string), the title, the top headings, each box's tag, type and label
+  words, each button's words, counts, and whether a password box or a captcha is there. Every word
+  outside a fixed vocabulary of form words becomes "_", and the diver's own names always do, so no
+  name, date or number on the page is in it. The server checks it again, logs it as one line
+  (`agency_check.page_shape`) and never shows it. It travels with two fixed reasons the staffer
+  reads beside the agency's link: **captcha** ("SSI is asking if you're human. Check on its page."),
+  where nothing is typed, and **page changed** ("SSI's page has changed, and DiveDay has been
+  told."), a lookup page with no box or button where the extension expects one.
+- **Minimum extension version** — the oldest copy of the extension the app talks to
+  (`MIN_EXTENSION_VERSION`). An older copy is treated as absent: the agency's link, never its
+  button, and Settings says "Update the extension". The extension also answers **hello** with its
+  version and the agencies it checks.
+- **Try the checks** — Settings' page (owners and managers) that runs the extension in this browser
+  against nothing real: whether it is here and current, a **dry run** of each public agency's lookup
+  on a sample page the extension carries, filled with a made-up diver by the real filler and never
+  sent, and whether an open PADI Pros' Site tab is signed in, read without a search. It ends in a
+  copyable session report of versions, outcomes and **Page-shape reports**, with no person in it.
 - **DiveChek check** — the **Agency check** for a PADI card, on PADI's DiveChek in the staffer's own
   browser, signed in to the PADI Pros' Site (H-121); the "(member sign-in)" link opens the same
   site. Searched by name and birth date, so a diver with no birth date on file keeps the link.

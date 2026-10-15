@@ -25,7 +25,7 @@ const ADDED = "Added.";
 async function installFakeExtension(page: Page) {
   await page.addInitScript(() => {
     const announce = () => {
-      document.documentElement.setAttribute("data-diveday-cert-check", "1.2.0");
+      document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
       window.dispatchEvent(new Event("diveday-cert-check-ready"));
     };
     if (document.readyState === "loading") {

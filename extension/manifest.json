@@ -2,9 +2,14 @@
   "manifest_version": 3,
   "name": "DiveDay certification check",
   "short_name": "DiveDay check",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Checks a diver's certification with their agency, PADI DiveChek included, and a course student's PADI eLearning, from DiveDay.",
   "minimum_chrome_version": "116",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "background": {
     "service_worker": "background.js"
   },

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { Field, FieldActions, FieldGrid, textareaClassFor } from "@/components/ui/form";
@@ -56,24 +57,35 @@ export function BookingsGroup({
           heading={t("settings.main.certCheck.heading")}
           value={
             <CertCheckExtensionStatus
-              added={t("settings.main.certCheck.added")}
+              added={t.raw("settings.main.certCheck.added")}
               notAdded={t("settings.main.certCheck.notAdded")}
+              outdated={t.raw("settings.main.certCheck.outdated")}
             />
           }
           description={t("settings.main.certCheck.description")}
           sectionId="certCheck"
           activeSection={activeSection}
         >
-          {EXTENSION_STORE_URL ? (
-            <a
-              href={EXTENSION_STORE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${buttonClass({ variant: "secondary" })} mt-4`}
+          <div className="mt-4 flex flex-wrap gap-3">
+            {EXTENSION_STORE_URL ? (
+              <a
+                href={EXTENSION_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("settings.main.certCheck.install")}
+              </a>
+            ) : null}
+            {/* The extension's own steps, sample pages only (no agency is
+                looked up), for a staffer to run alone and send back. */}
+            <Link
+              href={`/shop/${shopSlug}/settings/cert-checks`}
+              className={buttonClass({ variant: "secondary" })}
             >
-              {t("settings.main.certCheck.install")}
-            </a>
-          ) : null}
+              {t("settings.main.certCheck.try")}
+            </Link>
+          </div>
         </SettingsRow>
 
         {/* PADI's checks (H-121): the shop's own opt-in, under its own PADI

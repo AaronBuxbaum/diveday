@@ -8,6 +8,7 @@ import {
   agencyCheckMatchedText,
   agencyCheckOutcome,
   agencyCheckOutcomeText,
+  agencyCheckSendsToAgency,
 } from "./agency-check-outcome";
 
 const COPY = {
@@ -23,6 +24,8 @@ const COPY = {
   noRecord: "noRecord",
   severalRecords: "severalRecords",
   unreadable: "unreadable",
+  captcha: "captcha",
+  pageChanged: "pageChanged",
   notFoundOnPage: "notFoundOnPage {name}",
   noAnswer: "noAnswer",
   signedOut: "signedOut",
@@ -60,6 +63,23 @@ describe("agencyCheckOutcome", () => {
    * written, so the staffer is told to reload, never that the agency's page
    * could not be read.
    */
+  /**
+   * A captcha and a changed page each have their own sentence and send the
+   * staffer to the agency's own page, and to a "Check all" they are a page it
+   * could not read: two in a row stop it.
+   */
+  it("says a captcha and a changed page in their own words, with the agency's link", () => {
+    for (const reason of ["captcha", "page_changed"] as const) {
+      expect(agencyCheckFailure(reason)).toBe(reason);
+      expect(agencyCheckOutcome(null, reason)).toBe("unreadable");
+      expect(agencyCheckSendsToAgency(null, reason)).toBe(true);
+    }
+    expect(agencyCheckOutcomeText(null, "captcha", COPY, "Lena Ortiz")).toBe("captcha");
+    expect(agencyCheckOutcomeText(null, "page_changed", COPY, "Lena Ortiz")).toBe("pageChanged");
+    expect(agencyCheckSendsToAgency(null, "page")).toBe(false);
+    expect(agencyCheckSendsToAgency(null, "signed_out")).toBe(false);
+  });
+
   it("tells the staffer to reload when DiveDay itself did not answer", () => {
     expect(agencyCheckOutcome(null, "transport")).toBe("transport");
     expect(agencyCheckOutcomeText(null, "transport", COPY, "Lena Ortiz")).toBe("noAnswer");

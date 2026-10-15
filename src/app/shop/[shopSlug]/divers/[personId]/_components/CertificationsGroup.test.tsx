@@ -497,7 +497,7 @@ describe("the agency check, with the extension", () => {
   }
 
   function withExtension(run: () => void) {
-    document.documentElement.setAttribute("data-diveday-cert-check", "1.0.0");
+    document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
     try {
       run();
     } finally {

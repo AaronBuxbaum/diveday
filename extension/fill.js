@@ -435,24 +435,73 @@ function readAgencyPage() {
 }
 
 /**
- * Only the part of an eLearning page about the email searched for: the lines
- * near each line naming it, or, when none does, the page's first lines (enough
- * to say "No results" or "Sign in"). Read with the staffer's PADI sign-in, the
- * rest of the page may be about other students, and it is not DiveDay's to
- * take.
+ * Only the part of an eLearning page about the student searched for, read
+ * with the staffer's PADI sign-in, whose other rows are other students' and
+ * not DiveDay's to take. Each line carrying the student's email, the line
+ * naming them just above it (first and last name, accents and case aside,
+ * within the `AFTER` lines the server reads as one record), and the lines
+ * under it up to `AFTER`: never a line carrying any other address, never past
+ * one, and never the line just above one, which names that address's student.
+ * When no line carries the email, only the lines saying why (no result, a
+ * count, a sign-in), at most `WHY_LINES`, none with an address on it.
  * @param {string} text
  * @param {string} email
+ * @param {string} firstName
+ * @param {string} lastName
  */
-function excerptAround(text, email) {
-  const AROUND = 8;
-  const lines = text.split(/\r?\n/);
+function excerptAround(text, email, firstName, lastName) {
+  const AFTER = 6;
+  const WHY_LINES = 10;
+  const ADDRESS = /[^\s@]+@[^\s@]+\.[^\s@]+/g;
+  const COUNT = /(^| )\d+ (students?|results?|records?)( found)?( |$)/;
+  const WHY =
+    /(^| )(no results?|no records?|no matching|no students?|not found|could not find|unable to find|0 results|sign ?in|log ?in|password|session (has )?expired)( |$)/;
+  const fold = (value) =>
+    ` ${String(value || "")
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .trim()} `;
   const wanted = email.trim().toLowerCase();
+  const lines = text.split(/\r?\n/);
+  const others = lines.map((line) =>
+    (line.match(ADDRESS) || []).some((address) => address.toLowerCase() !== wanted),
+  );
+  const carries = lines.map((line) =>
+    (line.match(ADDRESS) || []).some((address) => address.toLowerCase() === wanted),
+  );
+  const first = fold(firstName);
+  const last = fold(lastName);
+  const names = (index) => {
+    const line = fold(lines[index].replace(ADDRESS, " "));
+    return first.trim() !== "" && last.trim() !== "" && line.includes(first) && line.includes(last);
+  };
   const keep = new Set();
-  lines.forEach((line, index) => {
-    if (!line.toLowerCase().includes(wanted)) return;
-    for (let at = Math.max(0, index - AROUND); at <= index + AROUND; at += 1) keep.add(at);
+  lines.forEach((_, index) => {
+    if (!carries[index] || others[index]) return;
+    keep.add(index);
+    // The student's name line above, when the address sits under it.
+    for (let at = index - 1; at >= Math.max(0, index - AFTER); at -= 1) {
+      if (others[at] || carries[at]) break;
+      if (names(at)) {
+        for (let line = at; line < index; line += 1) keep.add(line);
+        break;
+      }
+    }
+    for (let at = index + 1; at <= Math.min(lines.length - 1, index + AFTER); at += 1) {
+      if (others[at] || carries[at]) break;
+      // The line just above another address names that address's student.
+      if (at + 1 < lines.length && others[at + 1]) break;
+      keep.add(at);
+    }
   });
-  if (keep.size === 0) return lines.slice(0, 40).join("\n");
+  if (keep.size === 0) {
+    return lines
+      .filter((line, index) => !others[index] && (WHY.test(fold(line)) || COUNT.test(fold(line))))
+      .slice(0, WHY_LINES)
+      .join("\n");
+  }
   return lines.filter((_, index) => keep.has(index)).join("\n");
 }
 
@@ -487,6 +536,20 @@ function excerptAroundName(text, firstName, lastName) {
   const lines = text.split(/\r?\n/);
   const folded = lines.map(fold);
   const names = (line) => line.includes(first) && line.includes(last);
+  // A name split over two adjacent labelled lines ("First name: Lena" over
+  // "Last name: Ortiz", either order, Spanish labels too), each line the
+  // label and exactly that one name: the judge reads the pair as the name
+  // line (src/lib/agency-check.ts), so the pair, and the record under it, is
+  // kept like one.
+  const FIRST_LABEL = "(first name|given name|forename|nombre)";
+  const LAST_LABEL = "(last name|family name|surname|apellidos?)";
+  const labelled = (label, name) => new RegExp(`^ ${label}${name.replace(/ +$/, "")} $`);
+  const firstLine = labelled(FIRST_LABEL, first);
+  const lastLine = labelled(LAST_LABEL, last);
+  const splitAt = (index) =>
+    index + 1 < folded.length &&
+    ((firstLine.test(folded[index]) && lastLine.test(folded[index + 1])) ||
+      (lastLine.test(folded[index]) && firstLine.test(folded[index + 1])));
   const kept = new Map();
   folded.forEach((line, index) => {
     // The count's own words, never the rest of a long line around them.
@@ -494,12 +557,14 @@ function excerptAroundName(text, firstName, lastName) {
     if (count && !kept.has(index)) {
       kept.set(index, line.length < 60 ? lines[index] : count[0].trim());
     }
-    if (!names(line)) return;
-    for (let at = index; at <= Math.min(lines.length - 1, index + AFTER); at += 1) {
+    const split = splitAt(index);
+    if (!names(line) && !split) return;
+    const end = index + AFTER + (split ? 1 : 0);
+    for (let at = index; at <= Math.min(lines.length - 1, end); at += 1) {
       kept.set(at, lines[at]);
     }
   });
-  if (!folded.some(names)) {
+  if (!folded.some((line, index) => names(line) || splitAt(index))) {
     return lines
       .filter((_, index) => WHY.test(folded[index]) || COUNT.test(folded[index]))
       .slice(0, WHY_LINES)

@@ -55,20 +55,20 @@ describe("ElearningCheck", () => {
   });
 
   it("offers the check when the extension is here and the materials are not done", () => {
-    document.documentElement.setAttribute("data-diveday-cert-check", "1.1.0");
+    document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
     renderCheck();
     expect(screen.getByRole("button", { name: "Check eLearning with PADI" })).toBeInTheDocument();
   });
 
   it("offers nothing once the materials are done, or for a seat it cannot search", () => {
-    document.documentElement.setAttribute("data-diveday-cert-check", "1.1.0");
+    document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
     renderCheck({ materialsDone: true });
     renderCheck({ query: null });
     expect(screen.queryByRole("button", { name: "Check eLearning with PADI" })).toBeNull();
   });
 
   it("asks the extension, then hands the page it read to the server", async () => {
-    document.documentElement.setAttribute("data-diveday-cert-check", "1.1.0");
+    document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
     vi.mocked(requestElearningPage).mockResolvedValue({ ok: true, pageText: "No results found" });
     const action = renderCheck();
     await act(async () => {
@@ -82,7 +82,7 @@ describe("ElearningCheck", () => {
   });
 
   it("says it could not read PADI when the extension comes back empty-handed", async () => {
-    document.documentElement.setAttribute("data-diveday-cert-check", "1.1.0");
+    document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
     vi.mocked(requestElearningPage).mockResolvedValue({ ok: false, reason: "fill_failed" });
     const action = renderCheck();
     await act(async () => {
@@ -94,7 +94,7 @@ describe("ElearningCheck", () => {
 
   /** Domain review R4 (adversarial) nit: signed out is said as such, as DiveChek's check says it. */
   it("tells a staffer signed out of PADI to sign in first, and sends the server nothing", async () => {
-    document.documentElement.setAttribute("data-diveday-cert-check", "1.1.0");
+    document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
     vi.mocked(requestElearningPage).mockResolvedValue({ ok: false, reason: "signed_out" });
     const action = renderCheck();
     await act(async () => {
@@ -114,7 +114,7 @@ describe("ElearningCheck", () => {
     renderCheck({ query: null, offNote: off });
     expect(screen.queryByText(off)).toBeNull();
     cleanup();
-    document.documentElement.setAttribute("data-diveday-cert-check", "1.1.0");
+    document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
     renderCheck({ query: null, offNote: off });
     expect(screen.getByText(off)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Check eLearning with PADI" })).toBeNull();

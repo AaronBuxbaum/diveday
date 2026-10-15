@@ -22,7 +22,7 @@ const DEPARTURE = /Two-Tank Reef — French Reef/;
 async function installFakeExtension(page: Page, answer: "match" | "captcha") {
   await page.addInitScript((mode) => {
     const announce = () => {
-      document.documentElement.setAttribute("data-diveday-cert-check", "1.1.0");
+      document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
       window.dispatchEvent(new Event("diveday-cert-check-ready"));
     };
     if (document.readyState === "loading") {

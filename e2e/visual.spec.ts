@@ -5435,7 +5435,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await page.addInitScript(() => {
           const announce = () => {
-            document.documentElement.setAttribute("data-diveday-cert-check", "1.2.0");
+            document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
             window.dispatchEvent(new Event("diveday-cert-check-ready"));
           };
           if (document.readyState === "loading") {
@@ -5494,7 +5494,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await page.addInitScript(() => {
           const announce = () => {
-            document.documentElement.setAttribute("data-diveday-cert-check", "1.1.0");
+            document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
             window.dispatchEvent(new Event("diveday-cert-check-ready"));
           };
           if (document.readyState === "loading") {
@@ -6756,6 +6756,70 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Emergency reference" }).waitFor();
         await page.getByRole("button", { name: "Save emergency reference" }).waitFor();
         await capture(page, "settings-emergency", scheme);
+      });
+
+      /**
+       * **Try the checks** (H-105): Settings' run of the cert-check
+       * extension against its own sample pages, after a run. The extension is
+       * stood in for at the page's one seam, as the agency-check captures do:
+       * it says hello as 1.5.0, passes every sample but NAUI's, and finds a
+       * signed-in PADI tab. The report's time is the frozen clock's, and its
+       * browser line is pinned here, so a Chromium update moves no pixel.
+       */
+      test(`the cert-check extension's try page renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.addInitScript(() => {
+          Object.defineProperty(navigator, "userAgent", { get: () => "Chromium (visual capture)" });
+          const announce = () => {
+            document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
+            window.dispatchEvent(new Event("diveday-cert-check-ready"));
+          };
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", announce);
+          } else {
+            announce();
+          }
+          window.addEventListener("message", (event) => {
+            const data = event.data;
+            if (data?.source !== "diveday-page") return;
+            const answers: Record<string, object> = {
+              hello: {
+                ok: true,
+                version: "1.5.0",
+                agencies: ["ssi", "naui", "sdi", "gue", "cmas", "padi"],
+                elearning: ["padi"],
+              },
+              "dry-run": {
+                ok: true,
+                filled: data.query?.agency !== "naui",
+                typed: data.query?.agency !== "naui",
+                submitted: data.query?.agency !== "naui",
+                missing: data.query?.agency === "naui" ? ["birthDate"] : [],
+              },
+              "padi-session": { ok: true, padi: "signed_in" },
+            };
+            const answer = answers[data.type];
+            if (!answer) return;
+            window.postMessage(
+              {
+                source: "diveday-cert-check",
+                type: "agency-check-result",
+                requestId: data.requestId,
+                ...answer,
+              },
+              window.location.origin,
+            );
+          });
+        });
+        await page.goto("/shop/blue-mantis/settings/cert-checks");
+        await page.getByRole("heading", { level: 1, name: "Try the checks" }).waitFor();
+        await page.getByText("Added to this browser (1.5.0)").waitFor();
+        await page.getByRole("button", { name: "Run the checks" }).click();
+        await page.getByText("Signed in", { exact: true }).waitFor();
+        await page.getByRole("button", { name: "Copy report" }).waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "settings-cert-checks", scheme);
       });
 
       /**

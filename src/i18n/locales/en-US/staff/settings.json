@@ -364,8 +364,10 @@
     "certCheck": {
       "heading": "Certification checks",
       "description": "With the DiveDay browser extension, “Check with SSI” on a diver’s record looks the diver up on the agency’s page and marks the certification certified when the agency shows it. It checks SSI, NAUI, SDI, GUE and CMAS, and PADI once “PADI checks (beta)” in Bookings & waivers is on, in Chrome or Edge on a computer.",
-      "added": "Added to this browser",
+      "added": "Added to this browser ({version})",
       "notAdded": "Not added",
+      "outdated": "Update the extension: this browser has {version}, DiveDay needs {minimum}.",
+      "try": "Try the checks",
       "install": "Add to Chrome"
     },
     "integrations": {
@@ -1071,5 +1073,23 @@
     "partnerLinkField": "Referral link",
     "showRequired": "Pick the departure this card is for.",
     "fromFareharbor": "Switching from FareHarbor? <link>See which embed replaces each of its widgets</link>."
+  },
+  "certChecks": {
+    "title": "Try the checks",
+    "description": "Sample pages in this browser only: no agency is searched, and no diver’s details leave it.",
+    "run": "Run the checks",
+    "running": "Running…",
+    "extension": "Extension",
+    "samples": "Sample lookups",
+    "padi": "PADI Pros’ Site",
+    "report": "Session report",
+    "passed": "Passed",
+    "failed": "Failed",
+    "notListed": "Not in this copy",
+    "signedIn": "Signed in",
+    "signedOut": "Signed out",
+    "noTab": "No PADI tab open",
+    "noAnswer": "No answer",
+    "copy": "Copy report"
   }
 }

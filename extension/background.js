@@ -3,20 +3,26 @@
 // answer to settle, hand the page's text back, close the tab. It decides
 // nothing; the DiveDay server reads the text (src/lib/agency-check.ts for a
 // card, src/lib/elearning-check.ts for a course student's eLearning).
-importScripts("protocol.js", "agencies.js", "fill.js");
+importScripts("protocol.js", "agencies.js", "fill.js", "shape.js");
 
 const {
+  VERSION,
   AGENCIES,
   ELEARNING,
   PAGE_TEXT_MAX_LENGTH,
   REQUEST_TYPE,
   ELEARNING_REQUEST_TYPE,
+  HELLO_REQUEST_TYPE,
+  DRY_RUN_REQUEST_TYPE,
+  PADI_SESSION_REQUEST_TYPE,
+  PAGE_SHAPE_WORDS,
   SIGN_IN_PATH: SIGN_IN_PATH_SOURCE,
 } = globalThis.DiveDayCertCheck;
 // fill.js's functions (fillAgencyForm, readAgencyPage, pageAsksToSignIn,
-// excerptAround, excerptAroundName) are this worker's own globals: importScripts ran fill.js
-// in this one scope. Never name them again here: a top-level `const` of the
-// same name makes that import throw, and the worker never listens.
+// excerptAround, excerptAroundName) and shape.js's describePageShape are this
+// worker's own globals: importScripts ran them in this one scope. Never name
+// them again here: a top-level `const` of the same name makes that import
+// throw, and the worker never listens.
 
 /** An address that signs in, signs up or manages an account, never a lookup (protocol.js). */
 const SIGN_IN_PATH = new RegExp(SIGN_IN_PATH_SOURCE, "i");
@@ -94,10 +100,38 @@ async function signedOutAfterSearch(tabId, spec) {
   }
 }
 
+/**
+ * The shape of the page in the tab (shape.js), or null when it cannot be read
+ * or is not the lookup's own site: a lookup sent elsewhere is never read, not
+ * even its shape. Only the shape, never a word outside a form's vocabulary,
+ * and never the diver's own names.
+ */
+async function shapeOf(tabId, spec, query) {
+  if (await leftSite(tabId, spec)) return null;
+  try {
+    const shape = await run(tabId, describePageShape, [
+      PAGE_SHAPE_WORDS,
+      [query.firstName, query.lastName],
+    ]);
+    return shape && typeof shape === "object" ? shape : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A check that ends short of the page's text: its fixed reason, and the page's shape when there is one. */
+function failed(reason, pageShape) {
+  return pageShape ? { ok: false, reason, pageShape } : { ok: false, reason };
+}
+
 /** What a settled page hands back, once it is known to be the lookup's own answer. */
-async function settledReply(tabId, spec, text) {
+async function settledReply(tabId, spec, text, query) {
   if (await signedOutAfterSearch(tabId, spec)) return { ok: false, reason: "signed_out" };
   if (await leftSite(tabId, spec)) return { ok: false, reason: "fill_failed" };
+  // A page asking whether the staffer is human answers nothing about the
+  // diver: none of its text comes back.
+  const shape = await shapeOf(tabId, spec, query);
+  if (shape?.captcha) return failed("captcha", shape);
   const at = await tabAddress(tabId);
   return {
     ok: true,
@@ -156,6 +190,9 @@ async function check(query, pages) {
     if (!(await tabLoaded(tab.id, deadline))) return { ok: false, reason: "timeout" };
     if (await landedOnSignIn(tab.id, spec)) return { ok: false, reason: "signed_out" };
     if (await leftSite(tab.id, spec)) return { ok: false, reason: "fill_failed" };
+    // A captcha on the form is the staffer's to answer: nothing is typed.
+    const opened = await shapeOf(tab.id, spec, query);
+    if (opened?.captcha) return failed("captcha", opened);
     // A page that draws its form after load gets a moment to do it.
     let filled;
     let before = "";
@@ -168,9 +205,15 @@ async function check(query, pages) {
       await sleep(POLL_MS);
     }
     if (!filled?.ok) {
-      return (await landedOnSignIn(tab.id, spec))
-        ? { ok: false, reason: "signed_out" }
-        : { ok: false, reason: "fill_failed" };
+      if (await landedOnSignIn(tab.id, spec)) return { ok: false, reason: "signed_out" };
+      // On the lookup's own site, with no box or button where the lookup
+      // expects one: the agency has changed its page, or put a captcha on it.
+      const shape = await shapeOf(tab.id, spec, query);
+      if (shape?.captcha) return failed("captcha", shape);
+      if (shape && Array.isArray(filled?.missing) && filled.missing.length > 0) {
+        return failed("page_changed", shape);
+      }
+      return failed("fill_failed", shape);
     }
 
     // The answer has settled when three reads a second apart agree and
@@ -189,13 +232,16 @@ async function check(query, pages) {
       if (typeof text !== "string") continue;
       same = text === previous ? same + 1 : 0;
       previous = text;
-      if (same >= 2 && text !== before) return await settledReply(tab.id, spec, text);
+      if (same >= 2 && text !== before) return await settledReply(tab.id, spec, text, query);
     }
-    if (previous && previous !== before) return await settledReply(tab.id, spec, previous);
+    if (previous && previous !== before) {
+      return await settledReply(tab.id, spec, previous, query);
+    }
     // The search sent the tab to a sign-in it may not read: a lapsed session.
-    return (await landedOnSignIn(tab.id, spec))
-      ? { ok: false, reason: "signed_out" }
-      : { ok: false, reason: "timeout" };
+    if (await landedOnSignIn(tab.id, spec)) return { ok: false, reason: "signed_out" };
+    const shape = await shapeOf(tab.id, spec, query);
+    if (shape?.captcha) return failed("captcha", shape);
+    return failed("timeout", shape);
   } catch {
     // A page this extension may not script: on a signed-in lookup, most often
     // the sign-in page of another host it was sent to.
@@ -205,6 +251,101 @@ async function check(query, pages) {
   } finally {
     chrome.tabs.remove(tab.id).catch(() => {});
   }
+}
+
+/**
+ * **"Try the checks"**: fill one agency's sample page, which this extension
+ * carries (`sample.html`), with a made-up diver, and say whether every box
+ * was found, typed into and sent. No agency is opened and nothing leaves the
+ * browser. A lookup behind a member sign-in (PADI) has no dry run: its filler
+ * types only on the agency's own page.
+ */
+const DRY_RUN_DEADLINE_MS = 10_000;
+/** A dry run waiting for its sample page, by the tab it was opened in. */
+const dryRunsWaiting = new Map();
+/** A sample page's answer that came before its tab was known. */
+const dryRunsAnswered = new Map();
+
+function answerDryRun(tabId, result) {
+  const waiting = dryRunsWaiting.get(tabId);
+  if (waiting) waiting(result);
+  else dryRunsAnswered.set(tabId, result);
+}
+
+async function dryRun(agency) {
+  const spec = Object.hasOwn(AGENCIES, agency) ? AGENCIES[agency] : null;
+  if (!spec || spec.signIn) return { ok: false, reason: "unsupported" };
+  let tab;
+  try {
+    tab = await chrome.tabs.create({
+      url: chrome.runtime.getURL(`sample.html#${agency}`),
+      active: false,
+    });
+  } catch {
+    return { ok: false, reason: "tab_failed" };
+  }
+  try {
+    return await new Promise((resolve) => {
+      const timer = setTimeout(() => finish({ ok: false, reason: "timeout" }), DRY_RUN_DEADLINE_MS);
+      function finish(result) {
+        clearTimeout(timer);
+        dryRunsWaiting.delete(tab.id);
+        dryRunsAnswered.delete(tab.id);
+        resolve(result);
+      }
+      if (dryRunsAnswered.has(tab.id)) finish(dryRunsAnswered.get(tab.id));
+      else dryRunsWaiting.set(tab.id, finish);
+    });
+  } finally {
+    chrome.tabs.remove(tab.id).catch(() => {});
+  }
+}
+
+/** What a sample page says it did: four fixed answers and its shape, nothing else. */
+function dryRunResult(result) {
+  if (!result || typeof result !== "object") return { ok: false, reason: "fill_failed" };
+  const missing = Array.isArray(result.missing)
+    ? result.missing.filter((field) => typeof field === "string" && /^[a-zA-Z]{1,20}$/.test(field))
+    : [];
+  return {
+    ok: true,
+    filled: result.filled === true,
+    typed: result.typed === true,
+    submitted: result.submitted === true,
+    missing: missing.slice(0, 10),
+    ...(result.pageShape && typeof result.pageShape === "object"
+      ? { pageShape: result.pageShape }
+      : {}),
+  };
+}
+
+/**
+ * **Whether a PADI Pros' Site tab is signed in**, for "Try the checks": the
+ * open tabs on PADI's hosts, each read only for a sign-in address or a
+ * password box (`pageAsksToSignIn`). No tab is opened, nothing is typed or
+ * searched, and nothing of any page comes back but the one word.
+ */
+async function padiSession() {
+  const origins = siteOf(AGENCIES.padi);
+  let tabs = [];
+  try {
+    tabs = await chrome.tabs.query({ url: origins.map((origin) => `${origin}/*`) });
+  } catch {
+    return { ok: false, reason: "tab_failed" };
+  }
+  if (tabs.length === 0) return { ok: true, padi: "no_tab" };
+  for (const tab of tabs) {
+    try {
+      const at = new URL(tab.url);
+      if (!origins.includes(at.origin) || SIGN_IN_PATH.test(at.pathname)) continue;
+      if ((await run(tab.id, pageAsksToSignIn, [SIGN_IN_PATH_SOURCE])) === false) {
+        return { ok: true, padi: "signed_in" };
+      }
+    } catch {
+      // A tab still loading, or one this extension may not script: not signed in here.
+    }
+  }
+  return { ok: true, padi: "signed_out" };
 }
 
 function validElearningQuery(query) {
@@ -234,6 +375,17 @@ function validQuery(query) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // A sample page of this extension's own, answering the dry run it was opened for.
+  if (
+    sender.id === chrome.runtime.id &&
+    sender.tab &&
+    typeof sender.url === "string" &&
+    sender.url.startsWith(chrome.runtime.getURL("sample.html")) &&
+    message?.type === "dry-run-result"
+  ) {
+    answerDryRun(sender.tab.id, dryRunResult(message.result));
+    return false;
+  }
   // Only this extension's own content script, in the top frame of a DiveDay
   // staff page, may ask. The manifest's match pattern already says so; this
   // says it again where the work happens.
@@ -247,6 +399,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const local = from.hostname === "localhost" || from.hostname === "127.0.0.1";
   const diveDay = from.protocol === "https:" && from.hostname === "dive.day";
   if ((!diveDay && !local) || !from.pathname.startsWith("/shop/")) return false;
+  if (message?.type === HELLO_REQUEST_TYPE) {
+    sendResponse({
+      ok: true,
+      version: VERSION,
+      agencies: Object.keys(AGENCIES),
+      elearning: Object.keys(ELEARNING),
+    });
+    return false;
+  }
+  if (message?.type === DRY_RUN_REQUEST_TYPE) {
+    const agency = typeof message.query?.agency === "string" ? message.query.agency : "";
+    dryRun(agency).then(sendResponse);
+    return true;
+  }
+  if (message?.type === PADI_SESSION_REQUEST_TYPE) {
+    padiSession().then(sendResponse);
+    return true;
+  }
   if (message?.type === ELEARNING_REQUEST_TYPE && validElearningQuery(message.query)) {
     // Only what the search needs goes into the agency's page.
     const query = {
@@ -257,7 +427,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     };
     check(query, ELEARNING)
       .then((reply) =>
-        reply.ok ? { ok: true, pageText: excerptAround(reply.pageText, query.email) } : reply,
+        reply.ok
+          ? {
+              ok: true,
+              pageText: excerptAround(reply.pageText, query.email, query.firstName, query.lastName),
+            }
+          : reply,
       )
       .then(sendResponse);
     return true;

@@ -8,18 +8,43 @@ import type { AgencyCheckCopy } from "./agency-check-copy";
  * Why a check came back with no verdict, or null when it has one:
  * - `page`: the extension did not answer, or could not fill the agency's
  *   form. The staffer is told the agency's page could not be read.
+ * - `captcha`: the agency's page asks whether the staffer is human. They are
+ *   told to open it and check there.
+ * - `page_changed`: the agency's lookup page has no box or button where the
+ *   lookup expects one. They are told it changed and DiveDay was told.
  * - `signed_out`: a lookup behind the shop's own sign-in (PADI) met a sign-in
  *   page. The staffer is told to sign in first.
  * - `transport`: DiveDay's own server did not answer. The card may or may not
  *   have been written, so the staffer is told to reload and see.
  *
- * For the first two nothing was sent to the server and nothing was written.
+ * For all but the last nothing was judged and nothing was written; all but
+ * `signed_out` and `transport` send the page's shape to DiveDay's log
+ * (`reportFailedCheck`).
  */
-export type AgencyCheckFailure = "page" | "signed_out" | "transport" | null;
+export type AgencyCheckFailure =
+  | "page"
+  | "captcha"
+  | "page_changed"
+  | "signed_out"
+  | "transport"
+  | null;
 
 /** The extension's failure reason, as this check reads it. */
 export function agencyCheckFailure(reason: ExtensionFailureReason): AgencyCheckFailure {
-  return reason === "signed_out" ? "signed_out" : "page";
+  if (reason === "signed_out" || reason === "captcha" || reason === "page_changed") return reason;
+  return "page";
+}
+
+/**
+ * Whether the staffer's next step is the agency's own page: it answered short
+ * of a match, or asked whether they are human, or has changed. Its link takes
+ * the button's place.
+ */
+export function agencyCheckSendsToAgency(
+  result: AgencyCheckResult,
+  failure: AgencyCheckFailure,
+): boolean {
+  return failure === "captcha" || failure === "page_changed" || agencyCheckAnswered(result);
 }
 
 /**
@@ -30,7 +55,11 @@ export function agencyCheckOutcome(
   result: AgencyCheckResult,
   failure: AgencyCheckFailure,
 ): AgencyCheckOutcome | null {
-  if (failure === "page") return "unreadable";
+  // A captcha or a changed page is an unreadable page to a "Check all": two
+  // in a row stop it.
+  if (failure === "page" || failure === "captcha" || failure === "page_changed") {
+    return "unreadable";
+  }
   if (failure) return failure;
   if (!result) return null;
   if (!result.ok) return "refused";
@@ -61,6 +90,8 @@ export function agencyCheckOutcomeText(
   name: string,
 ): string | null {
   if (failure === "signed_out") return copy.signedOut;
+  if (failure === "captcha") return copy.captcha;
+  if (failure === "page_changed") return copy.pageChanged;
   if (failure === "transport") return copy.noAnswer;
   if (failure) return copy.unreadable;
   if (!result) return null;
