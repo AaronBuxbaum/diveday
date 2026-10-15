@@ -59,8 +59,8 @@ export async function beginTotpEnrollment(db: DbExecutor, userAccountId: string)
 
 /**
  * Turns two-factor on once a code proves the secret was scanned. The code
- * spends its time step like any other accepted code, so the one typed here
- * cannot be replayed at sign-in or step-up inside its window.
+ * spends its time step, as sign-in does, so the one typed here cannot be
+ * replayed at sign-in inside its window.
  */
 export async function enableTotp(
   db: DbExecutor,
@@ -87,16 +87,18 @@ export async function enableTotp(
 }
 
 /**
- * Verifies a second factor, and spends it. Sign-in, step-up and turning
- * two-factor off each grant something, so each consumes the TOTP time step: a
- * code seen over a shoulder, or already used to sign in, does not pass again
- * inside its window. The next code arrives within one step. A recovery code is
- * removed atomically from the stored hash list.
+ * Verifies a second factor. Sign-in spends the TOTP time step, so a replayed
+ * code cannot open another session. Step-up and turning two-factor off pass
+ * `consumeTotpStep: false`: they check the still-current window without
+ * spending it, so a staffer is not locked out of the next action right after
+ * signing in (Aaron's call, 2026-10-15). A recovery code is always removed
+ * atomically from the stored hash list.
  */
 export async function verifyAccountSecondFactor(
   db: DbExecutor,
   userAccountId: string,
   code: string,
+  options: { consumeTotpStep?: boolean } = {},
 ): Promise<boolean> {
   const security = await getAccountSecurity(db, userAccountId);
   if (!security?.totpEnabledAt) return true;
@@ -107,6 +109,7 @@ export async function verifyAccountSecondFactor(
   // current one -- consuming the current step would leave the real one live.
   const step = opened ? matchTotpStep(opened.plaintext, code, now) : null;
   if (step !== null) {
+    if (options.consumeTotpStep === false) return true;
     const [row] = await db
       .update(accountSecurity)
       .set({ lastTotpStep: step, updatedAt: nowDate() })

@@ -111,8 +111,8 @@ describe("account-security TOTP", () => {
     return { db, account, secret: started.secret };
   }
 
-  /** The code typed to turn two-factor on is spent like any other. */
-  it("refuses the enrolment code at sign-in or step-up inside its window", async () => {
+  /** The code typed to turn two-factor on is spent, as a sign-in code is. */
+  it("refuses the enrolment code at sign-in inside its window", async () => {
     const { db, account } = await seededAccount();
     const started = await beginTotpEnrollment(db, account.id);
     if (!started) throw new Error("enrollment needs a sealing key");
