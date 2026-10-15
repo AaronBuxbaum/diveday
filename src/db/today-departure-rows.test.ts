@@ -301,7 +301,12 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     const t = staffTranslator("en-US");
     const [today, needs] = await Promise.all([
       getTodayWork(db, shop.id, shop.slug, shop.timezone, now),
-      getDepartureNeeds(db, shop, reef.id, { now, t, locale: "en-US", roles: ["owner"] }),
+      getDepartureNeeds(db, shop, reef.id, {
+        now,
+        t,
+        locale: "en-US",
+        session: { user: { roles: ["owner"] } },
+      }),
     ]);
     const onToday = today.actions.filter((action) => action.departure?.tripId === reef.id);
     expect(needs?.map((action) => action.id)).toEqual(onToday.map((action) => action.id));
@@ -320,7 +325,12 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     if (!far) throw new Error("demo has no departure two weeks out");
     const t = staffTranslator("en-US");
     expect(
-      await getDepartureNeeds(db, shop, far.id, { now, t, locale: "en-US", roles: ["owner"] }),
+      await getDepartureNeeds(db, shop, far.id, {
+        now,
+        t,
+        locale: "en-US",
+        session: { user: { roles: ["owner"] } },
+      }),
     ).toBeNull();
   });
 

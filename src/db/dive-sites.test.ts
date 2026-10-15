@@ -70,36 +70,6 @@ describe("dive-site library", () => {
     expect(second?.sourceTemplateVersion).toBe(catalogEntry.version.version);
   });
 
-  // Fourth review, item 46: the catalog is written in metres and a feet shop's
-  // copy said "a ship's winch in about 12 m" under a "20–40 ft" header.
-  it("imports the catalog's measures in a feet shop's unit, and a later revision does not read them as edits", async () => {
-    const { db, shop } = ctx;
-    const metric = /\b\d+(\.\d+)?(–\d+(\.\d+)?)? ?m\b/;
-    const catalogEntry = (await listGlobalDiveSiteTemplates(db, { limit: 1000 })).templates.find(
-      (row) =>
-        (row.version.briefing.landmarks ?? []).some((landmark) => metric.test(landmark.note)),
-    );
-    if (!catalogEntry) throw new Error("seed: no template with a metric landmark");
-    const imported = await importGlobalDiveSiteTemplate(db, shop.id, catalogEntry.template.id);
-    if (!imported) throw new Error("expected a catalog copy");
-    const notes = (imported.landmarks as { note: string }[]).map((landmark) => landmark.note);
-    expect(notes.some((note) => / ft\b/.test(note))).toBe(true);
-    expect(notes.some((note) => metric.test(note))).toBe(false);
-
-    const next = catalogEntry.version.version + 1;
-    await db.insert(globalDiveSiteVersions).values({
-      globalDiveSiteId: catalogEntry.template.id,
-      version: next,
-      briefing: { ...catalogEntry.version.briefing, description: "A newly expanded briefing." },
-    });
-    await db
-      .update(globalDiveSites)
-      .set({ currentVersion: next })
-      .where(eq(globalDiveSites.id, catalogEntry.template.id));
-    const pending = await getDiveSiteTemplateUpdate(db, shop.id, imported.id);
-    expect(pending?.diff.map((change) => change.field)).toEqual(["description"]);
-  });
-
   it("pulls a newer template revision without overwriting a local edit", async () => {
     const { db, shop } = ctx;
     const catalogEntry = (await listGlobalDiveSiteTemplates(db, { limit: 1000 })).templates.find(

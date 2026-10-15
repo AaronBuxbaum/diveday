@@ -26,12 +26,12 @@ import { nowDate } from "@/lib/clock";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { type FormNotice, noticeForForm, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { departureStage } from "@/lib/trip-phase";
 import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { diversTabState } from "./_arrivals/departure-record";
-import { DESK_NOTICES } from "./_arrivals/notices";
+import { deskFormNotice } from "./_arrivals/notices";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { departureConditionReads } from "./_components/departure-conditions";
 import { openSeatsDetailsRows } from "./_components/details-rows";
@@ -122,12 +122,8 @@ export default async function ManageTripPage({
   const t = staffTranslator(locale);
   const sharedReads = loadTripSharedReads(db, shop.id, tripId);
   const now = nowDate();
-  // Today's rows for this boat, for the band's "Needs you · N" (fourth review,
-  // item 36). Not asked for on Details, which shows no band.
   const needs =
-    view === "details"
-      ? null
-      : getDepartureNeeds(db, shop, tripId, { now, t, locale, roles: session.user.roles });
+    view === "details" ? null : getDepartureNeeds(db, shop, tripId, { now, t, locale, session });
   const [
     overview,
     guests,
@@ -194,12 +190,8 @@ export default async function ManageTripPage({
   // The desk's own refusals and walk-in outcomes (`_arrivals/notices.ts`) are
   // page-level: they have no form on the roster to sit beside, and a code the
   // roster's own vocabulary also speaks is the roster's.
-  const deskNoticeDefinition = noticeFromParam(notice, DESK_NOTICES);
   const tripNotice: FormNotice | undefined =
-    resolveTripNotice({ notice, count, form, gate, tripId, locale }) ??
-    (deskNoticeDefinition
-      ? { form: "page", tone: deskNoticeDefinition.tone, text: t(deskNoticeDefinition.key) }
-      : undefined);
+    resolveTripNotice({ notice, count, form, gate, tripId, locale }) ?? deskFormNotice(notice, t);
   const lifecycleStatus = noticeForForm(tripNotice, "lifecycle");
 
   const pulseFacts = tripPulseFacts({

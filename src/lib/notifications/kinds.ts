@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { certificationAgency } from "@/db/schema";
 import { DIVER_LOCALES, type DiverLocale, isDiverLocale, toDiverLocale } from "@/i18n/settings";
 import { isValidCalendarDate } from "@/lib/calendar-date";
+import { CERTIFICATION_AGENCIES } from "@/lib/certification-options";
 import { ALERTING_LEVELS, CEILING_UNITS, COST_PROVIDERS } from "@/lib/cost-guardrails";
 import { COURSE_INQUIRY_EXPERIENCE } from "@/lib/course-inquiry";
 import {
@@ -1302,7 +1302,7 @@ const courseCertifiedSchema = z.object({
   shopName: z.string().trim().min(1).max(120),
   level: z.enum(DECLARABLE_CERTIFICATION_LEVELS),
   /** The course's agency, which issues the card; absent, the message names none. */
-  agency: z.enum(certificationAgency.enumValues).optional(),
+  agency: z.enum(CERTIFICATION_AGENCIES).optional(),
   recordedAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   /** The shop's next public course on from this level; the url is built server-side. */

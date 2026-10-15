@@ -35,12 +35,10 @@ import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import type { DepthUnit } from "@/lib/depth-units";
 import { parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { joinFacts } from "@/lib/format";
 import { capturePhoto } from "@/lib/marine-life-tiles";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
-import { briefingInUnit, siteProseInUnit } from "@/lib/site-prose-units";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { SiteLibraryLedger } from "./_components/SiteLibraryLedger";
@@ -314,16 +312,11 @@ async function CatalogView({
     );
   }
 
-  const shopCoordinates =
-    shop.latitude != null && shop.longitude != null
-      ? { latitude: shop.latitude, longitude: shop.longitude }
-      : null;
-
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it
   // into range so a bookmarked page past the end lands on the last real one.
   const catalog = await listGlobalDiveSiteTemplates(db, {
     page: Number.parseInt(page ?? "", 10),
-    shopCoordinates,
+    shop,
   });
   const pageHref = (target: number) => (target > 1 ? `${catalogHref}&page=${target}` : catalogHref);
   // Reading a template before taking it. Importing was a one-tap commitment
@@ -331,12 +324,11 @@ async function CatalogView({
   // by opening the site it now owned and deleting it again. The whole briefing
   // is public DiveDay content; there was never a reason to withhold it.
   const previewSlug = slug?.trim();
-  const preview = previewSlug ? await getGlobalDiveSiteTemplate(await getDb(), previewSlug) : null;
+  const preview = previewSlug ? await getGlobalDiveSiteTemplate(db, previewSlug, shop) : null;
   if (previewSlug && preview) {
     return (
       <TemplatePreview
         template={preview}
-        unit={shop.depthUnit}
         backHref={catalogHref}
         importAction={importDiveSiteTemplateAction}
         t={t}
@@ -399,9 +391,7 @@ async function CatalogView({
                   among thirty-four reefs it has never dived has nothing else to
                   choose on, which is the opposite of its own library. */}
               {version.briefing.description ? (
-                <p className="mt-1 text-sm text-muted">
-                  {siteProseInUnit(version.briefing.description, shop.depthUnit)}
-                </p>
+                <p className="mt-1 text-sm text-muted">{version.briefing.description}</p>
               ) : null}
             </div>
           </LedgerRow>
@@ -428,15 +418,12 @@ async function CatalogView({
  */
 function TemplatePreview({
   template,
-  unit,
   backHref,
   importAction,
   t,
   diverT,
 }: {
   template: GlobalDiveSiteTemplateRow;
-  /** The shop's depth unit: the preview reads as the import will land. */
-  unit: DepthUnit;
   backHref: string;
   // i18n-exempt: type annotation, not copy.
   importAction: (formData: FormData) => void | Promise<void>;
@@ -444,7 +431,7 @@ function TemplatePreview({
   /** The field guide is diver copy; the preview shows it as a diver will read it. */
   diverT: DiverTranslator;
 }) {
-  const briefing = briefingInUnit(template.version.briefing, unit);
+  const briefing = template.version.briefing;
   // Resolved for the reader, exactly as the imported site's own briefing will
   // render it -- the preview's whole job is showing what you are about to take.
   const templateDifficulty = diveSiteDifficultyLabel(

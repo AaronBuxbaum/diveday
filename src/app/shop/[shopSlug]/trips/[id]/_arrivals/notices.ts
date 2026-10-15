@@ -1,7 +1,7 @@
 import type { ArrivalOfflineRefusal, CheckInOutcome, UndoCheckInOutcome } from "@/db/check-in";
 import type { MarkNoShowOutcome, UndoNoShowOutcome } from "@/db/no-show";
-import type { StaffMessageKey } from "@/i18n/staff-messages";
-import type { NoticeCodeOf } from "@/lib/staff-notices";
+import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
+import { type FormNotice, type NoticeCodeOf, noticeFromParam } from "@/lib/staff-notices";
 
 /**
  * **What the desk's taps and the walk-in door can answer with**, in the
@@ -97,3 +97,17 @@ export const DESK_NOTICES: DeskNoticeMap = {
   "offer-opted-out": { tone: "warning", key: "checkIn.notice.offerOptedOut" },
   "offer-unavailable": { tone: "neutral", key: "checkIn.notice.offerUnavailable" },
 };
+
+/**
+ * The desk's own refusals and walk-in outcomes, as the trip page's banner
+ * notice: page-level, because they have no form on the roster to sit beside.
+ * The page asks only after the roster's own vocabulary declined the code, so a
+ * code both speak is the roster's.
+ */
+export function deskFormNotice(
+  notice: string | undefined,
+  t: StaffTranslator,
+): FormNotice | undefined {
+  const definition = noticeFromParam(notice, DESK_NOTICES);
+  return definition ? { form: "page", tone: definition.tone, text: t(definition.key) } : undefined;
+}
