@@ -1,0 +1,327 @@
+{
+  "area": "saint-lucia",
+  "method": "Saint Lucia, the whole island coast from Pigeon Island and Rodney Bay in the north to the Pitons and Soufriere in the south. No official site or mooring list is published online (the Soufriere Marine Management Area publishes zoning and mooring areas, not a named dive-site list; smma.org.lc could not be reached), so the denominator rests on one tourism-board list and five operator or resort-dive-operation lists. Lists read: the Saint Lucia tourism board dive sites page; Scuba St Lucia (Anse Chastanet; the Anse Chastanet and Jade Mountain resort pages repeat its list and count once); StolenTime resort dive page; the Oasis Marigot dive page (the Marigot Bay dive operation, Dive Fair Helen, whose own domain could not be read); Sugar Beach (Viceroy) dive shop page; Eastern Caribbean Diving (Rodney Bay). Dive Saint Lucia (Scuba Steve's) blocks fetching and its PADI listing names no sites, so it was not counted. A site is counted when named on at least two of those independent lists; sites on one list are kept as excluded. Same-site alternate names are merged (Keyhole Pinnacles / Pinnacles, Anse Jambette / Anse Jabette, Barrel of Beef / La Roche, Jalousie / Jalouise, Rosemond's Trench / Rosmund's Trench, Pigeon Island / Pigeon Point). Eastern Caribbean Diving labels Berger Rock as \"Barrel-O-Beef\", which other lists use for La Roche; kept as two sites. The Daini Koyomaru wreck is about 33 m, inside the 40 m recreational limit, and counted. Counted 2026-10-14.",
+  "sources": [
+    "https://stlucia.org/en_uk/things-to-do/diving/",
+    "https://scubastlucia.com/diving/",
+    "https://stolentime.com/dive-sites-in-saint-lucia",
+    "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
+    "https://www.viceroyhotelsandresorts.com/pt/node/1251",
+    "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Anse Chastanet Reef",
+      "template": "anse-chastanet-reef",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "https://scubastlucia.com/diving/",
+        "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
+        "https://www.viceroyhotelsandresorts.com/pt/node/1251",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Champagne Reef",
+      "template": null,
+      "listedBy": ["https://stlucia.org/en_uk/things-to-do/diving/"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Anse Jambette",
+      "template": null,
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "SK2 Wreck",
+      "template": "sk2-wreck",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Vicky B Wreck",
+      "template": "vicky-b-wreck",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Coral Gardens",
+      "template": "coral-gardens-soufriere",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "https://scubastlucia.com/diving/",
+        "https://stolentime.com/dive-sites-in-saint-lucia",
+        "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
+        "https://www.viceroyhotelsandresorts.com/pt/node/1251",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Piton Wall",
+      "template": "piton-wall",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "https://scubastlucia.com/diving/",
+        "https://stolentime.com/dive-sites-in-saint-lucia",
+        "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
+        "https://www.viceroyhotelsandresorts.com/pt/node/1251",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Superman's Flight",
+      "template": "supermans-flight",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "https://scubastlucia.com/diving/",
+        "https://stolentime.com/dive-sites-in-saint-lucia",
+        "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
+        "https://www.viceroyhotelsandresorts.com/pt/node/1251",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Keyhole Pinnacles",
+      "template": "keyhole-pinnacles",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "https://scubastlucia.com/diving/",
+        "https://stolentime.com/dive-sites-in-saint-lucia",
+        "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
+        "https://www.viceroyhotelsandresorts.com/pt/node/1251",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Grand Caille",
+      "template": "grand-caille",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "https://scubastlucia.com/diving/",
+        "https://stolentime.com/dive-sites-in-saint-lucia",
+        "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
+        "https://www.viceroyhotelsandresorts.com/pt/node/1251"
+      ]
+    },
+    {
+      "name": "Fairyland",
+      "template": "fairyland-saint-lucia",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "https://scubastlucia.com/diving/",
+        "https://stolentime.com/dive-sites-in-saint-lucia",
+        "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
+        "https://www.viceroyhotelsandresorts.com/pt/node/1251",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Turtle Reef",
+      "template": "turtle-reef-saint-lucia",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "https://scubastlucia.com/diving/",
+        "https://stolentime.com/dive-sites-in-saint-lucia",
+        "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
+        "https://www.viceroyhotelsandresorts.com/pt/node/1251"
+      ]
+    },
+    {
+      "name": "Lesleen M",
+      "template": "lesleen-m-wreck",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "https://scubastlucia.com/diving/",
+        "https://stolentime.com/dive-sites-in-saint-lucia",
+        "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
+        "https://www.viceroyhotelsandresorts.com/pt/node/1251",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Daini Koyomaru",
+      "template": null,
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Rosemond's Trench",
+      "template": null,
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Anse Cochon",
+      "template": "anse-cochon",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "https://scubastlucia.com/diving/",
+        "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Virgin's Cove",
+      "template": "virgins-cove",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "https://stolentime.com/dive-sites-in-saint-lucia",
+        "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Anse La Raye Wall",
+      "template": "anse-la-raye-wall",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "https://scubastlucia.com/diving/",
+        "https://stolentime.com/dive-sites-in-saint-lucia",
+        "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Bone Yard",
+      "template": "bone-yard",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "La Roche",
+      "template": "la-roche",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "https://stolentime.com/dive-sites-in-saint-lucia",
+        "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/"
+      ]
+    },
+    {
+      "name": "Berger Rock",
+      "template": null,
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Pigeon Island",
+      "template": "pigeon-island-dive",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Bird's Rock",
+      "template": null,
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Smugglers Cove",
+      "template": "smugglers-cove-reef",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Saline Point",
+      "template": "saline-point",
+      "listedBy": [
+        "https://stlucia.org/en_uk/things-to-do/diving/",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Trou Diable",
+      "template": "trou-diable-saint-lucia",
+      "listedBy": [
+        "https://scubastlucia.com/diving/",
+        "https://stolentime.com/dive-sites-in-saint-lucia",
+        "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
+        "https://www.viceroyhotelsandresorts.com/pt/node/1251",
+        "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
+      ]
+    },
+    {
+      "name": "Jalousie",
+      "template": null,
+      "listedBy": [
+        "https://scubastlucia.com/diving/",
+        "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
+        "https://www.viceroyhotelsandresorts.com/pt/node/1251"
+      ]
+    },
+    {
+      "name": "Malgretoute",
+      "template": null,
+      "listedBy": [
+        "https://stolentime.com/dive-sites-in-saint-lucia",
+        "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/"
+      ]
+    },
+    {
+      "name": "Gros Piton Reef",
+      "template": null,
+      "listedBy": ["https://stolentime.com/dive-sites-in-saint-lucia"],
+      "excluded": "on one list only (stolentime)"
+    },
+    {
+      "name": "Anse Galet",
+      "template": null,
+      "listedBy": ["https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/"],
+      "excluded": "on one list only (marigot)"
+    },
+    {
+      "name": "Ratchet Point",
+      "template": null,
+      "listedBy": ["https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/"],
+      "excluded": "on one list only (marigot)"
+    },
+    {
+      "name": "Blue Hole",
+      "template": null,
+      "listedBy": ["https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/"],
+      "excluded": "on one list only (marigot)"
+    },
+    {
+      "name": "Wawinet Wreck",
+      "template": null,
+      "listedBy": ["https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/"],
+      "excluded": "on one list only (marigot)"
+    },
+    {
+      "name": "Staircase",
+      "template": null,
+      "listedBy": ["https://www.viceroyhotelsandresorts.com/pt/node/1251"],
+      "excluded": "on one list only (sugarbeach)"
+    },
+    {
+      "name": "Piton Wall II",
+      "template": null,
+      "listedBy": ["https://www.viceroyhotelsandresorts.com/pt/node/1251"],
+      "excluded": "on one list only (sugarbeach)"
+    }
+  ]
+}

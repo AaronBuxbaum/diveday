@@ -1,0 +1,564 @@
+{
+  "area": "grenada",
+  "method": "Grenada, Carriacou and Petite Martinique: the southwest coast of Grenada (Grand Anse, Molinere-Beausejour Marine Protected Area, Dragon Bay, Boss Reef, Lance aux Epines), the Atlantic-side reefs, and Carriacou including the Sandy Island Oyster Bed Marine Protected Area. No official marine-park or Fisheries Division list of named dive sites is published online (the Molinere-Beausejour and Sandy Island Oyster Bed MPAs publish boundaries and zoning only, and the Grenada Tourism Authority pages name no site list), so the denominator rests on operator lists. Lists read: Eco Dive (its dive-sites page); Native Spirit Scuba (its reefs, wrecks and signature-dive-sites pages); Aquanauts Grenada (the Sunken Trail wreck list, wrecks only; its site pages are otherwise not published); Dive Carriacou (the Google My Maps dive-site map embedded on its dive-site-map page, read as KML, which gives the coordinates used here). Dive Grenada, Scuba West Indies, Deefer Diving (site names appear only in image file names), Lumbadive (the site returned HTTP 503) and Sandals were read or tried but publish no countable site list. A site is counted when named on at least two of those independent lists; sites on one list are kept as excluded. Carriacou has a single operator list, so its sites mostly fall to the one-list exclusion; the Carriacou denominator should be rechecked when a second Carriacou operator list is readable. Same-site alternate names are merged (Quarter Wreck / 1/4 Wreck, Persia II / Persia, Whibble Reef / Whibbles Reef, Dragon Bay Reef / Dragon Bay, Moliniere Underwater Sculpture Park / Underwater Sculpture Park); the Aquanauts entry Dragon Bay sits in its wreck list and is merged with Dragon Bay Reef on that basis, and Native Spirit's Three Part Wreck is kept separate from Aquanauts' Fiona & Barge because the match is unconfirmed. Depths are within the 130 ft / 40 m recreational limit for every row kept as counted (Bianca C, Windmill Shallows and Car Pile Wreck reach 130 ft). Counted 2026-10-14.",
+  "sources": [
+    "https://www.ecodivegrenada.com/about-us/dive-sites/",
+    "https://nativespiritscuba.com/reefs/",
+    "https://nativespiritscuba.com/wrecks/",
+    "https://nativespiritscuba.com/signature-dive-sites/",
+    "https://www.aquanautsgrenada.com/the-sunken-trail",
+    "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1",
+    "https://www.ecodivegrenada.com"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Buccaneer Wreck",
+      "template": "buccaneer-wreck",
+      "listedBy": [
+        "https://www.ecodivegrenada.com/about-us/dive-sites/",
+        "https://nativespiritscuba.com/wrecks/",
+        "https://www.aquanautsgrenada.com/the-sunken-trail"
+      ]
+    },
+    {
+      "name": "Car Pile Wreck",
+      "template": null,
+      "listedBy": ["https://www.ecodivegrenada.com/about-us/dive-sites/"],
+      "excluded": "on one list only (ecodive)"
+    },
+    {
+      "name": "Hema 1 Wreck",
+      "template": "hema-1-wreck",
+      "listedBy": [
+        "https://www.ecodivegrenada.com/about-us/dive-sites/",
+        "https://nativespiritscuba.com/wrecks/",
+        "https://www.aquanautsgrenada.com/the-sunken-trail"
+      ]
+    },
+    {
+      "name": "King Mitch Wreck",
+      "template": null,
+      "listedBy": [
+        "https://www.ecodivegrenada.com/about-us/dive-sites/",
+        "https://nativespiritscuba.com/wrecks/",
+        "https://www.aquanautsgrenada.com/the-sunken-trail"
+      ]
+    },
+    {
+      "name": "Anina Wreck",
+      "template": "anina-wreck",
+      "listedBy": [
+        "https://www.ecodivegrenada.com/about-us/dive-sites/",
+        "https://www.aquanautsgrenada.com/the-sunken-trail"
+      ]
+    },
+    {
+      "name": "Bianca C Wreck",
+      "template": "bianca-c-wreck",
+      "listedBy": [
+        "https://www.ecodivegrenada.com/about-us/dive-sites/",
+        "https://nativespiritscuba.com/signature-dive-sites/",
+        "https://www.aquanautsgrenada.com/the-sunken-trail"
+      ]
+    },
+    {
+      "name": "Tyrrel Bay Wreck",
+      "template": "tyrrel-bay-wreck-grenada",
+      "listedBy": [
+        "https://www.ecodivegrenada.com/about-us/dive-sites/",
+        "https://nativespiritscuba.com/wrecks/",
+        "https://www.aquanautsgrenada.com/the-sunken-trail"
+      ]
+    },
+    {
+      "name": "Shakem Wreck",
+      "template": "shakem-wreck",
+      "listedBy": [
+        "https://www.ecodivegrenada.com/about-us/dive-sites/",
+        "https://nativespiritscuba.com/wrecks/",
+        "https://www.aquanautsgrenada.com/the-sunken-trail"
+      ]
+    },
+    {
+      "name": "Veronica L Wreck",
+      "template": "veronica-l-wreck",
+      "listedBy": [
+        "https://www.ecodivegrenada.com/about-us/dive-sites/",
+        "https://nativespiritscuba.com/wrecks/",
+        "https://www.aquanautsgrenada.com/the-sunken-trail"
+      ]
+    },
+    {
+      "name": "Boss Reef",
+      "template": "boss-reef",
+      "listedBy": [
+        "https://www.ecodivegrenada.com/about-us/dive-sites/",
+        "https://nativespiritscuba.com/reefs/"
+      ]
+    },
+    {
+      "name": "Dragon Bay Reef",
+      "template": "dragon-bay-reef",
+      "listedBy": [
+        "https://www.ecodivegrenada.com/about-us/dive-sites/",
+        "https://nativespiritscuba.com/reefs/",
+        "https://www.aquanautsgrenada.com/the-sunken-trail"
+      ]
+    },
+    {
+      "name": "Flamingo Bay",
+      "template": "flamingo-bay",
+      "listedBy": [
+        "https://www.ecodivegrenada.com/about-us/dive-sites/",
+        "https://nativespiritscuba.com/reefs/"
+      ]
+    },
+    {
+      "name": "Grand Mal Reef",
+      "template": null,
+      "listedBy": ["https://www.ecodivegrenada.com/about-us/dive-sites/"],
+      "excluded": "on one list only (ecodive)"
+    },
+    {
+      "name": "Happy Valley",
+      "template": "happy-valley",
+      "listedBy": [
+        "https://www.ecodivegrenada.com/about-us/dive-sites/",
+        "https://nativespiritscuba.com/reefs/"
+      ]
+    },
+    {
+      "name": "Kahonee",
+      "template": "kahonee",
+      "listedBy": [
+        "https://www.ecodivegrenada.com/about-us/dive-sites/",
+        "https://nativespiritscuba.com/reefs/"
+      ]
+    },
+    {
+      "name": "Molinere Bay Reef",
+      "template": null,
+      "listedBy": ["https://www.ecodivegrenada.com/about-us/dive-sites/"],
+      "excluded": "on one list only (ecodive)"
+    },
+    {
+      "name": "Northern Exposure",
+      "template": "northern-exposure",
+      "listedBy": [
+        "https://www.ecodivegrenada.com/about-us/dive-sites/",
+        "https://nativespiritscuba.com/reefs/"
+      ]
+    },
+    {
+      "name": "Purple Rain",
+      "template": "purple-rain",
+      "listedBy": [
+        "https://www.ecodivegrenada.com/about-us/dive-sites/",
+        "https://nativespiritscuba.com/reefs/"
+      ]
+    },
+    {
+      "name": "Shark Reef",
+      "template": "shark-reef-grenada",
+      "listedBy": [
+        "https://www.ecodivegrenada.com/about-us/dive-sites/",
+        "https://nativespiritscuba.com/reefs/"
+      ]
+    },
+    {
+      "name": "Windmill Shallows",
+      "template": null,
+      "listedBy": [
+        "https://www.ecodivegrenada.com/about-us/dive-sites/",
+        "https://nativespiritscuba.com/reefs/"
+      ]
+    },
+    {
+      "name": "Whibble Reef (Whibbles Reef)",
+      "template": "whibble-reef",
+      "listedBy": [
+        "https://www.ecodivegrenada.com/about-us/dive-sites/",
+        "https://nativespiritscuba.com/reefs/"
+      ]
+    },
+    {
+      "name": "Spice Island Reef",
+      "template": null,
+      "listedBy": ["https://nativespiritscuba.com/reefs/"],
+      "excluded": "on one list only (nativespirit)"
+    },
+    {
+      "name": "Coral Garden",
+      "template": null,
+      "listedBy": ["https://nativespiritscuba.com/reefs/"],
+      "excluded": "on one list only (nativespirit)"
+    },
+    {
+      "name": "Canyon",
+      "template": null,
+      "listedBy": ["https://nativespiritscuba.com/reefs/"],
+      "excluded": "on one list only (nativespirit)"
+    },
+    {
+      "name": "Face of the Devil",
+      "template": null,
+      "listedBy": ["https://nativespiritscuba.com/reefs/"],
+      "excluded": "on one list only (nativespirit)"
+    },
+    {
+      "name": "The Sisters",
+      "template": null,
+      "listedBy": ["https://nativespiritscuba.com/reefs/"],
+      "excluded": "on one list only (nativespirit)"
+    },
+    {
+      "name": "Diamond Rock",
+      "template": null,
+      "listedBy": ["https://nativespiritscuba.com/reefs/"],
+      "excluded": "on one list only (nativespirit)"
+    },
+    {
+      "name": "Three Part Wreck",
+      "template": null,
+      "listedBy": ["https://nativespiritscuba.com/wrecks/"],
+      "excluded": "on one list only (nativespirit)"
+    },
+    {
+      "name": "Quarter Wreck (1/4 Wreck)",
+      "template": "quarter-wreck",
+      "listedBy": [
+        "https://nativespiritscuba.com/wrecks/",
+        "https://www.aquanautsgrenada.com/the-sunken-trail"
+      ]
+    },
+    {
+      "name": "Rum Runner Wreck",
+      "template": null,
+      "listedBy": [
+        "https://nativespiritscuba.com/wrecks/",
+        "https://www.aquanautsgrenada.com/the-sunken-trail"
+      ]
+    },
+    {
+      "name": "Persia II Wreck (Persia)",
+      "template": null,
+      "listedBy": [
+        "https://nativespiritscuba.com/wrecks/",
+        "https://www.aquanautsgrenada.com/the-sunken-trail"
+      ]
+    },
+    {
+      "name": "Molinere Underwater Sculpture Park",
+      "template": "molinere-underwater-sculpture-park",
+      "listedBy": [
+        "https://nativespiritscuba.com/signature-dive-sites/",
+        "https://www.ecodivegrenada.com"
+      ]
+    },
+    {
+      "name": "A World Adrift",
+      "template": null,
+      "listedBy": ["https://nativespiritscuba.com/signature-dive-sites/"],
+      "excluded": "on one list only (nativespirit)"
+    },
+    {
+      "name": "Courier Wreck",
+      "template": null,
+      "listedBy": ["https://www.aquanautsgrenada.com/the-sunken-trail"],
+      "excluded": "on one list only (aquanauts)"
+    },
+    {
+      "name": "Fiona & Barge",
+      "template": null,
+      "listedBy": ["https://www.aquanautsgrenada.com/the-sunken-trail"],
+      "excluded": "on one list only (aquanauts)"
+    },
+    {
+      "name": "Hildur Wreck",
+      "template": null,
+      "listedBy": ["https://www.aquanautsgrenada.com/the-sunken-trail"],
+      "excluded": "on one list only (aquanauts)"
+    },
+    {
+      "name": "Gun Point Ridge",
+      "template": null,
+      "position": [12.52842, -61.4419],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Arc Du Vero",
+      "template": null,
+      "position": [12.51393, -61.45331],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Jack-A-Dan",
+      "template": null,
+      "position": [12.49497, -61.46642],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Jack-A-Dan West Side",
+      "template": null,
+      "position": [12.49585, -61.46767],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Sandy Island Lighthouse",
+      "template": null,
+      "position": [12.48535, -61.48054],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Sandy Island Garden",
+      "template": null,
+      "position": [12.48623, -61.48316],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Mabouya Garden",
+      "template": null,
+      "position": [12.48806, -61.49039],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Sharky's Hideaway",
+      "template": null,
+      "position": [12.48847, -61.49164],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Boris Wreck (Twin Tugs)",
+      "template": null,
+      "position": [12.48929, -61.49147],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Westsider Wreck (Twin Tugs)",
+      "template": null,
+      "position": [12.49063, -61.49207],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Sharky's Hideaway Pt II",
+      "template": null,
+      "position": [12.48757, -61.49421],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Whirlpool",
+      "template": null,
+      "position": [12.48491, -61.49492],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Point Cistern",
+      "template": null,
+      "position": [12.47722, -61.49941],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "White Sand Beach",
+      "template": null,
+      "position": [12.47251, -61.49861],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Black Sand Beach",
+      "template": null,
+      "position": [12.46671, -61.49803],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Rose Wreck",
+      "template": null,
+      "position": [12.46518, -61.50099],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Barracuda Point",
+      "template": null,
+      "position": [12.47287, -61.52138],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Deep Blue",
+      "template": null,
+      "position": [12.46759, -61.52575],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Something Special",
+      "template": null,
+      "position": [12.46214, -61.49391],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Barrel",
+      "template": null,
+      "position": [12.45187, -61.49368],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Seaview",
+      "template": null,
+      "position": [12.44991, -61.49524],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Lime Kiln",
+      "template": null,
+      "position": [12.44874, -61.49679],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Tropical Hill",
+      "template": null,
+      "position": [12.43938, -61.49936],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Garden",
+      "template": null,
+      "position": [12.43858, -61.498],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Cola Pass Thru",
+      "template": null,
+      "position": [12.43272, -61.49919],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Shark Dorm",
+      "template": null,
+      "position": [12.4313, -61.49599],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Mushroom Express",
+      "template": null,
+      "position": [12.43073, -61.49269],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Saline Express",
+      "template": null,
+      "position": [12.43926, -61.46919],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Dry Rock",
+      "template": null,
+      "position": [12.42104, -61.48302],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Frigate Channel",
+      "template": null,
+      "position": [12.41024, -61.47893],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    },
+    {
+      "name": "Black Rock",
+      "template": null,
+      "position": [12.39441, -61.49451],
+      "listedBy": [
+        "https://www.google.com/maps/d/kml?mid=1qCvpEkozMBDp1v3H-1pX1ng78MZ03GU&forcekml=1"
+      ],
+      "excluded": "on one list only (divecarriacou)"
+    }
+  ]
+}
