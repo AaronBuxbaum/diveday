@@ -45,6 +45,13 @@ describe("dealing the real e2e tree", () => {
     expect(bins.flatMap((bin) => bin.items)).not.toContain(EXCLUDED_SPECS[0]);
   });
 
+  it("leaves a skipped spec out of every shard, and deals the rest once", async () => {
+    const bins = await dealSpecs(SHARDS, process.cwd(), undefined, ["e2e/pixel-probe.spec.ts"]);
+    const dealt = bins.flatMap((bin) => bin.items);
+    expect(dealt).not.toContain("e2e/pixel-probe.spec.ts");
+    expect(dealt.length).toBe((await listSpecs()).length - 1);
+  });
+
   it("balances the shards far better than an equal-count cut would", async () => {
     const bins = await dealSpecs(SHARDS);
     const loads = bins.map((bin) => bin.load);

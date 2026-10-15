@@ -1270,6 +1270,17 @@ select:not([multiple]):not([size]):dir(rtl) {
   }
 
   /*
+   * **The title and date once per sheet** (fourth review, item 17). The
+   * manifest runs on under the dive plan, and its own header printed the
+   * departure's title and date a second time a few lines below the plan's.
+   * The section that continues a sheet drops its header; one that starts a
+   * page keeps it, so the packing list still says which boat it is for.
+   */
+  .trip-print-bundle .print-bundle-continues [data-trip-page-header] {
+    display: none;
+  }
+
+  /*
    * One rhythm down every sheet. On screen these sections are spaced by
    * whatever each composed page chose for itself (`mt-6`, `mt-8`, `space-y-10`
    * — the packet renders three pages' worth of independently-tuned spacing),

@@ -1,186 +1,119 @@
 # DiveDay — agent guide
 
 Delight-first dive shop operations: **bookings, waivers, cert checks, trip prep, boat manifests**.
-Competitors have the features; we win on experience. AI agents are the developers. This file,
-`.claude/rules/`, `docs/`, scripts, and tests are the provider-neutral source of truth;
-provider-specific folders are adapters and must not introduce unique requirements.
+We win on experience; AI agents are the developers. This file, `.claude/rules/`, `docs/`, scripts
+and tests are the provider-neutral source of truth. Each section below is one line per rule; the
+full statement, with its incident, is in [docs/agents/working-rules.md](docs/agents/working-rules.md).
 
 ## Read first
 
-1. This file — the rules every session needs whatever it touches.
-2. The **path-scoped rules** in `.claude/rules/`: one file per area (`db`, `domain`, `surfaces`,
-   `i18n`, `e2e`, `infra`, `docs`, `scripts`), each the rules and route map for the paths its
-   `paths:` frontmatter names. Claude Code loads one when you read a matching file; another
-   provider reads the one for the paths it will touch. Nothing in them is optional.
-3. `pnpm task:context <area>` when the task matches an area (no argument lists them).
-4. [docs/README.md](docs/README.md), and only the documents relevant to the task.
-5. The Next.js warning at the bottom before framework-touching work.
+1. The **path-scoped rule** in `.claude/rules/` for each area you touch (`db`, `domain`,
+   `surfaces`, `i18n`, `e2e`, `infra`, `docs`, `scripts`): its rules and route map. Claude Code
+   loads it when you read a matching file; another provider reads it first. None is optional.
+2. `pnpm task:context <area>` when the task matches an area.
+3. [docs/README.md](docs/README.md), only the documents the task needs.
+4. The Next.js warning at the bottom before framework work.
 
 ## Context economy
 
-- Never read `pnpm-lock.yaml`, generated `drizzle/`, `.next/`, `playwright-report/`, or
-  `test-results/` whole; Grep them for the one line a diagnosis needs. The session hooks refuse the
-  whole-file form at both doors (`Read` and the shell).
-- Locate symbols with Grep and read the narrow range; `scripts/guard-read.mjs` refuses a
-  whole-file `Read` of a file over 900 lines, and an explicit `offset` or `limit` always passes.
-- Read `foo.test.ts` before `foo.ts`: tests are the contract.
-- Iterate with one focused test and quiet output. The whole suite belongs to CI; the shell guard
-  refuses a bare `pnpm test` / `pnpm e2e` / `pnpm check`.
-- Redirect a long run to a file and read the failing part; never pipe it through `tail`.
-- Send a broad search or a verbose run to a subagent; the `Explore` agent does not load this file.
+Grep generated files (`pnpm-lock.yaml`, `drizzle/`, `.next/`, reports) for one line, never whole;
+read big files by range; read `foo.test.ts` before `foo.ts`; iterate on one focused test; redirect
+a long run to a file. In full: [working-rules.md](docs/agents/working-rules.md#context-economy).
+
+## Delegating
+
+One-file change: no plan, no subagent. Multi-file: plan first. Cross-area: at most three
+subagents, each with an objective, output format and boundary. Scouting and test runs go to a
+cheap subagent (`Explore`); a worker hands back a file path plus at most ten lines
+([working-rules.md](docs/agents/working-rules.md#delegating)).
 
 ## Commands
 
 | Command | What |
 | --- | --- |
-| `pnpm dev` | dev server at localhost:3000; wait for **`dev: serving … — warmed in Ns`**, not Next's `✓ Ready`. One per checkout (the **run** skill) |
-| `pnpm task:context <area>` | bounded paths, invariants, and validation for a task |
-| `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`, `pnpm e2e:affected`, `pnpm verify:push` | the pre-commit and pre-push checklist is the **verify** skill |
-| `pnpm lint:fix` | Biome autofix |
-| `pnpm check:repo` | 51 static guards, concurrently; each names itself and the offending line. The *why* of each: [docs/agents/repo-checks.md](docs/agents/repo-checks.md) |
-| `pnpm agent:doctor` | what this environment will trip you on (Node, `gh`, stale `origin/main`, strays) |
-| `node scripts/stack-map.mjs` | your stack's layers and top, from git |
-| `pnpm db:generate` | a Drizzle migration after editing `src/db/schema/` (the **schema-change** skill) |
-| `node scripts/screenshot.mjs <path…>` | phone and desktop PNGs of a page against a running `pnpm dev` |
+| `pnpm dev` | dev server; wait for **`dev: serving … — warmed in Ns`**, one per checkout (the **run** skill) |
+| `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`, `pnpm e2e:affected`, `pnpm verify:push` | the checklist is the **verify** skill |
+| `pnpm check:repo` | 58 static guards; each names itself and the offending line ([repo-checks.md](docs/agents/repo-checks.md)) |
+| `pnpm agent:doctor`, `node scripts/stack-map.mjs` | what this environment will trip you on; your stack's layers and top |
 
-The rest (`pnpm check`, `check:context-budget`, `gates`, `agent:health`, `visual`, `build`,
-`db:reset`, each guard by name, the session hooks) are in `package.json`,
-[docs/agents/verifying.md](docs/agents/verifying.md) and
-[docs/agents/working-rules.md](docs/agents/working-rules.md#commands). Pass args to a `pnpm`
-script directly, never after a literal `--`, which silently runs the whole suite; the shell guard
-refuses it.
+Every other command: [working-rules.md](docs/agents/working-rules.md#commands). Pass args to a
+`pnpm` script directly, never after a literal `--` (that runs the whole suite).
 
-## Route map (don't re-derive this)
+## Route map
 
-The rows below say *where*; the path-scoped rule for that area says *how* and *why*, and loads
-when you open the file.
+The core rows; every other area is in [docs/agents/route-map.md](docs/agents/route-map.md) — read
+it before searching for one.
 
 | You need | Go to |
 | --- | --- |
-| Public pages (landing, sign-in) | `src/app/` |
 | A shop's diver-facing pages (schedule, booking, courses) | `src/app/s/[shopSlug]/**` — no auth anywhere in it; paths from `src/lib/public-routes.ts`. `/shop/**` is staff, without exception |
-| An unknown public URL (a 404 that is really a 404) | refused in `src/proxy.ts` before the shell — the URL's shape first, then one existence read where no closed list settles it; a page's own `notFound()` is only the second layer. An unrecognised shape passes through untouched, so `src/app/edge-refusal-coverage.test.ts` fails on a dynamic public route not taught to `publicRouteShape` |
-| Where a diver can go on a shop's public pages | `src/components/PublicShopNav.tsx`, assembled in `src/app/s/[shopSlug]/layout.tsx` — never a per-page cross-link |
-| Bearer-token pages (waiver signing, trip-prep "ready", recap, email verify, password reset, staff calendar feed) | `src/app/waivers/[token]`, `src/app/ready/[token]`, `src/app/recap/[token]`, `src/app/verify/[token]`, `src/app/reset-password/[token]`, `src/app/calendar/[token]` — the URL *is* the capability |
-| Account lifecycle (sign-up welcome/verify, forgot/reset password) | `src/app/onboard/`, `src/app/forgot-password/`; tokens in `src/db/account-tokens.ts` / `src/lib/account-tokens.ts`; accounts in `src/db/user-accounts.ts` |
-| Course pages (public content / staff roster + editor) | `src/app/s/[shopSlug]/courses/**` and `src/app/shop/[shopSlug]/courses/**`; content shapes in `src/lib/courses.ts`; templates in `src/content/course-templates.ts`; progression order in `src/db/courses.ts` |
-| The staff schedule builder (add / move / copy / remove a departure) | `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx` + `schedule/board/actions.ts`; mutations in `src/db/trips-schedule.ts`, reached through the `@/db/trips` barrel. The one place a trip is created |
-| A repeating trip (every Saturday, Mon+Thu, daily) | `src/lib/recurrence.ts` (pure cadence math), `src/db/trips-series.ts` (materialization), nightly roll at `src/app/api/cron/trip-series/` |
 | Staff surfaces (all `/shop/**`, auth-gated) | `src/app/shop/` |
-| Where staff can go (the sidebar, the phone tab bar, ⌘K "Go to") | one registry of sections, `src/lib/staff-destinations.ts`; two consumers — `src/components/ShopSectionNav.tsx`, `src/components/search/CommandPalette.tsx` |
-| SMS delivery receipts | `src/lib/notifications/sms-events.ts` + `src/app/api/webhooks/sms/`; runbook [docs/engineering/sms-delivery-receipts-runbook.md](docs/engineering/sms-delivery-receipts-runbook.md) |
-| Environment variables — adding one, or asking who supplies one | one registry, `config/env-registry.mjs`; everything else is generated from it (ADR 20260812-env-provenance-registry) |
-| AWS credentials, and what deploying still leaves for a human | §16 and §17 of `infra/lib/infra-stack.ts`; [docs/engineering/infrastructure-runbook.md](docs/engineering/infrastructure-runbook.md). **Two stacks, one region knob**: mail is its own stack (`infra/lib/email-stack.ts`) and every region is `config/aws-regions.mjs` |
-| Logs, metrics, alarms, dashboards, and how fast the app feels | `src/lib/log.ts`, `src/lib/observability/`, the one registry `infra/lib/observability.ts`; [docs/engineering/cloudwatch-observability-runbook.md](docs/engineering/cloudwatch-observability-runbook.md) |
-| Email: sending and delivery outcomes | `src/lib/notifications/` + `src/app/api/webhooks/ses/`; [docs/engineering/ses-email-runbook.md](docs/engineering/ses-email-runbook.md) |
-| The Today work queue, the day spine, the close-out | `src/lib/today.ts` / `src/db/today.ts`, `src/lib/closeout.ts` / `src/db/closeout.ts`; the spine in `_components/today/` |
-| Buddy teams (who dives with whom, and the split-team alert) | `src/db/buddy-pairs.ts`, the alert in `src/lib/manifests.ts`, words in `src/i18n/buddy-labels.ts`, the builder on `src/app/shop/[shopSlug]/trips/[id]/manifest/` |
-| How demanding a dive site is | `dive_sites.difficulty_level`, codes in `src/lib/dive-site-difficulty.ts`, words in `src/i18n/dive-site-labels.ts` |
-| The four lines every staff page opens with (session, shop, tenant, permission) | `requireShopSurface` in `src/lib/session.ts`; every refusal *throws* |
-| Telling a staffer what just happened (the `?notice=` redirect) | `src/lib/staff-notices.ts` — `noticeUrl`, `noticeFromParam`, `shopPath`; never hand-build the string |
-| Readiness words and tone ("Blocked" / "Ready", everywhere) | `src/i18n/readiness-labels.ts` |
 | DB schema (source of truth — never read `drizzle/`) | `src/db/schema/`, by Grep and range |
 | DB client / test db factory | `src/db/client.ts` (`getDb()`, `createTestDb()`) |
 | Queries and seed data | `src/db/shops.ts`; barrels `src/db/trips.ts` and `src/db/seed.ts` — import from the barrel, edit the sibling; demo data is a new `src/db/seed-<scenario>.ts` |
-| Retention / pruning of append-only tables | `src/lib/retention.ts` (`RETENTION_DAYS`), `src/db/retention.ts`, `src/app/api/cron/retention/` |
 | Whether a diver may *buy* a seat vs. *board* | two gates: `src/lib/trip-admission.ts` (booking-time, weaker) and `src/lib/readiness.ts` (boarding-time); admission may never refuse someone readiness would clear |
 | The booking transaction (capacity enforcement) | `src/db/bookings.ts` — read its tests first |
-| The gear register (the shop's own fleet, service clocks, reservations) | `src/lib/gear.ts`, `src/db/gear.ts`, `src/i18n/gear-labels.ts`, `src/app/shop/[shopSlug]/gear`; `pnpm task:context gear` |
-| Staff seating a diver (the roster, walk-in counter, diver record, global Add-booking) | one consequence path: `src/db/seat-diver.ts`, driven by `src/app/actions/seat-diver.ts`; the global door is `src/app/shop/[shopSlug]/bookings/new` |
-| Payments, orders, discount codes (Stripe Connect) | `src/lib/payments/`; state in `src/db/orders.ts`, `payments.ts`, `checkouts.ts`, `refunds.ts`, `stripe-accounts.ts`; codes in `src/lib/promo-codes.ts` + `src/db/shop-promos.ts`, deals in `src/db/trip-promos.ts` |
-| The back-office queues (unconfirmed Stripe calls, deletions that never finished) | with the object each is about — the Orders index and Settings' "Data" group — never on Reports |
-| A diver asking for a day that is not on the board | `src/components/DateRequestForm.tsx`, `src/app/actions/inquiry.ts`, `src/db/course-inquiries.ts`, `src/lib/date-requests.ts`, staff at `src/app/shop/[shopSlug]/requests` |
-| Diver reviews and ratings | `src/lib/reviews.ts` + `src/db/reviews.ts`; written from `/recap/[token]`, moderated at `shop/[shopSlug]/reviews` |
 | Copy and languages | `src/i18n/` — `locales/<locale>/diver.json`, `locales/<locale>/staff/<namespace>.json`, composed by `staff-messages.ts`; resolution order and the switcher in `.claude/rules/i18n.md`; Spanish: `src/i18n/locales/es-ES/README.md` first |
-| SEO structured data, `og:site_name`, link-preview cards | `src/lib/structured-data.ts` + `src/components/JsonLd.tsx`; `openGraphSite` in `src/lib/site-metadata.ts`; `allowSvgRasterization()` in `src/lib/og-rasterizer.ts` before every `ImageResponse` |
-| Notifications (email/SMS/WhatsApp) | `src/lib/notifications/`; `courtesy.ts` picks the channel; state in `src/db/notifications.ts`; a shop's own WhatsApp sender in `whatsapp-signup.ts` + `src/app/shop/[shopSlug]/settings/whatsapp/` |
-| Data portability (CSV export/import), scheduled backups | `src/db/export.ts` / `src/db/import.ts`, `src/features/backup-export/`; staff UI under `src/app/shop/[shopSlug]/settings/` — security-sensitive, see hard rules |
-| Offline boat manifests | `src/lib/offline-manifests.ts` + `offline-manifest-store.ts`; viewer `src/app/offline-manifest/`; worker `src/worker/manifest-sw.ts` |
-| A dive site's briefing — what a diver reads, and which field writes it | `dive-sites/_components/SiteFields.tsx` writes it, `_components/TripDayPlan.tsx` reads it; the field guide is `src/lib/dive-site-field-guide.ts` + `src/i18n/marine-life-labels.ts` |
-| Starting content a shop copies, and species it picks | `src/content/dive-site-templates.ts`, `src/content/course-templates.ts` (copied, then the shop's); `src/db/marine-life-catalog.ts` (DiveDay's words, photos under `public/marine-life/`, added with `node scripts/fetch-marine-life-photo.mjs`) |
 | Domain logic (framework-free) | `src/lib/` — capacity in `trips.ts`, dates in `format.ts` |
 | A domain term, or an ADR | `docs/product/glossary/` by domain; ADRs indexed in `docs/architecture/decisions/README.md` (generated; the guard names the command) |
-| Feature modules | `src/features/<feature>/` — `index.ts` is the whole public surface; `calendar-sync`, `backup-export`, `integrations` |
-| Outbound integrations a shop connects for itself (Shopify, QuickBooks, Xero, Zapier) | `src/features/integrations/`; rows in `src/db/integrations.ts` + `src/db/integration-events.ts`; staff at `src/app/shop/[shopSlug]/settings/integrations`; callbacks under `src/app/api/integrations/` |
-| Staff calendar subscriptions (iCalendar feeds) | `src/features/calendar-sync/` + `src/app/calendar/[token]/route.ts`; staff UI at `src/app/shop/[shopSlug]/settings/calendar/` |
 | Auth: session, gates, edge check | `src/lib/auth.ts` / `auth-secret.ts` / `authz.ts` + `session.ts`; edge layer `src/proxy.ts` |
-| Dev/e2e staff logins | `src/db/dev-credentials.ts` |
-| Design tokens; form/button/control/panel wrappers | `src/app/globals.css` (semantic only); `src/components/ui/` — `form.tsx`, `button.ts`, `card.tsx` (`SectionCard`), `tone.ts`, `typography.ts` |
-| Paging a staff list | `src/components/Pager.tsx` + `offsetPage` in `src/db/paging.ts`; keyset cursors in `src/db/cursor.ts` are the one exception |
-| Why a route paints instantly (or doesn't) | its `loading.tsx` and `export const instant = true` (ADR 20260804-instant-navigation; the **instant-navigation** skill) |
-| "What should this code do?" | Read `foo.test.ts` before `foo.ts` — tests are the contract |
-| A design for a surface that does not exist yet | [docs/design/design-artifacts.md](docs/design/design-artifacts.md) first; canvases in `docs/design/canvases/` |
 | An idea, question, risk, or cleanup you are **not** doing in this change | a GitHub issue labelled `needs-triage` ([docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)'s "Filing a follow-up"), `waiting-on-external` when nobody here can move it. Committed work lives in `docs/product/features/`, human-owned calls in `docs/product/human-decisions/README.md` |
 
 ## Skills and providers
 
-The canonical process is this file, `.claude/rules/`, `docs/`, scripts, and tests. Claude-specific
-playbooks are indexed in [.claude/skills/README.md](.claude/skills/README.md): **new-feature**,
+Playbooks, indexed in [.claude/skills/README.md](.claude/skills/README.md): **new-feature**,
 **verify**, **design-implementation**, **i18n-copy**, **copy-restraint**, **design-review**,
 **brand-voice**, **schema-change**, **debug**, **instant-navigation**, **e2e-and-visual**,
 **visual-triage**, **adr**, **stacked-prs**, **triage**, **backlog-routine**, **marketing-page**,
-**switching-pages**, **run**, and **commercial-outreach**. Other providers should read the
-corresponding `SKILL.md` directly when useful. If a skill conflicts with canonical docs, tests, or
-code, the skill is stale and must be fixed in the same change. Reviewer agents (`.claude/agents/`)
-are launched, never skipped: `dive-domain-expert` for safety-critical surfaces, `security-reviewer`
-for anything touching auth, tokens, personal or medical data, or export/import.
+**switching-pages**, **run**, **expand-content**, **commercial-outreach**. Another provider reads
+the `SKILL.md`. A skill that contradicts docs, tests or code is fixed in the same change. Reviewer
+agents are launched, never skipped: `dive-domain-expert` for safety-critical surfaces,
+`security-reviewer` for auth, tokens, personal or medical data, export/import.
 
 ## Parallel work
 
-Other sessions share this checkout. The full statement of each rule:
-[docs/agents/working-rules.md](docs/agents/working-rules.md#parallel-work).
+Other sessions share this checkout ([working-rules.md](docs/agents/working-rules.md#parallel-work)).
 
-- Read the branch and dirty count every prompt opens with before touching shared working-tree
-  state; the shell guard refuses a wholesale discard on a dirty tree.
-- **Claim the issue before you start** and clear it when you stop
-  ([docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)'s "Claiming an issue"); a dead
-  claim expires daily.
-- Before non-trivial work read the open PRs and `pnpm gates`' "Claimed — in flight"; on overlap
-  pick another slice. A **stale** claim is a dead session: take the work.
-- Never bare `git stash` / `git stash pop` (the shell guard refuses both); prefer a worktree, then
-  a WIP commit, then `git stash push -u -m "<tag>"` applied by sha.
-- A unique branch slug and an early draft PR naming owned paths, schema changes and ADR ids; ADR
-  ids are `YYYYMMDD-short-slug`, never the next integer. Trial-merge the target before calling
-  work complete.
-- **Stack everything, across threads, and run one PR's CI at a time**: cut every branch from the
-  newest open one, any thread's, related or not, as a draft with `base` on it; the thread that owns
-  the stack pushes one layer at a time, because concurrent runs cancel each other (**stacked-prs**).
+- Read the branch and dirty count each prompt opens with before touching shared tree state.
+- **Claim the issue before you start**, clear it when you stop
+  ([issue-tracker.md](docs/agents/issue-tracker.md)); read open PRs and `pnpm gates` first; a
+  **stale** claim is a dead session: take the work.
+- Worktree from the shell, never `EnterWorktree`; never bare `git stash`; never switch a live
+  thread's model.
+- Unique branch slug, early draft PR naming owned paths, schema changes and ADR ids
+  (`YYYYMMDD-short-slug`); trial-merge the target before calling work complete.
+- **A thread that steers never builds**: each layer goes to a fresh worker with a
+  [spec](docs/agents/spec-template.md); past ~150k context, write a state note and retire.
+- **Stack everything, across threads, one PR's CI at a time**: cut from the newest open branch,
+  draft with `base` on it, pushed one layer at a time (**stacked-prs**).
 
 ## Hard rules
 
-One line each, with what enforces it; the full statement and its incident:
-[docs/agents/working-rules.md](docs/agents/working-rules.md#hard-rules).
-
-- **A background job you start is yours to end**; check with
-  `node scripts/stray-processes.mjs --list`, never `TaskList`, and never pipe a long run through
-  `tail`/`head` (`Stop` hook `scripts/stray-processes.mjs`, `scripts/guard-bash.mjs`).
-- **Verify before commit, `pnpm verify:push` before push, push once per round.** The **verify**
-  skill is the checklist (`scripts/guard-push.mjs`). Never report unverified work as done.
-- **A thought you don't act on is a `needs-triage` issue**, at most ten per run, ending in a
-  prompt a fresh session can paste ([issue-tracker.md](docs/agents/issue-tracker.md)'s "Filing a follow-up").
+- **A background job you start is yours to end** (`node scripts/stray-processes.mjs --list`,
+  never `TaskList`; never pipe a long run through `tail`/`head`).
+- **Verify before commit, `pnpm verify:push` before push, push once per round** (**verify**);
+  never report unverified work as done.
+- **File only a bug, safety gap or decision** as a `needs-triage` issue, ten a run at most; the
+  rest is one "Notes" PR comment.
 - **A failing or flaky test is part of the work**, even when unrelated: never skipped, never a
-  wider timeout; search open PRs for a fix in flight first (`pnpm check:e2e-hygiene`).
-- **A pushed PR is not done until its visual diffs are explained** (the **visual-triage** skill)
-  **and every review thread is fixed, declined with a reason, or filed**.
-- **New runtime dependency → ADR** (`pnpm check:adrs`); **new domain concept → glossary**
-  (`pnpm check:glossary`); **invalidated doc → fixed in the same PR** (`pnpm check:docs`).
-- **Safety-critical surfaces** (manifests, roll call, readiness, cert gating, medical, erasure) get
-  boring code, adversarial tests and a `dive-domain-expert` review; **security-sensitive changes**
-  (auth, tokens, personal or medical data, export/import) a `security-reviewer` review; the PR body
-  names both (`scripts/check-pr-body.mjs`).
-- **`app → features → lib/db`, one way; routes stay thin** (`pnpm check:architecture`).
-- **Tests travel with behavior**: a bug fix starts with a failing regression test; every important
-  flow gets an `e2e/` spec and every important surface a capture in `e2e/visual.spec.ts`
-  (`pnpm check:route-coverage`).
-- **Copy from a bundle; every sentence earns its place; every delete is soft and says "Delete"; a
-  date names its zone and no locale is hard-coded; time comes from the clock; a new page ships a
-  `loading.tsx`**: the path-scoped rules, enforced by `pnpm check:repo`.
-- **There is no legacy. Delete it** (H-49; `.claude/rules/db.md`).
-- **Text a human will copy is written unwrapped** (`.claude/rules/docs.md`).
-- **A turn ends done, filed, or handed over**, or on a question; never on an intention. Two items
-  in flight go in the task list (`Stop` hooks `scripts/unfinished-promises.mjs`,
-  `scripts/unpushed-work.mjs`).
-- **Secrets never enter the repo** (`.claude/settings.json` denies key material to the file tools).
+  wider timeout; search open PRs for a fix in flight first.
+- **A pushed PR is not done until its visual diffs are explained** (**visual-triage**) **and every
+  review thread is fixed, declined with a reason, or filed**.
+- **New runtime dependency → ADR; new domain concept → glossary; invalidated doc → fixed in the
+  same PR.**
+- **Safety-critical surfaces** (manifests, roll call, readiness, cert gating, medical, waivers,
+  nitrox, erasure): boring code, adversarial tests, two differently framed `dive-domain-expert`
+  runs; **security-sensitive changes**: a `security-reviewer` review; the PR body names both.
+- **`app → features → lib/db`, one way; routes stay thin.**
+- **Tests travel with behavior**: a bug fix starts with a failing regression test; every
+  important flow gets an `e2e/` spec, every important surface a capture in `e2e/visual.spec.ts`.
+- **Copy from a bundle; every sentence earns its place; deletes are soft and say "Delete"; a date
+  names its zone, no hard-coded locale; time comes from the clock; a new page ships a
+  `loading.tsx`.**
+- **There is no legacy. Delete it** (H-49).
+- **Text a human will copy is written unwrapped.**
+- **A turn ends done, filed, or handed over**, or on a question; never on an intention.
+- **Secrets never enter the repo.**
 
 <!-- BEGIN:nextjs-agent-rules -->
 

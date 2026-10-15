@@ -69,7 +69,7 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await page.getByLabel("Name").fill("Nora Quinn");
   await page.getByLabel("Email").fill("nora@example.com");
   await acceptAgeAttestation(page);
-  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
 
   // Sizes live in the thread's "Gear and sizes" step, and at most one step is
@@ -565,7 +565,7 @@ test.describe("staff", () => {
     await page.getByLabel("Name").fill(diver);
     await page.getByLabel("Email").fill(`ravi-${e2eNow().getTime()}@example.com`);
     await acceptAgeAttestation(page);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Ravi/ })).toBeVisible();
   });
 
@@ -623,7 +623,9 @@ test.describe("staff", () => {
         await emailField.fill(`ratio-${stamp}-${label}@example.com`);
       }
       await acceptAgeAttestation(page);
-      await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+      await page
+        .getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ })
+        .click();
       await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).toBeVisible();
     };
 
@@ -639,7 +641,7 @@ test.describe("staff", () => {
     await page.getByLabel("Name", { exact: true }).fill(`Ratio Diver ${stamp}-9`);
     await page.getByLabel("Email", { exact: true }).fill(`ratio-${stamp}-9@example.com`);
     await acceptAgeAttestation(page);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(
       page.getByText("This session is at its instructor-to-student ratio limit"),
     ).toBeVisible();
@@ -1292,7 +1294,9 @@ test("a course's learning materials reach the student's thread, and staff tick t
   await diverPage.getByLabel("Name").fill(diver);
   await diverPage.getByLabel("Email").fill(`mira-${e2eNow().getTime()}@example.com`);
   await acceptAgeAttestation(diverPage);
-  await diverPage.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await diverPage
+    .getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ })
+    .click();
   await expect(diverPage).toHaveURL(/\/ready\//);
 
   await expect(diverPage.getByRole("heading", { name: "Before your first day" })).toBeVisible();

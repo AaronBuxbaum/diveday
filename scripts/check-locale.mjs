@@ -149,6 +149,10 @@ const guardedRoots = ["src/app", "src/components"];
 export const DELIBERATELY_IDENTICAL = new Map([
   // Training-agency acronyms — brand names. `other` is the one real word in
   // the group and is translated.
+  // The boat's radio identity (fourth review, item 11): the ITU acronym a
+  // Spanish-speaking coastguard reads back as "MMSI".
+  ["staff/boats.json mmsiLabel", "maritime radio acronym"],
+  ["staff/manifest.json emergency.mmsiLabel", "maritime radio acronym"],
   ["diver.json common.certification.agencies.padi", "agency acronym"],
   ["diver.json common.certification.agencies.ssi", "agency acronym"],
   ["diver.json common.certification.agencies.naui", "agency acronym"],
@@ -325,6 +329,7 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/settings.json main.timezone.zones.roatan", "place names"],
   ["diver.json notifications.whatsappTemplate.exampleShopName", "the demo shop's own name"],
   ["diver.json marineLife.species.cobia.name", "the fish's name in Spanish too"],
+  ["diver.json marineLife.species.boga.name", "the fish's name in Spanish too"],
   [
     "diver.json marketing.guides.shared.scopeTable.nitrox.what",
     "the gas, and the word Spanish diving uses for it",

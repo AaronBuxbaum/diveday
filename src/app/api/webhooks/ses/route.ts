@@ -9,6 +9,7 @@ import {
   readWebhookPayload,
   verifySnsMessage,
 } from "@/lib/notifications/sns";
+import { logWebhookRefusal } from "@/lib/webhook-refusal";
 
 /**
  * The SES delivery-outcome webhook (ADR 20260802-ses-adapter-and-webhook,
@@ -28,8 +29,10 @@ export async function POST(request: Request) {
 
   const verification = await verifySnsMessage(payload, process.env.SES_SNS_TOPIC_ARN);
 
-  if (verification.status === "not_configured") return new Response(null, { status: 503 });
-  if (verification.status !== "verified") return new Response(null, { status: 400 });
+  if (verification.status !== "verified") {
+    logWebhookRefusal("ses", verification.status);
+    return new Response(null, { status: verification.status === "not_configured" ? 503 : 400 });
+  }
 
   const { message } = verification;
 

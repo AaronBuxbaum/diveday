@@ -115,3 +115,40 @@ describe("diverRowState's gate", () => {
     expect(state.boardingControlShown).toBe(true);
   });
 });
+
+/**
+ * **The desk's check-in on the dock row** (fourth review, item 15). The
+ * gangway's question is who is still to come; the desk already answered it for
+ * the divers it checked in. Only at the dock, only until the crew records its
+ * own word, and never for a seat the desk wrote off.
+ */
+describe("diverRowState's desk check-in", () => {
+  const zone = "America/New_York";
+
+  it("says it at the dock for a checked-in diver the crew has not called", () => {
+    expect(diverRowState(diver({ checkedIn: true }), "departure", true, zone).checkedInAtDesk).toBe(
+      true,
+    );
+  });
+
+  it("gives way to the crew's own word once the diver is boarded", () => {
+    expect(
+      diverRowState(diver({ checkedIn: true, rollCall: boardedAt() }), "departure", true, zone)
+        .checkedInAtDesk,
+    ).toBe(false);
+  });
+
+  it("is not said after a dive, where the desk's word is history", () => {
+    expect(
+      diverRowState(diver({ checkedIn: true }), "after_dive_1", false, zone).checkedInAtDesk,
+    ).toBe(false);
+  });
+
+  it("is not said for a diver the desk did not check in, or wrote off", () => {
+    expect(diverRowState(diver(), "departure", true, zone).checkedInAtDesk).toBe(false);
+    expect(
+      diverRowState(diver({ checkedIn: true, notHere: true }), "departure", true, zone)
+        .checkedInAtDesk,
+    ).toBe(false);
+  });
+});

@@ -264,6 +264,7 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
         </FieldGrid>
       </fieldset>
       <TripDiveFields
+        id="dives"
         frameClassName={GROUP_INSET}
         diveSites={diveSiteList.map((site) => ({ id: site.id, name: site.name }))}
         initialCount={trip.plannedDives}

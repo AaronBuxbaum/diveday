@@ -3,6 +3,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
@@ -142,8 +143,8 @@ export default async function SafetyChecklistPage({
                         editing its own words, and the two arrows beside each
                         are already ghosts. The word stays "Delete"
                         (ADR 20260820-every-delete-is-soft). */}
-                    <button
-                      type="submit"
+                    <SubmitButton
+                      pendingLabel={t("settings.safetyChecklist.delete")}
                       className={buttonClass({
                         variant: "danger-ghost",
                         size: "sm",
@@ -151,7 +152,7 @@ export default async function SafetyChecklistPage({
                       })}
                     >
                       {t("settings.safetyChecklist.delete")}
-                    </button>
+                    </SubmitButton>
                   </form>
                 </ListItemActions>
               </li>

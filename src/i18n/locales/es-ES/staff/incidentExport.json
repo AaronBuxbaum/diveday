@@ -42,6 +42,7 @@
   "executedDiveDescription": "Lo que la tripulación registró después de cada inmersión, incluida la ausencia explícita de un dato no capturado.",
   "executedDiveEmpty": "No se ha guardado ningún registro posterior a la inmersión.",
   "executedDiveFieldNotRecorded": "Sin registrar",
+  "executedDiveFirstDive": "Primera inmersión",
   "executedDiveHeading": "Registros de inmersiones realizadas",
   "executedDiveNumber": "Inmersión",
   "executedDiveRecordedBy": "Registrado por",

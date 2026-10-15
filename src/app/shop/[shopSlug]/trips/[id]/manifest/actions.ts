@@ -577,14 +577,25 @@ export async function preDepartureCheckAction(
  * the departure went away) are both "this did not save" to the person
  * holding the phone.
  */
+/**
+ * A stage tap's answer. `rollCallOpen`: "Heading in" or "Home" was recorded
+ * while the last after-dive roll call still has somebody unmarked (batch 6,
+ * item 4) — the strip says so and offers the roll call. Never a refusal.
+ */
+export type TripStageResult =
+  | { ok: true; rollCallOpen: boolean }
+  | { ok: false; reason: "error" }
+  | null;
+
 export async function setTripStageAction(
   ctx: ManifestTripContext,
-  _prev: PreDepartureCheckResult,
+  _prev: TripStageResult,
   formData: FormData,
-): Promise<PreDepartureCheckResult> {
+): Promise<TripStageResult> {
   const staff = await manifestStaff(ctx);
   const parsed = tripStageSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, reason: "error" };
+  let rollCallOpen = false;
   try {
     const outcome = await recordTripStage(await getDb(), {
       shopId: staff.user.shopId,
@@ -593,11 +604,12 @@ export async function setTripStageAction(
       recordedByPersonId: staff.user.personId,
     });
     if (!outcome.ok) return { ok: false, reason: "error" };
+    rollCallOpen = outcome.rollCallOpen !== null;
   } catch {
     return { ok: false, reason: "error" };
   }
   revalidatePath(manifestPath(ctx));
-  return { ok: true };
+  return { ok: true, rollCallOpen };
 }
 
 /**

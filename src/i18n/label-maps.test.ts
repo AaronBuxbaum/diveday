@@ -16,6 +16,7 @@ import {
   type GearServiceKind,
 } from "@/lib/gear";
 import { GUARDIAN_RELATIONSHIPS } from "@/lib/guardian";
+import { INCIDENT_KINDS, INCIDENT_SEVERITIES } from "@/lib/incident-reports";
 import type { BuddyAlert, RollCallLabel } from "@/lib/manifests";
 import { CARDINAL_DIRECTIONS, SEA_STATES, WIND_STATES } from "@/lib/marine-forecast";
 import { PLAN_CHANGE_REASONS } from "@/lib/plan-change";
@@ -34,6 +35,7 @@ import {
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { ROLL_CALL_GAP_KINDS, type TodaySeason } from "@/lib/today";
 import { WORK_ORDER_OUTCOMES, WORK_ORDER_STATUSES } from "@/lib/work-orders";
+import { stripComments } from "@/test/source";
 import { SHOP_ACTIVITY_KIND_KEYS, shopActivityLineText } from "./activity-labels";
 import { boatSafetyNoticeText } from "./boat-safety-labels";
 import { boatWorkText } from "./boat-work-labels";
@@ -69,6 +71,7 @@ import {
   guardianRelationshipText,
   staffGuardianRelationshipOptions,
 } from "./guardian-labels";
+import { INCIDENT_KIND_KEYS, INCIDENT_SEVERITY_KEYS } from "./incident-labels";
 import { rollCallLabelText } from "./manifest-labels";
 import { diverTranslator } from "./messages";
 import {
@@ -646,6 +649,22 @@ const CASES: readonly LabelMapCase[] = [
     map: "DIVER_FACT_SOURCE_KEYS",
     rows: codeRows(keysOf(DIVER_FACT_SOURCE_KEYS), (locale, source) =>
       diverTranslator(locale)(DIVER_FACT_SOURCE_KEYS[source]),
+    ),
+  },
+  {
+    module: "incident-labels.ts",
+    map: "INCIDENT_KIND_KEYS",
+    // `injury` reads "Injury or illness", and `fatality` is its own kind
+    // (dive-domain review 20261014).
+    rows: codeRows(INCIDENT_KINDS, (locale, kind) =>
+      staffTranslator(locale)(INCIDENT_KIND_KEYS[kind]),
+    ),
+  },
+  {
+    module: "incident-labels.ts",
+    map: "INCIDENT_SEVERITY_KEYS",
+    rows: codeRows(INCIDENT_SEVERITIES, (locale, severity) =>
+      staffTranslator(locale)(INCIDENT_SEVERITY_KEYS[severity]),
     ),
   },
   {
@@ -1232,15 +1251,10 @@ describe.each(CASES)("$module › $map", ({ rows, map }) => {
  * directory and requires the table to hold exactly those maps, so a map added
  * tomorrow fails here rather than joining the twenty-four that had no proof
  * for months. It is a text scan for the same reason
- * `provider-coverage.test.ts` is: the maps it looks for are private to their
+ * `scripts/check-intl-providers.mjs` is: the maps it looks for are private to their
  * modules and there is nothing to import.
  */
 const I18N_DIR = path.join(process.cwd(), "src/i18n");
-
-/** Comments in this directory quote map literals constantly — never scan them. */
-function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
-}
 
 /**
  * Every `const NAME: Record<…>` whose type arguments name a message key.

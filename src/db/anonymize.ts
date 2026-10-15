@@ -2070,7 +2070,7 @@ async function scrubUnfinishedForms(
   // The bound the table was trusted to have is smaller than it looked. Its
   // reader drops anything over 24h and `NEVER_DRAFTED` keeps card, medical and
   // token fields out — but not a name, an address or a phone, and the retention
-  // prune runs **weekly** against that one-day cutoff (`30 3 * * 0`). So a draft
+  // prune runs **weekly** against that one-day cutoff (`8 3 * * 0`). So a draft
   // could outlive an erasure by five more days (issue #1620).
   //
   // Deleted rather than redacted. A draft is one person's unfinished work about

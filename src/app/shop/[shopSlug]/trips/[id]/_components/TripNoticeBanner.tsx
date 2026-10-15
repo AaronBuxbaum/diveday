@@ -147,6 +147,13 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.bookingRestoreCancelled",
   },
   "diver-added": { form: "add-diver", tone: "success", key: "trips.notices.diverAdded" },
+  // Seated for a later day and told so: the confirmation an online booking
+  // gets went out (fourth UX review, item 3).
+  "diver-added-confirmed": {
+    form: "add-diver",
+    tone: "success",
+    key: "trips.notices.diverAddedConfirmed",
+  },
   // Seated, but the waiver never left the building. Warning rather than
   // success: the booking is real and nothing needs undoing, yet the staffer
   // still owes the diver a link (src/app/actions/seat-diver-surfaces.ts).
@@ -300,6 +307,7 @@ const NOTICE_KEYS: Record<
   "contact-saved": { form: "roster", tone: "success", key: "trips.notices.contactSaved" },
   "contact-incomplete": { form: "roster", tone: "warning", key: "trips.notices.contactIncomplete" },
   "diver-invalid": { form: "add-diver", tone: "danger", key: "trips.notices.diverInvalid" },
+  "seat-busy": { form: "add-diver", tone: "danger", key: "seatDiver.busy" },
   "diver-full": { form: "add-diver", tone: "danger", key: "trips.notices.diverFull" },
   "diver-divers-full": {
     form: "add-diver",
@@ -500,6 +508,10 @@ const NOTICE_KEYS: Record<
     countKey: "trips.notices.requirementsBlockingCount",
   },
   payment: { form: "roster", tone: "success", key: "trips.notices.payment" },
+  "payment-amount": { form: "roster", tone: "danger", key: "trips.notices.paymentAmount" },
+  "payment-method": { form: "roster", tone: "danger", key: "trips.notices.paymentMethod" },
+  "payment-short": { form: "roster", tone: "danger", key: "trips.notices.paymentShort" },
+  "payment-online": { form: "roster", tone: "danger", key: "trips.notices.paymentOnline" },
   conditions: { form: "conditions", tone: "success", key: "trips.notices.conditions" },
   "conditions-cleared": {
     form: "conditions",

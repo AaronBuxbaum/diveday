@@ -94,8 +94,8 @@ export default async function TripPrepPage({
   if (!prep) notFound();
   const { trip } = prep;
   const now = nowDate();
-  // The crew's word for the header chip, and whether the departure is home.
-  const { shown: shownStage, finished } = departureStage({
+  // The crew's word for the header chip, and whether the boat has left the dock.
+  const { shown: shownStage, sailed } = departureStage({
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
     now,
@@ -118,7 +118,7 @@ export default async function TripPrepPage({
             <TripStageBadge stage={shownStage?.stage ?? null} copy={tripTabsCopy(t)} />
             <TripCapacityBadge
               trip={trip}
-              finished={finished}
+              finished={sailed}
               cancelledLabel={t("trips.detail.cancelledBadge")}
               t={t}
             />
@@ -140,6 +140,7 @@ export default async function TripPrepPage({
           noticeCount={count}
           grouping={grouping}
           cancelled={trip.status === "cancelled"}
+          sailed={sailed}
           groupPath={shopPath(shopSlug, "trips", tripId, "prep")}
           emptyState={
             // The whole page's content region, so this one wears an h2 — and the

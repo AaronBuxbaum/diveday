@@ -3,7 +3,7 @@ import { formatDayParts, formatTime } from "@/lib/format";
 import { publicTripPath } from "@/lib/public-routes";
 import { similarDepartures } from "@/lib/similar-departures";
 import { spotsRemaining } from "@/lib/trips";
-import { worthALook } from "@/lib/worth-a-look";
+import { asksNoMoreThan, worthALook } from "@/lib/worth-a-look";
 import type { publicTripRecord, readTripPage } from "../_lib/page-reads";
 
 type PublicTrip = NonNullable<Awaited<ReturnType<typeof publicTripRecord>>>;
@@ -16,6 +16,15 @@ export type OtherBoatsWhere = {
   locale: DiverLocale;
   timeZone: string;
 };
+
+/**
+ * A session of a course that asks no card of its students (Discover Scuba,
+ * Open Water): its reader may hold none, so another departure is offered only
+ * when it is the same course (dive-domain review F3 of layer r4-1).
+ */
+function opensToUncertified(trip: PublicTrip): boolean {
+  return trip.course?.minimumCertificationLevel === null;
+}
 
 /**
  * **What else this shop is running, for a boat with no seats left** (issue
@@ -31,15 +40,21 @@ export type OtherBoatsWhere = {
  * link serves better anyway.
  */
 export function fullTripAlternatives(trip: PublicTrip, board: Board, where: OtherBoatsWhere) {
+  const ownCourseOnly = opensToUncertified(trip);
   return similarDepartures({
     full: { tripId: trip.id, courseId: trip.courseId, diveSiteId: trip.diveSiteId },
-    candidates: board.map((candidate) => ({
-      id: candidate.id,
-      title: candidate.title,
-      startsAt: candidate.startsAt,
-      courseId: candidate.courseId,
-      diveSiteId: candidate.diveSiteId,
-    })),
+    // Never a boat that asks more than the full one (fourth UX review, item 10),
+    // and a first-timer's session is only offered its own course.
+    candidates: board.departures
+      .filter((candidate) => asksNoMoreThan(candidate.requirement, board.ceiling))
+      .filter((candidate) => !ownCourseOnly || candidate.courseId === trip.courseId)
+      .map((candidate) => ({
+        id: candidate.id,
+        title: candidate.title,
+        startsAt: candidate.startsAt,
+        courseId: candidate.courseId,
+        diveSiteId: candidate.diveSiteId,
+      })),
   }).map((row) => ({
     tripId: row.tripId,
     title: row.title,
@@ -71,8 +86,10 @@ export function worthALookList(
       difficultyLevel: trip.diveSite?.difficultyLevel ?? null,
       startsAt: trip.startsAt,
       seatsOpen: spotsRemaining(trip),
+      requirement: board.ceiling,
+      opensToUncertified: opensToUncertified(trip),
     },
-    candidates: board.map((candidate) => ({
+    candidates: board.departures.map((candidate) => ({
       tripId: candidate.id,
       title: candidate.title,
       courseId: candidate.courseId,
@@ -80,6 +97,7 @@ export function worthALookList(
       difficultyLevel: candidate.diveSite?.difficultyLevel ?? null,
       startsAt: candidate.startsAt,
       seatsOpen: Math.max(candidate.capacity - candidate.booked, 0),
+      requirement: candidate.requirement,
     })),
     timeZone: where.timeZone,
     now: where.now,

@@ -302,7 +302,11 @@ export type ShopActivityWrite =
   | { code: "order_refunded" | "order_paid_cash" | "order_paid_card_machine"; orderId: string }
   | { code: "paid_after_close_refunded"; checkoutId: string }
   | {
-      code: "seat_refunded" | "payment_waived" | "payment_marked_refunded";
+      code:
+        | "seat_refunded"
+        | "payment_waived"
+        | "payment_marked_refunded"
+        | "payment_balance_written_off";
       bookingId: string;
     }
   | {

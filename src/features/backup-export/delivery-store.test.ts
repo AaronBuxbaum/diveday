@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { shops } from "@/db/schema";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   beginBackupDelivery,
   finishBackupDelivery,
@@ -10,6 +10,8 @@ import {
   listShopsDueForBackup,
 } from "./delivery-store";
 import { saveShopBackupDestination } from "./destination-store";
+
+const ctx = fileScopedShopContext();
 
 const KEY = randomBytes(32);
 const PERIOD = "2099-W07";
@@ -24,7 +26,7 @@ const DESTINATION = {
 };
 
 async function bareShop(suffix: string) {
-  const { db } = await seededShopContext();
+  const { db } = ctx;
   const [shop] = await db
     .insert(shops)
     .values({ name: `Shop ${suffix}`, slug: `delivery-test-${suffix}`, timezone: "UTC" })

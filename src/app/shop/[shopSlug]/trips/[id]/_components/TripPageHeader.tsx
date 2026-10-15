@@ -24,8 +24,9 @@ export function TripCapacityBadge({
   trip: TripCapacity & { status: string; sellableCapacity: number };
   cancelledLabel: string;
   /**
-   * The departure is back (`tripPhaseOf`): nothing is for sale, so "4 spots
-   * left" would be a live-day word on a record (UX review 2026-10-10, item 10).
+   * The boat has left the dock (`departureSailed`): nothing is for sale, so
+   * "4 seats left" would be a dock word at sea or on a record (UX review
+   * 2026-10-10, item 10; fourth review, item 16).
    */
   finished?: boolean;
   t: StaffTranslator;
@@ -142,7 +143,10 @@ export function TripPageHeader({
   className?: string;
 }) {
   return (
-    <header className={className ?? "mb-8"}>
+    // `data-trip-page-header`: the printed packet drops the manifest's copy on
+    // the sheet it shares with the dive plan, whose header already said it
+    // (`globals.css`, fourth review item 17).
+    <header data-trip-page-header="" className={className ?? "mb-8"}>
       {/* **The way back up.** These are the deepest pages in the staff app and
           were once the only ones at depth 2-3 with no link to their parent at
           all: the first link in the header was a tab strip, which moved you

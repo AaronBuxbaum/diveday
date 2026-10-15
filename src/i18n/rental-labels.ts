@@ -1,7 +1,7 @@
 import type { RentalFitLine, RentalItemKind, StatedSizeKind } from "@/lib/dive-prep";
 import type { DrysuitCardCheck } from "@/lib/drysuit-card";
 import { cachedListFormat } from "@/lib/intl-cache";
-import type { RentableItemKind, ShopCatalogKind } from "@/lib/rentals";
+import { type RentableItemKind, type ShopCatalogKind, SIZED_RENTAL_KINDS } from "@/lib/rentals";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 /**
@@ -98,6 +98,8 @@ function sizedPiece(t: StaffTranslator, item: string, size: string): string {
   );
 }
 
+const SIZED_KINDS = new Set<RentalItemKind>(SIZED_RENTAL_KINDS);
+
 /**
  * A staff-fit diver's stated sizes, one piece per item — "BCD L, Wetsuit M" —
  * for the packing line the captain reads with no way to open the profile.
@@ -166,7 +168,13 @@ export function rentalFitLineText(t: StaffTranslator, locale: string, line: Rent
                 : t("shared.rentalFit.itemDrysuitGloves", { item: label })
               : item.size
                 ? sizedPiece(t, label, item.size)
-                : oneUnit(label);
+                : // A piece that comes in sizes, with none on file, says so
+                  // (fourth review, item 17): the packet printed "Weights"
+                  // where the screen said "Size missing", and a bare item
+                  // reads as a size nobody needs.
+                  SIZED_KINDS.has(item.kind)
+                  ? oneUnit(t("shared.rentalFit.itemSizeMissing", { item: label }))
+                  : oneUnit(label);
         // Wrapped rather than substituted, so the piece keeps whatever it
         // already said and gains the contradiction. A staffer reading the rail
         // is about to go and fetch this: "Drysuit ML" with nothing on it sends

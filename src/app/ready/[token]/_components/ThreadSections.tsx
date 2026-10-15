@@ -17,9 +17,12 @@ import { claimLinkPath } from "@/lib/booking-capabilities";
 import { formatShortDate } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicTripArrivalCardPath } from "@/lib/public-routes";
-import { addSeatFromReady, cancelMyBookingAction } from "../booking-actions";
+import { addSeatFromReady, askToMoveAction, cancelMyBookingAction } from "../booking-actions";
+import { signMinorWaiverAction } from "../party-actions";
 import { CourseMaterials } from "./CourseMaterials";
 import { CANCEL_PREVIEW_KEY } from "./cancel-notices";
+import { MoveAsk } from "./MoveAsk";
+import { PartyCancelPlan, partyCancelSeats } from "./PartyCancelPlan";
 import { PartySection } from "./PartySection";
 import { RunningLate } from "./RunningLate";
 
@@ -66,6 +69,8 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
     seatName: seat.seatName,
     claimed: seat.claimed,
     waiverSigned: seat.waiverSigned,
+    signForMinor: seat.signForMinor,
+    minorNote: seat.minorNote,
     claimUrl: seat.claim
       ? claimOrigin
         ? new URL(claimLinkPath(seat.claim.token), `${claimOrigin}/`).toString()
@@ -82,6 +87,10 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
   const legTravelTimes = tripDives.map(({ dive }) => dive.travelMinutes);
 
   const cancelPreviewKey = CANCEL_PREVIEW_KEY[data.cancelPreview];
+  // A lead's cancel takes their unclaimed seats with it; the confirm says
+  // which go and which stay before the tap (batch 6 item 10).
+  const partyCancel = partyCancelSeats(partySeatClaims);
+  const hasParty = partyCancel.goes.length + partyCancel.stays.length > 0;
 
   return (
     <>
@@ -138,6 +147,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
           seats={partySeats}
           allSet={partyAllSet}
           addSeatAction={data.canAddSeat ? addSeatFromReady.bind(null, token) : null}
+          signWaiverAction={data.identityHeld ? undefined : signMinorWaiverAction.bind(null, token)}
           t={t}
         />
         {/* What to put in the bag. Below the spine — which carries the gear
@@ -188,6 +198,16 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
           // there is a refund to preview, and the form's own `mt-3` stood
           // "Cancel my spot" 36px under the rule without one (K-156).
           <section className={`flex flex-col gap-3 ${THREAD_FOOT_SECTION_CLASS}`}>
+            {/* Past the free window, the ask comes before the forfeit (H-126). */}
+            {data.moveAsk ? (
+              <MoveAsk
+                state={data.moveAsk}
+                shopName={detail.shop.name}
+                shopPhone={fullShop?.contactPhone ?? null}
+                action={askToMoveAction.bind(null, token)}
+                t={t}
+              />
+            ) : null}
             {cancelPreviewKey ? (
               <p className="text-base text-muted">{t(cancelPreviewKey)}</p>
             ) : null}
@@ -199,11 +219,23 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
                 triggerLabel={t("ready.cancelSpot")}
                 triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
                 message={[
-                  t("ready.cancelConfirm", { trip: detail.trip.title }),
-                  cancelPreviewKey ? t(cancelPreviewKey) : null,
+                  t(hasParty ? "ready.cancelConfirmParty" : "ready.cancelConfirm", {
+                    trip: detail.trip.title,
+                  }),
+                  hasParty ? null : cancelPreviewKey ? t(cancelPreviewKey) : null,
                 ]
                   .filter(Boolean)
                   .join(" ")}
+                extra={
+                  hasParty ? (
+                    <PartyCancelPlan
+                      seats={partyCancel}
+                      preview={cancelPreviewKey ? t(cancelPreviewKey) : null}
+                      locale={locale}
+                      t={t}
+                    />
+                  ) : undefined
+                }
                 confirmLabel={t("ready.cancelConfirmButton")}
                 cancelLabel={t("ready.neverMind")}
                 pendingLabel={t("ready.cancelling")}

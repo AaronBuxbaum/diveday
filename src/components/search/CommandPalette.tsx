@@ -5,7 +5,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, useTransition
 import { createPortal } from "react-dom";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { DiveDayIcon, StaffDestinationIcon } from "@/components/StaffDestinationIcon";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import { useDialogBehaviour } from "@/components/ui/useDialogBehaviour";
 import type { SearchResults } from "@/db/search";
 import type { GearItemStatus } from "@/lib/gear";

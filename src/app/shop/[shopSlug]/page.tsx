@@ -368,10 +368,6 @@ async function TodayBody({
   // and badges the boat they crew; an instructor's leads with their sessions. It never re-orders
   // the spine — clock order wins.
   const lens = roleLensFor(session.user.roles);
-  // "Your week" is the crew's: a reader the lens files under boat work, or a
-  // deckhand, at a shop that plans its crew in DiveDay.
-  const showCrewWeek =
-    shop.crewScheduleEnabled && (lens === "boat" || session.user.roles.includes("crew"));
   const eveningClose = assembleEveningClose(closeout.departures, now);
   // **The shop's own calendar day**, as the two UTC instants that bracket it. Four readers below
   // want it — the first-boat-ever question, the day strip's window and ticks, and the day's takings
@@ -903,10 +899,13 @@ async function TodayBody({
         />
       )}
 
-      {/* A crew member's next three departures, on any day, quiet or not. */}
-      {showCrewWeek ? (
+      {/* **"Your week"**: the reader's next three departures, on any day, quiet or not, at a
+          shop that plans its crew in DiveDay. Any role with an assignment (fourth review, item
+          14), minus the sessions "Your sessions" already lists; nothing for nobody rostered. */}
+      {shop.crewScheduleEnabled ? (
         <Suspense fallback={null}>
           <YourWeek
+            listedTripIds={lens === "sessions" ? crewedSessions.map((row) => row.tripId) : []}
             db={db}
             shopId={shop.id}
             shopSlug={shopSlug}

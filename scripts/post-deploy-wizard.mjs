@@ -3,7 +3,6 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PRIMARY_REGION, SES_REGION } from "../config/aws-regions.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
-import { VERCEL_CLI, VERCEL_CLI_PACKAGE } from "./vercel-cli.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 
@@ -68,6 +67,10 @@ export async function runPostDeployWizard({
   // infra-deploy.mjs's isCiDeploy comment for why an ambient signal is unsafe
   // here). Never true when called from the interactive branch.
   ciUnattended = false,
+  // `pnpm infra:deploy --resync-vercel`: forwarded as import-vercel-env.mjs's
+  // `--resync`, so the Vercel step pushes every value instead of only what the
+  // checkpoint says changed.
+  resyncVercel = false,
   // Injectable so a test does not read whatever this checkout commits.
   committed = committedContext(),
 }) {
@@ -132,6 +135,7 @@ export async function runPostDeployWizard({
       "production",
       "--check",
       ...(ciUnattended ? ["--ci-unattended"] : []),
+      ...(resyncVercel ? ["--resync"] : []),
     ]) &&
     yes(
       await ask(
@@ -146,6 +150,7 @@ export async function runPostDeployWizard({
         ".env.vercel",
         "production",
         ...(ciUnattended ? ["--ci-unattended"] : []),
+        ...(resyncVercel ? ["--resync"] : []),
       ],
       SUBPROCESS_TIMEOUTS.wizardStep,
     );
@@ -389,7 +394,7 @@ export async function runPostDeployWizard({
       if (unreadableReason) throw new Error(unreadableReason);
       existingRecords = execute(
         "pnpm",
-        [...VERCEL_CLI, "dns", "ls", dnsZone, "--limit", "100", ...vercelScopeArguments],
+        ["exec", "vercel", "dns", "ls", dnsZone, "--limit", "100", ...vercelScopeArguments],
         {
           encoding: "utf8",
           timeoutMs: SUBPROCESS_TIMEOUTS.vercelCli,
@@ -578,7 +583,7 @@ export async function runPostDeployWizard({
     }
     if (plan.dmarcToPublish) {
       log(
-        `DMARC: nothing is published at ${plan.dmarcToPublish.name}, so SES mail is judged with no policy of its own and reports nothing. Set \`dmarcReportEmail\` in cdk.json and rerun, or publish it by hand: pnpm dlx ${VERCEL_CLI_PACKAGE} dns add ${plan.dnsZone} ${plan.dmarcToPublish.name} TXT '${plan.dmarcToPublish.value}'`,
+        `DMARC: nothing is published at ${plan.dmarcToPublish.name}, so SES mail is judged with no policy of its own and reports nothing. Set \`dmarcReportEmail\` in cdk.json and rerun, or publish it by hand: pnpm exec vercel dns add ${plan.dnsZone} ${plan.dmarcToPublish.name} TXT '${plan.dmarcToPublish.value}'`,
       );
     }
   };
@@ -596,7 +601,7 @@ export async function runPostDeployWizard({
       logDmarcState(sesDnsPlan);
       for (const line of sesDnsPlan.conflictingMailFromMx) {
         log(
-          `SES MAIL FROM: not adding the ${SES_REGION} MX -- ${sesDnsPlan.dnsZone} already carries a different one, and SES refuses the setup outright when the subdomain has several. Remove it first (\`pnpm dlx ${VERCEL_CLI_PACKAGE} dns rm <record-id>\`), then rerun this wizard. The record: ${line}`,
+          `SES MAIL FROM: not adding the ${SES_REGION} MX -- ${sesDnsPlan.dnsZone} already carries a different one, and SES refuses the setup outright when the subdomain has several. Remove it first (\`pnpm exec vercel dns rm <record-id>\`), then rerun this wizard. The record: ${line}`,
         );
       }
       let added = 0;
@@ -604,7 +609,8 @@ export async function runPostDeployWizard({
         run(
           "pnpm",
           [
-            ...VERCEL_CLI,
+            "exec",
+            "vercel",
             "dns",
             "add",
             sesDnsPlan.dnsZone,
@@ -646,7 +652,7 @@ export async function runPostDeployWizard({
     // production build, not a single API request.
     run(
       "pnpm",
-      [...VERCEL_CLI, "--prod", "--archive=tgz", ...(ciUnattended ? ["--yes"] : [])],
+      ["exec", "vercel", "--prod", "--archive=tgz", ...(ciUnattended ? ["--yes"] : [])],
       SUBPROCESS_TIMEOUTS.build,
     );
   }

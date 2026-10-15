@@ -73,10 +73,14 @@ type MeetingPoint = {
   mapQuery?: string | null;
 };
 
-/** A seat's money, minor units and an ISO currency (`seatMoneyTerms`). */
-type ConfirmationMoney =
+/**
+ * A seat's money, or the party's (`seats` > 1), minor units and an ISO
+ * currency (`seatMoneyTerms`, `partyMoneyTerms`).
+ */
+type ConfirmationMoney = (
   | { due: "at_shop" | "online"; amountCents: number; currency: string }
-  | { due: "deposit"; depositCents: number; balanceCents: number; currency: string };
+  | { due: "deposit"; depositCents: number; balanceCents: number; currency: string }
+) & { seats?: number };
 
 type WaiverRequestEmailInput = {
   locale: DiverLocale;
@@ -709,12 +713,30 @@ function confirmationMoneyLine(
   input: { locale: DiverLocale; startsAt: Date; timezone: string },
 ): string {
   const amount = (cents: number) => formatMoneyCents(cents, money.currency, input.locale);
+  // A lead holding several seats hears the party's figure, the one the form
+  // showed above the button (fourth UX review, item 5).
+  const party = (money.seats ?? 1) > 1;
+  const seats = money.seats ?? 1;
   if (money.due === "deposit") {
-    return t("notifications.bookingConfirmation.moneyDeposit", {
-      deposit: amount(money.depositCents),
-      balance: amount(money.balanceCents),
-      date: formatShortDate(input.startsAt, input.locale, input.timezone),
-    });
+    return t(
+      party
+        ? "notifications.bookingConfirmation.moneyPartyDeposit"
+        : "notifications.bookingConfirmation.moneyDeposit",
+      {
+        seats,
+        deposit: amount(money.depositCents),
+        balance: amount(money.balanceCents),
+        date: formatShortDate(input.startsAt, input.locale, input.timezone),
+      },
+    );
+  }
+  if (party) {
+    return t(
+      money.due === "online"
+        ? "notifications.bookingConfirmation.moneyPartyOnline"
+        : "notifications.bookingConfirmation.moneyPartyAtShop",
+      { seats, amount: amount(money.amountCents) },
+    );
   }
   return t(
     money.due === "online"

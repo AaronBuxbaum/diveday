@@ -5,7 +5,7 @@ import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { paperWaiverCopy } from "@/components/paper-waiver-copy";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_CLASS } from "@/components/ui/card";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import { StatusMarkColumn } from "@/components/ui/StatusMark";
 import { STAFF_RE_ENTRY_KEYS } from "@/i18n/dive-intent-labels";
 import { COURSE_FORMS_BLOCK_BOARDING } from "@/lib/course-forms";
@@ -47,6 +47,7 @@ export type RowOutstandingInput = Pick<
   | "readinessByBooking"
   | "courseNextStepByBooking"
   | "elearningQueryByBooking"
+  | "elearningChecksOff"
   | "markRosterWaiverInPersonAction"
   | "markPaymentAction"
   | "certifyDiverAction"
@@ -57,6 +58,7 @@ export type RowOutstandingInput = Pick<
   | "materialsDone"
   | "paymentStatus"
   | "paymentSource"
+  | "paymentMark"
   | "waiverStatus"
   | "waiverControl"
   | "identityUnconfirmed"
@@ -89,6 +91,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     readinessByBooking,
     courseNextStepByBooking,
     elearningQueryByBooking,
+    elearningChecksOff,
     markRosterWaiverInPersonAction,
     markPaymentAction,
     certifyDiverAction,
@@ -99,6 +102,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     materialsDone,
     paymentStatus,
     paymentSource,
+    paymentMark,
     waiverStatus,
     waiverControl,
     identityUnconfirmed,
@@ -195,6 +199,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
           materialsDone={Boolean(materialsDone)}
           action={elearningCheckAction}
           copy={elearningCheckCopy(t)}
+          offNote={elearningChecksOff ? t("shared.padiChecksOff") : null}
         />
       ) : null}
 
@@ -280,6 +285,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
               mayWriteOffPayment ? PAYMENT_STATUSES_ALL : PAYMENT_STATUSES_RECORDING_ONLY
             }
             sourceNote={paymentSource}
+            mark={paymentMark}
             packageNote={packageNote}
             refundNote={
               refundEligible && cancellationDeadline

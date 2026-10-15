@@ -16,6 +16,7 @@ const { applyProviderEmailEvent } = await import("@/db/notifications");
 const { optOutAddressAfterComplaint } = await import("@/db/courtesy-email");
 const { verifySnsMessage, confirmSnsSubscription } = await import("@/lib/notifications/sns");
 const { POST } = await import("./route");
+const { forgetWebhookRefusalReports } = await import("@/lib/webhook-refusal");
 
 const FAKE_DB = { fake: "db" };
 
@@ -60,6 +61,31 @@ describe("ses webhook route — verification gate", () => {
     const response = await POST(webhookRequest("{}"));
     expect(response.status).toBe(400);
     expect(applyProviderEmailEvent).not.toHaveBeenCalled();
+  });
+
+  it("logs a missing topic as webhook.unconfigured and a bad signature as webhook.refused", async () => {
+    forgetWebhookRefusalReports();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(verifySnsMessage).mockResolvedValueOnce({ status: "not_configured" });
+    await POST(webhookRequest("{}"));
+    vi.mocked(verifySnsMessage).mockResolvedValueOnce({ status: "invalid_signature" });
+    await POST(webhookRequest("{}"));
+    const parse = (spy: typeof warn) => spy.mock.calls.map((call) => JSON.parse(String(call[0])));
+    const warned = parse(warn);
+    const errored = parse(error);
+    warn.mockRestore();
+    error.mockRestore();
+    expect(errored).toContainEqual(
+      expect.objectContaining({ event: "webhook.unconfigured", webhook: "ses" }),
+    );
+    expect(warned).toEqual([
+      expect.objectContaining({
+        event: "webhook.refused",
+        webhook: "ses",
+        reason: "invalid_signature",
+      }),
+    ]);
   });
 
   it("rejects a message from an unexpected topic", async () => {

@@ -1,7 +1,9 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { bookings, people, personRoles } from "./schema";
+
+const ctx = fileScopedShopContext();
 
 /**
  * Which writes announce a manifest change.
@@ -29,7 +31,7 @@ const { callTripBlowout } = await import("./blowouts");
 const { upcomingTripsWithCounts } = await import("./trips");
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const trip = trips.find((candidate) => candidate.title === "Two-Tank Reef — Molasses & French");
   if (!trip) throw new Error("expected seeded trip missing");

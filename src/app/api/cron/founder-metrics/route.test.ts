@@ -231,7 +231,7 @@ describe("the deployed schedule", () => {
       readFileSync(path.join(process.cwd(), "vercel.json"), "utf8"),
     ).crons;
     expect(crons.find((cron) => cron.path === "/api/cron/founder-metrics")?.schedule).toBe(
-      "0 11 * * *",
+      "7 11 * * *",
     );
   });
 });

@@ -21,7 +21,7 @@ import {
   FieldGrid,
   FormStatus,
 } from "@/components/ui/form";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import { canPersonManagePaymentSettings } from "@/db/authz";
 import { listShopPromoCodes } from "@/db/shop-promos";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";

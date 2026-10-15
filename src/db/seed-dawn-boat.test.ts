@@ -3,15 +3,20 @@ import { describe, expect, it } from "vitest";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import { seededShopContext } from "@/test/db";
 import {
+  boats,
   bookings,
+  buddyPairMembers,
+  buddyTeamEvents,
   certifications,
   executedDives,
   preDepartureCheckEvents,
   preDepartureChecklistItems,
   rollCallCrewEvents,
+  rollCallEvents,
   tripAssignments,
   trips,
 } from "./schema";
+import { seedDawnBuddyTeams } from "./seed-buddy-pairs";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 
 /**
@@ -124,5 +129,73 @@ describe("the seeded dawn boat's record", () => {
       const card = reviewed.find((row) => row.personId === personId && row.reviewedAt);
       expect(card?.reviewedAt?.getTime(), personId).toBeLessThan(dawn.startsAt.getTime());
     }
+  });
+
+  it("paired every diver it boarded before the lines came off (fourth review, item 52)", async () => {
+    const { db, dawn } = await dawnBoat();
+    const boarded = await db
+      .select({ bookingId: rollCallEvents.bookingId })
+      .from(rollCallEvents)
+      .where(
+        and(
+          eq(rollCallEvents.tripId, dawn.id),
+          eq(rollCallEvents.checkpoint, "departure"),
+          eq(rollCallEvents.status, "boarded"),
+        ),
+      );
+    expect(boarded.length).toBeGreaterThan(1);
+    const members = await db
+      .select()
+      .from(buddyPairMembers)
+      .where(eq(buddyPairMembers.tripId, dawn.id));
+    // Everybody in the water is on a team, and nobody who stayed ashore is.
+    expect(members.map((member) => member.bookingId).sort()).toEqual(
+      boarded.map((row) => row.bookingId).sort(),
+    );
+    const sizes = new Map<string, number>();
+    for (const member of members) sizes.set(member.pairId, (sizes.get(member.pairId) ?? 0) + 1);
+    for (const size of sizes.values()) expect([2, 3]).toContain(size);
+    for (const member of members) {
+      expect(member.createdAt.getTime()).toBeLessThan(dawn.startsAt.getTime());
+    }
+  });
+
+  it("teams only the divers whose standing word at the dock is boarded (review F5)", async () => {
+    const { db, shop, dawn } = await dawnBoat();
+    const dockEvents = await db
+      .select()
+      .from(rollCallEvents)
+      .where(and(eq(rollCallEvents.tripId, dawn.id), eq(rollCallEvents.checkpoint, "departure")));
+    const [turnedAway, undone] = dockEvents.filter((event) => event.status === "boarded");
+    if (!turnedAway || !undone) throw new Error("expected boarded divers on the dawn boat");
+    // A boarded the crew took back: one turned away, one tap undone.
+    const later = new Date(turnedAway.occurredAt.getTime() + 60_000);
+    await db.insert(rollCallEvents).values([
+      { ...turnedAway, id: undefined, seq: undefined, status: "not_boarded", occurredAt: later },
+      { ...undone, id: undefined, seq: undefined, status: "cleared", occurredAt: later },
+    ]);
+    await db.delete(buddyTeamEvents).where(eq(buddyTeamEvents.tripId, dawn.id));
+    await db.delete(buddyPairMembers).where(eq(buddyPairMembers.tripId, dawn.id));
+    await seedDawnBuddyTeams(db, shop.id, {
+      personId: turnedAway.recordedByPersonId,
+      fullName: "Recorder",
+    });
+    const teamed = (
+      await db.select().from(buddyPairMembers).where(eq(buddyPairMembers.tripId, dawn.id))
+    ).map((member) => member.bookingId);
+    expect(teamed.length).toBeGreaterThan(1);
+    expect(teamed).not.toContain(turnedAway.bookingId);
+    expect(teamed).not.toContain(undone.bookingId);
+  });
+
+  it("sailed on a hull, so its card and packet name the boat (fourth review, item 11)", async () => {
+    const { db, dawn } = await dawnBoat();
+    expect(dawn.boatId).not.toBeNull();
+    const [hull] = await db
+      .select({ mmsi: boats.mmsi, callSign: boats.callSign })
+      .from(boats)
+      .where(eq(boats.id, dawn.boatId ?? ""));
+    expect(hull?.mmsi).toMatch(/^[0-9]{9}$/);
+    expect(hull?.callSign).toBeTruthy();
   });
 });

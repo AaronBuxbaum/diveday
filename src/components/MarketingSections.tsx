@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { CaptainRollCallFallback } from "@/components/MarketingScreenFallbacks";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";

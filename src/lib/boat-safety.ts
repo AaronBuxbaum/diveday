@@ -266,6 +266,25 @@ export function passengersAboveCertificate(
 }
 
 /**
+ * **The people the crew have counted aboard, past the certificate** — the
+ * manifest's head count turns danger with it. Passengers only, the same
+ * population the certificate and every seat number count: divers, snorkelers
+ * and riders a crew member marked boarded, never the crew. Null within the
+ * limit, and for a boat with no certificate recorded (or none known to the
+ * caller), which has said nothing. A warning only: nothing refuses a person
+ * the crew is looking at.
+ */
+export function passengersAboveCertificateAboard(
+  aboard: number,
+  certifiedPassengers: number | null | undefined,
+): { aboard: number; limit: number } | null {
+  if (certifiedPassengers == null) return null;
+  return passengersAboveCertificate(aboard, certifiedPassengers)
+    ? { aboard, limit: certifiedPassengers }
+    : null;
+}
+
+/**
  * **Why a boat's numbers may not be saved** (H-107), or null when they may.
  *
  * - `seats_above_certificate`: the seats on sale (`capacity`) pass the

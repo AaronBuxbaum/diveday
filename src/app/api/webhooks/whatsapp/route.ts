@@ -13,6 +13,7 @@ import {
   verifyWhatsAppSignature,
   whatsAppChallengeResponse,
 } from "@/lib/notifications/whatsapp-events";
+import { logWebhookRefusal } from "@/lib/webhook-refusal";
 
 /**
  * Meta's WhatsApp webhook: what happened to the courtesy messages shops sent
@@ -63,8 +64,10 @@ export async function POST(request: Request) {
     request.headers.get("x-hub-signature-256"),
     process.env.META_APP_SECRET,
   );
-  if (verification.status === "not_configured") return new Response(null, { status: 503 });
-  if (verification.status !== "verified") return new Response(null, { status: 400 });
+  if (verification.status !== "verified") {
+    logWebhookRefusal("whatsapp", verification.status);
+    return new Response(null, { status: verification.status === "not_configured" ? 503 : 400 });
+  }
 
   const now = nowDate();
   const events = parseWhatsAppDeliveryEvents(payload, now);

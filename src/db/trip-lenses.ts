@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNull, ne } from "drizzle-orm";
+import { and, asc, count, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { lensSlugFrom } from "@/lib/trip-lenses";
 import type { AppDb } from "./client";
@@ -43,23 +43,25 @@ export async function getTripLens(
  * How many departures wear this word, for the confirm to say so before a shop
  * taps Delete.
  *
- * Counted rather than refused, the same call `countBoatDepartures` makes:
+ * Counted rather than refused, the same call `countDeparturesByBoat` makes:
  * retiring a word the shop no longer uses is an ordinary thing, and with a soft
  * delete nothing is lost either way. A word nothing carries goes quietly.
  */
-export async function countTripLensDepartures(
+export async function countDeparturesByTripLens(
   db: AppDb,
   shopId: string,
-  lensId: string,
-): Promise<number> {
-  const [row] = await db
-    .select({ departures: count(trips.id) })
+): Promise<Map<string, number>> {
+  // One read for the vocabulary, grouped by word (code review 2026-10-13b,
+  // item 36). A word nothing carries is absent, and reads as 0.
+  const rows = await db
+    .select({ lensId: trips.lensId, departures: count(trips.id) })
     .from(trips)
     // diveday:allow-deleted-trips: the confirm is telling the shop how much of
     // its own history this word is attached to, and a departure taken off the
     // board still wore it.
-    .where(and(eq(trips.shopId, shopId), eq(trips.lensId, lensId), ne(trips.status, "cancelled")));
-  return row?.departures ?? 0;
+    .where(and(eq(trips.shopId, shopId), isNotNull(trips.lensId), ne(trips.status, "cancelled")))
+    .groupBy(trips.lensId);
+  return new Map(rows.flatMap((row) => (row.lensId ? [[row.lensId, row.departures]] : [])));
 }
 
 /**

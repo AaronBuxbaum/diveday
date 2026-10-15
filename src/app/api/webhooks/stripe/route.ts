@@ -18,12 +18,13 @@ import { recordStripePayout } from "@/db/payouts";
 import { recordStripeRefundFailure } from "@/db/refund-failures";
 import { recordStripeChargeRefund } from "@/db/refunds";
 import {
+  applyStripeAccountStatus,
   disconnectShopStripeAccount,
-  setShopStripeAccountStatus,
   stripeAccountHolder,
 } from "@/db/stripe-accounts";
 import { recordTipPaymentIntent } from "@/db/stripe-payment-targets";
 import { paymentSourceLookupFromEnvironment } from "@/db/stripe-providers";
+import { tellOwnersPaymentsRestricted } from "@/db/stripe-restricted";
 import {
   markTipExpiredBySessionId,
   markTipPaidBySessionId,
@@ -45,6 +46,7 @@ import { payoutSummaryLookupFromEnvironment } from "@/lib/payments/payout-summar
 import { refundFailureReasonOf } from "@/lib/payments/refund-failure-reason";
 import { demoStripeAccount, platformKeyIsLive } from "@/lib/payments/stripe-keys";
 import { type StripeWebhookEvent, verifyStripeWebhook } from "@/lib/payments/webhook";
+import { logWebhookRefusal } from "@/lib/webhook-refusal";
 
 const invoiceObjectSchema = z.object({
   id: z.string().min(1),
@@ -430,10 +432,43 @@ const accountObjectSchema = z.object({
   payouts_enabled: z.boolean(),
   details_submitted: z.boolean(),
   // Optional: a fixture or an unusual event payload missing it still
-  // parses — `setShopStripeAccountStatus` leaves the stored currency
+  // parses — `applyStripeAccountStatus` leaves the stored currency
   // untouched rather than resetting it to "usd" (task 60).
   default_currency: z.string().optional(),
 });
+
+/**
+ * Store an `account.updated` delivery's flags, and tell the owners when this
+ * is the write that turned card payments off (batch 6 item 8). Bookings
+ * already fall back to paying at the shop; this is the owner hearing why.
+ * Claimed once per change of state (`applyStripeAccountStatus`), so a
+ * redelivery tells nobody twice, and the telling never throws. Returns
+ * whether this delivery was that change.
+ */
+async function applyAccountUpdate(
+  db: AppDb,
+  account: {
+    id: string;
+    charges_enabled: boolean;
+    payouts_enabled: boolean;
+    details_submitted: boolean;
+    default_currency?: string;
+  },
+): Promise<boolean> {
+  const applied = await applyStripeAccountStatus(db, account.id, {
+    chargesEnabled: account.charges_enabled,
+    payoutsEnabled: account.payouts_enabled,
+    detailsSubmitted: account.details_submitted,
+    defaultCurrency: account.default_currency,
+  });
+  if (applied.newlyRestricted && applied.account?.paymentsRestrictedAt) {
+    await tellOwnersPaymentsRestricted(db, {
+      shopId: applied.account.shopId,
+      restrictedAt: applied.account.paymentsRestrictedAt,
+    });
+  }
+  return applied.newlyRestricted;
+}
 
 /**
  * A single Connect webhook endpoint for every shop's connected account
@@ -466,8 +501,10 @@ export async function POST(request: Request) {
     }
   }
 
-  if (verification.status === "not_configured") return new Response(null, { status: 503 });
-  if (verification.status !== "verified") return new Response(null, { status: 400 });
+  if (verification.status !== "verified") {
+    logWebhookRefusal("stripe", verification.status);
+    return new Response(null, { status: verification.status === "not_configured" ? 503 : 400 });
+  }
 
   const { event } = verification;
   const db = await getDb();
@@ -717,13 +754,8 @@ export async function POST(request: Request) {
             logOutcome("stale_account_update", { account: account.data.id });
             break;
           }
-          await setShopStripeAccountStatus(db, account.data.id, {
-            chargesEnabled: account.data.charges_enabled,
-            payoutsEnabled: account.data.payouts_enabled,
-            detailsSubmitted: account.data.details_submitted,
-            defaultCurrency: account.data.default_currency,
-          });
-          logOutcome("account_updated", { account: account.data.id });
+          const restricted = await applyAccountUpdate(db, account.data);
+          logOutcome("account_updated", { account: account.data.id, restricted });
         } else {
           logOutcome("malformed_payload");
         }
@@ -829,7 +861,7 @@ export async function POST(request: Request) {
     // `*ExpiredBySessionId` and `markCheckoutPaymentFailedBySessionId` only
     // touch a `pending` row,
     // `recordStripeRefundFailure` writes one row per refund, reversing with it,
-    // `setShopStripeAccountStatus` is gated by `hasNewerAccountUpdate`, and
+    // `applyStripeAccountStatus` is gated by `hasNewerAccountUpdate`, and
     // `disconnectShopStripeAccount` neither moves `disconnectedAt` on a row
     // that is already disconnected nor touches one reconnected since this
     // event's own `created` time, `recordStripeChargeRefund` only ever raises a

@@ -18,10 +18,16 @@ import {
   combineSiteRequirements,
   hasVerifiedCertificationAtLeast,
   higherCertificationLevel,
+  needsCardSighting,
   noCertificationStands,
   REQUIRABLE_CERTIFICATION_LEVELS,
   unreviewedCardState,
 } from "./readiness";
+import {
+  effectiveWaiverForBooking,
+  releaseLapsedForBooking,
+  WAIVER_SIGNATURE_VALIDITY_MS,
+} from "./waivers";
 
 const now = new Date("2026-07-18T12:00:00.000Z");
 const requirement = {
@@ -108,7 +114,7 @@ describe("calculateReadiness", () => {
       "certification_insufficient",
     ],
   ] as const)("fails closed for %s", (_name, input, code) => {
-    expect(calculateReadiness({ ...input, now }).blockers).toContainEqual(
+    expect(calculateReadiness({ ...input, timezone: "UTC", now }).blockers).toContainEqual(
       expect.objectContaining({ code }),
     );
   });
@@ -130,6 +136,7 @@ describe("calculateReadiness", () => {
    */
   it("does not tell a diver their self-declared level is certification awaiting verification", () => {
     const blockers = calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: signedWaiver,
       certifications: [
@@ -166,6 +173,7 @@ describe("calculateReadiness", () => {
    */
   it("says 'with the shop' about a self-declared card that carries a number", () => {
     const blockers = calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: signedWaiver,
       certifications: [
@@ -187,6 +195,7 @@ describe("calculateReadiness", () => {
 
   it("still says 'with the shop' once a real card is captured beside the claim", () => {
     const blockers = calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: signedWaiver,
       certifications: [
@@ -206,6 +215,7 @@ describe("calculateReadiness", () => {
 
   it("prefers the level the shop has evidence for over a claim", () => {
     const blockers = calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: signedWaiver,
       certifications: [
@@ -226,6 +236,7 @@ describe("calculateReadiness", () => {
 
   it("does not tell a diver their nitrox tick is a card awaiting verification", () => {
     const blockers = calculateReadiness({
+      timezone: "UTC",
       requirement: nitroxRequirement,
       waiver: signedWaiver,
       certifications: [certification()],
@@ -242,6 +253,7 @@ describe("calculateReadiness", () => {
   it("is ready only with a completed waiver and a verified card at or above the bar", () => {
     expect(
       calculateReadiness({
+        timezone: "UTC",
         requirement,
         waiver: signedWaiver,
         certifications: [certification()],
@@ -257,6 +269,7 @@ describe("calculateReadiness", () => {
     // Every piece of evidence is satisfied — the only thing wrong is that this
     // booking may be a different human sharing the email. It must not read ready.
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: signedWaiver,
       certifications: [certification()],
@@ -272,6 +285,7 @@ describe("calculateReadiness", () => {
   it("does not raise the identity blocker once the booking is confirmed (or was never flagged)", () => {
     for (const identityUnconfirmed of [false, undefined]) {
       const result = calculateReadiness({
+        timezone: "UTC",
         requirement,
         waiver: signedWaiver,
         certifications: [certification()],
@@ -285,6 +299,7 @@ describe("calculateReadiness", () => {
 
   it("raises under_minimum_age for a diver under the course's minimum on the course date (H-08)", () => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: signedWaiver,
       certifications: [certification()],
@@ -304,6 +319,7 @@ describe("calculateReadiness", () => {
       { courseMinimumAge: 15, dateOfBirth: "2012-03-01", courseDate: undefined },
     ]) {
       const result = calculateReadiness({
+        timezone: "UTC",
         requirement,
         waiver: signedWaiver,
         certifications: [certification()],
@@ -325,6 +341,7 @@ describe("calculateReadiness", () => {
   // flipping which line a diver sees.
   it("always raises identity_unconfirmed before under_minimum_age when both apply", () => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: signedWaiver,
       certifications: [certification()],
@@ -365,6 +382,7 @@ describe("calculateReadiness", () => {
   ] as const)("fails closed on a required specialty for %s", (_name, card, code) => {
     expect(
       calculateReadiness({
+        timezone: "UTC",
         requirement: deepRequirement,
         waiver: signedWaiver,
         certifications: [certification()],
@@ -377,6 +395,7 @@ describe("calculateReadiness", () => {
   it("is ready when a required specialty has a verified card", () => {
     expect(
       calculateReadiness({
+        timezone: "UTC",
         requirement: deepRequirement,
         waiver: signedWaiver,
         certifications: [certification()],
@@ -389,6 +408,7 @@ describe("calculateReadiness", () => {
   it("clears a required specialty once a staffer confirms the imported card", () => {
     expect(
       calculateReadiness({
+        timezone: "UTC",
         requirement: deepRequirement,
         waiver: signedWaiver,
         certifications: [certification()],
@@ -408,6 +428,7 @@ describe("calculateReadiness", () => {
     // read as "unconfirmed" for every card a staffer typed in themselves.
     expect(
       calculateReadiness({
+        timezone: "UTC",
         requirement: deepRequirement,
         waiver: signedWaiver,
         certifications: [certification()],
@@ -422,6 +443,7 @@ describe("calculateReadiness", () => {
     // asks for no specialty is unaffected by a card sitting unconfirmed.
     expect(
       calculateReadiness({
+        timezone: "UTC",
         requirement,
         waiver: signedWaiver,
         certifications: [certification()],
@@ -435,6 +457,7 @@ describe("calculateReadiness", () => {
 
   it("composes the stricter site level over a lax trip level", () => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement: { ...requirement, minimumCertificationLevel: "open_water" } as TripRequirement,
       siteRequirement: {
         minimumCertificationLevel: "rescue",
@@ -453,6 +476,7 @@ describe("calculateReadiness", () => {
 
   it("unions a site-only specialty the trip did not list", () => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement,
       siteRequirement: {
         minimumCertificationLevel: null,
@@ -473,6 +497,7 @@ describe("calculateReadiness", () => {
   ] as const)("fails closed on a required nitrox card for %s", (_name, card, code) => {
     expect(
       calculateReadiness({
+        timezone: "UTC",
         requirement: nitroxRequirement,
         waiver: signedWaiver,
         certifications: [certification()],
@@ -485,6 +510,7 @@ describe("calculateReadiness", () => {
   it("is ready when a required nitrox card is verified", () => {
     expect(
       calculateReadiness({
+        timezone: "UTC",
         requirement: nitroxRequirement,
         waiver: signedWaiver,
         certifications: [certification()],
@@ -496,6 +522,7 @@ describe("calculateReadiness", () => {
 
   it("requires nitrox when only the site demands it", () => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement,
       siteRequirement: {
         minimumCertificationLevel: null,
@@ -516,6 +543,7 @@ describe("calculateReadiness", () => {
   ] as const)("blocks payment for %s when the trip requires it", (_name, status) => {
     expect(
       calculateReadiness({
+        timezone: "UTC",
         requirement: paymentRequirement,
         waiver: signedWaiver,
         certifications: [certification()],
@@ -528,6 +556,7 @@ describe("calculateReadiness", () => {
   it("blocks payment as refunded, distinct from an outstanding balance, when the trip requires it", () => {
     expect(
       calculateReadiness({
+        timezone: "UTC",
         requirement: paymentRequirement,
         waiver: signedWaiver,
         certifications: [certification()],
@@ -552,6 +581,7 @@ describe("calculateReadiness", () => {
     (status) => {
       expect(
         calculateReadiness({
+          timezone: "UTC",
           requirement: paymentRequirement,
           waiver: signedWaiver,
           certifications: [certification()],
@@ -565,6 +595,7 @@ describe("calculateReadiness", () => {
   it("ignores payment when the trip does not require it", () => {
     expect(
       calculateReadiness({
+        timezone: "UTC",
         requirement,
         waiver: signedWaiver,
         certifications: [certification()],
@@ -592,6 +623,7 @@ describe("calculateReadiness — a course that gets them there", () => {
     certificationsInTraining: { level: Certification["level"]; finishesAt: Date }[],
   ) {
     return calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: signedWaiver,
       certifications,
@@ -602,6 +634,7 @@ describe("calculateReadiness — a course that gets them there", () => {
 
   it("names the level a booked course will reach, and still blocks", () => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: signedWaiver,
       certifications: [certification({ level: "open_water" })],
@@ -667,6 +700,7 @@ describe("calculateReadiness — a course that gets them there", () => {
   it("clears on the issued card, course or no course", () => {
     expect(
       calculateReadiness({
+        timezone: "UTC",
         requirement,
         waiver: signedWaiver,
         certifications: [certification()],
@@ -688,6 +722,7 @@ describe("calculateReadiness — a course that gets them there", () => {
     ).toEqual([{ code: "certification_pending" }]);
     expect(
       calculateReadiness({
+        timezone: "UTC",
         requirement: { ...requirement, minimumCertificationLevel: "rescue" } as TripRequirement,
         waiver: signedWaiver,
         certifications: [
@@ -773,6 +808,24 @@ describe("calculateReadiness — the guardian co-signature", () => {
     const turnsEighteenOnThe19th = { ...base, waiver: minorsSoloWaiver, dateOfBirth: "2008-07-19" };
     expect(calculateReadiness(turnsEighteenOnThe19th).status).toBe("blocked");
     expect(calculateReadiness({ ...turnsEighteenOnThe19th, timezone: "UTC" }).status).toBe("ready");
+  });
+
+  /**
+   * `timezone` is required on `ReadinessInput`: it once defaulted to UTC, and
+   * a caller that left it off cleared this diver. A compile error now stands
+   * where that default was.
+   */
+  it("blocks a solo signature at 23:30 Honolulu on the eve of the 18th birthday", () => {
+    const lateEve = new Date("2026-07-19T09:30:00.000Z");
+    const input = {
+      ...base,
+      waiver: { ...minorsSoloWaiver, signedAt: lateEve, completedAt: lateEve } as WaiverRecord,
+      dateOfBirth: "2008-07-19",
+    };
+    const result = calculateReadiness({ ...input, timezone: "Pacific/Honolulu" });
+    expect(result.status).toBe("blocked");
+    expect(result.blockers.map((blocker) => blocker.code)).toEqual(["guardian_signature_missing"]);
+    expect(calculateReadiness({ ...input, timezone: "UTC" }).status).toBe("ready");
   });
 
   it("stays silent where the release itself is the blocker, so the crew reads one line", () => {
@@ -1080,6 +1133,15 @@ describe("aboardBlockerKind", () => {
  * replaced the "Certification marked verified" banner. Two of its three answers
  * are refusals, and the interesting one is the third.
  */
+describe("needsCardSighting for a card an agency check listed", () => {
+  it("asks for the card when the page showed no number for it, never when it did", () => {
+    const listed = { status: "pending", listedFromCertificationId: "c-1" } as const;
+    expect(needsCardSighting({ ...listed, identifier: null })).toBe(true);
+    expect(needsCardSighting({ ...listed, identifier: "SDI-2002" })).toBe(false);
+    expect(needsCardSighting({ status: "pending", identifier: null })).toBe(false);
+  });
+});
+
 describe("unreviewedCardState", () => {
   it("returns a staff-captured card to pending and drops the review stamp", () => {
     expect(unreviewedCardState({ status: "verified", reviewedAt: now })).toEqual({
@@ -1113,6 +1175,25 @@ describe("unreviewedCardState", () => {
     ).toEqual({ ok: false, reason: "sighted_card" });
   });
 
+  it("refuses a card an agency check listed where the agency numbers each card", () => {
+    // SDI numbers each card, so the listed card's number may be the staffer's
+    // sighting: a revert cannot tell, and treats it as one.
+    const listed = {
+      status: "verified",
+      reviewedAt: now,
+      listedFromCertificationId: "c-1",
+    } as const;
+    expect(unreviewedCardState({ ...listed, agency: "sdi" })).toEqual({
+      ok: false,
+      reason: "sighted_card",
+    });
+    // PADI numbers the diver: the number was borrowed, never sighted.
+    expect(unreviewedCardState({ ...listed, agency: "padi" })).toEqual({
+      ok: true,
+      status: "pending",
+    });
+  });
+
   it("refuses a card nobody has reviewed, so a replayed undo cannot un-verify one", () => {
     expect(unreviewedCardState({ status: "pending", reviewedAt: null })).toEqual({
       ok: false,
@@ -1131,6 +1212,7 @@ describe("physician clearance and the medical block", () => {
 
   it("still blocks a referral nobody has cleared", () => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: { ...signedWaiver, status: "medical_review" } as WaiverRecord,
       certifications: [certification()],
@@ -1141,6 +1223,7 @@ describe("physician clearance and the medical block", () => {
 
   it("clears the block once a physician clearance is recorded", () => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: {
         ...signedWaiver,
@@ -1161,6 +1244,7 @@ describe("physician clearance and the medical block", () => {
     // boat, so the *absence of a date* is what the gate reads and a stray
     // person id alone lifts nothing.
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: {
         ...signedWaiver,
@@ -1198,6 +1282,7 @@ describe("the medical block on a departure that does not require the waiver", ()
     ],
   ] as const)("holds %s", (_label, overrides, code) => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement: noWaiverRequirement,
       waiver: { ...signedWaiver, ...overrides } as WaiverRecord,
       certifications: [certification()],
@@ -1219,6 +1304,7 @@ describe("the medical block on a departure that does not require the waiver", ()
     ],
   ] as const)("names %s on a departure with no requirements set", (_label, overrides, code) => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement: null,
       waiver: { ...signedWaiver, ...overrides } as WaiverRecord,
       certifications: [certification()],
@@ -1230,6 +1316,7 @@ describe("the medical block on a departure that does not require the waiver", ()
 
   it("boards a cleared referral", () => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement: noWaiverRequirement,
       waiver: {
         ...signedWaiver,
@@ -1245,6 +1332,7 @@ describe("the medical block on a departure that does not require the waiver", ()
 
   it("fails closed on a half-written clearance there too", () => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement: noWaiverRequirement,
       waiver: {
         ...signedWaiver,
@@ -1264,6 +1352,7 @@ describe("the medical block on a departure that does not require the waiver", ()
     ["a lapsed link", { status: "pending", expiresAt: new Date("2026-07-20T00:00:00.000Z") }],
   ] as const)("still asks nothing of the release itself with %s", (_label, waiver) => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement: noWaiverRequirement,
       waiver: waiver as WaiverRecord | null,
       certifications: [certification()],
@@ -1276,6 +1365,7 @@ describe("the medical block on a departure that does not require the waiver", ()
     // `effectiveWaiverForBooking` hands the engine the newer clean record; the
     // refusal it stands over is a warning on the surfaces, not a blocker.
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement: noWaiverRequirement,
       waiver: signedWaiver,
       certifications: [certification()],
@@ -1286,6 +1376,7 @@ describe("the medical block on a departure that does not require the waiver", ()
 
   it("raises the medical code once on a departure that does require the waiver", () => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: {
         ...signedWaiver,
@@ -1332,6 +1423,7 @@ describe("calculateReadiness — participant types (ADR 20261007-participant-typ
   it("asks a rider or a snorkeler for no card, but still for the waiver", () => {
     for (const participantType of ["rider", "snorkeler"] as const) {
       const unsigned = calculateReadiness({
+        timezone: "UTC",
         requirement: nitroxRequirement,
         waiver: null,
         certifications: [],
@@ -1344,6 +1436,7 @@ describe("calculateReadiness — participant types (ADR 20261007-participant-typ
 
       expect(
         calculateReadiness({
+          timezone: "UTC",
           requirement: deepRequirement,
           waiver: signedWaiver,
           certifications: [],
@@ -1357,6 +1450,7 @@ describe("calculateReadiness — participant types (ADR 20261007-participant-typ
   it("still asks a diver for the card", () => {
     expect(
       calculateReadiness({
+        timezone: "UTC",
         requirement,
         waiver: signedWaiver,
         certifications: [],
@@ -1369,6 +1463,7 @@ describe("calculateReadiness — participant types (ADR 20261007-participant-typ
   it("clears the payment gate for a non-diver seat the shop priced at nothing, and only that", () => {
     const base = { requirement: paymentRequirement, waiver: signedWaiver, now };
     const free = calculateReadiness({
+      timezone: "UTC",
       ...base,
       certifications: [],
       participantType: "rider",
@@ -1376,6 +1471,7 @@ describe("calculateReadiness — participant types (ADR 20261007-participant-typ
     });
     expect(free.status).toBe("ready");
     const unpriced = calculateReadiness({
+      timezone: "UTC",
       ...base,
       certifications: [],
       participantType: "rider",
@@ -1383,6 +1479,7 @@ describe("calculateReadiness — participant types (ADR 20261007-participant-typ
     expect(unpriced.status).toBe("blocked");
     // A diver is never waved through on a stated-free flag.
     const diverSeat = calculateReadiness({
+      timezone: "UTC",
       ...base,
       certifications: [certification()],
       participantType: "diver",
@@ -1411,6 +1508,7 @@ describe("calculateReadiness — the medical by participant type (H-109)", () =>
 
   it.each(holds)("boards a rider over %s, as a signed release", (_label, overrides) => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: { ...signedWaiver, ...overrides } as WaiverRecord,
       certifications: [],
@@ -1424,6 +1522,7 @@ describe("calculateReadiness — the medical by participant type (H-109)", () =>
     "names no medical code for a rider over %s on an unconfigured departure",
     (_label, overrides) => {
       const result = calculateReadiness({
+        timezone: "UTC",
         requirement: null,
         waiver: { ...signedWaiver, ...overrides } as WaiverRecord,
         certifications: [],
@@ -1436,6 +1535,7 @@ describe("calculateReadiness — the medical by participant type (H-109)", () =>
 
   it.each(holds)("still holds a snorkeler over %s", (_label, overrides, code) => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: { ...signedWaiver, ...overrides } as WaiverRecord,
       certifications: [],
@@ -1448,6 +1548,7 @@ describe("calculateReadiness — the medical by participant type (H-109)", () =>
 
   it.each(holds)("still holds a seat with no type over %s", (_label, overrides, code) => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: { ...signedWaiver, ...overrides } as WaiverRecord,
       certifications: [certification()],
@@ -1470,6 +1571,7 @@ describe("calculateReadiness — the medical by participant type (H-109)", () =>
     ],
   ] as const)("still asks a rider for the release with %s", (_label, waiver, code) => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: waiver as WaiverRecord | null,
       certifications: [],
@@ -1507,6 +1609,7 @@ describe("calculateReadiness — the medical by participant type (H-109)", () =>
 describe("certification_not_yet", () => {
   const codes = (input: Partial<Parameters<typeof calculateReadiness>[0]>) =>
     calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: signedWaiver,
       certifications: [],
@@ -1516,6 +1619,7 @@ describe("certification_not_yet", () => {
 
   it("replaces 'missing' and still blocks", () => {
     const result = calculateReadiness({
+      timezone: "UTC",
       requirement,
       waiver: signedWaiver,
       certifications: [],
@@ -1581,5 +1685,68 @@ describe("certification_not_yet", () => {
     expect(
       noCertificationStands({ noCertificationDeclaredAt: null, noCertificationClearedAt: null }),
     ).toBe(false);
+  });
+});
+
+/**
+ * **A release current today that lapses before the departure** (A§4 item 9).
+ * Readiness asks "is this diver cleared right now?": the roster read today
+ * shows the release as standing, and the same seat read on the morning of the
+ * dive shows it gone. This pins both readings so that "valid now" cannot be
+ * mistaken for "valid when the boat leaves", and so that a change to which
+ * instant the roster measures against is a visible decision.
+ */
+describe("a release that lapses between today and the departure", () => {
+  const today = new Date("2026-07-18T12:00:00.000Z");
+  const departure = new Date(today.getTime() + 21 * 24 * 60 * 60 * 1000);
+  // Signed 351 days ago: inside the year today, two weeks past it on the day.
+  const signedAt = new Date(
+    today.getTime() + 14 * 24 * 60 * 60 * 1000 - WAIVER_SIGNATURE_VALIDITY_MS,
+  );
+  const release = {
+    id: "release-1",
+    bookingId: "booking-1",
+    personId: "person-1",
+    status: "completed",
+    templateVersion: 1,
+    templateGeneration: 1,
+    signedAt,
+    completedAt: signedAt,
+    supersededAt: null,
+    expiresAt: signedAt,
+    createdAt: signedAt,
+  } as unknown as WaiverRecord;
+  const waiverOnly = {
+    requiresWaiver: true,
+    minimumCertificationLevel: null,
+    requiredSpecialties: [],
+  } as unknown as TripRequirement;
+
+  function rosterAt(at: Date) {
+    const resolution = {
+      bookingWaiver: release,
+      personSignedWaivers: [release],
+      currentTemplateVersion: 1,
+      now: at,
+    };
+    return calculateReadiness({
+      requirement: waiverOnly,
+      waiver: effectiveWaiverForBooking(resolution),
+      releaseLapsed: releaseLapsedForBooking(resolution),
+      certifications: [],
+      paymentStatus: "paid",
+      timezone: "UTC",
+      now: at,
+    });
+  }
+
+  it("reads as cleared on today's roster", () => {
+    expect(rosterAt(today)).toEqual({ status: "ready", blockers: [] });
+  });
+
+  it("reads as blocked on the morning of the dive, as a lapsed release and not an unsent one", () => {
+    const result = rosterAt(new Date(departure.getTime() - 3 * 60 * 60 * 1000));
+    expect(result.status).toBe("blocked");
+    expect(result.blockers.map((blocker) => blocker.code)).toEqual(["waiver_lapsed"]);
   });
 });

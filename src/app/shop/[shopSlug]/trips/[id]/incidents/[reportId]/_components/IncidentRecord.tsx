@@ -3,6 +3,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { Field, FormStatus, textareaClassFor } from "@/components/ui/form";
 import type { IncidentReportView } from "@/db/incident-reports";
+import { INCIDENT_KIND_KEYS, INCIDENT_SEVERITY_KEYS } from "@/i18n/incident-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { INCIDENT_TEXT_MAX, type IncidentFilingGap } from "@/lib/incident-reports";
@@ -55,6 +56,12 @@ export function IncidentRecord({
         </Row>
         <Row label={t("incidents.read.where")}>{where || notWritten}</Row>
         <Row label={t("incidents.form.whatHappened")}>{fields.whatHappened ?? notWritten}</Row>
+        <Row label={t("incidents.form.kind")}>
+          {fields.kind ? t(INCIDENT_KIND_KEYS[fields.kind]) : notWritten}
+        </Row>
+        <Row label={t("incidents.form.severity")}>
+          {fields.severity ? t(INCIDENT_SEVERITY_KEYS[fields.severity]) : notWritten}
+        </Row>
         <Row label={t("incidents.form.firstAid")}>{yesNo(fields.firstAidGiven)}</Row>
         <Row label={t("incidents.form.oxygen")}>
           {fields.oxygenGiven && fields.oxygenMinutes !== null

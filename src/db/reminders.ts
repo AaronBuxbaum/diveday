@@ -35,7 +35,7 @@ import {
 } from "@/lib/reminders";
 import { maySendNow } from "@/lib/send-window";
 import { temperatureUnitFor } from "@/lib/temperature-units";
-import { issueBookingCapability } from "./booking-capabilities";
+import { issueBookingCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
 import {
@@ -114,6 +114,12 @@ export type ReminderRunSummary = {
   settled: number;
   /** Reminders whose tracked channel failed or was not configured. */
   failed: number;
+};
+
+/** What a reminder that earns its send carries, decided before its link is minted. */
+type ReminderContent = {
+  checklist: ReturnType<typeof buildDiverChecklist> | null;
+  materialsDue: ReturnType<typeof readLearningMaterials>;
 };
 
 export type SendDueRemindersOptions = {
@@ -257,27 +263,76 @@ function reminderSmsBody(
 }
 
 /**
- * The diver's own trip-prep link for one reminder, minted once and carried by
- * both the email's button and the text (ux review 2026-10-11, item 6).
- * Undefined with no public origin configured.
+ * Every meeting of each due trip, in day order — one read for the whole pass.
+ * A multi-day course's reminder lists each day; one meeting (or none on file)
+ * keeps the single date and time it always had.
  */
-async function reminderReadinessUrl(
+async function readMeetingsByTrip(
+  db: AppDb,
+  tripIds: string[],
+): Promise<Map<string, { startsAt: Date; endsAt: Date }[]>> {
+  const meetingsByTrip = new Map<string, { startsAt: Date; endsAt: Date }[]>();
+  if (tripIds.length === 0) return meetingsByTrip;
+  const meetings = await db
+    .select({
+      tripId: tripScheduleDays.tripId,
+      startsAt: tripScheduleDays.startsAt,
+      endsAt: tripScheduleDays.endsAt,
+    })
+    .from(tripScheduleDays)
+    .where(inArray(tripScheduleDays.tripId, tripIds))
+    .orderBy(asc(tripScheduleDays.tripId), asc(tripScheduleDays.dayNumber));
+  for (const meeting of meetings) {
+    const list = meetingsByTrip.get(meeting.tripId) ?? [];
+    list.push({ startsAt: meeting.startsAt, endsAt: meeting.endsAt });
+    meetingsByTrip.set(meeting.tripId, list);
+  }
+  return meetingsByTrip;
+}
+
+/**
+ * The trip-prep link each sending reminder carries, by booking id, carried by
+ * both the email's button and the text (ux review 2026-10-11, item 6). Minted
+ * in one insert per shop for exactly the reminders that earn their send and
+ * have a channel to carry it (code review 2026-10-13b, item 36): the send loop
+ * used to mint one capability per reminder, three statements each, between
+ * its sends. Empty with no public origin configured.
+ */
+async function mintReminderLinks(
   db: AppDb,
   origin: string | null,
-  shopId: string,
-  bookingId: string,
+  seats: ReadonlyArray<{
+    row: {
+      shop: { id: string };
+      booking: { id: string };
+      person: { email: string | null; phone: string | null };
+    };
+  }>,
   now: Date,
-): Promise<string | undefined> {
-  if (!origin) return undefined;
-  const capability = await issueBookingCapability(db, {
-    shopId,
-    bookingId,
-    purpose: "readiness",
-    now,
-  });
-  return capability
-    ? new URL(readinessLinkPath(capability.token), `${origin}/`).toString()
-    : undefined;
+): Promise<Map<string, string>> {
+  const links = new Map<string, string>();
+  if (!origin) return links;
+  const byShop = new Map<string, string[]>();
+  for (const {
+    row: { shop, booking, person },
+  } of seats) {
+    // Only a seat the send loop can reach: a diver with no email and no
+    // textable phone gets a `not_configured` row, not a live token.
+    if (!person.email && !smsRecipient(person.phone)) continue;
+    byShop.set(shop.id, [...(byShop.get(shop.id) ?? []), booking.id]);
+  }
+  for (const [shopId, bookingIds] of byShop) {
+    const issued = await issueBookingCapabilities(db, {
+      shopId,
+      bookingIds,
+      purpose: "readiness",
+      now,
+    });
+    for (const [bookingId, { token }] of issued) {
+      links.set(bookingId, new URL(readinessLinkPath(token), `${origin}/`).toString());
+    }
+  }
+  return links;
 }
 
 /**
@@ -478,29 +533,14 @@ export async function sendDueReminders(
     }),
   );
 
-  // Every meeting of each due trip, in day order — one read for the whole
-  // pass. A multi-day course's reminder lists each day; one meeting (or none
-  // on file) keeps the single date and time it always had.
-  const dueTripIds = [...new Set(dueRows.map(({ row }) => row.trip.id))];
-  const meetingsByTrip = new Map<string, { startsAt: Date; endsAt: Date }[]>();
-  if (dueTripIds.length > 0) {
-    const meetings = await db
-      .select({
-        tripId: tripScheduleDays.tripId,
-        startsAt: tripScheduleDays.startsAt,
-        endsAt: tripScheduleDays.endsAt,
-      })
-      .from(tripScheduleDays)
-      .where(inArray(tripScheduleDays.tripId, dueTripIds))
-      .orderBy(asc(tripScheduleDays.tripId), asc(tripScheduleDays.dayNumber));
-    for (const meeting of meetings) {
-      const list = meetingsByTrip.get(meeting.tripId) ?? [];
-      list.push({ startsAt: meeting.startsAt, endsAt: meeting.endsAt });
-      meetingsByTrip.set(meeting.tripId, list);
-    }
-  }
+  const meetingsByTrip = await readMeetingsByTrip(db, [
+    ...new Set(dueRows.map(({ row }) => row.trip.id)),
+  ]);
 
+  // First which reminders send, then every link they carry, then the sends.
+  const sending: Array<(typeof dueRows)[number] & ReminderContent> = [];
   for (const {
+    row,
     row: { booking, person, trip, shop, courseMaterials },
     cadence,
   } of dueRows) {
@@ -535,11 +575,10 @@ export async function sendDueReminders(
       ).has(person.id)
         ? courseMaterialsList
         : [];
-    const meetings = meetingsByTrip.get(trip.id) ?? [];
 
     // **Due, sendable, and still not worth sending.** The 7-day nudge carries
     // the diver's to-do list and nothing else, so with nothing on it there is
-    // no message to send. Checked *before* `issueBookingCapability` below, so a
+    // no message to send. Checked *before* the links are minted below, so a
     // suppressed reminder does not mint a readiness token nobody will open, and
     // before the no-reachable-channel branch, so a settled diver with no email
     // and no phone is counted settled rather than failed. Nothing is written:
@@ -553,7 +592,18 @@ export async function sendDueReminders(
       summary.settled += 1;
       continue;
     }
+    sending.push({ row, cadence, checklist, materialsDue });
+  }
 
+  const links = await mintReminderLinks(db, origin, sending, now);
+
+  for (const {
+    row: { booking, person, trip, shop },
+    cadence,
+    checklist,
+    materialsDue,
+  } of sending) {
+    const meetings = meetingsByTrip.get(trip.id) ?? [];
     const lead = cadence.kind === "trip_reminder_7d" ? "week" : "day";
     // There is no request to negotiate `Accept-Language` from at a cron fire,
     // so this reads whatever the diver's own past requests already recorded,
@@ -564,7 +614,7 @@ export async function sendDueReminders(
     // different languages.
     const locale = recipientLocale(person.locale, shop.defaultLocale);
     const t = diverTranslator(locale);
-    const readinessUrl = await reminderReadinessUrl(db, origin, shop.id, booking.id, now);
+    const readinessUrl = links.get(booking.id);
     const phone = smsRecipient(person.phone);
     // Where to go, on both leads and both channels (ux review 2026-10-11, item 4).
     const meetingPoint = meetingPointForMessage(meetingPointOfRows(shop, trip));

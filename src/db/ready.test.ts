@@ -12,6 +12,7 @@ import {
   createBooking,
   setBookingLastDived,
 } from "./bookings";
+import { recordMoveAsk } from "./inbound-messages";
 import { setBookingPayment } from "./payments";
 import {
   createCertification,
@@ -21,7 +22,7 @@ import {
 } from "./readiness";
 import { carriedPreparationForDiver, getBookedCard, getReadyPageData } from "./ready";
 import { getRentalFit, toDiverRentalFit } from "./rental-fit";
-import { bookings, people, shops, waiverRecords } from "./schema";
+import { bookings, people, shops, trips as tripTable, waiverRecords } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver } from "./waivers";
@@ -107,6 +108,22 @@ describe("getReadyPageData", () => {
   // page renders it from — and `canCancelBooking` has to agree with
   // `selfCancelBooking`'s own pre-checks exactly, or the page offers a button
   // that can only come back refused.
+  /** Fourth UX review, item 5: a priced, unpaid seat with no card to take is owed at the shop. */
+  it("marks a priced seat the page cannot charge as owed at the shop, and a paid one not", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    expect((await getReadyPageData(db, bookingId))?.owesAtShop).toBe(true);
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      currency: "usd",
+      amountCents: 12_000,
+      provider: "cash",
+      providerRef: null,
+    });
+    expect((await getReadyPageData(db, bookingId))?.owesAtShop).toBe(false);
+  });
+
   /** UX review 2026-10-11, item 13: the page draws "Add a seat" only where it can work. */
   it("offers a seat to add on a booking that may lead one, never on a party member's seat", async () => {
     const { db, shop, bookingId } = await unpaidBooking();
@@ -137,6 +154,8 @@ describe("getReadyPageData", () => {
     const owing = await getReadyPageData(db, bookingId);
     expect(owing?.canPay).toBe(true);
     expect(owing?.canAddSeat).toBe(false);
+    // A page that can take the card is not money owed at the shop.
+    expect(owing?.owesAtShop).toBe(false);
 
     await setBookingPayment(db, {
       shopId: shop.id,
@@ -201,6 +220,70 @@ describe("getReadyPageData", () => {
     expect(data?.canPay).toBe(false);
     // And the money it still holds is money a cancellation would return.
     expect(data?.cancelPreview).not.toBe("unpaid");
+  });
+
+  /**
+   * H-126: "Ask to move" is offered exactly when a cancel would forfeit what
+   * was paid, and says it was asked once it has been.
+   */
+  it("offers Ask to move only past the free window on a paid seat, then says it was asked", async () => {
+    const { db, shop, open, bookingId } = await unpaidBooking();
+    // Unpaid: a cancel costs nothing, so there is nothing to ask instead.
+    expect((await getReadyPageData(db, bookingId))?.moveAsk).toBeNull();
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      currency: "usd",
+      amountCents: 12_000,
+      provider: "stripe",
+      providerRef: "pi_move_ask",
+    });
+    // Inside a generous window the cancel refunds.
+    await db.update(tripTable).set({ cancellationWindowHours: 1 }).where(eq(tripTable.id, open.id));
+    expect((await getReadyPageData(db, bookingId))?.cancelPreview).toBe("refund");
+    expect((await getReadyPageData(db, bookingId))?.moveAsk).toBeNull();
+    // A window wider than the time left: the cancel forfeits.
+    await db
+      .update(tripTable)
+      .set({ cancellationWindowHours: 24 * 365 })
+      .where(eq(tripTable.id, open.id));
+    const past = await getReadyPageData(db, bookingId);
+    expect(past?.cancelPreview).toBe("forfeit");
+    expect(past?.moveAsk).toBe("open");
+    await recordMoveAsk(db, { shopId: shop.id, bookingId, now: nowDate() });
+    expect((await getReadyPageData(db, bookingId))?.moveAsk).toBe("asked");
+    // A held seat is owed nothing (#2125).
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate() })
+      .where(eq(bookings.id, bookingId));
+    expect((await getReadyPageData(db, bookingId))?.moveAsk).toBeNull();
+  });
+
+  /**
+   * Dive-domain review N1 of layer r4-1: a paid seat at a shop with no
+   * cancellation window refunds nothing right away either, so the diver may
+   * ask to move instead there too.
+   */
+  it("offers Ask to move on a paid seat when the trip has no cancellation window", async () => {
+    const { db, shop, open, bookingId } = await unpaidBooking();
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      currency: "usd",
+      amountCents: 12_000,
+      provider: "stripe",
+      providerRef: "pi_move_ask_no_policy",
+    });
+    await db
+      .update(tripTable)
+      .set({ cancellationWindowHours: null })
+      .where(eq(tripTable.id, open.id));
+    const data = await getReadyPageData(db, bookingId);
+    expect(data?.cancelPreview).toBe("no_policy");
+    expect(data?.moveAsk).toBe("open");
   });
 
   it("withdraws the cancel once the seat is checked in", async () => {

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { AppDb } from "@/db/client";
 import { listShopStaff } from "@/db/staff-accounts";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { findElements, hrefsIn } from "@/test/jsx-inspect";
 import { SETTINGS_GROUPS } from "../../settings-groups";
 import { SettingsRow } from "../SettingsRows";
@@ -23,8 +23,10 @@ import {
 } from "./groups";
 import { SettingsGroup, type SettingsView } from "./kit";
 
+const ctx = fileScopedShopContext();
+
 async function viewFor(): Promise<{ db: AppDb; view: SettingsView; personId: string }> {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const owner = (await listShopStaff(db, shop.id)).find((staff) => staff.roles.includes("owner"));
   if (!owner) throw new Error("the seed has no owner");
   const t = staffTranslator("en-US");
@@ -64,7 +66,7 @@ describe("each settings group renders as its own component", () => {
         addressLookupEnabled: false,
       }),
       TeamGroup({ view, canManageTeam: true }),
-      BoatsSitesGroup({ view }),
+      BoatsSitesGroup({ view, boatsWithoutRadioIdentity: 0 }),
       BookingsGroup({ view, canManageWaivers: true }),
       RentalsGroup({ view }),
       MoneyGroup({ view, canPayments: true, account: null, connectConfigured: false }),
@@ -80,6 +82,8 @@ describe("each settings group renders as its own component", () => {
     expect(rendered[0]?.rows).toEqual(["timezone", "units", "address"]);
     expect(rendered[1]?.rows).toEqual(["crewSchedule"]);
     expect(rendered[2]?.rows).toEqual([]);
+    // PADI checks sit under the extension's own row, where a shop meets the checks.
+    expect(rendered[3]?.rows).toEqual(["certCheck", "padiChecks", "packing"]);
     expect(rendered[4]?.rows).toEqual(["rentalTerms", "regulatorService"]);
     expect(rendered[5]?.rows).toEqual(["tax", "tips", "stripe"]);
     expect(rendered[6]?.rows).toEqual(["reviews", "reviewLink"]);

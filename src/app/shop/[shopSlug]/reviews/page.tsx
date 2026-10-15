@@ -7,7 +7,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import { canPersonReadPrivateRecapPulse } from "@/db/authz";
 import { listOpenRecapPulses, type OpenRecapPulse } from "@/db/recap-pulses";
 import {

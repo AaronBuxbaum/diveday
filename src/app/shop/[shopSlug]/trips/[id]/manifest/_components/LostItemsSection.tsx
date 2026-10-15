@@ -9,24 +9,25 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /**
  * **Left aboard** (batch 4, J2), on the Boat tab: what the crew found after
- * the departure, and the form to add to it. Drawn once the boat has sailed,
- * or whenever something is already recorded.
+ * the departure, and the form to add to it. Drawn from "Heading in"
+ * (`leftAboardOpen`), or whenever something is already recorded.
  */
 export async function LostItemsSection({
   t,
   shopId,
   tripId,
-  sailed,
+  open,
   seats,
 }: {
   t: StaffTranslator;
   shopId: string;
   tripId: string;
-  sailed: boolean;
+  /** The crew is heading in, or the departure is back (`leftAboardOpen`). */
+  open: boolean;
   seats: { bookingId: string; name: string }[];
 }) {
   const items = await listTripLostItems(await getDb(), shopId, tripId);
-  if (!sailed && items.length === 0) return null;
+  if (!open && items.length === 0) return null;
   const rowAction = lostItemRowAction.bind(null, tripId);
   const rowCopy = lostItemRowCopy(t);
   return (

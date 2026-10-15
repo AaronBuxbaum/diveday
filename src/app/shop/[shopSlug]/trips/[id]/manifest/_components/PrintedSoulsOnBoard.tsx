@@ -9,9 +9,16 @@ import type { TripManifest } from "@/lib/manifests";
  */
 export function PrintedSoulsOnBoard({
   manifest,
+  vesselName,
   t,
 }: {
   manifest: TripManifest;
+  /**
+   * The boat this departure sails on, leading the line (fourth review, item
+   * 11): the sheet in a coastguard's hands said how many were aboard and never
+   * which hull. Null for a departure on no boat.
+   */
+  vesselName: string | null;
   t: StaffTranslator;
 }) {
   // How many of the named crew another departure claims at the same hours
@@ -27,6 +34,7 @@ export function PrintedSoulsOnBoard({
         says so first, so a practice sheet is never read as a real boat. */}
       <p className="mt-4 hidden text-base font-semibold tabular-nums print:block">
         {manifest.trip.isRehearsal ? `${t("trips.rehearsal.label")} · ` : null}
+        {vesselName ? `${vesselName} · ` : null}
         {staffSoulsOnBoardLine(t, manifest.summary, manifest.crew.length)}
         {/* **The count is the number read over the radio, and a crew member
           rostered on two overlapping boats makes it wrong** (issue #1779).

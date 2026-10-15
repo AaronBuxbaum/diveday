@@ -1,6 +1,6 @@
 ---
 name: conversion-reviewer
-description: Reviews marketing/sales surfaces — public pages and private outreach collateral (one-pagers, pitch notes) alike — for conversion and persuasion quality: CTA clarity, funnel logic, friction, scannability. Launch after drafting or editing a marketing page, switching guide, or commercial-outreach artifact, before verify.
+description: Reviews marketing pages and outreach collateral for conversion — CTA clarity, funnel logic, friction, scannability. Launch after drafting or editing a marketing page, switching guide, or commercial-outreach artifact, before verify.
 tools: Read, Glob, Grep
 model: sonnet
 effort: medium
@@ -69,7 +69,16 @@ Evaluate, in order of severity:
    (title, description) or Open Graph data undercuts the highest-intent channel we have (search,
    shared links); flag if absent, but the content lives in `marketing-page`'s SEO checklist.
 
-Report findings ordered by severity, each with: what a real buyer would do at that moment, why it
-costs the conversion, and a concrete fix that stays inside the claims policy. If a page genuinely
-converts well, say what makes it work in one sentence — future reviews calibrate on it. You
-review; you do not edit files.
+Report findings ordered by severity. Each finding carries its evidence or is not reported:
+
+- **The line it violates**: the section of `docs/product/marketing.md`, the principle in
+  `docs/design/principles.md`, or the ADR, by heading or id.
+- **A concrete failing case**: the page, the viewport and the moment where a real buyer stalls
+  (the question they arrive with, the scroll or click at which it goes unanswered), specific
+  enough that the implementer can open the page and see it.
+- **A label**: **confirmed** (you saw it on the page or in the rendered copy) or **possible** (the
+  risk is real but depends on something you could not see).
+
+Then why it costs the conversion and a concrete fix that stays inside the claims policy. Taste with
+no line behind it is out of scope. If a page genuinely converts well, say what makes it work in
+one sentence — future reviews calibrate on it. You review; you do not edit files.

@@ -5,6 +5,7 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import { firstNameOf } from "@/lib/person-name";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "@/lib/readiness";
 import type { RollCallGapReason, TodayActionKind, TodaySeason } from "@/lib/today";
+import { awayDatesText } from "./away-labels";
 import { SPECIALTY_KEYS } from "./readiness-labels";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
@@ -28,6 +29,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   uncrewed_departure: "today.actionKind.uncrewedDeparture",
   crew_clash: "today.actionKind.crewClash",
   crew_clash_sailed: "today.actionKind.crewClashSailed",
+  crew_away: "today.actionKind.crewAway",
   nitrox_gate: "today.actionKind.nitroxGate",
   high_wind_alert: "today.actionKind.highWindAlert",
   dive_prep: "today.actionKind.divePrep",
@@ -43,6 +45,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   failed_photo_deletion: "today.actionKind.failedPhotoDeletion",
   owed_refund: "today.actionKind.owedRefund",
   payment_dispute: "today.actionKind.paymentDispute",
+  payments_restricted: "today.actionKind.paymentsRestricted",
   reviews_pending: "today.actionKind.reviewsPending",
   unanswered_messages: "today.actionKind.unansweredMessages",
   gear_overdue: "today.actionKind.gearOverdue",
@@ -65,6 +68,7 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
   identity_unconfirmed: "today.blockerAction.confirmIdentity",
   under_minimum_age: "today.blockerAction.checkDateOfBirth",
   waiver_not_sent: "today.blockerAction.sendWaiver",
+  waiver_lapsed: "today.blockerAction.sendWaiver",
   waiver_pending: "today.blockerAction.nudgeWaiver",
   waiver_expired: "today.blockerAction.reissueWaiver",
   medical_review: "today.blockerAction.reviewMedical",
@@ -106,6 +110,7 @@ const BLOCKER_GROUP_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = 
   identity_unconfirmed: "today.blockerGroup.confirmIdentities",
   under_minimum_age: "today.blockerGroup.checkDatesOfBirth",
   waiver_not_sent: "today.blockerGroup.sendWaivers",
+  waiver_lapsed: "today.blockerGroup.sendWaivers",
   waiver_pending: "today.blockerGroup.nudgeWaivers",
   waiver_expired: "today.blockerGroup.reissueWaivers",
   medical_review: "today.blockerGroup.reviewMedicals",
@@ -168,6 +173,7 @@ const BLOCKER_ROW_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   requirements_not_configured: "today.blockerRow.requirementsNotConfigured",
   identity_unconfirmed: "today.blockerRow.identityUnconfirmed",
   waiver_not_sent: "today.blockerRow.waiverNotSent",
+  waiver_lapsed: "today.blockerRow.waiverLapsed",
   waiver_pending: "today.blockerRow.waiverPending",
   waiver_expired: "today.blockerRow.waiverExpired",
   medical_review: "today.blockerRow.medicalReview",
@@ -318,6 +324,26 @@ export function crewClashDetailText(
 ): string {
   return clashGroups(locale, clashes)
     .map((group) => t("today.detail.crewClash", group))
+    .join(" ");
+}
+
+/**
+ * **Who on this departure said they are away on a day it meets** (fourth
+ * review, item 12): one sentence a person, with the days, in the words the
+ * staffing week and the board use (`awayDatesText`).
+ */
+export function crewAwayDetailText(
+  t: StaffTranslator,
+  locale: string,
+  away: readonly { fullName: string; blocks: readonly { startsOn: string; endsOn: string }[] }[],
+): string {
+  return away
+    .map((person) =>
+      t("today.detail.crewAway", {
+        name: person.fullName,
+        dates: awayDatesText(person.blocks, locale),
+      }),
+    )
     .join(" ");
 }
 
@@ -753,6 +779,20 @@ export function paymentDisputeDetailText(
 /** A dispute's subject when no diver can be named for it. */
 export function paymentDisputeSubjectText(t: StaffTranslator): string {
   return t("today.opsAlert.disputeSubject");
+}
+
+/** Stripe turned card payments off (batch 6 item 8): the row's subject. */
+export function paymentsRestrictedSubjectText(t: StaffTranslator): string {
+  return t("today.opsAlert.restrictedSubject");
+}
+
+/** Since when, and what divers do meanwhile; Stripe's reason stays in Stripe. */
+export function paymentsRestrictedDetailText(t: StaffTranslator, when: string): string {
+  return t("today.opsAlert.restrictedDetail", { when });
+}
+
+export function openPaymentSettingsActionText(t: StaffTranslator): string {
+  return t("today.actionLabel.openPaymentSettings");
 }
 
 /**

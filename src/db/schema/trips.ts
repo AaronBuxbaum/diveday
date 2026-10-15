@@ -197,6 +197,18 @@ export const boats = pgTable(
     inspectionDueOn: date("inspection_due_on"),
     registrationExpiresOn: date("registration_expires_on"),
     insuranceExpiresOn: date("insurance_expires_on"),
+    /**
+     * **The boat's radio identity** (fourth review, item 11): its call sign and
+     * its MMSI, the two facts a coastguard asks for after the name. Held per
+     * hull because a shop with two boats has two of each: the packet's
+     * emergency card printed one shop-wide vessel line on every departure, so
+     * a boat sailing on Mantis I read Mantis II's MMSI. Optional each; a
+     * departure on no boat, or on one with neither, falls back to the shop's
+     * own vessel line (`emergencyReferenceForDeparture`). The MMSI is nine
+     * digits (ITU-R M.585); the call sign is stored upper-cased.
+     */
+    callSign: text("call_sign"),
+    mmsi: text("mmsi"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /**
      * Deleting a hull stamps this and leaves the row (ADR
@@ -221,6 +233,8 @@ export const boats = pgTable(
       "boats_certified_passengers_positive",
       sql`${table.certifiedPassengers} is null or ${table.certifiedPassengers} between 1 and 999`,
     ),
+    // An MMSI is nine digits; anything else read over the radio is a wrong number.
+    check("boats_mmsi_nine_digits", sql`${table.mmsi} is null or ${table.mmsi} ~ '^[0-9]{9}$'`),
   ],
 );
 
@@ -555,6 +569,15 @@ export const trips = pgTable(
      * src/db/rehearsals.ts).
      */
     isRehearsal: boolean("is_rehearsal").notNull().default(false),
+    /**
+     * **When the stale-roll-call alert went out for this departure** (batch
+     * 6, item 6; `sendStaleRollCallAlerts`, src/db/roll-call-alerts.ts): an
+     * after-dive roll call still open half an hour after the boat was due
+     * back. The hourly pass claims it with a conditional update, so the alert
+     * goes once per departure however many passes see the count still open.
+     * Null until then, and for ever on a departure whose count closed in time.
+     */
+    rollCallAlertedAt: timestamp("roll_call_alerted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -782,6 +805,11 @@ export const executedDives = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("executed_dives_recorded_by_person_id_idx").on(table.recordedByPersonId),
     uniqueIndex("executed_dives_trip_number_live_unique")
       .on(table.tripId, table.diveNumber)
       .where(sql`${table.deletedAt} is null`),

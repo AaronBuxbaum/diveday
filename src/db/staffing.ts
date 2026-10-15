@@ -297,7 +297,7 @@ export async function getStaffingView(
   // here can tell which days of it a person is committed to — the same reason
   // `weekBoard` joins these rows (src/db/trips-queries.ts). A departure with no
   // rows at all meets once, on its own window, which is every ordinary boat.
-  const meetingsByTrip = await tripMeetings(db, [...tripMap.keys()]);
+  const meetingsByTrip = await tripMeetings(db, shopId, [...tripMap.keys()]);
   const meetingsFor = (trip: typeof trips.$inferSelect): TripMeeting[] =>
     meetingsByTrip.get(trip.id) ?? [{ startsAt: trip.startsAt, endsAt: trip.endsAt }];
 
@@ -403,8 +403,15 @@ export async function getStaffingView(
  * given a synthetic entry: the caller already holds the trip row and its own
  * window is the honest fallback, and inventing one here would hide a trip
  * whose rows were never written.
+ *
+ * Joined to `trips` on the asking shop (security review, note 1): its callers
+ * already pass only their own shop's ids, and this keeps it so for the next.
  */
-async function tripMeetings(db: AppDb, tripIds: string[]): Promise<Map<string, TripMeeting[]>> {
+export async function tripMeetings(
+  db: AppDb,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Map<string, TripMeeting[]>> {
   const byTrip = new Map<string, TripMeeting[]>();
   if (tripIds.length === 0) return byTrip;
   const rows = await db
@@ -414,7 +421,8 @@ async function tripMeetings(db: AppDb, tripIds: string[]): Promise<Map<string, T
       endsAt: tripScheduleDays.endsAt,
     })
     .from(tripScheduleDays)
-    .where(inArray(tripScheduleDays.tripId, tripIds))
+    .innerJoin(trips, and(eq(trips.id, tripScheduleDays.tripId), eq(trips.shopId, shopId)))
+    .where(inArray(tripScheduleDays.tripId, [...tripIds]))
     .orderBy(asc(tripScheduleDays.tripId), asc(tripScheduleDays.dayNumber));
   for (const row of rows) {
     const windows = byTrip.get(row.tripId) ?? [];

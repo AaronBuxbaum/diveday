@@ -17,6 +17,8 @@ export type ElearningCheckCopy = {
   notComplete: string;
   noRecord: string;
   unreadable: string;
+  /** "Sign in to the PADI Pros’ Site first": the extension met PADI's sign-in. */
+  signedOut: string;
   failed: string;
   undo: string;
   undoPending: string;
@@ -43,6 +45,7 @@ export function ElearningCheck({
   materialsDone,
   action,
   copy,
+  offNote,
 }: {
   /** What the extension searches for, or null when this seat cannot be checked. */
   query: ElearningQuery | null;
@@ -51,23 +54,34 @@ export function ElearningCheck({
   /** `elearningCheckAction` bound to this shop and departure, on the server. */
   action: (previous: ElearningCheckResult, formData: FormData) => Promise<ElearningCheckResult>;
   copy: ElearningCheckCopy;
+  /**
+   * "PADI checks are off for this shop…": said beside the tick when the
+   * extension is here but the shop's switch keeps PADI's eLearning check off
+   * (H-121).
+   */
+  offNote?: string | null;
 }) {
   const hasExtension = useCertCheckExtension();
   const [result, formAction, judging] = useActionState(action, null);
   const [asking, setAsking] = useState(false);
-  const [extensionFailed, setExtensionFailed] = useState(false);
+  const [extensionFailed, setExtensionFailed] = useState<"signed_out" | "other" | null>(null);
   const [, startTransition] = useTransition();
-  if (!hasExtension || !query) return null;
+  if (!hasExtension) return null;
+  if (!query) {
+    return offNote && !materialsDone ? (
+      <span className="mt-2 block text-sm text-muted print:hidden">{offNote}</span>
+    ) : null;
+  }
   const busy = asking || judging;
 
   async function check() {
     if (!query) return;
     setAsking(true);
-    setExtensionFailed(false);
+    setExtensionFailed(null);
     const reply = await requestElearningPage(query);
     setAsking(false);
     if (!reply.ok) {
-      setExtensionFailed(true);
+      setExtensionFailed(reply.reason === "signed_out" ? "signed_out" : "other");
       return;
     }
     const formData = new FormData();
@@ -78,7 +92,9 @@ export function ElearningCheck({
 
   const undo = result?.ok && result.verdict === "complete" ? result.undo : undefined;
   const outcome = extensionFailed
-    ? copy.unreadable
+    ? extensionFailed === "signed_out"
+      ? copy.signedOut
+      : copy.unreadable
     : !result
       ? null
       : !result.ok

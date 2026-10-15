@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { boundedStripeFetch } from "../payments/stripe-fetch";
 
 /**
  * DiveDay's own subscription on DiveDay's own Stripe account — the money a
@@ -101,6 +102,13 @@ export type CheckoutRequest = {
   /** When the first charge should land; null charges at once. */
   firstChargeAt: Date | null;
   now: Date;
+  /**
+   * The session the shop's row held, which the caller just settled, or null.
+   * Part of the idempotency key: each "Add a card" press after a settled
+   * session is a new request, while a retry of the same press (a lost answer,
+   * a second tab that read the same row) is the same one.
+   */
+  replaces: string | null;
 };
 
 export type BillingCallResult<T> = { status: "ok"; value: T } | { status: "failed" };
@@ -166,7 +174,11 @@ export interface BillingProvider {
   }): Promise<BillingCallResult<string>>;
 }
 
-export function stripeBillingProvider(config: BillingConfig, fetchImpl: Fetch): BillingProvider {
+export function stripeBillingProvider(
+  config: BillingConfig,
+  unboundedFetch: Fetch,
+): BillingProvider {
+  const fetchImpl = boundedStripeFetch(unboundedFetch);
   async function call(
     method: "GET" | "POST",
     path: string,
@@ -206,7 +218,15 @@ export function stripeBillingProvider(config: BillingConfig, fetchImpl: Fetch): 
       return parsed.success ? { status: "ok", value: parsed.data.id } : { status: "failed" };
     },
 
-    async createCheckoutSession({ shopId, customerId, successUrl, cancelUrl, firstChargeAt, now }) {
+    async createCheckoutSession({
+      shopId,
+      customerId,
+      successUrl,
+      cancelUrl,
+      firstChargeAt,
+      now,
+      replaces,
+    }) {
       const body = new URLSearchParams({
         mode: "subscription",
         customer: customerId,
@@ -219,7 +239,21 @@ export function stripeBillingProvider(config: BillingConfig, fetchImpl: Fetch): 
       });
       const trialEnd = checkoutTrialEnd(firstChargeAt, now);
       if (trialEnd !== null) body.set("subscription_data[trial_end]", String(trialEnd));
-      const answer = await post("checkout/sessions", body);
+      // Keyed by the shop, what is sent (its customer and trial end among it)
+      // and the session it replaces. A request that timed out and is pressed
+      // again gets Stripe's first session back rather than a second open one;
+      // two tabs racing get one session, which `recordShopCheckoutSession`
+      // accepts from both. The replaced id is what keeps a fresh press after
+      // a settled session from replaying the session that press just expired.
+      const parameters = createHash("sha256")
+        .update(`${replaces ?? "none"}\n${body.toString()}`)
+        .digest("hex")
+        .slice(0, 16);
+      const answer = await post(
+        "checkout/sessions",
+        body,
+        `diveday-billing-checkout-${shopId}-${parameters}`,
+      );
       const id = checkoutResponse.safeParse(answer);
       const url = urlResponse.safeParse(answer);
       return id.success && url.success

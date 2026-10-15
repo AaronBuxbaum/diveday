@@ -190,21 +190,25 @@ export function DayOfDetails({
         </div>
         {/* The question asks about the *service*, not the address. "Where are
             you staying?" on a list of things a diver owes their shop reads as a
-            records question. The field under it keeps the address label. */}
-        <div className="py-5">
-          <h3 className="text-base font-semibold">{t("ready.hotelPickupLabel")}</h3>
-          <Field label={t("ready.hotelPickupFieldLabel")} htmlFor="hotel-pickup" className="mt-3">
-            <input
-              id="hotel-pickup"
-              type="text"
-              name="hotelPickupLocation"
-              maxLength={300}
-              placeholder={t("ready.hotelPickupPlaceholder")}
-              defaultValue={data.hotelPickupLocation ?? ""}
-              className={controlClass}
-            />
-          </Field>
-        </div>
+            records question. The field under it keeps the address label.
+            Asked only at a shop that says it runs pickups (fourth UX review,
+            item 8): most do not, and asking was a promise never made. */}
+        {data.offersHotelPickup ? (
+          <div className="py-5">
+            <h3 className="text-base font-semibold">{t("ready.hotelPickupLabel")}</h3>
+            <Field label={t("ready.hotelPickupFieldLabel")} htmlFor="hotel-pickup" className="mt-3">
+              <input
+                id="hotel-pickup"
+                type="text"
+                name="hotelPickupLocation"
+                maxLength={300}
+                placeholder={t("ready.hotelPickupPlaceholder")}
+                defaultValue={data.hotelPickupLocation ?? ""}
+                className={controlClass}
+              />
+            </Field>
+          </div>
+        ) : null}
         <div className="py-5">
           <h3 className="text-base font-semibold">{t("ready.helpHeading")}</h3>
           <p className="mt-1 text-sm text-muted">{t("ready.helpBody")}</p>

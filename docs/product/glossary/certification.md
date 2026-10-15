@@ -39,11 +39,99 @@
 - **Agency check** — the DiveDay browser extension doing the "Check with SSI" lookup from the
   staffer's own browser (H-105, ADR 20261008-cert-check-extension). The extension types the diver
   into the agency's own lookup page and hands back the page's text; the server certifies the card
-  only when one record on that page names the diver, carries the birth date or card number the lookup
-  was typed with, and states the claimed level in the agency's own words, with nothing limiting it.
+  only when one record on that page names the diver ("Lena Ortiz" or "Ortiz, Lena", or a labeled pair
+  of adjacent lines, "First name: Lena" over "Last name: Ortiz", paired top to bottom so one record's
+  family name never completes the next one's given name), carries the birth date or card number the
+  lookup was typed with, and states the claimed level in the agency's own words, with nothing
+  limiting it. A record ends at the agency's own page furniture (SDI's "Request Certification", a
+  search control such as "Manual Search" on its own line); a labeled pair's record holds only a
+  record's kinds of lines and dates or numbers its rating, so the search form echoed back is not a
+  result. "Jr." straight after the diver's last name is part of their name. A birth date written all in numbers whose day and month could
+  swap is read in that agency's own order only, so a transposed date is another diver's. Short of a
+  match the staffer is told which: someone by this name but not with this birth date or number (a
+  namesake, whose words are never shown), a Junior or limited card, or the diver at another level.
   It stamps `agency_checked_at`, with those words as the review note, and names the staffer whose
-  browser ran it. Anything else writes nothing and leaves the link. Level cards only, for SSI, NAUI,
-  SDI, GUE and CMAS; an unsighted self-declaration still needs its sighting.
+  browser ran it. That stamp means *the staffer's browser reported a match*: the words came from
+  their browser, not signed by the agency, so it attests no more than **Mark certified** does, with
+  the same permission. Anything else writes nothing and leaves the link. A match on a pending card
+  says it certified it; on an imported card, that it confirmed it. Level cards only, for SSI, NAUI,
+  SDI, GUE, CMAS and PADI, never divemaster or instructor (a professional rating is checked on the
+  agency's professional tool); an unsighted self-declaration still needs its sighting. The lookup carries
+  only what the agency's form asks for: a birth date or a card number, both only for CMAS.
+- **Check all (agency)** — a departure's "Check all 9 cards with their agencies" on its Divers tab
+  (H-105): each **Agency check** the departure holds, one card at a time with a pause between, from
+  the staffer's browser. Each card is judged and certified on its own and keeps its own Undo; there
+  is no Undo for the departure. One diver the agency's page does not show is skipped, named, with
+  the agency's page to open; two unreadable pages or unanswered requests in a row stop the run, and
+  a signed-out **DiveChek check** stops it at once. The staffer can stop it. A re-run skips the cards
+  the page already settled. Never a bulk confirm: nothing is certified that its agency's page did
+  not show.
+- **Page-shape report** — what an **Agency check** that could not finish sends back instead of the
+  page's text (ADR 20261008-cert-check-extension): the page's structure only, in a form's own words.
+  The path (never its query string), the title, the top headings, each box's tag, type and label
+  words, each button's words, counts, and whether a password box or a captcha is there. Every word
+  outside a fixed vocabulary of form words becomes "_", and the diver's own names always do, so no
+  name, date or number on the page is in it. The server checks it again, logs it as one line
+  (`agency_check.page_shape`) and never shows it. It travels with two fixed reasons the staffer
+  reads beside the agency's link: **captcha** ("SSI is asking if you're human. Check on its page."),
+  a captcha on the lookup's own form, where nothing is typed, or on an answer that says nothing
+  about the diver, whose text is never handed back; and **page changed** ("SSI's page has
+  changed. Check on its page."), a lookup page with a form but no box or button where the
+  extension expects one. In a **Check all**, either leaves that agency's other cards for the
+  staffer.
+- **Minimum extension version** — the oldest copy of the extension the app talks to
+  (`MIN_EXTENSION_VERSION`). An older copy is treated as absent: the agency's link, never its
+  button, and Settings says "Update the extension". The extension also answers **hello** with its
+  version and the agencies it checks.
+- **Try the checks** — Settings' page (owners and managers) that runs the extension in this browser
+  against nothing real: whether it is here and current, a **dry run** of each public agency's lookup
+  on a sample page the extension carries, filled with a made-up diver by the real filler and never
+  sent, whether Chrome lets the extension on each agency's own site, and whether an open PADI Pros'
+  Site tab is signed in, read without a search. It ends in a copyable session report of versions,
+  outcomes and **Page-shape reports**, with no person in it, to email to DiveDay's support address.
+- **DiveChek check** — the **Agency check** for a PADI card, on PADI's DiveChek in the staffer's own
+  browser, signed in to the PADI Pros' Site (H-121); the "(member sign-in)" link opens the same
+  site. Searched by name and birth date, so a diver with no birth date on file keeps the link.
+  Narrower than a public page. One diver: DiveChek may list a row per certification, so rows with
+  the typed birth date are one diver's cards, and two birth dates under the name, or a page saying
+  it found two divers or more, certify nothing ("PADI lists more than one diver by this name"). A
+  record ends at the first line that could be someone else's (another name, or a name and another
+  birth date) or at the page's own furniture, its birth date comes before its level, and it carries
+  the card's number when the card has one. Only those records, and the words saying why or how many,
+  leave the staffer's browser. An instructor named on the row is the trainer, not a limit. A **Junior certification**
+  reads as its level for a diver 15 or older on the day of the check; under 15 it says "PADI shows a
+  Junior card. Under 15, record it by hand." A signed-out browser says "Sign in to the PADI Pros'
+  Site first" and stops a "Check all". A best guess of PADI's page until a staffer tries it (#2259).
+  Offered only at a shop that turned the **PADI checks** on.
+- **PADI checks** — the shop's own switch, "PADI checks (beta)" in Settings, for both checks run on
+  the PADI Pros' Site: the **DiveChek check** and the PADI eLearning check (H-121, H-106). Off by
+  default, because they run under the shop's own PADI membership and have not been tried on the
+  real page; off, a PADI card keeps its "(member sign-in)" link and nothing offers or accepts a
+  check (`agencyCheckOffered`, `shops.padi_checks_enabled`).
+- **Agency-listed certification** — a nitrox or specialty certification an **Agency check** found on
+  the same page as the card it matched, and that the staffer chose to add (layer 3 of ADR
+  20261008-cert-check-extension). After a match the staffer reads "PADI also shows these
+  certifications. Add them? Each waits for Mark certified." with one tick per certification, all
+  ticked. Only lines inside the diver's own matched record are read, and only as far as every line
+  is explained (the diver's name, the birth date, the certification's name in that agency's words,
+  a recreational card DiveDay holds no kind for such as Perfect Buoyancy, its dates and numbers);
+  the first other word, such as a neighbour's name, "Tec" or "Instructor" after a certification's
+  name, ends it. Each agency's words come from a closed table, so wording not in it is ignored. GUE's
+  Recreational Diver 1 offers nitrox (see **Bundled nitrox**). A kind the diver already has on file
+  in any state is never offered, except an unsighted nitrox **Self-declared certification**: adding
+  the card the page lists retires that claim, as any card the shop holds outranks the diver's word.
+  Ticked ones land **pending**, stamped with the level card whose check listed them, with the
+  agency's words as the review note and "Listed on PADI's page." beside them, before and after the
+  confirm. Where the agency numbers the diver (PADI, SSI, NAUI, GUE) they carry the number the shop
+  holds for the diver, and a staffer's one-tap **Mark certified** certifies them, keeping the words.
+  Where it numbers each card (SDI, CMAS) they carry the number printed on their own line, or none,
+  and then the confirm is the card sighting. Never certified by the check: nitrox authorizes a fill
+  and a specialty opens a site. Undoing the check archives the ones still pending. The server judges
+  the posted page again and files only kinds it offers itself. Not levels: a second level card on
+  the diver's one agency number cannot be filed. On a departure's Divers tab the offer sits under
+  the diver's row, after a **Check all (agency)** has finished; on Today it sits under the Needs you
+  list, naming the diver with a link to their record, because the row leaves with the card it was
+  about.
 - **eLearning check** — the same extension reading a course student's PADI eLearning on the PADI
   Pros' Site, searched by the student's email in the staffer's signed-in browser (H-106, ADR
   20261008-cert-check-extension). The server ticks **Materials done** only when one record names
@@ -227,7 +315,9 @@
   Every imported card still confirms on one tap; what came back here is narrower and applies only to
   the diver-written rows that did not exist then. What did **not** change for imports is that the
   confirm exists at all: an imported card clears nothing until a staffer makes that tap, per card,
-  and there is still deliberately no bulk confirm. Cards reviewed before that date keep the sentence
+  and there is still deliberately no bulk confirm. An **Agency check** confirms an imported level
+  card only when the agency's own page shows it, one card at a time, and a **Check all (agency)** is
+  only that, card after card. Cards reviewed before that date keep the sentence
   the old attestation wrote into their `review_note`.
 - **Prior visit** — one line of a diver's history at the shop's *previous* system, brought across by
   the contact importer from a bookings or orders export (one row per booking). It is a **booking
@@ -385,7 +475,8 @@
   per agency and per table, so the same number on a `certifications` row and a `nitrox_certifications`
   row is not a collision. It is written down because it looks like a mistake to whoever does it, and
   the two things a staffer does instead — refuse a fill to a properly trained diver, or hand the
-  tank over off-system — are both worse than an entry that looks odd.
+  tank over off-system — are both worse than an entry that looks odd. An **Agency check** of a GUE Rec 1 card offers the
+  nitrox card on that number for the same reason (**Agency-listed certification**).
 - **Other agency** — the enum's escape hatch (`certification_agency = 'other'`), and **a lossy one**:
   there is no free-text companion column anywhere in the schema, so a diver holding an **SEI**,
   **ANDI**, **ACUC**, **PSAI** or **NASE** card is recorded as "Other agency" with nowhere

@@ -24,6 +24,7 @@ import { getInboundMessage } from "./inbound-messages";
 import { refundBookingOnCancellation } from "./refunds";
 import { markPersonRunningLate } from "./running-late";
 import { bookings, inboundMessages, notificationDeliveries, people, shops, trips } from "./schema";
+import { settleReleasedPartySeats } from "./self-cancel-settle";
 import { sendStaffReply } from "./staff-reply";
 import { liveTrip } from "./trips-live";
 
@@ -407,10 +408,14 @@ export async function handleInboundReplyKeyword(
     return "code_mismatch";
   }
 
+  // A lead's unclaimed seats go with them, the same rule `/ready` applies
+  // (batch 6 item 10): a lead who cancels by reply must not leave seats they
+  // booked held under nobody.
   const cancelled = await selfCancelBooking(db, {
     shopId: input.shopId,
     bookingId: matched.bookingId,
     now,
+    withUnclaimedParty: true,
   });
   if (!cancelled.ok) {
     // Never distinguished to the diver: the same fail-closed-uniformly rule
@@ -463,6 +468,11 @@ export async function handleInboundReplyKeyword(
       from: "booked",
       refund,
     },
+    { provider: input.provider, now },
+  );
+  await settleReleasedPartySeats(
+    db,
+    { shopId: input.shopId, leadBookingId: matched.bookingId, party: cancelled.party },
     { provider: input.provider, now },
   );
   return "cancelled";

@@ -1,4 +1,4 @@
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { rentalFitLine } from "@/lib/dive-prep";

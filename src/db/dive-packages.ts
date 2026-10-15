@@ -10,6 +10,7 @@ import {
   spendableCountForTrip,
 } from "@/lib/dive-packages";
 import type { AppDb, DbExecutor } from "./client";
+import { queryAll } from "./query-helpers";
 import {
   divePackageEntitlements,
   divePackages,
@@ -317,6 +318,43 @@ export async function diverPackageBalance(
     of += tally.of;
   }
   return left > 0 ? { left, of } : null;
+}
+
+/**
+ * How many package dives this booking spent: one per planned tank (H-123).
+ * `/ready` says it beside the money ("Uses 2 package dives (3 left)"), so a
+ * two-tank boat spending two is never a surprise.
+ */
+export async function countDivesSpentOnBooking(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<number> {
+  const [row] = await db
+    .select({ total: count() })
+    .from(divePackageEntitlements)
+    .where(
+      and(
+        eq(divePackageEntitlements.shopId, shopId),
+        eq(divePackageEntitlements.bookingId, bookingId),
+      ),
+    );
+  return Number(row?.total ?? 0);
+}
+
+/**
+ * The two package numbers `/ready`'s Pay step says: what the diver still
+ * holds (`countSpendableDives`) and what this booking used (H-123).
+ */
+export async function packageDivesForBooking(
+  db: DbExecutor,
+  input: { shopId: string; personId: string; bookingId: string },
+): Promise<{ left: number; usedHere: number }> {
+  const [left, usedHere] = await queryAll(db, [
+    () => countSpendableDives(db, input.shopId, input.personId),
+    () => countDivesSpentOnBooking(db, input.shopId, input.bookingId),
+  ]);
+  return { left, usedHere };
 }
 
 /**

@@ -1,5 +1,6 @@
 import { loadActiveStaffRoles } from "@/db/authz";
 import { departureBoatSafetyFor } from "@/db/boat-safety";
+import { departureVessels } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
@@ -12,6 +13,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { emergencyReferenceForDeparture } from "@/lib/emergency-reference";
 import type {
   OfflineManifestPayload,
   OfflineManifestUpcomingResponse,
@@ -106,6 +108,8 @@ export async function GET() {
   };
   // Shop-wide, fetched once — every trip in the window shares the same list.
   const checklistItems = await listChecklistItems(db, shop.id);
+  // Each departure's own boat for its card (fourth review, item 11), one read for the window.
+  const vessels = await departureVessels(db, shop.id, tripIds);
   const payloads = await Promise.all(
     tripIds.map(async (tripId): Promise<OfflineManifestPayload | null> => {
       const manifests = await getTripManifests(db, shop.id, tripId);
@@ -133,7 +137,13 @@ export async function GET() {
         : null;
       return serializeManifests(
         manifests,
-        shopIdentity,
+        {
+          ...shopIdentity,
+          emergencyReference: emergencyReferenceForDeparture(
+            shop.emergencyReference,
+            vessels.get(tripId) ?? null,
+          ),
+        },
         (blocker, diver) => crewBlockerText(t, diver, blocker),
         checklistItems.map((item) => ({
           id: item.id,

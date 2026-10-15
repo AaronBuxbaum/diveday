@@ -74,7 +74,8 @@ above it, which is how one deleted sentence became twelve red Playwright shards.
 
 `pnpm verify:push` (`scripts/verify-push.mjs`) runs the local half of every row above against
 the layer below (`stackBase` in `scripts/e2e-affected.mjs`; `origin/main` off a stack), stops at
-the first red step, and writes a stamp naming HEAD into the git directory:
+the first red step, and writes a stamp naming HEAD into the git directory (keyed by sha in the
+common git dir too, so a push from any worktree finds it):
 
 1. `pnpm regen` (with the export snapshot when seed, schema or export changed), then a clean
    tree: a generated file the diff left stale is committed, not discovered by CI.
@@ -88,10 +89,20 @@ the first red step, and writes a stamp naming HEAD into the git directory:
    nothing the build reads has changed (the tree minus tests, `e2e/` and docs, so a commit that
    only fixes a spec reuses it). *Strong*: specs the diff edits or whose helper it edits, specs
    quoting text the diff removed (a locale value, JSX text, a seed literal), and specs visiting a
-   route whose own directory the diff edits. *Reach*: specs visiting a route whose page imports an
-   edited module, or a hub route (one more than ten specs visit), run narrowest first while they
-   stay inside five recorded CI-minutes and the whole selection inside fifteen; the rest are named
-   and left to CI. A diff of only unit tests runs no spec and builds nothing.
+   route whose own directory the diff edits. *Smoke*: five tests (`SMOKE`: booking, a waiver,
+   check-in, roll call offline, sign-in), run as `file:line` whenever the app changed. *Reach*:
+   specs visiting a route the diff's changed names reach (`scripts/symbol-reach.mjs`, name by
+   name rather than file by file), or a hub route (one more than ten specs visit), ranked by how
+   much of the diff's vocabulary a spec names, then narrowest first. Every selected spec runs, in
+   steps of 25: until 2026-10-15 a time budget left the rest to CI, and on #2619 that was 30 of
+   129, one of which went red there. A diff of only unit tests runs no spec and builds nothing.
+   `--commit <sha>` replays one commit; over 104 commits the median reach fell from 65 specs to
+   19 with the name walk.
+
+A green run ends with **"Not run here"**, also recorded as `notRunHere` in the stamp: unit tests
+that neither read source nor import the changed code, the Playwright specs the diff neither names
+nor reaches, and the visual captures. CI runs those first, so a report says "verify:push green",
+never "all tests pass locally".
 
 Replayed against the commits that broke specs on 2026-10-11 and 2026-10-12, the selection ran
 the broken spec in five of six: the sightings disclaimer, the reviews count, the dive-site editor
@@ -105,8 +116,40 @@ layer below is a new commit and needs a new run, which is the typecheck row. The
 reason written in front of the command, `DIVEDAY_PUSH_UNVERIFIED="<why>" git push …`, for the
 two cases the verify skill allows. Each one is logged with its reason and the sha to
 `.claude/.hook-log` (`recordOverride` in `scripts/hook-log.mjs`), and the next session's opening
-line counts them, so an escape hatch used every day shows up as a number. A spec that is red on the base too is still named: run it on
-the base, say so in the PR, and push with the reason.
+line counts them, so an escape hatch used every day shows up as a number.
+
+### A red base
+
+The gate as first built had one hole, and on 2026-10-14 it was the whole of what went red. Main
+went red at d5014c5f1, a dependency bump pushed straight to `main` with no PR (lint, and PGlite
+0.5.10 hanging in `close()` on two unit shards). Every layer that merged main inherited it, and
+the override's commonest reason became "red on main, not mine": #2594 pushed that way, and #2608
+pushed past a worktree stamp the guard could not yet see. A push on a red base is certain to be
+red, on that layer and on every layer above it, and each of those layers then pushes again to
+merge the fix. Since 19:49 that day, eight CI runs started across six open PRs, most of them
+merges from below.
+
+So `verify:push` reads the layer below's latest CI before anything else (`scripts/base-ci.mjs`):
+
+- **Green**: one line, and on.
+- **Still running**: a note. If it goes red, this layer is red with it; read it again before
+  merging it a second time.
+- **Red**: Lint, Typecheck and Repository safeguards are answered by the gate's own steps, so a
+  green run here is the fix carried. A red unit or Playwright job adds the test files its
+  annotations name to this run (the unit shards annotate each failed file through
+  `src/test/failed-files-reporter.ts`; Playwright annotates each failed spec), and the stamp
+  means they passed here. A red job that names no file is refused until the author reads its log
+  and names the files: `pnpm verify:push --base-red <file…>`, which then run here too. Visual
+  capture and reg-suit are left out: a push approves those (**visual-triage**).
+- **Unreadable** (no `gh`, no network): a line saying so, and on. The gate fails open; CI still
+  answers.
+
+The stamp records what it found (`baseCi`). The fix for a red base goes where the break is when
+that layer is still open (its owner, through the coordinator), or rides in this layer when it
+cannot wait; either way, nothing is pushed red on purpose. `scripts/guard-push.mjs` refuses an
+override whose reason says the red came from elsewhere ("red on main", "not mine", "inherited",
+"flake", "pre-existing"), and names the base check instead. The override is left for its two
+cases: work saved before the container is reclaimed, and a question only CI can answer.
 
 The PR body rows are a separate gate: `scripts/guard-pr-body.mjs` runs `check-pr-body.mjs`
 before the GitHub MCP creates or edits a pull request.

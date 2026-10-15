@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { violationFor } from "./guard-bash.mjs";
+import { quietFormFor, violationFor } from "./guard-bash.mjs";
 
 /**
  * What matters about a guard that blocks a tool call is not the blocking. It is that it
@@ -207,5 +207,65 @@ describe("discarding a shared working tree", () => {
     expect(violationFor("git push", scripts, clean)).toBeNull();
     // A branch whose *name* ends in main is not main.
     expect(violationFor("git push -u origin claude/fix-domain", scripts, clean)).toBeNull();
+  });
+});
+
+/**
+ * The quiet reporter is mechanical, so the hook writes it in rather than refusing the run and
+ * paying for a retry: the session gets the command it meant, with the output it can afford.
+ */
+describe("the quiet reporter, written in", () => {
+  const quiet = (command) => quietFormFor(command, new Set([...scripts, "e2e:run"]));
+
+  it("appends --reporter=dot to a focused unit run and --reporter=line to a spec", () => {
+    expect(quiet("pnpm test src/db/bookings.test.ts")).toBe(
+      "pnpm test src/db/bookings.test.ts --reporter=dot",
+    );
+    expect(quiet("pnpm run test scripts/guard-bash.test.mjs")).toBe(
+      "pnpm run test scripts/guard-bash.test.mjs --reporter=dot",
+    );
+    expect(quiet("pnpm e2e e2e/booking.spec.ts")).toBe(
+      "pnpm e2e e2e/booking.spec.ts --reporter=line",
+    );
+    expect(quiet("pnpm e2e:run e2e/visual.spec.ts -g 'light mode.*orders'")).toBe(
+      "pnpm e2e:run e2e/visual.spec.ts -g 'light mode.*orders' --reporter=line",
+    );
+  });
+
+  it("puts the flag before a redirection, so the file still gets the whole output", () => {
+    expect(quiet("pnpm test src/lib/trips.test.ts > /tmp/out.txt 2>&1")).toBe(
+      "pnpm test src/lib/trips.test.ts --reporter=dot > /tmp/out.txt 2>&1",
+    );
+    expect(quiet("CI=1 pnpm e2e e2e/booking.spec.ts 2>&1 > /tmp/e2e.txt")).toBe(
+      "CI=1 pnpm e2e e2e/booking.spec.ts --reporter=line 2>&1 > /tmp/e2e.txt",
+    );
+  });
+
+  it("leaves a run that already names a reporter alone", () => {
+    expect(quiet("pnpm test src/foo.test.ts --reporter=verbose")).toBeNull();
+    expect(quiet("pnpm test src/foo.test.ts --reporter dot")).toBeNull();
+    expect(quiet("pnpm e2e e2e/booking.spec.ts --reporter=html")).toBeNull();
+  });
+
+  /**
+   * One simple command only. A chain or a pipe is the session's own composition, and a
+   * rewrite that has to guess which half to touch is a rewrite that will one day touch the
+   * wrong one.
+   */
+  it("leaves chains, pipes, other scripts and quoted mentions alone", () => {
+    expect(quiet("pnpm lint && pnpm test src/foo.test.ts")).toBeNull();
+    expect(quiet("pnpm test src/foo.test.ts; echo done")).toBeNull();
+    expect(quiet("pnpm test src/foo.test.ts | grep --line-buffered FAIL")).toBeNull();
+    expect(quiet("pnpm test:watch src/foo.test.ts")).toBeNull();
+    expect(quiet("pnpm verify:push")).toBeNull();
+    expect(quiet("pnpm exec vitest run src/foo.test.ts")).toBeNull();
+    expect(quiet(`git commit -m "pnpm test src/foo.test.ts"`)).toBeNull();
+    expect(quiet("pnpm test src/foo.test.ts &")).toBeNull();
+    expect(quietFormFor("pnpm test src/foo.test.ts", new Set(["lint"]))).toBeNull();
+  });
+
+  it("never rewrites a command the guard refuses", () => {
+    expect(quiet("pnpm test")).toBeNull();
+    expect(quiet("pnpm test -- src/foo.test.ts")).toBeNull();
   });
 });

@@ -27,6 +27,7 @@ const MESSAGE: InboxMessageRow["message"] = {
   emailMessageId: null,
   inReplyToDeliveryId: null,
   keywordIntent: null,
+  bookingId: null,
   senderAuthenticated: true,
   spamFlagged: false,
   deletedAt: null,
@@ -324,5 +325,42 @@ describe("a message from somebody with a boat to catch", () => {
   it("names nothing when there is no seat the message could be about", () => {
     const container = renderRow(LATE, "Diego Alvarez", null);
     expect(container.textContent).not.toMatch(/Booked on/);
+  });
+});
+
+describe("an Ask to move from the booking page (H-126)", () => {
+  const SEAT: MessageSeat = {
+    bookingId: "bf000000-1111-4222-8333-444444444444",
+    tripId: "cf000000-1111-4222-8333-444444444444",
+    title: "Night Dive",
+    startsAt: new Date("2026-07-22T04:30:00.000Z"),
+    runningLateAt: null,
+  };
+  const ASK = {
+    channel: "page" as const,
+    subject: null,
+    body: "",
+    keywordIntent: "move" as const,
+    bookingId: SEAT.bookingId,
+  };
+
+  it("says where it came from, what it asks and which seat", () => {
+    renderRow(ASK, "Diego Alvarez", SEAT);
+    expect(screen.getByText("Booking page")).toBeInTheDocument();
+    expect(screen.getByText(/Asked to move/)).toBeInTheDocument();
+    expect(screen.getByText(/Booked on Night Dive/)).toBeInTheDocument();
+  });
+
+  it("carries the diver's note when there is one", () => {
+    renderRow({ ...ASK, body: "Any Saturday in August" }, "Diego Alvarez", SEAT);
+    expect(screen.getByText("Any Saturday in August")).toBeInTheDocument();
+  });
+
+  it("offers no running-late mark: the ask is about another date", async () => {
+    renderRow(ASK, "Diego Alvarez", SEAT);
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Diego Alvarez" }),
+    );
+    expect(screen.queryByRole("button", { name: /running late/ })).toBeNull();
   });
 });

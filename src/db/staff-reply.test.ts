@@ -238,6 +238,37 @@ describe("what cannot be answered", () => {
     expect(provider.sent).toHaveLength(0);
   });
 
+  it("refuses an Ask to move from the booking page, which has no address to answer on", async () => {
+    const { db, shop, diver, staff } = await shopContext();
+    const [ask] = await db
+      .insert(inboundMessages)
+      .values({
+        shopId: shop.id,
+        personId: diver.id,
+        channel: "page",
+        fromAddress: diver.email.toLowerCase(),
+        body: "",
+        keywordIntent: "move",
+        receivedAt: NOW,
+        providerMessageId: "move-ask:test",
+      })
+      .returning({ id: inboundMessages.id });
+    if (!ask) throw new Error("insert failed");
+    const provider = acceptingProvider();
+    expect(
+      await sendStaffReply(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        messageId: ask.id,
+        body: "We can do the 28th.",
+        sentByPersonId: staff.id,
+        now: NOW,
+        provider,
+      }),
+    ).toEqual({ status: "refused", reason: "channel_unsupported" });
+    expect(provider.sent).toHaveLength(0);
+  });
+
   /**
    * A reply the outbound schema will not take. The address on the record is a
    * real one the diver wrote from, and it is long enough that the notification

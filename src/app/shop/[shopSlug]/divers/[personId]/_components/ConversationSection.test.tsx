@@ -139,6 +139,45 @@ describe("a conversation", () => {
 });
 
 /**
+ * H-126: an "Ask to move" from the booking page sits in the thread, says what
+ * it is, and is never what the composer answers: the shop calls, or writes
+ * back on the last message the diver actually wrote.
+ */
+describe("an Ask to move from the booking page", () => {
+  const ask = (body = "") =>
+    inbound({
+      message: {
+        id: "9a000000-1111-4222-8333-444444444444",
+        channel: "page",
+        subject: null,
+        body,
+        keywordIntent: "move",
+        receivedAt: new Date(NOW.getTime() - HOUR_MS / 2),
+      },
+    } as Partial<ThreadEntry & { direction: "inbound" }>);
+
+  it("says the diver asked to move, and carries a note only when there is one", () => {
+    renderSection([ask()]);
+    expect(
+      screen.getByText(/^Priya Sharma asked to move this seat from their booking page · /),
+    ).toBeInTheDocument();
+    cleanup();
+    renderSection([ask("Any Saturday in August")]);
+    expect(screen.getByText("Any Saturday in August")).toBeInTheDocument();
+  });
+
+  it("offers no composer when the ask is all they sent", () => {
+    renderSection([ask()]);
+    expect(screen.queryByLabelText(/^Reply by/)).toBeNull();
+  });
+
+  it("answers the last thing they wrote, not the ask after it", () => {
+    renderSection([inbound(), ask()]);
+    expect(screen.getByLabelText("Reply by email to priya.sharma@example.com")).toBeInTheDocument();
+  });
+});
+
+/**
  * Deleting a diver is soft, so their record and their thread stay readable —
  * the history is the point. What goes is the composer: `sendStaffReply` refuses
  * to write to a removed record, so offering the box would take a staffer's

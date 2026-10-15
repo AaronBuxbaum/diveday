@@ -1,0 +1,596 @@
+{
+  "area": "florida-broward",
+  "method": "Broward County, Deerfield Beach to Hallandale. Operator lists: South Florida Diving Headquarters, Sea Experience, Parrot Island Scuba, Squalo Divers. Sites are counted when named on at least two independent lists; an official list (FWC artificial reefs, the 2024 FDEP Southeast Florida mooring-buoy brochure, a county reef layer, Florida's underwater archaeological preserves, NPS) counts as one, each operator or tourism-board site list as another. FWC deployments count only when an operator names them; technical-depth wrecks (operator- or FWC-stated depth beyond ~135 ft) and one-list names are recorded as excluded. Multi-wreck dives sold as one dive are one row, with the wrecks as aliases. Counted 2026-10-14 from pages fetched that day.",
+  "sources": [
+    "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+    "https://www.southfloridadiving.com/dive-sites/recreational/pompano-drop-off/",
+    "https://seaxp.com/south-florida-reefs/",
+    "https://www.parrotislandscuba.com/reef.php",
+    "https://www.southfloridadiving.com/dive-sites/recreational/nursery-dive-and-snorkel/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/suzzanes-ledge/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/hall-of-fame-reef/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/anglin-pier-reef/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/oakland-ridges/",
+    "https://www.scubadivinginmiami.com/dive-sites/page/3/",
+    "https://www.scubadivinginmiami.com/dive-sites/page/4/",
+    "https://www.scubadivinginmiami.com/dive-sites/",
+    "https://www.scubadivinginmiami.com/dive-sites/page/5/",
+    "https://www.scubadivinginmiami.com/dive-sites/page/2/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/abbey-too/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/crab-cove/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/grouper-bend/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/hillsboro-ledge/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/labontee-reef/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/lighthouse-ledge/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/sanctuary-reef/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/touchdown-reef/",
+    "https://museumsinthesea.com/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/copenhagen/",
+    "https://seaxp.com/south-florida-wrecks/",
+    "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+    "https://www.southfloridadiving.com/dive-sites/advanced-open-water/lady-luck/",
+    "https://www.parrotislandscuba.com/wreks.php",
+    "https://www.southfloridadiving.com/dive-sites/recreational/okinawa/",
+    "https://www.southfloridadiving.com/dive-sites/advanced-open-water/captain-dan/",
+    "https://www.southfloridadiving.com/dive-sites/advanced-open-water/guy-harvey/",
+    "https://www.southfloridadiving.com/dive-sites/advanced-open-water/rodeo-25/",
+    "https://www.southfloridadiving.com/dive-sites/advanced-open-water/rsb-1/",
+    "https://www.southfloridadiving.com/dive-sites/advanced-open-water/union-express/",
+    "https://www.southfloridadiving.com/dive-sites/advanced-open-water/mariner-ii-barge/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/mariner-ii-tug/",
+    "https://www.southfloridadiving.com/dive-sites/advanced-open-water/wreck-trek-pompano/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/ancient-mariner/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/berry-patch-tug/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/wreck-trek-deerfield/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/rapa-nui-reef/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/jay-scutti/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/tracey/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/merci-jesus/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/robert-edmister/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/peter-b-mcallister/",
+    "https://www.southfloridadiving.com/dive-sites/advanced-open-water/mercedes-i/",
+    "https://www.southfloridadiving.com/dive-sites/advanced-open-water/jim-atria/",
+    "https://www.southfloridadiving.com/dive-sites/advanced-open-water/rebel/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/shark-reef/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/pompano-trench/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/lost-ledge/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/steves-twin-ledges/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/pompano-3rd-reef/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/ant-beds/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/separated-rocks/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/marks-ledge/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/horseshoe-reef/",
+    "https://www.southfloridadiving.com/dive-sites/recreational/merrit-barge/",
+    "https://www.southfloridadiving.com/dive-sites/technical/miller-lite/",
+    "https://www.southfloridadiving.com/dive-sites/technical/renegade/",
+    "https://www.southfloridadiving.com/dive-sites/technical/lowrance/",
+    "https://www.southfloridadiving.com/dive-sites/technical/sucre/",
+    "https://www.southfloridadiving.com/dive-sites/technical/rbj-chris-corey/",
+    "https://www.southfloridadiving.com/dive-sites/technical/caicos-express/",
+    "https://www.southfloridadiving.com/dive-sites/advanced-open-water/quallman-tugs/"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Pompano Drop-Off (The Balls)",
+      "template": "pompano-drop-off",
+      "position": [26.21155, -80.08463],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+        "https://www.southfloridadiving.com/dive-sites/recreational/pompano-drop-off/",
+        "https://seaxp.com/south-florida-reefs/",
+        "https://www.parrotislandscuba.com/reef.php"
+      ]
+    },
+    {
+      "name": "Nursery",
+      "template": null,
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/nursery-dive-and-snorkel/",
+        "https://www.parrotislandscuba.com/reef.php"
+      ]
+    },
+    {
+      "name": "Suzanne's Ledge",
+      "template": "suzannes-ledge",
+      "position": [26.22875, -80.08262],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+        "https://www.southfloridadiving.com/dive-sites/recreational/suzzanes-ledge/"
+      ]
+    },
+    {
+      "name": "Hall of Fame Reef",
+      "template": "hall-of-fame-reef",
+      "position": [26.19243, -80.08457],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+        "https://www.southfloridadiving.com/dive-sites/recreational/hall-of-fame-reef/",
+        "https://seaxp.com/south-florida-reefs/"
+      ]
+    },
+    {
+      "name": "Anglin's Ledge (Anglin Pier Reef)",
+      "template": "anglin-pier-reef",
+      "position": [26.18922, -80.08735],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+        "https://www.southfloridadiving.com/dive-sites/recreational/anglin-pier-reef/"
+      ]
+    },
+    {
+      "name": "Oakland Ridges (Oakland Ledges)",
+      "template": "oakland-ridges",
+      "position": [26.15423, -80.08902],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+        "https://www.southfloridadiving.com/dive-sites/recreational/oakland-ridges/",
+        "https://seaxp.com/south-florida-reefs/",
+        "https://www.scubadivinginmiami.com/dive-sites/page/3/"
+      ]
+    },
+    {
+      "name": "The Caves",
+      "template": "the-caves-fort-lauderdale",
+      "position": [26.12667, -80.09165],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+        "https://seaxp.com/south-florida-reefs/",
+        "https://www.scubadivinginmiami.com/dive-sites/page/4/"
+      ]
+    },
+    {
+      "name": "Barracuda Reef",
+      "template": "barracuda-reef-fort-lauderdale",
+      "position": [26.07638, -80.09583],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf",
+        "https://seaxp.com/south-florida-reefs/",
+        "https://www.scubadivinginmiami.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Twin Ledges (Fort Lauderdale)",
+      "template": null,
+      "listedBy": [
+        "https://seaxp.com/south-florida-reefs/",
+        "https://www.scubadivinginmiami.com/dive-sites/page/5/"
+      ]
+    },
+    {
+      "name": "Hammerhead Reef",
+      "template": null,
+      "listedBy": [
+        "https://seaxp.com/south-florida-reefs/",
+        "https://www.scubadivinginmiami.com/dive-sites/page/2/"
+      ]
+    },
+    {
+      "name": "Abbey Too (Abby Too)",
+      "template": null,
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/abbey-too/",
+        "https://www.parrotislandscuba.com/reef.php"
+      ]
+    },
+    {
+      "name": "Crab Cove",
+      "template": null,
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/crab-cove/",
+        "https://www.parrotislandscuba.com/reef.php"
+      ]
+    },
+    {
+      "name": "Grouper Bend",
+      "template": null,
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/grouper-bend/",
+        "https://www.parrotislandscuba.com/reef.php"
+      ]
+    },
+    {
+      "name": "Hillsboro Ledge",
+      "template": "hillsboro-ledge",
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/hillsboro-ledge/",
+        "https://www.parrotislandscuba.com/reef.php"
+      ]
+    },
+    {
+      "name": "Labontee Reef (Labonte)",
+      "template": "labonte-reef",
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/labontee-reef/",
+        "https://www.parrotislandscuba.com/reef.php"
+      ]
+    },
+    {
+      "name": "Lighthouse Ledge",
+      "template": "lighthouse-ledge",
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/lighthouse-ledge/",
+        "https://www.parrotislandscuba.com/reef.php"
+      ]
+    },
+    {
+      "name": "Sanctuary Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/sanctuary-reef/",
+        "https://www.parrotislandscuba.com/reef.php"
+      ]
+    },
+    {
+      "name": "Touchdown Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/touchdown-reef/",
+        "https://www.parrotislandscuba.com/reef.php"
+      ]
+    },
+    {
+      "name": "SS Copenhagen",
+      "template": "copenhagen-wreck",
+      "listedBy": [
+        "https://museumsinthesea.com/",
+        "https://www.southfloridadiving.com/dive-sites/recreational/copenhagen/",
+        "https://seaxp.com/south-florida-wrecks/",
+        "https://www.scubadivinginmiami.com/dive-sites/page/4/"
+      ]
+    },
+    {
+      "name": "Lady Luck",
+      "template": "lady-luck-shipwreck-park",
+      "position": [26.23011, -80.06345],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/advanced-open-water/lady-luck/",
+        "https://www.parrotislandscuba.com/wreks.php",
+        "https://www.scubadivinginmiami.com/dive-sites/page/2/"
+      ]
+    },
+    {
+      "name": "Okinawa",
+      "template": "okinawa-wreck-pompano",
+      "position": [26.23352, -80.07017],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/recreational/okinawa/",
+        "https://www.parrotislandscuba.com/wreks.php"
+      ]
+    },
+    {
+      "name": "Captain Dan",
+      "template": "captain-dan-wreck",
+      "position": [26.23095, -80.066],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/advanced-open-water/captain-dan/",
+        "https://seaxp.com/south-florida-wrecks/",
+        "https://www.parrotislandscuba.com/wreks.php",
+        "https://www.scubadivinginmiami.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Guy Harvey",
+      "template": "guy-harvey-wreck",
+      "position": [26.21078, -80.06573],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/advanced-open-water/guy-harvey/",
+        "https://www.parrotislandscuba.com/wreks.php"
+      ]
+    },
+    {
+      "name": "Rodeo 25",
+      "template": "rodeo-25-wreck",
+      "position": [26.2313, -80.06355],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/advanced-open-water/rodeo-25/"
+      ]
+    },
+    {
+      "name": "RSB-1",
+      "template": "rsb-1-wreck",
+      "position": [26.22736, -80.06493],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/advanced-open-water/rsb-1/",
+        "https://www.scubadivinginmiami.com/dive-sites/page/4/"
+      ]
+    },
+    {
+      "name": "Union Express",
+      "template": "union-express-wreck",
+      "position": [26.23456, -80.06448],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/advanced-open-water/union-express/"
+      ]
+    },
+    {
+      "name": "Mariner II (barge and tug)",
+      "template": "mariner-ii-barge-and-tug",
+      "position": [26.22255, -80.05315],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/advanced-open-water/mariner-ii-barge/",
+        "https://www.southfloridadiving.com/dive-sites/recreational/mariner-ii-tug/"
+      ]
+    },
+    {
+      "name": "Jay Dorman",
+      "template": "jay-dorman-wreck",
+      "position": [26.23098, -80.06711],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/advanced-open-water/wreck-trek-pompano/",
+        "https://www.parrotislandscuba.com/wreks.php"
+      ]
+    },
+    {
+      "name": "Alpha",
+      "template": "alpha-wreck-pompano",
+      "position": [26.23095, -80.06711],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/advanced-open-water/wreck-trek-pompano/",
+        "https://www.parrotislandscuba.com/wreks.php"
+      ]
+    },
+    {
+      "name": "Ancient Mariner",
+      "template": "ancient-mariner-wreck",
+      "position": [26.30201, -80.06215],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/recreational/ancient-mariner/"
+      ]
+    },
+    {
+      "name": "Berry Patch Tug",
+      "template": "berry-patch-tug",
+      "position": [26.30138, -80.06171],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/recreational/berry-patch-tug/",
+        "https://www.parrotislandscuba.com/wreks.php"
+      ]
+    },
+    {
+      "name": "Qualman Barge (Deerfield wreck trek)",
+      "template": "qualman-barge-deerfield",
+      "position": [26.29961, -80.06181],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/recreational/wreck-trek-deerfield/"
+      ]
+    },
+    {
+      "name": "Rapa Nui Reef",
+      "template": "rapa-nui-reef",
+      "position": [26.31678, -80.062],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/recreational/rapa-nui-reef/"
+      ]
+    },
+    {
+      "name": "Jay Scutti",
+      "template": "jay-scutti-wreck",
+      "position": [26.15866, -80.07933],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/recreational/jay-scutti/",
+        "https://seaxp.com/south-florida-wrecks/",
+        "https://www.parrotislandscuba.com/wreks.php",
+        "https://www.scubadivinginmiami.com/dive-sites/page/2/"
+      ]
+    },
+    {
+      "name": "Tracy (Ken Vitale)",
+      "template": "tracy-ken-vitale-wreck",
+      "position": [26.15931, -80.07938],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/recreational/tracey/",
+        "https://seaxp.com/south-florida-wrecks/",
+        "https://www.scubadivinginmiami.com/dive-sites/page/5/"
+      ]
+    },
+    {
+      "name": "Merci Jesus",
+      "template": "merci-jesus-wreck",
+      "position": [26.16058, -80.07911],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/recreational/merci-jesus/",
+        "https://seaxp.com/south-florida-wrecks/",
+        "https://www.scubadivinginmiami.com/dive-sites/page/3/"
+      ]
+    },
+    {
+      "name": "Robert Edmister",
+      "template": "robert-edmister-wreck",
+      "position": [26.15321, -80.08061],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/recreational/robert-edmister/",
+        "https://seaxp.com/south-florida-wrecks/",
+        "https://www.scubadivinginmiami.com/dive-sites/page/4/"
+      ]
+    },
+    {
+      "name": "Peter B. McAllister",
+      "template": "peter-b-mcallister-wreck",
+      "position": [26.16915, -80.07863],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/recreational/peter-b-mcallister/",
+        "https://seaxp.com/south-florida-wrecks/",
+        "https://www.scubadivinginmiami.com/dive-sites/page/3/"
+      ]
+    },
+    {
+      "name": "Mercedes I",
+      "template": "mercedes-i-wreck",
+      "position": [26.15616, -80.07521],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/advanced-open-water/mercedes-i/",
+        "https://seaxp.com/south-florida-wrecks/",
+        "https://www.scubadivinginmiami.com/dive-sites/page/2/"
+      ]
+    },
+    {
+      "name": "Jim Atria",
+      "template": "jim-atria-wreck",
+      "position": [26.1645, -80.07041],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/advanced-open-water/jim-atria/",
+        "https://seaxp.com/south-florida-wrecks/",
+        "https://www.parrotislandscuba.com/wreks.php"
+      ]
+    },
+    {
+      "name": "Rebel",
+      "template": "rebel-wreck",
+      "position": [26.17088, -80.0722],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://www.southfloridadiving.com/dive-sites/advanced-open-water/rebel/",
+        "https://seaxp.com/south-florida-wrecks/"
+      ]
+    },
+    {
+      "name": "Hog Heaven (Jungle Gym)",
+      "template": "hog-heaven-wreck",
+      "position": [26.13503, -80.07976],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://seaxp.com/south-florida-wrecks/",
+        "https://www.scubadivinginmiami.com/dive-sites/page/2/"
+      ]
+    },
+    {
+      "name": "Houseboat (Duzaway)",
+      "template": "houseboat-duzaway-wreck",
+      "position": [26.11128, -80.06193],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://seaxp.com/south-florida-wrecks/",
+        "https://www.scubadivinginmiami.com/dive-sites/page/2/"
+      ]
+    },
+    {
+      "name": "Donald G. McAllister",
+      "template": "donald-g-mcallister-wreck",
+      "position": [26.00913, -80.09275],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://seaxp.com/south-florida-wrecks/",
+        "https://www.parrotislandscuba.com/wreks.php",
+        "https://www.scubadivinginmiami.com/dive-sites/page/2/"
+      ]
+    },
+    {
+      "name": "Miss Dania Beach",
+      "template": "miss-dania-beach-wreck",
+      "position": [26.01008, -80.0917],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://seaxp.com/south-florida-wrecks/"
+      ]
+    },
+    {
+      "name": "Ebenezer II (Eben-Ezer-2)",
+      "template": "ebenezer-ii-wreck",
+      "position": [26.00663, -80.09315],
+      "listedBy": [
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+        "https://seaxp.com/south-florida-wrecks/"
+      ]
+    },
+    {
+      "name": "Pride",
+      "template": null,
+      "listedBy": ["https://seaxp.com/south-florida-wrecks/"],
+      "excluded": "named only by Sea Experience (part of the Jay Scutti trek); no FWC row by that name"
+    },
+    {
+      "name": "Shark Reef / Pompano Trench / Lost Ledge / Steve's Twin Ledges / Pompano 3rd Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/shark-reef/",
+        "https://www.southfloridadiving.com/dive-sites/recreational/pompano-trench/",
+        "https://www.southfloridadiving.com/dive-sites/recreational/lost-ledge/",
+        "https://www.southfloridadiving.com/dive-sites/recreational/steves-twin-ledges/",
+        "https://www.southfloridadiving.com/dive-sites/recreational/pompano-3rd-reef/"
+      ],
+      "excluded": "each on one operator list only (SFDHQ); the City of Pompano Beach list that also named them (pompanobeacharts.org/visitors-1/scuba-diving) now returns 404 and has no archive"
+    },
+    {
+      "name": "Ant Beds / Separated Rocks / Mark's Ledge / Horseshoe Reef (Pompano)",
+      "template": null,
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/recreational/ant-beds/",
+        "https://www.southfloridadiving.com/dive-sites/recreational/separated-rocks/",
+        "https://www.southfloridadiving.com/dive-sites/recreational/marks-ledge/",
+        "https://www.southfloridadiving.com/dive-sites/recreational/horseshoe-reef/"
+      ],
+      "excluded": "each on one operator list only (SFDHQ)"
+    },
+    {
+      "name": "Opal Tower / Razzle Dazzle / Sunkist / Turtle Ledge",
+      "template": null,
+      "listedBy": ["https://www.parrotislandscuba.com/reef.php"],
+      "excluded": "each on one operator list only (Parrot Island Scuba)"
+    },
+    {
+      "name": "Fisher's Pedestal / Sunrise Ledge / Willie's Way",
+      "template": null,
+      "listedBy": ["https://seaxp.com/south-florida-reefs/"],
+      "excluded": "each on one operator list only (Sea Experience)"
+    },
+    {
+      "name": "Deerfield Beach buoy reef",
+      "template": null,
+      "position": [26.30575, -80.06783],
+      "listedBy": [
+        "https://floridadep.gov/sites/default/files/SEFLMooringBuoys-Print_BrochurePDF_05152024_KJCAP.pdf"
+      ],
+      "excluded": "buoy list only, under a generic town name no operator uses"
+    },
+    {
+      "name": "Merrit Barge",
+      "template": null,
+      "listedBy": ["https://www.southfloridadiving.com/dive-sites/recreational/merrit-barge/"],
+      "excluded": "on one operator list only (SFDHQ); FWC 'Buddy Merrit' is a different 430 ft deployment"
+    },
+    {
+      "name": "Miller Lite / Renegade / Lowrance / Sucre / RBJ & Chris Corey / Caicos Express",
+      "template": null,
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/technical/miller-lite/",
+        "https://www.southfloridadiving.com/dive-sites/technical/renegade/",
+        "https://www.southfloridadiving.com/dive-sites/technical/lowrance/",
+        "https://www.southfloridadiving.com/dive-sites/technical/sucre/",
+        "https://www.southfloridadiving.com/dive-sites/technical/rbj-chris-corey/",
+        "https://www.southfloridadiving.com/dive-sites/technical/caicos-express/"
+      ],
+      "excluded": "technical depth (100-270 ft); SFDHQ and Parrot Island list them as technical"
+    },
+    {
+      "name": "Quallman Tugs",
+      "template": null,
+      "listedBy": [
+        "https://www.southfloridadiving.com/dive-sites/advanced-open-water/quallman-tugs/"
+      ],
+      "excluded": "SFDHQ only; FWC 'Qualman Barge' rows are the Deerfield barge and a 145 ft barge, not these tugs"
+    }
+  ]
+}

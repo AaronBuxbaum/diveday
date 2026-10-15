@@ -49,7 +49,8 @@
     "studentsCount": "{count, plural, one {# student} other {# students}}",
     "readyCount": "{count} ready",
     "blockedCount": "{count} blocked",
-    "openRoster": "Open roster"
+    "openRoster": "Open roster",
+    "away": "You said you’re away {dates}."
   },
   "yourWeek": {
     "heading": "Your week",
@@ -88,6 +89,7 @@
     "failedPhotoDeletion": "Cleanup",
     "owedRefund": "Refund owed",
     "paymentDispute": "Card dispute",
+    "paymentsRestricted": "Stripe",
     "reviewsPending": "Reviews",
     "unansweredMessages": "Messages",
     "gearOverdue": "Late gear",
@@ -103,7 +105,8 @@
     "helpRequest": "Help request",
     "sayHello": "Say hello",
     "rentalFit": "Gear",
-    "blockedAboard": "Aboard"
+    "blockedAboard": "Aboard",
+    "crewAway": "Crew away"
   },
   "blockerAction": {
     "setRequirements": "Set requirements",
@@ -187,7 +190,9 @@
     "ratingLapsed": "{names} {count, plural, one {has a rating that isn’t current} other {have ratings that aren’t current}} for this departure.",
     "missingContactNamed": "No emergency contact.",
     "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open, no last-minute deal sent.",
-    "waitlistSeat": "{seats, plural, one {# seat} other {# seats}} open, {waiting} on the wait list."
+    "waitlistSeat": "{seats, plural, one {# seat} other {# seats}} open, {waiting} on the wait list.",
+    "crewAway": "{name} is away {dates}.",
+    "rollCallAlerted": "Owners alerted: {time}."
   },
   "actionLabel": {
     "openRollCall": "Open roll call",
@@ -202,6 +207,7 @@
     "openOrders": "Review in Orders",
     "openOrder": "Open order",
     "openDataSettings": "Review in Settings",
+    "openPaymentSettings": "Open payment settings",
     "openReviews": "Open reviews",
     "openInbox": "Open inbox",
     "openGearRegister": "Open gear register",
@@ -245,7 +251,9 @@
     "owedRefundGroupDetailNoAmount": "{tripTitle} on {when}: {names}. Return it, then mark each seat refunded.",
     "disputeSubject": "Card dispute",
     "disputeDetail": "{amount} disputed. Send Stripe your evidence by {due}.",
-    "disputeDetailNoDeadline": "{amount} disputed. Answer it in Stripe."
+    "disputeDetailNoDeadline": "{amount} disputed. Answer it in Stripe.",
+    "restrictedSubject": "Card payments are off",
+    "restrictedDetail": "Stripe paused them on {when}. Divers pay at the shop until Stripe turns them back on."
   },
   "reviewsPending": {
     "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you"
@@ -303,6 +311,7 @@
     "waiverNotSent": "{count, plural, one {Waiver not signed, not sent yet.} other {# waivers not signed, not sent yet.}}",
     "waiverPending": "{count, plural, one {Waiver not signed, link sent.} other {# waivers not signed, links sent.}}",
     "waiverExpired": "{count, plural, one {Waiver link expired.} other {# waiver links expired.}}",
+    "waiverLapsed": "{count, plural, one {Signed waiver lapsed.} other {# signed waivers lapsed.}}",
     "medicalReview": "{count, plural, one {Medical answer needs a doctor’s sign-off.} other {# medical answers need a doctor’s sign-off.}}",
     "medicalNotCleared": "{count, plural, one {Not cleared to dive by a physician.} other {# divers not cleared to dive by a physician.}}",
     "guardianSignatureMissing": "{count, plural, one {Waiver needs a guardian’s signature.} other {# waivers need a guardian’s signature.}}",

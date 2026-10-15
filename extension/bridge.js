@@ -10,8 +10,18 @@
     EXTENSION_SOURCE,
     REQUEST_TYPE,
     ELEARNING_REQUEST_TYPE,
+    HELLO_REQUEST_TYPE,
+    DRY_RUN_REQUEST_TYPE,
+    PADI_SESSION_REQUEST_TYPE,
     RESULT_TYPE,
   } = globalThis.DiveDayCertCheck;
+  const REQUESTS = [
+    REQUEST_TYPE,
+    ELEARNING_REQUEST_TYPE,
+    HELLO_REQUEST_TYPE,
+    DRY_RUN_REQUEST_TYPE,
+    PADI_SESSION_REQUEST_TYPE,
+  ];
 
   document.documentElement.setAttribute(MARKER_ATTRIBUTE, VERSION);
   window.dispatchEvent(new Event(READY_EVENT));
@@ -20,7 +30,7 @@
     if (event.source !== window || event.origin !== window.location.origin) return;
     const data = event.data;
     if (!data || data.source !== PAGE_SOURCE) return;
-    if (data.type !== REQUEST_TYPE && data.type !== ELEARNING_REQUEST_TYPE) return;
+    if (!REQUESTS.includes(data.type)) return;
     if (typeof data.requestId !== "string" || data.requestId.length > 100) return;
     const reply = (result) =>
       window.postMessage(

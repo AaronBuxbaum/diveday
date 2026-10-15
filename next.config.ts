@@ -405,8 +405,9 @@ export default withSentryConfig(nextConfig, {
   // bundled. Also worth knowing: `bundleSizeOptimizations` is now deprecated in
   // favour of `webpack.treeshake.*`, and it is the latter that the webpack
   // `DefinePlugin` path actually reads — so this block is doubly inert here.
-  // Sentry's ~63 KB of the floor is real and still worth removing; the lever is
-  // not a build flag.
+  // Sentry's ~63 KB of the floor was real and the lever was not a build flag:
+  // `src/instrumentation-client.ts` now loads the browser SDK on idle
+  // (`deferSentry`, code review 2026-10-13b item 34), and the floor fell 57 KB.
   bundleSizeOptimizations: {
     excludeDebugStatements: true,
     excludeTracing: true,

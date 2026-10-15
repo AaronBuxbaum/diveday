@@ -10,6 +10,7 @@ import {
   OFFLINE_MANIFEST_RECORD_VERSION,
 } from "../src/lib/offline-manifests";
 import { signRecapToken } from "../src/lib/recap-links";
+import { weekStartOf } from "../src/lib/week-board";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
@@ -41,6 +42,7 @@ import {
   scheduleCrewedOpenWaterSession,
   seededTripId,
   threadStatus,
+  tripPathByTitle,
   waiverLinkFromResult,
   waiverLinkFromToast,
   writeCourseForm,
@@ -3271,8 +3273,8 @@ for (const scheme of ["light", "dark"] as const) {
         await bookAVisualRegressionSeat(page, scheme);
         await page.goto(new URL(page.url()).pathname);
         await threadStatus(page).waitFor();
-        await page.getByRole("button", { name: "Cancel my spot" }).click();
-        await page.getByRole("button", { name: "Yes, cancel my spot" }).click();
+        await page.getByRole("button", { name: "Cancel my seat" }).click();
+        await page.getByRole("button", { name: "Yes, cancel my seat" }).click();
         await page.getByRole("heading", { name: "This booking was canceled" }).waitFor();
         // Without `?cancelled=1` — the bookmarked URL, or the link out of an
         // old reminder email, which is how a diver actually arrives here.
@@ -3989,10 +3991,12 @@ for (const scheme of ["light", "dark"] as const) {
        * this surface saw the *ashore* row, and the one a crew reads at the rail
        * with the gate already behind somebody was never looked at.
        *
-       * Priya Sharma is the seeded blocked diver (waiver not sent), so boarding
-       * her is the shortest honest route into the state. The reset restores the
-       * schedule before the next test, which is what makes it safe to board her
-       * here.
+       * `?blockedAboard=1` boards the first diver the gate clears, by name
+       * (Diego Alvarez in the seed), then supersedes the release he signed, so
+       * the row reads "Signed waiver lapsed." — a signature that no longer
+       * stands, never "not sent yet" (`waiver_lapsed`, which renamed it). The
+       * reset restores the schedule before the next test, which is what makes
+       * it safe to board him here.
        */
       test(`a station names a blocker aboard (${scheme})`, async ({ page, request }) => {
         // **Through the trouble-states route, because it cannot be clicked.**
@@ -4008,7 +4012,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page
           .getByRole("listitem")
           .filter({ hasText: "Aboard" })
-          .filter({ hasText: "Waiver not signed, not sent yet." })
+          .filter({ hasText: "Signed waiver lapsed." })
           .first()
           .waitFor();
         await capture(page, "today-blocked-aboard", scheme);
@@ -4732,6 +4736,32 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **Rostered and away, on the board** (fourth review, item 12). The demo
+       * marks Marcus Webb away three and four days out; a departure of the
+       * capture's own on the first of those days, with him rostered, carries
+       * the warning line under its facts.
+       */
+      test(`the week says who is rostered while away (${scheme})`, async ({ page }) => {
+        test.setTimeout(60_000);
+        const title = `Away-day refresher (${scheme})`;
+        const day = daysFromNow(3);
+        await createTrip(page, { title, date: day, departsAt: "09:00", returnsAt: "12:00" });
+        await page.goto(await tripPathByTitle(page, "blue-mantis", title));
+        await openTripAbout(page);
+        await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
+        await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
+        await page.getByRole("button", { name: "Unassign Marcus Webb" }).waitFor();
+        await page.goto(`/shop/blue-mantis/schedule/board?week=${weekStartOf(day)}`);
+        await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
+        await boardListSettled(page);
+        await page
+          .getByText(/^Marcus Webb away /)
+          .first()
+          .waitFor();
+        await capture(page, "schedule-builder-crew-away", scheme);
+      });
+
+      /**
        * **The days somebody asked for, under the week they belong to** (ADR
        * 20260919-one-idea, slice 23f).
        *
@@ -5431,6 +5461,111 @@ for (const scheme of ["light", "dark"] as const) {
         await group.getByRole("link", { name: "Check with SSI" }).waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "diver-profile-agency-check", scheme);
+      });
+
+      /**
+       * **The other cards an agency's page lists, offered after a match**
+       * (layer 3 of ADR 20261008-cert-check-extension). The extension is
+       * stood in for at the page's one seam, as next door: SSI's page shows
+       * Mateo Duarte's Open Water card, which the check certifies, and his
+       * nitrox and Deep cards, which the panel under it offers with a tick
+       * each. Safe to mutate: each test resets the shop's cards.
+       */
+      test(`an agency check's offer of the page's other cards renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.addInitScript(() => {
+          const announce = () => {
+            document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
+            window.dispatchEvent(new Event("diveday-cert-check-ready"));
+          };
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", announce);
+          } else {
+            announce();
+          }
+          window.addEventListener("message", (event) => {
+            const data = event.data;
+            if (data?.source !== "diveday-page" || data.type !== "agency-check") return;
+            window.postMessage(
+              {
+                source: "diveday-cert-check",
+                type: "agency-check-result",
+                requestId: data.requestId,
+                ok: true,
+                pageText: `Online Diver Check\n${data.query.firstName} ${data.query.lastName}\nCard ${data.query.cardNumber}\nOpen Water Diver\nEnriched Air Nitrox · Deep Diving`,
+              },
+              window.location.origin,
+            );
+          });
+        });
+        // The match lands with its Undo toast, pinned over the foot of the
+        // screen where the offer's Add button sits, and gone only after its
+        // 12s countdown (`UndoToast`). This capture is the offer, so the clock
+        // is installed (it still runs in real time) and then jumped past the
+        // countdown, rather than the shot racing a timer.
+        await page.clock.install();
+        await openDiverProfile(page, "Mateo", "Mateo Duarte");
+        const group = await openDiverFileGroup(page, "Certification records");
+        await group.getByRole("button", { name: "Check with SSI" }).click();
+        await group
+          .getByRole("group", {
+            name: "SSI also shows these certifications. Add them? Each waits for Mark certified.",
+          })
+          .waitFor();
+        const toast = page.getByRole("status").filter({ hasText: "SSI shows this certification." });
+        await toast.waitFor();
+        await page.mouse.move(0, 0);
+        await page.clock.fastForward(13_000);
+        await toast.waitFor({ state: "detached" });
+        await capture(page, "diver-profile-agency-listed", scheme);
+      });
+
+      /**
+       * **A Divers-tab row after an agency check that came up short** (H-105).
+       * Nothing here renders without the DiveDay browser extension, so this
+       * stands in for it at the page's one seam (`e2e/agency-check-roster.spec.ts`
+       * does the same): SSI's page finds Tyler Brooks but shows him only as a
+       * Scuba Diver. The row keeps the agency's words under its reason, the
+       * link to SSI's own page, and its "Check with SSI" for another try —
+       * the state a staffer is left to read, and the densest one the row has.
+       */
+      test(`a Divers-tab row's agency check, short of a match, renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.addInitScript(() => {
+          const announce = () => {
+            document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
+            window.dispatchEvent(new Event("diveday-cert-check-ready"));
+          };
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", announce);
+          } else {
+            announce();
+          }
+          window.addEventListener("message", (event) => {
+            const data = event.data;
+            if (data?.source !== "diveday-page" || data.type !== "agency-check") return;
+            window.postMessage(
+              {
+                source: "diveday-cert-check",
+                type: "agency-check-result",
+                requestId: data.requestId,
+                ok: true,
+                pageText: `Online Diver Check\n${data.query.firstName} ${data.query.lastName}\nCard ${data.query.cardNumber}\nScuba Diver`,
+              },
+              window.location.origin,
+            );
+          });
+        });
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await openTripFromBoard(page, "Two-Tank Reef — French Reef");
+        await openTripTab(page, "Trip");
+        const roster = page.locator("#roster");
+        await roster.getByRole("button", { name: "Check with SSI" }).click();
+        await roster.getByText("SSI found this diver, but not at this level.").waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "trip-guests-agency-check", scheme);
       });
 
       /**
@@ -6662,6 +6797,71 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Emergency reference" }).waitFor();
         await page.getByRole("button", { name: "Save emergency reference" }).waitFor();
         await capture(page, "settings-emergency", scheme);
+      });
+
+      /**
+       * **Try the checks** (H-105): Settings' run of the cert-check
+       * extension against its own sample pages, after a run. The extension is
+       * stood in for at the page's one seam, as the agency-check captures do:
+       * it says hello as 1.5.0, passes every sample but NAUI's, and finds a
+       * signed-in PADI tab. The report's time is the frozen clock's, and its
+       * browser line is pinned here, so a Chromium update moves no pixel.
+       */
+      test(`the cert-check extension's try page renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.addInitScript(() => {
+          Object.defineProperty(navigator, "userAgent", { get: () => "Chromium (visual capture)" });
+          const announce = () => {
+            document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
+            window.dispatchEvent(new Event("diveday-cert-check-ready"));
+          };
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", announce);
+          } else {
+            announce();
+          }
+          window.addEventListener("message", (event) => {
+            const data = event.data;
+            if (data?.source !== "diveday-page") return;
+            const answers: Record<string, object> = {
+              hello: {
+                ok: true,
+                version: "1.5.0",
+                agencies: ["ssi", "naui", "sdi", "gue", "cmas", "padi"],
+                elearning: ["padi"],
+              },
+              "dry-run": {
+                ok: true,
+                filled: data.query?.agency !== "naui",
+                typed: data.query?.agency !== "naui",
+                submitted: data.query?.agency !== "naui",
+                hostAccess: true,
+                missing: data.query?.agency === "naui" ? ["birthDate"] : [],
+              },
+              "padi-session": { ok: true, padi: "signed_in" },
+            };
+            const answer = answers[data.type];
+            if (!answer) return;
+            window.postMessage(
+              {
+                source: "diveday-cert-check",
+                type: "agency-check-result",
+                requestId: data.requestId,
+                ...answer,
+              },
+              window.location.origin,
+            );
+          });
+        });
+        await page.goto("/shop/blue-mantis/settings/cert-checks");
+        await page.getByRole("heading", { level: 1, name: "Try the checks" }).waitFor();
+        await page.getByText("Added to this browser (1.5.0)").waitFor();
+        await page.getByRole("button", { name: "Run the checks" }).click();
+        await page.getByText("Signed in", { exact: true }).waitFor();
+        await page.getByRole("button", { name: "Copy report" }).waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "settings-cert-checks", scheme);
       });
 
       /**

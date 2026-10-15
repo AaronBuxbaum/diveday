@@ -4,10 +4,9 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StarRating } from "@/components/StarRating";
 import { Badge } from "@/components/ui/badge";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { GroupLabel, groupLabelClass } from "@/components/ui/group-label";
 import {
   DoorChevron,
-  GroupLabel,
-  groupLabelClass,
   LedgerGroup,
   LedgerRow,
   ledgerKindColumnClass,

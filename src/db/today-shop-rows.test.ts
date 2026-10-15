@@ -12,6 +12,7 @@ import { startPaymentOperation } from "./payment-operations";
 import { setBookingPayment } from "./payments";
 import { submitTripReview } from "./reviews";
 import { inboundMessages, orders, people, tripReviews } from "./schema";
+import { applyStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
 import { rowsContext } from "./today-rows-test-fixtures";
 import { pushShopRows } from "./today-shop-rows";
@@ -270,6 +271,32 @@ describe("ops alerts on the queue (task 157)", () => {
 
     await dispute("charge.dispute.closed", "won", new Date(opened.getTime() + 60_000));
     expect((await work()).actions.find((a) => a.kind === "payment_dispute")).toBeUndefined();
+  });
+
+  it("tells owners and managers that Stripe turned card payments off, until it turns them on", async () => {
+    const { db, shop } = ctx;
+    await upsertShopStripeAccount(db, shop.id, "acct_today_restricted");
+    const flags = { payoutsEnabled: true, detailsSubmitted: true };
+    await applyStripeAccountStatus(db, "acct_today_restricted", { ...flags, chargesEnabled: true });
+    const t = staffTranslator("en-US");
+    const work = () =>
+      getTodayWork(db, shop.id, shop.slug, shop.timezone, undefined, undefined, t, "en-US", true);
+    expect((await work()).actions.find((a) => a.kind === "payments_restricted")).toBeUndefined();
+
+    await applyStripeAccountStatus(db, "acct_today_restricted", {
+      ...flags,
+      chargesEnabled: false,
+    });
+    const row = (await work()).actions.find((a) => a.kind === "payments_restricted");
+    expect(row).toMatchObject({
+      subject: "Card payments are off",
+      urgency: "now",
+      href: `/shop/${shop.slug}/settings#money`,
+    });
+    expect(row?.detail).toContain("Divers pay at the shop");
+
+    await applyStripeAccountStatus(db, "acct_today_restricted", { ...flags, chargesEnabled: true });
+    expect((await work()).actions.find((a) => a.kind === "payments_restricted")).toBeUndefined();
   });
 
   it("is tenant-safe: another shop's queue never surfaces this shop's ops alerts", async () => {
