@@ -31,6 +31,7 @@ import { fileURLToPath } from "node:url";
 
 import { recordOverride, recordRefusal } from "./hook-log.mjs";
 import { gitReader } from "./stack-map.mjs";
+import { tracker } from "./tracker.mjs";
 
 export const OVERRIDE = "DIVEDAY_PUSH_UNVERIFIED";
 
@@ -148,6 +149,10 @@ export function pushViolation(command, read, cwd = ".") {
     if (refspecs.some((spec) => spec.startsWith(":"))) continue;
     const named = refspecs.map((spec) => spec.split(":")[0].replace(/^\+/, ""));
     const sources = named.length > 0 ? named : ["HEAD"];
+    if (sources.includes("HEAD") || sources.includes(here.branch())) {
+      const fork = here.fork?.();
+      if (fork) return fork;
+    }
     for (const source of sources) {
       const sha = source === "HEAD" || source === here.branch() ? here.head() : here.sha(source);
       if (!sha) continue;
@@ -176,6 +181,40 @@ export function overrideReason(command) {
   return null;
 }
 
+/**
+ * **A fork, refused where it is made.** Two threads cut a branch from the same open layer on
+ * 2026-10-14 (#2582 and #2584 on #2581); `stack.yml` refused the fork, correctly, and told no
+ * one, so three layers above it sat unstacked until the PR list was read (#2587). `parent` is
+ * the open PR head branch this branch grew from, `pulls` the open pull requests
+ * (`headRefName`, `baseRefName`, `number`). A branch that already has its own pull request is
+ * placed and left alone. Returns the sentence that names the current top, or null.
+ */
+export function forkRefusal({ branch, parent, pulls }) {
+  if (!parent || pulls.some((pull) => pull.headRefName === branch)) return null;
+  const siblings = pulls.filter(
+    (pull) => pull.baseRefName === parent && pull.headRefName !== branch,
+  );
+  if (siblings.length === 0) return null;
+  const seen = new Set([parent]);
+  let top = parent;
+  for (;;) {
+    const next = pulls.find((pull) => pull.baseRefName === top && !seen.has(pull.headRefName));
+    if (!next) break;
+    top = next.headRefName;
+    seen.add(top);
+  }
+  const topPull = pulls.find((pull) => pull.headRefName === top);
+  const named = topPull ? `#${topPull.number} (\`${top}\`)` : `\`${top}\``;
+  return (
+    `\`${branch}\` grew from \`${parent}\`, which ${siblings.map((pull) => `#${pull.number}`).join(", ")} ` +
+    `already stack on, so a push would fork the chain and \`stack.yml\` would leave every layer ` +
+    `above the fork unstacked. The current top is ${named}. Rebase onto it: ` +
+    `\`git fetch origin && git rebase --onto origin/${top} origin/${parent} ${branch}\`, then push ` +
+    "(.claude/skills/stacked-prs/pipeline.md#registration-which-is-not-yours-to-do). " +
+    "If this is meant to be a separate stack, base it on main."
+  );
+}
+
 /** The answers `pushViolation` needs, from the repository at `cwd`. */
 export function gitAnswers(cwd) {
   const git = gitReader(cwd);
@@ -188,6 +227,31 @@ export function gitAnswers(cwd) {
         : null,
     remoteHas: (sha) =>
       Boolean(git(["branch", "-r", "--contains", sha, "--format=%(refname:short)"])),
+    // Fails open: no `gh`, no network, or a branch with no open parent layer all answer null.
+    fork: () => {
+      try {
+        const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
+        if (!branch || branch === "HEAD") return null;
+        const pulls = tracker().listPulls();
+        const isAncestor = (a, b) => git(["merge-base", "--is-ancestor", a, b]) !== null;
+        const ancestors = pulls
+          .map((pull) => pull.headRefName)
+          .filter((head) => head && head !== branch)
+          .filter(
+            (head) =>
+              git(["rev-parse", "--verify", "--quiet", `origin/${head}`]) &&
+              isAncestor(`origin/${head}`, "HEAD"),
+          );
+        const parent = ancestors.find((head) =>
+          ancestors.every(
+            (other) => other === head || isAncestor(`origin/${other}`, `origin/${head}`),
+          ),
+        );
+        return forkRefusal({ branch, parent, pulls });
+      } catch {
+        return null;
+      }
+    },
     verified: (sha) => {
       const common = git(["rev-parse", "--path-format=absolute", "--git-common-dir"]);
       const file = verifiedFile(common, sha);

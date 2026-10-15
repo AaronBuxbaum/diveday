@@ -147,6 +147,7 @@ export function chainThrough(pulls, start, defaultBranch) {
     const children = childrenOf.get(pull.head.ref) ?? [];
     if (children.length > 1) {
       return {
+        fork: { base: pull.head.ref, children },
         error: `\`${pull.head.ref}\` is the base of ${children.length} open pull requests (${children.map((child) => `#${child.number}`).join(", ")}), so the chain forks and is not a stack`,
       };
     }
@@ -254,6 +255,31 @@ async function request(pathname, { token, method = "GET", body } = {}) {
   return text ? JSON.parse(text) : null;
 }
 
+/** Marks the fork comment, so a re-run on the same pull request does not post it twice. */
+export const FORK_MARKER = "<!-- diveday-stack-fork -->";
+
+/** One comment on `start`, naming both tips of the fork it sits on, unless it already has one. */
+async function commentFork(repo, token, call, start, fork) {
+  const comments = await call(`/repos/${repo}/issues/${start.number}/comments?per_page=100`, {
+    token,
+  });
+  if (comments.some((comment) => String(comment.body ?? "").includes(FORK_MARKER))) return;
+  const tips = fork.children
+    .map((child) => `#${child.number} (\`${child.head.ref}\`)`)
+    .join(" and ");
+  const body = [
+    FORK_MARKER,
+    `Not stacked: \`${fork.base}\` is the base of ${tips}, so the chain forks and the registrar leaves every layer above the fork alone.`,
+    "",
+    `Pick one tip to stay on \`${fork.base}\`, and rebase the other onto the top of that chain: \`git rebase --onto origin/<top> origin/${fork.base} <branch>\`, then retarget its pull request. See .claude/skills/stacked-prs/pipeline.md.`,
+  ].join("\n");
+  await call(`/repos/${repo}/issues/${start.number}/comments`, {
+    token,
+    method: "POST",
+    body: { body },
+  });
+}
+
 /** Every open pull request, following `Link` pagination the simple way. */
 async function openPulls(repo, token, call = request) {
   const pulls = [];
@@ -321,8 +347,13 @@ export async function run(env, call = request) {
   if (!start) return `#${number} is not an open pull request in ${repo}; nothing to register.`;
 
   const defaultBranch = env.STACK_DEFAULT_BRANCH || "main";
-  const { chain, error } = chainThrough(pulls, start, defaultBranch);
-  if (error) return `Left alone: ${error}.`;
+  const { chain, error, fork } = chainThrough(pulls, start, defaultBranch);
+  if (error) {
+    // A fork is the one refusal somebody can fix, and nobody was told (#2587): one comment on
+    // the layer, so its owner's PR-activity subscription wakes it. Once per pull request.
+    if (fork) await commentFork(repo, token, call, start, fork);
+    return `Left alone: ${error}.`;
+  }
 
   const plan = planRegistration(chain, await call(`/repos/${repo}/stacks`, { token }));
   let settled = plan;

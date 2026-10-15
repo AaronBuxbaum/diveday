@@ -80,6 +80,7 @@ export function toPull(raw) {
     title: raw.title ?? "",
     state: String(raw.state ?? "").toUpperCase(),
     headRefName: raw.head?.ref ?? "",
+    baseRefName: raw.base?.ref ?? "",
     url: raw.html_url ?? "",
     mergedAt: raw.merged_at ?? null,
   };
