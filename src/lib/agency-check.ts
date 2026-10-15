@@ -28,7 +28,9 @@ type CertificationLevel =
  *   claimed level in that agency's own wording and the birth date or card
  *   number the lookup was typed with. Two people with one name are told apart
  *   by that, and a level from the next row is never read as theirs. A level
- *   named in the site's menus is nowhere near either.
+ *   named in the site's menus is nowhere near either. A name split over two
+ *   adjacent labelled lines ("First name: Lena" over "Last name: Ortiz") is
+ *   read as one name line (`splitName`), and nothing looser is.
  * - A birth date written all in numbers with the day and month both 12 or
  *   under is read in the agency's own order only (`dates`), so a transposed
  *   date is another diver's, never this one's.
@@ -172,7 +174,7 @@ export function agencyCheckQuery(input: {
  * PADI's wording, at any level, is also what keeps a DiveChek record open
  * (`ONE_RECORD_ONLY`).
  */
-const LEVEL_WORDING: Record<
+export const LEVEL_WORDING: Record<
   CheckableAgency,
   Partial<Record<CertificationLevel, readonly string[]>>
 > = {
@@ -414,6 +416,29 @@ const NO_RECORD_WORDS = [
 ] as const;
 
 /**
+ * **An agency's own page furniture around its results**, which is never part
+ * of a diver's record: a record ends at a line saying one of these. Each is
+ * the live page's own text (2026-10-15), held by the fixtures in
+ * `src/lib/__fixtures__/agency-pages.ts`. Without it SDI's note under every
+ * result, "…might not show up in this online search", read as a limiting word
+ * in the record above it, and GUE's footer link "Instructor" as a trainer's
+ * title, so neither page could ever match. A closed list: ending a record
+ * early only ever reads less of it.
+ */
+const PAGE_FURNITURE_WORDS = [
+  // SDI, under the results.
+  "don t see your certification",
+  "request certification",
+  // NAUI.
+  "please review search information",
+  "replacement card request form",
+  // GUE's footer.
+  "find your gue",
+  // CMAS.
+  "cookie notice",
+] as const;
+
+/**
  * Lines under the diver's name line that can belong to their record. The
  * extension hands back the same number from a signed-in page (`AFTER` in
  * `extension/fill.js`); a test holds the two together.
@@ -610,6 +635,8 @@ function readAgencyPage(input: AgencyPageInput): {
       .replace(/ +/g, " ")
       .trim();
   const saysNoRecord = (line: string) => NO_RECORD_WORDS.some((phrase) => hasWords(line, phrase));
+  const isFurniture = (line: string) =>
+    PAGE_FURNITURE_WORDS.some((phrase) => hasWords(line, phrase));
   const ratingWords = (line: string) =>
     everyLevelWording.some((phrase) => hasWords(line, phrase)) ||
     everyListedWording.some((phrase) => hasWords(line, phrase)) ||
@@ -630,20 +657,36 @@ function readAgencyPage(input: AgencyPageInput): {
   );
   const namesDiver = (index: number) =>
     forward.test(lines[index] as string) || reversed.test(commaFolded[index] as string);
+  const splitNameAt = (index: number) =>
+    splitName(rawLines, lines, index, { first, last, nameIsRating: ratingWords });
 
-  type PageRecord = { from: number; to: number; birthDateLine: number | null };
+  /**
+   * A record runs from its name line (`from`, or the pair `from`..`nameEnd`
+   * when the name is split over two labelled lines) to `to`, exclusive.
+   * `nameLine` is a split name read as one line, given names first.
+   */
+  type PageRecord = {
+    from: number;
+    nameEnd: number;
+    to: number;
+    birthDateLine: number | null;
+    nameLine: { raw: string; folded: string } | null;
+  };
   const records: PageRecord[] = [];
   for (let index = 0; index < lines.length; index += 1) {
-    if (!namesDiver(index)) continue;
-    const ownDate = datesOn(lines[index] as string, order).length > 0;
-    let to = index + 1;
-    while (to < lines.length && to <= index + RECORD_LINES) {
+    const nameLine = splitNameAt(index);
+    if (!nameLine && !namesDiver(index)) continue;
+    const nameEnd = nameLine ? index + 1 : index;
+    // A split name's lines carry no digit, so no date of their own.
+    const ownDate = !nameLine && datesOn(lines[index] as string, order).length > 0;
+    let to = nameEnd + 1;
+    while (to < lines.length && to <= nameEnd + RECORD_LINES) {
       const line = lines[to] as string;
-      if (saysNoRecord(line)) break;
+      if (saysNoRecord(line) || isFurniture(line)) break;
       if (oneDiver) {
-        if (namesDiver(to)) break;
+        if (namesDiver(to) || splitNameAt(to)) break;
         // The birth date's own line, right under a name line without one.
-        const birthDateLine = to === index + 1 && !ownDate && datesOn(line, order).length > 0;
+        const birthDateLine = to === nameEnd + 1 && !ownDate && datesOn(line, order).length > 0;
         if (!birthDateLine && !ratingWords(line)) {
           // Another diver's bare name, or their name and birth date.
           if (!/\d/.test(line) || datesOn(line, order).length > 0) break;
@@ -658,11 +701,18 @@ function readAgencyPage(input: AgencyPageInput): {
     if (lines.slice(index, to).some(saysNoRecord) || saysNoRecord(lines[to] ?? "")) continue;
     const birthDateLine = ownDate
       ? index
-      : index + 1 < to && datesOn(lines[index + 1] as string, order).length > 0
-        ? index + 1
+      : nameEnd + 1 < to && datesOn(lines[nameEnd + 1] as string, order).length > 0
+        ? nameEnd + 1
         : null;
-    records.push({ from: index, to, birthDateLine });
+    records.push({ from: index, nameEnd, to, birthDateLine, nameLine });
   }
+
+  /** A record's lines, folded and as written, its name (split or not) as the first. */
+  const recordLinesOf = (record: PageRecord, which: "folded" | "raw"): string[] => {
+    const source = which === "folded" ? lines : rawLines;
+    if (!record.nameLine) return source.slice(record.from, record.to);
+    return [record.nameLine[which], ...source.slice(record.nameEnd + 1, record.to)];
+  };
 
   /** The birth date a DiveChek record carries: the first date on its birth-date line. */
   const recordBirthDate = (record: PageRecord) =>
@@ -672,7 +722,7 @@ function readAgencyPage(input: AgencyPageInput): {
 
   /** The record carries what the lookup was typed with, so it is this diver's. */
   const isThisDiver = (record: PageRecord): boolean => {
-    const recordLines = lines.slice(record.from, record.to);
+    const recordLines = recordLinesOf(record, "folded");
     if (oneDiver) return input.birthDate !== null && recordBirthDate(record) === input.birthDate;
     const hasNumber = hasCardNumber(recordLines, input.cardNumber);
     const hasBirthDate =
@@ -691,7 +741,7 @@ function readAgencyPage(input: AgencyPageInput): {
   }
 
   const judgeRecord = (record: PageRecord): RecordVerdict => {
-    const recordLines = lines.slice(record.from, record.to);
+    const recordLines = recordLinesOf(record, "folded");
     // On DiveChek the level is read from the birth date's line down.
     const levelLines = oneDiver
       ? lines.slice(record.birthDateLine ?? record.to, record.to)
@@ -729,13 +779,9 @@ function readAgencyPage(input: AgencyPageInput): {
   for (const record of records) {
     if (!isThisDiver(record)) continue;
     const verdict = judgeRecord(record);
-    diverRecords.push({
-      raw: rawLines.slice(record.from, record.to),
-      folded: lines.slice(record.from, record.to),
-      verdict,
-    });
+    const raw = recordLinesOf(record, "raw");
+    diverRecords.push({ raw, folded: recordLinesOf(record, "folded"), verdict });
     if (!best || RECORD_RANK[verdict] > RECORD_RANK[best.verdict]) {
-      const raw = rawLines.slice(record.from, record.to);
       // A match's words become the card's review note: its name line keeps
       // only what is the diver's (S1). Anything short of a match is shown
       // once and kept nowhere, with every word a staffer reads it by.
@@ -755,6 +801,101 @@ function readAgencyPage(input: AgencyPageInput): {
   if (records.length > 0) return { verdict: { verdict: "namesake" }, diverRecords };
   if (lines.some(saysNoRecord)) return { verdict: { verdict: "no_record" }, diverRecords };
   return { verdict: { verdict: "unreadable" }, diverRecords };
+}
+
+/**
+ * Labels a page may print before a diver's given names or family name, folded.
+ * A label says which part of the name its line holds.
+ */
+const NAME_PART_LABELS = {
+  given: [
+    "first name",
+    "first names",
+    "given name",
+    "given names",
+    "forename",
+    "forenames",
+    "nombre",
+    "nombres",
+  ],
+  family: [
+    "last name",
+    "last names",
+    "surname",
+    "surnames",
+    "family name",
+    "family names",
+    "apellido",
+    "apellidos",
+  ],
+} as const;
+/** The most words besides the diver's own first or last name a split line may hold. */
+const SPLIT_NAME_EXTRA_WORDS = 3;
+
+/** A line made of one name label and the words after it, as written and folded. */
+function labelledNamePart(
+  raw: string,
+  folded: string,
+): { part: "given" | "family"; words: string[]; rawValue: string } | null {
+  for (const part of ["given", "family"] as const) {
+    for (const label of NAME_PART_LABELS[part]) {
+      if (!folded.startsWith(`${label} `)) continue;
+      // The raw tokens after the label's words, so the name keeps its accents.
+      const labelWords = label.split(" ").length;
+      const tokens = raw.split(" ").filter(Boolean);
+      let consumed = 0;
+      let at = 0;
+      while (at < tokens.length && consumed < labelWords) {
+        consumed += foldText(tokens[at] as string)
+          .split(" ")
+          .filter(Boolean).length;
+        at += 1;
+      }
+      // A token that holds both the label's end and the name ("Name:Lena") is not read.
+      if (consumed !== labelWords) return null;
+      return {
+        part,
+        words: folded.slice(label.length + 1).split(" "),
+        rawValue: tokens.slice(at).join(" "),
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * **A diver's name split over two adjacent labelled lines** ("First name:
+ * Lena" over "Last name: Ortiz", either order), read as one name line, given
+ * names first; null when the lines at `index` and `index + 1` are not that.
+ * Narrow on purpose: each line is one label and only a name, the given line
+ * starts with the diver's first name and the family line ends with their last,
+ * a few middle names or particles at most, no digit, and no word a rating,
+ * limit or trainer's title could be. A neighbour's "Last name" further down
+ * is never adjacent, so never completes this diver's first name.
+ */
+function splitName(
+  rawLines: readonly string[],
+  lines: readonly string[],
+  index: number,
+  diver: { first: string; last: string; nameIsRating: (folded: string) => boolean },
+): { raw: string; folded: string } | null {
+  if (index + 1 >= lines.length) return null;
+  const a = labelledNamePart(rawLines[index] as string, lines[index] as string);
+  const b = labelledNamePart(rawLines[index + 1] as string, lines[index + 1] as string);
+  if (!a || !b || a.part === b.part) return null;
+  const given = a.part === "given" ? a : b;
+  const family = a.part === "given" ? b : a;
+  if (given.words[0] !== diver.first || family.words.at(-1) !== diver.last) return null;
+  if (
+    given.words.length > 1 + SPLIT_NAME_EXTRA_WORDS ||
+    family.words.length > 1 + SPLIT_NAME_EXTRA_WORDS
+  ) {
+    return null;
+  }
+  const folded = `${given.words.join(" ")} ${family.words.join(" ")}`;
+  if (/\p{N}/u.test(folded) || diver.nameIsRating(folded)) return null;
+  if (TRAINER_WORDS.some((word) => hasWords(folded, word))) return null;
+  return { raw: `${given.rawValue} ${family.rawValue}`, folded };
 }
 
 function escapeRegExp(text: string): string {
