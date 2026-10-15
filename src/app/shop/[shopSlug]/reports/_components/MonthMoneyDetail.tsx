@@ -86,7 +86,8 @@ export function MonthDetailLines({
  * line per source, no bars: the figures are the facts, and a line that came
  * to nothing is left out rather than read as $0. Its basis is the day the
  * money was paid, not the departures the Revenue figure is anchored to, so it
- * says so under its heading.
+ * says so under its heading. The month's money-out lines (refunded, discounted,
+ * Stripe fees) sit under it for the same reason: same basis.
  */
 export function MoneyByLine({
   detail,
@@ -97,7 +98,11 @@ export function MoneyByLine({
   t: StaffTranslator;
   money: (cents: number) => string;
 }) {
-  if (detail.lines.length === 0) return null;
+  const { refundedCents, discountedCents, stripeFeesCents } = detail.out;
+  const showFees = stripeFeesCents !== null && stripeFeesCents !== 0;
+  if (detail.lines.length === 0 && refundedCents <= 0 && discountedCents <= 0 && !showFees) {
+    return null;
+  }
   return (
     <section aria-labelledby="reports-by-line" className="mt-10">
       <h2 id="reports-by-line" className={SECTION_TITLE_CLASS}>
@@ -115,6 +120,27 @@ export function MoneyByLine({
           </div>
         ))}
       </dl>
+      {/* **What left the money above** (UX review 2026-10-11, item 17; issue
+          #2466): refunds, what discount codes took off, and Stripe's fees.
+          They share this section's basis, the day the money was paid, which is
+          why they sit here and not under the departure-basis Revenue figure.
+          Each only when there is something to say; a month whose payouts never
+          said what their fees were prints no fee line rather than $0. */}
+      {refundedCents > 0 ? (
+        <p className="mt-2 text-sm text-muted tabular-nums">
+          {t("reports.moneyOut.refunded", { amount: money(refundedCents) })}
+        </p>
+      ) : null}
+      {discountedCents > 0 ? (
+        <p className="mt-1 text-sm text-muted tabular-nums">
+          {t("reports.moneyOut.discounted", { amount: money(discountedCents) })}
+        </p>
+      ) : null}
+      {showFees ? (
+        <p className="mt-1 text-sm text-muted tabular-nums">
+          {t("reports.moneyOut.fees", { amount: money(stripeFeesCents) })}
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -155,26 +181,18 @@ export function QuietMonth({
  * #700 — the full-shop export is the right tool for a bookkeeper and the wrong
  * one for "just this month"). Tax used to be the sixth tile; it is a footnote
  * to net revenue, not a headline beside it.
- *
- * Then **what left the month's money** (UX review 2026-10-11, item 17):
- * refunds, what discount codes took off, and Stripe's fees. Quiet lines on the
- * tax line's pattern, each only when there is something to say; a month whose
- * payouts never said what their fees were prints no fee line rather than $0.
  */
 export function MonthFootnotes({
   taxCents,
   csvHref,
-  detail,
   t,
   money,
 }: {
   taxCents: number;
   csvHref: string;
-  detail: Detail;
   t: StaffTranslator;
   money: (cents: number) => string;
 }) {
-  const { refundedCents, discountedCents, stripeFeesCents } = detail.out;
   return (
     <>
       <p className="mt-3 text-end text-sm text-muted tabular-nums">
@@ -184,21 +202,6 @@ export function MonthFootnotes({
           {t("reports.downloadCsv")}
         </a>
       </p>
-      {refundedCents > 0 ? (
-        <p className="mt-1 text-end text-sm text-muted tabular-nums">
-          {t("reports.moneyOut.refunded", { amount: money(refundedCents) })}
-        </p>
-      ) : null}
-      {discountedCents > 0 ? (
-        <p className="mt-1 text-end text-sm text-muted tabular-nums">
-          {t("reports.moneyOut.discounted", { amount: money(discountedCents) })}
-        </p>
-      ) : null}
-      {stripeFeesCents !== null && stripeFeesCents !== 0 ? (
-        <p className="mt-1 text-end text-sm text-muted tabular-nums">
-          {t("reports.moneyOut.fees", { amount: money(stripeFeesCents) })}
-        </p>
-      ) : null}
     </>
   );
 }
