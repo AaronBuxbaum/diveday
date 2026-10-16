@@ -3863,6 +3863,7 @@
     "common": {
       "gettingReady": "Getting your shop ready…",
       "tryDemo": "Try the live demo",
+      "demoShopName": "Your shop’s name",
       "getSetUp": "Get set up",
       "demoNote": "The demo opens a working sample shop in one click. No sign-up and no card.",
       "setUpNote": "A person reads every request and sets your shop up with you."

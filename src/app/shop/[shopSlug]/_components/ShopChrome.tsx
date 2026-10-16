@@ -11,6 +11,7 @@ import { SkipLink } from "@/components/SkipLink";
 import { getDb } from "@/db/client";
 import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
+import { staffShopName } from "./staff-shop-name";
 import { countGearItems } from "@/db/gear";
 import { listShopRolesPresent } from "@/db/shop-roles";
 import { shopBySlugCached } from "@/db/shops-cached";
@@ -230,6 +231,7 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
     navOffers,
   } = await loadShopChrome(shopSlug);
   const demoT = showBanner ? diverTranslator(locale) : undefined;
+  const shopName = shop ? await staffShopName(shop) : "";
   const staffT = staffTranslator(locale);
 
   return (
@@ -279,7 +281,7 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
       {showNav && session?.user && shop ? (
         <ShopNav
           shopSlug={shopSlug}
-          shopName={shop.name}
+          shopName={shopName}
           logoUrl={shop.logoUrl ?? undefined}
           boatBoardingHref={boatBoardingHref}
           navGates={navGates}
