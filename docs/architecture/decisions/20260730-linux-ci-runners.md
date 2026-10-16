@@ -79,3 +79,14 @@ Run every `ci.yml` job on `ubuntu-latest`. The Playwright browser cache path mov
   `/usr/bin/chromium` on Linux. Baselines therefore still move whenever the runner image bumps its
   browser. This ADR does not change that; it is called out so the next unexplained full-suite diff
   has a documented first suspect.
+
+## Amendment 2026-10-13 — one named image, not `ubuntu-latest`
+
+"Every `ci.yml` job on `ubuntu-latest`" now reads **every job in every workflow on `ubuntu-24.04`**.
+`ubuntu-latest` moves to Ubuntu 26 from 2026-10-19, rolled out gradually, and every visual baseline
+is rendered on 24.04; the latent fragility named above (the image's own Chromium) would land as an
+unexplained full-suite diff, possibly split across one run's shards. The Playwright browser cache key
+names the image through `ImageOS`, since `runner.os` says only "Linux". `scripts/check-runner-image.mjs`
+holds the image in `RUNNER_IMAGE` and refuses any other label, except the Mac-or-GitHub pick of
+ADR 20261013-mac-ci-runner (`RUNNER_PICK`), whose GitHub answer and fallback are that image too. Moving to 26.04 is one pull request
+that changes that constant and rebaselines on purpose.

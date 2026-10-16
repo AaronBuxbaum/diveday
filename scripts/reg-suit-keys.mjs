@@ -146,10 +146,12 @@ export function resolveRegSuitKeys({ env = process.env, git }) {
       expectedKey = attempt(git, ["merge-base", env.PR_BASE_SHA, "HEAD"]) ?? env.PR_BASE_SHA;
       source = "merge-base with the event's base sha (the base branch is gone)";
     }
-  } else if (event === "push") {
+  } else if (event === "push" || event === "workflow_dispatch") {
     // A push to `main`: the baseline is the commit before this one, which is
     // what the deleted `reg-suit-baseline-parent` branch used to spell out for
-    // the graph walk.
+    // the graph walk. A dispatched run of main's head reads the same way: it
+    // stands in for the push run a workflow-token commit never gets
+    // (`durations-refresh.yml`).
     expectedKey = parent();
     source = "the previous commit";
   } else {

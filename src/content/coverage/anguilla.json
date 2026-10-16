@@ -1,0 +1,279 @@
+{
+  "area": "anguilla",
+  "method": "Anguilla and its offshore cays (Dog Island, Scrub, Prickly Pear, Sandy Island, Sombrero); Sombrero, 60 km out, appears only on the national-trust park list and is excluded. Anguilla publishes no official dive-site or mooring list: the Anguilla National Trust page names the six marine parks (Dog Island, Prickly Pear, Little Bay, Shoal Bay-Island Harbour, Sandy Island, Sombrero) but no dive sites, so it is cited and not counted for names. The lists weighed are the Anguilla Tourist Board's dive pages (anguilla-vacation.com and ivisitanguilla.com, one body, counted once), Scuba Shack's own site list (its news page and the full 15-reef, 7-wreck list its package page carries, hosted by Carimar Beach Club; Shoal Bay Scuba and Scuba Shack are the same business), and Open Seas Charters' scuba page. Anguillian Divers' domain is gone and Special D's site is a blog with no site list, so neither could be counted; no other operator publishes a list. A site is counted when it is on at least two of these three. Sandy Island is treated as the umbrella for Scuba Shack's three Sandy dives. El Buen Consejo is excluded as a closed or limited-access heritage wreck. Counted 2026-10-14.",
+  "sources": [
+    "https://www.anguilla-vacation.com/activities/diving-snorkeling/",
+    "https://ivisitanguilla.com/diving-in-anguilla/",
+    "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf",
+    "https://www.scubashackaxa.com/diving-and-snorkling-news/a-few-of-our-favorite-dive-sites-z96wz",
+    "https://openseascharters.com/scuba-diving",
+    "https://axanationaltrust.com/our-work/",
+    "https://www.shoalbayscuba.com/services/padi-ssi-and-naui-scuba-diving"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Dog Island (West Cay and Devil's Wall)",
+      "template": null,
+      "listedBy": ["https://www.anguilla-vacation.com/activities/diving-snorkeling/"],
+      "excluded": "on one list only (the Anguilla Tourist Board); no operator list names it"
+    },
+    {
+      "name": "Sombrero Island",
+      "template": null,
+      "listedBy": ["https://axanationaltrust.com/our-work/"],
+      "excluded": "on one list only (Anguilla National Trust marine park list); no dive-site list names it"
+    },
+    {
+      "name": "Prickly Pear Cays",
+      "template": "prickly-pear-cays-anguilla",
+      "listedBy": [
+        "https://www.anguilla-vacation.com/activities/diving-snorkeling/",
+        "https://openseascharters.com/scuba-diving"
+      ]
+    },
+    {
+      "name": "Anguillita",
+      "template": "anguillita-anguilla",
+      "listedBy": [
+        "https://www.anguilla-vacation.com/activities/diving-snorkeling/",
+        "https://www.scubashackaxa.com/diving-and-snorkling-news/a-few-of-our-favorite-dive-sites-z96wz",
+        "https://openseascharters.com/scuba-diving"
+      ]
+    },
+    {
+      "name": "Crystal Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.anguilla-vacation.com/activities/diving-snorkeling/",
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ]
+    },
+    {
+      "name": "Frenchman's Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.anguilla-vacation.com/activities/diving-snorkeling/",
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ]
+    },
+    {
+      "name": "Frenchman's West",
+      "template": null,
+      "listedBy": [
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ],
+      "excluded": "on one list only (Scuba Shack)"
+    },
+    {
+      "name": "Little Bay (The Pipes)",
+      "template": "little-bay-anguilla",
+      "listedBy": [
+        "https://www.anguilla-vacation.com/activities/diving-snorkeling/",
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ]
+    },
+    {
+      "name": "Stoney Ground Marine Park (El Buen Consejo)",
+      "template": null,
+      "listedBy": [
+        "https://www.anguilla-vacation.com/activities/diving-snorkeling/",
+        "https://openseascharters.com/scuba-diving"
+      ],
+      "excluded": "closed or limited access: PADI reports the wreck closed to the public and Scuba Shack-run tours are described as limited; protected heritage site"
+    },
+    {
+      "name": "Authors Deep",
+      "template": null,
+      "listedBy": ["https://www.anguilla-vacation.com/activities/diving-snorkeling/"],
+      "excluded": "on one list only (the Anguilla Tourist Board)"
+    },
+    {
+      "name": "Grouper Bowl",
+      "template": null,
+      "listedBy": ["https://www.anguilla-vacation.com/activities/diving-snorkeling/"],
+      "excluded": "on one list only (the Anguilla Tourist Board)"
+    },
+    {
+      "name": "Paintcan Reef",
+      "template": null,
+      "listedBy": ["https://www.anguilla-vacation.com/activities/diving-snorkeling/"],
+      "excluded": "on one list only (the Anguilla Tourist Board)"
+    },
+    {
+      "name": "Sand Canyon",
+      "template": null,
+      "listedBy": ["https://www.anguilla-vacation.com/activities/diving-snorkeling/"],
+      "excluded": "on one list only (the Anguilla Tourist Board)"
+    },
+    {
+      "name": "The Steps at Little Scrub",
+      "template": null,
+      "listedBy": ["https://www.anguilla-vacation.com/activities/diving-snorkeling/"],
+      "excluded": "on one list only (the Anguilla Tourist Board)"
+    },
+    {
+      "name": "Sea Fan Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ],
+      "excluded": "on one list only (Scuba Shack)"
+    },
+    {
+      "name": "Angel Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ],
+      "excluded": "on one list only (Scuba Shack)"
+    },
+    {
+      "name": "Lobster Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ],
+      "excluded": "on one list only (Scuba Shack)"
+    },
+    {
+      "name": "Shoal Bay Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ],
+      "excluded": "on one list only (Scuba Shack)"
+    },
+    {
+      "name": "The Beacon Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ],
+      "excluded": "on one list only (Scuba Shack)"
+    },
+    {
+      "name": "Captain Turtle (Face In The Wall)",
+      "template": null,
+      "listedBy": [
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ],
+      "excluded": "on one list only (Scuba Shack)"
+    },
+    {
+      "name": "Limestone Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ],
+      "excluded": "on one list only (Scuba Shack)"
+    },
+    {
+      "name": "Sandy Deep",
+      "template": "sandy-deep-anguilla",
+      "listedBy": [
+        "https://www.anguilla-vacation.com/activities/diving-snorkeling/",
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ]
+    },
+    {
+      "name": "Sandy Shallow",
+      "template": null,
+      "listedBy": [
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ],
+      "excluded": "on one list only (Scuba Shack)"
+    },
+    {
+      "name": "No Name",
+      "template": null,
+      "listedBy": [
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ],
+      "excluded": "on one list only (Scuba Shack)"
+    },
+    {
+      "name": "Sandy Island",
+      "template": null,
+      "listedBy": ["https://www.anguilla-vacation.com/activities/diving-snorkeling/"],
+      "excluded": "duplicate of Sandy Deep, Sandy Shallow and No Name (the three dives Scuba Shack runs at Sandy Island)"
+    },
+    {
+      "name": "Deep South",
+      "template": null,
+      "listedBy": [
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ],
+      "excluded": "on one list only (Scuba Shack)"
+    },
+    {
+      "name": "Oosterdiep Reef",
+      "template": null,
+      "listedBy": ["https://www.anguilla-vacation.com/activities/diving-snorkeling/"],
+      "excluded": "on one list only (the Anguilla Tourist Board); possibly Scuba Shack's Deep South"
+    },
+    {
+      "name": "Oosterdiep (Osterdeep) wreck",
+      "template": "oosterdiep-wreck-anguilla",
+      "listedBy": [
+        "https://www.anguilla-vacation.com/activities/diving-snorkeling/",
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ]
+    },
+    {
+      "name": "Ida Marie wreck",
+      "template": "ida-maria-wreck-anguilla",
+      "listedBy": [
+        "https://www.anguilla-vacation.com/activities/diving-snorkeling/",
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ]
+    },
+    {
+      "name": "Meppel (Hilda) wreck",
+      "template": null,
+      "listedBy": [
+        "https://ivisitanguilla.com/diving-in-anguilla/",
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ]
+    },
+    {
+      "name": "Commerce wreck",
+      "template": null,
+      "listedBy": [
+        "https://www.anguilla-vacation.com/activities/diving-snorkeling/",
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ]
+    },
+    {
+      "name": "Sara (Sarah) wreck",
+      "template": null,
+      "listedBy": [
+        "https://www.anguilla-vacation.com/activities/diving-snorkeling/",
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ]
+    },
+    {
+      "name": "Kathlee H (Cathy-H) wreck",
+      "template": null,
+      "listedBy": [
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ],
+      "excluded": "on one list only (Scuba Shack)"
+    },
+    {
+      "name": "Lady Vie wreck",
+      "template": null,
+      "listedBy": [
+        "https://www.carimar.com/uploads/documents/SUMMER_DIVESTAY_PACKAGE_-_DIVESITES.pdf"
+      ],
+      "excluded": "on one list only (Scuba Shack)"
+    },
+    {
+      "name": "Blowing Rock",
+      "template": null,
+      "listedBy": ["https://ivisitanguilla.com/diving-in-anguilla/"],
+      "excluded": "on one list only (the Anguilla Tourist Board)"
+    }
+  ]
+}

@@ -4,9 +4,35 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
 
 /**
- * Before the store has been read — every server render included — the shell
- * says what is actually true and nothing more (`useSavedManifest`'s
- * `storeRead`).
+ * The page's shape with no words in it: the eyebrow and title the view opens
+ * with, then a few hairline rows where the saved copies land. In `boat-mode`
+ * like the view, so the page does not change colour when the real one
+ * arrives. It is the segment's `loading.tsx`, the static shell's `<Suspense>`
+ * fallback, and what the view draws until it knows the device's language
+ * (`OfflineManifestView`).
+ */
+export function OfflineManifestSkeleton() {
+  return (
+    <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+      <div className="animate-pulse">
+        <div className="h-4 w-32 rounded bg-surface-sunken" />
+        <div className="mt-2 h-9 w-64 max-w-full rounded bg-surface-sunken" />
+        <div className="mt-8">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="border-t border-border py-4 last:border-b">
+              <div className="h-5 w-56 max-w-full rounded bg-surface-sunken" />
+              <div className="mt-2 h-4 w-40 max-w-full rounded bg-surface-sunken" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </main>
+  );
+}
+
+/**
+ * Before the store has been read, the shell says what is actually true and
+ * nothing more (`useSavedManifest`'s `storeRead`).
  */
 export function OfflineOpeningScreen({
   t,

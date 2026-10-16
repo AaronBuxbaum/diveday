@@ -84,7 +84,8 @@ export const SMOKE = [
 
 /**
  * Paths no capture can move: docs, playbooks, infrastructure, unit tests, functional specs,
- * snapshots, migrations, the lockfile, and root files neither the build nor the browser reads.
+ * snapshots, migrations, the lockfile, and root files neither the build nor the browser reads. Not
+ * `config/env-registry.mjs`: `next.config.ts` and `src/` import it.
  */
 const INERT =
   /^(?:docs\/|\.claude\/|\.agents\/|infra\/|drizzle\/|extension\/|LICENSE$)|\.md$|\.snap$|(?:^|\/)[^/]+\.test\.(?:ts|tsx|mts|mjs|js)$|^e2e\/(?!visual\.spec\.ts$).+\.spec\.ts$|^(?:\.gitignore|\.gitattributes|\.env\.example|\.coderabbit\.yaml|\.mcp\.json|\.vercelignore|vercel\.json|biome\.json|cdk\.json|skills-lock\.json|pnpm-lock\.yaml|vitest\.config\.ts|drizzle\.config(?:\.prod)?\.ts|next-env\.d\.ts|tsconfig\.tsbuildinfo)$|\.d\.ts$/;

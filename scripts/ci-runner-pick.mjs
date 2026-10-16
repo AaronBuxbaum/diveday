@@ -1,10 +1,11 @@
 import { appendFile } from "node:fs/promises";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { RUNNER_IMAGE } from "./check-runner-image.mjs";
 
 /**
  * Chooses where CI's non-browser jobs run: Aaron's Mac when one of its runners
- * is online, GitHub-hosted `ubuntu-latest` otherwise. Runs as a step of the
+ * is online, the pinned GitHub-hosted image (`RUNNER_IMAGE`) otherwise. Runs as a step of the
  * `changes` job in `.github/workflows/ci.yml`; every job that reads its answer
  * says `runs-on: ${{ fromJSON(needs.changes.outputs.runner) }}`.
  *
@@ -16,13 +17,13 @@ import { pathToFileURL } from "node:url";
  * GitHub-rendered baselines.
  *
  * It fails toward GitHub, always. No token, an API error, a fork, a kill
- * switch, or no runner online all answer `ubuntu-latest`, because the cost of
+ * switch, or no runner online all answer the GitHub image, because the cost of
  * a wrong "GitHub" is some queue time and the cost of a wrong "Mac" is a job
  * that waits for a machine that is asleep.
  */
 
 export const MAC_LABEL = "diveday-mac";
-export const GITHUB_HOSTED = "ubuntu-latest";
+export const GITHUB_HOSTED = RUNNER_IMAGE;
 
 /**
  * Whether this run may use the Mac at all. Only code that is already in this
