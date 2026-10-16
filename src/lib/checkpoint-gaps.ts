@@ -25,14 +25,17 @@ import { inAfterDivePopulation, type RollCallState } from "./roll-call-populatio
  * warned on every tap about crew nobody ever counts (dive-domain review
  * 20261014). The panel itself still holds the checkpoint open for them.
  *
- * The two halves stay apart, so the words can say "11 divers and 3 crew"
- * rather than a sum that hides which list to look at.
+ * The two halves stay apart, so the words can say "11 passengers and 3
+ * crew" rather than a sum that hides which list to look at.
  */
 export type CheckpointGap =
   | {
       kind: "unmarked";
       checkpoint: RollCallCheckpoint;
-      /** Divers with no result here, plus divers recorded not back aboard. */
+      /**
+       * Passengers (divers, snorkelers and riders alike) with no result here,
+       * plus those recorded not back aboard. The name is older than the count.
+       */
       divers: number;
       /** Crew in the after-dive count not accounted for here. */
       crew: number;
@@ -137,7 +140,7 @@ export function previousCheckpointGaps(
  * **A last dive nobody counted, after a closed one, is worded as a plan
  * question** (dive-domain review 20261014): with no result for anybody there
  * and the dive before it closed, the likeliest story is a dive called off and
- * the plan left at the old count, and "8 divers not marked" would send the
+ * the plan left at the old count, and "8 people not marked" would send the
  * crew counting a boat that never went in. It stays a warning (`not_counted`)
  * so a skipped count is never silent; the words offer both ways out.
  */

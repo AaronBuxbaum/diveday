@@ -5,8 +5,10 @@ import { rollCallCheckpointOrdinal } from "@/lib/manifests";
 /**
  * The one line both roll-call warnings say (batch 6, items 3 and 4): the
  * checkpoint switch's guard and the opened page, and the stage strip on the
- * way home. Divers and crew are worded apart — "11 divers and 3 crew" — so
- * the crew know which list to look at (dive-domain review 20261014).
+ * way home. Passengers and crew are worded apart — "11 passengers and 3
+ * crew" — so the crew know which list to look at (dive-domain review
+ * 20261014). The count is everyone booked aboard, snorkelers and riders with
+ * the divers, so the words say people, never divers (2026-10-16 sheet item 4).
  */
 export function checkpointGapLine(t: StaffTranslator, gap: CheckpointGap): string {
   const dive = rollCallCheckpointOrdinal(gap.checkpoint);

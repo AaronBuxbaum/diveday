@@ -255,9 +255,9 @@
     }
   },
   "checkpointGap": {
-    "lineDivers": "{divers, plural, one {# diver} other {# divers}} not marked after dive {dive}.",
+    "lineDivers": "{divers, plural, one {# person} other {# people}} not marked after dive {dive}.",
     "lineCrew": "{crew} crew not marked after dive {dive}.",
-    "lineBoth": "{divers, plural, one {# diver} other {# divers}} and {crew} crew not marked after dive {dive}.",
+    "lineBoth": "{divers, plural, one {# passenger} other {# passengers}} and {crew} crew not marked after dive {dive}.",
     "notCounted": "Dive {dive} not counted. If it was called off, set the plan to {plan, plural, one {# dive} other {# dives}}.",
     "setPlan": "Change the plan",
     "openAnyway": "Open anyway",
