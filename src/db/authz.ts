@@ -29,6 +29,7 @@ import {
   canViewShopActivity,
   type Role,
 } from "@/lib/authz";
+import { rolesMayActOnKind, type TodayActionKind } from "@/lib/today";
 import type { DbExecutor } from "./client";
 import { people, personRoles, userAccounts } from "./schema";
 import { livePerson } from "./trips-live";
@@ -134,6 +135,18 @@ async function canPerson(
   const roles = await loadActiveStaffRoles(db, shopId, personId);
   return roles !== null && predicate(roles);
 }
+
+/**
+ * Live DB-checked: may this person act on a Today row of this kind (its
+ * `KIND_AUDIENCE`)? What Today hides from a role, the action behind it refuses
+ * (issue #2134), read from the database, never from the session's cached roles.
+ */
+export const canPersonActOnKind = (
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+  kind: TodayActionKind,
+) => canPerson(db, shopId, personId, (roles) => rolesMayActOnKind(kind, roles));
 
 /** Live DB-checked companions of the H-14 predicates (src/lib/authz.ts). */
 export const canPersonManagePaymentSettings = (db: DbExecutor, shopId: string, personId: string) =>

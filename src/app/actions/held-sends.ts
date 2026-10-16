@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { HeldTicket } from "@/components/SendHold";
-import { canPersonConfigureTrips, canPersonManagePaymentSettings } from "@/db/authz";
+import {
+  canPersonActOnKind,
+  canPersonConfigureTrips,
+  canPersonManagePaymentSettings,
+} from "@/db/authz";
 import { type AppDb, getDb } from "@/db/client";
 import {
   claimHeldSend,
@@ -16,14 +20,12 @@ import {
 import { getShopById } from "@/db/shops";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import { trackEvent } from "@/lib/analytics";
-import type { Role } from "@/lib/authz";
 import { nowMs } from "@/lib/clock";
 import { formValue, parseForm, trimmedText } from "@/lib/form-parse";
 import { type HeldSendPayload, heldSendPayloadSchema } from "@/lib/held-sends";
 import { majorToMinor, toShopCurrency } from "@/lib/money";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { rolesMayActOnKind } from "@/lib/today";
 
 /**
  * The three moves of a send you can take back (ADR 20260906-before-you-ask,
@@ -168,7 +170,7 @@ export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
   // a role, the action refuses it too (issue #2134).
   if (
     payload.kind === "waitlist_invite" &&
-    !rolesMayActOnKind("waitlist_seat", session.user.roles)
+    !(await canPersonActOnKind(db, session.user.shopId, session.user.personId, "waitlist_seat"))
   ) {
     throw new Error("not_authorized");
   }
@@ -205,7 +207,7 @@ function ticketFor(held: { id: string; runAt: Date }): HeldTicket {
  */
 async function assertMayActOnHeld(
   db: AppDb,
-  session: { user: { shopId: string; personId: string; roles: readonly Role[] } },
+  session: { user: { shopId: string; personId: string } },
   id: string,
 ): Promise<void> {
   const row = await pendingHeldSend(db, session.user.shopId, id);
@@ -219,7 +221,10 @@ async function assertMayActOnHeld(
   if (gate && !(await gate(db, session.user.shopId, session.user.personId))) {
     throw new Error("not_authorized");
   }
-  if (row.kind === "waitlist_invite" && !rolesMayActOnKind("waitlist_seat", session.user.roles)) {
+  if (
+    row.kind === "waitlist_invite" &&
+    !(await canPersonActOnKind(db, session.user.shopId, session.user.personId, "waitlist_seat"))
+  ) {
     throw new Error("not_authorized");
   }
 }
