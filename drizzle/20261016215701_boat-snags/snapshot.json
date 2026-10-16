@@ -1,13 +1,14 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "d80a3ebf-4b9a-4bc2-a434-5cd90e169868",
+  "id": "1f3942d4-2c36-49a2-9487-29a40381431a",
   "prevIds": [
-    "157d4875-9d7a-44c3-a1c8-cf8d4e99c710",
-    "4bbc4b3b-de59-44b8-9afa-27d934eef05f",
+    "3d7fc55a-3967-4f48-90a3-b52a48da3569",
+    "44c0586d-ddc3-4af2-9187-992a8cd1a59b",
     "84c8ad31-e474-4673-8616-9645699fffb6",
     "beef9192-ca63-4022-a83e-fe29194e9c8a",
-    "c37d556c-7f88-48a5-8404-2eeb8f0de8f1"
+    "bfed0621-33d6-443d-b1b2-d5e4134f76a4",
+    "f2e1375f-33bf-46eb-93e2-dc9bd1706c13"
   ],
   "ddl": [
     {
@@ -219,6 +220,16 @@
         "failed"
       ],
       "name": "trip_last_minute_promo_status",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "first_ocean_dive",
+        "celebrating",
+        "nervous"
+      ],
+      "name": "welcome_hello",
       "entityType": "enums",
       "schema": "public"
     },
@@ -1772,6 +1783,12 @@
     },
     {
       "isRlsEnabled": false,
+      "name": "shop_shore_alert_tokens",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
       "name": "shop_whatsapp_accounts",
       "entityType": "tables",
       "schema": "public"
@@ -2124,6 +2141,32 @@
       "generated": null,
       "identity": null,
       "name": "recovery_code_hashes",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "account_security"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "totp_secret_key_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "account_security"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "recovery_codes_key_id",
       "entityType": "columns",
       "schema": "public",
       "table": "account_security"
@@ -2833,12 +2876,25 @@
     {
       "type": "uuid",
       "typeSchema": null,
-      "notNull": true,
+      "notNull": false,
       "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
       "name": "actor_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "activity_events"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "system_reason",
       "entityType": "columns",
       "schema": "public",
       "table": "activity_events"
@@ -4242,6 +4298,32 @@
       "default": null,
       "generated": null,
       "identity": null,
+      "name": "reschedule_missed_from",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "bookings"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "reschedule_missed_place",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "bookings"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
       "name": "minor_declared_at",
       "entityType": "columns",
       "schema": "public",
@@ -4295,6 +4377,19 @@
       "generated": null,
       "identity": null,
       "name": "welcome_shared_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "bookings"
+    },
+    {
+      "type": "welcome_hello",
+      "typeSchema": "public",
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "welcome_hello",
       "entityType": "columns",
       "schema": "public",
       "table": "bookings"
@@ -4718,6 +4813,19 @@
     {
       "type": "timestamp with time zone",
       "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "emailed_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_invitations"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
       "default": "now()",
@@ -5062,6 +5170,19 @@
       "generated": null,
       "identity": null,
       "name": "invited_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_waitlist_entries"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "1",
+      "generated": null,
+      "identity": null,
+      "name": "party_size",
       "entityType": "columns",
       "schema": "public",
       "table": "trip_waitlist_entries"
@@ -5452,6 +5573,19 @@
       "generated": null,
       "identity": null,
       "name": "reviewed_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "nitrox_certifications"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "agency_checked_at",
       "entityType": "columns",
       "schema": "public",
       "table": "nitrox_certifications"
@@ -5868,6 +6002,19 @@
       "generated": null,
       "identity": null,
       "name": "reviewed_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "specialty_certifications"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "agency_checked_at",
       "entityType": "columns",
       "schema": "public",
       "table": "specialty_certifications"
@@ -6653,6 +6800,19 @@
       "table": "shops"
     },
     {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "padi_checks_enabled",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
       "type": "text",
       "typeSchema": null,
       "notNull": false,
@@ -6861,6 +7021,58 @@
       "table": "shops"
     },
     {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shore_alert_email",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shore_alert_consent_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shore_alert_consent_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shore_alert_confirmed_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
       "type": "integer",
       "typeSchema": null,
       "notNull": true,
@@ -6947,6 +7159,19 @@
       "generated": null,
       "identity": null,
       "name": "surface_interval_minutes",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "30",
+      "generated": null,
+      "identity": null,
+      "name": "min_turnaround_minutes",
       "entityType": "columns",
       "schema": "public",
       "table": "shops"
@@ -8013,6 +8238,19 @@
       "generated": null,
       "identity": null,
       "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "course_forms"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "medical_screening",
       "entityType": "columns",
       "schema": "public",
       "table": "course_forms"
@@ -10951,6 +11189,32 @@
       "generated": null,
       "identity": null,
       "name": "note",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "roll_call_events"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "readiness_status",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "roll_call_events"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "readiness_blockers",
       "entityType": "columns",
       "schema": "public",
       "table": "roll_call_events"
@@ -14349,6 +14613,32 @@
       "table": "incident_reports"
     },
     {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "deleted_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "incident_reports"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "legal_hold_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "incident_reports"
+    },
+    {
       "type": "uuid",
       "typeSchema": null,
       "notNull": true,
@@ -16602,6 +16892,123 @@
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_shore_alert_tokens"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_shore_alert_tokens"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "purpose",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_shore_alert_tokens"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "email",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_shore_alert_tokens"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "token_hash",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_shore_alert_tokens"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "expires_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_shore_alert_tokens"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "used_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_shore_alert_tokens"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "superseded_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_shore_alert_tokens"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shop_shore_alert_tokens"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
@@ -18790,6 +19197,19 @@
       "generated": null,
       "identity": null,
       "name": "refunded_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "orders"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "counter_claimed_at",
       "entityType": "columns",
       "schema": "public",
       "table": "orders"
@@ -22708,6 +23128,19 @@
       "table": "trips"
     },
     {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "divers_told_meeting_point",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trips"
+    },
+    {
       "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": false,
@@ -22742,6 +23175,19 @@
       "generated": null,
       "identity": null,
       "name": "roll_call_alerted_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trips"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "roll_call_shore_alerted_at",
       "entityType": "columns",
       "schema": "public",
       "table": "trips"
@@ -29949,7 +30395,7 @@
         }
       ],
       "isUnique": false,
-      "where": null,
+      "where": "\"deleted_at\" is null",
       "with": "",
       "method": "btree",
       "concurrently": false,
@@ -30965,6 +31411,27 @@
       "entityType": "indexes",
       "schema": "public",
       "table": "shop_contact_email_confirmation_tokens"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "shop_shore_alert_tokens_shop_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "shop_shore_alert_tokens"
     },
     {
       "nameExplicit": true,
@@ -32536,6 +33003,34 @@
           "asc": true,
           "nullsFirst": false,
           "opclass": null
+        },
+        {
+          "value": "person_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "trip_reviews_shop_person_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "trip_reviews"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
         }
       ],
       "isUnique": false,
@@ -32705,6 +33200,27 @@
       "method": "btree",
       "concurrently": false,
       "name": "trip_dives_trip_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "trip_dives"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "dive_site_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "trip_dives_dive_site_idx",
       "entityType": "indexes",
       "schema": "public",
       "table": "trip_dives"
@@ -33076,6 +33592,62 @@
       "method": "btree",
       "concurrently": false,
       "name": "trips_series_starts_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "trips"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "course_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "starts_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "trips_course_starts_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "trips"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "boat_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "starts_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "trips_boat_starts_idx",
       "entityType": "indexes",
       "schema": "public",
       "table": "trips"
@@ -38657,6 +39229,23 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
+      "name": "shop_shore_alert_tokens_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "shop_shore_alert_tokens"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
       "name": "shop_whatsapp_accounts_shop_id_shops_id_fkey",
       "entityType": "fks",
       "schema": "public",
@@ -42260,6 +42849,16 @@
     },
     {
       "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "shop_shore_alert_tokens_pkey",
+      "schema": "public",
+      "table": "shop_shore_alert_tokens",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
         "shop_id"
       ],
       "nameExplicit": false,
@@ -42895,6 +43494,17 @@
         "token_hash"
       ],
       "nullsNotDistinct": false,
+      "name": "shop_shore_alert_tokens_token_hash_key",
+      "schema": "public",
+      "table": "shop_shore_alert_tokens",
+      "entityType": "uniques"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "token_hash"
+      ],
+      "nullsNotDistinct": false,
       "name": "waiver_records_token_hash_key",
       "schema": "public",
       "table": "waiver_records",
@@ -42917,6 +43527,13 @@
       "entityType": "checks",
       "schema": "public",
       "table": "account_step_ups"
+    },
+    {
+      "value": "(\"actor_person_id\" is null) = (\"system_reason\" is not null)",
+      "name": "activity_events_actor_or_system_reason",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "activity_events"
     },
     {
       "value": "length(trim(\"code\")) > 0",
@@ -42996,6 +43613,13 @@
       "table": "trip_last_minute_promos"
     },
     {
+      "value": "\"party_size\" between 1 and 20",
+      "name": "trip_waitlist_entries_party_size_range",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "trip_waitlist_entries"
+    },
+    {
       "value": "(\"identifier\" is not null and length(btrim(\"identifier\", E' \\t\\n\\r\\f\\v')) > 0) or (\"self_declared_at\" is not null and \"status\" = 'pending') or (\"issued_by_shop_at\" is not null)",
       "name": "certifications_identifier_present_unless_self_declared",
       "entityType": "checks",
@@ -43054,6 +43678,20 @@
     {
       "value": "\"dock_call_minutes\" >= 0",
       "name": "shops_dock_call_minutes_nonnegative",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "value": "(\"shore_alert_email\" is null and \"shore_alert_consent_at\" is null\n        and \"shore_alert_consent_by_person_id\" is null)\n        or (\"shore_alert_email\" is not null and \"shore_alert_consent_at\" is not null\n        and \"shore_alert_consent_by_person_id\" is not null)",
+      "name": "shops_shore_alert_consent",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "value": "\"shore_alert_confirmed_at\" is null or \"shore_alert_email\" is not null",
+      "name": "shops_shore_alert_confirmed_has_address",
       "entityType": "checks",
       "schema": "public",
       "table": "shops"
@@ -43138,6 +43776,13 @@
     {
       "value": "\"surface_interval_minutes\" >= 0",
       "name": "shops_surface_interval_minutes_nonnegative",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "value": "\"min_turnaround_minutes\" >= 0 and \"min_turnaround_minutes\" <= 240",
+      "name": "shops_min_turnaround_minutes_range",
       "entityType": "checks",
       "schema": "public",
       "table": "shops"
@@ -43311,6 +43956,13 @@
       "table": "buddy_pair_members"
     },
     {
+      "value": "(\"readiness_status\" is null and \"readiness_blockers\" is null) or (\"status\" = 'boarded' and \"readiness_status\" in ('ready', 'blocked'))",
+      "name": "roll_call_events_readiness_snapshot_shape",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "roll_call_events"
+    },
+    {
       "value": "(\"planning_note\" is null) = (\"planning_note_at\" is null)\n        and (\"planning_note_at\" is null) = (\"planning_note_by_person_id\" is null)",
       "name": "dive_sites_planning_note_attributed",
       "entityType": "checks",
@@ -43430,6 +44082,20 @@
       "table": "incident_report_people"
     },
     {
+      "value": "\"deleted_at\" is null or \"status\" = 'draft'",
+      "name": "incident_reports_only_a_draft_is_discarded",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "incident_reports"
+    },
+    {
+      "value": "\"legal_hold_at\" is null or \"deleted_at\" is null",
+      "name": "incident_reports_a_held_report_is_kept",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "incident_reports"
+    },
+    {
       "value": "\"oxygen_minutes\" is null or (\"oxygen_given\" is true and \"oxygen_minutes\" between 1 and 1440)",
       "name": "incident_reports_oxygen_minutes",
       "entityType": "checks",
@@ -43442,6 +44108,20 @@
       "entityType": "checks",
       "schema": "public",
       "table": "incident_reports"
+    },
+    {
+      "value": "\"purpose\" in ('confirm', 'stop')",
+      "name": "shop_shore_alert_tokens_purpose",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "shop_shore_alert_tokens"
+    },
+    {
+      "value": "(\"purpose\" = 'confirm') = (\"expires_at\" is not null)",
+      "name": "shop_shore_alert_tokens_expiry",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "shop_shore_alert_tokens"
     },
     {
       "value": "\"gear_cents\" >= 0",
@@ -43654,8 +44334,15 @@
       "table": "orders"
     },
     {
-      "value": "(\"collection\" = 'stripe_invoice' and \"stripe_account_id\" is not null and \"stripe_customer_id\" is not null and \"stripe_invoice_id\" is not null) or (\"collection\" <> 'stripe_invoice' and \"stripe_account_id\" is null and \"stripe_customer_id\" is null and \"stripe_invoice_id\" is null and \"stripe_payment_intent_id\" is null)",
+      "value": "(\"collection\" = 'stripe_invoice' and \"stripe_account_id\" is not null and \"stripe_customer_id\" is not null and \"stripe_invoice_id\" is not null) or (\"collection\" <> 'stripe_invoice' and \"stripe_payment_intent_id\" is null and ((\"stripe_account_id\" is null and \"stripe_customer_id\" is null and \"stripe_invoice_id\" is null) or (\"stripe_account_id\" is not null and \"stripe_customer_id\" is not null and \"stripe_invoice_id\" is not null)))",
       "name": "orders_stripe_ids_match_collection",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "orders"
+    },
+    {
+      "value": "\"counter_claimed_at\" is null or (\"status\" = 'open' and \"collection\" <> 'stripe_invoice' and \"stripe_invoice_id\" is not null)",
+      "name": "orders_counter_claim_open",
       "entityType": "checks",
       "schema": "public",
       "table": "orders"

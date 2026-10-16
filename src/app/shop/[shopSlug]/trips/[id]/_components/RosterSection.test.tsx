@@ -182,6 +182,8 @@ describe("the guests ledger (slice 5d)", () => {
         dock: new Map([[ready.booking.id, "boarded"]]),
         afterDive: new Set(),
         rollCallTaken: true,
+        unaccounted: new Set(),
+        countedAboardBlocked: new Map(),
         below: new Map([[ready.booking.id, <p key="next">Booked Sat 11:30 AM</p>]]),
       },
     });
