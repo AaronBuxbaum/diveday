@@ -1,13 +1,15 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
-import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
+import { sendClaimedSeatConfirmation } from "@/db/notifications";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
+import { tellSeatAlreadyHeld } from "@/db/seat-already-held";
 import { claimPartySeat } from "@/db/seat-claims";
 import { requestFirstHandLocale } from "@/i18n/request";
-import { claimLinkPath, readinessLinkPath } from "@/lib/booking-capabilities";
+import { claimLinkPath } from "@/lib/booking-capabilities";
 import { parseForm } from "@/lib/form-parse";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -28,10 +30,15 @@ const claimSchema = z.object({
  * capability action throttles both guessing and replay spam ahead of
  * verification (the pattern `confirmContextFor` set, CR-013).
  *
- * Success hands the claimant straight to their own `/ready` page on a fresh
- * readiness capability: the claim link itself died inside the claim
- * transaction (every capability on the booking is revoked there), so the
- * URL they leave with is theirs, not the organizer's.
+ * **A claim that worked and a claim for an address that already holds a seat
+ * on the trip answer identically** (issue #2381): the same redirect, to the
+ * same static page, with the same work done after the response. Anyone holding
+ * a claim link can type any address, so a different answer for a booked
+ * address would tell them who is on the manifest. The answer goes by email
+ * instead, to the only person entitled to it: the claimant gets their booking
+ * confirmation (their own prep link in it, the old claim link having died in
+ * the claim transaction), and the holder of an already-held seat gets a note
+ * naming it. The data layer still refuses the double seat.
  */
 export async function claimSeatAction(token: string, formData: FormData) {
   const base = claimLinkPath(token);
@@ -45,6 +52,10 @@ export async function claimSeatAction(token: string, formData: FormData) {
   if (!parsed.ok) redirect(`${base}?error=fields`);
 
   const db = await getDb();
+  // This form is the claimant's own device — first-hand evidence of the
+  // language they read (docs ADR 20260731-per-person-notification-locale).
+  // Read before the claim, for both answers alike.
+  const ownLocale = await requestFirstHandLocale();
   const outcome = await claimPartySeat(db, {
     token,
     fullName: parsed.data.fullName,
@@ -56,36 +67,29 @@ export async function claimSeatAction(token: string, formData: FormData) {
     // (or never did), so the page itself renders the uniform "this link
     // isn't available" notice — one honest answer for every dead-link cause.
     if (outcome.reason === "invalid") redirect(base);
-    // `already_booked` gets the neutral `unable`, so the sentence no longer
-    // says "you already have a spot" (issue #2288). The outcome itself still
-    // differs from a successful claim for a booked email, as the public
-    // booking form's does: the wording is closed, the oracle is not (H-22).
-    const code =
-      outcome.reason === "already_booked"
-        ? "unable"
-        : outcome.reason === "course_prerequisite"
-          ? "course"
-          : "requirement";
-    redirect(`${base}?error=${code}`);
+    if (outcome.reason === "already_booked") {
+      const { held } = outcome;
+      if (held) after(() => tellSeatAlreadyHeld(db, held));
+      redirect(sentPath(base));
+    }
+    redirect(
+      `${base}?error=${outcome.reason === "course_prerequisite" ? "course" : "requirement"}`,
+    );
   }
 
-  // This form is the claimant's own device — first-hand evidence of the
-  // language they read (docs ADR 20260731-per-person-notification-locale).
   // The booking-scoped writer refuses an identity-unconfirmed booking, which
-  // is exactly right here too.
-  await recordDiverOwnLocaleForBooking(db, {
-    bookingId: outcome.bookingId,
-    locale: await requestFirstHandLocale(),
+  // is exactly right here too. After the response, like the held-seat note.
+  after(async () => {
+    await recordDiverOwnLocaleForBooking(db, {
+      bookingId: outcome.bookingId,
+      locale: ownLocale,
+    });
+    await sendClaimedSeatConfirmation(db, outcome.shopId, outcome.bookingId);
   });
+  redirect(sentPath(base));
+}
 
-  const readiness = await issueBookingCapability(db, {
-    shopId: outcome.shopId,
-    bookingId: outcome.bookingId,
-    purpose: "readiness",
-  });
-  // A just-claimed booking is live, so this only fails on something already
-  // broken; landing back on the (now dead) claim link would read as a failed
-  // claim, so fall back to the uniform notice only in that corner.
-  if (!readiness) redirect(base);
-  redirect(`${readinessLinkPath(readiness.token)}?saved=claimed`);
+/** Where both answers land: the claim URL with the static "check your email" page. */
+function sentPath(base: string): string {
+  return `${base}?sent=1`;
 }

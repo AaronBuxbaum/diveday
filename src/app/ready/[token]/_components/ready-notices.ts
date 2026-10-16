@@ -32,9 +32,6 @@ export const READY_NOTICES: Record<
   // diver taps Save and is told nothing. The failure path was louder than the
   // success path until this row existed.
   "saved-fit": { tone: "success", key: "ready.fitSaved" },
-  // Landing here fresh off a successful seat claim (docs ADR
-  // 20260804-seat-claim-links) — the one moment to say whose page this now is.
-  "saved-claimed": { tone: "success", key: "seatClaim.claimedNotice" },
   // "Add a seat" (UX review 2026-10-11, item 13). Each refusal names its door:
   // the boat is full, the shop has to check who is coming, the group is at the
   // one-booking cap, or the name box was empty.

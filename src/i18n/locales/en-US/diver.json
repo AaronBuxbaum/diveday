@@ -1152,13 +1152,13 @@
     "privacyNote": "Only you and the shop see what you enter here. Your organizer just sees that the seat is claimed.",
     "unavailableHeading": "This link isn’t available",
     "unavailableBody": "It may already have been used, replaced with a newer link, or expired. Ask your organizer for a fresh link, or contact the shop.",
+    "sentHeading": "Check your email",
+    "sentBody": "We’ve sent a note to the address you gave. It says what happens next.",
     "expiredBody": "Whoever sent you this link can tell you what’s happened with the seat.",
     "errors": {
       "checkFields": "Check the highlighted fields and try again.",
-      "unable": "This seat can’t be claimed with these details. Contact the shop and they can sort it out.",
       "coursePrerequisite": "This session is a course with its own prerequisites, and the shop needs a verified certification on file before the seat can change hands. Contact the shop and they can sort it out."
     },
-    "claimedNotice": "This seat is yours now, and everything on this page is about you. Your organizer can see it’s claimed.",
     "panelHeading": "Your group’s seats",
     "panelBody": "Send each diver their own link. They add their own details, sign their own waiver, and get their own trip prep. A seat nobody claims stays with you, exactly as booked.",
     "claimedBadge": "Claimed",
@@ -5224,6 +5224,10 @@
     "partyPaymentReceipt": {
       "subject": "Receipt: {tripTitle}",
       "body": "Paid by card for {seats} seats on {tripTitle}, {date}: {amount}. Thank you."
+    },
+    "seatAlreadyHeld": {
+      "subject": "You already have a seat on {tripTitle}",
+      "body": "Someone used a seat-claim link for {tripTitle} on {date} with this address. You already hold a seat on it with {shopName}, so nothing changed."
     },
     "tripBlowout": {
       "subject": "Trip canceled — {tripTitle}",

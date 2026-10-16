@@ -243,7 +243,14 @@ export type ClaimSeatResult =
       /** Set when the claimant's submitted name didn't match the person row their email resolved to (H-13). */
       identityUnconfirmed: boolean;
     }
-  | { ok: false; reason: "invalid" | "already_booked" | "course_prerequisite" }
+  | { ok: false; reason: "invalid" | "course_prerequisite" }
+  /**
+   * The typed address already holds a live seat on this trip. `held`
+   * is that seat, for the note to its holder (`tellSeatAlreadyHeld`); the
+   * claimant is never shown it. Null only when two claims raced and the seat
+   * could not be re-found.
+   */
+  | { ok: false; reason: "already_booked"; held: { shopId: string; bookingId: string } | null }
   | { ok: false; reason: "trip_prerequisite"; refusal: TripAdmissionRefusal };
 
 /**
@@ -380,11 +387,10 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
   // on this trip, re-pointing this one would put them on the manifest twice
   // (and violate bookings_trip_person_unique). The organizer's other seats
   // stay untouched — this refusal is about the claimant, not the party.
-  // It runs after every gate, so a gate refusal no longer depends on whether
-  // the typed email holds a seat here (issue #2288). What it does not close:
-  // a claimant the gates admit still gets this refusal where a stranger's
-  // claim would succeed, so the outcome still differs for a booked email, as
-  // it does on the public booking form (H-22).
+  // It runs after every gate, so a gate refusal does not depend on whether
+  // the typed email holds a seat here (issue #2288). The refusal itself is not
+  // shown: the action answers it exactly as it answers a claim that worked,
+  // and tells the seat's holder by email instead (issue #2381).
   if (existing && existing.id !== booking.personId) {
     const [clash] = await tx
       .select({ id: bookings.id })
@@ -397,7 +403,12 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
         ),
       )
       .limit(1);
-    if (clash) return { ok: false, reason: "already_booked" };
+    if (clash)
+      return {
+        ok: false,
+        reason: "already_booked",
+        held: { shopId: capability.shopId, bookingId: clash.id },
+      };
   }
 
   // Gates passed — now resolve for real. Under a racing insert for the same
@@ -470,6 +481,44 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
 }
 
 /**
+ * The live seat the typed address already holds on the claimed seat's trip,
+ * found again after a racing claim rolled back. Null when it cannot be told.
+ */
+async function heldSeatForClaim(
+  db: AppDb,
+  input: ClaimSeatInput,
+): Promise<{ shopId: string; bookingId: string } | null> {
+  const capability = await verifyBookingCapability(db, {
+    token: input.token,
+    purpose: "claim",
+    now: input.now ?? nowDate(),
+  });
+  if (!capability) return null;
+  const [seat] = await db
+    .select({ tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(eq(bookings.id, capability.bookingId), eq(bookings.shopId, capability.shopId)))
+    .limit(1);
+  if (!seat) return null;
+  const [held] = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
+    .where(
+      and(
+        eq(bookings.shopId, capability.shopId),
+        eq(bookings.tripId, seat.tripId),
+        eq(people.email, input.email.trim().toLowerCase()),
+        isNull(people.deletedAt),
+        ne(bookings.status, "cancelled"),
+        ne(bookings.id, capability.bookingId),
+      ),
+    )
+    .limit(1);
+  return held ? { shopId: capability.shopId, bookingId: held.id } : null;
+}
+
+/**
  * Claim a party seat, with every consequence the seating paths owe
  * (`seatDiver` is the model): the re-point itself is one transaction, then
  * the claimant's own waiver goes out, the trip's activity trail records who
@@ -479,14 +528,20 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
 export async function claimPartySeat(db: AppDb, input: ClaimSeatInput): Promise<ClaimSeatResult> {
   const outcome = await db
     .transaction((tx) => claimSeatRecord(tx, input))
-    .catch((error: unknown): ClaimSeatResult => {
+    .catch(async (error: unknown): Promise<ClaimSeatResult> => {
       // Two truly concurrent claims by the same *new* email on two different
       // seats of one trip both pass the serial clash check (neither person
       // row exists yet), converge on one person via `findOrCreatePerson`, and
       // the second re-point then trips `bookings_trip_person_unique`. The
       // index is the backstop that keeps one diver off the manifest twice;
       // surface it as the same refusal the serial path gives.
-      if (isUniqueConstraintViolation(error)) return { ok: false, reason: "already_booked" };
+      if (isUniqueConstraintViolation(error)) {
+        return {
+          ok: false,
+          reason: "already_booked",
+          held: await heldSeatForClaim(db, input),
+        };
+      }
       throw error;
     });
   if (!outcome.ok) return outcome;

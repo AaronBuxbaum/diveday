@@ -1152,13 +1152,13 @@
     "privacyNote": "Lo que escribas aquí solo lo ven el centro y tú. Quien organiza el grupo solo ve que la plaza está reclamada.",
     "unavailableHeading": "Este enlace no está disponible",
     "unavailableBody": "Puede que ya se haya usado, que lo hayan reemplazado por uno más nuevo o que haya caducado. Pide un enlace nuevo a quien organiza el grupo o contacta con el centro.",
+    "sentHeading": "Revisa tu correo",
+    "sentBody": "Enviamos un mensaje a la dirección que indicaste. Ahí dice qué sigue.",
     "expiredBody": "Quien te envió este enlace puede decirte qué ha pasado con la plaza.",
     "errors": {
       "checkFields": "Revisa los campos marcados e inténtalo de nuevo.",
-      "unable": "Esta plaza no se puede reclamar con estos datos. Contacta con el centro y lo resolverán.",
       "coursePrerequisite": "Esta sesión es un curso con sus propios requisitos, y el centro necesita una certificación verificada archivada antes de que la plaza cambie de manos. Contacta con el centro y lo resolverán."
     },
-    "claimedNotice": "Esta plaza ya es tuya, y todo lo que ves en esta página es sobre ti. Quien organiza el grupo puede ver que está reclamada.",
     "panelHeading": "Las plazas de tu grupo",
     "panelBody": "Envía a cada buceador su propio enlace. Cada uno añade sus datos, firma su propia exención y recibe su propia preparación. Una plaza que nadie reclama se queda contigo, tal y como se reservó.",
     "claimedBadge": "Reclamada",
@@ -5224,6 +5224,10 @@
     "partyPaymentReceipt": {
       "subject": "Recibo: {tripTitle}",
       "body": "Pagado con tarjeta por {seats} plazas en {tripTitle}, {date}: {amount}. Gracias."
+    },
+    "seatAlreadyHeld": {
+      "subject": "Ya tienes una plaza en {tripTitle}",
+      "body": "Alguien usó un enlace para reclamar una plaza de {tripTitle} el {date} con esta dirección. Ya tienes una plaza en ese viaje con {shopName}, así que no cambió nada."
     },
     "tripBlowout": {
       "subject": "Salida cancelada — {tripTitle}",

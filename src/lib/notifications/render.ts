@@ -48,6 +48,7 @@ import {
   shoreAlertConfirmationEmail,
   shoreAlertStoppedEmail,
 } from "./roll-call-emails";
+import { seatAlreadyHeldEmail } from "./seat-already-held";
 import { shopVoiceOf } from "./shop-voice";
 import { weeklyDigestEmail } from "./weekly-digest-email";
 import { gearServiceDueEmail, workOrderReadyEmail } from "./work-order-emails";
@@ -162,6 +163,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   }
   if (notification.kind === "departure_note") return departureNoteEmail(notification);
   if (notification.kind === "lost_item_found") return lostItemEmail(notification);
+  if (notification.kind === "seat_already_held") return seatAlreadyHeldEmail(notification);
   if (notification.kind === "party_payment_receipt") return partyPaymentReceiptEmail(notification);
   if (notification.kind === "course_certified") return courseCertifiedEmail(notification);
   if (notification.kind === "course_inquiry_received") {

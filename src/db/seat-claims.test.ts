@@ -657,7 +657,7 @@ describe("claimPartySeat", () => {
       fullName: "Orla Organizer",
       email: "orla@example.com",
     });
-    expect(outcome).toEqual({ ok: false, reason: "already_booked" });
+    expect(outcome).toMatchObject({ ok: false, reason: "already_booked" });
     const [row] = await db
       .select()
       .from(bookings)

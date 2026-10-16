@@ -40,6 +40,7 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "trip_blowout":
     case "booking_cancelled":
     case "party_payment_receipt":
+    case "seat_already_held":
     case "checkout_recovery":
     case "last_minute_deal":
     case "staff_reply":

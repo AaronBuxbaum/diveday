@@ -1242,6 +1242,21 @@ export async function retryBookingConfirmation(
 }
 
 /**
+ * The booking confirmation for a seat someone has just claimed from a party
+ * link (#2381): the claimant is shown a page that says to check their email,
+ * and this is the email, carrying their own prep link. A first send, not a
+ * retry. Returns null, and sends nothing, for a booking with no address.
+ */
+export async function sendClaimedSeatConfirmation(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  provider?: NotificationProvider,
+) {
+  return sendStoredBookingConfirmation(db, shopId, bookingId, { isRetry: false, provider });
+}
+
+/**
  * The booking confirmation for a student a staffer seated on a course session
  * whose course carries learning materials (ADR 20261008-course-learning-materials).
  * A staff seating otherwise sends only the waiver-on-join, so without this the

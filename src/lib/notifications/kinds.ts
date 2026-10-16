@@ -1364,6 +1364,30 @@ const partyPaymentReceiptSchema = z.object({
   currency: z.string().trim().length(3),
 });
 
+/**
+ * **A seat-claim link was used with the address of someone who already holds a
+ * seat on the trip** (#2381, Aaron's option b). The claim page shows the same
+ * neutral landing whether the typed address holds a seat or not, so the only
+ * answer to "is this address on the trip" goes here, to the inbox that owns it.
+ * Carries `heldBookingId`, not `bookingId`, on purpose: it is a note about a
+ * claim attempt, not a delivery tracked on that booking. Not queued; the
+ * sender throttles it per booking.
+ */
+const seatAlreadyHeldSchema = z.object({
+  kind: z.literal("seat_already_held"),
+  heldBookingId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: tripTitleSchema,
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  /** When the claim was tried; keys the send. */
+  requestedAt: z.date(),
+});
+
 const workOrderReadySchema = z.object({
   kind: z.literal("work_order_ready"),
   noticeId: z.uuid(),
@@ -1647,6 +1671,7 @@ export const notificationSchema = z
     tripBlowoutSchema,
     bookingCancelledSchema,
     partyPaymentReceiptSchema,
+    seatAlreadyHeldSchema,
     welcomeSchema,
     emailVerificationSchema,
     contactEmailConfirmationSchema,
@@ -1792,6 +1817,7 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "departure_note":
     case "lost_item_found":
     case "course_certified":
+    case "seat_already_held":
       return false;
     default:
       return true;
@@ -1943,6 +1969,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // that completes the checkout.
     case "party_payment_receipt":
       return `party-payment-receipt/${notification.checkoutId}`;
+    // One note per claim attempt on a held seat.
+    case "seat_already_held":
+      return `seat-already-held/${notification.heldBookingId}/${notification.requestedAt.toISOString()}`;
     // One send per card written; a level already held writes none.
     case "course_certified":
       return `course-certified/${notification.certificationId}`;
