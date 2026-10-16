@@ -596,7 +596,7 @@ export async function issuePartySeatClaims(
   const rows = await db
     .select({
       // Only what the panel reads: not the person's contact details or the
-      // trip's pricing, and not the waiver's token, draft or signed body.
+      // trip's other pricing, and not the waiver's token, draft or signed body.
       booking: {
         id: bookings.id,
         status: bookings.status,
@@ -605,12 +605,17 @@ export async function issuePartySeatClaims(
         claimedAt: bookings.claimedAt,
         identityUnconfirmedAt: bookings.identityUnconfirmedAt,
         identityBookedAs: bookings.identityBookedAs,
+        participantType: bookings.participantType,
       },
       person: { fullName: people.fullName },
       trip: {
         status: trips.status,
         startsAt: trips.startsAt,
         endsAt: trips.endsAt,
+        // What `seatListPriceCents` reads for `payable`, and nothing else of the pricing.
+        priceCents: trips.priceCents,
+        snorkelerPriceCents: trips.snorkelerPriceCents,
+        riderPriceCents: trips.riderPriceCents,
       },
       waiver: WAIVER_STATE_COLUMNS,
       // The shop's current material terms, in the same statement
