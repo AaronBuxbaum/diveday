@@ -195,6 +195,18 @@ function flag(value: string | null): boolean {
   return value !== null && ["true", "t", "1", "yes", "y"].includes(value.toLowerCase());
 }
 
+/**
+ * A yes-or-no that may be unsaid: only an explicit answer sets it, and a typo
+ * or "maybe" stays null rather than reading as no (domain review A6).
+ */
+function saidFlag(value: string | null): boolean | null {
+  if (value === null) return null;
+  const answer = value.toLowerCase();
+  if (["true", "t", "1", "yes", "y"].includes(answer)) return true;
+  if (["false", "f", "0", "no", "n"].includes(answer)) return false;
+  return null;
+}
+
 function finiteNumber(value: string | null): number | null {
   if (value === null) return null;
   const parsed = Number(value);
@@ -465,8 +477,7 @@ export function prepareDiveSiteImport(
       description: read(cells, "description"),
       locationName: read(cells, "location_name"),
       difficultyLevel,
-      snorkelSuitable:
-        read(cells, "snorkel_suitable") === null ? null : flag(read(cells, "snorkel_suitable")),
+      snorkelSuitable: saidFlag(read(cells, "snorkel_suitable")),
       depthRange: read(cells, "depth_range"),
       maxDepthMeters,
       expectedBottomTimeMinutes,

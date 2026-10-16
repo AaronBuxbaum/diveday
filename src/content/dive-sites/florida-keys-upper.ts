@@ -24,7 +24,6 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Look along the coral heads for schooling grunts and curious damselfish; rays often cruise the sandy channels between the spurs.",
       difficultyLevel: "beginner",
-      snorkelSuitable: true,
       depthRange: "5–18 m (15–60 ft)",
       maxDepthMeters: 18,
       currentNote: "Usually gentle, but reef-line current can run.",
