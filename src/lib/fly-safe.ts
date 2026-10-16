@@ -341,3 +341,66 @@ export function flySafeMessageKey(
   }
   return anchor;
 }
+
+/**
+ * **The planned form, read before the boat sails** (fifth-loop ideas, item 18,
+ * 2026-10-16). A visitor books a flight home before the dive, not after it, so
+ * the recap's sentence arrived a day too late for the decision it is about.
+ * `/ready` says the same rule ahead of time, worded as a plan.
+ *
+ * Every choice leans the same way as {@link flySafeFrom}'s, toward the longer
+ * wait, because a plan the recap later lengthens is a flight the diver has
+ * already booked:
+ *
+ * - **Anchor.** The buffered return, scheduled end plus
+ *   {@link DEPARTURE_BUFFER_MS}: the latest instant the recap would anchor on
+ *   for a boat that comes in on time. A recap with logged exits can only say an
+ *   earlier time than this; only a boat later than its buffer says a later one.
+ *   The sentence names the margin ("plus an hour in case the boat runs late"),
+ *   so the time is never an hour off the arithmetic the diver can do.
+ * - **Basis.** Repetitive when the departure plans more than one dive, or when
+ *   this diver holds a dive day at this shop inside
+ *   {@link FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS} (a booked earlier day counts:
+ *   it is the plan too).
+ * - **Silence.** Past no-decompression limits, here or on an earlier day in
+ *   the window (H-84), as the recap. A departure with no scheduled end. And a
+ *   later dive with this shop that starts before the time this would name: that
+ *   boat's own page says the time, and this one would be a time the diver is
+ *   already booked to break.
+ *
+ * Informs, never gates, like the recap's.
+ */
+export type PlannedFlySafeInput = {
+  plannedDives: number;
+  endsAt: Date | null;
+  divedRecently: boolean;
+  exceedsNoDecoLimits?: boolean;
+  decompressionRecently?: boolean;
+  /** This diver's next live seat with the shop after this one, or null. */
+  nextDiveStartsAt: Date | null;
+  hours: FlySafeHours;
+};
+
+export type PlannedFlySafeReason = Exclude<FlySafeReason, "dives_recorded">;
+
+export type PlannedFlySafe = { from: Date; reason: PlannedFlySafeReason; hours: number };
+
+export function plannedFlySafeFrom(input: PlannedFlySafeInput): PlannedFlySafe | null {
+  if (input.exceedsNoDecoLimits || input.decompressionRecently) return null;
+  if (!input.endsAt) return null;
+  const reason: PlannedFlySafeReason =
+    input.plannedDives > 1 ? "dives_planned" : input.divedRecently ? "earlier_day" : "one_dive";
+  const hours = reason === "one_dive" ? input.hours.single : input.hours.repetitive;
+  const from = new Date(input.endsAt.getTime() + DEPARTURE_BUFFER_MS + hours * HOUR_MS);
+  if (input.nextDiveStartsAt && input.nextDiveStartsAt.getTime() < from.getTime()) return null;
+  return { from, reason, hours };
+}
+
+/** The planned sentence's key under `ready.`, one per reason, so the reason clause matches the recap's. */
+export function plannedFlySafeMessageKey(
+  reason: PlannedFlySafeReason,
+): "flySafePlanned" | "flySafePlannedDivesPlanned" | "flySafePlannedEarlierDay" {
+  if (reason === "dives_planned") return "flySafePlannedDivesPlanned";
+  if (reason === "earlier_day") return "flySafePlannedEarlierDay";
+  return "flySafePlanned";
+}

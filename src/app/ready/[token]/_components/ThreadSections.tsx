@@ -14,7 +14,8 @@ import type { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trip
 import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { claimLinkPath } from "@/lib/booking-capabilities";
-import { formatShortDate } from "@/lib/format";
+import { type PlannedFlySafe, plannedFlySafeMessageKey } from "@/lib/fly-safe";
+import { formatShortDate, formatWeekdayTime } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicTripArrivalCardPath } from "@/lib/public-routes";
 import { addSeatFromReady, askToMoveAction, cancelMyBookingAction } from "../booking-actions";
@@ -40,6 +41,8 @@ export type ReadyThreadSectionsContext = {
   partySeatClaims: Awaited<ReturnType<typeof issuePartySeatClaims>>;
   /** "Everyone's set — see you at the dock." The rule is `partyIsAllSet`'s. */
   partyAllSet: boolean;
+  /** When to fly home, as a plan (fifth-loop ideas, item 18); null when nothing honest can be said. */
+  flySafePlan: PlannedFlySafe | null;
 };
 
 /**
@@ -61,6 +64,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
     publicCrew,
     partySeatClaims,
     partyAllSet,
+    flySafePlan,
   } = context;
   const { detail } = data;
   const claimOrigin = publicAppUrl();
@@ -169,6 +173,19 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
             temperatureStatedAbove={false}
             locale={locale}
           />
+        ) : null}
+        {/* When to fly home, said before the dive rather than only on the
+                recap after it (fifth-loop ideas, item 18): a visitor books the
+                flight before the boat sails. A sentence, not a panel, like the
+                recap's: it informs and never gates. */}
+        {flySafePlan ? (
+          <p data-testid="ready-fly-safe-plan" className="text-base">
+            {t(`ready.${plannedFlySafeMessageKey(flySafePlan.reason)}`, {
+              shopName: detail.shop.name,
+              when: formatWeekdayTime(flySafePlan.from, locale, detail.shop.timezone),
+              count: flySafePlan.hours,
+            })}
+          </p>
         ) : null}
         {/* Where the day ends up (UX review 2026-10-10, item 35): the recap's
                 log entry is the keepsake this same link turns into once the

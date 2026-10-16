@@ -46,6 +46,7 @@ import { type AppDb, getDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
 import { diverCrewWithAway } from "@/db/crew-away-diver";
 import { packageDivesForBooking } from "@/db/dive-packages";
+import { readPlannedFlySafe } from "@/db/fly-safe-plan";
 import { getBookedCard, getReadyPageData } from "@/db/ready";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
@@ -356,7 +357,7 @@ async function DiverReadinessPage({
     // verified `readiness` capability above; the query only ever walks seats
     // led by this booking, so a member's own /ready renders no panel. One wave with
     // the rest: each needs only the verified booking, shop and person (review 2026-10-11).
-    const [partySeatClaims, tripReads, paymentReceipt, courseForms, packageDives] =
+    const [partySeatClaims, tripReads, paymentReceipt, courseForms, packageDives, flySafePlan] =
       await Promise.all([
         issuePartySeatClaims(db, { shopId: shop.id, leadBookingId: bookingId }),
         threadTripReads,
@@ -385,6 +386,14 @@ async function DiverReadinessPage({
         // Asked whatever `COURSE_FORMS_BLOCK_BOARDING` says: warn-only raises no blocker (#2266).
         data.trip.course ? getCourseFormsForBooking(db, shop.id, bookingId) : null,
         packageDivesForBooking(db, { shopId: shop.id, personId: data.person.id, bookingId }),
+        // When to fly home, as a plan, before the boat sails (fifth-loop ideas, item 18).
+        readPlannedFlySafe(db, {
+          shopId: shop.id,
+          personId: data.person.id,
+          participantType: data.participantType,
+          timeZone: detail.shop.timezone,
+          trip: detail.trip,
+        }),
       ]);
     const [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage] = tripReads;
     const courseFormsOwed = (courseForms?.outstanding.length ?? 0) > 0;
@@ -584,6 +593,7 @@ async function DiverReadinessPage({
             publicCrew,
             partySeatClaims,
             partyAllSet,
+            flySafePlan,
           }}
         />
       </>

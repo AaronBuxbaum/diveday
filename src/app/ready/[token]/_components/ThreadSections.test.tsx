@@ -89,6 +89,7 @@ function context(over: Partial<ReadyThreadSectionsContext> = {}): ReadyThreadSec
     publicCrew: [],
     partySeatClaims: [],
     partyAllSet: false,
+    flySafePlan: null,
     ...over,
   };
 }
@@ -112,6 +113,26 @@ describe("ThreadSections", () => {
     expect(seen.arrival?.downloadHref).toContain("?booking=tok");
     expect(seen.packing?.siteBottomTimes).toEqual([45, undefined]);
     expect(seen.packing?.legTravelTimes).toEqual([20, 15]);
+  });
+
+  it("says when to fly home as a plan, and nothing when there is no plan (ideas item 18)", () => {
+    render(<ThreadSections context={context()} />);
+    expect(screen.queryByTestId("ready-fly-safe-plan")).toBeNull();
+    cleanup();
+    render(
+      <ThreadSections
+        context={context({
+          flySafePlan: {
+            from: new Date("2026-10-16T08:30:00.000Z"),
+            reason: "dives_planned",
+            hours: 24,
+          },
+        })}
+      />,
+    );
+    expect(screen.getByTestId("ready-fly-safe-plan").textContent).toMatch(
+      /^Flying home soon\? Blue Mantis Divers asks you to plan your flight no earlier than Friday\s4:30\sAM: we plan more than one dive, so 24 hours after we’re due back, plus an hour in case the boat runs late, following DAN’s guidance\.$/,
+    );
   });
 
   it("shows the party panel only to a party lead, with its all-set close", () => {

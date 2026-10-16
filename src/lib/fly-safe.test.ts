@@ -5,6 +5,8 @@ import {
   type FlySafeInput,
   flySafeFrom,
   flySafeMessageKey,
+  plannedFlySafeFrom,
+  plannedFlySafeMessageKey,
 } from "./fly-safe";
 import { formatWeekdayTime } from "./format";
 import { DEPARTURE_BUFFER_MS } from "./trips";
@@ -494,5 +496,79 @@ describe("flySafeFrom — a departure past no-decompression limits (H-84)", () =
   it("answers as before for a departure that is not flagged, or says nothing about it", () => {
     expect(flySafeFrom({ ...base, exceedsNoDecoLimits: false })).toEqual(flySafeFrom(base));
     expect(flySafeFrom(base)).not.toBeNull();
+  });
+});
+
+/**
+ * **The planned form** (fifth-loop ideas, item 18). Read before the boat
+ * sails, so every case leans toward the longer wait the recap could still say.
+ */
+describe("plannedFlySafeFrom", () => {
+  const plan = {
+    plannedDives: 1,
+    endsAt,
+    divedRecently: false,
+    nextDiveStartsAt: null,
+    hours,
+  };
+
+  it("anchors on the buffered return, the latest instant an on-time recap could use", () => {
+    expect(plannedFlySafeFrom(plan)).toEqual({
+      from: new Date(scheduledHome.getTime() + 18 * HOUR_MS),
+      reason: "one_dive",
+      hours: 18,
+    });
+  });
+
+  it("names a margin the copy can say: the buffer is exactly one hour", () => {
+    // The sentence reads "plus an hour in case the boat runs late".
+    expect(DEPARTURE_BUFFER_MS).toBe(HOUR_MS);
+  });
+
+  it("is never earlier than the recap's answer for the same day, when the boat is on time", () => {
+    const planned = plannedFlySafeFrom({ ...plan, plannedDives: 2 });
+    const recorded = flySafeFrom({
+      executedDives: [],
+      plannedDives: 2,
+      endsAt,
+      divedRecently: false,
+      now: home,
+      hours,
+    });
+    expect(planned?.from.getTime()).toBeGreaterThanOrEqual(recorded?.from.getTime() ?? 0);
+  });
+
+  it("takes the repetitive hours for a two-tank plan, or a dive day in the window", () => {
+    expect(plannedFlySafeFrom({ ...plan, plannedDives: 2 })).toMatchObject({
+      reason: "dives_planned",
+      hours: 24,
+    });
+    expect(plannedFlySafeFrom({ ...plan, divedRecently: true })).toMatchObject({
+      reason: "earlier_day",
+      hours: 24,
+    });
+  });
+
+  it("says nothing past no-decompression limits, here or earlier in the window (H-84)", () => {
+    expect(plannedFlySafeFrom({ ...plan, exceedsNoDecoLimits: true })).toBeNull();
+    expect(plannedFlySafeFrom({ ...plan, decompressionRecently: true })).toBeNull();
+  });
+
+  it("says nothing for a departure with no scheduled end", () => {
+    expect(plannedFlySafeFrom({ ...plan, endsAt: null })).toBeNull();
+  });
+
+  it("yields to a later dive with the shop inside the wait, whose own page says the time", () => {
+    const from = new Date(scheduledHome.getTime() + 18 * HOUR_MS);
+    expect(
+      plannedFlySafeFrom({ ...plan, nextDiveStartsAt: new Date(from.getTime() - 1) }),
+    ).toBeNull();
+    expect(plannedFlySafeFrom({ ...plan, nextDiveStartsAt: from })?.from).toEqual(from);
+  });
+
+  it("picks the sentence whose reason clause matches", () => {
+    expect(plannedFlySafeMessageKey("one_dive")).toBe("flySafePlanned");
+    expect(plannedFlySafeMessageKey("dives_planned")).toBe("flySafePlannedDivesPlanned");
+    expect(plannedFlySafeMessageKey("earlier_day")).toBe("flySafePlannedEarlierDay");
   });
 });
