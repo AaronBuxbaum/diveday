@@ -262,9 +262,10 @@ export const rollCallCrewEvents = pgTable(
  * oxygen aboard", "Life jackets counted" — in the order the shop wants it read
  * (ADR 20260824-pre-departure-safety-check).
  *
- * **DiveDay authors none of this.** The required set differs by flag state,
- * vessel class and jurisdiction, so the label is free text the shop writes for
- * itself, not a code this table looks up. `sortOrder` is the shop's own
+ * **DiveDay authors none of this** but the oxygen line a new shop starts with
+ * (`createSignedUpShop`, issue #2301), which is the shop's to edit from then.
+ * The required set differs by flag state, vessel class and jurisdiction, so the
+ * label is free text, not a code this table looks up. `sortOrder` is the shop's own
  * reading order, not a priority; it may repeat or skip after edits, and reads
  * always resolve ties on `createdAt`.
  */

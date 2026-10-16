@@ -135,7 +135,7 @@ export const EXPORT_FILE_NOTES = {
   "work_order_events.csv":
     "Each ticket's own history, oldest first (seq is the order things actually happened in): the row that opened it, every status move with where it came from and went to, and every hand-over to a technician, each with the staff member who did it. This is what 'who had it, and for how long' is read out of.",
   "pre_departure_checklist_items.csv":
-    "The shop's own pre-departure safety line, in the shop's own reading order (sort_order) — DiveDay authors none of it. A deleted item is here too, carrying its deleted_at stamp; its history in pre_departure_check_events.csv stays readable regardless.",
+    "The shop's own pre-departure safety line, in the shop's own reading order (sort_order). DiveDay writes only the oxygen line a new shop starts with, and the shop may change it. A deleted item is here too, carrying its deleted_at stamp; its history in pre_departure_check_events.csv stays readable regardless.",
   "pre_departure_check_events.csv":
     "Append-only history of every tap against a checklist item, oldest first: status 'checked' or 'cleared' (an explicit undo of a mis-tap), who recorded it and when, and whether it was recorded live or synced from an offline device. The newest event per item is that item's current answer for the departure. Informs only — nothing here ever gated a departure from sailing.",
   "prior_visits.csv":
