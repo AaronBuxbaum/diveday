@@ -405,6 +405,11 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "shore_alert_consent_at",
     "shore_alert_consent_by_person_id",
     "shore_alert_confirmed_at",
+    // #2450: DiveDay's own review of the name at sign-up and a human's clearing
+    // of it; a bundle says nothing about either, and an import joins a shop
+    // already reviewed.
+    "name_flagged_at",
+    "name_cleared_at",
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
   trip_lenses: ["shop_id"],

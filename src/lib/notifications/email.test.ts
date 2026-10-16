@@ -726,6 +726,19 @@ describe("newAccountAlertEmail", () => {
     expect(email.html).toContain("Blue Mantis");
   });
 
+  it("says so when the shop's name is held for review (issue #2450)", () => {
+    const input = {
+      ownerName: "Pat Diver",
+      ownerEmail: "pat@example.com",
+      shopName: "PayPal Security",
+      shopSlug: "paypal-security",
+    };
+    expect(newAccountAlertEmail(input).text).not.toContain("flagged");
+    const flagged = newAccountAlertEmail({ ...input, nameFlagged: true });
+    expect(flagged.text).toContain("Name flagged for review");
+    expect(flagged.html).toContain("Name flagged for review");
+  });
+
   it("escapes HTML in shop and owner names", () => {
     const email = newAccountAlertEmail({
       ownerName: '<script>alert("x")</script>',

@@ -856,6 +856,8 @@ const newAccountAlertSchema = z.object({
   ownerEmail: emailAddressSchema,
   shopName: z.string().trim().min(1).max(120),
   shopSlug: z.string().trim().min(1).max(120),
+  /** The name matched the brand and trust-word list: its mail is sent as plain DiveDay until cleared (#2450). */
+  nameFlagged: z.literal(true).optional(),
 });
 
 /**
@@ -1631,6 +1633,13 @@ export const notificationSenderSchema = z.object({
    * every real shop's send.
    */
   demoShop: z.literal(true).optional(),
+  /**
+   * The shop's name is flagged for review (`shopNameUnderReview`, issue #2450):
+   * it matched the brand and trust-word list and no human has cleared it, so
+   * the From column carries the plain "DiveDay" name, never "{Shop} via
+   * DiveDay" (`fromAddressFor`). Absent on every other shop's send.
+   */
+  nameUnderReview: z.literal(true).optional(),
   /**
    * The shop's logo, already resolved to an absolute `https:` URL on DiveDay's
    * own origin or its managed storage (`shopSenderOf`), so the email can lead

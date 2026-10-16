@@ -406,6 +406,8 @@ export async function shopSenderFor(
       isDemo: shops.isDemo,
       logoUrl: shops.logoUrl,
       brandColor: shops.brandColor,
+      nameFlaggedAt: shops.nameFlaggedAt,
+      nameClearedAt: shops.nameClearedAt,
     })
     .from(shops)
     .where(eq(shops.id, shopId))

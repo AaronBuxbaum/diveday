@@ -349,6 +349,18 @@ export const shops = pgTable(
      */
     shoreAlertConfirmedAt: timestamp("shore_alert_confirmed_at", { withTimezone: true }),
     /**
+     * **A shop name that could pass for a brand or an institution** (issue
+     * #2450, decided 2026-10-16): set when the name matched the denylist in
+     * `src/lib/shop-name-review.ts` at sign-up (or a rename). While it is set
+     * and `name_cleared_at` is not newer, the shop's mail leaves under the plain
+     * "DiveDay" display name instead of "{Shop} via DiveDay"
+     * (`shopNameUnderReview`). A human clearing it stamps `name_cleared_at`; a
+     * later flag (another matching name) is newer than the clearing and holds
+     * again. Neither stops a shop signing up or sending.
+     */
+    nameFlaggedAt: timestamp("name_flagged_at", { withTimezone: true }),
+    nameClearedAt: timestamp("name_cleared_at", { withTimezone: true }),
+    /**
      * How many minutes before departure divers are asked to be at the dock. The
      * shop's real muster time varies (gear setup, cert check, briefing), so it is
      * configurable rather than a hardcoded "30 minutes" in every confirmation and

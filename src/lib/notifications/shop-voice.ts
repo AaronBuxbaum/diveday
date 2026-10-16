@@ -142,6 +142,9 @@ function splitMailbox(value: string): { name: string | null; address: string } {
 export function fromAddressFor(configuredFrom: string, notification: Notification): string {
   const shopName = shopVoiceOf(notification);
   if (!shopName) return configuredFrom;
+  // A name held for review (issue #2450) is not given the From column: it
+  // could pass for a brand or an institution, so the mail is plain DiveDay.
+  if ("sender" in notification && notification.sender?.nameUnderReview) return configuredFrom;
   const { name, address } = splitMailbox(configuredFrom);
   const via = name ?? "DiveDay";
   return `${encodeDisplayName(`${shopName} via ${via}`)} <${address}>`;

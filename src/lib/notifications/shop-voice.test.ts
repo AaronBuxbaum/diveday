@@ -40,6 +40,13 @@ describe("fromAddressFor", () => {
     );
   });
 
+  it("sends a shop whose name is under review as plain DiveDay (issue #2450)", () => {
+    const held = { ...confirmation, sender: { nameUnderReview: true } } as Notification;
+    expect(fromAddressFor("DiveDay <notifications@ses.dive.day>", held)).toBe(
+      "DiveDay <notifications@ses.dive.day>",
+    );
+  });
+
   it("leaves DiveDay's own mail as DiveDay", () => {
     expect(fromAddressFor("DiveDay <notifications@ses.dive.day>", reset)).toBe(
       "DiveDay <notifications@ses.dive.day>",

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { parseBrandColor } from "@/lib/brand";
 import { shopAddressLines } from "@/lib/shop-address";
+import { shopNameUnderReview } from "@/lib/shop-name-review";
 import { isManagedStorageUrl } from "@/lib/storage/blob-host";
 import { publicAppUrl } from "./app-url";
 import { shopInboundReplyAddress } from "./inbound-address";
@@ -29,6 +30,9 @@ export type ShopSenderSource = {
   addressCountry: string | null;
   /** `shops.is_demo`: its seeded people's mail goes to the SES simulator. */
   isDemo?: boolean;
+  /** `shops.name_flagged_at` and `name_cleared_at`: the name is held for review (#2450). */
+  nameFlaggedAt?: Date | null;
+  nameClearedAt?: Date | null;
   /** `shops.logo_url`: a first-party storage URL, or a path on DiveDay's own origin. */
   logoUrl?: string | null;
   /** `shops.brand_color`, `#rrggbb`. */
@@ -140,6 +144,10 @@ export function shopSenderOf(
     ...(replyTo && { replyTo }),
     ...(postalAddress.success && postalAddress.data && { postalAddress: postalAddress.data }),
     ...(shop.isDemo === true && { demoShop: true as const }),
+    ...(shopNameUnderReview({
+      nameFlaggedAt: shop.nameFlaggedAt ?? null,
+      nameClearedAt: shop.nameClearedAt ?? null,
+    }) && { nameUnderReview: true as const }),
     ...(logoUrl.success && logoUrl.data && { logoUrl: logoUrl.data }),
     ...(brandColor && { brandColor }),
   };
