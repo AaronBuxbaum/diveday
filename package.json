@@ -117,7 +117,7 @@
     "@aws-sdk/client-s3": "^3.1152.0",
     "@aws-sdk/client-sesv2": "^3.1152.0",
     "@aws-sdk/client-sns": "^3.1152.0",
-    "@electric-sql/pglite": "0.5.9",
+    "@electric-sql/pglite": "0.5.10",
     "@sentry/nextjs": "^11.8.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",

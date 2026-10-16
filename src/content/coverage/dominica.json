@@ -1,0 +1,193 @@
+{
+  "area": "dominica",
+  "method": "Dominica, whole island, with the Soufrière-Scotts Head Marine Reserve (SSMR) in the southwest and the Cabrits/Douglas Bay area in the north. The SSMR's own Dive Sites in the SSMR page (ssmrdominica.com), published by the reserve, is the official list and counts as one; it gives no coordinates and no numbered mooring list (the Fisheries Division publishes none online, and the UNESCO tentative-list text only names the headline sites). Operator lists read: Dive Dominica (Castle Comfort) and Cabrits Dive Center (Portsmouth). Nature Island Dive (Soufrière), SALT Dominica (Toucari) and Fort Young Dive publish no site list (images, rates or sales copy only, or the domain is dead or blocked), and East Carib Dive has closed, so they add nothing. A site is counted when named on at least two independent lists; sites on one list stay as excluded. Name merges: L'Abym is also La Sourcière (Witches Point); Scotts Head Pinnacle includes Swiss Cheese, where the dive begins; Dive Dominica's Coral Gardens North (Dangleben's North) is read as the Coral Gardens inshore of Dangleben's Pinnacles, which is doubtful, so Dangleben's Pinnacles itself stays on the reserve list only. Every northern site is on the Cabrits Dive Center list alone, so the north is largely excluded for lack of a second independent list (blogs such as a-virtual-dominica corroborate them but cannot count). Everything listed is within recreational depth. Counted 2026-10-14.",
+  "sources": [
+    "https://www.ssmrdominica.com/dive-sites-in-the-ssmr/",
+    "https://divedominica.com/dominica-dive-sites/",
+    "https://cabritsdive.com/diving-in-dominica/"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "The Suburbs",
+      "template": null,
+      "listedBy": [
+        "https://www.ssmrdominica.com/dive-sites-in-the-ssmr/",
+        "https://divedominica.com/dominica-dive-sites/"
+      ]
+    },
+    {
+      "name": "The Village",
+      "template": null,
+      "listedBy": [
+        "https://www.ssmrdominica.com/dive-sites-in-the-ssmr/",
+        "https://divedominica.com/dominica-dive-sites/"
+      ]
+    },
+    {
+      "name": "Condo",
+      "template": null,
+      "listedBy": ["https://www.ssmrdominica.com/dive-sites-in-the-ssmr/"],
+      "excluded": "on one list only (official)"
+    },
+    {
+      "name": "Scotts Head Pinnacle (Swiss Cheese)",
+      "template": "scotts-head-pinnacle",
+      "listedBy": [
+        "https://www.ssmrdominica.com/dive-sites-in-the-ssmr/",
+        "https://divedominica.com/dominica-dive-sites/"
+      ]
+    },
+    {
+      "name": "Crater's Edge",
+      "template": "craters-edge-dominica",
+      "listedBy": [
+        "https://www.ssmrdominica.com/dive-sites-in-the-ssmr/",
+        "https://divedominica.com/dominica-dive-sites/"
+      ]
+    },
+    {
+      "name": "Scotts Head Drop-Off (Scotts Head Point)",
+      "template": "scotts-head-drop-off",
+      "listedBy": [
+        "https://www.ssmrdominica.com/dive-sites-in-the-ssmr/",
+        "https://divedominica.com/dominica-dive-sites/"
+      ]
+    },
+    {
+      "name": "Soufriere Pinnacles",
+      "template": null,
+      "listedBy": ["https://www.ssmrdominica.com/dive-sites-in-the-ssmr/"],
+      "excluded": "on one list only (official)"
+    },
+    {
+      "name": "L'Abym (La Sourcière, Witches Point)",
+      "template": "labym-dominica",
+      "listedBy": [
+        "https://www.ssmrdominica.com/dive-sites-in-the-ssmr/",
+        "https://divedominica.com/dominica-dive-sites/"
+      ]
+    },
+    {
+      "name": "Dangleben's Pinnacles",
+      "template": null,
+      "listedBy": ["https://www.ssmrdominica.com/dive-sites-in-the-ssmr/"],
+      "excluded": "on one list only (official)"
+    },
+    {
+      "name": "Coral Gardens (Coral Gardens North)",
+      "template": "coral-gardens-dominica",
+      "listedBy": [
+        "https://www.ssmrdominica.com/dive-sites-in-the-ssmr/",
+        "https://divedominica.com/dominica-dive-sites/"
+      ]
+    },
+    {
+      "name": "Point Guignard (Pointe Guignard)",
+      "template": "point-guignard",
+      "listedBy": [
+        "https://www.ssmrdominica.com/dive-sites-in-the-ssmr/",
+        "https://divedominica.com/dominica-dive-sites/"
+      ]
+    },
+    {
+      "name": "Champagne Reef",
+      "template": "champagne-reef-dominica",
+      "listedBy": [
+        "https://www.ssmrdominica.com/dive-sites-in-the-ssmr/",
+        "https://divedominica.com/dominica-dive-sites/"
+      ]
+    },
+    {
+      "name": "Pointe Ronde and the Craters",
+      "template": null,
+      "listedBy": ["https://divedominica.com/dominica-dive-sites/"],
+      "excluded": "on one list only (dive-dominica)"
+    },
+    {
+      "name": "Volcano Site",
+      "template": null,
+      "listedBy": ["https://cabritsdive.com/diving-in-dominica/"],
+      "excluded": "on one list only (cabrits)"
+    },
+    {
+      "name": "Shark's Mouth",
+      "template": null,
+      "listedBy": ["https://cabritsdive.com/diving-in-dominica/"],
+      "excluded": "on one list only (cabrits)"
+    },
+    {
+      "name": "Sunshine Reef",
+      "template": null,
+      "listedBy": ["https://cabritsdive.com/diving-in-dominica/"],
+      "excluded": "on one list only (cabrits)"
+    },
+    {
+      "name": "Pole to Pole",
+      "template": null,
+      "listedBy": ["https://cabritsdive.com/diving-in-dominica/"],
+      "excluded": "on one list only (cabrits)"
+    },
+    {
+      "name": "Toucari Caves",
+      "template": null,
+      "listedBy": ["https://cabritsdive.com/diving-in-dominica/"],
+      "excluded": "on one list only (cabrits)"
+    },
+    {
+      "name": "Five Finger Rock",
+      "template": null,
+      "listedBy": ["https://cabritsdive.com/diving-in-dominica/"],
+      "excluded": "on one list only (cabrits)"
+    },
+    {
+      "name": "One Finger Rock",
+      "template": null,
+      "listedBy": ["https://cabritsdive.com/diving-in-dominica/"],
+      "excluded": "on one list only (cabrits)"
+    },
+    {
+      "name": "Douglas Bay Point",
+      "template": null,
+      "listedBy": ["https://cabritsdive.com/diving-in-dominica/"],
+      "excluded": "on one list only (cabrits)"
+    },
+    {
+      "name": "Rose Garden",
+      "template": null,
+      "listedBy": ["https://cabritsdive.com/diving-in-dominica/"],
+      "excluded": "on one list only (cabrits)"
+    },
+    {
+      "name": "Cannon Site",
+      "template": null,
+      "listedBy": ["https://cabritsdive.com/diving-in-dominica/"],
+      "excluded": "on one list only (cabrits)"
+    },
+    {
+      "name": "Point Break",
+      "template": null,
+      "listedBy": ["https://cabritsdive.com/diving-in-dominica/"],
+      "excluded": "on one list only (cabrits)"
+    },
+    {
+      "name": "Featherquill Reef",
+      "template": null,
+      "listedBy": ["https://cabritsdive.com/diving-in-dominica/"],
+      "excluded": "on one list only (cabrits)"
+    },
+    {
+      "name": "Heavenly Cove",
+      "template": null,
+      "listedBy": ["https://cabritsdive.com/diving-in-dominica/"],
+      "excluded": "on one list only (cabrits)"
+    },
+    {
+      "name": "Plume Plateau",
+      "template": null,
+      "listedBy": ["https://cabritsdive.com/diving-in-dominica/"],
+      "excluded": "on one list only (cabrits)"
+    }
+  ]
+}

@@ -1,0 +1,334 @@
+{
+  "area": "trinidad-tobago",
+  "method": "Trinidad and Tobago, which in practice means Tobago: the Crown Point and south-end drift sites, the Caribbean-coast reefs from Mount Irvine to Castara, the Charlotteville and northwest sites, and the Speyside sites around Little Tobago and Goat Island. Trinidad (the Chaguaramas islands: Gasparee, Monos, Huevos, Chacachacare) has no published dive-site list from any operator or agency (Chaguaramas pages describe caves, beaches and snorkeling tours only), so it contributes no counted sites. Lists read: Undersea Tobago, R and Sea Divers (Caribbean Coastal Adventures), the Environmental Research Institute Charlotteville (ERIC) dive centre, the Association of Tobago Dive Operators diving page (a trade body, weighed as one list), and the Tobago Tourism Agency diving page (Visit Tobago, one list; fetched through a tool because direct requests are refused). Other members of the Tobago operator association were checked but publish no site list or have dead sites (Black Rock Divers, Frontier Divers, Tobago Reef Masters), block fetching (Tobago Dive Experience), name areas only (Extra Divers Speyside), or sell dives without naming sites (Wild Turtle Scuba, Castara); Blue Waters Dive'n has no readable site page. A site is counted when named on at least two independent lists; same-site alternate names are merged (Majestan / Magestan Reef, Maverick / MV Maverick, Mt Irvine / Mount Irvine). R and Sea lists a bare \"Mount Irvine\" next to Mount Irvine Wall and Mount Irvine Extension; it is treated as the wall and not counted separately. Buccoo Reef is a snorkel and glass-bottom-boat site and is not counted. The Sisters (pinnacles dropping to about 140 ft) and Kelleston Drain are run at recreational depths and are counted. Because the operator evidence is thin (three operator lists plus the association and the tourism agency), sites seen on one list only stay excluded and the true island total is probably higher. Counted 2026-10-14.",
+  "sources": [
+    "https://www.underseatobago.com/tobago-dive-sites/caribbean-coast",
+    "https://www.underseatobago.com/tobago-dive-sites/south-coast",
+    "https://www.underseatobago.com/tobago-dive-sites/speyside",
+    "https://rseadivers.com/dive-sites/",
+    "https://www.eric-tobago.org/dive-sites-and-species",
+    "https://www.tobagoscubadiving.com/diving.html",
+    "https://visittobago.gov.tt/eco-adventure-nature/diving-tobago"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "1720 French Wreck",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/caribbean-coast"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "Arnos Vale",
+      "template": "arnos-vale-reef-tobago",
+      "listedBy": [
+        "https://www.underseatobago.com/tobago-dive-sites/caribbean-coast",
+        "https://rseadivers.com/dive-sites/",
+        "https://www.tobagoscubadiving.com/diving.html"
+      ]
+    },
+    {
+      "name": "Castara Reef",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/caribbean-coast"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "Culloden Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.underseatobago.com/tobago-dive-sites/caribbean-coast",
+        "https://rseadivers.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Hammerhead Central",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/caribbean-coast"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "Kariwak Reef",
+      "template": "kariwak-reef-tobago",
+      "listedBy": [
+        "https://www.underseatobago.com/tobago-dive-sites/caribbean-coast",
+        "https://rseadivers.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "King Peter's Bay",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/caribbean-coast"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "Long Rock",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/caribbean-coast"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "MV Maverick",
+      "template": "mv-maverick-tobago",
+      "listedBy": [
+        "https://www.underseatobago.com/tobago-dive-sites/caribbean-coast",
+        "https://rseadivers.com/dive-sites/",
+        "https://www.tobagoscubadiving.com/diving.html",
+        "https://visittobago.gov.tt/eco-adventure-nature/diving-tobago"
+      ]
+    },
+    {
+      "name": "Mount Irvine Extension",
+      "template": "mount-irvine-extension-tobago",
+      "listedBy": [
+        "https://www.underseatobago.com/tobago-dive-sites/caribbean-coast",
+        "https://rseadivers.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Mount Irvine Wall",
+      "template": "mount-irvine-wall-tobago",
+      "listedBy": [
+        "https://www.underseatobago.com/tobago-dive-sites/caribbean-coast",
+        "https://rseadivers.com/dive-sites/",
+        "https://visittobago.gov.tt/eco-adventure-nature/diving-tobago"
+      ]
+    },
+    {
+      "name": "Rainbow Reef",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/caribbean-coast"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "Scotch on the Rocks",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/caribbean-coast"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "The Sisters",
+      "template": "the-sisters-tobago",
+      "listedBy": [
+        "https://www.underseatobago.com/tobago-dive-sites/caribbean-coast",
+        "https://rseadivers.com/dive-sites/",
+        "https://www.eric-tobago.org/dive-sites-and-species",
+        "https://www.tobagoscubadiving.com/diving.html"
+      ]
+    },
+    {
+      "name": "St. Giles",
+      "template": null,
+      "listedBy": [
+        "https://www.underseatobago.com/tobago-dive-sites/caribbean-coast",
+        "https://www.eric-tobago.org/dive-sites-and-species"
+      ]
+    },
+    {
+      "name": "Two Blokes Reef",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/caribbean-coast"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "Cove Reef",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/south-coast"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "Cove Ledge",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/south-coast"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "Diver's Dream",
+      "template": "divers-dream-tobago",
+      "listedBy": [
+        "https://www.underseatobago.com/tobago-dive-sites/south-coast",
+        "https://www.tobagoscubadiving.com/diving.html"
+      ]
+    },
+    {
+      "name": "Diver's Thirst",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/south-coast"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "Flying Reef",
+      "template": "flying-reef-tobago",
+      "listedBy": [
+        "https://www.underseatobago.com/tobago-dive-sites/south-coast",
+        "https://rseadivers.com/dive-sites/",
+        "https://www.tobagoscubadiving.com/diving.html"
+      ]
+    },
+    {
+      "name": "SS Kioto",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/south-coast"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "Magestan Reef (Majestan)",
+      "template": null,
+      "listedBy": [
+        "https://www.underseatobago.com/tobago-dive-sites/south-coast",
+        "https://rseadivers.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Runway",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/south-coast"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "Angel Reef",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/speyside"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "Aquarium",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/speyside"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "Black Jack Hole",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/speyside"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "Bookends",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/speyside"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "Cathedral",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/speyside"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "Coral Gardens",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/speyside"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "Japanese Gardens",
+      "template": "japanese-gardens-tobago",
+      "listedBy": [
+        "https://www.underseatobago.com/tobago-dive-sites/speyside",
+        "https://www.eric-tobago.org/dive-sites-and-species",
+        "https://www.tobagoscubadiving.com/diving.html"
+      ]
+    },
+    {
+      "name": "Shark Bank",
+      "template": null,
+      "listedBy": ["https://www.underseatobago.com/tobago-dive-sites/speyside"],
+      "excluded": "on one list only (undersea)"
+    },
+    {
+      "name": "Bopez",
+      "template": null,
+      "listedBy": ["https://rseadivers.com/dive-sites/"],
+      "excluded": "on one list only (rsea)"
+    },
+    {
+      "name": "Flying Reef Extension",
+      "template": null,
+      "listedBy": ["https://rseadivers.com/dive-sites/"],
+      "excluded": "on one list only (rsea)"
+    },
+    {
+      "name": "Cove Crack",
+      "template": null,
+      "listedBy": ["https://rseadivers.com/dive-sites/"],
+      "excluded": "on one list only (rsea)"
+    },
+    {
+      "name": "Dutchman's Reef",
+      "template": "dutchmans-reef-tobago",
+      "listedBy": [
+        "https://rseadivers.com/dive-sites/",
+        "https://visittobago.gov.tt/eco-adventure-nature/diving-tobago"
+      ]
+    },
+    {
+      "name": "Kelleston Drain",
+      "template": "kelleston-drain-tobago",
+      "listedBy": [
+        "https://rseadivers.com/dive-sites/",
+        "https://www.eric-tobago.org/dive-sites-and-species",
+        "https://www.tobagoscubadiving.com/diving.html",
+        "https://visittobago.gov.tt/eco-adventure-nature/diving-tobago"
+      ]
+    },
+    {
+      "name": "Rum & Coke",
+      "template": null,
+      "listedBy": ["https://rseadivers.com/dive-sites/"],
+      "excluded": "on one list only (rsea)"
+    },
+    {
+      "name": "Gin & Tonic",
+      "template": null,
+      "listedBy": ["https://rseadivers.com/dive-sites/"],
+      "excluded": "on one list only (rsea)"
+    },
+    {
+      "name": "Gardener's Rocks",
+      "template": null,
+      "listedBy": ["https://www.eric-tobago.org/dive-sites-and-species"],
+      "excluded": "on one list only (eric)"
+    },
+    {
+      "name": "Landslide",
+      "template": null,
+      "listedBy": ["https://www.eric-tobago.org/dive-sites-and-species"],
+      "excluded": "on one list only (eric)"
+    },
+    {
+      "name": "London Bridge",
+      "template": "london-bridge-tobago",
+      "listedBy": [
+        "https://www.eric-tobago.org/dive-sites-and-species",
+        "https://www.tobagoscubadiving.com/diving.html",
+        "https://visittobago.gov.tt/eco-adventure-nature/diving-tobago"
+      ]
+    },
+    {
+      "name": "King's Bay",
+      "template": null,
+      "listedBy": ["https://www.eric-tobago.org/dive-sites-and-species"],
+      "excluded": "on one list only (eric)"
+    },
+    {
+      "name": "Boulder Valley",
+      "template": null,
+      "listedBy": ["https://www.tobagoscubadiving.com/diving.html"],
+      "excluded": "on one list only (atdo)"
+    },
+    {
+      "name": "Cardinal Rocks",
+      "template": null,
+      "listedBy": ["https://visittobago.gov.tt/eco-adventure-nature/diving-tobago"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Booby Island",
+      "template": null,
+      "listedBy": ["https://visittobago.gov.tt/eco-adventure-nature/diving-tobago"],
+      "excluded": "on one list only (tourism)"
+    }
+  ]
+}

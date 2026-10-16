@@ -6,6 +6,7 @@ import { btree_gist } from "@electric-sql/pglite/contrib/btree_gist";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
+import { closePglite } from "@/db/close-pglite";
 import { seedDemo } from "@/db/seed";
 
 /**
@@ -97,7 +98,7 @@ async function buildSnapshot(variant: TemplateVariant): Promise<Buffer> {
   await migrate(db, { migrationsFolder: "drizzle" });
   if (variant === "empty") {
     const emptyDump = await client.dumpDataDir("none");
-    await client.close();
+    await closePglite(client);
     return Buffer.from(await emptyDump.arrayBuffer());
   }
   // The `lean` fixture has no trailing-quarter back-fill. That history is for
@@ -107,7 +108,7 @@ async function buildSnapshot(variant: TemplateVariant): Promise<Buffer> {
   // history when it needs it (src/db/reporting.test.ts).
   await seedDemo(db, { history: variant === "history" });
   const dump = await client.dumpDataDir("none");
-  await client.close();
+  await closePglite(client);
   return Buffer.from(await dump.arrayBuffer());
 }
 
