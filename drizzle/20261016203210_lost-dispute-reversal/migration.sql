@@ -1,1 +1,0 @@
-ALTER TABLE "payment_disputes" ADD COLUMN "reversed_at" timestamp with time zone;
