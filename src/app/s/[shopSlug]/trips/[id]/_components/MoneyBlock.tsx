@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
+import type { DeskPayment } from "@/lib/desk-payment";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import type { NonDiverParticipantType } from "@/lib/participant-types";
@@ -54,6 +55,13 @@ export type MoneyBlockSeatLine = {
  */
 export type MoneyBlockDueNow = "checkout" | "at_shop" | "none";
 
+/** "Pay at the desk by card or cash." under "Due at the shop", by the shop's code. */
+const DESK_PAYMENT_BOOKING_KEYS = {
+  card: "money.deskPayment.card",
+  cash: "money.deskPayment.cash",
+  card_and_cash: "money.deskPayment.card_and_cash",
+} as const satisfies Record<DeskPayment, string>;
+
 /** What the money block states, assembled by the booking form. */
 export type MoneyBlockContext = {
   /** The per-diver fare the checkout charges (`perDiverBookingPriceCents`). */
@@ -80,6 +88,12 @@ export type MoneyBlockContext = {
   /** `"checkout"` states that Stripe adds tax on top; `"none"` says nothing. */
   taxLine: "checkout" | "none";
   dueNow: MoneyBlockDueNow;
+  /**
+   * How the shop takes money at the desk, said under "Due at the shop"
+   * (fifth-loop ideas, item 21). Read only in `"at_shop"` mode; null or
+   * absent says nothing.
+   */
+  deskPayment?: DeskPayment | null;
   /**
    * The per-diver deposit, when the departure takes one. Read only in
    * `"checkout"` mode; `null` charges the full fare now.
@@ -116,6 +130,7 @@ export function MoneyBlock({
     passThroughTotalCents,
     taxLine,
     dueNow,
+    deskPayment = null,
     depositCents,
     balanceDueAt,
     currency,
@@ -201,6 +216,9 @@ export function MoneyBlock({
         </dt>
         <dd className={FIGURE_INLINE_CLASS}>{money(dueNowCents)}</dd>
       </div>
+      {dueNow === "at_shop" && deskPayment ? (
+        <div className="text-sm text-muted">{t(DESK_PAYMENT_BOOKING_KEYS[deskPayment])}</div>
+      ) : null}
       {anyDeposit && balanceCents > 0 && balanceDueAt ? (
         <div className="text-sm text-muted tabular-nums">
           {t("money.balanceAtDock", {

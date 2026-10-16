@@ -50,7 +50,9 @@ export function depthText(
 ): string {
   const own = t(DEPTH_UNIT_KEYS[unit], { value: depthInUnit(meters, unit) });
   const theirs =
-    reader && reader !== unit ? t(DEPTH_UNIT_KEYS[reader], { value: depthInUnit(meters, reader) }) : null;
+    reader && reader !== unit
+      ? t(DEPTH_UNIT_KEYS[reader], { value: depthInUnit(meters, reader) })
+      : null;
   return withReaderUnit(t, own, theirs);
 }
 

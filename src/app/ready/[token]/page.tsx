@@ -365,12 +365,8 @@ async function DiverReadinessPage({
         // I pay?" is a question the night before too — and it is what the Pay step's
         // settled line says, now that the receipt panel that used to say it above
         // the checklist is gone (ADR 20260827-the-divers-thread, decision 3).
-        //
-        // The emails line went with that panel. It claimed, in the minutes after a
-        // submit, that two messages were on their way — a third statement of the
-        // booking's status in one screenful, on a page whose status is now said once
-        // by the spine. `EmbedBookedNotice` still carries it where it is the *only*
-        // thing the reader gets, which is the embed's confirmation and not this page.
+        // The emails line went with that panel; `EmbedBookedNotice` still carries it,
+        // where it is the only thing the reader gets.
         resolvePaymentReceipt(
           db,
           shop.id,
@@ -387,13 +383,7 @@ async function DiverReadinessPage({
         data.trip.course ? getCourseFormsForBooking(db, shop.id, bookingId) : null,
         packageDivesForBooking(db, { shopId: shop.id, personId: data.person.id, bookingId }),
         // When to fly home, as a plan, before the boat sails (fifth-loop ideas, item 18).
-        readPlannedFlySafe(db, {
-          shopId: shop.id,
-          personId: data.person.id,
-          participantType: data.participantType,
-          timeZone: detail.shop.timezone,
-          trip: detail.trip,
-        }),
+        readPlannedFlySafe(db, data),
       ]);
     const [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage] = tripReads;
     const courseFormsOwed = (courseForms?.outstanding.length ?? 0) > 0;
@@ -425,11 +415,10 @@ async function DiverReadinessPage({
     });
 
     /** "Everyone's set — see you at the dock." The rule is `partyIsAllSet`'s. */
-    const ownSignStep = spine.steps.find((step) => step.id === "sign");
     const currentStep = spine.steps.find((step) => step.id === spine.current);
     const partyAllSet = partyIsAllSet({
       seats: partySeatClaims,
-      ownSignSettled: !ownSignStep || ownSignStep.state === "done",
+      ownSignSettled: (spine.steps.find((step) => step.id === "sign")?.state ?? "done") === "done",
       diveDay,
     });
 
@@ -561,9 +550,7 @@ async function DiverReadinessPage({
           <p className="mt-8 text-base text-muted">{checklistDetailText(t, spine.setupItem)}</p>
         ) : (
           <>
-            {stageLine ? (
-              <BoatStageLine sentence={stageLine.sentence} said={stageLine.said} />
-            ) : null}
+            {stageLine ? <BoatStageLine {...stageLine} /> : null}
             <ThreadStatus
               lead={
                 spine.done === spine.countable

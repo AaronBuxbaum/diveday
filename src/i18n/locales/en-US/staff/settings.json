@@ -6,6 +6,8 @@
       "packingInvalid": "Add between one and twelve packing items.",
       "dockSaved": "Dock call time saved for every confirmation and reminder.",
       "pickupSaved": "Saved. Divers are asked about a pickup only when this is on.",
+      "deskPaymentSaved": "Saved. Every seat due at the shop says how to pay.",
+      "deskPaymentInvalid": "Nothing changed: choose card, cash, card and cash, or don’t say.",
       "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
       "unitsSaved": "Units saved.",
       "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
@@ -227,6 +229,16 @@
       "label": "We offer hotel pickup",
       "description": "When on, each diver’s page asks whether they want a pickup and where they’re staying.",
       "submit": "Save pickup",
+      "submitting": "Saving…"
+    },
+    "deskPayment": {
+      "legend": "How divers pay at the desk",
+      "description": "Said wherever a seat is due at the shop: the booking form, the confirmation and the diver’s page.",
+      "none": "Don’t say",
+      "card": "Card",
+      "cash": "Cash",
+      "card_and_cash": "Card and cash",
+      "submit": "Save how divers pay",
       "submitting": "Saving…"
     },
     "dockCall": {

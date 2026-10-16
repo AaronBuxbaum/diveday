@@ -1,11 +1,11 @@
 import { Suspense } from "react";
 import { ledgerRowRoomClass } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
+import type { ReaderUnits } from "@/i18n/reader-units";
 import { depthText, seaStateText, temperatureText, windText } from "@/i18n/unit-labels";
 import { formatDateTimeTz } from "@/lib/format";
 import { seaStateReading, windReading } from "@/lib/marine-forecast";
 import { temperatureUnitFor } from "@/lib/temperature-units";
-import type { ReaderUnits } from "@/i18n/reader-units";
 import type { AutomatedForecast, Shop, Trip } from "./types";
 
 /**
@@ -133,12 +133,7 @@ function ConditionsLineView({
   const parts = [
     waterTemperatureC !== null
       ? t("trip.conditionsWater", {
-          value: temperatureText(
-            t,
-            waterTemperatureC,
-            temperatureUnit,
-            readerUnits?.temperature,
-          ),
+          value: temperatureText(t, waterTemperatureC, temperatureUnit, readerUnits?.temperature),
         })
       : null,
     visibilityMeters !== null

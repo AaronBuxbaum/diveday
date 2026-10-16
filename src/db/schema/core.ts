@@ -17,6 +17,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { CERTIFICATION_AGENCIES } from "@/lib/certification-options";
+import { DESK_PAYMENTS } from "@/lib/desk-payment";
 import type { EmergencyReference } from "@/lib/emergency-reference";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 import type { SpokenLanguageTag } from "@/lib/spoken-languages";
@@ -55,6 +56,9 @@ export const brandDisplayFont = pgEnum("brand_display_font", [
  * (src/lib/temperature-units.ts).
  */
 export const temperatureUnit = pgEnum("temperature_unit", ["celsius", "fahrenheit"]);
+
+/** How a shop takes money at the desk (src/lib/desk-payment.ts). */
+export const deskPayment = pgEnum("desk_payment", DESK_PAYMENTS);
 
 export const shops = pgTable(
   "shops",
@@ -333,6 +337,13 @@ export const shops = pgTable(
      * shop that says it offers them has the question asked.
      */
     offersHotelPickup: boolean("offers_hotel_pickup").notNull().default(false),
+    /**
+     * How the shop takes money at the desk: card, cash, or both (fifth-loop
+     * ideas, item 21). Null until the shop says, and then nothing is added to
+     * "due at the shop". Read by the booking form's money block, the booking
+     * confirmation and `/ready`'s money line.
+     */
+    deskPayment: deskPayment("desk_payment"),
     /**
      * The rest of the shop's dock-day rhythm, in minutes (src/lib/diver-planning.ts).
      * Before these columns existed the whole day was inferred from

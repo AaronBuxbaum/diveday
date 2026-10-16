@@ -17,17 +17,12 @@ import { depthRangeText, depthText } from "@/i18n/unit-labels";
 import { dayProfileRows } from "@/lib/day-profile";
 import type { DepthUnit } from "@/lib/depth-units";
 import { type DiveSiteLandmarkKind, parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
-import {
-  type DiveMode,
-  type DockDayRhythm,
-  dockDayTimeline,
-  siteFit,
-} from "@/lib/diver-planning";
+import { type DiveMode, type DockDayRhythm, dockDayTimeline, siteFit } from "@/lib/diver-planning";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { capturePhoto } from "@/lib/marine-life-tiles";
 import { publicDiveSitePath } from "@/lib/public-routes";
 import type { SiteSightings } from "@/lib/sightings";
-import type { DiveBriefing, Shop, SiteBriefing } from "./types";
+import type { DiveBriefing, Shop, SiteBriefing, Trip } from "./types";
 
 /**
  * What the departure's own row and the shop's rhythm say about the shape of
@@ -54,6 +49,34 @@ export type DayProfileFacts = {
   /** The reader's depth unit, added after the shop's when it differs (ideas item 22). */
   readerDepthUnit?: DepthUnit | null;
 };
+
+type ProfileShop = Pick<Shop, keyof DockDayRhythm | "depthUnit">;
+type ProfileTrip = Pick<Trip, "diveMode" | "course" | "startsAt" | "endsAt" | "plannedDives">;
+
+/**
+ * The facts "The day" reads off the shop and the departure. The day's two
+ * ends ride along only for a one-day boat (fifth-loop ideas, item 19): a
+ * course says its own day, and a departure meeting on several days could not
+ * say them in one breath.
+ */
+export function dayProfileFacts(
+  shop: ProfileShop,
+  trip: ProfileTrip,
+  dayCount: number,
+  readerDepthUnit: DepthUnit | null,
+): DayProfileFacts {
+  return {
+    rhythm: shop,
+    depthUnit: shop.depthUnit,
+    diveMode: trip.diveMode,
+    dayCount,
+    readerDepthUnit,
+    day:
+      trip.course || dayCount > 1
+        ? undefined
+        : { startsAt: trip.startsAt, endsAt: trip.endsAt, plannedDives: trip.plannedDives },
+  };
+}
 
 /**
  * "At the dock 6:30 AM · back about 10:30 AM": the first and last beats of the

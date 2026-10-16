@@ -39,9 +39,7 @@ describe("the reader's second unit", () => {
     expect(depthRangeText(en, "40 ft", "meters")).toBe("40 ft (12 m)");
     expect(depthRangeText(en, "60–130 ft", "feet")).toBe("60–130 ft");
     expect(depthRangeText(en, "60–130 ft", null)).toBe("60–130 ft");
-    expect(depthRangeText(en, "Shallow, to about 40 ft", "meters")).toBe(
-      "Shallow, to about 40 ft",
-    );
+    expect(depthRangeText(en, "Shallow, to about 40 ft", "meters")).toBe("Shallow, to about 40 ft");
   });
 });
 

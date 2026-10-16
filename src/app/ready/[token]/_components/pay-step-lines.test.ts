@@ -43,7 +43,11 @@ describe("payStepLines", () => {
 
 describe("atShopMoneyLine (fourth UX review, item 5)", () => {
   const trip = { priceCents: 9_500, depositCents: null, snorkelerPriceCents: 4_000, course: null };
-  const owes = { owesAtShop: true, participantType: "diver" as const };
+  const owes = {
+    owesAtShop: true,
+    participantType: "diver" as const,
+    shop: { deskPayment: null },
+  };
   const seat = (claimed: boolean) => ({ claimed, participantType: "diver" as const });
 
   it("says one seat's figure, due at the shop", () => {
@@ -55,6 +59,16 @@ describe("atShopMoneyLine (fourth UX review, item 5)", () => {
   it("counts the lead's unclaimed party seats, and leaves a claimed seat to its claimant", () => {
     expect(atShopMoneyLine(t, "en-US", "usd", owes, trip, [seat(false), seat(true)])).toBe(
       "2 seats: $190.00, due at the shop. 1 claimed seat is paid from its own page.",
+    );
+  });
+
+  it("says how the desk takes money, when the shop has said (ideas item 21)", () => {
+    const desk = { ...owes, shop: { deskPayment: "card_and_cash" as const } };
+    expect(atShopMoneyLine(t, "en-US", "usd", desk, trip, [])).toBe(
+      "Your seat: $95.00, due at the shop. Pay at the desk by card or cash.",
+    );
+    expect(atShopMoneyLine(t, "en-US", "usd", desk, trip, [seat(false), seat(true)])).toBe(
+      "2 seats: $190.00, due at the shop. 1 claimed seat is paid from its own page. Pay at the desk by card or cash.",
     );
   });
 

@@ -6,6 +6,8 @@
       "packingInvalid": "Añade entre uno y doce artículos a la lista.",
       "dockSaved": "Hora de presentación en el muelle guardada para todas las confirmaciones y recordatorios.",
       "pickupSaved": "Guardado. A los buceadores solo se les pregunta por la recogida cuando esto está activado.",
+      "deskPaymentSaved": "Guardado. Cada plaza a pagar en el centro dice cómo pagar.",
+      "deskPaymentInvalid": "No cambió nada: elige tarjeta, efectivo, tarjeta y efectivo o no decirlo.",
       "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
       "unitsSaved": "Unidades guardadas.",
       "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
@@ -227,6 +229,16 @@
       "label": "Ofrecemos recogida en el hotel",
       "description": "Si está activado, la página de cada buceador pregunta si quiere que lo recojan y dónde se aloja.",
       "submit": "Guardar recogida",
+      "submitting": "Guardando…"
+    },
+    "deskPayment": {
+      "legend": "Cómo pagan los buceadores en el mostrador",
+      "description": "Se dice dondequiera que una plaza se paga en el centro: el formulario de reserva, la confirmación y la página del buceador.",
+      "none": "No decirlo",
+      "card": "Tarjeta",
+      "cash": "Efectivo",
+      "card_and_cash": "Tarjeta y efectivo",
+      "submit": "Guardar cómo pagan",
       "submitting": "Guardando…"
     },
     "dockCall": {

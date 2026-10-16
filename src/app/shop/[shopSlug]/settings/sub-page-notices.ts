@@ -61,6 +61,8 @@ export function dockDayNoticeMessages(t: StaffTranslator): NoticeMessages {
     "dock-saved": { tone: "success", text: t("settings.main.notice.dockSaved") },
     "dock-invalid": { tone: "danger", text: t("settings.main.notice.dockInvalid") },
     "pickup-saved": { tone: "success", text: t("settings.main.notice.pickupSaved") },
+    "desk-payment-saved": { tone: "success", text: t("settings.main.notice.deskPaymentSaved") },
+    "desk-payment-invalid": { tone: "danger", text: t("settings.main.notice.deskPaymentInvalid") },
   };
 }
 

@@ -41,11 +41,10 @@ describe("readPlannedFlySafe", () => {
     participantType: "diver" | "snorkeler" | "rider" = "diver",
   ) =>
     readPlannedFlySafe(ctx.db, {
-      shopId: ctx.shop.id,
-      personId,
+      shop: { id: ctx.shop.id },
+      person: { id: personId },
       participantType,
-      timeZone: ctx.shop.timezone,
-      trip,
+      detail: { shop: { timezone: ctx.shop.timezone }, trip },
     });
 
   it("names the single-dive wait from the buffered return for a one-tank boat", async () => {
@@ -103,11 +102,10 @@ describe("readPlannedFlySafe", () => {
     const booking = await seat(trip.id);
     expect(
       await readPlannedFlySafe(ctx.db, {
-        shopId: "00000000-0000-4000-8000-000000000000",
-        personId: booking.personId,
+        shop: { id: "00000000-0000-4000-8000-000000000000" },
+        person: { id: booking.personId },
         participantType: "diver",
-        timeZone: ctx.shop.timezone,
-        trip,
+        detail: { shop: { timezone: ctx.shop.timezone }, trip },
       }),
     ).toBeNull();
   });

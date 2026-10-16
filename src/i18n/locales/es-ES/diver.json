@@ -362,6 +362,11 @@
       "taxAtCheckout": "se suma al pagar",
       "dueNow": "A pagar ahora",
       "dueAtShop": "A pagar en el centro",
+      "deskPayment": {
+        "card": "Paga en el mostrador con tarjeta.",
+        "cash": "Paga en el mostrador en efectivo.",
+        "card_and_cash": "Paga en el mostrador con tarjeta o en efectivo."
+      },
       "balanceAtDock": "{balance} en el muelle el {when}",
       "snorkelerFare": "{price} × {count, plural, one {# persona de snorkel} other {# personas de snorkel}}",
       "riderFare": "{price} × {count, plural, one {# acompañante} other {# acompañantes}}"

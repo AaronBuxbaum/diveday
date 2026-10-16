@@ -48,6 +48,7 @@ const { revalidatePath } = await import("next/cache");
 const { requireStaffSession } = await import("@/lib/session");
 const { saveDockDayRhythmAction, saveEmergencyReferenceAction } = await import("./boat-actions");
 const { saveHotelPickupAction } = await import("./dock-day/pickup-actions");
+const { saveDeskPaymentAction } = await import("./dock-day/desk-payment-actions");
 const { savePackingAction } = await import("./booking-actions");
 const { dischargeProcessorErasureAction, retryMediaDeletionAction, retryProcessorErasureAction } =
   await import("./data-actions");
@@ -368,10 +369,17 @@ describe("every settings mutation refuses the daily crew", () => {
       `/shop/${shop.slug}/settings?notice=not-authorized`,
     );
 
+    const desk = new FormData();
+    desk.set("deskPayment", "cash");
+    expect(await redirectedTo(() => saveDeskPaymentAction(desk))).toBe(
+      `/shop/${shop.slug}/settings?notice=not-authorized`,
+    );
+
     const after = await getShopById(db, shop.id);
     expect(after?.packingList).toEqual(before?.packingList);
     expect(after?.dockCallMinutes).toBe(before?.dockCallMinutes);
     expect(after?.offersHotelPickup).toBe(before?.offersHotelPickup);
+    expect(after?.deskPayment).toBe(before?.deskPayment);
   });
 
   /**
@@ -457,6 +465,27 @@ describe("every settings mutation refuses the daily crew", () => {
       `/shop/${shop.slug}/settings/dock-day?notice=pickup-saved`,
     );
     expect((await getShopById(db, shop.id))?.offersHotelPickup).toBe(false);
+
+    // How divers pay at the desk (fifth-loop ideas, item 21): cash, then
+    // "Don't say", and a forged value changes nothing.
+    const desk = new FormData();
+    desk.set("deskPayment", "cash");
+    expect(await redirectedTo(() => saveDeskPaymentAction(desk))).toBe(
+      `/shop/${shop.slug}/settings/dock-day?notice=desk-payment-saved`,
+    );
+    expect((await getShopById(db, shop.id))?.deskPayment).toBe("cash");
+    const forged = new FormData();
+    forged.set("deskPayment", "bitcoin");
+    expect(await redirectedTo(() => saveDeskPaymentAction(forged))).toBe(
+      `/shop/${shop.slug}/settings/dock-day?notice=desk-payment-invalid`,
+    );
+    expect((await getShopById(db, shop.id))?.deskPayment).toBe("cash");
+    const unsaid = new FormData();
+    unsaid.set("deskPayment", "");
+    expect(await redirectedTo(() => saveDeskPaymentAction(unsaid))).toBe(
+      `/shop/${shop.slug}/settings/dock-day?notice=desk-payment-saved`,
+    );
+    expect((await getShopById(db, shop.id))?.deskPayment).toBeNull();
   });
 
   /**

@@ -3,6 +3,7 @@ import { type CarriedPreparation, carriedPreparation } from "@/lib/carried-prepa
 import { nowDate } from "@/lib/clock";
 import { type CourseLearningMaterial, readLearningMaterials } from "@/lib/courses";
 import { seatListPriceCents, withinCancellationWindow } from "@/lib/deposits";
+import type { DeskPayment } from "@/lib/desk-payment";
 import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { publicAppUrl } from "@/lib/notifications";
@@ -162,6 +163,8 @@ export type ReadyPageData = {
     rentalPricing: RentalPricing;
     /** Minutes before departure the shop wants divers at the dock — the same figure the night-before email's arrival line uses. */
     dockCallMinutes: number;
+    /** How the desk takes money, said after a figure owed there (fifth-loop ideas, item 21). */
+    deskPayment: DeskPayment | null;
   };
   trip: {
     id: string;
@@ -424,6 +427,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       rentalPricing: shops.rentalPricing,
       dockCallMinutes: shops.dockCallMinutes,
       offersHotelPickup: shops.offersHotelPickup,
+      deskPayment: shops.deskPayment,
       personEmail: people.email,
       personLocale: people.locale,
       emergencyContactName: people.emergencyContactName,
@@ -614,6 +618,7 @@ export async function getReadyPageData(
       rentalItems: row.rentalItems,
       rentalPricing: row.rentalPricing,
       dockCallMinutes: row.dockCallMinutes,
+      deskPayment: row.deskPayment,
     },
     trip: {
       id: row.tripId,

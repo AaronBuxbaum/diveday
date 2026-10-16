@@ -31,7 +31,7 @@
   },
   "bundle-reach": {
     "//": "Message-bundle keys no string literal in src/ can reach, per bundle. Written by `node scripts/check-bundle-reach.mjs --write`. This number may only go down — see scripts/check-bundle-reach.mjs. An entry is a list to triage, not a list to delete on sight: some are a hole in the walk.",
-    "src/i18n/locales/en-US/diver.json": 7,
+    "src/i18n/locales/en-US/diver.json": 3,
     "src/i18n/locales/en-US/staff/bookings.json": 1,
     "src/i18n/locales/en-US/staff/divers.json": 10,
     "src/i18n/locales/en-US/staff/diveSites.json": 6,
@@ -456,7 +456,7 @@
         }
       }
     ],
-    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 307,
+    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 306,
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 425,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 383,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 332,
@@ -541,9 +541,9 @@
     "src/app/onboard/page.tsx": 479,
     "src/app/page.tsx": 581,
     "src/app/pricing/page.tsx": 468,
-    "src/app/ready/[token]/page.tsx": 671,
+    "src/app/ready/[token]/page.tsx": 668,
     "src/app/s/[shopSlug]/page.tsx": 879,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 529,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 528,
     "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
     "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx": 727,
     "src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx": 406,

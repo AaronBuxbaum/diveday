@@ -427,12 +427,7 @@ export async function listSiteReviews(
       db
         .select({ one: tripDives.id })
         .from(tripDives)
-        .where(
-          and(
-            eq(tripDives.tripId, trips.id),
-            inArray(tripDives.diveSiteId, ids),
-          ),
-        ),
+        .where(and(eq(tripDives.tripId, trips.id), inArray(tripDives.diveSiteId, ids))),
     ),
   );
   const rows = await db

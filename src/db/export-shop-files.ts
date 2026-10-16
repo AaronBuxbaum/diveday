@@ -154,6 +154,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // Whether the shop runs hotel pickups: a restore must not start asking
       // divers about a pickup the shop does not offer (fourth UX review, item 8).
       "offers_hotel_pickup",
+      // How the desk takes money, so a restore still tells divers to bring
+      // cash or a card (fifth-loop ideas, item 21). Blank when never said.
+      "desk_payment",
       // The rest of the shop's dock-day rhythm (ADR
       // 20260812-configurable-dock-day-rhythm). Six numbers that describe
       // how this shop runs a day — as much the shop's own record as its
@@ -246,6 +249,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.addressCountry,
         shop.dockCallMinutes,
         shop.offersHotelPickup,
+        shop.deskPayment ?? "",
         shop.gearSetupMinutes,
         shop.briefingMinutes,
         shop.boatRideMinutes,

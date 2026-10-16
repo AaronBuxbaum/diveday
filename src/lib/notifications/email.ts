@@ -1,3 +1,4 @@
+import { deskPaymentSentence } from "@/i18n/desk-payment-labels";
 import type { DiverTranslator } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
 import { reminderActionText } from "@/i18n/reminder-labels";
@@ -7,6 +8,7 @@ import { type CalendarDate, calendarDateInTimezone, formatCalendarDate } from "@
 import { COURSE_INQUIRY_EXPERIENCE_KEYS, type CourseInquiryExperience } from "@/lib/course-inquiry";
 import { type CourseLearningMaterial, isLearningMaterialLink } from "@/lib/courses";
 import type { DemoRoleId } from "@/lib/demo-roles";
+import type { DeskPayment } from "@/lib/desk-payment";
 import { type FlySafeResult, flySafeMessageKey } from "@/lib/fly-safe";
 import {
   formatDateTimeTz,
@@ -78,7 +80,8 @@ type MeetingPoint = {
  * currency (`seatMoneyTerms`, `partyMoneyTerms`).
  */
 type ConfirmationMoney = (
-  | { due: "at_shop" | "online"; amountCents: number; currency: string }
+  | { due: "at_shop"; amountCents: number; currency: string; deskPayment?: DeskPayment }
+  | { due: "online"; amountCents: number; currency: string }
   | { due: "deposit"; depositCents: number; balanceCents: number; currency: string }
 ) & { seats?: number };
 
@@ -739,19 +742,31 @@ function confirmationMoneyLine(
     );
   }
   if (party) {
-    return t(
+    const partyLine = t(
       money.due === "online"
         ? "notifications.bookingConfirmation.moneyPartyOnline"
         : "notifications.bookingConfirmation.moneyPartyAtShop",
       { seats, amount: amount(money.amountCents) },
     );
+    return withDeskPayment(t, partyLine, money);
   }
-  return t(
+  const line = t(
     money.due === "online"
       ? "notifications.bookingConfirmation.moneyOnline"
       : "notifications.bookingConfirmation.moneyAtShop",
     { amount: amount(money.amountCents) },
   );
+  return withDeskPayment(t, line, money);
+}
+
+/**
+ * "Your seat: $95.00, due at the shop. Pay at the desk by card or cash."
+ * (fifth-loop ideas, item 21): how the desk takes money, after a figure owed
+ * there, when the shop has said.
+ */
+function withDeskPayment(t: DiverTranslator, line: string, money: ConfirmationMoney): string {
+  const desk = money.due === "at_shop" ? deskPaymentSentence(t, money.deskPayment) : null;
+  return desk ? `${line} ${desk}` : line;
 }
 
 /** The diver's outstanding items as one bullet list, or empty when nothing's left. */

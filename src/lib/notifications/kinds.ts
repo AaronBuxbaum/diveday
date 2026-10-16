@@ -13,6 +13,7 @@ import {
 import { CREW_NOTICE_CHANGES, CREW_TRIP_ROLES } from "@/lib/crew-notices";
 import { DEMO_ROLE_IDS } from "@/lib/demo-roles";
 import { DEPARTURE_NOTE_MAX, departureNoteProblem } from "@/lib/departure-notes";
+import { DESK_PAYMENTS } from "@/lib/desk-payment";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { SHOP_MILESTONES } from "@/lib/founder-metrics";
 import { GEAR_KIND_ORDER, GEAR_SERVICE_KINDS } from "@/lib/gear";
@@ -135,6 +136,8 @@ const seatMoneySchema = z.discriminatedUnion("due", [
     amountCents: centsSchema,
     currency: z.string().length(3),
     seats: seatsSchema,
+    /** How the shop takes money at the desk (fifth-loop ideas, item 21); absent says nothing. */
+    deskPayment: z.enum(DESK_PAYMENTS).optional(),
   }),
   z.object({
     due: z.literal("online"),

@@ -440,6 +440,9 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // "Want a pickup?" here; a new shop runs none until it says so (fourth
       // UX review, item 8).
       offersHotelPickup: true,
+      // The desk takes cards and cash, and every "due at the shop" says so
+      // (fifth-loop ideas, item 21); a new shop says nothing until it chooses.
+      deskPayment: "card_and_cash",
       // **Blue Mantis runs the PADI checks (beta)**, off for a new shop and for
       // a minted one (`shops.padi_checks_enabled`, H-121): the demo is where
       // "Check with PADI" and the eLearning check are photographed and

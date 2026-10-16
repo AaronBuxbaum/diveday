@@ -45,7 +45,7 @@ import { knownDiverFactLines } from "./_components/known-diver-lines";
 import { fullTripAlternatives, worthALookList } from "./_components/other-boats";
 import { StaffPreviewBar } from "./_components/StaffPreviewBar";
 import { TripAlternatives } from "./_components/TripAlternatives";
-import { dayCoverPhoto, TripDayPlan } from "./_components/TripDayPlan";
+import { dayCoverPhoto, dayProfileFacts, TripDayPlan } from "./_components/TripDayPlan";
 import { TripHero } from "./_components/TripHero";
 import { pitchHasDoor, pitchOpensOnDoor, TripPitch } from "./_components/TripPitch";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
@@ -378,19 +378,7 @@ export default async function TripDetailPage({
               shop={shop}
               locale={locale}
               logEntry={inPast ? undefined : { startsAt: trip.startsAt, isCourse: !!trip.course }}
-              profile={{
-                rhythm: shop,
-                depthUnit: shop.depthUnit,
-                diveMode: trip.diveMode,
-                dayCount: meetingDays.length,
-                readerDepthUnit: readerUnits.depth,
-                // The day's two ends, in one line (fifth-loop ideas, item 19):
-                // a one-day boat only; a course says its own day.
-                day:
-                  trip.course || meetingDays.length > 1
-                    ? undefined
-                    : { startsAt: trip.startsAt, endsAt: trip.endsAt, plannedDives: trip.plannedDives },
-              }}
+              profile={dayProfileFacts(shop, trip, meetingDays.length, readerUnits.depth)}
             />
             {/* **The bound** (ADR 20260904-reef-all-the-way-down, decision 1). The
                 route, the rest of the field guide, the moments strip, the shop's
@@ -501,6 +489,7 @@ export default async function TripDetailPage({
                     rentalPricing: shop.rentalPricing,
                     passThroughFee: parsePassThroughFee(shop.passThroughFee),
                     taxEnabled: shop.taxEnabled,
+                    deskPayment: shop.deskPayment,
                     courseFeeCents,
                     eLearningFeeCents,
                     ...checkoutSeatTerms(trip, trip.course),

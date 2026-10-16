@@ -362,6 +362,11 @@
       "taxAtCheckout": "added at checkout",
       "dueNow": "Due now",
       "dueAtShop": "Due at the shop",
+      "deskPayment": {
+        "card": "Pay at the desk by card.",
+        "cash": "Pay at the desk in cash.",
+        "card_and_cash": "Pay at the desk by card or cash."
+      },
       "balanceAtDock": "{balance} at the dock on {when}",
       "snorkelerFare": "{price} × {count, plural, one {# snorkeler} other {# snorkelers}}",
       "riderFare": "{price} × {count, plural, one {# rider} other {# riders}}"
