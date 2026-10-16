@@ -185,11 +185,14 @@ export function QuietMonth({
 export function MonthFootnotes({
   taxCents,
   csvHref,
+  crewSheetHref,
   t,
   money,
 }: {
   taxCents: number;
   csvHref: string;
+  /** The month's crew sheet, beside the CSV (fifth loop, item 31). */
+  crewSheetHref?: string;
   t: StaffTranslator;
   money: (cents: number) => string;
 }) {
@@ -200,6 +203,14 @@ export function MonthFootnotes({
       <a href={csvHref} className="font-medium text-primary hover:underline">
         {t("reports.downloadCsv")}
       </a>
+      {crewSheetHref ? (
+        <>
+          {" · "}
+          <a href={crewSheetHref} className="font-medium text-primary hover:underline">
+            {t("reports.downloadCrewSheet")}
+          </a>
+        </>
+      ) : null}
     </p>
   );
 }

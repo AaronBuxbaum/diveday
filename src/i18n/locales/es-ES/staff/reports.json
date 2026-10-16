@@ -8,7 +8,8 @@
   "numbersLabel": "Los números de este mes",
   "comparison": {
     "yearAgo": "{trend}frente a {baseline} en {month}",
-    "previousMonthFallback": "{trend}frente a {baseline} en {month} (todavía sin datos del año pasado)"
+    "previousMonthFallback": "{trend}frente a {baseline} en {month} (todavía sin datos del año pasado)",
+    "yearAgoToDate": "{trend}frente a {baseline} en {month} al {day}"
   },
   "downloadCsv": "Descargar CSV",
   "taxLine": "Impuestos cobrados {amount}",
@@ -114,5 +115,24 @@
   },
   "payouts": {
     "heading": "Pagado a tu banco"
+  },
+  "tipsShare": "{name} {amount}",
+  "downloadCrewSheet": "Descargar la hoja de la tripulación",
+  "weather": {
+    "month": "El clima canceló {departures, plural, one {# salida} other {# salidas}}: {divers, plural, one {# buceador} other {# buceadores}}, {refunded} reembolsados, {moved} con otra fecha."
+  },
+  "byBoat": {
+    "heading": "Por barco",
+    "facts": "{days, plural, one {# día de salida} other {# días de salida}} · {percent} % lleno"
+  },
+  "byKind": {
+    "heading": "Por tipo de salida",
+    "course": "Cursos",
+    "other": "Otras"
+  },
+  "leadTime": {
+    "heading": "Con cuánta anticipación se venden las salidas",
+    "caption": "Plazas en salidas de los últimos 12 meses",
+    "line": "Salidas del {weekday}: la mitad de las plazas se vende {days, plural, =0 {el mismo día} one {con # día o más de anticipación} other {con # días o más de anticipación}} · {percent} % en los últimos tres días"
   }
 }

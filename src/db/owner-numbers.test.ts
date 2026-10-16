@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { diveSiteSlugFrom } from "@/lib/dive-site-slug";
 import { summarizeShopYear } from "@/lib/shop-year";
 import { unseededTestDb } from "@/test/db";
+import { weatherCallsInWindow } from "./blowouts";
 import type { AppDb } from "./client";
 import {
   bookingLeadTimes,
@@ -22,6 +23,8 @@ import {
   people,
   shops,
   tripAssignments,
+  tripBlowoutDivers,
+  tripBlowouts,
   tripDives,
   tripLenses,
   trips,
@@ -94,7 +97,10 @@ describe("each departure's net (item 26)", () => {
   it("carries what each departure took, after tax, and the hull and kind it sailed as", async () => {
     const db = await unseededTestDb();
     const shopId = await shopRow(db, "net-by-departure");
-    const [boat] = await db.insert(boats).values({ shopId, name: "Mantis I", capacity: 12 }).returning();
+    const [boat] = await db
+      .insert(boats)
+      .values({ shopId, name: "Mantis I", capacity: 12 })
+      .returning();
     const [lens] = await db
       .insert(tripLenses)
       .values({ shopId, name: "Wreck", slug: "wreck" })
@@ -294,5 +300,93 @@ describe("certifiedHere and crewYearFacts (item 32)", () => {
       now: new Date("2026-08-01T12:00:00Z"),
     });
     expect(facts.get(marcus)).toEqual({ certified: 3, daysAtSea: 2 });
+  });
+});
+
+describe("weatherCallsInWindow (item 27)", () => {
+  it("counts the called-off departures, their divers, the money back and who moved", async () => {
+    const db = await unseededTestDb();
+    const shopId = await shopRow(db, "weather-month");
+    const owner = await person(db, shopId, "Dana Reyes");
+    const blown = await trip(db, shopId, "2026-06-10T13:00:00Z", { status: "cancelled" });
+    const ended = await trip(db, shopId, "2026-06-12T13:00:00Z", { status: "cancelled" });
+    const later = await trip(db, shopId, "2026-06-20T13:00:00Z");
+    const calledAt = new Date("2026-06-09T22:00:00Z");
+    const [weather] = await db
+      .insert(tripBlowouts)
+      .values({ shopId, tripId: blown, calledByPersonId: owner, calledAt, cause: "weather" })
+      .returning();
+    // A repeating trip's run ending is the schedule, not the weather.
+    const [runEnded] = await db
+      .insert(tripBlowouts)
+      .values({ shopId, tripId: ended, calledByPersonId: owner, calledAt, cause: "run_ended" })
+      .returning();
+    if (!weather || !runEnded) throw new Error("blowout insert failed");
+    const seats = [
+      await booking(db, shopId, blown, "cancelled"),
+      await booking(db, shopId, blown, "cancelled"),
+    ];
+    const snapshot = await db
+      .select({ id: bookings.id, personId: bookings.personId })
+      .from(bookings)
+      .where(inArray(bookings.id, seats));
+    await db.insert(tripBlowoutDivers).values(
+      snapshot.map((seat) => ({
+        shopId,
+        blowoutId: weather.id,
+        bookingId: seat.id,
+        personId: seat.personId,
+      })),
+    );
+    const endedSeat = await booking(db, shopId, ended, "cancelled");
+    const [endedPerson] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, endedSeat));
+    if (!endedPerson) throw new Error("ended seat missing");
+    await db.insert(tripBlowoutDivers).values({
+      shopId,
+      blowoutId: runEnded.id,
+      bookingId: endedSeat,
+      personId: endedPerson.personId,
+    });
+    const [first, second] = snapshot;
+    if (!first || !second) throw new Error("snapshot missing");
+    await db.insert(bookingPayments).values({
+      shopId,
+      bookingId: first.id,
+      status: "refunded",
+      amountCents: 9_500,
+      currency: "usd",
+    });
+    // The second diver books the make-up boat after the call.
+    await db.insert(bookings).values({
+      shopId,
+      tripId: later,
+      personId: second.personId,
+      bookedAs: "diver",
+      createdAt: new Date("2026-06-10T01:00:00Z"),
+    });
+
+    const june = {
+      startUtc: new Date("2026-06-01T04:00:00Z"),
+      endUtc: new Date("2026-07-01T04:00:00Z"),
+      timeZone: TZ,
+    };
+    expect(await weatherCallsInWindow(db, shopId, june)).toEqual({
+      departures: 1,
+      days: 1,
+      divers: 2,
+      refundedCents: 9_500,
+      moved: 1,
+    });
+    // Anchored to the departure, not the call: July counts nothing.
+    expect(
+      await weatherCallsInWindow(db, shopId, {
+        startUtc: june.endUtc,
+        endUtc: new Date("2026-08-01T04:00:00Z"),
+        timeZone: TZ,
+      }),
+    ).toMatchObject({ departures: 0, divers: 0, refundedCents: 0 });
   });
 });

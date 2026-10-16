@@ -8,7 +8,8 @@
   "numbersLabel": "This month’s numbers",
   "comparison": {
     "yearAgo": "{trend}vs {baseline} in {month}",
-    "previousMonthFallback": "{trend}vs {baseline} in {month} (no year-ago data yet)"
+    "previousMonthFallback": "{trend}vs {baseline} in {month} (no year-ago data yet)",
+    "yearAgoToDate": "{trend}vs {baseline} in {month} by {day}"
   },
   "downloadCsv": "Download CSV",
   "taxLine": "Tax collected {amount}",
@@ -114,5 +115,24 @@
   },
   "payouts": {
     "heading": "Paid to your bank"
+  },
+  "tipsShare": "{name} {amount}",
+  "downloadCrewSheet": "Download crew sheet",
+  "weather": {
+    "month": "Weather called off {departures, plural, one {# departure} other {# departures}}: {divers, plural, one {# diver} other {# divers}}, {refunded} refunded, {moved} moved to another date."
+  },
+  "byBoat": {
+    "heading": "By boat",
+    "facts": "{days, plural, one {# day out} other {# days out}} · {percent}% full"
+  },
+  "byKind": {
+    "heading": "By kind of trip",
+    "course": "Courses",
+    "other": "Other"
+  },
+  "leadTime": {
+    "heading": "How far ahead boats sell",
+    "caption": "Seats on departures in the last 12 months",
+    "line": "{weekday} boats: half the seats sold {days, plural, =0 {on the day} one {# day or more ahead} other {# days or more ahead}} · {percent}% in the last three days"
   }
 }
