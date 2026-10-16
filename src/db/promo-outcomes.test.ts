@@ -5,12 +5,12 @@ import {
   bookingCheckoutBookings,
   bookingCheckouts,
   bookings,
+  courses,
   people,
   shopPromoCodes,
   shopPromoRedemptions,
   shops,
   tripLastMinutePromos,
-  courses,
   trips,
 } from "./schema";
 import { shopPromoOutcomes } from "./shop-promos";

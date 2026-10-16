@@ -40,7 +40,11 @@ async function shopWithBookkeeper({ confirm = true } = {}) {
     now: at,
   });
   if (confirm) {
-    const issued = await issueBookkeeperConfirmation(db, { shopId: shop.id, email: BOOKS, now: at });
+    const issued = await issueBookkeeperConfirmation(db, {
+      shopId: shop.id,
+      email: BOOKS,
+      now: at,
+    });
     await consumeBookkeeperConfirmation(db, { token: issued?.token ?? "", now: at });
   }
   return { db, shopId: shop.id, owner };

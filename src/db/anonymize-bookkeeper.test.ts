@@ -39,7 +39,11 @@ describe("anonymizeDiver — the bookkeeper's address", () => {
       personId: owner.id,
       now,
     });
-    const issued = await issueBookkeeperConfirmation(db, { shopId: shop.id, email: bookkeeper, now });
+    const issued = await issueBookkeeperConfirmation(db, {
+      shopId: shop.id,
+      email: bookkeeper,
+      now,
+    });
     await consumeBookkeeperConfirmation(db, { token: issued?.token ?? "", now });
     const erase = () =>
       anonymizeDiver(db, { shopId: shop.id, personId: diver.id, actorPersonId: owner.id });

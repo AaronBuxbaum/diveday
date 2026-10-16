@@ -91,7 +91,10 @@ describe("last year and the year's lines", () => {
       <YearReport
         year={YEAR}
         lastYear={{ divers: "291 by this date in 2025", boats: "39 by this date in 2025" }}
-        lines={["4 days with a weather call, 6 departures called off", "Certifications issued here: 34 · 22 Open Water"]}
+        lines={[
+          "4 days with a weather call, 6 departures called off",
+          "Certifications issued here: 34 · 22 Open Water",
+        ]}
         locale="en-US"
         shopSlug="blue-mantis"
         t={t}

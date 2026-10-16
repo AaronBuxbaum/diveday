@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
+import { staffTranslator } from "@/i18n/staff-messages";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -30,14 +31,24 @@ const SafetyReportPage = (await import("./page")).default;
 function textIn(node: unknown, found: string[] = []): string[] {
   if (typeof node === "string") found.push(node);
   else if (Array.isArray(node)) for (const child of node) textIn(child, found);
-  else if (isValidElement<{ children?: unknown; title?: unknown }>(node)) {
+  else if (isValidElement<{ children?: unknown; title?: unknown; "aria-label"?: unknown }>(node)) {
     if (typeof node.props.title === "string") found.push(node.props.title);
+    if (typeof node.props["aria-label"] === "string") found.push(node.props["aria-label"]);
     textIn(node.props.children, found);
   }
   return found;
 }
 
-async function renderAs(viewerRoles: Role[], searchParams: { year?: string } = {}) {
+/** The figures handed to `MonthFigures`, label and value, wherever they sit in the tree. */
+function figuresIn(node: unknown): { label: string; value: string }[] {
+  if (Array.isArray(node)) return node.flatMap((child) => figuresIn(child));
+  if (!isValidElement<{ children?: unknown; figures?: unknown }>(node)) return [];
+  if (Array.isArray(node.props.figures))
+    return node.props.figures as { label: string; value: string }[];
+  return figuresIn(node.props.children);
+}
+
+async function renderTree(viewerRoles: Role[], searchParams: { year?: string } = {}) {
   const db: AppDb = await seededTestDb();
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error("demo shop missing");
@@ -55,11 +66,14 @@ async function renderAs(viewerRoles: Role[], searchParams: { year?: string } = {
       roles: viewerRoles,
     },
   });
-  const tree = await SafetyReportPage({
+  return SafetyReportPage({
     params: Promise.resolve({ shopSlug: "blue-mantis" }),
     searchParams: Promise.resolve(searchParams),
   });
-  return textIn(tree).join("\n");
+}
+
+async function renderAs(viewerRoles: Role[], searchParams: { year?: string } = {}) {
+  return textIn(await renderTree(viewerRoles, searchParams)).join("\n");
 }
 
 /**
@@ -95,6 +109,34 @@ describe("the Safety year", () => {
     // The year shows the figures alone, so no figure may point at a list below it.
     expect(text).not.toContain("listed below");
     expect(text).not.toContain("this month");
+  });
+
+  it("prints whose record it is, over which days and when, with the boarding caveat (review F3, F5)", async () => {
+    const year = String(nowDate().getUTCFullYear());
+    const text = await renderAs(["owner"], { year });
+    expect(text.replace(/\u00a0/g, " ")).toMatch(
+      /Blue Mantis[^\n]* · January 1 to [^\n]*, \d{4} · /,
+    );
+    expect(text).toContain("Printed ");
+    expect(text).toContain("A diver first counted at a later checkpoint is not in this figure.");
+  });
+
+  it("counts filed incident reports and names drafts beside them (review F4)", async () => {
+    const year = String(nowDate().getUTCFullYear());
+    const figures = figuresIn(await renderTree(["owner"], { year }));
+    const incidents = figures.find((figure) => figure.label === "Incident reports");
+    expect(incidents?.value).toMatch(/^\d+ filed( · \d+ drafts?)?$/);
+    const t = staffTranslator("en-US");
+    expect(t("incidents.safety.incidentsValue", { filed: 3, drafts: 1 })).toBe("3 filed · 1 draft");
+    expect(t("incidents.safety.incidentsValue", { filed: 2, drafts: 0 })).toBe("2 filed");
+  });
+
+  it("says year, not month, on its arrows (review S1)", async () => {
+    const year = String(nowDate().getUTCFullYear());
+    const text = await renderAs(["owner"], { year });
+    expect(text).toContain("Choose a year");
+    expect(text).not.toContain("Previous month");
+    expect(text).not.toContain("Choose month");
   });
 
   it("reads a year it cannot have as the month", async () => {

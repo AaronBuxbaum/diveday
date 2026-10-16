@@ -1830,6 +1830,10 @@ export function notificationSubjectEmail(notification: Notification): string | n
       return notification.ownerEmail;
     case "setup_request_alert":
       return notification.contactEmail;
+    // The bookkeeper's address in an owner's notice. Never queued, so no row
+    // holds it; named here so a future queued path is covered all the same.
+    case "bookkeeper_notice":
+      return notification.email ?? null;
     default:
       return null;
   }

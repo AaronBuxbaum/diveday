@@ -161,9 +161,11 @@ describe("saveBookkeeperAction", () => {
       status: "cleared",
     });
     expect(await readBookkeeper(db, shop.id)).toBeNull();
-    expect(
-      sent.list.flatMap((n) => (n.kind === "bookkeeper_notice" ? [n.event] : [])),
-    ).toEqual(["set", "changed", "cleared"]);
+    expect(sent.list.flatMap((n) => (n.kind === "bookkeeper_notice" ? [n.event] : []))).toEqual([
+      "set",
+      "changed",
+      "cleared",
+    ]);
     expect(await activityCodes(db, shop.id)).toEqual(
       expect.arrayContaining([
         "bookkeeper_email_set",

@@ -504,9 +504,7 @@ describe("summarizeSafetyYear (dive-domain review F1)", () => {
     expect(year.departuresBack).toBe(6);
     expect(year.boatsBack).toBe(6);
     expect(year.crewSailings).toBe(rostered.crewSailings);
-    expect(year.rollCallsClosed).toBe(
-      unrostered.rollCallsClosed * 2 + rostered.rollCallsClosed,
-    );
+    expect(year.rollCallsClosed).toBe(unrostered.rollCallsClosed * 2 + rostered.rollCallsClosed);
   });
 
   it("is one quiet line when no month had crew on record", () => {

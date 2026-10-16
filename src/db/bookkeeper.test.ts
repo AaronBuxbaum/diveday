@@ -103,7 +103,10 @@ describe("setBookkeeper", () => {
     const db = await unseededTestDb();
     const shopId = await shopRow(db, "books-change");
     const oldLink = await confirmed(db, shopId);
-    expect(await set(db, shopId, "new@example.com")).toEqual({ change: "changed", confirmed: false });
+    expect(await set(db, shopId, "new@example.com")).toEqual({
+      change: "changed",
+      confirmed: false,
+    });
     expect((await readBookkeeper(db, shopId))?.confirmedAt).toBeNull();
     expect(await listBookkeeperShops(db)).toEqual([]);
     // The old link is gone with its address.
@@ -122,7 +125,9 @@ describe("the confirm link", () => {
     const db = await unseededTestDb();
     const shopId = await shopRow(db, "books-link");
     await set(db, shopId, BOOKS);
-    expect(await issueBookkeeperConfirmation(db, { shopId, email: "x@example.com", now: OCT_20 })).toBeNull();
+    expect(
+      await issueBookkeeperConfirmation(db, { shopId, email: "x@example.com", now: OCT_20 }),
+    ).toBeNull();
     const issued = await issueBookkeeperConfirmation(db, { shopId, email: BOOKS, now: OCT_20 });
     if (!issued) throw new Error("no link");
     expect(await checkBookkeeperConfirmation(db, { token: issued.token, now: OCT_20 })).toEqual({
@@ -138,7 +143,9 @@ describe("the confirm link", () => {
     expect(await wasBookkeeperConfirmed(db, { token: issued.token })).toEqual({
       shopName: "books-link",
     });
-    expect(await consumeBookkeeperConfirmation(db, { token: issued.token, now: OCT_20 })).toBeNull();
+    expect(
+      await consumeBookkeeperConfirmation(db, { token: issued.token, now: OCT_20 }),
+    ).toBeNull();
     // A confirmed address mints no second link.
     expect(await issueBookkeeperConfirmation(db, { shopId, email: BOOKS, now: OCT_20 })).toBeNull();
   });

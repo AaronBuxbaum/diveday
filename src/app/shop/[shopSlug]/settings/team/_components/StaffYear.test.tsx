@@ -10,7 +10,9 @@ const t = staffTranslator("en-US");
 describe("StaffYearLine", () => {
   it("says the cards issued and the days at sea", () => {
     render(<StaffYearLine year={{ certified: 4, daysAtSea: 38 }} t={t} />);
-    expect(screen.getByText("4 certifications issued this year · 38 days at sea")).toBeInTheDocument();
+    expect(
+      screen.getByText("4 certifications issued this year · 38 days at sea"),
+    ).toBeInTheDocument();
   });
 
   it("drops a half that is none, and says nothing for somebody with neither", () => {

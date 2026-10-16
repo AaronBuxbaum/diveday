@@ -170,8 +170,12 @@ async function BookkeeperConfirmation({
     return (
       <EntryDone
         glyph="expired"
-        title={t(bookkeeper ? "bookkeeperConfirm.unavailableTitle" : "contactConfirm.unavailableTitle")}
-        text={t(bookkeeper ? "bookkeeperConfirm.unavailableText" : "contactConfirm.unavailableText")}
+        title={t(
+          bookkeeper ? "bookkeeperConfirm.unavailableTitle" : "contactConfirm.unavailableTitle",
+        )}
+        text={t(
+          bookkeeper ? "bookkeeperConfirm.unavailableText" : "contactConfirm.unavailableText",
+        )}
       />
     );
   }
