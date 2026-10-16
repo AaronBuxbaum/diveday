@@ -284,7 +284,7 @@ export default async function TripDetailPage({
         },
         siteRequirement,
       );
-  const requirementSentence = requirementSentenceFor(combinedRequirement, t, locale);
+  const requirementSentence = requirementSentenceFor(combinedRequirement, t, locale, knownDiver);
 
   const inPast = hasSailed(trip.startsAt, now);
   const logEntry = inPast ? undefined : { startsAt: trip.startsAt, isCourse: !!trip.course };

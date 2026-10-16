@@ -120,6 +120,8 @@ export type TripRosterContentContext = {
    * invite control is drawn at all (owner, 2026-10-06).
    */
   acceptsDivers: boolean;
+  /** The live roles may send a wait-list invite (`waitlist_seat`'s audience), as the action will. */
+  mayInviteFromWaitlist: boolean;
   actions: TripRosterActions;
 };
 
@@ -156,6 +158,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     record,
     walkInOpen = false,
     acceptsDivers,
+    mayInviteFromWaitlist,
     actions,
   } = context;
   const t = staffTranslator(locale);
@@ -329,7 +332,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
                   departureRequirement={dealRequirement}
                   locale={locale}
                   timezone={timezone}
-                  canInvite={acceptsDivers}
+                  canInvite={acceptsDivers && mayInviteFromWaitlist}
                 />
                 {/* **One waiting diver is worth carrying too** (fourth review,
                     item 31). The demand banner, and the carry door inside it,
@@ -362,7 +365,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
                 timezone={timezone}
                 inviteAction={actions.recordTripInvitationAction}
                 locale={locale}
-                canInvite={acceptsDivers}
+                canInvite={acceptsDivers && mayInviteFromWaitlist}
               />
             ) : null,
           addDiverGroup: !acceptsDivers ? null : (

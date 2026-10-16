@@ -2839,6 +2839,10 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the public dive-site page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis/sites/molasses-reef");
         await page.getByRole("heading", { name: "Next departures here" }).waitFor();
+        // The fleet refuses the maps host (e2e/fixtures.ts), so this capture is
+        // the failed state: the sunken ground, the route alone, and the quiet
+        // line naming the site (issue #2013).
+        await page.getByText("is not loading.").waitFor();
         await capture(page, "dive-site-page", scheme);
       });
 
@@ -4242,8 +4246,8 @@ for (const scheme of ["light", "dark"] as const) {
        * **A crew member on two of today's boats** (H-80, issue #1776). Each
        * boat shows a full crew list, so the clash is invisible on both until
        * the queue says so. `?crewClash=1` slides a seeded departure onto
-       * today's through `moveTrip`, the one door into the state, and both
-       * stations carry the row.
+       * today's through `moveTrip`, the one door into the state, and the
+       * earlier boat's station carries the one row (issue #2211).
        */
       test(`today names a crew member on two boats at once (${scheme})`, async ({
         page,
@@ -4255,6 +4259,22 @@ for (const scheme of ["light", "dark"] as const) {
         // The destination's own words, not a timing guess.
         await page.getByText("Crew on two departures").first().waitFor();
         await capture(page, "today-crew-clash", scheme);
+      });
+
+      /**
+       * **One hull on two departures at once** (H-80, issue #2135). `?boatClash=1`
+       * slides a seeded departure onto another that shares its boat through
+       * `moveTrip`; Today says it once, on the earlier departure.
+       */
+      test(`today names a boat on two departures at once (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?boatClash=1");
+        expect(seeded.ok()).toBe(true);
+        await page.goto("/shop/blue-mantis");
+        await page.getByText("Boat on two departures").first().waitFor();
+        await capture(page, "today-boat-clash", scheme);
       });
 
       /**

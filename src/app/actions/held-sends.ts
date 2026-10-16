@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { HeldTicket } from "@/components/SendHold";
-import { canPersonConfigureTrips, canPersonManagePaymentSettings } from "@/db/authz";
+import {
+  canPersonActOnKind,
+  canPersonConfigureTrips,
+  canPersonManagePaymentSettings,
+} from "@/db/authz";
 import { type AppDb, getDb } from "@/db/client";
 import {
   claimHeldSend,
@@ -162,6 +166,14 @@ export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
     );
     if (!allowed) throw new Error("not_authorized");
   }
+  // The wait-list invite is Today's `waitlist_seat` row: what Today hides from
+  // a role, the action refuses it too (issue #2134).
+  if (
+    payload.kind === "waitlist_invite" &&
+    !(await canPersonActOnKind(db, session.user.shopId, session.user.personId, "waitlist_seat"))
+  ) {
+    throw new Error("not_authorized");
+  }
   // A reschedule notice is only ever held by a move or by "Tell them" above,
   // both of which take the "before" time from the server's record.
   if (payload.kind === "trip_rescheduled") throw new Error("nothing_to_send");
@@ -207,6 +219,12 @@ async function assertMayActOnHeld(
         ? canPersonManagePaymentSettings
         : null;
   if (gate && !(await gate(db, session.user.shopId, session.user.personId))) {
+    throw new Error("not_authorized");
+  }
+  if (
+    row.kind === "waitlist_invite" &&
+    !(await canPersonActOnKind(db, session.user.shopId, session.user.personId, "waitlist_seat"))
+  ) {
     throw new Error("not_authorized");
   }
 }

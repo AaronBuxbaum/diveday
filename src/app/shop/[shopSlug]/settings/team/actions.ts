@@ -30,6 +30,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { inviteLinkPath } from "@/lib/account-tokens";
 import { type Role, STAFF_ROLE_LABELS, STAFF_ROLES } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
+import { RENEWAL_DATE_REQUIRED_KINDS } from "@/lib/crew-roles";
 import { formValue, readForm, text } from "@/lib/form-parse";
 import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -511,6 +512,9 @@ export async function saveStaffCredentialAction(formData: FormData) {
   await teamManagementBlock(session);
   const parsed = credentialSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(path, "credential-invalid"));
+  if (RENEWAL_DATE_REQUIRED_KINDS.includes(parsed.data.kind) && !parsed.data.renewsAt) {
+    redirect(noticeUrl(path, "credential-renewal-required"));
+  }
   const row = await createStaffCredential(await getDb(), {
     shopId: session.user.shopId,
     personId: parsed.data.personId,

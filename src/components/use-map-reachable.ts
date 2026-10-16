@@ -14,22 +14,48 @@ import { MAP_REACHABILITY_PROBE } from "@/lib/maps";
  * either.
  */
 export function useMapReachable(active: boolean): boolean {
+  return useMapState(active) === "reachable";
+}
+
+/** Where the map host stands: not yet answered, answered, or given up on. */
+export type MapState = "waiting" | "reachable" | "failed";
+
+/**
+ * The same probe, saying which of three it is (issue #2013): `failed` once the
+ * probe errors or, with `giveUpMs`, once that long passes with no answer. A
+ * blocked host errors at once; a stalled one never answers, so the silence is
+ * read as failure, and an answer that comes late still wins.
+ */
+export function useMapState(active: boolean, giveUpMs?: number): MapState {
   const [reachable, setReachable] = useState(false);
+  const [gaveUp, setGaveUp] = useState(false);
   useEffect(() => {
     if (!active) return;
     let settled = false;
     let probe: HTMLImageElement | null = null;
+    const giveUp =
+      giveUpMs === undefined
+        ? undefined
+        : setTimeout(() => {
+            if (!settled) setGaveUp(true);
+          }, giveUpMs);
     const ask = () => {
       window.removeEventListener("online", ask);
       probe = new Image();
       // Google learns that something asked, never which page.
       probe.referrerPolicy = "no-referrer";
       probe.onload = () => {
-        if (!settled) setReachable(true);
+        if (!settled) {
+          setReachable(true);
+          setGaveUp(false);
+        }
       };
       // Said, not left to a missing handler: the frame stays hidden.
       probe.onerror = () => {
-        if (!settled) setReachable(false);
+        if (!settled) {
+          setReachable(false);
+          setGaveUp(true);
+        }
       };
       probe.src = MAP_REACHABILITY_PROBE;
     };
@@ -40,12 +66,13 @@ export function useMapReachable(active: boolean): boolean {
     }
     return () => {
       settled = true;
+      clearTimeout(giveUp);
       window.removeEventListener("online", ask);
       if (probe) {
         probe.onload = null;
         probe.onerror = null;
       }
     };
-  }, [active]);
-  return reachable;
+  }, [active, giveUpMs]);
+  return reachable ? "reachable" : gaveUp ? "failed" : "waiting";
 }

@@ -31,7 +31,13 @@ describe("pushRollCallRows", () => {
       rowsContext({
         boatsOut: { out: [], blocked: [] },
         rollCallGaps: [],
-        crewClashState: { departures: [], clashes: new Map(), crew: new Map(), divers: new Map() },
+        crewClashState: {
+          departures: [],
+          clashes: new Map(),
+          boatClashes: new Map(),
+          crew: new Map(),
+          divers: new Map(),
+        },
       }),
     );
     expect(actions).toEqual([]);
@@ -45,7 +51,13 @@ describe("pushRollCallRows", () => {
       rowsContext({
         boatsOut: { out: [], blocked: [] },
         rollCallGaps: [],
-        crewClashState: { departures: [], clashes: new Map(), crew: new Map(), divers: new Map() },
+        crewClashState: {
+          departures: [],
+          clashes: new Map(),
+          boatClashes: new Map(),
+          crew: new Map(),
+          divers: new Map(),
+        },
       }),
     );
     expect(actions).toEqual([earlier]);
@@ -76,7 +88,13 @@ describe("pushRollCallRows after the stale-roll-call alert", () => {
       rowsContext({
         boatsOut: { out: [], blocked: [] },
         rollCallGaps: [{ ...gap, alertedAt, shoreAlertedAt }],
-        crewClashState: { departures: [], clashes: new Map(), crew: new Map(), divers: new Map() },
+        crewClashState: {
+          departures: [],
+          clashes: new Map(),
+          boatClashes: new Map(),
+          crew: new Map(),
+          divers: new Map(),
+        },
       }),
     );
     return actions;

@@ -2,6 +2,7 @@ import { getDb } from "@/db/client";
 import { applyProviderEmailEvent } from "@/db/notifications";
 import { markPhoneRunningLate } from "@/db/running-late";
 import { recordSmsKeyword } from "@/db/sms-opt-outs";
+import { shopForSmsSender } from "@/db/sms-sender";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { parseSmsDeliveryEvent } from "@/lib/notifications/sms-events";
@@ -57,9 +58,12 @@ export async function POST(request: Request) {
   if (reply.kind === "late") {
     // The signed envelope's own time, as for STOP: "said 7:42" is when the
     // diver sent it, not when a retried delivery reached us.
-    const outcome = await markPhoneRunningLate(await getDb(), {
+    const db = await getDb();
+    const outcome = await markPhoneRunningLate(db, {
       phone: reply.phone,
       now: new Date(message.Timestamp),
+      // The shop whose number was texted, or null on the shared sender (#2320).
+      shopId: await shopForSmsSender(db, reply.destinationNumber),
     });
     // The number and the booking stay out of the log line.
     log("sms_webhook.reply_applied", "info", { kind: reply.kind, outcome: outcome.status });

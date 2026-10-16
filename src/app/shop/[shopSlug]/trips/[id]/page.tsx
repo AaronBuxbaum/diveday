@@ -9,9 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import {
-  canPersonManageOrders,
   canPersonManagePaymentSettings,
-  canPersonOverrideCertBlock,
   canPersonRefund,
   canPersonRetireMedicalRefusal,
 } from "@/db/authz";
@@ -52,6 +50,7 @@ import { paymentAsks, tripPageNotices } from "./_components/trip-page-asks";
 import { tripPulseFactsOf } from "./_components/trip-pulse-facts";
 import type { TripPageSearchParams } from "./_components/trip-search-params";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
+import { readStaffGates } from "./_lib/staff-gates";
 import { reinstateTripAction } from "./details-actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -133,8 +132,7 @@ export default async function ManageTripPage({
     mayWriteOffPayment,
     stageReading,
     mayRetireRefusal,
-    canManageOrders,
-    mayOverrideCertBlock,
+    staffGates,
   ] = await Promise.all([
     // Both read the trip, its requirements, readiness and prep list; started
     // once here and handed to each (`src/db/trips-shared-reads.ts`).
@@ -152,11 +150,7 @@ export default async function ManageTripPage({
     latestTripStage(db, shop.id, tripId),
     // Who may give a refused seat a fresh release; the action re-checks.
     canPersonRetireMedicalRefusal(db, shop.id, session.user.personId),
-    // The per-seat "Create order" door (issue #1925): read for itself, not
-    // borrowed from `mayDiscount`, though both are owner/manager today.
-    canPersonManageOrders(db, shop.id, session.user.personId),
-    // Who is offered "Change anyway" past a missing card; the action re-checks.
-    canPersonOverrideCertBlock(db, shop.id, session.user.personId),
+    readStaffGates(db, shop.id, session.user.personId),
   ]);
   if (!overview || !guests) notFound();
   const {
@@ -509,9 +503,11 @@ export default async function ManageTripPage({
                 // all sprout the staffer's confirmation.
                 namesakeRefusedBookingId: notice === "waiver-guardian-name" ? bid : undefined,
                 participantTypeCertBookingId:
-                  notice === "participant-type-cert" && mayOverrideCertBlock ? bid : undefined,
+                  notice === "participant-type-cert" && staffGates.mayOverrideCertBlock
+                    ? bid
+                    : undefined,
                 mayWriteOffPayment,
-                canManageOrders,
+                ...staffGates,
                 actions: rosterActions,
               }}
             />

@@ -69,6 +69,7 @@ export function ChromeBar({
   leading,
   trailing,
   staffChrome = false,
+  stackedOnPhone = false,
 }: {
   /** The shop's own identity — the staff shell's menu, the shopfront's name. */
   leading: ReactNode;
@@ -76,6 +77,14 @@ export function ChromeBar({
   trailing?: ReactNode;
   /** Marks the staff shell for the full-viewport live manifest exception. */
   staffChrome?: boolean;
+  /**
+   * Below `sm`, two rows rather than one: the leading slot on its own line
+   * above the trailing cluster (issue #2303, the shopfront's name above its
+   * tabs). The bar is still a fixed height, and that height is still the
+   * token: `globals.css` reads the marker and sets `--chrome-h` for two rows,
+   * so everything pinned beneath it moves with it.
+   */
+  stackedOnPhone?: boolean;
 }) {
   return (
     // `data-chrome-bar` is what `globals.css` asks the document for before it
@@ -85,6 +94,7 @@ export function ChromeBar({
       className={CHROME_BAR_CLASS}
       data-chrome-bar=""
       data-staff-chrome={staffChrome || undefined}
+      data-chrome-stacked={stackedOnPhone || undefined}
     >
       {/* One row, always — a fixed height cannot wrap, so every slot shrinks
           instead. `min-w-0` on the two content slots is what lets a long shop
@@ -98,11 +108,13 @@ export function ChromeBar({
           the shop's name sits over the nav it names (ADR 20261001-logbook).
           The shopfront's bar keeps the page's own measure. */}
       <div
-        className={`mx-auto flex h-full w-full items-center gap-x-2 px-4 sm:gap-x-3 sm:px-6 ${staffChrome ? "" : "max-w-6xl"}`}
+        className={`mx-auto flex h-full w-full items-center gap-x-2 px-4 sm:gap-x-3 sm:px-6 ${staffChrome ? "" : "max-w-6xl"} ${stackedOnPhone ? "max-sm:flex-col max-sm:items-stretch max-sm:justify-center max-sm:gap-0" : ""}`}
       >
         <div className="flex min-w-0 shrink items-center">{leading}</div>
         {trailing ? (
-          <div className="ms-auto flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3">
+          <div
+            className={`ms-auto flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3 ${stackedOnPhone ? "max-sm:ms-0 max-sm:justify-between" : ""}`}
+          >
             {trailing}
           </div>
         ) : null}

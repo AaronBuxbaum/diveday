@@ -278,6 +278,7 @@
     "requirementNitrox": "a nitrox certification",
     "requirementMarkerNitrox": "Nitrox",
     "requirementNote": "This charter is for divers with {list}.",
+    "requirementAskShop": "Not yet at that level? Ask the shop.",
     "conditionsHoldHeading": "This trip is on a conditions hold",
     "conditionsHoldBody": "Weather is being watched. Existing seats stay held; new bookings are paused for now.",
     "minimumSeatsNotice": "This one runs with at least {minimum, plural, one {# diver} other {# divers}}. If it hasn’t got there by {deadline}, the shop cancels it and emails everyone booked, so you’ll know either way, in time to make another plan.",
@@ -1313,6 +1314,7 @@
       "noDepartures": "No departures to this site on the board right now"
     },
     "terrainMapTitle": "Terrain map of {site}",
+    "mapUnavailable": "The map for {site} is not loading.",
     "openMap": "Open map ↗",
     "landmarkKinds": {
       "navigationMark": "Navigation mark",

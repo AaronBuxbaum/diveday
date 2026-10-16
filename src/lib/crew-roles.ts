@@ -90,6 +90,19 @@ export type TripCrewAssignment = {
 export type RatingCredential = { kind: string; renewsAt: string | null };
 
 /**
+ * The kinds that must carry a renewal date when they are recorded (issue
+ * #2172). Pro ratings renew every year, so a missing date is missing data, and
+ * {@link lapsedRungs} reads an undated card as current: one old undated card
+ * would keep a lapsed pro counted toward supervision. Every other kind stays
+ * optional, and an undated rating already on file is still read as current,
+ * never as lapsed.
+ */
+export const RENEWAL_DATE_REQUIRED_KINDS: readonly string[] = [
+  "instructor_rating",
+  "divemaster_rating",
+];
+
+/**
  * The credential kinds that evidence each rung. An instructor stands on an
  * instructor rating. A certified assistant stands on any dive-professional
  * rating — a Divemaster's, or the instructor-track one an Assistant Instructor

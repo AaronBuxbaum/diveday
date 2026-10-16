@@ -2,8 +2,10 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { bookings, heldSends, people, personRoles, trips } from "@/db/schema";
+import { ALL_ROLES } from "@/lib/authz";
 import { nowMs } from "@/lib/clock";
 import { SEND_HOLD_MS } from "@/lib/held-sends";
+import { KIND_AUDIENCE } from "@/lib/today";
 import { fileScopedShopContext } from "@/test/db";
 
 const fileCtx = fileScopedShopContext();
@@ -171,6 +173,53 @@ describe("holdSendAction", () => {
     form.set("surface", "roster");
     await expect(holdSendAction(form)).rejects.toThrow();
   });
+});
+
+/**
+ * Issue #2134: Today shows the wait-list row to owners and managers only, and
+ * the action behind it holds the same line (decided 2026-10-13).
+ */
+describe("holdSendAction wait-list invite", () => {
+  const waitlistForm = (tripId: string) => {
+    const form = new FormData();
+    form.set("holdKind", "waitlist_invite");
+    form.set("tripId", tripId);
+    form.set("entryId", crypto.randomUUID());
+    return form;
+  };
+
+  // Security review S1: the gate reads the database, not the session's cached
+  // roles. A token that still says manager for a person who is crew refuses.
+  it("refuses a stale session that claims manager for a person the database says is crew", async () => {
+    const { db, shop, captain, seat } = await context();
+    vi.mocked(requireStaffSession).mockResolvedValue({
+      user: { shopId: shop.id, personId: captain.personId, roles: ["manager"] },
+    } as never);
+    await expect(holdSendAction(waitlistForm(seat.tripId))).rejects.toThrow("not_authorized");
+    expect(await heldRows(db, shop.id)).toEqual([]);
+  });
+
+  for (const role of ALL_ROLES) {
+    const allowed = KIND_AUDIENCE.waitlist_seat.includes(role);
+    it(`${allowed ? "does not refuse" : "refuses"} a ${role}`, async () => {
+      const { db, shop, owner, captain, seat } = await context();
+      // The live roles are the database's: an owner for the roles the audience
+      // admits, a captain (not in it) for the rest.
+      const person = allowed ? owner : captain;
+      vi.mocked(requireStaffSession).mockResolvedValue({
+        user: { shopId: shop.id, personId: person.personId, roles: [role] },
+      } as never);
+      const attempt = holdSendAction(waitlistForm(seat.tripId));
+      if (allowed) {
+        await attempt.catch((error: unknown) => {
+          expect((error as Error).message).not.toBe("not_authorized");
+        });
+      } else {
+        await expect(attempt).rejects.toThrow("not_authorized");
+        expect(await heldRows(db, shop.id)).toEqual([]);
+      }
+    });
+  }
 });
 
 /**

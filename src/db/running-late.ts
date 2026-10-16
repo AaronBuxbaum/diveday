@@ -243,8 +243,12 @@ export async function markPersonRunningLate(
 }
 
 /**
- * A `LATE` text to DiveDay's one number. The carrier vouches for the phone and
- * nothing names a shop, so this finds **the soonest open seat held under
+ * A `LATE` text. The carrier vouches for the phone. When the number it was sent
+ * *to* belongs to one shop (`shopId`, from `shopForSmsSender`), this marks that
+ * shop's soonest open seat and never another shop's: a diver who is booked at
+ * two shops and replies to one shop's reminder is late for that shop (issue
+ * #2320). On DiveDay's shared sender nothing names a shop (`shopId` absent or
+ * null), so this finds **the soonest open seat held under
  * exactly that number, in any shop**, and every other seat on that same
  * departure held under it: every writer of `people.phone` stores
  * E.164 (`storedPhone`), the same digits the carrier reports. A number on two
@@ -254,7 +258,7 @@ export async function markPersonRunningLate(
  */
 export async function markPhoneRunningLate(
   db: AppDb,
-  input: { phone: string; now: Date },
+  input: { phone: string; now: Date; shopId?: string | null },
 ): Promise<RunningLateOutcome> {
   const [next] = await db
     .select({ bookingId: bookings.id, shopId: bookings.shopId, tripId: bookings.tripId })
@@ -268,6 +272,7 @@ export async function markPhoneRunningLate(
         eq(people.phone, input.phone),
         isNull(people.deletedAt),
         isNull(people.anonymizedAt),
+        input.shopId ? eq(bookings.shopId, input.shopId) : undefined,
         openSeatsWhere(input.now),
       ),
     )

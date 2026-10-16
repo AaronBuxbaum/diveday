@@ -422,6 +422,19 @@ html:has([data-chrome-bar]) {
 }
 
 /*
+ * **A bar of two rows on a phone** (issue #2303): the shopfront's name on its
+ * own line above its tabs. Two 44px rows, so the token is 5.5rem below `sm`
+ * (40rem) and the sticky day headers, the scroll padding and every `top-(--chrome-h)`
+ * beneath the bar move with it. Marked by the bar (`stackedOnPhone`), so no
+ * other shell's height changes.
+ */
+@media (max-width: 39.99rem) {
+  html:has([data-chrome-stacked]) {
+    --chrome-h: 5.5rem;
+  }
+}
+
+/*
  * One skip link per page (UX audit 2026-10-07, item 29). The root layout,
  * a shell with its own header and a page with a better target each render a
  * `SkipLink`, marked `data-skip-link="root" | "shell" | "page"`; only the
