@@ -151,8 +151,7 @@
       "pasteWording": "Paste the agency’s wording",
       "awaitingText": "No student signs this until it has its text.",
       "addImpact": "{students, plural, one {A form added now asks # student} other {A form added now asks # students}} on {sessions, plural, one {# upcoming session} other {# upcoming sessions}} to sign it.",
-      "removeLocked": "Only an owner or manager can take a form off a course.",
-      "removeNotAuthorized": "That didn’t save. Only an owner or manager can take a form off a course."
+      "removeNotSaved": "That didn’t save."
     }
   },
   "dayByDay": {

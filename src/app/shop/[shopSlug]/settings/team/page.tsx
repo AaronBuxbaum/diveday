@@ -8,7 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
+import { sectionCardClass } from "@/components/ui/card";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import {
@@ -624,57 +624,69 @@ export default async function TeamSettingsPage({
           `space-y-10` here, and no `mt-*` on any card
           (docs/design/forms-and-controls.md). */}
       <div className="space-y-10">
-        {/* The anchor the roster's empty state jumps to. */}
-        <SectionCard
-          id="invite"
-          padding="lg"
-          className="scroll-mt-24"
-          title={t("settings.team.invite.heading")}
-          description={t("settings.team.invite.description")}
-        >
-          <FieldGrid as="form" action={inviteStaffAction} columns={2}>
-            <Field label={t("settings.team.invite.fullNameLabel")}>
-              <input
-                name="fullName"
-                type="text"
-                required
-                maxLength={120}
-                autoComplete="name"
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("settings.team.invite.emailLabel")} error={inviteEmailError}>
-              <input
-                name="email"
-                type="email"
-                required
-                maxLength={150}
-                autoComplete="email"
-                className={controlClass}
-              />
-            </Field>
-            <div className="sm:col-span-2">
-              <RoleCheckboxes name="role" defaultRoles={[]} t={t} />
-            </div>
-            <FieldActions>
-              <SubmitButton
-                pendingLabel={t("settings.team.invite.submitting")}
-                className={buttonClass()}
-              >
-                {t("settings.team.invite.submit")}
-              </SubmitButton>
-              <FormStatus tone={inviteStatus?.tone}>{inviteStatus?.text}</FormStatus>
-            </FieldActions>
-            <FieldErrorFocus key={notice} scope="invite" />
-          </FieldGrid>
-        </SectionCard>
-
+        {/* **The team first, and inviting is a button** (fifth-loop ideas,
+            item 58): the page opened on a blank invite form above the people
+            it was about. The form opens in place under the button, and opens
+            itself when the invite just failed or the empty state's link
+            points at it. */}
         <section>
           {/* Not a card — a heading over a list of them, so a bare `h2` at
               `SECTION_TITLE_CLASS`, the rung `SectionCard` draws its own title
-              at and `card.tsx` prescribes for a heading over a plural body. It
-              once stood 18px under the invite card's 24px (K-314, #1966). */}
+              at and `card.tsx` prescribes for a heading over a plural body. */}
           <h2 className={SECTION_TITLE_CLASS}>{t("settings.team.current.heading")}</h2>
+          <AutoOpenDetails
+            id="invite"
+            openOnHash="invite"
+            open={Boolean(inviteEmailError || inviteStatus)}
+            className="mt-4 scroll-mt-24"
+          >
+            <summary
+              className={buttonClass({
+                variant: "secondary",
+                className: "list-none select-none [&::-webkit-details-marker]:hidden",
+              })}
+            >
+              {t("settings.team.invite.heading")}
+            </summary>
+            <div className={sectionCardClass({ padding: "lg", className: "mt-3" })}>
+              <p className="mb-4 text-sm text-muted">{t("settings.team.invite.description")}</p>
+              <FieldGrid as="form" action={inviteStaffAction} columns={2}>
+                <Field label={t("settings.team.invite.fullNameLabel")}>
+                  <input
+                    name="fullName"
+                    type="text"
+                    required
+                    maxLength={120}
+                    autoComplete="name"
+                    className={controlClass}
+                  />
+                </Field>
+                <Field label={t("settings.team.invite.emailLabel")} error={inviteEmailError}>
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    maxLength={150}
+                    autoComplete="email"
+                    className={controlClass}
+                  />
+                </Field>
+                <div className="sm:col-span-2">
+                  <RoleCheckboxes name="role" defaultRoles={[]} t={t} />
+                </div>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.team.invite.submitting")}
+                    className={buttonClass()}
+                  >
+                    {t("settings.team.invite.submit")}
+                  </SubmitButton>
+                  <FormStatus tone={inviteStatus?.tone}>{inviteStatus?.text}</FormStatus>
+                </FieldActions>
+                <FieldErrorFocus key={notice} scope="invite" />
+              </FieldGrid>
+            </div>
+          </AutoOpenDetails>
           {staff.length === 0 ? (
             <EmptyState
               title={t("settings.team.current.empty")}

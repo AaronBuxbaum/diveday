@@ -135,7 +135,7 @@ export default async function RentOutPage({
   const noticeText = notice
     ? notice.named && noticeUnit
       ? t(notice.named, { label: noticeUnit })
-      : t(notice.key)
+      : t(notice.key, notice.values)
     : undefined;
   const whoNotice = notice?.step === "who" || !person ? noticeText : undefined;
   const rentNotice = person && notice?.step === "rent" ? noticeText : undefined;

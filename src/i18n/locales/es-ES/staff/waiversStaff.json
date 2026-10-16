@@ -81,7 +81,6 @@
     "noQuestionnaire": "En esta exención no se respondió ningún cuestionario.",
     "newWaiverSent": "Se envió una nueva exención el {date}. Esta respuesta sigue bloqueando la plaza hasta que un médico autorice la nueva.",
     "noQuestionnairePaper": "El centro revisó el formulario médico en papel. Las respuestas no se guardan aquí.",
-    "answersRestricted": "Solo un propietario o un gerente puede leer el cuestionario completo.",
     "identityHeld": "Las respuestas médicas quedan ocultas hasta que alguien confirme quién ocupa esta plaza.",
     "showAnswers": "Mostrar respuestas",
     "showingAnswers": "Mostrando…",

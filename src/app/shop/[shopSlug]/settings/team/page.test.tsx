@@ -133,7 +133,8 @@ describe("the page's section headings", () => {
  */
 describe("the send-limit refusal", () => {
   it("shows a banner saying nothing went out", async () => {
-    const text = STAFF_MESSAGES["en-US"].settings.team.notice.sendLimit;
+    const text =
+      "You have sent a lot of invites this hour. Nothing went out; try again in a little while.";
     const banners = findElements<{ tone?: string; children?: unknown }>(
       await renderTeam({ notice: "send-limit" }),
       StaffNoticeBanner,

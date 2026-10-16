@@ -13,6 +13,7 @@ import {
   xeroConfigFromEnvironment,
 } from "@/features/integrations";
 import { requestLocale } from "@/i18n/request";
+import { ownerOnlyWords, sayWords } from "@/i18n/shared-sentences";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
@@ -46,7 +47,7 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
     "test-sent": { tone: "success", text: t("integrations.notice.test-sent") },
     invalid: { tone: "danger", text: t("integrations.notice.invalid") },
     "not-configured": { tone: "warning", text: t("integrations.notice.not-configured") },
-    "not-authorized": { tone: "danger", text: t("integrations.notice.not-authorized") },
+    "not-authorized": { tone: "danger", text: sayWords(t, ownerOnlyWords("integrations")) },
     failed: { tone: "danger", text: t("integrations.notice.failed") },
     "encryption-key-unset": {
       tone: "danger",

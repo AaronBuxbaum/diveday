@@ -7,8 +7,9 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { controlClass } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/group-label";
-import { canPersonReadPrivateRecapPulse } from "@/db/authz";
+import { canPersonManageShopSettings, canPersonReadPrivateRecapPulse } from "@/db/authz";
 import { listOpenRecapPulses, type OpenRecapPulse } from "@/db/recap-pulses";
 import {
   countStaffReviewGroups,
@@ -31,6 +32,7 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
+import { saveReviewUrlAction } from "../settings/messages-actions";
 import {
   type BulkPublishCopy,
   PublishAllButton,
@@ -91,6 +93,8 @@ const PULSE_NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMess
   "pulse-addressed": { tone: "success", key: "reviews.notice.pulseAddressed" },
   "pulse-not-authorized": { tone: "danger", key: "reviews.notice.pulseNotAuthorized" },
   error: { tone: "danger", key: "reviews.notice.error" },
+  "review-url-saved": { tone: "success", key: "settings.main.notice.reviewUrlSaved" },
+  "review-url-invalid": { tone: "danger", key: "settings.main.notice.reviewUrlInvalid" },
 };
 
 /**
@@ -131,6 +135,7 @@ export default async function ReviewsPage({
   // would read a diver's private words for a staffer this gate exists to keep them from, and one
   // round trip is the price of not doing that.
   const canReadPulses = await canPersonReadPrivateRecapPulse(db, shop.id, session.user.personId);
+  const canManageSettings = await canPersonManageShopSettings(db, shop.id, session.user.personId);
   const locale = await requestLocale(shop.defaultLocale);
   const timezone = shop.timezone ?? "UTC";
   // The current calendar month in the shop's own timezone — "this month" means
@@ -377,21 +382,41 @@ export default async function ReviewsPage({
           <EmptyState
             title={t("reviews.emptyHeading")}
             body={t("reviews.emptyDetail")}
-            /* Nothing here yet is not something staff can fix by clicking — a
-               review arrives when a diver opens the recap after a trip sails,
-               and no setting turns that on. What *is* theirs to set is where a
-               diver goes next, so that is the door: the review link the
-               recap offers after every rating. */
+            /* A review arrives when a diver opens the recap after a trip
+               sails, and no setting turns that on. What *is* the shop's to set
+               is where a diver goes next, so the empty state offers that one
+               field in place (fifth-loop ideas, item 59) rather than a
+               paragraph explaining the product. Owner and manager only, as on
+               Settings; anyone else reads the line alone. */
             action={
-              <div className="flex flex-col items-center gap-2">
-                <p className="max-w-md text-sm text-muted">{t("reviews.emptyReviewLinkBody")}</p>
-                <Link
-                  href={`/shop/${shopSlug}/settings#review-link`}
-                  className={buttonClass({ variant: "secondary", size: "sm" })}
+              canManageSettings ? (
+                <form
+                  action={saveReviewUrlAction}
+                  className="flex w-full max-w-md flex-col gap-2 text-left"
                 >
-                  {t("reviews.emptyReviewLinkAction")}
-                </Link>
-              </div>
+                  <input type="hidden" name="from" value="reviews" />
+                  <label htmlFor="empty-review-url" className="text-sm font-medium">
+                    {t("reviews.emptyReviewLinkLabel")}
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <input
+                      id="empty-review-url"
+                      name="reviewUrl"
+                      type="url"
+                      maxLength={500}
+                      defaultValue={shop.reviewUrl ?? ""}
+                      placeholder="https://g.page/r/your-shop/review"
+                      className={`${controlClass} min-w-0 flex-1`}
+                    />
+                    <SubmitButton
+                      pendingLabel={t("reviews.saving")}
+                      className={buttonClass({ variant: "secondary" })}
+                    >
+                      {t("reviews.emptyReviewLinkSave")}
+                    </SubmitButton>
+                  </div>
+                </form>
+              ) : null
             }
           />
         ) : (

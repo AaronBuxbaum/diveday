@@ -12,8 +12,7 @@
     "disconnected": "Destino de respaldo eliminado. El historial de entregas de abajo se conserva.",
     "test-delivered": "La entrega de prueba llegó a tu bucket.",
     "test-failed": "La entrega de prueba no llegó. {reason}",
-    "no-destination": "Guarda primero un destino y luego ejecuta una entrega de prueba.",
-    "not-authorized": "Solo un propietario o gerente puede cambiar los ajustes de respaldo."
+    "no-destination": "Guarda primero un destino y luego ejecuta una entrega de prueba."
   },
   "status": {
     "configuredHeading": "Los respaldos están configurados",

@@ -1,6 +1,7 @@
 import type { DiverMergeRefusal } from "@/db/diver-merge";
 import type { SendStaffReplyRefusal } from "@/db/staff-reply";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
+import { sendLimitWords } from "@/i18n/shared-sentences";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { type FormNotice, type NoticeCodeOf, noticeFromParam } from "@/lib/staff-notices";
 import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
@@ -38,6 +39,8 @@ type DiverNoticeDefinition = {
   tone: "success" | "danger" | "warning";
   /** Absent only when `silent` is — nothing renders, so there is nothing to say. */
   key?: StaffMessageKey;
+  /** The values `key` takes, for a shared sentence (`src/i18n/shared-sentences.ts`). */
+  values?: Record<string, string>;
   field?: string;
   /**
    * A pure "it worked" outcome the surface already shows on its own: a
@@ -354,7 +357,7 @@ const NOTICE_KEYS: DiverNoticeMap = {
   "reply-body-too-long": { form: "reply", tone: "danger", key: "inbox.notices.tooLong" },
   "reply-message-not-found": { form: "reply", tone: "danger", key: "inbox.notices.notFound" },
   // Refused by the per-staff send bound (`RATE_LIMITS.staffSendByActor`).
-  "reply-send-limit": { form: "reply", tone: "warning", key: "inbox.notices.sendLimit" },
+  "reply-send-limit": { form: "reply", tone: "warning", ...sendLimitWords("replies") },
   "reply-channel-unsupported": {
     form: "reply",
     tone: "danger",
@@ -738,7 +741,7 @@ export function resolveDiverNotice({
             ? t("divers.notices.bookedConfirmedNoInvoice")
             : notice === "merge-booking-conflict" && conflictDeparture
               ? t("divers.notices.mergeBookingConflictOn", { departure: conflictDeparture })
-              : t(banner.key as StaffMessageKey),
+              : t(banner.key as StaffMessageKey, banner.values),
     code: notice,
     link: notice === undefined ? undefined : NOTICE_LINKS[notice],
     field: banner.field,

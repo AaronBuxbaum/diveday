@@ -35,7 +35,8 @@ import { shopByIdCached } from "@/db/shops";
 import { canAcceptPayments } from "@/db/stripe-accounts";
 import { orientationRoleFor } from "@/i18n/orientation-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { type StaffWords, sendLimitWords } from "@/i18n/shared-sentences";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { daySpineSummaryText } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
@@ -71,7 +72,7 @@ export const instant = true;
 
 // A notice query param maps to a message key, never to a sentence — the words
 // come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
-type EveningNotice = { key: StaffMessageKey; tone: NoticeTone };
+type EveningNotice = StaffWords & { tone: NoticeTone };
 
 /**
  * The fit-keep's refusals, in the spelling `noticeUrl` gives them. The tap
@@ -99,7 +100,7 @@ const EVENING_NOTICES: EveningNoticeMap = {
   "recap-send-attention": { key: "closeout.notice.recapAttention", tone: "warning" },
   "recap-not-ready": { key: "closeout.notice.recapNotReady", tone: "neutral" },
   "recap-held": { key: "closeout.notice.recapHeld", tone: "warning" },
-  "recap-send-limit": { key: "closeout.notice.recapSendLimit", tone: "warning" },
+  "recap-send-limit": { ...sendLimitWords("recaps"), tone: "warning" },
   "recap-locked": { key: "closeout.notice.recapLocked", tone: "neutral" },
   "recap-photo-removed": { key: "trips.notices.recapPhotoRemoved", tone: "success" },
   "crew-photo-added": { key: "closeout.notice.crewPhotoAdded", tone: "success" },

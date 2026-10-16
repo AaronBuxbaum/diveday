@@ -8,6 +8,7 @@ import { canPersonReadMedicalAnswers, canPersonReadMedicalClearanceDocument } fr
 import { getSignedWaiverForDiver } from "@/db/waivers";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { requestLocale } from "@/i18n/request";
+import { ownerOnlyWords, sayWords } from "@/i18n/shared-sentences";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { formatDateTimeTz } from "@/lib/format";
@@ -144,7 +145,7 @@ export default async function SignedWaiverPage({
   const noAnswersText = waiver.identityHeld
     ? t("waiversStaff.record.identityHeld")
     : !readsMedicalAnswers
-      ? t("waiversStaff.record.answersRestricted")
+      ? sayWords(t, ownerOnlyWords("questionnaire"))
       : waiver.signatureMethod === "in_person_attested"
         ? t("waiversStaff.record.noQuestionnairePaper")
         : t("waiversStaff.record.noQuestionnaire");
