@@ -791,11 +791,14 @@ export function noCertificationStands(person: {
   return person.noCertificationDeclaredAt !== null && person.noCertificationClearedAt === null;
 }
 
-/** The blocker codes an ended course's card would clear, and so may name it. */
+/**
+ * The blocker codes an ended course's card would clear, and so may name it.
+ * Not a self-declared card: the diver's own word is checked against the card
+ * they named, so verifying it is the fix (agency review G6).
+ */
 const ENDED_COURSE_CODES: ReadonlySet<ReadinessBlockerCode> = new Set([
   "certification_missing",
   "certification_insufficient",
-  "certification_self_declared",
   "certification_not_yet",
 ]);
 

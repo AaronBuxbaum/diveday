@@ -772,6 +772,23 @@ describe("calculateReadiness — a course that gets them there", () => {
       ).toEqual([{ code: "certification_pending" }]);
     });
 
+    // Agency review G6: the diver's own word about a card is checked against
+    // the card, so the fix is verifying it, not the session's roster.
+    it("leaves a self-declared card alone: verifying it is the fix", () => {
+      const blockers = endedBlockers(
+        [
+          certification({
+            status: "pending",
+            level: "advanced_open_water",
+            selfDeclaredAt: new Date("2026-07-17T00:00:00Z"),
+          }),
+        ],
+        [ended("advanced_open_water")],
+      ).blockers;
+      expect(blockers.map((blocker) => blocker.code)).toEqual(["certification_self_declared"]);
+      expect(blockers[0]?.params?.endedCourseTripId).toBeUndefined();
+    });
+
     it("clears nothing: the issued card is still what boards them", () => {
       expect(endedBlockers([certification()], [ended("advanced_open_water")])).toEqual({
         status: "ready",
