@@ -186,7 +186,16 @@
     "lapsedEmpty": "Nobody sailed on a lapsed credential.",
     "unrecordedTitle": "Crew who sailed with no credential for their role on file",
     "unrecordedSailings": "{count, plural, one {# sailing} other {# sailings}} this month",
-    "noDepartures": "No departures came back this month."
+    "noDepartures": "No departures came back this month.",
+    "year": {
+      "open": "The year",
+      "print": "Print the year",
+      "intro": "What the shop recorded on the year’s departures that are home. Lapsed credentials are read as the records stand today.",
+      "figuresLabel": "The year’s safety record",
+      "noDepartures": "No departures came back this year.",
+      "noCrewNone": "No crew recorded on any departure this year",
+      "activityLink": "The year’s safety activity"
+    }
   },
   "discard": {
     "title": "Delete this draft",

@@ -6,6 +6,7 @@ import { personRoles } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
 import { seededTestDb } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
@@ -36,7 +37,7 @@ function textIn(node: unknown, found: string[] = []): string[] {
   return found;
 }
 
-async function renderAs(viewerRoles: Role[]) {
+async function renderAs(viewerRoles: Role[], searchParams: { year?: string } = {}) {
   const db: AppDb = await seededTestDb();
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error("demo shop missing");
@@ -56,7 +57,7 @@ async function renderAs(viewerRoles: Role[]) {
   });
   const tree = await SafetyReportPage({
     params: Promise.resolve({ shopSlug: "blue-mantis" }),
-    searchParams: Promise.resolve({}),
+    searchParams: Promise.resolve(searchParams),
   });
   return textIn(tree).join("\n");
 }
@@ -81,4 +82,20 @@ describe("the Safety page", () => {
       await expect(renderAs([role])).rejects.toThrow(/NEXT_REDIRECT/);
     },
   );
+});
+
+/** The year the insurer renews on (fifth loop, item 33). */
+describe("the Safety year", () => {
+  it("reads the whole year under its own heading, with a way to print it", async () => {
+    const year = String(nowDate().getUTCFullYear());
+    const text = await renderAs(["owner"], { year });
+    expect(text).toContain("What the shop recorded on the year’s departures that are home.");
+    expect(text).toContain(year);
+    expect(text).not.toContain("What the shop recorded on departures that left this month");
+  });
+
+  it("reads a year it cannot have as the month", async () => {
+    const text = await renderAs(["owner"], { year: "1999" });
+    expect(text).toContain("What the shop recorded on departures that left this month");
+  });
 });

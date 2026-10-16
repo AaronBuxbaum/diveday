@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CREDENTIAL_KIND_KEYS } from "@/app/shop/[shopSlug]/settings/team/credential-kinds";
 import { EmptyState } from "@/components/EmptyState";
+import { PrintButton } from "@/components/PrintButton";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
@@ -24,7 +25,7 @@ import {
 import { nowDate } from "@/lib/clock";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
-import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
+import { shopMonthBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { type MonthFigure, MonthFigures } from "../reports/_components/MonthFigures";
 import { SafetyLists } from "./_components/SafetyLists";
 
@@ -50,10 +51,10 @@ export default async function SafetyReportPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; year?: string }>;
 }) {
   const { shopSlug } = await params;
-  const { month } = await searchParams;
+  const { month, year: yearParam } = await searchParams;
   // The Reports gate, re-read against the database; a refusal lands on Today
   // with its reason, as Reports' own does.
   const { session, db, shop } = await requireShopSurface(shopSlug, {
@@ -78,17 +79,35 @@ export default async function SafetyReportPage({
   const parsed = parseMonthKey(month) ?? thisMonth;
   const current = clampMonth(compareMonths(parsed, thisMonth) > 0 ? thisMonth : parsed, floor);
   const isThisMonth = compareMonths(current, thisMonth) === 0;
-  const prevKey = compareMonths(current, floor) > 0 ? monthKey(addMonths(current, -1)) : null;
-  const nextKey = isThisMonth ? null : monthKey(addMonths(current, 1));
+  // **The year the insurer renews on** (fifth loop, item 33): `?year=` reads
+  // the same figures over the whole year, one page for the broker instead of
+  // twelve, floored at the shop's first year and never past this one.
+  const year = safetyYear(yearParam, floor.year, thisMonth.year);
+  const prevKey = year
+    ? year.number > floor.year
+      ? `year=${year.number - 1}`
+      : null
+    : compareMonths(current, floor) > 0
+      ? `month=${monthKey(addMonths(current, -1))}`
+      : null;
+  const nextKey = year
+    ? year.isThisYear
+      ? null
+      : `year=${year.number + 1}`
+    : isThisMonth
+      ? null
+      : `month=${monthKey(addMonths(current, 1))}`;
 
-  const { from, to } = shopMonthBounds(current, tz);
+  const { from, to } = year ? year.bounds(tz) : shopMonthBounds(current, tz);
   const [safety, incidents] = await Promise.all([
     getSafetyMonth(db, shop.id, from, to, tz, now),
     listShopIncidentReports(db, shop.id, session.user.personId, from, to),
   ]);
 
   const lastDay = new Date(Date.UTC(current.year, current.month, 0)).getUTCDate();
-  const activityHref = `${shopPath(shopSlug, "settings", "activity")}?kind=safety&from=${isoDate(current.year, current.month, 1)}&to=${isoDate(current.year, current.month, lastDay)}`;
+  const activityHref = year
+    ? `${shopPath(shopSlug, "settings", "activity")}?kind=safety&from=${isoDate(year.number, 1, 1)}&to=${isoDate(year.number, 12, 31)}`
+    : `${shopPath(shopSlug, "settings", "activity")}?kind=safety&from=${isoDate(current.year, current.month, 1)}&to=${isoDate(current.year, current.month, lastDay)}`;
   const figures: MonthFigure[] = [
     {
       key: "rollCalls",
@@ -111,7 +130,12 @@ export default async function SafetyReportPage({
       key: "certOverrides",
       label: t("incidents.safety.certOverrides"),
       value: String(safety.certOverrides),
-      link: { href: activityHref, label: t("incidents.safety.certOverridesLink") },
+      link: {
+        href: activityHref,
+        label: t(
+          year ? "incidents.safety.year.activityLink" : "incidents.safety.certOverridesLink",
+        ),
+      },
     },
     {
       key: "crew",
@@ -148,7 +172,7 @@ export default async function SafetyReportPage({
           key: "noCrew",
           label: t("incidents.safety.noCrew"),
           value: "—",
-          detail: t("incidents.safety.noCrewNone"),
+          detail: t(year ? "incidents.safety.year.noCrewNone" : "incidents.safety.noCrewNone"),
           detailTone: "quiet",
         }
       : {
@@ -175,20 +199,36 @@ export default async function SafetyReportPage({
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <ShopPageHeader title={t("shared.shopSections.safety")} />
-      <p className="mb-6 max-w-prose text-muted">{t("incidents.safety.intro")}</p>
+      <ShopPageHeader
+        title={t("shared.shopSections.safety")}
+        actions={
+          year ? (
+            <PrintButton label={t("incidents.safety.year.print")} />
+          ) : (
+            <Link
+              href={`${safetyPath}?year=${thisMonth.year}`}
+              className={buttonClass({ variant: "secondary" })}
+            >
+              {t("incidents.safety.year.open")}
+            </Link>
+          )
+        }
+      />
+      <p className="mb-6 max-w-prose text-muted">
+        {t(year ? "incidents.safety.year.intro" : "incidents.safety.intro")}
+      </p>
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 className={SECTION_TITLE_CLASS}>
-          {monthLabel(current, locale)}
-          {isThisMonth ? (
+          {year ? String(year.number) : monthLabel(current, locale)}
+          {(year ? year.isThisYear : isThisMonth) ? (
             <span className="ms-2 text-sm font-normal text-muted">{t("reports.soFar")}</span>
           ) : null}
         </h2>
         <nav aria-label={t("reports.chooseMonth")} className="flex flex-wrap items-center gap-2">
           {prevKey ? (
             <Link
-              href={`${safetyPath}?month=${prevKey}`}
+              href={`${safetyPath}?${prevKey}`}
               aria-label={t("reports.previousMonth")}
               className={navClass}
               scroll={false}
@@ -206,7 +246,7 @@ export default async function SafetyReportPage({
           )}
           {nextKey ? (
             <Link
-              href={`${safetyPath}?month=${nextKey}`}
+              href={`${safetyPath}?${nextKey}`}
               aria-label={t("reports.nextMonth")}
               className={navClass}
               scroll={false}
@@ -226,7 +266,12 @@ export default async function SafetyReportPage({
       </div>
 
       {safety.departuresBack === 0 && incidents.length === 0 ? (
-        <EmptyState title={t("incidents.safety.noDepartures")} />
+        <EmptyState
+          title={t(year ? "incidents.safety.year.noDepartures" : "incidents.safety.noDepartures")}
+        />
+      ) : year ? (
+        // The year is the figures alone: the lists behind them stay on each month.
+        <MonthFigures label={t("incidents.safety.year.figuresLabel")} figures={figures} />
       ) : (
         <div className="space-y-10">
           <div>
@@ -248,4 +293,21 @@ export default async function SafetyReportPage({
       )}
     </main>
   );
+}
+
+/**
+ * `?year=` parsed, never trusted: four digits between the shop's first year and
+ * this one, or no year at all (the month view).
+ */
+function safetyYear(raw: string | undefined, firstYear: number, thisYear: number) {
+  const number = raw && /^\d{4}$/.test(raw) ? Number(raw) : null;
+  if (number === null || number < firstYear || number > thisYear) return null;
+  return {
+    number,
+    isThisYear: number === thisYear,
+    bounds: (timeZone: string) => ({
+      from: wallTimeToUtc({ year: number, month: 1, day: 1, hour: 0, minute: 0 }, timeZone),
+      to: wallTimeToUtc({ year: number + 1, month: 1, day: 1, hour: 0, minute: 0 }, timeZone),
+    }),
+  };
 }
