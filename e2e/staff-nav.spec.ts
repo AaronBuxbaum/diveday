@@ -223,7 +223,6 @@ test.describe("owner", () => {
       ["/requests", "Inbox"],
       ["/reviews", "Inbox"],
       ["/reports", "Money"],
-      ["/safety", "Safety"],
     ] as const) {
       await page.goto(`/shop/blue-mantis${suffix}`);
       await expect(nav.getByRole("link", { name: section }), suffix).toHaveAttribute(

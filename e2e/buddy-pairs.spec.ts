@@ -114,7 +114,7 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   await expect(page.getByRole("dialog").getByRole("region", { name: "Buddy team" })).toContainText(
     "Sam Whitfield",
   );
-  await expect(page.getByText("Buddy not back aboard", { exact: true })).toBeVisible();
+  await expect(page.getByText("Sam not back aboard", { exact: true })).toBeVisible();
   await expect(
     page.getByText("1 buddy team is split. Someone is back aboard, someone is not."),
   ).toBeVisible();
@@ -143,7 +143,7 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   await expect(page.getByRole("dialog").getByRole("region", { name: "Buddy team" })).toContainText(
     "Sam Whitfield",
   );
-  await expect(page.getByRole("dialog").getByText("Buddy not back aboard")).toHaveCount(0);
+  await expect(page.getByRole("dialog").getByText("Sam not back aboard")).toHaveCount(0);
   await expect(page.getByText("buddy team is split", { exact: false })).toHaveCount(0);
 });
 
