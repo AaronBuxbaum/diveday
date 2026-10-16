@@ -4,7 +4,8 @@ import type { DiveSiteTemplate } from "./types";
 /**
  * Antigua and Barbuda. No agency publishes coordinates for these sites, so every pin is an
  * approximate pin placed in the water from a mapped landmark the operators tie the site to
- * (OpenStreetMap maps the Pillars of Hercules and Indian Creek; Wikipedia gives Cades Reef); each
+ * (OpenStreetMap maps the Pillars of Hercules and Indian Creek; Wikipedia gives Cades Reef; the
+ * US NGA GeoNames file names Nanton Point); each
  * says so in a comment. Where an operator gives a deeper figure than the other, the deeper is used.
  */
 export const ANTIGUA_BARBUDA: DiveSiteTemplate[] = [
@@ -183,6 +184,53 @@ export const ANTIGUA_BARBUDA: DiveSiteTemplate[] = [
         "spotted-eagle-ray",
         "nurse-shark",
         "great-barracuda",
+      ],
+    },
+  },
+  {
+    slug: "nanton-point-antigua",
+    version: 1,
+    area: "antigua-barbuda",
+    sources: [
+      "https://www.divecarib.com/dive-sites/",
+      "https://web.archive.org/web/2026/http://www.dockyard-divers.com/divesites.html",
+      "https://www.scubatravel.co.uk/americas/antigua-diving.html",
+      "https://geonames.nga.mil/geon-ags/rest/services/RESEARCH/GIS_OUTPUT/MapServer/0/query?where=full_name%3D%27Nanton+Point%27&outFields=full_name,lat_dd,long_dd&f=json",
+    ],
+    briefing: {
+      name: "Nanton Point",
+      locationName: "Nanton Point, Antigua",
+      // Approximate pin: the US National Geospatial-Intelligence Agency's GeoNames record puts
+      // Nanton Point, a headland on Antigua's south coast east of English Harbor, at 16.9982,
+      // -61.7547; both operators name the dive for that point and describe boulders at the foot of
+      // a cliff. The pin is in the water about 100 m south of the headland's tip (OpenStreetMap
+      // coastline, 16.9974, -61.7545), good to about 2 km along the shore.
+      // Depth: 4 m to 23 m (DiveCarib), 30 ft to 45 ft (Dockyard Divers); the deeper figure is used.
+      forecastLatitude: 16.997,
+      forecastLongitude: -61.755,
+      description:
+        "Big boulders pile against a cliff on the south coast, and rocky ridges reach out from the face like short walls. Corals and sponges crust the stone, and reef sharks are sometimes reported along the outer edge.",
+      marineLife: "Spotted eagle rays · green turtles · morays",
+      marineLifeDescription:
+        "Eagle rays patrol the outer ridges, and turtles are a regular sight. Reef sharks are sometimes reported, not promised. Morays and small reef life tuck into the gaps between the boulders.",
+      difficultyLevel: "advanced",
+      depthRange: "4–23 m (13–75 ft)",
+      maxDepthMeters: 23,
+      currentNote:
+        "Yachts use the water off English Harbor: carry an SMB, listen for engines, and surface only after the SMB is up. Close to a cliff and open to the Atlantic, with a current whose direction is unpredictable, so local operators usually run it as a drift from the boat. Keep a few meters clear of the cliff foot; surge can move you into the boulders. The water off the headland is often rough and the site is not always diveable.",
+      divePlan:
+        "Drift with the current along the boulders and ridges, hold no deeper than 23 m, and make the safety stop on an SMB in open water, away from the cliff. If reef sharks come by: stay with the group, keep nothing dangling, do not chase or touch, and follow the crew's briefing. Sightings are not promised. Staff confirm the diver's log before boarding.",
+      fitTone: "demanding",
+      fitNote:
+        "A boat drift beside a cliff on the exposed coast. For divers who are at ease with current and an SMB.",
+      // Gate: depth is not the reason (23 m). The sources call for divers confident in drifting,
+      // and the site is exposed to the Atlantic with an unpredictable current, so Advanced Open Water.
+      minimumCertificationLevel: "advanced_open_water",
+      creatureSlugs: [
+        "spotted-eagle-ray",
+        "green-sea-turtle",
+        "green-moray",
+        "caribbean-reef-shark",
       ],
     },
   },
