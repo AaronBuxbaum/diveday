@@ -494,7 +494,12 @@ export function WaiverGroup({
             <div className={FILE_ROW_INSET}>
               <MedicalClearanceControl
                 action={recordMedicalClearanceAction.bind(null, shopSlug, personId)}
-                copy={medicalClearanceCopy(t)}
+                copy={medicalClearanceCopy(
+                  t,
+                  diver.medicalEarlierReferral
+                    ? formatCalendarDate(diver.medicalEarlierReferral.on, locale)
+                    : null,
+                )}
                 // The shop's own today, so the date box cannot offer tomorrow: a
                 // Key Largo evening is already tomorrow in UTC, and the reader's
                 // browser zone is nobody's business here.

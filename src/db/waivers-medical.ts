@@ -3,7 +3,7 @@
  * evaluation, the hold an unanswered one keeps, and retiring a refusal.
  * Imported through the `./waivers` barrel.
  */
-import { and, desc, eq, isNotNull, isNull, or } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, ne, or } from "drizzle-orm";
 import { canRetireMedicalRefusal } from "@/lib/authz";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -13,7 +13,7 @@ import { WAIVER_SIGNATURE_VALIDITY_MS } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
-import { type WaiverRecord, waiverRecords } from "./schema";
+import { activityEvents, bookings, people, type WaiverRecord, waiverRecords } from "./schema";
 import { activeStaffAttestorId } from "./waivers-in-person";
 
 /**
@@ -44,6 +44,14 @@ export type MedicalEvaluationResult =
       outcome: MedicalEvaluationOutcome;
       /** The answer was already on file, so nothing was written. A double submit, not a failure. */
       alreadyRecorded: boolean;
+      /**
+       * Set only when the answer was written from a letter that predates the
+       * referral it answers (issue #2616): the earlier referral that covered it,
+       * and how many of the diver's live seats that referral still holds. The
+       * letter answers the open record only, so those seats stay blocked until
+       * the desk records the letter against them too, and the surface says so.
+       */
+      earlierLetter?: { referralId: string; seatsStillHeld: number };
     }
   | {
       ok: false;
@@ -129,7 +137,7 @@ function signatureInstant(record: WaiverRecord): Date {
 
 /**
  * **The earliest earlier referral a physician's letter could have been written
- * for** (issue #2616), as a UTC calendar date, or null when there is none.
+ * for** (issue #2616), or null when there is none.
  *
  * A diver whose release was referred, and who re-signs the same "yes" before
  * the shop records the physician's letter, holds two open referrals; the letter
@@ -137,9 +145,11 @@ function signatureInstant(record: WaiverRecord): Date {
  * least every condition the newer one discloses. So a candidate is an *earlier*
  * referral of this diver at this shop that nobody has answered (a cleared or
  * refused one is finished, and a refusal is never an evidence of fitness), whose
- * flagged prompts include **every** prompt the open record flags. Live or
- * superseded counts; the caller has already scoped `held` to this shop, this
- * diver, and not erased.
+ * flagged prompts include **every** prompt the open record flags, and that is
+ * still this diver's own: a record given on a seat that has since passed to
+ * somebody else (`passed`) was never this diver's answers
+ * (`listSignedWaiversByPerson` drops it the same way). Live or superseded counts;
+ * the caller has already scoped `held` to this shop, this diver, and not erased.
  *
  * Fails closed: the open record must itself be a real physician referral (a
  * complete questionnaire flagging at least one prompt), an incomplete or
@@ -147,17 +157,19 @@ function signatureInstant(record: WaiverRecord): Date {
  * prompt has no candidate, so it still needs its own evaluation. The clearance
  * is written to the open record only, never to the earlier one.
  */
-function earliestCoveringReferralOn(
+function earliestCoveringReferral(
   held: readonly WaiverRecord[],
   open: WaiverRecord,
-): string | null {
+  passed: ReadonlySet<string>,
+): WaiverRecord | null {
   const wanted = physicianFlaggedPrompts(open);
   if (wanted === null) return null;
   const openAt = signatureInstant(open).getTime();
-  const days = held
+  const covering = held
     .filter(
       (record) =>
         record.id !== open.id &&
+        !passed.has(record.id) &&
         record.medicalClearedAt === null &&
         record.medicalClearanceDeclinedAt === null &&
         signatureInstant(record).getTime() <= openAt,
@@ -166,9 +178,95 @@ function earliestCoveringReferralOn(
       const seen = physicianFlaggedPrompts(record);
       return seen !== null && [...wanted].every((prompt) => seen.has(prompt));
     })
-    .map((record) => calendarDateInTimezone(signatureInstant(record), "UTC"))
-    .sort();
-  return days[0] ?? null;
+    .sort((a, b) => signatureInstant(a).getTime() - signatureInstant(b).getTime());
+  return covering[0] ?? null;
+}
+
+/**
+ * Records of this diver's whose seat has since passed to somebody else (a split
+ * or a claim): the booking now belongs to another person, so the answers on it
+ * were never this diver's. The same exclusion `listSignedWaiversByPerson` makes.
+ */
+async function recordsOnPassedSeats(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<Set<string>> {
+  const rows = await db
+    .select({ id: waiverRecords.id })
+    .from(waiverRecords)
+    .innerJoin(bookings, eq(bookings.id, waiverRecords.bookingId))
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        eq(waiverRecords.personId, personId),
+        eq(waiverRecords.status, "medical_review"),
+        ne(bookings.personId, waiverRecords.personId),
+      ),
+    );
+  return new Set(rows.map((row) => row.id));
+}
+
+/** The diver's medical-review records at this shop, newest first: the pool a physician's answer is read against. */
+async function heldReferrals(db: DbExecutor, shopId: string, personId: string) {
+  return db
+    .select()
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        eq(waiverRecords.personId, personId),
+        eq(waiverRecords.status, "medical_review"),
+        // A superseded referral is answerable too. Superseding moves a hold
+        // off a seat and answers nothing (`isUnclearedReferral`): it still
+        // holds every seat the diver has, so a physician must still be able
+        // to end it, or the desk is told "nothing to clear" about a hold it
+        // can see (glossary: Medical hold).
+        isNull(waiverRecords.anonymizedAt),
+      ),
+    )
+    .orderBy(desc(waiverRecords.completedAt));
+}
+
+/**
+ * The record a physician's answer would land on: the newest unanswered
+ * referral, a live one before a superseded one. A live hold is the one holding
+ * its own seat outright (`isUnresolvedMedicalHold`), so an answer landing on a
+ * newer superseded referral instead would leave that seat blocked while the desk
+ * reads "recorded".
+ */
+function openReferral(held: readonly WaiverRecord[]): WaiverRecord | undefined {
+  const unanswered = held.filter(
+    (record) => record.medicalClearedAt === null && record.medicalClearanceDeclinedAt === null,
+  );
+  return (
+    unanswered.find((record) => record.supersededAt === null) ??
+    unanswered.find((record) => record.supersededAt !== null)
+  );
+}
+
+/**
+ * **The earlier referral a letter dated before the open one could cover**, for
+ * the recording form (issue #2616): its id and its signing day as a UTC calendar
+ * date, or null when the open referral has none, so the form asks nothing extra.
+ * Read-only; `recordMedicalEvaluation` decides again on its own.
+ */
+export async function earlierReferralForOpenHold(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<{ referralId: string; on: string } | null> {
+  const held = await heldReferrals(db, shopId, personId);
+  const open = openReferral(held);
+  if (!open) return null;
+  const earlier = earliestCoveringReferral(
+    held,
+    open,
+    await recordsOnPassedSeats(db, shopId, personId),
+  );
+  return earlier
+    ? { referralId: earlier.id, on: calendarDateInTimezone(signatureInstant(earlier), "UTC") }
+    : null;
 }
 
 /** The prompts a complete questionnaire flagged for a physician, or null when it flagged none. */
@@ -235,6 +333,13 @@ export async function recordMedicalEvaluation(
     physicianName?: string | null;
     /** The physician's evaluation, already re-stored through `storeMedicalClearanceDocument`. */
     documentUrl?: string | null;
+    /**
+     * The staffer's explicit word that the physician evaluated the diver's
+     * **current** condition, not only the earlier referral the letter was
+     * written for (issue #2616). Read only when the letter predates the open
+     * referral; without it that letter is refused.
+     */
+    earlierLetterConfirmed?: boolean;
     now?: Date;
   },
 ): Promise<MedicalEvaluationResult> {
@@ -254,23 +359,7 @@ export async function recordMedicalEvaluation(
     const recordedBy = await activeStaffAttestorId(tx, input.shopId, input.recordedByPersonId);
     if (!recordedBy) return { ok: false, reason: "staff_not_found" };
 
-    const held = await tx
-      .select()
-      .from(waiverRecords)
-      .where(
-        and(
-          eq(waiverRecords.shopId, input.shopId),
-          eq(waiverRecords.personId, input.personId),
-          eq(waiverRecords.status, "medical_review"),
-          // A superseded referral is answerable too. Superseding moves a hold
-          // off a seat and answers nothing (`isUnclearedReferral`): it still
-          // holds every seat the diver has, so a physician must still be able
-          // to end it, or the desk is told "nothing to clear" about a hold it
-          // can see (glossary: Medical hold).
-          isNull(waiverRecords.anonymizedAt),
-        ),
-      )
-      .orderBy(desc(waiverRecords.completedAt));
+    const held = await heldReferrals(tx, input.shopId, input.personId);
 
     // "Answered" is either stamp: a refusal resolves the question as
     // conclusively as a clearance does, and only an unanswered record is open
@@ -278,16 +367,7 @@ export async function recordMedicalEvaluation(
     const answered = held.find(
       (record) => record.medicalClearedAt !== null || record.medicalClearanceDeclinedAt !== null,
     );
-    // A live hold before a superseded one: it is the one holding its own seat
-    // outright (`isUnresolvedMedicalHold`), so an answer landing on a newer
-    // superseded referral instead would leave that seat blocked while the desk
-    // reads "recorded". Newest first within each.
-    const unanswered = held.filter(
-      (record) => record.medicalClearedAt === null && record.medicalClearanceDeclinedAt === null,
-    );
-    const open =
-      unanswered.find((record) => record.supersededAt === null) ??
-      unanswered.find((record) => record.supersededAt !== null);
+    const open = openReferral(held);
     if (!open) {
       if (!answered) return { ok: false, reason: "no_medical_hold" };
       const standing: MedicalEvaluationOutcome = answered.medicalClearedAt
@@ -305,17 +385,30 @@ export async function recordMedicalEvaluation(
     // The evaluation must post-date the answers it clears. Compared as calendar
     // dates in UTC, matching how the column is read back everywhere else.
     const disclosedOn = calendarDateInTimezone(signatureInstant(open), "UTC");
+    let covering: WaiverRecord | null = null;
     if (input.evaluatedOn < disclosedOn) {
       // A letter older than this record can still be the one that covers it: the
       // diver re-signed the same "yes" before the shop recorded the letter
-      // (issue #2616). Only when an earlier referral that is still open flagged
-      // everything this one does, and the letter is on or after it, and the
-      // letter is itself inside its own year.
-      const coveredFrom = earliestCoveringReferralOn(held, open);
+      // (issue #2616). Only when an earlier referral that is still open (and
+      // still this diver's) flagged everything this one does, the letter is on or
+      // after it and inside its own year, **and the staffer confirms the
+      // physician evaluated the diver's current condition**: the prompts match by
+      // text, and "yes" to the same question can mean a different condition now.
+      // The same gate guards a refusal stamped from an earlier letter.
+      covering = earliestCoveringReferral(
+        held,
+        open,
+        await recordsOnPassedSeats(tx, input.shopId, input.personId),
+      );
       const withinItsYear =
         Date.parse(`${input.evaluatedOn}T00:00:00.000Z`) + WAIVER_SIGNATURE_VALIDITY_MS >
         now.getTime();
-      if (coveredFrom === null || input.evaluatedOn < coveredFrom || !withinItsYear) {
+      if (
+        covering === null ||
+        input.evaluatedOn < calendarDateInTimezone(signatureInstant(covering), "UTC") ||
+        !withinItsYear ||
+        input.earlierLetterConfirmed !== true
+      ) {
         return { ok: false, reason: "evaluation_predates_disclosure" };
       }
     }
@@ -358,7 +451,74 @@ export async function recordMedicalEvaluation(
         ? { ok: true, recordId: open.id, outcome: standing, alreadyRecorded: true }
         : { ok: false, reason: "answer_already_recorded" };
     }
-    return { ok: true, recordId: written.id, outcome: input.outcome, alreadyRecorded: false };
+    if (!covering) {
+      return { ok: true, recordId: written.id, outcome: input.outcome, alreadyRecorded: false };
+    }
+    // **Which earlier referral covered this answer**, on the trail (issue
+    // #2616): a clearance that rests on a letter older than the release it
+    // clears must say so wherever the record is read, and the audit is the
+    // referral's id, not a guess from dates.
+    const names = await tx
+      .select({ id: people.id, name: people.fullName })
+      .from(people)
+      // diveday:allow-deleted-people: two names for an activity line; the diver already holds a live hold here.
+      .where(
+        and(
+          eq(people.shopId, input.shopId),
+          or(eq(people.id, recordedBy), eq(people.id, input.personId)),
+        ),
+      );
+    const actorName = names.find((row) => row.id === recordedBy)?.name;
+    const diverName = names.find((row) => row.id === input.personId)?.name;
+    if (!actorName || !diverName) throw new Error("recordMedicalEvaluation: names missing");
+    await tx.insert(activityEvents).values({
+      shopId: input.shopId,
+      tripId: null,
+      bookingId: null,
+      actorPersonId: recordedBy,
+      subjectPersonId: input.personId,
+      code: "medical_answered_by_earlier_letter",
+      params: {
+        actor: actorName,
+        diver: diverName,
+        evaluated: input.evaluatedOn,
+        referred: calendarDateInTimezone(signatureInstant(covering), "UTC"),
+        signed: disclosedOn,
+        referral: covering.id,
+        record: written.id,
+        outcome: input.outcome,
+      },
+      occurredAt: now,
+    });
+    // The letter answered the open record only. A live seat still held by the
+    // covering referral stays blocked until the desk records the letter there
+    // too; counted here so the surface can say so plainly.
+    const seatsStillHeld = (
+      await tx
+        .select({ id: waiverRecords.id })
+        .from(waiverRecords)
+        .innerJoin(bookings, eq(bookings.id, waiverRecords.bookingId))
+        .where(
+          and(
+            eq(waiverRecords.shopId, input.shopId),
+            eq(waiverRecords.personId, input.personId),
+            eq(waiverRecords.status, "medical_review"),
+            isNull(waiverRecords.supersededAt),
+            isNull(waiverRecords.anonymizedAt),
+            isNull(waiverRecords.medicalClearedAt),
+            isNull(waiverRecords.medicalClearanceDeclinedAt),
+            eq(bookings.personId, waiverRecords.personId),
+            ne(bookings.status, "cancelled"),
+          ),
+        )
+    ).length;
+    return {
+      ok: true,
+      recordId: written.id,
+      outcome: input.outcome,
+      alreadyRecorded: false,
+      earlierLetter: { referralId: covering.id, seatsStillHeld },
+    };
   });
   // A physician's answer clears or holds every seat this diver has: open and
   // primed manifests re-read, after the commit (issue #2613).

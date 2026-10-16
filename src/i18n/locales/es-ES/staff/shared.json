@@ -58,7 +58,8 @@
     "documentChoose": "Elige un archivo",
     "documentChooseAnother": "Elige otro archivo",
     "recording": "Registrando…",
-    "confirm": "Registrar la respuesta"
+    "confirm": "Registrar la respuesta",
+    "earlierLetterConfirm": "Marca si esta carta tiene fecha anterior a la última derivación: el médico evaluó su estado actual, no solo la derivación firmada el {date}."
   },
   "waiverSend": {
     "sending": "Enviando…",

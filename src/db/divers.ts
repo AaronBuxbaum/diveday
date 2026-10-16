@@ -47,6 +47,7 @@ import {
 } from "./schema";
 import { livePerson } from "./trips-live";
 import {
+  earlierReferralForOpenHold,
   getCurrentWaiverGeneration,
   getDiverWaiverChannelStates,
   getDiverWaiverRequestStatus,
@@ -906,6 +907,36 @@ export async function getDiverProfile(
     listAfterDiveRollCallByTrip(db, shopId, diverTripIds),
   ]);
 
+  const waiver = shopWaiverStatus({
+    personSignedWaivers: signedWaivers.get(personId) ?? [],
+    currentTemplateVersion: waiverTemplate?.materialGeneration ?? null,
+    // Person-scoped: no seat in hand, so no booker's "Under 18" (a seat's
+    // own readiness reads it).
+    signer: {
+      dateOfBirth: personRow.person.dateOfBirth,
+      minorDeclared: false,
+      timezone: shopTimezone,
+    },
+    // The furthest instant any upcoming seat's roster measures this release
+    // at (issue #2611), so the record says "runs out before the trip" for the
+    // same diver the roster blocks for it, not "Signed".
+    through: bookingRows.reduce<Date | undefined>((latest, row) => {
+      if (row.booking.status === "cancelled" || row.trip.deletedAt) return latest;
+      if (row.trip.status !== "scheduled") return latest;
+      const at = waiverClockInstant({
+        now: waiverNow,
+        startsAt: row.trip.startsAt,
+        endsAt: row.trip.endsAt,
+      });
+      return !latest || at > latest ? at : latest;
+    }, undefined),
+    now: waiverNow,
+  });
+  const medicalEarlierReferral =
+    waiver.state === "medical_review"
+      ? await earlierReferralForOpenHold(db, shopId, personId)
+      : null;
+
   return {
     person: personRow.person,
     noCertificationClearedByName: personRow.clearedByName,
@@ -938,31 +969,13 @@ export async function getDiverProfile(
      * the signed medical answers, which stay on the waiver surfaces built to
      * review them.
      */
-    waiver: shopWaiverStatus({
-      personSignedWaivers: signedWaivers.get(personId) ?? [],
-      currentTemplateVersion: waiverTemplate?.materialGeneration ?? null,
-      // Person-scoped: no seat in hand, so no booker's "Under 18" (a seat's
-      // own readiness reads it).
-      signer: {
-        dateOfBirth: personRow.person.dateOfBirth,
-        minorDeclared: false,
-        timezone: shopTimezone,
-      },
-      // The furthest instant any upcoming seat's roster measures this release
-      // at (issue #2611), so the record says "runs out before the trip" for the
-      // same diver the roster blocks for it, not "Signed".
-      through: bookingRows.reduce<Date | undefined>((latest, row) => {
-        if (row.booking.status === "cancelled" || row.trip.deletedAt) return latest;
-        if (row.trip.status !== "scheduled") return latest;
-        const at = waiverClockInstant({
-          now: waiverNow,
-          startsAt: row.trip.startsAt,
-          endsAt: row.trip.endsAt,
-        });
-        return !latest || at > latest ? at : latest;
-      }, undefined),
-      now: waiverNow,
-    }),
+    waiver,
+    /**
+     * The earlier referral a physician's letter dated before the open one could
+     * cover (issue #2616), for the recording form; null when nothing is held or
+     * there is none.
+     */
+    medicalEarlierReferral,
     waiverRequest,
     /**
      * What we know about each way of handing this diver's outstanding link

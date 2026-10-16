@@ -58,7 +58,8 @@
     "documentChoose": "Choose a file",
     "documentChooseAnother": "Choose a different file",
     "recording": "Recording…",
-    "confirm": "Record the answer"
+    "confirm": "Record the answer",
+    "earlierLetterConfirm": "Tick if this letter is dated before the latest referral: the physician evaluated their current condition, not only the referral signed {date}."
   },
   "waiverSend": {
     "sending": "Sending…",
