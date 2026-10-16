@@ -1,10 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
-import type { IncidentDraftFields } from "@/lib/incident-reports";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
-import type { AppDb } from "./client";
 import { loadShopExportBundleInput } from "./export";
 import {
   addIncidentAddendum,
@@ -18,79 +16,28 @@ import {
   removeIncidentPerson,
   saveIncidentDraft,
   startIncidentReport,
-  startMissingDiverReport,
 } from "./incident-reports";
+import {
+  blank,
+  complete,
+  draftsBy,
+  fixture,
+  OCCURRED_AT,
+  OTHER_SHOP,
+  OTHER_TRIP,
+} from "./incident-reports-test-fixtures";
 import { pruneExpiredRecords } from "./retention";
 import {
   activityEvents,
   incidentReportAddenda,
   incidentReportPeople,
   incidentReports,
-  rollCallEvents,
-  tripAssignments,
 } from "./schema";
-import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test:
 // every test writes its own report and reads it back.
 const ctx = fileScopedShopContext();
-
-const OTHER_SHOP = "99999999-8888-4777-8666-555555555555";
-
-const OTHER_TRIP = "99999999-8888-4777-8666-444444444444";
-const OCCURRED_AT = new Date("2026-10-01T15:20:00Z");
-
-const complete: IncidentDraftFields = {
-  occurredAt: OCCURRED_AT,
-  diveSiteId: null,
-  locationText: "North wall mooring",
-  whatHappened: "Diver surfaced coughing after a fast ascent from 18 m.",
-  kind: "injury",
-  severity: "moderate",
-  firstAidGiven: true,
-  oxygenGiven: true,
-  oxygenMinutes: 25,
-  emergencyServicesCalled: false,
-  handoverKind: "diver",
-  handoverDetail: null,
-  handedOverAt: new Date("2026-10-01T16:30:00Z"),
-  followUp: null,
-};
-
-/**
- * A booked departure, a crew member on it (the divemaster), staff who are not
- * (the captain), and the owner. Crew is set here rather than read from the
- * seed, so the test says who is aboard.
- */
-async function fixture(db: AppDb, shopId: string) {
-  const trip = (await upcomingTripsWithCounts(db, shopId)).find((row) => row.booked > 0);
-  if (!trip) throw new Error("expected a booked trip");
-  const [seat] = await getTripRoster(db, shopId, trip.id);
-  const staff = await listStaff(db, shopId);
-  const byRole = (role: string) => staff.find((member) => member.roles.includes(role))?.person;
-  const owner = byRole("owner");
-  const crew = byRole("divemaster");
-  const ashore = byRole("captain");
-  if (!seat || !owner || !crew || !ashore) throw new Error("expected seeded people");
-  await db.delete(tripAssignments).where(eq(tripAssignments.tripId, trip.id));
-  await db.insert(tripAssignments).values({ tripId: trip.id, personId: crew.id });
-  return { trip, seat, owner, crew, ashore };
-}
-
-/** How many unfiled drafts one writer holds on one departure. */
-async function draftsBy(db: AppDb, tripId: string, personId: string): Promise<number> {
-  const rows = await db
-    .select({ id: incidentReports.id })
-    .from(incidentReports)
-    .where(
-      and(
-        eq(incidentReports.tripId, tripId),
-        eq(incidentReports.createdByPersonId, personId),
-        eq(incidentReports.status, "draft"),
-      ),
-    );
-  return rows.length;
-}
 
 describe("starting a report", () => {
   it("lets the departure's crew and the owner start one, and nobody else", async () => {
@@ -122,6 +69,38 @@ describe("starting a report", () => {
     if (!first.ok || !second.ok) throw new Error("expected drafts");
     expect(second.reportId).toBe(first.reportId);
     expect(await draftsBy(db, trip.id, crew.id)).toBe(1);
+  });
+
+  it("starts a new report once the writer's open draft says anything at all", async () => {
+    // Domain review 2026-10-16: reuse is for a double tap, never for a second
+    // incident. A writer with an open draft about one thing must still be able
+    // to start a report about another.
+    const { db, shop } = ctx;
+    const { trip, crew, seat } = await fixture(db, shop.id);
+    const input = { shopId: shop.id, tripId: trip.id, actorPersonId: crew.id };
+    const written = await startIncidentReport(db, input);
+    if (!written.ok) throw new Error("expected a draft");
+    await saveIncidentDraft(db, {
+      ...input,
+      reportId: written.reportId,
+      fields: { ...blank, whatHappened: "Regulator free-flowing at 12 m." },
+    });
+    const second = await startIncidentReport(db, input);
+    if (!second.ok) throw new Error("expected a draft");
+    expect(second).toMatchObject({ reused: false });
+    expect(second.reportId).not.toBe(written.reportId);
+
+    // A draft naming somebody is not untouched either.
+    await addIncidentPerson(db, {
+      ...input,
+      reportId: second.reportId,
+      subject: { kind: "booking", bookingId: seat.booking.id },
+      involvement: "witness",
+    });
+    const third = await startIncidentReport(db, input);
+    if (!third.ok) throw new Error("expected a draft");
+    expect(third.reportId).not.toBe(second.reportId);
+    expect(await draftsBy(db, trip.id, crew.id)).toBe(3);
   });
 
   it("never hands one writer somebody else's draft", async () => {
@@ -524,162 +503,6 @@ describe("who reads what", () => {
     expect(await listUnfiledIncidentDrafts(db, shop.id, f.crew.id)).toEqual([]);
     expect(await listUnfiledIncidentDrafts(db, shop.id, f.ashore.id)).toEqual([]);
     expect(await listUnfiledIncidentDrafts(db, OTHER_SHOP, f.owner.id)).toEqual([]);
-  });
-});
-
-describe("a missing diver report from the manifest", () => {
-  const MARKED_AT = new Date("2026-10-01T15:42:00Z");
-
-  /** One roll-call tap on the fixture's seat, as the manifest records it. */
-  async function mark(
-    db: AppDb,
-    f: Awaited<ReturnType<typeof fixture>>,
-    checkpoint: string,
-    status: "boarded" | "not_boarded" | "cleared",
-    occurredAt: Date,
-  ) {
-    await db.insert(rollCallEvents).values({
-      shopId: ctx.shop.id,
-      tripId: f.trip.id,
-      bookingId: f.seat.booking.id,
-      recordedByPersonId: f.crew.id,
-      status,
-      checkpoint,
-      occurredAt,
-    });
-  }
-
-  async function reportOf(db: AppDb, reportId: string) {
-    const [row] = await db
-      .select({ kind: incidentReports.kind, occurredAt: incidentReports.occurredAt })
-      .from(incidentReports)
-      .where(eq(incidentReports.id, reportId));
-    const people = await db
-      .select({
-        bookingId: incidentReportPeople.bookingId,
-        involvement: incidentReportPeople.involvement,
-      })
-      .from(incidentReportPeople)
-      .where(eq(incidentReportPeople.reportId, reportId));
-    return { ...row, people };
-  }
-
-  it("opens a draft of kind Missing diver, timed at the mark, naming the diver as affected", async () => {
-    const { db, shop } = ctx;
-    const f = await fixture(db, shop.id);
-    await mark(db, f, "after_dive_1", "not_boarded", MARKED_AT);
-    const started = await startMissingDiverReport(db, {
-      shopId: shop.id,
-      tripId: f.trip.id,
-      bookingId: f.seat.booking.id,
-      actorPersonId: f.crew.id,
-    });
-    if (!started.ok) throw new Error(`refused: ${started.reason}`);
-    expect(await reportOf(db, started.reportId)).toEqual({
-      kind: "missing_diver",
-      occurredAt: MARKED_AT,
-      people: [{ bookingId: f.seat.booking.id, involvement: "affected" }],
-    });
-    // A second tap opens the same draft and names the diver once.
-    const again = await startMissingDiverReport(db, {
-      shopId: shop.id,
-      tripId: f.trip.id,
-      bookingId: f.seat.booking.id,
-      actorPersonId: f.crew.id,
-    });
-    expect(again).toEqual({ ok: true, reportId: started.reportId });
-    expect((await reportOf(db, started.reportId)).people).toHaveLength(1);
-  });
-
-  it("fills only the blanks of a draft its writer already started", async () => {
-    const { db, shop } = ctx;
-    const f = await fixture(db, shop.id);
-    await mark(db, f, "after_dive_1", "not_boarded", MARKED_AT);
-    const own = await startIncidentReport(db, {
-      shopId: shop.id,
-      tripId: f.trip.id,
-      actorPersonId: f.crew.id,
-    });
-    if (!own.ok) throw new Error("expected a draft");
-    await saveIncidentDraft(db, {
-      shopId: shop.id,
-      tripId: f.trip.id,
-      reportId: own.reportId,
-      actorPersonId: f.crew.id,
-      fields: { ...complete, occurredAt: null, kind: "near_miss" },
-    });
-    const started = await startMissingDiverReport(db, {
-      shopId: shop.id,
-      tripId: f.trip.id,
-      bookingId: f.seat.booking.id,
-      actorPersonId: f.crew.id,
-    });
-    expect(started).toEqual({ ok: true, reportId: own.reportId });
-    const report = await reportOf(db, own.reportId);
-    // The writer's own choice of kind stands; the blank time is filled.
-    expect(report.kind).toBe("near_miss");
-    expect(report.occurredAt).toEqual(MARKED_AT);
-  });
-
-  it("reads the newest standing mark, not a dock 'not boarded' or a mark taken back", async () => {
-    const { db, shop } = ctx;
-    const f = await fixture(db, shop.id);
-    const input = {
-      shopId: shop.id,
-      tripId: f.trip.id,
-      bookingId: f.seat.booking.id,
-      actorPersonId: f.crew.id,
-    };
-    // At the dock "not boarded" is "never left": no missing diver.
-    await mark(db, f, "departure", "not_boarded", new Date("2026-10-01T12:00:00Z"));
-    expect(await startMissingDiverReport(db, input)).toEqual({
-      ok: false,
-      reason: "not_missing",
-    });
-    // Marked missing after dive 1, then back aboard: nothing stands.
-    await mark(db, f, "after_dive_1", "not_boarded", new Date("2026-10-01T14:00:00Z"));
-    await mark(db, f, "after_dive_1", "boarded", new Date("2026-10-01T14:05:00Z"));
-    expect(await startMissingDiverReport(db, input)).toEqual({
-      ok: false,
-      reason: "not_missing",
-    });
-    expect(await draftsBy(db, f.trip.id, f.crew.id)).toBe(0);
-    // Missing again after dive 2: that is the mark the report is timed at.
-    await mark(db, f, "after_dive_2", "not_boarded", MARKED_AT);
-    const started = await startMissingDiverReport(db, input);
-    if (!started.ok) throw new Error(`refused: ${started.reason}`);
-    expect((await reportOf(db, started.reportId)).occurredAt).toEqual(MARKED_AT);
-  });
-
-  it("refuses staff who may not start a report, and a seat from another departure", async () => {
-    const { db, shop } = ctx;
-    const f = await fixture(db, shop.id);
-    await mark(db, f, "after_dive_1", "not_boarded", MARKED_AT);
-    expect(
-      await startMissingDiverReport(db, {
-        shopId: shop.id,
-        tripId: f.trip.id,
-        bookingId: f.seat.booking.id,
-        actorPersonId: f.ashore.id,
-      }),
-    ).toEqual({ ok: false, reason: "not_allowed" });
-    expect(await draftsBy(db, f.trip.id, f.ashore.id)).toBe(0);
-    expect(
-      await startMissingDiverReport(db, {
-        shopId: shop.id,
-        tripId: f.trip.id,
-        bookingId: OTHER_TRIP,
-        actorPersonId: f.owner.id,
-      }),
-    ).toEqual({ ok: false, reason: "not_missing" });
-    expect(
-      await startMissingDiverReport(db, {
-        shopId: OTHER_SHOP,
-        tripId: f.trip.id,
-        bookingId: f.seat.booking.id,
-        actorPersonId: f.owner.id,
-      }),
-    ).toEqual({ ok: false, reason: "not_allowed" });
   });
 });
 

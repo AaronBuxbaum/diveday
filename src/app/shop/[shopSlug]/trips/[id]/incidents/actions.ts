@@ -118,11 +118,11 @@ export async function startMissingDiverReportAction(
   const result = await startMissingDiverReport(await getDb(), {
     shopId: shop.id,
     tripId,
-    bookingId,
+    subject: { kind: "diver", bookingId },
     actorPersonId: session.user.personId,
   });
   if (!result.ok) {
-    if (result.reason === "not_missing") {
+    if (result.reason === "not_missing" || result.reason === "already_started") {
       revalidateAndRedirect(shopPath(shopSlug, "trips", tripId, "manifest"));
     }
     redirect(noticeUrl(tripPage, "not-authorized"));

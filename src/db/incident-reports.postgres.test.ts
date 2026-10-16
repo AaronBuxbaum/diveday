@@ -4,11 +4,12 @@ import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import type { AppDb } from "./client";
-import { startIncidentReport } from "./incident-reports";
+import { startIncidentReport, startMissingDiverReport } from "./incident-reports";
 import {
   incidentReports,
   people,
   personRoles,
+  rollCallCrewEvents,
   shops,
   tripAssignments,
   trips,
@@ -59,7 +60,40 @@ async function departureWithCrew(db: AppDb) {
   await db.insert(personRoles).values({ personId: crew.id, role: "divemaster" });
   await db.insert(userAccounts).values({ personId: crew.id, email: `sal-${suffix}@example.com` });
   await db.insert(tripAssignments).values({ tripId: trip.id, personId: crew.id });
-  return { shopId: shop.id, tripId: trip.id, crewId: crew.id };
+  return { shopId: shop.id, tripId: trip.id, crewId: crew.id, suffix };
+}
+
+/** A second crew member on the departure, and a third marked not back aboard. */
+async function twoMoreCrew(
+  db: AppDb,
+  at: { shopId: string; tripId: string; crewId: string; suffix: string },
+) {
+  const ids: string[] = [];
+  for (const name of ["Ana Ortiz", "Dev Patel"]) {
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: at.shopId, fullName: name })
+      .returning({ id: people.id });
+    if (!person) throw new Error("person insert returned no row");
+    await db.insert(personRoles).values({ personId: person.id, role: "divemaster" });
+    await db.insert(userAccounts).values({
+      personId: person.id,
+      email: `${name.split(" ")[0]?.toLowerCase()}-${at.suffix}@example.com`,
+    });
+    await db.insert(tripAssignments).values({ tripId: at.tripId, personId: person.id });
+    ids.push(person.id);
+  }
+  const [second, missing] = ids as [string, string];
+  await db.insert(rollCallCrewEvents).values({
+    shopId: at.shopId,
+    tripId: at.tripId,
+    personId: missing,
+    recordedByPersonId: at.crewId,
+    status: "not_boarded",
+    checkpoint: "after_dive_1",
+    occurredAt: nowDate(),
+  });
+  return { secondId: second, missingId: missing };
 }
 
 describePostgres("startIncidentReport under real concurrency", () => {
@@ -85,5 +119,36 @@ describePostgres("startIncidentReport under real concurrency", () => {
       .from(incidentReports)
       .where(and(eq(incidentReports.tripId, tripId), eq(incidentReports.status, "draft")));
     expect(drafts).toHaveLength(1);
+  });
+
+  it("gives two crew tapping for one missing person at once a single report", async () => {
+    const pg = await postgresTestDb();
+    const at = await departureWithCrew(pg.db);
+    const { secondId, missingId } = await twoMoreCrew(pg.db, at);
+
+    const gate = await holdRowLock(
+      pg,
+      sql`select id from trips where id = ${at.tripId} for update`,
+    );
+    const subject = { kind: "crew" as const, personId: missingId };
+    const base = { shopId: at.shopId, tripId: at.tripId, subject };
+    const contenders = [
+      startMissingDiverReport(pg.connect(), { ...base, actorPersonId: at.crewId }),
+      startMissingDiverReport(pg.connect(), { ...base, actorPersonId: secondId }),
+    ];
+    await waitForLockWaiters(pg.db, contenders.length);
+    await gate.release();
+
+    const outcomes = await Promise.all(contenders);
+    // One of them started it; the other was told who did.
+    expect(outcomes.filter((outcome) => outcome.ok)).toHaveLength(1);
+    expect(
+      outcomes.filter((outcome) => !outcome.ok && outcome.reason === "already_started"),
+    ).toHaveLength(1);
+    const reports = await pg.db
+      .select({ id: incidentReports.id })
+      .from(incidentReports)
+      .where(eq(incidentReports.tripId, at.tripId));
+    expect(reports).toHaveLength(1);
   });
 });
