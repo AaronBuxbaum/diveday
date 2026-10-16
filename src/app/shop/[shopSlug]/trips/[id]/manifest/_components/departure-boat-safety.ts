@@ -2,7 +2,7 @@ import { departureBoatSafetyFor } from "@/db/boat-safety";
 import type { DbExecutor } from "@/db/client";
 import { boatSafetySection } from "@/i18n/boat-safety-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { BoatSafetySection } from "@/lib/boat-safety";
+import { type BoatSafetySection, departureCrewCount } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
 import type { TripManifest } from "@/lib/manifests";
 
@@ -22,7 +22,7 @@ import type { TripManifest } from "@/lib/manifests";
 export async function departureBoatSafetySection(
   db: DbExecutor,
   shop: { id: string; timezone: string },
-  departure: Pick<TripManifest, "trip" | "summary">,
+  departure: Pick<TripManifest, "trip" | "summary" | "crew">,
   t: StaffTranslator,
 ): Promise<BoatSafetySection | null> {
   const safety = await departureBoatSafetyFor(db, shop.id, {
@@ -31,6 +31,8 @@ export async function departureBoatSafetySection(
     timeZone: shop.timezone,
     now: nowDate(),
     passengers: { booked: departure.summary.totalDivers, boarded: departure.summary.boarded },
+    // Counted only against total persons (#2302): never the passenger limit.
+    crew: departureCrewCount(departure.crew),
   });
   return boatSafetySection(t, safety);
 }

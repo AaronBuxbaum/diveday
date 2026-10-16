@@ -9,10 +9,12 @@ import {
 } from "@/lib/boat-safety";
 
 /**
- * **The certificate and the three paper dates** (roadmap N-10), under the
- * boat's own line. Captioned, because a date box with only a placeholder says
- * nothing once it holds a date. All four optional: an empty box is a boat the
- * shop has not dated, and nothing reads it as expired.
+ * **The certificate and the paper dates** (roadmap N-10), under the boat's
+ * own line: the passenger limit, the total-persons limit with the crew and the
+ * certificate's own expiry (#2302), then the three dates the boat renews.
+ * Captioned, because a date box with only a placeholder says nothing once it
+ * holds a date. All optional: an empty box is a boat the shop has not dated,
+ * and nothing reads it as expired.
  */
 export function BoatPaperFields({
   boat,
@@ -44,6 +46,22 @@ export function BoatPaperFields({
           aria-describedby={describedBy}
           className={`${controlClass} tabular-nums`}
         />
+      </Field>
+      <Field label={t("boats.certifiedTotalPersonsLabel")}>
+        <input
+          name="certifiedTotalPersons"
+          type="number"
+          min={1}
+          max={999}
+          inputMode="numeric"
+          defaultValue={boat?.certifiedTotalPersons ?? ""}
+          aria-invalid={invalid || undefined}
+          aria-describedby={describedBy}
+          className={`${controlClass} tabular-nums`}
+        />
+      </Field>
+      <Field label={t("boats.coiExpiresLabel")}>
+        <DateField name="coiExpiresOn" defaultValue={boat?.coiExpiresOn ?? ""} />
       </Field>
       <Field label={t("boats.inspectionDueLabel")}>
         <DateField name="inspectionDueOn" defaultValue={boat?.inspectionDueOn ?? ""} />

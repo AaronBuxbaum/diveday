@@ -11,6 +11,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
+import { departureCrewCount } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
 import type {
   OfflineManifestPayload,
@@ -128,6 +129,7 @@ export async function GET() {
                 booked: departure.summary.totalDivers,
                 boarded: departure.summary.boarded,
               },
+              crew: departureCrewCount(departure.crew),
             }),
           )
         : null;

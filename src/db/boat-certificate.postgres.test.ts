@@ -63,6 +63,8 @@ describePostgres("a hull's certificate edit against a booking on its departure",
       description: null,
       papers: {
         certifiedPassengers: 2,
+        certifiedTotalPersons: null,
+        coiExpiresOn: null,
         inspectionDueOn: null,
         registrationExpiresOn: null,
         insuranceExpiresOn: null,

@@ -80,6 +80,8 @@ const boatForm = z.object({
   capacity: formValue(),
   description: trimmedText(),
   certifiedPassengers: trimmedText(),
+  certifiedTotalPersons: trimmedText(),
+  coiExpiresOn: trimmedText(),
   inspectionDueOn: trimmedText(),
   registrationExpiresOn: trimmedText(),
   insuranceExpiresOn: trimmedText(),
@@ -320,39 +322,50 @@ function boatDescription(form: BoatForm): string | null {
 }
 
 /**
- * The certificate's passenger limit and the boat's three paper dates, as the
- * fleet row posts them. Every one optional, and an empty box is a cleared
- * value; anything that is not a whole number of passengers or a real calendar
- * day refuses the save rather than being dropped, so a typo is never stored as
- * "nothing said" (roadmap N-10).
+ * The certificate's two limits (passengers, and total persons with the crew,
+ * #2302) and the boat's four paper dates, as the fleet row posts them. Every
+ * one optional, and an empty box is a cleared value; anything that is not a
+ * whole number of people or a real calendar day refuses the save rather than
+ * being dropped, so a typo is never stored as "nothing said" (roadmap N-10).
  */
 function boatPapers(form: BoatForm): BoatPapersInput | "invalid" {
   const day = (
-    name: "inspectionDueOn" | "registrationExpiresOn" | "insuranceExpiresOn",
+    name: "coiExpiresOn" | "inspectionDueOn" | "registrationExpiresOn" | "insuranceExpiresOn",
   ): string | null | "invalid" => {
     const value = form[name];
     if (!value) return null;
     return isValidCalendarDate(value) ? value : "invalid";
   };
-  const passengersText = form.certifiedPassengers;
-  const certifiedPassengers = passengersText ? Number(passengersText) : null;
-  if (
-    certifiedPassengers !== null &&
-    (!Number.isInteger(certifiedPassengers) || certifiedPassengers < 1 || certifiedPassengers > 999)
-  ) {
-    return "invalid";
-  }
+  const people = (name: "certifiedPassengers" | "certifiedTotalPersons") => {
+    const value = form[name];
+    if (!value) return null;
+    const number = Number(value);
+    return Number.isInteger(number) && number >= 1 && number <= 999 ? number : "invalid";
+  };
+  const certifiedPassengers = people("certifiedPassengers");
+  const certifiedTotalPersons = people("certifiedTotalPersons");
+  const coiExpiresOn = day("coiExpiresOn");
   const inspectionDueOn = day("inspectionDueOn");
   const registrationExpiresOn = day("registrationExpiresOn");
   const insuranceExpiresOn = day("insuranceExpiresOn");
   if (
+    certifiedPassengers === "invalid" ||
+    certifiedTotalPersons === "invalid" ||
+    coiExpiresOn === "invalid" ||
     inspectionDueOn === "invalid" ||
     registrationExpiresOn === "invalid" ||
     insuranceExpiresOn === "invalid"
   ) {
     return "invalid";
   }
-  return { certifiedPassengers, inspectionDueOn, registrationExpiresOn, insuranceExpiresOn };
+  return {
+    certifiedPassengers,
+    certifiedTotalPersons,
+    coiExpiresOn,
+    inspectionDueOn,
+    registrationExpiresOn,
+    insuranceExpiresOn,
+  };
 }
 
 /**
@@ -364,6 +377,15 @@ function certificateRefusal(page: string, boat: string, refusal: BoatSeatsRefusa
   if (!refusal) return;
   // The fragment scrolls to the row the error is on (`boatRowId`).
   const row = `${page}#${boatRowId(boat)}`;
+  if (refusal.code === "passengers_above_total_persons") {
+    redirect(
+      noticeUrl(row, "boat-passengers-above-persons", {
+        boat,
+        passengers: refusal.passengers,
+        limit: refusal.limit,
+      }),
+    );
+  }
   redirect(
     refusal.code === "seats_above_certificate"
       ? noticeUrl(row, "boat-above-certificate", {

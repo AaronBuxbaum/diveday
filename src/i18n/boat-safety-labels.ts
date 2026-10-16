@@ -36,6 +36,7 @@ const KIT_KEYS: Record<GearServiceKind, { due: StaffMessageKey; expired: StaffMe
 };
 
 const PAPER_KEYS: Record<BoatPaper, { due: StaffMessageKey; expired: StaffMessageKey }> = {
+  coi: { due: "boatSafety.paper.coi.due", expired: "boatSafety.paper.coi.expired" },
   inspection: {
     due: "boatSafety.paper.inspection.due",
     expired: "boatSafety.paper.inspection.expired",
@@ -70,6 +71,13 @@ export function boatSafetyNoticeText(t: StaffTranslator, notice: BoatSafetyNotic
           passengers: notice.passengers,
           limit: notice.limit,
         },
+      );
+    case "over_total_persons":
+      return t(
+        notice.counted
+          ? "boatSafety.overTotalPersons.aboard"
+          : "boatSafety.overTotalPersons.booked",
+        { persons: notice.persons, limit: notice.limit },
       );
     case "kit_missing":
       return t(MISSING_KEYS[notice.kind]);

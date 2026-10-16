@@ -1344,6 +1344,8 @@ export async function resetDemoSchedule(
     .update(boats)
     .set({
       certifiedPassengers: null,
+      certifiedTotalPersons: null,
+      coiExpiresOn: null,
       inspectionDueOn: null,
       registrationExpiresOn: null,
       insuranceExpiresOn: null,

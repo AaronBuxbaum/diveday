@@ -69,6 +69,8 @@ const boatPaperColumns = {
   id: boats.id,
   name: boats.name,
   certifiedPassengers: boats.certifiedPassengers,
+  certifiedTotalPersons: boats.certifiedTotalPersons,
+  coiExpiresOn: boats.coiExpiresOn,
   inspectionDueOn: boats.inspectionDueOn,
   registrationExpiresOn: boats.registrationExpiresOn,
   insuranceExpiresOn: boats.insuranceExpiresOn,
@@ -82,7 +84,8 @@ export type DepartureBoatSafety = {
 
 /**
  * **What the pre-departure check says about this departure's boat**: the
- * people aboard against its certificate, its papers, the O2 kit or AED it
+ * people aboard against its certificate (passengers, and persons with the
+ * crew), its papers, the O2 kit or AED it
  * should carry and does not, and every clock on the safety kit assigned aboard
  * it that has run out or will inside its horizon — all judged on `onDate`, the
  * departure's own local date.
@@ -97,6 +100,8 @@ export async function departureBoatSafety(
   input: {
     boatId: string | null;
     passengers: { booked: number; boarded: number };
+    /** The departure's named crew, and how many are recorded aboard (#2302). */
+    crew: { assigned: number; boarded: number };
     onDate: CalendarDate;
   },
 ): Promise<DepartureBoatSafety | null> {
@@ -117,6 +122,7 @@ export async function departureBoatSafety(
       kit: kit.filter((unit) => unit.aboardBoatId === boat.id),
       kindsOnRegister: kindsOf(kit),
       passengers: input.passengers,
+      crew: input.crew,
       onDate: input.onDate,
     }),
   };
@@ -244,6 +250,7 @@ export async function departureBoatSafetyFor(
     timeZone: string;
     now: Date;
     passengers: { booked: number; boarded: number };
+    crew: { assigned: number; boarded: number };
   },
 ): Promise<DepartureBoatSafety | null> {
   const onDate = departureSafetyDate(input.startsAt, input.now, input.timeZone);
@@ -251,6 +258,7 @@ export async function departureBoatSafetyFor(
   return departureBoatSafety(db, shopId, {
     boatId: await departureBoatId(db, shopId, input.tripId),
     passengers: input.passengers,
+    crew: input.crew,
     onDate,
   });
 }

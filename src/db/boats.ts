@@ -9,12 +9,16 @@ import { liveTrip } from "./trips-live";
 export type Boat = typeof boats.$inferSelect;
 
 /**
- * The certificate's passenger limit and the boat's three paper dates, as the
- * fleet row edits them. Every field nullable: a shop that has not typed one in
- * has said nothing (`src/lib/boat-safety.ts`).
+ * The certificate's two limits and the boat's four paper dates, as the fleet
+ * row edits them. Every field nullable: a shop that has not typed one in has
+ * said nothing (`src/lib/boat-safety.ts`).
  */
 export type BoatPapersInput = {
   certifiedPassengers: number | null;
+  /** Total persons, crew included (#2302); checked at the manifest only. */
+  certifiedTotalPersons: number | null;
+  /** The certificate's own expiry, apart from the annual inspection (#2302). */
+  coiExpiresOn: string | null;
   inspectionDueOn: string | null;
   registrationExpiresOn: string | null;
   insuranceExpiresOn: string | null;

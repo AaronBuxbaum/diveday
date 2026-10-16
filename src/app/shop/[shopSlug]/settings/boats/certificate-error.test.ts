@@ -31,6 +31,26 @@ describe("boatCertificateError", () => {
     });
   });
 
+  it("says more passengers than persons is a typo in one of the two boxes (issue 2302)", () => {
+    expect(
+      boatCertificateError(
+        t,
+        { notice: "boat-passengers-above-persons", boat: "b1", passengers: "14", limit: "12" },
+        LOCALE,
+      ),
+    ).toEqual({
+      boat: "b1",
+      text: "The certificate allows 12 persons in all, so it can’t allow 14 passengers. Correct one of the two.",
+    });
+    expect(
+      boatCertificateError(
+        t,
+        { notice: "boat-passengers-above-persons", boat: "b1", passengers: "x", limit: "12" },
+        LOCALE,
+      ),
+    ).toBeNull();
+  });
+
   it("counts the departures still selling above a lowered certificate", () => {
     expect(
       boatCertificateError(

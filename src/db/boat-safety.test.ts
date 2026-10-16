@@ -18,6 +18,8 @@ const ctx = fileScopedShopContext();
 const TODAY = "2026-10-09";
 const PAPERS_CLEAR = {
   certifiedPassengers: null,
+  certifiedTotalPersons: null,
+  coiExpiresOn: null,
   inspectionDueOn: null,
   registrationExpiresOn: null,
   insuranceExpiresOn: null,
@@ -68,6 +70,8 @@ describe("boat papers", () => {
     const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Paper Hull", 12, null, {
       certifiedPassengers: 14,
+      certifiedTotalPersons: null,
+      coiExpiresOn: null,
       inspectionDueOn: "2027-03-01",
       registrationExpiresOn: "2027-01-31",
       insuranceExpiresOn: null,
@@ -182,8 +186,37 @@ describe("aboard a boat", () => {
 });
 
 const BOOKED = (booked: number) => ({ booked, boarded: 0 });
+const NO_CREW = { assigned: 0, boarded: 0 };
 
 describe("departureBoatSafety", () => {
+  // #2302: total persons and the certificate's own expiry, read off the hull.
+  it("counts the crew against total persons, and says the certificate's expiry", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Persons Hull", 10, null, {
+      ...PAPERS_CLEAR,
+      certifiedPassengers: 10,
+      certifiedTotalPersons: 12,
+      coiExpiresOn: "2026-10-05",
+    });
+    const safety = await departureBoatSafety(db, shop.id, {
+      boatId: boat.id,
+      passengers: BOOKED(10),
+      crew: { assigned: 3, boarded: 0 },
+      onDate: TODAY,
+    });
+    expect(safety?.notices).toEqual([
+      { code: "over_total_persons", persons: 13, limit: 12, counted: false },
+      { code: "paper", paper: "coi", dueOn: "2026-10-05", expired: true, days: 4 },
+    ]);
+    const twoCrew = await departureBoatSafety(db, shop.id, {
+      boatId: boat.id,
+      passengers: BOOKED(10),
+      crew: { assigned: 2, boarded: 0 },
+      onDate: TODAY,
+    });
+    expect(twoCrew?.notices.map((notice) => notice.code)).toEqual(["paper"]);
+  });
+
   it("speaks for this hull's kit and papers, and nobody else's", async () => {
     const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Check Hull", 14, null, {
@@ -226,6 +259,7 @@ describe("departureBoatSafety", () => {
     const safety = await departureBoatSafety(db, shop.id, {
       boatId: boat.id,
       passengers: BOOKED(13),
+      crew: NO_CREW,
       onDate: TODAY,
     });
     expect(safety?.boatName).toBe("Check Hull");
@@ -252,6 +286,7 @@ describe("departureBoatSafety", () => {
         await departureBoatSafety(db, shop.id, {
           boatId: boat.id,
           passengers: BOOKED(2),
+          crew: NO_CREW,
           onDate: TODAY,
         })
       )?.notices.filter((notice) => notice.code === "kit_missing");
@@ -286,6 +321,7 @@ describe("departureBoatSafety", () => {
     const safety = await departureBoatSafety(db, shop.id, {
       boatId: boat.id,
       passengers: BOOKED(2),
+      crew: NO_CREW,
       onDate: TODAY,
     });
     expect(safety?.notices.some((notice) => notice.code === "kit_missing")).toBe(false);
@@ -299,6 +335,7 @@ describe("departureBoatSafety", () => {
     const safety = await departureBoatSafety(db, shop.id, {
       boatId: boat.id,
       passengers: BOOKED(2),
+      crew: NO_CREW,
       onDate: TODAY,
     });
     expect(safety?.notices).toEqual([
@@ -313,6 +350,7 @@ describe("departureBoatSafety", () => {
       await departureBoatSafety(db, shop.id, {
         boatId: null,
         passengers: BOOKED(4),
+        crew: NO_CREW,
         onDate: TODAY,
       }),
     ).toBeNull();
@@ -325,6 +363,7 @@ describe("departureBoatSafety", () => {
       await departureBoatSafety(db, shop.id, {
         boatId: theirs.id,
         passengers: BOOKED(4),
+        crew: NO_CREW,
         onDate: TODAY,
       }),
     ).toBeNull();
@@ -456,6 +495,7 @@ describe("departureBoatSafetyFor", () => {
         timeZone: ZONE,
         now: NOW,
         passengers: { booked: 2, boarded: 0 },
+        crew: NO_CREW,
       });
     };
 

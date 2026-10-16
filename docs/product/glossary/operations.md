@@ -641,11 +641,22 @@
   The field reads **passengers only, not crew**, the same people capacity counts: everyone aboard
   but the crew. A boat saved over it before H-107 keeps sailing, its fleet row says so in danger
   ink, and its next save must fix it (`src/lib/boat-safety.ts`).
-- **Boat papers** — a boat's three dated documents: when its next safety inspection is due, and
-  when its registration and hull insurance expire (`boats.inspection_due_on`,
-  `registration_expires_on`, `insurance_expires_on`). Typed over in Settings, Boats when renewed,
-  so the paper itself is the history. Each has its own window — 90 days for the inspection, 60 for
-  registration and insurance (`BOAT_PAPER_HORIZON_DAYS`) — inside which a departure on that boat
+- **Certificate total-persons limit** — the second number some certificates print: everyone
+  aboard, **crew included** (`boats.certified_total_persons`, issue 2302). Optional, and independent
+  of the **certificate passenger limit**: some flag states (Spain among them) print only this one,
+  and a certificate with only a passenger figure is never asked for it. Checked at the manifest
+  beside the passenger line and never at the point of sale: when the people booked plus the crew
+  named for the departure pass it, the Boat tab says so in danger ink, and once the crew roll call
+  has counted more people and crew aboard than it allows, the line counts them instead. Passengers
+  above persons is refused at save as a typo (`passengers_above_total_persons`). The booking
+  transaction counts seats exactly as before (Aaron, 2026-10-13).
+- **Boat papers** — a boat's four dated documents: when its certificate itself expires (a
+  Certificate of Inspection runs for years, apart from the annual inspection, issue 2302), when its
+  next safety inspection is due, and when its registration and hull insurance expire
+  (`boats.coi_expires_on`, `inspection_due_on`, `registration_expires_on`,
+  `insurance_expires_on`). Typed over in Settings, Boats when renewed,
+  so the paper itself is the history. Each has its own window — 90 days for the certificate and the
+  inspection, 60 for registration and insurance (`BOAT_PAPER_HORIZON_DAYS`) — inside which a departure on that boat
   names the paper above its pre-departure checklist and Today carries a quiet owner errand
   (`boat_papers_due`), escalating once it lapses (`boat_safety_expired`).
 - **Safety kit** — the boat's own emergency equipment kept on the **gear register** as units:

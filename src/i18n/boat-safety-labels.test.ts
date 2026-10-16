@@ -137,3 +137,40 @@ describe("boatSafetySection", () => {
     });
   });
 });
+
+// #2302: the total-persons line and the certificate's own expiry, both locales.
+describe("boatSafetyNoticeText and the certificate's second limit", () => {
+  const over = (counted: boolean): BoatSafetyNotice => ({
+    code: "over_total_persons",
+    persons: 13,
+    limit: 12,
+    counted,
+  });
+
+  it("says the crew are in the count, booked and aboard", () => {
+    expect(boatSafetyNoticeText(en, over(false))).toBe(
+      "13 people booked, crew included; the certificate allows 12 in all.",
+    );
+    expect(boatSafetyNoticeText(en, over(true))).toBe(
+      "13 people aboard, crew included; the certificate allows 12 in all.",
+    );
+    expect(boatSafetyNoticeText(es, over(true))).toBe(
+      "13 personas a bordo con la tripulación; el certificado permite 12 en total.",
+    );
+  });
+
+  it("names the certificate's expiry apart from the inspection", () => {
+    const coi = (expired: boolean, days: number): BoatSafetyNotice => ({
+      code: "paper",
+      paper: "coi",
+      dueOn: "2026-10-01",
+      expired,
+      days,
+    });
+    expect(boatSafetyNoticeText(en, coi(false, 30))).toBe("Boat certificate expires in 30 days");
+    expect(boatSafetyNoticeText(en, coi(true, 2))).toBe("Boat certificate expired 2 days ago");
+    expect(boatSafetyNoticeText(es, coi(true, 2))).toBe(
+      "Certificado del barco: vencido hace 2 días",
+    );
+  });
+});
