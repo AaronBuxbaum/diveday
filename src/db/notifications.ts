@@ -42,6 +42,7 @@ import {
 } from "@/lib/notifications";
 import { confirmationExtras } from "@/lib/notifications/confirmation-extras";
 import { ACTIONABLE_PROVIDER_STATUSES, type ProviderEmailStatus } from "@/lib/notifications/events";
+import { shopVoiceOf } from "@/lib/notifications/shop-voice";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { issueBookingCapability } from "./booking-capabilities";
 import { settledPartyPayment } from "./checkouts";
@@ -428,9 +429,19 @@ async function withShopSender(
   input: Notification,
   cache: Map<string, NotificationSender | undefined> = new Map(),
 ): Promise<Notification> {
-  if (!("shopId" in input) || input.sender) return input;
+  if (!("shopId" in input)) return input;
+  // A caller that brought its own sender profile cannot vouch for the shop's
+  // name: whether it is held for review (issue #2450) is read from the shop
+  // here, for every message that speaks in a shop's voice, so a path that
+  // skipped the flag cannot send a flagged name through the From column.
+  if (input.sender && shopVoiceOf(input) === null) return input;
   if (!cache.has(input.shopId)) cache.set(input.shopId, await shopSenderFor(db, input.shopId));
   const sender = cache.get(input.shopId);
+  if (input.sender) {
+    return sender?.nameUnderReview && !input.sender.nameUnderReview
+      ? { ...input, sender: { ...input.sender, nameUnderReview: true } }
+      : input;
+  }
   return sender ? { ...input, sender } : input;
 }
 
