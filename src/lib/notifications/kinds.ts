@@ -2016,9 +2016,11 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // that completes the checkout.
     case "party_payment_receipt":
       return `party-payment-receipt/${notification.checkoutId}`;
-    // One note per claim attempt on a held seat.
+    // One note per held seat per clock hour, however many claims were tried:
+    // the same key for every attempt in the hour, so a limiter outage cannot
+    // turn a loop of claims into a loop of mail (issue #2381).
     case "seat_already_held":
-      return `seat-already-held/${notification.heldBookingId}/${notification.requestedAt.toISOString()}`;
+      return `seat-already-held/${notification.heldBookingId}/${Math.floor(notification.requestedAt.getTime() / 3_600_000)}`;
     // One send per card written; a level already held writes none.
     case "course_certified":
       return `course-certified/${notification.certificationId}`;

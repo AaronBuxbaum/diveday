@@ -61,7 +61,12 @@ vi.mock("@/db/seat-already-held", async (importOriginal) => {
   };
 });
 
+const { eq } = await import("drizzle-orm");
 const { createBookingParty } = await import("@/db/bookings");
+const { verifyBookingCapability } = await import("@/db/booking-capabilities");
+const { hashCapabilityToken } = await import("@/lib/booking-capabilities");
+const { bookings, bookingCapabilities, people, waiverRecords } = await import("@/db/schema");
+const { nowDate } = await import("@/lib/clock");
 const { issuePartySeatClaims } = await import("@/db/seat-claims");
 const { upcomingTripsWithCounts } = await import("@/db/trips");
 const { claimSeatAction } = await import("./actions");
@@ -102,7 +107,12 @@ function form(name: string, email: string): FormData {
   return data;
 }
 
-async function submit(token: string, name: string, email: string): Promise<string> {
+async function submit(
+  token: string,
+  name: string,
+  email: string,
+  beforeDeferred?: () => Promise<void>,
+): Promise<string> {
   pending.length = 0;
   let landed = "";
   try {
@@ -112,6 +122,7 @@ async function submit(token: string, name: string, email: string): Promise<strin
     if (!message.startsWith("REDIRECT:")) throw error;
     landed = message.slice("REDIRECT:".length);
   }
+  await beforeDeferred?.();
   // The work the action deferred until after the response.
   await Promise.all(pending.map((callback) => callback()));
   return landed;
@@ -146,17 +157,77 @@ describe("claimSeatAction answers a booked address as it answers a fresh one", (
     ]);
   });
 
-  it("leaves the refused seat unclaimed, so the same link still opens", async () => {
+  it("leaves the refused seat unclaimed, but its link ends as dead as a spent one", async () => {
     const { tokens } = await party();
-    const [, bookedToken] = tokens;
+    const [freshToken, bookedToken] = tokens;
+    const live = (token: string) =>
+      verifyBookingCapability(ctx.db, { token, purpose: "claim", now: nowDate() });
+    expect(await live(freshToken)).not.toBeNull();
+    expect(await live(bookedToken)).not.toBeNull();
+
+    mail.current = fakeEmail();
+    await submit(freshToken, "Milo Member", "milo@example.com");
     mail.current = fakeEmail();
     await submit(bookedToken, "Orla Organizer", "orla@example.com");
-    // A second attempt with the same link still reaches the same answer: the
-    // double seat was refused in the data layer and the link was not spent.
+
+    // The page behind the link (`/claim/<token>`) answers from this check: a
+    // refusal that left its link live while a success killed it would let
+    // anyone holding a link learn which addresses hold a seat (issue #2381).
+    expect(await live(freshToken)).toBeNull();
+    expect(await live(bookedToken)).toBeNull();
+
+    // The refused seat itself is still the organizer's placeholder, unclaimed.
+    const [seat] = await ctx.db
+      .select({ claimedAt: bookings.claimedAt })
+      .from(bookings)
+      .innerJoin(bookingCapabilities, eq(bookingCapabilities.bookingId, bookings.id))
+      .where(eq(bookingCapabilities.tokenHash, hashCapabilityToken(bookedToken)));
+    expect(seat?.claimedAt).toBeNull();
+
+    // A second attempt with the dead link lands where a spent one does.
     mail.current = fakeEmail();
     expect(await submit(bookedToken, "Orla Organizer", "orla@example.com")).toBe(
-      `/claim/${bookedToken}?sent=1`,
+      `/claim/${bookedToken}`,
     );
+    expect(mail.current.sent).toHaveLength(0);
+  });
+
+  it("leaves the organizer a fresh link for the seat the refusal killed", async () => {
+    const { tokens, lead } = await party();
+    mail.current = fakeEmail();
+    await submit(tokens[1], "Orla Organizer", "orla@example.com");
+    const seats = await issuePartySeatClaims(ctx.db, {
+      shopId: ctx.shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    const reissued = seats.filter((seat) => seat.claim && !seat.claimed);
+    expect(reissued.length).toBeGreaterThan(0);
+    for (const seat of reissued) {
+      const verified = await verifyBookingCapability(ctx.db, {
+        token: seat.claim?.token ?? "",
+        purpose: "claim",
+        now: nowDate(),
+      });
+      expect(verified).not.toBeNull();
+    }
+  });
+
+  it("answers a claim that worked before its waiver, event and trail work, which all wait for after the response", async () => {
+    const { tokens } = await party();
+    const waiversFor = async (email: string) =>
+      ctx.db
+        .select({ id: waiverRecords.id })
+        .from(waiverRecords)
+        .innerJoin(people, eq(people.id, waiverRecords.personId))
+        .where(eq(people.email, email));
+    mail.current = fakeEmail();
+    let before = -1;
+    await submit(tokens[0], "Milo Member", "milo@example.com", async () => {
+      before = (await waiversFor("milo@example.com")).length;
+    });
+    // Nothing the claim sends or records had run when the answer was given.
+    expect(before).toBe(0);
+    expect((await waiversFor("milo@example.com")).length).toBeGreaterThan(0);
   });
 
   it("does not send the holder anything for a claim that worked", async () => {
