@@ -181,7 +181,12 @@ export default async function SafetyReportPage({
           value: String(safety.noCrewDepartures.length),
           ...(safety.noCrewDepartures.length > 0
             ? {
-                detail: t("incidents.safety.noCrewDetail", { back: safety.departuresBack }),
+                detail: t(
+                  year ? "incidents.safety.year.noCrewDetail" : "incidents.safety.noCrewDetail",
+                  {
+                    back: safety.departuresBack,
+                  },
+                ),
                 detailTone: "attention" as const,
               }
             : {}),

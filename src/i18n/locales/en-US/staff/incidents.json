@@ -194,7 +194,8 @@
       "figuresLabel": "The year’s safety record",
       "noDepartures": "No departures came back this year.",
       "noCrewNone": "No crew recorded on any departure this year",
-      "activityLink": "The year’s safety activity"
+      "activityLink": "The year’s safety activity",
+      "noCrewDetail": "of {back}, listed on each month"
     }
   },
   "discard": {

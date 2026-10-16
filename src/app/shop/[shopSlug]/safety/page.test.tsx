@@ -92,6 +92,9 @@ describe("the Safety year", () => {
     expect(text).toContain("What the shop recorded on the year’s departures that are home.");
     expect(text).toContain(year);
     expect(text).not.toContain("What the shop recorded on departures that left this month");
+    // The year shows the figures alone, so no figure may point at a list below it.
+    expect(text).not.toContain("listed below");
+    expect(text).not.toContain("this month");
   });
 
   it("reads a year it cannot have as the month", async () => {

@@ -194,7 +194,8 @@
       "figuresLabel": "Registro de seguridad del año",
       "noDepartures": "Ninguna salida volvió este año.",
       "noCrewNone": "No hay tripulación registrada en ninguna salida este año",
-      "activityLink": "La actividad de seguridad del año"
+      "activityLink": "La actividad de seguridad del año",
+      "noCrewDetail": "de {back}, en la lista de cada mes"
     }
   },
   "discard": {
