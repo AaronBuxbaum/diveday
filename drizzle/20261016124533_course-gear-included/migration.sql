@@ -1,1 +1,0 @@
-ALTER TABLE "courses" ADD COLUMN "gear_included" boolean DEFAULT false NOT NULL;

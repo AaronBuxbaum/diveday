@@ -1,1 +1,0 @@
-ALTER TABLE "waiver_records" ADD COLUMN "doctor_unlock_failures" integer DEFAULT 0 NOT NULL;
