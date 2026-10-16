@@ -349,6 +349,16 @@ describe("the words the es-ES README settled", () => {
     });
   });
 
+  it("reads past an ICU select's case keys, never past its words", () => {
+    // `waiver` as a case key is the turned-away reason's code, which no
+    // reader sees; the same word as the case's text is still the mistake.
+    expect(rules({ k: "No embarcó{reason, select, waiver {: exención} other {}}" })).toEqual([]);
+    expect(rules({ k: "No embarcó{reason, select, waiver {: waiver} other {}}" })).toEqual([
+      "waiver",
+    ]);
+    expect(rules({ k: "Completa tu waiver {tripTitle}" })).toEqual(["waiver"]);
+  });
+
   it("reports every rule a single string breaks, not only the first", () => {
     // A string can be wrong twice, and reporting one at a time turns a sweep
     // into as many rounds as the string has mistakes.
