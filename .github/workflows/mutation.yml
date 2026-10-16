@@ -29,7 +29,7 @@ permissions:
 jobs:
   mutate:
     name: Mutate ${{ matrix.module }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
       contents: read
@@ -41,11 +41,11 @@ jobs:
       matrix:
         module: [src/lib/readiness.ts, src/lib/trip-admission.ts]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       - name: Run Stryker
         run: pnpm test:mutation --mutate "${{ matrix.module }}"
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
           name: mutation-report-${{ strategy.job-index }}
@@ -64,7 +64,7 @@ jobs:
     name: Report a red run
     needs: mutate
     if: ${{ !cancelled() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -72,5 +72,5 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: node scripts/workflow-alert.mjs --workflow mutation --outcome "${{ needs.mutate.result == 'success' && 'success' || 'failure' }}" --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

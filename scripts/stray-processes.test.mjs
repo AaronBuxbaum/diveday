@@ -4,9 +4,11 @@ import {
   descendsFrom,
   diagnoseCommand,
   humanElapsed,
+  looseFilesSince,
   orphanedDevProcesses,
   parseElapsedSeconds,
   parseProcessTable,
+  sessionStartMs,
   staleSessionShells,
   summarizeCommand,
 } from "./stray-processes.mjs";
@@ -294,5 +296,37 @@ describe("a refused watch skips the age threshold", () => {
       { pid: 12, ppid: 10, elapsedSeconds: 20, rssMb: 0, command: snapshot("pnpm test foo") },
     ];
     expect(staleSessionShells(rows, [], 10).map((row) => row.pid)).toEqual([11]);
+  });
+});
+
+describe("scratch files left beside the checkouts", () => {
+  // 2026-10-13: 199 loose files (37 MB) sat in /home/claude, 196 of them from that day,
+  // among them `*-orig.ts` copies of source files a later session could grep by mistake.
+  const start = Date.parse("2026-10-13T08:00:00Z");
+  const entries = [
+    { name: "wt-cr3-today-orig.ts", isFile: true, mtimeMs: start + 60_000 },
+    { name: "wt-cr1-t1.log", isFile: true, mtimeMs: start + 120_000 },
+    { name: "old-notes.txt", isFile: true, mtimeMs: start - 3_600_000 },
+    { name: "wt-cr11", isFile: false, mtimeMs: start + 60_000 },
+    { name: ".bash_history", isFile: true, mtimeMs: start + 60_000 },
+  ];
+
+  it("names the files this session wrote there, newest first, and nothing older or hidden", () => {
+    expect(looseFilesSince(entries, start)).toEqual(["wt-cr1-t1.log", "wt-cr3-today-orig.ts"]);
+  });
+
+  it("says nothing without a session start to measure from", () => {
+    expect(looseFilesSince(entries, null)).toEqual([]);
+  });
+
+  it("dates the session from its process, else from its transcript's birth", () => {
+    const now = start + 3_600_000;
+    const rows = [{ pid: 7, ppid: 1, elapsedSeconds: 600, rssMb: 1, command: "claude" }];
+    expect(sessionStartMs(rows, 7, null, { now })).toBe(now - 600_000);
+    // A cloud container runs the session outside this process table.
+    const stat = () => ({ birthtimeMs: start });
+    expect(sessionStartMs([], 0, "/t.jsonl", { now, stat })).toBe(start);
+    expect(sessionStartMs([], 0, "/t.jsonl", { now, stat: () => ({ birthtimeMs: 0 }) })).toBe(null);
+    expect(sessionStartMs([], 0, undefined, { now })).toBeNull();
   });
 });

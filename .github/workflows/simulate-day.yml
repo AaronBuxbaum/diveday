@@ -29,7 +29,7 @@ permissions:
 jobs:
   simulate:
     name: One dive day, end to end
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     # For the alert steps at the end: a red run opens or comments on one issue.
     permissions:
@@ -38,7 +38,7 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/playwright-shell
       # One build, the same e2e build ci.yml's `build` job makes; the simulation
@@ -50,7 +50,7 @@ jobs:
       # on the shop's clock it was reached, and the screenshot it left. Uploaded
       # whether or not the day completed — a failed run's transcript is the one
       # worth reading.
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: simulation
@@ -58,7 +58,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       # Playwright's own trace and failure screenshot for the state that failed.
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: simulation-test-results

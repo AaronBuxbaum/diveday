@@ -9124,8 +9124,7 @@ for (const scheme of ["light", "dark"] as const) {
       // the spine renders unfolded — where the old `?view=urgency` queue put it
       // inside a "This week" band a reader had to expand. That queue is gone
       // (ADR 20260827-clearwater-surface-language), `?view=` 308s here, and
-      // "This week" is now a plain door to the schedule board whose stretched
-      // link would swallow the click this test used to make.
+      // "This week" is a folded disclosure beside Tomorrow.
       await page.goto(`/shop/${privateShop.slug}`);
       // The row's own words, not a timing guess.
       await page.getByText(/guessed from your timezone/).waitFor();

@@ -6,6 +6,7 @@ import { btree_gist } from "@electric-sql/pglite/contrib/btree_gist";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
+import { closePglite } from "@/db/close-pglite";
 import { seedDemo } from "@/db/seed";
 
 /**
@@ -70,7 +71,10 @@ function templateFile(variant: TemplateVariant): string {
  */
 async function inputsFingerprint(): Promise<string> {
   const hash = createHash("sha256");
-  for (const root of ["drizzle", "src/db"]) {
+  // `src/content` because the seed publishes its course and dive-site catalogs
+  // from there (seed-catalog.ts, seed-dive-site-catalog.ts): a content-only
+  // change otherwise reuses a snapshot holding the old catalog.
+  for (const root of ["drizzle", "src/db", "src/content"]) {
     const files = (await readdir(root, { recursive: true, withFileTypes: true }))
       .filter((entry) => entry.isFile())
       .map((entry) => path.join(entry.parentPath, entry.name))
@@ -94,7 +98,7 @@ async function buildSnapshot(variant: TemplateVariant): Promise<Buffer> {
   await migrate(db, { migrationsFolder: "drizzle" });
   if (variant === "empty") {
     const emptyDump = await client.dumpDataDir("none");
-    await client.close();
+    await closePglite(client);
     return Buffer.from(await emptyDump.arrayBuffer());
   }
   // The `lean` fixture has no trailing-quarter back-fill. That history is for
@@ -104,7 +108,7 @@ async function buildSnapshot(variant: TemplateVariant): Promise<Buffer> {
   // history when it needs it (src/db/reporting.test.ts).
   await seedDemo(db, { history: variant === "history" });
   const dump = await client.dumpDataDir("none");
-  await client.close();
+  await closePglite(client);
   return Buffer.from(await dump.arrayBuffer());
 }
 

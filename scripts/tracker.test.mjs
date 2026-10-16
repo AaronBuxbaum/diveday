@@ -1,6 +1,8 @@
-import { readFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
   createTracker,
@@ -92,6 +94,23 @@ describe("reading issues", () => {
     expect(() => createTracker({ repo: REPO, run }).getIssue(1)).toThrow(/gh api .*issues\/1/);
   });
 
+  it("names the spawn error when gh fails with nothing on stderr", () => {
+    const run = () => ({
+      status: null,
+      stdout: "",
+      stderr: "",
+      error: Object.assign(new Error("spawnSync gh ENOBUFS"), { code: "ENOBUFS" }),
+    });
+    expect(() => createTracker({ repo: REPO, run }).getIssue(1)).toThrow(/failed: ENOBUFS/);
+  });
+
+  it("asks gh for only the fields a pull request is read for", () => {
+    const { run, calls } = fakeGh({ [`${BASE}/pulls?`]: [] });
+    createTracker({ repo: REPO, run }).listPulls({ state: "closed" });
+    expect(calls[0].args).toContain("--jq");
+    expect(calls[0].args.at(-1)).not.toMatch(/body/);
+  });
+
   it("refuses something that is not an issue number before calling gh", () => {
     const { run, calls } = fakeGh({});
     expect(() => createTracker({ repo: REPO, run }).getIssue("1; rm")).toThrow(TrackerError);
@@ -149,6 +168,46 @@ describe("writing issues", () => {
     expect(() =>
       createTracker({ repo: REPO, run }).editLabels(5, { remove: ["in-progress"] }),
     ).not.toThrow();
+  });
+});
+
+describe("the real gh runner", () => {
+  let dir;
+  const savedPath = process.env.PATH;
+  afterEach(() => {
+    process.env.PATH = savedPath;
+    if (dir) rmSync(dir, { recursive: true, force: true });
+  });
+
+  /** A stand-in `gh` on PATH that prints `bytes` of JSON: 100 pull requests with long bodies. */
+  function fakeGhBinary(bytes) {
+    dir = mkdtempSync(path.join(tmpdir(), "tracker-gh-"));
+    const script = path.join(dir, "gh");
+    writeFileSync(
+      script,
+      `#!/usr/bin/env node
+const body = "x".repeat(Math.ceil(${bytes} / 100));
+const pulls = Array.from({ length: 100 }, (_, i) => ({
+  number: i + 1, state: "closed", body, html_url: "https://x/" + (i + 1),
+  merged_at: "2026-10-13T00:00:00Z", head: { ref: "claude/b-" + i },
+}));
+process.stdout.write(JSON.stringify(pulls));
+`,
+    );
+    chmodSync(script, 0o755);
+    process.env.PATH = `${dir}${path.delimiter}${savedPath}`;
+  }
+
+  // 2026-10-13: one page of 100 closed pull requests was 2,279,829 bytes, spawnSync's 1 MiB
+  // default answered ENOBUFS, and `expire-claims` exited 2 with an empty "failed:".
+  it("reads a page larger than the 1 MiB default pipe", () => {
+    fakeGhBinary(2.5 * 1024 * 1024);
+    const pulls = createTracker({ repo: REPO, run: ghApi }).listPulls({
+      state: "closed",
+      limit: 100,
+    });
+    expect(pulls).toHaveLength(100);
+    expect(pulls[99]).toMatchObject({ number: 100, headRefName: "claude/b-99" });
   });
 });
 

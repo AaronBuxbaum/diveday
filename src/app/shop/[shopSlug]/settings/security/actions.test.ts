@@ -8,9 +8,9 @@ import {
 } from "@/db/account-security";
 import type { AppDb } from "@/db/client";
 import { accountSessions, accountStepUps, people, personRoles, userAccounts } from "@/db/schema";
-import { nowDate } from "@/lib/clock";
+import { nowDate, nowMs } from "@/lib/clock";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { totpCode } from "@/lib/totp";
+import { TOTP_STEP_SECONDS, totpCode } from "@/lib/totp";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 import { redirectedTo, staffSession } from "@/test/staff-session";
@@ -238,13 +238,16 @@ describe("verifyStepUpAction", () => {
    * (`consumeTotpStep: false`), so a staffer who has just signed in is not
    * locked out of the next challenge for the rest of the window. The cost is
    * that the code stays good for that window. Changing this is a security
-   * call, not a refactor.
+   * call, not a refactor. Aaron confirmed the rule on 2026-10-15.
    */
   it("leaves the code's time step unspent", async () => {
     const { db, shop } = ctx;
     const owner = await enrolledOwner(db, shop);
     signIn(owner.personId, owner.sessionId);
-    const code = totpCode(owner.secret);
+    // Turning two-factor on spent the current step; the next one is still
+    // unspent, and the checker's one step of drift takes it now.
+    const code = totpCode(owner.secret, nowMs() + TOTP_STEP_SECONDS * 1000);
+    const before = (await getAccountSecurity(db, owner.accountId))?.lastTotpStep;
 
     await redirectedTo(() =>
       verifyStepUpAction(
@@ -253,7 +256,7 @@ describe("verifyStepUpAction", () => {
       ),
     );
 
-    expect((await getAccountSecurity(db, owner.accountId))?.lastTotpStep).toBeNull();
+    expect((await getAccountSecurity(db, owner.accountId))?.lastTotpStep).toBe(before);
     // Sign-in, which does spend it, still takes the same code once.
     expect(await verifyAccountSecondFactor(db, owner.accountId, code)).toBe(true);
     expect(await verifyAccountSecondFactor(db, owner.accountId, code)).toBe(false);

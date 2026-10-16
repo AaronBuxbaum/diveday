@@ -1,0 +1,401 @@
+{
+  "area": "honduras-guanaja",
+  "method": "Guanaja, all around the island inside the Guanaja Marine Reserve, north-side walls and canyons to the south-side Southwest Cay walls. Official list: the 1997 Guanaja Tourism Association / Guanaja Marine Reserve mooring-buoy chart produced with Reef Relief (35 named buoys, published as a PDF on reefrelieffounders.com), counted as one list; its printed coordinates repeat between different buoys, so no positions were taken from it. Operator lists, one each: Clearwater Paradise Resort's numbered dive-site map (38 sites, linked from its diving page); Cabañas on Clark's Cay's favourite-sites page together with the Franko Maps dive map made for its sister Villa on Dunbar Rock (same owner and reservations office, so counted once). End of the World Resort and Reef Gliders' Guanaja trip publish no named sites, Bayman Bay Club's site no longer resolves, and Bluewater Dive Travel and magazine guides were leads only. A site is counted when it is named on at least two independent lists and is a recreational scuba dive; one-list names are kept as excluded rows, grouped per list where several. Counted 2026-10-14.",
+  "sources": [
+    "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+    "https://reefrelieffounders.com/guanaja-bay-islands-honduras-reef-mooring-buoy-project.html",
+    "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+    "https://www.clearwaterparadise.com/diving/",
+    "https://www.clarkscay.com/portfolio/guanaja-dive-sites/",
+    "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Blue Rock Channel; Blue Hole; Spayer's; Thomas Reef; Pelican Reef",
+      "template": null,
+      "listedBy": ["https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"],
+      "excluded": "each on one operator list only (Clark's Cay / Dunbar Rock map)"
+    },
+    {
+      "name": "Tortuga Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Fantasy Reef",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "The Pinnacle",
+      "template": "the-pinnacle-guanaja",
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.clarkscay.com/portfolio/guanaja-dive-sites/",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Eel's Garden",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Basket Star Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg"
+      ],
+      "excluded": "on one operator list only (Clearwater Paradise)"
+    },
+    {
+      "name": "Bayman Bay Drop (Bayman Drop)",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Diane's Reef (Diane's Wall)",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Wonderful Reef",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Paradise Reef",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "The Cut",
+      "template": null,
+      "listedBy": ["https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"],
+      "excluded": "on one operator list only (Clark's Cay / Dunbar Rock map)"
+    },
+    {
+      "name": "Sandi's Reef",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Michael's Rock (Michael's Rock Key, Michael's Rock Canyon)",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.clarkscay.com/portfolio/guanaja-dive-sites/",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "The Pavilions",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Alderson Outside (Alderson's Wall Outside)",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Alderson Inside (Alderson's Wall Inside)",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Dunia's Reef; Lunar Canyon",
+      "template": null,
+      "listedBy": ["https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"],
+      "excluded": "each on one operator list only (Clark's Cay / Dunbar Rock map)"
+    },
+    {
+      "name": "Reef Relief",
+      "template": null,
+      "listedBy": ["https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf"],
+      "excluded": "on the 1997 Guanaja Tourism Association buoy chart only"
+    },
+    {
+      "name": "Black Rock Canyon",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.clarkscay.com/portfolio/guanaja-dive-sites/",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Sand Canyon",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg"
+      ]
+    },
+    {
+      "name": "Black Rock",
+      "template": null,
+      "listedBy": ["https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf"],
+      "excluded": "on the 1997 buoy chart only; Clearwater and Clark's Cay show Black Rock as a place, not a site"
+    },
+    {
+      "name": "Tito's Labyrinth",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Caldera del Diablo",
+      "template": null,
+      "listedBy": [
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "George's Reef",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Hector's Run",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Windmill Reef",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Stephan's Reef",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Half Moon Cay Reef",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Mt. Elusive",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Mestizo 1; Mestizo 2; Brad's Reef",
+      "template": null,
+      "listedBy": ["https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"],
+      "excluded": "each on one operator list only (Clark's Cay / Dunbar Rock map)"
+    },
+    {
+      "name": "Bridget's Reef",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Katron's Cay Reef (Kiatron's Cay)",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Short Stop",
+      "template": null,
+      "listedBy": [
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Lisa's Reef",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Sebastian's Reef; The Elbow; Daniel's Reef; Denis's Playground; Vertigo 2",
+      "template": null,
+      "listedBy": ["https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"],
+      "excluded": "each on one operator list only (Clark's Cay / Dunbar Rock map)"
+    },
+    {
+      "name": "Rainbow Reef",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Lee's Pleasure",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Afternoon Delight",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Jado Trader",
+      "template": "jado-trader-guanaja",
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.clarkscay.com/portfolio/guanaja-dive-sites/",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Jim's Silver Lode",
+      "template": "jims-silverlode-guanaja",
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.clarkscay.com/portfolio/guanaja-dive-sites/",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Vertigo",
+      "template": "vertigo-guanaja",
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.clarkscay.com/portfolio/guanaja-dive-sites/",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Gorgonian Wall",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Captain's Crack",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Southwest Wall",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    },
+    {
+      "name": "Blacktip Slumberland",
+      "template": null,
+      "listedBy": [
+        "https://reefrelieffounders.com/pdf/guanaja-buoy-chart.pdf",
+        "https://www.clearwaterparadise.com/wp-content/uploads/2023/10/CPR-Dive-Sites.jpg",
+        "https://www.dunbarrock.com/wp-content/uploads/2019/08/guanaja-dive-map.jpg"
+      ]
+    }
+  ]
+}

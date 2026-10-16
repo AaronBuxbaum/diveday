@@ -1,6 +1,6 @@
 # Mac CI runner runbook
 
-CI's lint, typecheck, repository safeguards and unit tests run on Aaron's Mac whenever one of its runners is online, and on GitHub's runners when none is. Nobody switches anything: the `changes` job in `.github/workflows/ci.yml` asks GitHub which runners are online at the start of every run (`scripts/ci-runner-pick.mjs`) and sends those jobs to the Mac or to `ubuntu-latest`. ADR [20261013-mac-ci-runner](../architecture/decisions/20261013-mac-ci-runner.md) records why.
+CI's lint, typecheck, repository safeguards and unit tests run on Aaron's Mac whenever one of its runners is online, and on GitHub's runners when none is. Nobody switches anything: the `changes` job in `.github/workflows/ci.yml` asks GitHub which runners are online at the start of every run (`scripts/ci-runner-pick.mjs`) and sends those jobs to the Mac or to GitHub's `ubuntu-24.04` (the one image `scripts/check-runner-image.mjs` pins). ADR [20261013-mac-ci-runner](../architecture/decisions/20261013-mac-ci-runner.md) records why.
 
 ## Why
 

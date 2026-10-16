@@ -1461,6 +1461,16 @@
         "description": "Un pez violeta del largo de un dedo con una franja negra que va del hocico al borde de la aleta dorsal.",
         "tip": "Búscalo más hondo que el gramma real, casi siempre pasados los 20 metros, con la panza hacia la roca bajo los salientes de la pared."
       },
+      "blacknose-shark": {
+        "name": "Tiburón hocico negro",
+        "description": "Un tiburón gris, pequeño y esbelto, de hocico corto y redondeado con una mancha oscura en la punta y sin otras marcas llamativas en las aletas.",
+        "tip": "Suele verse sobre arena y arrecife somero, sobre todo en los meses cálidos. En una inmersión organizada de alimentación de tiburones, sigue al pie de la letra la charla del operador; en cualquier otro sitio, trátalo como un encuentro imprevisto: mantén la calma, las manos pegadas al cuerpo y deja que pase."
+      },
+      "blacktip-shark": {
+        "name": "Tiburón puntas negras",
+        "description": "Un tiburón esbelto y rápido, gris bronceado, con las puntas de casi todas las aletas negras, sobre todo la segunda dorsal y la cola.",
+        "tip": "Se ve en aguas someras, más en invierno y primavera en Bahamas y Florida. Mantén la calma, las manos pegadas al cuerpo y deja que pase."
+      },
       "blade-fire-coral": {
         "name": "Coral de fuego laminar",
         "description": "Láminas planas color mostaza con los bordes claros, alineadas sobre la cresta del arrecife en aguas bajas, donde pega el oleaje.",
@@ -1516,10 +1526,20 @@
         "description": "Flancos amarillos regidos por líneas azul eléctrico, en grupos sueltos bajo las cornisas.",
         "tip": "Mira la sombra bajo los salientes. Un cardumen entero puede pasar ahí todo el día."
       },
+      "bluethroat-pikeblenny": {
+        "name": "Trambollo lucio de garganta azul",
+        "description": "Un trambollo delgado como un lápiz, de mandíbula larga como la de un lucio, que se asoma desde un hueco en la arena o el cascajo con solo la cabeza fuera. Los machos despliegan la garganta azul y una aleta con manchas oscuras.",
+        "tip": "Busca una cabecita en un hueco del fondo y espera. Si te acercas mucho, se esconde, así que fotografía desde un poco más lejos."
+      },
       "boga": {
         "name": "Boga",
         "description": "Pez esbelto de cola ahorquillada, azul verdoso por arriba y plateado por abajo con líneas doradas finas, que pasa en cardúmenes a media agua sobre el arrecife.",
         "tip": "Mira hacia arriba desde lo alto del arrecife. El cardumen gira como un solo cuerpo y se acerca si te quedas quieto a media agua."
+      },
+      "bonefish": {
+        "name": "Macabí",
+        "description": "Un pez esbelto, plateado y en forma de torpedo, con el hocico romo y la cola ahorquillada, que se alimenta sobre fondos de arena y pasto marino.",
+        "tip": "Búscalo en bajos someros y bordes de manglar, a menudo en grupos pequeños. Mantente atrás y muévete despacio; se asusta con un chapoteo."
       },
       "bottlenose-dolphin": {
         "name": "Delfín nariz de botella",
@@ -1580,6 +1600,11 @@
         "name": "Esponja tubo marrón",
         "description": "Grupos de tubos canela a marrón, con la pared exterior sembrada de pequeños conos y aberturas redondas.",
         "tip": "Mira dentro de la boca de los tubos buscando gobios y camaroncitos. Que tu consola no se balancee contra ellos."
+      },
+      "bull-shark": {
+        "name": "Tiburón toro",
+        "description": "Un tiburón gris y robusto, de hocico corto y romo, ojos pequeños y aletas sin marcas.",
+        "tip": "En una inmersión organizada de alimentación de tiburones, sigue al pie de la letra la charla del operador; en cualquier otro sitio, trátalo como un encuentro imprevisto: mantén la calma, no lo pierdas de vista y termina la inmersión."
       },
       "butter-hamlet": {
         "name": "Vaca mantequilla",
@@ -1791,6 +1816,11 @@
         "description": "Dedos cortos y romos en matorrales bajos, de canela a morado pálido, en agua somera.",
         "tip": "Es una guardería: mira entre los dedos para ver los peces más pequeños del arrecife."
       },
+      "fingerprint-cyphoma": {
+        "name": "Cifoma de huellas",
+        "description": "Un caracol del tamaño de una uña con una concha pálida y lisa y un manto de líneas finas y apretadas como una huella dactilar, que pasta sobre los abanicos de mar.",
+        "tip": "Busca en abanicos de mar y gorgonias, en las mismas ramas donde se alimentan las lenguas de flamenco. Mira sin tocar: el patrón es tejido vivo."
+      },
       "fire-coral": {
         "name": "Coral de fuego ramificado",
         "description": "Láminas color mostaza con las puntas pálidas, que crecen sobre cualquier cosa que deje de moverse.",
@@ -1820,6 +1850,11 @@
         "name": "Caracol gigante de Florida",
         "description": "Una concha enorme en forma de huso, de hasta 60 cm, con un animal rojo anaranjado dentro, sobre arena y pasto marino.",
         "tip": "Obsérvalo cazar otros caracoles y deja cada concha viva donde está."
+      },
+      "flying-gurnard": {
+        "name": "Golondrina de mar",
+        "description": "Un pez de fondo de cabeza roma y acorazada, con aletas pectorales anchas, moteadas de azul, que se abren como alas cuando se asusta.",
+        "tip": "Recorre con la vista la arena y el cascajo junto al borde del arrecife, donde camina por el fondo. Mantente atrás: si te acercas mucho, abre las aletas y huye."
       },
       "foureye-butterflyfish": {
         "name": "Pez mariposa de ojo falso",
@@ -1866,6 +1901,11 @@
         "description": "Un ermitaño rojo y grande, de tenazas gruesas y granuladas, que vive dentro de una concha de caracol grande sobre arena y pasto marino.",
         "tip": "Fíjate en las conchas grandes que se mueven sobre la arena, quédate quieto y espera a que asomen los ojos."
       },
+      "giant-manta-ray": {
+        "name": "Manta gigante",
+        "description": "Una raya muy ancha, de dorso oscuro y vientre blanco, con aletas cefálicas anchas junto a la boca y una mancha clara en los hombros.",
+        "tip": "Se ve en montes submarinos y estaciones de limpieza del Caribe, sobre todo en los meses más frescos. Guarda la distancia, no la toques ni la persigas, y deja que sea ella quien dé las vueltas."
+      },
       "glasseye-snapper": {
         "name": "Catalufa",
         "description": "Roja y plateada con un ojo enorme, colgada cabeza abajo en un hueco en sombra.",
@@ -1896,6 +1936,11 @@
         "description": "Un gobio moteado, color arena, con una barra oscura que le baja por el ojo y un puntito dorado encima de la aleta pectoral.",
         "tip": "Descansa en la arena junto al arrecife y se aparta un poco si te acercas. Detente a un cuerpo de distancia y deja que se calme."
       },
+      "goldspotted-eel": {
+        "name": "Anguila de manchas doradas",
+        "description": "Una anguila serpiente color canela con una fila de manchas oscuras bordeadas de dorado a cada lado, que suele verse con la cabeza fuera de la arena o deslizándose sobre ella.",
+        "tip": "Búscala sobre arena y cascajo al atardecer y en inmersiones nocturnas. Mantén las manos y las aletas lejos del fondo a su alrededor; si la agobias, se esconde en la arena."
+      },
       "goliath-grouper": {
         "name": "Mero guasa",
         "description": "Enorme y despreocupado, casi siempre estacionado bajo una cornisa o en la sombra de un pecio.",
@@ -1925,6 +1970,11 @@
         "name": "Barracuda",
         "description": "Una barra plateada larga con la mandíbula salida, inmóvil en la corriente.",
         "tip": "Es curiosa, no le interesas. Guarda el equipo brillante y sigue tu camino."
+      },
+      "great-hammerhead": {
+        "name": "Tiburón martillo gigante",
+        "description": "Un tiburón grande y solitario, con la primera aleta dorsal alta y una cabeza ancha de borde frontal casi recto.",
+        "tip": "Se encuentra en el borde de aguas abiertas y en bajos, sobre todo en invierno. Guarda la distancia, no lo persigas y deja que pase."
       },
       "great-star-coral": {
         "name": "Coral estrella grande",
@@ -1976,6 +2026,11 @@
         "description": "Un trambollo grande, jaspeado de pardo y verde, con penachos de cirros sobre los ojos y una mancha ocular oscura en el opérculo. Vive en lo somero rocoso.",
         "tip": "Revisa agujeros y grietas en roca somera y escolleras. Descansa con la cabeza afuera y no se mueve si te acercas despacio."
       },
+      "hardhead-silverside": {
+        "name": "Pejerrey cabezón",
+        "description": "Un pez pequeño y esbelto con una franja plateada brillante a cada lado, apiñado en cardúmenes densos.",
+        "tip": "Observa el cardumen desde fuera de la abertura. Se reúnen en espacios techados, así que no entres en cavernas ni en pasos entre rocas."
+      },
       "harlequin-bass": {
         "name": "Serrano arlequín",
         "description": "Un serrano del largo de un dedo, de hocico puntiagudo, blanco con barras y manchas negras bien marcadas, posado sobre el cascajo junto al arrecife.",
@@ -2021,6 +2076,11 @@
         "description": "Azul intenso con bandas blancas, y uno de los peces más difíciles de encontrar en el Caribe.",
         "tip": "Vale la inmersión entera si aparece. Busca en las cabezas de coral más hondas, no en lo somero."
       },
+      "jackknife-fish": {
+        "name": "Pez navaja",
+        "description": "Un pez blanco y negro con una aleta dorsal alta y curva como una hoja abierta y una franja oscura y larga en el cuerpo. Los juveniles arrastran una aleta dorsal alargada.",
+        "tip": "Búscalo bajo cornisas y en cuevas y grietas, a menudo en pareja. Se queda en la sombra, así que acércate despacio y deja que se tranquilice."
+      },
       "knobby-brain-coral": {
         "name": "Coral cerebro nudoso",
         "description": "Costras y montículos bajos que se levantan en bultos nudosos, cubiertos de valles cortos, angostos y sinuosos.",
@@ -2030,6 +2090,11 @@
         "name": "Coral lámina de Lamarck",
         "description": "Placas anchas escalonadas por la pared, con crestas curvas y pequeños pólipos blancos en forma de estrella repartidos por la superficie.",
         "tip": "Es de pared, casi siempre por debajo de los 15 metros. Mantén tu profundidad lejos de las placas; se quiebran con una aleta."
+      },
+      "lancer-dragonet": {
+        "name": "Dragonete lancero",
+        "description": "Un pez pequeño de cabeza plana, moteado de pardo y gris para confundirse con el fondo, con una aleta dorsal alta y rayada que levanta para exhibirla, posado sobre arena y cascajo.",
+        "tip": "Recorre con la vista la arena abierta cerca del arrecife, sobre todo en aguas someras. Se queda tan quieto que es fácil pasarlo por alto, así que busca la aleta y los ojos."
       },
       "lane-snapper": {
         "name": "Biajaiba",
@@ -2100,6 +2165,11 @@
         "name": "Pez rana",
         "description": "Una esponja llena de bultos que resulta tener boca, pescando con un señuelo en la cabeza.",
         "tip": "Los guías encuentran estos y los buzos no. Si tu guía se detiene ante una esponja pelada, mira mejor."
+      },
+      "longnose-batfish": {
+        "name": "Pez murciélago de nariz larga",
+        "description": "Un pez aplanado, verrugoso y pardo anaranjado, con un cuerno corto en el hocico, labios rojos y aletas pectorales como brazos, que camina por el fondo en vez de nadar.",
+        "tip": "Búscalo sobre arena y cascajo y en inmersiones nocturnas, donde parece un trozo de escombro hasta que se mueve. Obsérvalo a distancia; no nada para huir, pero no es un pez para tocar."
       },
       "longsnout-butterflyfish": {
         "name": "Pez mariposa hocicón",
@@ -2216,6 +2286,11 @@
         "description": "Un rombo gris y alto con una mancha oscura en la pectoral, en el azul frente a una pared.",
         "tip": "Mira hacia afuera de la pared, no a lo largo. Este se queda en agua abierta, no en el arrecife."
       },
+      "oceanic-whitetip-shark": {
+        "name": "Tiburón oceánico de puntas blancas",
+        "description": "Un tiburón oceánico lento y robusto, con aletas largas y redondeadas de puntas blancas y el hocico romo.",
+        "tip": "Mantenlo a la vista, quédate cerca del grupo y de la línea, no le des la espalda y termina la inmersión si se queda. Nunca sueltes la línea para seguirlo."
+      },
       "orange-cup-coral": {
         "name": "Coral copa naranja",
         "description": "Grupos de copas redondas, de naranja a rojizas, en la sombra bajo salientes, en cuevas y sobre pecios y plataformas. De noche despliega tentáculos amarillo anaranjado. Viene del Indopacífico.",
@@ -2230,6 +2305,11 @@
         "name": "Ermitaño de tenazas naranjas",
         "description": "Un ermitaño pequeño de tenazas naranja intenso y patas pardo rojizas con puntas blancas, dentro de una concha prestada.",
         "tip": "Observa el cascajo y la roca de las zonas someras y tranquilas; de día anda a la vista."
+      },
+      "orangesided-goby": {
+        "name": "Gobio de costado naranja",
+        "description": "Un gobio diminuto de cuerpo pálido cruzado por manchas rojo anaranjadas en el costado y la cabeza moteada de un rojo anaranjado vivo, posado sobre corales y esponjas.",
+        "tip": "Busca en la parte baja de cabezos de coral y esponjas en el arrecife somero, atento al destello naranja. Es pequeño y tímido, así que ponte a un palmo y quédate quieto."
       },
       "orangespotted-filefish": {
         "name": "Pez lija de puntos naranja",
@@ -2341,6 +2421,11 @@
         "description": "El loro más grande del Atlántico: verde bronce, y de más de un metro ya crecido.",
         "tip": "Crece en el manglar, así que un arrecife junto a uno es donde tienes más posibilidades."
       },
+      "rainbow-runner": {
+        "name": "Macarela salmón",
+        "description": "Un pez esbelto, azul oliva, con dos franjas azul pálido bordeadas de amarillo a lo largo del costado y la cola muy ahorquillada.",
+        "tip": "Mira el agua azul junto a paredes y pináculos alejados de la costa, a menudo en grupos pequeños. Pasan con prisa, así que mantén tu posición y deja que vengan."
+      },
       "red-boring-sponge": {
         "name": "Esponja perforadora roja",
         "description": "Manchas rojo anaranjado incrustadas en cabezas de coral, con aberturas redondas elevadas, que roen el coral desde adentro.",
@@ -2431,6 +2516,11 @@
         "description": "Un trambollo diminuto que vive en un viejo agujero de gusano en el coral y asoma solo la cabeza, coronada de penachos ramificados.",
         "tip": "Revisa la parte muerta de las cabezas de coral buscando agujeros del grosor de un lápiz y quédate quieto. Tu sombra lo hace meterse."
       },
+      "roughtail-stingray": {
+        "name": "Raya látigo de cola rugosa",
+        "description": "Un rombo muy grande, gris pardo oscuro, de cola larga y áspera por las pequeñas espinas, que planea o descansa sobre la arena en aguas más frías o profundas.",
+        "tip": "Búscala en bordes y canales de arena más profundos que los de la inmersión habitual con rayas. Dale mucho espacio y obsérvala de lado, nunca desde arriba ni desde atrás de la cola."
+      },
       "round-scad": {
         "name": "Macarela chuparaco",
         "description": "Un pez carnada delgado y plateado con una hilera de puntitos oscuros a lo largo de la línea lateral, que se mueve en cardúmenes cerrados y rápidos.",
@@ -2485,6 +2575,11 @@
         "name": "Pluma ojo de plato",
         "description": "Un pez alto y plateado de frente empinada, ojo grande y una corta línea azul debajo, que nada solo cerca del arrecife.",
         "tip": "Mira el borde arenoso del arrecife. Busca cangrejos y conchas en el fondo y guarda una distancia fija con los buzos."
+      },
+      "scalloped-hammerhead": {
+        "name": "Tiburón martillo común",
+        "description": "Un tiburón gris pardo con una cabeza ancha y plana, cuyo borde frontal tiene una muesca en el centro. Es raro en el Caribe.",
+        "tip": "Si ves uno, quédate en tu sitio, respira despacio y déjalo pasar."
       },
       "scamp": {
         "name": "Cuna garropa",
@@ -2561,6 +2656,11 @@
         "description": "Amarilla intensa con una mancha azul oscuro sobre la parte alta del lomo y marcas negras bordeadas de azul junto al ojo y el hocico.",
         "tip": "Hace honor a su nombre y se esconde en el coral si te acercas. Detente a un cuerpo de distancia y vuelve a salir."
       },
+      "silky-shark": {
+        "name": "Tiburón sedoso",
+        "description": "Un tiburón esbelto de mar abierto, gris bronce oscuro por arriba y claro por abajo, con una pequeña cresta en el lomo y aletas pectorales largas y curvas de puntas oscuras.",
+        "tip": "Es sobre todo de aguas azules y se ve frente a paredes profundas y en inmersiones de aguas abiertas. En una inmersión organizada de alimentación de tiburones, sigue al pie de la letra la charla del operador; en cualquier otro sitio, trátalo como un encuentro imprevisto: mantén la calma, no lo pierdas de vista y termina la inmersión."
+      },
       "silver-porgy": {
         "name": "Sargo plateado",
         "description": "Un sargo plateado de cuerpo alto, con una mancha negra bien marcada en la base de la cola. Anda en grupitos sobre rocas someras.",
@@ -2600,6 +2700,11 @@
         "name": "Plumero social",
         "description": "Grupos de plumeros pequeños, cada corona un abanico suave pardo, morado o blanco, apiñados sobre la roca del arrecife.",
         "tip": "Quédate quieto junto a un grupo; si se retraen, espera y se vuelven a abrir uno a uno."
+      },
+      "southern-sennet": {
+        "name": "Barracuda del sur",
+        "description": "Una barracuda plateada y esbelta, mucho más pequeña que la barracuda grande, con la mandíbula larga y una o dos barras oscuras tenues en el costado superior, que forma cardúmenes sueltos.",
+        "tip": "Búscala en cardúmenes suspendidos sobre fondos de arena, pasto marino y arrecife somero. Se alejan juntas si nadas directo hacia ellas, así que acércate despacio."
       },
       "southern-stingray": {
         "name": "Raya látigo americana",
@@ -2696,6 +2801,11 @@
         "description": "Una babosa blanda, de oliva a canela, con anillos negros esparcidos por el cuerpo, que pasta algas en lo somero.",
         "tip": "Si la molestas, suelta tinta morada; mantén las manos atrás y déjala pastar."
       },
+      "spotted-snake-eel": {
+        "name": "Anguila serpiente manchada",
+        "description": "Una anguila larga y gruesa de hocico puntiagudo y filas de manchas oscuras sobre un cuerpo color crema, que suele verse como una cabeza y un cuello asomados de la arena, o reptando sobre ella.",
+        "tip": "Búscala sobre arena y pasto marino al atardecer y en inmersiones nocturnas. Mantén la distancia y las manos quietas; si la agobias, se esconde en la arena."
+      },
       "spotted-spiny-lobster": {
         "name": "Langosta pinta",
         "description": "Una langosta oscura, pardo púrpura, salpicada de puntos blancos y con las patas rayadas, metida al fondo de los huecos del arrecife.",
@@ -2781,6 +2891,11 @@
         "description": "Barras de tigre inclinadas sobre un cuerpo largo, muy a menudo parado en una estación de limpieza.",
         "tip": "Encuentra la estación de limpieza y encuentras al mero, con la boca abierta y sin moverse."
       },
+      "tiger-shark": {
+        "name": "Tiburón tigre",
+        "description": "Un tiburón grande, de hocico romo, con barras verticales oscuras en los flancos que se desvanecen con la edad.",
+        "tip": "En una inmersión organizada de alimentación de tiburones, sigue al pie de la letra la charla del operador; en cualquier otro sitio, trátalo como un encuentro imprevisto: mantén la calma, no lo pierdas de vista y termina la inmersión."
+      },
       "tobaccofish": {
         "name": "Serrano tabaco",
         "description": "Un serrano esbelto con una franja ancha color tabaco en la parte baja del costado y monturas oscuras sobre el lomo claro, cazando a ras de arena y cascajo.",
@@ -2830,6 +2945,11 @@
         "name": "Besugo",
         "description": "Un pargo esbelto rojo rosado de cola ahorquillada, con líneas azules finas en el lomo y trazos amarillos cortos más abajo, en cardúmenes sobre arrecifes y pecios profundos.",
         "tip": "Espéralo en cornisas y pecios hondos, a menudo pasados los 25 metros. Mira el agua abierta sobre la estructura, donde se queda el cardumen."
+      },
+      "wahoo": {
+        "name": "Peto",
+        "description": "Un pez largo y esbelto, azul acero, con barras verticales tenues en el costado, hocico puntiagudo y la boca llena de dientes afilados y planos.",
+        "tip": "Búscalo en aguas abiertas junto a paredes y caídas. Es rápido y receloso, así que no lo persigas. Quien se queda quieto al borde del azul lo ve más."
       },
       "west-indian-sea-egg": {
         "name": "Erizo blanco",

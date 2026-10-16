@@ -1,0 +1,143 @@
+{
+  "area": "saint-martin",
+  "method": "French Saint-Martin: the Reserve Naturelle Nationale de Saint-Martin and the dive sites around the French coast, Tintamarre, Rocher Creole, Caye Verte and Pinel; Dutch-side sites that French clubs also dive (Carib Cargo, Proselyte, The Gregory, The Bridge) are counted in sint-maarten. The official list is the reserve's own material, one list: its Google Earth dive layer plongee.kml (positions) and its mooring study (ReCorEA, with dive moorings at the Remorqueur, Chico 1 and 2, Caye Verte 1 and 2 and Basse Espagnole, plus the 11 Rocher Creole moorings). The other lists are the Saint-Martin Tourism Office's operator pages (the Blue Odyssey Diving page names Rocher Creole and the Remorqueur; read through the Wayback Machine because the host refuses connections) and the operators' own sites. Blue Odyssey Diving and Bubble Shop publish no French-side site list (Blue Odyssey says only 'over 35 sites'; Bubble Shop's pages name Rocher Creole and Tintamarre for snorkeling), Octopus Diving is now Dive Sint Maarten with no list, and the names Scuba Fun Caraibes and Blue Sens turned up no operator. A site is counted when it is on the reserve's material and on one other list. Sites on the reserve's material alone are excluded, as are Pinel (commercial diving is prohibited there) and La Renee (43 m). Counted 2026-10-14.",
+  "sources": [
+    "http://reservenaturelle-saint-martin.com/maps/plongee.kml",
+    "https://www.dm.guadeloupe.developpement-durable.gouv.fr/IMG/pdf/etude_d_impact_-_projet_bouees_recorea_saint-martin_agrnsm.pdf",
+    "http://web.archive.org/web/2025/https://www.st-martin.org/us/activity/blue-odyssey-diving/",
+    "https://reservenaturelle-saint-martin.com/fr/general/sites-fragiles-decouvrir",
+    "https://reservenaturelle-saint-martin.com/sites/default/files/telechargements/arretesfr.pdf",
+    "https://www.bubbleshopsxm.com/plongee/exploration",
+    "https://blue-odyssey-diving.com/"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Rocher Créole (Creole Rock)",
+      "template": "rocher-creole-saint-martin",
+      "position": [18.11742, -63.05635],
+      "listedBy": [
+        "http://reservenaturelle-saint-martin.com/maps/plongee.kml",
+        "http://web.archive.org/web/2025/https://www.st-martin.org/us/activity/blue-odyssey-diving/"
+      ]
+    },
+    {
+      "name": "Îlet Pinel",
+      "template": null,
+      "listedBy": [
+        "https://www.dm.guadeloupe.developpement-durable.gouv.fr/IMG/pdf/etude_d_impact_-_projet_bouees_recorea_saint-martin_agrnsm.pdf"
+      ],
+      "excluded": "commercial diving prohibited on the reserve's Pinel site; used for snorkeling and anchoring"
+    },
+    {
+      "name": "Caye Verte (Green Cay)",
+      "template": null,
+      "position": [18.09123, -63.01062],
+      "listedBy": [
+        "https://www.dm.guadeloupe.developpement-durable.gouv.fr/IMG/pdf/etude_d_impact_-_projet_bouees_recorea_saint-martin_agrnsm.pdf"
+      ],
+      "excluded": "on one list only (the nature reserve: moorings CV1 and CV2); the tourism office names it only in a snorkeling context"
+    },
+    {
+      "name": "Basse Espagnole",
+      "template": null,
+      "position": [18.13023, -63.00452],
+      "listedBy": [
+        "http://reservenaturelle-saint-martin.com/maps/plongee.kml",
+        "https://www.dm.guadeloupe.developpement-durable.gouv.fr/IMG/pdf/etude_d_impact_-_projet_bouees_recorea_saint-martin_agrnsm.pdf"
+      ],
+      "excluded": "on one list only (the nature reserve: its dive layer and mooring dossier)"
+    },
+    {
+      "name": "Remorqueur (Tintamarre tugboat wreck)",
+      "template": "remorqueur-tintamarre-saint-martin",
+      "position": [18.12162, -62.98698],
+      "listedBy": [
+        "http://reservenaturelle-saint-martin.com/maps/plongee.kml",
+        "http://web.archive.org/web/2025/https://www.st-martin.org/us/activity/blue-odyssey-diving/"
+      ]
+    },
+    {
+      "name": "New Wreck Tintamarre",
+      "template": null,
+      "position": [18.1223, -62.98618],
+      "listedBy": ["http://reservenaturelle-saint-martin.com/maps/plongee.kml"],
+      "excluded": "on one list only (the nature reserve's dive layer)"
+    },
+    {
+      "name": "Cirque de Tintamarre",
+      "template": null,
+      "position": [18.12117, -62.97033],
+      "listedBy": ["http://reservenaturelle-saint-martin.com/maps/plongee.kml"],
+      "excluded": "on one list only (the nature reserve's dive layer)"
+    },
+    {
+      "name": "Chico 1 (Chicot)",
+      "template": null,
+      "position": [18.10808, -62.98655],
+      "listedBy": [
+        "https://www.dm.guadeloupe.developpement-durable.gouv.fr/IMG/pdf/etude_d_impact_-_projet_bouees_recorea_saint-martin_agrnsm.pdf"
+      ],
+      "excluded": "on one list only (the nature reserve's mooring dossier)"
+    },
+    {
+      "name": "Chico 2 (Chicot)",
+      "template": null,
+      "position": [18.10843, -62.98322],
+      "listedBy": [
+        "https://www.dm.guadeloupe.developpement-durable.gouv.fr/IMG/pdf/etude_d_impact_-_projet_bouees_recorea_saint-martin_agrnsm.pdf"
+      ],
+      "excluded": "on one list only (the nature reserve's mooring dossier)"
+    },
+    {
+      "name": "Fish Spot",
+      "template": null,
+      "position": [18.1152, -63.11548],
+      "listedBy": ["http://reservenaturelle-saint-martin.com/maps/plongee.kml"],
+      "excluded": "on one list only (the nature reserve's dive layer)"
+    },
+    {
+      "name": "Fish Spot 2",
+      "template": null,
+      "position": [18.1158, -63.11727],
+      "listedBy": ["http://reservenaturelle-saint-martin.com/maps/plongee.kml"],
+      "excluded": "on one list only (the nature reserve's dive layer)"
+    },
+    {
+      "name": "Vapa",
+      "template": null,
+      "position": [18.11637, -63.117],
+      "listedBy": ["http://reservenaturelle-saint-martin.com/maps/plongee.kml"],
+      "excluded": "on one list only (the nature reserve's dive layer)"
+    },
+    {
+      "name": "Noriapa",
+      "template": null,
+      "position": [18.11648, -63.11795],
+      "listedBy": ["http://reservenaturelle-saint-martin.com/maps/plongee.kml"],
+      "excluded": "on one list only (the nature reserve's dive layer)"
+    },
+    {
+      "name": "La Médée (Banc Médée)",
+      "template": null,
+      "position": [18.08763, -63.0933],
+      "listedBy": ["http://reservenaturelle-saint-martin.com/maps/plongee.kml"],
+      "excluded": "on one list only (the nature reserve's dive layer)"
+    },
+    {
+      "name": "Pointe de la Samana",
+      "template": null,
+      "position": [18.08265, -63.15638],
+      "listedBy": ["http://reservenaturelle-saint-martin.com/maps/plongee.kml"],
+      "excluded": "on one list only (the nature reserve's dive layer)"
+    },
+    {
+      "name": "La Renée",
+      "template": null,
+      "position": [18.0835, -63.16015],
+      "listedBy": ["http://reservenaturelle-saint-martin.com/maps/plongee.kml"],
+      "excluded": "technical depth (43 m) and one list only (the nature reserve's dive layer)"
+    }
+  ]
+}

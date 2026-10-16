@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { closeToBudget, formatBudgetReport, parseArgs, reportTests } from "./e2e-budget-report.mjs";
+import {
+  budgetAnnotations,
+  closeToBudget,
+  formatBudgetReport,
+  parseArgs,
+  reportTests,
+  WARN_SHARE,
+} from "./e2e-budget-report.mjs";
 
 const result = (duration, status = "passed") => ({ duration, status });
 const report = {
@@ -76,10 +83,27 @@ describe("e2e budget report", () => {
     expect(parseArgs(["results.json", "--share", "0.4"])).toEqual({
       file: "results.json",
       share: 0.4,
+      annotate: false,
     });
     expect(parseArgs(["--share", "0.4", "results.json"])).toEqual({
       file: "results.json",
       share: 0.4,
+      annotate: false,
     });
+    expect(parseArgs(["results.json", "--annotate"])).toEqual({
+      file: "results.json",
+      share: WARN_SHARE,
+      annotate: true,
+    });
+  });
+
+  it("annotates a test over 80% of its budget on its own line, and leaves one at 60% to the summary", () => {
+    const withRoot = { ...report, config: { rootDir: "/repo/e2e" } };
+    expect(budgetAnnotations(withRoot, { cwd: "/repo" })).toEqual([
+      "::warning file=e2e/waivers.spec.ts,line=40,title=e2e test at 93% of its budget::the counter › seats a walk-in took 14.0s of 15.0s. Give it test.slow() or test.setTimeout() with the measured reason, or make it faster, before it times out on a loaded runner.",
+    ]);
+    // At 10%, three tests make the summary's list; only the one over 80% is annotated.
+    expect(closeToBudget(report, { share: 0.1 })).toHaveLength(3);
+    expect(budgetAnnotations({ suites: [] })).toEqual([]);
   });
 });

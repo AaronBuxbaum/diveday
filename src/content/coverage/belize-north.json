@@ -1,0 +1,288 @@
+{
+  "area": "belize-north",
+  "method": "Ambergris Caye and Caye Caulker, from Rocky Point and Bacalar Chico in the north to the Caye Caulker Marine Reserve in the south; the atoll trips these shops run are counted in belize-atolls. No official site list could be read: the Hol Chan Marine Reserve site (holchanbelize.org) returned HTTP 522 and the reserve's zones (A-D) are areas, not dive sites. Operator lists, one each: Ambergris Divers' 32-site page (Sun Breeze Hotel's dive shop is Ambergris Divers, counted once), Ramon's Village Divers' trip page, Ecologic Divers' dive-trip page, Frenchie's Diving (Caye Caulker), Amigos del Mar's tour pages, Belize Pro Dive Center's Hol Chan page and White Sands Dive Shop's tour page. The Belize Tourism Board's two diving articles (travelbelize.org) count together as one tourism-board list. Belize Diving Services now redirects to Elite Adventures, whose pages name no sites; Reef Adventures names local sites only as snorkel stops; Chuck & Robbie's and Amigos' old domain refused connections; ambergriscaye.com returned 403 and is a lodging guide in any case. Island Expeditions' Belize dive map, DiveSSI, Lonely Planet, scubadiving.com and Undercurrent were read for leads only. A site is counted when it is named, recreationally divable on scuba and on at least two lists; spellings that clearly name the same spur-and-groove site (Tuffy Canyon/Tuffy Canyons, Mata/Mata Rocks Canyons, Cypress Canyons/Tunnels) are one row. Shark Ray Alley and Mexico Rocks are excluded as snorkel stops, and one-list names stay as excluded rows. Counted 2026-10-14.",
+  "sources": [
+    "https://ambergrisdivers.com/ambergris-caye-dive-sites/",
+    "https://ramons.com/scuba-trips/",
+    "https://www.ecologicdivers.com/scubadiving.htm",
+    "https://www.frenchiesdivingbelize.com/",
+    "https://www.amigosdivebelize.com/divingtours.php",
+    "https://www.belizeprodivecenter.com/diving/hol-chan",
+    "https://www.whitesandsdiveshop.com/dive-tours",
+    "https://www.travelbelize.org/blog/best-diving-spots-belize/",
+    "https://www.travelbelize.org/blog/dive-into-the-wonders-of-belize/"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Rocky Point Canyons",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Robles Point",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Tortuga Canyons",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Basil Jones Canyons",
+      "template": null,
+      "listedBy": [
+        "https://ambergrisdivers.com/ambergris-caye-dive-sites/",
+        "https://www.ecologicdivers.com/scubadiving.htm"
+      ]
+    },
+    {
+      "name": "Sandy Point",
+      "template": null,
+      "listedBy": ["https://www.ecologicdivers.com/scubadiving.htm"],
+      "excluded": "on one operator list only (Ecologic Divers)"
+    },
+    {
+      "name": "Punta Azul Canyons",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Palmero Canyons",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Palmero Cut",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Santa Rita Canyons",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Mexico Rocks",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "snorkel-only: Ambergris Divers, Belize Pro Dive Center, Amigos del Mar and Reef Adventures sell it only as a snorkel tour"
+    },
+    {
+      "name": "Mexico Canyons",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Mexico Tunnels",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Mexico Cut",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Catalan Rocks",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Mata Canyons (Mata Rocks Canyons)",
+      "template": null,
+      "listedBy": [
+        "https://ambergrisdivers.com/ambergris-caye-dive-sites/",
+        "https://www.ecologicdivers.com/scubadiving.htm"
+      ]
+    },
+    {
+      "name": "M&M Caverns",
+      "template": null,
+      "listedBy": ["https://ramons.com/scuba-trips/"],
+      "excluded": "on one operator list only (Ramon's Village); no other list names it"
+    },
+    {
+      "name": "Punta Arena Caverns (Punta Arena Canyons, Small Cut)",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Pescador Canyons",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Pescador Tunnels",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Buena Vista Canyons",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Caroba Canyons",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Tres Cocos Canyons",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Tres Cocos Cut",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Esmeralda (Esmeralda Canyons)",
+      "template": "esmeralda-canyons",
+      "listedBy": [
+        "https://www.ecologicdivers.com/scubadiving.htm",
+        "https://www.frenchiesdivingbelize.com/",
+        "https://www.travelbelize.org/blog/best-diving-spots-belize/"
+      ]
+    },
+    {
+      "name": "Paradise Canyons",
+      "template": "paradise-canyons-ambergris",
+      "listedBy": [
+        "https://ambergrisdivers.com/ambergris-caye-dive-sites/",
+        "https://ramons.com/scuba-trips/"
+      ]
+    },
+    {
+      "name": "Tackle Box (Tackle Box Canyons)",
+      "template": "tackle-box-canyons",
+      "listedBy": [
+        "https://ambergrisdivers.com/ambergris-caye-dive-sites/",
+        "https://ramons.com/scuba-trips/",
+        "https://www.frenchiesdivingbelize.com/"
+      ]
+    },
+    {
+      "name": "Tuffy Canyons (Tuffy Canyon, Tuffy Rocks)",
+      "template": null,
+      "listedBy": [
+        "https://ambergrisdivers.com/ambergris-caye-dive-sites/",
+        "https://www.ecologicdivers.com/scubadiving.htm"
+      ]
+    },
+    {
+      "name": "Entrada San Pedro Cut",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Daradanellos Cut",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Dos Cocos Canyons",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Ramon's Canyons",
+      "template": null,
+      "listedBy": ["https://ramons.com/scuba-trips/"],
+      "excluded": "on one operator list only (Ramon's Village)"
+    },
+    {
+      "name": "Victoria Canyons",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Cypress Canyons (Cypress Tunnels)",
+      "template": "cypress-canyons",
+      "listedBy": [
+        "https://ambergrisdivers.com/ambergris-caye-dive-sites/",
+        "https://ramons.com/scuba-trips/"
+      ]
+    },
+    {
+      "name": "Boca Chica Canyons",
+      "template": null,
+      "listedBy": ["https://ambergrisdivers.com/ambergris-caye-dive-sites/"],
+      "excluded": "on one operator list only (Ambergris Divers)"
+    },
+    {
+      "name": "Pillar Corals (The Pillar Corals)",
+      "template": null,
+      "listedBy": [
+        "https://ambergrisdivers.com/ambergris-caye-dive-sites/",
+        "https://ramons.com/scuba-trips/"
+      ]
+    },
+    {
+      "name": "Hol Chan Marine Reserve (Hol Chan Cut)",
+      "template": "hol-chan-marine-reserve",
+      "listedBy": [
+        "https://ambergrisdivers.com/ambergris-caye-dive-sites/",
+        "https://ramons.com/scuba-trips/",
+        "https://www.ecologicdivers.com/scubadiving.htm",
+        "https://www.amigosdivebelize.com/divingtours.php",
+        "https://www.belizeprodivecenter.com/diving/hol-chan",
+        "https://www.whitesandsdiveshop.com/dive-tours",
+        "https://www.travelbelize.org/blog/best-diving-spots-belize/"
+      ]
+    },
+    {
+      "name": "Shark Ray Alley",
+      "template": null,
+      "listedBy": [
+        "https://ambergrisdivers.com/ambergris-caye-dive-sites/",
+        "https://www.amigosdivebelize.com/divingtours.php",
+        "https://www.travelbelize.org/blog/best-diving-spots-belize/"
+      ],
+      "excluded": "snorkel-only: a shallow sand flat; Belize Pro Dive Center, Ecologic Divers and Ambergris Divers' own trip page sell it as the snorkel stop after the Hol Chan dive"
+    },
+    {
+      "name": "Black Coral Beauty",
+      "template": null,
+      "listedBy": ["https://www.frenchiesdivingbelize.com/"],
+      "excluded": "on one operator list only (Frenchie's Diving) (Caye Caulker local reef)"
+    },
+    {
+      "name": "South Channel",
+      "template": null,
+      "listedBy": ["https://www.frenchiesdivingbelize.com/"],
+      "excluded": "on one operator list only (Frenchie's Diving) (Caye Caulker local reef)"
+    },
+    {
+      "name": "Caye Caulker Marine Reserve",
+      "template": null,
+      "listedBy": ["https://www.frenchiesdivingbelize.com/"],
+      "excluded": "a reserve, not a named site (Frenchie's night-dive area); on one operator list only"
+    }
+  ]
+}

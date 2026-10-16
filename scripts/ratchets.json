@@ -375,7 +375,7 @@
     "src/app/api/webhooks/stripe/route.ts": 932,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1110,
-    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1338,
+    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1324,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 929,
     "src/app/shop/[shopSlug]/page.tsx": 967,
     "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1057,
@@ -487,7 +487,6 @@
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 429,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 383,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 332,
-    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": 304,
     "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 519,
     "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 381,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 333,
@@ -607,8 +606,24 @@
         "files": {
           "src/content/dive-sites/florida-panhandle.ts": "0 -> 1"
         }
+      },
+      {
+        "why": "Harbour Island and Harbour Reef are the places' own names, as the Bahamas and Aruba spell them",
+        "files": {
+          "src/content/dive-areas.ts": "0 -> 1",
+          "src/content/dive-sites/aruba.ts": "0 -> 1"
+        }
+      },
+      {
+        "why": "Harbour Island is the island's own name",
+        "files": {
+          "src/content/dive-sites/bahamas-eleuthera.ts": "0 -> 1"
+        }
       }
     ],
+    "src/content/dive-areas.ts": 1,
+    "src/content/dive-sites/aruba.ts": 1,
+    "src/content/dive-sites/bahamas-eleuthera.ts": 1,
     "src/content/dive-sites/florida-panhandle.ts": 1
   }
 }
