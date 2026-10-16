@@ -377,6 +377,14 @@
           "src/db/readiness.test.ts": "1519 -> 1522",
           "src/i18n/label-maps.test.ts": "1334 -> 1349"
         }
+      },
+      {
+        "why": "w1 review fixes: schema-guard exclusion lists in export.test.ts (#2450, #2598), one expected field in checkouts.test.ts (#2566), notification kind cases in email.test.ts (#2566, #2381); none can live in a sibling",
+        "files": {
+          "src/db/checkouts.test.ts": "2972 -> 2973",
+          "src/db/export.test.ts": "1672 -> 1683",
+          "src/lib/notifications/email.test.ts": "1480 -> 1493"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -401,7 +409,7 @@
     "src/db/bookings.test.ts": 3540,
     "src/db/buddy-pairs.test.ts": 990,
     "src/db/check-in.test.ts": 1212,
-    "src/db/checkouts.test.ts": 2972,
+    "src/db/checkouts.test.ts": 2973,
     "src/db/closeout.test.ts": 903,
     "src/db/course-forms.test.ts": 1274,
     "src/db/courses.test.ts": 1719,
@@ -410,7 +418,7 @@
     "src/db/divers.test.ts": 3077,
     "src/db/erasure-coverage.test.ts": 1178,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1627,
+    "src/db/export.test.ts": 1683,
     "src/db/import.test.ts": 1077,
     "src/db/manifests.test.ts": 3725,
     "src/db/no-show.test.ts": 1165,
@@ -440,7 +448,7 @@
     "src/lib/import.test.ts": 1459,
     "src/lib/incident-export.test.ts": 1187,
     "src/lib/manifests.test.ts": 1320,
-    "src/lib/notifications/email.test.ts": 1480,
+    "src/lib/notifications/email.test.ts": 1493,
     "src/lib/offline-manifest-store.test.ts": 1018,
     "src/lib/offline-manifests.test.ts": 2179,
     "src/lib/readiness.test.ts": 1684,

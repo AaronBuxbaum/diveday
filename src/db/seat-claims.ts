@@ -519,13 +519,52 @@ async function heldSeatForClaim(
 }
 
 /**
- * Claim a party seat, with every consequence the seating paths owe
- * (`seatDiver` is the model): the re-point itself is one transaction, then
- * the claimant's own waiver goes out, the trip's activity trail records who
- * claimed, and the analytics event fires — each best-effort after the claim
- * is committed, so a mail-provider outage can never cost anyone their claim.
+ * **A refused claim kills its link, as a claim that worked does** (issue
+ * #2381). The action answers a booked address exactly as it answers a fresh
+ * one, but the claim page behind the link is a second answer: a success ends
+ * every claim link on the seat, so a refusal that left its link live would tell
+ * anyone holding it which addresses hold a seat. Committed here, outside the
+ * claim's transaction, because that one rolled back (or ended with no write)
+ * and a revoke inside it would roll back with it. The organizer's next view of
+ * the party panel mints a fresh link (`issuePartySeatClaims`).
+ *
+ * Fails open to the log: the refusal stands either way, and a failed revoke
+ * must not turn into a different answer for a booked address.
  */
-export async function claimPartySeat(db: AppDb, input: ClaimSeatInput): Promise<ClaimSeatResult> {
+async function retireRefusedClaimLink(db: AppDb, input: ClaimSeatInput): Promise<void> {
+  try {
+    const now = input.now ?? nowDate();
+    const capability = await verifyBookingCapability(db, {
+      token: input.token,
+      purpose: "claim",
+      now,
+    });
+    if (!capability) return;
+    await revokeBookingCapabilities(db, {
+      shopId: capability.shopId,
+      bookingId: capability.bookingId,
+      purpose: "claim",
+      now,
+    });
+  } catch (error) {
+    log("seat_claim.refused_link_not_retired", "error", {
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+  }
+}
+
+/**
+ * The claim itself and nothing after it: the re-point (one transaction) and,
+ * for a refusal of an address that already holds a seat, the retired link.
+ * The caller owes `settleClaimedSeat` for a success, after its response
+ * (`claimSeatAction`): that work sends mail inline, so doing it before the
+ * answer would let a claim that worked take visibly longer than one that was
+ * refused (issue #2381).
+ */
+export async function claimPartySeatRecord(
+  db: AppDb,
+  input: ClaimSeatInput,
+): Promise<ClaimSeatResult> {
   const outcome = await db
     .transaction((tx) => claimSeatRecord(tx, input))
     .catch(async (error: unknown): Promise<ClaimSeatResult> => {
@@ -544,8 +583,28 @@ export async function claimPartySeat(db: AppDb, input: ClaimSeatInput): Promise<
       }
       throw error;
     });
-  if (!outcome.ok) return outcome;
-  await trackEvent({ name: "seat_claimed", source: "diver" });
+  if (!outcome.ok && outcome.reason === "already_booked") await retireRefusedClaimLink(db, input);
+  return outcome;
+}
+
+/**
+ * What a committed claim owes, each best-effort so a mail-provider outage can
+ * never cost anyone their claim: the claimant's own waiver goes out, the
+ * analytics event fires and the trip's activity trail records who claimed
+ * (`seatDiver` is the model).
+ */
+export async function settleClaimedSeat(
+  db: AppDb,
+  outcome: Extract<ClaimSeatResult, { ok: true }>,
+): Promise<void> {
+  try {
+    await trackEvent({ name: "seat_claimed", source: "diver" });
+  } catch (error) {
+    log("seat_claim.event_failed", "error", {
+      bookingId: outcome.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+  }
   try {
     // The claimant's own waiver, to their own address — idempotent, and a
     // sign-once diver with a current signature at this shop is skipped.
@@ -569,6 +628,12 @@ export async function claimPartySeat(db: AppDb, input: ClaimSeatInput): Promise<
       errorCode: error instanceof Error ? error.name : "unknown_error",
     });
   }
+}
+
+/** Claim a party seat and settle it at once; the action splits the two around its response. */
+export async function claimPartySeat(db: AppDb, input: ClaimSeatInput): Promise<ClaimSeatResult> {
+  const outcome = await claimPartySeatRecord(db, input);
+  if (outcome.ok) await settleClaimedSeat(db, outcome);
   return outcome;
 }
 

@@ -6,8 +6,18 @@ import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
 import { demoteOwnerToManager } from "@/test/staff-session";
 import type { AppDb } from "./client";
-import { fileIncidentReport, saveIncidentDraft, startIncidentReport } from "./incident-reports";
-import { MISSING_DIVER_ALERT_LOOKBACK_MS, sendMissingDiverAlerts } from "./missing-diver-alerts";
+import {
+  fileIncidentReport,
+  getIncidentReport,
+  saveIncidentDraft,
+  startIncidentReport,
+} from "./incident-reports";
+import {
+  MISSING_DIVER_ALERT_LOOKBACK_MS,
+  MISSING_DIVER_LEASE_MS,
+  MISSING_DIVER_OVERDUE_MS,
+  sendMissingDiverAlerts,
+} from "./missing-diver-alerts";
 import { incidentReports, personRoles, shops, trips, userAccounts } from "./schema";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 
@@ -43,7 +53,7 @@ const ctx = fileScopedShopContext();
 const SECRET_WORDS = "Ana Ruiz went down the line at 18 m and has not surfaced.";
 
 const missing: IncidentDraftFields = {
-  occurredAt: new Date("2026-10-01T15:20:00Z"),
+  occurredAt: new Date(nowDate().getTime() - 20 * 60 * 1000),
   diveSiteId: null,
   locationText: "North wall mooring",
   whatHappened: SECRET_WORDS,
@@ -101,6 +111,29 @@ async function claimOf(reportId: string) {
   return row?.at ?? null;
 }
 
+async function sentAtOf(reportId: string) {
+  const [row] = await ctx.db
+    .select({ at: incidentReports.missingAlertSentAt })
+    .from(incidentReports)
+    .where(eq(incidentReports.id, reportId));
+  return row?.at ?? null;
+}
+
+/** A provider that fails for the named recipients only. */
+function failingFor(addresses: string[]) {
+  const sent: Notification[] = [];
+  const provider: NotificationProvider = {
+    async send(notification) {
+      if ("to" in notification && addresses.includes(notification.to)) {
+        return { status: "failed", retryable: false, errorCode: "test" };
+      }
+      sent.push(notification);
+      return { status: "sent", providerMessageId: `msg-${sent.length}` };
+    },
+  };
+  return { sent, provider };
+}
+
 describe("filing a report of a missing diver", () => {
   it("emails every owner once, with a link and no name, and pushes the manifest's followers once", async () => {
     const { db, target, trip } = await draft(missing);
@@ -121,7 +154,7 @@ describe("filing a report of a missing diver", () => {
       expect(everything).not.toContain("18 m");
       expect(everything).not.toContain("North wall");
     }
-    expect(await claimOf(target.reportId)).toBeInstanceOf(Date);
+    expect(await sentAtOf(target.reportId)).toBeInstanceOf(Date);
   });
 
   it("sends nothing a second time, from the sweep or a repeat", async () => {
@@ -194,7 +227,136 @@ describe("filing a report of a missing diver", () => {
       released: 0,
     });
     expect(retry.sent.length).toBeGreaterThan(0);
-    expect(await claimOf(target.reportId)).toBeInstanceOf(Date);
+    expect(await sentAtOf(target.reportId)).toBeInstanceOf(Date);
+  });
+
+  it("does not count a push as reaching the owners: every email fails, the push reaches one device, the next pass retries", async () => {
+    const { db, target } = await draft(missing);
+    push.reaches = 1;
+    await fileIncidentReport(db, { ...target, provider: recorder("failed").provider });
+    expect(push.calls).toBe(1);
+    expect(await claimOf(target.reportId)).toBeNull();
+    expect(await sentAtOf(target.reportId)).toBeNull();
+    const retry = recorder();
+    expect(await sendMissingDiverAlerts(db, { provider: retry.provider })).toMatchObject({
+      alerted: 1,
+    });
+    expect(retry.sent.length).toBeGreaterThan(0);
+  });
+
+  it("retries when one of two owners failed, and stops once both were sent", async () => {
+    const { db, shop, target, owner } = await draft(missing);
+    const second = (await listStaff(db, shop.id)).find(
+      (member) => !member.roles.includes("owner"),
+    )?.person;
+    if (!second) throw new Error("expected a second staff member");
+    await db.insert(personRoles).values({ personId: second.id, role: "owner" });
+    const [account] = await db
+      .select({ email: userAccounts.email })
+      .from(userAccounts)
+      .where(eq(userAccounts.personId, owner.id));
+    if (!account) throw new Error("expected a login");
+    const half = failingFor([account.email]);
+    await fileIncidentReport(db, { ...target, provider: half.provider });
+    expect(half.sent).toHaveLength(1);
+    expect(await sentAtOf(target.reportId)).toBeNull();
+    expect(await claimOf(target.reportId)).toBeNull();
+
+    const retry = recorder();
+    expect(await sendMissingDiverAlerts(db, { provider: retry.provider })).toMatchObject({
+      alerted: 1,
+    });
+    expect(retry.sent.length).toBeGreaterThanOrEqual(2);
+    expect(await sentAtOf(target.reportId)).toBeInstanceOf(Date);
+    const done = recorder();
+    expect(await sendMissingDiverAlerts(db, { provider: done.provider })).toMatchObject({
+      checked: 0,
+    });
+  });
+
+  it("keeps a lease a crashed pass left until it runs out, then takes the report again", async () => {
+    const { db, target } = await draft(missing);
+    await fileIncidentReport(db, { ...target, provider: recorder("failed").provider });
+    // A pass that took the report and died before it sent anything.
+    const crashedAt = nowDate();
+    await db
+      .update(incidentReports)
+      .set({ missingAlertedAt: crashedAt })
+      .where(eq(incidentReports.id, target.reportId));
+    const early = recorder();
+    expect(
+      await sendMissingDiverAlerts(db, {
+        now: new Date(crashedAt.getTime() + MISSING_DIVER_LEASE_MS - 60_000),
+        provider: early.provider,
+      }),
+    ).toMatchObject({ checked: 0 });
+    expect(early.sent).toHaveLength(0);
+    const late = recorder();
+    expect(
+      await sendMissingDiverAlerts(db, {
+        now: new Date(crashedAt.getTime() + MISSING_DIVER_LEASE_MS + 1_000),
+        provider: late.provider,
+      }),
+    ).toMatchObject({ checked: 1, alerted: 1 });
+    expect(late.sent.length).toBeGreaterThan(0);
+    expect(await sentAtOf(target.reportId)).toBeInstanceOf(Date);
+  });
+
+  it("never pages for a cancelled departure", async () => {
+    const { db, target, trip } = await draft(missing);
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, trip.id));
+    const { sent, provider } = recorder();
+    await fileIncidentReport(db, { ...target, provider });
+    expect(sent).toHaveLength(0);
+    expect(push.calls).toBe(0);
+  });
+
+  it("emails but does not push for an incident long before the filing", async () => {
+    const { db, target } = await draft({
+      ...missing,
+      occurredAt: new Date(nowDate().getTime() - 7 * 60 * 60 * 1000),
+    });
+    push.reaches = 3;
+    const { sent, provider } = recorder();
+    await fileIncidentReport(db, { ...target, provider });
+    expect(sent.length).toBeGreaterThan(0);
+    expect(push.calls).toBe(0);
+  });
+
+  it("carries the incident time and the emergency reference link in the mail", async () => {
+    const { db, target } = await draft(missing);
+    const { sent, provider } = recorder();
+    await fileIncidentReport(db, { ...target, provider });
+    const first = sent[0];
+    if (first?.kind !== "incident_missing_diver") throw new Error("wrong kind");
+    expect(first.reportedAt).toEqual(missing.occurredAt);
+    expect(first.emergencyUrl).toBe(
+      `https://dive.day/shop/${ctx.shop.slug}/settings/emergency-reference`,
+    );
+  });
+
+  it("counts a report still untold past the overdue wait", async () => {
+    const { db, target } = await draft(missing);
+    await fileIncidentReport(db, { ...target, provider: recorder("failed").provider });
+    const soon = new Date(nowDate().getTime() + 5 * 60 * 1000);
+    expect(
+      await sendMissingDiverAlerts(db, { now: soon, provider: recorder("failed").provider }),
+    ).toMatchObject({ released: 1, overdue: 0 });
+    const later = new Date(nowDate().getTime() + MISSING_DIVER_OVERDUE_MS + 60_000);
+    expect(
+      await sendMissingDiverAlerts(db, { now: later, provider: recorder("failed").provider }),
+    ).toMatchObject({ released: 1, overdue: 1 });
+  });
+
+  it("tells the report's reader whether the owners were reached", async () => {
+    const { db, shop, owner, target } = await draft(missing);
+    const read = () => getIncidentReport(db, shop.id, target.reportId, owner.id);
+    // A draft has told nobody anything.
+    expect((await read())?.ownersAlert).toBeNull();
+    await fileIncidentReport(db, { ...target, provider: recorder("failed").provider });
+    expect((await read())?.ownersAlert).toEqual({ sentAt: null });
+    await sendMissingDiverAlerts(db, { provider: recorder().provider });
+    expect((await read())?.ownersAlert?.sentAt).toBeInstanceOf(Date);
   });
 
   it("stays filed when the send path throws, gives the claim back, and rethrows from the pass", async () => {
@@ -255,12 +417,14 @@ describe("filing a report of a missing diver", () => {
     expect(to).not.toContain(demotedEmail);
   });
 
-  it("sends nothing when the public origin is not known, and keeps the claim free", async () => {
+  it("sends nothing when the public origin is not known, keeps the claim free and counts it overdue", async () => {
     const { db, target } = await draft(missing);
     await fileIncidentReport(db, { ...target, provider: recorder("failed").provider });
     const { sent, provider } = recorder();
-    expect(await sendMissingDiverAlerts(db, { origin: null, provider })).toMatchObject({
-      checked: 0,
+    const later = new Date(nowDate().getTime() + MISSING_DIVER_OVERDUE_MS + 60_000);
+    expect(await sendMissingDiverAlerts(db, { origin: null, now: later, provider })).toMatchObject({
+      checked: 1,
+      overdue: 1,
     });
     expect(sent).toHaveLength(0);
     expect(await claimOf(target.reportId)).toBeNull();

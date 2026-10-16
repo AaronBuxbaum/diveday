@@ -15,10 +15,12 @@ export type IncidentMissingDiverEmailInput = {
   recipientName: string;
   shopName: string;
   tripTitle: string;
-  /** When the report was filed. */
+  /** When it happened, per the report. */
   reportedAt: Date;
   timezone: string;
   reportUrl: string;
+  /** The shop's emergency reference, for the call that comes first. */
+  emergencyUrl: string;
 };
 
 /**
@@ -38,12 +40,13 @@ export function incidentMissingDiverEmail(
     when: formatDateTimeTz(input.reportedAt, input.locale, input.timezone),
   });
   const open = t("notifications.incidentMissingDiver.open");
+  const emergency = t("notifications.incidentMissingDiver.emergency");
   return {
     subject: t("notifications.incidentMissingDiver.subject", {
       shopName: input.shopName,
       tripTitle: input.tripTitle,
     }),
-    text: `${greetingText}\n\n${body}\n\n${open}:\n${input.reportUrl}\n`,
-    html: `<p>${greetingHtml}</p><p>${escapeHtml(body)}</p>${emailButton(input.reportUrl, open)}`,
+    text: `${greetingText}\n\n${body}\n\n${open}:\n${input.reportUrl}\n\n${emergency}:\n${input.emergencyUrl}\n`,
+    html: `<p>${greetingHtml}</p><p>${escapeHtml(body)}</p>${emailButton(input.reportUrl, open)}<p><a href="${escapeHtml(input.emergencyUrl)}">${escapeHtml(emergency)}</a></p>`,
   };
 }

@@ -102,6 +102,7 @@
     "title": "Presentar el informe",
     "description": "Al presentarlo, queda con tu nombre y la hora. Después ya no cambia.",
     "submit": "Presentar informe",
+    "missingDiverWarning": "Al presentarlo, avisamos a los propietarios ahora. ¿Sigue desaparecido el buceador?",
     "pending": "Presentando…",
     "needs": "Antes de presentarlo, falta:",
     "gap": {
@@ -117,6 +118,8 @@
     }
   },
   "read": {
+    "ownersAlerted": "Propietarios avisados",
+    "ownersNotReached": "Aún sin avisar. Llámalos.",
     "when": "Cuándo",
     "where": "Dónde",
     "notAnswered": "Sin responder",

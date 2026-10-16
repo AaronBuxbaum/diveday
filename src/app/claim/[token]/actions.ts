@@ -7,7 +7,7 @@ import { getDb } from "@/db/client";
 import { sendClaimedSeatConfirmation } from "@/db/notifications";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { tellSeatAlreadyHeld } from "@/db/seat-already-held";
-import { claimPartySeat } from "@/db/seat-claims";
+import { claimPartySeatRecord, settleClaimedSeat } from "@/db/seat-claims";
 import { requestFirstHandLocale } from "@/i18n/request";
 import { claimLinkPath } from "@/lib/booking-capabilities";
 import { parseForm } from "@/lib/form-parse";
@@ -56,7 +56,7 @@ export async function claimSeatAction(token: string, formData: FormData) {
   // language they read (docs ADR 20260731-per-person-notification-locale).
   // Read before the claim, for both answers alike.
   const ownLocale = await requestFirstHandLocale();
-  const outcome = await claimPartySeat(db, {
+  const outcome = await claimPartySeatRecord(db, {
     token,
     fullName: parsed.data.fullName,
     email: parsed.data.email,
@@ -84,6 +84,10 @@ export async function claimSeatAction(token: string, formData: FormData) {
       bookingId: outcome.bookingId,
       locale: ownLocale,
     });
+    // The waiver mail, the analytics event and the activity trail: all after
+    // the response, so a claim that worked costs the caller no more time than
+    // one that was refused.
+    await settleClaimedSeat(db, outcome);
     await sendClaimedSeatConfirmation(db, outcome.shopId, outcome.bookingId);
   });
   redirect(sentPath(base));

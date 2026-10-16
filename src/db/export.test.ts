@@ -571,6 +571,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // H-126: when this installation told the owners of a filed missing-diver
     // report; once-per-report send state, like `roll_call_alerted_at`.
     "missing_alerted_at",
+    "missing_alert_sent_at",
   ],
   incident_report_people: ["shop_id"],
   incident_report_addenda: ["shop_id"],

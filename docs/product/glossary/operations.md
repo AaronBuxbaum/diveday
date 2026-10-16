@@ -759,7 +759,10 @@
   start one and read their own; owners and managers read all of them, on the trip's Details tab
   and the Reports **Safety** tab. Nothing a diver sees, and never a gate. It is not the
   **departure log**, which prints recorded facts and judges nothing; the report is the shop's
-  narrative beside it. Kept seven years from the incident; erasing a diver removes their identity
+  narrative beside it. Filing a report of kind **missing diver** is also an alarm: it emails every
+  active owner and pushes the manifest's followers at once, naming no one (H-126,
+  `sendMissingDiverAlerts`), and the filed report says when the owners were alerted or that they
+  were not reached yet. Kept seven years from the incident; erasing a diver removes their identity
   from it and keeps the report
   ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
 - **Legal hold** (on an **incident report**) — an owner-set flag that keeps a report past its
@@ -771,7 +774,9 @@
 - **Incident kind** / **incident severity** — the two closed answers an **incident report** files
   with: its kind (injury or illness, near miss, equipment, missing diver, fatality, other) and how
   serious the writer judged it (minor, moderate, serious). Shown on the report and the Safety page;
-  read by nothing that gates. A severity is the crew's judgment, never a medical classification
+  read by nothing that gates, with one exception: a filed report of kind missing diver tells the
+  owners at once (H-126). This is the written account's "missing diver"; the roll call's is the
+  first kind under **Unaccounted for**, below, and filing the one does not mark the other. A severity is the crew's judgment, never a medical classification
   ([20261014-incident-kind-severity](../../architecture/decisions/20261014-incident-kind-severity.md)).
 - **Shore alert contact** — the one person outside the shop's accounts who hears a **stale roll
   call**: an email address on the emergency reference page, beside the free-text shore contact a
@@ -793,7 +798,9 @@
   "boarded"**; nothing else closes that count, and the rule is the same whether they hold a booking
   or a roster line.
   1. **Missing diver** — a crew member explicitly marked someone *not back aboard* at an after-dive
-     checkpoint. A human said a diver did not return to the boat: the loudest row the app has.
+     checkpoint. A human said a diver did not return to the boat: the loudest row the app has. (A
+     filed **incident report** of kind missing diver is a separate act with its own alert, H-126;
+     neither sets the other.)
   2. **Missing crew** — the same statement about a named **crew member**. The divemaster who went
      back down for a lost weight belt and has not surfaced is this row. It sits beside the diver
      row rather than below the clerical ones, because the crew are the people most reliably in the

@@ -69,6 +69,9 @@ const checkoutSessionObjectSchema = z.object({
   // parses — the completion then falls back to the amounts DiveDay asked for
   // rather than recording nothing collected.
   amount_total: z.number().int().nullable().optional(),
+  // The currency `amount_total` is in. The party receipt reads the figure back
+  // to a person and sends nothing when this is not the checkout's own.
+  currency: z.string().min(3).max(3).nullable().optional(),
   total_details: z
     .object({ amount_tax: z.number().int().nonnegative().nullable().optional() })
     .nullable()
@@ -381,7 +384,7 @@ async function settleCheckoutPaid(
   session: z.infer<typeof checkoutSessionObjectSchema>,
   account: string | undefined,
 ) {
-  const settlement = { firstCompletion: false };
+  const settlement = { firstCompletion: false, reportedOverCeiling: false };
   const checkout = await markCheckoutPaidBySessionId(
     db,
     session.id,
@@ -390,7 +393,12 @@ async function settleCheckoutPaid(
     session.total_details?.amount_tax,
     settlement,
   );
-  if (checkout && settlement.firstCompletion) await sendPartyPaymentReceipt(db, checkout);
+  if (checkout && settlement.firstCompletion) {
+    await sendPartyPaymentReceipt(db, checkout, {
+      currency: session.currency ?? null,
+      overCeiling: settlement.reportedOverCeiling,
+    });
+  }
   return checkout;
 }
 

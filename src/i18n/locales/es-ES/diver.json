@@ -5571,8 +5571,9 @@
     },
     "incidentMissingDiver": {
       "subject": "{shopName}: buceador desaparecido en {tripTitle}",
-      "body": "Tu equipo presentó un reporte de buceador desaparecido en {tripTitle}, {when}. El reporte tiene los detalles.",
-      "open": "Abrir el reporte"
+      "body": "Buceador desaparecido en {tripTitle}. Reportado {when}. Llama primero al barco.",
+      "open": "Abrir el reporte",
+      "emergency": "Abrir la referencia de emergencia"
     },
     "shoreAlertStopped": {
       "subject": "{shopName}: el contacto en tierra dejó los avisos del pase de lista",

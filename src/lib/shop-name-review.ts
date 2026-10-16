@@ -14,8 +14,10 @@
  * constant. Folded before it looks, so the cheap disguises do not work: case,
  * accents, full-width letters, zero-width characters, look-alike Cyrillic and
  * Greek letters, digits and symbols standing in for letters ("Paypa1",
- * "Amaz0n"), and punctuation or spaces cut into a word ("P a y P a l",
- * "Sup.port"). It will flag real names that read like these words ("Silver Bank
+ * "Amaz0n"), letters that look alike in a sans-serif From column (a capital I
+ * or a one for an l, "rn" for an m, "vv" for a w: "PayPaI", "Arnazon"), a
+ * brand run into the next word ("ChaseBank", "StripeSupport"), and punctuation
+ * or spaces cut into a word ("P a y P a l", "Sup.port"). It will flag real names that read like these words ("Silver Bank
  * Whale Divers", "Apple Bay Divers"); that is accepted, since the cost of a
  * false flag is a plain sender name until someone clears it.
  */
@@ -39,28 +41,39 @@ const BRANDS_ANYWHERE = [
   "citibank",
   "mastercard",
   "americanexpress",
+  "capitalone",
+  "shopify",
+  "quickbooks",
+  "intuit",
+  "verizon",
   "diveday",
+  // Distinctive enough to match inside a longer word ("StripeSupport").
+  "stripe",
+  "zelle",
+  "dropbox",
+  "fedex",
 ];
 
-/** Short or common-word brands, matched only as a whole word. */
+/** Short brands, matched only as a whole word. */
 const BRAND_WORDS = new Set([
-  "apple",
-  "stripe",
-  "chase",
   "visa",
   "amex",
   "irs",
   "dhl",
-  "fedex",
   "usps",
   "ups",
   "ebay",
   "meta",
   "hsbc",
   "citi",
-  "zelle",
-  "dropbox",
 ]);
+
+/**
+ * Common words that are also brands ("Pineapple", "Grapple", "Chaser" are real
+ * shops): matched as a whole word, or run into a trust word or a brand
+ * ("ChaseBank", "AppleSupport", "SupportChase").
+ */
+const COMMON_BRANDS = ["apple", "chase"];
 
 /** Words that dress a name as an institution or a department, matched as whole words. */
 const TRUST_WORDS = new Set([
@@ -112,7 +125,7 @@ const LOOKALIKES: Record<string, string> = {
   κ: "k",
 };
 
-/** Digits and symbols typed in place of a letter. `1` is `l` or `i`, so both are tried. */
+/** Digits and symbols typed in place of a letter. `1`, `!` and `|` are the l/i family (`skeleton`). */
 const STAND_INS: Record<string, string> = {
   "0": "o",
   "3": "e",
@@ -121,10 +134,8 @@ const STAND_INS: Record<string, string> = {
   "7": "t",
   "@": "a",
   $: "s",
-  "!": "i",
 };
 
-// biome-ignore lint/suspicious/noMisleadingCharacterClass: removing combining marks and invisible characters is the point.
 const INVISIBLE = /[­​-‏‪-‮⁠-⁤⁦-⁩﻿]/g;
 const COMBINING = /[̀-ͯ]/g;
 
@@ -135,15 +146,48 @@ function fold(name: string): string {
   return out;
 }
 
-function standIns(text: string, one: "l" | "i"): string {
+function standIns(text: string, bar: "l" | ""): string {
   let out = "";
-  for (const char of text) out += char === "1" ? one : (STAND_INS[char] ?? char);
+  for (const char of text) out += char === "|" ? bar : (STAND_INS[char] ?? char);
   return out;
 }
 
-function reads(text: string): boolean {
+/**
+ * The shape a name has in a sans-serif From column: `i`, `l`, `1`, `|` and `!`
+ * are one letter, `rn` is an `m`, `vv` is a `w`. Brand and trust words are put
+ * through the same fold, so both sides of every comparison agree.
+ */
+function skeleton(text: string): string {
+  return text
+    .replace(/[il1!]/g, "l")
+    .replace(/rn/g, "m")
+    .replace(/vv/g, "w");
+}
+
+const SKELETON_ANYWHERE = BRANDS_ANYWHERE.map(skeleton);
+const SKELETON_BRAND_WORDS = new Set([...BRAND_WORDS].map(skeleton));
+const SKELETON_TRUST_WORDS = new Set([...TRUST_WORDS].map(skeleton));
+const SKELETON_COMMON = COMMON_BRANDS.map(skeleton);
+const SKELETON_TRUST_PHRASES = TRUST_PHRASES.map(skeleton);
+const SKELETON_COMPANIONS = [...SKELETON_TRUST_WORDS, ...SKELETON_ANYWHERE, ...SKELETON_COMMON];
+
+/** A common-word brand with a trust word or another brand on either side, no gap between. */
+function commonBrandRunIn(squashed: string): boolean {
+  for (const brand of SKELETON_COMMON) {
+    for (const companion of SKELETON_COMPANIONS) {
+      if (squashed.includes(brand + companion) || squashed.includes(companion + brand)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function reads(raw: string): boolean {
+  const text = skeleton(raw);
   const squashed = text.replace(/[^a-z0-9]+/g, "");
-  if (BRANDS_ANYWHERE.some((brand) => squashed.includes(brand))) return true;
+  if (SKELETON_ANYWHERE.some((brand) => squashed.includes(brand))) return true;
+  if (commonBrandRunIn(squashed)) return true;
   // Whole words twice: with punctuation as a gap ("pay-pal"), and with
   // punctuation removed ("sup.port").
   const spaced = text.replace(/[^a-z0-9]+/g, " ").trim();
@@ -153,16 +197,18 @@ function reads(text: string): boolean {
     .trim();
   for (const form of [spaced, joined]) {
     for (const word of form.split(" ")) {
-      if (BRAND_WORDS.has(word) || TRUST_WORDS.has(word)) return true;
+      if (SKELETON_BRAND_WORDS.has(word) || SKELETON_TRUST_WORDS.has(word)) return true;
+      if (SKELETON_COMMON.includes(word)) return true;
     }
-    if (TRUST_PHRASES.some((phrase) => ` ${form} `.includes(phrase))) return true;
+    if (SKELETON_TRUST_PHRASES.some((phrase) => ` ${form} `.includes(phrase))) return true;
   }
   return false;
 }
 
 export function shopNameNeedsReview(name: string): boolean {
   const folded = fold(name);
-  return reads(standIns(folded, "l")) || reads(standIns(folded, "i"));
+  // A bar is a letter or a gap, so both are tried.
+  return reads(standIns(folded, "l")) || reads(standIns(folded, ""));
 }
 
 /**

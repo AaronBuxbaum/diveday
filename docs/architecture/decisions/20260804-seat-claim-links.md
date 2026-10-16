@@ -45,7 +45,11 @@ already-held address with the same redirect, to a static "check your email" page
 the token is read, and does the rest after the response. The claimant is sent their booking
 confirmation, which carries their own prep link now that the claim link has died; the holder of the
 seat the address already has is sent a note naming it (`tellSeatAlreadyHeld`, five an hour a seat,
-no link in it). So the link holder learns nothing about who is on the manifest, and the only answer
+no link in it). The refused claim link is retired in a write of its own, outside the claim's
+transaction, so a refusal and a success both leave the link dead and the page behind it cannot be
+read as an oracle; the organizer's panel mints a fresh link. The waiver mail, analytics event and
+activity trail of a success also wait for after the response, so it is no slower than a refusal.
+So the link holder learns nothing about who is on the manifest, and the only answer
 goes to the inbox that owns it. The public booking form keeps its on-screen refusal: it cannot
 imitate a success without abandoning the checkout redirect and telling a party its seats are booked
 when none are — then re-point `person_id`,

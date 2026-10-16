@@ -64,9 +64,39 @@ describe("shopNameNeedsReview", () => {
     "Pineapple Reef Divers",
     "Metallica Dive",
     "Grapple Dive Co",
+    "Cornwall Dive Centre",
+    "Lionfish Lodge",
+    "Simply Divers",
     "",
   ])("leaves %s alone", (name) => {
     expect(shopNameNeedsReview(name)).toBe(false);
+  });
+
+  // The second review's bypasses (security review, 2026-10-16): look-alike
+  // letters in a sans-serif From column, a brand run into the next word, and
+  // brands the list lacked.
+  it.each([
+    "PayPaI Divers",
+    "PayPa| Divers",
+    "Paypa1 Divers",
+    "PaypaL Divers",
+    "Arnazon Billing",
+    "Googie Divers",
+    "Mlcrosoft Account Team",
+    "ChaseBank Divers",
+    "StripeSupport",
+    "StripeBilling",
+    "AppleSupport Divers",
+    "Capital One Divers",
+    "CapitalOne",
+    "Shopify Dive Shop",
+    "QuickBooks Reef",
+    "Intuit Divers",
+    "Verizon Wireless Dive",
+    "0fficial Support",
+    "Offlcial Account Verification",
+  ])("flags the look-alike or run-together %s", (name) => {
+    expect(shopNameNeedsReview(name)).toBe(true);
   });
 
   it("flags known false positives, which a human clears", () => {
@@ -74,5 +104,6 @@ describe("shopNameNeedsReview", () => {
     // still sends, only under the plain DiveDay name, until someone clears it.
     expect(shopNameNeedsReview("Silver Bank Whale Divers")).toBe(true);
     expect(shopNameNeedsReview("Apple Bay Divers")).toBe(true);
+    expect(shopNameNeedsReview("Striped Bass Divers")).toBe(true);
   });
 });
