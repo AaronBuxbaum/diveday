@@ -265,6 +265,17 @@ const RULES = [
     pattern: /\bm[oó]vil(es)?\b/i,
     says: 'a mobile phone is "el celular" ("número de celular", "Celular o fijo"). "Móvil" reads as Spain',
   },
+  {
+    id: "add",
+    // Issue #2564: the add action is "agregar" in Latin American Spanish;
+    // "añadir" reads as Spain. Stem-matched so every form is caught (añade,
+    // añadido, añadiendo, añadirlo).
+    //
+    // Word-initial on purpose: `bañador` (a swimsuit, in the packing lists)
+    // contains `ñad` and is not the verb.
+    pattern: /\bañad/i,
+    says: 'adding is "agregar" ("Agregar buzo", "agregado"). "Añadir" reads as Spain',
+  },
 ];
 
 /**

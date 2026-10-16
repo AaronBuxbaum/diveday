@@ -12,7 +12,7 @@
     "confirmationsResent": "Confirmaciones reenviadas.",
     "errors": {
       "invalid": "No se encontró esa reserva. Abre la salida para revisarla.",
-      "noEmail": "No hay correo registrado. Añade uno desde el listado y vuelve a intentarlo.",
+      "noEmail": "No hay correo registrado. Agrega uno desde el listado y vuelve a intentarlo.",
       "notConfigured": "El correo todavía no está configurado para este centro.",
       "failed": "Sigue sin poder entregarse. Abre la salida para revisar la reserva."
     }
@@ -115,14 +115,14 @@
     "reissueWaiver": "Reemitir exención",
     "reviewMedical": "Revisar informe médico",
     "contactDiver": "Avisar a la persona",
-    "addCard": "Añadir certificación",
+    "addCard": "Agregar certificación",
     "askForCard": "Pedir datos de certificación",
     "verifyCard": "Verificar certificación",
     "reviewCard": "Revisar certificación",
-    "addSpecialty": "Añadir especialidad",
+    "addSpecialty": "Agregar especialidad",
     "verifySpecialty": "Verificar especialidad",
     "confirmSpecialty": "Confirmar especialidad",
-    "addNitroxCard": "Añadir certificación de nitrox",
+    "addNitroxCard": "Agregar certificación de nitrox",
     "askForNitroxCard": "Pedir certificación de nitrox",
     "verifyNitroxCard": "Verificar certificación de nitrox",
     "takePayment": "Cobrar pago",
@@ -289,8 +289,8 @@
   },
   "unfinished": {
     "label": "Sin terminar",
-    "addDeparture": "Una salida que empezaste a añadir.",
-    "newDiver": "Un buceador que empezaste a añadir.",
+    "addDeparture": "Una salida que empezaste a agregar.",
+    "newDiver": "Un buceador que empezaste a agregar.",
     "tookACall": "Una llamada que empezaste a anotar.",
     "resume": "Retomar"
   },

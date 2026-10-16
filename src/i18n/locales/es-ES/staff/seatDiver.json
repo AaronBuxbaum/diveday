@@ -4,7 +4,7 @@
   "findPlaceholder": "Empieza a escribir un nombre…",
   "noMatches": "Sin coincidencias para “{query}”.",
   "noEmailOnFile": "Sin correo registrado",
-  "adding": "Añadiendo…",
+  "adding": "Agregando…",
   "handEntryHeading": "Buceador nuevo",
   "nameLabel": "Nombre completo",
   "emailLabel": "Correo",
@@ -12,10 +12,10 @@
   "optionalHint": "(opcional)",
   "noMatchesHeading": "Nadie registrado con ese nombre",
   "noMatchesAction": "Introdúcelo a mano",
-  "addDiver": "Añadir buceador",
-  "addDiverAction": "Añadir buceador",
+  "addDiver": "Agregar buceador",
+  "addDiverAction": "Agregar buceador",
   "addDiverPrompt": "¿No aparece?",
-  "addNewDiverAction": "Añadir buceador",
+  "addNewDiverAction": "Agregar buceador",
   "busy": "Alguien más está reservando esta salida ahora mismo. Vuelve a presionar.",
   "tripSummary": "{title} · {date} · {time} · {booked}/{capacity, plural, one {# reservado} other {# reservados}}"
 }

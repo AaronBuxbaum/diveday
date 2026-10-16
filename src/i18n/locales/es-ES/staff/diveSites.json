@@ -1,13 +1,13 @@
 {
   "list": {
     "title": "Biblioteca de sitios de buceo",
-    "createSite": "Añadir un sitio de buceo",
+    "createSite": "Agregar un sitio de buceo",
     "browseTemplates": "Explora el catálogo de DiveDay",
     "catalogSiteCount": "{count, plural, one {# sitio publicado} other {# sitios publicados}}",
     "siteDeletedNotice": "Sitio eliminado.",
     "emptyHeading": "Empieza con un sitio que tu tripulación ya conoce",
-    "emptyBody": "Añade una ubicación, una imagen de mapa o ruta, y la vida marina que verán los buceadores.",
-    "locationToAdd": "Ubicación por añadir",
+    "emptyBody": "Agrega una ubicación, una imagen de mapa o ruta, y la vida marina que verán los buceadores.",
+    "locationToAdd": "Ubicación por agregar",
     "searchAriaLabel": "Buscar en la biblioteca de sitios de buceo",
     "searchLabel": "Encuentra un sitio",
     "searchPlaceholder": "Nombre o ubicación",
@@ -103,7 +103,7 @@
       "zoomOut": "Alejar",
       "undo": "Deshacer punto",
       "clear": "Borrar ruta",
-      "mapAriaLabel": "Mapa: toca para añadir un punto de la ruta",
+      "mapAriaLabel": "Mapa: toca para agregar un punto de la ruta",
       "status": {
         "empty": "Toca donde empieza la inmersión.",
         "one": "Un punto marcado: toca dónde sigue.",
@@ -273,7 +273,7 @@
     }
   },
   "new": {
-    "title": "Añadir un sitio de buceo",
+    "title": "Agregar un sitio de buceo",
     "description": "Todo es opcional excepto el nombre.",
     "errorInvalid": "Eso no se guardó. Revisa el nombre obligatorio y los enlaces e inténtalo de nuevo.",
     "certificationDescription": "Estos requisitos viajan con el sitio a cada nueva salida que lo use.",
@@ -290,7 +290,7 @@
   },
   "notice": {
     "importEmpty": "Elige un dive_sites.csv para importar.",
-    "importUnknownColumns": "Ese archivo tiene una columna que DiveDay no reconoce, así que no se leyó nada. Importa el archivo que produjo tu exportación, sin columnas añadidas.",
+    "importUnknownColumns": "Ese archivo tiene una columna que DiveDay no reconoce, así que no se leyó nada. Importa el archivo que produjo tu exportación, sin columnas agregadas.",
     "importNoNameColumn": "Ese archivo no tiene columna de nombre, así que no hay con qué emparejar un sitio.",
     "importFileEmpty": "Ese archivo no tiene filas.",
     "importWrongFiles": "Elige un dive_sites.csv y, como mucho, un dive_site_creatures.csv con él.",
