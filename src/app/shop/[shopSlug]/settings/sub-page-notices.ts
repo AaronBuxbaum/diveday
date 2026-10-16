@@ -51,6 +51,24 @@ export function rentalPricingNoticeMessages(t: StaffTranslator): NoticeMessages 
 export function emergencyReferenceNoticeMessages(t: StaffTranslator): NoticeMessages {
   return {
     "emergency-saved": { tone: "success", text: t("settings.main.notice.emergencySaved") },
+    "shore-alert-invalid": { tone: "danger", text: t("settings.main.notice.shoreAlertInvalid") },
+    "shore-alert-consent-missing": {
+      tone: "danger",
+      text: t("settings.main.notice.shoreAlertConsentMissing"),
+    },
+    "shore-alert-confirmation-sent": {
+      tone: "success",
+      text: t("settings.main.notice.shoreAlertConfirmationSent"),
+    },
+    "shore-alert-confirmation-not-sent": {
+      tone: "warning",
+      text: t("settings.main.notice.shoreAlertConfirmationNotSent"),
+    },
+    "shore-alert-saved-demo": {
+      tone: "success",
+      text: t("settings.main.notice.shoreAlertSavedDemo"),
+    },
+    "shore-alert-cleared": { tone: "success", text: t("settings.main.notice.shoreAlertCleared") },
   };
 }
 
@@ -59,6 +77,8 @@ export function dockDayNoticeMessages(t: StaffTranslator): NoticeMessages {
   return {
     "dock-saved": { tone: "success", text: t("settings.main.notice.dockSaved") },
     "dock-invalid": { tone: "danger", text: t("settings.main.notice.dockInvalid") },
+    "turnaround-saved": { tone: "success", text: t("settings.main.notice.turnaroundSaved") },
+    "turnaround-invalid": { tone: "danger", text: t("settings.main.notice.turnaroundInvalid") },
   };
 }
 

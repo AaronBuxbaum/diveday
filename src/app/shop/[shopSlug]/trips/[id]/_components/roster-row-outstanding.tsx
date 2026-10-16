@@ -14,6 +14,7 @@ import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { CourseFormsRowControl } from "./CourseFormsRowControl";
 import { ElearningCheck } from "./ElearningCheck";
 import { elearningCheckCopy } from "./elearning-check-copy";
+import { PartyPaymentSection } from "./PartyPaymentSection";
 import { PaymentStatusControl } from "./PaymentStatusControl";
 import { PAYMENT_STATUSES_ALL, PAYMENT_STATUSES_RECORDING_ONLY } from "./roster-model";
 import type { RowIdentity } from "./roster-row-identity";
@@ -50,6 +51,9 @@ export type RowOutstandingInput = Pick<
   | "elearningChecksOff"
   | "markRosterWaiverInPersonAction"
   | "markPaymentAction"
+  | "previewPartyPaymentAction"
+  | "markPartyPaidAction"
+  | "partyPay"
   | "certifyDiverAction"
   | "saveCourseNextStepAction"
   | "setCourseMaterialsDoneAction"
@@ -94,6 +98,9 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     elearningChecksOff,
     markRosterWaiverInPersonAction,
     markPaymentAction,
+    previewPartyPaymentAction,
+    markPartyPaidAction,
+    partyPay,
     certifyDiverAction,
     saveCourseNextStepAction,
     setCourseMaterialsDoneAction,
@@ -114,6 +121,12 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     packageNote,
     deskPrivateLines,
   } = seat;
+  // Only a seat in the water on a medical hold: a rider is never held on one.
+  const snorkelerMedicalHold =
+    booking.participantType === "snorkeler" &&
+    blockerTexts.some(
+      ({ blocker }) => blocker.code === "medical_review" || blocker.code === "medical_not_cleared",
+    );
   const outstanding = (
     <>
       {arrival ? identityContact : null}
@@ -161,6 +174,14 @@ export function rowOutstanding(seat: RowOutstandingInput) {
             >
               {t("trips.roster.reviewCertificationsLink")}
             </Link>
+          ) : null}
+          {/* A snorkeler is held on the dive medical exactly as a diver is (H-109).
+              The way aboard without it is a rider's seat, whose chip carries the
+              warning; this only points at that switch, it clears nothing. */}
+          {snorkelerMedicalHold ? (
+            <p className="mt-2 text-sm text-muted">
+              {t("participants.roster.snorkelerMedicalHint")}
+            </p>
           ) : null}
         </>
       ) : null}
@@ -296,6 +317,16 @@ export function rowOutstanding(seat: RowOutstandingInput) {
             }
             copy={paymentStatusCopy}
           />
+          {partyPay ? (
+            <PartyPaymentSection
+              bookingId={booking.id}
+              party={partyPay}
+              previewAction={previewPartyPaymentAction}
+              confirmAction={markPartyPaidAction}
+              copy={paymentStatusCopy}
+              t={t}
+            />
+          ) : null}
         </div>
       ) : null}
     </>
@@ -312,6 +343,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     Boolean(arrival && booking.reEntryAsk) ||
     flaggedPrompts.length > 0 ||
     certificationBlocked ||
+    snorkelerMedicalHold ||
     Boolean(certifyDiverAction) ||
     Boolean(saveCourseNextStepAction) ||
     Boolean(setCourseMaterialsDoneAction) ||

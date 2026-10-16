@@ -516,6 +516,14 @@
     "confirmedTitle": "The Monday email is off",
     "confirmedText": "You won’t get the weekly summary from {shopName} anymore. Turn it back on from your email settings."
   },
+  "shoreAlertStop": {
+    "title": "Stop {shopName}’s roll-call alerts?",
+    "description": "You’re {shopName}’s shore contact: it emails you when a boat’s roll call is still open after the boat was due back. Stopping takes your address off {shopName}’s settings.",
+    "submit": "Stop these alerts",
+    "submitting": "Stopping…",
+    "confirmedTitle": "Roll-call alerts stopped",
+    "confirmedText": "{shopName} won’t send you roll-call alerts anymore. If the shop adds you again, you’ll be asked to confirm first."
+  },
   "contactConfirm": {
     "title": "Confirm this address for {shopName}?",
     "description": "Divers who reply to {shopName}’s emails will reach {email}.",
@@ -525,6 +533,16 @@
     "confirmedText": "Replies from {shopName}’s divers now come here.",
     "unavailableTitle": "This confirmation link isn’t available",
     "unavailableText": "It may have expired, been replaced by a newer one, or the address in settings has changed since. Save the address again in settings to get a fresh link."
+  },
+  "shoreConfirm": {
+    "title": "Be {shopName}’s shore contact?",
+    "description": "{shopName} will email {email} when a boat’s roll call is still open after the boat was due back. Each alert has a link to stop them.",
+    "confirming": "Confirming…",
+    "submit": "Yes, send me these alerts",
+    "confirmedTitle": "You’re {shopName}’s shore contact",
+    "confirmedText": "If a roll call is still open after a boat was due back, {shopName} will email you. Each alert has a link to stop them.",
+    "unavailableTitle": "This link isn’t available",
+    "unavailableText": "It may have expired or been replaced by a newer one, or the shop has changed the address since. Ask the shop to send a fresh one."
   },
   "course": {
     "hidden": "Hidden: divers cannot see this page.",
@@ -968,6 +986,11 @@
     "welcomeAudience": "Only the crew on this boat, only today, and you can take it back.",
     "welcomeShareLabel": "Yes, tell the crew",
     "welcomeShared": "Your crew will know.",
+    "welcomeHelloLegend": "Anything to add for the crew? You can skip this.",
+    "welcomeHelloNone": "Nothing to add",
+    "welcomeHelloFirstOceanDive": "It is my first ocean dive",
+    "welcomeHelloCelebrating": "I am celebrating something",
+    "welcomeHelloNervous": "I am a little nervous",
     "intentHeading": "What’s this dive for?",
     "intentChoose": "Rather not say",
     "signCourseForms": "Sign course forms",
@@ -1147,7 +1170,12 @@
     "waiverComplete": "Waiver complete",
     "waiverNeeded": "Waiver still needed",
     "copyReminder": "Copy reminder link",
-    "claimedNeedsWaiver": "Ask them to finish their waiver from their own link."
+    "claimedNeedsWaiver": "Ask them to finish their waiver from their own link.",
+    "payForSeat": "Pay for this seat",
+    "payingSeat": "Opening payment…",
+    "payForSeatNote": "Pay online now. The seat stays theirs to claim.",
+    "seatPaidNotice": "Payment received for their seat. We’re confirming it with your shop. Nothing more to do.",
+    "payUnavailable": "We couldn’t open the payment page for that seat. It’s still held. Try again, or pay at the shop."
   },
   "rental": {
     "ownGear": "Bringing own gear, so no rental needed.",
@@ -3515,7 +3543,6 @@
     "today": "Today",
     "todayStart": "7:30 AM",
     "todayEnds": "– 11:00 AM",
-    "phaseCheckin": "Check-in",
     "readyCount": "7 of 9 ready",
     "blockedCount": "2 blocked",
     "spotsOpen": "3 spots open",
@@ -5147,6 +5174,7 @@
     "replyKeyword": {
       "offer": "Reply C to cancel your seat, or M to ask about moving it.",
       "confirmCancel": "{tripTitle}, {date} at {time}. Reply {code} in the next half hour to give up your seat. Nothing has changed yet.",
+      "confirmCancelParty": "{tripTitle}, {date} at {time}. Reply {code} in the next half hour to give up your seat. This also cancels {count, plural, one {# party seat} other {# party seats}}. Nothing has changed yet.",
       "cancelled": "Your seat on {tripTitle}, {date}, is canceled.",
       "refundOnItsWay": "Your refund is on its way.",
       "cancelRefused": "That seat could not be released. We’ll pick this up.",
@@ -5189,6 +5217,8 @@
       "moneyRefunded": "{amount} is on its way back to the card you paid with, and can take a few days to land.",
       "moneyForfeit": "It was canceled after our free-cancellation window closed, so under our policy nothing is refunded.",
       "moneyFollowUp": "We’ll be in touch about what you paid.",
+      "partyCancelled": "{count, plural, one {The # party seat you booked is canceled with yours.} other {The # party seats you booked are canceled with yours.}}",
+      "partyStayed": "{count, plural, one {# party seat stays booked: its diver has already claimed it or checked in.} other {# party seats stay booked: their divers have already claimed them or checked in.}}",
       "findAnother": "See what else is running"
     },
     "tripBlowout": {
@@ -5517,9 +5547,28 @@
     },
     "rollCallStale": {
       "subject": "{shopName}: roll call still open on {tripTitle}",
-      "body": "The roll call after dive {dive} on {tripTitle} is still open after the boat was due back at {time}. {count, plural, one {# person is} other {# people are}} not marked aboard.",
-      "bodyMissing": "On {tripTitle}, {count, plural, one {# person is} other {# people are}} recorded not back aboard after dive {dive}, after the boat was due back at {time}.",
-      "open": "Open the roll call"
+      "body": "The roll call after dive {dive} on {tripTitle} is still open after the boat was due back at {time}.",
+      "bodyDated": "The roll call after dive {dive} on {tripTitle} is still open after the boat was due back on {date} at {time}.",
+      "countsMissing": "{missing, plural, one {# person is} other {# people are}} recorded not back aboard.",
+      "countsAwaiting": "{awaiting, plural, one {# person has} other {# people have}} no result yet: nobody has recorded them missing or back aboard.",
+      "countsBoth": "{missing, plural, one {# person is} other {# people are}} recorded not back aboard; {awaiting, plural, one {# more has} other {# more have}} no result yet: nobody has recorded them missing or back aboard.",
+      "open": "Open the roll call",
+      "shoreCall": "Call {shopName} first.",
+      "shoreCallPhone": "Call {shopName} first, on {phone}.",
+      "shoreSent": "Sent {when}. This is the only message you will get about this departure. DiveDay sends no all-clear; ask {shopName}.",
+      "shoreWhy": "You’re getting this because {shopName} lists you as its shore contact for roll-call alerts, and you confirmed it.",
+      "shoreStop": "Stop these alerts"
+    },
+    "shoreAlertStopped": {
+      "subject": "{shopName}: the shore contact stopped roll-call alerts",
+      "body": "Your shore contact used the link in a roll-call alert to stop them. DiveDay won’t email them again unless you save their address and they confirm it again.",
+      "open": "Open the emergency reference"
+    },
+    "shoreAlertConfirmation": {
+      "subject": "{shopName} asks you to be its shore contact",
+      "body": "{shopName} wants to email you when a boat’s roll call is still open after the boat was due back, because someone may not be back aboard. Confirm to get these alerts. Each one has a link to stop them.",
+      "confirm": "Yes, send me these alerts",
+      "expiry": "This link expires {expiresAt}. If you didn’t agree to this, ignore this email and nothing will be sent to you."
     },
     "smsWorkOrder": {
       "ready": "{shopName}: your gear on ticket #{number} is ready to collect ({pieces}).",

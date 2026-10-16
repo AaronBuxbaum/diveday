@@ -69,3 +69,49 @@ describe("which open counts alert", () => {
     expect(isMissingReason("after_dive_uncounted")).toBe(false);
   });
 });
+
+/**
+ * **Autumn fall-back day, America/New_York, 2026-11-01** (issue #2614): the
+ * stale-count alert is measured in elapsed milliseconds from the boat's end, so
+ * a count left open across the repeated 01:00 hour is alerted after the same
+ * 30 elapsed minutes as on an ordinary day, and the look-back is 24 elapsed
+ * hours (25 wall-clock hours on this date), never a calendar day.
+ */
+describe("staleRollCallAlertDue on the fall-back day", () => {
+  const MIN = MINUTE_MS;
+  // The boat is due back at 01:15 EDT, the first pass through the 01:00 hour.
+  const dueBack = new Date("2026-11-01T05:15:00.000Z");
+  const plus = (from: Date, ms: number) => new Date(from.getTime() + ms);
+
+  it("alerts 30 elapsed minutes after a 01:15 EDT end, as on any other day", () => {
+    expect(
+      staleRollCallAlertDue({ endsAt: dueBack, alertedAt: null, now: plus(dueBack, 29 * MIN) }),
+    ).toBe(false);
+    expect(
+      staleRollCallAlertDue({ endsAt: dueBack, alertedAt: null, now: plus(dueBack, 30 * MIN) }),
+    ).toBe(true);
+  });
+
+  it("alerts a count that stays open across the repeated hour after the same elapsed wait", () => {
+    // Due back 01:45 EDT; 30 elapsed minutes later the wall clock reads 01:15
+    // EST. A wall-clock reading (an end of 01:45 and a now of 01:15) would call
+    // that 30 minutes *before* the end and never fire; elapsed time fires it.
+    const lateEnd = new Date("2026-11-01T05:45:00.000Z");
+    expect(
+      staleRollCallAlertDue({ endsAt: lateEnd, alertedAt: null, now: plus(lateEnd, 29 * MIN) }),
+    ).toBe(false);
+    const firesAt = plus(lateEnd, 30 * MIN);
+    expect(firesAt.toISOString()).toBe("2026-11-01T06:15:00.000Z");
+    expect(staleRollCallAlertDue({ endsAt: lateEnd, alertedAt: null, now: firesAt })).toBe(true);
+  });
+
+  it("measures the look-back in 24 elapsed hours across the 25-hour day", () => {
+    const edge = plus(dueBack, STALE_ROLL_CALL_LOOKBACK_MS);
+    // 24 elapsed hours after 01:15 EDT is 00:15 EST the next day.
+    expect(edge.toISOString()).toBe("2026-11-02T05:15:00.000Z");
+    expect(staleRollCallAlertDue({ endsAt: dueBack, alertedAt: null, now: edge })).toBe(true);
+    expect(staleRollCallAlertDue({ endsAt: dueBack, alertedAt: null, now: plus(edge, 1) })).toBe(
+      false,
+    );
+  });
+});

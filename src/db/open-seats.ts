@@ -1,10 +1,14 @@
 import { and, desc, eq, gte, inArray, lt, max, ne, notInArray, sql } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
-import { type OpenSeatsDebrief, openSeatsDebrief } from "@/lib/open-seats";
+import {
+  departuresWithEmptySeats,
+  type OpenSeatsDebrief,
+  openSeatsDebrief,
+} from "@/lib/open-seats";
 import type { AppDb } from "./client";
 import { bookings, trips } from "./schema";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * **Why a sailed departure's seats went unsold** — the db half of the
@@ -171,4 +175,49 @@ export async function getTripOpenSeatsDebrief(
     },
     now,
   );
+}
+
+/**
+ * **A month's departures that left with empty seats** (issue #2424): one
+ * grouped read over the live, scheduled departures that started in
+ * `[startUtc, endUtc)`, `booked` being every non-cancelled booking exactly as
+ * {@link getTripOpenSeatsDebrief} counts it, then the pure
+ * `departuresWithEmptySeats` decides which sailed short. A rehearsal is not a
+ * departure and a cancelled boat sailed nothing.
+ */
+export async function getMonthDeparturesWithEmptySeats(
+  db: AppDb,
+  shopId: string,
+  window: { startUtc: Date; endUtc: Date },
+  now: Date = nowDate(),
+) {
+  const rows = await db
+    .select({
+      tripId: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+      capacity: trips.capacity,
+      booked: sql<number>`count(${bookings.id})::int`,
+    })
+    .from(trips)
+    .leftJoin(
+      bookings,
+      and(
+        eq(bookings.tripId, trips.id),
+        eq(bookings.shopId, shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .where(
+      and(
+        liveTrip(),
+        notRehearsal(),
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        gte(trips.startsAt, window.startUtc),
+        lt(trips.startsAt, window.endUtc),
+      ),
+    )
+    .groupBy(trips.id, trips.title, trips.startsAt, trips.capacity);
+  return departuresWithEmptySeats(rows, now);
 }

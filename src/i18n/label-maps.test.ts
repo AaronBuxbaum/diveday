@@ -523,6 +523,13 @@ const CASES: readonly LabelMapCase[] = [
     rows: codeRows(BUDDY_ALERTS, (locale, alert) => buddyAlertText(staffTranslator(locale), alert)),
   },
   {
+    module: "buddy-labels.ts",
+    map: "BUDDY_ALERT_NAMED_KEYS",
+    rows: codeRows(BUDDY_ALERTS, (locale, alert) =>
+      buddyAlertText(staffTranslator(locale), alert, ["Ravi Patel"]),
+    ),
+  },
+  {
     module: "card-labels.ts",
     map: "CARD_STATUS_KEYS",
     rows: codeRows(keysOf(CARD_STATUS_KEYS), (locale, status) =>

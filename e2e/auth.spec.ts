@@ -37,7 +37,8 @@ test("staff sign-in lands on the shop dashboard and sign-out locks it again", as
   await page.getByLabel("Password").fill(DEV_STAFF_LOGINS.owner.password);
   await page.getByRole("button", { name: "Sign in" }).click();
 
-  await expect(page).toHaveURL(/\/shop/);
+  // Straight to the staffer's own shop, not through the bare /shop.
+  await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
   await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
   // Today leads with the boats that sail today, not a generic trip list: the
   // summary sentence counts them, and each departure says how many are ready.

@@ -90,6 +90,14 @@ on the Budget board, each naming what renders when it is not true: nothing.
 | 7 | The diver's day gains three sentences and a picture: the boat's-back line, the dive-day number on the postcard, the next dive with its reason; the postcard exports as an image with no link in it and room for one private line that never leaves the phone | — |
 | 8 | Every ban stands: no drawing, coral or motion on a manifest, roll call, cert check, waiver or payment, or beside a refusal; coral stays at three; a wash is not a status; nothing renders quietly; every sentence earns its place | — |
 
+**Amendment 2026-10-13 (Aaron Buxbaum, issue #2400): coral is ink, not a fill, on Today's good-news
+lines.** The coral wash read as the amber of a warning on a phone in the sun (UX review 2026-10-10,
+item 3), and the morning all-clear already moved to the success tone. The three lines that keep
+coral (all boats home, the first booking ever, the fact of scale) now draw it as text on a neutral
+surface (`EarnedMomentLine tone="ink"`, `text-accent-deep` on `bg-surface`); the budget's count,
+`animate={false}` rule and "renders nothing when not true" are unchanged. The wash remains the look
+of `EarnedMoment` and of the lines outside Today.
+
 The hand gains its eighth drawing, the boat, and the boat is the only drawing that ever moves. It
 appears on the home, the board and the storefront; never on the manifest.
 

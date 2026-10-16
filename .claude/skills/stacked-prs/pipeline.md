@@ -26,7 +26,11 @@ Three things to know, and none of them is a step:
   fork, a cycle, two open pull requests sharing a head branch, or layers spread across two stacks
   are each named in the job log and left alone, because a stack is an *ordered* list that merges
   bottom-up and atomically, so a guessed order is first noticed as the wrong pull request having
-  landed. If a chain of yours has not become a stack, that log says why.
+  landed. If a chain of yours has not become a stack, that log says why. A **fork** is the one
+  refusal that also speaks: the registrar posts a single comment on the refused layer naming both
+  tips, so the owning thread's PR-activity subscription wakes it, and `scripts/guard-push.mjs`
+  refuses the push that would make the fork, naming the current top and the `git rebase --onto`
+  that moves the branch onto it (#2587).
 - **Nothing here dissolves one.** `POST /repos/{owner}/{repo}/stacks/{n}/unstack` is a human's call
   and leaves ordinary chained-base pull requests behind.
 

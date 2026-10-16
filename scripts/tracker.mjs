@@ -80,12 +80,33 @@ export function toComment(raw) {
   return { body: raw.body ?? "", createdAt: raw.created_at ?? "" };
 }
 
+/** A branch name safe to print into a shell command or a comment. */
+const SAFE_BRANCH = /^[A-Za-z0-9._/-]+$/;
+
+/**
+ * How a pull request's branch reads in a message: the name when it is plainly a branch name, else
+ * the pull request's number. A fork's branch name is the fork author's text, and the messages
+ * these scripts print are copied into a shell and posted as comments.
+ */
+export function branchLabel(branch, number) {
+  return typeof branch === "string" && SAFE_BRANCH.test(branch) ? `\`${branch}\`` : `#${number}`;
+}
+
+/** Whether a REST pull request's head lives in another repository (or one since deleted). */
+export function isForkPull(raw) {
+  const head = raw.head;
+  if (!head || !("repo" in head)) return false;
+  if (head.repo === null) return true;
+  const base = raw.base?.repo?.full_name;
+  return Boolean(base) && head.repo?.full_name !== base;
+}
+
 /**
  * The fields `toPull` reads, selected by `gh` itself so a page of pull requests carries no
  * bodies (2.28 MB a page with them, a few KB without).
  */
 const PULL_FIELDS_JQ =
-  "[.[] | {number, title, state, html_url, merged_at, head: {ref: .head.ref}}]";
+  "[.[] | {number, title, state, html_url, merged_at, head: {ref: .head.ref, repo: (if .head.repo then {full_name: .head.repo.full_name} else null end)}, base: {ref: .base.ref, repo: {full_name: .base.repo.full_name}}}]";
 
 /** One REST pull request, reduced to what the scripts read. */
 export function toPull(raw) {
@@ -94,6 +115,7 @@ export function toPull(raw) {
     title: raw.title ?? "",
     state: String(raw.state ?? "").toUpperCase(),
     headRefName: raw.head?.ref ?? "",
+    baseRefName: raw.base?.ref ?? "",
     url: raw.html_url ?? "",
     mergedAt: raw.merged_at ?? null,
   };
@@ -203,9 +225,9 @@ export function createTracker({ repo = repoSlug(), run = ghApi, log = console.lo
     },
 
     listPulls({ state = "open", limit = 500 } = {}) {
-      return getAll(`${base}/pulls?state=${encodeURIComponent(state)}`, limit, PULL_FIELDS_JQ).map(
-        toPull,
-      );
+      return getAll(`${base}/pulls?state=${encodeURIComponent(state)}`, limit, PULL_FIELDS_JQ)
+        .filter((raw) => !isForkPull(raw))
+        .map(toPull);
     },
 
     /** Files an issue; returns `{ number, url }` (null under a dry run). */

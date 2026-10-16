@@ -1138,15 +1138,16 @@ export const paymentDisputes = pgTable(
 /**
  * **A Stripe payout**: money Stripe moved from a shop's connected account to
  * its bank, one row per Stripe payout, kept current by the `payout.paid` and
- * `payout.failed` webhooks (ADR 20261012-payouts-reach-diveday).
+ * `payout.failed` and `payout.canceled` webhooks (ADR 20261012-payouts-reach-diveday).
  *
  * This is the line that ties Reports to the bank statement: "Paid out $1,842
  * on Oct 3, covering Sep 27 to Oct 1". The amount, currency and arrival date
  * are Stripe's own, verbatim off the event. `covered_from`/`covered_to` and
  * `fee_cents` are a summary of the payout's balance transactions, asked of
- * Stripe once when the payout is paid and never at render; null means Stripe
- * did not say (a manual payout, which Stripe will not itemize, or a read that
- * was refused), never zero.
+ * Stripe once, after the paid webhook has answered, and never at render; null means Stripe
+ * did not say (a read that was refused), never zero. A manual or instant
+ * payout, which Stripe will not itemize, has a fee from its own balance
+ * transaction and no span.
  *
  * Informs, never moves money. A failed payout is Stripe's to retry and the
  * shop's to fix in its own Stripe account; DiveDay only says so.

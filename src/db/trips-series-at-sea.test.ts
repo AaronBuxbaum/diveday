@@ -5,6 +5,7 @@ import { weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext } from "@/test/db";
 import { rollCallCrewEvents, tripStageEvents } from "./schema";
 import {
+  cancelFutureSeriesTrips,
   cancelOffCadenceSeriesTrips,
   createTripSeries,
   getTripWithBooked,
@@ -47,7 +48,7 @@ function seriesInput(overrides: Partial<NewTripSeries> & { shopId: string }): Ne
  * and one the crew have already taken out is neither offered nor cancelled.
  */
 describe("cancelOffCadenceSeriesTrips and a boat at sea", () => {
-  it("never calls off a date the crew have taken out early; a dock count at the tied-up boat still goes", async () => {
+  it("never calls off a date the crew have taken out early, nor one with a dock count begun", async () => {
     const { db, shop } = ctx;
     const now = at("2030-09-30T12:00:00.000Z");
     const result = await createTripSeries(
@@ -106,9 +107,55 @@ describe("cancelOffCadenceSeriesTrips and a boat at sea", () => {
     expect(listed).not.toContain(staged.id);
     expect(listed).toContain(tiedUp.id);
 
-    await cancelOffCadenceSeriesTrips(db, shop.id, result.series.id, now);
+    await cancelOffCadenceSeriesTrips(db, {
+      shopId: shop.id,
+      seriesId: result.series.id,
+      calledByPersonId: staff.person.id,
+      now,
+    });
     expect((await getTripWithBooked(db, shop.id, early.id))?.status).toBe("scheduled");
     expect((await getTripWithBooked(db, shop.id, staged.id))?.status).toBe("scheduled");
-    expect((await getTripWithBooked(db, shop.id, tiedUp.id))?.status).toBe("cancelled");
+    // Offered, but the cascade's own check is the stricter one: any roll-call
+    // event means boarding has begun, so the date is skipped, not called off.
+    expect((await getTripWithBooked(db, shop.id, tiedUp.id))?.status).toBe("scheduled");
+  });
+});
+
+/**
+ * **Stopping a run never calls off a boat the crew have taken out early**:
+ * "Cancel every upcoming date" sends each date through the blow-out cascade,
+ * whose own underway check reads the clock and roll-call events only. A stage
+ * past Boarding before the start time is the crew's word that the boat is off
+ * the dock (`departureMayBeAtSea`), so the cascade refuses that date too.
+ */
+describe("cancelFutureSeriesTrips and a boat taken out early", () => {
+  it("skips the date whose crew are underway before its time and calls off the rest", async () => {
+    const { db, shop } = ctx;
+    const now = at("2030-09-30T12:00:00.000Z");
+    const result = await createTripSeries(db, seriesInput({ shopId: shop.id }));
+    if (!result) throw new Error("series not created");
+    const upcoming = result.trips.filter((trip) => trip.startsAt >= now);
+    const [early, other] = upcoming;
+    if (!early || !other) throw new Error("expected two future dates");
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("seed staff missing");
+    await db.insert(tripStageEvents).values({
+      shopId: shop.id,
+      tripId: early.id,
+      stage: "underway",
+      recordedByPersonId: staff.person.id,
+    });
+
+    const outcome = await cancelFutureSeriesTrips(db, {
+      shopId: shop.id,
+      seriesId: result.series.id,
+      calledByPersonId: staff.person.id,
+      now,
+    });
+
+    expect(outcome?.skipped).toBe(1);
+    expect(outcome?.tripIds).not.toContain(early.id);
+    expect((await getTripWithBooked(db, shop.id, early.id))?.status).toBe("scheduled");
+    expect((await getTripWithBooked(db, shop.id, other.id))?.status).toBe("cancelled");
   });
 });

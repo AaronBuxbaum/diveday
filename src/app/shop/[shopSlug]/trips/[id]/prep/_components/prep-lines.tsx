@@ -71,6 +71,33 @@ export const careLine = (
     .join(" · ");
 
 /**
+ * Whether a diver's assignment row has nothing left to do (issue #2435), so a
+ * phone may fold it to "All N assigned": every piece they wanted is on a unit,
+ * the set has been handed over, and nothing on the row asks for a person —
+ * no staff-fit flag, no counter rental to say, no unit with a care line.
+ * Anything short of that stays open, and so does a row holding nothing.
+ */
+export function assignmentRowIsSettled(
+  t: StaffTranslator,
+  row: {
+    assigned: Parameters<typeof careLine>[1][];
+    wanted: readonly unknown[];
+    needsStaffFit: unknown;
+    handedOver: boolean;
+    counterHeld: readonly unknown[];
+  },
+): boolean {
+  return (
+    row.assigned.length > 0 &&
+    row.wanted.length === 0 &&
+    row.needsStaffFit === null &&
+    row.counterHeld.length === 0 &&
+    row.handedOver &&
+    row.assigned.every((unit) => careLine(t, unit) === "")
+  );
+}
+
+/**
  * The size a staffer pulls, or the honest reason there isn't one — null when
  * the piece has no size to carry at all. Shared by the phone cards, both
  * tables, and both groupings, so none of them can drift into telling the

@@ -5,7 +5,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
-import { DockDayForm } from "../_components/editors/BoatsSitesEditors";
+import { DockDayForm, TurnaroundForm } from "../_components/editors/BoatsSitesEditors";
 import { SettingsEditorPage } from "../_components/SettingsEditorPage";
 import { dockDayNoticeMessages } from "../sub-page-notices";
 
@@ -60,6 +60,7 @@ export default async function DockDaySettingsPage({
         t={t}
         siteBottomTimeOverrides={siteBottomTimeOverrides}
       />
+      <TurnaroundForm shop={shop} t={t} />
     </SettingsEditorPage>
   );
 }

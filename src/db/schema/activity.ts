@@ -69,9 +69,19 @@ export const activityEvents = pgTable(
       .references(() => shops.id),
     tripId: uuid("trip_id").references(() => trips.id, { onDelete: "cascade" }),
     bookingId: uuid("booking_id").references(() => bookings.id, { onDelete: "set null" }),
-    actorPersonId: uuid("actor_person_id")
-      .notNull()
-      .references(() => people.id),
+    /**
+     * Who did it. Null only for a line no account wrote: the system's own (an
+     * automatic call-off) or the shore contact stopping roll-call alerts from
+     * the link in one (`shore_alert_contact_stopped`, H-118 re-review). Then {@link activityEvents.systemReason} says
+     * why; the check below holds the two together (issue #2539).
+     */
+    actorPersonId: uuid("actor_person_id").references(() => people.id),
+    /**
+     * **Why the system acted**, as a code from `SYSTEM_REASONS` in
+     * `src/lib/activity.ts` (`minimum_not_met`), set exactly when there is no
+     * actor. Never a sentence: the words come from the activity labels bundle.
+     */
+    systemReason: text("system_reason"),
     /**
      * The person this line is **about**, where that is neither the actor nor
      * reachable through `booking_id` — today, a note written on a diver's
@@ -154,6 +164,12 @@ export const activityEvents = pgTable(
     // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
     index("activity_events_subject_person_id_idx").on(table.subjectPersonId),
     index("activity_events_actor_person_id_idx").on(table.actorPersonId),
+    // Every line has a person who did it or a reason the system did, never
+    // neither and never both.
+    check(
+      "activity_events_actor_or_system_reason",
+      sql`(${table.actorPersonId} is null) = (${table.systemReason} is not null)`,
+    ),
     index("activity_events_shop_trip_idx").on(table.shopId, table.tripId, table.occurredAt),
     index("activity_events_shop_subject_idx").on(
       table.shopId,

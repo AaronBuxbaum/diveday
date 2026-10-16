@@ -14,10 +14,19 @@ import {
 const COPY = {
   check: "Check with SSI",
   link: "Check with SSI",
+  checkKind: {
+    nitrox: "Check Nitrox with SSI",
+    deep: "Check Deep with SSI",
+    wreck: "Check Wreck with SSI",
+    night: "Check Night with SSI",
+    drysuit: "Check Drysuit with SSI",
+    cavern: "Check Cavern with SSI",
+  },
   checking: "Checking with SSI…",
   matched: "matched",
   matchedConfirmed: "matchedConfirmed",
   levelUnconfirmed: "levelUnconfirmed",
+  cardUnconfirmed: "cardUnconfirmed",
   limitedCard: "limitedCard",
   juniorUnder15: "juniorUnder15",
   namesake: "namesake",
@@ -179,5 +188,28 @@ describe("agencyCheckForm", () => {
   it("asks a Check all card's post to leave the refresh to the end of the run", () => {
     const form = agencyCheckForm("card-1", "page", { refreshLater: true });
     expect(form.get("refresh")).toBe("later");
+  });
+});
+
+/** A nitrox or specialty card's check (issue #2592) words "not this certification", never "not at this level". */
+describe("a nitrox or specialty card's check", () => {
+  it("says the diver is there and the certification is not", () => {
+    const result = {
+      ok: true,
+      verdict: "level_unconfirmed",
+      evidence: "Lena Ortiz",
+      listedCard: true,
+    } as const;
+    expect(agencyCheckOutcomeText(result, null, COPY, "Lena Ortiz")).toBe("cardUnconfirmed");
+    expect(agencyCheckOutcomeText({ ...result, listedCard: undefined }, null, COPY, "Lena")).toBe(
+      "levelUnconfirmed",
+    );
+  });
+
+  it("posts the table the card is in, and nothing for a level card", () => {
+    expect(agencyCheckForm("card-1", "page", { cardType: "nitrox" }).get("cardType")).toBe(
+      "nitrox",
+    );
+    expect(agencyCheckForm("card-1", "page").has("cardType")).toBe(false);
   });
 });

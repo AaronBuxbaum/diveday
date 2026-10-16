@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { HOUR_MS, MINUTE_MS } from "./clock";
-import { type NoShowGateInput, noShowClaim, noShowGate, salvageOffer, seatIsHeld } from "./no-show";
+import { HOUR_MS, MINUTE_MS, nowMs } from "./clock";
+import {
+  type NoShowGateInput,
+  noShowClaim,
+  noShowGate,
+  rowCanBeReactivated,
+  salvageOffer,
+  seatIsHeld,
+} from "./no-show";
 import type { SimilarDeparture } from "./similar-departures";
 
 const DEPARTURE = new Date("2026-09-11T14:00:00.000Z");
@@ -156,5 +163,22 @@ describe("salvageOffer", () => {
 
   it("offers nothing rather than inventing something", () => {
     expect(salvageOffer({ waitlistCount: 0, alternatives: [] })).toEqual({ kind: "none" });
+  });
+});
+
+describe("rowCanBeReactivated (#2484)", () => {
+  const ahead = new Date(nowMs() + HOUR_MS);
+  const behind = new Date(nowMs() - HOUR_MS);
+
+  it("takes a cancelled row on any departure and a no-show on one still ahead", () => {
+    expect(rowCanBeReactivated("cancelled", behind)).toBe(true);
+    expect(rowCanBeReactivated("cancelled", ahead)).toBe(true);
+    expect(rowCanBeReactivated("no_show", ahead)).toBe(true);
+  });
+
+  it("refuses a no-show once the departure has started, and every live seat", () => {
+    expect(rowCanBeReactivated("no_show", behind)).toBe(false);
+    expect(rowCanBeReactivated("booked", ahead)).toBe(false);
+    expect(rowCanBeReactivated("checked_in", ahead)).toBe(false);
   });
 });

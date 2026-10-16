@@ -535,7 +535,7 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
   public destination there, never as a per-page cross-link; the whole header is dropped in
   `?embed=1`.
 - **Where staff can go**: derive from `src/lib/staff-destinations.ts`, a registry of
-  destinations each filed under one **section** — Today, Schedule, Divers, Inbox, Money, Courses,
+  destinations each filed under one **section** — Today, Schedule, Divers, Inbox, Money, Safety, Courses,
   Gear, Settings (ADR 20261001-logbook). It has **two** consumers:
   `src/components/ShopSectionNav.tsx` (the labelled sidebar from `lg` up, the phone tab bar below
   it — Today, Schedule, Divers, Inbox and More) and `src/components/search/CommandPalette.tsx`, the

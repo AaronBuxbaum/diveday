@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { createBookingParty } from "./bookings";
+import { createBookingParty, previewPartyCancel } from "./bookings";
 import { rollCallEvents } from "./schema";
 import { issuePartySeatClaims } from "./seat-claims";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
@@ -61,5 +61,25 @@ describe("issuePartySeatClaims and a seat counted aboard", () => {
     const goes = new Map(seats.map((seat) => [seat.bookingId, seat.cancelsWithLead]));
     expect(goes.get(memberOne.bookingId)).toBe(false);
     expect(goes.get(memberTwo.bookingId)).toBe(true);
+  });
+  it("counts that seat as staying in the text-reply preview too (H-126)", async () => {
+    const { db, shop, open, lead, memberOne } = await party();
+    const [recorder] = await listStaff(db, shop.id);
+    if (!recorder) throw new Error("seeded staff missing");
+    await db.insert(rollCallEvents).values({
+      shopId: shop.id,
+      tripId: open.id,
+      bookingId: memberOne.bookingId,
+      recordedByPersonId: recorder.person.id,
+      status: "boarded",
+      checkpoint: "departure",
+      occurredAt: new Date(open.startsAt.getTime() + 5 * 60 * 1000),
+    });
+    const preview = await previewPartyCancel(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+      now: new Date(open.startsAt.getTime() + 20 * 60 * 1000),
+    });
+    expect(preview).toEqual({ goes: 1, stays: 1 });
   });
 });

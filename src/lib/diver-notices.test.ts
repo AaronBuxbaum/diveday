@@ -71,6 +71,14 @@ describe("the diver record's notice", () => {
     );
   });
 
+  it("says a saved form's “18 or older” went unused because a date is on file (#2167)", () => {
+    expect(resolve({ notice: "person-saved-adult-answer-unused" })).toMatchObject({
+      form: "details",
+      tone: "warning",
+      text: t("divers.notices.personSavedAdultAnswerUnused"),
+    });
+  });
+
   it("carries a card id only on a notice that names a box", () => {
     expect(resolve({ notice: "card-number-implausible", card: "card-1" })).toMatchObject({
       field: "sighted-identifier",

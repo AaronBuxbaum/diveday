@@ -53,7 +53,7 @@ vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { refresh } = await import("next/cache");
 const { requireStaffSession } = await import("@/lib/session");
-const { addAgencyListedCardsAction, agencyCheckAction } = await import("./card-actions");
+const { addAgencyListedCardsAction, agencyCheckAction } = await import("./agency-check-actions");
 
 const NAUI_PAGE = "Verify Diver Certification\nLena Ortiz\n1990-04-12\nAdvanced Scuba Diver";
 
@@ -721,7 +721,11 @@ describe("addAgencyListedCardsAction", () => {
     expect(sighted.ok && sighted.certification.identifier).toBe("SDI-5005");
     // A number that may be a sighting is not taken back by a status flip.
     expect(
-      await unreviewNitroxCertification(db, { shopId: shop.id, certificationId: nitroxId }),
+      await unreviewNitroxCertification(db, {
+        shopId: shop.id,
+        certificationId: nitroxId,
+        reviewedAt: new Date(),
+      }),
     ).toEqual({ ok: false, reason: "sighted_card" });
   });
 

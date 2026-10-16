@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { composeMovePreflight, type MovePreflightFacts } from "./move-preflight";
+import {
+  composeMovePreflight,
+  DEFAULT_MIN_TURNAROUND_MINUTES,
+  type MovePreflightFacts,
+  parseMinTurnaroundMinutes,
+  turnaroundGapMinutes,
+} from "./move-preflight";
 
 /** A departure nothing has happened to: on the board, empty, untouched. */
 const quiet: MovePreflightFacts = {
@@ -12,6 +18,7 @@ const quiet: MovePreflightFacts = {
   boatClashes: [],
   crewClashes: [],
   crewAway: [],
+  turnarounds: [],
 };
 
 describe("composeMovePreflight", () => {
@@ -53,6 +60,7 @@ describe("composeMovePreflight", () => {
       boatClashes: [{ boat: "Mantis I", departure: "Night Dive" }],
       crewClashes: [{ name: "Marcus Webb", departure: "Night Dive" }],
       crewAway: [],
+      turnarounds: [],
     });
     expect(full.sections.map((section) => section.kind)).toEqual([
       "boat",
@@ -228,5 +236,125 @@ describe("composeMovePreflight", () => {
     expect(blocked.sections).toEqual([
       { kind: "boat", clashes: [{ boat: "Mantis I", departure: "Night Dive" }] },
     ]);
+  });
+});
+
+/**
+ * **A tight turnaround is information, never a clash** (issue #2141, Aaron's
+ * decision (b)). H-80's half-open overlap stands: nose to tail is the plan and
+ * says nothing as a clash. This is the near miss beside it — one line, under
+ * any clash, never a refusal.
+ */
+describe("turnaroundGapMinutes", () => {
+  const at = (iso: string) => new Date(iso);
+  const window = (start: string, end: string) => ({ startsAt: at(start), endsAt: at(end) });
+  const moved = [window("2030-08-05T08:00:00Z", "2030-08-05T12:00:00Z")];
+
+  it("is quiet exactly at the gap", () => {
+    expect(
+      turnaroundGapMinutes(moved, [window("2030-08-05T12:30:00Z", "2030-08-05T16:00:00Z")], 30),
+    ).toBeNull();
+  });
+
+  it("speaks one minute under the gap, naming the minutes", () => {
+    expect(
+      turnaroundGapMinutes(moved, [window("2030-08-05T12:29:00Z", "2030-08-05T16:00:00Z")], 30),
+    ).toBe(29);
+  });
+
+  it("speaks at either end: a departure due back just before this one leaves", () => {
+    expect(
+      turnaroundGapMinutes(moved, [window("2030-08-05T04:00:00Z", "2030-08-05T07:50:00Z")], 30),
+    ).toBe(10);
+  });
+
+  it("speaks for nose to tail, which H-80 keeps quiet as a clash", () => {
+    expect(
+      turnaroundGapMinutes(moved, [window("2030-08-05T12:00:00Z", "2030-08-05T16:00:00Z")], 30),
+    ).toBe(0);
+  });
+
+  it("leaves an overlap to the clash line", () => {
+    expect(
+      turnaroundGapMinutes(moved, [window("2030-08-05T11:00:00Z", "2030-08-05T15:00:00Z")], 30),
+    ).toBeNull();
+  });
+
+  it("reads every leg of a multi-day departure and reports the tightest gap", () => {
+    const course = [
+      window("2030-08-05T08:00:00Z", "2030-08-05T12:00:00Z"),
+      window("2030-08-06T08:00:00Z", "2030-08-06T12:00:00Z"),
+    ];
+    expect(
+      turnaroundGapMinutes(
+        course,
+        [
+          window("2030-08-05T12:20:00Z", "2030-08-05T16:00:00Z"),
+          window("2030-08-06T12:05:00Z", "2030-08-06T16:00:00Z"),
+        ],
+        30,
+      ),
+    ).toBe(5);
+  });
+
+  it("is quiet when the shop sets no gap", () => {
+    expect(
+      turnaroundGapMinutes(moved, [window("2030-08-05T12:00:00Z", "2030-08-05T16:00:00Z")], 0),
+    ).toBeNull();
+  });
+
+  it("defaults to thirty minutes", () => {
+    expect(DEFAULT_MIN_TURNAROUND_MINUTES).toBe(30);
+  });
+});
+
+describe("composeMovePreflight's turnaround line", () => {
+  const boat = {
+    kind: "boat",
+    name: "Mantis I",
+    departure: "Afternoon Reef",
+    minutes: 10,
+  } as const;
+  const crew = { kind: "crew", name: "Marcus Webb", departure: "Night Dive", minutes: 20 } as const;
+
+  it("says nothing when no departure is close", () => {
+    expect(composeMovePreflight({ ...quiet, turnarounds: [] }).sections).toEqual([]);
+  });
+
+  it("sits under every clash line and above the costs of going ahead", () => {
+    const composed = composeMovePreflight({
+      ...quiet,
+      toldSeats: 2,
+      boatClashes: [{ boat: "Mantis I", departure: "Night Dive" }],
+      crewClashes: [{ name: "Ana Ruiz", departure: "Night Dive" }],
+      crewAway: ["Ana Ruiz"],
+      turnarounds: [boat, crew],
+    });
+    expect(composed.sections.map((section) => section.kind)).toEqual([
+      "boat",
+      "crew",
+      "crewAway",
+      "turnaround",
+      "told",
+    ]);
+    expect(composed.sections[3]).toEqual({ kind: "turnaround", items: [boat, crew] });
+  });
+
+  it("never blocks the move", () => {
+    expect(composeMovePreflight({ ...quiet, turnarounds: [boat] }).blocked).toBeNull();
+  });
+});
+
+describe("parseMinTurnaroundMinutes", () => {
+  it("takes a whole number of minutes from 0 to 240", () => {
+    expect(parseMinTurnaroundMinutes("0")).toBe(0);
+    expect(parseMinTurnaroundMinutes("45")).toBe(45);
+    expect(parseMinTurnaroundMinutes("240")).toBe(240);
+  });
+
+  it("refuses anything else", () => {
+    for (const raw of ["", " ", "-5", "241", "12.5", "thirty", null, undefined]) {
+      expect(parseMinTurnaroundMinutes(raw)).toBeNull();
+    }
   });
 });

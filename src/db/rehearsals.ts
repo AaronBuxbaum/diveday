@@ -305,7 +305,14 @@ export async function rehearsalsWithEvidence(
   const reported = await db
     .selectDistinct({ tripId: incidentReports.tripId })
     .from(incidentReports)
-    .where(and(eq(incidentReports.shopId, shopId), inArray(incidentReports.tripId, [...tripIds])));
+    .where(
+      and(
+        eq(incidentReports.shopId, shopId),
+        inArray(incidentReports.tripId, [...tripIds]),
+        // A discarded draft is not evidence of anything.
+        isNull(incidentReports.deletedAt),
+      ),
+    );
   const logged = await db
     .selectDistinct({ tripId: executedDives.tripId })
     .from(executedDives)

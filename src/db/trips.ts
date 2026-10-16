@@ -124,6 +124,7 @@ export {
   getTripDiveSitesPeek,
   getTripMeetingPointFields,
   getTripWithBooked,
+  getTripWithBookedOnce,
   listTripDives,
   listTripScheduleDays,
   type PublicCrewMember,

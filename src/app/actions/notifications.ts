@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
-import { listNotificationDeliveryIssues, retryBookingConfirmation } from "@/db/notifications";
+import { listNotificationDeliveryIssues } from "@/db/notifications";
+import { resendConfirmationWithWaiver } from "@/db/waiver-issue";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { operationalWindow } from "@/lib/operational-window";
@@ -12,8 +13,8 @@ import type { ResendState } from "./notification-resend-types";
 /**
  * One-tap re-send of a failed booking confirmation from the Today queue, so an
  * email-delivery row is a fix, not just a link to the trip. Only confirmations
- * are retried here: a waiver link's one-time token is never stored, so re-sending
- * a waiver issues a fresh link through the shared WP-1 path instead.
+ * are retried here, and when a waiver is still owed the booking's live link
+ * rides in the mail as its first step (issue #2473).
  *
  * Auth and shop ownership are re-checked server-side; the caller only supplies
  * booking ids. A batched row posts several, so the set is **re-derived on the
@@ -32,7 +33,7 @@ export async function resendConfirmationAction(
 ): Promise<ResendState> {
   const session = (await requireShopSurface(shopSlug)).session;
   // One booking, or every one a batched Today row stands for. Each retry is
-  // scoped to the session's shop by `retryBookingConfirmation` itself.
+  // scoped to the session's shop by `resendConfirmationWithWaiver` itself.
   const bookingIds = [
     ...new Set(
       formData
@@ -57,7 +58,7 @@ export async function resendConfirmationAction(
 
   let failure: Exclude<ResendState, { status: "idle" } | { status: "sent" }> | null = null;
   for (const bookingId of retryable) {
-    const delivery = await retryBookingConfirmation(db, session.user.shopId, bookingId);
+    const delivery = await resendConfirmationWithWaiver(db, session.user.shopId, bookingId);
     if (delivery?.status === "sent") {
       await trackEvent({ name: "staff_recovery", kind: "confirmation_resent", surface: "today" });
       continue;

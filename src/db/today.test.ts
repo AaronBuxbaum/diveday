@@ -688,6 +688,30 @@ describe("the high-wind row (issue #722)", () => {
     expect(new Set(urls).size).toBe(urls.length);
   });
 
+  it("asks the provider for nothing when the caller says it will not read the wind rows", async () => {
+    const { db, shop } = ctx;
+    const fetcher = stubProvider(30);
+
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shop.timezone,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      undefined,
+      undefined,
+      undefined,
+      false,
+    );
+
+    expect(await work.highWind).toEqual([]);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it("raises nothing on a calm forecast", async () => {
     const { db, shop } = ctx;
     stubProvider(8);

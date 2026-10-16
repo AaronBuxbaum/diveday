@@ -190,7 +190,9 @@
     "missingContactNamed": "Sin contacto de emergencia.",
     "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}}, sin oferta de última hora enviada.",
     "waitlistSeat": "{seats, plural, one {# plaza libre} other {# plazas libres}}, {waiting} en la lista de espera.",
-    "rollCallAlerted": "Propietarios avisados: {time}."
+    "rollCallAlerted": "Propietarios avisados: {time}.",
+    "rollCallAlertedWithShore": "Propietarios y contacto en tierra avisados: {time}.",
+    "rollCallShoreAlerted": "Contacto en tierra avisado: {time}."
   },
   "actionLabel": {
     "openRollCall": "Abrir recuento",

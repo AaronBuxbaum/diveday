@@ -135,6 +135,8 @@ export type WaiverSendCopy = {
   neverMind: string;
   /** The roster's bulk control, submitted with nothing ticked. */
   emptySelection: string;
+  /** Stands in for a held send's name that came back empty. */
+  unnamedDiver: string;
 };
 
 /** Built once per page and threaded to every `WaiverSendControl` on it. */
@@ -165,17 +167,21 @@ export function waiverSendCopy(t: StaffTranslator): WaiverSendCopy {
     confirmResend: t("shared.waiverSend.confirmResend"),
     neverMind: t("shared.waiverSend.neverMind"),
     emptySelection: t("shared.waiverSend.emptySelection"),
+    unnamedDiver: t("shared.waiverSend.unnamedDiver"),
   };
 }
 
 /**
  * A held send's outcome (`src/db/held-sends.ts`) in the shape every waiver
  * surface renders. Names arrive as the executor found them; an empty name is
- * the "A diver" the immediate path always used.
+ * `unnamedDiver`, the word the immediate path always used.
  */
-export function waiverSendStateFromOutcome(outcome: HeldSendOutcome): WaiverSendState {
+export function waiverSendStateFromOutcome(
+  outcome: HeldSendOutcome,
+  unnamedDiver: string,
+): WaiverSendState {
   if (outcome.kind !== "waiver_send") return IDLE_WAIVER_SEND_STATE;
-  const named = (names: string[]) => names.map((name) => name || "A diver");
+  const named = (names: string[]) => names.map((name) => name || unnamedDiver);
   return {
     status: "done",
     channel: outcome.channel,

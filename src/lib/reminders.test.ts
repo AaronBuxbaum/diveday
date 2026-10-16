@@ -114,3 +114,68 @@ describe("reminderEarnsItsSend", () => {
     );
   });
 });
+
+/**
+ * **Autumn fall-back day, America/New_York, 2026-11-01** (issue #2614): 01:00 to
+ * 02:00 happens twice, so the day is 25 hours long. The reminder windows are
+ * measured in elapsed hours, so a departure on that morning gets its brief 24
+ * elapsed hours ahead, which is 25 hours of wall clock, never a wall-clock
+ * day ahead.
+ */
+describe("dueReminder on the fall-back day", () => {
+  // 01:30 EST, the second pass through the 01:00 hour.
+  const sails = new Date("2026-11-01T06:30:00.000Z");
+  const ahead = (ms: number) => new Date(sails.getTime() - ms);
+  const HOUR = 60 * 60 * 1000;
+
+  it("opens the 24-hour brief exactly 24 elapsed hours ahead, not a wall-clock day", () => {
+    // 24 elapsed hours before 01:30 EST is 02:30 EDT on 31 October.
+    expect(dueReminder({ startsAt: sails, now: ahead(24 * HOUR), sentKinds: none })?.kind).toBe(
+      "trip_reminder_24h",
+    );
+    // A wall-clock day ahead (01:30 EDT on 31 October) is 25 elapsed hours out:
+    // still the weekly reminder, not the day-before one an hour early.
+    expect(dueReminder({ startsAt: sails, now: ahead(25 * HOUR), sentKinds: none })?.kind).toBe(
+      "trip_reminder_7d",
+    );
+    expect(dueReminder({ startsAt: sails, now: ahead(24 * HOUR + 1), sentKinds: none })?.kind).toBe(
+      "trip_reminder_7d",
+    );
+  });
+
+  it("gives a departure in the first pass through the hour the same window", () => {
+    const firstPass = new Date("2026-11-01T05:30:00.000Z"); // 01:30 EDT
+    expect(
+      dueReminder({
+        startsAt: firstPass,
+        now: new Date(firstPass.getTime() - 24 * HOUR),
+        sentKinds: none,
+      })?.kind,
+    ).toBe("trip_reminder_24h");
+    expect(
+      dueReminder({
+        startsAt: firstPass,
+        now: new Date(firstPass.getTime() - 24 * HOUR - 1),
+        sentKinds: none,
+      })?.kind,
+    ).toBe("trip_reminder_7d");
+  });
+
+  it("opens the weekly reminder 168 elapsed hours ahead of a departure after the change", () => {
+    // 08:00 EST on 2 November; a wall-clock week back is 08:00 EDT on 26
+    // October, an hour before the elapsed week (09:00 EDT).
+    const monday = new Date("2026-11-02T13:00:00.000Z");
+    const elapsedWeek = new Date(monday.getTime() - 168 * HOUR);
+    expect(elapsedWeek.toISOString()).toBe("2026-10-26T13:00:00.000Z");
+    expect(
+      dueReminder({
+        startsAt: monday,
+        now: new Date(elapsedWeek.getTime() - 1),
+        sentKinds: none,
+      }),
+    ).toBeNull();
+    expect(dueReminder({ startsAt: monday, now: elapsedWeek, sentKinds: none })?.kind).toBe(
+      "trip_reminder_7d",
+    );
+  });
+});

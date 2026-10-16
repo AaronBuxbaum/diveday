@@ -1,4 +1,7 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, test } from "./fixtures";
+
+const staff = staffTranslator("en-US");
 
 /**
  * **The settings editors that outgrew a hub row.**
@@ -36,7 +39,7 @@ test("the hub's list editors are doors, and each opens its own page", async ({
     ["Boats", "boats"],
     ["Trip tags", "trip-tags"],
     // Forms of six to a dozen fields, pages of their own since #1854.
-    ["What we rent", "rentals"],
+    ["Rentals", "rentals"],
     ["Rental prices", "rental-prices"],
     ["Emergency reference", "emergency-reference"],
     ["Dock-day rhythm", "dock-day"],
@@ -80,6 +83,38 @@ test("the emergency reference saves on its own page, and the save lands back on 
   await expect(page.getByLabel("Vessel", { exact: true })).toHaveValue(
     "Second Wind, white hull, blue canopy",
   );
+});
+
+/**
+ * H-118: the shore contact's alert address saves with the box that records
+ * their consent, comes back ticked with when and by whom it was recorded, and
+ * clearing the address clears both and says so. The minted shop is a demo
+ * shop, so the save says no confirmation link went (demo shops send nothing);
+ * a real shop's link is `shore-alert-actions.test.ts`'s.
+ */
+test("a shore contact's alert address saves with its consent, and clears with it", async ({
+  page,
+  privateShop,
+}) => {
+  test.setTimeout(60_000);
+  const SHOP = privateShop.slug;
+  await page.goto(`/shop/${SHOP}/settings/emergency-reference`);
+  const address = page.getByLabel("Shore contact’s email for roll-call alerts");
+  const consent = page.getByRole("checkbox", { name: /They agreed to get these alerts/ });
+  await address.fill("shore@example.com");
+  await consent.check();
+  await page.getByRole("button", { name: "Save emergency reference" }).click();
+
+  await expect(page.getByText(staff("settings.main.notice.shoreAlertSavedDemo"))).toBeVisible();
+  await expect(address).toHaveValue("shore@example.com");
+  await expect(consent).toBeChecked();
+  await expect(page.getByText(/^Recorded .+ by /)).toBeVisible();
+
+  await address.fill("");
+  await page.getByRole("button", { name: "Save emergency reference" }).click();
+  await expect(page.getByText(staff("settings.main.notice.shoreAlertCleared"))).toBeVisible();
+  await expect(address).toHaveValue("");
+  await expect(consent).not.toBeChecked();
 });
 
 test("a hull is added on its own page, and the save lands back on it", async ({

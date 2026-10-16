@@ -1,11 +1,10 @@
 import { ShopPageHeaderSkeleton, SkeletonLineBars } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
-import { StaffSectionTabsSkeleton } from "../../_components/StaffSectionTabs";
-import { figureCellClass } from "../_components/MonthFigures";
+import { figureCellClass } from "../reports/_components/MonthFigures";
 
 /**
- * The Safety tab's skeleton, in the page's own order: the section's title and
- * tabs, the one-line intro, the month heading and its stepper (as Reports draws
+ * The Safety page's skeleton, in the page's own order: the page's title, the
+ * one-line intro, the month heading and its stepper (as Reports draws
  * it), the five figures, and the three list cards.
  */
 export default function SafetyReportLoading() {
@@ -13,7 +12,6 @@ export default function SafetyReportLoading() {
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-32" description={false} />
-        <StaffSectionTabsSkeleton section="money" />
         <div className="mb-6">
           <SkeletonLineBars lines={{ base: 3, sm: 2 }} height="h-6" width="w-160 max-w-full" />
         </div>

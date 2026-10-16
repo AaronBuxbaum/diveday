@@ -24,10 +24,8 @@ import {
 import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
 import { utcToWallTime, type WallTime, wallTimeToUtc } from "@/lib/zoned";
 import { departureMayBeAtSea } from "./aboard-at-sea";
-import { callDayBlowout } from "./blowouts";
+import { type BlowoutRefundMode, callDayBlowout } from "./blowouts";
 import type { AppDb, AppTransaction } from "./client";
-import { flushUrgentCrewNotices, recordCrewCalledOff } from "./crew-notices";
-import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { queryAll } from "./query-helpers";
 import { recordedRollCallRows } from "./roll-call-history";
 import {
@@ -35,6 +33,7 @@ import {
   bookingPayments,
   bookings,
   courses,
+  people,
   shops,
   tripDives,
   tripScheduleDays,
@@ -730,9 +729,24 @@ export async function getTripSeriesSummary(
         ne(bookings.status, "cancelled"),
       ),
     );
+  // The names as well as the fact, so the panel can say who crews every date.
+  const standingCrewNames = await db
+    .select({ name: people.fullName })
+    .from(tripSeriesCrew)
+    .innerJoin(
+      people,
+      and(
+        eq(people.id, tripSeriesCrew.personId),
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+      ),
+    )
+    .where(and(eq(tripSeriesCrew.seriesId, row.series.id), eq(tripSeriesCrew.shopId, shopId)))
+    .orderBy(asc(people.fullName), asc(people.id));
   return {
     ...row.series,
-    standingCrew: (await getSeriesStandingCrew(db, shopId, row.series.id)).length > 0,
+    standingCrew: standingCrewNames.length > 0,
+    standingCrewNames: standingCrewNames.map((entry) => entry.name),
     scheduledCount: counts?.scheduled ?? 0,
     futureScheduledCount: counts?.future ?? 0,
     futureBookedCount: reach?.divers ?? 0,
@@ -946,94 +960,94 @@ export async function listOffCadenceSeriesTrips(
   return ashore;
 }
 
+/** What "Cancel every upcoming date" and "Take them off" did. */
+export type SeriesCancelResult = {
+  /** Dates taken off the board, each with its own cascade record. */
+  cancelled: number;
+  /** Dates that could not be called (underway, or the call failed) and still stand. */
+  skipped: number;
+  /** Booked divers the cancelled dates reached, one message each. */
+  divers: number;
+  /** The dates taken off the board, for their activity lines. */
+  tripIds: string[];
+};
+
+/** Who is calling a run's dates off, and the seams a test replaces. */
+export type SeriesCallOffInput = {
+  shopId: string;
+  seriesId: string;
+  /** A staffer's act, never a system pass: the crew's news names them. */
+  calledByPersonId: string;
+  now?: Date;
+  /** Injectable for tests; default to the configured provider and Stripe seam. */
+  provider?: NotificationProvider;
+  checkout?: CheckoutProvider;
+  /**
+   * Whether the refunds the call triggers go back now or wait for a refund
+   * holder (H-123). Absent means now, which is every system caller.
+   */
+  refunds?: BlowoutRefundMode;
+};
+
 /**
- * Who called a run's dates off. Both series cancels are a staffer's act, never
- * a system pass, so the crew's "called off" news names them, and they are not
- * told about their own act (issue #2284). `null` only for a caller with no
- * person behind it.
+ * Send these dates through the blow-out cascade as a run that stopped: each is
+ * cancelled, its booked divers are told once (cause `run_ended`), card captures
+ * go back by themselves or wait for a refund holder, and staff get a cascade
+ * record per date. Both series cancels end here, so they treat a paid diver the
+ * same way.
  */
-export type SeriesCallOffOptions = { actorPersonId?: string | null };
+async function callOffSeriesDates(
+  db: AppDb,
+  input: SeriesCallOffInput,
+  upcoming: readonly { id: string }[],
+  now: Date,
+): Promise<SeriesCancelResult> {
+  if (upcoming.length === 0) return { cancelled: 0, skipped: 0, divers: 0, tripIds: [] };
+  const results = await callDayBlowout(db, {
+    shopId: input.shopId,
+    tripIds: upcoming.map((trip) => trip.id),
+    calledByPersonId: input.calledByPersonId,
+    cause: "run_ended",
+    now,
+    provider: input.provider,
+    checkout: input.checkout,
+    refunds: input.refunds,
+  });
+  const tripIds: string[] = [];
+  let divers = 0;
+  for (const { tripId, outcome } of results) {
+    if (!outcome.ok) continue;
+    tripIds.push(tripId);
+    divers += outcome.total;
+  }
+  return { cancelled: tripIds.length, skipped: results.length - tripIds.length, divers, tripIds };
+}
 
 /**
  * Take the off-cadence upcoming dates off the public schedule — the second,
  * explicit half of narrowing a run.
  *
- * Cancels rather than deletes, through the same status every per-date cancel
- * uses, so each one is reinstatable from its own trip page and every booking's
- * history survives. Re-derives the list inside the transaction rather than
- * trusting ids from the form: a date can be booked, moved, or cancelled between
- * the page render and the tap, and cancelling a departure that has *since*
- * come back onto the cadence would be the exact silent bulk cancellation this
- * two-step exists to prevent. Returns how many were taken off.
+ * **Each date goes through the blow-out cascade**, exactly as "Cancel every
+ * upcoming date" does (`callOffSeriesDates`): it is still reinstatable from its
+ * own trip page and every booking's history survives, but its booked divers are
+ * told once and their card payments go back (issue #2453; full refunds, H-122).
+ * Before that this only flipped the status, and a paid diver on a dropped
+ * weekday heard nothing and kept being charged.
+ *
+ * Re-derives the list from the series here rather than trusting ids from the
+ * form: a date can be booked, moved, or cancelled between the page render and
+ * the tap, and cancelling a departure that has *since* come back onto the
+ * cadence would be the exact silent bulk cancellation this two-step exists to
+ * prevent. The cascade then re-checks each date under its own row lock, so a
+ * date no longer scheduled or already underway is skipped, never cancelled.
  */
 export async function cancelOffCadenceSeriesTrips(
   db: AppDb,
-  shopId: string,
-  seriesId: string,
-  now: Date = nowDate(),
-  options: SeriesCallOffOptions = {},
-): Promise<number> {
-  const stale = await listOffCadenceSeriesTrips(db, shopId, seriesId, now);
-  if (stale.length === 0) return 0;
-  const cancelledIds = await db.transaction(async (tx) => {
-    // Asked again under each trip's row lock, the one the roll call takes: the
-    // crew may have taken one out since the list was read (H-126).
-    const locked = await tx
-      .select({ id: trips.id, startsAt: trips.startsAt })
-      .from(trips)
-      .where(
-        and(
-          eq(trips.shopId, shopId),
-          liveTrip(),
-          inArray(
-            trips.id,
-            stale.map((trip) => trip.id),
-          ),
-        ),
-      )
-      .orderBy(asc(trips.id))
-      .for("update");
-    const ashoreIds: string[] = [];
-    for (const trip of locked) {
-      const tripId = trip.id;
-      if (await departureMayBeAtSea(tx, { shopId, tripId, startsAt: trip.startsAt, now })) continue;
-      ashoreIds.push(tripId);
-    }
-    if (ashoreIds.length === 0) return [];
-    const cancelled = await tx
-      .update(trips)
-      // Same stamp as any other cancellation. An off-cadence occurrence being
-      // taken off the board *is* the shop calling that departure off -- it can
-      // carry booked, paid seats, which is exactly why narrowing a cadence lists
-      // the orphaned dates with their head counts before doing it -- so the money
-      // it leaves behind is owed from this instant like any other.
-      .set({ status: "cancelled", cancelledAt: now })
-      .where(
-        and(
-          eq(trips.shopId, shopId),
-          eq(trips.seriesId, seriesId),
-          eq(trips.status, "scheduled"),
-          inArray(trips.id, ashoreIds),
-        ),
-      )
-      .returning({ id: trips.id });
-    // The cancelled dates keep their bookings, so the booking cascade never
-    // frees the gear reserved against them.
-    await releaseUnclaimedGearReservationsForTrips(tx, {
-      shopId,
-      tripIds: cancelled.map((trip) => trip.id),
-    });
-    // Each called-off date tells its crew (ADR 20261009-crew-hear-about-their-boats).
-    await recordCrewCalledOff(tx, {
-      shopId,
-      tripIds: cancelled.map((trip) => trip.id),
-      actorPersonId: options.actorPersonId ?? null,
-      now,
-    });
-    return cancelled.map((trip) => trip.id);
-  });
-  await flushUrgentCrewNotices(db, { shopId, tripIds: cancelledIds, now });
-  return cancelledIds.length;
+  input: SeriesCallOffInput,
+): Promise<SeriesCancelResult> {
+  const now = input.now ?? nowDate();
+  const stale = await listOffCadenceSeriesTrips(db, input.shopId, input.seriesId, now);
+  return callOffSeriesDates(db, input, stale, now);
 }
 
 export type SeriesCadencePatch = {
@@ -1137,18 +1151,6 @@ export async function setSeriesRepeat(
   return (await rollSeriesForward(db, shopId, seriesId, now)) ?? { created: 0 };
 }
 
-/** What "Cancel every upcoming date" did. */
-export type SeriesCancelResult = {
-  /** Dates taken off the board, each with its own cascade record. */
-  cancelled: number;
-  /** Dates that could not be called (underway, or the call failed) and still stand. */
-  skipped: number;
-  /** Booked divers the cancelled dates reached, one message each. */
-  divers: number;
-  /** The dates taken off the board, for their activity lines. */
-  tripIds: string[];
-};
-
 /**
  * Cancel every still-scheduled, not-yet-departed instance of a series in one
  * action — the series-wide counterpart to calling a single date off.
@@ -1161,7 +1163,8 @@ export type SeriesCancelResult = {
  * (ADR 20260813-shop-cancellation-refunds-itself), its crew hear at once, and
  * staff get a cascade record per date to work. Before 2026-10-12 this only
  * flipped the status: the dates kept their bookings and their money, and
- * nobody but the crew was told.
+ * nobody but the crew was told. Every date refunds in full, never under its
+ * own cancellation window (H-122).
  *
  * Every date is set up before any message is written, so nobody is offered
  * another date of the run being cancelled. Past and already-cancelled dates
@@ -1176,15 +1179,7 @@ export type SeriesCancelResult = {
  */
 export async function cancelFutureSeriesTrips(
   db: AppDb,
-  input: {
-    shopId: string;
-    seriesId: string;
-    calledByPersonId: string;
-    now?: Date;
-    /** Injectable for tests; default to the configured provider and Stripe seam. */
-    provider?: NotificationProvider;
-    checkout?: CheckoutProvider;
-  },
+  input: SeriesCallOffInput,
 ): Promise<SeriesCancelResult | null> {
   const now = input.now ?? nowDate();
   // Which dates to call is read before the repeat stops, so the dates and the
@@ -1204,24 +1199,7 @@ export async function cancelFutureSeriesTrips(
     .orderBy(asc(trips.startsAt));
   const stopped = await setSeriesRepeat(db, input.shopId, input.seriesId, false, now);
   if (!stopped) return null;
-  if (upcoming.length === 0) return { cancelled: 0, skipped: 0, divers: 0, tripIds: [] };
-  const results = await callDayBlowout(db, {
-    shopId: input.shopId,
-    tripIds: upcoming.map((trip) => trip.id),
-    calledByPersonId: input.calledByPersonId,
-    cause: "run_ended",
-    now,
-    provider: input.provider,
-    checkout: input.checkout,
-  });
-  const tripIds: string[] = [];
-  let divers = 0;
-  for (const { tripId, outcome } of results) {
-    if (!outcome.ok) continue;
-    tripIds.push(tripId);
-    divers += outcome.total;
-  }
-  return { cancelled: tripIds.length, skipped: results.length - tripIds.length, divers, tripIds };
+  return callOffSeriesDates(db, input, upcoming, now);
 }
 
 export type SeriesCrewApplyResult = { updated: number; skipped: number };

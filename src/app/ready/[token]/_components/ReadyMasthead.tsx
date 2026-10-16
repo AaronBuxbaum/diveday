@@ -15,6 +15,7 @@ import {
   formatTimeRangeTz,
 } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
+import { firstNameOf } from "@/lib/person-name";
 import { publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
 import { isDiveDay } from "@/lib/thread-steps";
 
@@ -183,7 +184,7 @@ export function ReadyBookedHeader({
   /** Anything that belongs under the card and above the thread. */
   children?: ReactNode;
 }) {
-  const firstName = greetingName.split(" ")[0] || t("ready.namelessFallback");
+  const firstName = firstNameOf(greetingName, t("ready.namelessFallback"));
   return (
     <header>
       <EarnedMoment

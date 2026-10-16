@@ -1,4 +1,4 @@
-import type { AgencyCheckResult } from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
+import type { AgencyCheckResult } from "@/app/shop/[shopSlug]/divers/[personId]/agency-check-actions";
 import { fill } from "@/i18n/fill";
 import type { AgencyCheckOutcome } from "@/lib/agency-check-queue";
 import type { ExtensionFailureReason } from "@/lib/cert-check-extension";
@@ -114,7 +114,7 @@ export function agencyCheckOutcomeText(
   if (!result.ok) return result.reason === "not-undoable" ? copy.undoFailed : copy.invalid;
   switch (result.verdict) {
     case "level_unconfirmed":
-      return copy.levelUnconfirmed;
+      return result.listedCard ? copy.cardUnconfirmed : copy.levelUnconfirmed;
     case "limited_card":
       return copy.limitedCard;
     case "junior_under_15":
@@ -156,10 +156,12 @@ export function agencyCheckAnswered(result: AgencyCheckResult): boolean {
 export function agencyCheckForm(
   certificationId: string,
   pageText: string,
-  options: { refreshLater?: boolean } = {},
+  options: { refreshLater?: boolean; cardType?: "nitrox" | "specialty" } = {},
 ): FormData {
   const formData = new FormData();
   formData.set("certificationId", certificationId);
+  // Which table the card is in; absent for a level card (issue #2592).
+  if (options.cardType) formData.set("cardType", options.cardType);
   formData.set("pageText", pageText);
   if (options.refreshLater) formData.set("refresh", "later");
   return formData;

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { type OpenSeatsInput, openSeatsDebrief } from "./open-seats";
+import {
+  departuresWithEmptySeats,
+  type OpenSeatsInput,
+  openSeatsDebrief,
+  unsoldSeats,
+} from "./open-seats";
 
 const TZ = "America/New_York";
 // An evening instant: 17:30 shop-local on 2026-08-04 (EDT, UTC-4).
@@ -126,5 +131,47 @@ describe("openSeatsDebrief", () => {
       "lastBookingDaysOut",
       "openSeats",
     ]);
+  });
+});
+
+describe("departuresWithEmptySeats (Reports' monthly row, issue #2424)", () => {
+  const sailed = new Date("2026-08-02T11:30:00Z");
+  const row = (tripId: string, capacity: number, booked: number, startsAt = sailed) => ({
+    tripId,
+    title: `Trip ${tripId}`,
+    capacity,
+    booked,
+    startsAt,
+  });
+
+  it("counts the departures that sailed short and the seats that never sold, emptiest first", () => {
+    const summary = departuresWithEmptySeats(
+      [
+        row("a", 12, 8),
+        row("full", 12, 12),
+        row("b", 10, 3),
+        row("c", 6, 2, new Date("2026-08-01T11:30:00Z")),
+      ],
+      now,
+    );
+    expect(summary).toMatchObject({ departures: 3, seats: 4 + 7 + 4 });
+    expect(summary.list.map((departure) => departure.tripId)).toEqual(["b", "c", "a"]);
+  });
+
+  it("leaves out a departure that has not sailed, and a month with none short is empty", () => {
+    const ahead = row("ahead", 12, 0, new Date(now.getTime() + 2 * HOUR));
+    expect(departuresWithEmptySeats([ahead, row("full", 4, 4)], now)).toEqual({
+      departures: 0,
+      seats: 0,
+      list: [],
+    });
+  });
+
+  it("agrees with the debrief on which departures qualify and by how many seats", () => {
+    // The same definition: a sold seat nobody turned up for is still sold.
+    const sold = { capacity: 12, booked: 10, startsAt: sailed };
+    expect(unsoldSeats(sold, now)).toBe(2);
+    expect(openSeatsDebrief(input({ ...sold, dealSent: false }), now)?.openSeats).toBe(2);
+    expect(unsoldSeats({ ...sold, booked: 13 }, now)).toBe(0);
   });
 });

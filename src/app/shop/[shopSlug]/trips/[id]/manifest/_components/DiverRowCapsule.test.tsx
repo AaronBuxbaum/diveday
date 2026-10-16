@@ -4,7 +4,14 @@ import { afterEach, describe, expect, it } from "vitest";
 import { readinessStatusText } from "@/i18n/readiness-labels";
 import { buddyAlertFor, type TripManifest } from "@/lib/manifests";
 import { diverCapsule, diverTypeBadge } from "./DiverRowCapsule";
-import { boardedAt, diver, notBackAt, renderList, t } from "./diver-roll-call-test-fixtures";
+import {
+  boardedAt,
+  dangerToned,
+  diver,
+  notBackAt,
+  renderList,
+  t,
+} from "./diver-roll-call-test-fixtures";
 import { diverRowState } from "./diver-row-state";
 
 afterEach(cleanup);
@@ -407,4 +414,125 @@ describe("diverCapsule, called on its own", () => {
     );
     expect(container.textContent?.length).toBeGreaterThan(0);
   });
+});
+
+/**
+ * **A diver boarded over a medical blocker keeps a medical capsule after a
+ * dive** (issue #2380, Aaron's decision (b)): warning-toned, never the danger
+ * "Blocked", placed where the rider's riding-only chip sits.
+ */
+describe("the medical-hold capsule after a dive", () => {
+  const notCleared: TripManifest["divers"][number]["readiness"] = {
+    status: "blocked",
+    blockers: [{ code: "medical_not_cleared" }],
+  };
+  const inReview: TripManifest["divers"][number]["readiness"] = {
+    status: "blocked",
+    blockers: [{ code: "medical_review" }],
+  };
+  const NOT_CLEARED = "Not medically cleared";
+  const IN_REVIEW = "Medical review open";
+
+  function capsuleOf(container: HTMLElement) {
+    return container.querySelector<HTMLElement>(".basis-full");
+  }
+
+  for (const checkpoint of ["after_dive_1", "after_dive_2", "after_dive_3"] as const) {
+    it(`stays on the row of a diver boarded over a physician's no at ${checkpoint}`, () => {
+      const { container } = renderList({
+        checkpoint,
+        divers: [diver({ readiness: notCleared, boardedEarlier: true, rollCall: boardedAt() })],
+      });
+      const capsule = capsuleOf(container);
+      expect(capsule).toHaveTextContent(NOT_CLEARED);
+      expect(within(capsule as HTMLElement).getByText(NOT_CLEARED).className).toContain(
+        "text-warning-strong",
+      );
+      // Not the danger "Blocked": decision 4 keeps the red for the alarm.
+      expect(capsule).not.toHaveTextContent(readinessStatusText(t, "blocked"));
+      expect(dangerToned(capsule as HTMLElement)).toHaveLength(0);
+    });
+  }
+
+  it("names an open medical review, before anyone has been called at this checkpoint", () => {
+    const { container } = renderList({
+      divers: [diver({ readiness: inReview, boardedEarlier: true })],
+    });
+    expect(capsuleOf(container)).toHaveTextContent(IN_REVIEW);
+  });
+
+  it("says nothing at the dock, where the row says Blocked", () => {
+    const { container } = renderList({
+      checkpoint: "departure",
+      divers: [diver({ readiness: notCleared, rollCall: boardedAt() })],
+    });
+    expect(capsuleOf(container)).toHaveTextContent(readinessStatusText(t, "blocked"));
+    expect(container.querySelector(".basis-full")).not.toHaveTextContent(NOT_CLEARED);
+  });
+
+  it("gives way to the not-back alarm: nothing beside somebody in the water", () => {
+    const { container } = renderList({
+      divers: [diver({ readiness: notCleared, boardedEarlier: true, rollCall: notBackAt() })],
+    });
+    expect(capsuleOf(container)).toBeNull();
+  });
+
+  it("gives way to a team that did not come back after a dive", () => {
+    const { container } = renderList({
+      divers: [
+        diver({
+          readiness: notCleared,
+          boardedEarlier: true,
+          rollCall: boardedAt(),
+          buddyAlert: "separated_after_dive",
+          buddyTeam: { teamId: "t-1", others: [] },
+        }),
+      ],
+    });
+    expect(capsuleOf(container)).toHaveTextContent("Buddy not back aboard");
+    expect(capsuleOf(container)).not.toHaveTextContent(NOT_CLEARED);
+  });
+
+  it("outranks the minor, depth and birthday capsules", () => {
+    const state = diverRowState(
+      diver({
+        readiness: notCleared,
+        boardedEarlier: true,
+        age: 13,
+        minor: true,
+        birthday: { status: "today" },
+      }),
+      "after_dive_1",
+      false,
+      "America/New_York",
+    );
+    expect(state.capsuleKind).toBe("medicalHold");
+  });
+
+  it("stays off a paperwork blocker, which decision 4 keeps quiet after a dive", () => {
+    const { container } = renderList({
+      divers: [
+        diver({
+          readiness: { status: "blocked", blockers: [{ code: "certification_missing" }] },
+          boardedEarlier: true,
+          rollCall: boardedAt(),
+        }),
+      ],
+    });
+    expect(capsuleOf(container)).toBeNull();
+  });
+
+  for (const locale of ["en-US", "es-ES"] as const) {
+    it(`fits the 24-character capsule in ${locale}`, () => {
+      for (const readiness of [notCleared, inReview]) {
+        cleanup();
+        const { container } = renderList({
+          locale,
+          divers: [diver({ readiness, boardedEarlier: true })],
+        });
+        expect(capsuleOf(container)?.textContent?.length ?? 0).toBeGreaterThan(0);
+        expect(capsuleOf(container)?.textContent?.length).toBeLessThanOrEqual(24);
+      }
+    });
+  }
 });

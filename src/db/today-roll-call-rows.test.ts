@@ -69,13 +69,13 @@ describe("pushRollCallRows after the stale-roll-call alert", () => {
     underway: false,
     stale: false,
   };
-  const rows = (alertedAt: Date | null) => {
+  const rows = (alertedAt: Date | null, shoreAlertedAt: Date | null = null) => {
     const actions: TodayAction[] = [];
     pushRollCallRows(
       actions,
       rowsContext({
         boatsOut: { out: [], blocked: [] },
-        rollCallGaps: [{ ...gap, alertedAt }],
+        rollCallGaps: [{ ...gap, alertedAt, shoreAlertedAt }],
         crewClashState: { departures: [], clashes: new Map(), crew: new Map(), divers: new Map() },
       }),
     );
@@ -85,6 +85,23 @@ describe("pushRollCallRows after the stale-roll-call alert", () => {
   it("names when the owners were alerted, in the shop's zone", () => {
     const [row] = rows(new Date("2026-07-21T16:40:00Z"));
     expect(row?.detail?.replace(/\s+/gu, " ")).toMatch(/Owners alerted: Jul 21, 12:40 PM EDT\.$/);
+  });
+
+  // Dive-domain re-review #7: whoever opens Today knows the shore contact
+  // heard too, so nobody rings them as if they had not.
+  it("names the shore contact beside the owners when the shore copy went too", () => {
+    const at = new Date("2026-07-21T16:40:00Z");
+    const [row] = rows(at, at);
+    expect(row?.detail?.replace(/\s+/gu, " ")).toMatch(
+      /Owners and shore contact alerted: Jul 21, 12:40 PM EDT\.$/,
+    );
+  });
+
+  it("names the shore contact alone when only the shore copy went", () => {
+    const [row] = rows(null, new Date("2026-07-21T16:40:00Z"));
+    expect(row?.detail?.replace(/\s+/gu, " ")).toMatch(
+      /Shore contact alerted: Jul 21, 12:40 PM EDT\.$/,
+    );
   });
 
   it("says nothing of an alert that has not gone", () => {
@@ -194,6 +211,50 @@ describe("unclosed roll call (DOM-H3)", () => {
       const row = rollCallRow(work, trip.id, "missing_diver");
       expect(row?.detail).toContain("dive 1");
       expect(rollCallRow(work, trip.id, "after_dive_uncounted")).toBeUndefined();
+    });
+
+    /**
+     * The rule `listUnaccountedForByTrip` and `homewardCheckpointGap` keep: the
+     * latest after-dive checkpoint speaks for a seat (issue #2404). Missing after
+     * dive 1 and counted aboard after dive 2 is back, so Today does not keep the
+     * loudest row in the app up for a diver the crew have since counted. Still
+     * missing after dive 2, or nobody has counted them since, stays the row.
+     */
+    it("lets a later 'back aboard' for the same diver settle an earlier 'not back'", async () => {
+      const { db, shop } = ctx;
+      const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
+        endedHoursAgo: 2,
+        divers: 2,
+        plannedDives: 2,
+      });
+      await boardAtDeparture(db, { shopId: shop.id, tripId: trip.id, staffId, bookingIds });
+      const [wasMissing, other] = bookingIds;
+      if (!wasMissing || !other) throw new Error("fixture bookings missing");
+      const tap = (
+        bookingId: string,
+        checkpoint: "after_dive_1" | "after_dive_2",
+        status: "boarded" | "not_boarded",
+      ) =>
+        recordRollCall(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          bookingId,
+          recordedByPersonId: staffId,
+          status,
+          checkpoint,
+        });
+      await tap(wasMissing, "after_dive_1", "not_boarded");
+      await tap(other, "after_dive_1", "boarded");
+      await tap(other, "after_dive_2", "boarded");
+
+      // Nobody has counted them since: still the row.
+      const stillMissing = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      expect(rollCallRow(stillMissing, trip.id, "missing_diver")).toBeDefined();
+
+      await tap(wasMissing, "after_dive_2", "boarded");
+      const back = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      expect(rollCallRow(back, trip.id, "missing_diver")).toBeUndefined();
+      expect(rollCallRow(back, trip.id, "after_dive_uncounted")).toBeUndefined();
     });
 
     it("keeps saying so at a lower urgency once the trip is too old to settle on the dock", async () => {

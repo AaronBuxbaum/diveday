@@ -8,6 +8,7 @@ import {
   issueBookingCapabilities,
   issueBookingCapability,
   MAX_LIVE_CAPABILITIES_PER_PURPOSE,
+  mintBookingCapabilities,
   resolveRevokedBookingCapability,
   revokeBookingCapabilities,
   staleBookingCapabilityForToken,
@@ -510,6 +511,84 @@ describe("live-capability cap (security review: unbounded minting on page GETs)"
     expect(await verifyBookingCapability(db, { token: oldest ?? "", purpose: "readiness" })).toBe(
       null,
     );
+  });
+});
+
+describe("mintBookingCapabilities (#2488: the party panel's links, no second read of the seats)", () => {
+  it("mints one link per seat from the departure ends it is handed, each its own booking's", async () => {
+    const { db, shop, open, other } = await seededContext();
+    const first = await bookVisitor(db, shop.id, open.id);
+    const second = await bookVisitor(db, shop.id, other.id);
+    const minted = await mintBookingCapabilities(db, {
+      shopId: shop.id,
+      seats: [
+        { bookingId: first, tripEndsAt: open.endsAt },
+        { bookingId: second, tripEndsAt: other.endsAt },
+        { bookingId: first, tripEndsAt: open.endsAt },
+      ],
+      purpose: "claim",
+      now: nowDate(),
+    });
+    expect([...minted.keys()].sort()).toEqual([first, second].sort());
+    for (const bookingId of [first, second]) {
+      expect(
+        await verifyBookingCapability(db, {
+          token: minted.get(bookingId)?.token ?? "",
+          purpose: "claim",
+        }),
+      ).toMatchObject({ bookingId, shopId: shop.id });
+    }
+    expect(
+      (
+        await mintBookingCapabilities(db, {
+          shopId: shop.id,
+          seats: [],
+          purpose: "claim",
+          now: nowDate(),
+        })
+      ).size,
+    ).toBe(0);
+  });
+
+  it("holds each seat at its cap, oldest retired first, and a link never opens another purpose", async () => {
+    const { db, shop, open } = await seededContext();
+    const bookingId = await bookVisitor(db, shop.id, open.id);
+    const start = nowDate();
+    const tokens: string[] = [];
+    for (let i = 0; i < MAX_LIVE_CAPABILITIES_PER_PURPOSE + 3; i++) {
+      const minted = await mintBookingCapabilities(db, {
+        shopId: shop.id,
+        seats: [{ bookingId, tripEndsAt: open.endsAt }],
+        purpose: "claim",
+        now: new Date(start.getTime() + i * 1000),
+      });
+      tokens.push(minted.get(bookingId)?.token ?? "");
+    }
+    const at = new Date(start.getTime() + tokens.length * 1000);
+    const live = await db
+      .select({ id: bookingCapabilities.id })
+      .from(bookingCapabilities)
+      .where(
+        and(
+          eq(bookingCapabilities.bookingId, bookingId),
+          isNull(bookingCapabilities.revokedAt),
+          gt(bookingCapabilities.expiresAt, at),
+        ),
+      );
+    expect(live).toHaveLength(MAX_LIVE_CAPABILITIES_PER_PURPOSE);
+    expect(
+      await verifyBookingCapability(db, { token: tokens[0] ?? "", purpose: "claim", now: at }),
+    ).toBeNull();
+    expect(
+      await verifyBookingCapability(db, { token: tokens.at(-1) ?? "", purpose: "claim", now: at }),
+    ).toMatchObject({ bookingId });
+    expect(
+      await verifyBookingCapability(db, {
+        token: tokens.at(-1) ?? "",
+        purpose: "readiness",
+        now: at,
+      }),
+    ).toBeNull();
   });
 });
 

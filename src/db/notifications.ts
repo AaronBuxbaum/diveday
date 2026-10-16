@@ -22,6 +22,7 @@ import {
   dailyPassesWithin,
   nextDailyTickAtOrAfter,
 } from "@/lib/cron-schedule";
+import { errorClassToken } from "@/lib/error-token";
 import { log } from "@/lib/log";
 import {
   type Notification,
@@ -313,7 +314,7 @@ type QueueRefusal = "no_shop" | "not_queueable" | "queue_seal_unavailable";
  * driver's bound parameters.
  */
 function thrownErrorDetail(error: unknown): string {
-  return error instanceof Error ? error.name : "unknown_error";
+  return errorClassToken(error);
 }
 
 async function queueRetry(
@@ -1234,8 +1235,10 @@ export async function retryBookingConfirmation(
   shopId: string,
   bookingId: string,
   provider?: NotificationProvider,
+  /** The live waiver link to carry as the confirmation's first step (`resendConfirmationWithWaiver`). */
+  waiver?: { url: string; expiresAt: Date },
 ) {
-  return sendStoredBookingConfirmation(db, shopId, bookingId, { isRetry: true, provider });
+  return sendStoredBookingConfirmation(db, shopId, bookingId, { isRetry: true, provider, waiver });
 }
 
 /**
@@ -1262,7 +1265,12 @@ async function sendStoredBookingConfirmation(
   db: AppDb,
   shopId: string,
   bookingId: string,
-  options: { isRetry: boolean; provider?: NotificationProvider; onlyWithMaterials?: boolean },
+  options: {
+    isRetry: boolean;
+    provider?: NotificationProvider;
+    onlyWithMaterials?: boolean;
+    waiver?: { url: string; expiresAt: Date };
+  },
 ) {
   const [row] = await db
     .select({
@@ -1324,6 +1332,9 @@ async function sendStoredBookingConfirmation(
         ? new URL(readinessLinkPath(readinessCapability.token), `${origin}/`).toString()
         : undefined,
       ...(learningMaterials.length > 0 ? { learningMaterials } : {}),
+      ...(options.waiver
+        ? { waiverUrl: options.waiver.url, waiverExpiresAt: options.waiver.expiresAt }
+        : {}),
       // The same where, calendar, money and window the booking-time send
       // carried (ux review 2026-10-11, items 4 and 5). Online when a card
       // checkout took this seat's money; otherwise it is owed at the shop.
@@ -1462,8 +1473,10 @@ export async function applyProviderEmailEvent(
       ),
     )
     .returning({ id: notificationDeliveries.id });
-  if (updated || updatedChannel) return "applied";
-
+  // The waiver record's own latest-attempt columns follow the same message id
+  // (issue #2473): a confirmation that carried the waiver link shares its id with
+  // the record, so a bounce must reach `getDiverWaiverRequestStatus` as well as
+  // the per-channel row and the notification.
   const [updatedIndependent] = await db
     .update(waiverRecords)
     .set({
@@ -1488,7 +1501,7 @@ export async function applyProviderEmailEvent(
       ),
     )
     .returning({ id: waiverRecords.id });
-  if (updatedIndependent) return "applied";
+  if (updated || updatedChannel || updatedIndependent) return "applied";
 
   // The condition filtered zero rows either because no delivery row carries
   // this provider message id, or because one exists but already holds a

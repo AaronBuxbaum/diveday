@@ -53,8 +53,6 @@ const WAY_UP_MARKERS = ["eyebrowHref", "EyebrowBackLink", "TripPageHeader", "Set
 const WAY_UP_EXEMPT: Record<string, string> = {
   "schedule/board":
     "A first-class destination wearing two URL segments: `/schedule` has no page, so the board is a depth-1 surface and its eyebrow is its own name, per principle 10's first bullet.",
-  "reports/safety":
-    "A tab of the Money section beside Orders, Discounts and Reports, wearing two URL segments: its header is the section's own (`Money` and its tab strip), so it is a depth-1 surface like the other three tabs, per principle 10's first bullet.",
   "print/pass/[bookingId]":
     "A printed sheet, not a screen. `SheetDocument` carries the way back to the counter as its own `print:hidden` link, because paper has no eyebrow.",
   "print/counter-card":

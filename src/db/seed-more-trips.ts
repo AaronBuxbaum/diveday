@@ -570,7 +570,9 @@ export async function seedMoreTrips(
   // Same deliberate variety as the demo shop above (see the long note there):
   // the first charter's crew carry **no** per-trip role, which is the state
   // every row written before the column existed is in, and the one no seeded
-  // row exercised at all.
+  // row exercised at all. Never the completed dawn boat: its stage taps are
+  // recorded by its captain, and a boat with no captain role read "Home · a
+  // deckhand" (issue #2503).
   type ScenarioCrewRow = { tripId: string; personId: string; tripRole: TripAssignmentRole | null };
   // The second supervisor in the water, as on the charters in `seed-trips.ts`:
   // eight divers to one divemaster is under the shop's default 6:1 target, and
@@ -593,7 +595,7 @@ export async function seedMoreTrips(
             : []),
         ];
       }
-      const unspecified = scenarioCharterIndex++ === 0;
+      const unspecified = !def.completedDemo && scenarioCharterIndex++ === 0;
       return [
         ...(captainId
           ? [

@@ -322,6 +322,7 @@ export async function buildArrivalDesk({
             {welcomeDockLine(t, {
               personName: row.personName,
               certification: cards.get(row.personId) ?? null,
+              hello: welcomeInputs.get(row.bookingId)?.hello ?? null,
             })}
           </p>
         ) : null}

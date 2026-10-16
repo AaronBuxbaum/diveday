@@ -19,6 +19,8 @@ import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import type { ElearningQuery } from "@/lib/elearning-check";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { isDiver } from "@/lib/participant-types";
+import type { ManualPaymentMethodCode, MarkRetry } from "@/lib/payment-marks";
+import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { waiverState } from "@/lib/waivers";
 import type { ElearningCheckResult } from "../elearning-actions";
@@ -104,10 +106,6 @@ export type RosterTrip = {
    * wears the "Materials not done" capsule. After the last day it is history.
    */
   courseMaterialsOpen?: boolean;
-  /** The Trip surface already leads with its masthead capacity read. */
-  compact?: boolean;
-  /** Keep the old standalone Guests heading for the compatibility route. */
-  showSummaryHeading?: boolean;
 };
 
 export type RosterPrivateNote = Awaited<ReturnType<typeof listBookingNotes>>[number] & {
@@ -157,6 +155,10 @@ export type RosterRows = {
    * with its panel open on the way back.
    */
   keepOpenBookingId?: string;
+  /** The Paid mark that just bounced (issue #2607): reopens that seat's sheet holding what was typed. */
+  paymentMarkRetry?: { bookingId: string } & MarkRetry;
+  /** A party payment waiting on its confirm (issue #2605). */
+  partyPreview?: PartyPreview;
   /**
    * The seat whose paper release was just refused for a co-signer sharing the
    * diver's name (issue #1573). That one row's form offers the staffer's
@@ -173,11 +175,30 @@ export type RosterRows = {
 };
 
 /** The server actions a row posts to. */
+/**
+ * The server's own split of a party payment, shown before it is taken
+ * (issue #2605). `amountCents` and `method` ride the confirm form; the
+ * shares are for reading, and the confirm works them out again.
+ */
+export type PartyPreview = {
+  leadBookingId: string;
+  amountCents: number;
+  method: ManualPaymentMethodCode;
+  shares: { bookingId: string; personName: string; amountCents: number; settles: boolean }[];
+  unspentCents: number;
+  /** The party's total owed when the split was read; the confirm form returns it so a changed party is not paid blind. */
+  owedCents: number;
+};
+
 export type RosterActions = {
   /** A reducer, not a plain form action: a refusal hands the typed values
    * back to the control rather than redirecting (`PaperWaiverAction`). */
   markRosterWaiverInPersonAction: PaperWaiverAction;
   markPaymentAction: (formData: FormData) => void;
+  /** "Mark the party paid", step one: the server works the split out and sends the page back to show it. */
+  previewPartyPaymentAction: (formData: FormData) => void;
+  /** Step two: take the payment (issue #2605). */
+  markPartyPaidAction: (formData: FormData) => void;
   removeBookingAction: (formData: FormData) => void;
   /**
    * "Coming as": change what this seat is for (ADR
@@ -283,6 +304,19 @@ export type RosterRecord = {
    * later cancelled, never reads "No roll call taken".
    */
   rollCallTaken: boolean;
+  /**
+   * Seats the crew said did not come back aboard at an after-dive checkpoint
+   * and nobody has counted since (`listUnaccountedForByTrip`). They sailed,
+   * and a record that filed them under "Sailed" beside a diver still in the
+   * water would be the lie this group exists to refuse (issue #2404).
+   */
+  unaccounted: ReadonlySet<string>;
+  /**
+   * Seats counted aboard while blocked, off the snapshot the count kept
+   * (`listCountedAboardBlockedByTrip`, issue #2414). A fact about the past in
+   * danger text, never a control: nothing here asks for action.
+   */
+  countedAboardBlocked: ReadonlyMap<string, CountedAboardBlocked>;
 };
 
 /** What the page slots into the ledger beneath the seats. */
@@ -478,7 +512,7 @@ export function groupRoster({
   record?: RosterRecord;
 }) {
   const { roster, readinessByBooking, waiverByBooking } = rows;
-  if (record) return recordGroups(roster, record);
+  if (record) return recordGroups(t, roster, record);
   const WAIVER_CONTROLS = controls;
   // A depth advisory whose sentence renders identically for much of the boat
   // is one fact about the dive plan, not N facts about N divers (principle 9):
@@ -632,6 +666,8 @@ export function groupRoster({
     didNotSail: [] as RosterEntry[],
     uncounted: [] as RosterEntry[],
     unrecorded: [] as RosterEntry[],
+    unaccounted: [] as RosterEntry[],
+    sailedMeta: undefined as string | undefined,
   };
 }
 
@@ -648,17 +684,26 @@ export function groupRoster({
  *   departure whose roll call was taken. Silence is not "didn't sail".
  * - **No roll call taken**: the same silence on a departure with no dock roll
  *   call at all, under a band that says so rather than a guess.
+ * - **Not back aboard**: said missing at an after-dive checkpoint and not
+ *   counted since. Ahead of every other group, and the departure stays open
+ *   while one is here (`departureStage`, issue #2404).
  *
  * Nothing is still to clear, nothing is blocked, and no shared advisory is
  * said: the dive is over (dive-domain rule: a record never asks for action).
  */
-function recordGroups(roster: RosterEntry[], record: RosterRecord) {
+function recordGroups(t: StaffTranslator, roster: RosterEntry[], record: RosterRecord) {
   const sailed: RosterEntry[] = [];
   const didNotSail: RosterEntry[] = [];
   const uncounted: RosterEntry[] = [];
   const unrecorded: RosterEntry[] = [];
+  const unaccounted: RosterEntry[] = [];
   for (const entry of roster) {
     const id = entry.booking.id;
+    // First: the one group that is still a question, whatever else is on file.
+    if (record.unaccounted.has(id)) {
+      unaccounted.push(entry);
+      continue;
+    }
     const dockResult = record.dock.get(id) ?? null;
     const afterDiveResultStands = record.afterDive.has(id);
     const noShow = entry.booking.status === "no_show";
@@ -684,7 +729,20 @@ function recordGroups(roster: RosterEntry[], record: RosterRecord) {
     didNotSail,
     uncounted,
     unrecorded,
+    unaccounted,
+    // The group's fact, said once (principle 9): how many of those who sailed
+    // were counted aboard while blocked. Nothing at all when none were.
+    sailedMeta: countedBlockedMeta(t, sailed, record),
   };
+}
+
+function countedBlockedMeta(
+  t: StaffTranslator,
+  sailed: readonly RosterEntry[],
+  record: RosterRecord,
+): string | undefined {
+  const count = sailed.filter(({ booking }) => record.countedAboardBlocked.has(booking.id)).length;
+  return count === 0 ? undefined : t("trips.roster.sailedBlockedMeta", { count });
 }
 
 export type RosterGroups = ReturnType<typeof groupRoster>;

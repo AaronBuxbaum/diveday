@@ -243,6 +243,7 @@
     "cartServiceFlagged": "{count, plural, one {# unidad necesita mantenimiento} other {# unidades necesitan mantenimiento}}",
     "handOver": "Entregar",
     "handingOver": "Entregando…",
+    "allAssigned": "{count, plural, one {# asignada} other {Todas las # asignadas}}",
     "outLabel": "fuera",
     "kindWithSize": "{kindLabel} · {size}",
     "noneFree": "No hay {kindLabel} libre para estas fechas.",

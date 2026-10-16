@@ -363,6 +363,7 @@ describe("unreviewNitroxCertification", () => {
       await unreviewNitroxCertification(ctx.db, {
         shopId: ctx.shopId,
         certificationId: cert.id,
+        reviewedAt: (await card(ctx.db, cert.id)).reviewedAt ?? new Date(0),
       }),
     ).toEqual({ ok: true });
 
@@ -408,6 +409,7 @@ describe("unreviewNitroxCertification", () => {
       await unreviewNitroxCertification(ctx.db, {
         shopId: ctx.shopId,
         certificationId: imported.id,
+        reviewedAt: (await card(ctx.db, imported.id)).reviewedAt ?? new Date(0),
       }),
     ).toEqual({ ok: true });
 
@@ -423,6 +425,7 @@ describe("unreviewNitroxCertification", () => {
       await unreviewNitroxCertification(ctx.db, {
         shopId: crypto.randomUUID(),
         certificationId: cert.id,
+        reviewedAt: (await card(ctx.db, cert.id)).reviewedAt ?? new Date(0),
       }),
     ).toEqual({ ok: false, reason: "not_found" });
 
@@ -443,6 +446,7 @@ describe("unreviewNitroxCertification", () => {
       await unreviewNitroxCertification(ctx.db, {
         shopId: ctx.shopId,
         certificationId: sighted.id,
+        reviewedAt: (await card(ctx.db, sighted.id)).reviewedAt ?? new Date(0),
       }),
     ).toEqual({ ok: false, reason: "sighted_card" });
     expect((await card(ctx.db, sighted.id)).reviewedAt).not.toBeNull();
@@ -458,6 +462,7 @@ describe("unreviewNitroxCertification", () => {
       await unreviewNitroxCertification(ctx.db, {
         shopId: ctx.shopId,
         certificationId: unreviewed.id,
+        reviewedAt: (await card(ctx.db, unreviewed.id)).reviewedAt ?? new Date(0),
       }),
     ).toEqual({ ok: false, reason: "not_reviewed" });
   });

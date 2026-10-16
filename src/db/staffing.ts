@@ -448,24 +448,30 @@ export async function crewShiftCoverage(
   // shop schedule shifts" is a fact about the shop, and a week nobody entered
   // shifts for at a shop that does schedule them is exactly when the warning
   // is earned.
-  const usesShifts = await db
+  // The probe and the window read need nothing from one another, so they go
+  // out together: one round trip, not two (#2487). With no one rostered there
+  // is nothing to cover, so only the probe runs.
+  const probe = db
     .select({ personId: staffShifts.personId })
     .from(staffShifts)
     .where(eq(staffShifts.shopId, shopId))
     .limit(1);
+  const covering =
+    personIds.length === 0
+      ? Promise.resolve([] as Array<{ personId: string }>)
+      : db
+          .select({ personId: staffShifts.personId })
+          .from(staffShifts)
+          .where(
+            and(
+              eq(staffShifts.shopId, shopId),
+              inArray(staffShifts.personId, [...personIds]),
+              lt(staffShifts.startsAt, trip.endsAt),
+              gt(staffShifts.endsAt, trip.startsAt),
+            ),
+          );
+  const [usesShifts, rows] = await Promise.all([probe, covering]);
   if (usesShifts.length === 0) return null;
-  if (personIds.length === 0) return new Set();
-  const rows = await db
-    .select({ personId: staffShifts.personId })
-    .from(staffShifts)
-    .where(
-      and(
-        eq(staffShifts.shopId, shopId),
-        inArray(staffShifts.personId, [...personIds]),
-        lt(staffShifts.startsAt, trip.endsAt),
-        gt(staffShifts.endsAt, trip.startsAt),
-      ),
-    );
   return new Set(rows.map((row) => row.personId));
 }
 
