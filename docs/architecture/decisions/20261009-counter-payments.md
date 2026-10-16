@@ -111,3 +111,18 @@ Fourth UX review, items 18 and 19. Two gaps in "money the shop took":
   settled charge split by what each seat was asked, merged with orders by a `unionAll` in
   `pagedOrdersByDay` and filtered alike. Nothing is written: the seats stay `booking_checkouts`,
   and refunds stay on the checkout. The CSV gains "Paid on" and "Method".
+
+## Amendment 2026-10-16: room charge (fifth-loop ideas, item 57)
+
+A resort dive center bills a guest's dives to their room and settles with the hotel's front desk
+monthly. `order_collection` gains `room_charge`, and an order charged to a room names it:
+`orders.room_number` (required with `room_charge`, and only with it:
+`orders_room_charge_names_room`) and `orders.room_hotel` (optional, for a shop serving more than
+one hotel; `orders_room_hotel_only_on_room_charge`). It is a third way to settle an **open
+invoice** from the order page (`recordPaymentOnOpenOrder`), behind the same money step-up, the
+same claim, and the same out-of-band mark to Stripe, so the diver is not asked twice; the claim
+writes the room with the method and a released claim clears both. Counter rentals and bench
+tickets stay cash and card machine. The activity log says `order_paid_room_charge`; the Orders
+index tells an owner or manager the month's room charges per hotel ("Room charges in October: Reef
+Hotel $1,840 on 14 orders", `src/db/room-charges.ts`), net of refunds; the CSV method code is
+`room_charge`. This does not revive hotel rate cards (#1237).

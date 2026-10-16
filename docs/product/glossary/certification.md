@@ -175,6 +175,12 @@
   all. Neither looks like a hand-verified card, so the two are never read as the same thing at a
   busy desk. Only `src/lib/readiness.ts` decides who boards; the tones carry no gate
   (`src/i18n/card-labels.test.ts` keeps this entry and the code in step).
+- **Processed with the agency** — the instructor's tick, after Certify, that the shop has submitted
+  the student to the agency (PADI, SSI and the rest), dated and naming who ticked it
+  (`certifications.processed_with_agency_at`, `processed_by_person_id`). It records the shop's own
+  act and issues nothing: the agency sends its own card. Only a card this shop issued can carry it
+  (`certifications_processed_only_when_issued`), the same tap takes it back, and the course page
+  lists the cards issued in the last 90 days still to process. Gates nothing.
 - **Shop-issued certification** — a level card **this shop's own instructor certified**, from a per-
   student tap on a course session's own roster (issue #717), never automatic. It lands `verified`
   immediately (`issued_by_shop_at` set, alongside `issued_from_trip_id` naming the session and

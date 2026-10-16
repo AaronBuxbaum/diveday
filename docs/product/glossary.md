@@ -51,6 +51,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - PADI Scuba Diver
 - Page-shape report
 - Prior visit
+- Processed with the agency
 - RAID
 - Readiness
 - Refresher / ReActivate
@@ -118,6 +119,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Pass-through fee
 - Payments restricted
 - Payout
+- Room charge
 - Sailed / Still to sail
 - Subscription (DiveDay billing)
 
