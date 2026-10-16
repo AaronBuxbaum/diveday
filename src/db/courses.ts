@@ -163,6 +163,7 @@ export async function listCatalogInProgressionOrder(db: DbExecutor, shopId: stri
       isIntroCourse: courses.isIntroCourse,
       minimumCertificationLevel: courses.minimumCertificationLevel,
       certifiesLevel: courses.certifiesLevel,
+      minimumAge: courses.minimumAge,
     })
     .from(courses)
     .where(eq(courses.shopId, shopId))

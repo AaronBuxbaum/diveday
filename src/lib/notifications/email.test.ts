@@ -228,6 +228,17 @@ describe("tripInvitationEmail", () => {
     // name rides the subject and the From, never raw markup in the body.
     expect(email.html).toContain("We’ve planned");
     expect(email.html).not.toContain("Blue Mantis & Co.");
+    expect(email.text).not.toContain("Before you book");
+  });
+
+  it("carries a course's prerequisite note, escaped, so the invite never implies the diver qualifies", () => {
+    const email = tripInvitationEmail({
+      ...base,
+      bookingUrl: "https://diveday.example/s/blue-mantis/trips/trip-1",
+      prerequisiteNote: "EFR within 24 months <required>",
+    });
+    expect(email.text).toContain("Before you book: EFR within 24 months <required>");
+    expect(email.html).toContain("Before you book: EFR within 24 months &lt;required&gt;");
   });
 });
 

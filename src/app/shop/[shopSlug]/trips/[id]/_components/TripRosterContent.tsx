@@ -68,6 +68,7 @@ export type TripRosterActions = {
   deleteInternalNoteAction: FormAction;
   saveRosterEmergencyContactAction: FormAction;
   updateBookingPickupAction: (bookingId: string, formData: FormData) => void | Promise<void>;
+  updateBookingDietaryNoteAction: (bookingId: string, formData: FormData) => void | Promise<void>;
   recordTripInvitationAction: (invitationId: string) => Promise<"sent" | "fallback">;
   undoRemoveBookingAction: FormAction;
   restoreInternalNoteAction: FormAction;
@@ -313,6 +314,10 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           // here rather than on the page: only a seat that owes a form draws it.
           recordPaperCourseFormAction: recordPaperCourseFormAction.bind(null, shopSlug, trip.id),
           updatePickupAction: actions.updateBookingPickupAction,
+          // Only a departure that serves lunch aboard asks for a lunch note.
+          updateDietaryNoteAction: trip.lunchAboard
+            ? actions.updateBookingDietaryNoteAction
+            : undefined,
         }}
         slots={{
           arrival,

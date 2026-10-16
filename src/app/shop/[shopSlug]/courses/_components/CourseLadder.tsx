@@ -14,6 +14,7 @@ const LADDER_NOTICES: Record<
   "invite-sent": { key: "courses.ladder.notice.invite-sent", tone: "success" },
   "invite-opted-out": { key: "courses.ladder.notice.invite-opted-out", tone: "warning" },
   "invite-cooldown": { key: "courses.ladder.notice.invite-cooldown", tone: "warning" },
+  "invite-unavailable": { key: "courses.ladder.notice.invite-unavailable", tone: "warning" },
   "invite-failed": { key: "courses.ladder.notice.invite-failed", tone: "danger" },
 };
 
@@ -34,7 +35,9 @@ export function LadderNotice({ notice, t }: { notice?: string; t: StaffTranslato
  * twelve months and how many went on, then "See who" opening the names of
  * those who did not, each with an "Invite" to the next course's soonest
  * session (H-130: one at a time, the 30-day cooldown). For the desk to call or
- * invite one by one; it sends nothing in bulk.
+ * invite one by one; it sends nothing in bulk. Someone whose release waits on
+ * a physician's referral says so and has no Invite: the desk calls instead
+ * (dive-domain review N4).
  */
 export function CourseLadder({
   steps,
@@ -97,8 +100,15 @@ export function CourseLadder({
                       key={person.personId}
                       className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2"
                     >
-                      <span className="font-medium">{person.fullName}</span>
-                      {step.nextSession && person.invitable ? (
+                      <span>
+                        <span className="font-medium">{person.fullName}</span>
+                        {person.medicalReferral ? (
+                          <span className="ml-2 text-warning-strong">
+                            {t("courses.ladder.referral")}
+                          </span>
+                        ) : null}
+                      </span>
+                      {step.nextSession && person.invitable && !person.medicalReferral ? (
                         <form action={invite}>
                           <input type="hidden" name="personId" value={person.personId} />
                           <input type="hidden" name="tripId" value={step.nextSession.tripId} />

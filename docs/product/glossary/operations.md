@@ -214,6 +214,17 @@
   staying (`bookings.hotel_pickup_location`, refused by the server otherwise). Staff then set the
   seat's pickup time (`bookings.pickup_time`), and the night-before brief gives that
   time and place instead of the dock arrival time. A **seat move** clears the pickup time.
+- **Lunch aboard** — `trips.lunch_aboard`, set on a departure's Details ("Lunch served aboard").
+  Only on such a departure does the diver's Day-of form ask for a lunch preference and the desk's
+  roster row offer a lunch note, and Prep, the paper day, the manifest row and the offline copy say
+  "Lunch for 14" with each **dietary note** by name and "N of M left a lunch note". Gates nothing.
+- **Dietary note** — `bookings.dietary_note`: a seat's meal preference for that day's galley
+  (vegetarian, halal, no pork), 160 characters, from the diver's Day-of form or the desk. **A galley
+  note, not an allergy record**: a food allergy is medical, belongs on the person and on every
+  departure with whether they carry an auto-injector, and is not modeled yet (dive-domain review
+  B1). So the form never invites one and sends an allergy to the shop, and an empty list is never
+  read as "nobody has a restriction". It is in the diver's own export, cleared by erasure, and
+  nulled 30 days after the boat sailed (`DIETARY_NOTE_RETENTION_DAYS`).
 - **Working shift** — a dated availability window for a staff member. It is not a crew assignment:
   the shift says who is available, while the trip assignment says who is actually on that
   manifest. Overlapping shifts for one person are rejected.
@@ -421,6 +432,22 @@
   is validated against that specific trip before being handed to Stripe Checkout, so a code issued
   for one trip cannot discount a different one. See
   [20260727-last-minute-fill-promos](../../architecture/decisions/20260727-last-minute-fill-promos.md).
+- **Thin boat** — a departure in the next 14 days (`THIN_BOATS_HORIZON_DAYS`) that could use
+  divers: short of the minimum it must reach to run while that call is still ahead, or, with no
+  minimum, less than half of its sellable seats sold (`thinBoatNeed`, `src/lib/thin-boats.ts`).
+  Listed on a quiet Today. A boat short of its minimum says it cancels itself and has a door to the
+  minimum; the deal door shows only inside three days of sailing; a fun dive offers its **invite
+  suggestions** and a course session points at the **course ladder** instead.
+- **Invite suggestion** — a past diver a departure's Invite section names ("Dived the Wall with you
+  before"), for a one-to-one invite (H-130). Only a diver's seat on a departure that was not an
+  intro session counts as having dived the site, everyone listed passes the departure's own
+  admission gate (`tripAdmissionFor`), and a course session suggests nobody. Leaves out anyone
+  aboard, already invited to it, inside the **30-day invite cooldown**, opted out, erased or merged.
+- **30-day invite cooldown** — no second one-to-one invite to the same person inside 30 days
+  (`INVITE_COOLDOWN_DAYS`, H-130), counted from when the invite was recorded. Its scope is the
+  invite suggestions and the course ladder, which leave such people out and re-check under a lock
+  on (shop, person) at the send. The trip page's manual "Invite a person" does not apply it; whether
+  it should is a filed decision.
 - **Dock call time** — how many minutes before departure a shop asks divers to arrive, for gear
   setup, cert checks, and the briefing (`shops.dock_call_minutes`, default 30). Configurable per
   shop in settings because real muster times vary; it drives the arrival copy on booking

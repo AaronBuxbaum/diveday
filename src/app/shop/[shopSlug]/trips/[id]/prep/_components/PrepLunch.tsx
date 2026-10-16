@@ -3,9 +3,11 @@ import { scopedId } from "@/lib/element-id";
 import type { PrepView } from "./prep-view";
 
 /**
- * **"Lunch for 14"**, and what each person can't eat (fifth-loop ideas, item
+ * **"Lunch for 14"**, and each person's lunch note (fifth-loop ideas, item
  * 56): only on a departure that serves lunch aboard. Printed with the paper
- * day, which composes this list.
+ * day, which composes this list. "2 of 12 left a lunch note" stands under it
+ * always, so an empty list never reads as nobody having a restriction
+ * (dive-domain review B1).
  */
 export function PrepLunch({ view }: { view: PrepView }) {
   const { prep, t, idPrefix } = view;
@@ -29,9 +31,10 @@ export function PrepLunch({ view }: { view: PrepView }) {
             </li>
           ))}
         </ul>
-      ) : (
-        <p className="mt-1 text-sm text-muted">{t("tripPrep.lunch.noNotes")}</p>
-      )}
+      ) : null}
+      <p className="mt-2 text-sm text-muted tabular-nums">
+        {t("tripPrep.lunch.answered", { answered: lunch.answered, asked: lunch.asked })}
+      </p>
     </section>
   );
 }

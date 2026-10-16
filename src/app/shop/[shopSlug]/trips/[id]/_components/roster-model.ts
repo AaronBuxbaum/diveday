@@ -256,6 +256,8 @@ export type RosterActions = {
   /** Files the other cards a match's page listed, ticked under the diver's row (layer 3). */
   agencyListedAction?: AgencyListedHostAction;
   updatePickupAction?: (bookingId: string, formData: FormData) => void;
+  /** The desk's lunch note for a seat (item 56, review F8); only on a lunch-aboard departure. */
+  updateDietaryNoteAction?: (bookingId: string, formData: FormData) => void;
   /**
    * "Move to another departure" (ADR 20261013-staff-move-a-seat): the action
    * and the departures it may move to. Absent once the departure has left, or

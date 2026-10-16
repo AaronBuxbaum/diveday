@@ -993,9 +993,9 @@
     "hotelPickupLabel": "¿Quieres que te recojamos?",
     "hotelPickupFieldLabel": "Dónde te alojas",
     "hotelPickupPlaceholder": "Nombre del hotel, habitación o punto de referencia",
-    "dietaryLabel": "¿Hay algo que no puedas comer?",
-    "dietaryHint": "El almuerzo se sirve a bordo, y la tripulación que lo prepara ve tu respuesta. Si tienes una alergia grave, díselo también al centro directamente.",
-    "dietaryPlaceholder": "Vegetariano, sin mariscos…",
+    "dietaryLabel": "¿Alguna preferencia para el almuerzo a bordo?",
+    "dietaryHint": "Solo para tu almuerzo. Una alergia alimentaria es un tema médico: avísale al centro antes de bucear.",
+    "dietaryPlaceholder": "Vegetariano, halal, sin cerdo…",
     "hotelPickupDetail": "{location}",
     "hotelPickupDetailWithTime": "{location} · Recogida a las {time}",
     "helpHeading": "Necesito un poco de ayuda",
@@ -5309,7 +5309,8 @@
       "subject": "Una invitación de {shopName}: {tripTitle}",
       "body": "Programamos {tripTitle} y queremos invitarte.",
       "note": "Esto es una invitación, no una reserva, así que todavía no hay ninguna plaza apartada.",
-      "link": "Ver la salida y reservar tu plaza"
+      "link": "Ver la salida y reservar tu plaza",
+      "prerequisite": "Antes de reservar: {note}"
     },
     "lastMinuteDeal": {
       "subject": "{discount} de descuento en {tripTitle}: oferta de última hora",

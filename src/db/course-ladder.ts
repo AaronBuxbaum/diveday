@@ -12,13 +12,15 @@ import {
   notInArray,
 } from "drizzle-orm";
 import { sellableSeats } from "@/lib/boat-safety";
-import { courseLadderSince, nextCourseFor } from "@/lib/course-ladder";
+import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
+import type { CertificationLevel } from "@/lib/certification-levels";
+import { courseLadderSince, ladderExclusion, nextCourseFor } from "@/lib/course-ladder";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import type { DbExecutor } from "./client";
 import { listCatalogInProgressionOrder } from "./courses";
 import { recentlyInvitedPeople } from "./invite-suggestions";
 import { queryAll } from "./query-helpers";
-import { bookings, certifications, people, trips } from "./schema";
+import { bookings, certifications, courses, people, trips, waiverRecords } from "./schema";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 import { liveBookingJoin, tripBoatCertifiedPassengers } from "./trips-queries";
 
@@ -28,6 +30,11 @@ export type LadderPerson = {
   fullName: string;
   /** Has an address, has not opted out, and was not invited inside the cooldown. */
   invitable: boolean;
+  /**
+   * Their release is parked on a physician's referral, uncleared (dive-domain
+   * review N4): the desk calls rather than emails a course invite.
+   */
+  medicalReferral: boolean;
 };
 
 export type LadderStep = {
@@ -57,11 +64,17 @@ export type LadderStep = {
  * certification's is every live card the shop issued from one of its
  * sessions. "Went on" is any seat held on any session of the next course.
  * Erased and merged people are left out; rehearsals count for nothing.
+ *
+ * The names never include anyone the next course is wrong for
+ * (`ladderExclusion`, dive-domain review F3): a card at or above the level it
+ * certifies, from any agency and in any state, or younger than its minimum
+ * age on the next session's day (today's, with no session).
  */
 export async function getCourseLadder(
   db: DbExecutor,
   shopId: string,
   now: Date,
+  timeZone: string,
 ): Promise<LadderStep[]> {
   const catalog = await listCatalogInProgressionOrder(db, shopId);
   const pairs = catalog.flatMap((course) => {
@@ -142,7 +155,7 @@ export async function getCourseLadder(
       ),
     ),
   ];
-  const [reachable, recent, sessions] = await queryAll(db, [
+  const [reachable, recent, sessions, facts, referred] = await queryAll(db, [
     async () =>
       stalledIds.length
         ? db
@@ -167,25 +180,134 @@ export async function getCourseLadder(
         live.map((step) => step.next.id),
         now,
       ),
+    () => ladderFacts(db, shopId, stalledIds),
+    () => physicianReferrals(db, shopId, stalledIds),
   ]);
   const canReach = new Set(reachable.map((row) => row.id));
+  const today = calendarDateInTimezone(now, timeZone);
 
-  return live.map(({ course, next, cohort, wentOn }) => ({
-    course: { id: course.id, title: course.title },
-    next: { id: next.id, title: next.title },
-    kind: course.isIntroCourse ? ("taster" as const) : ("certified" as const),
-    count: cohort.length,
-    wentOn: wentOn.size,
-    stalled: cohort
-      .filter((row) => !wentOn.has(row.personId))
-      .sort((a, b) => a.fullName.localeCompare(b.fullName))
-      .map((row) => ({
-        personId: row.personId,
-        fullName: row.fullName,
-        invitable: canReach.has(row.personId) && !recent.has(row.personId),
-      })),
-    nextSession: sessions.get(next.id) ?? null,
-  }));
+  return live.map(({ course, next, cohort, wentOn }) => {
+    const nextSession = sessions.get(next.id) ?? null;
+    const onDate = nextSession ? calendarDateInTimezone(nextSession.startsAt, timeZone) : today;
+    return {
+      course: { id: course.id, title: course.title },
+      next: { id: next.id, title: next.title },
+      kind: course.isIntroCourse ? ("taster" as const) : ("certified" as const),
+      count: cohort.length,
+      wentOn: wentOn.size,
+      stalled: cohort
+        .filter((row) => !wentOn.has(row.personId))
+        .filter(
+          (row) => ladderExclusion(next, factsFor(facts, row.personId), onDate) === null,
+        )
+        .sort((a, b) => a.fullName.localeCompare(b.fullName))
+        .map((row) => ({
+          personId: row.personId,
+          fullName: row.fullName,
+          invitable: canReach.has(row.personId) && !recent.has(row.personId),
+          medicalReferral: referred.has(row.personId),
+        })),
+      nextSession,
+    };
+  });
+}
+
+type LadderFacts = Map<
+  string,
+  { heldLevels: CertificationLevel[]; dateOfBirth: CalendarDate | null }
+>;
+
+function factsFor(facts: LadderFacts, personId: string) {
+  return facts.get(personId) ?? { heldLevels: [], dateOfBirth: null };
+}
+
+/** Every live level card (any agency, any state) and the date of birth of each person. */
+async function ladderFacts(
+  db: DbExecutor,
+  shopId: string,
+  personIds: string[],
+): Promise<LadderFacts> {
+  const facts: LadderFacts = new Map();
+  if (personIds.length === 0) return facts;
+  const [cards, births] = await queryAll(db, [
+    () =>
+      db
+        .select({ personId: certifications.personId, level: certifications.level })
+        .from(certifications)
+        .where(
+          and(
+            eq(certifications.shopId, shopId),
+            inArray(certifications.personId, personIds),
+            isNull(certifications.deletedAt),
+          ),
+        ),
+    () =>
+      db
+        .select({ id: people.id, dateOfBirth: people.dateOfBirth })
+        .from(people)
+        .where(and(eq(people.shopId, shopId), inArray(people.id, personIds))),
+  ]);
+  for (const row of births) facts.set(row.id, { heldLevels: [], dateOfBirth: row.dateOfBirth });
+  for (const card of cards) {
+    const entry = facts.get(card.personId) ?? { heldLevels: [], dateOfBirth: null };
+    entry.heldLevels.push(card.level);
+    facts.set(card.personId, entry);
+  }
+  return facts;
+}
+
+/** People whose release is parked on a physician's referral that nobody has cleared. */
+async function physicianReferrals(
+  db: DbExecutor,
+  shopId: string,
+  personIds: string[],
+): Promise<Set<string>> {
+  if (personIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ personId: waiverRecords.personId })
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        inArray(waiverRecords.personId, personIds),
+        eq(waiverRecords.status, "medical_review"),
+        isNull(waiverRecords.medicalClearedAt),
+        isNull(waiverRecords.supersededAt),
+      ),
+    );
+  return new Set(rows.map((row) => row.personId));
+}
+
+/**
+ * The ladder's own refusal for one invite, re-run by the action for a page
+ * left open (dive-domain review F3, security review N3): the trip must be a
+ * live session of a course, and the person must not already hold that
+ * course's card or be under its minimum age on the session's day. `null`
+ * when they may be asked. The departure's own gate (public, scheduled, a
+ * seat, the course prerequisite) is `departureOpenToDiver`, under the
+ * cooldown lock.
+ */
+export async function ladderInviteRefusal(
+  db: DbExecutor,
+  input: { shopId: string; personId: string; tripId: string; timeZone: string },
+): Promise<"not_a_course_session" | "holds_next" | "under_age" | null> {
+  const [session] = await db
+    .select({
+      startsAt: trips.startsAt,
+      certifiesLevel: courses.certifiesLevel,
+      minimumAge: courses.minimumAge,
+    })
+    .from(trips)
+    .innerJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, input.shopId)))
+    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
+    .limit(1);
+  if (!session) return "not_a_course_session";
+  const facts = await ladderFacts(db, input.shopId, [input.personId]);
+  return ladderExclusion(
+    session,
+    factsFor(facts, input.personId),
+    calendarDateInTimezone(session.startsAt, input.timeZone),
+  );
 }
 
 /** Each course's soonest public, scheduled session that still has a seat. */

@@ -993,9 +993,9 @@
     "hotelPickupLabel": "Want a pickup?",
     "hotelPickupFieldLabel": "Where you’re staying",
     "hotelPickupPlaceholder": "Hotel name, room, or landmark",
-    "dietaryLabel": "Anything you can’t eat?",
-    "dietaryHint": "Lunch is served aboard, and the crew who make it see your answer. For a severe allergy, tell the shop directly too.",
-    "dietaryPlaceholder": "Vegetarian, no shellfish…",
+    "dietaryLabel": "Any preference for lunch aboard?",
+    "dietaryHint": "For your lunch only. A food allergy is medical: tell the shop before you dive.",
+    "dietaryPlaceholder": "Vegetarian, halal, no pork…",
     "hotelPickupDetail": "{location}",
     "hotelPickupDetailWithTime": "{location} · Pickup at {time}",
     "helpHeading": "I could use a hand",
@@ -5309,7 +5309,8 @@
       "subject": "An invitation from {shopName}: {tripTitle}",
       "body": "We’ve planned {tripTitle} and would like to invite you.",
       "note": "This is an invitation, not a booking, so no seat is held yet.",
-      "link": "See the trip and book your seat"
+      "link": "See the trip and book your seat",
+      "prerequisite": "Before you book: {note}"
     },
     "lastMinuteDeal": {
       "subject": "{discount} off {tripTitle}: last-minute deal",

@@ -156,6 +156,8 @@ type TripInvitationEmailInput = {
   bookingUrl: string;
   /** Present on the cold, staff-initiated invitation only (`direct_trip_invitation`). */
   unsubscribeUrl?: string;
+  /** A course session's prerequisite note, in the shop's words. */
+  prerequisiteNote?: string;
 };
 
 type LastMinuteDealEmailInput = {
@@ -1078,6 +1080,12 @@ export function tripInvitationEmail(input: TripInvitationEmailInput): Notificati
   });
   const note = t("notifications.tripInvitation.note");
   const link = t("notifications.tripInvitation.link");
+  const prerequisite = input.prerequisiteNote
+    ? t("notifications.tripInvitation.prerequisite", { note: input.prerequisiteNote })
+    : null;
+  const prerequisiteHtml = input.prerequisiteNote
+    ? `<p>${t("notifications.tripInvitation.prerequisite", { note: escapeHtml(input.prerequisiteNote) })}</p>`
+    : "";
   const greeting = t("notifications.common.greeting", { firstName });
   const greetingHtml = t("notifications.common.greeting", {
     firstName: escapeHtml(firstName),
@@ -1101,8 +1109,8 @@ export function tripInvitationEmail(input: TripInvitationEmailInput): Notificati
       shopName: input.shopName,
       tripTitle: input.tripTitle,
     }),
-    text: `${[greeting, body, `${date} · ${time}`, note, `${link}:`, input.bookingUrl].join("\n\n")}${unsubscribeText}`,
-    html: `<p>${greetingHtml}</p><p>${bodyHtml}</p><p><strong>${date}</strong><br>${time}</p><p>${note}</p>${emailButton(input.bookingUrl, link)}${unsubscribeHtml}`,
+    text: `${[greeting, body, `${date} · ${time}`, ...(prerequisite ? [prerequisite] : []), note, `${link}:`, input.bookingUrl].join("\n\n")}${unsubscribeText}`,
+    html: `<p>${greetingHtml}</p><p>${bodyHtml}</p><p><strong>${date}</strong><br>${time}</p>${prerequisiteHtml}<p>${note}</p>${emailButton(input.bookingUrl, link)}${unsubscribeHtml}`,
   };
 }
 

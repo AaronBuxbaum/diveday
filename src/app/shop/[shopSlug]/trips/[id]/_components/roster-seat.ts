@@ -91,6 +91,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     elearningCheckAction,
     recordPaperCourseFormAction,
     updatePickupAction,
+    updateDietaryNoteAction,
     moveSeat,
   } = actions;
   // A course student whose learning materials nobody has marked done (ADR
@@ -337,6 +338,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     elearningCheckAction,
     recordPaperCourseFormAction,
     updatePickupAction,
+    updateDietaryNoteAction,
     // Only a booked seat moves: checked in or absent is the day's own record.
     moveSeat: booking.status === "booked" ? moveSeat : undefined,
     materialsDone,

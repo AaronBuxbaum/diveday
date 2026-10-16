@@ -1,5 +1,9 @@
+import { checkMinimumAge } from "@/lib/age";
+import type { CalendarDate } from "@/lib/calendar-date";
+import type { CertificationLevel } from "@/lib/certification-levels";
 import { DAY_MS } from "@/lib/clock";
 import { canonicalAgency } from "@/lib/courses";
+import { certificationRank } from "@/lib/readiness";
 
 /**
  * **The course ladder: who finished here and never took the next step**
@@ -24,8 +28,9 @@ export type LadderCourse = {
   agency: string;
   isActive: boolean;
   isIntroCourse: boolean;
-  minimumCertificationLevel: string | null;
-  certifiesLevel: string | null;
+  minimumCertificationLevel: CertificationLevel | null;
+  certifiesLevel: CertificationLevel | null;
+  minimumAge: number | null;
 };
 
 /** The course that follows `course`, from `catalog` in progression order, or `null`. */
@@ -44,4 +49,33 @@ export function nextCourseFor<T extends LadderCourse>(course: T, catalog: readon
         candidate.minimumCertificationLevel === leadsFrom,
     ) ?? null
   );
+}
+
+/**
+ * Why a person is left off the ladder's list for `next`, or `null` when they
+ * may be asked (dive-domain review F3):
+ *
+ * - `holds_next`: a card at or above the level `next` certifies, from any
+ *   agency and in any state (verified, pending, imported, self-declared). A
+ *   vacation try-diver who certified at home, or a diver whose Advanced card
+ *   from elsewhere is on file, has already passed the course. Levels are one
+ *   ladder across agencies, so the comparison is by rank.
+ * - `under_age`: younger than `next.minimumAge` on `onDate` (the session's
+ *   day). No date of birth on file never refuses (H-08).
+ */
+export type LadderExclusion = "holds_next" | "under_age";
+
+export function ladderExclusion(
+  next: { certifiesLevel: CertificationLevel | null; minimumAge: number | null },
+  person: { heldLevels: readonly CertificationLevel[]; dateOfBirth: CalendarDate | null },
+  onDate: CalendarDate,
+): LadderExclusion | null {
+  if (next.certifiesLevel) {
+    const needed = certificationRank(next.certifiesLevel);
+    if (person.heldLevels.some((level) => certificationRank(level) >= needed)) return "holds_next";
+  }
+  if (checkMinimumAge(person.dateOfBirth, next.minimumAge, onDate).status === "under") {
+    return "under_age";
+  }
+  return null;
 }

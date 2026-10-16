@@ -445,6 +445,21 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
  */
 export const PRUNE_BATCH_LIMIT = 5_000;
 
+/**
+ * **A lunch note is cleared this many days after its boat sailed** (fifth-loop
+ * ideas, item 56; security review N5). Its one purpose is that day's galley,
+ * and a diver's own words about what they eat say something about their
+ * health or faith, so the column is nulled rather than kept with the booking.
+ * Not a row prune: the booking itself stays. The window leaves room for a
+ * dispute about the day and for the trip's own record to be read back.
+ */
+export const DIETARY_NOTE_RETENTION_DAYS = 30;
+
+/** The departure start before which a seat's lunch note is cleared. */
+export function dietaryNoteCutoff(now: Date): Date {
+  return new Date(now.getTime() - DIETARY_NOTE_RETENTION_DAYS * DAY_MS);
+}
+
 /** The instant before which rows of `table` are eligible for deletion. */
 export function retentionCutoff(table: RetainedTable, now: Date): Date {
   return new Date(now.getTime() - RETENTION_DAYS[table] * DAY_MS);

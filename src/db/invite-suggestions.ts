@@ -1,9 +1,33 @@
-import { and, desc, eq, gte, isNotNull, isNull, lt, max, ne, notInArray, or } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  gte,
+  isNotNull,
+  isNull,
+  lt,
+  max,
+  ne,
+  notInArray,
+  or,
+  sql,
+} from "drizzle-orm";
 import { INVITE_SUGGESTIONS_SHOWN, inviteCooldownStart } from "@/lib/invite-suggestions";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
-import type { DbExecutor } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
-import { bookings, diveSites, people, personRoles, tripInvitations, trips } from "./schema";
+import { tripAdmissionFor } from "./bookings";
+import { getTripRequirements, getTripSiteRequirement } from "./readiness";
+import {
+  bookings,
+  courses,
+  diveSites,
+  people,
+  personRoles,
+  tripInvitations,
+  trips,
+} from "./schema";
+import { departureOpenToDiver, insertDirectTripInvitation } from "./trip-invitations";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 
 /**
@@ -18,6 +42,16 @@ import { livePerson, liveTrip, notRehearsal } from "./trips-live";
  * invite inside the cooldown (`INVITE_COOLDOWN_DAYS`), anyone erased, deleted
  * or merged, anyone with no email, and anyone who turned off courtesy email.
  * Rehearsal departures count for nothing.
+ *
+ * "Dived" means a diver's seat (`participant_type = 'diver'`) on a departure
+ * that was not an intro session such as Discover Scuba: a snorkeler, a rider
+ * or a try-dive participant did not dive the site. And everyone listed passes
+ * the departure's own admission gate (`tripAdmissionFor`): a diver whose card
+ * is below the boat's level, or who lacks a specialty it demands, is left out
+ * rather than invited to a boat that would refuse them (dive-domain review F1).
+ * A course session lists nobody: its site's past divers are certified divers,
+ * the least likely to want the course (review F2; the course ladder is that
+ * list).
  */
 export type InviteSuggestion = { personId: string; fullName: string; lastDivedAt: Date };
 
@@ -27,6 +61,19 @@ export type InviteSuggestions = {
   /** Everyone who qualifies, `shown` included. */
   total: number;
 };
+
+/**
+ * An invite counts from the moment it is recorded, not only once it is sent:
+ * the locked check in {@link createInvitationUnderCooldown} must see the row a
+ * moment-earlier invite just wrote, before its mail has gone (security N2).
+ */
+function invitedSince(since: Date) {
+  return or(
+    gte(tripInvitations.createdAt, since),
+    gte(tripInvitations.invitedAt, since),
+    gte(tripInvitations.emailedAt, since),
+  );
+}
 
 /** People contacted with an invite (any departure) since the cooldown began. */
 export async function recentlyInvitedPeople(
@@ -42,7 +89,7 @@ export async function recentlyInvitedPeople(
       and(
         eq(tripInvitations.shopId, shopId),
         isNotNull(tripInvitations.personId),
-        or(gte(tripInvitations.invitedAt, since), gte(tripInvitations.emailedAt, since)),
+        invitedSince(since),
       ),
     );
   return new Set(rows.flatMap((row) => (row.personId ? [row.personId] : [])));
@@ -63,7 +110,7 @@ export async function invitedWithinCooldown(
       and(
         eq(tripInvitations.shopId, shopId),
         eq(tripInvitations.personId, personId),
-        or(gte(tripInvitations.invitedAt, since), gte(tripInvitations.emailedAt, since)),
+        invitedSince(since),
       ),
     )
     .limit(1);
@@ -88,12 +135,16 @@ export async function pastDiversOfSite(
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, input.shopId)))
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(personRoles, and(eq(personRoles.personId, people.id), eq(personRoles.role, "diver")))
     .where(
       and(
         eq(bookings.shopId, input.shopId),
         eq(trips.shopId, input.shopId),
+        // A diver's seat, on anything but an intro session (review F1).
+        eq(bookings.participantType, "diver"),
+        or(isNull(trips.courseId), eq(courses.isIntroCourse, false)),
         eq(trips.diveSiteId, input.diveSiteId),
         lt(trips.startsAt, sailedBefore),
         liveTrip(),
@@ -124,12 +175,13 @@ export async function listInviteSuggestions(
   input: { shopId: string; tripId: string; now: Date },
 ): Promise<InviteSuggestions | null> {
   const [trip] = await db
-    .select({ diveSiteId: trips.diveSiteId, siteName: diveSites.name })
+    .select({ diveSiteId: trips.diveSiteId, courseId: trips.courseId, siteName: diveSites.name })
     .from(trips)
     .innerJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
     .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
     .limit(1);
-  if (!trip?.diveSiteId) return null;
+  // A course session suggests nobody from its site (review F2).
+  if (!trip?.diveSiteId || trip.courseId) return null;
 
   const [aboard, invitedHere, recent] = await queryAll(db, [
     () =>
@@ -155,16 +207,103 @@ export async function listInviteSuggestions(
   const exclude = new Set<string>(recent);
   for (const row of [...aboard, ...invitedHere]) if (row.personId) exclude.add(row.personId);
 
-  const everyone = await pastDiversOfSite(db, {
+  const pastDivers = await pastDiversOfSite(db, {
     shopId: input.shopId,
     diveSiteId: trip.diveSiteId,
     now: input.now,
     exclude,
   });
+  const everyone = await admittedToTrip(db, input.shopId, input.tripId, pastDivers);
   if (everyone.length === 0) return null;
   return {
     siteName: trip.siteName,
     shown: everyone.slice(0, INVITE_SUGGESTIONS_SHOWN),
     total: everyone.length,
   };
+}
+
+/**
+ * The people of `candidates` the departure's admission gate would sell a seat
+ * to (`tripAdmissionFor`, the booking's own gate), in order. A departure that
+ * demands no card admits every diver, so it is read once and the per-person
+ * reads are skipped.
+ */
+export async function admittedToTrip<T extends { personId: string }>(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  candidates: readonly T[],
+): Promise<T[]> {
+  if (candidates.length === 0) return [];
+  const [requirement, siteRequirement] = await queryAll(db, [
+    () => getTripRequirements(db, shopId, tripId),
+    () => getTripSiteRequirement(db, shopId, tripId),
+  ]);
+  const demandsSomething = Boolean(
+    requirement?.minimumCertificationLevel ||
+      requirement?.requiredSpecialties.length ||
+      requirement?.requiresNitrox ||
+      siteRequirement,
+  );
+  if (!demandsSomething) return [...candidates];
+  const admitted: T[] = [];
+  for (const candidate of candidates) {
+    const decision = await tripAdmissionFor(
+      db,
+      shopId,
+      tripId,
+      { id: candidate.personId },
+      false,
+      false,
+    );
+    if (decision.admitted) admitted.push(candidate);
+  }
+  return admitted;
+}
+
+/**
+ * Whether one person would still be admitted to this departure: the send's
+ * re-check for a page left open (review F1).
+ */
+export async function personAdmittedToTrip(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  personId: string,
+): Promise<boolean> {
+  return (await admittedToTrip(db, shopId, tripId, [{ personId }])).length === 1;
+}
+
+export type CooledInvitation = "created" | "cooldown" | "unavailable" | "refused";
+
+/**
+ * **One invite under the 30-day cooldown** (H-130; the suggestions and the
+ * course ladder, never the manual invite). The cooldown check and the insert
+ * run in one transaction under an advisory lock on (shop, person), so two
+ * near-simultaneous invites to two departures cannot both pass the check
+ * (security review N2). Inside the same lock the departure is re-checked
+ * for this diver (`departureOpenToDiver`: public, scheduled, a seat left,
+ * the admission gate and, on a course session, the course's own), so a page
+ * left open cannot invite someone the boat would now refuse (review F1, N3).
+ */
+export async function createInvitationUnderCooldown(
+  db: AppDb,
+  input: {
+    shopId: string;
+    tripId: string;
+    personId: string;
+    createdByPersonId: string;
+    now: Date;
+  },
+): Promise<CooledInvitation> {
+  return db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext('invite_cooldown'), hashtext(${`${input.shopId}:${input.personId}`}))`,
+    );
+    if (await invitedWithinCooldown(tx, input.shopId, input.personId, input.now)) {
+      return "cooldown";
+    }
+    if (!(await departureOpenToDiver(tx, { ...input }))) return "unavailable";
+    return (await insertDirectTripInvitation(tx, input)) ? "created" : "refused";
+  });
 }

@@ -2,8 +2,23 @@ import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { INVITE_SUGGESTIONS_SHOWN } from "@/lib/invite-suggestions";
 import { fileScopedShopContext } from "@/test/db";
-import { invitedWithinCooldown, listInviteSuggestions } from "./invite-suggestions";
-import { bookings, diveSites, people, personRoles, tripInvitations, trips } from "./schema";
+import {
+  createInvitationUnderCooldown,
+  invitedWithinCooldown,
+  listInviteSuggestions,
+} from "./invite-suggestions";
+import {
+  bookings,
+  certifications,
+  courses,
+  diveSites,
+  people,
+  personRoles,
+  specialtyCertifications,
+  tripInvitations,
+  tripRequirements,
+  trips,
+} from "./schema";
 
 const ctx = fileScopedShopContext();
 
@@ -52,9 +67,30 @@ async function fixture() {
     tripId: string,
     personId: string,
     status: "booked" | "cancelled" | "no_show" = "booked",
-  ) => db.insert(bookings).values({ bookedAs: "diver", shopId: shop.id, tripId, personId, status });
+    participantType: "diver" | "snorkeler" | "rider" = "diver",
+  ) =>
+    db.insert(bookings).values({
+      bookedAs: participantType,
+      participantType,
+      shopId: shop.id,
+      tripId,
+      personId,
+      status,
+    });
+  const card = (
+    personId: string,
+    level: "open_water" | "advanced_open_water",
+  ) =>
+    db.insert(certifications).values({
+      shopId: shop.id,
+      personId,
+      agency: "padi",
+      level,
+      status: "verified",
+      identifier: `C-${personId.slice(0, 8)}`,
+    });
 
-  return { db, shop, now, site, target, march, july, rehearsal, diver, seat };
+  return { db, shop, now, site, target, march, july, rehearsal, diver, seat, card, trip };
 }
 
 describe("listInviteSuggestions", () => {
@@ -96,6 +132,7 @@ describe("listInviteSuggestions", () => {
         personId: invitedRecently.id,
         createdByPersonId: aboard.id,
         invitedAt: new Date(now.getTime() - 29 * DAY_MS),
+        createdAt: new Date(now.getTime() - 29 * DAY_MS),
       },
       {
         shopId: shop.id,
@@ -104,6 +141,7 @@ describe("listInviteSuggestions", () => {
         personId: invitedLongAgo.id,
         createdByPersonId: aboard.id,
         invitedAt: new Date(now.getTime() - 31 * DAY_MS),
+        createdAt: new Date(now.getTime() - 31 * DAY_MS),
       },
     ]);
 
@@ -137,5 +175,137 @@ describe("listInviteSuggestions", () => {
     const got = await listInviteSuggestions(db, { shopId: shop.id, tripId: target.id, now });
     expect(got?.shown).toHaveLength(INVITE_SUGGESTIONS_SHOWN);
     expect(got?.total).toBe(INVITE_SUGGESTIONS_SHOWN + 3);
+  });
+
+  it("never suggests a rider, a snorkeler, or someone who only did a try-dive", async () => {
+    const { db, shop, now, site, target, march, diver, seat } = await fixture();
+    const rider = await diver("Rider Only");
+    const snorkeler = await diver("Snorkel Only");
+    const taster = await diver("Try Dive Only");
+    const real = await diver("Real Diver");
+    await seat(march.id, rider.id, "booked", "rider");
+    await seat(march.id, snorkeler.id, "booked", "snorkeler");
+    await seat(march.id, real.id);
+    const [dsd] = await db
+      .insert(courses)
+      .values({
+        shopId: shop.id,
+        title: "Discover Scuba",
+        slug: `invite-dsd-${now.getTime()}`,
+        agency: "PADI",
+        isIntroCourse: true,
+      })
+      .returning();
+    const startsAt = new Date(now.getTime() - 40 * DAY_MS);
+    const [dsdSession] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "DSD at the wall",
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
+        capacity: 4,
+        diveSiteId: site.id,
+        courseId: dsd.id,
+      })
+      .returning();
+    await seat(dsdSession.id, taster.id);
+
+    const got = await listInviteSuggestions(db, { shopId: shop.id, tripId: target.id, now });
+    expect(got?.shown.map((p) => p.fullName)).toEqual(["Real Diver"]);
+  });
+
+  it("leaves out a diver below the boat's level, or missing the Deep card a deep boat demands", async () => {
+    const { db, shop, now, target, march, diver, seat, card } = await fixture();
+    const underLevel = await diver("Under Level");
+    const advanced = await diver("Advanced Diver");
+    const noDeep = await diver("No Deep Card");
+    const deep = await diver("Deep Diver");
+    for (const p of [underLevel, advanced, noDeep, deep]) await seat(march.id, p.id);
+    await card(underLevel.id, "open_water");
+    for (const p of [advanced, noDeep, deep]) await card(p.id, "advanced_open_water");
+    await db.insert(specialtyCertifications).values({
+      shopId: shop.id,
+      personId: deep.id,
+      agency: "padi",
+      specialty: "deep",
+      status: "verified",
+      identifier: "DEEP-1",
+    });
+    await db.insert(tripRequirements).values({
+      shopId: shop.id,
+      tripId: target.id,
+      minimumCertificationLevel: "advanced_open_water",
+      requiredSpecialties: ["deep"],
+    });
+
+    const got = await listInviteSuggestions(db, { shopId: shop.id, tripId: target.id, now });
+    expect(got?.shown.map((p) => p.fullName)).toEqual(["Deep Diver"]);
+  });
+
+  it("suggests nobody on a course session", async () => {
+    const { db, shop, now, site, march, diver, seat } = await fixture();
+    await seat(march.id, (await diver("Certified Regular")).id);
+    const [ow] = await db
+      .insert(courses)
+      .values({
+        shopId: shop.id,
+        title: "Open Water",
+        slug: `invite-ow-${now.getTime()}`,
+        agency: "PADI",
+        certifiesLevel: "open_water",
+      })
+      .returning();
+    const startsAt = new Date(now.getTime() + 9 * DAY_MS);
+    const [session] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "OW at the wall",
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
+        capacity: 6,
+        diveSiteId: site.id,
+        courseId: ow.id,
+      })
+      .returning();
+    expect(await listInviteSuggestions(db, { shopId: shop.id, tripId: session.id, now })).toBeNull();
+  });
+});
+
+describe("createInvitationUnderCooldown", () => {
+  it("records one invite, then refuses a second inside the cooldown, even to another departure, before any mail went", async () => {
+    const { db, shop, now, target, trip, diver } = await fixture();
+    const author = await diver("Desk Author");
+    const nadia = await diver("Cooldown Nadia");
+    const other = await trip("Another wall dive", new Date(now.getTime() + 12 * DAY_MS));
+    const input = { shopId: shop.id, personId: nadia.id, createdByPersonId: author.id, now };
+    expect(await createInvitationUnderCooldown(db, { ...input, tripId: target.id })).toBe("created");
+    // Nothing was sent yet (no `invited_at`), and the recorded row still holds the cooldown.
+    expect(await createInvitationUnderCooldown(db, { ...input, tripId: other.id })).toBe(
+      "cooldown",
+    );
+  });
+
+  it("refuses a departure this diver could not book (below its level), recording nothing", async () => {
+    const { db, shop, now, target, diver, card } = await fixture();
+    const author = await diver("Desk Author Two");
+    const ow = await diver("Open Water Only");
+    await card(ow.id, "open_water");
+    await db.insert(tripRequirements).values({
+      shopId: shop.id,
+      tripId: target.id,
+      minimumCertificationLevel: "advanced_open_water",
+    });
+    expect(
+      await createInvitationUnderCooldown(db, {
+        shopId: shop.id,
+        tripId: target.id,
+        personId: ow.id,
+        createdByPersonId: author.id,
+        now,
+      }),
+    ).toBe("unavailable");
+    expect(await invitedWithinCooldown(db, shop.id, ow.id, now)).toBe(false);
   });
 });

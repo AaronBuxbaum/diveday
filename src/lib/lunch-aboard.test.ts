@@ -24,7 +24,16 @@ describe("lunchSummary", () => {
         { name: "Ines Costa", note: "no shellfish" },
         { name: "Priya Sharma", note: "vegetarian" },
       ],
+      answered: 2,
+      asked: 3,
     });
+  });
+
+  it("counts who left a note, so an empty list never reads as nobody having a restriction", () => {
+    const quiet = [{ fullName: "Tom Okafor", dietaryNote: null }];
+    expect(
+      lunchSummary({ lunchAboard: true, cancelled: false, seats: quiet, crewAboard: 0 }),
+    ).toMatchObject({ notes: [], answered: 0, asked: 1 });
   });
 
   it("says nothing when lunch is not aboard, or the boat is not going", () => {

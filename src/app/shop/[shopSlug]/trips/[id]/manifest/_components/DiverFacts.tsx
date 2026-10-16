@@ -155,6 +155,12 @@ export function DiverFacts({
         </p>
       ) : null}
       {pickup}
+      {diver.dietaryNote ? (
+        <p>
+          <span className="font-bold">{t("manifest.dietaryNoteLabel")}</span>
+          <span className="mt-0.5 block text-muted break-words">{diver.dietaryNote}</span>
+        </p>
+      ) : null}
       {ridingOnly.length > 0 ? (
         <p className="font-medium text-warning-strong">
           {ridingOnly.map((line) => (

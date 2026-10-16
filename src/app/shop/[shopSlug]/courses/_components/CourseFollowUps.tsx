@@ -29,7 +29,7 @@ export async function CourseFollowUps({
 }) {
   const now = nowDate();
   const [ladder, cards] = await queryAll(db, [
-    () => getCourseLadder(db, shop.id, now),
+    () => getCourseLadder(db, shop.id, now, shop.timezone),
     () => listCardsToProcess(db, shop.id),
   ]);
   return (

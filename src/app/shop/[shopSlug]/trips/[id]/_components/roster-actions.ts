@@ -20,6 +20,7 @@ import {
   removeBookingAction,
   setParticipantTypeAction,
   undoRemoveBookingAction,
+  updateBookingDietaryNoteAction,
   updateBookingPickupAction,
 } from "../roster-seating-actions";
 import { markRosterWaiverInPersonAction, sendNewWaiverAction } from "../roster-waiver-actions";
@@ -76,6 +77,7 @@ export async function tripRosterActions({
     ...noteRosterActions(shopSlug, tripId),
     saveRosterEmergencyContactAction: saveRosterEmergencyContactAction.bind(null, shopSlug, tripId),
     updateBookingPickupAction: updateBookingPickupAction.bind(null, shopSlug, tripId),
+    updateBookingDietaryNoteAction: updateBookingDietaryNoteAction.bind(null, shopSlug, tripId),
     recordTripInvitationAction: recordTripInvitationAction.bind(null, shopSlug, tripId),
     undoRemoveBookingAction: undoRemoveBookingAction.bind(null, shopSlug, tripId),
     carryWaitlistAction: carryWaitlistAction.bind(null, shopSlug, tripId),
