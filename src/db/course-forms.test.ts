@@ -30,6 +30,7 @@ import {
 import {
   coursesAwaitingFormText,
   getCourseBySlug,
+  getCourseTemplateUpdate,
   pagedCourses,
   pullCourseTemplateUpdates,
 } from "./courses";
@@ -529,6 +530,73 @@ describe("course forms — a form bound to an age (in-memory PGlite)", () => {
           .where(eq(courseFormRequirements.courseId, ctx.seat.courseId)),
       ),
     ).rejects.toThrow();
+  });
+});
+
+/**
+ * **A shop already on Open Water version 2 is offered 10615** (reviews G2/H5
+ * of #2265): the youth acknowledgment came with version 3, so a course that
+ * follows version 2 sees an update, and pulling it sets the form up with its
+ * age.
+ */
+describe("course forms — Open Water version 3 brings the youth acknowledgment", () => {
+  const YOUTH = "Youth Diving: Responsibility and Risks Acknowledgment";
+
+  async function openWaterOnVersionTwo() {
+    const { db, shop } = fileCtx;
+    const openWater = await getCourseBySlug(db, shop.id, "open-water-diver");
+    const template = getCourseTemplate("open-water-diver");
+    if (!openWater || !template) throw new Error("seeded Open Water missing");
+    const snapshot = courseTemplateSnapshot(template);
+    const youth = (await listCourseForms(db, shop.id)).find((form) => form.title === YOUTH);
+    if (!youth) throw new Error("seeded youth form missing");
+    await db
+      .update(courses)
+      .set({
+        sourceTemplateVersion: 2,
+        sourceTemplateSnapshot: {
+          ...snapshot,
+          standardForms: (snapshot.standardForms ?? []).filter((title) => title !== YOUTH),
+        },
+      })
+      .where(eq(courses.id, openWater.id));
+    return { db, shop, openWater, youth };
+  }
+
+  it("offers the update to a course on version 2, and pulling it asks 10615 up to age 11", async () => {
+    const { db, shop, openWater, youth } = await openWaterOnVersionTwo();
+    // The course never had the youth form: version 2 did not name it.
+    await db.delete(courseFormRequirements).where(eq(courseFormRequirements.formId, youth.id));
+
+    expect(await getCourseTemplateUpdate(db, shop.id, openWater.id)).not.toBeNull();
+    await pullCourseTemplateUpdates(db, shop.id, openWater.id, "preserve-shop-edits");
+
+    expect(await listCourseFormRequirements(db, shop.id, openWater.id)).toContain(youth.id);
+    expect((await listCourseFormAgeBounds(db, shop.id, openWater.id)).get(youth.id)).toBe(11);
+  });
+
+  it("puts the age on a same-titled form the course already asks everyone", async () => {
+    const { db, shop, openWater, youth } = await openWaterOnVersionTwo();
+    await db
+      .update(courseFormRequirements)
+      .set({ maxAgeYears: null })
+      .where(eq(courseFormRequirements.formId, youth.id));
+
+    await pullCourseTemplateUpdates(db, shop.id, openWater.id, "preserve-shop-edits");
+
+    expect((await listCourseFormAgeBounds(db, shop.id, openWater.id)).get(youth.id)).toBe(11);
+  });
+
+  it("leaves a shop's own age on that form alone", async () => {
+    const { db, shop, openWater, youth } = await openWaterOnVersionTwo();
+    await db
+      .update(courseFormRequirements)
+      .set({ maxAgeYears: 13 })
+      .where(eq(courseFormRequirements.formId, youth.id));
+
+    await pullCourseTemplateUpdates(db, shop.id, openWater.id, "preserve-shop-edits");
+
+    expect((await listCourseFormAgeBounds(db, shop.id, openWater.id)).get(youth.id)).toBe(13);
   });
 });
 

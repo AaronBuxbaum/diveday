@@ -551,8 +551,10 @@ export async function attachStandardCourseForms(
   );
   const current = await db
     .select({
+      id: courseFormRequirements.id,
       formId: courseFormRequirements.formId,
       position: courseFormRequirements.position,
+      maxAgeYears: courseFormRequirements.maxAgeYears,
     })
     .from(courseFormRequirements)
     .where(
@@ -612,13 +614,27 @@ export async function attachStandardCourseForms(
       formByTitle.set(titleKey(title), formId);
       created += 1;
     }
-    if (required.has(formId) || declined.has(formId)) continue;
+    const bound = medicalForms.has(formId) ? undefined : boundByTitle.get(titleKey(title));
+    if (required.has(formId)) {
+      // Asked of everyone already, and the template, new in this version,
+      // names an age for it (reviews G2/H5 of #2265): the agency's bound
+      // applies. A shop's own age on it stands.
+      const row = current.find((entry) => entry.formId === formId);
+      if (bound !== undefined && row && row.maxAgeYears === null) {
+        await db
+          .update(courseFormRequirements)
+          .set({ maxAgeYears: bound })
+          .where(eq(courseFormRequirements.id, row.id));
+      }
+      continue;
+    }
+    if (declined.has(formId)) continue;
     await db.insert(courseFormRequirements).values({
       shopId: input.shopId,
       courseId: course.id,
       formId,
       position,
-      maxAgeYears: medicalForms.has(formId) ? null : (boundByTitle.get(titleKey(title)) ?? null),
+      maxAgeYears: bound ?? null,
     });
     required.add(formId);
     position += 1;

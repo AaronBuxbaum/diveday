@@ -293,8 +293,10 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     slug: "open-water-diver",
     // Version 2 is the first live revision consumed by the update flow. Older
     // shop copies can review this wording change without losing their own
-    // overview, pricing, or photography.
-    version: 2,
+    // overview, pricing, or photography. Version 3 adds PADI's Youth Diving
+    // acknowledgment (10615) for students up to 11 (issue #2265): a shop on
+    // version 2 is offered it, and the pull sets it up with its age.
+    version: 3,
     title: "Open Water Diver",
     agency: "padi",
     standardForms: PADI_OPEN_WATER_FORMS,
