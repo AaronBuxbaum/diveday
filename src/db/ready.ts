@@ -17,7 +17,11 @@ import { canSayRunningLate, runningLateShown } from "@/lib/running-late";
 import { hasSailed } from "@/lib/trips";
 import { type DiveDayMilestone, diveDayMilestone } from "@/lib/visit-milestones";
 import { shopWaiverStatus } from "@/lib/waivers";
-import { type OfferableWelcomeCue, offerableWelcomeCue, type WelcomeHello } from "@/lib/welcome-cue";
+import {
+  type OfferableWelcomeCue,
+  offerableWelcomeCue,
+  type WelcomeHello,
+} from "@/lib/welcome-cue";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
 import { firstActiveIntroCourse, hasActiveRefresherCourse } from "./courses";

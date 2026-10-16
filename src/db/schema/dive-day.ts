@@ -12,8 +12,8 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { ReadinessBlocker } from "@/lib/readiness";
 import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
+import type { ReadinessBlocker } from "@/lib/readiness";
 import { bookings } from "./bookings";
 import { people, shops } from "./core";
 import { boats, trips } from "./trips";

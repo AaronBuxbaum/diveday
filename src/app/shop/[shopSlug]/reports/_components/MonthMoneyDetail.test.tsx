@@ -87,8 +87,8 @@ describe("who brought the month's buddy seats", () => {
       <BuddyReferrerLines
         detail={detail({
           buddyReferrers: [
-          { personId: "p-1", fullName: "Priya Sharma", friends: 2 },
-          { personId: "p-2", fullName: "Bjorn Aasen", friends: 1 },
+            { personId: "p-1", fullName: "Priya Sharma", friends: 2 },
+            { personId: "p-2", fullName: "Bjorn Aasen", friends: 1 },
           ],
         })}
         t={t}
@@ -101,7 +101,9 @@ describe("who brought the month's buddy seats", () => {
   });
 
   it("names nobody in a month with no buddy seats", () => {
-    render(<BuddyReferrerLines detail={detail({ buddyReferrers: [] })} t={t} shopSlug="blue-mantis" />);
+    render(
+      <BuddyReferrerLines detail={detail({ buddyReferrers: [] })} t={t} shopSlug="blue-mantis" />,
+    );
     expect(screen.queryByRole("link")).toBeNull();
   });
 });

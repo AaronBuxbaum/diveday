@@ -19,11 +19,11 @@ import { TodayHeaderNotes } from "@/app/shop/[shopSlug]/_components/today/TodayH
 import { TodayNoticeStack } from "@/app/shop/[shopSlug]/_components/today/TodayNoticeStack";
 import { TodayOrientation } from "@/app/shop/[shopSlug]/_components/today/TodayOrientation";
 import { TodayPrintDoor } from "@/app/shop/[shopSlug]/_components/today/TodayPrintDoor";
+import { TodayUpdated } from "@/app/shop/[shopSlug]/_components/today/TodayUpdated";
 import {
   readTodayFirstWave,
   readTodaySecondWave,
 } from "@/app/shop/[shopSlug]/_components/today/today-reads";
-import { TodayUpdated } from "@/app/shop/[shopSlug]/_components/today/TodayUpdated";
 import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessions";
 import { YourWeek } from "@/app/shop/[shopSlug]/_components/today/YourWeek";
 import { FlashParams } from "@/components/FlashParams";

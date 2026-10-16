@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { EditorSection, type EditorSectionRef } from "@/components/editor/EditorSection";
 import { controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { EditableCourse } from "./course-types";
 import { CourseSwitches } from "./CourseSwitches";
+import type { EditableCourse } from "./course-types";
 
 /** The editor's at-a-glance, who-may-enrol and what-the-fee-covers sections. */
 export function CourseDetailSections({

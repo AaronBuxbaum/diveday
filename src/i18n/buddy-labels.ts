@@ -1,6 +1,6 @@
 import type { BuddyAlert } from "@/lib/manifests";
-import { firstNameOf } from "@/lib/person-name";
 import type { PartyLeftReason } from "@/lib/party-teams";
+import { firstNameOf } from "@/lib/person-name";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 /**
