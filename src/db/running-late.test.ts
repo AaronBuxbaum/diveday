@@ -12,8 +12,8 @@ import {
   markPhoneRunningLate,
   messageSeats,
 } from "./running-late";
-import { activityEvents, bookings, people, trips } from "./schema";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { activityEvents, bookings, people, shops, trips } from "./schema";
+import { createTrip, listStaff, upcomingTripsWithCounts } from "./trips";
 
 /**
  * **"Running late"** (J3): one guarded write behind three doors. What matters
@@ -390,6 +390,78 @@ describe("one statement for the people travelling together", () => {
     expect(await lateAt(bookingId)).toEqual(now);
     expect(await lateAt(sibling.bookingId)).toEqual(now);
     expect(await lateAt(stranger.bookingId)).toBeNull();
+  });
+});
+
+/**
+ * **One number, seats at two shops** (issue #2320). A LATE text lands on the
+ * sender number it was sent to; when that number belongs to one shop, the seat
+ * marked is that shop's, even when another shop's boat leaves sooner. On the
+ * shared DiveDay sender (`shopForSmsSender` answers null) the soonest seat
+ * across shops stands, as before.
+ */
+describe("markPhoneRunningLate across two shops (#2320)", () => {
+  async function twoShops() {
+    const base = await context();
+    const { db, trip } = base;
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Second Reef Shop", slug: "second-reef-shop", timezone: "UTC" })
+      .returning();
+    if (!other) throw new Error("second shop setup failed");
+    // Leaves an hour after the first shop's boat: the later seat of the two.
+    const later = await createTrip(db, {
+      shopId: other.id,
+      title: "Second shop dawn dive",
+      startsAt: new Date(trip.startsAt.getTime() + HOUR_MS),
+      endsAt: new Date(trip.startsAt.getTime() + 4 * HOUR_MS),
+      capacity: 6,
+    });
+    if (!later) throw new Error("second shop trip failed");
+    const booked = await createBooking(db, {
+      actor: "staff",
+      shopId: other.id,
+      tripId: later.id,
+      fullName: "Iris Okafor",
+      email: "iris.second@example.com",
+      phone: DIVER.phone,
+    });
+    if (!booked.ok) throw new Error("second shop booking failed");
+    return { ...base, other, otherBookingId: booked.bookingId };
+  }
+
+  it("keeps the soonest seat across shops when no shop is named", async () => {
+    const { db, bookingId, otherBookingId, now } = await twoShops();
+    await markPhoneRunningLate(db, { phone: E164, now });
+    expect(await lateAt(bookingId)).toEqual(now);
+    expect(await lateAt(otherBookingId)).toBeNull();
+  });
+
+  it("marks the named shop's seat even when another shop's boat leaves sooner", async () => {
+    const { db, bookingId, other, otherBookingId, now } = await twoShops();
+    expect(await markPhoneRunningLate(db, { phone: E164, now, shopId: other.id })).toMatchObject({
+      status: "marked",
+      bookingId: otherBookingId,
+    });
+    expect(await lateAt(otherBookingId)).toEqual(now);
+    expect(await lateAt(bookingId)).toBeNull();
+  });
+
+  it("marks the first shop's seat when that is the shop named", async () => {
+    const { db, shop, bookingId, otherBookingId, now } = await twoShops();
+    await markPhoneRunningLate(db, { phone: E164, now, shopId: shop.id });
+    expect(await lateAt(bookingId)).toEqual(now);
+    expect(await lateAt(otherBookingId)).toBeNull();
+  });
+
+  it("closes, and touches no other shop, when the named shop holds no seat for the number", async () => {
+    const { db, bookingId, otherBookingId, now } = await twoShops();
+    const empty = "00000000-0000-4000-8000-000000000000";
+    expect(await markPhoneRunningLate(db, { phone: E164, now, shopId: empty })).toEqual({
+      status: "closed",
+    });
+    expect(await lateAt(bookingId)).toBeNull();
+    expect(await lateAt(otherBookingId)).toBeNull();
   });
 });
 
