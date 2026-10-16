@@ -283,7 +283,7 @@ export type ManifestDiverInput = {
    */
   notHere?: boolean;
   /**
-   * The desk saw this diver and turned them away (H-128): a released seat like
+   * The desk saw this diver and turned them away (H-135): a released seat like
    * `notHere`, worded apart from it on the row. Display only, never a gate;
    * absent reads as false.
    */

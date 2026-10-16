@@ -327,7 +327,7 @@ export type ReadyPageData = {
    */
   canCancelBooking: boolean;
   /**
-   * The desk saw this diver and turned them away (H-128), rather than marking
+   * The desk saw this diver and turned them away (H-135), rather than marking
    * them not here. After the departure the page says the shop could not take
    * them, never that they did not make it. The category is not carried: the
    * diver was there, and a bearer link is no place to print it.
@@ -616,7 +616,7 @@ export async function getReadyPageData(
   const canCancelBooking =
     row.status === "booked" &&
     !hasSailed(trip.startsAt, now) &&
-    // Counted aboard a boat past its time: `selfCancelBooking` refuses it (H-126).
+    // Counted aboard a boat past its time: `selfCancelBooking` refuses it (H-133).
     !(
       await heldAtTheDoor(db, {
         shopId: row.shopId,

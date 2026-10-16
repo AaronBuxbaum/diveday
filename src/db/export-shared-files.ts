@@ -299,7 +299,7 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
       value: (row, { personName }) => personName.get(row.personId),
     },
     { header: "status", in: "both", value: (row) => row.status },
-    // Why the desk turned this diver away, on a released seat (H-128): a
+    // Why the desk turned this diver away, on a released seat (H-135): a
     // category from the seat's own blockers, never the evidence. Blank on a
     // plain no-show, which is the other statement `no_show` makes. The
     // diver's own export carries it too: it is a record about them.

@@ -360,7 +360,7 @@ export type OfflineManifestPayload = {
            */
           notHere?: boolean;
           /**
-           * **The desk saw this diver and turned them away** (H-128; layer 3
+           * **The desk saw this diver and turned them away** (H-135; layer 3
            * review, dde-1 F3): set only beside `notHere`, which it refines.
            * Without it the dock copy badged a turned-away diver "Not here", the
            * opposite statement about a person the desk stood in front of.

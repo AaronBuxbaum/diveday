@@ -337,7 +337,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     updatePickupAction,
     // A booked seat, or one turned away before the start (`seatMoveForRow`).
     moveSeat: seatMoveForRow(booking, moveSeat),
-    // Marked aboard a boat that has left: Remove says so and changes nothing (H-126).
+    // Marked aboard a boat that has left: Remove says so and changes nothing (H-133).
     removeRefusedAboard: aboardAtSea?.get(booking.id) ?? null,
     materialsDone,
     materialsPending,

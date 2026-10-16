@@ -351,7 +351,7 @@ export type IncidentTimelineEntry =
       subjectName: string;
       /** Who made the change; the diver themselves for a self-cancel. */
       recordedByName: string;
-      /** A `turned_away` line's category (H-128), never the evidence behind it. */
+      /** A `turned_away` line's category (H-135), never the evidence behind it. */
       reason?: TurnAwayReason;
     };
 
@@ -361,7 +361,7 @@ export type IncidentRosterChangeAction =
   | "removed"
   | "moved_away"
   | "moved_here"
-  /** Seen at the desk and turned away, the seat freed (H-128). */
+  /** Seen at the desk and turned away, the seat freed (H-135). */
   | "turned_away"
   | "crew_added"
   | "crew_removed"

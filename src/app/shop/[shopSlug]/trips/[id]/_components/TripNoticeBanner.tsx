@@ -95,7 +95,7 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.bookingRemovedRefundOwner",
   },
   "booking-restored": { form: "roster", tone: "success", key: "trips.notices.bookingRestored" },
-  // Refused: the boat carried this seat or may be carrying it (H-126). Nothing
+  // Refused: the boat carried this seat or may be carrying it (H-133). Nothing
   // changed, and the row stays open on the Remove that was tapped.
   "booking-remove-aboard": {
     form: "roster",

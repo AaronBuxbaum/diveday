@@ -136,7 +136,7 @@ export type RosterRows = {
   courseMaterialsDoneByPerson?: ReadonlyMap<string, CourseMaterialsDone>;
   /** Per held seat, the other held seats a split may move with it (`sameNameHeldSeats`). */
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
-  /** Seats the boat carried or may be carrying: Remove refuses them (H-126). */
+  /** Seats the boat carried or may be carrying: Remove refuses them (H-133). */
   aboardAtSea?: ReadonlyMap<string, AboardHold>;
   /**
    * Per held seat, the matched diver's last dive day at this shop, or null for
@@ -643,7 +643,7 @@ export function groupRoster({
   // has gone blocked since, or still owes the desk something, stays in "Still
   // to clear" wearing its reasons — the counter's most dangerous silence was
   // folding that row away.
-  // A released seat the desk turned away (H-128) is its own group: seen and
+  // A released seat the desk turned away (H-135) is its own group: seen and
   // refused is not "not here", and the two must never share a heading.
   const released = arrival ? roster.filter(({ booking }) => booking.status === "no_show") : [];
   const notHere = released.filter(({ booking }) => !booking.turnedAwayAt);
@@ -742,7 +742,7 @@ function recordGroups(t: StaffTranslator, roster: RosterEntry[], record: RosterR
     } else if (seatSailed({ noShow, dockResult, afterDiveResultStands })) {
       sailed.push(entry);
     } else if (noShow && entry.booking.turnedAwayAt) {
-      // Did not sail because the desk refused them (H-128), said apart from
+      // Did not sail because the desk refused them (H-135), said apart from
       // the divers who never came.
       turnedAway.push(entry);
     } else {

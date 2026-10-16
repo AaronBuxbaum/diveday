@@ -41,7 +41,7 @@ export const bookingStatus = pgEnum("booking_status", [
 
 /**
  * **Why the desk turned a diver away** (safety sheet 2026-10-15, item 6;
- * H-128): one category from that seat's own readiness blockers, never the
+ * H-135): one category from that seat's own readiness blockers, never the
  * evidence behind it. Kept in step with `TURN_AWAY_REASONS` in
  * `src/lib/turn-away.ts`.
  */

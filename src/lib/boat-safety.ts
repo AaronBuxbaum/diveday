@@ -117,7 +117,7 @@ export type BoatPaper = (typeof BOAT_PAPERS)[number];
  * How far ahead each paper is said, longer than the kit's: booking an
  * inspection or renewing a policy takes weeks of lead time, where new pads are
  * a parcel. A paper inside its window is an owner's errand on Today and a line
- * on the manifest; past its date it escalates to danger ink (H-129), and still
+ * on the manifest; past its date it escalates to danger ink (H-136), and still
  * gates nothing.
  */
 export const BOAT_PAPER_HORIZON_DAYS: Record<BoatPaper, number> = {
@@ -503,7 +503,7 @@ export type BoatSafetySection = {
  * it should be to leave: must-carry kit missing, more people than the
  * certificate allows, and a lapsed paper — hull insurance, registration or
  * the safety inspection past its date, the fact that makes a claim uncovered
- * (H-129). **Warning** for kit that has gone wrong (a lapsed clock, a unit
+ * (H-136). **Warning** for kit that has gone wrong (a lapsed clock, a unit
  * flagged for service). **Neutral** for a heads-up.
  *
  * Tone only: a danger line here refuses nothing. The certificate's own gate

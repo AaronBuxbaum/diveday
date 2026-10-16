@@ -46,7 +46,7 @@ function seat(
 const behind = { ahead: false, firstSailed: false };
 const TURNED_AWAY_AT = new Date("2026-10-16T07:00:00.000Z");
 
-describe("a seat the desk turned away (H-128)", () => {
+describe("a seat the desk turned away (H-135)", () => {
   const turnedAway = seat({ status: "no_show", turnedAwayReason: "card" });
 
   it("says the desk saw them and why, never no-show", () => {

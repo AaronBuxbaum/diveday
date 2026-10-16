@@ -138,7 +138,7 @@ describe("resolveTripNotice", () => {
   });
 
   /**
-   * Remove refused for a diver marked aboard a boat that has left (H-126). The
+   * Remove refused for a diver marked aboard a boat that has left (H-133). The
    * name is the page's own roster's, never the URL's, so a hand-edited `bid`
    * with no seat behind it says nothing rather than a sentence about nobody.
    */

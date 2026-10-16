@@ -135,7 +135,7 @@ export function richPayload(
     crewWithoutIds?: boolean;
     /** The counter released this diver's seat before the copy was saved (#1209). */
     notHere?: boolean;
-    /** The desk turned the diver away, which also released the seat (H-128). */
+    /** The desk turned the diver away, which also released the seat (H-135). */
     turnedAway?: boolean;
     /** The diver said they were running late, at this instant (#2319). */
     runningLateAt?: string;

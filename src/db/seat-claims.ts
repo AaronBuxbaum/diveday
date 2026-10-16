@@ -721,7 +721,7 @@ export async function issuePartySeatClaims(
     )
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
   // A seat counted aboard a boat past its time stays with the crew, as
-  // `cancelUnclaimedPartySeats` keeps it (H-126).
+  // `cancelUnclaimedPartySeats` keeps it (H-133).
   const onLeadTrip = rows.filter((row) => row.booking.tripId === row.leadTripId);
   const onLead = onLeadTrip[0];
   const held = onLead

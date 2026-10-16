@@ -98,7 +98,7 @@ export function BoatPaperFields({
  * decision keeps sailing, but its next save is refused until the seats come
  * down or the certificate is corrected, and the row says so before the shop
  * finds out by pressing Save. The papers still only inform, and a lapsed one
- * reads in danger ink, as on the manifest and Today (H-129).
+ * reads in danger ink, as on the manifest and Today (H-136).
  */
 const PAPER_INK = {
   danger: "font-medium text-danger",

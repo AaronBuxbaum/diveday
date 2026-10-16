@@ -45,13 +45,13 @@ async function bookVisitor(db: AppDb, shopId: string, tripId: string) {
 }
 
 /**
- * **A diver marked aboard a boat that has left cannot be removed** (H-126).
+ * **A diver marked aboard a boat that has left cannot be removed** (H-133).
  * A cancelled booking is nobody to every roll-call reader, so a wrong-row tap
  * at the desk would drop a person on the water from the count. Each refusal
  * asserts the seat, its capabilities, the crew's catch-up strip and the roll
  * call are all as they were, not merely that the outcome reads as a refusal.
  */
-describe("cancelBooking refuses a diver marked aboard at sea (H-126)", () => {
+describe("cancelBooking refuses a diver marked aboard at sea (H-133)", () => {
   const HOUR = 60 * 60 * 1000;
 
   async function sail(db: AppDb, tripId: string, hoursAgo = 2) {

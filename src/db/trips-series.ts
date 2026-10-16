@@ -907,7 +907,7 @@ export type OffCadenceSeriesTrip = {
  * slot at all (created before the ledger existed) is left out — there is nothing
  * to judge it against, and guessing would offer to cancel a real departure.
  * So is one the crew have taken out before its time (`departureMayBeAtSea`,
- * H-126): a bulk call-off never cancels a boat on the water.
+ * H-133): a bulk call-off never cancels a boat on the water.
  */
 export async function listOffCadenceSeriesTrips(
   db: AppDb,

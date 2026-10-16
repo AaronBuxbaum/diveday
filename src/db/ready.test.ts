@@ -347,7 +347,7 @@ describe("getReadyPageData", () => {
     expect((await getReadyPageData(db, bookingId, pastBuffer))?.canCancelBooking).toBe(false);
   });
 
-  it("withdraws the cancel inside the late hour once the dock counted the diver aboard (H-126)", async () => {
+  it("withdraws the cancel inside the late hour once the dock counted the diver aboard (H-133)", async () => {
     // `selfCancelBooking` refuses this seat (`aboardAtSeaBookingIds`), so the
     // page must not offer it.
     const { db, shop, open, bookingId } = await unpaidBooking();

@@ -177,7 +177,7 @@ export async function buildArrivalDesk({
           </RowActionForm>,
         );
       }
-      // **Turned away says so, in its own words** (H-128): the desk saw this
+      // **Turned away says so, in its own words** (H-135): the desk saw this
       // diver and refused them, which is not "did not arrive". The reason is
       // the category alone.
       const turnedAway = isTurnedAwayAtCounter(row) ? (
@@ -445,7 +445,7 @@ export async function buildArrivalDesk({
 }
 
 /**
- * **"Turned away" on a blocked row, before the boat leaves too** (H-128: any
+ * **"Turned away" on a blocked row, before the boat leaves too** (H-135: any
  * active staff, blocked rows only). The door and the writer share one
  * predicate (`turnAwayOffer`, the gate `turnBookingAway` runs again under the
  * seat's lock), so the desk never draws a door the writer refuses: none on the

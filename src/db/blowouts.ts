@@ -194,7 +194,7 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
         .from(trips)
         .where(and(eq(trips.id, trip.id), liveTrip()));
       // The crew may also have taken the boat out before its time, or hold a
-      // diver aboard (`departureMayBeAtSea`, H-126): the stricter of the two.
+      // diver aboard (`departureMayBeAtSea`, H-133): the stricter of the two.
       if (
         departureUnderway(
           { startsAt: trip.startsAt, rollCallStarted: Boolean(started?.started) },

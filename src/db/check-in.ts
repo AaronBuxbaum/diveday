@@ -63,7 +63,7 @@ export type CheckInQueueRow = {
    */
   bookingStatus: "booked" | "checked_in" | "no_show";
   /**
-   * On a released seat, why the desk turned the diver away (H-128); null on a
+   * On a released seat, why the desk turned the diver away (H-135); null on a
    * plain "Not here" and on every seat still held. The two are different
    * statements — seen and refused, or never came — and every surface that
    * reads the release says which.

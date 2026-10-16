@@ -22,7 +22,7 @@ export type StoryNoteBooking = {
     status: string;
     paidRentalKinds?: readonly string[] | null;
     /**
-     * Set when the desk turned this diver away (H-128). Required, so the story
+     * Set when the desk turned this diver away (H-135). Required, so the story
      * can never say "no-show" over somebody the desk saw and refused. The
      * category may be null on a turned-away seat (erasure clears it and keeps
      * `turnedAwayAt`).
@@ -110,7 +110,7 @@ export function storyNotes(
   t: StaffTranslator,
   locale: string,
 ): string[] {
-  // **Seen at the desk, turned away** (H-128): a past fact even on a boat that
+  // **Seen at the desk, turned away** (H-135): a past fact even on a boat that
   // has not left yet, so it is said ahead as well as behind. The crew's own
   // word outranks it: a seat they counted aboard has no turn-away left on it.
   // A seat removed afterwards was not the diver cancelling: "then removed"

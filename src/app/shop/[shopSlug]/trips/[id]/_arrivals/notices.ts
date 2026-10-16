@@ -96,7 +96,7 @@ export const DESK_NOTICES: DeskNoticeMap = {
     tone: "warning",
     key: "checkIn.notice.noShowTurnedAwayDeparted",
   },
-  // "Turned away" (H-128). The roll-call refusals come first for the reason
+  // "Turned away" (H-135). The roll-call refusals come first for the reason
   // the no-show's do; the rest say what changed on the row since it was drawn.
   "turn-away-already-boarded": { tone: "danger", key: "checkIn.notice.turnAwayAlreadyBoarded" },
   "turn-away-already-missing-after-dive": {
