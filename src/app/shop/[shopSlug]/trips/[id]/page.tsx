@@ -495,8 +495,7 @@ export default async function ManageTripPage({
                     ? bid
                     : undefined,
                 mayWriteOffPayment,
-                canManageOrders: staffGates.canManageOrders,
-                mayInviteFromWaitlist: staffGates.mayInviteFromWaitlist,
+                ...staffGates,
                 actions: rosterActions,
               }}
             />
