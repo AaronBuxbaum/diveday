@@ -501,12 +501,20 @@ export async function bookSpot(
     getTripWithBooked(dbi, shopNow.id, tripId),
   ]);
   // Where this booking now lands, and what the confirmation email links to:
-  // the diver's own `/ready` page (ADR 20260820-one-page-after-booking). Minted
-  // here, above the email send, so both uses share the one capability.
+  // the diver's own `/ready` page (ADR 20260820-one-page-after-booking). Two
+  // links, not one: the browser's proves only a typed name and address, so it
+  // stays undelivered and opens none of that person's other days, which wait
+  // for the email's (security review r5-4, F1).
   const readinessCapability = await issueBookingCapability(dbi, {
     shopId: shopNow.id,
     bookingId: primaryBookingId,
     purpose: "readiness",
+  });
+  const mailedCapability = await issueBookingCapability(dbi, {
+    shopId: shopNow.id,
+    bookingId: primaryBookingId,
+    purpose: "readiness",
+    delivered: true,
   });
   await consumeHandoffFromForm(dbi, shopNow.id, fields.handoff);
   // This form is the diver's own — the public schedule page, submitted from
@@ -533,7 +541,7 @@ export async function bookSpot(
     primaryBookingId,
     bookings: outcome.bookings,
     ownLocale,
-    readinessToken: readinessCapability?.token,
+    readinessToken: mailedCapability?.token,
     money: { chargesOnline: payAtBookingForGear, partyTypes },
   });
 
