@@ -36,6 +36,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
 
 const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("@/lib/session");
@@ -129,28 +130,90 @@ describe("incident report actions refuse staff who may not write", () => {
     ).rejects.toThrow("NOT_FOUND");
   });
 
-  it("sends an ashore captain's missing diver report back refused, writing nothing", async () => {
+  it("answers an ashore captain's missing diver report in words, writing nothing", async () => {
     const { db, shop, tripId, owner, captain } = await context();
     const bookingId = await markedMissing(db, shop.id, tripId, owner);
     signIn(db, shop, captain);
     const before = await reportCount(db, tripId);
-    const to = await redirectedTo(() =>
-      startMissingDiverReportAction(shop.slug, tripId, bookingId),
-    );
-    expect(to).toContain("notice=not-authorized");
+    expect(
+      await startMissingDiverReportAction(shop.slug, tripId, null, missingForm({ bookingId })),
+    ).toEqual({ message: "Only this departure’s crew, owners and managers can start a report." });
     expect(await reportCount(db, tripId)).toBe(before);
   });
 
-  it("opens the owner's prefilled draft from a seat marked not back aboard", async () => {
+  it("opens the owner's prefilled draft, remembering the manifest it came from", async () => {
     const { db, shop, tripId, owner } = await context();
     const bookingId = await markedMissing(db, shop.id, tripId, owner);
     signIn(db, shop, owner);
     const to = await redirectedTo(() =>
-      startMissingDiverReportAction(shop.slug, tripId, bookingId),
+      startMissingDiverReportAction(shop.slug, tripId, null, missingForm({ bookingId })),
     );
-    expect(to).toMatch(new RegExp(`/trips/${tripId}/incidents/[0-9a-f-]{36}$`));
+    expect(to).toMatch(
+      new RegExp(
+        `/trips/${tripId}/incidents/[0-9a-f-]{36}\\?from=manifest&checkpoint=after_dive_1$`,
+      ),
+    );
+  });
+
+  it("tells a crew member who already started the report, and starts none", async () => {
+    const { db, shop, tripId, owner, captain } = await context();
+    const bookingId = await markedMissing(db, shop.id, tripId, owner);
+    signIn(db, shop, owner);
+    await redirectedTo(() =>
+      startMissingDiverReportAction(shop.slug, tripId, null, missingForm({ bookingId })),
+    );
+    // The captain is crew now, and may not read the owner's draft.
+    await db.insert(tripAssignments).values({ tripId, personId: captain });
+    signIn(db, shop, captain);
+    const before = await reportCount(db, tripId);
+    const answer = await startMissingDiverReportAction(
+      shop.slug,
+      tripId,
+      null,
+      missingForm({ bookingId }),
+    );
+    expect(answer?.message).toMatch(/^Already started by .+\.$/);
+    expect(await reportCount(db, tripId)).toBe(before);
+  });
+
+  it("says so when the seat is no longer missing, and when the write fails", async () => {
+    const { db, shop, tripId, owner } = await context();
+    signIn(db, shop, owner);
+    const [seat] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(eq(bookings.tripId, tripId))
+      .limit(1);
+    if (!seat) throw new Error("expected a seat");
+    expect(
+      await startMissingDiverReportAction(
+        shop.slug,
+        tripId,
+        null,
+        missingForm({ bookingId: seat.id }),
+      ),
+    ).toEqual({ message: "No longer marked not back aboard." });
+    // A failure the database throws is a sentence beside the button, never
+    // the manifest swapped for an error page.
+    vi.mocked(getDb).mockRejectedValueOnce(new Error("connection reset"));
+    expect(
+      await startMissingDiverReportAction(
+        shop.slug,
+        tripId,
+        null,
+        missingForm({ bookingId: seat.id }),
+      ),
+    ).toEqual({ message: "The report did not open. Tap again." });
   });
 });
+
+/** The manifest button's form: whose row, and the checkpoint it was pressed at. */
+function missingForm(subject: { bookingId: string } | { personId: string }): FormData {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(subject)) form.set(key, value);
+  form.set("checkpoint", "after_dive_1");
+  return form;
+}
 
 /** One seat on the departure, marked not back aboard after dive 1. */
 async function markedMissing(db: AppDb, shopId: string, tripId: string, recorder: string) {

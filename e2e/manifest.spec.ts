@@ -812,6 +812,20 @@ test("a checkpoint with every diver counted stays open until the crew are called
   await expect(progressPanel.getByText(/1 crew member is not back aboard/)).toBeVisible();
   await expect(awaitingEntry).toBeVisible();
   await expect(page.getByRole("heading", { name: "Roll call complete" })).toHaveCount(0);
+
+  // The missing crew member's report starts from their own sheet too, and
+  // the report it opens leads straight back to this checkpoint (domain review
+  // 2026-10-16).
+  const crewReport = page
+    .getByRole("dialog")
+    .getByRole("button", { name: /^Start a missing diver report — / });
+  await crewReport.evaluate((button) => button.scrollIntoView({ block: "center" }));
+  await crewReport.click();
+  await expect(page).toHaveURL(
+    /\/incidents\/[0-9a-f-]{36}\?from=manifest&checkpoint=after_dive_\d+$/,
+  );
+  await page.getByRole("link", { name: "Back to manifest" }).click();
+  await expect(page).toHaveURL(/\/manifest\?checkpoint=after_dive_\d+$/);
 });
 
 test("the manifest offers a per-device push opt-in without asking for permission first", async ({

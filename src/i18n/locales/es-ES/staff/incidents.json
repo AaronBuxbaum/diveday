@@ -8,7 +8,12 @@
     "notTimed": "Aún sin hora"
   },
   "missingDiver": {
-    "start": "Empezar un informe de buceador desaparecido"
+    "start": "Empezar un informe de buceador desaparecido",
+    "alreadyStarted": "Ya lo empezó {name}.",
+    "notMissing": "Ya no figura como sin regresar a bordo.",
+    "notAllowed": "Solo la tripulación de esta salida, los propietarios y los gerentes pueden empezar un informe.",
+    "failed": "El informe no se abrió. Toca de nuevo.",
+    "backToManifest": "Volver al manifiesto"
   },
   "status": {
     "draft": "Borrador",

@@ -339,10 +339,9 @@ export default async function TripManifestPage({
           }}
         />
 
-        {/* Crew close the checkpoint (DOM-H1) — they come straight after the
-            divers, not before them: the divers are the head count's heart, and
-            a two-person crew list ahead of nine divers read as the page's
-            subject. */}
+        {/* Crew close the checkpoint (DOM-H1) — straight after the divers, not
+            before them: the divers are the head count's heart, and a two-person
+            crew list ahead of nine divers read as the page's subject. */}
         <CrewRollCall
           crew={manifest.crew}
           idPrefix={idPrefix}
@@ -356,6 +355,7 @@ export default async function TripManifestPage({
           todayTrailBySubject={todayTrailBySubject}
           crewRollCallAction={actions.crewRollCall}
           crewRollCallButtonCopy={crewRollCallButtonCopy}
+          startMissingReport={actions.startMissingDiverReport}
           buddyTeamLabel={buddyTeamLabel}
           t={t}
         />

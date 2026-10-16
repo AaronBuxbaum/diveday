@@ -5,6 +5,7 @@ import type {
 import type { PrivateNoteAction } from "@/components/PrivateNoteForm";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { ManifestBuddyTeam, RollCallCheckpoint, TripManifest } from "@/lib/manifests";
+import type { MissingReportAction } from "./MissingReportButton";
 import type { PersonTrailEntry } from "./PersonSheet";
 import type { ManifestNote } from "./StaffNotes";
 
@@ -37,7 +38,7 @@ export type DiverRollCallContext = {
    * not back aboard; null for a reader who may not start an incident report
    * here (anyone but its crew, owners and managers). The write re-checks.
    */
-  startMissingDiverReport: ((bookingId: string) => Promise<void>) | null;
+  startMissingDiverReport: MissingReportAction | null;
   /**
    * One `RollCallButtonCopy` per diver: the "not ready" refusal embeds a rich
    * link to that diver's own Guests anchor, so it is built by the page

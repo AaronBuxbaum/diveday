@@ -8,7 +8,12 @@
     "notTimed": "Time not written yet"
   },
   "missingDiver": {
-    "start": "Start a missing diver report"
+    "start": "Start a missing diver report",
+    "alreadyStarted": "Already started by {name}.",
+    "notMissing": "No longer marked not back aboard.",
+    "notAllowed": "Only this departure’s crew, owners and managers can start a report.",
+    "failed": "The report did not open. Tap again.",
+    "backToManifest": "Back to manifest"
   },
   "status": {
     "draft": "Draft",

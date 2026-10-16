@@ -8,11 +8,14 @@ import {
   fileIncidentReport,
   type IncidentSubject,
   type IncidentWriteRefusal,
+  type MissingSubject,
   removeIncidentPerson,
   saveIncidentDraft,
   startIncidentReport,
   startMissingDiverReport,
 } from "@/db/incident-reports";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
 import {
   type IncidentFieldRefusal,
   isIncidentInvolvement,
@@ -23,6 +26,7 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { manifestCheckpointParam } from "./[reportId]/_components/manifest-return";
 
 /**
  * The incident report's writes (ADR 20261012-incident-reports). Each reads the
@@ -102,34 +106,64 @@ export async function startIncidentReportAction(shopSlug: string, tripId: string
   );
 }
 
+/** What "Start a missing diver report" answers in place when it opens nothing. */
+export type MissingReportState = { message: string } | null;
+
 /**
- * "Start a missing diver report" on a manifest row marked not back aboard:
- * the writer's own draft, prefilled from the mark (`startMissingDiverReport`).
- * A seat no longer marked goes back to the manifest, which now shows why.
+ * **"Start a missing diver report"** on a manifest row marked not back aboard,
+ * a diver's (`bookingId`) or a crew member's (`personId`): the one report for
+ * that missing person (`startMissingDiverReport`), opened with the way back
+ * to the manifest it came from.
+ *
+ * Under `useActionState`, so every way it can fail is a sentence beside the
+ * button (domain review 2026-10-16): a thrown write used to swap the whole
+ * manifest for the error page, in the minutes the crew most needs it. Only
+ * the success navigates.
  */
 export async function startMissingDiverReportAction(
   shopSlug: string,
   tripId: string,
-  bookingId: string,
-) {
+  _previous: MissingReportState,
+  formData: FormData,
+): Promise<MissingReportState> {
   const { session, shop } = await requireShopSurface(shopSlug);
-  const tripPage = `${shopPath(shopSlug, "trips", tripId)}?view=details`;
-  if (!uuidParam(tripId) || !uuidParam(bookingId)) redirect(noticeUrl(tripPage, "not-authorized"));
-  const result = await startMissingDiverReport(await getDb(), {
-    shopId: shop.id,
-    tripId,
-    subject: { kind: "diver", bookingId },
-    actorPersonId: session.user.personId,
-  });
-  if (!result.ok) {
-    if (result.reason === "not_missing" || result.reason === "already_started") {
-      revalidateAndRedirect(shopPath(shopSlug, "trips", tripId, "manifest"));
-    }
-    redirect(noticeUrl(tripPage, "not-authorized"));
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const bookingId = text(formData, "bookingId");
+  const personId = text(formData, "personId");
+  const subject: MissingSubject | null = uuidParam(bookingId)
+    ? { kind: "diver", bookingId }
+    : uuidParam(personId)
+      ? { kind: "crew", personId }
+      : null;
+  if (!uuidParam(tripId) || !subject) return { message: t("incidents.missingDiver.notMissing") };
+  let result: Awaited<ReturnType<typeof startMissingDiverReport>>;
+  try {
+    result = await startMissingDiverReport(await getDb(), {
+      shopId: shop.id,
+      tripId,
+      subject,
+      actorPersonId: session.user.personId,
+    });
+  } catch {
+    return { message: t("incidents.missingDiver.failed") };
   }
+  if (!result.ok) {
+    if (result.reason === "already_started") {
+      return {
+        message: t("incidents.missingDiver.alreadyStarted", { name: result.startedByName }),
+      };
+    }
+    if (result.reason === "not_missing") {
+      return { message: t("incidents.missingDiver.notMissing") };
+    }
+    return { message: t("incidents.missingDiver.notAllowed") };
+  }
+  const checkpoint = manifestCheckpointParam(text(formData, "checkpoint"));
+  const back = new URLSearchParams({ from: "manifest" });
+  if (checkpoint) back.set("checkpoint", checkpoint);
   revalidateAndRedirect(
     shopPath(shopSlug, "trips", tripId),
-    reportPath(shopSlug, tripId, result.reportId),
+    `${reportPath(shopSlug, tripId, result.reportId)}?${back}`,
   );
 }
 

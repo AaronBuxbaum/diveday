@@ -11,6 +11,7 @@ import {
   t,
 } from "./diver-roll-call-test-fixtures";
 import { diverRowState } from "./diver-row-state";
+import type { MissingReportAction } from "./MissingReportButton";
 
 afterEach(cleanup);
 
@@ -217,7 +218,7 @@ describe("the missing diver report starts from the row that raised it", () => {
 
   function renderPanel(
     rollCall: ReturnType<typeof notBackAt> | undefined,
-    startMissingDiverReport: ((bookingId: string) => Promise<void>) | null,
+    startMissingDiverReport: MissingReportAction | null,
     checkpoint: "departure" | "after_dive_1" = "after_dive_1",
   ) {
     const row = diver({ bookingId: "b-9", fullName: "Hugo Brandt", rollCall });
@@ -240,7 +241,7 @@ describe("the missing diver report starts from the row that raised it", () => {
   it("offers it, named for the diver, on a row marked not back aboard", () => {
     renderPanel(
       notBackAt(),
-      vi.fn(async () => undefined),
+      vi.fn(async () => null),
     );
     expect(start()).toHaveAccessibleName(`${t("incidents.missingDiver.start")} — Hugo Brandt`);
   });
@@ -253,14 +254,14 @@ describe("the missing diver report starts from the row that raised it", () => {
   it("offers nothing on a row that is not missing, or at the dock", () => {
     renderPanel(
       undefined,
-      vi.fn(async () => undefined),
+      vi.fn(async () => null),
     );
     expect(start()).toBeNull();
     cleanup();
     // At the dock "not boarded" is "never left": no missing diver.
     renderPanel(
       notBackAt(),
-      vi.fn(async () => undefined),
+      vi.fn(async () => null),
       "departure",
     );
     expect(start()).toBeNull();
