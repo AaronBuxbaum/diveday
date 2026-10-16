@@ -45,8 +45,9 @@ function baseInput(): IncidentExportInput {
   };
 }
 
-describe("the boat at the departure checkpoint on the departure log ", () => {
+describe("the boat at the departure checkpoint on the departure log", () => {
   const snapshot = {
+    boatId: "boat-1",
     boatName: "Reef Runner",
     judgedOn: "2026-08-04",
     capturedAt: new Date("2026-08-04T12:40:00.000Z"),
@@ -77,9 +78,14 @@ describe("the boat at the departure checkpoint on the departure log ", () => {
 
   it("carries the papers and notices verbatim, and the hash covers them", () => {
     const without = buildIncidentExport(baseInput());
-    const doc = buildIncidentExport({ ...baseInput(), boatSafety: snapshot });
+    const doc = buildIncidentExport({
+      ...baseInput(),
+      boatSafety: snapshot,
+      departureBoatId: "boat-1",
+    });
     expect(doc.boatSafety).toEqual({
       boatName: "Reef Runner",
+      boatChanged: false,
       judgedOn: "2026-08-04",
       capturedAt: "2026-08-04T12:40:00.000Z",
       papers: snapshot.papers,
@@ -92,8 +98,42 @@ describe("the boat at the departure checkpoint on the departure log ", () => {
       boatSafety: { ...snapshot, papers: { ...snapshot.papers, inspectionDueOn: "2027-08-01" } },
     });
     expect(renewed.contentHash).not.toBe(doc.contentHash);
-    expect(buildIncidentExport({ ...baseInput(), boatSafety: snapshot }).contentHash).toBe(
-      doc.contentHash,
-    );
+    expect(
+      buildIncidentExport({ ...baseInput(), boatSafety: snapshot, departureBoatId: "boat-1" })
+        .contentHash,
+    ).toBe(doc.contentHash);
+  });
+
+  // Review D1: absence is worded by what is known, never "no roll call".
+  it("says why nothing was kept: no boat on the departure, or simply not kept", () => {
+    const noBoat = buildIncidentExport({ ...baseInput(), departureBoatId: null });
+    expect(noBoat.boatSafety).toBeNull();
+    expect(noBoat.boatSafetyAbsence).toBe("no_boat");
+    const notKept = buildIncidentExport({ ...baseInput(), departureBoatId: "boat-1" });
+    expect(notKept.boatSafetyAbsence).toBe("not_kept");
+    // The reason is read off today's departure, not a fact of the day: unhashed.
+    expect(notKept.contentHash).toBe(noBoat.contentHash);
+    const kept = buildIncidentExport({
+      ...baseInput(),
+      boatSafety: snapshot,
+      departureBoatId: "boat-1",
+    });
+    expect(kept.boatSafetyAbsence).toBeNull();
+  });
+
+  // Review D6: a boat swapped after the count is said, not hidden.
+  it("says when the departure's boat is no longer the hull that was kept", () => {
+    const swapped = buildIncidentExport({
+      ...baseInput(),
+      boatSafety: snapshot,
+      departureBoatId: "boat-2",
+    });
+    expect(swapped.boatSafety?.boatChanged).toBe(true);
+    const removed = buildIncidentExport({
+      ...baseInput(),
+      boatSafety: snapshot,
+      departureBoatId: null,
+    });
+    expect(removed.boatSafety?.boatChanged).toBe(true);
   });
 });

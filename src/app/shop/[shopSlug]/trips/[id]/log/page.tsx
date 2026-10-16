@@ -374,7 +374,7 @@ export default async function IncidentExportPage({
         )}
       </section>
 
-      <BoatAtDeparture boatSafety={doc.boatSafety} locale={locale} dateTime={dateTime} t={t} />
+      <BoatAtDeparture doc={doc} locale={locale} dateTime={dateTime} t={t} />
       <section aria-labelledby="incident-evidence-heading">
         <h2 id="incident-evidence-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.evidenceHeading")}

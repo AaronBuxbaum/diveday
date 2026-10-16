@@ -1690,10 +1690,11 @@ export async function recordRollCall(
     occurredAt?: Date;
   },
 ): Promise<RecordRollCallOutcome> {
+  // One instant for the event and the boat snapshot it keeps (#2300).
+  const occurredAt = input.occurredAt ?? nowDate();
   const outcome = await db.transaction(async (tx): Promise<RecordRollCallOutcome> => {
     const checkpoint = input.checkpoint ?? "departure";
     const source = input.source ?? "live";
-    const occurredAt = input.occurredAt ?? nowDate();
     const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
     if (!staffId) return { ok: false, reason: "staff_not_found" };
 
@@ -1901,7 +1902,8 @@ export async function recordRollCall(
     // The boat's papers and kit as the boat leaves (#2300), for the departure
     // log once the live section is gone. After the commit, and never throws.
     if ((input.checkpoint ?? "departure") === "departure") {
-      await captureDepartureBoatSafety(db, input.shopId, input.tripId);
+      // As of the tap, not the sync: an offline count made before sailing keeps the boat.
+      await captureDepartureBoatSafety(db, input.shopId, input.tripId, occurredAt);
     }
   }
   logOfflineRetractionSignals(input, outcome);
@@ -1980,10 +1982,11 @@ export async function recordCrewRollCall(
     occurredAt?: Date;
   },
 ): Promise<RecordCrewRollCallOutcome> {
+  // One instant for the event and the boat snapshot it keeps (#2300).
+  const occurredAt = input.occurredAt ?? nowDate();
   const outcome = await db.transaction(async (tx): Promise<RecordCrewRollCallOutcome> => {
     const checkpoint = input.checkpoint ?? "departure";
     const source = input.source ?? "live";
-    const occurredAt = input.occurredAt ?? nowDate();
 
     const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
     if (!staffId) return { ok: false, reason: "staff_not_found" };
@@ -2233,7 +2236,8 @@ export async function recordCrewRollCall(
     // The boat's papers and kit as the boat leaves (#2300), for the departure
     // log once the live section is gone. After the commit, and never throws.
     if ((input.checkpoint ?? "departure") === "departure") {
-      await captureDepartureBoatSafety(db, input.shopId, input.tripId);
+      // As of the tap, not the sync: an offline count made before sailing keeps the boat.
+      await captureDepartureBoatSafety(db, input.shopId, input.tripId, occurredAt);
     }
   }
   logOfflineRetractionSignals(input, outcome);

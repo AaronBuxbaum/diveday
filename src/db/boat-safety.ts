@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lte } from "drizzle-orm";
 import {
   type BoatPaperRecord,
   type BoatSafetyNotice,
@@ -288,10 +288,11 @@ export async function departureBoatId(
 /**
  * **Keep the boat's papers and kit notices as they stand at the departure
  * checkpoint** (#2300). Called after every departure-checkpoint roll-call
- * write, diver or crew, live or offline: the row is rewritten each time until
- * the departure has sailed (`hasSailed`), then never again, so the departure
- * log reads what the crew had in front of them as the boat left rather than
- * the boat as it is today.
+ * write, diver or crew, live or offline, with that tap's own `occurredAt` as
+ * `asOf`: a tap made before the departure sailed (`hasSailed`) keeps the boat,
+ * however late it syncs, and one made after keeps nothing. An older tap never
+ * overwrites a newer one, so the log reads the boat as of the last count
+ * before it left. A deleted hull keeps nothing.
  *
  * Never throws. The roll call it follows is already committed, and a missing
  * snapshot is stated on the log as missing; a failure is logged, not raised
@@ -301,12 +302,12 @@ export async function captureDepartureBoatSafety(
   db: DbExecutor,
   shopId: string,
   tripId: string,
-  now: Date = nowDate(),
-): Promise<"captured" | "sailed" | "no_boat" | "failed"> {
+  asOf: Date = nowDate(),
+): Promise<"captured" | "kept_newer" | "sailed" | "no_boat" | "failed"> {
   try {
     // Its own transaction (a savepoint when the caller holds one), so a failed
     // statement here never aborts the caller's.
-    return await db.transaction((tx) => captureInTransaction(tx, shopId, tripId, now));
+    return await db.transaction((tx) => captureInTransaction(tx, shopId, tripId, asOf));
   } catch (error) {
     log("boat_safety.snapshot_failed", "error", {
       errorCode: error instanceof Error ? error.name : "unknown_error",
@@ -319,8 +320,8 @@ async function captureInTransaction(
   db: DbExecutor,
   shopId: string,
   tripId: string,
-  now: Date,
-): Promise<"captured" | "sailed" | "no_boat"> {
+  asOf: Date,
+): Promise<"captured" | "kept_newer" | "sailed" | "no_boat"> {
   const [trip] = await db
     .select({ startsAt: trips.startsAt, boatId: trips.boatId, timeZone: shops.timezone })
     .from(trips)
@@ -328,11 +329,11 @@ async function captureInTransaction(
     .where(and(eq(trips.shopId, shopId), eq(trips.id, tripId), liveTrip()))
     .limit(1);
   if (!trip?.boatId) return "no_boat";
-  if (hasSailed(trip.startsAt, now)) return "sailed";
+  if (hasSailed(trip.startsAt, asOf)) return "sailed";
   const [boat] = await db
     .select(boatPaperColumns)
     .from(boats)
-    .where(and(eq(boats.shopId, shopId), eq(boats.id, trip.boatId)))
+    .where(and(eq(boats.shopId, shopId), eq(boats.id, trip.boatId), isNull(boats.deletedAt)))
     .limit(1);
   if (!boat) return "no_boat";
   const judgedOn = calendarDateInTimezone(trip.startsAt, trip.timeZone);
@@ -356,18 +357,25 @@ async function captureInTransaction(
     registrationExpiresOn: boat.registrationExpiresOn,
     insuranceExpiresOn: boat.insuranceExpiresOn,
   };
-  const row = { boatId: boat.id, boatName: boat.name, judgedOn, papers, notices, capturedAt: now };
-  await db
+  const row = { boatId: boat.id, boatName: boat.name, judgedOn, papers, notices, capturedAt: asOf };
+  const written = await db
     .insert(departureBoatSafetySnapshots)
     .values({ shopId, tripId, ...row })
-    .onConflictDoUpdate({ target: departureBoatSafetySnapshots.tripId, set: row });
-  return "captured";
+    .onConflictDoUpdate({
+      target: departureBoatSafetySnapshots.tripId,
+      set: row,
+      // An offline tap from before the last one kept arrives second: keep the newer.
+      setWhere: lte(departureBoatSafetySnapshots.capturedAt, asOf),
+    })
+    .returning({ id: departureBoatSafetySnapshots.id });
+  return written.length > 0 ? "captured" : "kept_newer";
 }
 
 /** The departure-checkpoint snapshot of this departure's boat, or null if none was taken. */
 export async function departureBoatSafetySnapshot(db: DbExecutor, shopId: string, tripId: string) {
   const [row] = await db
     .select({
+      boatId: departureBoatSafetySnapshots.boatId,
       boatName: departureBoatSafetySnapshots.boatName,
       judgedOn: departureBoatSafetySnapshots.judgedOn,
       papers: departureBoatSafetySnapshots.papers,
