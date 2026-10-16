@@ -642,7 +642,7 @@
     "src/app/shop/[shopSlug]/reviews/page.tsx": 465,
     "src/app/shop/[shopSlug]/schedule/board/page.tsx": 416,
     "src/app/shop/[shopSlug]/settings/import/page.tsx": 508,
-    "src/app/shop/[shopSlug]/settings/team/page.tsx": 789,
+    "src/app/shop/[shopSlug]/settings/team/page.tsx": 788,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 593,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 704,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 494,
