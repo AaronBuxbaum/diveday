@@ -792,11 +792,6 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-      # The OIDC token `configure-aws-credentials` trades for the reg-suit role
-      # below (issue #2543). It replaces the long-lived `REG_SUIT_AWS_*` access
-      # key this job used to read from secrets; the role is scoped to the visual
-      # bucket (`GitHubActionsRegSuitRole`, infra/lib/infra-stack.ts).
-      id-token: write
     steps:
       # This job needs the *commit* right and the *history* whole, for two
       # reasons that outlived the plugin that first demanded them.
@@ -951,21 +946,6 @@ jobs:
       # diff can reach (`visual-plan`): every surface it did not capture is
       # copied from the expected snapshot before the compare, so it reads as
       # unchanged instead of deleted (`scripts/visual-fill.mjs`).
-      # Short-lived credentials for `reg-suit run`, which finds them in the
-      # environment through the AWS SDK's default chain (regconfig.json names no
-      # key). A fork's pull request is handed no OIDC token and no secrets, so it
-      # skips this and the compare fails as it always has there.
-      - name: Confirm the reg-suit role ARN is set
-        if: ${{ vars.AWS_REG_SUIT_ROLE_ARN == '' && needs.visual.result == 'success' && steps.keys.outcome == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
-        run: |
-          echo "::error::AWS_REG_SUIT_ROLE_ARN repository variable is not set. Set it to the GitHubActionsRegSuitRoleArn stack output (docs/engineering/infrastructure-runbook.md)."
-          exit 1
-      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
-        if: ${{ needs.visual.result == 'success' && steps.keys.outcome == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
-        with:
-          aws-region: ${{ env.REG_SUIT_AWS_REGION }}
-          role-to-assume: ${{ vars.AWS_REG_SUIT_ROLE_ARN }}
-          role-session-name: gha-reg-suit
       - name: Run reg-suit visual regression
         id: compare
         if: ${{ needs.visual.result == 'success' && steps.keys.outcome == 'success' }}
@@ -975,6 +955,8 @@ jobs:
           VISUAL_EXPECTED_DIR: ${{ steps.baseline-cache.outputs.cache-hit == 'true' && '.reg-baseline' || '' }}
           REG_SUIT_AWS_REGION: ${{ env.REG_SUIT_AWS_REGION }}
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
+          REG_SUIT_AWS_ACCESS_KEY_ID: ${{ secrets.REG_SUIT_AWS_ACCESS_KEY_ID }}
+          REG_SUIT_AWS_SECRET_ACCESS_KEY: ${{ secrets.REG_SUIT_AWS_SECRET_ACCESS_KEY }}
           REG_SUIT_GITHUB_CLIENT_ID: ${{ secrets.REG_SUIT_GITHUB_CLIENT_ID }}
       # A push to main just published this commit's whole capture as its
       # snapshot; keep the same images in the Actions cache under the same key,
