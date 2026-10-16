@@ -85,7 +85,7 @@ export default async function InboxPage({
   const messages = await pagedInboxMessages(db, shop.id, {
     page: Number.parseInt(page ?? "", 10),
   });
-  // The departure each message could be about (UX review 2026-10-13, item 19).
+  // The departures each message could be about (UX review 2026-10-13, item 19).
   const seats = await messageSeats(
     db,
     shop.id,
@@ -132,7 +132,7 @@ export default async function InboxPage({
                     t={t}
                     deleteAction={deleteInboxMessageAction}
                     doneAction={setInboxMessageDoneAction}
-                    seat={seats.get(row.message.id) ?? null}
+                    seats={seats.get(row.message.id) ?? []}
                     lateAction={markInboxSenderLateAction}
                   />
                 ))}
@@ -153,7 +153,7 @@ export default async function InboxPage({
                     t={t}
                     deleteAction={deleteInboxMessageAction}
                     doneAction={setInboxMessageDoneAction}
-                    seat={seats.get(row.message.id) ?? null}
+                    seats={seats.get(row.message.id) ?? []}
                     lateAction={markInboxSenderLateAction}
                   />
                 ))}

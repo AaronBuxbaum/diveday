@@ -45,6 +45,9 @@ const MENU_DANGER_ROW_CLASS = `${menuRowClass("danger", { gutter: false })} whit
  */
 const EXCERPT_LENGTH = 140;
 
+/** Whether a seat already carries the mark, by any door. */
+const marked = (seat: MessageSeat) => seat.runningLateAt !== null;
+
 function excerpt(body: string): string {
   const flattened = body.replace(/\s+/g, " ").trim();
   return flattened.length <= EXCERPT_LENGTH
@@ -89,7 +92,10 @@ function excerpt(body: string): string {
  * departure, and its "⋯" offers **Mark running late**: the mark the diver's
  * own tap sets, which the roster and the manifest already show. A sentence is
  * never read as a command (ADR 20260909-reply-keywords), so a person decides;
- * once the seat carries the mark, by any door, the row says so instead.
+ * once the seat carries the mark, by any door, the row says so instead. When
+ * the sender holds **more than one** such seat, the row names each and the "⋯"
+ * offers **Mark running late for {trip}** once per seat, so the desk chooses
+ * (issue #2551); the server re-derives the candidates and refuses any other.
  *
  * **The door lands on the message, not the top of the conversation.** Each
  * inbound message on the record carries `id="message-<id>"`, and the record's
@@ -103,7 +109,7 @@ export function InboxRow({
   t,
   deleteAction,
   doneAction,
-  seat = null,
+  seats = [],
   lateAction,
 }: {
   row: InboxMessageRow;
@@ -115,9 +121,9 @@ export function InboxRow({
   deleteAction: (formData: FormData) => Promise<void>;
   /** Marks the message done (`done=true`) or puts it back (`done=false`). */
   doneAction: (formData: FormData) => Promise<void>;
-  /** The open seat this message could be about, or null. */
-  seat?: MessageSeat | null;
-  /** Puts the running-late mark on `seat`; required whenever `seat` is passed. */
+  /** The open seats this message could be about, soonest first; empty when none. */
+  seats?: readonly MessageSeat[];
+  /** Puts the running-late mark on the chosen seat; required whenever `seats` is passed. */
   lateAction?: (formData: FormData) => Promise<void>;
 }) {
   const { message, personName } = row;
@@ -139,23 +145,29 @@ export function InboxRow({
   // either: three lines held the seeded message only where its column was
   // wide. The 140-character excerpt is what bounds the row.
   const wordsCut = message.personId ? "truncate" : "wrap-anywhere";
+  const several = seats.length > 1;
   const facts = [
     // The address is on the stranger's row only: for a diver on file the name
     // above already says who this is, and their address is on their record.
     message.personId ? null : message.fromAddress,
     // A LATE reply already marked the seat; the seat's own fact says so.
-    message.keywordIntent && !(message.keywordIntent === "late" && seat?.runningLateAt)
+    message.keywordIntent && !(message.keywordIntent === "late" && seats.some(marked))
       ? t(KEYWORD_KEYS[message.keywordIntent])
       : null,
-    seat
-      ? t("inbox.seat", {
-          trip: seat.title,
-          when: formatWeekdayTime(seat.startsAt, locale, timezone),
-        })
-      : null,
-    seat?.runningLateAt
-      ? t("inbox.late.marked", { time: formatTime(seat.runningLateAt, locale, timezone) })
-      : null,
+    ...seats.flatMap((seat) => [
+      t("inbox.seat", {
+        trip: seat.title,
+        when: formatWeekdayTime(seat.startsAt, locale, timezone),
+      }),
+      seat.runningLateAt
+        ? several
+          ? t("inbox.late.markedFor", {
+              trip: seat.title,
+              time: formatTime(seat.runningLateAt, locale, timezone),
+            })
+          : t("inbox.late.marked", { time: formatTime(seat.runningLateAt, locale, timezone) })
+        : null,
+    ]),
     message.mediaCount > 0 ? t("inbox.attachments", { count: message.mediaCount }) : null,
   ].filter((fact): fact is string => Boolean(fact));
 
@@ -174,18 +186,33 @@ export function InboxRow({
             {formatDateTimeTz(message.receivedAt, locale, timezone)}
           </span>
           <RowMenu label={t("inbox.menu.label", { name })}>
-            {seat && !seat.runningLateAt && lateAction ? (
-              <form action={lateAction}>
-                <input type="hidden" name="messageId" value={message.id} />
-                <SubmitButton
-                  pendingLabel={t("inbox.done.pending")}
-                  className={MENU_ROW_CLASS}
-                  ariaLabel={t("inbox.late.actionFor", { name, trip: seat.title })}
-                >
-                  {t("inbox.late.action")}
-                </SubmitButton>
-              </form>
-            ) : null}
+            {lateAction
+              ? seats
+                  .filter((seat) => !seat.runningLateAt)
+                  .map((seat) => (
+                    <form key={seat.bookingId} action={lateAction}>
+                      <input type="hidden" name="messageId" value={message.id} />
+                      <input type="hidden" name="bookingId" value={seat.bookingId} />
+                      <SubmitButton
+                        pendingLabel={t("inbox.done.pending")}
+                        className={MENU_ROW_CLASS}
+                        ariaLabel={
+                          several
+                            ? t("inbox.late.actionForSeat", {
+                                name,
+                                trip: seat.title,
+                                when: formatWeekdayTime(seat.startsAt, locale, timezone),
+                              })
+                            : t("inbox.late.actionFor", { name, trip: seat.title })
+                        }
+                      >
+                        {several
+                          ? t("inbox.late.actionTrip", { trip: seat.title })
+                          : t("inbox.late.action")}
+                      </SubmitButton>
+                    </form>
+                  ))
+              : null}
             <form action={doneAction}>
               <input type="hidden" name="messageId" value={message.id} />
               <input type="hidden" name="done" value={done ? "false" : "true"} />
