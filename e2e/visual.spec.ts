@@ -4034,19 +4034,43 @@ for (const scheme of ["light", "dark"] as const) {
       /** The same hold on the schedule board, under the move's own notice. */
       test(`the board holds a reschedule notice after a move (${scheme})`, async ({ page }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const title = "Wreck Trip — Spiegel Grove";
         await page.goto("/shop/blue-mantis/schedule/board");
         await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
         await boardListSettled(page);
-        await page
-          .getByRole("button", { name: new RegExp(`^Move, copy, or remove ${title},`) })
-          .first()
-          .click();
-        await page
-          .getByRole("button", { name: new RegExp(`^Move ${title},`) })
-          .first()
-          .click();
-        await page.getByText("If you move it").waitFor();
+        // The first departure with divers booked that has not counted heads;
+        // the panel's own refusal line says which (schedule-builder.spec.ts).
+        const titles = await page
+          .getByRole("button", { name: /^Move, copy, or remove / })
+          .evaluateAll((nodes) =>
+            nodes.map(
+              (node) =>
+                /^Move, copy, or remove ([^,]+),/.exec(node.getAttribute("aria-label") ?? "")?.[1],
+            ),
+          );
+        let moved = false;
+        for (const title of new Set(titles.filter(Boolean))) {
+          const row = page
+            .getByRole("listitem")
+            .filter({ hasText: title as string })
+            .first();
+          const text = (await row.textContent()) ?? "";
+          if (!/(?:^|\D)[1-9]\d* of \d+/.test(text) || text.includes("Sailed")) continue;
+          await page
+            .getByRole("button", { name: new RegExp(`^Move, copy, or remove ${title},`) })
+            .first()
+            .click();
+          await page
+            .getByRole("button", { name: new RegExp(`^Move ${title},`) })
+            .first()
+            .click();
+          await page.locator("[data-move-preflight]").waitFor({ state: "attached" });
+          if ((await page.getByText("already counted heads").count()) === 0) {
+            moved = true;
+            break;
+          }
+          await page.getByRole("button", { name: "Cancel" }).click();
+        }
+        expect(moved).toBe(true);
         const date = page.getByLabel("New date");
         const next = new Date(`${await date.inputValue()}T12:00:00Z`);
         next.setUTCDate(next.getUTCDate() + 1);

@@ -103,6 +103,12 @@ describe("the certification records door", () => {
     expect(door()).toHaveTextContent("PADI Open Water · Nitrox");
   });
 
+  it("always offers the add-a-card door, with or without a card on file", () => {
+    renderGroup(diver({ certifications: [] } as unknown as Partial<DiverProfile>));
+
+    expect(screen.getByText("Add certification", { exact: true })).toBeInTheDocument();
+  });
+
   /**
    * A claim the shop has never seen may not read on a closed door as though it
    * had. The phrase is the shared one (`shared.certificationSummary.selfDeclared`),
