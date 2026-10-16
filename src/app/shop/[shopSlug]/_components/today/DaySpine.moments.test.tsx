@@ -326,7 +326,7 @@ describe("the two horizon rows", () => {
     const fold = container.querySelector("details");
     expect(fold).not.toBeNull();
     expect(fold?.open).toBe(false);
-    expect(screen.getByText(/1 departure · 1 job/)).toBeInTheDocument();
+    expect(screen.getByText(/1 departure · 1 thing/)).toBeInTheDocument();
     // Folding hides; it never drops. Tomorrow's station is in the DOM, drawn by
     // the same renderer as today's, one native toggle away.
     expect(within(fold as HTMLElement).getByRole("link", { name: /Night Dive/ })).toHaveAttribute(
