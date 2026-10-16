@@ -23,11 +23,6 @@ import {
   REQUIRABLE_CERTIFICATION_LEVELS,
   unreviewedCardState,
 } from "./readiness";
-import {
-  effectiveWaiverForBooking,
-  releaseLapsedForBooking,
-  WAIVER_SIGNATURE_VALIDITY_MS,
-} from "./waivers";
 
 const now = new Date("2026-07-18T12:00:00.000Z");
 const requirement = {
@@ -1685,68 +1680,5 @@ describe("certification_not_yet", () => {
     expect(
       noCertificationStands({ noCertificationDeclaredAt: null, noCertificationClearedAt: null }),
     ).toBe(false);
-  });
-});
-
-/**
- * **A release current today that lapses before the departure** (A§4 item 9).
- * Readiness asks "is this diver cleared right now?": the roster read today
- * shows the release as standing, and the same seat read on the morning of the
- * dive shows it gone. This pins both readings so that "valid now" cannot be
- * mistaken for "valid when the boat leaves", and so that a change to which
- * instant the roster measures against is a visible decision.
- */
-describe("a release that lapses between today and the departure", () => {
-  const today = new Date("2026-07-18T12:00:00.000Z");
-  const departure = new Date(today.getTime() + 21 * 24 * 60 * 60 * 1000);
-  // Signed 351 days ago: inside the year today, two weeks past it on the day.
-  const signedAt = new Date(
-    today.getTime() + 14 * 24 * 60 * 60 * 1000 - WAIVER_SIGNATURE_VALIDITY_MS,
-  );
-  const release = {
-    id: "release-1",
-    bookingId: "booking-1",
-    personId: "person-1",
-    status: "completed",
-    templateVersion: 1,
-    templateGeneration: 1,
-    signedAt,
-    completedAt: signedAt,
-    supersededAt: null,
-    expiresAt: signedAt,
-    createdAt: signedAt,
-  } as unknown as WaiverRecord;
-  const waiverOnly = {
-    requiresWaiver: true,
-    minimumCertificationLevel: null,
-    requiredSpecialties: [],
-  } as unknown as TripRequirement;
-
-  function rosterAt(at: Date) {
-    const resolution = {
-      bookingWaiver: release,
-      personSignedWaivers: [release],
-      currentTemplateVersion: 1,
-      now: at,
-    };
-    return calculateReadiness({
-      requirement: waiverOnly,
-      waiver: effectiveWaiverForBooking(resolution),
-      releaseLapsed: releaseLapsedForBooking(resolution),
-      certifications: [],
-      paymentStatus: "paid",
-      timezone: "UTC",
-      now: at,
-    });
-  }
-
-  it("reads as cleared on today's roster", () => {
-    expect(rosterAt(today)).toEqual({ status: "ready", blockers: [] });
-  });
-
-  it("reads as blocked on the morning of the dive, as a lapsed release and not an unsent one", () => {
-    const result = rosterAt(new Date(departure.getTime() - 3 * 60 * 60 * 1000));
-    expect(result.status).toBe("blocked");
-    expect(result.blockers.map((blocker) => blocker.code)).toEqual(["waiver_lapsed"]);
   });
 });

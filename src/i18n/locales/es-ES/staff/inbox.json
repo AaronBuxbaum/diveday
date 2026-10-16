@@ -22,7 +22,10 @@
   "late": {
     "action": "Marcar que llega tarde",
     "actionFor": "Marcar que {name} llega tarde a {trip}",
-    "marked": "En el manifiesto: llega tarde, avisó a las {time}"
+    "marked": "En el manifiesto: llega tarde, avisó a las {time}",
+    "actionTrip": "Marcar que llega tarde a {trip}",
+    "actionForSeat": "Marcar que {name} llega tarde a {trip}, {when}",
+    "markedFor": "En el manifiesto de {trip}: llega tarde, avisó a las {time}"
   },
   "openRecord": "Abrir la ficha de {name}",
   "delete": {

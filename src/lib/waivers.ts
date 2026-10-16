@@ -1,6 +1,6 @@
 import type { MedicalAnswers, WaiverRecord as StoredWaiverRecord } from "@/db/schema";
 import { type CalendarDate, calendarDateInTimezone, isValidCalendarDate } from "./calendar-date";
-import { nowDate } from "./clock";
+import { DAY_MS, nowDate } from "./clock";
 import {
   type GuardianSignature,
   type GuardianSigner,
@@ -250,6 +250,32 @@ export function clearanceEvaluatedAt(record: WaiverRecord): number | null {
   if (!record.medicalClearedAt || !record.medicalClearanceEvaluatedOn) return null;
   const parsed = Date.parse(`${record.medicalClearanceEvaluatedOn}T00:00:00.000Z`);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+/**
+ * **The instant a seat's release is measured at** (issue #2611): the later of
+ * `now` and the departure, never earlier than `now`. A roster read the night
+ * before must not call a release "Ready" that lapses before the boat leaves,
+ * and a liveaboard's release that lapses mid-trip must read blocked before it
+ * sails, so both clocks of a release (the signature's year and a cleared
+ * referral's physician evaluation) run against the departure.
+ *
+ * The departure is the trip's `endsAt` when it runs a day or more (a multi-day
+ * trip, the same threshold `meetingWindowsByTrip` uses) and `startsAt`
+ * otherwise. Cards, payment and age do not use this: they keep their own
+ * instants. Fail-closed by construction: the result is never before `now`, so
+ * a trip already under way or over is read exactly as today.
+ */
+export function waiverClockInstant(input: {
+  now: Date;
+  startsAt: Date | null;
+  endsAt: Date | null;
+}): Date {
+  const { now, startsAt, endsAt } = input;
+  if (!startsAt) return now;
+  const multiDay = endsAt !== null && endsAt.getTime() - startsAt.getTime() >= DAY_MS;
+  const departure = multiDay ? endsAt : startsAt;
+  return departure.getTime() > now.getTime() ? departure : now;
 }
 
 /**

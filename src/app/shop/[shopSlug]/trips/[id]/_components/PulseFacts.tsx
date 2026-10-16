@@ -5,12 +5,15 @@ import type { TripPulseFact } from "./TripPulse";
 const FACT_LINK_CLASS =
   "-my-3 inline-flex min-h-11 items-center text-sm font-medium hover:underline";
 
+const FACT_INK = {
+  danger: "text-danger",
+  warning: "text-warning-strong",
+  work: "text-primary",
+} as const;
+
 function FactLink({ fact }: { fact: TripPulseFact }) {
   return (
-    <Link
-      href={fact.href}
-      className={`${FACT_LINK_CLASS} ${fact.tone === "danger" ? "text-danger" : "text-primary"}`}
-    >
+    <Link href={fact.href} className={`${FACT_LINK_CLASS} ${FACT_INK[fact.tone ?? "work"]}`}>
       {fact.text}
     </Link>
   );
@@ -22,7 +25,9 @@ function FactLink({ fact }: { fact: TripPulseFact }) {
  * 2026-10-07, item 23).
  *
  * A fact that holds the boat up (`tone: "danger"`) always stands on its own
- * line: a missing instructor or a boat clash is never one tap deep. The rest
+ * line: a missing instructor or a boat clash is never one tap deep. A warning
+ * (nitrox asked for with no verified card, issue #2549) also stands on its own
+ * line, in warning ink, below the hazards. The rest
  * (rental sizes to take, orders awaiting payment) are work, not hazards: one
  * of them renders as its own link, and two or more fold into one line, "2
  * things to sort", that opens to the same links. Not "before boarding": an
@@ -43,11 +48,15 @@ export function PulseFacts({
 }) {
   if (facts.length === 0) return null;
   const hazards = facts.filter((fact) => fact.tone === "danger");
-  const work = facts.filter((fact) => fact.tone !== "danger");
+  const warnings = facts.filter((fact) => fact.tone === "warning");
+  const work = facts.filter((fact) => fact.tone === undefined);
   const fold = work.length > 1;
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-7">
       {hazards.map((fact) => (
+        <FactLink key={fact.href} fact={fact} />
+      ))}
+      {warnings.map((fact) => (
         <FactLink key={fact.href} fact={fact} />
       ))}
       {fold ? (

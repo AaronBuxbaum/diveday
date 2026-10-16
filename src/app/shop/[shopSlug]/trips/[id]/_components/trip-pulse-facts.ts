@@ -19,7 +19,7 @@ import { boatClashText } from "./trip-crew-notes";
 type TripOverview = NonNullable<Awaited<ReturnType<typeof getTripOverview>>>;
 
 /** One quiet link in the Divers tab's pulse: a fact about the boat and the door to its fix. */
-export type TripPulseFact = { text: string; href: string; tone?: "danger" };
+export type TripPulseFact = { text: string; href: string; tone?: "danger" | "warning" };
 
 /**
  * Capacity moved into the masthead ring in slice 5e. Non-seat pulse facts
@@ -127,10 +127,12 @@ export function tripPulseFacts({
         // **The boat's work** (third review, item 4): the same items, counts
         // and words Today's rows for this boat carry, from one reader
         // (`boatWorkItems`). Work, not hazards, so it reads in the pulse's
-        // neutral ink below the facts that hold the boat up.
+        // neutral ink below the facts that hold the boat up, except nitrox
+        // asked for with no verified card, which carries its warning tone.
         ...boatWorkItems(pulse.work, { startsAt, now }).map((item) => ({
           text: boatWorkText(t, item),
           href: boatWorkHref(item, { shopSlug, tripId }),
+          ...(item.tone === "warning" ? { tone: "warning" as const } : {}),
         })),
       ]
     : [];

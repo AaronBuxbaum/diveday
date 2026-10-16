@@ -5,6 +5,7 @@ import { formatDateTimeTz } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { firstNameOf } from "@/lib/person-name";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "@/lib/readiness";
+import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { RollCallGapReason, TodayActionKind, TodaySeason } from "@/lib/today";
 import { SPECIALTY_KEYS } from "./readiness-labels";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
@@ -708,18 +709,24 @@ export function openInboxActionText(t: StaffTranslator): string {
 /**
  * The units row: the one first-run question a trading shop can still have open.
  *
- * Worded as a question about *money and depth*, not about a settings page —
+ * Worded as a question about *money, depth and temperature* (the three units
+ * the first-run checklist names too, issue #2571), not about a settings page —
  * "confirm your units" says nothing a reader could act on, while the currency a
  * card is charged in is the fact that makes this worth a row at all (#835).
  */
 export function unitsUnconfirmedSubjectText(
   t: StaffTranslator,
-  input: { currency: string; depthUnit: DepthUnit },
+  input: { currency: string; depthUnit: DepthUnit; temperatureUnit: TemperatureUnit },
 ): string {
   return t("today.unitsUnconfirmed.subject", {
     currency: input.currency,
     depth: t(
       input.depthUnit === "feet" ? "today.unitsUnconfirmed.feet" : "today.unitsUnconfirmed.meters",
+    ),
+    temperature: t(
+      input.temperatureUnit === "fahrenheit"
+        ? "today.unitsUnconfirmed.fahrenheit"
+        : "today.unitsUnconfirmed.celsius",
     ),
   });
 }

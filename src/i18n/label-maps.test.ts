@@ -514,7 +514,7 @@ const CASES: readonly LabelMapCase[] = [
     module: "boat-work-labels.ts",
     map: "BOAT_WORK_KEYS",
     rows: codeRows(BOAT_WORK_CODES, (locale, code) =>
-      boatWorkText(staffTranslator(locale), { code, count: 2 }),
+      boatWorkText(staffTranslator(locale), { code, count: 2, tone: "work" }),
     ),
   },
   {

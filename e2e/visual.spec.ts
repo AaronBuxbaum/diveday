@@ -9348,7 +9348,7 @@ for (const scheme of ["light", "dark"] as const) {
       // "This week" is a folded disclosure beside Tomorrow.
       await page.goto(`/shop/${privateShop.slug}`);
       // The row's own words, not a timing guess.
-      await page.getByText(/guessed from your timezone/).waitFor();
+      await page.getByText(/picked for where you are/).waitFor();
       await capture(page, "today-units-unconfirmed", scheme);
     });
 
