@@ -52,6 +52,7 @@ export type TripRosterActions = {
   setParticipantTypeAction: FormAction;
   confirmDiverIdentityAction: FormAction;
   splitDiverIdentityAction: FormAction;
+  repointDiverIdentityAction: FormAction;
   /** Drawn only for an owner or manager (`canRetireMedicalRefusal`). */
   sendNewWaiverAction?: FormAction;
   certifyDiverAction?: FormAction;
@@ -269,6 +270,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           agencyCheckCardsByPerson: guests.agencyCheckCardsByPerson,
           courseMaterialsDoneByPerson: guests.courseMaterialsDoneByPerson,
           sameNameHeldSeats: guests.sameNameHeldSeats,
+          sameNamePeople: guests.sameNamePeople,
           heldSeatLastDiveDay: guests.heldSeatLastDiveDay,
           packageDivesByBooking: guests.packageDivesByBooking,
           paymentMarksByBooking: guests.paymentMarksByBooking,
@@ -288,6 +290,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           setParticipantTypeAction: actions.setParticipantTypeAction,
           confirmIdentityAction: actions.confirmDiverIdentityAction,
           splitIdentityAction: actions.splitDiverIdentityAction,
+          repointIdentityAction: actions.repointDiverIdentityAction,
           sendNewWaiverAction: actions.sendNewWaiverAction,
           addNoteAction: actions.addInternalNoteAction,
           deleteNoteAction: actions.deleteInternalNoteAction,

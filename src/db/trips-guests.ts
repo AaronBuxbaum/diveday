@@ -19,6 +19,7 @@ import { type CourseMaterialsDone, courseMaterialsDoneByPerson } from "./course-
 import { courseNextStepsByBooking } from "./course-next-step";
 import { spendableDivesForTrip } from "./dive-packages";
 import { findSimilarDivers, lastDiveDaysHere, listBookableDivers } from "./divers";
+import { otherSameNamePeople } from "./identity-repoint";
 import { listLastMinuteList } from "./last-minute-list";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "./operations";
 import { getTripRosterWithPaymentMarks } from "./payment-marks";
@@ -139,6 +140,7 @@ export async function getTripGuests(
   // one after another, most of the trip page's serial phases.
   const [
     sameNameHeldSeats,
+    sameNamePeople,
     heldLastDiveDays,
     packageDivesByPerson,
     certificationSummaries,
@@ -155,6 +157,18 @@ export async function getTripGuests(
         bookingId: booking.id,
         personId: booking.personId,
         tripId,
+        bookedAs: booking.identityBookedAs,
+      })),
+    ),
+    // "Another diver on file": the shop's other live people with the seat's
+    // name, by name only, for a seat held because two divers share it
+    // (issue #2129).
+    otherSameNamePeople(
+      db,
+      shop.id,
+      heldSeats.map(({ booking }) => ({
+        bookingId: booking.id,
+        personId: booking.personId,
         bookedAs: booking.identityBookedAs,
       })),
     ),
@@ -313,6 +327,8 @@ export async function getTripGuests(
     notesByBooking,
     courseNextStepByBooking,
     sameNameHeldSeats,
+    /** Per same-name held seat, the shop's other people with that name (issue #2129). */
+    sameNamePeople,
     /**
      * Per held seat, the matched diver's last dive day at this shop, or null
      * when there is none (issue #1789). Only held seats have an entry.

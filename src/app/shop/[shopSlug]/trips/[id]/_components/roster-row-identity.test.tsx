@@ -375,6 +375,36 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       );
     });
 
+    it("offers the other same-name divers by name only, unpicked, beside a link to each record (#2129)", () => {
+      const sameName = entry("u", "Alex Kim", {
+        identityBookedAs: "Alex Kim",
+        identityMatchedBy: "picked_name",
+      });
+      const { unmount } = renderRoster({
+        roster: [sameName],
+        readiness: unconfirmed,
+        waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+        rentalFit,
+      });
+      expect(document.querySelector('input[name="toPersonId"]')).toBeNull();
+      unmount();
+
+      renderRoster({
+        roster: [sameName],
+        readiness: unconfirmed,
+        waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+        rentalFit,
+        sameNamePeople: new Map([["u", [{ personId: "p-2", fullName: "Alex Kim" }]]]),
+      });
+      const radios = document.querySelectorAll<HTMLInputElement>('input[name="toPersonId"]');
+      expect([...radios].map((radio) => [radio.value, radio.checked])).toEqual([["p-2", false]]);
+      const form = radios[0]?.form;
+      // Name only: the form carries nothing else from the other record.
+      expect(form?.textContent).toContain("Alex Kim");
+      expect(form?.querySelector("a")?.getAttribute("href")).toBe("/shop/blue-mantis/divers/p-2");
+      expect(form?.textContent).toContain("The seat stays held until you confirm it’s them.");
+    });
+
     it("asks for a date of birth when a seat it would move is on an age-gated course", () => {
       renderRoster({
         roster: [heldSeat()],

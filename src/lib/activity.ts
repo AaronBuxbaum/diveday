@@ -67,6 +67,16 @@ type ActivityParamShapes = {
   /** The same split, on the record the seat left; `diver` is that record's name. */
   identity_split_off: { actor: string; diver: string };
   /**
+   * …or answered "another diver on file": the held seat moved to the shop's
+   * other record with the same name and **stays held** (issue #2129,
+   * `repointHeldBooking`). On the departure; `diver` is the booked-as name.
+   */
+  identity_repointed: { actor: string; diver: string };
+  /** The same move, on the record the seat left; `diver` is that record's name. */
+  identity_repointed_off: { actor: string; diver: string };
+  /** The same move, on the record the seat now waits on; `diver` is that record's name. */
+  identity_repointed_onto: { actor: string; diver: string };
+  /**
    * Two records were merged into one, on the record kept: `diver` is its name
    * after the merge, `merged` the name the other record carried
    * (`mergeDiverRecords`). The merged record's own lines stay on it.
@@ -372,6 +382,9 @@ export const ACTIVITY_CODES = [
   "identity_confirmed",
   "identity_split",
   "identity_split_off",
+  "identity_repointed",
+  "identity_repointed_off",
+  "identity_repointed_onto",
   "crew_assigned",
   "crew_removed",
   "blowout_called",

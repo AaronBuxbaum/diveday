@@ -590,7 +590,13 @@
     "sameNameSeats": "{count, plural, one {Also move the held seat booked as {bookedAs} on {departures}} other {Also move the held seats booked as {bookedAs} on {departures}}}",
     "sameNameDeparture": "{trip} ({date}, {time})",
     "split": "Give them their own record",
-    "splitting": "Creating…"
+    "splitting": "Creating…",
+    "another": "Another diver on file",
+    "anotherLegend": "Move this seat to",
+    "anotherNote": "The seat stays held until you confirm it’s them.",
+    "openRecord": "Open record",
+    "repoint": "Move to this diver",
+    "repointing": "Moving…"
   },
   "boatWork": {
     "missingSizes": "{count, plural, one {# person} other {# people}} missing rental sizes",

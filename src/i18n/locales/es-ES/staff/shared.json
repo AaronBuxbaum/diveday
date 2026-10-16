@@ -590,7 +590,13 @@
     "sameNameSeats": "{count, plural, one {Pasar también la plaza retenida reservada como {bookedAs} en {departures}} other {Pasar también las plazas retenidas reservadas como {bookedAs} en {departures}}}",
     "sameNameDeparture": "{trip} ({date}, {time})",
     "split": "Crear su propia ficha",
-    "splitting": "Creando…"
+    "splitting": "Creando…",
+    "another": "Otra ficha existente",
+    "anotherLegend": "Pasar esta plaza a",
+    "anotherNote": "La plaza sigue retenida hasta que confirmes que es esa persona.",
+    "openRecord": "Abrir ficha",
+    "repoint": "Pasar a esta ficha",
+    "repointing": "Moviendo…"
   },
   "boatWork": {
     "missingSizes": "{count, plural, one {A # persona le faltan} other {A # personas les faltan}} tallas de alquiler",

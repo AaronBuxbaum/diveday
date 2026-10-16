@@ -7,6 +7,7 @@ import type { AppDb } from "@/db/client";
 import { markPartyPaidAction, previewPartyPaymentAction } from "../party-payment-actions";
 import {
   confirmDiverIdentityAction,
+  repointDiverIdentityAction,
   saveRosterEmergencyContactAction,
   splitDiverIdentityAction,
 } from "../roster-identity-actions";
@@ -67,6 +68,7 @@ export async function tripRosterActions({
     // at the counter (dive-domain review 2026-10-05).
     confirmDiverIdentityAction: confirmDiverIdentityAction.bind(null, shopSlug, tripId),
     splitDiverIdentityAction: splitDiverIdentityAction.bind(null, shopSlug, tripId),
+    repointDiverIdentityAction: repointDiverIdentityAction.bind(null, shopSlug, tripId),
     sendNewWaiverAction: mayRetireRefusal
       ? sendNewWaiverAction.bind(null, shopSlug, tripId)
       : undefined,

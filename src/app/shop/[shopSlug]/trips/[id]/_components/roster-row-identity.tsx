@@ -28,6 +28,9 @@ export type RowIdentityInput = Pick<
   | "locale"
   | "splitAsksDateOfBirth"
   | "sameNameHeldSeats"
+  | "sameNamePeople"
+  | "repointIdentityAction"
+  | "shopSlug"
   | "heldSeatLastDiveDay"
   | "packageDivesByBooking"
   | "confirmIdentityAction"
@@ -45,6 +48,9 @@ export function rowIdentity(seat: RowIdentityInput) {
     locale,
     splitAsksDateOfBirth,
     sameNameHeldSeats,
+    sameNamePeople,
+    repointIdentityAction,
+    shopSlug,
     heldSeatLastDiveDay,
     packageDivesByBooking,
     confirmIdentityAction,
@@ -184,6 +190,11 @@ export function rowIdentity(seat: RowIdentityInput) {
             }
           : undefined
       }
+      otherPeople={(sameNamePeople?.get(booking.id) ?? []).map((other) => ({
+        ...other,
+        href: `/shop/${shopSlug}/divers/${other.personId}`,
+      }))}
+      repointAction={repointIdentityAction}
       className="pb-3"
       confirm={
         <form action={confirmIdentityAction}>

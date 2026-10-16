@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { confirmBookingIdentity, splitBookingIdentity } from "@/db/bookings";
 import { getDb } from "@/db/client";
+import { repointHeldBooking } from "@/db/identity-repoint";
 import { applyPaidRentalKindsToFit } from "@/db/rental-fit";
 import { type IdentityReleaseOutcome, sendReleasesOnceIdentityKnown } from "@/db/waiver-issue";
 import { saveBookingEmergencyContact } from "@/db/waivers";
@@ -119,6 +120,55 @@ export async function splitDiverIdentityAction(
     noticeUrl(back, IDENTITY_RELEASE_NOTICE.split[release], { bid: bookingId }),
   );
 }
+
+/**
+ * Staff answer "another diver on file" to a seat held because two divers share
+ * its name (issue #2129): the seat moves to the namesake the staffer picked and
+ * **stays held**, so "Same person" is still asked of the new match. The write,
+ * its refusals and its trail are `repointHeldBooking`'s; no release goes out,
+ * because nobody is confirmed yet.
+ */
+export async function repointDiverIdentityAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const back = tripPath(shopSlug, tripId);
+  const s = (await requireShopSurface(shopSlug)).session;
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const toPersonId = String(formData.get("toPersonId") ?? "");
+  if (!uuidParam(bookingId)) redirect(back);
+  if (!uuidParam(toPersonId))
+    revalidateAndRedirect(back, noticeUrl(back, "invalid", { bid: bookingId }));
+  const db = await getDb();
+  await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
+  const moved = await repointHeldBooking(db, {
+    shopId: s.user.shopId,
+    bookingId,
+    actorPersonId: s.user.personId,
+    toPersonId,
+    sameNameSeatIds: String(formData.get("sameNameSeatIds") ?? "")
+      .split(",")
+      .filter((id) => uuidParam(id)),
+  });
+  revalidateAndRedirect(
+    back,
+    noticeUrl(back, moved.ok ? "identity-repointed" : REPOINT_REFUSAL_NOTICE[moved.reason], {
+      bid: bookingId,
+    }),
+  );
+}
+
+/** Which notice each refused re-point lands on (`repointHeldBooking`). */
+const REPOINT_REFUSAL_NOTICE = {
+  not_held: "invalid",
+  person_unavailable: "identity-repoint-unavailable",
+  medical_hold: "identity-repoint-medical-hold",
+  already_on_departure: "identity-repoint-already-booked",
+} as const satisfies Record<
+  Extract<Awaited<ReturnType<typeof repointHeldBooking>>, { ok: false }>["reason"],
+  string
+>;
 
 /**
  * Which notice confirm and split land on, by what sending the owed release

@@ -177,6 +177,27 @@ const NOTICE_KEYS: Record<
   },
   "identity-confirmed": { form: "roster", tone: "success", key: "trips.notices.identityConfirmed" },
   "identity-split": { form: "roster", tone: "success", key: "trips.notices.identitySplit" },
+  // Moved to the other same-name record and still held (issue #2129).
+  "identity-repointed": {
+    form: "roster",
+    tone: "success",
+    key: "trips.notices.identityRepointed",
+  },
+  "identity-repoint-unavailable": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityRepointUnavailable",
+  },
+  "identity-repoint-medical-hold": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityRepointMedicalHold",
+  },
+  "identity-repoint-already-booked": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityRepointAlreadyBooked",
+  },
   // The release a held seat was owed, sent once the desk knew who it is. When
   // it reached nobody the row hands it over (`…-waiver-ready`); when it could
   // not be issued the notice is `new-waiver-failed` (issue #2125).

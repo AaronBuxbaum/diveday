@@ -74,7 +74,8 @@
   until the desk confirms or splits it (`issueWaiverRequest` and `completeWaiver` refuse
   `identity_unconfirmed`), and confirming or splitting sends the release then (issue #2125). It
   ends one of two ways, both on the roster: **Confirm
-  identity** or **Split off a held seat**. Crew never settle it at the rail.
+  identity** or **Split off a held seat**; a seat held because two divers share its name may first
+  be **re-pointed to another diver on file**, which keeps it held. Crew never settle it at the rail.
 - **Confirm identity** — the staff tap that clears `bookings.identity_unconfirmed_at`, and the
   most consequential one in the product: it says *this person is the diver this seat was attached
   to*. Clearing the flag hands the seat the matched diver's **certifications** (readiness stops
@@ -135,6 +136,19 @@
   (owner or manager), which re-seals each verified release it moves as integrity **version 3**
   (who moved it, when, from which record) so it does not read as tampered. Trail lines on the departure (`identity_split`) and on the matched diver's
   record (`identity_split_off`).
+- **Re-point a held seat** ("Another diver on file") — the third answer, offered only on a seat
+  held because the shop holds more than one diver with its booked-as name (issue #2129, Aaron
+  2026-10-13): the seat belongs to the *other* existing record with that name.
+  `otherSameNamePeople` offers the shop's other live people with exactly that name (trimmed,
+  lower-cased; not removed, erased or merged) **by name only**, each beside a link to their record
+  for the staffer to check, and never pre-picks one. `repointHeldBooking`
+  (`src/db/identity-repoint.ts`) moves the booking, its gear and its unsigned links to the chosen
+  person in one transaction and **keeps the seat held**: it confirms nothing, and "Same person" is
+  then asked of the new match. Otherwise it is the split's: the booker's other same-name held seats
+  move along when ticked, a medical hold refuses the lot, every release is superseded and every
+  bearer link revoked, and a chosen person already on a moving departure is refused. Trail lines
+  on the departure (`identity_repointed`) and on both records (`identity_repointed_off`,
+  `identity_repointed_onto`).
 - **Merge (two diver records)** — the shop saying two records are one diver, and the record kept
   taking everything the other held (`mergeDiverRecords`, `src/db/diver-merge.ts`; issue #1240).
   Owner or manager only. A **likely duplicate** is offered on the record and flagged on the roster
