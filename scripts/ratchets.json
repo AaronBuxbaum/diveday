@@ -385,6 +385,12 @@
           "src/db/export.test.ts": "1672 -> 1683",
           "src/lib/notifications/email.test.ts": "1480 -> 1493"
         }
+      },
+      {
+        "why": "merge of the ready-for-human batch's worker branches (#2611 tests from two sides)",
+        "files": {
+          "src/lib/trip-admission.test.ts": "984 -> 992"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -418,7 +424,7 @@
     "src/db/divers.test.ts": 3077,
     "src/db/erasure-coverage.test.ts": 1178,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1683,
+    "src/db/export.test.ts": 1628,
     "src/db/import.test.ts": 1077,
     "src/db/manifests.test.ts": 3725,
     "src/db/no-show.test.ts": 1165,
@@ -448,13 +454,13 @@
     "src/lib/import.test.ts": 1459,
     "src/lib/incident-export.test.ts": 1187,
     "src/lib/manifests.test.ts": 1320,
-    "src/lib/notifications/email.test.ts": 1493,
+    "src/lib/notifications/email.test.ts": 1480,
     "src/lib/offline-manifest-store.test.ts": 1018,
     "src/lib/offline-manifests.test.ts": 2179,
     "src/lib/readiness.test.ts": 1684,
     "src/lib/staffing-week.test.ts": 1115,
     "src/lib/today.test.ts": 1651,
-    "src/lib/trip-admission.test.ts": 984,
+    "src/lib/trip-admission.test.ts": 992,
     "src/lib/waivers.test.ts": 1402,
     "src/proxy.test.ts": 1241
   },
