@@ -95,6 +95,7 @@
     "diverAddedIdentityUnconfirmed": "Buceador añadido a la salida, pero la plaza queda retenida hasta que confirmes que es la misma persona. Confírmalo en su fila de abajo.",
     "diverWaitlisted": "Buceador añadido a la lista de espera.",
     "invitationOptedOut": "Invitación registrada, pero no enviada por correo: este buceador desactivó los correos opcionales del centro.",
+    "inviteCooldown": "No se envió: este buceador recibió una invitación del centro en los últimos 30 días.",
     "identityConfirmed": "Identidad confirmada. Este buceador puede autorizarse a embarcar.",
     "identitySplit": "Ya tiene su propia ficha, aún sin exención ni certificaciones registradas. Antes de que embarque, envíale la exención desde su ficha o registra una exención en papel en su fila.",
     "identityConfirmedWaiverSent": "Identidad confirmada. Su exención va de camino.",
@@ -427,6 +428,11 @@
     "directInvite": "Invitar",
     "directInviting": "Invitando…",
     "directInviteAria": "Invitar a {name} a la salida"
+  },
+  "inviteSuggestions": {
+    "heading": "Ya bucearon en {site} contigo",
+    "description": "Invitar envía un correo por esta salida. A nadie se le pregunta dos veces en 30 días.",
+    "more": "{count, plural, one {y # más} other {y # más}}"
   },
   "lastMinute": {
     "heading": "Oferta de última hora",

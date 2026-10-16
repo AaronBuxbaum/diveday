@@ -182,6 +182,9 @@ const NOTICE_KEYS: Record<
     tone: "warning",
     key: "trips.notices.invitationOptedOut",
   },
+  // A suggested past diver contacted with an invite inside the cooldown
+  // (H-130): nothing was recorded or sent.
+  "invite-cooldown": { form: "add-diver", tone: "warning", key: "trips.notices.inviteCooldown" },
   "identity-confirmed": { form: "roster", tone: "success", key: "trips.notices.identityConfirmed" },
   "identity-split": { form: "roster", tone: "success", key: "trips.notices.identitySplit" },
   // The release a held seat was owed, sent once the desk knew who it is. When

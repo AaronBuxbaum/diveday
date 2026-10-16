@@ -13,6 +13,7 @@ import {
   setBookingPickupDetails,
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
+import { invitedWithinCooldown } from "@/db/invite-suggestions";
 import { recordTripActivity } from "@/db/operations";
 import { getBookingPayment } from "@/db/payments";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
@@ -27,6 +28,7 @@ import {
 import { joinTripWaitlist, type WaitlistOutcome } from "@/db/waitlist";
 import { carryWaitlist } from "@/db/waitlist-roll";
 import { trackEvent } from "@/lib/analytics";
+import { nowDate } from "@/lib/clock";
 import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PARTICIPANT_TYPES } from "@/lib/participant-types";
@@ -142,11 +144,37 @@ export async function createDirectTripInvitationAction(
   tripId: string,
   formData: FormData,
 ) {
+  await inviteOneDiver(shopSlug, tripId, formData, { cooldown: false });
+}
+
+/**
+ * **Invites one past diver the departure suggested** (fifth-loop ideas, items
+ * 43 and 44; H-130): the same one-to-one invite as above, staff-chosen and for
+ * this named departure, and refused for a person already contacted with an
+ * invite inside `INVITE_COOLDOWN_DAYS`. The list leaves such people out; this
+ * holds the line for a page left open across the window.
+ */
+export async function invitePastDiverAction(shopSlug: string, tripId: string, formData: FormData) {
+  await inviteOneDiver(shopSlug, tripId, formData, { cooldown: true });
+}
+
+async function inviteOneDiver(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+  rule: { cooldown: boolean },
+): Promise<never> {
   const guests = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const parsed = directInvitationSchema.safeParse({ personId: formData.get("personId") });
   if (!uuidParam(tripId) || !parsed.success) redirect(`${guests}#invite-person`);
   const db = await getDb();
+  if (
+    rule.cooldown &&
+    (await invitedWithinCooldown(db, s.user.shopId, parsed.data.personId, nowDate()))
+  ) {
+    redirect(noticeUrl(`${guests}#invitations`, "invite-cooldown"));
+  }
   const created = await createDirectTripInvitation(db, {
     shopId: s.user.shopId,
     tripId,

@@ -26,6 +26,7 @@ import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "
 import { listTripPrepDivers } from "./rental-fit";
 import { listCertificationSummaries } from "./self-declared-cards";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
+import { listInviteSuggestions } from "./invite-suggestions";
 import { listTripInvitations } from "./trip-invitations";
 import { listTripLastMinutePromoRecipients, listTripLastMinutePromos } from "./trip-promos";
 import { getTripWithBooked } from "./trips-record";
@@ -87,6 +88,7 @@ export async function getTripGuests(
     prepDivers,
     waitlist,
     invitations,
+    inviteSuggestions,
     lastMinuteList,
     lastMinutePromos,
     lastMinutePromoRecipients,
@@ -112,6 +114,9 @@ export async function getTripGuests(
     shared ? shared.prepDivers : listTripPrepDivers(db, shop.id, tripId),
     getTripWaitlist(db, shop.id, tripId),
     listTripInvitations(db, shop.id, tripId),
+    // Past divers of this departure's site worth asking (H-130), only while
+    // it has a seat to offer.
+    isFull(trip) ? null : listInviteSuggestions(db, { shopId: shop.id, tripId, now: nowDate() }),
     listLastMinuteList(db, shop.id),
     listTripLastMinutePromos(db, shop.id, tripId),
     listTripLastMinutePromoRecipients(db, shop.id, tripId),
@@ -307,6 +312,7 @@ export async function getTripGuests(
     requirement,
     waitlist,
     invitations,
+    inviteSuggestions,
     activity,
     confirmMatches,
     diverCandidates,

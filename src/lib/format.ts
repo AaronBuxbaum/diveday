@@ -579,3 +579,26 @@ export function formatOrdinal(count: number, locale = "en-US"): string {
   const suffix = suffixes[rule] ?? "th";
   return `${count}${suffix}`;
 }
+
+/**
+ * A past month as a reader places it: "Mar" within the year `now` is in,
+ * "Mar 2025" before it. For a line like "dived here before: Nadia Petrov
+ * (Mar)", where the day is noise and last year's March is not this one.
+ */
+export function formatPastMonth(
+  date: Date,
+  locale = "en-US",
+  timeZone: string,
+  now: Date,
+): string {
+  const year = (d: Date) =>
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, { year: "numeric", timeZone }).format(d);
+  const sameYear = year(date) === year(now);
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      month: "short",
+      ...(sameYear ? {} : { year: "numeric" }),
+      timeZone,
+    }).formatToParts(date),
+  );
+}

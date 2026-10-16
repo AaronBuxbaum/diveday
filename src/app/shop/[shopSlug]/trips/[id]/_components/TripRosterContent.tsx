@@ -29,6 +29,7 @@ import { DepartureNoteSection } from "./DepartureNoteSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
 import type { PartyPreview, RosterActions, RosterRecord, SeatMove } from "./roster-model";
+import { InviteSuggestionsGroup } from "./InviteSuggestionsGroup";
 import { TripInvitationGroup } from "./TripInvitationSection";
 import { TripNoticeBanner } from "./TripNoticeBanner";
 import { WaitlistGroup } from "./WaitlistSection";
@@ -40,6 +41,7 @@ export type TripRosterActions = {
   addExistingDiverAction: FormAction;
   addToWaitlistAction: FormAction;
   createDirectTripInvitationAction: FormAction;
+  invitePastDiverAction: FormAction;
   /** A reducer, not a plain `FormAction`: a refused paper release answers in
    * the form with the typed values rather than redirecting (issue #1674). */
   markRosterWaiverInPersonAction: PaperWaiverAction;
@@ -348,7 +350,9 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
               </>
             ) : null,
           invitedGroup:
-            invitations.length > 0 ? (
+            invitations.length > 0 || (acceptsDivers && guests.inviteSuggestions) ? (
+              <>
+                {invitations.length > 0 ? (
               <TripInvitationGroup
                 invitations={invitations}
                 shopSlug={shopSlug}
@@ -361,6 +365,16 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
                 locale={locale}
                 canInvite={acceptsDivers}
               />
+                ) : null}
+                {acceptsDivers && guests.inviteSuggestions ? (
+                  <InviteSuggestionsGroup
+                    suggestions={guests.inviteSuggestions}
+                    action={actions.invitePastDiverAction}
+                    locale={locale}
+                    timeZone={timezone}
+                  />
+                ) : null}
+              </>
             ) : null,
           addDiverGroup: !acceptsDivers ? null : (
             <AddDiverSection

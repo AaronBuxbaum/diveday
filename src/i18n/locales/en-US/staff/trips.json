@@ -95,6 +95,7 @@
     "diverAddedIdentityUnconfirmed": "Diver added to the trip, but the seat is held until you confirm it’s the same person. Confirm it on their row below.",
     "diverWaitlisted": "Diver added to the wait list.",
     "invitationOptedOut": "Invitation recorded but not emailed: this diver turned off optional emails from the shop.",
+    "inviteCooldown": "Not sent: this diver had an invite from the shop in the last 30 days.",
     "identityConfirmed": "Identity confirmed. This diver can be cleared to board.",
     "identitySplit": "They have their own diver record now, with no waiver or certifications on file yet. Before they board, send their waiver from their record or record a paper release on their row.",
     "identityConfirmedWaiverSent": "Identity confirmed. Their waiver is on its way.",
@@ -427,6 +428,11 @@
     "directInvite": "Invite",
     "directInviting": "Inviting…",
     "directInviteAria": "Invite {name} to the departure"
+  },
+  "inviteSuggestions": {
+    "heading": "Dived {site} with you before",
+    "description": "Invite sends one email for this departure. Nobody is asked twice in 30 days.",
+    "more": "{count, plural, one {and # more} other {and # more}}"
   },
   "lastMinute": {
     "heading": "Last-minute deal",
