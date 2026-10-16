@@ -73,6 +73,24 @@ export function OrderMeta({
   );
 }
 
+/** The order's open dispute, then each lost one, as the detail page heads them. */
+export function OrderDisputes({
+  header,
+  ...shared
+}: {
+  header: { dispute: OpenPaymentDispute | null; lostDisputes: LostPaymentDispute[] };
+  timezone: string;
+  locale: DiverLocale;
+  t: StaffTranslator;
+}) {
+  return (
+    <>
+      <OrderDisputeBanner dispute={header.dispute} {...shared} />
+      <OrderLostDisputes lost={header.lostDisputes} {...shared} />
+    </>
+  );
+}
+
 /**
  * A card dispute the diver's bank opened against this order and has not
  * decided (ADR 20261009-stripe-reversals-reach-diveday): the amount, and the

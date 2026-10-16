@@ -384,8 +384,11 @@ const EXCLUDED_TABLES = [
 /**
  * Columns on an exported table that deliberately stay out of the bundle. The
  * default for anything absent from this map is "must be exported" — a new
- * column has to be argued out, not quietly forgotten.
+ * column has to be argued out, not quietly forgotten. `shop_id` is out on every
+ * table (`SHOP_SCOPED`): it is the same value on every row of a single-shop
+ * bundle, so a table that excludes nothing else needs no entry.
  */
+const SHOP_SCOPED = "shop_id";
 const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // `shop_id` is the same value on every row of a single-shop bundle.
   shops: [
@@ -408,15 +411,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "shore_alert_consent_by_person_id",
     "shore_alert_confirmed_at",
   ], // DiveDay-side config, not shop records
-  boats: ["shop_id"],
-  trip_lenses: ["shop_id"],
-  dive_packages: ["shop_id"],
-  dive_package_entitlements: ["shop_id"],
-  staff_shifts: ["shop_id"],
-  staff_credentials: ["shop_id"],
-  executed_dives: ["shop_id"],
-  trip_sightings: ["shop_id"],
-  review_moderation_events: ["shop_id"],
   people: [
     "shop_id",
     // The language a diver reads, as observed from their own request's
@@ -428,9 +422,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // shop got before the column existed, so nothing is silently lost.
     "locale",
   ],
-  certifications: ["shop_id"],
-  specialty_certifications: ["shop_id"],
-  nitrox_certifications: ["shop_id"],
   trips: [
     "shop_id",
     "recap_shoutout", // recap copy travels with recap_photos.csv
@@ -456,13 +447,8 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // so this column would read false on every row it could appear on.
     "is_rehearsal",
   ],
-  trip_change_events: ["shop_id"],
-  trip_stage_events: ["shop_id"],
-  trip_series: ["shop_id"],
-  trip_series_crew: ["shop_id"],
   trip_series_skips: ["id", "shop_id"],
   trip_dives: [],
-  trip_requirements: ["shop_id"],
   trip_assignments: [],
   bookings: [
     "shop_id",
@@ -479,32 +465,14 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "party_lead_booking_id",
     "claimed_at", // claim-flow operational state, same reasoning as identity_unconfirmed_at
   ],
-  trip_help_requests: ["shop_id"],
-  trip_waitlist_entries: ["shop_id"],
-  trip_invitations: ["shop_id"],
-  last_minute_list_entries: ["shop_id"],
   trip_last_minute_promos: [
     "shop_id",
     "stripe_coupon_id", // provider linkage, useless outside this Stripe account
     "stripe_promotion_code_id",
   ],
-  trip_last_minute_promo_recipients: ["shop_id"],
-  booking_arrival_events: ["shop_id"],
-  roll_call_events: ["shop_id"],
-  roll_call_crew_events: ["shop_id"],
   // The member row's surrogate id says nothing beyond (pair_id, booking_id),
   // which are both exported.
   buddy_pair_members: ["shop_id", "id"],
-  // The crew's own two tables (issue #1235). Every row is scoped to the bundle
-  // being exported, so the id repeated on each line buys a reader nothing.
-  crew_availability_blocks: ["shop_id"],
-  crew_assignment_requests: ["shop_id"],
-  waiver_templates: ["shop_id"],
-  waiver_materiality_decisions: ["shop_id"],
-  course_forms: ["shop_id"],
-  course_form_versions: ["shop_id"],
-  course_form_requirements: ["shop_id"],
-  course_form_records: ["shop_id"],
   waiver_records: [
     "shop_id",
     "template_body", // the frozen copy; waiver_templates.csv carries the text
@@ -561,14 +529,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // The join row's surrogate id says nothing beyond (checkout_id, booking_id),
   // which are both exported — same reasoning as buddy_pair_members.id.
   booking_checkout_bookings: ["shop_id", "id"],
-  shop_promo_redemptions: ["shop_id"],
-  internal_notes: ["shop_id"],
-  incident_reports: ["shop_id"],
-  incident_report_people: ["shop_id"],
-  incident_report_addenda: ["shop_id"],
-  activity_events: ["shop_id"],
-  notification_deliveries: ["shop_id"],
-  course_inquiries: ["shop_id"],
   rental_fit_profiles: [
     "shop_id",
     // A DiveDay-side discriminator, not a fact about the diver: it separates a
@@ -578,18 +538,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // exporting it would carry an internal flag out and re-derive it anyway.
     "fit_stated_at",
   ],
-  gear_items: ["shop_id"],
-  gear_service_events: ["shop_id"],
-  gear_reservations: ["shop_id"],
-  customer_gear_items: ["shop_id"],
-  work_orders: ["shop_id"],
-  work_order_items: ["shop_id"],
-  work_order_lines: ["shop_id"],
-  work_order_care: ["shop_id"],
-  work_order_events: ["shop_id"],
-  pre_departure_checklist_items: ["shop_id"],
-  pre_departure_check_events: ["shop_id"],
-  departure_boat_safety_snapshots: ["shop_id"],
   prior_visits: [
     "shop_id",
     // The re-import idempotency key, derived from the columns that *are*
@@ -616,9 +564,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // (ADR 20261009-counter-payments); nothing a shop would read in a backup.
     "counter_claimed_at",
   ],
-  order_line_items: ["shop_id"],
-  work_order_bills: ["shop_id"],
-  customer_gear_reminder_settings: ["shop_id"],
   tips: [
     "shop_id",
     "stripe_account_id", // provider linkage, useless outside this Stripe account
@@ -641,12 +586,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // generation no rendered page has ever carried.
     "row_version",
   ],
-  dive_site_creatures: ["shop_id"],
-  dive_site_moments: ["shop_id"],
-  recap_photos: ["shop_id"],
-  trip_recap_photos: ["shop_id"],
-  trip_reviews: ["shop_id"],
-  recap_pulses: ["shop_id"],
   shop_promo_codes: [
     "shop_id",
     "stripe_coupon_id", // provider linkage, useless outside this Stripe account
@@ -724,6 +663,7 @@ describe("schema coverage", () => {
       const missing = Object.values(getTableColumns(value as Parameters<typeof getTableColumns>[0]))
         .map((column) => column.name)
         .filter((column) => !exportedColumns.has(column))
+        .filter((column) => column !== SHOP_SCOPED)
         .filter((column) => !(EXCLUDED_COLUMNS[name] ?? []).includes(column));
       if (missing.length > 0) undecided[name] = missing;
     }
