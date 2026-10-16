@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
-import { createBookingParty } from "./bookings";
+import { confirmBookingIdentity, createBookingParty, splitBookingIdentity } from "./bookings";
 import { claimDueHeldSends } from "./held-sends";
 import {
   bookingCapabilities,
@@ -15,8 +15,13 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
-import { holdRescheduleNotice, sendRescheduleNotices } from "./trip-rescheduled";
-import { createTrip, moveTrip, upcomingTripsWithCounts } from "./trips";
+import { recordSmsKeyword } from "./sms-opt-outs";
+import {
+  holdRescheduleNotice,
+  sendMissedRescheduleNotice,
+  sendRescheduleNotices,
+} from "./trip-rescheduled";
+import { createTrip, listStaff, moveTrip, upcomingTripsWithCounts } from "./trips";
 
 /**
  * **The reschedule notice** (ux review 2026-10-11, item 1). The security
@@ -590,6 +595,58 @@ describe("holdRescheduleNotice", () => {
     ).toBeNull();
   });
 
+  it("records that the meeting point moved beside the time, ORs later moves in, and clears it on send (#2446)", async () => {
+    const { db, shop, reef, previousStartsAt, now } = await movedTrip();
+    const read = async () =>
+      (await db.select().from(trips).where(eq(trips.id, reef.id)))[0]?.diversToldMeetingPoint;
+    expect(await read()).toBe(false);
+
+    const first = await holdRescheduleNotice(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      movedFrom: previousStartsAt,
+      meetingPointMoved: true,
+      actorPersonId: null,
+      now,
+    });
+    expect(await read()).toBe(true);
+
+    // Undo, then Tell them with nothing posted: the record says the place moved.
+    await db.delete(heldSends).where(eq(heldSends.id, first?.id ?? ""));
+    const tell = await holdRescheduleNotice(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      actorPersonId: null,
+      now,
+    });
+    const [held] = await db
+      .select()
+      .from(heldSends)
+      .where(eq(heldSends.id, tell?.id ?? ""));
+    expect(held.payload).toMatchObject({ meetingPointMoved: true });
+
+    // A later move that did not touch the place keeps the earlier one's word.
+    const again = await holdRescheduleNotice(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      movedFrom: previousStartsAt,
+      meetingPointMoved: false,
+      actorPersonId: null,
+      now,
+    });
+    expect(await read()).toBe(true);
+    expect(again).not.toBeNull();
+
+    // Sent: the divers know both.
+    await sendRescheduleNotices(
+      db,
+      shop.id,
+      held.payload as Parameters<typeof sendRescheduleNotices>[2],
+      { ...providers().options, now },
+    );
+    expect(await read()).toBe(false);
+  });
+
   it("holds nothing for Tell them when no move was ever recorded", async () => {
     const { db, shop, reef, now } = await movedTrip();
     expect(
@@ -602,5 +659,241 @@ describe("holdRescheduleNotice", () => {
       }),
     ).toBeNull();
     expect(await db.select().from(heldSends).where(eq(heldSends.shopId, shop.id))).toHaveLength(0);
+  });
+});
+
+/**
+ * Issue #2451: the link is minted ahead of the send, so a notice that does not
+ * go must not leave a live capability behind.
+ */
+describe("the trip-prep link on a notice that does not go", () => {
+  async function send() {
+    const moved = await movedTrip();
+    const { options } = providers();
+    return { moved, options };
+  }
+
+  const payload = (moved: Awaited<ReturnType<typeof movedTrip>>) => ({
+    kind: "trip_rescheduled" as const,
+    tripId: moved.reef.id,
+    previousStartsAt: moved.previousStartsAt.toISOString(),
+    meetingPointMoved: false,
+  });
+
+  it("mints nothing for a phone-only seat on the STOP list", async () => {
+    const { moved, options } = await send();
+    const { db, shop, kid, now } = moved;
+    const [kidRow] = await db.select().from(bookings).where(eq(bookings.id, kid));
+    await db.update(people).set({ phone: "+13055550143" }).where(eq(people.id, kidRow.personId));
+    await recordSmsKeyword(db, { phone: "+13055550143", optedOut: true, keywordAt: now });
+    await sendRescheduleNotices(db, shop.id, payload(moved), { ...options, now });
+    expect(
+      await db.select().from(bookingCapabilities).where(eq(bookingCapabilities.bookingId, kid)),
+    ).toEqual([]);
+  });
+
+  it("revokes the link when the email bounces", async () => {
+    const { moved } = await send();
+    const { db, shop, priya, now } = moved;
+    await sendRescheduleNotices(db, shop.id, payload(moved), {
+      emailProvider: fakeEmail({ status: "failed", retryable: false, errorCode: "rejected" })
+        .provider,
+      smsProvider: fakeSms().provider,
+      whatsAppProviders: new Map(),
+      appOrigin: ORIGIN,
+      now,
+    });
+    const rows = await db
+      .select()
+      .from(bookingCapabilities)
+      .where(eq(bookingCapabilities.bookingId, priya));
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((row) => row.revokedAt !== null)).toBe(true);
+  });
+
+  it("keeps the link live when the email goes", async () => {
+    const { moved, options } = await send();
+    const { db, shop, priya, now } = moved;
+    await sendRescheduleNotices(db, shop.id, payload(moved), { ...options, now });
+    const rows = await db
+      .select()
+      .from(bookingCapabilities)
+      .where(eq(bookingCapabilities.bookingId, priya));
+    expect(rows.filter((row) => row.revokedAt === null)).toHaveLength(1);
+  });
+});
+
+/**
+ * Issue #2445: a held seat is skipped by the reschedule notice, and nothing
+ * re-sent it when staff confirmed who the diver is, so that diver never learned
+ * the departure moved. The skip is remembered on the seat; the confirm sends it.
+ */
+describe("a held seat's missed reschedule notice", () => {
+  async function heldSeat() {
+    const moved = await movedTrip();
+    const { db, priya } = moved;
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: moved.now })
+      .where(eq(bookings.id, priya));
+    const [staffer] = await listStaff(db, moved.shop.id);
+    if (!staffer) throw new Error("no staff in the demo shop");
+    return { ...moved, actorPersonId: staffer.person.id };
+  }
+
+  const payload = (moved: Awaited<ReturnType<typeof movedTrip>>, meetingPointMoved = false) => ({
+    kind: "trip_rescheduled" as const,
+    tripId: moved.reef.id,
+    previousStartsAt: moved.previousStartsAt.toISOString(),
+    meetingPointMoved,
+  });
+
+  const seatRow = async (db: typeof ctx.db, id: string) =>
+    (await db.select().from(bookings).where(eq(bookings.id, id)))[0];
+
+  const priyaMail = (email: ReturnType<typeof fakeEmail>) =>
+    email.sent.filter((n) => "to" in n && n.to === "reschedule-priya@example.com");
+
+  it("sends one notice when the hold clears, and none on a second confirm", async () => {
+    const held = await heldSeat();
+    const { db, shop, priya, now, actorPersonId } = held;
+    const { email, options } = providers();
+    const outcome = await sendRescheduleNotices(db, shop.id, payload(held), { ...options, now });
+    expect(outcome.identityHeld).toBe(1);
+    expect(priyaMail(email)).toHaveLength(0);
+    expect((await seatRow(db, priya))?.rescheduleMissedFrom).toEqual(held.previousStartsAt);
+
+    const confirmed = await confirmBookingIdentity(
+      db,
+      { shopId: shop.id, bookingId: priya, actorPersonId },
+      { ...options, now },
+    );
+    expect(confirmed).toBe(true);
+    expect(priyaMail(email)).toHaveLength(1);
+    expect((await deliveriesFor(db, [priya])).map((row) => row.status)).toEqual(["sent"]);
+    expect((await seatRow(db, priya))?.rescheduleMissedFrom).toBeNull();
+
+    await confirmBookingIdentity(
+      db,
+      { shopId: shop.id, bookingId: priya, actorPersonId },
+      { ...options, now },
+    );
+    expect(priyaMail(email)).toHaveLength(1);
+  });
+
+  it("keeps the notice owed when the send fails, and sends it on the next confirm", async () => {
+    const held = await heldSeat();
+    const { db, shop, priya, now, actorPersonId } = held;
+    const { email, options } = providers();
+    await sendRescheduleNotices(db, shop.id, payload(held), { ...options, now });
+
+    const failing = {
+      ...options,
+      emailProvider: fakeEmail({ status: "failed", retryable: false, errorCode: "rejected" })
+        .provider,
+      now,
+    };
+    await confirmBookingIdentity(db, { shopId: shop.id, bookingId: priya, actorPersonId }, failing);
+    // The notice never went, so it is still owed (#2445).
+    expect((await seatRow(db, priya))?.rescheduleMissedFrom).toEqual(held.previousStartsAt);
+    expect(priyaMail(email)).toHaveLength(0);
+
+    const retried = await sendMissedRescheduleNotice(
+      db,
+      { shopId: shop.id, bookingId: priya },
+      { ...options, now },
+    );
+    expect(retried).toBe("told");
+    expect(priyaMail(email)).toHaveLength(1);
+    expect((await seatRow(db, priya))?.rescheduleMissedFrom).toBeNull();
+  });
+
+  it("sends nothing on confirm when the trip never moved", async () => {
+    const { db, shop, priya, actorPersonId, now } = await heldSeat();
+    const { email, options } = providers();
+    expect((await seatRow(db, priya))?.rescheduleMissedFrom).toBeNull();
+    await confirmBookingIdentity(
+      db,
+      { shopId: shop.id, bookingId: priya, actorPersonId },
+      { ...options, now },
+    );
+    expect(priyaMail(email)).toHaveLength(0);
+  });
+
+  it("sends nothing when the trip is back at the start the seat knew", async () => {
+    const held = await heldSeat();
+    const { db, shop, reef, priya, actorPersonId, now, previousStartsAt } = held;
+    const { email, options } = providers();
+    await sendRescheduleNotices(db, shop.id, payload(held), { ...options, now });
+    await moveTrip(db, shop.id, reef.id, previousStartsAt);
+    await confirmBookingIdentity(
+      db,
+      { shopId: shop.id, bookingId: priya, actorPersonId },
+      { ...options, now },
+    );
+    expect(priyaMail(email)).toHaveLength(0);
+    expect((await seatRow(db, priya))?.rescheduleMissedFrom).toBeNull();
+  });
+
+  it("keeps the earliest start the seat knew across two skipped moves", async () => {
+    const held = await heldSeat();
+    const { db, shop, priya, now, previousStartsAt } = held;
+    const { options } = providers();
+    await sendRescheduleNotices(db, shop.id, payload(held), { ...options, now });
+    const later = new Date(previousStartsAt.getTime() + 24 * HOUR);
+    await sendRescheduleNotices(
+      db,
+      shop.id,
+      { ...payload(held), previousStartsAt: later.toISOString() },
+      { ...options, now },
+    );
+    expect((await seatRow(db, priya))?.rescheduleMissedFrom).toEqual(previousStartsAt);
+  });
+
+  it("tells a held seat where to meet when only the place moved", async () => {
+    const held = await heldSeat();
+    const { db, shop, reef, priya, actorPersonId, now } = held;
+    const { email, options } = providers();
+    await db
+      .update(trips)
+      .set({ meetingPointLabel: "North Pier", meetingPointAddress: "1 Dock St" })
+      .where(eq(trips.id, reef.id));
+    const placeOnly = {
+      ...payload(held, true),
+      previousStartsAt: held.moved.startsAt.toISOString(),
+    };
+    await sendRescheduleNotices(db, shop.id, placeOnly, { ...options, now });
+    expect((await seatRow(db, priya))?.rescheduleMissedPlace).toBe(true);
+    await confirmBookingIdentity(
+      db,
+      { shopId: shop.id, bookingId: priya, actorPersonId },
+      { ...options, now },
+    );
+    const [mail] = priyaMail(email);
+    if (mail?.kind !== "trip_rescheduled") throw new Error("expected a reschedule notice");
+    expect(mail.meetingPoint).toMatchObject({ label: "North Pier" });
+  });
+
+  it("tells the new record's own address when the held seat is split off", async () => {
+    const held = await heldSeat();
+    const { db, shop, priya, actorPersonId, now } = held;
+    const { email, options } = providers();
+    await sendRescheduleNotices(db, shop.id, payload(held), { ...options, now });
+    const result = await splitBookingIdentity(
+      db,
+      {
+        shopId: shop.id,
+        bookingId: priya,
+        actorPersonId,
+        fullName: "Pia Shah",
+        email: "reschedule-pia@example.com",
+        adultAttested: true,
+      },
+      { ...options, now },
+    );
+    if (!result.ok) throw new Error(`split refused: ${result.reason}`);
+    const toPia = email.sent.filter((n) => "to" in n && n.to === "reschedule-pia@example.com");
+    expect(toPia).toHaveLength(1);
+    expect(priyaMail(email)).toHaveLength(0);
   });
 });

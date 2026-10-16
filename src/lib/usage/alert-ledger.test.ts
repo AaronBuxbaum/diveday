@@ -1,6 +1,7 @@
 import type { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type AppDb, createTestDb } from "@/db/client";
+import { closePglite } from "@/db/close-pglite";
 import { claimUsageAlert, releaseUsageAlert } from "./alert-ledger";
 
 /**
@@ -25,7 +26,7 @@ beforeAll(async () => {
 }, 60_000);
 
 afterAll(async () => {
-  await (db.$client as PGlite).close();
+  await closePglite(db.$client as PGlite);
 });
 
 const periodEnd = new Date("2026-09-01T00:00:00.000Z");

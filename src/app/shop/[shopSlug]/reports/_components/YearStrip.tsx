@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import type { ShopYearCell, ShopYearFill } from "@/lib/shop-year";
 
 /**
@@ -14,7 +15,9 @@ import type { ShopYearCell, ShopYearFill } from "@/lib/shop-year";
  * page ever scrolling sideways.
  *
  * **The months are doors** (#2434): each label links to its own month's
- * report, so a far month is one tap rather than a walk along the arrows.
+ * report, so a far month is one tap rather than a walk along the arrows. On a
+ * phone the doors are a row of month chips above the strip, 44 by 44px at
+ * least, and the strip's own labels are plain words (#2573).
  *
  * **The squares are decorative, and say so.** Every fact the strip draws is written in
  * words one screen-inch away — the sentence above it and the four figures
@@ -72,21 +75,46 @@ export function YearStrip({
           **Each label is its month's door**, spanning the weeks to the next
           label and 44px tall; the negative margin lets the target overhang
           the line, so the strip does not move (#2434). */}
-      <nav
-        aria-label={copy.monthsLabel}
-        className="grid gap-x-[3px] text-[10px] text-muted tabular-nums"
-        style={columns}
-      >
-        {months.map((month, index) => (
-          <Link
-            key={month.key}
-            href={month.href}
-            style={{ gridColumn: `${month.column} / ${months[index + 1]?.column ?? weeks + 1}` }}
-            className="-my-3.5 flex min-h-11 items-center underline-offset-2 hover:text-foreground hover:underline"
-          >
-            {month.label}
-          </Link>
-        ))}
+      <nav aria-label={copy.monthsLabel}>
+        {/* **On a phone the doors are chips**: twelve labels cannot each be 44px
+            wide across 390px (the weeks a label spans are about 33px), so below
+            `sm` the months are a row of 44 by 44px chips that scrolls sideways
+            and the labels in the strip are plain words (#2573). */}
+        <ul className="-mx-4 mb-1 flex gap-2 overflow-x-auto px-4 sm:hidden">
+          {months.map((month) => (
+            <li key={month.key} className="shrink-0">
+              <Link
+                href={month.href}
+                className="flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-surface-sunken px-3 text-sm font-medium text-foreground"
+              >
+                {month.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <div className="grid gap-x-[3px] text-[10px] text-muted tabular-nums" style={columns}>
+          {months.map((month, index) => {
+            const gridColumn = `${month.column} / ${months[index + 1]?.column ?? weeks + 1}`;
+            return (
+              <Fragment key={month.key}>
+                <span
+                  aria-hidden="true"
+                  style={{ gridColumn }}
+                  className="-my-3.5 flex min-h-11 items-center sm:hidden"
+                >
+                  {month.label}
+                </span>
+                <Link
+                  href={month.href}
+                  style={{ gridColumn }}
+                  className="-my-3.5 flex min-h-11 items-center underline-offset-2 hover:text-foreground hover:underline max-sm:hidden"
+                >
+                  {month.label}
+                </Link>
+              </Fragment>
+            );
+          })}
+        </div>
       </nav>
       <div
         className="mt-1 grid grid-flow-col grid-rows-7 gap-[3px]"

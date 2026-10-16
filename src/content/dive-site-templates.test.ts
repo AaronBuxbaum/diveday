@@ -105,6 +105,52 @@ describe("the dive-site catalog", () => {
     expect(under).toEqual([]);
   });
 
+  /**
+   * `maxDepthMeters` is the only number readiness's depth advisory and the
+   * >30 m gate read, so a briefing whose own words put a mooring barrel, a
+   * wreck's sand or a slope's foot deeper than it has silently dropped both
+   * (the Caribbean adversarial review, 2026-10-15: a 43 m mooring under a
+   * 30 m cap). A depth the prose says lies *past* the plan (a wall that keeps
+   * falling, sand beyond the briefed dive) is the walls rule working, not a
+   * contradiction, so a sentence that says so is left alone, and so is the sand
+   * under a wreck capped at the 40 m recreational limit.
+   */
+  it("never describes a reachable depth deeper than its maxDepthMeters", () => {
+    const beyondThePlan =
+      /\b(past|beyond|below|deeper than|outside)\b[^.]*\b(plan|floor|limit|turn|recreational)\b|\b(plan|floor)\b[^.]*\b(past|beyond|above)\b|\bfalls? away\b|\bdrops? (off |away )?(past|beyond)\b|\bnever\b|\bstay (off|above|out)\b|\bno-go\b|\btechnical\b|\bcave (training|certification)\b/i;
+    // A named structure with a foot (a pinnacle's base, a wreck's sand, a chute's
+    // exit, a mooring) is reachable however the sentence frames it.
+    const bounded =
+      /\b(base|sand|bottom|foot|exit|exits|mooring|barrel|stern|bow|deck|chute|pinnacle|seamount|ledge|cut|cuts)\b/i;
+    const deeper = DIVE_SITE_TEMPLATES.flatMap(({ slug, briefing }) => {
+      const max = briefing.maxDepthMeters ?? 0;
+      const prose = [
+        briefing.description,
+        briefing.currentNote,
+        briefing.fitNote,
+        briefing.divePlan,
+        briefing.marineLifeDescription,
+        ...(briefing.landmarks ?? []).map((landmark) => landmark.note),
+      ];
+      return prose.flatMap((text) =>
+        (text ?? "")
+          .split(/(?<=[.;])\s+/)
+          .filter((sentence) => bounded.test(sentence) || !beyondThePlan.test(sentence))
+          .flatMap((sentence) =>
+            [
+              ...sentence.matchAll(
+                /(?<!\d\s)\b(?:at|to|in|reaches|down|near|beyond)\s+(?:about\s+|around\s+|roughly\s+|some\s+)?(\d+)(?:(?:–|\s+to\s+)(\d+))? m\b(?!\s*(?:\(\d+(?:–\d+)? ft\)\s*)?(?:long|wide|high|tall|across|of\b))/g,
+              ),
+            ]
+              .map((match) => Number(match[2] ?? match[1]))
+              .filter((metres) => metres > max && max < 40)
+              .map((metres) => `${slug}: “${sentence}” says ${metres} m, max is ${max}`),
+          ),
+      );
+    });
+    expect(deeper).toEqual([]);
+  });
+
   it("names only catalog species in its field guides, which the import would otherwise drop", () => {
     const unknown = DIVE_SITE_TEMPLATES.flatMap(({ slug, briefing }) =>
       (briefing.creatureSlugs ?? [])

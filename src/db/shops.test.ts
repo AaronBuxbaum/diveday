@@ -7,11 +7,13 @@ import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
 import { courses, divePackages, shops, trips } from "./schema";
 import {
+  clearPassedReopensOn,
   getShopBySlug,
   listShopsForDiverPicker,
   listShopsForSitemap,
   setShopAddress,
   setShopDepthUnit,
+  setShopReopensOn,
   setShopSearchListing,
   setShopTemperatureUnit,
   shopHasPricedRecords,
@@ -342,5 +344,30 @@ describe("shopHasPricedRecords", () => {
       .insert(divePackages)
       .values({ shopId: rival.id, name: "Ten dives", diveCount: 10, priceCents: 40000 });
     expect(await shopHasPricedRecords(db, bare.id)).toBe(false);
+  });
+});
+
+describe("clearPassedReopensOn", () => {
+  it("clears a date before the shop's own today and keeps today and later", async () => {
+    const { db, shop } = ctx;
+    // 2030-06-02 01:00 UTC is still 1 June in New York (the shop's zone).
+    const now = new Date("2030-06-02T01:00:00.000Z");
+    await setShopReopensOn(db, shop.id, "2030-05-31");
+    expect(await clearPassedReopensOn(db, now)).toBe(1);
+    expect((await getShopBySlug(db, shop.slug))?.reopensOn).toBeNull();
+
+    // The day itself is not passed yet.
+    await setShopReopensOn(db, shop.id, "2030-06-01");
+    expect(await clearPassedReopensOn(db, now)).toBe(0);
+    expect((await getShopBySlug(db, shop.slug))?.reopensOn).toBe("2030-06-01");
+
+    await setShopReopensOn(db, shop.id, "2031-01-15");
+    expect(await clearPassedReopensOn(db, now)).toBe(0);
+  });
+
+  it("leaves a shop with no date alone", async () => {
+    const { db, shop } = ctx;
+    await setShopReopensOn(db, shop.id, null);
+    expect(await clearPassedReopensOn(db, new Date("2030-06-02T01:00:00.000Z"))).toBe(0);
   });
 });

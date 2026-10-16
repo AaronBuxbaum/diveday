@@ -537,6 +537,15 @@ export const trips = pgTable(
      */
     diversToldStartsAt: timestamp("divers_told_starts_at", { withTimezone: true }),
     /**
+     * **Whether the meeting point has moved since the divers were last told**
+     * (#2446), kept beside `divers_told_starts_at` for the same reason: the
+     * "Tell them" notice after an Undo reads it here, and a posted form field
+     * is never trusted for what the notice says. ORed in by each move that
+     * holds a notice, cleared with `divers_told_starts_at` when a notice is
+     * sent or the divers' time is current again.
+     */
+    diversToldMeetingPoint: boolean("divers_told_meeting_point").notNull().default(false),
+    /**
      * Set when staff delete an empty departure (ADR 20260820-every-delete-is-soft).
      *
      * `deleteTrip` still refuses a departure with any roster, wait-list entry or
@@ -578,6 +587,13 @@ export const trips = pgTable(
      * Null until then, and for ever on a departure whose count closed in time.
      */
     rollCallAlertedAt: timestamp("roll_call_alerted_at", { withTimezone: true }),
+    /**
+     * **When the shop's shore contact was told** (H-118): the same alert's
+     * shore copy, claimed on its own so a failed shore send is tried again on
+     * the next pass and a delivery ashore never reads as "Owners alerted".
+     * Null until then, and for ever on a shop with no confirmed shore contact.
+     */
+    rollCallShoreAlertedAt: timestamp("roll_call_shore_alerted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -586,6 +602,12 @@ export const trips = pgTable(
     // already leaves private departures out leaves it out too, by construction.
     check("trips_rehearsal_is_private", sql`not ${table.isRehearsal} or ${table.isPrivate}`),
     index("trips_series_starts_idx").on(table.seriesId, table.startsAt),
+    // Foreign keys a query filters on (#2492): a course's departures
+    // (progression, materials, forms) and a hull's upcoming departures (the
+    // certificate edit locks them, the clash check reads them). Other
+    // reads scope by `shop_id` first and ride the shop/starts_at indexes.
+    index("trips_course_starts_idx").on(table.courseId, table.startsAt),
+    index("trips_boat_starts_idx").on(table.boatId, table.startsAt),
     // Partial, over the live rows only: every listing read carries
     // `deleted_at is null`, and a deleted departure is rare enough that
     // indexing the tombstones alongside them would pay for nothing.
@@ -713,6 +735,8 @@ export const tripDives = pgTable(
   (table) => [
     uniqueIndex("trip_dives_trip_number_unique").on(table.tripId, table.diveNumber),
     index("trip_dives_trip_idx").on(table.tripId, table.diveNumber),
+    // "Which departures dive this site" (dive-sites.ts), a read by site alone.
+    index("trip_dives_dive_site_idx").on(table.diveSiteId),
     // The same bounds `DOCK_DAY_LIMITS.boatRideMinutes` puts on the shop-wide
     // figure this falls back to (src/lib/diver-planning.ts), so an import or a
     // hand-written fix cannot write a leg the form would have refused.

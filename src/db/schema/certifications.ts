@@ -341,6 +341,16 @@ export const specialtyCertifications = pgTable(
     /** See certifications.reviewedByPersonId. */
     reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
     /**
+     * **The agency's own page said so** — the twin of
+     * `certifications.agencyCheckedAt` (H-105, ADR
+     * 20261008-cert-check-extension), read there. Set when the review that
+     * certified this card was a check the DiveDay browser extension ran on the
+     * agency's lookup page and the page listed this specialty for this diver;
+     * `reviewNote` then holds the agency's words, and Undo clears the stamp
+     * with the rest of the review. Null for every other review.
+     */
+    agencyCheckedAt: timestamp("agency_checked_at", { withTimezone: true }),
+    /**
      * Import provenance, mirroring `certifications.importedAt` — an imported
      * specialty card lands `verified` and flagged
      * (ADR 20260725-import-specialty-cards). It diverges from a ladder card in
@@ -576,6 +586,16 @@ export const nitroxCertifications = pgTable(
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
     /** See certifications.reviewedByPersonId. */
     reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
+    /**
+     * **The agency's own page said so** — the twin of
+     * `certifications.agencyCheckedAt` (H-105, ADR
+     * 20261008-cert-check-extension), read there. Set when the review that
+     * certified this card was a check the DiveDay browser extension ran on the
+     * agency's lookup page and the page listed this nitrox card for this diver;
+     * `reviewNote` then holds the agency's words, and Undo clears the stamp
+     * with the rest of the review. Null for every other review.
+     */
+    agencyCheckedAt: timestamp("agency_checked_at", { withTimezone: true }),
     /**
      * Import provenance, mirroring `certifications.importedAt` — an imported
      * nitrox card lands `verified` (flagged) awaiting a staff confirm

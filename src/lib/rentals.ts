@@ -111,7 +111,7 @@ export const RENTABLE_ITEMS: readonly RentableItem[] = [
   },
   { kind: "gopro", field: "rentsGopro", name: "gopro", defaultRented: false },
   // **The kit a particular dive calls for**, rather than the kit everybody
-  // takes (reported 2026-09-06: a shop's "What we rent" list could not say it
+  // takes (reported 2026-09-06: a shop's rental list could not say it
   // rents drysuits). Every one defaults off, so a shop that leaves them alone
   // is where it was and no diver is ever packed one they did not ask for.
   //

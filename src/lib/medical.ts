@@ -574,6 +574,32 @@ export function needsPhysicianReview(answers: MedicalAnswers): boolean {
   return calculateMedicalResult(answers).status !== "clear";
 }
 
+/** One question a diver was asked, with their answer, in the order asked. */
+export type AnsweredMedicalQuestion = { id: string; prompt: string; yes: boolean };
+
+/**
+ * **The questions this diver was actually asked**, each with their answer.
+ * A Box opens only on a yes to its parent, so an unopened Box is blank on
+ * the paper form, not "no", and is left out. Null for a questionnaire
+ * version this build does not know, whose prompts cannot be named.
+ */
+export function answeredMedicalQuestions(
+  answers: MedicalAnswers,
+): AnsweredMedicalQuestion[] | null {
+  const questionnaire = findQuestionnaireVersion(
+    answers.questionnaireId,
+    answers.questionnaireVersion,
+  );
+  if (!questionnaire) return null;
+  return applicableMedicalQuestions(questionnaire, answers.responses)
+    .filter((question) => typeof answers.responses[question.id] === "boolean")
+    .map((question) => ({
+      id: question.id,
+      prompt: question.prompt,
+      yes: answers.responses[question.id] === true,
+    }));
+}
+
 export function flaggedMedicalPrompts(answers: MedicalAnswers): string[] {
   const result = calculateMedicalResult(answers);
   if (result.status === "physician_review") return result.flaggedPrompts;

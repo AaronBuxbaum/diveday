@@ -1,0 +1,264 @@
+{
+  "area": "st-kitts-nevis",
+  "method": "St. Kitts and Nevis (both islands, including the Narrows shoals between them). No government mooring list or marine-park site list is published online (the St Kitts Tourism Authority pages are a script-rendered shell with no site list, and the Sandy Point / Kittitian marine reserves publish no dive list), so the denominator rests on operator lists. Lists read: Pro Divers St Kitts, Kenneth's Dive Center (St Kitts), and Dive Nevis (the Oualie Beach operator, also trading as Scuba Safaris, whose own domain is dead; counted once). A site is counted when named on at least two of those independent operator lists; sites on one list are kept as excluded. Same-reef alternate names are merged (Monkey Shoals / Monkey Shoal Reef, Brimstone Shallows / Brimstone Reef, Coconut Tree Rocks / Coconut Reef). Everything listed is within recreational depth (130 ft / 40 m); Finger Reef is listed to 130 ft by one operator and 140 ft by the other, counted as recreational. Nevis is thinly covered by a single operator, so its sites mostly fall to the one-list exclusion. Counted 2026-10-14.",
+  "sources": [
+    "https://prodiversstkitts.com/st-kitts-dive-sites/",
+    "https://www.divekdc.com/dive-sites",
+    "https://divenevis.com/dive-sites/",
+    "https://divenevis.com/wreck-dives/"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "River Taw (MV River Taw)",
+      "template": "river-taw",
+      "listedBy": [
+        "https://prodiversstkitts.com/st-kitts-dive-sites/",
+        "https://www.divekdc.com/dive-sites",
+        "https://divenevis.com/wreck-dives/"
+      ]
+    },
+    {
+      "name": "Brimstone Shallows (Brimstone Reef)",
+      "template": "brimstone-shallows",
+      "listedBy": [
+        "https://prodiversstkitts.com/st-kitts-dive-sites/",
+        "https://www.divekdc.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Talata (MV Talata)",
+      "template": "talata-wreck",
+      "listedBy": [
+        "https://prodiversstkitts.com/st-kitts-dive-sites/",
+        "https://www.divekdc.com/dive-sites",
+        "https://divenevis.com/wreck-dives/"
+      ]
+    },
+    {
+      "name": "Finger Reef",
+      "template": null,
+      "listedBy": [
+        "https://prodiversstkitts.com/st-kitts-dive-sites/",
+        "https://www.divekdc.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Coconut Tree Rocks (Coconut Reef)",
+      "template": null,
+      "listedBy": [
+        "https://prodiversstkitts.com/st-kitts-dive-sites/",
+        "https://www.divekdc.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Friars Bay Reef",
+      "template": "friars-bay-reef",
+      "listedBy": [
+        "https://prodiversstkitts.com/st-kitts-dive-sites/",
+        "https://www.divekdc.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Black Coral Reef",
+      "template": null,
+      "listedBy": ["https://prodiversstkitts.com/st-kitts-dive-sites/"],
+      "excluded": "on one list only (prodiversstkitts.com)"
+    },
+    {
+      "name": "Frigate Bay Reef",
+      "template": "frigate-bay-reef",
+      "listedBy": [
+        "https://prodiversstkitts.com/st-kitts-dive-sites/",
+        "https://www.divekdc.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Green Point Reef",
+      "template": "green-point-reef",
+      "listedBy": [
+        "https://prodiversstkitts.com/st-kitts-dive-sites/",
+        "https://www.divekdc.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Turtle Bar Reef",
+      "template": null,
+      "listedBy": [
+        "https://prodiversstkitts.com/st-kitts-dive-sites/",
+        "https://www.divekdc.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Nags Head (Nags' Head North)",
+      "template": null,
+      "listedBy": [
+        "https://prodiversstkitts.com/st-kitts-dive-sites/",
+        "https://www.divekdc.com/dive-sites",
+        "https://divenevis.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Monkey Shoals (Monkey Shoal Reef)",
+      "template": null,
+      "listedBy": [
+        "https://prodiversstkitts.com/st-kitts-dive-sites/",
+        "https://www.divekdc.com/dive-sites"
+      ]
+    },
+    {
+      "name": "The Vents",
+      "template": null,
+      "listedBy": ["https://prodiversstkitts.com/st-kitts-dive-sites/"],
+      "excluded": "on one list only (prodiversstkitts.com)"
+    },
+    {
+      "name": "Harbour Reef",
+      "template": null,
+      "listedBy": ["https://prodiversstkitts.com/st-kitts-dive-sites/"],
+      "excluded": "on one list only (prodiversstkitts.com)"
+    },
+    {
+      "name": "Paradise Reef",
+      "template": null,
+      "listedBy": [
+        "https://prodiversstkitts.com/st-kitts-dive-sites/",
+        "https://www.divekdc.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Sandy Point Reef",
+      "template": null,
+      "listedBy": ["https://prodiversstkitts.com/st-kitts-dive-sites/"],
+      "excluded": "on one list only (prodiversstkitts.com)"
+    },
+    {
+      "name": "Camps Reef",
+      "template": null,
+      "listedBy": [
+        "https://prodiversstkitts.com/st-kitts-dive-sites/",
+        "https://www.divekdc.com/dive-sites"
+      ]
+    },
+    {
+      "name": "The Rock",
+      "template": "the-rock-st-kitts",
+      "listedBy": [
+        "https://prodiversstkitts.com/st-kitts-dive-sites/",
+        "https://www.divekdc.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Corinthian (MV Corinthian)",
+      "template": null,
+      "listedBy": [
+        "https://prodiversstkitts.com/st-kitts-dive-sites/",
+        "https://www.divekdc.com/dive-sites",
+        "https://divenevis.com/wreck-dives/"
+      ]
+    },
+    {
+      "name": "Ponds Reef",
+      "template": null,
+      "listedBy": ["https://www.divekdc.com/dive-sites"],
+      "excluded": "on one list only (divekdc.com)"
+    },
+    {
+      "name": "Rockies Reef",
+      "template": null,
+      "listedBy": ["https://www.divekdc.com/dive-sites"],
+      "excluded": "on one list only (divekdc.com)"
+    },
+    {
+      "name": "The Donut",
+      "template": null,
+      "listedBy": ["https://www.divekdc.com/dive-sites"],
+      "excluded": "on one list only (divekdc.com)"
+    },
+    {
+      "name": "Clyde's Ledge",
+      "template": null,
+      "listedBy": ["https://www.divekdc.com/dive-sites"],
+      "excluded": "on one list only (divekdc.com)"
+    },
+    {
+      "name": "Oceans Paradise",
+      "template": null,
+      "listedBy": ["https://www.divekdc.com/dive-sites"],
+      "excluded": "on one list only (divekdc.com)"
+    },
+    {
+      "name": "The Ruins",
+      "template": null,
+      "listedBy": ["https://www.divekdc.com/dive-sites"],
+      "excluded": "on one list only (divekdc.com)"
+    },
+    {
+      "name": "West Farm Reef",
+      "template": null,
+      "listedBy": ["https://www.divekdc.com/dive-sites"],
+      "excluded": "on one list only (divekdc.com)"
+    },
+    {
+      "name": "Challengers Reef",
+      "template": null,
+      "listedBy": ["https://www.divekdc.com/dive-sites"],
+      "excluded": "on one list only (divekdc.com)"
+    },
+    {
+      "name": "Old Road Reef",
+      "template": null,
+      "listedBy": ["https://www.divekdc.com/dive-sites"],
+      "excluded": "on one list only (divekdc.com)"
+    },
+    {
+      "name": "Anchors Away",
+      "template": null,
+      "listedBy": ["https://www.divekdc.com/dive-sites"],
+      "excluded": "on one list only (divekdc.com)"
+    },
+    {
+      "name": "Ballast Bay Reef",
+      "template": null,
+      "listedBy": ["https://www.divekdc.com/dive-sites"],
+      "excluded": "on one list only (divekdc.com)"
+    },
+    {
+      "name": "Calypso Reef",
+      "template": null,
+      "listedBy": ["https://www.divekdc.com/dive-sites"],
+      "excluded": "on one list only (divekdc.com)"
+    },
+    {
+      "name": "Booby High Shoals",
+      "template": null,
+      "listedBy": ["https://divenevis.com/dive-sites/"],
+      "excluded": "on one list only (divenevis)"
+    },
+    {
+      "name": "Pelican Cove",
+      "template": null,
+      "listedBy": ["https://divenevis.com/dive-sites/"],
+      "excluded": "on one list only (divenevis)"
+    },
+    {
+      "name": "Stoney Grove",
+      "template": null,
+      "listedBy": ["https://divenevis.com/dive-sites/"],
+      "excluded": "on one list only (divenevis)"
+    },
+    {
+      "name": "HMS Solebay",
+      "template": null,
+      "listedBy": ["https://divenevis.com/wreck-dives/"],
+      "excluded": "on one list only (divenevis)"
+    },
+    {
+      "name": "Christena (MV Christina)",
+      "template": null,
+      "listedBy": ["https://divenevis.com/wreck-dives/"],
+      "excluded": "on one list only (divenevis)"
+    }
+  ]
+}

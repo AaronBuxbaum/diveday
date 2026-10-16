@@ -100,10 +100,14 @@
   "/shop/[shopSlug]/orders/[id]": {
     "visual": ["order-detail", "order-detail-partly-refunded"]
   },
+  "/shop/[shopSlug]/orders/[id]/print/dispute": {
+    "e2e": ["dispute-sheet.spec.ts"],
+    "visual": ["order-dispute-sheet"]
+  },
   "/shop/[shopSlug]/print/pass/[bookingId]": {
     "e2e": ["shop-on-paper.spec.ts"]
   },
-  "/shop/[shopSlug]/reports/safety": {
+  "/shop/[shopSlug]/safety": {
     "e2e": ["incident-reports.spec.ts"]
   },
   "/shop/[shopSlug]/schedule/blowout/[tripId]": {

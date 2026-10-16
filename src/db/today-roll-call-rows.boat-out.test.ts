@@ -833,7 +833,7 @@ describe("a card review undone after the diver boarded", () => {
       identifier: "PADI-RESCUE-ABOARD",
     });
     if (!card) throw new Error("expected certification to insert");
-    await reviewCertification(db, {
+    const reviewed = await reviewCertification(db, {
       shopId: shop.id,
       certificationId: card.id,
       status: "verified",
@@ -850,7 +850,16 @@ describe("a card review undone after the diver boarded", () => {
     // Cleared on the card: nothing to say about them aboard.
     expect(await aboardRows()).toEqual([]);
 
-    expect(await unreviewCertification(db, { shopId: shop.id, certificationId: card.id })).toEqual({
+    expect(
+      await unreviewCertification(db, {
+        shopId: shop.id,
+        certificationId: card.id,
+        reviewedAt:
+          reviewed.ok && reviewed.certification.reviewedAt
+            ? reviewed.certification.reviewedAt
+            : new Date(0),
+      }),
+    ).toEqual({
       ok: true,
     });
 

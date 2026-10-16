@@ -42,6 +42,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ shop
       personId: search.get("personId") ?? undefined,
       q: search.get("q") ?? undefined,
       tripId: search.get("tripId") ?? undefined,
+      seats: search.get("seats") ?? undefined,
       from: search.get("from") ?? undefined,
       to: search.get("to") ?? undefined,
       range: search.get("range") ?? undefined,

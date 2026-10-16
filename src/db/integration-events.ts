@@ -64,7 +64,26 @@ export type OrderIntegrationPayload = {
   }>;
 };
 
-function eventIsSubscribed(settings: unknown, eventType: string): boolean {
+/**
+ * The idempotency keys of the money events, in one place so the live write
+ * path and the owner's backfill (`integration-backfill.ts`) can never
+ * disagree about what "already sent" means.
+ */
+export const checkoutPaidKey = (checkoutId: string) => `checkout:${checkoutId}:paid`;
+export const checkoutRefundKey = (checkoutId: string, refundedCents: number) =>
+  `checkout:${checkoutId}:refund:${refundedCents}`;
+export const tipPaidKey = (tipId: string) => `tip:${tipId}:paid`;
+
+/**
+ * Fan an event out to one integration only, at a chosen time. The backfill's
+ * choice (issue #2606): the owner picked this provider, and another one that
+ * has its own closed periods must not hear about it. `nextAttemptAt` is what
+ * the queue orders by, so spacing it by a millisecond per event sends oldest
+ * first.
+ */
+export type OnlyIntegration = { id: string; nextAttemptAt: Date };
+
+export function eventIsSubscribed(settings: unknown, eventType: string): boolean {
   if (!settings || typeof settings !== "object" || Array.isArray(settings)) return false;
   const eventTypes = (settings as { eventTypes?: unknown }).eventTypes;
   return Array.isArray(eventTypes) && eventTypes.includes(eventType);
@@ -136,11 +155,13 @@ export async function enqueueIntegrationEvent(
     entityId: string;
     idempotencyKey: string;
     payload: Record<string, unknown>;
+    onlyIntegration?: OnlyIntegration;
   },
 ): Promise<IntegrationEvent | null> {
+  const { onlyIntegration, ...eventValues } = input;
   const [inserted] = await db
     .insert(integrationEvents)
-    .values(input)
+    .values(eventValues)
     .onConflictDoNothing({
       target: [integrationEvents.shopId, integrationEvents.idempotencyKey],
     })
@@ -172,6 +193,7 @@ export async function enqueueIntegrationEvent(
         // "connected" alone would keep queuing orders for a provider the shop
         // took away last month.
         isNull(shopIntegrations.deletedAt),
+        ...(onlyIntegration ? [eq(shopIntegrations.id, onlyIntegration.id)] : []),
       ),
     );
   for (const integration of integrations) {
@@ -183,6 +205,7 @@ export async function enqueueIntegrationEvent(
         integrationId: integration.id,
         eventId: event.id,
         status: "pending",
+        ...(onlyIntegration ? { nextAttemptAt: onlyIntegration.nextAttemptAt } : {}),
       })
       .onConflictDoNothing({
         target: [integrationDeliveries.integrationId, integrationDeliveries.eventId],
@@ -336,6 +359,7 @@ export async function enqueueCheckoutIntegrationEvent(
     idempotencyKey: string;
     status?: string;
     refundCents?: number;
+    onlyIntegration?: OnlyIntegration;
   },
 ): Promise<IntegrationEvent | null> {
   const payload = await loadCheckoutIntegrationPayload(db, input.shopId, input.checkoutId, {
@@ -350,6 +374,7 @@ export async function enqueueCheckoutIntegrationEvent(
     entityId: input.checkoutId,
     idempotencyKey: input.idempotencyKey,
     payload: payload as unknown as Record<string, unknown>,
+    ...(input.onlyIntegration ? { onlyIntegration: input.onlyIntegration } : {}),
   });
 }
 
@@ -361,7 +386,7 @@ export async function enqueueCheckoutIntegrationEvent(
  */
 export async function enqueueTipIntegrationEvent(
   db: DbExecutor,
-  input: { shopId: string; tipId: string },
+  input: { shopId: string; tipId: string; onlyIntegration?: OnlyIntegration },
 ): Promise<IntegrationEvent | null> {
   const [row] = await db
     .select({
@@ -403,8 +428,9 @@ export async function enqueueTipIntegrationEvent(
     eventType: "order.paid",
     entityType: "tip",
     entityId: row.tip.id,
-    idempotencyKey: `tip:${row.tip.id}:paid`,
+    idempotencyKey: tipPaidKey(row.tip.id),
     payload: payload as unknown as Record<string, unknown>,
+    ...(input.onlyIntegration ? { onlyIntegration: input.onlyIntegration } : {}),
   });
 }
 

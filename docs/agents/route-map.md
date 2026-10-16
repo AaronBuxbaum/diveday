@@ -41,3 +41,7 @@ A row moves between here and AGENTS.md in one commit, never duplicated.
 | Dev/e2e staff logins | `src/db/dev-credentials.ts` |
 | Why a route paints instantly (or doesn't) | its `loading.tsx` and `export const instant = true` (ADR 20260804-instant-navigation; the **instant-navigation** skill) |
 | A design for a surface that does not exist yet | [docs/design/design-artifacts.md](../design/design-artifacts.md) first; canvases in `docs/design/canvases/` |
+| DB client / test db factory | `src/db/client.ts` (`getDb()`, `createTestDb()`) |
+| Domain logic (framework-free) | `src/lib/` — capacity in `trips.ts`, dates in `format.ts` |
+| A domain term, or an ADR | `docs/product/glossary/` by domain; ADRs indexed in `docs/architecture/decisions/README.md` (generated; the guard names the command) |
+| Auth: session, gates, edge check | `src/lib/auth.ts` / `auth-secret.ts` / `authz.ts` + `session.ts`; edge layer `src/proxy.ts` |

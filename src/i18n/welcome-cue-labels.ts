@@ -1,6 +1,6 @@
 import { cachedListFormat } from "@/lib/intl-cache";
 import { firstNameOf } from "@/lib/person-name";
-import type { WelcomeCue } from "@/lib/welcome-cue";
+import type { WelcomeCue, WelcomeHello } from "@/lib/welcome-cue";
 import { CERTIFICATION_LEVEL_KEYS, type CertificationSummaryShape } from "./readiness-labels";
 import type { StaffTranslator } from "./staff-messages";
 
@@ -65,6 +65,13 @@ export function sayHelloSentences(
   return sentences;
 }
 
+/** The words for what a first-timer chose to add (#2425): fragments that end the dock line. */
+export const WELCOME_HELLO_KEYS = {
+  first_ocean_dive: "shared.welcomeCue.hello.firstOceanDive",
+  celebrating: "shared.welcomeCue.hello.celebrating",
+  nervous: "shared.welcomeCue.hello.nervous",
+} as const satisfies Record<WelcomeHello, string>;
+
 /**
  * The card the dock line reads: the certification summary plus the highest
  * level the shop has actually **verified** (`CertificationSummary.verifiedLevel`).
@@ -116,10 +123,29 @@ export function welcomeDockLineUnchecked(card: DockLineCard | null): boolean {
  * free-text note can carry anything, medical included, so it stays behind the
  * row's own note count. A diver who gave the shop no card at all gets the
  * hello without one: "level not said" is a desk task, not a greeting.
+ *
+ * **The one other thing it may carry is the diver's own fixed choice**
+ * (issue #2425): first ocean dive, celebrating, nervous, ending the line. The
+ * caller passes it only for a consented seat (`welcomeCueInputsByBooking`
+ * returns null without a yes), and there is deliberately no parameter a note
+ * could arrive through.
  */
 export function welcomeDockLine(
   t: StaffTranslator,
-  { personName, certification }: { personName: string; certification: DockLineCard | null },
+  {
+    personName,
+    certification,
+    hello = null,
+  }: { personName: string; certification: DockLineCard | null; hello?: WelcomeHello | null },
+): string {
+  const line = dockLineSentence(t, personName, certification);
+  return hello ? `${line} ${t(WELCOME_HELLO_KEYS[hello])}` : line;
+}
+
+function dockLineSentence(
+  t: StaffTranslator,
+  personName: string,
+  certification: DockLineCard | null,
 ): string {
   const name = firstNameOf(personName, personName);
   const fact = dockLineFact(certification);

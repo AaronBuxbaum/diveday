@@ -44,7 +44,7 @@ const PHASE_TIMEOUT_MS = 45 * 60_000;
  * forwarding trap that silently drops flags.
  */
 export const phases = [
-  // Spawns the 37 repository guards itself, concurrently, and reports all of their
+  // Spawns every repository guard itself, concurrently, and reports all of their
   // failures in one pass. `check:critical-text` is one of them; it is deliberately not
   // repeated here.
   { label: "repo", command: process.execPath, args: ["scripts/check-repo.mjs"] },

@@ -5,7 +5,6 @@ import { JsonLd } from "@/components/JsonLd";
 import { PhoneFootBar } from "@/components/PhoneFootBar";
 import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
-import { TONE_PANEL_LG_CLASS } from "@/components/ui/card";
 import { getDb } from "@/db/client";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { checkoutMode } from "@/db/stripe-accounts";
@@ -37,6 +36,7 @@ import {
   WaitlistConfirmation,
 } from "./_components/BookingSections";
 import { CancelledTripLanding } from "./_components/CancelledTripLanding";
+import { ConditionsChangedNotice } from "./_components/ConditionsChangedNotice";
 import { ConditionsLine } from "./_components/ConditionsLine";
 import { bookingCourseFees } from "./_components/course-fees";
 import { crewLanguagesSentence } from "./_components/crew-languages";
@@ -287,6 +287,8 @@ export default async function TripDetailPage({
   const requirementSentence = requirementSentenceFor(combinedRequirement, t, locale);
 
   const inPast = hasSailed(trip.startsAt, now);
+  const logEntry = inPast ? undefined : { startsAt: trip.startsAt, isCourse: !!trip.course };
+  const hasDoor = pitchHasDoor(diveBriefings, publicCrew, !!logEntry);
   // Where this departure stands against the head count it needs, if it named
   // one. A departure that already sailed has nothing conditional left to
   // promise; a cancelled one returned far above this line, at the `status`
@@ -371,11 +373,10 @@ export default async function TripDetailPage({
             {/* Its run closes itself, unless a pitch opens on its rule (pixel-craft class 6). */}
             <TripDayPlan
               briefings={diveBriefings}
-              nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew)}
+              nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew, !!logEntry)}
               sightings={briefing.seen}
               shop={shop}
               locale={locale}
-              logEntry={inPast ? undefined : { startsAt: trip.startsAt, isCourse: !!trip.course }}
               profile={{
                 rhythm: shop,
                 depthUnit: shop.depthUnit,
@@ -395,11 +396,13 @@ export default async function TripDetailPage({
                 close rather than a second rule a gap below it; with no door the
                 two stand a section apart. An empty block takes no room: its
                 margins collapse through it. */}
-            <div className={pitchHasDoor(diveBriefings, publicCrew) ? undefined : "space-y-10"}>
+            <div className={hasDoor ? undefined : "space-y-10"}>
               <TripPitch
                 briefings={diveBriefings}
                 crew={publicCrew}
                 locale={locale}
+                timeZone={shop.timezone}
+                logEntry={logEntry}
                 embed={isEmbed}
               />
               <ConditionsLine
@@ -422,15 +425,7 @@ export default async function TripDetailPage({
               trip.conditionsUpdatedAt,
               confirmed.booking.conditionsBriefedAt,
             ) ? (
-              // Only a booked diver sees this, and a booking renders the booked
-              // moment on the `lg` rung below, so this panel is its `lg` twin.
-              <section
-                className={`${TONE_PANEL_LG_CLASS} border-warning/40 bg-warning/10`}
-                role="status"
-              >
-                <h2 className="font-semibold">{t("trip.conditionsChangedHeading")}</h2>
-                <p className="mt-1 text-sm text-muted">{t("trip.conditionsChangedBody")}</p>
-              </section>
+              <ConditionsChangedNotice locale={locale} />
             ) : null}
             <TripAlternatives alternatives={worthALookRows} locale={locale} />
 

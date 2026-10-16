@@ -10,7 +10,7 @@ import { agencyCheckCopies } from "@/app/shop/[shopSlug]/_components/agency-chec
 import {
   addAgencyListedCardsAction,
   agencyCheckAction,
-} from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
+} from "@/app/shop/[shopSlug]/divers/[personId]/agency-check-actions";
 import {
   WaitlistInvite,
   type WaitlistInviteCopy,
@@ -54,6 +54,7 @@ import {
 } from "./ResendConfirmationControl";
 import { spineClearUnlessWindy, spineEntries, spineMoment } from "./spine-reading";
 import { WaiverSendControl } from "./WaiverSendControl";
+import { WeekHorizon } from "./WeekHorizon";
 
 /**
  * **The shop home is the day's spine** — ADR
@@ -793,11 +794,10 @@ function DeskPaymentsRow({ shopSlug, t }: { shopSlug: string; t: StaffTranslator
 }
 
 /**
- * **What the divers left the reader's boats** (UX review 2026-10-11, item 18):
- * paid tips on the boats this reader crewed this week (`crewTipsOnBoats`), in
- * the shop's minor units. The diver was told the shop passes tips on to the
- * crew; this is the crew seeing that it did. A plain line, not a coral moment:
- * it is money, and the coral table never carries money. Zero renders nothing.
+ * The reader's share of the week's paid tips on boats they crewed (`crewTipShare`;
+ * UX review 2026-10-11, item 18; issue #2468): the crew seeing the shop pass
+ * tips on. A plain line, never coral. The only shop money shown below the
+ * money gate, and not precedent for more (H-125). Zero renders nothing.
  */
 function CrewTipsLine({
   cents,
@@ -990,7 +990,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
           16px under its edge with 40px to the first station. Unpulled, they
           sit the header's 32px under the band like every first block. */}
       {allHomeLine && evening ? (
-        <EarnedMomentLine className="-mt-4 tabular-nums">
+        <EarnedMomentLine tone="ink" className="-mt-4 tabular-nums">
           {/* **Souls, not seats** (issue #1346). The one sentence in the
               product about who came home used to leave the crew out of both
               numbers — and they are the people most reliably still in the
@@ -1014,7 +1014,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
           booking is still: the fact holds all day, and a celebration replayed
           on every visit stops meaning anything. */}
       {factOfScaleLine && factOfScale ? (
-        <EarnedMomentLine animate={false}>
+        <EarnedMomentLine tone="ink" animate={false}>
           <span className="font-medium">
             {factOfScale.kind === "first_boat"
               ? t("shopHome.spine.factOfScale.firstBoat")
@@ -1053,7 +1053,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
               exactly how a celebration stops meaning anything (the rule
               `EarnedMomentLine` carries). The two lines above are today's and
               reset with the day; this one does not. */}
-          <EarnedMomentLine animate={false} className="flex items-center gap-2">
+          <EarnedMomentLine tone="ink" animate={false} className="flex items-center gap-2">
             <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-accent" />
             {t("shopHome.spine.firstBooking")}
           </EarnedMomentLine>
@@ -1273,29 +1273,14 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
             </LedgerGroup>
           ) : null}
           {spine.week.jobs > 0 ? (
-            <ul className={HORIZON_PANEL_CLASS}>
-              <LedgerRow
-                size="lg"
-                // The hairline goes transparent rather than to width zero:
-                // `border-t`'s width beats a `border-0` on emit order, and a
-                // colour beats a colour by name.
-                //
-                // The row keeps its room from `sm` up as well: it used to take
-                // it back there (`sm:mx-0 sm:px-0`), which left the fill
-                // flush against "This week" while Tomorrow's summary in the
-                // panel beside it kept its 8px.
-                className="sm:rounded-panel sm:border-transparent sm:last:border-transparent"
-                href={`/shop/${shopSlug}/schedule/board`}
-                linkLabel={t("shopHome.spine.openBoard")}
-                trailing={
-                  <span className="flex items-center gap-2 text-sm text-muted tabular-nums">
-                    {t("shopHome.spine.needsYouCount", { count: spine.week.jobs })}
-                  </span>
-                }
-              >
-                <p className="text-base font-semibold tracking-tight">{t("shopHome.spine.week")}</p>
-              </LedgerRow>
-            </ul>
+            <WeekHorizon
+              panelClass={HORIZON_PANEL_CLASS}
+              jobs={spine.week.jobs}
+              shopSlug={shopSlug}
+              t={t}
+            >
+              <StationRows rows={spine.week.rows} controls={controls} />
+            </WeekHorizon>
           ) : null}
         </div>
       ) : null}

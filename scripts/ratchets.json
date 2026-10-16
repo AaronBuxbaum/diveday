@@ -35,7 +35,6 @@
     "src/i18n/locales/en-US/staff/bookings.json": 1,
     "src/i18n/locales/en-US/staff/divers.json": 10,
     "src/i18n/locales/en-US/staff/diveSites.json": 6,
-    "src/i18n/locales/en-US/staff/integrations.json": 4,
     "src/i18n/locales/en-US/staff/manifest.json": 5,
     "src/i18n/locales/en-US/staff/orders.json": 1,
     "src/i18n/locales/en-US/staff/settings.json": 3,
@@ -46,9 +45,9 @@
     "note": "Words of agent context every session loads before reading any code. A ratchet: a count may never rise, and a fall is banked with `node scripts/check-context-budget.mjs --write`. See the module comment in scripts/check-context-budget.mjs.",
     "budgets": {
       "CLAUDE.md": 54,
-      "AGENTS.md": 1206,
+      "AGENTS.md": 1067,
       ".claude/rules/*.md (without paths: frontmatter)": 0,
-      ".claude/skills/*/SKILL.md (description lines)": 805,
+      ".claude/skills/*/SKILL.md (description lines)": 796,
       ".claude/agents/*.md (description lines)": 130
     },
     "raises": [
@@ -198,12 +197,85 @@
           "src/app/shop/[shopSlug]/settings/team/actions.ts": "0 -> 2"
         }
       }
-    ],
-    "src/app/actions/waiver-send-types.ts": 1,
-    "src/app/shop/[shopSlug]/settings/team/actions.ts": 2
+    ]
   },
   "domain-strings": {
     "//": "English strings returned from src/lib or src/db, per file. Written by `node scripts/check-domain-strings.mjs --write`. This number may only go down — see scripts/check-domain-strings.mjs."
+  },
+  "e2e-long-literals": {
+    "//": "getByText/toContainText string literals of 40+ characters in e2e/, per file, written before the ratchet (testing review decision 8). A count may only fall. Written by `node scripts/check-e2e-hygiene.mjs --write`.",
+    "//absorbed": [
+      {
+        "why": "cert-check extension specs (#2625) merged to main before the long-literal ratchet landed",
+        "files": {
+          "e2e/agency-check-extension.spec.ts": "0 -> 8",
+          "e2e/agency-check.spec.ts": "0 -> 1"
+        }
+      }
+    ],
+    "e2e/add-diver.spec.ts": 8,
+    "e2e/agency-check-extension.spec.ts": 8,
+    "e2e/agency-check-padi.spec.ts": 7,
+    "e2e/agency-check-roster.spec.ts": 3,
+    "e2e/agency-check.spec.ts": 1,
+    "e2e/backup.spec.ts": 6,
+    "e2e/blowout.spec.ts": 2,
+    "e2e/boat-loop.spec.ts": 1,
+    "e2e/booking.spec.ts": 2,
+    "e2e/buddy-pairs.spec.ts": 1,
+    "e2e/certifications.spec.ts": 4,
+    "e2e/check-in.spec.ts": 10,
+    "e2e/courses.spec.ts": 5,
+    "e2e/crew-clash.spec.ts": 1,
+    "e2e/date-requests.spec.ts": 2,
+    "e2e/day-spine.spec.ts": 1,
+    "e2e/departure-desk.spec.ts": 2,
+    "e2e/departure-log.spec.ts": 1,
+    "e2e/desk-ping.spec.ts": 1,
+    "e2e/dive-sites.spec.ts": 5,
+    "e2e/export.spec.ts": 2,
+    "e2e/find-my-booking.spec.ts": 2,
+    "e2e/gear-fit-and-age.spec.ts": 2,
+    "e2e/gear.spec.ts": 1,
+    "e2e/guardian-co-signature.spec.ts": 4,
+    "e2e/helpers.ts": 2,
+    "e2e/import.spec.ts": 4,
+    "e2e/inbox.spec.ts": 1,
+    "e2e/incident-reports.spec.ts": 2,
+    "e2e/integrations.spec.ts": 1,
+    "e2e/invoicing.spec.ts": 3,
+    "e2e/last-minute-fill.spec.ts": 3,
+    "e2e/manifest.spec.ts": 3,
+    "e2e/marketing.spec.ts": 9,
+    "e2e/nitrox.spec.ts": 1,
+    "e2e/onboard.spec.ts": 1,
+    "e2e/package-purchase.spec.ts": 1,
+    "e2e/promo-codes.spec.ts": 4,
+    "e2e/readiness.spec.ts": 1,
+    "e2e/recap.spec.ts": 4,
+    "e2e/rehearsal.spec.ts": 1,
+    "e2e/reports.spec.ts": 1,
+    "e2e/review-replies.spec.ts": 1,
+    "e2e/reviews.spec.ts": 1,
+    "e2e/role-permissions.spec.ts": 1,
+    "e2e/running-late.spec.ts": 1,
+    "e2e/schedule-builder.spec.ts": 1,
+    "e2e/seat-move.spec.ts": 1,
+    "e2e/security-settings.spec.ts": 3,
+    "e2e/shop-activity.spec.ts": 3,
+    "e2e/shop-on-paper.spec.ts": 1,
+    "e2e/sightings.spec.ts": 2,
+    "e2e/staff-invite.spec.ts": 1,
+    "e2e/staff-session-revalidation.spec.ts": 3,
+    "e2e/staffing.spec.ts": 2,
+    "e2e/took-a-call.spec.ts": 2,
+    "e2e/trip-admission.spec.ts": 8,
+    "e2e/trips.spec.ts": 5,
+    "e2e/visual.spec.ts": 7,
+    "e2e/waiver-print.spec.ts": 1,
+    "e2e/waivers.spec.ts": 16,
+    "e2e/whatsapp-settings.spec.ts": 1,
+    "e2e/work-orders.spec.ts": 4
   },
   "file-length": {
     "//": "Line counts of the files under src/app, src/components and the test files under src still over 900 lines, the size scripts/guard-read.mjs refuses to read whole. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
@@ -332,24 +404,35 @@
           "src/app/s/[shopSlug]/trips/[id]/actions.ts": "1118 -> 1131",
           "src/db/trips-queries.test.ts": "1143 -> 1209"
         }
+      },
+      {
+        "why": "list entries that cannot live in a sibling: export.test.ts column decisions (#2445, #2446, #2425) and the label-maps row for the named buddy alert",
+        "files": {
+          "src/db/export.test.ts": "1670 -> 1673",
+          "src/i18n/label-maps.test.ts": "1327 -> 1334"
+        }
+      },
+      {
+        "why": "merge of PR 2652's stack into r4-3: both sides grew the order page (record payment, dispute sheet) and export.test.ts",
+        "files": {
+          "src/db/export.test.ts": "1673 -> 1675"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
     "src/app/api/test/seed-trouble-states/route.ts": 2040,
-    "src/app/api/webhooks/stripe/route.replay.test.ts": 1417,
-    "src/app/api/webhooks/stripe/route.test.ts": 1931,
-    "src/app/api/webhooks/stripe/route.ts": 958,
+    "src/app/api/webhooks/stripe/route.replay.test.ts": 1308,
+    "src/app/api/webhooks/stripe/route.test.ts": 1913,
+    "src/app/api/webhooks/stripe/route.ts": 902,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1131,
-    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1338,
+    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1323,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 929,
-    "src/app/shop/[shopSlug]/page.tsx": 962,
     "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1072,
     "src/app/shop/[shopSlug]/schedule/board/actions.ts": 948,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.test.tsx": 1040,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": 1043,
     "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1180,
-    "src/app/shop/[shopSlug]/trips/[id]/actions.ts": 1062,
     "src/components/MarketingFeatureScreens.tsx": 1064,
     "src/components/search/CommandPalette.tsx": 1016,
     "src/components/ui/button.test.ts": 971,
@@ -365,17 +448,17 @@
     "src/db/courses.test.ts": 1719,
     "src/db/dive-sites.test.ts": 1174,
     "src/db/diver-merge.test.ts": 1285,
-    "src/db/divers.test.ts": 3105,
+    "src/db/divers.test.ts": 3077,
     "src/db/erasure-coverage.test.ts": 1178,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1673,
+    "src/db/export.test.ts": 1675,
     "src/db/import.test.ts": 1077,
     "src/db/manifests.test.ts": 3725,
     "src/db/no-show.test.ts": 1165,
-    "src/db/notifications.test.ts": 2007,
+    "src/db/notifications.test.ts": 1875,
     "src/db/orders.test.ts": 3175,
     "src/db/participant-types.test.ts": 1216,
-    "src/db/readiness.test.ts": 1691,
+    "src/db/readiness.test.ts": 1519,
     "src/db/recap.test.ts": 2138,
     "src/db/refunds.test.ts": 1154,
     "src/db/reminders.test.ts": 1078,
@@ -388,12 +471,12 @@
     "src/db/staffing.test.ts": 952,
     "src/db/trips-crew.test.ts": 1489,
     "src/db/trips-queries.test.ts": 1209,
-    "src/db/trips-series.test.ts": 1873,
+    "src/db/trips-series.test.ts": 1785,
     "src/db/waiver-issue.test.ts": 1178,
     "src/db/waivers-medical.test.ts": 1004,
     "src/db/work-order-follow-up.test.ts": 1213,
     "src/db/work-orders.test.ts": 1408,
-    "src/i18n/label-maps.test.ts": 1327,
+    "src/i18n/label-maps.test.ts": 1334,
     "src/lib/agency-check.test.ts": 930,
     "src/lib/dive-prep.test.ts": 1983,
     "src/lib/import.test.ts": 1459,
@@ -456,31 +539,23 @@
         }
       }
     ],
-    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 307,
+    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 306,
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 425,
-    "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 383,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 332,
-    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": 304,
-    "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 519,
-    "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 381,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 333,
     "src/app/shop/[shopSlug]/gear/page.tsx#GearRegisterPage": 308,
-    "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 422,
-    "src/app/shop/[shopSlug]/page.tsx#TodayBody": 469,
+    "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 421,
+    "src/app/shop/[shopSlug]/page.tsx#TodayBody": 304,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 377,
-    "src/app/shop/[shopSlug]/reports/page.tsx#ReportsPage": 382,
+    "src/app/shop/[shopSlug]/reports/page.tsx#ReportsPage": 378,
     "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 310,
-    "src/app/shop/[shopSlug]/settings/import/ImportWizard.tsx#ImportWizard": 467,
-    "src/app/shop/[shopSlug]/settings/integrations/page.tsx#IntegrationsSettingsPage": 306,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 332,
     "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 318,
-    "src/app/shop/[shopSlug]/trips/[id]/_components/trip-about-rows.tsx#tripAboutRows": 301,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 372,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 366,
-    "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 345,
     "src/db/checkouts.ts#startBookingCheckout": 303,
     "src/db/export.ts#loadShopExportContext": 338,
-    "src/db/reminders.ts#sendDueReminders": 340,
+    "src/db/reminders.ts#sendDueReminders": 332,
     "src/db/reporting.ts#getMonthlyReport": 338,
     "src/db/seed-dive-sites.ts#seedDiveSites": 467,
     "src/db/seed-history.ts#seedHistory": 726,
@@ -489,9 +564,7 @@
     "src/lib/import.ts#prepareContactImport": 508
   },
   "live-people": {
-    "//": "Reads of `people` written before scripts/check-live-people.mjs that carry no `livePerson()`, per file. Most are right (a by-id read in a transaction, a name for an activity line); a count may only fall. Written by `node scripts/check-live-people.mjs --write`.",
-    "src/app/api/test/seed-returning-diver/route.ts": 1,
-    "src/app/api/test/seed-trouble-states/route.ts": 9
+    "//": "Reads of `people` written before scripts/check-live-people.mjs that carry no `livePerson()`, per file. Most are right (a by-id read in a transaction, a name for an activity line); a count may only fall. Written by `node scripts/check-live-people.mjs --write`."
   },
   "locale": {
     "//": "Undeclared es-ES values still byte-identical to their en-US counterpart, per bundle file. Written by `node scripts/check-locale.mjs --write`. This number may only go down, and it will never reach zero — the acronyms, the course-name ladder and the placeholder-only templates are the same string in Spanish on purpose. See scripts/check-locale.mjs and docs/agents/repo-checks.md."
@@ -512,7 +585,6 @@
     "src/app/shop/[shopSlug]/divers/new/page.tsx": 3,
     "src/app/shop/[shopSlug]/settings/AddressSearch.tsx": 1,
     "src/app/shop/[shopSlug]/settings/export/_components/BackupsSection.tsx": 1,
-    "src/app/shop/[shopSlug]/settings/import/ImportWizard.tsx": 2,
     "src/app/shop/[shopSlug]/settings/whatsapp/page.tsx": 1,
     "src/app/shop/[shopSlug]/trips/[id]/_components/AddDiverSection.tsx": 3,
     "src/app/switching/_components/guide.tsx": 3,
@@ -537,34 +609,45 @@
       {
         "why": "The register page carries the Gear section's tab strip (Register, Work orders) since the bench became its second tab (ADR 20261008-gear-work-orders)",
         "files": {}
+      },
+      {
+        "why": "merge of PR 2652's stack into r4-3: both sides grew the order page (record payment, dispute sheet) and export.test.ts",
+        "files": {
+          "src/app/shop/[shopSlug]/orders/[id]/page.tsx": "0 -> 401"
+        }
+      },
+      {
+        "why": "merge of PR 2652's stack into r4-5: the base thinned the trip route and this layer added its departure-needs read to the pulse",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/page.tsx": "511 -> 521"
+        }
       }
     ],
     "src/app/onboard/page.tsx": 479,
     "src/app/page.tsx": 581,
     "src/app/pricing/page.tsx": 468,
-    "src/app/ready/[token]/page.tsx": 671,
+    "src/app/ready/[token]/page.tsx": 667,
     "src/app/s/[shopSlug]/page.tsx": 879,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 529,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 524,
     "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
-    "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx": 727,
     "src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx": 406,
     "src/app/shop/[shopSlug]/dive-sites/page.tsx": 613,
     "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 506,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 779,
     "src/app/shop/[shopSlug]/gear/page.tsx": 479,
+    "src/app/shop/[shopSlug]/orders/[id]/page.tsx": 401,
     "src/app/shop/[shopSlug]/orders/page.tsx": 734,
-    "src/app/shop/[shopSlug]/page.tsx": 962,
+    "src/app/shop/[shopSlug]/page.tsx": 672,
     "src/app/shop/[shopSlug]/promos/page.tsx": 601,
-    "src/app/shop/[shopSlug]/reports/page.tsx": 628,
+    "src/app/shop/[shopSlug]/reports/page.tsx": 620,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 465,
     "src/app/shop/[shopSlug]/schedule/board/page.tsx": 416,
     "src/app/shop/[shopSlug]/settings/import/page.tsx": 508,
-    "src/app/shop/[shopSlug]/settings/integrations/page.tsx": 489,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 789,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 593,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 704,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 494,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 525
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 521
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."
@@ -580,8 +663,24 @@
         "files": {
           "src/content/dive-sites/florida-panhandle.ts": "0 -> 1"
         }
+      },
+      {
+        "why": "Harbour Island and Harbour Reef are the places' own names, as the Bahamas and Aruba spell them",
+        "files": {
+          "src/content/dive-areas.ts": "0 -> 1",
+          "src/content/dive-sites/aruba.ts": "0 -> 1"
+        }
+      },
+      {
+        "why": "Harbour Island is the island's own name",
+        "files": {
+          "src/content/dive-sites/bahamas-eleuthera.ts": "0 -> 1"
+        }
       }
     ],
+    "src/content/dive-areas.ts": 1,
+    "src/content/dive-sites/aruba.ts": 1,
+    "src/content/dive-sites/bahamas-eleuthera.ts": 1,
     "src/content/dive-sites/florida-panhandle.ts": 1
   }
 }

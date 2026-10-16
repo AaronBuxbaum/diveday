@@ -124,6 +124,9 @@ export function EditorSection({
   // so what was typed in them survives the fold and still posts with Save; the
   // fold is a class below `lg`, where the rail no longer fits, and from `lg` up
   // every section stands open beside the rail as it always has.
+  // **Phone-only on purpose** (Aaron, 2026-10-13, issue #2439): the review's height
+  // numbers were phone heights, and on a wide screen the rail already tells a
+  // reader where they are. Revisit if desktop users report losing their place.
   const body = (
     <div
       ref={bodyRef}

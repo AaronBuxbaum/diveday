@@ -228,6 +228,13 @@
   has sailed, since nothing on a hull that has left is left to move; the side still on the dock
   keeps the warning until it sails or its boat changes, because its divers are the ones with no
   boat.
+- **Tight turnaround** — the near miss beside a clash (issue #2141): a move that leaves less than the
+  shop's **minimum turnaround** (`shops.min_turnaround_minutes`, default 30, set on the dock-day
+  settings page; 0 turns it off) between one departure due back and the next leaving, on the same
+  hull or for a crew member leaving from a different meeting point. Said on the Move panel only, as
+  one muted line naming the other departure and the minutes, under any clash line
+  (`moveTurnarounds` in `src/db/move-preflight.ts`). Advice, never a refusal; nose to tail stays no
+  clash under H-80's predicate, and a crew hand-off on the same dock stays quiet.
 - **Crew news** — what a crew member is told when their boats change: put on a departure, taken off
   one, given a different role on one, the departure called off, or an answer to their own request.
   Recorded as `crew_notices` rows by the crew write path, never for the staffer who made the change,
@@ -696,7 +703,7 @@
   counted as sailing: a seat nobody spoke for is **Not counted at the dock** or **No roll call
   taken**, never "Sailed" and never **Didn't sail**.
   A **crew sailing** is one crew member on one departure that is home, unless the crew marked
-  them ashore at the dock; the Safety tab reads each against the crew member's credentials as they
+  them ashore at the dock; the Safety page reads each against the crew member's credentials as they
   stand today, on the departure's last day.
 - **The record** — a home departure's Divers tab: each seat filed under **Sailed**, **Didn't
   sail**, **Not counted at the dock** or **No roll call taken** (`recordGroups`,
@@ -771,20 +778,32 @@
   narrative beside it. Kept seven years from the incident; erasing a diver removes their identity
   from it and keeps the report
   ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
+- **Legal hold** (on an **incident report**) — an owner-set flag that keeps a report past its
+  seven-year window while a claim is open. The retention prune skips a held report until an owner
+  releases the hold, and a held report cannot be deleted. Only an owner sets or releases it
+  ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
+- **Discarded draft** — an **incident report** draft an owner deleted because it should never have
+  been started. Soft-deleted and invisible; a filed report can never be discarded.
 - **Incident kind** / **incident severity** — the two closed answers an **incident report** files
   with: its kind (injury or illness, near miss, equipment, missing diver, fatality, other) and how
-  serious the writer judged it (minor, moderate, serious). Shown on the report and the Safety tab;
+  serious the writer judged it (minor, moderate, serious). Shown on the report and the Safety page;
   read by nothing that gates. A severity is the crew's judgment, never a medical classification
   ([20261014-incident-kind-severity](../../architecture/decisions/20261014-incident-kind-severity.md)).
+- **Shore alert contact** — the one person outside the shop's accounts who hears a **stale roll
+  call**: an email address on the emergency reference page, beside the free-text shore contact a
+  crew reads, saved only with the box that records they agreed (who ticked it, and when), and sent
+  nothing until the address itself confirms by the link DiveDay mails it. Changing the address asks
+  for both again; clearing it clears them. Their copy names the shop and its phone, the departure,
+  the dive and the counts, in the shop's language, with no names and one link, the one that takes
+  the address off the shop (H-118, `src/lib/shore-alert-contact.ts`, `src/db/shore-alert-tokens.ts`).
 - **Stale roll call** — an after-dive roll call still open after its departure was due back. The
   hourly crew-notices pass asks from 30 minutes past the end; a count nobody started is open only
   once the boat is due home (the end plus the one-hour return buffer), so it alerts at the first
   hourly pass after that, while a started count or a person recorded not back aboard can alert at
   the first pass past the half hour. Once per departure the owners are emailed ("after the boat was
   due back at 4:00 PM EDT") and every device following the manifest is pushed
-  (`sendStaleRollCallAlerts`), and the Today row says when; the
-  shore contact is free text and is not messaged (H-118). It informs and never closes or changes
-  the count.
+  (`sendStaleRollCallAlerts`), and the Today row says when. A confirmed **shore alert contact** is
+  emailed too, under a claim of its own (H-118). It informs and never closes or changes the count.
 - **Unaccounted for** — the six ways a head count can be open, in descending severity. A person is
   accounted for at an after-dive checkpoint **only if their latest live result there is
   "boarded"**; nothing else closes that count, and the rule is the same whether they hold a booking
@@ -840,7 +859,8 @@
   differs by country, so a plausible wrong number here costs the minute it takes to find out. Free
   text throughout, including the phone lines: an international dive line is not a `tel:`-shaped
   string until the shop writes it, and nothing on this card links, dials, escalates, or opens an
-  incident. It is a laminated card retyped, priced at zero words of DiveDay's own.
+  incident. Its free-text shore contact is never messaged; the address DiveDay may email lives
+  beside it as the **shore alert contact**. It is a laminated card retyped, priced at zero words of DiveDay's own.
 - **Radio identity** — what a **boat** answers to on the radio: its name, its **call sign** and its
   nine-digit **MMSI** (`boats.call_sign`, `boats.mmsi`, fourth review item 11). Held per hull, so
   the emergency card and the printed packet name the departure's own boat
@@ -1151,7 +1171,9 @@
   `COURSE_FORMS_BLOCK_BOARDING`, turns that into a warning instead, and buying a seat never waits on
   it (ADR 20261008-course-forms). A course template names its agency's **standard forms** by title.
   Creating or syncing the course sets them up empty, and a form with no text is asked of nobody
-  until the shop pastes the agency's wording in.
+  until the shop pastes the agency's wording in. A form the shop ticks as a **medical
+  statement** (signature only; no answers are screened, unlike the **Medical questionnaire**
+  below) keeps blocking even with that switch at warn-only.
 - **Sign once** — a diver signs the release once, not every trip. A **completed** signature is held
   against the diver (not just the booking it was signed on) and satisfies the waiver gate on any of
   their bookings while it stays **current**: signed against the shop's current release version and
@@ -1175,7 +1197,8 @@
   those answers were never the record's person's, and the seat's new holder signs their own. A
   cleared record keeps its status, so the signed records' **Medical holds** view lists every
   referral, and each row says where it stands: Waiting on physician, Cleared by physician, or Not
-  cleared.
+  cleared. A diver a captain boarded over the hold keeps it named on their manifest row after a
+  dive: in the row's capsule, or in the person panel when a louder fact takes the capsule.
 - **Physician clearance** — the shop recording that a physician evaluated a diver the medical
   questionnaire had **referred**, and cleared them to dive. It is the only thing that clears that
   `medical_review` record itself (a clean later release can stand over it, below), and it is a
@@ -1248,6 +1271,10 @@
   5, and 10 and the affirmative answers in an applicable Box are
   physician referrals; a parent question can therefore be yes and still clear when its Box is all
   no. Unknown or incomplete questionnaires **fail closed** (review required), never waved through.
+  On a signed release every staff role sees the prompts that flagged; the **full answers** are
+  owner/manager-only, behind "Show answers", and each read writes `medical_answers_read` to the
+  diver's activity trail before the answers are returned (issue #2157). A read that cannot be
+  logged shows nothing, and a page render logs nothing.
 - **Waiver activity** — the staff-facing chronological explanation of stored waiver evidence:
   a link was issued, a diver started, signed, needs medical review, or had a pending link replaced.
   It is derived from timestamps on the evidence records and never exposes the raw completion token.

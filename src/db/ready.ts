@@ -15,7 +15,7 @@ import type { RentalPricing } from "@/lib/rentals";
 import { canSayRunningLate, runningLateShown } from "@/lib/running-late";
 import { hasSailed } from "@/lib/trips";
 import { shopWaiverStatus } from "@/lib/waivers";
-import { offerableWelcomeCue, type WelcomeCue } from "@/lib/welcome-cue";
+import { offerableWelcomeCue, type WelcomeCue, type WelcomeHello } from "@/lib/welcome-cue";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
 import { firstActiveIntroCourse, hasActiveRefresherCourse } from "./courses";
@@ -33,7 +33,7 @@ import {
 } from "./rental-fit";
 import { bookings, certifications, people, shops, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
-import { getTripWithBooked } from "./trips";
+import { getTripWithBookedOnce } from "./trips";
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
 import { welcomeCueInputsByBooking } from "./welcome-cues";
 
@@ -331,6 +331,14 @@ export type ReadyPageData = {
    */
   canAddSeat: boolean;
   /**
+   * **"Pay for this seat"** (issue #2474): this booking leads a party and the
+   * page could open a checkout for a seat it added. A fact about the lead and
+   * the shop only (a live seat on a departure still ahead, a connected
+   * account, a held identity that is not); which seats are owed is
+   * `PartySeatClaim.payable`.
+   */
+  canPayPartySeats: boolean;
+  /**
    * **"Running late"** (J3). `open` is `canSayRunningLate` for this seat now —
    * booked, not checked in, from the night-before brief until a scheduled
    * departure has sailed — and `saidAt` is when the diver already said
@@ -368,6 +376,8 @@ export type ReadyPageData = {
   welcomeOffer: WelcomeCue | null;
   /** Whether they have said yes. Their own answer, on their own link. */
   welcomeShared: boolean;
+  /** What they chose to add to the hello (#2425); null without a yes. */
+  welcomeHello: WelcomeHello | null;
   /**
    * What this course asks a student to work through before day 1 (ADR
    * 20261008-course-learning-materials), read through `readLearningMaterials`
@@ -398,6 +408,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       participantType: bookings.participantType,
       lastDivedBand: bookings.lastDivedBand,
       welcomeSharedAt: bookings.welcomeSharedAt,
+      welcomeHello: bookings.welcomeHello,
       courseMaterialsDoneAt: bookings.courseMaterialsDoneAt,
       diveIntent: bookings.diveIntent,
       reEntryAsk: bookings.reEntryAsk,
@@ -437,7 +448,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     // diveday:allow-deleted-trips: the window and course columns only; the
-    // trip itself is read through `getTripWithBooked`, which keeps `liveTrip()`.
+    // trip itself is read through `getTripWithBookedOnce`, which keeps `liveTrip()`.
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(eq(bookings.id, bookingId))
     .limit(1);
@@ -468,7 +479,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     welcomeInputs,
     fitConfirmation,
   ] = await Promise.all([
-    getTripWithBooked(db, row.shopId, row.tripId),
+    getTripWithBookedOnce(db, row.shopId, row.tripId),
     reEntryOffersOpen ? hasActiveRefresherCourse(db, row.shopId) : false,
     // Only for a diver whose "I'm not certified yet" stands: the one door the
     // certification step opens for them (third UX review, item 23).
@@ -595,6 +606,14 @@ export async function getReadyPageData(
       : "open"
     : null;
 
+  const canPayPartySeats =
+    canCancelBooking &&
+    !identityHeld &&
+    row.partyLeadBookingId === null &&
+    canAcceptPayments(stripeAccount) &&
+    Boolean(publicAppUrl()) &&
+    Boolean(row.personEmail);
+
   return {
     detail,
     shop: {
@@ -663,6 +682,7 @@ export async function getReadyPageData(
     canCancelBooking,
     canAddSeat,
     moveAsk,
+    canPayPartySeats,
     runningLate: {
       open: canSayRunningLate({
         bookingStatus: row.status,
@@ -683,6 +703,7 @@ export async function getReadyPageData(
       now,
     }),
     welcomeShared: row.welcomeSharedAt !== null,
+    welcomeHello: row.welcomeSharedAt !== null ? row.welcomeHello : null,
     learningMaterials: readLearningMaterials(trip.course?.learningMaterials),
     courseMaterialsDone: row.courseMaterialsDoneAt !== null || materialsDoneElsewhere,
     courseStarted: trip.startsAt.getTime() <= now.getTime(),

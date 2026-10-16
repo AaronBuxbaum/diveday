@@ -9,6 +9,7 @@ import { listExecutedDives } from "@/db/executed-dives";
 import { getTripManifests } from "@/db/manifests";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
+import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
 import { listShopPickedSpecies, listTripSightings } from "@/db/trip-sightings";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripMeetingPointFields, listTripDives } from "@/db/trips";
@@ -101,6 +102,11 @@ export async function readManifestPage(
     listTripSightings(db, shopId, tripId),
     listShopPickedSpecies(db, shopId),
   ]);
+  // A multi-day run's real windows, for the stage strip's tap (issue #2406).
+  const dockTrip = completeManifests?.[0]?.trip;
+  const meetingWindows = dockTrip
+    ? (await meetingWindowsByTrip(db, [dockTrip])).get(tripId)
+    : undefined;
   return {
     completeManifests,
     buddyTeamsList,
@@ -113,7 +119,8 @@ export async function readManifestPage(
     liveDiveSites,
     catchUp,
     diveIntents,
-    stage,
+    // The crew's latest word and the run's windows, read together (`stageStripProps`).
+    stageStrip: { stage, meetingWindows },
     meetingPoint,
     vessel: vessels.get(tripId) ?? null,
     kitRecord,

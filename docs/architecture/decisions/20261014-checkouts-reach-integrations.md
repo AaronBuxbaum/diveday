@@ -37,5 +37,13 @@ same transaction that records them, on the existing outbox (`integration_events`
 
 ## Consequences
 
-- A shop connected before this change receives checkouts from now on; nothing is back-filled.
+- A shop connected before this change receives checkouts from now on. Earlier ones are sent only
+  when the **owner** asks, from Settings > Integrations, "Send earlier checkouts" (issue #2606):
+  choose one connected provider and a start day in the shop's zone, preview the counts, confirm.
+  The run queues the events oldest first through the same outbox, under the same idempotency keys,
+  to that provider only. A candidate is skipped when any delivery of its event already exists for
+  the shop's integration of that provider (a reconnect makes a new row, so the test is by provider),
+  so a second run, or an overlap with live events, sends nothing twice. One run queues at most 500;
+  the owner runs it again for the rest. There is no automatic backfill on connect: a closed period is
+  the owner's to judge.
 - Zapier subscribers see `entityType` `checkout` or `tip` on events they already receive.

@@ -126,13 +126,11 @@ that row by `shop_id` once its owner confirms they are not mid-Connect). Re-run 
 
 ## Rotating `SECRET_ENCRYPTION_KEY`
 
-Rotating the key **without re-sealing existing rows silently degrades every connected shop to SMS**.
-That is deliberate — a key change must not take the reminder cron down — but it means rotation is not
-a one-liner. Either have every connected shop reconnect, or write a one-off migration that opens each
-`shop_whatsapp_accounts.access_token_sealed` (and `registration_pin_sealed`) with the old key and
-re-seals with the new one before swapping the environment value.
-
-There is no in-app rotation flow yet; add one here if this stops being rare.
+Follow the two-key procedure in the
+[infrastructure runbook](infrastructure-runbook.md#rotating-the-secret-sealing-key). A shop's access
+token and PIN are sealed under the old key until the shop reconnects, and open under
+`SECRET_ENCRYPTION_KEY_PREVIOUS` until then. Removing that key before every connected shop has
+reconnected degrades those shops to SMS.
 
 ## Deliberately not built
 

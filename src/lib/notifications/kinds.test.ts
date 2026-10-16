@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ZodObject, ZodType } from "zod";
 
 import {
+  NOTIFICATION_TRIP_TITLE_MAX,
   type Notification,
   notificationSchema,
   notificationSubjectEmail,
@@ -163,6 +164,9 @@ describe("every handle a notification carries is reachable by the erasure sweep"
    */
   const SHOP_OWNED_NUMBERS: Record<string, readonly string[]> = {
     course_inquiry_received: ["shopPhone"],
+    // The stale-roll-call alert's shore copy says whom to call first: the
+    // shop's own `contact_phone` (H-118). Never queued, either.
+    roll_call_stale_shore: ["shopPhone"],
   };
 
   it.each(branches())("$kind surfaces every handle it carries", ({ kind, email, phone }) => {
@@ -243,5 +247,81 @@ describe("setup_request_alert", () => {
     for (const shopName of ["Reef\r\nBcc: x@example.com", "Reef‮Line", "Reef Line"]) {
       expect(notificationSchema.safeParse({ ...alert, shopName }).success).toBe(false);
     }
+  });
+});
+
+/**
+ * **A long trip title shortens a notification, it never fails one** (issue
+ * #2603). `trips.title` is unbounded text, so every kind that carries a
+ * `tripTitle` shares one schema that clips it. Found by walking the union, so
+ * a kind added later with its own `max(200)` is caught here.
+ */
+describe("every kind's tripTitle shortens a long title instead of rejecting it", () => {
+  /** Every `tripTitle` schema in the union, with the kind it belongs to, nested ones included. */
+  function tripTitleFields(): { where: string; schema: ZodType }[] {
+    const union = (
+      notificationSchema as unknown as { def: { left: { def: { options: ZodType[] } } } }
+    ).def.left.def.options;
+    const found: { where: string; schema: ZodType }[] = [];
+    const walk = (where: string, shape: Record<string, ZodType>) => {
+      for (const [name, field] of Object.entries(shape)) {
+        if (name === "tripTitle") found.push({ where, schema: field });
+        let def = (field as unknown as { def: Record<string, unknown> }).def;
+        while (def?.innerType) def = (def.innerType as { def: Record<string, unknown> }).def;
+        const element = def?.element as { def?: { shape?: Record<string, ZodType> } } | undefined;
+        if (element?.def?.shape) walk(`${where}.${name}[]`, element.def.shape);
+      }
+    };
+    for (const option of union) {
+      const shape = (option as ZodObject).def.shape as Record<string, ZodType>;
+      const kind = (shape.kind as unknown as { def: { values: string[] } }).def.values[0] ?? "";
+      walk(kind, shape);
+    }
+    return found;
+  }
+
+  const fields = tripTitleFields();
+
+  it("finds the kinds that carry a trip title", () => {
+    // A floor, not a count: the walk must not pass vacuously over an empty list.
+    expect(fields.length).toBeGreaterThanOrEqual(19);
+    expect(fields.map((field) => field.where)).toContain("roll_call_stale");
+    expect(fields.map((field) => field.where)).toContain("booking_confirmation");
+    expect(fields.map((field) => field.where)).toContain("crew_schedule_change.changes[]");
+  });
+
+  it.each(fields.map((field) => [field.where, field.schema] as const))(
+    "%s shortens 500 characters, keeps 200 whole, and still refuses blank",
+    (_where, schema) => {
+      const long = schema.safeParse("Reef ".repeat(100));
+      expect(long.success).toBe(true);
+      if (long.success) {
+        expect((long.data as string).length).toBeLessThanOrEqual(NOTIFICATION_TRIP_TITLE_MAX);
+        expect((long.data as string).endsWith("…")).toBe(true);
+      }
+      const exact = "x".repeat(NOTIFICATION_TRIP_TITLE_MAX);
+      expect(schema.safeParse(exact)).toMatchObject({ success: true, data: exact });
+      expect(schema.safeParse(`  ${exact}  `)).toMatchObject({ success: true, data: exact });
+      expect(schema.safeParse("   ").success).toBe(false);
+    },
+  );
+
+  it("sends a booking confirmation for a trip with a 500-character title, subject shortened", () => {
+    const parsed = notificationSchema.parse({
+      kind: "booking_confirmation",
+      bookingId: "00000000-0000-4000-8000-000000000011",
+      shopId: "00000000-0000-4000-8000-000000000012",
+      to: "ana@example.com",
+      locale: "en-US",
+      diverName: "Ana Ruiz",
+      shopName: "Blue Mantis Divers",
+      tripTitle: "Reef ".repeat(100),
+      startsAt: new Date("2026-11-01T12:00:00Z"),
+      endsAt: new Date("2026-11-01T16:00:00Z"),
+      timezone: "America/New_York",
+      manageUrl: "https://diveday.example/ready/x",
+    });
+    if (parsed.kind !== "booking_confirmation") throw new Error("wrong kind");
+    expect(parsed.tripTitle.length).toBeLessThanOrEqual(NOTIFICATION_TRIP_TITLE_MAX);
   });
 });

@@ -19,13 +19,23 @@
  * the runner's load. A per-test `test.slow()` with the measured number in its
  * comment is the fix this list asks for, one test at a time.
  *
+ * A step summary is where nobody looks, though: `add-diver.spec.ts:48` took
+ * about 27 s of its 30 and was on the list before it timed out on run 4752
+ * (code review 2026-10-13, row 28). So `--annotate` prints a `::warning` for
+ * each test over WARN_SHARE of its budget, which lands in the check run's
+ * annotations, the place sessions read a run from.
+ *
  *   node scripts/e2e-budget-report.mjs e2e-durations/results.json [--share 0.5]
+ *   node scripts/e2e-budget-report.mjs e2e-durations/results.json --annotate
  */
 import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
 export const DEFAULT_SHARE = 0.5;
+/** The share of its budget past which a test is an annotation, not only a summary row. */
+export const WARN_SHARE = 0.8;
 
 /** Every test in a Playwright JSON report, flattened with where it lives. */
 export function reportTests(report) {
@@ -87,21 +97,50 @@ export function formatBudgetReport(close, { share = DEFAULT_SHARE } = {}) {
   ].join("\n");
 }
 
-/** The command line: the results file, and `--share <n>` when given. */
+/**
+ * One `::warning` workflow command per test over `share` of its budget, its
+ * file made relative to the working directory through the report's `rootDir`
+ * so the annotation lands on the spec's line.
+ */
+export function budgetAnnotations(report, { share = WARN_SHARE, cwd = process.cwd() } = {}) {
+  const rootDir = report.config?.rootDir;
+  return closeToBudget(report, { share }).map((entry) => {
+    const file = rootDir ? path.relative(cwd, path.resolve(rootDir, entry.file)) : entry.file;
+    const title = entry.title
+      .replaceAll("%", "%25")
+      .replaceAll("\r", "%0D")
+      .replaceAll("\n", "%0A");
+    return `::warning file=${file},line=${entry.line},title=e2e test at ${Math.round(entry.used * 100)}% of its budget::${title} took ${seconds(entry.duration)} of ${seconds(entry.timeout)}. Give it test.slow() or test.setTimeout() with the measured reason, or make it faster, before it times out on a loaded runner.`;
+  });
+}
+
+/** The command line: the results file, `--share <n>` and `--annotate` when given. */
 export function parseArgs(args) {
   const shareAt = args.indexOf("--share");
-  const share = shareAt === -1 ? DEFAULT_SHARE : Number(args[shareAt + 1]);
+  const annotate = args.includes("--annotate");
+  const share =
+    shareAt === -1 ? (annotate ? WARN_SHARE : DEFAULT_SHARE) : Number(args[shareAt + 1]);
   const file = args.find(
     (arg, index) => !arg.startsWith("--") && (shareAt === -1 || index !== shareAt + 1),
   );
-  return { file, share };
+  return { file, share, annotate };
 }
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
-  const { file, share } = parseArgs(process.argv.slice(2));
+  const { file, share, annotate } = parseArgs(process.argv.slice(2));
   if (!file || !Number.isFinite(share)) {
-    console.error("Usage: node scripts/e2e-budget-report.mjs <results.json> [--share 0.5]");
+    console.error(
+      "Usage: node scripts/e2e-budget-report.mjs <results.json> [--share 0.5] [--annotate]",
+    );
     process.exit(1);
+  }
+  if (annotate) {
+    // Nothing to annotate without a report; the summary step says why.
+    if (existsSync(file)) {
+      const lines = budgetAnnotations(JSON.parse(readFileSync(file, "utf8")), { share });
+      if (lines.length > 0) process.stdout.write(`${lines.join("\n")}\n`);
+    }
+    process.exit(0);
   }
   if (!existsSync(file)) {
     // A shard that died before the reporter wrote is already red for that

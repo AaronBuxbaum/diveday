@@ -185,3 +185,26 @@ function boatWorkHref(
       return `${shopPath(shopSlug, "orders")}?tripId=${tripId}&status=open&range=all`;
   }
 }
+
+/** The page's call: the overview's own parts, read off it here rather than spelled out at the route. */
+export function tripPulseFactsOf(
+  overview: Pick<
+    TripOverview,
+    "pulseNeeded" | "pulse" | "crew" | "requirement" | "cancelled" | "trip"
+  >,
+  page: Pick<
+    Parameters<typeof tripPulseFacts>[0],
+    "liveBoatClashes" | "shopSlug" | "tripId" | "now" | "t" | "needs"
+  >,
+): TripPulseFact[] {
+  return tripPulseFacts({
+    pulseNeeded: overview.pulseNeeded,
+    pulse: overview.pulse,
+    crewGap: overview.crew.crewGap,
+    requirement: overview.requirement,
+    cancelled: overview.cancelled,
+    course: overview.trip.course,
+    startsAt: overview.trip.startsAt,
+    ...page,
+  });
+}

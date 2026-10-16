@@ -2,7 +2,7 @@ import type { StaffMessageKey } from "@/i18n/staff-messages";
 import type { NoticeTone } from "@/lib/staff-notices";
 
 /** Which form on the report page a notice belongs to (`noticeForForm`). */
-export type IncidentForm = "page" | "draft" | "people" | "file" | "addenda";
+export type IncidentForm = "page" | "draft" | "people" | "file" | "addenda" | "discard" | "hold";
 
 /**
  * The report page's `?notice=` codes, each with the form it answers and its
@@ -51,5 +51,8 @@ export const INCIDENT_NOTICES: Record<
   "nobody-chosen": { form: "people", tone: "danger", key: "incidents.notices.nobodyChosen" },
   "name-too-long": { form: "people", tone: "danger", key: "incidents.notices.textTooLong" },
   "note-too-long": { form: "addenda", tone: "danger", key: "incidents.notices.textTooLong" },
+  held: { form: "discard", tone: "warning", key: "incidents.notices.held" },
+  "hold-set": { form: "hold", tone: "success", key: "incidents.notices.holdSet" },
+  "hold-released": { form: "hold", tone: "success", key: "incidents.notices.holdReleased" },
   "blank-note": { form: "addenda", tone: "danger", key: "incidents.notices.blankNote" },
 };

@@ -2,7 +2,7 @@ import { listSeatMoveTargets } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
 import { formatDateTimeTz } from "@/lib/format";
 import { hasSailed } from "@/lib/trips";
-import { moveSeatAction } from "../actions";
+import { moveSeatAction } from "../roster-seating-actions";
 import type { SeatMove } from "./roster-model";
 
 /**

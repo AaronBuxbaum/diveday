@@ -1,0 +1,216 @@
+{
+  "area": "bahamas-eleuthera",
+  "method": "Eleuthera, Harbour Island and Spanish Wells: the Devil's Backbone and north coast, Current Cut, Harbour Island's Atlantic reefs, and the south-west wall off Cape Eleuthera. No official site list exists: the Bahamas National Trust protects no Eleuthera dive sites by name. Lists used: the tourism list (Bahamas Ministry of Tourism dive page together with the My Out Islands Eleuthera and Harbour Island diving pages, counted as one list); Valentine's Dive Center, Harbour Island (its own per-site pages, read through the Wayback Machine 2016 snapshot because the current site names no sites); Ocean Fox, Harbour Island (Romora Bay; names Devil's Backbone, Current Cut and Cistern Rock); Ocean Fox Cotton Bay at Cape Eleuthera (its dive-sites page, a separate operator under different ownership); and the Aqua Cat and Aggressor liveaboard site lists for south-west Eleuthera (Aqua Cat, Blackbeard's and Cat Ppalu count as one owner). The Dive Shop at Cape Eleuthera Resort and Spanish Wells operators publish no site names; blogs and lodging guides were read for leads only. A site counts when named, recreationally divable on scuba and on at least two of those lists. Cistern Rock is excluded as a 3 to 8 foot snorkel and bubblemaker site. Counted 2026-10-14.",
+  "sources": [
+    "https://www.myoutislands.com/bahamas-islands/eleuthera/diving",
+    "https://www.myoutislands.com/bahamas-islands/harbour-island/diving",
+    "https://www.bahamas.com/plan-your-trip/diving",
+    "https://web.archive.org/web/2016/http://www.valentinesdive.com/473.html",
+    "https://oceanfoxbahamas.com/snorkeling-diving/",
+    "https://web.archive.org/web/2020/https://oceanfoxcottonbay.com/diving/dive-sites.html",
+    "https://web.archive.org/web/20151103034457/http://www.aquacatcruises.com/scuba-diving-sites/",
+    "https://www.diversetravel.co.uk/wp-content/uploads/2020/07/BAHAMAS-AGGRESSOR_Exuma-Cays-ITIN.pdf"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Devil's Backbone (Devil's Backbone Wrecks)",
+      "template": "devils-backbone-eleuthera",
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/eleuthera/diving",
+        "https://web.archive.org/web/2016/http://www.valentinesdive.com/485.html",
+        "https://oceanfoxbahamas.com/snorkeling-diving/"
+      ]
+    },
+    {
+      "name": "Carnarvon (wreck)",
+      "template": "carnarvon-wreck-eleuthera",
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/eleuthera/diving",
+        "https://web.archive.org/web/2016/http://www.valentinesdive.com/485.html"
+      ]
+    },
+    {
+      "name": "Cienfuegos (wreck)",
+      "template": null,
+      "excluded": "on one list only (Valentine's)"
+    },
+    {
+      "name": "Arimoroa (Egg Island freighter)",
+      "template": null,
+      "excluded": "on one list only (Valentine's)"
+    },
+    {
+      "name": "Train Wreck",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Bridge Point",
+      "template": null,
+      "excluded": "on one list only (Valentine's)"
+    },
+    {
+      "name": "Current Cut",
+      "template": "current-cut-eleuthera",
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/eleuthera/diving",
+        "https://web.archive.org/web/2016/http://www.valentinesdive.com/477.html",
+        "https://oceanfoxbahamas.com/snorkeling-diving/"
+      ]
+    },
+    {
+      "name": "Split Reef (Split Head Reef)",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/harbour-island/diving",
+        "https://web.archive.org/web/2016/http://www.valentinesdive.com/649.html"
+      ]
+    },
+    {
+      "name": "High Head",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Fairyland",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Black Shoals",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Hammerhead Point",
+      "template": null,
+      "excluded": "on one list only (Valentine's)"
+    },
+    {
+      "name": "Blow Hole",
+      "template": null,
+      "excluded": "on one list only (Valentine's)"
+    },
+    {
+      "name": "Tarpon Hole",
+      "template": null,
+      "excluded": "on one list only (Valentine's)"
+    },
+    {
+      "name": "Grouper Hole",
+      "template": null,
+      "excluded": "on one list only (Valentine's)"
+    },
+    {
+      "name": "The Grotto",
+      "template": null,
+      "excluded": "on one list only (Valentine's)"
+    },
+    {
+      "name": "Sea Gardens",
+      "template": null,
+      "excluded": "on one list only (Valentine's)"
+    },
+    {
+      "name": "Pink House Reef",
+      "template": null,
+      "excluded": "on one list only (Valentine's)"
+    },
+    {
+      "name": "Cistern Rock",
+      "template": null,
+      "excluded": "snorkel and bubblemaker site 3 to 8 feet deep, not a scuba dive"
+    },
+    {
+      "name": "Plateau (Fish Bowl, The Canyons, The Maze)",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/eleuthera/diving",
+        "https://web.archive.org/web/2016/http://www.valentinesdive.com/478.html"
+      ]
+    },
+    {
+      "name": "The Arch",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/eleuthera/diving",
+        "https://web.archive.org/web/2016/http://www.valentinesdive.com/479.html"
+      ]
+    },
+    {
+      "name": "The Pinnacles",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Christmas Tree (Shark City wall and pinnacle)",
+      "template": null,
+      "excluded": "on one list only (Ocean Fox Cotton Bay)"
+    },
+    {
+      "name": "Rich's Canyon",
+      "template": null,
+      "excluded": "on one list only (Ocean Fox Cotton Bay)"
+    },
+    {
+      "name": "Blackbeard's Treasure Hole",
+      "template": null,
+      "excluded": "on one list only (Ocean Fox Cotton Bay)"
+    },
+    {
+      "name": "Shark Tease",
+      "template": null,
+      "excluded": "on one list only (Ocean Fox Cotton Bay)"
+    },
+    {
+      "name": "Thick Finger Reef",
+      "template": null,
+      "excluded": "on one list only (Ocean Fox Cotton Bay)"
+    },
+    {
+      "name": "Canyon of Anchors",
+      "template": null,
+      "excluded": "on one list only (Ocean Fox Cotton Bay)"
+    },
+    {
+      "name": "Turtle Point",
+      "template": null,
+      "excluded": "on one list only (Ocean Fox Cotton Bay)"
+    },
+    {
+      "name": "Bridge South Wall",
+      "template": null,
+      "excluded": "on one list only (Ocean Fox Cotton Bay)"
+    },
+    {
+      "name": "Bridge drift dives (Eleuthera to Little San Salvador)",
+      "template": null,
+      "excluded": "on one list only (Ocean Fox Cotton Bay)"
+    },
+    {
+      "name": "Cave Rock",
+      "template": null,
+      "excluded": "on one list only (Aggressor)"
+    },
+    {
+      "name": "Hole in the Wall (south-west Eleuthera)",
+      "template": null,
+      "excluded": "on one list only (Aqua Cat)"
+    },
+    {
+      "name": "Jake's Hole",
+      "template": null,
+      "excluded": "tidal blue hole the operator does not allow divers to enter; one list only (Aqua Cat)"
+    },
+    {
+      "name": "Monolith",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20151103034457/http://www.aquacatcruises.com/scuba-diving-sites/",
+        "https://www.diversetravel.co.uk/wp-content/uploads/2020/07/BAHAMAS-AGGRESSOR_Exuma-Cays-ITIN.pdf"
+      ]
+    }
+  ]
+}

@@ -52,7 +52,7 @@
     "offerOptedOut": "Nothing was sent: they turned off emails from the shop. Call them with the date.",
     "offerNotSent": "Nothing was sent: there’s no email on file for them, or email isn’t set up. Call them with the date.",
     "offerSent": "Offer emailed. They book the seat themselves from the link.",
-    "offerAlreadySent": "Already emailed this hour. Nothing new was sent.",
+    "offerAlreadySent": "Already emailed in the last 24 hours. Nothing new was sent.",
     "notReady": "Something changed and they can’t board yet. Their row says what’s in the way.",
     "notBookable": "That booking is no longer available for check-in.",
     "alreadyCheckedIn": "That diver was already checked in.",

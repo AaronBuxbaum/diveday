@@ -7,6 +7,7 @@ import { migrate } from "drizzle-orm/pglite/migrator";
 import { Pool } from "pg";
 import { getDbPoolConfig, listenForPoolErrors } from "@/lib/db-pool-config";
 import { queryTimingLogger, withStatementTiming } from "@/lib/observability/query-timing";
+import { closePglite } from "./close-pglite";
 import { withExplicitSslMode } from "./connection-string";
 import { acquireDataDirLock } from "./data-dir-lock";
 
@@ -180,7 +181,7 @@ export async function openLocalDb(
     // the *next* request builds another one: without this, a database that
     // fails to migrate stacks a fresh ~170 MB PGlite instance — and an
     // un-droppable lock — on every retry, for as long as anything keeps asking.
-    await client?.close().catch(() => undefined);
+    if (client) await closePglite(client).catch(() => undefined);
     releaseDataDirLock?.();
     throw error;
   }

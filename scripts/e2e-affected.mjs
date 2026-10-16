@@ -29,8 +29,8 @@
 //   node scripts/e2e-affected.mjs [--base <ref> | --commit <sha>] [--json]
 //
 // `--commit` replays one commit against its parent, to score the selector against what CI
-// caught. The visual spec is never selected here: its captures are `visual-affected.mjs`'s. A
-// path-gated spec (`PATH_GATED`) is picked only when what it tests changed. Every git call is
+// caught. The visual spec is never selected as a file: its captures are picked one by one
+// ({@link selectCaptures}, #2517) and run in light mode only. A path-gated spec (`PATH_GATED`) is picked only when what it tests changed. Every git call is
 // a constant argument array plus refs git itself printed.
 
 import { readdirSync, readFileSync } from "node:fs";
@@ -495,6 +495,104 @@ export function withinBudget(reach, rank, record, budgetMs) {
   return { run, left: ordered.filter((spec) => !run.includes(spec)) };
 }
 
+/** The capture spec, whose tests are picked one at a time rather than as a file. */
+const VISUAL_SPEC = "e2e/visual.spec.ts";
+
+/**
+ * The tests of `e2e/visual.spec.ts` by title, each with its own source (up to the next
+ * `test(`). A title written with a template hole matches any text at the hole.
+ */
+export function visualBlocks(source) {
+  const starts = [...source.matchAll(/^[ \t]*test\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1\s*,/gm)];
+  return starts.map((match, i) => ({
+    title: match[2],
+    body: source.slice(match.index, starts[i + 1]?.index ?? source.length),
+  }));
+}
+
+const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * A Playwright `-g` source for one test title: its literal text, `${scheme}` as the light run
+ * and any other template hole as anything.
+ */
+function titlePattern(title) {
+  return title
+    .replace(/\\(["'`\\])/g, "$1")
+    .split(/(\$\{[^}]*\})/)
+    .map((piece) =>
+      /^\$\{scheme\}$/.test(piece) ? "light" : /^\$\{/.test(piece) ? ".*" : escapeRegex(piece),
+    )
+    .join("");
+}
+
+/**
+ * The captures a diff can move, by test title: a capture whose source quotes text the diff
+ * removed, visits a route whose own directory the diff edits (a hub route, visited by more than
+ * {@link HUB_SPECS} captures, selects none), or sits on a line the diff changed in the capture
+ * spec itself. Each value says why. A capture is a screenshot; running it here is what finds the
+ * heading it waits for gone (five visual shards, 2026-10-09 to 2026-10-12).
+ */
+export function selectCaptures({ changed, diff, source }) {
+  const picked = new Map();
+  if (!source) return picked;
+  const blocks = visualBlocks(source);
+  const note = (block, why) => {
+    if (!picked.has(block.title)) picked.set(block.title, new Set());
+    picked.get(block.title).add(why);
+  };
+  for (const piece of removedText(diff)) {
+    for (const block of blocks) if (block.body.includes(piece)) note(block, `quotes "${piece}"`);
+  }
+  const routes = new Map();
+  for (const file of changed) {
+    const route = routeOf(file);
+    if (route) routes.set(`${route.route}|${route.broad}`, route);
+  }
+  for (const route of routes.values()) {
+    const pattern = routePattern(route);
+    const hits = blocks.filter((block) => pattern.test(block.body));
+    if (hits.length > HUB_SPECS) continue;
+    for (const block of hits) note(block, route.route);
+  }
+  const added =
+    diff
+      .get(VISUAL_SPEC)
+      ?.added.map((line) => line.trim())
+      .filter((line) => line.length >= 20) ?? [];
+  for (const block of blocks) {
+    if (added.some((line) => block.body.includes(line))) note(block, "edited");
+  }
+  return picked;
+}
+
+/**
+ * The `-g` argument that runs `titles` in light mode only (a dark capture is the same test
+ * under another `describe`, and CI's reg-suit run has both): any of the titles, none under a
+ * `dark mode` describe. Null for no titles.
+ */
+export function captureGrep(titles) {
+  if (titles.length === 0) return null;
+  return `^(?!.*dark mode).*(?:${titles.map(titlePattern).join("|")})`;
+}
+
+/** Recorded CI milliseconds for the light-mode run of each title, from the `visual` record. */
+export function captureMs(titles, root = ROOT) {
+  let record = {};
+  try {
+    record =
+      JSON.parse(readFileSync(path.join(root, "scripts/e2e-durations.json"), "utf8")).visual ?? {};
+  } catch {}
+  let total = 0;
+  for (const title of titles) {
+    const own = new RegExp(`(?:^| › )${titlePattern(title)}$`);
+    for (const [key, ms] of Object.entries(record)) {
+      if (!key.includes("dark mode") && own.test(key)) total += ms;
+    }
+  }
+  return total;
+}
+
 /** Recorded CI milliseconds per spec, and a default for a spec the record has not met. */
 export function durations(root = ROOT) {
   try {
@@ -555,7 +653,14 @@ export function affectedSpecs({ root = ROOT, base, commit, git = gitReader(root)
       selection.rank.delete(spec);
     }
   }
-  return { base: label, changed: names, ...selection };
+  let captureSource = "";
+  try {
+    captureSource = readFileSync(path.join(root, VISUAL_SPEC), "utf8");
+  } catch {}
+  const captures = names.some((file) => APP_CHANGE.test(file) || file === VISUAL_SPEC)
+    ? selectCaptures({ changed: names, diff: parseDiff(diffText), source: captureSource })
+    : new Map();
+  return { base: label, changed: names, ...selection, captures };
 }
 
 function render(result, record) {
@@ -571,7 +676,13 @@ function render(result, record) {
   };
   block("Strong", result.strong);
   block("Reach", result.reach);
-  if (result.strong.size + result.reach.size === 0)
+  if (result.captures?.size > 0) {
+    lines.push(`Captures (${result.captures.size}, light mode only):`);
+    for (const [title, why] of [...result.captures].sort()) {
+      lines.push(`  ${title}  — ${[...why].slice(0, 2).join("; ")}`);
+    }
+  }
+  if (result.strong.size + result.reach.size + (result.captures?.size ?? 0) === 0)
     lines.push("No spec reads what this diff changed.");
   return lines.join("\n");
 }
@@ -590,6 +701,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       changed: result.changed.length,
       strong: Object.fromEntries([...result.strong].map(([k, v]) => [k, [...v]])),
       reach: Object.fromEntries([...result.reach].map(([k, v]) => [k, [...v]])),
+      captures: Object.fromEntries([...result.captures].map(([k, v]) => [k, [...v]])),
     };
     process.stdout.write(`${JSON.stringify(plain, null, 2)}\n`);
   } else {

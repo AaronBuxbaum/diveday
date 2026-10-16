@@ -3,7 +3,7 @@ import Link from "next/link";
 import { discardFormDraftAction, saveFormDraftAction } from "@/app/actions/form-drafts";
 import { seatExistingDiverAction } from "@/app/actions/seat-diver";
 import { SEAT_SURFACES, type SeatSurfaceId } from "@/app/actions/seat-diver-surfaces";
-import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/actions";
+import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions";
 import { FormDraft } from "@/components/FormDraft";
 import { formDraftCopy } from "@/components/form-draft-copy";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";

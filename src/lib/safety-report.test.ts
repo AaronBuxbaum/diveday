@@ -1,11 +1,21 @@
 import { describe, expect, it } from "vitest";
 import {
   lapsedCredentialKinds,
+  type SafetyCrewMember,
   type SafetyDepartureInput,
   type SafetyMonthInput,
   type SafetyRollCallEvent,
   summarizeSafetyMonth,
 } from "./safety-report";
+
+/** A crew member with no named job and no standing role: any credential answers. */
+function member(
+  personId: string,
+  tripRole: SafetyCrewMember["tripRole"] = null,
+  shopRoles: readonly string[] = [],
+): SafetyCrewMember {
+  return { personId, tripRole, shopRoles };
+}
 
 const departure: SafetyDepartureInput = {
   tripId: "t1",
@@ -15,7 +25,7 @@ const departure: SafetyDepartureInput = {
   plannedDives: 2,
   diveMode: "boat",
   bookingIds: ["b1", "b2"],
-  crewIds: ["c1"],
+  crew: [member("c1")],
 };
 
 function diver(
@@ -161,7 +171,7 @@ describe("summarizeSafetyMonth: roll calls", () => {
   });
 
   it("passes over a departure with nobody booked and no head count, as an empty occurrence", () => {
-    const empty = { ...departure, tripId: "t3", bookingIds: [], crewIds: ["c1"] };
+    const empty = { ...departure, tripId: "t3", bookingIds: [], crew: [member("c1")] };
     const summary = summarizeSafetyMonth(
       month({ departures: [departure, empty], diverEvents: everyoneBack }),
     );
@@ -225,12 +235,12 @@ describe("summarizeSafetyMonth: crew with nothing on file", () => {
       tripId: "t2",
       startsAt: new Date("2026-10-04T13:00:00Z"),
       endsAt: new Date("2026-10-04T17:00:00Z"),
-      crewIds: ["c1", "c2"],
+      crew: [member("c1"), member("c2")],
     };
     const summary = summarizeSafetyMonth(
       month({
         departures: [departure, second],
-        credentials: [{ personId: "c2", kind: "captain_license", renewsAt: null }],
+        credentials: [{ personId: "c2", kind: "captains_licence", renewsAt: null }],
         personNames: new Map([
           ["c1", "Sal Moretti"],
           ["c2", "Keiko Tanaka"],
@@ -255,6 +265,101 @@ describe("summarizeSafetyMonth: crew with nothing on file", () => {
     );
     expect(summary.unrecordedSailings).toBe(0);
     expect(summary.unrecordedCrew).toEqual([]);
+  });
+});
+
+/**
+ * **"No credential on file" is role-matched** (issue #2548). A captain with only
+ * a first-aid card has nothing that says he may captain; an instructor with
+ * only liability insurance has no rating. A report, never a gate (H-59).
+ */
+describe("summarizeSafetyMonth: a credential that answers the job", () => {
+  const sailedAs = (
+    tripRole: SafetyCrewMember["tripRole"],
+    shopRoles: readonly string[],
+    kinds: readonly string[],
+  ) =>
+    summarizeSafetyMonth(
+      month({
+        departures: [{ ...departure, crew: [member("c1", tripRole, shopRoles)] }],
+        credentials: kinds.map((kind) => ({ personId: "c1", kind, renewsAt: null })),
+      }),
+    );
+
+  it("counts a captain with only first aid as unrecorded, though a card is on file", () => {
+    const summary = sailedAs("captain", ["captain"], ["first_aid_cpr"]);
+    expect(summary.unrecordedSailings).toBe(1);
+    expect(summary.unrecordedCrew).toEqual([{ personId: "c1", name: "Keiko Tanaka", sailings: 1 }]);
+    // The first-aid card is still on file to be judged for a lapse.
+    expect(summary.checkedSailings).toBe(1);
+  });
+
+  it("counts an instructor with only liability insurance as unrecorded", () => {
+    expect(sailedAs("instructor", ["instructor"], ["liability_insurance"]).unrecordedSailings).toBe(
+      1,
+    );
+  });
+
+  it("does not count a divemaster who holds an instructor rating", () => {
+    expect(sailedAs("divemaster", ["divemaster"], ["instructor_rating"]).unrecordedSailings).toBe(
+      0,
+    );
+  });
+
+  it("counts a divemaster with a divemaster rating, and an assistant instructor with theirs", () => {
+    expect(sailedAs("divemaster", [], ["divemaster_rating"]).unrecordedSailings).toBe(0);
+    expect(
+      sailedAs(null, ["assistant_instructor"], ["assistant_instructor_rating"]).unrecordedSailings,
+    ).toBe(0);
+  });
+
+  it("never lets a lower rating answer a higher job", () => {
+    expect(sailedAs("instructor", [], ["divemaster_rating"]).unrecordedSailings).toBe(1);
+    expect(sailedAs("instructor", [], ["assistant_instructor_rating"]).unrecordedSailings).toBe(1);
+  });
+
+  it("answers a captain only with a captain's license, never an instructor rating", () => {
+    expect(sailedAs("captain", [], ["instructor_rating"]).unrecordedSailings).toBe(1);
+    expect(sailedAs("captain", [], ["captains_licence"]).unrecordedSailings).toBe(0);
+  });
+
+  it("never reads a free-text 'other' credential as a rating", () => {
+    expect(sailedAs("instructor", [], ["other"]).unrecordedSailings).toBe(1);
+    expect(sailedAs("captain", [], ["other"]).unrecordedSailings).toBe(1);
+  });
+
+  it("measures the job rostered for the trip, not the standing role", () => {
+    // A divemaster rostered as captain sailed as captain.
+    expect(sailedAs("captain", ["divemaster"], ["divemaster_rating"]).unrecordedSailings).toBe(1);
+    // An instructor rostered as plain crew needs no rating; a card of any kind answers.
+    expect(sailedAs("crew", ["instructor"], ["first_aid_cpr"]).unrecordedSailings).toBe(0);
+  });
+
+  it("falls back to the standing roles when the roster names no job, and to any card for none", () => {
+    expect(sailedAs(null, ["captain"], ["first_aid_cpr"]).unrecordedSailings).toBe(1);
+    expect(
+      sailedAs(null, ["captain", "divemaster"], ["divemaster_rating"]).unrecordedSailings,
+    ).toBe(0);
+    expect(sailedAs(null, [], ["first_aid_cpr"]).unrecordedSailings).toBe(0);
+  });
+
+  it("still reads nothing on file as unrecorded for a job no card answers", () => {
+    const summary = sailedAs("crew", [], []);
+    expect(summary.unrecordedSailings).toBe(1);
+    expect(summary.checkedSailings).toBe(0);
+  });
+
+  it("still judges a lapse on the cards a role-less captain has", () => {
+    const summary = summarizeSafetyMonth(
+      month({
+        departures: [{ ...departure, crew: [member("c1", "captain", ["captain"])] }],
+        credentials: [{ personId: "c1", kind: "first_aid_cpr", renewsAt: "2026-10-02" }],
+      }),
+    );
+    expect(summary.unrecordedSailings).toBe(1);
+    expect(summary.lapsedSailings).toEqual([
+      expect.objectContaining({ personId: "c1", kinds: ["first_aid_cpr"] }),
+    ]);
   });
 });
 
@@ -291,7 +396,7 @@ describe("summarizeSafetyMonth: departures with no crew on record (fourth review
   it("lists a departure that sailed with nobody on the crew, instead of reading 0 of 0", () => {
     const summary = summarizeSafetyMonth(
       month({
-        departures: [{ ...departure, crewIds: [] }, crewedBoat],
+        departures: [{ ...departure, crew: [] }, crewedBoat],
         diverEvents: crewedBack,
       }),
     );
@@ -319,8 +424,8 @@ describe("summarizeSafetyMonth: departures with no crew on record (fourth review
     const summary = summarizeSafetyMonth(
       month({
         departures: [
-          { ...departure, tripId: "shore", diveMode: "shore", crewIds: [] },
-          { ...departure, tripId: "pool", diveMode: "pool", crewIds: [] },
+          { ...departure, tripId: "shore", diveMode: "shore", crew: [] },
+          { ...departure, tripId: "pool", diveMode: "pool", crew: [] },
           crewedBoat,
         ],
         diverEvents: [
@@ -343,8 +448,8 @@ describe("summarizeSafetyMonth: departures with no crew on record (fourth review
     const summary = summarizeSafetyMonth(
       month({
         departures: [
-          { ...departure, crewIds: [] },
-          { ...crewedBoat, crewIds: [] },
+          { ...departure, crew: [] },
+          { ...crewedBoat, crew: [] },
         ],
         diverEvents: crewedBack,
       }),
@@ -362,7 +467,7 @@ describe("summarizeSafetyMonth: departures with no crew on record (fourth review
 
   it("passes over an empty occurrence nobody booked or counted", () => {
     const summary = summarizeSafetyMonth(
-      month({ departures: [{ ...departure, bookingIds: [], crewIds: [] }] }),
+      month({ departures: [{ ...departure, bookingIds: [], crew: [] }] }),
     );
     expect(summary.noCrewDepartures).toEqual([]);
     // Nothing came back, so there is no month of crew to speak of either.

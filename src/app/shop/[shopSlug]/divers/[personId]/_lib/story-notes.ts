@@ -79,6 +79,9 @@ const isBoat = (entry: StoryNoteBooking) => (entry.trip.diveMode ?? "boat") === 
  * with the shop, the gear they rented, the stars they gave it. "sailed" is the
  * fallback for a trip that went as trips go ("dived" off a boat).
  *
+ * A seat picked up after the boat left ("joined later") keeps its rental and
+ * rating lines but never first-dive credit (#2427).
+ *
  * Whether it sailed is the crew's roll call first and the booking second
  * (`seatSailed`): a seat the crew marked `not_boarded` at the dock "stayed
  * ashore" whatever the booking says, and earns no gear, stars or first dive.
@@ -104,7 +107,11 @@ export function storyNotes(
     case "stayedAshore":
       return [t(isBoat(entry) ? "divers.story.stayedAshore" : "divers.story.didNotDive")];
     case "joinedLater":
-      return [t("divers.story.joinedLater")];
+      // Picked up after the boat left: the diver did get in the water, so the
+      // gear they rented and the stars they gave are real (#2427). First-dive
+      // credit stays tied to sailing from the dock, and "joined later" always
+      // leads.
+      return [t("divers.story.joinedLater"), ...gearAndRatingNotes(entry, t, locale)];
     case "notCountedBack":
       return [t("divers.story.notCountedBack")];
     case "sailed":
@@ -113,6 +120,15 @@ export function storyNotes(
 
   const notes: string[] = [];
   if (firstSailed && seatMayBeFirstDive(entry)) notes.push(t("divers.story.firstDive"));
+  notes.push(...gearAndRatingNotes(entry, t, locale));
+  if (notes.length > 0) return notes;
+  // "sailed" is a boat's word; a shore dive or a pool session is "dived".
+  return [t(isBoat(entry) ? "divers.story.sailed" : "divers.story.dived")];
+}
+
+/** The gear rented and the stars given on one seat, in that order. */
+function gearAndRatingNotes(entry: StoryNoteBooking, t: StaffTranslator, locale: string): string[] {
+  const notes: string[] = [];
   const rented = toRentableKinds(entry.booking.paidRentalKinds ?? []);
   if (rented.length > 0) {
     const items = cachedListFormat(locale, { style: "long", type: "conjunction" }).format(
@@ -121,9 +137,7 @@ export function storyNotes(
     notes.push(t("divers.story.rented", { items }));
   }
   if (entry.reviewRating) notes.push(t("divers.story.rated", { rating: entry.reviewRating }));
-  if (notes.length > 0) return notes;
-  // "sailed" is a boat's word; a shore dive or a pool session is "dived".
-  return [t(isBoat(entry) ? "divers.story.sailed" : "divers.story.dived")];
+  return notes;
 }
 
 /** Whether a seat behind the diver actually went out, by `seatSailed`. */
