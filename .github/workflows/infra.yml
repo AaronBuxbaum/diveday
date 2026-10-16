@@ -264,7 +264,7 @@ jobs:
                 echo "**This replaces or removes an existing resource:**"
                 echo
                 echo '```'
-                cat destructive.txt
+                sed 's/```/` ` `/g' destructive.txt
                 echo '```'
               fi
               echo
@@ -279,8 +279,11 @@ jobs:
               echo "The diff did not finish. Read [the run]($RUN_URL)."
             fi
           } > body.md
+          # --jq runs per page; `first` stops on the first match without a
+          # pipe (a `| head -n 1` under pipefail can SIGPIPE gh). Only the
+          # workflow's own bot comment counts, never a human who pasted the marker.
           existing=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" \
-            --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -n 1)
+            --jq "first(.[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id) // empty" | sed -n 1p)
           if [ -n "$existing" ]; then
             gh api -X PATCH "repos/$REPO/issues/comments/$existing" -F body=@body.md > /dev/null
           else

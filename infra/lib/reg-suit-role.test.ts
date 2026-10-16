@@ -45,7 +45,9 @@ describe("GitHubActionsRegSuitRole", () => {
     const trust = JSON.stringify(role.Properties.AssumeRolePolicyDocument);
     expect(trust).toContain("AaronBuxbaum@5578581/diveday@1302222351:pull_request");
     expect(trust).toContain("AaronBuxbaum@5578581/diveday@1302222351:ref:refs/heads/main");
-    // Not the diff role's `repo:...:*`: no schedule, no other branch ref, no environment.
+    // Not the diff role's `repo:...:*`: no other branch ref, no environment. The
+    // `ref:refs/heads/main` subject also matches a schedule or dispatch run on
+    // main, so schedule is NOT excluded here; ci.yml's triggers decide that.
     expect(trust).not.toContain("diveday@1302222351:*");
     expect(trust).toContain("sts.amazonaws.com");
   });
@@ -64,6 +66,15 @@ describe("GitHubActionsRegSuitRole", () => {
       statements.filter((statement) => statement.Effect === "Allow"),
     );
     expect(serialized).not.toContain('"*"}');
+    // Exact Resources, not a substring: no Allow may name the bare "*" in any form.
+    const allowStatements = statements.filter((statement) => statement.Effect === "Allow");
+    for (const statement of allowStatements) {
+      const resources = ([] as unknown[]).concat(statement.Resource);
+      expect(resources).not.toContain("*");
+      expect(resources.length).toBeGreaterThan(0);
+    }
+    const bucketScoped = JSON.stringify(allowStatements.map((statement) => statement.Resource));
+    expect(bucketScoped).not.toMatch(/"\*"/);
     expect(serialized).not.toContain("DeleteObject");
     expect(serialized).not.toContain("Acl");
     expect(serialized).toContain("VisualRegressionBucket");
