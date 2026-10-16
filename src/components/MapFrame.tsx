@@ -10,7 +10,19 @@ import { MAP_REACHABILITY_PROBE } from "@/lib/maps";
  * frame stays invisible and the route draws alone over the panel's own
  * surface: no broken-document glyph under the line. `invisible`, never
  * unmounted, so the frame's box and the route's percentages never move.
+ *
+ * **It says which of three it is** (`data-map-state`, issue #2013): `waiting`
+ * until the provider answers, `reachable`, or `failed` once the probe errors or
+ * {@link MAP_GIVE_UP_MS} pass with no answer. A cross-origin frame gives no
+ * reliable `onError`, so the probe's error and the timeout are the only
+ * signals there are. A surface that wants a line for the failed state asks the
+ * document for it (`group-has-[[data-map-state=failed]]`) rather than lifting
+ * this state, so the line can sit outside a scaled or cropped box.
  */
+
+/** How long a map may stay silent before it counts as not loading. */
+export const MAP_GIVE_UP_MS = 8000;
+
 export function MapFrame({
   title,
   src,
@@ -25,6 +37,7 @@ export function MapFrame({
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [onScreen, setOnScreen] = useState(false);
   const [reachable, setReachable] = useState(false);
+  const [gaveUp, setGaveUp] = useState(false);
 
   // Nothing is asked until the frame is on screen: a map inside a folded
   // editor section (`display: none` below `lg`) never intersects, so opening
@@ -48,17 +61,29 @@ export function MapFrame({
     if (!onScreen) return;
     let settled = false;
     let probe: HTMLImageElement | null = null;
+    // A blocked host errors at once; a stalled one never answers. The silence
+    // is the only signal for the second, so it is read as failure, and an
+    // answer that comes late still wins.
+    const giveUp = setTimeout(() => {
+      if (!settled) setGaveUp(true);
+    }, MAP_GIVE_UP_MS);
     const ask = () => {
       window.removeEventListener("online", ask);
       probe = new Image();
       // Google learns that something asked, never which page.
       probe.referrerPolicy = "no-referrer";
       probe.onload = () => {
-        if (!settled) setReachable(true);
+        if (!settled) {
+          setReachable(true);
+          setGaveUp(false);
+        }
       };
       // Said, not left to a missing handler: the frame stays hidden.
       probe.onerror = () => {
-        if (!settled) setReachable(false);
+        if (!settled) {
+          setReachable(false);
+          setGaveUp(true);
+        }
       };
       probe.src = MAP_REACHABILITY_PROBE;
     };
@@ -71,6 +96,7 @@ export function MapFrame({
     }
     return () => {
       settled = true;
+      clearTimeout(giveUp);
       window.removeEventListener("online", ask);
       if (probe) {
         probe.onload = null;
@@ -86,6 +112,7 @@ export function MapFrame({
       tabIndex={interactive ? undefined : -1}
       aria-hidden={reachable ? undefined : true}
       data-map-reachable={reachable ? "true" : "false"}
+      data-map-state={reachable ? "reachable" : gaveUp ? "failed" : "waiting"}
       className={`${className}${reachable ? "" : " invisible"}`}
       loading="lazy"
       referrerPolicy="strict-origin-when-cross-origin"

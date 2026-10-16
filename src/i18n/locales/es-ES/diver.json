@@ -1275,6 +1275,7 @@
       "noDepartures": "No hay salidas a este sitio en el calendario por ahora"
     },
     "terrainMapTitle": "Mapa del terreno de {site}",
+    "mapUnavailable": "El mapa de {site} no se está cargando.",
     "openMap": "Abrir mapa ↗",
     "landmarkKinds": {
       "navigationMark": "Marca de navegación",

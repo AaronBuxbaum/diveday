@@ -2,7 +2,7 @@
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MAP_REACHABILITY_PROBE } from "@/lib/maps";
-import { MapFrame } from "./MapFrame";
+import { MAP_GIVE_UP_MS, MapFrame } from "./MapFrame";
 
 /**
  * **A map that cannot load fails silently** (UX review 2026-10-10, item 20).
@@ -129,5 +129,42 @@ describe("MapFrame", () => {
     expect(observers[0]?.disconnected).toBe(true);
     act(() => probes[0]?.onload?.());
     expect(iframe).not.toHaveClass("invisible");
+  });
+
+  // Issue #2013: the frame says which state it is in, so a surface can draw a
+  // quiet line for the one that matters. A cross-origin frame has no reliable
+  // error event: the probe's error and the silence are the only signals.
+  describe("its state (#2013)", () => {
+    it("is waiting, then reachable once the provider answers", () => {
+      const iframe = frame();
+      expect(iframe).toHaveAttribute("data-map-state", "waiting");
+      act(() => probes[0]?.onload?.());
+      expect(iframe).toHaveAttribute("data-map-state", "reachable");
+    });
+
+    it("is failed as soon as the provider refuses", () => {
+      const iframe = frame();
+      act(() => probes[0]?.onerror?.());
+      expect(iframe).toHaveAttribute("data-map-state", "failed");
+    });
+
+    it("is failed when the provider stays silent, and recovers if it answers late", () => {
+      vi.useFakeTimers();
+      try {
+        const iframe = frame();
+        act(() => {
+          vi.advanceTimersByTime(MAP_GIVE_UP_MS - 1);
+        });
+        expect(iframe).toHaveAttribute("data-map-state", "waiting");
+        act(() => {
+          vi.advanceTimersByTime(1);
+        });
+        expect(iframe).toHaveAttribute("data-map-state", "failed");
+        act(() => probes[0]?.onload?.());
+        expect(iframe).toHaveAttribute("data-map-state", "reachable");
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });

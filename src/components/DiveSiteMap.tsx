@@ -72,7 +72,7 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
 
   return (
     <figure className="overflow-hidden rounded-panel border border-border bg-surface-sunken">
-      <div className="relative h-[calc(16rem+4rem)] overflow-hidden sm:h-[calc(20rem+4rem)]">
+      <div className="group/map relative h-[calc(16rem+4rem)] overflow-hidden sm:h-[calc(20rem+4rem)]">
         <div
           className="absolute inset-0 origin-top-left"
           style={
@@ -130,6 +130,13 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
             <RouteWaypoint point={finish} magnified={zoom} className="border-surface bg-primary" />
           </MapEmbed>
         </div>
+        {/* The quiet line for a map that is not loading (issue #2013), naming
+            the site. Outside the scaled layer above so the crop does not
+            magnify it, and asked of the document rather than lifted state:
+            `MapFrame` marks its own failure. The route and the ground stay. */}
+        <p className="pointer-events-none absolute inset-x-0 bottom-20 hidden px-4 text-center text-sm text-muted group-has-[[data-map-state=failed]]/map:block">
+          {t("site.mapUnavailable", { site: site.name })}
+        </p>
       </div>
       <figcaption className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3 text-sm sm:px-6">
         <div>

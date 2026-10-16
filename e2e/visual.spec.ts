@@ -2809,6 +2809,10 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the public dive-site page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis/sites/molasses-reef");
         await page.getByRole("heading", { name: "Next departures here" }).waitFor();
+        // The fleet refuses the maps host (e2e/fixtures.ts), so this capture is
+        // the failed state: the sunken ground, the route alone, and the quiet
+        // line naming the site (issue #2013).
+        await page.getByText("The map for Molasses Reef is not loading.").waitFor();
         await capture(page, "dive-site-page", scheme);
       });
 

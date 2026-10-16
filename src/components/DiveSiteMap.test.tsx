@@ -62,3 +62,26 @@ describe("DiveSiteMap's route ends", () => {
     for (const dot of dots) expect(dot.style.scale).toBe(String(1 / (focus?.scale ?? 1)));
   });
 });
+
+/**
+ * **A map that is not loading says so, quietly, and keeps its ground** (issue
+ * #2013). The frame paints over a sunken surface, and the line naming the site
+ * is in the document but shown only while the frame marks itself failed.
+ */
+describe("DiveSiteMap when the map does not load (#2013)", () => {
+  it("lays the frame over a sunken ground", () => {
+    const { container } = render(<DiveSiteMap site={SITE} t={t} />);
+    const frame = container.querySelector("iframe");
+    expect(frame?.parentElement).toHaveClass("bg-surface-sunken");
+  });
+
+  it("names the site in a line that shows only once the frame says it failed", () => {
+    const { container } = render(<DiveSiteMap site={SITE} t={t} />);
+    const line = [...container.querySelectorAll("p")].find((p) =>
+      p.textContent?.includes("The map for Molasses Reef is not loading."),
+    );
+    expect(line).toBeDefined();
+    expect(line).toHaveClass("hidden", "group-has-[[data-map-state=failed]]/map:block");
+    expect(container.querySelector(".group\\/map")?.contains(line ?? null)).toBe(true);
+  });
+});

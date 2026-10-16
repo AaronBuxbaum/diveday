@@ -1275,6 +1275,7 @@
       "noDepartures": "No departures to this site on the board right now"
     },
     "terrainMapTitle": "Terrain map of {site}",
+    "mapUnavailable": "The map for {site} is not loading.",
     "openMap": "Open map ↗",
     "landmarkKinds": {
       "navigationMark": "Navigation mark",
