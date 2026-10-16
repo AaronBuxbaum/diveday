@@ -116,7 +116,9 @@
     "purchasedOn": "Purchased on",
     "optionalHint": "(optional)",
     "aboard": "Aboard",
-    "ashore": "Ashore"
+    "ashore": "Ashore",
+    "nitroxDesignated": "Nitrox",
+    "nitroxDesignatedHint": "Kept for enriched air"
   },
   "notice": {
     "added": "On the register.",
@@ -264,6 +266,7 @@
     },
     "optionServiceOverdue": "service overdue",
     "optionServiceDueSoon": "service due soon",
+    "optionNitroxDesignated": "for nitrox",
     "optionServiceConcern": "service concern",
     "pickUnit": "Pick a unit…",
     "proposal": {

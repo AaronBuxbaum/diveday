@@ -1389,6 +1389,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "status",
       "service_note",
       "aboard_boat_id",
+      // true on a regulator the shop keeps for enriched air (issue #2207);
+      // empty when the shop has not said, and on every other kind.
+      "nitrox_designated",
       "deleted_at",
       "created_at",
       "updated_at",
@@ -1405,6 +1408,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.status,
         row.serviceNote,
         row.aboardBoatId,
+        row.nitroxDesignated,
         row.deletedAt,
         row.createdAt,
         row.updatedAt,

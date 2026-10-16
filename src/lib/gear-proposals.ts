@@ -27,12 +27,17 @@ export type ProposalUnit = {
    * proposed; the picker still offers it, labelled.
    */
   serviceConcern?: boolean;
+  /**
+   * A regulator the shop keeps for enriched air (`gear_items.nitrox_designated`,
+   * issue #2207). Only `true` counts; null is "not said".
+   */
+  nitroxDesignated?: boolean | null;
 };
 
 /**
- * One diver's row as the proposal reads it. `wantsNitrox` keeps a regulator
- * off the row: the register cannot yet say which regulators are O2-clean, so
- * DiveDay does not choose one for an enriched-air diver.
+ * One diver's row as the proposal reads it. `wantsNitrox` decides which side
+ * of the shop's designated set its regulator comes from (see
+ * `proposeRentalUnits`).
  */
 export type ProposalRow = {
   bookingId: string;
@@ -68,8 +73,15 @@ export function proposalKey(bookingId: string, kind: string): string {
  *   with no size label. A mask labelled "Kids" or "RX -4.0" was labelled for
  *   somebody, and handing it over is a person's call.
  * - **Never weights.** Lead is bulk stock, not a tagged unit to choose.
- * - **Never a regulator for a diver who asked for nitrox**, until the
- *   register can say which regulators are O2-clean.
+ * - **A nitrox diver's regulator only from the shop's designated set, and an
+ *   air diver's only from outside it** (`nitroxDesignated`, issue #2207).
+ *   None when that side has nothing free. The second half is the shop's own
+ *   policy read back: a set kept for enriched air is kept off air fills,
+ *   which is the point of keeping one, so DiveDay does not hand it to an air
+ *   diver. The picker still offers every free regulator to everyone, the
+ *   designated ones labelled on a nitrox diver's row: a person may hand over
+ *   any of them (a standard regulator is fine to 40% for most agencies), and
+ *   refusing that would be a boarding gate in disguise.
  * - **Never a unit whose service clock has lapsed, nor one that came home
  *   with a service concern nobody has serviced since.** The picker still
  *   offers both, labelled, because the dock decides; a proposal is DiveDay
@@ -92,12 +104,15 @@ export function proposeRentalUnits<U extends ProposalUnit>(
       const sized = sizedRentalKindOfGearKind(need.kind) !== null;
       let candidates: readonly U[];
       if (need.sizeIsAStart || need.kind === "weights") continue;
-      if (need.kind === "regulator" && row.wantsNitrox) continue;
       if (sized) {
         if (!need.size?.trim()) continue;
         candidates = groupUnitsForSize(free, need.size).exact;
       } else {
         candidates = groupUnitsForSize(free, null).rest.filter((unit) => !unit.size?.trim());
+      }
+      if (need.kind === "regulator") {
+        const nitrox = row.wantsNitrox === true;
+        candidates = candidates.filter((unit) => (unit.nitroxDesignated === true) === nitrox);
       }
       const usable = candidates.filter(
         (unit) => !taken.has(unit.id) && !gearServiceKeepsUnitBack(unit),

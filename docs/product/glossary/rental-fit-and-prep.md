@@ -193,6 +193,13 @@
   says the person took the units; it is a receipt for gear, never a liability release, and the one
   shop-wide waiver stays the only waiver (CR-015). No terms set prints none, and DiveDay supplies
   no default. ADR 20260815-minimal-gear-register, the second amendment of 2026-10-08.
+- **Nitrox-designated regulator** — a regulator the shop keeps for enriched air, O2-cleaned or set
+  aside by its own policy (`gear_items.nitrox_designated`, issue #2207), ticked on the unit's
+  details form; only a regulator carries the answer, and not said reads as no. It shapes
+  **gear proposals** (a nitrox diver's regulator from the set, an air diver's from outside it) and
+  labels the unit in a nitrox diver's picker. It never gates: any free regulator can still be
+  assigned to anyone, because most agencies accept a standard regulator up to 40%, and a refusal
+  here would be a boarding gate in disguise.
 - **Gear proposal** — the unit the Gear tab offers for a piece a diver wants, so staff confirm
   instead of choose (`proposeRentalUnits`, `src/lib/gear-proposals.ts`). A proposal is never a
   reservation and never a fit check, and it gates nothing: nothing is held until a staffer taps
@@ -213,9 +220,10 @@
   unticked box per unit, shown only once the concern is open, which moves a ticked unit to
   `needs_service` with the concern as its note. While the concern is open, the fast answers hide,
   so the note cannot be dropped by a tap on "All good"; Cancel closes it. Never automatic, and still
-  no service event. A regulator is
-  never proposed for a diver who asked for nitrox, because the register cannot yet say which
-  regulators are O2-clean. One unit is never proposed twice. Every pick, one row or "Assign all",
+  no service event. A diver who asked for nitrox is proposed only a **nitrox-designated**
+  regulator, and an air diver only one that is not, so a set the shop keeps for enriched air stays
+  off air fills; none when that side has nothing free. The picker still offers every free
+  regulator, the designated ones labelled on a nitrox diver's row, and never refuses one. One unit is never proposed twice. Every pick, one row or "Assign all",
   goes through `assignGearUnit` or `confirmProposedGearUnits`, and each is re-read against what
   the departure still wants before it reserves (`screenGearPicks`), so a stale tab cannot give a
   diver a second unit of a kind they hold. A proposed pick is also re-read for care at that

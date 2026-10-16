@@ -119,6 +119,63 @@ describe("gear items", () => {
     expect(updated).toMatchObject({ ok: true, item: { size: "L", serialNumber: "C-991" } });
   });
 
+  // Issue #2207: only a regulator holds a nitrox answer; an edit that does
+  // not carry the box leaves it; a kind change away from regulator clears it.
+  it("holds a nitrox answer on a regulator only, and keeps it across an edit that does not say", async () => {
+    const { db, shop } = await gearShopContext(ctx);
+    const reg = mustCreate(
+      await createGearItem(db, {
+        shopId: shop.id,
+        kind: "regulator",
+        label: "Reg #nx-1",
+        nitroxDesignated: true,
+      }),
+    );
+    expect(reg.nitroxDesignated).toBe(true);
+
+    const bcd = mustCreate(
+      await createGearItem(db, {
+        shopId: shop.id,
+        kind: "bcd",
+        label: "BCD #nx-forged",
+        nitroxDesignated: true,
+      }),
+    );
+    expect(bcd.nitroxDesignated).toBeNull();
+
+    const untouched = await updateGearItem(db, {
+      shopId: shop.id,
+      gearItemId: reg.id,
+      kind: "regulator",
+      label: "Reg #nx-1",
+    });
+    expect(untouched).toMatchObject({ ok: true, item: { nitroxDesignated: true } });
+
+    const unticked = await updateGearItem(db, {
+      shopId: shop.id,
+      gearItemId: reg.id,
+      kind: "regulator",
+      label: "Reg #nx-1",
+      nitroxDesignated: false,
+    });
+    expect(unticked).toMatchObject({ ok: true, item: { nitroxDesignated: false } });
+
+    await updateGearItem(db, {
+      shopId: shop.id,
+      gearItemId: reg.id,
+      kind: "regulator",
+      label: "Reg #nx-1",
+      nitroxDesignated: true,
+    });
+    const nowAnOctopus = await updateGearItem(db, {
+      shopId: shop.id,
+      gearItemId: reg.id,
+      kind: "other",
+      label: "Reg #nx-1",
+    });
+    expect(nowAnOctopus).toMatchObject({ ok: true, item: { nitroxDesignated: null } });
+  });
+
   it("refuses a duplicate tag and an empty one — the tag is how a wet hand finds the row", async () => {
     // A database of its own, not the file's shared transaction: the duplicate
     // is refused by the unique index, a violation aborts a wrapping

@@ -116,7 +116,9 @@
     "purchasedOn": "Fecha de compra",
     "optionalHint": "(opcional)",
     "aboard": "A bordo",
-    "ashore": "En tierra"
+    "ashore": "En tierra",
+    "nitroxDesignated": "Uso con nitrox",
+    "nitroxDesignatedHint": "Reservado para aire enriquecido"
   },
   "notice": {
     "added": "En el registro.",
@@ -264,6 +266,7 @@
     },
     "optionServiceOverdue": "mantenimiento vencido",
     "optionServiceDueSoon": "mantenimiento por vencer",
+    "optionNitroxDesignated": "para nitrox",
     "optionServiceConcern": "revisión pendiente",
     "pickUnit": "Elige una unidad…",
     "proposal": {

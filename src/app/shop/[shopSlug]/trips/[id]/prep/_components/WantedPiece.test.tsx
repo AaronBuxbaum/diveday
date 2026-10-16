@@ -22,6 +22,7 @@ const unit = (id: string, label: string, size: string | null) => ({
   size,
   serviceState: { state: "no_clock" } as GearServiceState,
   serviceConcern: false,
+  nitroxDesignated: null as boolean | null,
 });
 
 function prepWith(free: ReturnType<typeof unit>[], proposed?: ReturnType<typeof unit>): TripPrep {
@@ -55,6 +56,48 @@ describe("WantedPiece", () => {
     const proposed = unit("u1", "BCD #1", "L");
     renderPiece(prepWith([proposed], proposed));
     expect(screen.getByText("Proposed: BCD #1 · L")).toBeTruthy();
+  });
+
+  /**
+   * Issue #2207: a regulator the shop keeps for enriched air says so in the
+   * picker on a nitrox diver's row, and only there. Every regulator stays in
+   * the picker either way: the label informs, it never filters.
+   */
+  describe("a nitrox-designated regulator", () => {
+    const reg = (id: string, label: string, nitroxDesignated: boolean | null) => ({
+      ...unit(id, label, null),
+      kind: "regulator" as const,
+      nitroxDesignated,
+    });
+    const regPrep = (): TripPrep => ({
+      ...prepFor(),
+      freeByKind: new Map([["regulator", [reg("r1", "Reg #1", null), reg("r9", "Reg #9", true)]]]),
+      proposals: new Map(),
+    });
+    const renderReg = (wantsNitrox: boolean) =>
+      render(
+        <dl>
+          <WantedPiece
+            view={viewOf(regPrep())}
+            bookingId="b1"
+            wantsNitrox={wantsNitrox}
+            item={{ kind: "regulator", size: null }}
+          />
+        </dl>,
+      );
+
+    it("is labelled on a nitrox diver's row, beside every other free regulator", () => {
+      renderReg(true);
+      expect(
+        screen.getByRole("option", { name: `Reg #9 · ${t("gear.prep.optionNitroxDesignated")}` }),
+      ).toBeTruthy();
+      expect(screen.getByRole("option", { name: "Reg #1" })).toBeTruthy();
+    });
+
+    it("is not labelled on an air diver's row", () => {
+      renderReg(false);
+      expect(screen.getByRole("option", { name: "Reg #9" })).toBeTruthy();
+    });
   });
 
   it("says none is free when the kind has no free unit", () => {

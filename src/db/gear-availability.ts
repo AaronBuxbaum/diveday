@@ -34,6 +34,8 @@ export type AvailableGearUnit = {
   kind: GearItemKind;
   label: string;
   size: string | null;
+  /** A regulator kept for enriched air (issue #2207); null for every other kind. */
+  nitroxDesignated: boolean | null;
   /**
    * The unit's most urgent clock, so the picker can say "service overdue"
    * in the option itself. Informing at the moment of the decision, never
@@ -160,6 +162,7 @@ export async function listAvailableGearUnits(
       kind: gearItems.kind,
       label: gearItems.label,
       size: gearItems.size,
+      nitroxDesignated: gearItems.nitroxDesignated,
     })
     .from(gearItems)
     .where(

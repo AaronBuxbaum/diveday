@@ -330,6 +330,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Nitrox / EANx
 - Nitrox request
 - Nitrox-compatible course
+- Nitrox-designated regulator
 - Private staff note
 - Ready message
 - Rental catalog

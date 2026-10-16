@@ -41,9 +41,20 @@ export const unitLine = (
     size: string | null;
     serviceState: { state: string };
     serviceConcern?: boolean;
+    nitroxDesignated?: boolean | null;
   },
+  /**
+   * The row is a nitrox diver's, so a regulator the shop keeps for enriched
+   * air says so (issue #2207). Said only there: on an air diver's row the
+   * word would read as a reason to pick it.
+   */
+  forNitroxDiver = false,
 ) =>
-  [unit.size ? `${unit.label} · ${unit.size}` : unit.label, ...careNotes(t, unit)]
+  [
+    unit.size ? `${unit.label} · ${unit.size}` : unit.label,
+    forNitroxDiver && unit.nitroxDesignated === true ? t("gear.prep.optionNitroxDesignated") : null,
+    ...careNotes(t, unit),
+  ]
     .filter(Boolean)
     .join(" · ");
 /**

@@ -48,6 +48,7 @@ import { uuidParam } from "@/lib/uuid";
 import { restoreGearItemAction } from "../actions";
 import { AboardBoatField, aboardText, gearUnitHull } from "./_components/AboardBoatField";
 import { GearItemNotes } from "./_components/GearItemNotes";
+import { KindFacts } from "./_components/KindFacts";
 import { StatusCard } from "./_components/StatusCard";
 import {
   checkOutGearReservationFromUnitAction,
@@ -480,6 +481,7 @@ export default async function GearUnitPage({
                   <DateField name="purchasedOn" defaultValue={item.purchasedOn ?? ""} />
                 </Field>
                 <AboardBoatField hull={hull} t={t} />
+                <KindFacts item={item} t={t} />
                 <FieldActions>
                   <SubmitButton
                     pendingLabel={t("gear.unit.details.saving")}

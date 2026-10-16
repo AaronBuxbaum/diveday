@@ -277,6 +277,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                           key={item.kind}
                           view={view}
                           bookingId={diver.bookingId}
+                          wantsNitrox={diver.wantsNitrox}
                           item={item}
                         />
                       ))}

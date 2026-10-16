@@ -65,6 +65,11 @@ const unitFormSchema = z.object({
    * leaves the unit's hull as it was. "" is Ashore.
    */
   aboardBoatId: z.union([z.uuid(), z.literal("")]).optional(),
+  /**
+   * Only on a regulator's form (issue #2207): "on", or the hidden "off" posted
+   * beside the box. Absent leaves the unit's answer as it was.
+   */
+  nitroxDesignated: z.enum(["on", "off"]).optional(),
 });
 
 export async function updateGearItemAction(formData: FormData) {
@@ -72,12 +77,13 @@ export async function updateGearItemAction(formData: FormData) {
   const parsed = unitFormSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) revalidateAndRedirect(unit, noticeUrl(unit, "invalid"));
 
-  const { aboardBoatId, ...fields } = parsed.data;
+  const { aboardBoatId, nitroxDesignated, ...fields } = parsed.data;
   const outcome = await updateGearItem(await getDb(), {
     shopId: session.user.shopId,
     gearItemId,
     ...fields,
     aboardBoatId: aboardBoatId === undefined ? undefined : aboardBoatId || null,
+    nitroxDesignated: nitroxDesignated === undefined ? undefined : nitroxDesignated === "on",
   });
   if (outcome.ok) revalidateAndRedirect(unit, noticeUrl(unit, "updated"));
   // A boat that is not this shop's live hull is a stale or forged select, not

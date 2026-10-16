@@ -11,10 +11,13 @@ import { RentalUnitPicker } from "./RentalUnitPicker";
 export function WantedPiece({
   view,
   bookingId,
+  wantsNitrox = false,
   item,
 }: {
   view: PrepView;
   bookingId: string;
+  /** The diver asked for enriched air: designated regulators say so (issue #2207). */
+  wantsNitrox?: boolean;
   item: WantedItem;
 }) {
   const { prep, t, tripId } = view;
@@ -43,7 +46,7 @@ export function WantedPiece({
   const proposal = proposals.get(proposalKey(bookingId, item.kind));
   const preselect = "";
   const optionsFor = (units: typeof exact) =>
-    units.map((option) => ({ id: option.id, label: unitLine(t, option) }));
+    units.map((option) => ({ id: option.id, label: unitLine(t, option, wantsNitrox) }));
   // **Nothing falls between the bands.** The first band
   // is headed by the size it matches, so it can only
   // exist where there is a size to name — and a unit
@@ -132,7 +135,7 @@ export function WantedPiece({
                 assign={assignGearUnit}
                 copy={{
                   proposed: t("gear.prep.proposal.unit", {
-                    unit: unitLine(t, proposal),
+                    unit: unitLine(t, proposal, wantsNitrox),
                   }),
                   assign: t("gear.prep.proposal.assign"),
                   assigning: t("gear.prep.assigning"),

@@ -409,6 +409,21 @@ export const gearItems = pgTable(
      */
     aboardBoatId: uuid("aboard_boat_id").references(() => boats.id, { onDelete: "set null" }),
     /**
+     * **This regulator is kept for enriched air** (issue #2207; Aaron
+     * 2026-10-13): O2-cleaned or set aside by the shop's own policy. Many
+     * shops run standard regulators up to 40%, many keep a designated set,
+     * and some manufacturers require it, so this is the shop's fact to hold,
+     * not DiveDay's rule.
+     *
+     * Only a regulator carries one (`updateGearItem` clears it for any other
+     * kind). Null is "the shop has not said", which reads the same as false
+     * everywhere. What it changes is narrow: the Gear tab's picker labels a
+     * designated regulator on a nitrox diver's row, and `proposeRentalUnits`
+     * proposes a nitrox diver only a designated regulator. It never blocks
+     * assigning any other one: that would be a boarding gate in disguise.
+     */
+    nitroxDesignated: boolean("nitrox_designated"),
+    /**
      * Set when staff delete a unit (ADR 20260820-every-delete-is-soft). The row
      * stays, and so do its `gear_service_events` and `gear_reservations` — a
      * fleet's care history is the last thing a delete should take, and it is
