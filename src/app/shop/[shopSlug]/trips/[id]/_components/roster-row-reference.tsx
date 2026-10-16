@@ -7,8 +7,8 @@ import type { RowNotices } from "./roster-row-notices";
 import type { RosterSeat } from "./roster-seat";
 import { SeatComingAs } from "./SeatComingAs";
 import { SeatFootActions } from "./SeatFootActions";
-import { SeatNotes } from "./SeatNotes";
 import { SeatLunchNote } from "./SeatLunchNote";
+import { SeatNotes } from "./SeatNotes";
 import { SeatPickup } from "./SeatPickup";
 
 /** **Reference**: what is merely true about this seat, one tap away. */

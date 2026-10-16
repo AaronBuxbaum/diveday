@@ -147,14 +147,32 @@ describe("agency processing", () => {
 
   it("lists and ticks the Enriched Air and specialty cards a session issued, not only level cards", async () => {
     const { db, shop, owner, now, session, priya } = await fixture();
-    const issued = { issuedByShopAt: new Date(now.getTime() - DAY_MS), issuedFromTripId: session.id };
+    const issued = {
+      issuedByShopAt: new Date(now.getTime() - DAY_MS),
+      issuedFromTripId: session.id,
+    };
     const [nitrox] = await db
       .insert(nitroxCertifications)
-      .values({ shopId: shop.id, personId: priya.id, agency: "padi", status: "pending", identifier: null, ...issued })
+      .values({
+        shopId: shop.id,
+        personId: priya.id,
+        agency: "padi",
+        status: "pending",
+        identifier: null,
+        ...issued,
+      })
       .returning();
     const [deep] = await db
       .insert(specialtyCertifications)
-      .values({ shopId: shop.id, personId: priya.id, agency: "padi", specialty: "deep", status: "pending", identifier: null, ...issued })
+      .values({
+        shopId: shop.id,
+        personId: priya.id,
+        agency: "padi",
+        specialty: "deep",
+        status: "pending",
+        identifier: null,
+        ...issued,
+      })
       .returning();
     const kinds = async () =>
       (await listCardsToProcess(db, shop.id))
@@ -219,7 +237,11 @@ describe("agency processing", () => {
     const { db, shop } = await fixture();
     const [other] = await db
       .insert(shops)
-      .values({ name: "Elsewhere", slug: `elsewhere-${crypto.randomUUID().slice(0, 8)}`, timezone: "UTC" })
+      .values({
+        name: "Elsewhere",
+        slug: `elsewhere-${crypto.randomUUID().slice(0, 8)}`,
+        timezone: "UTC",
+      })
       .returning();
     const theirs = await listCardsToProcess(db, other.id);
     expect(theirs).toEqual([]);

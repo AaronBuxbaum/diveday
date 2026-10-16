@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
+import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { bookings, courses, diveSites, people, trips } from "./schema";
@@ -83,7 +83,11 @@ describe("listThinBoats", () => {
         certifiesLevel: "open_water",
       })
       .returning();
-    const insert = async (title: string, days: number, extra: Partial<typeof trips.$inferInsert>) => {
+    const insert = async (
+      title: string,
+      days: number,
+      extra: Partial<typeof trips.$inferInsert>,
+    ) => {
       const startsAt = new Date(now.getTime() + days * DAY_MS);
       const [row] = await db
         .insert(trips)

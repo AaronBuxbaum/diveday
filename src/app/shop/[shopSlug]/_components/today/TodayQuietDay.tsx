@@ -32,7 +32,10 @@ export function TodayQuietDay({
       <QuietDayThinBoats
         shopId={shopId}
         shopSlug={shopSlug}
-        locale={locale} timeZone={timeZone} t={t} />
+        locale={locale}
+        timeZone={timeZone}
+        t={t}
+      />
       <Link
         href={`/shop/${shopSlug}/schedule/board?add=1`}
         className={buttonClass({ className: "w-full justify-center sm:w-auto" })}

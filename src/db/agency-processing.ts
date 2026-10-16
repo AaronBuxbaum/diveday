@@ -27,7 +27,10 @@ export function isCardKind(value: unknown): value is CardKind {
   return typeof value === "string" && (CARD_KINDS as readonly string[]).includes(value);
 }
 
-type CardTable = typeof certifications | typeof nitroxCertifications | typeof specialtyCertifications;
+type CardTable =
+  | typeof certifications
+  | typeof nitroxCertifications
+  | typeof specialtyCertifications;
 
 const CARD_TABLES: Record<CardKind, CardTable> = {
   level: certifications,
@@ -219,7 +222,14 @@ export async function listCardsToProcess(db: DbExecutor, shopId: string): Promis
   ]);
   const cards: CardToProcess[] = [];
   const add = (
-    row: { certificationId: string; agency: IssuedCard["agency"]; issuedAt: Date | null; personId: string; fullName: string; courseId: string | null },
+    row: {
+      certificationId: string;
+      agency: IssuedCard["agency"];
+      issuedAt: Date | null;
+      personId: string;
+      fullName: string;
+      courseId: string | null;
+    },
     kind: CardKind,
     what: CardWhat,
   ) => {

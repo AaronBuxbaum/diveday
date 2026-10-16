@@ -77,10 +77,7 @@ async function fixture() {
       personId,
       status,
     });
-  const card = (
-    personId: string,
-    level: "open_water" | "advanced_open_water",
-  ) =>
+  const card = (personId: string, level: "open_water" | "advanced_open_water") =>
     db.insert(certifications).values({
       shopId: shop.id,
       personId,
@@ -269,7 +266,9 @@ describe("listInviteSuggestions", () => {
         courseId: ow.id,
       })
       .returning();
-    expect(await listInviteSuggestions(db, { shopId: shop.id, tripId: session.id, now })).toBeNull();
+    expect(
+      await listInviteSuggestions(db, { shopId: shop.id, tripId: session.id, now }),
+    ).toBeNull();
   });
 });
 
@@ -280,7 +279,9 @@ describe("createInvitationUnderCooldown", () => {
     const nadia = await diver("Cooldown Nadia");
     const other = await trip("Another wall dive", new Date(now.getTime() + 12 * DAY_MS));
     const input = { shopId: shop.id, personId: nadia.id, createdByPersonId: author.id, now };
-    expect(await createInvitationUnderCooldown(db, { ...input, tripId: target.id })).toBe("created");
+    expect(await createInvitationUnderCooldown(db, { ...input, tripId: target.id })).toBe(
+      "created",
+    );
     // Nothing was sent yet (no `invited_at`), and the recorded row still holds the cooldown.
     expect(await createInvitationUnderCooldown(db, { ...input, tripId: other.id })).toBe(
       "cooldown",

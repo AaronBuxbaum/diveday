@@ -51,7 +51,9 @@ describe("ladderExclusion", () => {
   const day = "2026-11-01";
 
   it("asks someone who holds only the level below", () => {
-    expect(ladderExclusion(nextAow, { heldLevels: ["open_water"], dateOfBirth: null }, day)).toBeNull();
+    expect(
+      ladderExclusion(nextAow, { heldLevels: ["open_water"], dateOfBirth: null }, day),
+    ).toBeNull();
   });
 
   it("drops someone already holding the next card or higher, from any agency or source", () => {
@@ -79,6 +81,8 @@ describe("ladderExclusion", () => {
     expect(
       ladderExclusion(divemaster, { heldLevels: ["rescue"], dateOfBirth: "2008-11-01" }, day),
     ).toBeNull();
-    expect(ladderExclusion(divemaster, { heldLevels: ["rescue"], dateOfBirth: null }, day)).toBeNull();
+    expect(
+      ladderExclusion(divemaster, { heldLevels: ["rescue"], dateOfBirth: null }, day),
+    ).toBeNull();
   });
 });

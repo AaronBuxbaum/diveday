@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { buttonClass } from "@/components/ui/button";
 import { tripTabHref } from "@/app/shop/[shopSlug]/trips/[id]/_components/TripTabs";
+import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { listThinBoats } from "@/db/thin-boats";
 import type { StaffTranslator } from "@/i18n/staff-messages";

@@ -182,7 +182,9 @@ describe("getCourseLadder", () => {
       )
       .returning();
     const [eve, fay, gus, hal, ida] = rows;
-    await db.insert(personRoles).values(rows.map((p) => ({ personId: p.id, role: "diver" as const })));
+    await db
+      .insert(personRoles)
+      .values(rows.map((p) => ({ personId: p.id, role: "diver" as const })));
     // Eve and Fay tried diving here; Eve is certified Open Water with another agency.
     await db.insert(bookings).values(
       [eve, fay].map((p) => ({

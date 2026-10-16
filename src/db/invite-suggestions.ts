@@ -14,9 +14,9 @@ import {
 } from "drizzle-orm";
 import { INVITE_SUGGESTIONS_SHOWN, inviteCooldownStart } from "@/lib/invite-suggestions";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
+import { tripAdmissionFor } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
-import { tripAdmissionFor } from "./bookings";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
   bookings,

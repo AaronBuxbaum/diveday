@@ -197,9 +197,7 @@ export async function getCourseLadder(
       wentOn: wentOn.size,
       stalled: cohort
         .filter((row) => !wentOn.has(row.personId))
-        .filter(
-          (row) => ladderExclusion(next, factsFor(facts, row.personId), onDate) === null,
-        )
+        .filter((row) => ladderExclusion(next, factsFor(facts, row.personId), onDate) === null)
         .sort((a, b) => a.fullName.localeCompare(b.fullName))
         .map((row) => ({
           personId: row.personId,

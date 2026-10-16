@@ -40,13 +40,15 @@ describe("clearExpiredDietaryNotes", () => {
       .returning();
     const [oldSeat, recentSeat] = await db
       .insert(bookings)
-      .values([old, recent].map((trip) => ({
-        bookedAs: "diver" as const,
-        shopId: shop.id,
-        tripId: trip.id,
-        personId: diver.id,
-        dietaryNote: "Vegetarian",
-      })))
+      .values(
+        [old, recent].map((trip) => ({
+          bookedAs: "diver" as const,
+          shopId: shop.id,
+          tripId: trip.id,
+          personId: diver.id,
+          dietaryNote: "Vegetarian",
+        })),
+      )
       .returning();
 
     expect(await clearExpiredDietaryNotes(db, now)).toBeGreaterThanOrEqual(1);

@@ -199,7 +199,12 @@ describe("trip invitations", () => {
       .where(eq(people.id, candidate.person.id));
     await db
       .update(people)
-      .set({ mergedIntoPersonId: author.id, mergedAt: now, mergedByPersonId: author.id, deletedAt: now })
+      .set({
+        mergedIntoPersonId: author.id,
+        mergedAt: now,
+        mergedByPersonId: author.id,
+        deletedAt: now,
+      })
       .where(eq(people.id, other.person.id));
 
     for (const personId of [candidate.person.id, other.person.id]) {

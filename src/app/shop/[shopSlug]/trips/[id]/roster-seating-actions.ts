@@ -9,8 +9,8 @@ import {
   bookingDiverName,
   cancelBooking,
   restoreBooking,
-  setBookingParticipantType,
   setBookingDietaryNote,
+  setBookingParticipantType,
   setBookingPickupDetails,
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
