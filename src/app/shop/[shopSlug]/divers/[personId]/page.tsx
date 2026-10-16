@@ -277,15 +277,8 @@ export default async function DiverDetailPage({
   // came back empty — and stripped out of the URL by `FlashParams`, so a
   // reload never re-celebrates it.
   const cleared = detailsStatus?.code === "diver-clear" ? detailsStatus : undefined;
-  // Who this person is to the shop, in one line (fifth-loop ideas, item 36).
-  // Visits share `bookingIsAhead`'s late-arrival buffer, so the boat somebody
-  // is still boarding is not counted yet; money only for a reader who may see it.
-  const standing = diverStanding(diver, {
-    now,
-    timezone: shop.timezone,
-    currency: shop.currency,
-    showMoney: canManageOrders,
-  });
+  // Who this person is to the shop, in one line (item 36); money only for a reader who may see it.
+  const standing = diverStanding(diver, { now, shop, showMoney: canManageOrders });
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">

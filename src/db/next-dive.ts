@@ -46,7 +46,7 @@ export async function heldDepartures(
         input.excludeTripId ? ne(tripTable.id, input.excludeTripId) : undefined,
       ),
     )
-    .orderBy(asc(tripTable.startsAt), asc(tripTable.id));
+    .orderBy(asc(tripTable.startsAt), asc(tripTable.title), asc(tripTable.id));
 }
 
 /**

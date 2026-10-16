@@ -1,5 +1,6 @@
 import { SectionCard } from "@/components/ui/card";
 import type { AppDb } from "@/db/client";
+import type { ReadyPageData } from "@/db/ready";
 import { listYourDays } from "@/db/your-days";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
@@ -18,29 +19,21 @@ import { YourDayRow, type YourDayRowWords } from "./YourDayRow";
  * other day, or on a held seat, whose holder may not be the person on file.
  */
 export async function YourDays({
-  db,
-  token,
-  shopId,
-  bookingId,
-  shopName,
-  timezone,
+  ready: { db, token, bookingId, data },
   locale,
   t,
-  identityHeld,
   className = "mt-10",
 }: {
-  db: AppDb;
-  token: string;
-  shopId: string;
-  bookingId: string;
-  shopName: string;
-  timezone: string;
+  /** This page's own reads: the booking it opened and what was read for it. */
+  ready: { db: AppDb; token: string; bookingId: string; data: ReadyPageData };
   locale: DiverLocale;
   t: DiverTranslator;
-  identityHeld: boolean;
   className?: string;
 }) {
-  if (identityHeld) return null;
+  const shopId = data.shop.id;
+  const shopName = data.detail.shop.name;
+  const timezone = data.detail.shop.timezone;
+  if (data.identityHeld) return null;
   const { upcoming, past } = await listYourDays(db, { shopId, bookingId });
   if (upcoming.length === 0 && past.length === 0) return null;
 

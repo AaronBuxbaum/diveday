@@ -6,8 +6,9 @@ import { personWeekTotals, type StaffWeek } from "@/lib/staffing-week";
  * `StaffingWeek` as plain data. Out of the route file so the page stays a
  * page (`scripts/check-page-length.mjs`).
  */
-export function staffingWeekWords(t: StaffTranslator) {
+export function staffingWeekWords(t: StaffTranslator, week?: StaffWeek) {
   return {
+    personTotals: week ? personTotalsWords(week, t) : {},
     ariaLabel: t("staffing.week.ariaLabel"),
     previous: t("staffing.week.previous"),
     next: t("staffing.week.next"),

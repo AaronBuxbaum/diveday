@@ -180,15 +180,7 @@ export default async function TripManifestPage({
     timeZone: shop.timezone,
     t,
   });
-  const buddyBuilder = buddyBuilderView({
-    manifest,
-    buddyTeamsList,
-    buddyError,
-    parties,
-    locale,
-    t,
-  });
-  const { buddyTeamLabel } = buddyBuilder;
+  const buddy = buddyBuilderView({ manifest, buddyTeamsList, buddyError, parties, locale, t });
   const notesByBooking = manifestNoteThreads(bookingNotes, diverNotes);
   const { crewRollCallButtonCopy, rollCallButtonCopy } = rollCallCopies(t, shopSlug, tripId);
   const emergencyCopy = emergencyReferenceCopy(t);
@@ -346,7 +338,7 @@ export default async function TripManifestPage({
             rollCallAction: actions.rollCall,
             addPrivateNoteAction: actions.addPrivateNote,
             rollCallButtonCopy,
-            buddyTeamLabel,
+            buddyTeamLabel: buddy.buddyTeamLabel,
             t,
           }}
         />
@@ -368,7 +360,7 @@ export default async function TripManifestPage({
           todayTrailBySubject={todayTrailBySubject}
           crewRollCallAction={actions.crewRollCall}
           crewRollCallButtonCopy={crewRollCallButtonCopy}
-          buddyTeamLabel={buddyTeamLabel}
+          buddyTeamLabel={buddy.buddyTeamLabel}
           t={t}
         />
         <DockDesk
@@ -440,7 +432,7 @@ export default async function TripManifestPage({
           defaultOpen={buddies === "open"}
           intentLine={staffDiveIntentLine(t, diveIntents, locale)}
           buddyTeamsList={buddyTeamsList}
-          {...buddyBuilder.panel}
+          {...buddy.panel}
           {...actions.buddyTeams}
           t={t}
         />

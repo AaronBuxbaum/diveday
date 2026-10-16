@@ -695,12 +695,12 @@ describe("what today made", () => {
 /** What the divers left on the reader's boats this week (UX review 2026-10-11, item 18). */
 describe("the crew's tips line", () => {
   it("tells a crew member what their boats earned in tips this week", () => {
-    renderSpine({ crewTipsCents: 14_000 });
+    renderSpine({ crew: { tipsCents: 14_000, month: null } });
     expect(screen.getByText("Your boats earned $140 in tips this week.")).toBeInTheDocument();
   });
 
   it("says nothing on a week with no tips", () => {
-    renderSpine({ crewTipsCents: 0 });
+    renderSpine({ crew: { tipsCents: 0, month: null } });
     expect(screen.queryByText(/in tips this week/)).toBeNull();
   });
 });

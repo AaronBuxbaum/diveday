@@ -299,7 +299,7 @@
     "courseNeedsInstructor": "Este curso no puede aceptar reservas hasta que un miembro de la tripulación asignado tenga el rol de instructor.",
     "underTarget": "{divers, plural, one {# buceador} other {# buceadores}} con {divemasters, plural, =0 {ningún supervisor} one {# supervisor} other {# supervisores}}. Tu objetivo de {ratio}:1 pide {needed, plural, one {# divemaster} other {# divemasters}}.",
     "languageGap": "Reservaron en {language}: {divers}. Nadie de esta tripulación tiene registrado {language}.",
-    "languageCovered": "{crewCount, plural, one {{crew} puede} other {{crew} pueden}} dar la charla en {language} a {divers}.",
+    "languageCovered": "Charla en {language} para {divers}: {crew}.",
     "languageDivers": "{count, plural, one {# buceador} other {# buceadores}}",
     "noCrew": "Todavía no hay tripulación que asignar. Tus instructores y divemasters aparecerán aquí en cuanto se unan al equipo.",
     "notAssignedYet": "Todavía no asignado.",

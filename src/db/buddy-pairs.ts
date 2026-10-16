@@ -504,6 +504,7 @@ export async function formPartyTeams(
           isNull(bookings.identityUnconfirmedAt),
         ),
       )
+      // diveday:allow-time-id-order: the order seats are grouped into parties; no reader sees it.
       .orderBy(asc(bookings.createdAt), asc(bookings.id)),
     db
       .select({ bookingId: buddyPairMembers.bookingId })

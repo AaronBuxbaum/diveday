@@ -96,9 +96,7 @@ function renderWeek({
   blocks = [],
   requests = [],
   viewer,
-  personTotals,
 }: {
-  personTotals?: Record<string, string>;
   people?: WeekPerson[];
   gaps?: WeekGap[];
   canManage?: boolean;
@@ -138,7 +136,6 @@ function renderWeek({
       deleteShiftAction={vi.fn()}
       requestAction={vi.fn()}
       decideRequestAction={vi.fn()}
-      personTotals={personTotals}
     />,
   );
 }
@@ -157,11 +154,6 @@ const GAP: WeekGap = {
 };
 
 describe("StaffingWeek", () => {
-  it("sets each person's week in one figure under their name (item 52)", () => {
-    renderWeek({ personTotals: { [KEIKO.personId]: "1 day · 0 boats · 8 h" } });
-    expect(screen.getAllByText("1 day · 0 boats · 8 h").length).toBeGreaterThan(0);
-  });
-
   it("renders a crew gap with its word and its act, in the day it sails", () => {
     renderWeek({ gaps: [GAP] });
 

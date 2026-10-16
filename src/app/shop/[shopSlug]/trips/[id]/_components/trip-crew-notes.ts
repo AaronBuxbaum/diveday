@@ -66,7 +66,6 @@ export function tripCrewNotes({
     ...crew.languageBriefings.covered.map((briefing) =>
       t("trips.crew.languageCovered", {
         crew: list(briefing.crew),
-        crewCount: briefing.crew.length,
         divers: diversWords(briefing.divers),
         language: languageName(briefing.language),
       }),

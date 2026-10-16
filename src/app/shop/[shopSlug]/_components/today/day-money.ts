@@ -1,6 +1,8 @@
+import type { CrewReading } from "@/app/shop/[shopSlug]/_components/today/CrewLines";
 import type { DbExecutor } from "@/db/client";
-import { type CrewMonth, crewMonth, crewTipsOnBoats, tipsByDeparture } from "@/db/crew-tips";
+import { crewMonth, crewTipsOnBoats, tipsByDeparture } from "@/db/crew-tips";
 import { getMonthlyReport } from "@/db/reporting";
+import { nowDate } from "@/lib/clock";
 import { type DayTakings, dayTakings } from "@/lib/closeout";
 import { summarizeMonth } from "@/lib/reporting";
 import { shiftInstantByCalendarDays, shopMonthBounds, utcToWallTime } from "@/lib/zoned";
@@ -39,16 +41,12 @@ export async function readDayMoney(
   db: DbExecutor,
   shop: { id: string; currency: string; timezone: string },
   day: { from: Date; to: Date },
-  reader: { personId: string; withTakings: boolean; now: Date },
-): Promise<{
-  takings: DayTakings | null;
-  crewTipsCents: number;
-  crewMonth: (CrewMonth & { month: number }) | null;
-}> {
+  reader: { personId: string; withTakings: boolean },
+): Promise<{ takings: DayTakings | null; crew: CrewReading }> {
   const week = { from: shiftInstantByCalendarDays(day.from, -6, shop.timezone), to: day.to };
   const wall = utcToWallTime(day.from, shop.timezone);
   const month = shopMonthBounds({ year: wall.year, month: wall.month }, shop.timezone);
-  const [report, boatTips, crewTipsCents, season] = await Promise.all([
+  const [report, boatTips, tipsCents, season] = await Promise.all([
     reader.withTakings
       ? getMonthlyReport(db, shop.id, day.from, day.to, {
           currency: shop.currency,
@@ -57,11 +55,10 @@ export async function readDayMoney(
       : null,
     reader.withTakings ? tipsByDeparture(db, shop.id, day) : [],
     crewTipsOnBoats(db, shop.id, reader.personId, week),
-    crewMonth(db, shop.id, reader.personId, { from: month.from, now: reader.now }),
+    crewMonth(db, shop.id, reader.personId, { from: month.from, now: nowDate() }),
   ]);
   return {
     takings: report ? dayTakings(summarizeMonth(report), boatTips) : null,
-    crewTipsCents,
-    crewMonth: season.boats > 0 ? { ...season, month: wall.month } : null,
+    crew: { tipsCents, month: season.boats > 0 ? { ...season, month: wall.month } : null },
   };
 }

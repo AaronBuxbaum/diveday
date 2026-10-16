@@ -92,7 +92,8 @@ describe("the known diver's facts", () => {
   });
 
   it("render as a panel only when the read answered", () => {
-    expect(SOURCE).toContain("const knownDiverPanel = knownDiver\n    ? {");
+    // `knownDiverPanelFor` answers null for no diver (known-diver-lines.test.ts).
+    expect(SOURCE).toContain("const knownDiverPanel = knownDiverPanelFor(knownDiver, t, {");
     expect(SECTIONS).toContain("{knownDiver ? (\n          <KnownDiverPanel");
   });
 

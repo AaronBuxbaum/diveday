@@ -424,7 +424,6 @@ async function TodayBody({
       readDayMoney(db, shop, dayBounds, {
         personId: session.user.personId,
         withTakings: eveningClose.closing && canReadShopMoney,
-        now,
       }),
     ]);
   const { actions, nextDeparture, crewedTripIds, crewedSessions } = work;
@@ -866,8 +865,7 @@ async function TodayBody({
             showPaymentsRow,
             firstBooking,
             factOfScale,
-            crewTipsCents: dayMoney.crewTipsCents,
-            crewMonth: dayMoney.crewMonth,
+            crew: dayMoney.crew,
             evening,
             needsYou,
             now,

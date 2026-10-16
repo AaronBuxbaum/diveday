@@ -1,5 +1,6 @@
 import { and, asc, count, eq, gte, inArray, lt, lte, sum } from "drizzle-orm";
 import type { DbExecutor } from "./client";
+import { queryAll } from "./query-helpers";
 import { boats, bookings, executedDives, tips, tripAssignments, tripDives, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -131,17 +132,19 @@ export async function crewMonth(
     );
   if (crewed.length === 0) return { boats: 0, dives: 0, minutes: 0 };
   const ids = crewed.map((trip) => trip.id);
-  const [logged, planned] = await Promise.all([
-    db
-      .select({ tripId: executedDives.tripId, dives: count() })
-      .from(executedDives)
-      .where(and(eq(executedDives.shopId, shopId), inArray(executedDives.tripId, ids)))
-      .groupBy(executedDives.tripId),
-    db
-      .select({ tripId: tripDives.tripId, dives: count() })
-      .from(tripDives)
-      .where(inArray(tripDives.tripId, ids))
-      .groupBy(tripDives.tripId),
+  const [logged, planned] = await queryAll(db, [
+    () =>
+      db
+        .select({ tripId: executedDives.tripId, dives: count() })
+        .from(executedDives)
+        .where(and(eq(executedDives.shopId, shopId), inArray(executedDives.tripId, ids)))
+        .groupBy(executedDives.tripId),
+    () =>
+      db
+        .select({ tripId: tripDives.tripId, dives: count() })
+        .from(tripDives)
+        .where(inArray(tripDives.tripId, ids))
+        .groupBy(tripDives.tripId),
   ]);
   const loggedBy = new Map(logged.map((row) => [row.tripId, Number(row.dives)]));
   const plannedBy = new Map(planned.map((row) => [row.tripId, Number(row.dives)]));

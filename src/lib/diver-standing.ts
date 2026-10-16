@@ -29,12 +29,14 @@ export type DiverStanding = {
 
 export function diverStanding(
   diver: DiverProfile,
-  input: { now: Date; timezone: string; currency: string; showMoney: boolean },
+  input: { now: Date; shop: { timezone: string; currency: string }; showMoney: boolean },
 ): DiverStanding {
+  // Visits share `bookingIsAhead`'s late-arrival buffer, so the boat somebody
+  // is still boarding is not counted as a visit yet.
   const days: CalendarDate[] = [
     ...diver.bookings
       .filter((entry) => entry.booking.status !== "cancelled" && !bookingIsAhead(entry, input.now))
-      .map((entry) => calendarDateInTimezone(entry.trip.startsAt, input.timezone)),
+      .map((entry) => calendarDateInTimezone(entry.trip.startsAt, input.shop.timezone)),
     ...diver.priorVisits.map((visit) => visit.visitedOn),
   ].sort();
 
@@ -42,7 +44,7 @@ export function diverStanding(
     visits: days.length,
     since: days[0] ?? null,
     lastOut: days.at(-1) ?? null,
-    spent: input.showMoney ? spentWithShop(diver, input.currency) : null,
+    spent: input.showMoney ? spentWithShop(diver, input.shop.currency) : null,
     friends: diver.friendsBrought,
   };
 }

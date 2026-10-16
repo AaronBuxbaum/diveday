@@ -38,7 +38,7 @@ import { ScheduleViews } from "../schedule/_components/ScheduleViews";
 import { staffingGapWords } from "./_components/gap-words";
 import { StaffingWarnings } from "./_components/StaffingWarnings";
 import { StaffingWeek, weekTailRowClass } from "./_components/StaffingWeek";
-import { personTotalsWords, staffingWeekWords } from "./_components/staffing-week-words";
+import { staffingWeekWords } from "./_components/staffing-week-words";
 import {
   createShiftAction,
   decideCrewRequestAction,
@@ -338,8 +338,7 @@ export default async function StaffingPage({
               // Absent while it would only reload the week already on screen.
               thisWeekHref: weekStart === weekStartOf(today) ? null : staffingPath,
             }}
-            words={staffingWeekWords(t)}
-            personTotals={personTotalsWords(week, t)}
+            words={staffingWeekWords(t, week)}
           />
 
           {canManage ? (

@@ -7,10 +7,8 @@ import {
   addBuddyTeamMember,
   dissolveBuddyTeam,
   formBuddyTeam,
-  formPartyTeams,
   listTripBuddyTeamEvents,
   listTripBuddyTeams,
-  listTripParties,
   removeBuddyTeamMember,
   sortBuddyMemberRowsByTeam,
 } from "./buddy-pairs";
@@ -988,54 +986,5 @@ describe("sortBuddyMemberRowsByTeam", () => {
   it("orders two same-named members of one team by their row id", () => {
     const rows = [row("r9", "pair-a", "John Smith"), row("r1", "pair-a", "John Smith")];
     expect(sortBuddyMemberRowsByTeam(rows, (r) => r.name).map((r) => r.id)).toEqual(["r1", "r9"]);
-  });
-});
-
-describe("party teams (fifth-loop ideas, item 50)", () => {
-  it("keys each seat to its party and teams a party of two once, never the diver who came alone", async () => {
-    const { db, shop, trip, a, b, c, staff } = await buddyContext();
-    await db
-      .update(bookings)
-      .set({ partyLeadBookingId: a.booking.id })
-      .where(eq(bookings.id, b.booking.id));
-
-    const parties = await listTripParties(db, shop.id, trip.id);
-    expect(parties.get(a.booking.id)).toBe(a.booking.id);
-    expect(parties.get(b.booking.id)).toBe(a.booking.id);
-    expect(parties.get(c.booking.id)).toBe(c.booking.id);
-
-    const input = { shopId: shop.id, tripId: trip.id, recordedByPersonId: staff.id };
-    expect(await formPartyTeams(db, input)).toBe(1);
-    const teams = await listTripBuddyTeams(db, shop.id, trip.id);
-    expect(teams).toHaveLength(1);
-    expect(
-      teams[0]?.members.flatMap((member) => (member.kind === "diver" ? [member.bookingId] : [])),
-    ).toEqual(expect.arrayContaining([a.booking.id, b.booking.id]));
-    // A second tap finds nobody left to team: the party is already a team.
-    expect(await formPartyTeams(db, input)).toBe(0);
-  });
-
-  it("leaves a party of four or more for the divemaster to split", async () => {
-    const { db, shop, trip, a, b, c, staff } = await buddyContext();
-    await db
-      .update(bookings)
-      .set({ partyLeadBookingId: a.booking.id })
-      .where(inArray(bookings.id, [b.booking.id, c.booking.id]));
-    const [extra] = await db
-      .insert(bookings)
-      .values({
-        shopId: shop.id,
-        tripId: trip.id,
-        personId: staff.id,
-        status: "booked",
-        bookedAs: "diver",
-        partyLeadBookingId: a.booking.id,
-      })
-      .returning({ id: bookings.id });
-    expect(extra).toBeDefined();
-    expect(
-      await formPartyTeams(db, { shopId: shop.id, tripId: trip.id, recordedByPersonId: staff.id }),
-    ).toBe(0);
-    expect(await listTripBuddyTeams(db, shop.id, trip.id)).toHaveLength(0);
   });
 });

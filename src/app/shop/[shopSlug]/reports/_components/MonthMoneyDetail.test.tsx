@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { MonthMoneyDetail } from "@/db/report-lines";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { MonthDetailLines } from "./MonthMoneyDetail";
+import { BuddyReferrerLines } from "./MonthMoneyDetail";
 
 afterEach(cleanup);
 
@@ -28,14 +28,12 @@ function detail(buddyReferrers: MonthMoneyDetail["buddyReferrers"]): MonthMoneyD
 describe("who brought the month's buddy seats", () => {
   it("names each referrer with their friends, linking to the record", () => {
     render(
-      <MonthDetailLines
-        report={{ partnerReferredSeats: 0, buddyReferredSeats: 3 }}
+      <BuddyReferrerLines
         detail={detail([
           { personId: "p-1", fullName: "Priya Sharma", friends: 2 },
           { personId: "p-2", fullName: "Bjorn Aasen", friends: 1 },
         ])}
         t={t}
-        money={(cents) => `$${cents / 100}`}
         shopSlug="blue-mantis"
       />,
     );
@@ -45,15 +43,7 @@ describe("who brought the month's buddy seats", () => {
   });
 
   it("names nobody in a month with no buddy seats", () => {
-    render(
-      <MonthDetailLines
-        report={{ partnerReferredSeats: 0, buddyReferredSeats: 0 }}
-        detail={detail([])}
-        t={t}
-        money={(cents) => `$${cents / 100}`}
-        shopSlug="blue-mantis"
-      />,
-    );
+    render(<BuddyReferrerLines detail={detail([])} t={t} shopSlug="blue-mantis" />);
     expect(screen.queryByRole("link")).toBeNull();
   });
 });

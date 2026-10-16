@@ -86,14 +86,14 @@ export async function listYourDays(
           gt(trips.startsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
         ),
       )
-      .orderBy(asc(trips.startsAt), asc(bookings.id)),
+      .orderBy(asc(trips.startsAt), asc(trips.title), asc(bookings.id)),
     // Every dive day, this booking's included: the numbering counts them all.
     db
       .select({ bookingId: bookings.id, startsAt: trips.startsAt, title: trips.title })
       .from(bookings)
       .innerJoin(trips, eq(trips.id, bookings.tripId))
       .where(and(mine, diveDay(), liveTrip(), lte(trips.startsAt, now)))
-      .orderBy(asc(trips.startsAt), asc(bookings.id)),
+      .orderBy(asc(trips.startsAt), asc(trips.title), asc(bookings.id)),
     db
       .select({ visitedOn: priorVisits.visitedOn, statusLabel: priorVisits.statusLabel })
       .from(priorVisits)
@@ -277,7 +277,7 @@ export async function latestDiveDayBooking(
         lte(trips.startsAt, input.now),
       ),
     )
-    .orderBy(desc(trips.startsAt), desc(bookings.id))
+    .orderBy(desc(trips.startsAt), asc(trips.title), desc(bookings.id))
     .limit(1);
   return row ?? null;
 }

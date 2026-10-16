@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, isNull, lte, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNull, lte, ne } from "drizzle-orm";
 import type { DiverLocale } from "@/i18n/settings";
 import { hashCapabilityToken } from "@/lib/booking-capabilities";
 import {
@@ -169,7 +169,7 @@ export async function lastGearFor(
         lte(trips.startsAt, input.now),
       ),
     )
-    .orderBy(desc(trips.startsAt), desc(bookings.id))
+    .orderBy(desc(trips.startsAt), asc(trips.title), desc(bookings.id))
     .limit(1);
   if (!last) return null;
   const rentedKinds = toRentableKinds(last.paidRentalKinds).filter(

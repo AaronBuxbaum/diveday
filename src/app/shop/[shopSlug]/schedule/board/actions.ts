@@ -20,7 +20,6 @@ import {
   createTripSeries,
   deleteTrip,
   duplicateTrip,
-  getTripCrewAssignments,
   listStaff,
   moveTrip,
   setTripCrew,
@@ -55,6 +54,7 @@ import { uuidParam } from "@/lib/uuid";
 import type { PatternDeparture } from "@/lib/weekday-pattern";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import type { BuilderPattern, BuilderTideWindowInput } from "./_components/ScheduleBuilder";
+import { copyCrewIfAsked, duplicateSchema } from "./copy-departure";
 
 const removeDepartureForm = z.object({ tripId: z.uuid() });
 
@@ -882,13 +882,6 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
   revalidateAndRedirect(back, `${back}?${params}`);
 }
 
-const duplicateSchema = z.object({
-  tripId: z.uuid(),
-  date: z.string(),
-  startTime: z.string(),
-  sameCrew: z.literal("on").optional(),
-});
-
 export async function duplicateDepartureAction(shopSlug: string, formData: FormData) {
   const back = boardPath(shopSlug);
   const { session, db, shop } = await requireBoardAuthor(shopSlug);
@@ -913,19 +906,7 @@ export async function duplicateDepartureAction(shopSlug: string, formData: FormD
     await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "invalid" });
     redirect(`${back}?builder=invalid`);
   }
-  // **"Same crew"** (fifth-loop ideas, item 53): the source's crew, roles and
-  // all, through `setTripCrew`, so a clash, an away day's conflict or a
-  // course's instructor rule refuses exactly as a hand assignment would. All
-  // or nothing: the copy stands either way, and the notice says the crew did
-  // not come.
-  const sourceCrew = parsed.data.sameCrew
-    ? await getTripCrewAssignments(db, shop.id, parsed.data.tripId)
-    : [];
-  const crewCame =
-    sourceCrew.length === 0 ||
-    (await setTripCrew(db, shop.id, copy.id, sourceCrew, {
-      actorPersonId: session.user.personId,
-    }));
+  const crewCame = await copyCrewIfAsked(db, shop.id, parsed.data, copy.id, session.user.personId);
   await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "ok" });
   await recordShopActivity(db, {
     shopId: shop.id,

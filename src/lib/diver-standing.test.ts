@@ -3,7 +3,11 @@ import type { DiverProfile } from "@/lib/diver-profile";
 import { diverStanding } from "./diver-standing";
 
 const NOW = new Date("2026-10-16T12:00:00Z");
-const base = { now: NOW, timezone: "America/New_York", currency: "usd", showMoney: true };
+const base = {
+  now: NOW,
+  shop: { timezone: "America/New_York", currency: "usd" },
+  showMoney: true,
+};
 
 function seat(id: string, startsAt: string, status = "booked") {
   return {

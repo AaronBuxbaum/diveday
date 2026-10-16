@@ -29,12 +29,9 @@ export function MonthDetailLines({
   detail,
   t,
   money,
-  shopSlug,
 }: {
   report: { partnerReferredSeats: number; buddyReferredSeats: number };
   detail: Detail;
-  /** For the door from a referrer's name to their record. */
-  shopSlug: string;
   t: StaffTranslator;
   money: (cents: number) => string;
 }) {
@@ -65,23 +62,6 @@ export function MonthDetailLines({
           {t("reports.buddySeats", { count: report.buddyReferredSeats })}
         </p>
       ) : null}
-      {/* **Who brought them** (fifth-loop ideas, item 41): the referring diver
-          is the shop's own, so unlike a partner slug it is safe to name, and
-          each name is the door to their record, where the owner thanks them. */}
-      {detail.buddyReferrers.length > 0 ? (
-        <ul className="mt-1 flex flex-wrap justify-end gap-x-4 text-sm text-muted tabular-nums">
-          {detail.buddyReferrers.map((referrer) => (
-            <li key={referrer.personId}>
-              <Link
-                href={shopPath(shopSlug, "divers", referrer.personId)}
-                className={buttonClass({ variant: "link", size: "sm", flush: true })}
-              >
-                {t("reports.buddyReferrer", { name: referrer.fullName, count: referrer.friends })}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ) : null}
 
       {/* Returning divers and package dives owed (owner decision 2026-10-09). */}
       {detail.divers.returning > 0 ? (
@@ -101,6 +81,38 @@ export function MonthDetailLines({
         </p>
       ) : null}
     </>
+  );
+}
+
+/**
+ * **Who brought the month's buddy seats** (fifth-loop ideas, item 41):
+ * "Priya Sharma brought 2 friends". The referring diver is the shop's own, so
+ * unlike a partner slug the name is safe to show, and each name is the door to
+ * their record, where the owner thanks them. Nothing in a month with none.
+ */
+export function BuddyReferrerLines({
+  detail,
+  t,
+  shopSlug,
+}: {
+  detail: Detail;
+  t: StaffTranslator;
+  shopSlug: string;
+}) {
+  if (detail.buddyReferrers.length === 0) return null;
+  return (
+    <ul className="mt-1 flex flex-wrap justify-end gap-x-4 text-sm text-muted tabular-nums">
+      {detail.buddyReferrers.map((referrer) => (
+        <li key={referrer.personId}>
+          <Link
+            href={shopPath(shopSlug, "divers", referrer.personId)}
+            className={buttonClass({ variant: "link", size: "sm", flush: true })}
+          >
+            {t("reports.buddyReferrer", { name: referrer.fullName, count: referrer.friends })}
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }
 

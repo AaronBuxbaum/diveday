@@ -195,18 +195,12 @@ async function DiverReadinessPage({
   underBookedHeader: boolean;
 }) {
   const data = await getReadyPageData(db, bookingId);
-  if (!data) {
-    // `ready.unavailableBody`, not the waiver subtree's identical sentence,
-    // which this read until issue #1334. The two say the same words today, so
-    // nothing on screen moves — but `/waivers` and `/ready` are different
-    // surfaces with different rescues, and a reword of one should not be able
-    // to reach the other by accident.
-    return <UnavailableReadyLink t={anonT} />;
-  }
+  if (!data) return <UnavailableReadyLink t={anonT} />;
 
   const { detail, shop, person } = data;
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
+  const yourDays = <YourDays ready={{ db, token, bookingId, data }} locale={locale} t={t} />;
 
   if (detail.cancelled) {
     // The shop took this seat off the boat and this diver still holds a live
@@ -290,24 +284,7 @@ async function DiverReadinessPage({
         timeZone={detail.shop.timezone}
         namespaces={["recap", "common", "booking", "reviews", "trip"]}
       >
-        <AfterState
-          context={{
-            ...after,
-            yourDays: (
-              <YourDays
-                db={db}
-                token={token}
-                shopId={shop.id}
-                bookingId={bookingId}
-                shopName={detail.shop.name}
-                timezone={detail.shop.timezone}
-                locale={locale}
-                t={t}
-                identityHeld={data.identityHeld}
-              />
-            ),
-          }}
-        />
+        <AfterState context={{ ...after, yourDays }} />
       </DiverIntlProvider>
     );
   }
@@ -604,17 +581,7 @@ async function DiverReadinessPage({
             partyAllSet,
           }}
         />
-        <YourDays
-          db={db}
-          token={token}
-          shopId={shop.id}
-          bookingId={bookingId}
-          shopName={detail.shop.name}
-          timezone={detail.shop.timezone}
-          locale={locale}
-          t={t}
-          identityHeld={data.identityHeld}
-        />
+        {yourDays}
       </>
     );
   })();
