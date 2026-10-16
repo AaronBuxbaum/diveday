@@ -1,13 +1,16 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { QuietDay } from "./QuietDay";
+
+// The thin-boats list reads the database; its own tests cover it.
+vi.mock("./QuietDayThinBoats", () => ({ QuietDayThinBoats: () => null }));
 
 afterEach(cleanup);
 
 const props = {
-  shopSlug: "blue-mantis",
+  shop: { id: "shop-1", slug: "blue-mantis", timezone: "America/New_York" },
   nextDeparture: {
     tripId: "trip-tue",
     title: "Tuesday two-tank",
@@ -16,7 +19,6 @@ const props = {
     sellableCapacity: 8,
   },
   locale: "en-US",
-  timeZone: "America/New_York",
   t: staffTranslator("en-US"),
 };
 
