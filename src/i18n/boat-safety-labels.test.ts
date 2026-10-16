@@ -149,7 +149,7 @@ describe("boatSafetyNoticeText and the certificate's second limit", () => {
 
   it("says the crew are in the count, booked and aboard", () => {
     expect(boatSafetyNoticeText(en, over(false))).toBe(
-      "13 people booked, crew included; the certificate allows 12 in all.",
+      "13 people booked or named as crew; the certificate allows 12 in all.",
     );
     expect(boatSafetyNoticeText(en, over(true))).toBe(
       "13 people aboard, crew included; the certificate allows 12 in all.",
