@@ -12,7 +12,7 @@ import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { survivingPersonNames } from "./people";
-import { isUniqueConstraintViolation } from "./query-helpers";
+import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import {
   bookings,
   buddyPairMembers,
@@ -495,33 +495,35 @@ export async function planPartyTeams(
     .limit(1);
   const plan: PartyTeamPlan = { parties: new Map(), teamable: [], left: [] };
   if (!departure) return plan;
-  const [seats, teamed] = await Promise.all([
-    db
-      .select({
-        bookingId: bookings.id,
-        partyLeadBookingId: bookings.partyLeadBookingId,
-        participantType: bookings.participantType,
-        status: bookings.status,
-        heldAt: bookings.identityUnconfirmedAt,
-        declaredMinorAt: bookings.minorDeclaredAt,
-        dateOfBirth: people.dateOfBirth,
-        verifiedCard: sql<boolean>`exists (select 1 from ${certifications} where ${certifications.shopId} = ${bookings.shopId} and ${certifications.personId} = ${bookings.personId} and ${certifications.status} = 'verified' and ${certifications.deletedAt} is null)`,
-      })
-      .from(bookings)
-      .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
-      .where(
-        and(
-          eq(bookings.shopId, shopId),
-          eq(bookings.tripId, tripId),
-          ne(bookings.status, "cancelled"),
-        ),
-      )
-      // diveday:allow-time-id-order: the order seats are grouped into parties; no reader sees it.
-      .orderBy(asc(bookings.createdAt), asc(bookings.id)),
-    db
-      .select({ bookingId: buddyPairMembers.bookingId })
-      .from(buddyPairMembers)
-      .where(and(eq(buddyPairMembers.shopId, shopId), eq(buddyPairMembers.tripId, tripId))),
+  const [seats, teamed] = await queryAll(db, [
+    () =>
+      db
+        .select({
+          bookingId: bookings.id,
+          partyLeadBookingId: bookings.partyLeadBookingId,
+          participantType: bookings.participantType,
+          status: bookings.status,
+          heldAt: bookings.identityUnconfirmedAt,
+          declaredMinorAt: bookings.minorDeclaredAt,
+          dateOfBirth: people.dateOfBirth,
+          verifiedCard: sql<boolean>`exists (select 1 from ${certifications} where ${certifications.shopId} = ${bookings.shopId} and ${certifications.personId} = ${bookings.personId} and ${certifications.status} = 'verified' and ${certifications.deletedAt} is null)`,
+        })
+        .from(bookings)
+        .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
+        .where(
+          and(
+            eq(bookings.shopId, shopId),
+            eq(bookings.tripId, tripId),
+            ne(bookings.status, "cancelled"),
+          ),
+        )
+        // diveday:allow-time-id-order: the order seats are grouped into parties; no reader sees it.
+        .orderBy(asc(bookings.createdAt), asc(bookings.id)),
+    () =>
+      db
+        .select({ bookingId: buddyPairMembers.bookingId })
+        .from(buddyPairMembers)
+        .where(and(eq(buddyPairMembers.shopId, shopId), eq(buddyPairMembers.tripId, tripId))),
   ]);
   const onATeam = new Set(teamed.map((row) => row.bookingId));
   const tripDay = calendarDateInTimezone(departure.startsAt, departure.timezone);

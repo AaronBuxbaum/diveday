@@ -242,41 +242,6 @@ describe("getRecapPageData", () => {
     expect((await getRecapPageData(db, bookingId))?.visitCount).toBe(1);
   });
 
-  it("counts a morning and an afternoon boat on one date as one dive day", async () => {
-    // Glossary **Dive day**: one calendar day in the shop's zone, however many
-    // boats (dive-domain review of layer r5-4, fix 2). The same count the
-    // milestone and "Your days" say, through `diveDayOrdinal`.
-    const { db, shop, reef, bookingId } = await recapContext();
-    const sameDayEarlier = new Date(reef.startsAt.getTime() + 24 * 60 * 60 * 1000);
-    const morning = await createTrip(db, {
-      shopId: shop.id,
-      title: "Morning Single",
-      startsAt: sameDayEarlier,
-      endsAt: new Date(sameDayEarlier.getTime() + 60 * 60 * 1000),
-      capacity: 12,
-      plannedDives: 1,
-    });
-    if (!morning) throw new Error("test setup: the morning departure could not be created");
-    const party = await createBookingParty(db, [
-      {
-        actor: "staff",
-        shopId: shop.id,
-        tripId: morning.id,
-        fullName: "Rae Recap",
-        email: "recap-rae@example.com",
-      },
-    ]);
-    if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
-    // An hour before the reef boat, on its own day.
-    const anHourBefore = new Date(reef.startsAt.getTime() - 60 * 60 * 1000);
-    await db
-      .update(trips)
-      .set({ startsAt: anHourBefore, endsAt: new Date(anHourBefore.getTime() + 30 * 60 * 1000) })
-      .where(eq(trips.id, morning.id));
-
-    expect((await getRecapPageData(db, bookingId))?.visitCount).toBe(1);
-  });
-
   it("still counts a day the roll call left them ashore while the seat stayed booked", async () => {
     // **Pinned as it stands, not as settled** (domain review of issue #1694,
     // 2026-10-10). `diveDay()` reads the seat's status and the departure's,

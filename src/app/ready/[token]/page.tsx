@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { HeldAfterDiveCard, NoShowCard } from "@/app/ready/[token]/_components/AfterDiveDoors";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
+import { afterStateActions } from "@/app/ready/[token]/_components/after-state-actions";
 import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
 import { cancelledNoticeForReady } from "@/app/ready/[token]/_components/CancelledNotice";
 import { CertificationEntries } from "@/app/ready/[token]/_components/CertificationEntries";
@@ -30,12 +31,6 @@ import {
   readyThreadFacts,
 } from "@/app/ready/[token]/_components/thread-facts";
 import { YourDays } from "@/app/ready/[token]/_components/YourDays";
-import { uploadRecapPhotoFromReadyAction } from "@/app/ready/[token]/recap-photo-actions";
-import {
-  startTipAction,
-  submitRecapPulseAction,
-  submitReviewAction,
-} from "@/app/recap/[token]/actions";
 import { FlashParams } from "@/components/FlashParams";
 import { RecapWaitingCard } from "@/components/RecapWaitingCard";
 import { RememberBooker } from "@/components/RememberBooker";
@@ -65,7 +60,6 @@ import { toShopCurrency } from "@/lib/money";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { seatRentalItems } from "@/lib/participant-types";
 import { readyCopyKeepUntil } from "@/lib/ready-offline";
-import { signRecapToken } from "@/lib/recap-links";
 import { nitroxAvailableOn } from "@/lib/rentals";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
@@ -265,7 +259,6 @@ async function DiverReadinessPage({
     if (recapState.kind === "waiting") return <RecapWaitingCard shop={shopContact} t={t} />;
     const recap = recapState.kind === "recap" ? recapState.data : null;
     if (!recap) return <NoShowCard shop={shopContact} t={t} />;
-    const recapToken = signRecapToken(bookingId);
     const after = await buildAfterStateProps({
       db,
       data: recap,
@@ -276,14 +269,7 @@ async function DiverReadinessPage({
       // This route carries none of the three: each action redirects to
       // `/recap/<token>`, which is where its notice is read.
       params: {},
-      actions: {
-        submitReview: submitReviewAction.bind(null, recapToken),
-        // The one door that may share a photo with the boat: it verifies this
-        // page's own readiness token (security review r5-4, F3).
-        uploadPhoto: uploadRecapPhotoFromReadyAction.bind(null, token),
-        startTip: startTipAction.bind(null, recapToken),
-        submitPulse: submitRecapPulseAction.bind(null, recapToken),
-      },
+      actions: afterStateActions(token, bookingId),
     });
     return (
       <DiverIntlProvider

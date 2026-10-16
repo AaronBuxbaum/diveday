@@ -5,6 +5,7 @@ import { diveDayOrdinal } from "@/lib/prior-visits";
 import { hasReturned } from "@/lib/trips";
 import type { AppDb, DbExecutor } from "./client";
 import { diveDay } from "./dive-days";
+import { queryAll } from "./query-helpers";
 import { bookings, people, priorVisits, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -107,33 +108,36 @@ async function diveDayCountsForSeats(
   const divers = seats.filter((seat) => seat.participantType === "diver");
   const personIds = [...new Set(divers.map((seat) => seat.personId))];
   if (personIds.length === 0) return counts;
-  const [shop, days, visits] = await Promise.all([
-    db
-      .select({ timezone: shops.timezone })
-      .from(shops)
-      .where(eq(shops.id, shopId))
-      .limit(1)
-      .then((rows) => rows[0]),
-    db
-      .select({ personId: bookings.personId, startsAt: trips.startsAt })
-      .from(bookings)
-      .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
-      .where(
-        and(
-          eq(bookings.shopId, shopId),
-          inArray(bookings.personId, personIds),
-          eq(bookings.participantType, "diver"),
-          diveDay(),
+  const [shop, days, visits] = await queryAll(db, [
+    () =>
+      db
+        .select({ timezone: shops.timezone })
+        .from(shops)
+        .where(eq(shops.id, shopId))
+        .limit(1)
+        .then((rows) => rows[0]),
+    () =>
+      db
+        .select({ personId: bookings.personId, startsAt: trips.startsAt })
+        .from(bookings)
+        .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
+        .where(
+          and(
+            eq(bookings.shopId, shopId),
+            inArray(bookings.personId, personIds),
+            eq(bookings.participantType, "diver"),
+            diveDay(),
+          ),
         ),
-      ),
-    db
-      .select({
-        personId: priorVisits.personId,
-        visitedOn: priorVisits.visitedOn,
-        statusLabel: priorVisits.statusLabel,
-      })
-      .from(priorVisits)
-      .where(and(eq(priorVisits.shopId, shopId), inArray(priorVisits.personId, personIds))),
+    () =>
+      db
+        .select({
+          personId: priorVisits.personId,
+          visitedOn: priorVisits.visitedOn,
+          statusLabel: priorVisits.statusLabel,
+        })
+        .from(priorVisits)
+        .where(and(eq(priorVisits.shopId, shopId), inArray(priorVisits.personId, personIds))),
   ]);
   const timezone = shop?.timezone ?? "UTC";
   for (const seat of divers) {

@@ -33,6 +33,26 @@ export type IssuedCapability = { token: string; expiresAt: Date };
 export const MAX_LIVE_CAPABILITIES_PER_PURPOSE = 20;
 
 /**
+ * **The two readiness links a new booking gets** (security review r5-4, F1):
+ * one for the browser that booked, which proved only a typed name and an
+ * address and so stays undelivered, and one for the confirmation email, which
+ * is delivered and opens the diver's other days. Issued one after the other,
+ * never side by side, so a transaction executor stays sequential.
+ */
+export async function issueBookedReadinessLinks(
+  db: DbExecutor,
+  input: { shopId: string; bookingId: string },
+): Promise<{ redirect: IssuedCapability | null; mailed: IssuedCapability | null }> {
+  const redirect = await issueBookingCapability(db, { ...input, purpose: "readiness" });
+  const mailed = await issueBookingCapability(db, {
+    ...input,
+    purpose: "readiness",
+    delivered: true,
+  });
+  return { redirect, mailed };
+}
+
+/**
  * Mints a fresh, purpose-bound bearer capability over a booking. Refuses a
  * booking that isn't this shop's or is already cancelled — a cancelled
  * booking never gets a new link, and any of its outstanding links already
