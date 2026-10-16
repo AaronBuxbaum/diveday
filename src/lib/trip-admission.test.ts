@@ -21,7 +21,7 @@ import {
   type TripAdmissionEvidence,
   type TripAdmissionRefusal,
 } from "./trip-admission";
-import { effectiveWaiverForBooking, releaseLapsedForBooking } from "./waivers";
+import { effectiveWaiverForBooking, releaseLapsedForBooking, waiverClockInstant } from "./waivers";
 
 function certification(overrides: Partial<Certification> = {}): Certification {
   return {
@@ -926,12 +926,12 @@ describe("decideTripAdmission — participant types (ADR 20261007-participant-ty
  * the sale.** Admission takes no release at all: whether a diver's waiver
  * stands is something they can fix before the boat leaves, so it is
  * readiness's question. Here the seat sells three weeks out to a diver whose
- * release readiness clears today and would block on the morning of the dive:
- * admission must admit at both instants, or it refuses someone readiness
- * clears.
+ * release readiness already blocks today, because it is measured at the
+ * departure (issue #2611): admission must still admit, or it refuses someone
+ * who can re-sign in time.
  */
 describe("decideTripAdmission — a release that lapses before the departure", () => {
-  it("admits the seat while readiness clears it today and blocks it on the day", () => {
+  it("admits the seat while readiness blocks it, today and on the day", () => {
     const today = new Date("2026-07-18T12:00:00.000Z");
     const departure = new Date("2026-08-08T09:00:00.000Z");
     const lapsesOn = new Date("2026-08-01T12:00:00.000Z");
@@ -955,11 +955,12 @@ describe("decideTripAdmission — a release that lapses before the departure", (
       supersededAt: null,
     } as WaiverRecord;
     const readinessAt = (now: Date) => {
+      // Measured at the departure (issue #2611), as the roster does.
       const resolution = {
         bookingWaiver: release,
         personSignedWaivers: [release],
         currentTemplateVersion: null,
-        now,
+        now: waiverClockInstant({ now, startsAt: departure, endsAt: null }),
       };
       return calculateReadiness({
         timezone: "UTC",
@@ -971,8 +972,11 @@ describe("decideTripAdmission — a release that lapses before the departure", (
         now,
       });
     };
-    expect(readinessAt(today).status).toBe("ready");
-    // On the day the release has lapsed: blocked, and named as a signature
+    // Readiness now says so today, three weeks ahead; admission still admits.
+    const ahead = readinessAt(today);
+    expect(ahead.status).toBe("blocked");
+    expect(ahead.blockers).toContainEqual(expect.objectContaining({ code: "waiver_lapsed" }));
+    // And on the day the release has lapsed: blocked, and named as a signature
     // that ran out rather than one nobody ever sent.
     const onTheDay = readinessAt(departure);
     expect(onTheDay.status).toBe("blocked");

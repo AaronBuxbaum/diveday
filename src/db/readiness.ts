@@ -26,6 +26,7 @@ import {
   overriddenRefusal,
   releaseLapsedForBooking,
   riderMedicalHold,
+  waiverClockInstant,
 } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
 import {
@@ -1632,6 +1633,7 @@ export async function listTripsReadiness(
           .select({
             id: trips.id,
             startsAt: trips.startsAt,
+            endsAt: trips.endsAt,
             courseId: trips.courseId,
             minimumAge: courses.minimumAge,
             priceCents: trips.priceCents,
@@ -1774,6 +1776,16 @@ export async function listTripsReadiness(
       ? calendarDateInTimezone(courseRow.startsAt, timezone)
       : null;
 
+    // **The release's clocks run at the departure** (issue #2611): the later of
+    // now and the trip's end (multi-day) or start, never before now. The
+    // night-before roster, Today and the reminder then agree with the dock, and
+    // a liveaboard's release that lapses mid-trip blocks before it sails. Cards,
+    // payment and age keep their own instants.
+    const waiverNow = waiverClockInstant({
+      now,
+      startsAt: courseRow?.startsAt ?? null,
+      endsAt: courseRow?.endsAt ?? null,
+    });
     // A rider is held to the release and never to its medical (H-109), so a
     // hold does not outrank their signatures and a held record is a signed one
     // — read only while it is itself current, never the hold's own standing.
@@ -1785,14 +1797,14 @@ export async function listTripsReadiness(
       bookingWaiver: row.waiver,
       personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
       currentTemplateVersion: currentTemplateGeneration,
-      now,
+      now: waiverNow,
     });
     const releaseLapsed = releaseLapsedForBooking({
       bookingWaiver: row.waiver,
       personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
       currentTemplateVersion: currentTemplateGeneration,
       heldToMedical: isHeldToMedical(row.booking.participantType),
-      now,
+      now: waiverNow,
     });
     const referral = overriddenReferral(
       effectiveWaiver,
