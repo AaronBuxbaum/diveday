@@ -2,14 +2,17 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
-import { resolveTripNotice, TripNoticeBanner } from "./TripNoticeBanner";
+import { resolveTripNotice, TripNoticeBanner, type TripNoticeInput } from "./TripNoticeBanner";
 
 afterEach(cleanup);
 
 const TRIP = "11111111-1111-4111-8111-111111111111";
 const OTHER_TRIP = "22222222-2222-4222-8222-222222222222";
 
-function resolve(notice?: string, extra: { gate?: string | string[]; form?: string } = {}) {
+function resolve(
+  notice?: string,
+  extra: Pick<TripNoticeInput, "gate" | "form" | "bid" | "roster"> = {},
+) {
   return resolveTripNotice({ notice, tripId: TRIP, locale: "en-US", ...extra });
 }
 
@@ -132,5 +135,23 @@ describe("resolveTripNotice", () => {
     expect(held?.tone).toBe("warning");
     expect(held?.text).not.toBe(resolve("diver-added")?.text);
     expect(held?.text).toMatch(/confirm/i);
+  });
+
+  /**
+   * Remove refused for a diver marked aboard a boat that has left (H-122). The
+   * name is the page's own roster's, never the URL's, so a hand-edited `bid`
+   * with no seat behind it says nothing rather than a sentence about nobody.
+   */
+  it("names the diver Remove refused, beside the roster, and says nothing without one", () => {
+    const roster = [{ booking: { id: "seat-1" }, person: { fullName: "Hugo Marsh" } }];
+    const refused = resolve("booking-remove-aboard", { bid: "seat-1", roster });
+
+    expect(refused).toEqual({
+      form: "roster",
+      tone: "danger",
+      text: "Hugo Marsh is marked aboard. Mark them ashore first, or call the captain.",
+    });
+    expect(resolve("booking-remove-aboard", { bid: "seat-2", roster })).toBeUndefined();
+    expect(resolve("booking-remove-aboard")).toBeUndefined();
   });
 });

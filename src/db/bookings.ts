@@ -41,6 +41,7 @@ import {
   type TripAdmissionRefusal,
 } from "@/lib/trip-admission";
 import { hasReturned, hasSailed, MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
+import { aboardAtSeaBookingIds } from "./aboard-at-sea";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { inTrainingBefore, listCourseSeatsInTraining } from "./certifications-in-training";
@@ -76,6 +77,7 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
+import { lockSeatDeparture } from "./seat-locks";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { getShopCurrency } from "./stripe-accounts";
 import { liveTrip } from "./trips-live";
@@ -1636,12 +1638,12 @@ export type RestoreBookingOutcome =
  *   bookings pause" (glossary). The diver whose row was mis-tapped is an
  *   existing booking; putting them back is undoing a clerical slip, not
  *   selling a seat the hold was meant to stop.
- * - *Already departed.* `cancelBooking` has no trip-state gate at all and the
- *   Remove control renders on every roster row, including at sea — a departed
- *   trip is still `scheduled` and roll call stays live. Refusing the undo
- *   there would make a misclick on an at-sea manifest permanent, and the two
- *   errors are not symmetric: an under-listed manifest costs a search, an
- *   over-listed one costs a tap.
+ * - *Already departed.* `cancelBooking` refuses only a diver marked aboard a
+ *   boat that has left (H-122); every other row can still be removed at sea —
+ *   a departed trip is still `scheduled` and roll call stays live. Refusing
+ *   the undo there would make a misclick on an at-sea manifest permanent, and
+ *   the two errors are not symmetric: an under-listed manifest costs a
+ *   search, an over-listed one costs a tap.
  *
  * Capacity and the course ratio still bind in both cases, so a seat that has
  * genuinely been taken is still refused.
@@ -2486,20 +2488,60 @@ async function changeParticipantType(
   });
 }
 
-export async function cancelBooking(db: AppDb, shopId: string, bookingId: string) {
-  const booking = await cancelBookingRow(db, shopId, bookingId);
+/**
+ * Why a staff removal did not cancel the seat. `aboard_at_sea`: the diver is
+ * marked aboard a boat that has left (H-122, `aboardAtSeaBookingIds`), and
+ * the crew marks them ashore first.
+ */
+export type CancelBookingRefusal = "not_found" | "aboard_at_sea";
+
+export type CancelBookingOutcome =
+  | {
+      ok: true;
+      booking: typeof bookings.$inferSelect & {
+        previousStatus: (typeof bookings.$inferSelect)["status"];
+      };
+    }
+  | { ok: false; reason: CancelBookingRefusal };
+
+/**
+ * **A staff member takes a seat off the roster.** Refused for a diver marked
+ * aboard a boat that has left (H-122): a cancelled booking is nobody to every
+ * roll-call reader, so the removal would drop a person on the water from the
+ * count. Asked inside the transaction, under the trip and the seat locks the
+ * crew's roll-call write takes in the same order (`lockSeatDeparture`), so a
+ * tap at the rail and a removal at the desk cannot both decide against the
+ * same pre-state. No override: "mark ashore" is the correction, recorded with
+ * a name and a time.
+ */
+export async function cancelBooking(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  now: Date = nowDate(),
+): Promise<CancelBookingOutcome> {
+  const outcome = await cancelBookingRow(db, shopId, bookingId, now);
   // A diver just left the roster, which is a manifest change like any other —
   // and one that lands on shore while a captain may already be walking to the
   // boat (ADR 20260804-manifest-web-push). Published *after* the transaction
   // commits, never inside it: this fans out to a push service, and holding a
   // database transaction open across third-party HTTP is how a slow provider
   // becomes a lock-wait on the bookings table.
-  if (booking) await publishManifestEvent(db, shopId, booking.tripId);
-  return booking;
+  if (outcome.ok) await publishManifestEvent(db, shopId, outcome.booking.tripId);
+  return outcome;
 }
 
-async function cancelBookingRow(db: AppDb, shopId: string, bookingId: string) {
-  return db.transaction(async (tx) => {
+async function cancelBookingRow(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  now: Date,
+): Promise<CancelBookingOutcome> {
+  return db.transaction(async (tx): Promise<CancelBookingOutcome> => {
+    // The departure, then the seat: the order every seat writer takes, the
+    // crew's roll call among them.
+    const tripId = await lockSeatDeparture(tx, shopId, bookingId);
+    if (!tripId) return { ok: false, reason: "not_found" };
     // What the seat was before this, read under the row's lock: only a seat
     // that was `booked` becomes a diver's "your booking is canceled" email, and
     // a roster removal of a checked-in or no-show row is not one.
@@ -2508,12 +2550,15 @@ async function cancelBookingRow(db: AppDb, shopId: string, bookingId: string) {
       .from(bookings)
       .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
       .for("update");
+    if (!prior) return { ok: false, reason: "not_found" };
+    const atSea = await aboardAtSeaBookingIds(tx, { shopId, tripId, now, bookingIds: [bookingId] });
+    if (atSea.has(bookingId)) return { ok: false, reason: "aboard_at_sea" };
     const [updated] = await tx
       .update(bookings)
       .set({ status: "cancelled" })
       .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
       .returning();
-    if (!updated || !prior) return null;
+    if (!updated) return { ok: false, reason: "not_found" };
     const booking = { ...updated, previousStatus: prior.status };
     // Belt-and-suspenders: verifyBookingCapability already fails closed on a
     // cancelled booking, but revoking outright keeps the capability table's
@@ -2546,7 +2591,7 @@ async function cancelBookingRow(db: AppDb, shopId: string, bookingId: string) {
       bookingId: booking.id,
       subjectPersonId: booking.personId,
     });
-    return booking;
+    return { ok: true, booking };
   });
 }
 
@@ -2636,6 +2681,15 @@ export async function selfCancelBooking(
     if (trip && hasSailed(trip.startsAt, now)) {
       return { ok: false, reason: "trip_departed" };
     }
+    // Within the hour `hasSailed` allows, a boat the crew have taken out with
+    // this diver counted aboard has left all the same (H-122).
+    const atSea = await aboardAtSeaBookingIds(tx, {
+      shopId: input.shopId,
+      tripId: row.tripId,
+      now,
+      bookingIds: [input.bookingId],
+    });
+    if (atSea.has(input.bookingId)) return { ok: false, reason: "trip_departed" };
 
     const [cancelled] = await tx
       .update(bookings)
@@ -2661,6 +2715,7 @@ export async function selfCancelBooking(
       shopId: input.shopId,
       leadBookingId: input.bookingId,
       tripId: row.tripId,
+      now,
     });
     return { ok: true, party };
   });
@@ -2704,7 +2759,7 @@ async function releaseSelfCancelledSeat(
  */
 export async function cancelUnclaimedPartySeats(
   tx: DbExecutor,
-  input: { shopId: string; leadBookingId: string; tripId: string },
+  input: { shopId: string; leadBookingId: string; tripId: string; now: Date },
 ): Promise<PartyCancelOutcome> {
   const [lead] = await tx
     .select({ email: people.email })
@@ -2736,10 +2791,18 @@ export async function cancelUnclaimedPartySeats(
     )
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id))
     .for("update", { of: bookings });
+  // A party seat counted aboard a boat that has left stays, like a claimed one
+  // (H-122).
+  const atSea = await aboardAtSeaBookingIds(tx, {
+    shopId: input.shopId,
+    tripId: input.tripId,
+    now: input.now,
+    bookingIds: seats.map((seat) => seat.bookingId),
+  });
   const outcome: PartyCancelOutcome = { cancelled: [], stayed: [] };
   for (const seat of seats) {
     const name = seatName(seat.fullName, seat);
-    if (seat.claimedAt !== null || seat.status !== "booked") {
+    if (seat.claimedAt !== null || seat.status !== "booked" || atSea.has(seat.bookingId)) {
       outcome.stayed.push({ bookingId: seat.bookingId, seatName: name });
       continue;
     }

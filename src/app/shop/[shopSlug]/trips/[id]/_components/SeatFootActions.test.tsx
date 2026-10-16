@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { rendersFlush } from "@/test/button-flush";
 import { fixtures, ready, renderRoster } from "./roster-test-fixtures";
@@ -82,5 +82,36 @@ describe("the move to another departure", () => {
     renderRoster({ ...fixtures, roster: [checkedIn], moveSeat });
 
     expect(screen.queryByText("Move to another departure")).toBeNull();
+  });
+});
+
+/**
+ * **A diver marked aboard a boat that has left** (H-122): Remove says why it
+ * will not, and offers nothing that posts. `cancelBooking` refuses the same
+ * seat under its locks; this is the row saying so before anyone tries.
+ */
+describe("Remove on a diver marked aboard at sea", () => {
+  it("says the diver is aboard and carries no confirm and no submit", () => {
+    renderRoster({
+      ...fixtures,
+      roster: [ready],
+      aboardAtSea: new Set([ready.booking.id]),
+    });
+
+    const remove = screen.getByText("Remove booking");
+    fireEvent.click(remove);
+    expect(
+      screen.getByText("Rene Marsh is marked aboard. Mark them ashore first, or call the captain."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Yes, remove booking" })).toBeNull();
+    // Not a form's control: nothing behind this Remove can post the removal.
+    expect(remove.closest("form")).toBeNull();
+  });
+
+  it("leaves another diver's Remove as it was", () => {
+    renderRoster({ ...fixtures, roster: [ready], aboardAtSea: new Set(["someone-else"]) });
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove booking" }));
+    expect(screen.getByRole("button", { name: "Yes, remove booking" })).toBeInTheDocument();
   });
 });

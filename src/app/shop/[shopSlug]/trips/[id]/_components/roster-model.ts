@@ -137,6 +137,8 @@ export type RosterRows = {
   courseMaterialsDoneByPerson?: ReadonlyMap<string, CourseMaterialsDone>;
   /** Per held seat, the other held seats a split may move with it (`sameNameHeldSeats`). */
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
+  /** Seats whose diver is marked aboard a boat that has left: Remove refuses them (H-122). */
+  aboardAtSea?: ReadonlySet<string>;
   /**
    * Per held seat, the matched diver's last dive day at this shop, or null for
    * none (issue #1789): the evidence line in the armed "Same person" confirm.

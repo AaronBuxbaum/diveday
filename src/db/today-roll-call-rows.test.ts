@@ -716,9 +716,11 @@ describe("unclosed roll call (DOM-H3)", () => {
         afterDiveRow(await getTodayWork(db, shop.id, shop.slug, shop.timezone), trip.id),
       ).toBeDefined();
 
-      // The remaining diver's seat was cancelled — they are off the manifest's
-      // roster, so there is nobody left uncounted.
-      await cancelBooking(db, shop.id, pulled);
+      // The remaining diver's seat was cancelled at the dock, before the boat
+      // left (once it has, a diver marked aboard cannot be removed, H-122) —
+      // they are off the manifest's roster, so there is nobody left uncounted.
+      const atTheDock = new Date(trip.startsAt.getTime() - 10 * 60 * 1000);
+      expect(await cancelBooking(db, shop.id, pulled, atTheDock)).toMatchObject({ ok: true });
 
       const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
       expect(rollCallRows(work, trip.id)).toEqual([]);

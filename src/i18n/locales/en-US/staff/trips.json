@@ -575,6 +575,7 @@
     "sendNewWaiverMessage": "Emails {name} a new waiver. They stay blocked until they sign it. The physician’s answer stays on file.",
     "refundEligibleUntil": "Refund-eligible until {date}",
     "removeBooking": "Remove booking",
+    "removeAboard": "{name} is marked aboard. Mark them ashore first, or call the captain.",
     "moveSeat": "Move to another departure",
     "moveSeatTo": "Departure",
     "moveSeatSubmit": "Move",

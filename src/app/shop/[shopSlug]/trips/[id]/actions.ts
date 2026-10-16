@@ -12,7 +12,6 @@ import {
 import { sendBookingCancelledNotice } from "@/db/booking-cancelled-notice";
 import {
   bookingDiverName,
-  cancelBooking,
   confirmBookingIdentity,
   restoreBooking,
   setBookingParticipantType,
@@ -66,7 +65,7 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { uuidParam } from "@/lib/uuid";
-import { isRosterBooking, requireRosterBooking, tripPath } from "./roster-booking";
+import { isRosterBooking, removeSeat, requireRosterBooking, tripPath } from "./roster-booking";
 
 const paymentStatusSchema = z.enum(["unpaid", "deposit_paid", "paid", "waived", "refunded"]);
 
@@ -293,8 +292,8 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   if (!uuidParam(bookingId)) redirect(back);
   const dbi = await getDb();
   await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, back);
-  const cancelled = await cancelBooking(dbi, s.user.shopId, bookingId);
-  const from = cancelled?.previousStatus ?? "cancelled";
+  // Refused, with nothing sent, for a diver marked aboard at sea (H-122).
+  const from = await removeSeat(dbi, s.user.shopId, bookingId, back);
   await trackEvent({ name: "booking_cancelled", source: "staff" });
   // Same activity line an add writes (addBookingAction), for the same reason:
   // the trip's log, read from the Trip surface, is the record of who touched

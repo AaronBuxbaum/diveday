@@ -12,6 +12,7 @@ import {
 import { combineCertRequirements } from "@/lib/readiness";
 import { isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
+import { aboardAtSeaBookingIds } from "./aboard-at-sea";
 import { listAgencyCheckableCards } from "./agency-check";
 import { sameNameHeldSeats as findSameNameHeldSeats } from "./bookings";
 import type { AppDb } from "./client";
@@ -95,6 +96,7 @@ export async function getTripGuests(
     activity,
     stripeAccount,
     courseNextStepByBooking,
+    aboardAtSea,
   ] = await Promise.all([
     filters.confirmName ? findSimilarDivers(db, shop.id, filters.confirmName) : [],
     // The returning-diver picker only books, so it is skipped once the boat is
@@ -122,6 +124,9 @@ export async function getTripGuests(
     // What each student on a course session has already been told to do next
     // (issues #1196, #1205), so the roster's box opens holding it.
     courseNextStepsByBooking(db, shop.id, tripId),
+    // Who Remove refuses on this roster: marked aboard a boat that has left
+    // (H-122), the rule `cancelBooking` applies under its locks.
+    aboardAtSeaBookingIds(db, { shopId: shop.id, tripId, now: nowDate() }),
   ]);
 
   // The last-minute pipeline: who said they are around on this date, who among
@@ -311,6 +316,8 @@ export async function getTripGuests(
     notesByBooking,
     courseNextStepByBooking,
     sameNameHeldSeats,
+    /** Seats whose diver is marked aboard a boat that has left: Remove refuses them (H-122). */
+    aboardAtSea,
     /**
      * Per held seat, the matched diver's last dive day at this shop, or null
      * when there is none (issue #1789). Only held seats have an entry.

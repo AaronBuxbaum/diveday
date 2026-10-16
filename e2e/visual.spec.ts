@@ -49,9 +49,9 @@ import { E2E_FROZEN_CLOCK } from "./servers";
 import { mintOnboardFormPath } from "./setup-link";
 
 /**
- * Visual regression coverage. Two hundred and ninety-seven `capture()` calls,
+ * Visual regression coverage. Two hundred and ninety-nine `capture()` calls,
  * each shot in light at a phone and a desktop viewport and in dark at the
- * desktop viewport alone (`DARK_VIEWPORTS`) — 912 screenshots per run, down
+ * desktop viewport alone (`DARK_VIEWPORTS`) — 918 screenshots per run, down
  * from 1,218 when dark took both widths (see ADR
  * 20260729-reg-suit-visual-regression). Keep this count in sync when adding a
  * surface; each `capture()` call costs 3 screenshots per CI run — 4 for a
@@ -4183,6 +4183,24 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: /^Didn’t sail · \d+$/ }).waitFor();
         await page.getByRole("heading", { name: /^Not counted at the dock · 1$/ }).waitFor();
         await capture(page, "trip-record-uncounted", scheme);
+      });
+
+      // **Remove on a diver marked aboard a boat that has left** (H-122). The
+      // dawn boat boarded its sailed seats and is home, so a sailed row's
+      // Remove opens on why it will not, with nothing to confirm.
+      test(`Remove on a diver marked aboard says why it will not (${scheme})`, async ({ page }) => {
+        const tripId = await seededTripId(page, "blue-mantis", SAILED_TRIP);
+        await page.goto(counterPath("blue-mantis", tripId));
+        await page.getByRole("heading", { name: /^Sailed · \d+$/ }).waitFor();
+        const row = page
+          .locator('#roster li[id^="booking-"]')
+          .filter({ has: page.locator("summary", { hasText: /^\s*Remove booking\s*$/ }) })
+          .first();
+        await openRosterDetails(row);
+        await row.locator("summary", { hasText: /^\s*Remove booking\s*$/ }).click();
+        await row.getByRole("status").filter({ hasText: "is marked aboard." }).waitFor();
+        await expect(row.getByRole("button", { name: "Yes, remove booking" })).toHaveCount(0);
+        await capture(page, "trip-remove-aboard-refused", scheme);
       });
 
       /**

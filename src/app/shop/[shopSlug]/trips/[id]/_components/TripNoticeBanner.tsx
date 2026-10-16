@@ -32,6 +32,8 @@ const NOTICE_KEYS: Record<
     tone: "success" | "danger" | "warning";
     key: StaffMessageKey;
     countKey?: StaffMessageKey;
+    /** The words name the seat's diver (`TripNoticeInput.roster`); said only when known. */
+    named?: true;
   }
 > = {
   saved: { form: "details", tone: "success", key: "trips.notices.saved" },
@@ -85,6 +87,14 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.bookingRemovedRefundOwner",
   },
   "booking-restored": { form: "roster", tone: "success", key: "trips.notices.bookingRestored" },
+  // Refused: the diver is marked aboard a boat that has left (H-122). Nothing
+  // changed, and the row stays open on the Remove that was tapped.
+  "booking-remove-aboard": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.roster.removeAboard",
+    named: true,
+  },
   // A seat moved to another departure, or why it stayed (ADR 20261013-staff-move-a-seat).
   "seat-moved": { form: "roster", tone: "success", key: "trips.notices.seatMoved" },
   "seat-moved-untold": { form: "roster", tone: "warning", key: "trips.notices.seatMovedUntold" },
@@ -652,6 +662,13 @@ export type TripNoticeInput = {
    */
   tripId: string;
   locale: string;
+  /** The seat `?bid=` names, for a notice whose words name its diver. */
+  bid?: string;
+  /**
+   * The page's own roster, where that seat's name is read: never from the URL,
+   * and a `bid` that is not on it names nobody.
+   */
+  roster?: readonly { booking: { id: string }; person: { fullName: string } }[];
 };
 
 /**
@@ -668,9 +685,21 @@ export function resolveTripNotice({
   gate,
   tripId,
   locale,
+  bid,
+  roster,
 }: TripNoticeInput): FormNotice | undefined {
   const banner = noticeFromParam(notice, NOTICE_KEYS);
   if (!banner) return undefined;
+  if (banner.named) {
+    const diverName = roster?.find(({ booking }) => booking.id === bid)?.person.fullName;
+    // No seat by that id on this roster: a hand-edited URL, with nobody to name.
+    if (!diverName) return undefined;
+    return {
+      form: tripNoticeForm(form, banner.form),
+      tone: banner.tone,
+      text: staffTranslator(locale)(banner.key, { name: diverName }),
+    };
+  }
   const t = staffTranslator(locale);
   const parsedCount = count !== undefined && /^\d+$/.test(count) ? Number(count) : undefined;
   const refusal =

@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
-import { getShopBookingTripId } from "@/db/bookings";
+import { cancelBooking, getShopBookingTripId } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
-import { shopPath } from "@/lib/staff-notices";
+import { revalidateAndRedirect } from "@/lib/navigation";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 
 /**
@@ -45,4 +46,19 @@ export async function requireRosterBooking(
   back: string,
 ): Promise<void> {
   if (!(await isRosterBooking(db, shopId, tripId, bookingId))) redirect(back);
+}
+
+/**
+ * **Take a seat off the roster, or say why not.** A diver marked aboard a boat
+ * that has left is refused (H-122): back to the row with
+ * `booking-remove-aboard` and nothing changed — no email, no refund, no trail
+ * line. Otherwise the seat is cancelled and this returns what it was before,
+ * which decides whether the diver is told.
+ */
+export async function removeSeat(db: AppDb, shopId: string, bookingId: string, back: string) {
+  const cancelled = await cancelBooking(db, shopId, bookingId);
+  if (!cancelled.ok && cancelled.reason === "aboard_at_sea") {
+    revalidateAndRedirect(back, noticeUrl(back, "booking-remove-aboard", { bid: bookingId }));
+  }
+  return cancelled.ok ? cancelled.booking.previousStatus : "cancelled";
 }

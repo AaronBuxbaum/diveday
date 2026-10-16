@@ -127,6 +127,8 @@ export type RosterFixtureOptions = {
   certifyDefaultLevel?: "open_water" | "advanced_open_water" | null;
   /** "Move to another departure", when the page offers it. */
   moveSeat?: SeatMove;
+  /** Seats marked aboard a boat that has left, whose Remove refuses (H-122). */
+  aboardAtSea?: ReadonlySet<string>;
 };
 
 function rosterProps({
@@ -148,6 +150,7 @@ function rosterProps({
   splitAsksDateOfBirth,
   certifyDefaultLevel,
   moveSeat,
+  aboardAtSea,
 }: RosterFixtureOptions) {
   return {
     trip: {
@@ -179,6 +182,7 @@ function rosterProps({
       sameNameHeldSeats,
       heldSeatLastDiveDay,
       packageDivesByBooking,
+      aboardAtSea,
     },
     actions: {
       markRosterWaiverInPersonAction: noRefusal,

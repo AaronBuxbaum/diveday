@@ -575,6 +575,7 @@
     "sendNewWaiverMessage": "Envía a {name} una nueva exención por correo. La plaza sigue bloqueada hasta que la firme. La respuesta del médico queda archivada.",
     "refundEligibleUntil": "Reembolsable hasta {date}",
     "removeBooking": "Eliminar reserva",
+    "removeAboard": "{name} figura a bordo. Primero marca que está en tierra, o llama al capitán.",
     "moveSeat": "Mover a otra salida",
     "moveSeatTo": "Salida",
     "moveSeatSubmit": "Mover",
