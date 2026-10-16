@@ -7572,7 +7572,9 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const email = `invite-capture-${scheme}@example.com`;
         await page.goto("/shop/blue-mantis/settings/team");
-        const inviteSection = page.locator("section").filter({ hasText: "Invite someone" });
+        // The invite form opens from its button under the team (ideas item 58).
+        const inviteSection = page.locator("#invite");
+        await inviteSection.locator("summary").click();
         await inviteSection.getByLabel("Full name").fill("Priya Nair");
         await inviteSection.getByLabel("Email").fill(email);
         await inviteSection.getByLabel("Instructor", { exact: true }).check();

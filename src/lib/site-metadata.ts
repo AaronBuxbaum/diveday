@@ -72,7 +72,8 @@ export const sharedLinkCardImage = {
 } as const satisfies NonNullable<NonNullable<Metadata["openGraph"]>["images"]>;
 
 /**
- * The `robots` field for a shop's own public pages, from its opt-out stamp.
+ * The `robots` field for a shop's own public pages, from its opt-out stamp
+ * and whether it is a demo.
  *
  * A shop is indexed by default — being findable is most of the point of having
  * a public schedule — but it can say no, and saying no has to reach the page
@@ -84,8 +85,12 @@ export const sharedLinkCardImage = {
  * the site default rather than stating an explicit `index: true` that would
  * have to be kept in step with the root layout.
  */
-export function shopSearchListingRobots(
-  optedOutAt: Date | null | undefined,
-): Metadata["robots"] | undefined {
-  return optedOutAt ? { index: false, follow: false } : undefined;
+export function shopSearchListingRobots(shop: {
+  searchListingOptOutAt: Date | null | undefined;
+  isDemo: boolean;
+}): Metadata["robots"] | undefined {
+  // A demo shop is never listed (H-142): a minted demo may wear its visitor's
+  // shop name on staff screens, and its storefront must not become a page a
+  // search for that name finds. The sitemap already leaves demos out.
+  return shop.searchListingOptOutAt || shop.isDemo ? { index: false, follow: false } : undefined;
 }

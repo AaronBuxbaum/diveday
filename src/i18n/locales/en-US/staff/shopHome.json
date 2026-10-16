@@ -27,10 +27,7 @@
     "importNotAuthorized": "Importing writes divers’ personal and medical records, so it’s limited to owners and managers.",
     "gearImportNotAuthorized": "Importing gear service history is limited to owners and managers.",
     "diveSiteImportNotAuthorized": "Importing dive sites is limited to owners and managers.",
-    "backupNotAuthorized": "Only an owner or manager can change backup settings.",
-    "whatsappNotAuthorized": "Only an owner or manager can change WhatsApp settings.",
     "promosNotAuthorized": "Promo codes are limited to owners and managers.",
-    "integrationsNotAuthorized": "Only an owner or manager can change integrations.",
     "billingNotAuthorized": "Billing is limited to the owner.",
     "dayBlowoutNotAuthorized": "Calling a whole day off is limited to owners, managers and captains. You can still call one departure from its own page.",
     "activityNotAuthorized": "The activity log is limited to owners and managers."
@@ -189,6 +186,15 @@
     "deskGroupLabel": "The desk",
     "crewTips": "Your share of tips this week: {amount}.",
     "crewMonth": "{month}: {boats, plural, one {# boat} other {# boats}} · {dives, plural, one {# dive run} other {# dives run}} · {hours, plural, one {# hour} other {# hours}} on the water."
+  },
+  "thinBoats": {
+    "heading": "{count, plural, one {One boat in the next two weeks could use divers.} other {# boats in the next two weeks could use divers.}}",
+    "seats": "{booked} of {capacity}",
+    "needsBy": "{count, plural, one {needs # more by {when}, or it cancels itself} other {needs # more by {when}, or it cancels itself}}",
+    "deal": "Send a last-minute deal",
+    "invite": "Invite past divers",
+    "ladder": "See who could take it",
+    "minimum": "Change the minimum"
   },
   "quietAddDeparture": "Add a departure",
   "quietNextDepartureLabel": "Next departure",

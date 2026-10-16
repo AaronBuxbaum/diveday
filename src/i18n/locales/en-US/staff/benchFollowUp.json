@@ -39,7 +39,6 @@
     "billSent": "Bill sent.",
     "billAlready": "This ticket already has a bill.",
     "billNotConnected": "Connect Stripe in Settings to send bills.",
-    "billNotAuthorized": "Only an owner or manager can send a bill.",
     "billInvalid": "These lines can’t go on a bill. Check each amount and quantity.",
     "billTaxLocation": "Tax is on, so this bill needs the customer’s billing address. Send it from Orders.",
     "billStripeFailed": "Stripe couldn’t create that bill. Try again in a moment.",

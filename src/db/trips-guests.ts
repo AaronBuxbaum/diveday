@@ -13,12 +13,14 @@ import { combineCertRequirements } from "@/lib/readiness";
 import { isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { listAgencyCheckableCards } from "./agency-check";
+import { type IssuedCard, issuedCardsForTrip } from "./agency-processing";
 import { sameNameHeldSeats as findSameNameHeldSeats } from "./bookings";
 import type { AppDb } from "./client";
 import { type CourseMaterialsDone, courseMaterialsDoneByPerson } from "./course-materials";
 import { courseNextStepsByBooking } from "./course-next-step";
 import { spendableDivesForTrip } from "./dive-packages";
 import { findSimilarDivers, lastDiveDaysHere, listBookableDivers } from "./divers";
+import { listInviteSuggestions } from "./invite-suggestions";
 import { listLastMinuteList } from "./last-minute-list";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "./operations";
 import { getTripRosterWithPaymentMarks } from "./payment-marks";
@@ -87,6 +89,7 @@ export async function getTripGuests(
     prepDivers,
     waitlist,
     invitations,
+    inviteSuggestions,
     lastMinuteList,
     lastMinutePromos,
     lastMinutePromoRecipients,
@@ -112,6 +115,9 @@ export async function getTripGuests(
     shared ? shared.prepDivers : listTripPrepDivers(db, shop.id, tripId),
     getTripWaitlist(db, shop.id, tripId),
     listTripInvitations(db, shop.id, tripId),
+    // Past divers of this departure's site worth asking (H-141), only while
+    // it has a seat to offer.
+    isFull(trip) ? null : listInviteSuggestions(db, { shopId: shop.id, tripId, now: nowDate() }),
     listLastMinuteList(db, shop.id),
     listTripLastMinutePromos(db, shop.id, tripId),
     listTripLastMinutePromoRecipients(db, shop.id, tripId),
@@ -144,6 +150,7 @@ export async function getTripGuests(
     certificationSummaries,
     courseMaterialsDone,
     agencyCheckCardsByPerson,
+    issuedCardByPerson,
   ] = await Promise.all([
     // What "Different person" on a held seat can offer to move along with it:
     // other held seats under the same name on the same matched diver, on other
@@ -207,6 +214,9 @@ export async function getTripGuests(
         .filter(({ booking }) => !booking.identityUnconfirmedAt)
         .map(({ person }) => person.id),
     }),
+    // The cards this session issued, so each one can carry "Processed with
+    // PADI" (fifth-loop ideas, item 46). Only a course session issues any.
+    trip.courseId ? issuedCardsForTrip(db, shop.id, tripId) : new Map<string, IssuedCard>(),
   ]);
 
   const heldSeatLastDiveDay = new Map<string, Date | null>(
@@ -307,6 +317,7 @@ export async function getTripGuests(
     requirement,
     waitlist,
     invitations,
+    inviteSuggestions,
     activity,
     confirmMatches,
     diverCandidates,
@@ -362,6 +373,8 @@ export async function getTripGuests(
      * their agencies from this tab (H-105). Held seats are never in it.
      */
     agencyCheckCardsByPerson,
+    /** Per student, the card this session issued and whether the agency has it yet. */
+    issuedCardByPerson,
     /** Done, who and when, by person: the roster's capsule and done line read here. */
     courseMaterialsDoneByPerson: courseMaterialsDone,
     /**

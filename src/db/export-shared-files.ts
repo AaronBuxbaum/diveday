@@ -162,6 +162,13 @@ export const CERTIFICATIONS_CSV = sharedFile<ShopRow<"certificationRows">>({
     { header: "issued_by_shop_at", in: "shop", value: (row) => row.issuedByShopAt },
     { header: "issued_from_trip_id", in: "shop", value: (row) => row.issuedFromTripId },
     { header: "issued_by_person_id", in: "shop", value: (row) => row.issuedByPersonId },
+    // The shop's own record that it told the agency (item 46).
+    {
+      header: "processed_with_agency_at",
+      in: "shop",
+      value: (row) => row.processedWithAgencyAt,
+    },
+    { header: "processed_by_person_id", in: "shop", value: (row) => row.processedByPersonId },
     { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
     { header: "deleted_by_person_id", in: "shop", value: (row) => row.deletedByPersonId },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
@@ -211,6 +218,13 @@ export const SPECIALTY_CERTIFICATIONS_CSV = sharedFile<ShopRow<"specialtyRows">>
       in: "shop",
       value: (row) => row.listedFromCertificationId,
     },
+    // The shop's own record that it told the agency (item 46), as on certifications.csv.
+    {
+      header: "processed_with_agency_at",
+      in: "shop",
+      value: (row) => row.processedWithAgencyAt,
+    },
+    { header: "processed_by_person_id", in: "shop", value: (row) => row.processedByPersonId },
     { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
     { header: "deleted_by_person_id", in: "shop", value: (row) => row.deletedByPersonId },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
@@ -263,6 +277,13 @@ export const NITROX_CERTIFICATIONS_CSV = sharedFile<ShopRow<"nitroxRows">>({
       in: "shop",
       value: (row) => row.listedFromCertificationId,
     },
+    // The shop's own record that it told the agency (item 46), as on certifications.csv.
+    {
+      header: "processed_with_agency_at",
+      in: "shop",
+      value: (row) => row.processedWithAgencyAt,
+    },
+    { header: "processed_by_person_id", in: "shop", value: (row) => row.processedByPersonId },
     { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
     { header: "deleted_by_person_id", in: "shop", value: (row) => row.deletedByPersonId },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
@@ -396,7 +417,10 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
       in: "shop",
       value: (row) => row.courseMaterialsDoneByPersonId,
     },
-    { header: "hotel_pickup_location", in: "shop", value: (row) => row.hotelPickupLocation },
+    // Where to collect the diver, and their lunch preference (item 56):
+    // statements the diver made, so they are theirs as well.
+    { header: "hotel_pickup_location", in: "both", value: (row) => row.hotelPickupLocation },
+    { header: "dietary_note", in: "both", value: (row) => row.dietaryNote },
     { header: "pickup_time", in: "shop", value: (row) => row.pickupTime },
     {
       header: "payment_status",
@@ -1402,6 +1426,8 @@ export const ORDERS_CSV = sharedFile<ShopRow<"orderRows">>({
     { header: "source", in: "both", value: (row) => row.source },
     { header: "status", in: "both", value: (row) => row.status },
     { header: "collection", in: "both", value: (row) => row.collection },
+    { header: "room_number", in: "both", value: (row) => row.roomNumber },
+    { header: "room_hotel", in: "both", value: (row) => row.roomHotel },
     { header: "currency", in: "both", value: (row) => row.currency },
     { header: "total_cents", in: "both", value: (row) => row.totalCents },
     { header: "pass_through_cents", in: "shop", value: (row) => row.passThroughCents },

@@ -27,10 +27,7 @@
     "importNotAuthorized": "La importación escribe datos personales y médicos de los buceadores, así que está limitada a propietarios y gerentes.",
     "gearImportNotAuthorized": "Importar el historial del equipo está limitado a propietarios y gerentes.",
     "diveSiteImportNotAuthorized": "Importar sitios de buceo está limitado a propietarios y gerentes.",
-    "backupNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de respaldo.",
-    "whatsappNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de WhatsApp.",
     "promosNotAuthorized": "Los códigos promocionales están limitados a propietarios y gerentes.",
-    "integrationsNotAuthorized": "Solo un propietario o gerente puede cambiar las integraciones.",
     "billingNotAuthorized": "La facturación es solo para el propietario.",
     "dayBlowoutNotAuthorized": "Cancelar un día entero está limitado a propietarios, gerentes y capitanes. Aún puedes cancelar una salida desde su propia página.",
     "activityNotAuthorized": "El registro de actividad está limitado a propietarios y gerentes."
@@ -189,6 +186,15 @@
     "deskGroupLabel": "El mostrador",
     "crewTips": "Tu parte de las propinas esta semana: {amount}.",
     "crewMonth": "En {month}: {boats, plural, one {# salida} other {# salidas}} · {dives, plural, one {# inmersión realizada} other {# inmersiones realizadas}} · {hours, plural, one {# hora} other {# horas}} en el agua."
+  },
+  "thinBoats": {
+    "heading": "{count, plural, one {Una salida de las próximas dos semanas necesita buceadores.} other {# salidas de las próximas dos semanas necesitan buceadores.}}",
+    "seats": "{booked} de {capacity}",
+    "needsBy": "{count, plural, one {falta # más antes del {when}, o se cancela sola} other {faltan # más antes del {when}, o se cancela sola}}",
+    "deal": "Enviar una oferta de último minuto",
+    "invite": "Invitar a buceadores anteriores",
+    "ladder": "Ver quién podría tomarlo",
+    "minimum": "Cambiar el mínimo"
   },
   "quietAddDeparture": "Añadir una salida",
   "quietNextDepartureLabel": "Próxima salida",

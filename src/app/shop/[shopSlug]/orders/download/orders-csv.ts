@@ -49,6 +49,7 @@ const METHOD_CODES = {
   stripe_invoice: "stripe",
   cash: "cash",
   card_machine: "card_machine",
+  room_charge: "room_charge",
 } as const satisfies Record<OrderExportLine["collection"], string>;
 
 function orderRows(lines: readonly OrderExportLine[], timeZone: string) {

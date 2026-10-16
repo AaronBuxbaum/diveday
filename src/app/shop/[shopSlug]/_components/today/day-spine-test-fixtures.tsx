@@ -144,6 +144,7 @@ export function renderSpine({
         spine: assembleDaySpine({ departures, actions }, { departures: tomorrow, actions: [] }),
         shopSlug: "blue-mantis",
         shopName: "Blue Mantis",
+        mailShopName: "Blue Mantis",
         // The source locale: these tests read the English bundle.
         locale: DEFAULT_DIVER_LOCALE,
         timeZone: "America/New_York",

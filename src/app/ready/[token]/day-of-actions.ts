@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
+  setBookingDietaryNote,
   setBookingDiveIntent,
   setBookingHotelPickup,
   setBookingLastDived,
@@ -15,6 +16,7 @@ import { setWelcomeConsent } from "@/db/welcome-cues";
 import { nowDate } from "@/lib/clock";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
 import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
+import { cleanDietaryNote } from "@/lib/lunch-aboard";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { isDiver } from "@/lib/participant-types";
 import { RE_ENTRY_ASKS, reEntryOffersFor } from "@/lib/re-entry";
@@ -55,6 +57,7 @@ const dayOfSchema = z.object({
   reEntryAsk: z.enum(RE_ENTRY_ASKS).optional(),
   note: z.string().trim().max(300).optional(),
   hotelPickupLocation: z.string().trim().max(300).optional(),
+  dietaryNote: z.string().max(400).optional(),
   kind: z.enum(["carry_gear", "first_timer", "find_group", "none"]).optional(),
   welcomeAsked: z.literal("1").optional(),
   welcomeShare: z.literal("on").optional(),
@@ -98,6 +101,14 @@ export async function saveDayOfDetailsFromReady(token: string, formData: FormDat
       writes.push(
         setBookingHotelPickup(ctx.db, { shopId, bookingId, hotelPickupLocation: location }),
       );
+    }
+  }
+  // Asked only on a departure that serves lunch aboard, and the server, not
+  // the form, is what keeps a hand-made post from storing one elsewhere.
+  if (answers.dietaryNote !== undefined && data.lunchAboard) {
+    const note = cleanDietaryNote(answers.dietaryNote);
+    if (note !== (data.dietaryNote ?? null)) {
+      writes.push(setBookingDietaryNote(ctx.db, { shopId, bookingId, note }));
     }
   }
   if (!data.identityHeld) {

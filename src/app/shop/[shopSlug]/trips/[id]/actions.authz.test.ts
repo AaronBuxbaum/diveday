@@ -586,14 +586,14 @@ describe("who may run each action on the trip page", () => {
     // wait list's own work, open on the same terms as adding to it: it copies
     // leads, seats nobody, and invites nobody (ADR 20260813-wait-list-is-a-lead-list).
     "carryWaitlistAction",
-    // **A seat move** (ADR 20261013-staff-move-a-seat) is the counter's
-    // reseat, open on the same terms as seating a walk-in: every gate the
-    // target admits by runs again inside `moveBooking`, nothing is charged or
-    // refunded (a higher price is reported as owed), and both trips carry a
-    // trail naming the staffer.
+    // **A seat move** (ADR 20261013-staff-move-a-seat) is the counter's reseat,
+    // open on the same terms as seating a walk-in: every gate the target admits
+    // by runs again inside `moveBooking`, nothing is charged or refunded (a
+    // higher price is reported as owed), and both trips carry a trail naming the staffer.
     "moveSeatAction",
     "recordTripInvitationAction",
     "createDirectTripInvitationAction",
+    "invitePastDiverAction",
     "removeBookingAction",
     "undoRemoveBookingAction",
     // Attesting that a flagged booking really is the diver it was attached to
@@ -630,21 +630,21 @@ describe("who may run each action on the trip page", () => {
     // role: the tap only ever lands beside a name on that session's own
     // roster (issue #717).
     "certifyDiverFromRosterAction",
-    // The other half of teaching a session (issues #1196, #1205), and open on
-    // exactly the same terms as the tap above it: the box only ever appears
-    // beside a name on that session's own roster, and what it records is a
-    // sentence rather than a credential.
+    // The other half of teaching a session (issues #1196, #1205), open on the
+    // same terms as the tap above it: it appears only beside a name on that
+    // session's own roster, and records a sentence rather than a credential.
     "saveCourseNextStepAction",
-    // The learning-materials tick (ADR 20261008-course-learning-materials),
-    // open on the same terms as the next step beside it: it appears only on a
-    // course session's own roster, and it is bookkeeping that gates nothing.
+    // The learning-materials tick (ADR 20261008-course-learning-materials) and
+    // the sent-to-the-agency tick (item 46), open on the same terms as the next
+    // step: bookkeeping on a course session's own roster that gates nothing.
     "setCourseMaterialsDoneAction",
+    "markCardProcessedAction",
     "updateBookingPickupAction",
-    // **A rider added at the dock** (batch 4, D6) is the counter's walk-in at
-    // the rail: whoever holds the roster when somebody turns up, on the same
-    // terms as seating a walk-in. Everything that limits the seat is in the
-    // one seating path it goes through (capacity, the certificate, a sailed or
-    // canceled departure), it never seats a diver, and the trail names who did it.
+    "updateBookingDietaryNoteAction",
+    // **A rider added at the dock** (batch 4, D6) is the counter's walk-in at the rail: whoever
+    // holds the roster when somebody turns up, on the same terms as seating a walk-in. All that
+    // limits the seat is in the one seating path it goes through (capacity, the certificate, a
+    // sailed or canceled departure), it never seats a diver, and the trail names who did it.
     "addDockRiderAction",
     // **A note to everyone on a departure** (batch 4, J4): "the marina lot is
     // closed" is known first by whoever is at the dock, and the precedent is

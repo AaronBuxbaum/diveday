@@ -8,7 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { GroupLabel } from "@/components/ui/group-label";
-import { canPersonReadPrivateRecapPulse } from "@/db/authz";
+import { canPersonManageShopSettings, canPersonReadPrivateRecapPulse } from "@/db/authz";
 import { listOpenRecapPulses, type OpenRecapPulse } from "@/db/recap-pulses";
 import {
   countStaffReviewGroups,
@@ -38,6 +38,7 @@ import {
   PublishAllStatus,
 } from "./_components/ReviewBulkPublish";
 import { type ReviewGroup, ReviewLedgerRow } from "./_components/ReviewLedgerRow";
+import { ReviewLinkEmptyForm } from "./_components/ReviewLinkEmptyForm";
 import { ReviewNarrowChips, reviewsPageHref } from "./_components/ReviewNarrowChips";
 import { type ReviewRowCopy, ReviewRowProvider } from "./_components/ReviewRowActions";
 import { ReviewsAggregateLine } from "./_components/ReviewsAggregateLine";
@@ -91,6 +92,8 @@ const PULSE_NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMess
   "pulse-addressed": { tone: "success", key: "reviews.notice.pulseAddressed" },
   "pulse-not-authorized": { tone: "danger", key: "reviews.notice.pulseNotAuthorized" },
   error: { tone: "danger", key: "reviews.notice.error" },
+  "review-url-saved": { tone: "success", key: "settings.main.notice.reviewUrlSaved" },
+  "review-url-invalid": { tone: "danger", key: "settings.main.notice.reviewUrlInvalid" },
 };
 
 /**
@@ -131,6 +134,7 @@ export default async function ReviewsPage({
   // would read a diver's private words for a staffer this gate exists to keep them from, and one
   // round trip is the price of not doing that.
   const canReadPulses = await canPersonReadPrivateRecapPulse(db, shop.id, session.user.personId);
+  const canManageSettings = await canPersonManageShopSettings(db, shop.id, session.user.personId);
   const locale = await requestLocale(shop.defaultLocale);
   const timezone = shop.timezone ?? "UTC";
   // The current calendar month in the shop's own timezone — "this month" means
@@ -377,21 +381,9 @@ export default async function ReviewsPage({
           <EmptyState
             title={t("reviews.emptyHeading")}
             body={t("reviews.emptyDetail")}
-            /* Nothing here yet is not something staff can fix by clicking — a
-               review arrives when a diver opens the recap after a trip sails,
-               and no setting turns that on. What *is* theirs to set is where a
-               diver goes next, so that is the door: the review link the
-               recap offers after every rating. */
+            /* The one field the shop can set here (fifth-loop ideas, item 59). */
             action={
-              <div className="flex flex-col items-center gap-2">
-                <p className="max-w-md text-sm text-muted">{t("reviews.emptyReviewLinkBody")}</p>
-                <Link
-                  href={`/shop/${shopSlug}/settings#review-link`}
-                  className={buttonClass({ variant: "secondary", size: "sm" })}
-                >
-                  {t("reviews.emptyReviewLinkAction")}
-                </Link>
-              </div>
+              canManageSettings ? <ReviewLinkEmptyForm reviewUrl={shop.reviewUrl} t={t} /> : null
             }
           />
         ) : (

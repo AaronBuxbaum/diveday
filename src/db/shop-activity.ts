@@ -299,7 +299,14 @@ export async function listShopActivityPeople(db: AppDb, shopId: string) {
  * a caller cannot file a line about another tenant's seat or departure.
  */
 export type ShopActivityWrite =
-  | { code: "order_refunded" | "order_paid_cash" | "order_paid_card_machine"; orderId: string }
+  | {
+      code:
+        | "order_refunded"
+        | "order_paid_cash"
+        | "order_paid_card_machine"
+        | "order_paid_room_charge";
+      orderId: string;
+    }
   | { code: "paid_after_close_refunded"; checkoutId: string }
   | {
       code:
@@ -344,12 +351,9 @@ export type ShopActivityWrite =
 /** The line for counter money on an order, by how it was taken. */
 export function counterPaymentActivity(
   orderId: string,
-  collection: "cash" | "card_machine",
+  collection: "cash" | "card_machine" | "room_charge",
 ): ShopActivityWrite {
-  return {
-    code: collection === "cash" ? "order_paid_cash" : "order_paid_card_machine",
-    orderId,
-  };
+  return { code: `order_paid_${collection}`, orderId };
 }
 
 /**

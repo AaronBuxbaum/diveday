@@ -223,7 +223,7 @@ export default async function OrdersIndexPage({
     </Link>
   ) : null;
   const { stuckPaymentOperations, owedRefunds, paidAfterClose, failedRefunds, payouts } =
-    await readBackOffice(db, shop.id, canReconcilePayments);
+    await readBackOffice(db, shop, canReconcilePayments);
 
   // One reading of the URL, shared with "Download orders (CSV)" so the file
   // holds the orders this page shows (`orderIndexFilter`).

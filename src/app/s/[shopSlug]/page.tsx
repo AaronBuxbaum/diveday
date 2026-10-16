@@ -102,7 +102,7 @@ export async function generateMetadata({
     title: `Dive schedule — ${shop.name}`,
     description,
     alternates: { canonical: publicSchedulePath(shop.slug) },
-    robots: shopSearchListingRobots(shop.searchListingOptOutAt),
+    robots: shopSearchListingRobots(shop),
     openGraph: {
       ...openGraphSite,
       title: `Dive schedule — ${shop.name}`,

@@ -12,8 +12,7 @@
     "disconnected": "Backup destination removed. The delivery history below stays.",
     "test-delivered": "Test delivery landed in your bucket.",
     "test-failed": "The test delivery didn’t land. {reason}",
-    "no-destination": "Save a destination first, then run a test delivery.",
-    "not-authorized": "Only an owner or manager can change backup settings."
+    "no-destination": "Save a destination first, then run a test delivery."
   },
   "status": {
     "configuredHeading": "Backups are set up",

@@ -4,6 +4,7 @@ import type {
   AgencyListedHostAction,
 } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckHost";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
+import type { IssuedCard } from "@/db/agency-processing";
 import type { SameNameHeldSeat } from "@/db/bookings";
 import type { CourseMaterialsDone } from "@/db/course-materials";
 import type { listBookingNotes } from "@/db/operations";
@@ -128,6 +129,8 @@ export type RosterRows = {
   elearningChecksOff?: boolean;
   /** Per diver, the cards the browser extension could check with their agencies (H-105). */
   agencyCheckCardsByPerson?: ReadonlyMap<string, readonly AgencyCheckableCard[]>;
+  /** Per student, the card this session issued and whether the agency has it yet (ideas item 46). */
+  issuedCardByPerson?: ReadonlyMap<string, IssuedCard>;
   /**
    * Who finished the course's materials, by person, across every departure of
    * the course (`courseMaterialsDoneByPerson`): the roster's "done" reads here.
@@ -231,6 +234,8 @@ export type RosterActions = {
    * offered one without the other would be a roster that half-taught.
    */
   saveCourseNextStepAction?: (formData: FormData) => void;
+  /** Tick a card this session issued processed with its agency, or take it back (ideas item 46). */
+  markCardProcessedAction?: (formData: FormData) => void;
   /**
    * Tick a student's learning materials done, or take the tick back (ADR
    * 20261008-course-learning-materials). Present only on a course session
@@ -251,6 +256,8 @@ export type RosterActions = {
   /** Files the other cards a match's page listed, ticked under the diver's row (layer 3). */
   agencyListedAction?: AgencyListedHostAction;
   updatePickupAction?: (bookingId: string, formData: FormData) => void;
+  /** The desk's lunch note for a seat (item 56, review F8); only on a lunch-aboard departure. */
+  updateDietaryNoteAction?: (bookingId: string, formData: FormData) => void;
   /**
    * "Move to another departure" (ADR 20261013-staff-move-a-seat): the action
    * and the departures it may move to. Absent once the departure has left, or

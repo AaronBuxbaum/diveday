@@ -1131,6 +1131,9 @@ async function scrubBookingRows(
         courseNextStepByPersonId: null,
         hotelPickupLocation: null,
         pickupTime: null,
+        // What they can't eat (ideas item 56) is health-adjacent prose about
+        // this person, typed for one boat's galley.
+        dietaryNote: null,
         // The name a held seat was booked under (H-13) is somebody's name, and
         // after an erasure no one is left to ask whether it was them.
         identityBookedAs: null,
@@ -1802,6 +1805,16 @@ async function scrubOrders(
     // consistent answer (issue #1607, found by a `security-reviewer` pass).
     .set({ hostedInvoiceUrl: null, invoicePdfUrl: null, description: null })
     .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)));
+  // The room a room charge went to (fifth-loop ideas, item 57) placed this
+  // diver in one hotel room on one night. Redacted rather than cleared, since a
+  // room charge must name a room; the hotel stays, being the shop's own
+  // account with the front desk and what the month's total is grouped by.
+  await tx
+    .update(orders)
+    .set({ roomNumber: REDACTED_TEXT })
+    .where(
+      and(eq(orders.shopId, shopId), eq(orders.personId, personId), isNotNull(orders.roomNumber)),
+    );
 
   // The per-line half of the same text, on the same form, carried out of the
   // shop under the same exclusion.

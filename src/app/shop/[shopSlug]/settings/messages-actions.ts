@@ -33,10 +33,15 @@ export async function saveReviewUrlAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
   await settingsBlock(session);
-  const parsed = reviewUrlSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(noticeUrl(settings, "review-url-invalid", { saved: "reviewLink" }));
+  // The Reviews page's empty state offers the same box in place (fifth-loop
+  // ideas, item 59), and its save lands back there.
+  const fromReviews = formData.get("from") === "reviews";
+  const back = fromReviews ? shopPath(session.user.shopSlug, "reviews") : settings;
+  const saved = fromReviews ? {} : { saved: "reviewLink" };
+  const parsed = reviewUrlSchema.safeParse({ reviewUrl: formData.get("reviewUrl") });
+  if (!parsed.success) redirect(noticeUrl(back, "review-url-invalid", saved));
   await setShopReviewUrl(await getDb(), session.user.shopId, parsed.data.reviewUrl);
-  revalidateAndRedirect(settings, noticeUrl(settings, "review-url-saved", { saved: "reviewLink" }));
+  revalidateAndRedirect(back, noticeUrl(back, "review-url-saved", saved));
 }
 
 const deskHoursForm = z.object({ deskOpens: formValue(), deskCloses: formValue() });

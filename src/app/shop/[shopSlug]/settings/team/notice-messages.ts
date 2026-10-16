@@ -1,3 +1,4 @@
+import { sayWords, sendLimitWords } from "@/i18n/shared-sentences";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { NoticeMessages } from "@/lib/staff-notices";
 
@@ -13,7 +14,7 @@ export function noticeMessages(t: StaffTranslator): NoticeMessages {
     restored: { tone: "success", text: t("settings.team.notice.restored") },
     "restore-failed": { tone: "danger", text: t("settings.team.notice.restoreFailed") },
     "invite-invalid": { tone: "danger", text: t("settings.team.notice.inviteInvalid") },
-    "send-limit": { tone: "warning", text: t("settings.team.notice.sendLimit") },
+    "send-limit": { tone: "warning", text: sayWords(t, sendLimitWords("invites")) },
     "roles-invalid": { tone: "danger", text: t("settings.team.notice.rolesInvalid") },
     "roles-conflict": { tone: "danger", text: t("settings.team.notice.rolesConflict") },
     "invite-already-on-team": {

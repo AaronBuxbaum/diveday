@@ -95,7 +95,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical },
-    robots: shopSearchListingRobots(shop.searchListingOptOutAt),
+    robots: shopSearchListingRobots(shop),
     openGraph: {
       ...openGraphSite,
       title,

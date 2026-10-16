@@ -437,6 +437,12 @@ const tripInvitationSchema = z.object({
 const directTripInvitationSchema = tripInvitationSchema.extend({
   kind: z.literal("direct_trip_invitation"),
   unsubscribeUrl: z.url().max(2_000),
+  /**
+   * On a course session, the course's own prerequisite note in the shop's
+   * words, so an invite to Rescue or Divemaster never implies the diver
+   * already qualifies (dive-domain review N3).
+   */
+  prerequisiteNote: z.string().trim().min(1).max(2_000).optional(),
 });
 
 // A staff-triggered last-minute-fill blast (docs ADR

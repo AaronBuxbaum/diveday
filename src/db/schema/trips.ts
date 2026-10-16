@@ -444,6 +444,13 @@ export const trips = pgTable(
     conditionsHold: boolean("conditions_hold").notNull().default(false),
     isPrivate: boolean("is_private").notNull().default(false),
     /**
+     * **Lunch is served aboard** (fifth-loop ideas, item 56): a long day boat
+     * feeds its divers. Only then does the diver's day-of form ask what they
+     * cannot eat, and Prep and the paper day count lunches and list the
+     * notes. Off by default; a two-tank morning feeds nobody.
+     */
+    lunchAboard: boolean("lunch_aboard").notNull().default(false),
+    /**
      * **This departure is meant to run without an in-water guide, and the shop
      * says so.**
      *

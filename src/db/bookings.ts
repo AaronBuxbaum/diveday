@@ -18,6 +18,7 @@ import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { seatName } from "@/lib/held-seat";
 import { normalizeEmailAddress } from "@/lib/inbox";
+import { cleanDietaryNote } from "@/lib/lunch-aboard";
 import { rowCanBeReactivated } from "@/lib/no-show";
 import {
   holdsRegisterKind,
@@ -3012,6 +3013,29 @@ export async function setBookingLastDived(
     )
     .returning({ id: bookings.id });
   return Boolean(updated);
+}
+
+/**
+ * What a diver can't eat, from the Day-of form of a departure that serves
+ * lunch aboard (fifth-loop ideas, item 56). The booking's, not the person's:
+ * it is for this boat's galley. Null clears it.
+ */
+export async function setBookingDietaryNote(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; note: string | null },
+): Promise<boolean> {
+  const updated = await db
+    .update(bookings)
+    .set({ dietaryNote: cleanDietaryNote(input.note) })
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        eq(bookings.shopId, input.shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .returning({ id: bookings.id });
+  return updated.length > 0;
 }
 
 export async function setBookingHotelPickup(

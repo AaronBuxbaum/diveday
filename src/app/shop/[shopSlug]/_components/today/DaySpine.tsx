@@ -131,9 +131,8 @@ type RowControls = {
 };
 
 /**
- * The copy and context every row's control needs, composed once per render on
- * the server: the controls are Client Components, so a translator never
- * crosses the boundary.
+ * The copy and context every row's control needs, composed once per render on the server:
+ * the controls are Client Components, so a translator never crosses the boundary.
  */
 function rowControls(
   base: Pick<RowControls, "shopSlug" | "shopName" | "helpRequestAction" | "t">,
@@ -801,6 +800,7 @@ export type DaySpineContext = {
   spine: DaySpineData;
   shopSlug: string;
   shopName: string;
+  mailShopName: string; // what a mail that leaves says: always `shop.name` (H-142)
   locale: string;
   timeZone: string;
   currency: string;
@@ -915,7 +915,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
     now,
   } = context;
   const t = staffTranslator(locale);
-  const controls = rowControls({ shopSlug, shopName, helpRequestAction, t });
+  const controls = rowControls({ shopSlug, shopName: context.mailShopName, helpRequestAction, t });
   const crewed = new Set(crewedTripIds ?? []);
   const jobs = spineJobCount(spine);
   const tomorrowDate = spine.tomorrow.stations[0]?.startsAt ?? null;

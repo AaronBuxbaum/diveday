@@ -9,6 +9,7 @@ import { countBoatsWithoutRadioIdentity } from "@/db/boats";
 import { shopHasPricedRecords } from "@/db/shops";
 import { getShopStripeAccount, stripeCurrencyMismatch } from "@/db/stripe-accounts";
 import { requestLocale } from "@/i18n/request";
+import { ownerOrManagerWords, sayWords } from "@/i18n/shared-sentences";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { isAddressLookupConfigured } from "@/lib/address-lookup";
 import {
@@ -32,10 +33,9 @@ import { BoatsSitesGroup } from "./_components/groups/BoatsSitesGroup";
 import { BookingsGroup } from "./_components/groups/BookingsGroup";
 import { DataGroup } from "./_components/groups/DataGroup";
 import { DATA_GROUP, SettingsGroup, type SettingsView } from "./_components/groups/kit";
-import { MessagesGroup } from "./_components/groups/MessagesGroup";
 import { MoneyGroup } from "./_components/groups/MoneyGroup";
-import { NotificationsGroup } from "./_components/groups/NotificationsGroup";
 import { RarelyChangedGroup } from "./_components/groups/RarelyChangedGroup";
+import { ReachGroup } from "./_components/groups/ReachGroup";
 import { RentalsGroup } from "./_components/groups/RentalsGroup";
 import { ShopGroup } from "./_components/groups/ShopGroup";
 import { TeamGroup } from "./_components/groups/TeamGroup";
@@ -120,7 +120,10 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
     // Same shape and the same reason: the WhatsApp page's own gate bounces a
     // non-owner/manager here, and the payment-settings wording above would
     // explain the wrong surface.
-    "whatsapp-not-authorized": { tone: "danger", text: t("whatsapp.notice.not-authorized") },
+    "whatsapp-not-authorized": {
+      tone: "danger",
+      text: sayWords(t, ownerOrManagerWords("whatsapp")),
+    },
     // Team and Import are the last two Settings sub-pages whose gate used to
     // teleport a refused staffer to Today saying nothing at all. Same rule as
     // the four above: bounce to the nearest parent surface with a code it
@@ -130,7 +133,7 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
     // Backups hold the same bar as the export download — the destination
     // receives the whole shop, medical evidence included — and the same
     // bounce-with-an-explanation rule as every gate above.
-    "backup-not-authorized": { tone: "danger", text: t("backup.notice.not-authorized") },
+    "backup-not-authorized": { tone: "danger", text: sayWords(t, ownerOrManagerWords("backup")) },
     "diving-options-saved": { tone: "success", text: t("boats.divingOptionsSaved") },
     "diving-options-invalid": { tone: "danger", text: t("boats.divingOptionsInvalid") },
     "diving-options-none": { tone: "danger", text: t("boats.divingOptionsNone") },
@@ -288,9 +291,7 @@ export default async function SettingsPage({
           connectConfigured={connectConfigured}
         />
 
-        <MessagesGroup view={view} canManageMessaging={canManageMessaging} />
-
-        <NotificationsGroup view={view} />
+        <ReachGroup view={view} canManageMessaging={canManageMessaging} />
 
         <WebsiteGroup view={view} />
 

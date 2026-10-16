@@ -311,6 +311,13 @@ export type OfflineManifestPayload = {
            * additive like `participantType`; absent says nothing.
            */
           | "bookedAs"
+          /**
+           * The lunch note (item 56, dive-domain review B1): the crew who
+           * hand out lunch read the dock copy, not Prep. A meal preference,
+           * already staff-only like the rest of this record; optional and
+           * additive, so no record-version bump.
+           */
+          | "dietaryNote"
         > & {
           /**
            * **The counter's own answer, and the reason the dock copy can take
@@ -971,6 +978,7 @@ export function serializeManifests(
         nitroxRequested: diver.nitroxRequested,
         participantType: diver.participantType,
         bookedAs: diver.bookedAs,
+        ...(diver.dietaryNote ? { dietaryNote: diver.dietaryNote } : {}),
         checkedIn: diver.checkedIn,
         notHere: diver.notHere,
         ...(diver.runningLateAt ? { runningLateAt: diver.runningLateAt.toISOString() } : {}),

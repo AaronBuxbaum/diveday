@@ -7,6 +7,13 @@
   owns (ADR
   [20260826-stripe-tax-is-opt-in-and-provider-owned](../../architecture/decisions/20260826-stripe-tax-is-opt-in-and-provider-owned.md)),
   and from a **deposit**, which is the shop's money held early.
+- **Room charge** — an open invoice settled by billing a resort guest's room rather than taking money
+  at the counter: the hotel collects it and settles with the shop monthly. It is the order's
+  `collection` (`room_charge`), with `room_number` required and `room_hotel` optional, recorded from
+  the order page like cash or the card machine and marked paid out of band to Stripe. The Orders
+  index adds up the month's room charges per hotel for an owner or manager. ADR
+  [20261009-counter-payments](../../architecture/decisions/20261009-counter-payments.md), amended
+  2026-10-16.
 - **Dashboard refund** — a refund somebody made outside DiveDay, usually in the shop's own Stripe dashboard. The `charge.refunded` webhook records it on the order or checkout it reverses, reconciled to Stripe's cumulative `amount_refunded`, so a refund DiveDay made itself is never counted twice. Its trail code is `stripe_dashboard_refund`. A party checkout's dashboard refund names no seat, so no seat's payment is changed; it waits on the stuck-operations queue for a human, and no automatic refund runs against that checkout's seats until then. ADR [20261009-stripe-reversals-reach-diveday](../../architecture/decisions/20261009-stripe-reversals-reach-diveday.md).
 - **Payout** — money Stripe moved from a shop’s connected account to its bank. One `stripe_payouts` row per Stripe payout, written by the `payout.paid`, `payout.failed` and `payout.canceled` webhooks and scoped to the shop holding the event’s account; a failure or a cancellation is final. After the webhook answers, Stripe is asked, once, what it carried: the span of days ("covering Sep 27 to Oct 1") and Stripe’s fees on it. Reports lists the month’s payouts and fees; the Orders index shows the latest. Informs, never moves money. ADR [20261012-payouts-reach-diveday](../../architecture/decisions/20261012-payouts-reach-diveday.md).
 - **Paid after close** — a diver's card charged on a checkout DiveDay had already closed (`expired`: a stale quote retired, a reschedule, a seat that changed type). The checkout stays `expired` and no seat is marked paid from it, because its price no longer describes any seat. `booking_checkouts.paid_after_close_at` and `paid_after_close_cents` record what Stripe captured; it waits on the Orders index, with a Refund for an owner or manager, until `refunded_cents` reaches it, by that refund or a dashboard refund. No automatic refund (issue #2335).

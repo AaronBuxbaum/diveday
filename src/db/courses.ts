@@ -28,7 +28,7 @@ import {
 import { type CourseContent, canonicalAgency } from "@/lib/courses";
 import { REFRESHER_TEMPLATE_SLUGS } from "@/lib/re-entry";
 import type { CertificationLevel } from "@/lib/readiness";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { attachStandardCourseForms, courseFormsAwaitingTextByCourse } from "./course-forms";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import type { Course } from "./schema";
@@ -146,6 +146,29 @@ export async function listActiveCourses(
     .select()
     .from(courses)
     .where(scope)
+    .orderBy(...progressionOrder);
+}
+
+/**
+ * Every course the shop has, hidden ones too, in progression order: the
+ * course ladder's catalog (`src/db/course-ladder.ts`), where a hidden taster
+ * still had students and only an active course can be a next step.
+ */
+export async function listCatalogInProgressionOrder(db: DbExecutor, shopId: string) {
+  return db
+    .select({
+      id: courses.id,
+      slug: courses.slug,
+      title: courses.title,
+      agency: courses.agency,
+      isActive: courses.isActive,
+      isIntroCourse: courses.isIntroCourse,
+      minimumCertificationLevel: courses.minimumCertificationLevel,
+      certifiesLevel: courses.certifiesLevel,
+      minimumAge: courses.minimumAge,
+    })
+    .from(courses)
+    .where(eq(courses.shopId, shopId))
     .orderBy(...progressionOrder);
 }
 

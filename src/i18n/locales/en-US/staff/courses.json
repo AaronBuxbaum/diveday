@@ -153,8 +153,7 @@
       "pasteWording": "Paste the agency’s wording",
       "awaitingText": "No student signs this until it has its text.",
       "addImpact": "{students, plural, one {A form added now asks # student} other {A form added now asks # students}} on {sessions, plural, one {# upcoming session} other {# upcoming sessions}} to sign it.",
-      "removeLocked": "Only an owner or manager can take a form off a course.",
-      "removeNotAuthorized": "That didn’t save. Only an owner or manager can take a form off a course."
+      "removeNotSaved": "That didn’t save."
     }
   },
   "dayByDay": {
@@ -198,5 +197,31 @@
     "add": "Add a material",
     "max": "A course holds up to {max, plural, one {# material} other {# materials}}.",
     "empty": "Nothing yet. Add the eLearning or reading students finish before day 1."
+  },
+  "processing": {
+    "heading": "Cards to process",
+    "agencyLine": "{count, plural, one {# card to process with {agency}} other {# cards to process with {agency}}}",
+    "cardLine": "{card}, certified {date}",
+    "late": "Waiting over 30 days",
+    "mark": "Mark sent to {agency}"
+  },
+  "ladder": {
+    "heading": "Next steps",
+    "taster": "{count, plural, one {# did {course} in the last 12 months} other {# did {course} in the last 12 months}} · {wentOn} went on to {next}",
+    "certified": "{count, plural, one {# diver who certified as {course} here in the last 12 months has no {next} booked} other {# divers who certified as {course} here in the last 12 months have no {next} booked}}",
+    "nextSession": "Next {next}: {date} ({booked} of {capacity})",
+    "noSession": "No {next} with a seat on the board yet.",
+    "seeWho": "See who",
+    "invite": "Invite",
+    "inviting": "Inviting…",
+    "inviteAria": "Invite {name} to {next}",
+    "referral": "Physician referral open: call first",
+    "notice": {
+      "invite-sent": "Invite sent.",
+      "invite-opted-out": "Invitation recorded but not emailed: this diver turned off optional emails from the shop.",
+      "invite-cooldown": "Not sent: this diver had an invite from the shop in the last 30 days.",
+      "invite-unavailable": "Not sent: this diver can’t take that session.",
+      "invite-failed": "That invite didn’t go out. Try again."
+    }
   }
 }

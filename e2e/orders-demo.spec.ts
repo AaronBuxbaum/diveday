@@ -276,7 +276,7 @@ test.describe("demo billing history", () => {
     // sentence naming whose orders these are used to be read off the first row
     // and therefore vanished exactly here.
     await expect(page.getByText("Showing orders for Grace Halloran.")).toBeVisible();
-    await expect(page.getByText("No DiveDay orders match these filters.")).toBeVisible();
+    await expect(page.getByText("No orders match these filters.")).toBeVisible();
   });
 
   /** A filter has to survive paging, or page 2 quietly shows the unfiltered set. */

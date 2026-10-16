@@ -175,6 +175,22 @@
   all. Neither looks like a hand-verified card, so the two are never read as the same thing at a
   busy desk. Only `src/lib/readiness.ts` decides who boards; the tones carry no gate
   (`src/i18n/card-labels.test.ts` keeps this entry and the code in step).
+- **Processed with the agency** — the instructor's "Mark sent to PADI", after Certify, that the
+  shop has submitted the student to the agency (PADI, SSI and the rest), dated and naming who
+  ticked it, and read back as "Processed with PADI · Oct 25". Any card this shop issued carries it:
+  a level card, an Enriched Air card or a specialty card (`processed_with_agency_at`,
+  `processed_by_person_id` on `certifications`, `nitrox_certifications` and
+  `specialty_certifications`, each with its `*_processed_only_when_issued` check). It records the
+  shop's own act and issues nothing: the agency sends its own card. The same tap takes it back, and
+  the course page lists every issued card still to process, oldest first and with no lookback, a
+  card waiting more than 30 days saying so. Gates nothing.
+- **Course ladder** — the Courses page's "N did Discover Scuba this year · M went on to Open Water",
+  with the names of those who did not and an Invite to the next course's soonest session with a
+  seat (`nextCourseFor`, `src/lib/course-ladder.ts`; H-141's one-at-a-time invite under the
+  **30-day invite cooldown**). The names leave out anyone holding a card at or above the level the
+  next course certifies (any agency, any state) and anyone under its minimum age on the session's
+  day, and the send re-checks both. Someone whose release waits on a physician's referral is
+  flagged for a call instead of an Invite.
 - **Shop-issued certification** — a level card **this shop's own instructor certified**, from a per-
   student tap on a course session's own roster (issue #717), never automatic. It lands `verified`
   immediately (`issued_by_shop_at` set, alongside `issued_from_trip_id` naming the session and

@@ -14,11 +14,14 @@ import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import {
   parseSetupRequest,
+  SETUP_CURRENT_SYSTEMS,
   SETUP_FIELDS,
   SETUP_HONEYPOT_FIELD,
   SETUP_REQUESTS_PER_HOUR,
+  type SetupCurrentSystem,
   type SetupField,
   type SetupRequestFormState,
+  setupSentPath,
   trippedHoneypot,
 } from "@/lib/setup-requests";
 // A plain module, deliberately not a second server action — see its comment.
@@ -84,7 +87,14 @@ export async function submitSetupRequestAction(
   if (trippedHoneypot(form.data[SETUP_HONEYPOT_FIELD])) {
     // A count, so a bot wave shows in the drain; nothing it typed is logged.
     log("setup_request.honeypot_tripped", "info");
-    redirect(SET_UP_SENT_PATH);
+    // The same address a person with that answer gets, so the page tells the
+    // bot nothing about whether it was caught.
+    const answered = (SETUP_CURRENT_SYSTEMS as readonly string[]).includes(values.currentSystem);
+    redirect(
+      answered
+        ? setupSentPath(SET_UP_SENT_PATH, values.currentSystem as SetupCurrentSystem)
+        : SET_UP_SENT_PATH,
+    );
   }
 
   const parsed = parseSetupRequest(values);
@@ -109,5 +119,6 @@ export async function submitSetupRequestAction(
   });
   after(() => announceSetupRequest(row));
 
-  redirect(SET_UP_SENT_PATH);
+  // What they use today, and nothing else, rides to the next page (item 55).
+  redirect(setupSentPath(SET_UP_SENT_PATH, parsed.data.currentSystem));
 }

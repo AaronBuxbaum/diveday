@@ -131,6 +131,8 @@ const NOTICE_KEYS: Record<
   },
   "pickup-saved": { form: "roster", tone: "success", key: "trips.notices.pickupSaved" },
   "pickup-invalid": { form: "roster", tone: "danger", key: "trips.notices.pickupInvalid" },
+  "dietary-saved": { form: "roster", tone: "success", key: "trips.notices.dietarySaved" },
+  "dietary-invalid": { form: "roster", tone: "danger", key: "trips.notices.dietaryInvalid" },
   "booking-restore-full": {
     form: "roster",
     tone: "danger",
@@ -181,6 +183,16 @@ const NOTICE_KEYS: Record<
     form: "add-diver",
     tone: "warning",
     key: "trips.notices.invitationOptedOut",
+  },
+  // A suggested past diver contacted with an invite inside the cooldown
+  // (H-141): nothing was recorded or sent.
+  "invite-cooldown": { form: "add-diver", tone: "warning", key: "trips.notices.inviteCooldown" },
+  // A suggested diver this departure would no longer sell a seat to (its
+  // level, a specialty, a full boat): nothing was recorded or sent (review F1).
+  "invite-unavailable": {
+    form: "add-diver",
+    tone: "warning",
+    key: "trips.notices.inviteUnavailable",
   },
   "identity-confirmed": { form: "roster", tone: "success", key: "trips.notices.identityConfirmed" },
   "identity-split": { form: "roster", tone: "success", key: "trips.notices.identitySplit" },

@@ -246,6 +246,8 @@ type ActivityParamShapes = {
    */
   order_paid_cash: { actor: string };
   order_paid_card_machine: { actor: string };
+  /** Charged to a resort guest's room (fifth-loop ideas, item 57). */
+  order_paid_room_charge: { actor: string };
   /**
    * Money a card paid on a checkout DiveDay had already closed, sent back from
    * the Orders index (issue #2335). On the departure the checkout was for.
@@ -435,6 +437,7 @@ export const ACTIVITY_CODES = [
   "order_refunded",
   "order_paid_cash",
   "order_paid_card_machine",
+  "order_paid_room_charge",
   "paid_after_close_refunded",
   "seat_refunded",
   "payment_waived",

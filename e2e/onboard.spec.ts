@@ -216,7 +216,7 @@ test("a freshly onboarded shop finds a way forward on its empty Divers and Order
   // so it is a card above the list rather than the page's standing primary
   // (UX audit item 20), and the empty state says only what is true.
   await page.goto(`/shop/${unique}/orders`);
-  await expect(page.getByText("No DiveDay orders yet.", { exact: true })).toBeVisible();
+  await expect(page.getByText("No orders yet.", { exact: true })).toBeVisible();
   // One door, once: the header holds no primary without an account to send
   // an order from, and the empty state does not repeat the card's door
   // (docs/design/principles.md #8).

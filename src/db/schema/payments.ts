@@ -588,6 +588,13 @@ export const orderCollection = pgEnum("order_collection", [
   "stripe_invoice",
   "cash",
   "card_machine",
+  /**
+   * Charged to a hotel guest's room (fifth-loop ideas, item 57; ADR
+   * 20261009-counter-payments, amended 2026-10-16): the resort's front desk
+   * collects it and settles with the shop monthly. Counter money like cash,
+   * with the room number, and the hotel when the shop names one.
+   */
+  "room_charge",
 ]);
 
 /**
@@ -694,6 +701,10 @@ export const orders = pgTable(
      * than `STALE_AFTER_MS` belonged to a call that died.
      */
     counterClaimedAt: timestamp("counter_claimed_at", { withTimezone: true }),
+    /** The room a `room_charge` order was charged to, as the front desk names it. */
+    roomNumber: text("room_number"),
+    /** The hotel holding that room, when the shop names one. */
+    roomHotel: text("room_hotel"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -716,6 +727,16 @@ export const orders = pgTable(
     // half that was scanning every order the shop has ever written.
     index("orders_description_trgm_idx").using("gin", sql`${table.description} gin_trgm_ops`),
     check("orders_total_nonnegative", sql`${table.totalCents} >= 0`),
+    check(
+      "orders_room_charge_names_room",
+      // `::text`, so the check never names the enum value it is created with:
+      // Postgres refuses a new enum value used in the transaction that adds it.
+      sql`(${table.collection}::text = 'room_charge') = (${table.roomNumber} is not null)`,
+    ),
+    check(
+      "orders_room_hotel_only_on_room_charge",
+      sql`${table.roomHotel} is null or ${table.collection}::text = 'room_charge'`,
+    ),
     check("orders_pass_through_nonnegative", sql`${table.passThroughCents} >= 0`),
     check("orders_tax_nonnegative", sql`${table.taxCents} >= 0`),
     check("orders_amount_paid_nonnegative", sql`${table.amountPaidCents} >= 0`),

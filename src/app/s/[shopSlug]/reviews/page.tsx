@@ -37,7 +37,7 @@ export async function generateMetadata({
     title: `${t("reviews.allTitle")} — ${shop.name}`,
     description,
     alternates: { canonical },
-    robots: shopSearchListingRobots(shop.searchListingOptOutAt),
+    robots: shopSearchListingRobots(shop),
     openGraph: {
       ...openGraphSite,
       title: `${t("reviews.allTitle")} — ${shop.name}`,

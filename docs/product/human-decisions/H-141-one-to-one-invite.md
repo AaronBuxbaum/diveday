@@ -1,6 +1,6 @@
 # H-141: May staff invite one past diver to a named departure?
 
-- **Status:** Chosen
+- **Status:** Implemented
 - **Human owner:** Product owner
 
 ## Decision or approval needed
@@ -17,6 +17,11 @@ The choice, and where it is said.
 
 ## Unblocks / follow-up
 
-Layer r5-6 builds it.
+Built by layer r5-6: a departure's Invite section suggests up to six past divers of its site
+(sailed here, opted in, an email on file, not contacted with an invite in 30 days), each with its own
+Invite; the course page's "Next steps" ladder invites one diver at a time to the next course's
+soonest session. Both send the existing direct trip invitation, with its unsubscribe, and both refuse
+a diver invited inside the 30 days on the server (`src/lib/invite-suggestions.ts`,
+`src/db/invite-suggestions.ts`).
 
 Part of the [human decision log](README.md#decision-register).

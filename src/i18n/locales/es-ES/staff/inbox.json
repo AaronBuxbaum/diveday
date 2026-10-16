@@ -74,7 +74,6 @@
     "emptyBody": "Escribe una respuesta antes de enviar.",
     "tooLong": "Es más larga de lo que admite una respuesta. Recórtala y envíala otra vez.",
     "notFound": "Ese mensaje ya no está en esta ficha.",
-    "sendLimit": "Has enviado muchas respuestas en esta hora. No salió nada; vuelve a intentarlo en un rato.",
     "channelUnsupported": "DiveDay todavía no puede responder un SMS.",
     "noReplyAddress": "No hay ninguna dirección a la que responder.",
     "cannotBeSent": "Esta respuesta no se puede enviar tal como está. No salió nada, y volver a intentarlo no cambiará eso.",

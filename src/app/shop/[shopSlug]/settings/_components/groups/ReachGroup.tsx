@@ -7,21 +7,34 @@ import { InsetGroup } from "@/components/ui/ledger";
 import { nowDate } from "@/lib/clock";
 import { deskTimeOn, deskTimeValue } from "@/lib/desk-hours";
 import { formatTime } from "@/lib/format";
-import { saveDeskHoursAction } from "../../messages-actions";
+import { saveDeskHoursAction, saveReviewUrlAction } from "../../messages-actions";
 import { resendContactConfirmationAction, saveContactAction } from "../../shop-actions";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
-import { NOTIFICATIONS_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
+import { featureRow, REACH_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
 
 /**
- * The Notifications group: everything that decides where mail goes. The
- * address divers write to (and replies are routed to), the hours outside
- * which a diver's message pings the staff who asked, and the reader's own
- * email page (reply address, digest, after-hours pings). They were three
- * rows in three groups (Shop, Messages, Account), so a shop asking "where
- * does my mail go?" opened three.
+ * **How divers reach you** (fifth-loop ideas, item 58): the address divers
+ * write to (and replies are routed to), the desk's hours, the reader's own
+ * email page, then reviews, the review link and the shop's own WhatsApp
+ * sender. They were two groups, Notifications and Messages, side by side, and
+ * an owner looking for "how do divers get hold of us" read both.
  */
-export function NotificationsGroup({ view }: { view: SettingsView }) {
+export function ReachGroup({
+  view,
+  canManageMessaging,
+}: {
+  view: SettingsView;
+  canManageMessaging: boolean;
+}) {
   const { shop, shopSlug, t, locale, banner, activeSection, notSet } = view;
+  const reviewLinkValue = (() => {
+    if (!shop.reviewUrl) return notSet;
+    try {
+      return new URL(shop.reviewUrl).hostname;
+    } catch {
+      return shop.reviewUrl;
+    }
+  })();
   const now = nowDate();
   const deskTime = (minute: number) =>
     formatTime(deskTimeOn(minute, now, shop.timezone), locale, shop.timezone);
@@ -38,7 +51,7 @@ export function NotificationsGroup({ view }: { view: SettingsView }) {
     contactText
   );
   return (
-    <SettingsGroup group={NOTIFICATIONS_GROUP} label={t(NOTIFICATIONS_GROUP.labelKey)}>
+    <SettingsGroup group={REACH_GROUP} label={t(REACH_GROUP.labelKey)}>
       <InsetGroup>
         <SettingsRow
           heading={t("settings.main.contact.heading")}
@@ -141,6 +154,55 @@ export function NotificationsGroup({ view }: { view: SettingsView }) {
           href={`/shop/${shopSlug}/settings/email`}
           heading={t("emailSettings.title")}
         />
+
+        {featureRow(view, "reviews")}
+
+        {/* One of the few rows another surface links straight to: the Reviews
+          page's empty state names this box, so it opens itself on the
+          `#review-link` fragment rather than dropping a shop at a closed
+          row. */}
+        <SettingsRow
+          heading={t("settings.main.reviewLink.heading")}
+          value={reviewLinkValue}
+          description={t("settings.main.reviewLink.description")}
+          detail={t("settings.main.reviewLink.detail")}
+          sectionId="reviewLink"
+          activeSection={activeSection}
+        >
+          <SectionNotice banner={banner} section="reviewLink" active={activeSection} />
+          <FieldGrid as="form" action={saveReviewUrlAction} columns={1} className="mt-4">
+            <Field
+              label={t("settings.main.reviewLink.label")}
+              hint={t("settings.main.reviewLink.hint")}
+            >
+              <input
+                name="reviewUrl"
+                type="url"
+                maxLength={500}
+                defaultValue={shop.reviewUrl ?? ""}
+                placeholder="https://g.page/r/your-shop/review"
+                className={controlClass}
+              />
+            </Field>
+            <FieldActions>
+              <SubmitButton
+                pendingLabel={t("settings.main.reviewLink.submitting")}
+                className={buttonClass({ variant: "secondary" })}
+              >
+                {t("settings.main.reviewLink.submit")}
+              </SubmitButton>
+            </FieldActions>
+          </FieldGrid>
+        </SettingsRow>
+
+        {/* Owner/manager only, like the payment rows: the credential it
+          stores can send messages as the business. */}
+        {canManageMessaging ? (
+          <SettingsDoorRow
+            href={`/shop/${shopSlug}/settings/whatsapp`}
+            heading={t("settings.main.whatsapp.heading")}
+          />
+        ) : null}
       </InsetGroup>
     </SettingsGroup>
   );

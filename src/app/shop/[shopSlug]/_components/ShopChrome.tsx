@@ -31,6 +31,7 @@ import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
 import { formatTime } from "@/lib/format";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { settingsShortcutsFor } from "../settings/settings-groups";
+import { staffShopName } from "./staff-shop-name";
 
 /**
  * **Everything above a staff page that has to be asked of this request** — the
@@ -247,6 +248,7 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
     navOffers,
   } = await loadShopChrome(shopSlug);
   const demoT = showBanner ? diverTranslator(locale) : undefined;
+  const shopName = shop ? await staffShopName(shop) : "";
   const staffT = staffTranslator(locale);
 
   return (
@@ -296,7 +298,7 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
       {showNav && session?.user && shop ? (
         <ShopNav
           shopSlug={shopSlug}
-          shopName={shop.name}
+          shopName={shopName}
           logoUrl={shop.logoUrl ?? undefined}
           boatBoardingHref={boatBoardingHref}
           todayBoats={todayBoats}
