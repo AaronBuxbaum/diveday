@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, inArray } from "drizzle-orm";
+import { and, asc, count, countDistinct, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   filterEligibleLastMinuteRecipients,
@@ -25,6 +25,8 @@ import { notificationProviderForDb, sendNotificationBatch } from "./notification
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
+  bookingCheckoutBookings,
+  bookingCheckouts,
   people,
   type TripLastMinutePromo,
   tripLastMinutePromoRecipients,
@@ -485,4 +487,70 @@ export async function tripIdsNeverSentLastMinuteDeal(
     );
   const alreadySent = new Set(sent.map((row) => row.tripId));
   return new Set(tripIds.filter((id) => !alreadySent.has(id)));
+}
+
+/** What a last-minute deal sold (fifth loop, item 28). */
+export type DealOutcome = { seats: number; seatsCents: number };
+
+/**
+ * **What each deal sold**: the seats on completed checkouts that carried the
+ * deal's code, and what those checkouts settled for net of tax, Stripe's own
+ * figure where it reported one and the asked total otherwise (the basis
+ * `getMonthlyReport` recovers deposits on). Without it a deal reads "Sent to 8
+ * divers" and stops, and the owner cannot tell a deal that filled a boat from
+ * one that discounted divers who were coming anyway.
+ */
+export async function lastMinuteDealOutcomes(
+  db: DbExecutor,
+  shopId: string,
+  dealIds: readonly string[],
+): Promise<Map<string, DealOutcome>> {
+  if (dealIds.length === 0) return new Map();
+  const [seatRows, moneyRows] = await Promise.all([
+    db
+      .select({
+        dealId: bookingCheckouts.tripPromoId,
+        seats: countDistinct(bookingCheckoutBookings.bookingId),
+      })
+      .from(bookingCheckouts)
+      .innerJoin(
+        bookingCheckoutBookings,
+        and(
+          eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
+          eq(bookingCheckoutBookings.shopId, shopId),
+        ),
+      )
+      .where(
+        and(
+          eq(bookingCheckouts.shopId, shopId),
+          eq(bookingCheckouts.status, "completed"),
+          inArray(bookingCheckouts.tripPromoId, [...dealIds]),
+        ),
+      )
+      .groupBy(bookingCheckouts.tripPromoId),
+    db
+      .select({
+        dealId: bookingCheckouts.tripPromoId,
+        cents: sql<string>`coalesce(sum(greatest(coalesce(${bookingCheckouts.settledTotalCents}, ${bookingCheckouts.totalCents}) - coalesce(${bookingCheckouts.taxCents}, 0), 0)), 0)`,
+      })
+      .from(bookingCheckouts)
+      .where(
+        and(
+          eq(bookingCheckouts.shopId, shopId),
+          eq(bookingCheckouts.status, "completed"),
+          inArray(bookingCheckouts.tripPromoId, [...dealIds]),
+        ),
+      )
+      .groupBy(bookingCheckouts.tripPromoId),
+  ]);
+  const outcomes = new Map<string, DealOutcome>();
+  for (const row of seatRows) {
+    if (row.dealId) outcomes.set(row.dealId, { seats: Number(row.seats), seatsCents: 0 });
+  }
+  for (const row of moneyRows) {
+    if (!row.dealId) continue;
+    const seen = outcomes.get(row.dealId) ?? { seats: 0, seatsCents: 0 };
+    outcomes.set(row.dealId, { ...seen, seatsCents: Number(row.cents) });
+  }
+  return outcomes;
 }

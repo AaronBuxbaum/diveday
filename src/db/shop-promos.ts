@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { nowDate, nowMs } from "@/lib/clock";
 import type { PromotionProvider } from "@/lib/payments/promotions";
 import {
@@ -15,6 +15,7 @@ import {
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import {
+  bookingCheckouts,
   type ShopPromoCode,
   shopPromoCodes,
   shopPromoRedemptions,
@@ -507,4 +508,47 @@ export async function tripMayTakeACode(
     )
     .limit(1);
   return Boolean(tripCode);
+}
+
+/** What a discount code gave away, and on how much (fifth loop, item 28). */
+export type CodeOutcome = { offCents: number; ofCents: number };
+
+/**
+ * **What each code took off, and off what**: "$28.50 off $285 of seats". The
+ * asked total of every checkout the code was spent on (`total_cents`, before
+ * the discount) and the discount snapshot that checkout recorded
+ * (`applied_discount_cents`, or the percent of the asked total). A redemption
+ * with no snapshot, written before the column, counts its seats and no
+ * discount rather than a guessed one.
+ */
+export async function shopPromoOutcomes(
+  db: DbExecutor,
+  shopId: string,
+  codeIds: readonly string[],
+): Promise<Map<string, CodeOutcome>> {
+  if (codeIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      codeId: shopPromoRedemptions.promoCodeId,
+      of: sql<string>`coalesce(sum(${bookingCheckouts.totalCents}), 0)`,
+      off: sql<string>`coalesce(sum(coalesce(${bookingCheckouts.appliedDiscountCents}, round(${bookingCheckouts.totalCents} * ${bookingCheckouts.appliedDiscountPercent} / 100.0), 0)), 0)`,
+    })
+    .from(shopPromoRedemptions)
+    .innerJoin(
+      bookingCheckouts,
+      and(
+        eq(bookingCheckouts.id, shopPromoRedemptions.checkoutId),
+        eq(bookingCheckouts.shopId, shopId),
+      ),
+    )
+    .where(
+      and(
+        eq(shopPromoRedemptions.shopId, shopId),
+        inArray(shopPromoRedemptions.promoCodeId, [...codeIds]),
+      ),
+    )
+    .groupBy(shopPromoRedemptions.promoCodeId);
+  return new Map(
+    rows.map((row) => [row.codeId, { offCents: Number(row.off), ofCents: Number(row.of) }]),
+  );
 }

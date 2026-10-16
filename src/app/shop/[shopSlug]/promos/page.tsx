@@ -43,12 +43,8 @@ import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { PromoConnectNotice } from "./_components/PromoConnectNotice";
 import { PromoDiscountFields, promoDiscountText } from "./_components/PromoDiscountFields";
-import {
-  PromoCodeLedger,
-  type PromoCodeRow,
-  TripDealLedger,
-  type TripDealRow,
-} from "./_components/PromoLedger";
+import { PromoCodeLedger, type PromoCodeRow, TripDealLedger } from "./_components/PromoLedger";
+import { codeOutcomeFact, readPromoOutcomes, tripDealRows } from "./_components/promo-outcomes";
 import {
   createPromoAction,
   deletePromoAction,
@@ -206,7 +202,12 @@ export default async function PromosPage({
     }),
   ]);
   const { promos } = promoPage;
-  const { deals: tripDeals } = dealPage;
+  const outcomes = await readPromoOutcomes(
+    db,
+    session.user.shopId,
+    promos.map((promo) => promo.id),
+    dealPage.deals.map((deal) => deal.id),
+  );
   const base = shopPath(shopSlug, "promos");
   // The two lists page independently, so moving one must carry the other's
   // page along rather than resetting it back to its own first page.
@@ -284,7 +285,8 @@ export default async function PromosPage({
               count: promo.timesRedeemed,
               max: promo.maxRedemptions,
             }),
-      ],
+        codeOutcomeFact(outcomes.codes.get(promo.id), t, currency, locale),
+      ].filter((fact): fact is string => fact !== null),
       ...(switchable || promo.status === "pending" || promo.status === "failed"
         ? {
             actions: switchable ? (
@@ -329,19 +331,15 @@ export default async function PromosPage({
     };
   });
 
-  const dealRows: TripDealRow[] = tripDeals.map((deal) => ({
-    id: deal.id,
-    code: deal.code,
-    discount: promoDiscountText(t, deal, currency, locale),
-    tripTitle: deal.tripTitle,
-    href: `/shop/${shopSlug}/trips/${deal.tripId}?view=details#last-minute-deal`,
-    facts: [
-      t("promos.tripDeals.expiresAt", {
-        date: formatDateTimeTz(deal.expiresAt, locale, timezone),
-      }),
-      t("promos.tripDeals.recipients", { count: deal.recipientCount }),
-    ],
-  }));
+  const dealRows = tripDealRows({
+    deals: dealPage.deals,
+    outcomes: outcomes.deals,
+    shopSlug,
+    t,
+    currency,
+    locale,
+    timezone,
+  });
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -554,7 +552,7 @@ export default async function PromosPage({
       <GroupLabel as="h2" id="trip-deals" className="mt-10">
         {t("promos.tripDeals.heading")}
       </GroupLabel>
-      {tripDeals.length === 0 ? (
+      {dealRows.length === 0 ? (
         // A trip deal is sent from a departure, never from here, so the door is
         // the board. The one line saying so shows only here, where a reader
         // needs to know how to make one; a list of deals needs no caption.
