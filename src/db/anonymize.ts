@@ -1788,6 +1788,16 @@ async function scrubOrders(
     // consistent answer (issue #1607, found by a `security-reviewer` pass).
     .set({ hostedInvoiceUrl: null, invoicePdfUrl: null, description: null })
     .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)));
+  // The room a room charge went to (fifth-loop ideas, item 57) placed this
+  // diver in one hotel room on one night. Redacted rather than cleared, since a
+  // room charge must name a room; the hotel stays, being the shop's own
+  // account with the front desk and what the month's total is grouped by.
+  await tx
+    .update(orders)
+    .set({ roomNumber: REDACTED_TEXT })
+    .where(
+      and(eq(orders.shopId, shopId), eq(orders.personId, personId), isNotNull(orders.roomNumber)),
+    );
 
   // The per-line half of the same text, on the same form, carried out of the
   // shop under the same exclusion.
