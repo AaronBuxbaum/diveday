@@ -2,7 +2,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { startIncidentReport } from "@/db/incident-reports";
-import { bookings, incidentReports, tripAssignments, trips } from "@/db/schema";
+import { bookings, incidentReports, rollCallEvents, tripAssignments, trips } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -39,7 +39,8 @@ vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("@/lib/session");
-const { saveIncidentDraftAction, startIncidentReportAction } = await import("./actions");
+const { saveIncidentDraftAction, startIncidentReportAction, startMissingDiverReportAction } =
+  await import("./actions");
 
 /** A booked departure with the captain taken off its crew, so the captain is ashore. */
 async function context() {
@@ -127,4 +128,46 @@ describe("incident report actions refuse staff who may not write", () => {
       saveIncidentDraftAction(shop.slug, other.id, started.reportId, draftForm()),
     ).rejects.toThrow("NOT_FOUND");
   });
+
+  it("sends an ashore captain's missing diver report back refused, writing nothing", async () => {
+    const { db, shop, tripId, owner, captain } = await context();
+    const bookingId = await markedMissing(db, shop.id, tripId, owner);
+    signIn(db, shop, captain);
+    const before = await reportCount(db, tripId);
+    const to = await redirectedTo(() =>
+      startMissingDiverReportAction(shop.slug, tripId, bookingId),
+    );
+    expect(to).toContain("notice=not-authorized");
+    expect(await reportCount(db, tripId)).toBe(before);
+  });
+
+  it("opens the owner's prefilled draft from a seat marked not back aboard", async () => {
+    const { db, shop, tripId, owner } = await context();
+    const bookingId = await markedMissing(db, shop.id, tripId, owner);
+    signIn(db, shop, owner);
+    const to = await redirectedTo(() =>
+      startMissingDiverReportAction(shop.slug, tripId, bookingId),
+    );
+    expect(to).toMatch(new RegExp(`/trips/${tripId}/incidents/[0-9a-f-]{36}$`));
+  });
 });
+
+/** One seat on the departure, marked not back aboard after dive 1. */
+async function markedMissing(db: AppDb, shopId: string, tripId: string, recorder: string) {
+  const [seat] = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(and(eq(bookings.tripId, tripId), ne(bookings.status, "cancelled")))
+    .limit(1);
+  if (!seat) throw new Error("expected a seat");
+  await db.insert(rollCallEvents).values({
+    shopId,
+    tripId,
+    bookingId: seat.id,
+    recordedByPersonId: recorder,
+    status: "not_boarded",
+    checkpoint: "after_dive_1",
+    occurredAt: new Date("2026-10-01T15:42:00Z"),
+  });
+  return seat.id;
+}

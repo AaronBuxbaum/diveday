@@ -11,6 +11,7 @@ import {
   removeIncidentPerson,
   saveIncidentDraft,
   startIncidentReport,
+  startMissingDiverReport,
 } from "@/db/incident-reports";
 import {
   type IncidentFieldRefusal,
@@ -95,6 +96,37 @@ export async function startIncidentReportAction(shopSlug: string, tripId: string
     actorPersonId: session.user.personId,
   });
   if (!result.ok) redirect(noticeUrl(tripPage, "not-authorized"));
+  revalidateAndRedirect(
+    shopPath(shopSlug, "trips", tripId),
+    reportPath(shopSlug, tripId, result.reportId),
+  );
+}
+
+/**
+ * "Start a missing diver report" on a manifest row marked not back aboard:
+ * the writer's own draft, prefilled from the mark (`startMissingDiverReport`).
+ * A seat no longer marked goes back to the manifest, which now shows why.
+ */
+export async function startMissingDiverReportAction(
+  shopSlug: string,
+  tripId: string,
+  bookingId: string,
+) {
+  const { session, shop } = await requireShopSurface(shopSlug);
+  const tripPage = `${shopPath(shopSlug, "trips", tripId)}?view=details`;
+  if (!uuidParam(tripId) || !uuidParam(bookingId)) redirect(noticeUrl(tripPage, "not-authorized"));
+  const result = await startMissingDiverReport(await getDb(), {
+    shopId: shop.id,
+    tripId,
+    bookingId,
+    actorPersonId: session.user.personId,
+  });
+  if (!result.ok) {
+    if (result.reason === "not_missing") {
+      revalidateAndRedirect(shopPath(shopSlug, "trips", tripId, "manifest"));
+    }
+    redirect(noticeUrl(tripPage, "not-authorized"));
+  }
   revalidateAndRedirect(
     shopPath(shopSlug, "trips", tripId),
     reportPath(shopSlug, tripId, result.reportId),

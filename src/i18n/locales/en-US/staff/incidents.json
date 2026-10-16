@@ -7,6 +7,9 @@
     "writtenBy": "Written by {name}",
     "notTimed": "Time not written yet"
   },
+  "missingDiver": {
+    "start": "Start a missing diver report"
+  },
   "status": {
     "draft": "Draft",
     "filed": "Filed"

@@ -33,6 +33,12 @@ export type DiverRollCallContext = {
   rollCallAction: RollCallAction;
   addPrivateNoteAction: PrivateNoteAction;
   /**
+   * "Start a missing diver report", bound to the departure, for a row marked
+   * not back aboard; null for a reader who may not start an incident report
+   * here (anyone but its crew, owners and managers). The write re-checks.
+   */
+  startMissingDiverReport: ((bookingId: string) => Promise<void>) | null;
+  /**
    * One `RollCallButtonCopy` per diver: the "not ready" refusal embeds a rich
    * link to that diver's own Guests anchor, so it is built by the page
    * (server-side, with `t.rich`) rather than reassembled from string fragments

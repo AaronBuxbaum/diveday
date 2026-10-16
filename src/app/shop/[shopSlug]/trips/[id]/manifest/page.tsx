@@ -135,6 +135,7 @@ export default async function TripManifestPage({
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
+    mayStartIncidentReport,
   } = await readManifestPage(db, shop.id, tripId, session.user.personId);
   const { catalogSpecies, speciesBySite } = manifestSpecies(locale, fieldGuides);
   const departureManifest = completeManifests?.[0];
@@ -155,7 +156,7 @@ export default async function TripManifestPage({
   const rollCallComplete = completeness.complete;
 
   const actionContext: ManifestActionContext = { shopSlug, tripId, checkpoint };
-  const actions = bindManifestActions(actionContext);
+  const actions = bindManifestActions(actionContext, { mayStartIncidentReport });
   const seen = seenGroupView({
     checkpoint,
     actionContext,
@@ -204,12 +205,10 @@ export default async function TripManifestPage({
         trip={manifest.trip}
         locale={locale}
         timeZone={shop.timezone}
-        // No description line. "Divers and crew, with emergency contacts, at
-        // every checkpoint" was a caption describing the page under a tab
-        // that already names it — the checkpoint nav and the panel below say
-        // what to do, and the per-row "Contact & gear" summaries carry the
-        // emergency-contact discoverability it was keeping alive (the
-        // copy-restraint question, applied 2026-08-21).
+        // No description line: "Divers and crew, with emergency contacts, at
+        // every checkpoint" captioned a page its tab already names; the
+        // checkpoint nav and the panel below say what to do, and the per-row
+        // summaries carry the contacts (copy-restraint, 2026-08-21).
         // Printing is an Overall-tab action. The manifest is the live dock
         // surface; keeping a second current-page printer here made it unclear
         // whether staff were getting the full packet or only this tab.
@@ -333,6 +332,7 @@ export default async function TripManifestPage({
             todayTrailByBooking: todayTrailBySubject,
             rollCallAction: actions.rollCall,
             addPrivateNoteAction: actions.addPrivateNote,
+            startMissingDiverReport: actions.startMissingDiverReport,
             rollCallButtonCopy,
             buddyTeamLabel,
             t,

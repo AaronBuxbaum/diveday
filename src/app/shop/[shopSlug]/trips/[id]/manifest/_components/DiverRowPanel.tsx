@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { PrivateNoteForm } from "@/components/PrivateNoteForm";
+import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
+import { buttonClass } from "@/components/ui/button";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { depthWarningText } from "@/i18n/depth-labels";
 import type { TripManifest } from "@/lib/manifests";
@@ -45,6 +47,7 @@ export function DiverRowPanel({
     timezone,
     rollCallAction,
     addPrivateNoteAction,
+    startMissingDiverReport,
     rollCallButtonCopy,
     t,
   } = context;
@@ -185,6 +188,26 @@ export function DiverRowPanel({
           copy={rollCallButtonCopy(diver.bookingId)}
           t={t}
         />
+      ) : null}
+      {/* **The report, from the row that raised it** (safety sheet
+        2026-10-15, item 2). The trip page's "Report an incident" was the
+        only door, so the worst day's report was written from memory later.
+        This opens the reader's own draft with the kind, the diver and the
+        time of the mark filled in; a draft they already have is reused and
+        nothing they wrote is overwritten. Only for those who may start one. */}
+      {rowState.notBackAboard && startMissingDiverReport ? (
+        <form
+          action={startMissingDiverReport.bind(null, diver.bookingId)}
+          className="mt-3 print:hidden"
+        >
+          <SubmitButton
+            pendingLabel={t("incidents.trip.starting")}
+            className={buttonClass({ variant: "secondary" })}
+            ariaLabel={`${t("incidents.missingDiver.start")} — ${diver.fullName}`}
+          >
+            {t("incidents.missingDiver.start")}
+          </SubmitButton>
+        </form>
       ) : null}
       {/* The deliberate second step. It is here, and nowhere
         else on this page, because reaching it has to cost a

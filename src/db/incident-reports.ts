@@ -168,6 +168,154 @@ async function openOwnDraft(
   return { ok: true, reportId: row.id, reused: false };
 }
 
+/**
+ * When this seat's standing "not back aboard" mark was made: the newest
+ * after-dive checkpoint whose latest event for the seat is `not_boarded`.
+ * Null when no checkpoint stands that way now (never marked, or marked back
+ * aboard or cleared since). The dock's `not_boarded` is "never left", never
+ * a missing diver, so the departure checkpoint is not read.
+ */
+async function standingNotBackAboardAt(
+  tx: DbExecutor,
+  input: { shopId: string; tripId: string; bookingId: string },
+): Promise<Date | null> {
+  const events = await tx
+    .select({
+      checkpoint: rollCallEvents.checkpoint,
+      status: rollCallEvents.status,
+      occurredAt: rollCallEvents.occurredAt,
+    })
+    .from(rollCallEvents)
+    .where(
+      and(
+        eq(rollCallEvents.shopId, input.shopId),
+        eq(rollCallEvents.tripId, input.tripId),
+        eq(rollCallEvents.bookingId, input.bookingId),
+        ne(rollCallEvents.checkpoint, "departure"),
+      ),
+    )
+    .orderBy(
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
+    );
+  const latestByCheckpoint = new Map<string, (typeof events)[number]>();
+  for (const event of events) {
+    if (!latestByCheckpoint.has(event.checkpoint)) latestByCheckpoint.set(event.checkpoint, event);
+  }
+  let markedAt: Date | null = null;
+  for (const event of latestByCheckpoint.values()) {
+    if (event.status !== "not_boarded") continue;
+    if (!markedAt || event.occurredAt > markedAt) markedAt = event.occurredAt;
+  }
+  return markedAt;
+}
+
+/**
+ * **"Start a missing diver report"** from a manifest row marked not back
+ * aboard (safety sheet 2026-10-15, item 2). Opens the writer's own draft on
+ * the departure (`startIncidentReport`'s rule: an unfiled one is reused) and
+ * fills what the manifest already knows: kind Missing diver, when the mark
+ * was made, and the diver named as affected.
+ *
+ * **It never overwrites.** A reused draft keeps any kind or time its writer
+ * already chose; only a blank is filled, and the diver is added once. No new
+ * state or mode: the result is an ordinary draft, filed the ordinary way.
+ *
+ * Refused as `not_missing` when the seat has no standing after-dive "not back
+ * aboard" mark on this departure (it was marked back aboard meanwhile, or the
+ * seat is not on this departure at all), so a stale tap writes nothing.
+ */
+export async function startMissingDiverReport(
+  db: AppDb,
+  input: { shopId: string; tripId: string; bookingId: string; actorPersonId: string },
+): Promise<
+  { ok: true; reportId: string } | { ok: false; reason: IncidentWriteRefusal | "not_missing" }
+> {
+  return db.transaction(async (tx) => {
+    // Who may write first, so a refused caller learns nothing about the seat.
+    const viewer = await loadIncidentViewer(tx, input.shopId, input.tripId, input.actorPersonId);
+    if (!mayStartIncidentReport(viewer)) return { ok: false, reason: "not_allowed" } as const;
+    const [seat] = await tx
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.tripId, input.tripId),
+        ),
+      )
+      .limit(1);
+    if (!seat) return { ok: false, reason: "not_missing" } as const;
+    const markedAt = await standingNotBackAboardAt(tx, input);
+    if (!markedAt) return { ok: false, reason: "not_missing" } as const;
+    const started = await openOwnDraft(tx, input);
+    if (!started.ok) return started;
+    const [draft] = await tx
+      .select({ kind: incidentReports.kind, occurredAt: incidentReports.occurredAt })
+      .from(incidentReports)
+      .where(
+        and(
+          eq(incidentReports.id, started.reportId),
+          eq(incidentReports.shopId, input.shopId),
+          eq(incidentReports.status, "draft"),
+        ),
+      )
+      .limit(1)
+      .for("update");
+    if (!draft) return { ok: false, reason: "not_found" } as const;
+    if (draft.kind === null || draft.occurredAt === null) {
+      await tx
+        .update(incidentReports)
+        .set({
+          kind: draft.kind ?? "missing_diver",
+          occurredAt: draft.occurredAt ?? markedAt,
+          updatedAt: nowDate(),
+        })
+        .where(
+          and(
+            eq(incidentReports.id, started.reportId),
+            eq(incidentReports.shopId, input.shopId),
+            eq(incidentReports.status, "draft"),
+          ),
+        );
+    }
+    const [listed] = await tx
+      .select({ id: incidentReportPeople.id })
+      .from(incidentReportPeople)
+      .where(
+        and(
+          eq(incidentReportPeople.reportId, started.reportId),
+          eq(incidentReportPeople.bookingId, input.bookingId),
+        ),
+      )
+      .limit(1);
+    if (!listed) {
+      await tx.insert(incidentReportPeople).values({
+        shopId: input.shopId,
+        reportId: started.reportId,
+        bookingId: input.bookingId,
+        involvement: "affected",
+      });
+    }
+    return { ok: true, reportId: started.reportId } as const;
+  });
+}
+
+/**
+ * Whether this person may start a report on this departure: the manifest
+ * shows "Start a missing diver report" only to them. The write re-checks.
+ */
+export async function mayStartTripIncidentReport(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  personId: string,
+): Promise<boolean> {
+  return mayStartIncidentReport(await loadIncidentViewer(db, shopId, tripId, personId));
+}
+
 /** Which report a write is for: the shop, the departure it hangs off, and who is writing. */
 type WriteTarget = { shopId: string; reportId: string; tripId: string; actorPersonId: string };
 

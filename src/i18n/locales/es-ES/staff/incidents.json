@@ -7,6 +7,9 @@
     "writtenBy": "Escrito por {name}",
     "notTimed": "Aún sin hora"
   },
+  "missingDiver": {
+    "start": "Empezar un informe de buceador desaparecido"
+  },
   "status": {
     "draft": "Borrador",
     "filed": "Presentado"

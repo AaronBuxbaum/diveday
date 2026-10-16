@@ -7737,6 +7737,15 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(
           page.getByRole("dialog").getByRole("button", { name: "Not back aboard", exact: true }),
         ).toBeVisible();
+        // The panel the alarm leaves open, with the report's door in it (safety
+        // sheet 2026-10-15, item 2): "Start a missing diver report" under "Mark
+        // back aboard", for the owner signed in here.
+        const startReport = page
+          .getByRole("dialog")
+          .getByRole("button", { name: /^Start a missing diver report — / });
+        await startReport.evaluate((button) => button.scrollIntoView({ block: "center" }));
+        await page.mouse.move(0, 0);
+        await capture(page, "manifest-not-back-aboard-panel", scheme);
         // Closed again for the shot: the alarm this capture is about is what
         // the *list* shows — the pinned danger line and the one red row — and a
         // panel left open would photograph a person's contact card instead.
