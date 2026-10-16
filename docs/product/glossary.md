@@ -105,6 +105,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Card dispute
 - Checkout sale / tip sale
 - Dashboard refund
+- Dive (package unit)
 - Dives owed on packages
 - Failed refund
 - First paid month
