@@ -107,6 +107,7 @@ export function RentalSizeFields({
   onSize: (field: keyof RentalSizeValues, value: string) => void;
 }) {
   const t = useTranslations();
+  const sizesOffered = SIZED_KINDS.some((kind) => offers.has(kind));
   const bcdSize = sizes.bcd;
   const wetsuitSize = sizes.wetsuit;
   const drysuitSize = sizes.drysuit;
@@ -129,7 +130,7 @@ export function RentalSizeFields({
             the third, and "Usual weight setup" is the same shape of answer as
             the fields it now sits with. On a phone the grid is one column and
             the order is unchanged. */}
-      {SIZED_KINDS.some((kind) => offers.has(kind)) ? (
+      {sizesOffered ? (
         <FieldGrid columns={2}>
           {offers.has("bcd") ? (
             <Field label={t("rental.bcdSize")}>

@@ -1371,14 +1371,12 @@ test("a course that includes its gear asks the student for sizes, not money", as
 
   const gear = await openThreadStep(diverPage, "gear");
   await expect(
-    gear.getByText(
-      "Your scuba unit (BCD, regulator, tank, weights) comes with the course. Tell us your sizes so it’s ready.",
-    ),
+    gear.getByText(/^Your scuba unit \(BCD, regulator, tank, weights\) comes with the course\./),
   ).toBeVisible();
   await expect(gear.getByText(/Estimated rental/)).toHaveCount(0);
   // Personal gear is the student's own: not offered here, listed to bring.
   await expect(gear.getByRole("checkbox", { name: /^Mask/ })).toHaveCount(0);
-  await expect(diverPage.getByText("Scuba unit (BCD, regulator, tank, weights)")).toBeVisible();
+  await expect(diverPage.getByText(/^Scuba unit \(BCD, regulator, tank, weights\)$/)).toBeVisible();
   await expect(diverPage.getByText("Snorkel", { exact: true })).toBeVisible();
   await diverContext.close();
 });

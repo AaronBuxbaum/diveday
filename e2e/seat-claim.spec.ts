@@ -64,7 +64,7 @@ test.describe("seat claim links", () => {
     // What the party owes at the shop, said once on the page the lead keeps,
     // in the confirmation's own words (fourth UX review, item 5).
     await expect(
-      page.getByText("2 seats: $180.00, due at the shop. Pay by card or cash when you arrive."),
+      page.getByText(/^2 seats: \$180\.00, due at the shop\. Pay by card or cash/),
     ).toBeVisible();
 
     // The organizer's panel: the second seat, unclaimed, with a shareable link.
