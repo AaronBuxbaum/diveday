@@ -103,6 +103,8 @@ type BookingCancelledNoticeInput = {
    */
   from: Booking["status"];
   refund: CancellationRefundSeen;
+  /** A lead's cancel: the party seats that went with it and the ones that stayed. */
+  party?: { cancelled: number; stayed: number };
 };
 
 type BookingCancelledNoticeOptions = {
@@ -160,6 +162,7 @@ async function sendNotice(
       cancelledBy: input.cancelledBy,
       cancelledAt: options.now ?? nowDate(),
       money: cancellationMoney(input.refund, payment ?? null),
+      ...(input.party ? { party: input.party } : {}),
       scheduleUrl: new URL(publicSchedulePath(row.shop.slug), `${origin}/`).toString(),
     },
     { provider: options.provider },

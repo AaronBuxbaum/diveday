@@ -78,6 +78,7 @@ export async function POST(request: Request) {
   const [keeper] = await db
     .select({ id: people.id })
     .from(people)
+    // diveday:allow-deleted-people: an e2e seed finds the divers it just seeded; nobody is removed yet.
     .where(and(eq(people.shopId, shop.id), eq(people.fullName, KEEPER_FULL_NAME)))
     .limit(1);
   if (!keeper) return NextResponse.json({ error: "keeper_not_found" }, { status: 404 });

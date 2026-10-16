@@ -11,11 +11,12 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { formatDateTimeTz } from "@/lib/format";
-import { applicableMedicalQuestions, findQuestionnaireVersion } from "@/lib/medical";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED } from "@/lib/waiver-integrity";
+import { MedicalAnswers } from "./_components/MedicalAnswers";
+import { showMedicalAnswersAction } from "./actions";
 
 export const instant = true;
 
@@ -28,11 +29,14 @@ export const instant = true;
  *
  * A child of the diver's record, because a release is a fact about the
  * person. The release, its signature and its seal are open to every staff
- * member who reads that record. The questionnaire is not: an owner or manager
- * reads every answer and the physician's name (`canReadMedicalAnswers`, the
- * same wall as the bulk export), and everyone else sees what the trip roster
- * already shows them, the prompts that flagged, which is what whoever records
- * a clearance needs to read. The physician's evaluation itself stays behind
+ * member who reads that record. The questionnaire is not: an owner or
+ * manager reads the physician's name and, by tapping "Show answers", every
+ * answer (`canReadMedicalAnswers`, the same wall as the bulk export). The
+ * tap's action puts who read them on the diver's trail (issue #2157), never
+ * the render, which a prefetch or a reload would log for nobody. Everyone
+ * else, and a manager before the tap, sees what the trip roster already
+ * shows them, the prompts that flagged, which is what whoever records a
+ * clearance needs to read. The physician's evaluation itself stays behind
  * its own door (`canReadMedicalClearanceDocument`), which this page only links
  * to. A seat still held over who is in it (H-13) shows no answers at all.
  */
@@ -50,11 +54,14 @@ export default async function SignedWaiverPage({
     canPersonReadMedicalAnswers(db, shop.id, session.user.personId),
     canPersonReadMedicalClearanceDocument(db, shop.id, session.user.personId),
   ]);
+  // Never the full questionnaire on render: an owner or manager reads it by
+  // tapping "Show answers", whose action records the read (issue #2157).
   const waiver = await getSignedWaiverForDiver(db, {
     shopId: shop.id,
     personId,
     recordId,
     readsMedicalAnswers,
+    withholdAnswers: true,
   });
   if (!waiver) notFound();
 
@@ -131,24 +138,9 @@ export default async function SignedWaiverPage({
     { label: t("waiversStaff.record.sealLabel"), value: seal },
   ];
 
-  // The questions this diver was actually asked: a Box opens only on a yes to
-  // its parent, so an unopened Box is blank on the paper form, not "no".
-  const questionnaire = waiver.medicalAnswers
-    ? findQuestionnaireVersion(
-        waiver.medicalAnswers.questionnaireId,
-        waiver.medicalAnswers.questionnaireVersion,
-      )
-    : null;
-  const answered =
-    questionnaire && waiver.medicalAnswers
-      ? applicableMedicalQuestions(questionnaire, waiver.medicalAnswers.responses)
-          .filter((question) => typeof waiver.medicalAnswers?.responses[question.id] === "boolean")
-          .map((question) => ({
-            id: question.id,
-            prompt: question.prompt,
-            yes: waiver.medicalAnswers?.responses[question.id] === true,
-          }))
-      : waiver.flaggedPrompts.map((prompt) => ({ id: prompt, prompt, yes: true }));
+  // What every staff role reads without a tap: the prompts that flagged.
+  const flagged = waiver.flaggedPrompts.map((prompt) => ({ id: prompt, prompt, yes: true }));
+  const showsAnswers = readsMedicalAnswers && waiver.medicalAnswersOnFile;
   const noAnswersText = waiver.identityHeld
     ? t("waiversStaff.record.identityHeld")
     : !readsMedicalAnswers
@@ -241,27 +233,23 @@ export default async function SignedWaiverPage({
               ) : null}
             </div>
           ) : null}
-          {answered.length > 0 ? (
-            <ol className="grid gap-2 text-sm">
-              {answered.map((question) => (
-                <li
-                  key={question.id}
-                  className={`flex items-baseline justify-between gap-4 ${
-                    question.yes ? "font-medium text-warning-strong" : ""
-                  }`}
-                >
-                  <span className="min-w-0">{question.prompt}</span>
-                  <span className="shrink-0 tabular-nums">
-                    {question.yes
-                      ? t("waiversStaff.record.answerYes")
-                      : t("waiversStaff.record.answerNo")}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p className="text-sm text-muted">{noAnswersText}</p>
-          )}
+          <MedicalAnswers
+            flagged={flagged}
+            show={
+              showsAnswers
+                ? showMedicalAnswersAction.bind(null, shopSlug, waiver.personId, waiver.id)
+                : undefined
+            }
+            emptyText={noAnswersText}
+            copy={{
+              yes: t("waiversStaff.record.answerYes"),
+              no: t("waiversStaff.record.answerNo"),
+              show: t("waiversStaff.record.showAnswers"),
+              showing: t("waiversStaff.record.showingAnswers"),
+              showHint: t("waiversStaff.record.showAnswersHint"),
+              failed: t("waiversStaff.record.showAnswersFailed"),
+            }}
+          />
         </SectionCard>
 
         <SectionCard title={t("waiversStaff.record.releaseHeading")}>

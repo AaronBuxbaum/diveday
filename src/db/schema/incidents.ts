@@ -109,10 +109,35 @@ export const incidentReports = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     filedAt: timestamp("filed_at", { withTimezone: true }),
     filedByPersonId: uuid("filed_by_person_id").references(() => people.id),
+    /**
+     * **A mistaken draft, discarded** (soft, like every delete): an owner took
+     * it off the departure's Details tab and the Reports Safety tab. Only a
+     * draft can be discarded, and the database says so below; a filed report
+     * is amend-only. Who and when are on the departure's activity trail, which
+     * carries no report content.
+     */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /**
+     * **A legal hold**, set and cleared by an owner: the seven-year retention
+     * prune skips a held report until it is released (ADR
+     * 20261012-incident-reports, amendment 2026-10-15). A held report cannot be
+     * discarded.
+     */
+    legalHoldAt: timestamp("legal_hold_at", { withTimezone: true }),
   },
   (table) => [
-    index("incident_reports_shop_trip_idx").on(table.shopId, table.tripId, table.createdAt),
+    index("incident_reports_shop_trip_idx")
+      .on(table.shopId, table.tripId, table.createdAt)
+      .where(sql`${table.deletedAt} is null`),
     index("incident_reports_shop_occurred_idx").on(table.shopId, table.occurredAt),
+    check(
+      "incident_reports_only_a_draft_is_discarded",
+      sql`${table.deletedAt} is null or ${table.status} = 'draft'`,
+    ),
+    check(
+      "incident_reports_a_held_report_is_kept",
+      sql`${table.legalHoldAt} is null or ${table.deletedAt} is null`,
+    ),
     check(
       "incident_reports_oxygen_minutes",
       sql`${table.oxygenMinutes} is null or (${table.oxygenGiven} is true and ${table.oxygenMinutes} between 1 and 1440)`,

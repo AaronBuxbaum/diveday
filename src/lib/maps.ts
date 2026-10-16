@@ -68,5 +68,15 @@ export function googleMapsUrl(query: string): string {
  * read of the same provider can: an image's `error` is honest. Same host the
  * embed redirects to, so this tells Google nothing the frame would not, and
  * it is listed under `img-src` (`src/lib/content-security-policy.ts`).
+ *
+ * **What it does not prove (#2441).** An answering favicon is not the embed
+ * loading: a network can allow `www.google.com` and refuse `maps.google.com`,
+ * or the embed can be rate-limited while the favicon comes from cache, and the
+ * diver then sees a blank frame instead of the route alone. Probing a static
+ * image on the embed's own host would close it, at the price of an `img-src`
+ * entry and an e2e fixture; that asset's URL has to be confirmed against the
+ * live host before it replaces this one, since a probe that always fails
+ * hides the map for everyone. The iframe's own `load` is not an option: it
+ * fires for the browser's error page too.
  */
 export const MAP_REACHABILITY_PROBE = "https://www.google.com/favicon.ico";

@@ -7,6 +7,8 @@
       "dockSaved": "Dock call time saved for every confirmation and reminder.",
       "pickupSaved": "Saved. Divers are asked about a pickup only when this is on.",
       "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
+      "turnaroundSaved": "Turnaround saved.",
+      "turnaroundInvalid": "Enter a turnaround between 0 and 240 minutes.",
       "unitsSaved": "Units saved.",
       "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
       "taxSaved": "Tax setting saved.",
@@ -26,7 +28,7 @@
       "profileSaved": "Shop profile and branding saved.",
       "profileInvalid": "Check your tagline, description, and logo file.",
       "shopPhotosSaved": "Shop photos saved.",
-      "shopPhotosInvalid": "Those photos didn’t save. Use JPG, PNG, WebP, or HEIC under {maxMb} MB, and keep to {max} in all.",
+      "shopPhotosInvalid": "Those photos didn’t save. Use JPG, PNG, WebP, or HEIC under {maxMb}\u00a0MB, and keep to {max} in all.",
       "addressSaved": "Shop address saved.",
       "addressRemoved": "Shop address removed.",
       "addressInvalid": "That address couldn’t be saved. Search again and pick your shop from the list.",
@@ -47,9 +49,15 @@
       "seasonSaved": "Season start saved.",
       "seasonInvalid": "Pick a day that month has.",
       "reopensSaved": "Saved. Your public page names this date while its schedule is quiet.",
-      "reopensInvalid": "That isn’t a date on the calendar. Pick one from the box.",
+      "reopensInvalid": "That date isn’t one we can post. Pick one within the next 18 months.",
       "timezoneInvalid": "That isn’t a timezone we recognize. Pick one from the list.",
       "emergencySaved": "Emergency reference saved.",
+      "shoreAlertInvalid": "That shore contact email isn’t an address. Nothing was saved.",
+      "shoreAlertConsentMissing": "Tick that the shore contact agreed to get roll-call alerts at this address; for a new address, tick it again. Nothing was saved.",
+      "shoreAlertConfirmationSent": "Saved. We emailed the shore contact a link; alerts start once they confirm.",
+      "shoreAlertConfirmationNotSent": "Saved, but the confirmation link didn’t go. Try “Send the link again” in a few minutes.",
+      "shoreAlertSavedDemo": "Saved. Demo shops send nothing, so no link went.",
+      "shoreAlertCleared": "Shore contact’s email removed. It gets no more roll-call alerts.",
       "packageSaved": "Package added.",
       "packageDeleted": "Package deleted.",
       "packageInvalid": "That didn’t save. Check the number of dives, the price, and how long it stays usable."
@@ -260,6 +268,11 @@
       "siteOverrides": "{count, plural, one {# dive site sets its own time in the water, so this rhythm doesn’t describe a dive there:} other {# dive sites set their own time in the water, so this rhythm doesn’t describe a dive at any of them:}}",
       "siteOverride": "{name} · {count} min"
     },
+    "turnaround": {
+      "label": "Turnaround between departures",
+      "description": "Moving a departure warns when a boat, or crew leaving from another meeting point, gets less than this. 0 turns it off.",
+      "submit": "Save turnaround"
+    },
     "units": {
       "heading": "Units",
       "depthLabel": "Show depths in",
@@ -301,7 +314,7 @@
       "notice": "The rental catalog, rental prices, and Stripe connection are limited to owners and managers. The settings above are open to all staff."
     },
     "rentals": {
-      "heading": "What we rent",
+      "heading": "Rentals",
       "detail": "Tick what you rent. Unticked gear leaves the kit form, and fits that already ask for it stay on the prep list, marked.",
       "legend": "Rentable gear and services",
       "submit": "Save rental catalog",
@@ -523,6 +536,19 @@
       "vesselLabel": "Vessel",
       "vesselHint": "Printed only on departures with no boat. Each boat’s call sign and MMSI go in Boats.",
       "shoreContactLabel": "Shore contact",
+      "shoreContactDescription": "A name and number the crew reads. DiveDay never messages this line.",
+      "shoreAlertEmailLabel": "Shore contact’s email for roll-call alerts",
+      "shoreAlertEmailDescription": "If a roll call is still open after the boat was due back, this address gets one email for that departure, with no names. It is sent a link to confirm first, and nothing goes until they do.",
+      "shoreAlertConsent": "They agreed to get these alerts",
+      "shoreAlertConsentRecorded": "Recorded {when} by {name}",
+      "shoreAlertConsentRecordedNoName": "Recorded {when}",
+      "shoreAlertConfirmed": "They confirmed {when}.",
+      "shoreAlertWaiting": "Waiting for them to confirm. Send the link again if they didn’t get it.",
+      "shoreAlertPhone": "Alerts tell them to call {phone}.",
+      "shoreAlertNoPhone": "No shop phone on file, so alerts give them no number to call.",
+      "shoreAlertResend": "Send the link again",
+      "shoreAlertResending": "Sending…",
+      "shoreAlertDemo": "Demo shops send nothing: no link and no alerts.",
       "planLabel": "If something goes wrong",
       "submit": "Save emergency reference",
       "saving": "Saving…"
@@ -547,6 +573,7 @@
   },
   "team": {
     "title": "Team",
+    "unnamedInviter": "A teammate",
     "notice": {
       "invited": "Invite sent.",
       "inviteResent": "Invite resent.",
@@ -740,7 +767,7 @@
       },
       "waiverDocuments": {
         "what": "Waiver / medical documents",
-        "detail": "Fetched once from your file’s URL and kept for audit. Images and PDFs up to 5 MB."
+        "detail": "Fetched once from your file’s URL and kept for audit. Images and PDFs up to 5\u00a0MB."
       },
       "role": {
         "what": "Role",
@@ -936,7 +963,7 @@
       "notOwnerOrManager": "Importing contacts is limited to the shop’s owner or manager.",
       "csvRequired": "Choose a CSV file to import.",
       "noImportableRows": "No rows could be imported. Every row was missing a name or duplicated.",
-      "fileTooLarge": "The file is too large. The limit is {limitMb} MB.",
+      "fileTooLarge": "The file is too large. The limit is {limitMb}\u00a0MB.",
       "fileEmpty": "The file is empty.",
       "tooManyColumns": "Too many columns ({count}). The limit is {limit}.",
       "tooManyRows": "Too many rows ({count}). The limit is {limit} per import, so split the file and import it in batches.",

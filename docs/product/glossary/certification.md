@@ -125,13 +125,23 @@
   confirm. Where the agency numbers the diver (PADI, SSI, NAUI, GUE) they carry the number the shop
   holds for the diver, and a staffer's one-tap **Mark certified** certifies them, keeping the words.
   Where it numbers each card (SDI, CMAS) they carry the number printed on their own line, or none,
-  and then the confirm is the card sighting. Never certified by the check: nitrox authorizes a fill
-  and a specialty opens a site. Undoing the check archives the ones still pending. The server judges
+  and then the confirm is the card sighting. Never certified by the check that listed them: nitrox
+  authorizes a fill and a specialty opens a site (each can be certified afterwards by its own
+  **Agency check of a card** or by Mark certified). Undoing the check archives the ones still pending. The server judges
   the posted page again and files only kinds it offers itself. Not levels: a second level card on
   the diver's one agency number cannot be filed. On a departure's Divers tab the offer sits under
   the diver's row, after a **Check all (agency)** has finished; on Today it sits under the Needs you
   list, naming the diver with a link to their record, because the row leaves with the card it was
   about.
+- **Agency check of a card** — an **Agency check** of one pending nitrox or specialty certification,
+  with its own "Check Nitrox with SSI" button on the diver record and a departure's Divers tab
+  (issue #2592, ADR 20261008-cert-check-extension). The server certifies it only when the diver's own
+  record on the agency's page lists that card in the agency's closed wording for its kind, under the
+  card's own number, and never from a level card's match alone. Offered only for a card with a
+  number of its own and not one a card sighting must confirm (a diver's own **Self-declared
+  certification**, a **Shop-issued certification**, a listed card with no number). A match stamps
+  `agency_checked_at` on the card, as for a level card, and its own Undo clears it and puts the card
+  back to pending (or, for an imported card, back to awaiting its confirm).
 - **eLearning check** — the same extension reading a course student's PADI eLearning on the PADI
   Pros' Site, searched by the student's email in the staffer's signed-in browser (H-106, ADR
   20261008-cert-check-extension). The server ticks **Materials done** only when one record names

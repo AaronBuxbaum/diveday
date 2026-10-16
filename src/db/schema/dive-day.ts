@@ -12,6 +12,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { ReadinessBlocker } from "@/lib/readiness";
 import { bookings } from "./bookings";
 import { people, shops } from "./core";
 import { trips } from "./trips";
@@ -74,6 +75,19 @@ export const rollCallEvents = pgTable(
      * is deliberately gone.
      */
     note: text("note"),
+    /**
+     * **What readiness said when this diver was counted aboard**
+     * (ADR 20261015-roll-call-records-readiness, issue #2414): `ready` or
+     * `blocked`, written with a `boarded` event and null on every other one.
+     * Readiness is recomputed live, so without this a card verified at 09:00
+     * after a 05:30 boat would make "was blocked" unsayable afterwards, and a
+     * finished departure's record would file a diver counted aboard while
+     * blocked under "Sailed" with no trace. A record of what was true, never a
+     * gate: nothing reads it to refuse or allow anything.
+     */
+    readinessStatus: text("readiness_status"),
+    /** The blockers behind a `blocked` snapshot, as the engine raised them; null otherwise. */
+    readinessBlockers: jsonb("readiness_blockers").$type<ReadinessBlocker[]>(),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /**
@@ -120,6 +134,10 @@ export const rollCallEvents = pgTable(
       table.occurredAt,
     ),
     uniqueIndex("roll_call_events_shop_client_event_unique").on(table.shopId, table.clientEventId),
+    check(
+      "roll_call_events_readiness_snapshot_shape",
+      sql`(${table.readinessStatus} is null and ${table.readinessBlockers} is null) or (${table.status} = 'boarded' and ${table.readinessStatus} in ('ready', 'blocked'))`,
+    ),
   ],
 );
 

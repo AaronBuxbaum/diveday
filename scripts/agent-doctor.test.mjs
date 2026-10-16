@@ -18,6 +18,8 @@ const healthy = {
   strays: 0,
   stack: "stack: layer 2 of 3, top origin/claude/x-3",
   refusals: "",
+  hooksCheckout: { dir: "/home/claude/diveday", detached: true, behind: 0 },
+  mergeDriver: "node scripts/merge-drivers.mjs ratchets %O %A %B %P",
 };
 
 describe("the doctor's checks", () => {
@@ -78,7 +80,12 @@ describe("the doctor's checks", () => {
 
   it("reads origin/main as current after the session's own fetch, and leaves a failed one to the block", () => {
     const readers = {
-      git: (args) => (args.join(" ") === "log -1 --format=%cs origin/main" ? "2026-10-10" : null),
+      git: (args) =>
+        ({
+          "log -1 --format=%cs origin/main": "2026-10-10",
+          "config --get merge.diveday-ratchets.driver": "node scripts/merge-drivers.mjs",
+        })[args.join(" ")] ?? null,
+      hooksCheckout: () => ({ dir: "/repo", detached: true, behind: 0 }),
       pinnedMajor: () => 24,
       commandWorks: () => true,
       fetchAge: () => null,
@@ -139,6 +146,65 @@ describe("the doctor's checks", () => {
   });
 });
 
+describe("the checkout the hooks load from, and the merge drivers", () => {
+  // 2026-10-13: every session's hooks came from a checkout 704 commits behind main.
+  it("warns when the hooks' checkout is detached behind main, with the command that moves it", () => {
+    const facts = {
+      ...healthy,
+      hooksCheckout: { dir: "/home/claude/diveday", detached: true, behind: 704 },
+    };
+    const row = checks(facts).find((r) => r.name === "hooks checkout");
+    expect(row).toMatchObject({ status: "warn" });
+    expect(row.detail).toBe("hooks run from /home/claude/diveday, 704 commits behind origin/main");
+    expect(row.fix).toContain("git -C /home/claude/diveday checkout --detach origin/main");
+    expect(summaryLines(facts)[0]).toContain("704 commits behind origin/main");
+  });
+
+  it("is quiet when that checkout is current, and only informs when it is on a branch", () => {
+    expect(checks(healthy).find((r) => r.name === "hooks checkout").status).toBe("ok");
+    const branch = {
+      ...healthy,
+      hooksCheckout: { dir: "/repo", detached: false, behind: 12 },
+    };
+    expect(checks(branch).find((r) => r.name === "hooks checkout").status).toBe("info");
+    expect(
+      checks({ ...healthy, hooksCheckout: null }).find((r) => r.name === "hooks checkout"),
+    ).toMatchObject({ status: "unknown" });
+  });
+
+  // 2026-10-13: the drivers were defined in no clone config and merges stopped on ratchets.json.
+  it("warns when the ratchet merge driver is not installed in this clone", () => {
+    const facts = { ...healthy, mergeDriver: null };
+    const row = checks(facts).find((r) => r.name === "merge drivers");
+    expect(row).toMatchObject({ status: "warn" });
+    expect(row.fix).toBe("node scripts/merge-drivers.mjs install");
+    expect(summaryLines(facts)[0]).toContain("merge drivers are not installed");
+    // Session start says a failed install itself; the summary does not say it twice.
+    expect(summaryLines({ ...facts, mergeDriversInstall: "not installed" })[0]).toBe(
+      "Doctor: nothing to warn about.",
+    );
+  });
+
+  it("reads both through injectable readers", () => {
+    const facts = gatherFacts("/repo", {
+      strays: false,
+      readers: {
+        git: (args) =>
+          args.join(" ") === "config --get merge.diveday-ratchets.driver" ? "node x" : null,
+        pinnedMajor: () => 24,
+        commandWorks: () => true,
+        fetchAge: () => 5_000,
+        installNeed: () => null,
+        readStack: () => null,
+        readLog: () => [],
+        hooksCheckout: () => ({ dir: "/p", detached: true, behind: 3 }),
+      },
+    });
+    expect(facts.mergeDriver).toBe("node x");
+    expect(facts.hooksCheckout).toEqual({ dir: "/p", detached: true, behind: 3 });
+  });
+});
+
 describe("branchesWithoutPr", () => {
   it("is every head but main that no open pull request uses, or null when unread", () => {
     expect(branchesWithoutPr(["main", "b", "a", "c"], ["c"])).toEqual(["a", "b"]);
@@ -151,5 +217,63 @@ describe("branchesWithoutPr", () => {
       (r) => r.name === "remote branches",
     );
     expect(row.status).toBe("unknown");
+  });
+});
+
+describe("the scheduled-runs row", () => {
+  const red = [
+    {
+      name: "Simulate a day",
+      path: ".github/workflows/simulate-day.yml",
+      streak: 26,
+      since: "2026-09-18",
+      url: "https://github.com/o/r/actions/runs/36",
+    },
+  ];
+
+  it("warns at session start when a scheduled workflow is red twice running, with where to look", () => {
+    const facts = { ...healthy, redScheduled: red };
+    const row = checks(facts).find((r) => r.name === "scheduled runs");
+    expect(row.status).toBe("warn");
+    expect(row.fix).toContain(".github/workflows/simulate-day.yml");
+    expect(row.fix).toContain("https://github.com/o/r/actions/runs/36");
+    expect(summaryLines(facts)[0]).toBe(
+      "Doctor: scheduled Simulate a day red 26 runs running (since 2026-09-18).",
+    );
+  });
+
+  it("is ok when none is red, unknown when GitHub could not answer, and absent unless asked", () => {
+    expect(
+      checks({ ...healthy, redScheduled: [] }).find((r) => r.name === "scheduled runs"),
+    ).toMatchObject({ status: "ok" });
+    expect(
+      checks({ ...healthy, redScheduled: null }).find((r) => r.name === "scheduled runs"),
+    ).toMatchObject({ status: "unknown" });
+    expect(checks(healthy).some((r) => r.name === "scheduled runs")).toBe(false);
+  });
+
+  it("reads the runs only when asked, through an injectable reader", () => {
+    let asked = 0;
+    const readers = {
+      git: () => null,
+      pinnedMajor: () => 24,
+      commandWorks: () => true,
+      fetchAge: () => 5_000,
+      installNeed: () => null,
+      readStack: () => null,
+      readLog: () => [],
+      scheduledRuns: () => {
+        asked += 1;
+        return [
+          { ...red[0], conclusion: "failure", createdAt: "2026-10-13T06:30:00Z" },
+          { ...red[0], conclusion: "failure", createdAt: "2026-10-12T06:30:00Z" },
+        ];
+      },
+    };
+    expect(gatherFacts("/repo", { strays: false, readers }).redScheduled).toBeUndefined();
+    expect(asked).toBe(0);
+    const facts = gatherFacts("/repo", { strays: false, scheduled: true, readers });
+    expect(asked).toBe(1);
+    expect(facts.redScheduled).toMatchObject([{ name: "Simulate a day", streak: 2 }]);
   });
 });

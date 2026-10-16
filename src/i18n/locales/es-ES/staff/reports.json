@@ -106,6 +106,12 @@
     "discounted": "Los códigos de descuento restaron {amount}",
     "fees": "Comisiones de Stripe {amount}, en lo pagado a tu banco este mes"
   },
+  "emptySeats": {
+    "heading": "Salidas que zarparon con plazas vacías",
+    "summary": "{departures, plural, one {# salida zarpó} other {# salidas zarparon}} con {seats, plural, one {# plaza} other {# plazas}} sin vender",
+    "row": "{title}, {date}",
+    "seats": "{count, plural, one {# plaza} other {# plazas}}"
+  },
   "payouts": {
     "heading": "Pagado a tu banco"
   }

@@ -29,16 +29,16 @@ what is currently wired.
 
 | Event | Script | What it does |
 | --- | --- | --- |
-| `SessionStart` (all sources) | `scripts/session-context.mjs` | at startup and resume, fetches `main` and `claude/*` once, then fast-forwards the checkout to `origin/main` when it is the main worktree, clean, detached or on `main`, and has nothing main lacks; prints the checkout's state, the doctor's two-line summary (`scripts/agent-doctor.mjs`, read after the fetch), "Merge drivers: not installed" when `scripts/merge-drivers.mjs install` could not write them and one line asking for a papercut ([papercuts.md](papercuts.md)) when a guard or hook fights the session; after a compaction, the reminders a summary drops; puts the pinned Node first on PATH when it is installed but not running; in a cloud container, installs dependencies when `node_modules/` is missing or older than the lockfile |
+| `SessionStart` (all sources) | `scripts/session-context.mjs` | at startup and resume, fetches `main` and `claude/*` once, then fast-forwards the checkout to `origin/main` when it is the main worktree, clean, detached or on `main`, and has nothing main lacks; prints the checkout's state, the doctor's two-line summary (`scripts/agent-doctor.mjs`, read after the fetch; it names any scheduled workflow whose last two runs on main failed, from one `gh api` read cached an hour in the git common dir by `scripts/scheduled-runs.mjs`, `DIVEDAY_SCHEDULED_RUNS=0` turns it off), "Merge drivers: not installed" when `scripts/merge-drivers.mjs install` could not write them and one line asking for a papercut ([papercuts.md](papercuts.md)) when a guard or hook fights the session; after a compaction, the reminders a summary drops; puts the pinned Node first on PATH when it is installed but not running; in a cloud container, installs dependencies when `node_modules/` is missing or older than the lockfile |
 | `UserPromptSubmit` | `scripts/session-context.mjs --prompt` | one line: branch, uncommitted count, unpushed count against the upstream, stack position, and the account's open pull requests (`gh api`, cached ten minutes in the git common dir; `DIVEDAY_OPEN_PULLS=0` turns it off), because one PR's CI runs at a time; on the first prompt of a session, the last session's hook refusals, and "write a papercut" with a ready `file-follow-up.mjs --papercut` command when one rule has refused three or more times this week and no papercut has its slug |
-| `PreToolUse` on `Bash` | `scripts/guard-bash.mjs` | refuses six command shapes, each naming the correct form; writes the quiet reporter into a focused test or e2e run |
+| `PreToolUse` on `Bash` | `scripts/guard-bash.mjs` | refuses eight command shapes, each naming the correct form; writes the quiet reporter into a focused test or e2e run |
 | `PreToolUse` on `Bash` | `scripts/guard-commit-format.mjs` | before a `git commit`, Biome's safe fixes over the fully staged files, re-staged; never refuses |
 | `PreToolUse` on `Bash` | `scripts/guard-push.mjs` | refuses a `git push` of a commit `pnpm verify:push` has not stamped, unless a reason is written in front |
 | `PreToolUse` on the GitHub MCP's pull request create/update | `scripts/guard-pr-body.mjs` | runs CI's `check-pr-body.mjs` over the body first and refuses one CI would refuse |
 | `PreToolUse` on `Read` | `scripts/guard-read.mjs` | refuses a generated artifact and a whole-file read of a large source file |
 | `PostToolUse` on `Edit`/`Write` | `scripts/format-touched.mjs` | Biome over the one file just touched; hands back what its safe fixes could not clear |
 | `PostToolUseFailure` on `Bash` | `scripts/explain-failure.mjs` | attaches the written answer to a failure the debug skill already explains |
-| `Stop` | `scripts/stray-processes.mjs` | reports background shells still alive after ten minutes and dev/test processes reparented to init |
+| `Stop` | `scripts/stray-processes.mjs` | reports background shells still alive after ten minutes, dev/test processes reparented to init, and files the session wrote in the directory the checkouts sit in (`*-orig.ts` copies and logs belong in the scratchpad) |
 | `Stop` | `scripts/unfinished-promises.mjs` | blocks a closing message that promises work while the tree is dirty, unless its last sentence is a question; the reason quotes the promise in two lines |
 | `Stop` | `scripts/unpushed-work.mjs` | in a cloud container, blocks a plain ending with commits on no remote branch; the reason is the one command to run |
 | `SubagentStop` | `scripts/stray-processes.mjs` | the same report for a subagent's shells |
@@ -118,7 +118,7 @@ line so it is not repeated. One papercut in 322 commits while twelve commit subj
 format or guard fix-ups is the measurement behind it: the papercuts rule fired on memory, and
 memory is what a session does not have about the session before.
 
-## `guard-bash.mjs` — six command shapes this repository has been burned by
+## `guard-bash.mjs` — eight command shapes this repository has been burned by
 
 1. **`pnpm <script> -- <args>`.** pnpm forwards that `--` into the underlying command instead of
    consuming it, so vitest/playwright see their own `--` and silently drop every flag after it.
@@ -151,6 +151,21 @@ memory is what a session does not have about the session before.
    refused unconditionally: `git push --force` without `--force-with-lease`, which overwrites a
    commit a reviewer or another session pushed since you fetched, and any push to `main`, which
    skips the pull request.
+7. **Cancelling a `push` run on `main`**: `gh run cancel <id>`, or a `gh api` POST to
+   `actions/runs/<id>/cancel` or `force-cancel`. A main push run publishes that commit's visual
+   snapshot, the baseline every branch cut from it compares against; five were cancelled on
+   2026-10-12 and -13 by the account every session's `gh` uses. The run's event and branch are read
+   with one `gh api` call; a run it cannot read passes. The GitHub MCP's run tools are not a `Bash`
+   command and are outside this hook.
+8. **An environment file read through the shell.** `cat`, `grep`, `rg`, `sed`, `awk`, `source` and
+   the other readers handed `.env` or a `.env.*` path other than `.env.example`. The settings deny
+   the Read tool those files, and `grep`/`find` run without a prompt, so `grep -r . .env.local`
+   printed production keys (2026-10-13 review, row 26). `config/env-registry.mjs` says what each key
+   is, `.env.example` lists them without values, and `pnpm check:env` says which are blank. This rule
+   reads the raw command, not the quote-blanked one the others use: a quoted path, a glob or brace
+   expansion (`.env*`, `.env.{local,vercel}`), `dd if=`, and an input redirection all count, and an
+   output redirection or heredoc that *writes* the file does not. A recursive search of a directory
+   that holds a `.env` file is not caught; `rg` skips it by default as gitignored.
 
 The guard blanks heredoc bodies and quoted strings before matching, so a commit message or a
 script that *mentions* a refused shape is not refused. The cost — a shell-in-a-string like

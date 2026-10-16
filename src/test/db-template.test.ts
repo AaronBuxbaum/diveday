@@ -34,7 +34,7 @@ async function freshTemplateBytes() {
   const globalForTemplate = globalThis as { divedayTestDbTemplate?: unknown };
   globalForTemplate.divedayTestDbTemplate = undefined;
   vi.resetModules();
-  const module = await import("./db-template");
+  const module = await import("./db-template-read");
   return module.templateBytes;
 }
 

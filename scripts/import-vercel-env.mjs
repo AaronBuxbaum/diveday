@@ -212,8 +212,13 @@ function readVercelState() {
       // An entry naming no target (a custom environment) proves nothing about this one.
       const targets = Array.isArray(entry.target) ? entry.target : [entry.target];
       if (!targets.includes(environment)) continue;
+      // Only a "plain" entry lists its value verbatim. Any other non-sensitive
+      // type (the "Config" the CLI reports for a NEXT_PUBLIC_ push, "encrypted")
+      // lists a ciphertext or normalised form that never equals what was sent:
+      // comparing it re-pushed the four NEXT_PUBLIC_RUM_* values on every deploy
+      // (2026-10-15). For those the listing proves only that the key exists.
       const readable =
-        entry.type !== "sensitive" && typeof entry.value === "string" && entry.value !== ""
+        entry.type === "plain" && typeof entry.value === "string" && entry.value !== ""
           ? entry.value
           : null;
       state.set(entry.key, readable);

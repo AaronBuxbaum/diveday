@@ -1,0 +1,600 @@
+{
+  "area": "belize-atolls",
+  "method": "Belize's three atolls: Turneffe Atoll, Lighthouse Reef (Great Blue Hole, Half Moon Caye, Long Caye) and Glover's Reef, as dived by atoll resorts and by day trips from Ambergris Caye, Caye Caulker, Hopkins and Placencia. Official lists, one each: the Half Moon Caye and Blue Hole Natural Monuments management plan 2008-2013 (Map 19, popular dive sites) for Lighthouse Reef and the Glover's Reef Marine Reserve management plan 2008-2013 (its tourism section's named dive sites) for Glover's; the Turneffe Atoll management plan 2012-2017 maps its dive sites as unnamed dots, so Turneffe has no official named list. Operator lists, one each: Turneffe Flats, Blackbird Caye Resort, Ramon's Village, Frenchie's Diving, Ecologic Divers, Amigos del Mar, Belize Pro Dive Center, White Sands Dive Shop, Ambergris Divers, Hamanasi (its Turneffe, Lighthouse, Glover's pages and its site blog are one list), Thatch Caye Resort, Splash Dive Center, Seahorse Dive Shop (belizescuba.com), The Placencia Resort, Belize Adventures (Slickrock, Long Caye, Glover's) and Off the Wall (Glover's). The Belize Tourism Board's two diving articles count together as one list. Turneffe Island Resort's site did not resolve, Isla Marisol's domain did not resolve and Glover's Atoll Resort names no sites; Island Expeditions, Dive The World, Belize Adventure (a blog) and Wikipedia were read for leads only. A site is counted when it is named, recreationally divable on scuba and on at least two lists. The Great Blue Hole is counted as the ~40 m (130 ft) guided dive run for certified divers. The Lighthouse Aquarium and Long Caye Wall are one row because Amigos and Seahorse name them as one site; Glover's Long Caye Wall and Aquarium are separate rows. One-list and official-only names stay as excluded rows. Counted 2026-10-14.",
+  "sources": [
+    "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/HMCNM%20BHNM%202008%20-%202013.pdf",
+    "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/Glovers%20Reef_MR_MP_%202008-2013.pdf",
+    "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/Turneffe%20Atoll%20Management%20Plan%202012-2017.pdf",
+    "https://www.tflats.com/belize-diving/favorite-dive-sites",
+    "https://www.blackbirdresort.com/scuba-diving/day-trips",
+    "https://ramons.com/scuba-trips/",
+    "https://www.frenchiesdivingbelize.com/",
+    "https://www.ecologicdivers.com/scubadiving.htm",
+    "https://www.amigosdivebelize.com/bluehole.php",
+    "https://www.belizeprodivecenter.com/diving/great-blue-hole",
+    "https://www.belizeprodivecenter.com/diving/witconcrete",
+    "https://www.whitesandsdiveshop.com/dive-tours",
+    "https://ambergrisdivers.com/lighthouse-reef-atoll-dive-sites/",
+    "https://www.hamanasi.com/belize-vacation/turneffe-atoll/",
+    "https://www.hamanasi.com/belize-vacation/great-blue-hole-lighthouse-reef/",
+    "https://www.hamanasi.com/belize-vacation/glovers-reef/",
+    "https://www.hamanasi.com/belize/tours/diving/best-dive-sites-in-belize-youve-never-heard-of/",
+    "https://www.thatchcayebelize.com/belize-barrier-reef",
+    "https://splashbelize.com/scuba-diving-sites/glovers-reef/",
+    "https://splashbelize.com/scuba-diving-sites/lighthouse-atoll-and-the-great-blue-hole/",
+    "https://splashbelize.com/scuba-diving-sites/turneffe-atoll/",
+    "https://belizescuba.com/diving-snorkeling/glovers-reef/",
+    "https://belizescuba.com/diving-snorkeling/belize-blue-hole/",
+    "https://theplacencia.com/scuba-snorkel",
+    "https://www.belizeadventures.com/belize-scuba-diving/",
+    "https://offthewallbelize.com/diving",
+    "https://www.travelbelize.org/blog/best-diving-spots-belize/",
+    "https://www.travelbelize.org/blog/dive-into-the-wonders-of-belize/"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Rendezvous Point (Rendezvous Cut, Rendezvouz)",
+      "template": null,
+      "listedBy": [
+        "https://www.tflats.com/belize-diving/favorite-dive-sites",
+        "https://ramons.com/scuba-trips/"
+      ]
+    },
+    {
+      "name": "Mini Elbow",
+      "template": null,
+      "listedBy": ["https://ramons.com/scuba-trips/", "https://www.frenchiesdivingbelize.com/"]
+    },
+    {
+      "name": "Vicente Wall",
+      "template": null,
+      "listedBy": ["https://ramons.com/scuba-trips/"],
+      "excluded": "on one operator list only (Ramon's Village)"
+    },
+    {
+      "name": "Elkin's Bay",
+      "template": null,
+      "listedBy": ["https://ramons.com/scuba-trips/"],
+      "excluded": "on one operator list only (Ramon's Village)"
+    },
+    {
+      "name": "JoJo's Split",
+      "template": null,
+      "listedBy": ["https://ramons.com/scuba-trips/"],
+      "excluded": "on one operator list only (Ramon's Village)"
+    },
+    {
+      "name": "Lee Ellen's Melons",
+      "template": null,
+      "listedBy": ["https://ramons.com/scuba-trips/"],
+      "excluded": "on one operator list only (Ramon's Village)"
+    },
+    {
+      "name": "Corona",
+      "template": null,
+      "listedBy": ["https://ramons.com/scuba-trips/"],
+      "excluded": "on one operator list only (Ramon's Village)"
+    },
+    {
+      "name": "Grand Bogue",
+      "template": null,
+      "listedBy": ["https://ramons.com/scuba-trips/"],
+      "excluded": "on one operator list only (Ramon's Village)"
+    },
+    {
+      "name": "Black Coral Wall",
+      "template": null,
+      "listedBy": ["https://www.frenchiesdivingbelize.com/"],
+      "excluded": "on one operator list only (Frenchie's Diving)"
+    },
+    {
+      "name": "Sandy Lane",
+      "template": null,
+      "listedBy": ["https://www.frenchiesdivingbelize.com/"],
+      "excluded": "on one operator list only (Frenchie's Diving)"
+    },
+    {
+      "name": "Ski Slope",
+      "template": null,
+      "listedBy": ["https://www.frenchiesdivingbelize.com/"],
+      "excluded": "on one operator list only (Frenchie's Diving)"
+    },
+    {
+      "name": "Gallows Point",
+      "template": null,
+      "listedBy": ["https://www.frenchiesdivingbelize.com/"],
+      "excluded": "on one operator list only (Frenchie's Diving)"
+    },
+    {
+      "name": "The Wit (Witconcrete Wreck)",
+      "template": "witconcrete-wreck",
+      "listedBy": [
+        "https://www.belizeprodivecenter.com/diving/witconcrete",
+        "https://www.blackbirdresort.com/scuba-diving/day-trips",
+        "https://ramons.com/scuba-trips/",
+        "https://www.travelbelize.org/blog/dive-into-the-wonders-of-belize/"
+      ]
+    },
+    {
+      "name": "Soldier Caye",
+      "template": null,
+      "listedBy": ["https://www.blackbirdresort.com/scuba-diving/day-trips"],
+      "excluded": "on one operator list only (Blackbird Caye Resort)"
+    },
+    {
+      "name": "Majestic Alley",
+      "template": null,
+      "listedBy": ["https://www.blackbirdresort.com/scuba-diving/day-trips"],
+      "excluded": "on one operator list only (Blackbird Caye Resort)"
+    },
+    {
+      "name": "Coral Gardens",
+      "template": null,
+      "listedBy": ["https://www.blackbirdresort.com/scuba-diving/day-trips"],
+      "excluded": "on one operator list only (Blackbird Caye Resort)"
+    },
+    {
+      "name": "Oasis",
+      "template": null,
+      "listedBy": ["https://www.blackbirdresort.com/scuba-diving/day-trips"],
+      "excluded": "on one operator list only (Blackbird Caye Resort)"
+    },
+    {
+      "name": "Turtle Ridge",
+      "template": null,
+      "listedBy": ["https://www.blackbirdresort.com/scuba-diving/day-trips"],
+      "excluded": "on one operator list only (Blackbird Caye Resort)"
+    },
+    {
+      "name": "Al's Hideout",
+      "template": null,
+      "listedBy": ["https://www.blackbirdresort.com/scuba-diving/day-trips"],
+      "excluded": "on one operator list only (Blackbird Caye Resort)"
+    },
+    {
+      "name": "Runway",
+      "template": null,
+      "listedBy": ["https://www.blackbirdresort.com/scuba-diving/day-trips"],
+      "excluded": "on one operator list only (Blackbird Caye Resort)"
+    },
+    {
+      "name": "Blackbird's Cut",
+      "template": null,
+      "listedBy": ["https://www.blackbirdresort.com/scuba-diving/day-trips"],
+      "excluded": "on one operator list only (Blackbird Caye Resort)"
+    },
+    {
+      "name": "Coliseum",
+      "template": null,
+      "listedBy": ["https://www.blackbirdresort.com/scuba-diving/day-trips"],
+      "excluded": "on one operator list only (Blackbird Caye Resort)"
+    },
+    {
+      "name": "Stingray's Motel",
+      "template": null,
+      "listedBy": ["https://www.blackbirdresort.com/scuba-diving/day-trips"],
+      "excluded": "on one operator list only (Blackbird Caye Resort)"
+    },
+    {
+      "name": "Coral Canyon",
+      "template": null,
+      "listedBy": ["https://www.blackbirdresort.com/scuba-diving/day-trips"],
+      "excluded": "on one operator list only (Blackbird Caye Resort)"
+    },
+    {
+      "name": "Grouper City",
+      "template": null,
+      "listedBy": ["https://www.blackbirdresort.com/scuba-diving/day-trips"],
+      "excluded": "on one operator list only (Blackbird Caye Resort)"
+    },
+    {
+      "name": "The Crabwalk",
+      "template": null,
+      "listedBy": ["https://www.blackbirdresort.com/scuba-diving/day-trips"],
+      "excluded": "on one operator list only (Blackbird Caye Resort); Blackbird gives it to 130 ft"
+    },
+    {
+      "name": "Little Calabash",
+      "template": null,
+      "listedBy": ["https://www.blackbirdresort.com/scuba-diving/day-trips"],
+      "excluded": "on one operator list only (Blackbird Caye Resort)"
+    },
+    {
+      "name": "Chinaman's Wall",
+      "template": null,
+      "listedBy": ["https://www.blackbirdresort.com/scuba-diving/day-trips"],
+      "excluded": "on one operator list only (Blackbird Caye Resort)"
+    },
+    {
+      "name": "Calabash Cut",
+      "template": null,
+      "listedBy": ["https://www.blackbirdresort.com/scuba-diving/day-trips"],
+      "excluded": "on one operator list only (Blackbird Caye Resort)"
+    },
+    {
+      "name": "Calabash",
+      "template": null,
+      "listedBy": ["https://www.ecologicdivers.com/scubadiving.htm"],
+      "excluded": "on one operator list only (Ecologic Divers); cannot be matched to Blackbird's Calabash Cut or Little Calabash or Turneffe Flats' The Chutes off Calabash Caye"
+    },
+    {
+      "name": "The Chutes",
+      "template": null,
+      "listedBy": ["https://www.tflats.com/belize-diving/favorite-dive-sites"],
+      "excluded": "on one operator list only (Turneffe Flats)"
+    },
+    {
+      "name": "CoCo Point",
+      "template": null,
+      "listedBy": ["https://www.blackbirdresort.com/scuba-diving/day-trips"],
+      "excluded": "on one operator list only (Blackbird Caye Resort)"
+    },
+    {
+      "name": "West Side Story",
+      "template": null,
+      "listedBy": ["https://www.blackbirdresort.com/scuba-diving/day-trips"],
+      "excluded": "on one operator list only (Blackbird Caye Resort)"
+    },
+    {
+      "name": "Crickozeen Cut",
+      "template": null,
+      "listedBy": ["https://www.tflats.com/belize-diving/favorite-dive-sites"],
+      "excluded": "on one operator list only (Turneffe Flats)"
+    },
+    {
+      "name": "Baker's Drop",
+      "template": null,
+      "listedBy": ["https://www.tflats.com/belize-diving/favorite-dive-sites"],
+      "excluded": "on one operator list only (Turneffe Flats)"
+    },
+    {
+      "name": "Wonder World",
+      "template": null,
+      "listedBy": ["https://www.tflats.com/belize-diving/favorite-dive-sites"],
+      "excluded": "on one operator list only (Turneffe Flats)"
+    },
+    {
+      "name": "The Terrace",
+      "template": null,
+      "listedBy": ["https://www.tflats.com/belize-diving/favorite-dive-sites"],
+      "excluded": "on one operator list only (Turneffe Flats)"
+    },
+    {
+      "name": "Tubular Barrels",
+      "template": null,
+      "listedBy": ["https://www.tflats.com/belize-diving/favorite-dive-sites"],
+      "excluded": "on one operator list only (Turneffe Flats)"
+    },
+    {
+      "name": "Pelican Wall",
+      "template": null,
+      "listedBy": ["https://www.tflats.com/belize-diving/favorite-dive-sites"],
+      "excluded": "on one operator list only (Turneffe Flats)"
+    },
+    {
+      "name": "Sayonara (Sayonara Wreck)",
+      "template": null,
+      "listedBy": ["https://www.tflats.com/belize-diving/favorite-dive-sites"],
+      "excluded": "on one operator list only (Turneffe Flats)"
+    },
+    {
+      "name": "Lindsey's Back Porch",
+      "template": null,
+      "listedBy": ["https://www.tflats.com/belize-diving/favorite-dive-sites"],
+      "excluded": "on one operator list only (Turneffe Flats)"
+    },
+    {
+      "name": "Front Porch",
+      "template": null,
+      "listedBy": [
+        "https://www.frenchiesdivingbelize.com/",
+        "https://www.ecologicdivers.com/scubadiving.htm"
+      ]
+    },
+    {
+      "name": "Myrtle's Wall (Myrtle Turtle)",
+      "template": null,
+      "listedBy": [
+        "https://www.frenchiesdivingbelize.com/",
+        "https://www.ecologicdivers.com/scubadiving.htm"
+      ]
+    },
+    {
+      "name": "Black Beauty",
+      "template": null,
+      "listedBy": [
+        "https://www.ecologicdivers.com/scubadiving.htm",
+        "https://www.thatchcayebelize.com/belize-barrier-reef"
+      ]
+    },
+    {
+      "name": "The Elbow (Turneffe Elbow)",
+      "template": "the-elbow-turneffe",
+      "listedBy": [
+        "https://www.tflats.com/belize-diving/favorite-dive-sites",
+        "https://www.blackbirdresort.com/scuba-diving/day-trips",
+        "https://ramons.com/scuba-trips/",
+        "https://www.frenchiesdivingbelize.com/",
+        "https://www.ecologicdivers.com/scubadiving.htm",
+        "https://www.hamanasi.com/belize-vacation/turneffe-atoll/",
+        "https://splashbelize.com/scuba-diving-sites/turneffe-atoll/",
+        "https://www.travelbelize.org/blog/best-diving-spots-belize/"
+      ]
+    },
+    {
+      "name": "Abyss West",
+      "template": null,
+      "listedBy": [
+        "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/HMCNM%20BHNM%202008%20-%202013.pdf"
+      ],
+      "excluded": "on the official list only (Half Moon Caye and Blue Hole Natural Monuments management plan, Map 19)"
+    },
+    {
+      "name": "West Point",
+      "template": null,
+      "listedBy": [
+        "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/HMCNM%20BHNM%202008%20-%202013.pdf"
+      ],
+      "excluded": "on the official list only (HMCNM/BHNM management plan, Map 19)"
+    },
+    {
+      "name": "Great Blue Hole (Blue Hole)",
+      "template": "great-blue-hole",
+      "listedBy": [
+        "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/HMCNM%20BHNM%202008%20-%202013.pdf",
+        "https://ambergrisdivers.com/lighthouse-reef-atoll-dive-sites/",
+        "https://ramons.com/scuba-trips/",
+        "https://www.ecologicdivers.com/scubadiving.htm",
+        "https://www.frenchiesdivingbelize.com/",
+        "https://www.amigosdivebelize.com/bluehole.php",
+        "https://www.belizeprodivecenter.com/diving/great-blue-hole",
+        "https://www.whitesandsdiveshop.com/dive-tours",
+        "https://www.tflats.com/belize-diving/favorite-dive-sites",
+        "https://www.blackbirdresort.com/scuba-diving/day-trips",
+        "https://www.hamanasi.com/belize-vacation/great-blue-hole-lighthouse-reef/",
+        "https://splashbelize.com/scuba-diving-sites/lighthouse-atoll-and-the-great-blue-hole/",
+        "https://belizescuba.com/diving-snorkeling/belize-blue-hole/",
+        "https://theplacencia.com/scuba-snorkel",
+        "https://www.travelbelize.org/blog/best-diving-spots-belize/"
+      ]
+    },
+    {
+      "name": "Eagle Ray Wall",
+      "template": null,
+      "listedBy": [
+        "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/HMCNM%20BHNM%202008%20-%202013.pdf"
+      ],
+      "excluded": "on the official list only (HMCNM/BHNM management plan, Map 19)"
+    },
+    {
+      "name": "The Aquarium (Long Caye Aquarium, Long Caye Wall)",
+      "template": "the-aquarium-lighthouse-reef",
+      "listedBy": [
+        "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/HMCNM%20BHNM%202008%20-%202013.pdf",
+        "https://ramons.com/scuba-trips/",
+        "https://www.ecologicdivers.com/scubadiving.htm",
+        "https://www.frenchiesdivingbelize.com/",
+        "https://www.amigosdivebelize.com/bluehole.php",
+        "https://www.belizeprodivecenter.com/diving/great-blue-hole",
+        "https://www.tflats.com/belize-diving/favorite-dive-sites",
+        "https://www.blackbirdresort.com/scuba-diving/day-trips",
+        "https://www.hamanasi.com/belize-vacation/great-blue-hole-lighthouse-reef/",
+        "https://splashbelize.com/scuba-diving-sites/lighthouse-atoll-and-the-great-blue-hole/",
+        "https://belizescuba.com/diving-snorkeling/belize-blue-hole/",
+        "https://theplacencia.com/scuba-snorkel",
+        "https://www.travelbelize.org/blog/best-diving-spots-belize/"
+      ]
+    },
+    {
+      "name": "Silver Caves (Silver Cave)",
+      "template": null,
+      "listedBy": [
+        "https://www.blackbirdresort.com/scuba-diving/day-trips",
+        "https://www.hamanasi.com/belize/tours/diving/best-dive-sites-in-belize-youve-never-heard-of/"
+      ]
+    },
+    {
+      "name": "The Cathedral",
+      "template": null,
+      "listedBy": ["https://www.tflats.com/belize-diving/favorite-dive-sites"],
+      "excluded": "on one operator list only (Turneffe Flats)"
+    },
+    {
+      "name": "Que Brada",
+      "template": null,
+      "listedBy": [
+        "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/HMCNM%20BHNM%202008%20-%202013.pdf"
+      ],
+      "excluded": "on the official list only (HMCNM/BHNM management plan, Map 19)"
+    },
+    {
+      "name": "Tres Cocos",
+      "template": null,
+      "listedBy": [
+        "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/HMCNM%20BHNM%202008%20-%202013.pdf"
+      ],
+      "excluded": "on the official list only (HMCNM/BHNM management plan, Map 19)"
+    },
+    {
+      "name": "Half Moon Caye Wall (Half Moon Wall)",
+      "template": "half-moon-caye-wall",
+      "listedBy": [
+        "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/HMCNM%20BHNM%202008%20-%202013.pdf",
+        "https://ramons.com/scuba-trips/",
+        "https://www.ecologicdivers.com/scubadiving.htm",
+        "https://www.frenchiesdivingbelize.com/",
+        "https://www.amigosdivebelize.com/bluehole.php",
+        "https://www.belizeprodivecenter.com/diving/great-blue-hole",
+        "https://www.tflats.com/belize-diving/favorite-dive-sites",
+        "https://www.blackbirdresort.com/scuba-diving/day-trips",
+        "https://www.hamanasi.com/belize-vacation/great-blue-hole-lighthouse-reef/",
+        "https://splashbelize.com/scuba-diving-sites/lighthouse-atoll-and-the-great-blue-hole/",
+        "https://belizescuba.com/diving-snorkeling/belize-blue-hole/",
+        "https://theplacencia.com/scuba-snorkel",
+        "https://www.travelbelize.org/blog/best-diving-spots-belize/"
+      ]
+    },
+    {
+      "name": "Eagle Landing",
+      "template": null,
+      "listedBy": [
+        "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/HMCNM%20BHNM%202008%20-%202013.pdf"
+      ],
+      "excluded": "on the official list only (HMCNM/BHNM management plan, Map 19)"
+    },
+    {
+      "name": "Hat Caye Drop-off",
+      "template": null,
+      "listedBy": [
+        "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/HMCNM%20BHNM%202008%20-%202013.pdf"
+      ],
+      "excluded": "on the official list only (HMCNM/BHNM management plan, Map 19)"
+    },
+    {
+      "name": "Emerald Forest Reef",
+      "template": null,
+      "listedBy": [
+        "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/Glovers%20Reef_MR_MP_%202008-2013.pdf"
+      ],
+      "excluded": "on the official list only (Glover's Reef Marine Reserve management plan)"
+    },
+    {
+      "name": "Baking Swash",
+      "template": null,
+      "listedBy": [
+        "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/Glovers%20Reef_MR_MP_%202008-2013.pdf"
+      ],
+      "excluded": "on the official list only (Glover's Reef Marine Reserve management plan)"
+    },
+    {
+      "name": "Shark Point",
+      "template": null,
+      "listedBy": [
+        "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/Glovers%20Reef_MR_MP_%202008-2013.pdf"
+      ],
+      "excluded": "on the official list only (Glover's Reef Marine Reserve management plan)"
+    },
+    {
+      "name": "Middle Caye Wall (Middle Caye Reefs)",
+      "template": null,
+      "listedBy": [
+        "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/Glovers%20Reef_MR_MP_%202008-2013.pdf",
+        "https://www.belizeadventures.com/belize-scuba-diving/"
+      ]
+    },
+    {
+      "name": "Long Caye Wall",
+      "template": "long-caye-wall-glovers-reef",
+      "listedBy": [
+        "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/Glovers%20Reef_MR_MP_%202008-2013.pdf",
+        "https://www.belizeadventures.com/belize-scuba-diving/",
+        "https://offthewallbelize.com/diving",
+        "https://www.hamanasi.com/belize-vacation/glovers-reef/",
+        "https://belizescuba.com/diving-snorkeling/glovers-reef/",
+        "https://theplacencia.com/scuba-snorkel"
+      ]
+    },
+    {
+      "name": "Off The Wall",
+      "template": null,
+      "listedBy": ["https://splashbelize.com/scuba-diving-sites/glovers-reef/"],
+      "excluded": "on one operator list only (Splash Dive Center); probably Long Caye Wall off the Off the Wall resort, but Splash does not say so"
+    },
+    {
+      "name": "The Aquarium (Glover's Reef)",
+      "template": "the-aquarium-glovers-reef",
+      "listedBy": [
+        "https://www.belizeadventures.com/belize-scuba-diving/",
+        "https://splashbelize.com/scuba-diving-sites/glovers-reef/",
+        "https://belizescuba.com/diving-snorkeling/glovers-reef/",
+        "https://theplacencia.com/scuba-snorkel",
+        "https://www.travelbelize.org/blog/dive-into-the-wonders-of-belize/"
+      ]
+    },
+    {
+      "name": "Manta Wall",
+      "template": "manta-wall-glovers-reef",
+      "listedBy": [
+        "https://splashbelize.com/scuba-diving-sites/glovers-reef/",
+        "https://belizescuba.com/diving-snorkeling/glovers-reef/",
+        "https://theplacencia.com/scuba-snorkel"
+      ]
+    },
+    {
+      "name": "The Abyss (Glover's Reef)",
+      "template": null,
+      "listedBy": ["https://www.belizeadventures.com/belize-scuba-diving/"],
+      "excluded": "on one operator list only (Belize Adventures (Slickrock))"
+    },
+    {
+      "name": "The Crack",
+      "template": null,
+      "listedBy": ["https://www.belizeadventures.com/belize-scuba-diving/"],
+      "excluded": "on one operator list only (Belize Adventures (Slickrock))"
+    },
+    {
+      "name": "Durgeon Reef",
+      "template": null,
+      "listedBy": ["https://www.belizeadventures.com/belize-scuba-diving/"],
+      "excluded": "on one operator list only (Belize Adventures (Slickrock))"
+    },
+    {
+      "name": "The Wild Side",
+      "template": null,
+      "listedBy": ["https://www.belizeadventures.com/belize-scuba-diving/"],
+      "excluded": "on one operator list only (Belize Adventures (Slickrock))"
+    },
+    {
+      "name": "Gorgonian Reef",
+      "template": null,
+      "listedBy": ["https://www.belizeadventures.com/belize-scuba-diving/"],
+      "excluded": "on one operator list only (Belize Adventures (Slickrock))"
+    },
+    {
+      "name": "The Whole Lotta Wrasse",
+      "template": null,
+      "listedBy": ["https://www.belizeadventures.com/belize-scuba-diving/"],
+      "excluded": "on one operator list only (Belize Adventures (Slickrock))"
+    },
+    {
+      "name": "Sand Dollar Flats",
+      "template": null,
+      "listedBy": ["https://www.belizeadventures.com/belize-scuba-diving/"],
+      "excluded": "on one operator list only (Belize Adventures (Slickrock)) (night dive)"
+    },
+    {
+      "name": "The Garden",
+      "template": null,
+      "listedBy": ["https://www.belizeadventures.com/belize-scuba-diving/"],
+      "excluded": "on one operator list only (Belize Adventures (Slickrock))"
+    },
+    {
+      "name": "White Sands",
+      "template": null,
+      "listedBy": ["https://www.travelbelize.org/blog/best-diving-spots-belize/"],
+      "excluded": "on the tourism-board list only"
+    },
+    {
+      "name": "Southwest Caye Wall (SW Caye Wall)",
+      "template": null,
+      "listedBy": [
+        "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/Glovers%20Reef_MR_MP_%202008-2013.pdf",
+        "https://www.hamanasi.com/belize/tours/diving/best-dive-sites-in-belize-youve-never-heard-of/"
+      ]
+    },
+    {
+      "name": "The Pinnacles (Pinnacle)",
+      "template": "the-pinnacles-glovers-reef",
+      "listedBy": [
+        "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/Glovers%20Reef_MR_MP_%202008-2013.pdf",
+        "https://www.hamanasi.com/belize-vacation/glovers-reef/",
+        "https://www.hamanasi.com/belize/tours/diving/best-dive-sites-in-belize-youve-never-heard-of/",
+        "https://splashbelize.com/scuba-diving-sites/glovers-reef/",
+        "https://belizescuba.com/diving-snorkeling/glovers-reef/",
+        "https://theplacencia.com/scuba-snorkel"
+      ]
+    }
+  ]
+}

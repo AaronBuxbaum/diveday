@@ -15,11 +15,21 @@ export const DIALOG_PANEL_PROPS = {
 } as const;
 
 /**
+ * The same panel while it plays its exit animation: **inert**, so nothing in it can be tabbed
+ * into, clicked, or read out. A layer that has been dismissed stays mounted for `exitMs`, and
+ * the command palette portals to the end of `<body>` — the first stop a Tab reaches when the
+ * focus it left behind has been hidden by the navigation that closed it. The e2e keyboard walk
+ * hit exactly that (about one run in 250): Tab, Tab, then off the end of the page, in the 200ms
+ * between choosing "Add a booking" and the palette unmounting.
+ */
+const CLOSING_DIALOG_PANEL_PROPS = { ...DIALOG_PANEL_PROPS, inert: true } as const;
+
+/**
  * **One keyboard contract for every modal layer**: holds focus inside while open and hands it
  * back on close (`useFocusTrap`, or the `triggerRef` when one is given), closes on Escape, keeps
  * mounted through its exit animation, and — for a sheet that covers the page — stops the page
- * behind it scrolling. The panel's `aria-modal` and `tabIndex` come back as `dialogProps`, so
- * no layer spells them by hand.
+ * behind it scrolling. The panel's `aria-modal` and `tabIndex` come back as `dialogProps` (plus
+ * `inert` once it is closing), so no layer spells them by hand.
  *
  * `Modal`, the manifest's `PersonSheet` and the command palette each carried their own copy of
  * this; `PersonSheet` additionally sent focus back to its trigger by hand on Escape. One hook is
@@ -49,7 +59,11 @@ export function useDialogBehaviour({
   exitMs: number;
   /** Stop the page behind scrolling while the layer is on screen. */
   lockScroll?: boolean;
-}): { mounted: boolean; closing: boolean; dialogProps: typeof DIALOG_PANEL_PROPS } {
+}): {
+  mounted: boolean;
+  closing: boolean;
+  dialogProps: typeof DIALOG_PANEL_PROPS | typeof CLOSING_DIALOG_PANEL_PROPS;
+} {
   useFocusTrap(open, containerRef);
   const { mounted, closing } = useExitAnimation(open, exitMs);
 
@@ -86,5 +100,9 @@ export function useDialogBehaviour({
     };
   }, [lockScroll, mounted]);
 
-  return { mounted, closing, dialogProps: DIALOG_PANEL_PROPS };
+  return {
+    mounted,
+    closing,
+    dialogProps: closing ? CLOSING_DIALOG_PANEL_PROPS : DIALOG_PANEL_PROPS,
+  };
 }

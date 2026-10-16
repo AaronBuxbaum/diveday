@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 
 /**
  * Authenticated encryption for third-party credentials DiveDay stores on a
@@ -17,7 +17,8 @@ import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
  * to garbage that then gets sent to Meta as a bearer token.
  *
  * This is deliberately *not* a general-purpose crypto layer. It seals short
- * strings under one key, and callers treat "cannot open" as
+ * strings under one key (opening, during a rotation, under the one before it
+ * too), and callers treat "cannot open" as
  * "this shop has no working credential" rather than a fatal error — a rotated
  * or mis-set key degrades the courtesy channel to SMS instead of taking down
  * the reminder cron.
@@ -29,28 +30,80 @@ const KEY_BYTES = 32;
 const IV_BYTES = 12;
 const TAG_BYTES = 16;
 
-export type SecretKey = Buffer;
-
-export type SecretKeyResult =
-  | { status: "ok"; key: SecretKey }
-  | { status: "unset" }
-  /** Returns a code, never a sentence — the UI picks the words (ADR 20260731-domain-layer-copy-leaks). */
-  | { status: "invalid"; reason: "not_base64" | "wrong_length" };
+export const SECRET_KEY_VARIABLE = "SECRET_ENCRYPTION_KEY";
+export const PREVIOUS_SECRET_KEY_VARIABLE = "SECRET_ENCRYPTION_KEY_PREVIOUS";
 
 /**
- * The application's secret-sealing key, read from `SECRET_ENCRYPTION_KEY` as
- * 32 base64 bytes (`openssl rand -base64 32`).
+ * The key that seals, and the one it replaced, which only opens.
+ *
+ * Rotation is two-key so that it locks nobody out. Two-factor secrets and
+ * recovery-code digests are bound to this key (src/db/account-security.ts):
+ * a key swapped in one step would leave every staffer who turned on two-factor
+ * unable to sign in. With the old value in `SECRET_ENCRYPTION_KEY_PREVIOUS`,
+ * everything sealed under it still opens, and each value is sealed under the
+ * new key the next time it is written.
+ */
+export interface SecretKeyring {
+  readonly current: Buffer;
+  readonly previous: Buffer | null;
+}
+
+/** A bare key is a keyring with nothing before it. */
+export type SecretKey = Buffer | SecretKeyring;
+
+export type SecretKeyResult =
+  | { status: "ok"; key: SecretKeyring }
+  | { status: "unset" }
+  /** Returns a code, never a sentence — the UI picks the words (ADR 20260731-domain-layer-copy-leaks). */
+  | {
+      status: "invalid";
+      variable: typeof SECRET_KEY_VARIABLE | typeof PREVIOUS_SECRET_KEY_VARIABLE;
+      reason: "not_base64" | "wrong_length";
+    };
+
+/**
+ * The application's secret-sealing keyring, read from `SECRET_ENCRYPTION_KEY`
+ * (and, during a rotation, `SECRET_ENCRYPTION_KEY_PREVIOUS`) as 32 base64 bytes
+ * each (`openssl rand -base64 32`).
  *
  * Absent is a legitimate state, not an error: DiveDay runs perfectly well with
  * no shop having connected WhatsApp, and every caller degrades rather than
  * throwing. A *present but malformed* key is different — that is a
  * configuration mistake worth naming loudly, because it silently disables a
- * channel the operator believes they just switched on.
+ * channel the operator believes they just switched on. The previous key is held
+ * to the same standard: a mis-pasted one would quietly fail every value it was
+ * there to open, which is the lockout the rotation exists to prevent.
  */
 export function secretKeyFromEnvironment(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): SecretKeyResult {
-  const raw = env.SECRET_ENCRYPTION_KEY?.trim();
+  // Read by name, not through the constants, so `check-env-reads` sees both reads.
+  const current = parseKey(env.SECRET_ENCRYPTION_KEY);
+  if (current.status === "unset") return { status: "unset" };
+  if (current.status === "invalid") {
+    return { status: "invalid", variable: SECRET_KEY_VARIABLE, reason: current.reason };
+  }
+  const previous = parseKey(env.SECRET_ENCRYPTION_KEY_PREVIOUS);
+  if (previous.status === "invalid") {
+    return { status: "invalid", variable: PREVIOUS_SECRET_KEY_VARIABLE, reason: previous.reason };
+  }
+  return {
+    status: "ok",
+    key: {
+      current: current.key,
+      // The same value in both places is a rotation that has not started.
+      previous: previous.status === "ok" && !previous.key.equals(current.key) ? previous.key : null,
+    },
+  };
+}
+
+type ParsedKey =
+  | { status: "ok"; key: Buffer }
+  | { status: "unset" }
+  | { status: "invalid"; reason: "not_base64" | "wrong_length" };
+
+function parseKey(value: string | undefined): ParsedKey {
+  const raw = value?.trim();
   if (!raw) return { status: "unset" };
   let decoded: Buffer;
   try {
@@ -69,10 +122,32 @@ export function secretKeyFromEnvironment(
   return { status: "ok", key: decoded };
 }
 
+/** Every key that may open a value, the sealing key first. */
+export function openingKeys(key: SecretKey): Buffer[] {
+  if (Buffer.isBuffer(key)) return [key];
+  return key.previous ? [key.current, key.previous] : [key.current];
+}
+
 /**
- * Seal a secret for storage. Every call uses a fresh random IV, so sealing the
- * same token twice produces different ciphertext — an attacker with read access
- * to the column cannot tell which shops share a credential.
+ * A short, non-secret name for a key: the first 16 hex digits of its SHA-256.
+ * Stored beside values the key protects, so an operator can count what still
+ * depends on a previous key. Shell equivalent:
+ * `printf %s "$KEY" | base64 -d | sha256sum | cut -c1-16`.
+ */
+export function secretKeyFingerprint(key: Buffer): string {
+  return createHash("sha256").update(key).digest("hex").slice(0, 16);
+}
+
+/** The one key that seals. */
+export function sealingKey(key: SecretKey): Buffer {
+  return Buffer.isBuffer(key) ? key : key.current;
+}
+
+/**
+ * Seal a secret for storage, always under the current key. Every call uses a
+ * fresh random IV, so sealing the same token twice produces different
+ * ciphertext — an attacker with read access to the column cannot tell which
+ * shops share a credential.
  *
  * Format is `v1.<iv>.<tag>.<ciphertext>`, each part base64url, chosen over a
  * JSON envelope so the stored value is a single opaque text column with no
@@ -80,7 +155,7 @@ export function secretKeyFromEnvironment(
  */
 export function sealSecret(plaintext: string, key: SecretKey): string {
   const iv = randomBytes(IV_BYTES);
-  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const cipher = createCipheriv("aes-256-gcm", sealingKey(key), iv);
   const ciphertext = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
   return [SCHEME, base64url(iv), base64url(tag), base64url(ciphertext)].join(".");
@@ -96,6 +171,27 @@ export function sealSecret(plaintext: string, key: SecretKey): string {
  * which failure they triggered.
  */
 export function openSecret(sealed: string, key: SecretKey): string | null {
+  return openSecretWithKeyring(sealed, key)?.plaintext ?? null;
+}
+
+/**
+ * `openSecret`, also saying whether the value was sealed under the previous
+ * key — a caller that can write it back re-seals it under the current one, so
+ * the previous key can be retired without waiting for every row to change.
+ */
+export function openSecretWithKeyring(
+  sealed: string,
+  key: SecretKey,
+): { plaintext: string; sealedWithPrevious: boolean } | null {
+  const keys = openingKeys(key);
+  for (const [index, candidate] of keys.entries()) {
+    const plaintext = openWith(sealed, candidate);
+    if (plaintext !== null) return { plaintext, sealedWithPrevious: index > 0 };
+  }
+  return null;
+}
+
+function openWith(sealed: string, key: Buffer): string | null {
   const parts = sealed.split(".");
   if (parts.length !== 4 || parts[0] !== SCHEME) return null;
   const [, ivPart, tagPart, ciphertextPart] = parts;

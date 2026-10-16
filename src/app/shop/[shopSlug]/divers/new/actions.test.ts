@@ -13,7 +13,9 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 vi.mock("@/app/actions/seat-diver", () => ({ seatNewDiverAction: vi.fn() }));
-vi.mock("@/app/shop/[shopSlug]/trips/[id]/actions", () => ({ addToWaitlistAction: vi.fn() }));
+vi.mock("@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions", () => ({
+  addToWaitlistAction: vi.fn(),
+}));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({ db: "handle" })) }));
 vi.mock("@/db/divers", () => ({ createDiver: vi.fn(), findSimilarDivers: vi.fn() }));
 vi.mock("@/db/form-drafts", () => ({ discardFormDraft: vi.fn() }));
@@ -25,7 +27,9 @@ vi.mock("@/lib/navigation", () => ({
 vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { seatNewDiverAction } = await import("@/app/actions/seat-diver");
-const { addToWaitlistAction } = await import("@/app/shop/[shopSlug]/trips/[id]/actions");
+const { addToWaitlistAction } = await import(
+  "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions"
+);
 const { createDiver, findSimilarDivers } = await import("@/db/divers");
 const { discardFormDraft } = await import("@/db/form-drafts");
 const { revalidateAndRedirect } = await import("@/lib/navigation");

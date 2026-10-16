@@ -1,0 +1,211 @@
+{
+  "area": "usvi-st-croix",
+  "method": "St Croix, US Virgin Islands: the north shore from Salt River to Cane Bay and Northstar, Long Reef off Christiansted, Buck Island Reef National Monument, and the west end from Frederiksted to Butler Bay. Lists used: Blue Salt Divers' St Croix dive-site page (divexp.com, Dive Experience, now redirects to Blue Salt Divers, so they count once); Sweet Bottom Dive Center's shore-dive page; Cane Bay Dive Shop's tour page, which names the Wall, the Pier, Armageddon and the five Butler Bay wrecks but not the wrecks individually; the USVI tourism dive-site pages (GoToStCroix and VisitUSVI, counted as one tourism-board list); and the NPS Submerged Resources dive guides to Salt River Bay and Buck Island (archived 2023 snapshots of 2012 text; the live pages return 404), counted as the one official list. St Croix Ultimate Bluewater Adventures publishes no named sites (its pages say only wall, reef, wreck and pier), says it does not scuba dive Buck Island, and is not counted; the N2 the Blue domain is now parked and its successor Nep2une publishes no readable list; Anchor Dive Center's site is gone and Sweet Bottom names no boat sites. No official mooring list with names is readable: the St Croix Diving Association moorings and the DPNR/East End Marine Park mooring pages name no dive sites. A site is counted on at least two independent lists and recreationally divable; Salt River Canyon's walls are counted at their 25 to 80 ft mooring depths; the Butler Bay wrecks are two rows (shallow and deep) because the tourism list splits them that way. The Anchors (NPS) and Twin Anchors (Blue Salt) are treated as one site on the strength of the matching description of two 1700s Danish anchors, which is the least certain merge. Counted 2026-10-14.",
+  "sources": [
+    "https://bluesaltdivers.com/st-croix-dive-sites",
+    "https://www.sweetbottomdive.com/diving",
+    "https://canebayscuba.com/dive-tours/",
+    "https://www.gotostcroix.com/st-croix-dive-sites/",
+    "https://www.visitusvi.com/experience/take-a-st-croix-diving-trip/",
+    "https://web.archive.org/web/2023/https://www.nps.gov/submerged/Parks/SARI.html",
+    "https://web.archive.org/web/2023/https://www.nps.gov/submerged/Parks/buis.html",
+    "https://stcroixscuba.com/diving",
+    "https://stcroixscuba.com/wall",
+    "https://stcroixscuba.com/buck-island-reef-national-monument-st-croix",
+    "https://stcroixscuba.com/charters/northshore-am",
+    "https://divexp.com"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Buck Island Reef National Monument (two scuba moorings)",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/2023/https://www.nps.gov/submerged/Parks/buis.html"
+      ],
+      "excluded": "on one list only (NPS); the main St Croix operator reports it does not scuba dive Buck Island"
+    },
+    {
+      "name": "Scotch Bank",
+      "template": null,
+      "listedBy": ["https://bluesaltdivers.com/st-croix-dive-sites"],
+      "excluded": "on one operator list only (Blue Salt Divers)"
+    },
+    {
+      "name": "Stingraysted",
+      "template": null,
+      "listedBy": ["https://bluesaltdivers.com/st-croix-dive-sites"],
+      "excluded": "on one operator list only (Blue Salt Divers)"
+    },
+    {
+      "name": "Eagle Ray",
+      "template": null,
+      "listedBy": ["https://bluesaltdivers.com/st-croix-dive-sites"],
+      "excluded": "on one operator list only (Blue Salt Divers)"
+    },
+    {
+      "name": "Blue Chute (Chez Barge)",
+      "template": null,
+      "listedBy": ["https://bluesaltdivers.com/st-croix-dive-sites"],
+      "excluded": "on one operator list only (Blue Salt Divers)"
+    },
+    {
+      "name": "WAPA",
+      "template": null,
+      "listedBy": ["https://bluesaltdivers.com/st-croix-dive-sites"],
+      "excluded": "on one operator list only (Blue Salt Divers)"
+    },
+    {
+      "name": "Sleeping Shark Hole",
+      "template": null,
+      "listedBy": ["https://bluesaltdivers.com/st-croix-dive-sites"],
+      "excluded": "on one operator list only (Blue Salt Divers)"
+    },
+    {
+      "name": "Sugar Beach",
+      "template": null,
+      "listedBy": ["https://bluesaltdivers.com/st-croix-dive-sites"],
+      "excluded": "on one operator list only (Blue Salt Divers)"
+    },
+    {
+      "name": "Turquoise Bay",
+      "template": null,
+      "listedBy": ["https://bluesaltdivers.com/st-croix-dive-sites"],
+      "excluded": "on one operator list only (Blue Salt Divers)"
+    },
+    {
+      "name": "Love Shack",
+      "template": null,
+      "listedBy": ["https://bluesaltdivers.com/st-croix-dive-sites"],
+      "excluded": "on one operator list only (Blue Salt Divers)"
+    },
+    {
+      "name": "Knobby Knoll",
+      "template": null,
+      "listedBy": ["https://bluesaltdivers.com/st-croix-dive-sites"],
+      "excluded": "on one operator list only (Blue Salt Divers)"
+    },
+    {
+      "name": "Little Cozumel",
+      "template": null,
+      "listedBy": ["https://bluesaltdivers.com/st-croix-dive-sites"],
+      "excluded": "on one operator list only (Blue Salt Divers)"
+    },
+    {
+      "name": "White Horse",
+      "template": null,
+      "listedBy": ["https://bluesaltdivers.com/st-croix-dive-sites"],
+      "excluded": "on one operator list only (Blue Salt Divers)"
+    },
+    {
+      "name": "Salt River Canyon East Wall (Barracuda Bank)",
+      "template": "salt-river-canyon-east-wall-st-croix",
+      "listedBy": [
+        "https://www.gotostcroix.com/st-croix-dive-sites/",
+        "https://web.archive.org/web/2023/https://www.nps.gov/submerged/Parks/SARI.html"
+      ]
+    },
+    {
+      "name": "Salt River Canyon West Wall (Grouper Grotto, The Pinnacles)",
+      "template": "salt-river-canyon-west-wall-st-croix",
+      "listedBy": [
+        "https://bluesaltdivers.com/st-croix-dive-sites",
+        "https://www.gotostcroix.com/st-croix-dive-sites/",
+        "https://web.archive.org/web/2023/https://www.nps.gov/submerged/Parks/SARI.html"
+      ]
+    },
+    {
+      "name": "The Anchors (Twin Anchors)",
+      "template": "the-anchors-salt-river-st-croix",
+      "listedBy": [
+        "https://web.archive.org/web/2023/https://www.nps.gov/submerged/Parks/SARI.html",
+        "https://bluesaltdivers.com/st-croix-dive-sites"
+      ]
+    },
+    {
+      "name": "Gentle Winds",
+      "template": null,
+      "listedBy": ["https://bluesaltdivers.com/st-croix-dive-sites"],
+      "excluded": "on one operator list only (Blue Salt Divers)"
+    },
+    {
+      "name": "Pinnacle (Salt River)",
+      "template": null,
+      "listedBy": ["https://bluesaltdivers.com/st-croix-dive-sites"],
+      "excluded": "on one operator list only (Blue Salt Divers)"
+    },
+    {
+      "name": "Pavilions",
+      "template": null,
+      "listedBy": ["https://bluesaltdivers.com/st-croix-dive-sites"],
+      "excluded": "on one operator list only (Blue Salt Divers)"
+    },
+    {
+      "name": "Cane Bay Wall",
+      "template": "cane-bay-wall-st-croix",
+      "listedBy": [
+        "https://bluesaltdivers.com/st-croix-dive-sites",
+        "https://www.sweetbottomdive.com/diving",
+        "https://canebayscuba.com/dive-tours/",
+        "https://www.gotostcroix.com/st-croix-dive-sites/",
+        "https://www.visitusvi.com/experience/take-a-st-croix-diving-trip/"
+      ]
+    },
+    {
+      "name": "Davis Bay Wall (Carambola House Reef)",
+      "template": null,
+      "listedBy": ["https://www.sweetbottomdive.com/diving"],
+      "excluded": "on one operator list only (Sweet Bottom Dive Center)"
+    },
+    {
+      "name": "Northstar",
+      "template": "northstar-st-croix",
+      "listedBy": [
+        "https://bluesaltdivers.com/st-croix-dive-sites",
+        "https://www.sweetbottomdive.com/diving"
+      ]
+    },
+    {
+      "name": "Frederiksted Pier",
+      "template": "frederiksted-pier-st-croix",
+      "listedBy": [
+        "https://bluesaltdivers.com/st-croix-dive-sites",
+        "https://www.sweetbottomdive.com/diving",
+        "https://canebayscuba.com/dive-tours/",
+        "https://www.gotostcroix.com/st-croix-dive-sites/",
+        "https://www.visitusvi.com/experience/take-a-st-croix-diving-trip/"
+      ]
+    },
+    {
+      "name": "Armageddon",
+      "template": null,
+      "listedBy": ["https://canebayscuba.com/dive-tours/"],
+      "excluded": "on one operator list only (Cane Bay Dive Shop)"
+    },
+    {
+      "name": "Butler Bay shallow wrecks (Suffolk Maid, Virgin Islander, North Wind)",
+      "template": "butler-bay-shallow-wrecks-st-croix",
+      "listedBy": [
+        "https://canebayscuba.com/dive-tours/",
+        "https://www.gotostcroix.com/st-croix-dive-sites/",
+        "https://www.visitusvi.com/experience/take-a-st-croix-diving-trip/"
+      ]
+    },
+    {
+      "name": "Butler Bay deep wrecks (Rosa Maria, Coakley Bay)",
+      "template": "butler-bay-deep-wrecks-st-croix",
+      "listedBy": [
+        "https://canebayscuba.com/dive-tours/",
+        "https://www.gotostcroix.com/st-croix-dive-sites/",
+        "https://www.visitusvi.com/experience/take-a-st-croix-diving-trip/"
+      ]
+    },
+    {
+      "name": "Butler Bay (reef)",
+      "template": null,
+      "listedBy": ["https://bluesaltdivers.com/st-croix-dive-sites"],
+      "excluded": "on one operator list only (Blue Salt Divers); a shore reef distinct from the wrecks"
+    }
+  ]
+}

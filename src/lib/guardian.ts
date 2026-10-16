@@ -62,8 +62,9 @@ export type GuardianSignature = {
  * date is put on file, `guardianSignatureMissing` below turns the release
  * they already signed into a block rather than a silent pass.
  *
- * The one record that cannot reach this blank by default is a held seat split
- * into a new diver (H-100): `splitBookingIdentity` refuses unless the staffer
+ * Two doors cannot reach this blank by default (H-100): a held seat split
+ * into a new diver (`splitBookingIdentity`) and a stored date emptied on the
+ * diver record (`updateDiver`, issue #2167) are refused unless the staffer
  * gives a date or says the person is 18 or older (`people.adult_attested_at`).
  * So a blank date here is either nobody's question or a staffer's "adult",
  * and both read as an adult; a date, when one lands, is what is measured.

@@ -21,7 +21,7 @@ import { UndoToast } from "@/components/UndoToast";
 import { FormStatus } from "@/components/ui/form";
 import { requestAgencyPage, useCertCheckExtension } from "@/components/useCertCheckExtension";
 import type { AgencyCheckQuery } from "@/lib/agency-check";
-import type { AgencyCheckResult, AgencyListedAddResult } from "../card-actions";
+import type { AgencyCheckResult, AgencyListedAddResult } from "../agency-check-actions";
 
 export type { AgencyCheckCopy };
 
@@ -51,6 +51,7 @@ export function AgencyCheck({
   href,
   query,
   certificationId,
+  cardType,
   awaiting,
   action,
   addListed,
@@ -61,6 +62,8 @@ export function AgencyCheck({
   /** The lookup the extension types, or null when this card cannot be checked. */
   query: AgencyCheckQuery | null;
   certificationId: string;
+  /** The table a nitrox or specialty card is in (issue #2592); absent for a level card. */
+  cardType?: "nitrox" | "specialty";
   /** The card is still waiting for somebody to confirm it. */
   awaiting: boolean;
   /** `agencyCheckAction` bound to this shop and diver, on the server. */
@@ -104,7 +107,7 @@ export function AgencyCheck({
     }
     setPageText(reply.pageText);
     setListedAdded(false);
-    const formData = agencyCheckForm(certificationId, reply.pageText);
+    const formData = agencyCheckForm(certificationId, reply.pageText, { cardType });
     startTransition(() => formAction(formData));
   }
 
@@ -168,7 +171,11 @@ export function AgencyCheck({
         <UndoToast
           message={match ? agencyCheckMatchedText(match, copy) : copy.matched}
           action={formAction}
-          fields={{ certificationId: undo.certificationId, intent: "undo" }}
+          fields={{
+            certificationId: undo.certificationId,
+            ...(cardType ? { cardType } : {}),
+            intent: "undo",
+          }}
           pendingLabel={copy.undoPending}
           undoLabel={copy.undo}
         />

@@ -326,7 +326,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
   // Denominator row: "USS Mohawk CGC Veterans Memorial Reef (Charlie's Reef)"
   {
     slug: "uss-mohawk-memorial-reef",
-    version: 1,
+    version: 2,
     area: "florida-gulf-coast",
     sources: [
       "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27USS%20Mohawk%20CGC%20V.M.R.%27&outFields=Name,Description,Depth,Relief,Lat_DD,Long_DD,DeployDate&returnGeometry=false&f=json",
@@ -342,8 +342,8 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
         "A World War II Coast Guard cutter, 50 m long, sunk on 2 July 2012 about 28 nautical miles off Sanibel as a memorial reef to all American veterans. She sits upright on the sand with her bow to the east.",
       marineLife: "Goliath grouper · amberjack · barracuda · cobia",
       difficultyLevel: "advanced",
-      depthRange: "9–27 m (30–90 ft)",
-      maxDepthMeters: 28,
+      depthRange: "9–30 m (30–100 ft)",
+      maxDepthMeters: 30,
       currentNote:
         "A long open-Gulf run with no shelter, so current, visibility and sea state all decide the day. Moored at bow and stern. Stay outside the hull.",
       fitTone: "demanding",

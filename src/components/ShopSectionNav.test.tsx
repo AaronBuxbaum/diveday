@@ -27,6 +27,7 @@ const props = {
       divers: "Divers",
       inbox: "Inbox",
       money: "Money",
+      safety: "Safety",
       courses: "Courses",
       gear: "Gear",
       settings: "Settings",

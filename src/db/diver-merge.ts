@@ -318,6 +318,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
     "the merge pointer itself — structural, and what makes the shell resolve",
   "people.no_certification_cleared_by_person_id": "who cleared the no-card stamp",
   "people.adult_attested_by_person_id": "who said the diver is 18 or older (H-100)",
+  "shops.shore_alert_consent_by_person_id": "who recorded the shore contact's consent (H-118)",
   "pre_departure_check_events.recorded_by_person_id": "who ticked the check",
   "pre_departure_checklist_items.deleted_by_person_id": "who removed the check",
   "held_sends.actor_person_id": "who tapped Send; the hold lives eight seconds",

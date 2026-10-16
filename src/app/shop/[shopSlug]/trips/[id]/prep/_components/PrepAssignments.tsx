@@ -16,9 +16,10 @@ import {
   returnTripGearSetAction,
 } from "../actions";
 import { confirmProposedGearUnits } from "../proposal-actions";
+import { FoldBelowLg } from "./FoldBelowLg";
 import { GearReturnPane } from "./GearReturnPane";
 import { ConfirmProposals } from "./ProposedUnit";
-import { careLine, kitLineClass } from "./prep-lines";
+import { assignmentRowIsSettled, careLine, kitLineClass } from "./prep-lines";
 import type { PrepView } from "./prep-view";
 import { WantedPiece } from "./WantedPiece";
 
@@ -136,122 +137,135 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                   </Link>
                 ) : null}
               </div>
-              {/* Flagged for a staff fit (issue #2208): the row keeps a
+              <FoldBelowLg
+                summary={
+                  assignmentRowIsSettled(t, {
+                    assigned,
+                    wanted,
+                    needsStaffFit,
+                    handedOver,
+                    counterHeld,
+                  })
+                    ? t("gear.prep.allAssigned", { count: assigned.length })
+                    : null
+                }
+              >
+                {/* Flagged for a staff fit (issue #2208): the row keeps a
                         picker for every piece, proposes none, and says why. */}
-              {needsStaffFit ? (
-                <p className="mt-1 text-sm font-medium text-warning-strong">
-                  {rentalFitLineText(t, locale, {
-                    state: "needs_staff_fit",
-                    note: needsStaffFit.note,
-                  })}
-                </p>
-              ) : null}
-              {/* Already carrying the shop's kit off a counter rental:
+                {needsStaffFit ? (
+                  <p className="mt-1 text-sm font-medium text-warning-strong">
+                    {rentalFitLineText(t, locale, {
+                      state: "needs_staff_fit",
+                      note: needsStaffFit.note,
+                    })}
+                  </p>
+                ) : null}
+                {/* Already carrying the shop's kit off a counter rental:
                         said, so nobody packs a second set. Counts stay put. */}
-              {counterHeld.length > 0 ? (
-                <p className="mt-1 text-sm text-warning-strong">
-                  {t("counterRentals.trip.held", {
-                    units: cachedListFormat(locale, {
-                      style: "long",
-                      type: "conjunction",
-                    }).format(counterHeld.map((held) => held.label)),
-                    date: formatCalendarDate(
-                      counterHeld
-                        .map((held) => held.until)
-                        .sort()
-                        .at(-1) ?? "",
-                      locale,
-                    ),
-                  })}
-                </p>
-              ) : null}
-              <dl className="mt-1.5 flex flex-col gap-1 text-sm">
-                {assigned.map((assignment) => (
-                  <div key={assignment.reservationId} className={kitLineClass}>
-                    <dt className="text-muted">
-                      {assignment.size
-                        ? t("gear.prep.kindWithSize", {
-                            kindLabel: gearItemKindLabel(t, assignment.kind),
-                            size: assignment.size,
-                          })
-                        : gearItemKindLabel(t, assignment.kind)}
-                    </dt>
-                    <dd className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <span className="font-mono font-medium">{assignment.label}</span>
-                      {careLine(t, assignment) ? (
-                        <span className="font-medium text-warning-strong">
-                          {careLine(t, assignment)}
-                        </span>
-                      ) : null}
-                      {assignment.checkedOutAt ? (
-                        <span className="text-muted">{t("gear.prep.outLabel")}</span>
-                      ) : (
-                        <form action={releaseGearUnitAction} className="print:hidden">
-                          <input type="hidden" name="tripId" value={tripId} />
-                          <input
-                            type="hidden"
-                            name="reservationId"
-                            value={assignment.reservationId}
-                          />
-                          <SubmitButton
-                            pendingLabel={t("gear.unit.where.releasing")}
-                            className={buttonClass({ variant: "ghost", size: "sm" })}
-                          >
-                            {t("gear.unit.where.release")}
-                          </SubmitButton>
-                        </form>
-                      )}
-                    </dd>
-                  </div>
-                ))}
-                {/* **The set goes out in one act too** (issue #1185,
+                {counterHeld.length > 0 ? (
+                  <p className="mt-1 text-sm text-warning-strong">
+                    {t("counterRentals.trip.held", {
+                      units: cachedListFormat(locale, {
+                        style: "long",
+                        type: "conjunction",
+                      }).format(counterHeld.map((held) => held.label)),
+                      date: formatCalendarDate(
+                        counterHeld
+                          .map((held) => held.until)
+                          .sort()
+                          .at(-1) ?? "",
+                        locale,
+                      ),
+                    })}
+                  </p>
+                ) : null}
+                <dl className="mt-1.5 flex flex-col gap-1 text-sm">
+                  {assigned.map((assignment) => (
+                    <div key={assignment.reservationId} className={kitLineClass}>
+                      <dt className="text-muted">
+                        {assignment.size
+                          ? t("gear.prep.kindWithSize", {
+                              kindLabel: gearItemKindLabel(t, assignment.kind),
+                              size: assignment.size,
+                            })
+                          : gearItemKindLabel(t, assignment.kind)}
+                      </dt>
+                      <dd className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span className="font-mono font-medium">{assignment.label}</span>
+                        {careLine(t, assignment) ? (
+                          <span className="font-medium text-warning-strong">
+                            {careLine(t, assignment)}
+                          </span>
+                        ) : null}
+                        {assignment.checkedOutAt ? (
+                          <span className="text-muted">{t("gear.prep.outLabel")}</span>
+                        ) : (
+                          <form action={releaseGearUnitAction} className="print:hidden">
+                            <input type="hidden" name="tripId" value={tripId} />
+                            <input
+                              type="hidden"
+                              name="reservationId"
+                              value={assignment.reservationId}
+                            />
+                            <SubmitButton
+                              pendingLabel={t("gear.unit.where.releasing")}
+                              className={buttonClass({ variant: "ghost", size: "sm" })}
+                            >
+                              {t("gear.unit.where.release")}
+                            </SubmitButton>
+                          </form>
+                        )}
+                      </dd>
+                    </div>
+                  ))}
+                  {/* **The set goes out in one act too** (issue #1185,
                           D25) — the mirror of the return pane below it. One
                           deliberate hand-over per diver, offered only while
                           there is something still on the wall to hand across:
                           a set already out has nothing to give, and a set with
                           nothing assigned is not a set. */}
-                {assigned.length > 0 && !handedOver ? (
-                  <form action={checkOutTripGearSetAction} className="print:hidden">
-                    <input type="hidden" name="tripId" value={tripId} />
-                    <input type="hidden" name="bookingId" value={diver.bookingId} />
-                    <SubmitButton
-                      pendingLabel={t("gear.prep.handingOver")}
-                      className={buttonClass({ variant: "secondary", size: "sm" })}
-                    >
-                      {t("gear.prep.handOver")}
-                    </SubmitButton>
-                  </form>
-                ) : null}
-                {/* **The set comes home in one act** (issue #1186, D26).
+                  {assigned.length > 0 && !handedOver ? (
+                    <form action={checkOutTripGearSetAction} className="print:hidden">
+                      <input type="hidden" name="tripId" value={tripId} />
+                      <input type="hidden" name="bookingId" value={diver.bookingId} />
+                      <SubmitButton
+                        pendingLabel={t("gear.prep.handingOver")}
+                        className={buttonClass({ variant: "secondary", size: "sm" })}
+                      >
+                        {t("gear.prep.handOver")}
+                      </SubmitButton>
+                    </form>
+                  ) : null}
+                  {/* **The set comes home in one act** (issue #1186, D26).
                           Only when something is actually out: a diver whose
                           units are still on the wall has nothing to return, and
                           a pane offering to close a set that never left would
                           be the paperwork this replaces rather than the removal
                           of it. */}
-                {assigned.some((assignment) => assignment.checkedOutAt !== null) ? (
-                  <GearReturnPane
-                    fields={{ tripId, bookingId: diver.bookingId }}
-                    action={returnTripGearSetAction}
-                    labels={{
-                      allGood: t("gear.prep.returnAllGood"),
-                      fitAdjusted: t("gear.prep.returnFitAdjusted"),
-                      serviceConcern: t("gear.prep.returnServiceConcern"),
-                      cancelConcern: t("gear.prep.returnCancelConcern"),
-                      noteLabel: t("gear.prep.returnNoteLabel"),
-                      notePlaceholder: t("gear.prep.returnNotePlaceholder"),
-                    }}
-                    bench={{
-                      legend: t("gear.prep.returnPullToBench"),
-                      units: assigned
-                        .filter((assignment) => assignment.checkedOutAt !== null)
-                        .map((assignment) => ({
-                          id: assignment.gearItemId,
-                          label: assignment.label,
-                        })),
-                    }}
-                  />
-                ) : null}
-                {/* **No new reservations on a departure that is not
+                  {assigned.some((assignment) => assignment.checkedOutAt !== null) ? (
+                    <GearReturnPane
+                      fields={{ tripId, bookingId: diver.bookingId }}
+                      action={returnTripGearSetAction}
+                      labels={{
+                        allGood: t("gear.prep.returnAllGood"),
+                        fitAdjusted: t("gear.prep.returnFitAdjusted"),
+                        serviceConcern: t("gear.prep.returnServiceConcern"),
+                        cancelConcern: t("gear.prep.returnCancelConcern"),
+                        noteLabel: t("gear.prep.returnNoteLabel"),
+                        notePlaceholder: t("gear.prep.returnNotePlaceholder"),
+                      }}
+                      bench={{
+                        legend: t("gear.prep.returnPullToBench"),
+                        units: assigned
+                          .filter((assignment) => assignment.checkedOutAt !== null)
+                          .map((assignment) => ({
+                            id: assignment.gearItemId,
+                            label: assignment.label,
+                          })),
+                      }}
+                    />
+                  ) : null}
+                  {/* **No new reservations on a departure that is not
                           going.** A reservation holds an exclusion window over
                           the unit, so picking a drysuit for a blown-out boat
                           takes it off the boat that is sailing — and there is
@@ -259,17 +273,18 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                           half: what is already reserved, what is already out,
                           and the two controls that undo them (dive-domain
                           review 20260920). */}
-                {cancelled
-                  ? null
-                  : wanted.map((item) => (
-                      <WantedPiece
-                        key={item.kind}
-                        view={view}
-                        bookingId={diver.bookingId}
-                        item={item}
-                      />
-                    ))}
-              </dl>
+                  {cancelled
+                    ? null
+                    : wanted.map((item) => (
+                        <WantedPiece
+                          key={item.kind}
+                          view={view}
+                          bookingId={diver.bookingId}
+                          item={item}
+                        />
+                      ))}
+                </dl>
+              </FoldBelowLg>
             </li>
           ),
         )}

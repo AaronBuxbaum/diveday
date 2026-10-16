@@ -151,7 +151,10 @@
     "alreadyListed": "Esa persona ya está en el informe.",
     "nobodyChosen": "Elige a una persona o escribe un nombre.",
     "blankNote": "Escribe la nota antes de añadirla.",
-    "notYetFiled": "Presenta el informe antes de añadir una nota posterior."
+    "notYetFiled": "Presenta el informe antes de añadir una nota posterior.",
+    "held": "Un informe con retención legal no se puede eliminar. Levanta antes la retención.",
+    "holdSet": "Retención legal puesta.",
+    "holdReleased": "Retención legal levantada."
   },
   "safety": {
     "intro": "Lo que el centro registró en las salidas que zarparon este mes y ya han vuelto. Las acreditaciones caducadas se leen según los registros de hoy. Nada de esta página cambia un registro.",
@@ -165,7 +168,7 @@
     "certOverridesLink": "La actividad de seguridad del mes",
     "crew": "Tripulación con una acreditación caducada",
     "crewValue": "{lapsed} de {sailings}",
-    "crewDetailUnrecorded": "Sin acreditación registrada en {unrecorded} de {sailings, plural, one {# salida de tripulante} other {# salidas de tripulantes}}",
+    "crewDetailUnrecorded": "Sin acreditación registrada para su función en {unrecorded} de {sailings, plural, one {# salida de tripulante} other {# salidas de tripulantes}}",
     "crewDetail": "{sailings, plural, one {# salida de tripulante} other {# salidas de tripulantes}}",
     "incidents": "Informes de incidentes",
     "noCrew": "Zarparon sin tripulación registrada",
@@ -181,8 +184,25 @@
     "closureNone": "Sin recuento",
     "lapsedTitle": "Tripulantes que salieron con una acreditación caducada",
     "lapsedEmpty": "Nadie salió con una acreditación caducada.",
-    "unrecordedTitle": "Tripulantes que salieron sin acreditación registrada",
+    "unrecordedTitle": "Tripulantes que salieron sin acreditación registrada para su función",
     "unrecordedSailings": "{count, plural, one {# salida} other {# salidas}} este mes",
     "noDepartures": "Ninguna salida volvió este mes."
+  },
+  "discard": {
+    "title": "Eliminar este borrador",
+    "description": "Solo puede hacerlo un propietario, y solo antes de presentarlo. Desaparece de esta salida y de la página de informes.",
+    "trigger": "Eliminar borrador",
+    "confirm": "Sí, eliminar el borrador",
+    "cancel": "Cancelar",
+    "pending": "Eliminando…",
+    "message": "¿Eliminar este borrador? Deja de verse, y sus palabras se conservan siete años. Un informe presentado nunca se puede eliminar."
+  },
+  "hold": {
+    "title": "Retención legal",
+    "descriptionOff": "Para una reclamación abierta. Conserva este informe más allá de los siete años. Solo un propietario puede ponerla o levantarla.",
+    "descriptionOn": "Con retención legal. Este informe se conserva hasta que un propietario la levante.",
+    "set": "Poner retención legal",
+    "release": "Levantar la retención",
+    "pending": "Guardando…"
   }
 }

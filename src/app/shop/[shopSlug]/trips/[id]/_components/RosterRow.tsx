@@ -4,7 +4,9 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { StatusMark } from "@/components/ui/StatusMark";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
+import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
 import type { PaymentStatusControlCopy } from "./PaymentStatusControl";
+import { RosterRecordBlocked } from "./RosterRecordBlocked";
 import type {
   RosterActions,
   RosterArrival,
@@ -34,6 +36,8 @@ export type RosterRowContext = {
    * 2026-10-10, item 10): the row says who, never what is left to do.
    */
   record: boolean;
+  /** The record's seats counted aboard while blocked (`RosterRecord`). */
+  countedAboardBlocked?: ReadonlyMap<string, CountedAboardBlocked>;
   /** Depth sentences much of the boat shares, said once in the group band. */
   sharedAdvisoryTexts: ReadonlySet<string>;
   waiverControls: WaiverControls;
@@ -103,6 +107,7 @@ export function RosterRow({
     identityUnconfirmed,
   } = s7;
   const { rows, actions } = context;
+  const countedBlocked = context.countedAboardBlocked?.get(booking.id);
   const badgeCluster =
     headerBadges.length > 0 ? (
       <div className="ms-auto flex flex-wrap items-center justify-end gap-2 max-sm:ms-0 max-sm:justify-start">
@@ -171,7 +176,13 @@ export function RosterRow({
           diver; AutoOpenDetails opens on the hash, so the fold can never
           swallow what a link promised, and `holdOpen` keeps open the row a
           form on it just answered. */}
-      {record ? null : reasonList}
+      {record ? (
+        countedBlocked ? (
+          <RosterRecordBlocked t={t} blocked={countedBlocked} />
+        ) : null
+      ) : (
+        reasonList
+      )}
       {/* "Check with SSI", under the reason that says the card is pending
           (H-105): drawn only with the browser extension, and never on a held
           seat, whose matched diver's details are not yet this seat's. */}

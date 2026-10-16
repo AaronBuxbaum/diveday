@@ -285,6 +285,11 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/reviews.json pulseCategoryBriefing", "loanword Spanish diving uses"],
   ["staff/trips.json phases.checkin", "settled loanword (es-ES README, “Check-in is el check-in”)"],
   [
+    "staff/disputeSheet.json checkInHeading",
+    "settled loanword (es-ES README, “Check-in is el check-in”)",
+  ],
+  ["staff/disputeSheet.json total", "the same word in Spanish"],
+  [
     "diver.json fallback.phaseCheckin",
     "settled loanword (es-ES README, “Check-in is el check-in”)",
   ],

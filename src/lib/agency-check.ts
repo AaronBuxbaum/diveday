@@ -572,9 +572,24 @@ function compact(text: string): string {
   return foldText(text).replace(/\s+/g, "");
 }
 
+/**
+ * Whether the record carries this card number **as a whole**: some run of its
+ * words, joined, is the number. A number the shop typed short, or the tail of a
+ * longer one, is another card (issue #2592); separators the page puts inside a
+ * number (`1506 AB 1234`, `N-12345`) still read as one.
+ */
 function hasCardNumber(record: readonly string[], cardNumber: string | null): boolean {
   const number = cardNumber ? compact(cardNumber) : "";
-  return number.length >= 3 && compact(record.join(" ")).includes(number);
+  if (number.length < 3) return false;
+  const words = foldText(record.join(" ")).split(" ");
+  for (let start = 0; start < words.length; start += 1) {
+    let joined = "";
+    for (let end = start; end < words.length && joined.length < number.length; end += 1) {
+      joined += words[end];
+      if (joined === number) return true;
+    }
+  }
+  return false;
 }
 
 /** Whole years old on a calendar date; both are `YYYY-MM-DD`. */
@@ -1239,6 +1254,92 @@ export const DIVECHEK_RECORD = {
 };
 
 /**
+ * **What one record of the diver lists, line by line** — the scan under
+ * {@link agencyListedCards} and {@link judgeAgencyListedCard}, so the two read
+ * a record the same way. Null for a record no card may be read from: on
+ * DiveChek one that carries another PADI number than the card checked.
+ * Otherwise the cards its explained lines list, and the diver's own words from
+ * it. A junior or limited record is the caller's to skip.
+ */
+function listedOnRecord(
+  record: DiverRecord,
+  input: AgencyPageInput,
+): {
+  cards: { kind: AgencyListedKind; word: string; cardNumber: string | null }[];
+  words: string;
+} | null {
+  const phrases = recordPhrases(input.agency);
+  const oneDiver = ONE_RECORD_ONLY.has(input.agency);
+  const nameWords = new Set([foldText(input.firstName), foldText(input.lastName)]);
+  const cardNumber = input.cardNumber ? foldText(input.cardNumber) : "";
+  const { dates: order, numbersTheDiver } = AGENCY_CHECKS[input.agency];
+  // DiveChek: a record under the same name and birth date that carries
+  // another PADI number than the card checked may be another diver's, so
+  // nothing on it is offered.
+  if (oneDiver && input.cardNumber && !hasCardNumber(record.folded, input.cardNumber)) return null;
+  const onRecord: { kind: AgencyListedKind; word: string; cardNumber: string | null }[] = [];
+  let end = record.folded.length;
+  for (let index = 0; index < record.folded.length; index += 1) {
+    let line = record.folded[index] as string;
+    if (oneDiver) {
+      const trainer = TRAINER_WORDS.map((word) => ` ${line} `.indexOf(` ${word} `))
+        .filter((at) => at >= 0)
+        .sort((a, b) => a - b)[0];
+      if (trainer !== undefined) {
+        const before = line.slice(0, trainer).trim();
+        // "Deep Diver Instructor": a professional rating, not the card.
+        if (phrases.some((phrase) => before.endsWith(phrase.folded)) || !before) {
+          end = index;
+          break;
+        }
+        line = before;
+      }
+    }
+    let rest = ` ${line} `;
+    const here: { kind: AgencyListedKind; word: string }[] = [];
+    let explained = false;
+    for (const phrase of phrases) {
+      if (!rest.includes(` ${phrase.folded} `)) continue;
+      rest = rest.split(` ${phrase.folded} `).join("  ");
+      if (phrase.offers) here.push(phrase.offers);
+      else explained = true;
+    }
+    // The card number the shop holds ("N-12345").
+    if (cardNumber) rest = ` ${rest.trim()} `.split(` ${cardNumber} `).join(" ");
+    const unexplained = rest
+      .trim()
+      .split(/ +/)
+      .filter(
+        (word) =>
+          word.length > 0 &&
+          !/\d/.test(word) &&
+          !RECORD_LINE_WORDS.has(word) &&
+          !(index === 0 && nameWords.has(word)),
+      );
+    if (unexplained.length > 0) {
+      // The name line starts the record whatever else it says; it just lists nothing.
+      if (index === 0) continue;
+      end = index;
+      break;
+    }
+    // A date on a line naming no card, and not the birth date, may be
+    // another diver's birth date: the judge ends a DiveChek record there too.
+    const bare = here.length === 0 && !explained;
+    if (index > 0 && bare && datesOn(line, order).some((date) => date !== input.birthDate)) {
+      end = index;
+      break;
+    }
+    const ownNumber =
+      !numbersTheDiver && here.length === 1
+        ? cardNumberOn(record.raw[index] as string, input.cardNumber)
+        : null;
+    onRecord.push(...here.map((card) => ({ ...card, cardNumber: ownNumber })));
+  }
+  const words = evidence(keptRecordWords(record.raw.slice(0, end), input));
+  return { cards: onRecord, words };
+}
+
+/**
  * **The other cards an agency's page lists for this diver** (layer 3 of the
  * agency check, ADR 20261008-cert-check-extension): after a match, what the
  * same page shows that DiveDay could hold as nitrox or a specialty and does
@@ -1272,87 +1373,78 @@ export function agencyListedCards(
 ): AgencyListedCard[] {
   const read = readAgencyPage(input);
   if (read.verdict.verdict !== "match") return [];
-  const phrases = recordPhrases(input.agency);
-  const oneDiver = ONE_RECORD_ONLY.has(input.agency);
-  const nameWords = new Set([foldText(input.firstName), foldText(input.lastName)]);
-  const cardNumber = input.cardNumber ? foldText(input.cardNumber) : "";
-  const { dates: order, numbersTheDiver } = AGENCY_CHECKS[input.agency];
-
   const found = new Map<AgencyListedKind, AgencyListedCard>();
   for (const record of read.diverRecords) {
     if (record.verdict !== "match" && record.verdict !== "level_unconfirmed") continue;
-    // DiveChek: a record under the same name and birth date that carries
-    // another PADI number than the card checked may be another diver's, so
-    // nothing on it is offered.
-    if (oneDiver && input.cardNumber && !hasCardNumber(record.folded, input.cardNumber)) continue;
-    const onRecord: { kind: AgencyListedKind; word: string; cardNumber: string | null }[] = [];
-    let end = record.folded.length;
-    for (let index = 0; index < record.folded.length; index += 1) {
-      let line = record.folded[index] as string;
-      if (oneDiver) {
-        const trainer = TRAINER_WORDS.map((word) => ` ${line} `.indexOf(` ${word} `))
-          .filter((at) => at >= 0)
-          .sort((a, b) => a - b)[0];
-        if (trainer !== undefined) {
-          const before = line.slice(0, trainer).trim();
-          // "Deep Diver Instructor": a professional rating, not the card.
-          if (phrases.some((phrase) => before.endsWith(phrase.folded)) || !before) {
-            end = index;
-            break;
-          }
-          line = before;
-        }
-      }
-      let rest = ` ${line} `;
-      const here: { kind: AgencyListedKind; word: string }[] = [];
-      let explained = false;
-      for (const phrase of phrases) {
-        if (!rest.includes(` ${phrase.folded} `)) continue;
-        rest = rest.split(` ${phrase.folded} `).join("  ");
-        if (phrase.offers) here.push(phrase.offers);
-        else explained = true;
-      }
-      // The card number the shop holds ("N-12345").
-      if (cardNumber) rest = ` ${rest.trim()} `.split(` ${cardNumber} `).join(" ");
-      const unexplained = rest
-        .trim()
-        .split(/ +/)
-        .filter(
-          (word) =>
-            word.length > 0 &&
-            !/\d/.test(word) &&
-            !RECORD_LINE_WORDS.has(word) &&
-            !(index === 0 && nameWords.has(word)),
-        );
-      if (unexplained.length > 0) {
-        // The name line starts the record whatever else it says; it just lists nothing.
-        if (index === 0) continue;
-        end = index;
-        break;
-      }
-      // A date on a line naming no card, and not the birth date, may be
-      // another diver's birth date: the judge ends a DiveChek record there too.
-      const bare = here.length === 0 && !explained;
-      if (index > 0 && bare && datesOn(line, order).some((date) => date !== input.birthDate)) {
-        end = index;
-        break;
-      }
-      const ownNumber =
-        !numbersTheDiver && here.length === 1
-          ? cardNumberOn(record.raw[index] as string, input.cardNumber)
-          : null;
-      onRecord.push(...here.map((card) => ({ ...card, cardNumber: ownNumber })));
-    }
-    const words = evidence(keptRecordWords(record.raw.slice(0, end), input));
-    for (const card of onRecord) {
+    const listed = listedOnRecord(record, input);
+    if (!listed) continue;
+    for (const card of listed.cards) {
       if (input.held.has(card.kind) || found.has(card.kind)) continue;
       found.set(card.kind, {
         kind: card.kind,
         words: card.word,
-        evidence: words,
+        evidence: listed.words,
         cardNumber: card.cardNumber,
       });
     }
   }
   return [...found.values()];
+}
+
+/** What the judge is given for a nitrox or specialty card: the diver and the card as the shop holds them, and the page. */
+export type AgencyListedCardPageInput = Omit<AgencyPageInput, "level" | "cardNumber"> & {
+  kind: AgencyListedKind;
+  /** The card's own number, which the shop holds for every card this can check. */
+  cardNumber: string;
+};
+
+/**
+ * **Decide what an agency's page says about one pending nitrox or specialty
+ * card** (issue #2592). The same page, the same diver rules and the same line
+ * reading as {@link agencyListedCards}, asked of a card the shop already
+ * holds rather than offered from a level card's match:
+ *
+ * - **The diver first**: the record must be this diver's by the birth date or
+ *   number the lookup was typed with (`readAgencyPage`), and never a junior or
+ *   limited one.
+ * - **Then the card**: a line of that record in this agency's own words for
+ *   this kind (`LISTED_CARD_WORDING`, and GUE's nitrox from its level line),
+ *   under the same rule that a record is read only as far as every line is
+ *   explained. A "Tec Deep Diver" or a "Deep Diver Specialty Instructor" is
+ *   not a Deep card.
+ * - **And the card's number** on that record, wherever the agency puts it: a
+ *   page that lists the kind for this diver under another number is not this
+ *   card (`level_unconfirmed`, for a staffer to read).
+ *
+ * Never a match from the level card alone, and none for an agency whose table
+ * lists no such kind: that is `level_unconfirmed` too, and writes nothing.
+ * The verdict names are the level check's, so the one outcome vocabulary
+ * serves every card; here `level_unconfirmed` means "the diver, but not this
+ * card".
+ */
+export function judgeAgencyListedCard(input: AgencyListedCardPageInput): AgencyCheckVerdict {
+  // The level only decides the level check's own verdict, which is not read
+  // here: the records it finds are the diver's whatever their level.
+  const page: AgencyPageInput = { ...input, level: "open_water" };
+  const read = readAgencyPage(page);
+  if (read.diverRecords.length === 0) return read.verdict;
+  let seen: string | null = null;
+  let limited: AgencyCheckVerdict | null = null;
+  for (const record of read.diverRecords) {
+    // A junior, limited or unfinished record is shown and never matched.
+    if (record.verdict === "limited_card" || record.verdict === "junior_under_15") {
+      limited ??= { verdict: record.verdict, evidence: evidence(record.raw) };
+      continue;
+    }
+    const listed = listedOnRecord(record, page);
+    if (!listed) continue;
+    seen ??= listed.words;
+    const lists = listed.cards.some((card) => card.kind === input.kind);
+    if (lists && hasCardNumber(record.folded, input.cardNumber)) {
+      return { verdict: "match", evidence: listed.words };
+    }
+  }
+  // The staffer reads why the page is short of a match: a limited row first,
+  // as the level check says it.
+  return limited ?? { verdict: "level_unconfirmed", evidence: seen ?? "" };
 }

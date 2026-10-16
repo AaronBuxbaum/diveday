@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNotNull, lt, max, ne, notInArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { hasReturned } from "@/lib/trips";
+import type { WelcomeHello } from "@/lib/welcome-cue";
 import type { AppDb, DbExecutor } from "./client";
 import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -17,6 +18,8 @@ import { liveTrip } from "./trips-live";
 export type WelcomeCueInputs = {
   sharedAt: Date | null;
   lastDivedAt: Date | null;
+  /** What the diver chose to add (#2425). Null whenever `sharedAt` is: no consent, no choice. */
+  hello: WelcomeHello | null;
 };
 
 /**
@@ -58,6 +61,7 @@ export async function welcomeCueInputsByBooking(
     .select({
       bookingId: bookings.id,
       sharedAt: bookings.welcomeSharedAt,
+      hello: bookings.welcomeHello,
       lastDivedAt: prior.lastDivedAt,
     })
     .from(bookings)
@@ -76,7 +80,13 @@ export async function welcomeCueInputsByBooking(
   return new Map(
     rows.map((row) => [
       row.bookingId,
-      { sharedAt: row.sharedAt, lastDivedAt: row.lastDivedAt ?? null },
+      {
+        sharedAt: row.sharedAt,
+        lastDivedAt: row.lastDivedAt ?? null,
+        // Gated here as well as at the write: a choice without a consent stamp
+        // is never read, whatever the row holds.
+        hello: row.sharedAt ? row.hello : null,
+      },
     ]),
   );
 }
@@ -179,7 +189,18 @@ export type SetWelcomeConsentResult =
  */
 export async function setWelcomeConsent(
   db: AppDb,
-  input: { shopId: string; bookingId: string; shared: boolean; now?: Date },
+  input: {
+    shopId: string;
+    bookingId: string;
+    shared: boolean;
+    /**
+     * What the diver chose to add (#2425). Kept only with a consent: `shared:
+     * false` clears it whatever is passed. Absent leaves a consented seat's
+     * choice as it is.
+     */
+    hello?: WelcomeHello | null;
+    now?: Date;
+  },
 ): Promise<SetWelcomeConsentResult> {
   const now = input.now ?? nowDate();
   const [booking] = await db
@@ -202,7 +223,14 @@ export async function setWelcomeConsent(
   }
   await db
     .update(bookings)
-    .set({ welcomeSharedAt: input.shared ? now : null })
+    .set({
+      welcomeSharedAt: input.shared ? now : null,
+      ...(!input.shared
+        ? { welcomeHello: null }
+        : input.hello !== undefined
+          ? { welcomeHello: input.hello }
+          : {}),
+    })
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)));
   return { ok: true };
 }

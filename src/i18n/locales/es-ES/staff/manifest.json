@@ -124,13 +124,15 @@
   "medicalEarlierRefusal": "Un médico no autorizó a esta persona el {date} (exención anterior)",
   "medicalEarlierRefusalChip": "Rechazo médico previo",
   "medicalReferralUnresolved": "Derivación médica del {date}; firmada de nuevo sin autorización de un médico registrada",
+  "medicalHoldNotClearedChip": "Sin autorización médica",
+  "medicalHoldReviewChip": "Revisión médica abierta",
   "medicalReferralUnresolvedChip": "Derivación aún abierta",
   "medicalRidingOnlyNotClearedChip": "Solo a bordo: no apto",
   "medicalRidingOnlyReferralChip": "Solo a bordo: derivado",
   "medicalRidingOnlyNotCleared": "Un médico no autorizó a esta persona el {date}: solo a bordo, sin entrar al agua",
   "medicalRidingOnlyReferral": "Derivación médica del {date} sin respuesta registrada: solo a bordo, sin entrar al agua",
   "medicalReferralLink": "Ver la derivación",
-  "medicalRefusalLink": "Ver el rechazo",
+  "medicalRefusalLink": "Ver la decisión del médico",
   "resolveBlockersLink": "Resolver bloqueos en Buceadores →",
   "addNoteSummary": "Añadir una nota",
   "rollCallRecordedByPlain": "{label} {date} por {name}",
@@ -268,6 +270,8 @@
   },
   "staleRollCall": {
     "pushTitle": "Pase de lista aún abierto",
-    "pushBody": "{title}: {count, plural, one {# persona sin marcar} other {# personas sin marcar}} después de la inmersión {dive}."
+    "pushBody": "{title}: {awaiting, plural, one {# persona sin resultado} other {# personas sin resultado}} después de la inmersión {dive}.",
+    "pushBodyMissing": "{title}: {missing, plural, one {# persona consta} other {# personas constan}} como no de vuelta a bordo después de la inmersión {dive}.",
+    "pushBodyBoth": "{title}: {missing, plural, one {# persona consta} other {# personas constan}} como no de vuelta a bordo después de la inmersión {dive}; {awaiting, plural, one {# más sin resultado} other {# más sin resultado}}."
   }
 }

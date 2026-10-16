@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
+import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
 import {
   CaptainRollCallFallback,
   DiverBookingFallback,
@@ -330,5 +332,13 @@ describe("MarketingScreenFallbacks", () => {
       render(<ExportBundleFallback locale="es-ES" />);
       expect(screen.getByText("Exportar datos")).toBeInTheDocument();
     });
+  });
+});
+
+describe("FrontDeskReadinessFallback stage chip", () => {
+  it.each(["en-US", "es-ES"] as const)("shows the staff boarding word in %s", (locale) => {
+    render(<FrontDeskReadinessFallback locale={locale} />);
+    expect(screen.getByText(staffTranslator(locale)(STAGE_WORD_KEYS.boarding))).toBeVisible();
+    expect(screen.queryByText("Check-in")).toBeNull();
   });
 });

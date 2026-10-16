@@ -6,6 +6,7 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { getMonthDeparturesWithEmptySeats } from "@/db/open-seats";
 import { getMonthMoneyDetail } from "@/db/report-lines";
 import {
   canPersonViewShopReports,
@@ -29,7 +30,6 @@ import {
   parseMonthKey,
 } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
-import { formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { sailedSplit } from "@/lib/report-split";
 import {
@@ -46,7 +46,8 @@ import {
 import { requireShopSurface } from "@/lib/session";
 import { shopMonthBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
-import { DepartureLedger, type DepartureRow } from "./_components/DepartureLedger";
+import { DepartureLedger, departureLedgerRows } from "./_components/DepartureLedger";
+import { EmptySeats } from "./_components/EmptySeats";
 import { type MonthFigure, MonthFigures } from "./_components/MonthFigures";
 import {
   MoneyByLine,
@@ -235,7 +236,7 @@ export default async function ReportsPage({
   // under way also reads its sailed half, departures before now (item 22).
   const shopMoney = { currency, timeZone: tz };
   const underWay = monthStart < now && now < monthEnd;
-  const [input, tripPage, baselineInput, moneyDetail, sailedInput] = await Promise.all([
+  const [input, tripPage, baselineInput, moneyDetail, emptySeats, sailedInput] = await Promise.all([
     getMonthlyReport(db, shop.id, monthStart, monthEnd, { currency, timeZone: tz }),
     // A non-numeric or missing `?page=` reads as page 1; the query clamps it
     // into range, so switching to a shorter month never strands the reader on
@@ -252,6 +253,8 @@ export default async function ReportsPage({
     // The money by line, the package dives still owed, and the returning
     // divers (owner decision 2026-10-09) — `src/lib/report-lines.ts`.
     getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now, shopMoney, current),
+    // The departures that left with empty seats (issue #2424), on the debrief's own rule.
+    getMonthDeparturesWithEmptySeats(db, shop.id, { startUtc: monthStart, endUtc: monthEnd }, now),
     underWay ? getMonthlyReport(db, shop.id, monthStart, now, shopMoney) : null,
   ]);
   const report = summarizeMonth(input);
@@ -463,31 +466,14 @@ export default async function ReportsPage({
     },
   ];
 
-  // The ledger's rows. Every fact carries its own noun: a ledger row has no
-  // column header above it to borrow one from, which is also what lets the
-  // phone keep all three facts instead of hiding two behind a breakpoint.
-  const departureRows: DepartureRow[] = trips.map((trip) => ({
-    tripId: trip.tripId,
-    href: `/shop/${shopSlug}/trips/${trip.tripId}`,
-    title: trip.title,
-    date: formatShortDate(trip.startsAt, locale, tz),
-    seats: t("reports.row.seats", { booked: trip.activeBookings, capacity: trip.capacity }),
-    crew: t("reports.row.crew", { count: crewCounts.get(trip.tripId) ?? 0 }),
-    // A departure nobody booked has no waivers to collect, so it says nothing
-    // about them. Otherwise the row says the one thing a staffer acts on: how
-    // many are still out, or that none are.
-    waivers:
-      trip.activeBookings > 0
-        ? trip.waiverComplete >= trip.activeBookings
-          ? { fact: t("reports.row.waiversAllIn"), outstanding: false }
-          : {
-              fact: t("reports.row.waiversToCollect", {
-                count: trip.activeBookings - trip.waiverComplete,
-              }),
-              outstanding: true,
-            }
-        : null,
-  }));
+  const departureRows = departureLedgerRows({
+    trips,
+    crewCounts,
+    shopSlug,
+    locale,
+    timeZone: tz,
+    t,
+  });
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -569,7 +555,6 @@ export default async function ReportsPage({
           <MonthFootnotes
             taxCents={report.taxCents}
             csvHref={`/shop/${shopSlug}/reports/download?month=${monthKey(current)}`}
-            detail={moneyDetail}
             t={t}
             money={money}
           />
@@ -597,6 +582,13 @@ export default async function ReportsPage({
           <MonthDetailLines report={report} detail={moneyDetail} t={t} money={money} />
           <MoneyByLine detail={moneyDetail} t={t} money={money} />
           <MonthPayouts detail={moneyDetail} t={t} locale={locale} timeZone={tz} />
+          <EmptySeats
+            summary={emptySeats}
+            shopSlug={shopSlug}
+            t={t}
+            locale={locale}
+            timeZone={tz}
+          />
 
           {report.tripCount > 0 ? (
             <DepartureLedger

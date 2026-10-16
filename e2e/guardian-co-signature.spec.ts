@@ -1,4 +1,5 @@
 import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   choosePartySize,
@@ -12,6 +13,8 @@ import {
   signOut,
   waiverLinkFromToast,
 } from "./helpers";
+
+const diverText = diverTranslator("en-US");
 
 /**
  * **A minor's release is signed twice** (ADR 20260907-guardian-co-signature).
@@ -370,7 +373,7 @@ test("a parent signs the release of a child they booked, from their own page", a
 
   const seatRow = page.locator("#party-seats li").filter({ hasText: child });
   await expect(
-    seatRow.getByText(`${child} is under 18, so you sign their release with them`),
+    seatRow.getByText(diverText("seatClaim.minorSignBody", { name: child })),
   ).toBeVisible();
   await seatRow.getByText("Show link").click();
   const claimPath = ((await seatRow.locator("p.font-mono").textContent()) ?? "").match(
@@ -386,8 +389,6 @@ test("a parent signs the release of a child they booked, from their own page", a
   // The child's own claim link says the same thing to whoever opens it.
   await page.goto(claimPath ?? "/");
   await expect(
-    page.getByText(`${child} is under 18, so a parent or guardian signs the release with them.`, {
-      exact: false,
-    }),
+    page.getByText(diverText("seatClaim.minorNote", { seatName: child }), { exact: false }),
   ).toBeVisible();
 });

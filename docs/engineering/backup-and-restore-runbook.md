@@ -295,9 +295,11 @@ Operationally distinct from §2 in every way that matters during an incident:
 | Gaps | Exactly §2's: credentials/`user_accounts` never exported, and a photo that fails to fetch is silently absent. A shop restoring from its own bundle re-invites staff the same way §2's procedures do. |
 | Restore | The bundle is the standard export zip — the quarterly test's step 4 and the import path in step 5 apply verbatim to a shop-owned copy. |
 
-`SECRET_ENCRYPTION_KEY` matters here: rotating it without re-sealing makes every stored
-destination credential unreadable, which surfaces as `credential_unreadable` delivery failures
-until each shop re-enters its key. Treat that as part of any key-rotation plan.
+`SECRET_ENCRYPTION_KEY` matters here: a stored destination credential opens under
+`SECRET_ENCRYPTION_KEY_PREVIOUS` after a rotation, and is re-sealed when the shop next saves its
+destination. Removing the previous key before then surfaces as `credential_unreadable` delivery
+failures until each shop re-enters its key. The procedure is in the
+[infrastructure runbook](infrastructure-runbook.md#rotating-the-secret-sealing-key).
 
 ## 2c. Full-cluster `pg_dump` (running since 2026-08-12)
 
