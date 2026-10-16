@@ -234,7 +234,7 @@ async function recordMatchedInboundMessage(
 }
 
 /**
- * **A diver asks to move a seat** (H-126). Past the free-cancellation window a
+ * **A diver asks to move a seat** (H-137). Past the free-cancellation window a
  * cancel forfeits the money, so the booking page offers "Ask to move" instead:
  * a request, not a move. It lands in the Inbox as a `page` message naming the
  * booking, with the diver's optional note as its words, and staff decide —
@@ -309,7 +309,7 @@ export async function recordMoveAsk(
 }
 
 /**
- * Whether this booking's diver has an ask to move it standing (H-126): one
+ * Whether this booking's diver has an ask to move it standing (H-137): one
  * about the departure the seat is on now, not answered and not deleted.
  */
 export async function hasMoveAsk(

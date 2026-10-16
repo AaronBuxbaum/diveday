@@ -6,7 +6,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { MOVE_ASK_NOTE_MAX_LENGTH } from "@/lib/inbox";
 
 /**
- * **"Ask to move"** (H-126). Past the free-cancellation window the only
+ * **"Ask to move"** (H-137). Past the free-cancellation window the only
  * button the diver had was one that forfeits what they paid. This sits above
  * it: a request to the shop for another date, with an optional note and the
  * shop's phone, that lands in the shop's Inbox against the seat. Staff decide;

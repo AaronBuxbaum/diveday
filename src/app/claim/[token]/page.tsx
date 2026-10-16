@@ -225,7 +225,7 @@ export default async function SeatClaimPage({
             seatName: data.seatName,
           })}
         </p>
-        {/* A seat booked "Under 18" (H-124): a parent or guardian signs with
+        {/* A seat booked "Under 18" (H-135): a parent or guardian signs with
             them, and, only where that door exists, the parent who booked can
             do it from their own page. */}
         {data.minorDeclared ? (

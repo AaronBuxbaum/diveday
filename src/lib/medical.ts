@@ -662,7 +662,7 @@ function referralRef(questionId: string): MedicalReferralRef | null {
 export type MedicalReferralItem = { ref: MedicalReferralRef; prompt: string };
 
 /**
- * **What a referred diver shows their doctor** (H-127, ADR
+ * **What a referred diver shows their doctor** (H-138, ADR
  * 20261016-doctor-referral-page, amended by the layer r5-3 reviews): each yes
  * that calls for evaluation, with its place on the form and the form's
  * published prompt, never an answer's free-text detail. A primary yes that

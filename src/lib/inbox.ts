@@ -17,12 +17,12 @@ export type InboundChannel = "email" | "sms" | "whatsapp";
 
 /**
  * Every source an Inbox row can have: the channels above, and the diver's own
- * booking page (`page`, an "Ask to move", H-126). A page row has no address to
+ * booking page (`page`, an "Ask to move", H-137). A page row has no address to
  * answer on, so it is never a reply target.
  */
 export type InboxChannel = InboundChannel | "page";
 
-/** The longest note a diver may add to an "Ask to move" (H-126). */
+/** The longest note a diver may add to an "Ask to move" (H-137). */
 export const MOVE_ASK_NOTE_MAX_LENGTH = 500;
 
 /**

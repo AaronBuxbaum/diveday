@@ -1,4 +1,4 @@
-# H-128: Is a regular's 10th, 25th, 50th or 100th boat said, and where?
+# H-139: Is a regular's 10th, 25th, 50th or 100th boat said, and where?
 
 - **Status:** Implemented
 - **Human owner:** Product owner

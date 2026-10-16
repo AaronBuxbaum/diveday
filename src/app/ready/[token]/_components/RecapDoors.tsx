@@ -172,7 +172,7 @@ export function PhotoDoor({
   notice: { tone: "success" | "danger"; key: DiverMessageKey } | undefined;
   action: (formData: FormData) => void | Promise<void>;
 }) {
-  // Another diver's shared photos sit under their own words (H-129): the
+  // Another diver's shared photos sit under their own words (H-140): the
   // diver's own and the crew's stay the grid they always were, and nothing a
   // stranger chose reads as this diver's.
   const own = photos.filter((photo) => !photo.sharedBy);

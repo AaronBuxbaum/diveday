@@ -1224,7 +1224,7 @@
   dive: in the row's capsule, or in the person panel when a louder fact takes the capsule.
 - **Doctor's page** — `/waivers/[token]/doctor`, the page a diver on a **medical hold** takes to
   their physician, opened from the held waiver page's "Take this to your doctor" (ADR
-  20261016-doctor-referral-page, H-127). It names the official form and the page the examiner
+  20261016-doctor-referral-page, H-138). It names the official form and the page the examiner
   signs (page 3 of the UHMS/DMSC participant questionnaire, linked rather than restyled), prints the
   diver's name, and says to send a photo of the signed form to the shop before the dive day. The
   answers that called for a physician sit behind the diver's **date of birth**, re-entered on the
@@ -1513,7 +1513,7 @@
   Primary ink, never coral (the thread spends its accent three times and this is not one of them),
   and on every other visit the plain ordinal line renders in its place.
 - **Milestone** — a regular's 10th, 25th, 50th or 100th **dive day** with the shop, said once on
-  each side as a count with no badge (H-128): "25th dive day with us" under the name on the roster
+  each side as a count with no badge (H-139): "25th dive day with us" under the name on the roster
   and the manifest, and "Say hello to Bjorn: 25th dive day with us." on Today, for a diver who
   said the crew may know (the welcome cue's consent); "Your 25th dive day with Blue Mantis
   Divers." on the diver's booked moment, and only on a link mailed to the contact on file, never a
@@ -1536,7 +1536,7 @@
   whose live seats name one of this diver's seats as the one that brought them
   (`booking_referrals`), at this shop only (`friendsBroughtBy`, `src/db/buddy-referrals.ts`).
 - **Shared photo** — a recap photo its diver ticked "Share with everyone on this boat" for at
-  upload (`recap_photos.shared_with_boat_at`, H-129, ADR 20261016-shared-boat-photos). Off by
+  upload (`recap_photos.shared_with_boat_at`, H-140, ADR 20261016-shared-boat-photos). Off by
   default and per photo. The tick is offered, and honored, only on an upload made through the
   diver's own readiness link (`uploadRecapPhotoFromReadyAction`); a photo added through a bare
   `/recap` link stays on that recap alone, because a recap link proves less than a mailed
@@ -1677,7 +1677,7 @@
   days with {shop}": upcoming seats, and the six newest past dive days numbered as the recap
   stamps them (`diveDayOrdinal`, so two boats on one date carry one number). A row is a send,
   never a door: "Email me the link" mails that day's own page (a fresh readiness link, or a recap
-  link for a past day) to the address on file, so one link still opens one booking (H-132).
+  link for a past day) to the address on file, so one link still opens one booking (H-143).
   **Drawn only on a delivered link** (security review of layer r5-4, F1): a readiness link DiveDay
   mailed to the contact on file (`booking_capabilities.delivered`), never the one a booking or a
   seat claim redirects its browser to, because that browser proved only that it typed a name and
@@ -1718,6 +1718,6 @@
   renewal date counts as current, a renewal date is good through the end of that day, and a kind
   the shop has never recorded for anybody raises nothing. Pure logic in
   `src/lib/staffing-warnings.ts`; words in `src/i18n/staffing-warning-labels.ts`.
-- **Seat** — the one word for what a diver buys and what a boat holds, said by staff and divers alike ([H-122](../human-decisions/H-122-seat-is-the-word.md)): "3 seats left", "Book 2 seats", "Cancel my seat". Never "spot" for capacity. `scripts/check-seat-word.mjs` reads the staff bundles and `diver.json` both; its allowlist keeps words that are not the thing bought (a marine-life "spot", "on the spot").
-- **Ask to move** — a diver's request, from their own `/ready`, that the shop move their seat to another date ([H-126](../human-decisions/H-126-ask-to-move.md)). Offered on a paid seat the diver may still release where cancelling would return nothing right away: past the free-cancellation window, or on a trip with none. It is a request, not a move: it files one Inbox row per booking and departure on the `page` channel, naming the booking (`inbound_messages.booking_id`, `recordMoveAsk` in `src/db/inbound-messages.ts`), and the page then says it was asked while that row stands. Staff decide, and a move is a **seat move**, which answers the ask; one staff answered or deleted no longer stands, and asking again files it anew.
+- **Seat** — the one word for what a diver buys and what a boat holds, said by staff and divers alike ([H-133](../human-decisions/H-133-seat-is-the-word.md)): "3 seats left", "Book 2 seats", "Cancel my seat". Never "spot" for capacity. `scripts/check-seat-word.mjs` reads the staff bundles and `diver.json` both; its allowlist keeps words that are not the thing bought (a marine-life "spot", "on the spot").
+- **Ask to move** — a diver's request, from their own `/ready`, that the shop move their seat to another date ([H-137](../human-decisions/H-137-ask-to-move.md)). Offered on a paid seat the diver may still release where cancelling would return nothing right away: past the free-cancellation window, or on a trip with none. It is a request, not a move: it files one Inbox row per booking and departure on the `page` channel, naming the booking (`inbound_messages.booking_id`, `recordMoveAsk` in `src/db/inbound-messages.ts`), and the page then says it was asked while that row stands. Staff decide, and a move is a **seat move**, which answers the ask; one staff answered or deleted no longer stands, and asking again files it anew.
 - **Saved answer** — words the desk sends often enough to keep, offered as a chip above the reply box on a diver's record; a tap puts them in the box, and Send stays the reader's. The shop's own, like a template, and about no diver: `{name}` becomes the diver's first name and `{trip}` the departure they are next booked on. "Save this answer" under a reply that just went out writes one from the stored reply with that diver's name swapped for `{name}`, so the list grows from real replies; the Inbox lists them with a soft Delete and Put back. At most twelve live. Rows in `inbox_saved_answers` (`src/db/inbox-saved-answers.ts`), helpers in `src/lib/saved-answers.ts`.

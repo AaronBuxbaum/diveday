@@ -15,7 +15,7 @@ type Message = {
   id: string;
   personId: string | null;
   receivedAt: Date;
-  /** Set on an "Ask to move" from the booking page (H-126): the seat it is about. */
+  /** Set on an "Ask to move" from the booking page (H-137): the seat it is about. */
   bookingId?: string | null;
 };
 
@@ -37,7 +37,7 @@ export async function inboxSeats(
   now: Date,
 ): Promise<Map<string, InboxSeat[]>> {
   const found = new Map<string, InboxSeat[]>();
-  // A message that names its booking (an Ask to move, H-126) is about that
+  // A message that names its booking (an Ask to move, H-137) is about that
   // seat alone, whenever it departs, and never offers the late mark; any other
   // answer here is the late-window seat.
   const late = await messageSeats(db, shopId, messages, now);

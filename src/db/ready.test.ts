@@ -223,7 +223,7 @@ describe("getReadyPageData", () => {
   });
 
   /**
-   * H-126: "Ask to move" is offered exactly when a cancel would forfeit what
+   * H-137: "Ask to move" is offered exactly when a cancel would forfeit what
    * was paid, and says it was asked once it has been.
    */
   it("offers Ask to move only past the free window on a paid seat, then says it was asked", async () => {
@@ -584,7 +584,7 @@ describe("getBookedCard", () => {
     ).toBe(true);
   });
 
-  // H-128: the diver's side of a regular's milestone, said on the booked moment.
+  // H-139: the diver's side of a regular's milestone, said on the booked moment.
   it("names a milestone boat, counting the shop's imported visits, and only that boat", async () => {
     const { db, shop, bookingId } = await unpaidBooking();
     expect(

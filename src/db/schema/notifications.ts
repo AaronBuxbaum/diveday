@@ -467,7 +467,7 @@ export const inboundChannel = pgEnum("inbound_channel", [
   "whatsapp",
   /**
    * The diver's own booking page (`/ready/[token]`): an "Ask to move" past the
-   * free-cancellation window (H-126). Nothing to answer *on* — the shop calls
+   * free-cancellation window (H-137). Nothing to answer *on* — the shop calls
    * or writes back from the record — so a reply composer never targets it.
    */
   "page",
@@ -555,7 +555,7 @@ export const inboundMessages = pgTable(
     keywordIntent: inboundKeywordIntent("keyword_intent"),
     /**
      * The seat this message is about, when the diver said so rather than the
-     * Inbox inferring it (H-126): an "Ask to move" from the booking page names
+     * Inbox inferring it (H-137): an "Ask to move" from the booking page names
      * its booking. Null on every message that arrived by email or WhatsApp,
      * whose seat is still read off the diver's open bookings.
      */

@@ -480,7 +480,7 @@ describe("clearBookingRunningLate", () => {
 });
 
 /**
- * H-126: an "Ask to move" names its booking, so the row reads that seat
+ * H-137: an "Ask to move" names its booking, so the row reads that seat
  * whenever it departs, not the one the running-late window would infer.
  */
 describe("a message that names its booking", () => {

@@ -370,7 +370,7 @@ export function AfterState({
       ) : null}
 
       {/* ——— Every other day with the shop, each row sending its own fresh
-          link (H-132). Only `/ready` fills it. */}
+          link (H-143). Only `/ready` fills it. */}
       {yourDays}
 
       {/* ——— **Bring a buddy next time** (ADR 20260908-one-hand, decision 6,

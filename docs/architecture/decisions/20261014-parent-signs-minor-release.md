@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-10-14
 - **Extends:** [20260907-guardian-co-signature](20260907-guardian-co-signature.md),
-  [20260804-seat-claim-links](20260804-seat-claim-links.md); decision H-124
+  [20260804-seat-claim-links](20260804-seat-claim-links.md); decision H-135
 
 ## Context
 

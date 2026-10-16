@@ -1,4 +1,4 @@
-# H-123: What is one "dive" in a dive package: a tank or a trip?
+# H-134: What is one "dive" in a dive package: a tank or a trip?
 
 - **Status:** Implemented
 - **Human owner:** Product owner

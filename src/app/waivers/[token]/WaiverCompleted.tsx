@@ -34,7 +34,7 @@ export function WaiverCompleted({
   locale: string;
   needsReview: boolean;
   readyPath: string | null;
-  /** "Take this to your doctor", while the release waits on a physician (H-127). */
+  /** "Take this to your doctor", while the release waits on a physician (H-138). */
   doctorPath: string | null;
   signedRail: WaiverRailProgress;
   diveSitesList: TripSitePeek[];

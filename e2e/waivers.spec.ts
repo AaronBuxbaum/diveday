@@ -250,7 +250,7 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // and turns up at the dock unboardable.
   await expect(page.getByTestId("waiver-step-rail")).toContainText("2 of 3 done");
 
-  // The page a referred diver hands their doctor (H-127, amended after the
+  // The page a referred diver hands their doctor (H-138, amended after the
   // layer r5-3 reviews): their name and the official form to print; the
   // answers wait behind their date of birth, which the page never prints.
   await page.getByRole("link", { name: "Take this to your doctor" }).click();
