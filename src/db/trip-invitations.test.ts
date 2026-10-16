@@ -186,6 +186,35 @@ describe("trip invitations", () => {
     expect(await getTripRoster(db, shop.id, firstTrip.id)).toHaveLength(0);
   });
 
+  it("refuses a direct invitation for an erased or merged person", async () => {
+    const { db, shop, author, firstTrip } = await invitationContext({ fresh: true });
+    const [candidate, other] = await listBookableDivers(db, shop.id, firstTrip.id, {
+      query: "mail.example",
+    });
+    if (!candidate || !other) throw new Error("expected two bookable seeded divers");
+    const now = nowDate();
+    await db
+      .update(people)
+      .set({ anonymizedAt: now, deletedAt: now })
+      .where(eq(people.id, candidate.person.id));
+    await db
+      .update(people)
+      .set({ mergedIntoPersonId: author.id, mergedAt: now, mergedByPersonId: author.id, deletedAt: now })
+      .where(eq(people.id, other.person.id));
+
+    for (const personId of [candidate.person.id, other.person.id]) {
+      await expect(
+        createDirectTripInvitation(db, {
+          shopId: shop.id,
+          tripId: firstTrip.id,
+          personId,
+          createdByPersonId: author.id,
+        }),
+      ).resolves.toBe(false);
+    }
+    expect(await listTripInvitations(db, shop.id, firstTrip.id)).toHaveLength(0);
+  });
+
   it("does not attach a request across shop boundaries", async () => {
     const { db, shop, course, author, firstTrip } = await invitationContext();
     const request = await makeRequest(db, shop.id, course.id, "Tenant Tina");

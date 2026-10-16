@@ -2,8 +2,21 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { issuedCardsForTrip, listCardsToProcess, setCardProcessed } from "./agency-processing";
-import { certifications, courses, people, trips } from "./schema";
+import {
+  cardIsLate,
+  issuedCardsForTrip,
+  listCardsToProcess,
+  setCardProcessed,
+} from "./agency-processing";
+import {
+  certifications,
+  courses,
+  nitroxCertifications,
+  people,
+  shops,
+  specialtyCertifications,
+  trips,
+} from "./schema";
 
 const ctx = fileScopedShopContext();
 
@@ -62,7 +75,7 @@ async function fixture() {
     .returning();
   const mine = new Set([priya.id, tom.id, old.id]);
   const listed = async () =>
-    (await listCardsToProcess(db, shop.id, now))
+    (await listCardsToProcess(db, shop.id))
       .filter((row) => mine.has(row.personId))
       .map((row) => row.fullName);
   return { db, shop, owner: tom, now, session, priya, priyaCard, tomCard, oldCard, listed };
@@ -72,7 +85,8 @@ describe("agency processing", () => {
   it("lists a card the shop issued until someone ticks it processed, and the tick comes back off", async () => {
     const { db, shop, owner, now, session, priya, priyaCard, listed } = await fixture();
 
-    expect(await listed()).toEqual(["Priya Sharma"]);
+    // Oldest first, and a 120-day-old card is still on the list (review F5).
+    expect(await listed()).toEqual(["Old Card", "Priya Sharma"]);
     expect(
       (await issuedCardsForTrip(db, shop.id, session.id)).get(priya.id)?.processedAt,
     ).toBeNull();
@@ -80,6 +94,7 @@ describe("agency processing", () => {
     expect(
       await setCardProcessed(db, {
         shopId: shop.id,
+        kind: "level",
         certificationId: priyaCard.id,
         actorPersonId: owner.id,
         processed: true,
@@ -87,7 +102,7 @@ describe("agency processing", () => {
         tripId: session.id,
       }),
     ).toBe(true);
-    expect(await listed()).toEqual([]);
+    expect(await listed()).toEqual(["Old Card"]);
     const [stamped] = await db
       .select()
       .from(certifications)
@@ -96,12 +111,13 @@ describe("agency processing", () => {
 
     await setCardProcessed(db, {
       shopId: shop.id,
+      kind: "level",
       certificationId: priyaCard.id,
       actorPersonId: owner.id,
       processed: false,
       now,
     });
-    expect(await listed()).toEqual(["Priya Sharma"]);
+    expect(await listed()).toEqual(["Old Card", "Priya Sharma"]);
   });
 
   it("refuses a card the shop did not issue, or one from another session", async () => {
@@ -109,6 +125,7 @@ describe("agency processing", () => {
     expect(
       await setCardProcessed(db, {
         shopId: shop.id,
+        kind: "level",
         certificationId: tomCard.id,
         actorPersonId: owner.id,
         processed: true,
@@ -118,6 +135,7 @@ describe("agency processing", () => {
     expect(
       await setCardProcessed(db, {
         shopId: shop.id,
+        kind: "level",
         certificationId: oldCard.id,
         actorPersonId: owner.id,
         processed: true,
@@ -125,5 +143,92 @@ describe("agency processing", () => {
         tripId: crypto.randomUUID(),
       }),
     ).toBe(false);
+  });
+
+  it("lists and ticks the Enriched Air and specialty cards a session issued, not only level cards", async () => {
+    const { db, shop, owner, now, session, priya } = await fixture();
+    const issued = { issuedByShopAt: new Date(now.getTime() - DAY_MS), issuedFromTripId: session.id };
+    const [nitrox] = await db
+      .insert(nitroxCertifications)
+      .values({ shopId: shop.id, personId: priya.id, agency: "padi", status: "pending", identifier: null, ...issued })
+      .returning();
+    const [deep] = await db
+      .insert(specialtyCertifications)
+      .values({ shopId: shop.id, personId: priya.id, agency: "padi", specialty: "deep", status: "pending", identifier: null, ...issued })
+      .returning();
+    const kinds = async () =>
+      (await listCardsToProcess(db, shop.id))
+        .filter((row) => row.personId === priya.id)
+        .map((row) => row.what);
+    expect(await kinds()).toEqual(
+      expect.arrayContaining([
+        { kind: "level", level: "open_water" },
+        { kind: "nitrox" },
+        { kind: "specialty", specialty: "deep" },
+      ]),
+    );
+
+    for (const [kind, id] of [
+      ["nitrox", nitrox.id],
+      ["specialty", deep.id],
+    ] as const) {
+      expect(
+        await setCardProcessed(db, {
+          shopId: shop.id,
+          kind,
+          certificationId: id,
+          actorPersonId: owner.id,
+          processed: true,
+          now,
+          tripId: session.id,
+        }),
+      ).toBe(true);
+    }
+    expect(await kinds()).toEqual([{ kind: "level", level: "open_water" }]);
+
+    // The id names the table: a nitrox id ticked as a level card changes nothing.
+    expect(
+      await setCardProcessed(db, {
+        shopId: shop.id,
+        kind: "level",
+        certificationId: nitrox.id,
+        actorPersonId: owner.id,
+        processed: false,
+        now,
+      }),
+    ).toBe(false);
+  });
+
+  it("refuses the processed stamp on a specialty card the shop did not issue", async () => {
+    const { db, shop, priya, now, owner } = await fixture();
+    await expect(
+      db.insert(specialtyCertifications).values({
+        shopId: shop.id,
+        personId: priya.id,
+        agency: "padi",
+        specialty: "wreck",
+        status: "verified",
+        identifier: "W-1",
+        processedWithAgencyAt: now,
+        processedByPersonId: owner.id,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("never lists another shop's cards", async () => {
+    const { db, shop } = await fixture();
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Elsewhere", slug: `elsewhere-${crypto.randomUUID().slice(0, 8)}`, timezone: "UTC" })
+      .returning();
+    const theirs = await listCardsToProcess(db, other.id);
+    expect(theirs).toEqual([]);
+    expect((await listCardsToProcess(db, shop.id)).length).toBeGreaterThan(0);
+  });
+
+  it("calls a card late after 30 days, and never before", () => {
+    const now = new Date("2026-10-16T12:00:00Z");
+    expect(cardIsLate(new Date(now.getTime() - 30 * DAY_MS), now)).toBe(false);
+    expect(cardIsLate(new Date(now.getTime() - 31 * DAY_MS), now)).toBe(true);
   });
 });

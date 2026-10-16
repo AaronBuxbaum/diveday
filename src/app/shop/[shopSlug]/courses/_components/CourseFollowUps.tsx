@@ -30,13 +30,14 @@ export async function CourseFollowUps({
   const now = nowDate();
   const [ladder, cards] = await queryAll(db, [
     () => getCourseLadder(db, shop.id, now),
-    () => listCardsToProcess(db, shop.id, now),
+    () => listCardsToProcess(db, shop.id),
   ]);
   return (
     <>
       <CardsToProcess
         cards={cards}
         markProcessed={markCardProcessedFromCoursesAction.bind(null, shop.slug)}
+        now={now}
         locale={locale}
         timeZone={shop.timezone}
         t={t}

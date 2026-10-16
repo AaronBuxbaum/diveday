@@ -199,8 +199,9 @@
   "processing": {
     "heading": "Cards to process",
     "agencyLine": "{count, plural, one {# card to process with {agency}} other {# cards to process with {agency}}}",
-    "certifiedOn": "certified {date}",
-    "mark": "Processed"
+    "cardLine": "{card}, certified {date}",
+    "late": "Waiting over 30 days",
+    "mark": "Mark sent to {agency}"
   },
   "ladder": {
     "heading": "Next steps",

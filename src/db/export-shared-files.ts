@@ -218,6 +218,13 @@ export const SPECIALTY_CERTIFICATIONS_CSV = sharedFile<ShopRow<"specialtyRows">>
       in: "shop",
       value: (row) => row.listedFromCertificationId,
     },
+    // The shop's own record that it told the agency (item 46), as on certifications.csv.
+    {
+      header: "processed_with_agency_at",
+      in: "shop",
+      value: (row) => row.processedWithAgencyAt,
+    },
+    { header: "processed_by_person_id", in: "shop", value: (row) => row.processedByPersonId },
     { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
     { header: "deleted_by_person_id", in: "shop", value: (row) => row.deletedByPersonId },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
@@ -270,6 +277,13 @@ export const NITROX_CERTIFICATIONS_CSV = sharedFile<ShopRow<"nitroxRows">>({
       in: "shop",
       value: (row) => row.listedFromCertificationId,
     },
+    // The shop's own record that it told the agency (item 46), as on certifications.csv.
+    {
+      header: "processed_with_agency_at",
+      in: "shop",
+      value: (row) => row.processedWithAgencyAt,
+    },
+    { header: "processed_by_person_id", in: "shop", value: (row) => row.processedByPersonId },
     { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
     { header: "deleted_by_person_id", in: "shop", value: (row) => row.deletedByPersonId },
     { header: "created_at", in: "both", value: (row) => row.createdAt },

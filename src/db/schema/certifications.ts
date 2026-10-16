@@ -439,6 +439,14 @@ export const specialtyCertifications = pgTable(
     /** The live staff member whose tap issued this card. Set only alongside `issuedByShopAt`. */
     issuedByPersonId: uuid("issued_by_person_id").references(() => people.id),
     /**
+     * When the shop told the agency about this card: the same stamp as
+     * `certifications.processedWithAgencyAt` (item 46, dive-domain review F4).
+     * Set only on a card the shop issued.
+     */
+    processedWithAgencyAt: timestamp("processed_with_agency_at", { withTimezone: true }),
+    /** The staff member who ticked it; set only alongside `processedWithAgencyAt`. */
+    processedByPersonId: uuid("processed_by_person_id").references(() => people.id),
+    /**
      * **The agency check that listed this card** (layer 3 of ADR
      * 20261008-cert-check-extension): the level card whose match found it on
      * the same agency page, set only when a staffer added it from that offer.
@@ -459,6 +467,13 @@ export const specialtyCertifications = pgTable(
   },
   (table) => [
     index("specialty_certifications_shop_person_idx").on(table.shopId, table.personId),
+    index("specialty_certifications_processed_by_person_idx")
+      .on(table.processedByPersonId)
+      .where(sql`${table.processedByPersonId} is not null`),
+    check(
+      "specialty_certifications_processed_only_when_issued",
+      sql`${table.processedWithAgencyAt} is null or ${table.issuedByShopAt} is not null`,
+    ),
     // Case-insensitive like certifications_shop_agency_identifier_unique (CR-009),
     // but keyed on the **specialty** as well — an agency number identifies the
     // *diver*, not the card (docs/product/glossary.md, "C-card": agency, level,
@@ -658,6 +673,14 @@ export const nitroxCertifications = pgTable(
     /** The live staff member whose tap issued this card. Set only alongside `issuedByShopAt`. */
     issuedByPersonId: uuid("issued_by_person_id").references(() => people.id),
     /**
+     * When the shop told the agency about this card: the same stamp as
+     * `certifications.processedWithAgencyAt` (item 46, dive-domain review F4).
+     * Set only on a card the shop issued.
+     */
+    processedWithAgencyAt: timestamp("processed_with_agency_at", { withTimezone: true }),
+    /** The staff member who ticked it; set only alongside `processedWithAgencyAt`. */
+    processedByPersonId: uuid("processed_by_person_id").references(() => people.id),
+    /**
      * **The agency check that listed this card** (layer 3 of ADR
      * 20261008-cert-check-extension): the level card whose match found it on
      * the same agency page, set only when a staffer added it from that offer.
@@ -678,6 +701,13 @@ export const nitroxCertifications = pgTable(
   },
   (table) => [
     index("nitrox_certifications_shop_person_idx").on(table.shopId, table.personId),
+    index("nitrox_certifications_processed_by_person_idx")
+      .on(table.processedByPersonId)
+      .where(sql`${table.processedByPersonId} is not null`),
+    check(
+      "nitrox_certifications_processed_only_when_issued",
+      sql`${table.processedWithAgencyAt} is null or ${table.issuedByShopAt} is not null`,
+    ),
     // Case-insensitive, mirroring certifications_shop_agency_identifier_unique (CR-009).
     //
     // **Some agencies issue no standalone nitrox card.** RAID and GUE bundle

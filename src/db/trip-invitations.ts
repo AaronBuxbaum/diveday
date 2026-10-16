@@ -128,7 +128,10 @@ export async function createDirectTripInvitation(
           eq(people.id, input.personId),
           eq(people.shopId, input.shopId),
           eq(personRoles.role, "diver"),
-          isNull(people.deletedAt),
+          // Removed, erased or merged people get no invitation row (security
+          // review N4): `people_anonymized_stays_removed` and
+          // `people_merged_stays_removed` make the last two removed as well.
+          livePerson(),
         ),
       )
       .limit(1);

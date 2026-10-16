@@ -199,8 +199,9 @@
   "processing": {
     "heading": "Certificaciones por tramitar",
     "agencyLine": "{count, plural, one {# certificación por tramitar con {agency}} other {# certificaciones por tramitar con {agency}}}",
-    "certifiedOn": "certificado el {date}",
-    "mark": "Tramitada"
+    "cardLine": "{card}, certificado el {date}",
+    "late": "Lleva más de 30 días esperando",
+    "mark": "Marcar como enviada a {agency}"
   },
   "ladder": {
     "heading": "Siguientes pasos",

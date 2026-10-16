@@ -1,55 +1,95 @@
-import { and, asc, eq, gte, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull } from "drizzle-orm";
 import { DAY_MS } from "@/lib/clock";
 import type { DbExecutor } from "./client";
-import { certifications, people, trips } from "./schema";
+import { queryAll } from "./query-helpers";
+import {
+  certifications,
+  nitroxCertifications,
+  people,
+  specialtyCertifications,
+  trips,
+} from "./schema";
 import { livePerson } from "./trips-live";
 
 /**
  * **"Processed with PADI"** (fifth-loop ideas, item 46): whether the shop has
  * told the agency about a card it issued. It records the shop's own act and
- * issues nothing; the agency sends its own card. Only a live level card the
- * shop issued can carry it (`certifications_processed_only_when_issued`).
+ * issues nothing; the agency sends its own card. Every card the shop issues
+ * can carry it: a level card, an Enriched Air card and a specialty card, each
+ * in its own table with the same two columns and the same
+ * `*_processed_only_when_issued` check (dive-domain review F4).
  */
+export const CARD_KINDS = ["level", "nitrox", "specialty"] as const;
+
+export type CardKind = (typeof CARD_KINDS)[number];
+
+export function isCardKind(value: unknown): value is CardKind {
+  return typeof value === "string" && (CARD_KINDS as readonly string[]).includes(value);
+}
+
+type CardTable = typeof certifications | typeof nitroxCertifications | typeof specialtyCertifications;
+
+const CARD_TABLES: Record<CardKind, CardTable> = {
+  level: certifications,
+  nitrox: nitroxCertifications,
+  specialty: specialtyCertifications,
+};
+
+/** What the card certifies, as codes for its line on the list. */
+export type CardWhat =
+  | { kind: "level"; level: (typeof certifications.$inferSelect)["level"] }
+  | { kind: "nitrox" }
+  | { kind: "specialty"; specialty: (typeof specialtyCertifications.$inferSelect)["specialty"] };
+
 export type IssuedCard = {
+  kind: CardKind;
   certificationId: string;
   agency: (typeof certifications.$inferSelect)["agency"];
   issuedAt: Date;
   processedAt: Date | null;
 };
 
-/** The live cards this session issued, by the person who earned each. */
+/**
+ * The live cards this session issued, by the person who earned each. A
+ * session issues its course's one kind of card, so one card per person; the
+ * level card wins if a person somehow holds two.
+ */
 export async function issuedCardsForTrip(
   db: DbExecutor,
   shopId: string,
   tripId: string,
 ): Promise<Map<string, IssuedCard>> {
-  const rows = await db
-    .select({
-      personId: certifications.personId,
-      certificationId: certifications.id,
-      agency: certifications.agency,
-      issuedAt: certifications.issuedByShopAt,
-      processedAt: certifications.processedWithAgencyAt,
-    })
-    .from(certifications)
-    .where(
-      and(
-        eq(certifications.shopId, shopId),
-        eq(certifications.issuedFromTripId, tripId),
-        isNotNull(certifications.issuedByShopAt),
-        isNull(certifications.deletedAt),
-      ),
-    )
-    .orderBy(asc(certifications.createdAt));
   const byPerson = new Map<string, IssuedCard>();
-  for (const row of rows) {
-    if (!row.issuedAt) continue;
-    byPerson.set(row.personId, {
-      certificationId: row.certificationId,
-      agency: row.agency,
-      issuedAt: row.issuedAt,
-      processedAt: row.processedAt,
-    });
+  for (const kind of CARD_KINDS) {
+    const table = CARD_TABLES[kind];
+    const rows = await db
+      .select({
+        personId: table.personId,
+        certificationId: table.id,
+        agency: table.agency,
+        issuedAt: table.issuedByShopAt,
+        processedAt: table.processedWithAgencyAt,
+      })
+      .from(table)
+      .where(
+        and(
+          eq(table.shopId, shopId),
+          eq(table.issuedFromTripId, tripId),
+          isNotNull(table.issuedByShopAt),
+          isNull(table.deletedAt),
+        ),
+      )
+      .orderBy(asc(table.createdAt));
+    for (const row of rows) {
+      if (!row.issuedAt || byPerson.has(row.personId)) continue;
+      byPerson.set(row.personId, {
+        kind,
+        certificationId: row.certificationId,
+        agency: row.agency,
+        issuedAt: row.issuedAt,
+        processedAt: row.processedAt,
+      });
+    }
   }
   return byPerson;
 }
@@ -63,6 +103,7 @@ export async function setCardProcessed(
   db: DbExecutor,
   input: {
     shopId: string;
+    kind: CardKind;
     certificationId: string;
     actorPersonId: string;
     processed: boolean;
@@ -71,8 +112,9 @@ export async function setCardProcessed(
     tripId?: string;
   },
 ): Promise<boolean> {
+  const table = CARD_TABLES[input.kind];
   const updated = await db
-    .update(certifications)
+    .update(table)
     .set(
       input.processed
         ? { processedWithAgencyAt: input.now, processedByPersonId: input.actorPersonId }
@@ -80,63 +122,135 @@ export async function setCardProcessed(
     )
     .where(
       and(
-        eq(certifications.id, input.certificationId),
-        eq(certifications.shopId, input.shopId),
-        isNotNull(certifications.issuedByShopAt),
-        isNull(certifications.deletedAt),
-        input.tripId ? eq(certifications.issuedFromTripId, input.tripId) : undefined,
+        eq(table.id, input.certificationId),
+        eq(table.shopId, input.shopId),
+        isNotNull(table.issuedByShopAt),
+        isNull(table.deletedAt),
+        input.tripId ? eq(table.issuedFromTripId, input.tripId) : undefined,
       ),
     )
-    .returning({ id: certifications.id });
+    .returning({ id: table.id });
   return updated.length > 0;
 }
 
-/** How far back the course page's "cards to process" list reaches. */
-export const CARDS_TO_PROCESS_LOOKBACK_DAYS = 90;
+/** A card waiting longer than this is called out on the list, never dropped from it. */
+export const CARD_TO_PROCESS_LATE_DAYS = 30;
 
 export type CardToProcess = IssuedCard & {
+  what: CardWhat;
   personId: string;
   fullName: string;
   courseId: string | null;
 };
 
-/**
- * Cards the shop issued in the last {@link CARDS_TO_PROCESS_LOOKBACK_DAYS}
- * days and has not marked processed, oldest first: the instructor's list of
- * students still to submit to their agency.
- */
-export async function listCardsToProcess(
-  db: DbExecutor,
-  shopId: string,
-  now: Date,
-): Promise<CardToProcess[]> {
-  const since = new Date(now.getTime() - CARDS_TO_PROCESS_LOOKBACK_DAYS * DAY_MS);
-  const rows = await db
-    .select({
-      certificationId: certifications.id,
-      agency: certifications.agency,
-      issuedAt: certifications.issuedByShopAt,
-      personId: people.id,
-      fullName: people.fullName,
-      courseId: trips.courseId,
-    })
-    .from(certifications)
-    .innerJoin(people, eq(people.id, certifications.personId))
-    // diveday:allow-deleted-trips: a card earned on a session since deleted is still the diver's to submit.
-    .leftJoin(trips, eq(trips.id, certifications.issuedFromTripId))
-    .where(
-      and(
-        eq(certifications.shopId, shopId),
-        isNotNull(certifications.issuedByShopAt),
-        gte(certifications.issuedByShopAt, since),
-        isNull(certifications.processedWithAgencyAt),
-        isNull(certifications.deletedAt),
-        livePerson(),
-        isNull(people.anonymizedAt),
-      ),
-    )
-    .orderBy(asc(certifications.issuedByShopAt), asc(people.fullName));
-  return rows.flatMap((row) =>
-    row.issuedAt ? [{ ...row, issuedAt: row.issuedAt, processedAt: null }] : [],
+/** The person and session joins every list query shares, each naming the shop (security N7). */
+function waitingOn(table: CardTable, shopId: string) {
+  return and(
+    eq(table.shopId, shopId),
+    isNotNull(table.issuedByShopAt),
+    isNull(table.processedWithAgencyAt),
+    isNull(table.deletedAt),
+    livePerson(),
+    isNull(people.anonymizedAt),
   );
+}
+
+const personJoin = (table: CardTable, shopId: string) =>
+  and(eq(people.id, table.personId), eq(people.shopId, shopId));
+const sessionJoin = (table: CardTable, shopId: string) =>
+  and(eq(trips.id, table.issuedFromTripId), eq(trips.shopId, shopId));
+
+/**
+ * Every card the shop issued and has not marked processed, of every kind and
+ * however old, oldest first: the instructor's list of students still to submit
+ * to their agency. There is no lookback: a card gets more urgent with age, so
+ * an old one is called out (`CARD_TO_PROCESS_LATE_DAYS`), never dropped
+ * (dive-domain review F5).
+ */
+export async function listCardsToProcess(db: DbExecutor, shopId: string): Promise<CardToProcess[]> {
+  const [levelRows, nitroxRows, specialtyRows] = await queryAll(db, [
+    () =>
+      db
+        .select({
+          certificationId: certifications.id,
+          agency: certifications.agency,
+          issuedAt: certifications.issuedByShopAt,
+          level: certifications.level,
+          personId: people.id,
+          fullName: people.fullName,
+          courseId: trips.courseId,
+        })
+        .from(certifications)
+        .innerJoin(people, personJoin(certifications, shopId))
+        // diveday:allow-deleted-trips: a card earned on a session since deleted is still the diver's to submit.
+        .leftJoin(trips, sessionJoin(certifications, shopId))
+        .where(waitingOn(certifications, shopId)),
+    () =>
+      db
+        .select({
+          certificationId: nitroxCertifications.id,
+          agency: nitroxCertifications.agency,
+          issuedAt: nitroxCertifications.issuedByShopAt,
+          personId: people.id,
+          fullName: people.fullName,
+          courseId: trips.courseId,
+        })
+        .from(nitroxCertifications)
+        .innerJoin(people, personJoin(nitroxCertifications, shopId))
+        // diveday:allow-deleted-trips: a card earned on a session since deleted is still the diver's to submit.
+        .leftJoin(trips, sessionJoin(nitroxCertifications, shopId))
+        .where(waitingOn(nitroxCertifications, shopId)),
+    () =>
+      db
+        .select({
+          certificationId: specialtyCertifications.id,
+          agency: specialtyCertifications.agency,
+          issuedAt: specialtyCertifications.issuedByShopAt,
+          specialty: specialtyCertifications.specialty,
+          personId: people.id,
+          fullName: people.fullName,
+          courseId: trips.courseId,
+        })
+        .from(specialtyCertifications)
+        .innerJoin(people, personJoin(specialtyCertifications, shopId))
+        // diveday:allow-deleted-trips: a card earned on a session since deleted is still the diver's to submit.
+        .leftJoin(trips, sessionJoin(specialtyCertifications, shopId))
+        .where(waitingOn(specialtyCertifications, shopId)),
+  ]);
+  const cards: CardToProcess[] = [];
+  const add = (
+    row: { certificationId: string; agency: IssuedCard["agency"]; issuedAt: Date | null; personId: string; fullName: string; courseId: string | null },
+    kind: CardKind,
+    what: CardWhat,
+  ) => {
+    if (!row.issuedAt) return;
+    cards.push({
+      kind,
+      what,
+      certificationId: row.certificationId,
+      agency: row.agency,
+      issuedAt: row.issuedAt,
+      processedAt: null,
+      personId: row.personId,
+      fullName: row.fullName,
+      courseId: row.courseId,
+    });
+  };
+  for (const row of levelRows) add(row, "level", { kind: "level", level: row.level });
+  for (const row of nitroxRows) add(row, "nitrox", { kind: "nitrox" });
+  for (const row of specialtyRows) {
+    add(row, "specialty", { kind: "specialty", specialty: row.specialty });
+  }
+  // Oldest first; a tie keeps the order stable by name, then id.
+  return cards.sort(
+    (a, b) =>
+      a.issuedAt.getTime() - b.issuedAt.getTime() ||
+      (a.fullName < b.fullName ? -1 : a.fullName > b.fullName ? 1 : 0) ||
+      (a.certificationId < b.certificationId ? -1 : 1),
+  );
+}
+
+/** Whether a card has waited past {@link CARD_TO_PROCESS_LATE_DAYS}. */
+export function cardIsLate(issuedAt: Date, now: Date): boolean {
+  return now.getTime() - issuedAt.getTime() > CARD_TO_PROCESS_LATE_DAYS * DAY_MS;
 }

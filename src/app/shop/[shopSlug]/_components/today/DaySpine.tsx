@@ -118,7 +118,8 @@ export type SpineHelpRequestAction = (
 
 type RowControls = {
   shopSlug: string;
-  shopName: string;
+  /** The shop's own name, for a mail the staffer sends; never the demo's worn name (H-131). */
+  mailShopName: string;
   waiverCopy: WaiverSendCopy;
   resendCopy: ResendConfirmationCopy;
   inviteCopy: WaitlistInviteCopy;
@@ -133,7 +134,7 @@ type RowControls = {
  * crosses the boundary.
  */
 function rowControls(
-  base: Pick<RowControls, "shopSlug" | "shopName" | "helpRequestAction" | "t">,
+  base: Pick<RowControls, "shopSlug" | "mailShopName" | "helpRequestAction" | "t">,
 ): RowControls {
   const { t } = base;
   return {
@@ -454,7 +455,7 @@ function StationRow({
       personEmail={action.invite.personEmail}
       invitedAt={action.invite.invitedAt}
       bookingPath={action.invite.bookingPath}
-      shopName={controls.shopName}
+      shopName={controls.mailShopName}
       tripTitle={action.invite.tripTitle}
       tripWhen={action.invite.tripWhen}
       tripId={action.invite.tripId}
@@ -822,7 +823,10 @@ function CrewTipsLine({
 export type DaySpineContext = {
   spine: DaySpineData;
   shopSlug: string;
+  /** What staff screens call the shop: in a demo, the name the visitor typed (H-131). */
   shopName: string;
+  /** What a mail that leaves calls the shop: always `shop.name`. */
+  mailShopName: string;
   locale: string;
   timeZone: string;
   currency: string;
@@ -917,6 +921,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
     spine,
     shopSlug,
     shopName,
+    mailShopName,
     locale,
     timeZone,
     currency,
@@ -937,7 +942,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
     now,
   } = context;
   const t = staffTranslator(locale);
-  const controls = rowControls({ shopSlug, shopName, helpRequestAction, t });
+  const controls = rowControls({ shopSlug, mailShopName, helpRequestAction, t });
   const crewed = new Set(crewedTripIds ?? []);
   const jobs = spineJobCount(spine);
   const tomorrowDate = spine.tomorrow.stations[0]?.startsAt ?? null;

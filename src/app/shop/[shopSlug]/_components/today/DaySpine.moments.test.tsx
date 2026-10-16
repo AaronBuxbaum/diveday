@@ -83,6 +83,7 @@ describe("the good-news moments, beside a forecast still arriving", () => {
           highWind,
           shopSlug: "blue-mantis",
           shopName: "Blue Mantis",
+          mailShopName: "Blue Mantis",
           locale: "en-US",
           timeZone: "America/New_York",
           currency: "usd",

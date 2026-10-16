@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { setCardProcessed } from "@/db/agency-processing";
+import { CARD_KINDS, setCardProcessed } from "@/db/agency-processing";
 import { getDb } from "@/db/client";
 import { invitedWithinCooldown } from "@/db/invite-suggestions";
 import {
@@ -71,7 +71,7 @@ export async function inviteToCourseSessionAction(shopSlug: string, formData: Fo
   );
 }
 
-const processedSchema = z.object({ certificationId: z.uuid() });
+const processedSchema = z.object({ certificationId: z.uuid(), kind: z.enum(CARD_KINDS) });
 
 /**
  * **"Processed" on the course page's list of cards to process** (fifth-loop
@@ -81,11 +81,15 @@ const processedSchema = z.object({ certificationId: z.uuid() });
 export async function markCardProcessedFromCoursesAction(shopSlug: string, formData: FormData) {
   const { session } = await requireShopSurface(shopSlug);
   const back = shopPath(shopSlug, "courses");
-  const parsed = processedSchema.safeParse({ certificationId: formData.get("certificationId") });
+  const parsed = processedSchema.safeParse({
+    certificationId: formData.get("certificationId"),
+    kind: formData.get("cardKind"),
+  });
   if (!parsed.success) redirect(back);
   const db = await getDb();
   await setCardProcessed(db, {
     shopId: session.user.shopId,
+    kind: parsed.data.kind,
     certificationId: parsed.data.certificationId,
     actorPersonId: session.user.personId,
     processed: true,

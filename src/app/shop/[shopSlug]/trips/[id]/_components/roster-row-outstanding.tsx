@@ -209,6 +209,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
         processedCard={
           issuedCard
             ? {
+                kind: issuedCard.kind,
                 certificationId: issuedCard.certificationId,
                 agency: processingAgencyName(issuedCard.agency, t),
                 doneLine: issuedCard.processedAt

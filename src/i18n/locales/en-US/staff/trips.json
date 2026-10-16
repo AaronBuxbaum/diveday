@@ -508,7 +508,7 @@
       "left": "Left {agency}’s other certifications for you: check them on its page."
     },
     "certifyConfirm": "Confirm certification",
-    "processedMark": "Processed with {agency}",
+    "processedMark": "Mark sent to {agency}",
     "processedLine": "Processed with {agency} · {date}",
     "processedUndo": "Undo",
     "processedSaving": "Saving…",

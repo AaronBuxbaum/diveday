@@ -565,6 +565,7 @@ async function TodayBody({
             highWind: work.highWind,
             shopSlug,
             shopName: await staffShopName(shop),
+            mailShopName: shop.name,
             locale,
             timeZone: shop.timezone,
             currency: shop.currency,

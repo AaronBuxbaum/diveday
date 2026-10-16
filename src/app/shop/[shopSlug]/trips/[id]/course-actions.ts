@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { setCardProcessed } from "@/db/agency-processing";
+import { isCardKind, setCardProcessed } from "@/db/agency-processing";
 import { getDb } from "@/db/client";
 import { tellCourseCertified } from "@/db/course-certified";
 import { type PaperCourseFormOutcome, recordPaperCourseForm } from "@/db/course-forms";
@@ -39,6 +39,7 @@ import { requireRosterBooking, tripPath } from "./roster-booking";
 const courseRosterForm = z.object({
   award: text(),
   bookingId: text(),
+  cardKind: text(),
   certificationId: text(),
   done: formValue(),
   formId: text(),
@@ -145,10 +146,12 @@ export async function markCardProcessedAction(
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const certificationId = fields.certificationId;
-  if (!uuidParam(tripId) || !uuidParam(certificationId)) redirect(back);
+  const kind = fields.cardKind;
+  if (!uuidParam(tripId) || !uuidParam(certificationId) || !isCardKind(kind)) redirect(back);
   const db = await getDb();
   const saved = await setCardProcessed(db, {
     shopId: s.user.shopId,
+    kind,
     certificationId,
     actorPersonId: s.user.personId,
     processed: fields.done === "true",

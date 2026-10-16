@@ -43,7 +43,12 @@ export function SeatCourseControls({
   /** Tick the card this session issued processed with its agency (ideas item 46). */
   markCardProcessedAction?: (formData: FormData) => void;
   /** The card Certify issued here: its agency's name, and "Processed with PADI · Oct 25" once ticked. */
-  processedCard?: { certificationId: string; agency: string; doneLine: string | null } | null;
+  processedCard?: {
+    kind: "level" | "nitrox" | "specialty";
+    certificationId: string;
+    agency: string;
+    doneLine: string | null;
+  } | null;
 }) {
   return (
     <>
@@ -154,6 +159,7 @@ export function SeatCourseControls({
           action={markCardProcessedAction}
           className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1"
         >
+          <input type="hidden" name="cardKind" value={processedCard.kind} />
           <input type="hidden" name="certificationId" value={processedCard.certificationId} />
           <input type="hidden" name="done" value={processedCard.doneLine ? "false" : "true"} />
           {processedCard.doneLine ? (

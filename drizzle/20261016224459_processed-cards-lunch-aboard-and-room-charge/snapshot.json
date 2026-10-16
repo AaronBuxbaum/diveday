@@ -1,9 +1,14 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "bd3f3366-72e5-4bfe-a7ee-e38630a6f45e",
+  "id": "16b87e48-cc35-4708-9e70-a816df2b2c86",
   "prevIds": [
-    "ea016abd-dd71-4057-8d24-1df67318d2f2"
+    "3d7fc55a-3967-4f48-90a3-b52a48da3569",
+    "44c0586d-ddc3-4af2-9187-992a8cd1a59b",
+    "84c8ad31-e474-4673-8616-9645699fffb6",
+    "beef9192-ca63-4022-a83e-fe29194e9c8a",
+    "bfed0621-33d6-443d-b1b2-d5e4134f76a4",
+    "f2e1375f-33bf-46eb-93e2-dc9bd1706c13"
   ],
   "ddl": [
     {
@@ -5698,6 +5703,32 @@
       "table": "nitrox_certifications"
     },
     {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "processed_with_agency_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "nitrox_certifications"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "processed_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "nitrox_certifications"
+    },
+    {
       "type": "uuid",
       "typeSchema": null,
       "notNull": false,
@@ -6122,6 +6153,32 @@
       "generated": null,
       "identity": null,
       "name": "issued_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "specialty_certifications"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "processed_with_agency_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "specialty_certifications"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "processed_by_person_id",
       "entityType": "columns",
       "schema": "public",
       "table": "specialty_certifications"
@@ -27090,6 +27147,27 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "processed_by_person_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": "\"processed_by_person_id\" is not null",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "nitrox_certifications_processed_by_person_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "nitrox_certifications"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "shop_id",
           "isExpression": false,
           "asc": true,
@@ -27215,6 +27293,27 @@
       "method": "btree",
       "concurrently": false,
       "name": "specialty_certifications_shop_person_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "specialty_certifications"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "processed_by_person_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": "\"processed_by_person_id\" is not null",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "specialty_certifications_processed_by_person_idx",
       "entityType": "indexes",
       "schema": "public",
       "table": "specialty_certifications"
@@ -35813,6 +35912,23 @@
     {
       "nameExplicit": false,
       "columns": [
+        "processed_by_person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "nitrox_certifications_processed_by_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "nitrox_certifications"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
         "listed_from_certification_id"
       ],
       "schemaTo": "public",
@@ -35959,6 +36075,23 @@
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "name": "specialty_certifications_issued_by_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "specialty_certifications"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "processed_by_person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "specialty_certifications_processed_by_person_id_people_id_fkey",
       "entityType": "fks",
       "schema": "public",
       "table": "specialty_certifications"
@@ -43243,11 +43376,25 @@
       "table": "certifications"
     },
     {
+      "value": "\"processed_with_agency_at\" is null or \"issued_by_shop_at\" is not null",
+      "name": "nitrox_certifications_processed_only_when_issued",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "nitrox_certifications"
+    },
+    {
       "value": "(\"identifier\" is not null and length(btrim(\"identifier\", E' \\t\\n\\r\\f\\v')) > 0) or (\"self_declared_at\" is not null and \"status\" = 'pending') or (\"issued_by_shop_at\" is not null and \"status\" = 'pending') or (\"listed_from_certification_id\" is not null and \"status\" = 'pending')",
       "name": "nitrox_certifications_identifier_present_unless_self_declared",
       "entityType": "checks",
       "schema": "public",
       "table": "nitrox_certifications"
+    },
+    {
+      "value": "\"processed_with_agency_at\" is null or \"issued_by_shop_at\" is not null",
+      "name": "specialty_certifications_processed_only_when_issued",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "specialty_certifications"
     },
     {
       "value": "(\"identifier\" is not null and length(btrim(\"identifier\", E' \\t\\n\\r\\f\\v')) > 0) or (\"self_declared_at\" is not null and \"status\" = 'pending') or (\"issued_by_shop_at\" is not null and \"status\" = 'pending') or (\"listed_from_certification_id\" is not null and \"status\" = 'pending')",

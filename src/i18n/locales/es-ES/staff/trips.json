@@ -508,7 +508,7 @@
       "left": "Las demás certificaciones de {agency} quedan para ti: verifícalas en su página."
     },
     "certifyConfirm": "Confirmar certificación",
-    "processedMark": "Tramitado con {agency}",
+    "processedMark": "Marcar como enviada a {agency}",
     "processedLine": "Tramitado con {agency} · {date}",
     "processedUndo": "Deshacer",
     "processedSaving": "Guardando…",
