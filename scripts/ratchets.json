@@ -425,6 +425,12 @@
           "src/db/export.test.ts": "1670 -> 1673",
           "src/db/retention.test.ts": "1262 -> 1265"
         }
+      },
+      {
+        "why": "the label-maps table must hold every message-key map in src/i18n by design, and r5-4's PARTY_LEFT_KEYS (why Team up each party left a party) is one more row and its code list, which no sibling file can hold",
+        "files": {
+          "src/i18n/label-maps.test.ts": "1333 -> 1351"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -484,7 +490,7 @@
     "src/db/waivers-medical.test.ts": 1004,
     "src/db/work-order-follow-up.test.ts": 1213,
     "src/db/work-orders.test.ts": 1408,
-    "src/i18n/label-maps.test.ts": 1333,
+    "src/i18n/label-maps.test.ts": 1351,
     "src/lib/agency-check.test.ts": 930,
     "src/lib/dive-prep.test.ts": 1983,
     "src/lib/import.test.ts": 1459,

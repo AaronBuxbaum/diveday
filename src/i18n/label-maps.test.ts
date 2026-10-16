@@ -19,8 +19,8 @@ import {
 import { GUARDIAN_RELATIONSHIPS } from "@/lib/guardian";
 import { INCIDENT_KINDS, INCIDENT_SEVERITIES } from "@/lib/incident-reports";
 import type { BuddyAlert, RollCallLabel } from "@/lib/manifests";
-import type { PartyLeftReason } from "@/lib/party-teams";
 import { CARDINAL_DIRECTIONS, SEA_STATES, WIND_STATES } from "@/lib/marine-forecast";
+import type { PartyLeftReason } from "@/lib/party-teams";
 import { PLAN_CHANGE_REASONS } from "@/lib/plan-change";
 import {
   BLOCKER_CATEGORY,
