@@ -1,9 +1,12 @@
+import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
+import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { MonthMoneyDetail as Detail } from "@/db/report-lines";
 import { payoutSentence } from "@/i18n/payout-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { RevenueLine } from "@/lib/report-lines";
+import { shopPath } from "@/lib/staff-notices";
 
 /** Each revenue line's name in the staff bundle. */
 export const BY_LINE_KEYS = {
@@ -26,9 +29,12 @@ export function MonthDetailLines({
   detail,
   t,
   money,
+  shopSlug,
 }: {
   report: { partnerReferredSeats: number; buddyReferredSeats: number };
   detail: Detail;
+  /** For the door from a referrer's name to their record. */
+  shopSlug: string;
   t: StaffTranslator;
   money: (cents: number) => string;
 }) {
@@ -58,6 +64,23 @@ export function MonthDetailLines({
         <p className="mt-1 text-end text-sm text-muted tabular-nums">
           {t("reports.buddySeats", { count: report.buddyReferredSeats })}
         </p>
+      ) : null}
+      {/* **Who brought them** (fifth-loop ideas, item 41): the referring diver
+          is the shop's own, so unlike a partner slug it is safe to name, and
+          each name is the door to their record, where the owner thanks them. */}
+      {detail.buddyReferrers.length > 0 ? (
+        <ul className="mt-1 flex flex-wrap justify-end gap-x-4 text-sm text-muted tabular-nums">
+          {detail.buddyReferrers.map((referrer) => (
+            <li key={referrer.personId}>
+              <Link
+                href={shopPath(shopSlug, "divers", referrer.personId)}
+                className={buttonClass({ variant: "link", size: "sm", flush: true })}
+              >
+                {t("reports.buddyReferrer", { name: referrer.fullName, count: referrer.friends })}
+              </Link>
+            </li>
+          ))}
+        </ul>
       ) : null}
 
       {/* Returning divers and package dives owed (owner decision 2026-10-09). */}

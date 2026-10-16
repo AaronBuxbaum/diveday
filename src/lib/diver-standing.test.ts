@@ -1,0 +1,95 @@
+import { describe, expect, it } from "vitest";
+import type { DiverProfile } from "@/lib/diver-profile";
+import { diverStanding } from "./diver-standing";
+
+const NOW = new Date("2026-10-16T12:00:00Z");
+const base = { now: NOW, timezone: "America/New_York", currency: "usd", showMoney: true };
+
+function seat(id: string, startsAt: string, status = "booked") {
+  return {
+    booking: { id, status },
+    trip: { id: `trip-${id}`, status: "scheduled", startsAt: new Date(startsAt) },
+  };
+}
+
+function diver(over: Partial<Record<string, unknown>> = {}): DiverProfile {
+  return {
+    bookings: [],
+    priorVisits: [],
+    orders: [],
+    bookingPayments: [],
+    friendsBrought: 0,
+    ...over,
+  } as unknown as DiverProfile;
+}
+
+describe("diverStanding", () => {
+  it("counts sailed seats and imported visits, first and last on the shop's calendar", () => {
+    const standing = diverStanding(
+      diver({
+        bookings: [
+          seat("a", "2026-09-30T23:30:00Z"), // Sep 30 in Florida, Oct 1 in UTC
+          seat("b", "2026-11-01T12:00:00Z"), // ahead: not a visit yet
+          seat("c", "2026-08-01T12:00:00Z", "cancelled"),
+        ],
+        priorVisits: [{ visitedOn: "2024-03-02" }],
+      }),
+      base,
+    );
+    expect(standing).toMatchObject({ visits: 2, since: "2024-03-02", lastOut: "2026-09-30" });
+  });
+
+  it("counts money kept once per seat, in the shop's currency only", () => {
+    const standing = diverStanding(
+      diver({
+        orders: [
+          {
+            order: {
+              bookingId: "a",
+              currency: "usd",
+              amountPaidCents: 20_000,
+              refundedCents: 5_000,
+            },
+          },
+          { order: { bookingId: null, currency: "usd", amountPaidCents: 4_000, refundedCents: 0 } },
+          { order: { bookingId: "x", currency: "eur", amountPaidCents: 9_900, refundedCents: 0 } },
+        ],
+        bookingPayments: [
+          // Has an order: the order is the record, so this is not counted again.
+          {
+            booking: { id: "a" },
+            payment: { status: "paid", currency: "usd", amountCents: 20_000 },
+          },
+          {
+            booking: { id: "b" },
+            payment: { status: "deposit_paid", currency: "usd", amountCents: 5_000 },
+          },
+          {
+            booking: { id: "c" },
+            payment: { status: "partly_refunded", currency: "usd", amountCents: 8_000 },
+          },
+          {
+            booking: { id: "d" },
+            payment: { status: "unpaid", currency: "usd", amountCents: 8_000 },
+          },
+        ],
+      }),
+      base,
+    );
+    expect(standing.spent).toEqual({ cents: 15_000 + 4_000 + 5_000, currency: "usd" });
+  });
+
+  it("says no money to a reader who may not see it, and none at zero", () => {
+    const paid = {
+      orders: [
+        { order: { bookingId: "a", currency: "usd", amountPaidCents: 100, refundedCents: 0 } },
+      ],
+    };
+    expect(diverStanding(diver(paid), { ...base, showMoney: false }).spent).toBeNull();
+    expect(diverStanding(diver(), base).spent).toBeNull();
+  });
+
+  it("carries the friends brought", () => {
+    expect(diverStanding(diver({ friendsBrought: 2 }), base).friends).toBe(2);
+  });
+});

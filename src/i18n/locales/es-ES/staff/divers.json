@@ -207,6 +207,10 @@
     "saving": "Guardando…",
     "saveDetails": "Guardar datos",
     "visits": "{count, plural, one {# visita} other {# visitas}}",
+    "visitsSince": "{count, plural, one {# visita} other {# visitas}} desde {since}",
+    "lastOut": "Última salida: {date}",
+    "spent": "Gasto: {amount}",
+    "broughtFriends": "Trajo {count, plural, one {# amigo} other {# amigos}}",
     "packageBalance": "Paquete: quedan {left} de {of, plural, one {# inmersión} other {# inmersiones}}"
   },
   "bookActivity": {

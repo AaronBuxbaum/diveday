@@ -594,7 +594,13 @@ export default async function ReportsPage({
             </section>
           ) : null}
 
-          <MonthDetailLines report={report} detail={moneyDetail} t={t} money={money} />
+          <MonthDetailLines
+            report={report}
+            detail={moneyDetail}
+            t={t}
+            money={money}
+            shopSlug={shopSlug}
+          />
           <MoneyByLine detail={moneyDetail} t={t} money={money} />
           <MonthPayouts detail={moneyDetail} t={t} locale={locale} timeZone={tz} />
 

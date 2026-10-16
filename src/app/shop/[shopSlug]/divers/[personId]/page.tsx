@@ -24,7 +24,8 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { resolveDiverNotice } from "@/lib/diver-notices";
-import { bookingIsAhead, splitDiverStatus } from "@/lib/diver-status";
+import { diverStanding } from "@/lib/diver-standing";
+import { splitDiverStatus } from "@/lib/diver-status";
 import { requireShopSurface } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
@@ -276,13 +277,15 @@ export default async function DiverDetailPage({
   // came back empty — and stripped out of the URL by `FlashParams`, so a
   // reload never re-celebrates it.
   const cleared = detailsStatus?.code === "diver-clear" ? detailsStatus : undefined;
-  // Times out with this shop: a seat that has sailed plus the visits the
-  // importer brought across. Shares `bookingIsAhead`'s late-arrival buffer, so
-  // the boat somebody is still boarding is not counted as a visit yet.
-  const visits =
-    diver.bookings.filter(
-      (entry) => entry.booking.status !== "cancelled" && !bookingIsAhead(entry, now),
-    ).length + diver.priorVisits.length;
+  // Who this person is to the shop, in one line (fifth-loop ideas, item 36).
+  // Visits share `bookingIsAhead`'s late-arrival buffer, so the boat somebody
+  // is still boarding is not counted yet; money only for a reader who may see it.
+  const standing = diverStanding(diver, {
+    now,
+    timezone: shop.timezone,
+    currency: shop.currency,
+    showMoney: canManageOrders,
+  });
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -291,7 +294,8 @@ export default async function DiverDetailPage({
         diver={diver}
         shopSlug={shopSlug}
         t={t}
-        visits={visits}
+        standing={standing}
+        locale={locale}
         packages={packages}
         status={cleared ? undefined : detailsStatus}
         moment={

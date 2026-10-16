@@ -207,6 +207,10 @@
     "saving": "Saving…",
     "saveDetails": "Save details",
     "visits": "{count, plural, one {# visit} other {# visits}}",
+    "visitsSince": "{count, plural, one {# visit} other {# visits}} since {since}",
+    "lastOut": "Last out {date}",
+    "spent": "{amount} spent",
+    "broughtFriends": "Brought {count, plural, one {# friend} other {# friends}}",
     "packageBalance": "Package: {left} of {of, plural, one {# dive} other {# dives}} left"
   },
   "bookActivity": {

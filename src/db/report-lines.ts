@@ -23,6 +23,7 @@ import {
   revenueByLine,
   revenueLineForOrderItem,
 } from "@/lib/report-lines";
+import { type BuddyReferrer, buddyReferrersForWindow } from "./buddy-referrals";
 import type { DbExecutor } from "./client";
 import { packageOrderStillBacks } from "./dive-packages";
 import { listShopPayoutsArriving, type ShopPayout } from "./payouts";
@@ -66,6 +67,8 @@ export type MonthMoneyDetail = {
   out: { refundedCents: number; discountedCents: number; stripeFeesCents: number | null };
   /** Stripe payouts arriving at the bank this month, oldest first (ADR 20261012-payouts-reach-diveday). */
   payouts: ShopPayout[];
+  /** The divers whose buddy links brought this month's buddy seats, most friends first (fifth-loop ideas, item 41). */
+  buddyReferrers: BuddyReferrer[];
 };
 
 /** Same set the roster and every other report figure count as "on the boat". */
@@ -105,12 +108,13 @@ export async function getMonthMoneyDetail(
    */
   payoutMonth?: { year: number; month: number },
 ): Promise<MonthMoneyDetail> {
-  const [lines, packageDivesOwed, divers, out, payouts] = await queryAll(db, [
+  const [lines, packageDivesOwed, divers, out, payouts, buddyReferrers] = await queryAll(db, [
     () => moneyByLine(db, shopId, startUtc, endUtc, shopMoney),
     () => packageDivesOwedAt(db, shopId, endUtc < now ? endUtc : now),
     () => returningDivers(db, shopId, startUtc, endUtc),
     () => moneyOut(db, shopId, startUtc, endUtc),
     () => listShopPayoutsArriving(db, shopId, payoutWindow(payoutMonth, startUtc, endUtc)),
+    () => buddyReferrersForWindow(db, shopId, startUtc, endUtc),
   ]);
   const paidFees = payouts.flatMap((payout) =>
     payout.status === "paid" && payout.feeCents !== null ? [payout.feeCents] : [],
@@ -124,6 +128,7 @@ export async function getMonthMoneyDetail(
       stripeFeesCents: paidFees.length > 0 ? paidFees.reduce((sum, fee) => sum + fee, 0) : null,
     },
     payouts,
+    buddyReferrers,
   };
 }
 
