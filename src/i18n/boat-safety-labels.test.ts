@@ -26,25 +26,26 @@ const kit = (
 
 describe("boatSafetyNoticeText", () => {
   it("words the pre-departure check's lines the way a crew says them", () => {
-    expect(boatSafetyNoticeText(en, kit({}))).toBe("AED: pads expire in 12 days");
+    expect(boatSafetyNoticeText(en, "en-US", kit({}))).toBe("AED: pads expire in 12 days");
     expect(
       boatSafetyNoticeText(
         en,
+        "en-US",
         kit({ label: "Flares", kind: "flares", clock: "expiry", expired: true, days: 3 }),
       ),
     ).toBe("Flares: expired 3 days ago");
-    expect(boatSafetyNoticeText(en, kit({ days: 0 }))).toBe("AED: pads expire today");
+    expect(boatSafetyNoticeText(en, "en-US", kit({ days: 0 }))).toBe("AED: pads expire today");
     expect(
-      boatSafetyNoticeText(en, {
+      boatSafetyNoticeText(en, "en-US", {
         code: "paper",
         paper: "inspection",
         dueOn: "2026-10-01",
         expired: true,
         days: 1,
       }),
-    ).toBe("Safety inspection overdue by 1 day");
+    ).toMatch(/^Safety inspection was due Oct\s1,\s2026$/);
     expect(
-      boatSafetyNoticeText(en, {
+      boatSafetyNoticeText(en, "en-US", {
         code: "kit_off_service",
         gearItemId: "u1",
         label: "O2 kit",
@@ -55,7 +56,7 @@ describe("boatSafetyNoticeText", () => {
 
   it("says booked before boarding and aboard once the crew are counting", () => {
     expect(
-      boatSafetyNoticeText(en, {
+      boatSafetyNoticeText(en, "en-US", {
         code: "over_certificate",
         passengers: 14,
         limit: 12,
@@ -63,7 +64,7 @@ describe("boatSafetyNoticeText", () => {
       }),
     ).toBe("14 people booked; the boat’s certificate allows 12.");
     expect(
-      boatSafetyNoticeText(en, {
+      boatSafetyNoticeText(en, "en-US", {
         code: "over_certificate",
         passengers: 13,
         limit: 12,
@@ -73,10 +74,12 @@ describe("boatSafetyNoticeText", () => {
   });
 
   it("names the must-carry kit a hull lacks", () => {
-    expect(boatSafetyNoticeText(en, { code: "kit_missing", kind: "o2_kit" })).toBe(
+    expect(boatSafetyNoticeText(en, "en-US", { code: "kit_missing", kind: "o2_kit" })).toBe(
       "No emergency oxygen aboard",
     );
-    expect(boatSafetyNoticeText(en, { code: "kit_missing", kind: "aed" })).toBe("No AED aboard");
+    expect(boatSafetyNoticeText(en, "en-US", { code: "kit_missing", kind: "aed" })).toBe(
+      "No AED aboard",
+    );
   });
 
   it("names no country's authority", () => {
@@ -86,27 +89,62 @@ describe("boatSafetyNoticeText", () => {
       { code: "paper", paper: "inspection", dueOn: "2026-10-01", expired: false, days: 4 },
       { code: "paper", paper: "inspection", dueOn: "2026-10-01", expired: true, days: 4 },
     ] satisfies BoatSafetyNotice[]) {
-      expect(boatSafetyNoticeText(en, notice)).not.toMatch(/Coast Guard/);
-      expect(boatSafetyNoticeText(es, notice)).not.toMatch(/Guardia Costera/);
+      expect(boatSafetyNoticeText(en, "en-US", notice)).not.toMatch(/Coast Guard/);
+      expect(boatSafetyNoticeText(es, "es-ES", notice)).not.toMatch(/Guardia Costera/);
     }
   });
 
   it("has a Spanish sentence for every one", () => {
-    expect(boatSafetyNoticeText(es, kit({}))).toBe("AED: los parches vencen en 12 días");
-    expect(boatSafetyNoticeText(es, kit({ clock: "aed_battery", expired: true, days: 1 }))).toBe(
-      "AED: la batería venció hace 1 día",
-    );
-    expect(boatSafetyNoticeText(es, { code: "kit_missing", kind: "aed" })).toBe(
+    expect(boatSafetyNoticeText(es, "es-ES", kit({}))).toBe("AED: los parches vencen en 12 días");
+    expect(
+      boatSafetyNoticeText(es, "es-ES", kit({ clock: "aed_battery", expired: true, days: 1 })),
+    ).toBe("AED: la batería venció hace 1 día");
+    expect(boatSafetyNoticeText(es, "es-ES", { code: "kit_missing", kind: "aed" })).toBe(
       "No hay DEA a bordo",
     );
     expect(
-      boatSafetyNoticeText(es, {
+      boatSafetyNoticeText(es, "es-ES", {
         code: "kit_off_service",
         gearItemId: "u1",
         label: "Kit de O2",
         kind: "o2_kit",
       }),
     ).toBe("Kit de O2: marcado para mantenimiento. Revísalo antes de zarpar.");
+  });
+});
+
+/** A lapsed paper names the day it ran out, in the reader's own order (H-125). */
+describe("a lapsed paper", () => {
+  const lapsed = (paper: "inspection" | "registration" | "insurance"): BoatSafetyNotice => ({
+    code: "paper",
+    paper,
+    dueOn: "2026-10-08",
+    expired: true,
+    days: 8,
+  });
+
+  it("says when each paper ran out", () => {
+    // The date is one unit (U+00A0 inside, `keepUnitsWhole`), so `\s`.
+    expect(boatSafetyNoticeText(en, "en-US", lapsed("insurance"))).toMatch(
+      /^Hull insurance ended Oct\s8,\s2026$/,
+    );
+    expect(boatSafetyNoticeText(en, "en-US", lapsed("registration"))).toMatch(
+      /^Registration ended Oct\s8,\s2026$/,
+    );
+    expect(boatSafetyNoticeText(es, "es-ES", lapsed("insurance"))).toMatch(
+      /^Seguro del casco: venció el 8\soct\.?\s2026$/,
+    );
+  });
+
+  it("is a danger line in the boat's section", () => {
+    expect(
+      boatSafetySection(en, "en-US", { boatName: "Mantis I", notices: [lapsed("insurance")] }),
+    ).toEqual({
+      heading: "Mantis I: papers and safety kit",
+      lines: [
+        { text: expect.stringMatching(/^Hull insurance ended Oct\s8,\s2026$/), tone: "danger" },
+      ],
+    });
   });
 });
 
@@ -121,10 +159,10 @@ describe("boatSafetyHeadingText", () => {
 
 describe("boatSafetySection", () => {
   it("words the heading and tones each line, and is null with nothing to say", () => {
-    expect(boatSafetySection(en, { boatName: "Mantis I", notices: [] })).toBeNull();
-    expect(boatSafetySection(en, null)).toBeNull();
+    expect(boatSafetySection(en, "en-US", { boatName: "Mantis I", notices: [] })).toBeNull();
+    expect(boatSafetySection(en, "en-US", null)).toBeNull();
     expect(
-      boatSafetySection(en, {
+      boatSafetySection(en, "en-US", {
         boatName: "Mantis I",
         notices: [{ code: "kit_missing", kind: "aed" }, kit({})],
       }),

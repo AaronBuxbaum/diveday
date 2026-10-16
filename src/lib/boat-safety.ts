@@ -117,7 +117,8 @@ export type BoatPaper = (typeof BOAT_PAPERS)[number];
  * How far ahead each paper is said, longer than the kit's: booking an
  * inspection or renewing a policy takes weeks of lead time, where new pads are
  * a parcel. A paper inside its window is an owner's errand on Today and a line
- * on the manifest; past its date it escalates.
+ * on the manifest; past its date it escalates to danger ink (H-125), and still
+ * gates nothing.
  */
 export const BOAT_PAPER_HORIZON_DAYS: Record<BoatPaper, number> = {
   inspection: 90,
@@ -458,14 +459,21 @@ export type BoatSafetySection = {
 };
 
 /**
- * How loudly a notice is drawn. **Danger** for the two that mean the boat is
- * not as it should be to leave: must-carry kit missing, and more people than
- * the certificate allows. **Warning** for what has already gone wrong (a
- * lapsed date, kit flagged for service). **Neutral** for a heads-up.
+ * How loudly a notice is drawn. **Danger** for what means the boat is not as
+ * it should be to leave: must-carry kit missing, more people than the
+ * certificate allows, and a lapsed paper — hull insurance, registration or
+ * the safety inspection past its date, the fact that makes a claim uncovered
+ * (H-125). **Warning** for kit that has gone wrong (a lapsed clock, a unit
+ * flagged for service). **Neutral** for a heads-up.
+ *
+ * Tone only: a danger line here refuses nothing. The certificate's own gate
+ * lives at the point of sale (`sellableSeats`), and a lapsed paper has none —
+ * DiveDay cannot know a policy was renewed offline.
  */
 export function boatSafetyNoticeTone(notice: BoatSafetyNotice): BoatSafetyTone {
   if (notice.code === "over_certificate" || notice.code === "kit_missing") return "danger";
   if (notice.code === "kit_off_service") return "warning";
+  if (notice.code === "paper") return notice.expired ? "danger" : "neutral";
   return notice.expired ? "warning" : "neutral";
 }
 

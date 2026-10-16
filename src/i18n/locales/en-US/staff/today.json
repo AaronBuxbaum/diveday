@@ -96,6 +96,7 @@
     "gearServiceDue": "Gear service",
     "boatSafetyKit": "Safety kit",
     "boatPapersDue": "Papers due",
+    "boatPapersLapsed": "Papers lapsed",
     "boatSafetyExpired": "Safety expired",
     "workOrderLate": "Late repair",
     "workOrderUncollected": "Repair not collected",

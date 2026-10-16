@@ -4,7 +4,7 @@ import { boatSafetyNoticeText } from "@/i18n/boat-safety-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
   boatPaperNotices,
-  boatSafetyNoticeIsUrgent,
+  boatSafetyNoticeTone,
   passengersAboveCertificate,
 } from "@/lib/boat-safety";
 
@@ -69,16 +69,25 @@ export function BoatPaperFields({
  * **Seats past the certificate is danger now** (H-107): a hull saved before the
  * decision keeps sailing, but its next save is refused until the seats come
  * down or the certificate is corrected, and the row says so before the shop
- * finds out by pressing Save. The papers still only inform.
+ * finds out by pressing Save. The papers still only inform, and a lapsed one
+ * reads in danger ink, as on the manifest and Today (H-125).
  */
+const PAPER_INK = {
+  danger: "font-medium text-danger",
+  warning: "font-medium text-warning-strong",
+  neutral: "text-muted",
+} as const;
+
 export function BoatPaperFacts({
   boat,
   t,
   todayLocal,
+  locale,
 }: {
   boat: Boat;
   t: StaffTranslator;
   todayLocal: string;
+  locale: string;
 }) {
   const papers = boatPaperNotices(boat, todayLocal);
   const overSold = passengersAboveCertificate(boat.capacity, boat.certifiedPassengers);
@@ -96,11 +105,9 @@ export function BoatPaperFacts({
       {papers.map((notice) => (
         <li
           key={notice.code === "paper" ? notice.paper : notice.code}
-          className={
-            boatSafetyNoticeIsUrgent(notice) ? "font-medium text-warning-strong" : "text-muted"
-          }
+          className={PAPER_INK[boatSafetyNoticeTone(notice)]}
         >
-          {boatSafetyNoticeText(t, notice)}
+          {boatSafetyNoticeText(t, locale, notice)}
         </li>
       ))}
     </ul>

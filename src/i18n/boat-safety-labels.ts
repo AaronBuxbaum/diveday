@@ -5,6 +5,7 @@ import {
   boatSafetyNoticeTone,
   type MustCarryKitKind,
 } from "@/lib/boat-safety";
+import { formatCalendarDate } from "@/lib/calendar-date";
 import type { GearServiceKind } from "@/lib/gear";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
@@ -17,6 +18,10 @@ import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
  * Total over every clock that can carry a date, so a new clock is a compile
  * error here rather than a raw code on a manifest. `note` never reaches a
  * notice (it has no clock) and borrows the printed-date wording if it ever did.
+ *
+ * A lapsed paper names the day it ran out, "Hull insurance ended Oct 8, 2026",
+ * rather than a count of days since: the date is what the owner checks the
+ * policy against (H-125). A calendar date, so it has no zone to name.
  */
 const KIT_KEYS: Record<GearServiceKind, { due: StaffMessageKey; expired: StaffMessageKey }> = {
   aed_pads: { due: "boatSafety.kit.aedPads.due", expired: "boatSafety.kit.aedPads.expired" },
@@ -60,8 +65,12 @@ export function boatSafetyHeadingText(t: StaffTranslator, boatName: string): str
   return t("boatSafety.heading", { boatName });
 }
 
-/** One notice, as one sentence. */
-export function boatSafetyNoticeText(t: StaffTranslator, notice: BoatSafetyNotice): string {
+/** One notice, as one sentence. `locale` dates a lapsed paper. */
+export function boatSafetyNoticeText(
+  t: StaffTranslator,
+  locale: string,
+  notice: BoatSafetyNotice,
+): string {
   switch (notice.code) {
     case "over_certificate":
       return t(
@@ -75,7 +84,9 @@ export function boatSafetyNoticeText(t: StaffTranslator, notice: BoatSafetyNotic
       return t(MISSING_KEYS[notice.kind]);
     case "paper": {
       const keys = PAPER_KEYS[notice.paper];
-      return t(notice.expired ? keys.expired : keys.due, { days: notice.days });
+      return notice.expired
+        ? t(keys.expired, { date: formatCalendarDate(notice.dueOn, locale) })
+        : t(keys.due, { days: notice.days });
     }
     case "kit_clock": {
       const keys = KIT_KEYS[notice.clock];
@@ -96,13 +107,14 @@ export function boatSafetyNoticeText(t: StaffTranslator, notice: BoatSafetyNotic
  */
 export function boatSafetySection(
   t: StaffTranslator,
+  locale: string,
   safety: { boatName: string; notices: readonly BoatSafetyNotice[] } | null,
 ): BoatSafetySection | null {
   if (!safety || safety.notices.length === 0) return null;
   return {
     heading: boatSafetyHeadingText(t, safety.boatName),
     lines: safety.notices.map((notice) => ({
-      text: boatSafetyNoticeText(t, notice),
+      text: boatSafetyNoticeText(t, locale, notice),
       tone: boatSafetyNoticeTone(notice),
     })),
   };
