@@ -115,6 +115,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Pass-through fee
 - Payments restricted
 - Payout
+- Stale package invoice
 - Subscription (DiveDay billing)
 
 ## Operations
