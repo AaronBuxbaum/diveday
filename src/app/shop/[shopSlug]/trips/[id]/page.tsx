@@ -26,7 +26,6 @@ import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
-import { departureStage } from "@/lib/trip-phase";
 import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { diversTabState } from "./_arrivals/departure-record";
@@ -206,16 +205,10 @@ export default async function ManageTripPage({
   });
 
   const acceptsDivers = acceptsNewDivers(trip, now);
-  const { shown, finished, checkInOpen } = departureStage({
-    startsAt: trip.startsAt,
-    endsAt: trip.endsAt,
-    now,
-    timeZone: shop.timezone,
-    stage: stageReading,
-    cancelled,
-  });
-  // The desk while arrivals are open, or a finished departure's record.
-  const { desk, record } = await diversTabState({
+  // The desk while arrivals are open, or a finished departure's record; the
+  // stage is read with it, since a diver counted out and not back keeps the
+  // departure open (`readDepartureStage`).
+  const { shown, finished, checkInOpen, desk, record } = await diversTabState({
     db,
     shopId: shop.id,
     shopSlug,
@@ -226,7 +219,9 @@ export default async function ManageTripPage({
     timeZone: shop.timezone,
     t,
     onDivers: !showDetails,
-    finished,
+    stage: stageReading,
+    cancelled,
+    meetingWindows: scheduleDays,
   });
 
   const tabsCopy = tripTabsCopy(t, checkInOpen ? { trip, shop, locale } : undefined);
@@ -505,7 +500,6 @@ export default async function ManageTripPage({
                   notice === "participant-type-cert" && mayOverrideCertBlock ? bid : undefined,
                 mayWriteOffPayment,
                 canManageOrders,
-                compact: true,
                 actions: rosterActions,
               }}
             />

@@ -17,6 +17,7 @@ import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { seatName } from "@/lib/held-seat";
 import { normalizeEmailAddress } from "@/lib/inbox";
+import { rowCanBeReactivated } from "@/lib/no-show";
 import {
   holdsRegisterKind,
   isDiver,
@@ -78,6 +79,7 @@ import {
 } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { getShopCurrency } from "./stripe-accounts";
+import { type SendRescheduleNoticesOptions, sendMissedRescheduleNotice } from "./trip-rescheduled";
 import { liveTrip } from "./trips-live";
 import { heldSeatCounts, sellableCapacity } from "./trips-queries";
 
@@ -1085,7 +1087,9 @@ async function writeSeat(
     .where(and(eq(bookings.tripId, trip.id), eq(bookings.personId, person.id)))
     .limit(1);
   if (existing) {
-    if (existing.status !== "cancelled") return { ok: false, reason: "already_booked" };
+    if (!rowCanBeReactivated(existing.status, trip.startsAt)) {
+      return { ok: false, reason: "already_booked" };
+    }
     await tx
       .update(bookings)
       .set({
@@ -3128,6 +3132,7 @@ export async function confirmBookingIdentity(
     bookingId: string;
     actorPersonId: string;
   },
+  notices: SendRescheduleNoticesOptions = {},
 ) {
   const booking = await db.transaction(async (tx) => {
     const [row] = await tx
@@ -3166,6 +3171,13 @@ export async function confirmBookingIdentity(
     actorPersonId: input.actorPersonId,
     code,
   });
+  // The reschedule notice the hold skipped, once (#2445). After the trail, so a
+  // send that throws cannot lose the record that the tap happened.
+  await sendMissedRescheduleNotice(
+    db,
+    { shopId: input.shopId, bookingId: input.bookingId },
+    notices,
+  );
   return true;
 }
 
@@ -3398,6 +3410,7 @@ export async function sameNameHeldSeats(
 export async function splitBookingIdentity(
   db: AppDb,
   input: SplitBookingIdentityInput,
+  notices: SendRescheduleNoticesOptions = {},
 ): Promise<SplitBookingIdentityResult> {
   const fullName = input.fullName.trim().slice(0, SPLIT_NAME_MAX);
   if (!fullName) return { ok: false, reason: "name_required" };
@@ -3668,6 +3681,15 @@ export async function splitBookingIdentity(
     actorPersonId: input.actorPersonId,
     code: "identity_split_off",
   });
+  // Each moved seat missed the reschedule notice while it was held; the new
+  // record's own address hears it once (#2445).
+  for (const seat of split.seats) {
+    await sendMissedRescheduleNotice(
+      db,
+      { shopId: input.shopId, bookingId: seat.bookingId },
+      notices,
+    );
+  }
   return {
     ok: true,
     personId: split.personId,

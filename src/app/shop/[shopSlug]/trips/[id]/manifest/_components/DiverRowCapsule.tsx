@@ -22,7 +22,7 @@ export function diverCapsule(
 ): ReactNode {
   return capsuleKind === "buddy" && diver.buddyAlert ? (
     <Badge tone={splitAfterDive ? "danger" : "warning"}>
-      {buddyAlertText(t, diver.buddyAlert)}
+      {buddyAlertText(t, diver.buddyAlert, diver.buddyMissing)}
     </Badge>
   ) : capsuleKind === "blocked" ? (
     <Badge tone={readinessStatusTone(diverStatus)}>{readinessStatusText(t, diverStatus)}</Badge>

@@ -35,12 +35,10 @@ export type RescheduleHoldCopy = {
 export function RescheduleHold({
   ticket,
   tripId,
-  meetingPointMoved,
   copy,
 }: {
   ticket: HeldTicket | null;
   tripId: string;
-  meetingPointMoved: boolean;
   copy: RescheduleHoldCopy;
 }) {
   const [result, setResult] = useState<string | null>(null);
@@ -80,7 +78,6 @@ export function RescheduleHold({
     >
       <input type="hidden" name="holdKind" value="trip_rescheduled" />
       <input type="hidden" name="tripId" value={tripId} />
-      <input type="hidden" name="meetingPointMoved" value={meetingPointMoved ? "true" : "false"} />
       <span className="text-sm">{copy.notTold}</span>
       <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>
         {copy.tellThem}

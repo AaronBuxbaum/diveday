@@ -8,6 +8,8 @@ import {
   shops,
 } from "@/db/schema";
 import { getShopById } from "@/db/shops";
+import { calendarDateInTimezone, shiftCalendarDateMonths } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
   demoteOwnerToManager,
@@ -63,8 +65,13 @@ const { disconnectAction, refreshAction, saveTaxAction } = await import("./money
 const { saveRegulatorServiceAction, saveRentalItemsAction, saveRentalPricingAction } = await import(
   "./rental-actions"
 );
-const { saveAddressAction, saveShopFeatureAction, saveTimezoneAction, saveUnitsAction } =
-  await import("./shop-actions");
+const {
+  saveAddressAction,
+  saveReopensOnAction,
+  saveShopFeatureAction,
+  saveTimezoneAction,
+  saveUnitsAction,
+} = await import("./shop-actions");
 const { saveCrewScheduleAction } = await import("./team-actions");
 const { saveProfileAction } = await import("./website-actions");
 
@@ -333,6 +340,26 @@ describe("every settings mutation refuses the daily crew", () => {
 
     expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
     expect((await getShopById(db, shop.id))?.timezone).toBe(before?.timezone);
+  });
+
+  it("refuses a back-on-the-water date more than eighteen months out, and keeps the old one", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const today = calendarDateInTimezone(nowDate(), shop.timezone);
+
+    const form = new FormData();
+    form.set("reopensOn", "2062-03-01");
+    expect(await redirectedTo(() => saveReopensOnAction(form))).toBe(
+      `/shop/${shop.slug}/settings?notice=reopens-invalid&saved=season`,
+    );
+    expect((await getShopById(db, shop.id))?.reopensOn).toBeNull();
+
+    const near = shiftCalendarDateMonths(today, 12);
+    form.set("reopensOn", near);
+    expect(await redirectedTo(() => saveReopensOnAction(form))).toBe(
+      `/shop/${shop.slug}/settings?notice=reopens-saved&saved=season`,
+    );
+    expect((await getShopById(db, shop.id))?.reopensOn).toBe(near);
   });
 
   it("refuses a captain's address change", async () => {

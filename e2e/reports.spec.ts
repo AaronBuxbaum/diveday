@@ -180,7 +180,7 @@ test.describe("owner", () => {
   });
 });
 
-test.describe("owner, the Safety tab", () => {
+test.describe("owner, the Safety page", () => {
   signedInAsOwner();
 
   // The month's safety record (ADR 20261012-incident-reports): the figures and
@@ -188,7 +188,7 @@ test.describe("owner, the Safety tab", () => {
   test("shows the month's safety figures and the roll calls left open", {
     tag: READ_ONLY,
   }, async ({ page }) => {
-    await page.goto("/shop/blue-mantis/reports/safety");
+    await page.goto("/shop/blue-mantis/safety");
 
     await expect(page.getByRole("region", { name: "This month’s safety record" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Roll calls left open" })).toBeVisible();
@@ -196,12 +196,11 @@ test.describe("owner, the Safety tab", () => {
 
     const chooser = page.getByRole("navigation", { name: "Choose month" });
     await chooser.getByRole("link", { name: "Previous month" }).click();
-    await expect(page).toHaveURL(/reports\/safety\?month=\d{4}-\d{2}/);
-    // The section's heading, as on every tabbed section (Inbox, Gear): Safety
-    // is the Money section's tab, and the tab row says which one is open. The
-    // manager's way in is pinned in reports/safety/page.test.tsx; the demo
-    // shop has no manager login to sign in with here.
-    await expect(page.getByRole("heading", { level: 1, name: "Money" })).toBeVisible();
+    await expect(page).toHaveURL(/\/safety\?month=\d{4}-\d{2}/);
+    // Safety is a place of its own (not a Money tab) and wears its own name.
+    // The manager's way in is pinned in safety/page.test.tsx; the demo shop has
+    // no manager login to sign in with here.
+    await expect(page.getByRole("heading", { level: 1, name: "Safety" })).toBeVisible();
   });
 });
 
@@ -218,8 +217,8 @@ test.describe("as captain", () => {
     await expect(page.getByRole("region", { name: "This month’s numbers" })).toHaveCount(0);
   });
 
-  test("the Safety tab is gated the same way", { tag: READ_ONLY }, async ({ page }) => {
-    await page.goto("/shop/blue-mantis/reports/safety");
+  test("the Safety page is gated the same way", { tag: READ_ONLY }, async ({ page }) => {
+    await page.goto("/shop/blue-mantis/safety");
     await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
     await expect(page.getByRole("region", { name: "Roll calls left open" })).toHaveCount(0);
   });

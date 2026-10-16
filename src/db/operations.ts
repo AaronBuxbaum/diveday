@@ -510,6 +510,9 @@ export type TripActivityEntry =
         | "seat_holder_refunded"
         | "incident_report_filed"
         | "incident_report_addendum_added"
+        | "incident_draft_discarded"
+        | "incident_legal_hold_set"
+        | "incident_legal_hold_released"
         | "departure_note_sent";
     };
 

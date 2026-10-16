@@ -44,6 +44,7 @@ export function entry(
     reEntryAsk?: "deck_word" | "easy_first_dive" | "refresher_course";
     identityBookedAs?: string;
     identityMatchedBy?: "shared_email" | "picked_name";
+    participantType?: "diver" | "snorkeler" | "rider";
   } = {},
 ): RosterEntry {
   return {
@@ -57,6 +58,7 @@ export function entry(
       pickupTime: null,
       identityBookedAs: over.identityBookedAs ?? null,
       identityMatchedBy: over.identityMatchedBy ?? null,
+      participantType: over.participantType ?? "diver",
     } as unknown as RosterEntry["booking"],
     person: {
       id: `p-${id}`,
@@ -110,9 +112,6 @@ export type RosterFixtureOptions = {
   readiness: ReadinessByBooking;
   waivers: WaiverByBooking;
   rentalFit?: RentalFitByBooking;
-  compact?: boolean;
-  /** The departure page passes `false`: its Divers tab opens under the page's own H1. */
-  showSummaryHeading?: boolean;
   addDiverGroup?: ReactNode;
   paymentsConnected?: boolean;
   canManageOrders?: boolean;
@@ -134,8 +133,6 @@ function rosterProps({
   readiness,
   waivers,
   rentalFit,
-  compact = false,
-  showSummaryHeading,
   addDiverGroup,
   paymentsConnected = false,
   canManageOrders = true,
@@ -166,8 +163,6 @@ function rosterProps({
       canManageOrders,
       splitAsksDateOfBirth,
       certifyDefaultLevel,
-      compact,
-      showSummaryHeading,
     },
     rows: {
       roster,

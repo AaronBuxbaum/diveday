@@ -277,6 +277,7 @@
     "divers": "Buceadores",
     "inbox": "Mensajes",
     "money": "Dinero",
+    "safety": "Seguridad",
     "courses": "Cursos",
     "gear": "Equipo",
     "settings": "Ajustes",
@@ -485,7 +486,9 @@
   "buddyTeam": {
     "with": "Pareja: {names}",
     "separatedDock": "Compañero aún no a bordo",
-    "separatedAfterDive": "Compañero sin regresar a bordo"
+    "separatedAfterDive": "Compañero sin regresar a bordo",
+    "separatedDockNamed": "{name} aún no a bordo",
+    "separatedAfterDiveNamed": "{name} sin regresar a bordo"
   },
   "payments": {
     "connect": "Conectar pagos"
@@ -525,7 +528,12 @@
     "returning": "de vuelta tras {years, plural, one {# año} other {# años}}",
     "dockLine": "Saluda a {name}: {card}.",
     "dockLineNoCard": "Saluda a {name}.",
-    "dockLineSays": "Saluda a {name}: dice {level}."
+    "dockLineSays": "Saluda a {name}: dice {level}.",
+    "hello": {
+      "firstOceanDive": "Su primera inmersión en mar abierto.",
+      "celebrating": "Celebra algo.",
+      "nervous": "Con algo de nervios."
+    }
   },
   "diveIntent": {
     "onTheList": "En la lista de hoy: {list}",

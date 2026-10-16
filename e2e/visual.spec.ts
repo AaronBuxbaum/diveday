@@ -6258,12 +6258,12 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "incident-report-draft", scheme);
       });
 
-      // The month's Safety tab beside Reports: roll calls, dock marks, card
+      // The month's Safety page, its own destination: roll calls, dock marks, card
       // checks written past, crew credentials and the month's incident
       // reports, read from what the shop already records.
       test(`the Safety tab renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/reports/safety");
-        await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
+        await page.goto("/shop/blue-mantis/safety");
+        await page.getByRole("heading", { level: 1, name: "Safety" }).waitFor();
         await page.getByRole("region", { name: "Roll calls left open" }).waitFor();
         await capture(page, "reports-safety", scheme);
       });
@@ -7959,7 +7959,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("dialog")
           .getByRole("button", { name: "Close person details" })
           .click();
-        await expect(tomRow.getByText("Buddy not back aboard")).toBeVisible();
+        await expect(tomRow.getByText("Lena not back aboard")).toBeVisible();
         await page.mouse.move(0, 0);
         await capture(page, "manifest-buddy-divergence", scheme);
       });
@@ -8761,7 +8761,7 @@ for (const scheme of ["light", "dark"] as const) {
             dialog.getByRole("button", { name: "Sin regresar a bordo", exact: true }),
           ).toBeVisible();
           await dialog.getByRole("button", { name: "Cerrar detalles de la persona" }).click();
-          await expect(tomRow.getByText("Compañero sin regresar a bordo")).toBeVisible();
+          await expect(tomRow.getByText("Lena sin regresar a bordo")).toBeVisible();
           await page.mouse.move(0, 0);
           await capture(page, "manifest-buddy-divergence", scheme, { locale: SPANISH });
         });

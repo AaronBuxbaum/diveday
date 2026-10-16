@@ -3,6 +3,7 @@ import { messagesFor } from "@/i18n/messages";
 import { DIVER_LOCALES, type DiverLocale } from "@/i18n/settings";
 import {
   ALL_ROLES,
+  canAddDiver,
   canBackfillIntegrations,
   canCallDayBlowout,
   canConfigureTrips,
@@ -339,5 +340,19 @@ describe("canManageBilling", () => {
     expect(canManageBilling(["manager"])).toBe(false);
     expect(canManageBilling(["captain", "crew", "divemaster", "instructor"])).toBe(false);
     expect(canManageBilling(undefined)).toBe(false);
+  });
+});
+
+describe("canAddDiver (every staff role)", () => {
+  it("admits each staff role on its own, a captain included", () => {
+    for (const role of ALL_ROLES.filter((role) => isStaff([role]))) {
+      expect(canAddDiver([role])).toBe(true);
+    }
+  });
+
+  it("refuses a diver, an empty role list and none at all", () => {
+    expect(canAddDiver(["diver"])).toBe(false);
+    expect(canAddDiver([])).toBe(false);
+    expect(canAddDiver(undefined)).toBe(false);
   });
 });

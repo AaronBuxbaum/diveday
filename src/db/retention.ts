@@ -360,11 +360,13 @@ export const PRUNE_ARMS = {
   },
   // Incident reports (ADR 20261012-incident-reports): seven years from when the
   // incident happened, or from when a draft that never said so was started.
-  // Its people and addenda cascade with it.
+  // Its people and addenda cascade with it. A report an owner has put a legal
+  // hold on is skipped until the hold is released.
   incident_reports: {
     from: incidentReports,
     id: incidentReports.id,
     clock: sql`coalesce(${incidentReports.occurredAt}, ${incidentReports.createdAt})`,
+    extraWhere: isNull(incidentReports.legalHoldAt),
   },
 } satisfies Record<RetainedTable, PruneArm>;
 

@@ -687,7 +687,7 @@
   counted as sailing: a seat nobody spoke for is **Not counted at the dock** or **No roll call
   taken**, never "Sailed" and never **Didn't sail**.
   A **crew sailing** is one crew member on one departure that is home, unless the crew marked
-  them ashore at the dock; the Safety tab reads each against the crew member's credentials as they
+  them ashore at the dock; the Safety page reads each against the crew member's credentials as they
   stand today, on the departure's last day.
 - **The record** — a home departure's Divers tab: each seat filed under **Sailed**, **Didn't
   sail**, **Not counted at the dock** or **No roll call taken** (`recordGroups`,
@@ -762,9 +762,15 @@
   narrative beside it. Kept seven years from the incident; erasing a diver removes their identity
   from it and keeps the report
   ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
+- **Legal hold** (on an **incident report**) — an owner-set flag that keeps a report past its
+  seven-year window while a claim is open. The retention prune skips a held report until an owner
+  releases the hold, and a held report cannot be deleted. Only an owner sets or releases it
+  ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
+- **Discarded draft** — an **incident report** draft an owner deleted because it should never have
+  been started. Soft-deleted and invisible; a filed report can never be discarded.
 - **Incident kind** / **incident severity** — the two closed answers an **incident report** files
   with: its kind (injury or illness, near miss, equipment, missing diver, fatality, other) and how
-  serious the writer judged it (minor, moderate, serious). Shown on the report and the Safety tab;
+  serious the writer judged it (minor, moderate, serious). Shown on the report and the Safety page;
   read by nothing that gates. A severity is the crew's judgment, never a medical classification
   ([20261014-incident-kind-severity](../../architecture/decisions/20261014-incident-kind-severity.md)).
 - **Shore alert contact** — the one person outside the shop's accounts who hears a **stale roll
@@ -1138,7 +1144,9 @@
   `COURSE_FORMS_BLOCK_BOARDING`, turns that into a warning instead, and buying a seat never waits on
   it (ADR 20261008-course-forms). A course template names its agency's **standard forms** by title.
   Creating or syncing the course sets them up empty, and a form with no text is asked of nobody
-  until the shop pastes the agency's wording in.
+  until the shop pastes the agency's wording in. A form the shop ticks as a **medical
+  statement** (signature only; no answers are screened, unlike the **Medical questionnaire**
+  below) keeps blocking even with that switch at warn-only.
 - **Sign once** — a diver signs the release once, not every trip. A **completed** signature is held
   against the diver (not just the booking it was signed on) and satisfies the waiver gate on any of
   their bookings while it stays **current**: signed against the shop's current release version and

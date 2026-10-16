@@ -448,6 +448,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // notice: in-flight messaging state on this installation, cleared by the
     // send, and a re-imported departure has no divers who were told anything.
     "divers_told_starts_at",
+    "divers_told_meeting_point",
     // A rehearsal never reaches the bundle at all (ADR
     // 20261012-rehearsal-departures): every exported departure is a real one,
     // so this column would read false on every row it could appear on.
@@ -466,6 +467,8 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "pending_checkout_intent_id", // in-flight Stripe attempt, meaningless elsewhere
     "identity_unconfirmed_at", // H-13 review state, not a shop record
     "identity_booked_as", // H-13 review state: the name the held booking was made under
+    "reschedule_missed_from", // a notice owed to a held seat (#2445), cleared once sent
+    "reschedule_missed_place", // the same: whether the meeting point moved too
     "identity_matched_by", // H-13 review state: why the booking was matched
     "paid_rental_kinds", // held-seat prep state: the order lines already carry what was paid for
     // Seat-claim linkage (ADR 20260804-seat-claim-links): a pointer at another

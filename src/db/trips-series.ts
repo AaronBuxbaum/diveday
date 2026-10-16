@@ -32,6 +32,7 @@ import {
   bookingPayments,
   bookings,
   courses,
+  people,
   shops,
   tripDives,
   tripScheduleDays,
@@ -727,9 +728,24 @@ export async function getTripSeriesSummary(
         ne(bookings.status, "cancelled"),
       ),
     );
+  // The names as well as the fact, so the panel can say who crews every date.
+  const standingCrewNames = await db
+    .select({ name: people.fullName })
+    .from(tripSeriesCrew)
+    .innerJoin(
+      people,
+      and(
+        eq(people.id, tripSeriesCrew.personId),
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+      ),
+    )
+    .where(and(eq(tripSeriesCrew.seriesId, row.series.id), eq(tripSeriesCrew.shopId, shopId)))
+    .orderBy(asc(people.fullName), asc(people.id));
   return {
     ...row.series,
-    standingCrew: (await getSeriesStandingCrew(db, shopId, row.series.id)).length > 0,
+    standingCrew: standingCrewNames.length > 0,
+    standingCrewNames: standingCrewNames.map((entry) => entry.name),
     scheduledCount: counts?.scheduled ?? 0,
     futureScheduledCount: counts?.future ?? 0,
     futureBookedCount: reach?.divers ?? 0,

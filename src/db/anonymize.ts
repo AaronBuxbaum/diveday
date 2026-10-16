@@ -1098,6 +1098,7 @@ async function scrubBookingRows(
         lastDivedBand: null,
         reEntryAsk: null,
         welcomeSharedAt: null,
+        welcomeHello: null,
         // "Running late" (J3) is the diver's own statement on the seat.
         runningLateAt: null,
         // The booker's "Under 18" is an age fact about this person, cleared
@@ -1143,6 +1144,22 @@ async function scrubBookingRows(
           eq(rollCallEvents.shopId, shopId),
           inArray(rollCallEvents.bookingId, bookingIds),
           isNotNull(rollCallEvents.note),
+        ),
+      );
+
+    // The blockers a `boarded` event kept (ADR 20261015-roll-call-records-
+    // readiness, issue #2414) are the reasons one person could not board: a
+    // physician's review, a missing card. They are about the person, so they go
+    // with the note; `readiness_status` stays, saying only that this count was
+    // made while blocked. The shape check allows a `blocked` status with no list.
+    await tx
+      .update(rollCallEvents)
+      .set({ readinessBlockers: null })
+      .where(
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          inArray(rollCallEvents.bookingId, bookingIds),
+          isNotNull(rollCallEvents.readinessBlockers),
         ),
       );
 

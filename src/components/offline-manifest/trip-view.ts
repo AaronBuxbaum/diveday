@@ -22,6 +22,7 @@ import {
   refusedOfflineArrival,
   rejectedOfflineEventCount,
 } from "@/lib/offline-manifests";
+import { offlinePreviousGaps } from "./checkpoint-gap-inputs";
 import { deviceLocale } from "./shared";
 
 /**
@@ -249,6 +250,10 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   const anyBuddies =
     manifest.divers.some((diver) => (diver.buddyTeamNames ?? []).length > 0) ||
     manifest.crew.some((member) => (member.buddyTeamNames ?? []).length > 0);
+  // **What opening each checkpoint should warn about**: the gap at the
+  // after-dive count before it (`previousCheckpointGaps`), read off this
+  // device's own taps. A warning only; every checkpoint stays one tap away.
+  const previousGaps = offlinePreviousGaps(envelope);
   const dateTime = cachedFormatter("dt", Intl.DateTimeFormat, deviceLocale(), {
     dateStyle: "medium",
     timeStyle: "short",
@@ -285,6 +290,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
     allBoarded,
     missingDivers,
     anyBuddies,
+    previousGaps,
     dateTime,
   };
 }

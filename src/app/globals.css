@@ -618,7 +618,8 @@ body {
   --accent: #0a141c;
   --accent-foreground: #ffd23f;
   --accent-deep: #0a141c;
-  --accent-tint: #fff0b3;
+  /* Navy like `--primary-tint`, not pale yellow (#2569): yellow is the warning. */
+  --accent-tint: #d6e2ec;
   --success: #0b5e2e;
   --warning: #7a4100;
   --danger: #a30f1b;
@@ -661,7 +662,7 @@ body {
     --accent: #ffd23f;
     --accent-foreground: #241400;
     --accent-deep: #ffe38a;
-    --accent-tint: #2e2a12;
+    --accent-tint: #223a4b;
     --success: #58e08f;
     --warning: #ffb648;
     --danger: #ff7a7a;

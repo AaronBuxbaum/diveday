@@ -38,6 +38,8 @@ describe("activity lines", () => {
           type: "snorkeler",
           certCheck: "cleared",
           cleared: "",
+          form: "Medical statement",
+          marked: "yes",
         },
       });
       expect(line.trim(), code).not.toBe("");

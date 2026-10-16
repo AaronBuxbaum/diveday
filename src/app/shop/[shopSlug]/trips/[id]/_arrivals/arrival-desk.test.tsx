@@ -82,6 +82,33 @@ describe("the counter's welcome word (UX audit 2026-10-07, item 46)", () => {
     expect(below.querySelectorAll("p")).toHaveLength(2);
   });
 
+  it("ends the dock line with the diver's own choice, and never the booking's free text", async () => {
+    const seat = await firstTimerAtTheCounter();
+    await seat.db
+      .update(bookings)
+      .set({
+        welcomeSharedAt: seat.now,
+        welcomeHello: "nervous",
+        hotelPickupLocation: "Panic attacks underwater; on sertraline.",
+      })
+      .where(eq(bookings.id, seat.bookingId));
+    const below = await belowFor(seat);
+    expect(below).toHaveTextContent("A little nervous.");
+    expect(below).not.toHaveTextContent(/panic|sertraline/i);
+    expect(below.querySelectorAll("p")).toHaveLength(2);
+  });
+
+  it("shows no choice when the consent is gone, even if the row still holds one", async () => {
+    const seat = await firstTimerAtTheCounter();
+    await seat.db
+      .update(bookings)
+      .set({ welcomeSharedAt: null, welcomeHello: "celebrating" })
+      .where(eq(bookings.id, seat.bookingId));
+    const below = await belowFor(seat);
+    expect(below).not.toHaveTextContent("Celebrating");
+    expect(below).not.toHaveTextContent("Say hello");
+  });
+
   /**
    * **A card a staffer typed and nobody has verified is what the diver says**
    * (dive-domain review of the demo layer). It carries no self-declared stamp,

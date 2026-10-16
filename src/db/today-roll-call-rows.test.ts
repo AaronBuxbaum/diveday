@@ -214,6 +214,50 @@ describe("unclosed roll call (DOM-H3)", () => {
       expect(rollCallRow(work, trip.id, "after_dive_uncounted")).toBeUndefined();
     });
 
+    /**
+     * The rule `listUnaccountedForByTrip` and `homewardCheckpointGap` keep: the
+     * latest after-dive checkpoint speaks for a seat (issue #2404). Missing after
+     * dive 1 and counted aboard after dive 2 is back, so Today does not keep the
+     * loudest row in the app up for a diver the crew have since counted. Still
+     * missing after dive 2, or nobody has counted them since, stays the row.
+     */
+    it("lets a later 'back aboard' for the same diver settle an earlier 'not back'", async () => {
+      const { db, shop } = ctx;
+      const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
+        endedHoursAgo: 2,
+        divers: 2,
+        plannedDives: 2,
+      });
+      await boardAtDeparture(db, { shopId: shop.id, tripId: trip.id, staffId, bookingIds });
+      const [wasMissing, other] = bookingIds;
+      if (!wasMissing || !other) throw new Error("fixture bookings missing");
+      const tap = (
+        bookingId: string,
+        checkpoint: "after_dive_1" | "after_dive_2",
+        status: "boarded" | "not_boarded",
+      ) =>
+        recordRollCall(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          bookingId,
+          recordedByPersonId: staffId,
+          status,
+          checkpoint,
+        });
+      await tap(wasMissing, "after_dive_1", "not_boarded");
+      await tap(other, "after_dive_1", "boarded");
+      await tap(other, "after_dive_2", "boarded");
+
+      // Nobody has counted them since: still the row.
+      const stillMissing = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      expect(rollCallRow(stillMissing, trip.id, "missing_diver")).toBeDefined();
+
+      await tap(wasMissing, "after_dive_2", "boarded");
+      const back = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      expect(rollCallRow(back, trip.id, "missing_diver")).toBeUndefined();
+      expect(rollCallRow(back, trip.id, "after_dive_uncounted")).toBeUndefined();
+    });
+
     it("keeps saying so at a lower urgency once the trip is too old to settle on the dock", async () => {
       const { db, shop } = ctx;
       // Five days back: past the 48h dock-work window. This used to age to

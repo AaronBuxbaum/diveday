@@ -20,10 +20,13 @@ import { uuidParam } from "@/lib/uuid";
 import {
   addIncidentAddendumAction,
   addIncidentPersonAction,
+  discardIncidentDraftAction,
   fileIncidentReportAction,
   removeIncidentPersonAction,
   saveIncidentDraftAction,
+  setIncidentLegalHoldAction,
 } from "../actions";
+import { IncidentDiscard, IncidentLegalHold } from "./_components/IncidentDecisions";
 import { IncidentDraftForm } from "./_components/IncidentDraftForm";
 import { IncidentPeople } from "./_components/IncidentPeople";
 import { IncidentAddenda, IncidentFiling, IncidentRecord } from "./_components/IncidentRecord";
@@ -156,6 +159,14 @@ export default async function IncidentReportPage({
         />
       ) : null}
 
+      {report.mayDecide && report.status === "draft" ? (
+        <IncidentDiscard
+          action={discardIncidentDraftAction.bind(null, shopSlug, tripId, reportId)}
+          notice={noticeForForm(notice, "discard")}
+          t={t}
+        />
+      ) : null}
+
       {report.status === "filed" ? (
         <IncidentAddenda
           addenda={report.addenda}
@@ -167,6 +178,21 @@ export default async function IncidentReportPage({
               : null
           }
           notice={noticeForForm(notice, "addenda")}
+          t={t}
+        />
+      ) : null}
+
+      {report.mayDecide && report.status === "filed" ? (
+        <IncidentLegalHold
+          held={report.legalHold}
+          action={setIncidentLegalHoldAction.bind(
+            null,
+            shopSlug,
+            tripId,
+            reportId,
+            !report.legalHold,
+          )}
+          notice={noticeForForm(notice, "hold")}
           t={t}
         />
       ) : null}

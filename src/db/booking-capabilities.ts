@@ -562,3 +562,29 @@ export async function revokeBookingCapabilities(
     .set({ revokedAt: now, tokenSealed: null })
     .where(and(...conditions));
 }
+
+/**
+ * **Take back links that were minted ahead of a send that did not go** (#2451).
+ * A batch mints every reachable seat's link before the first message leaves,
+ * because the link is part of the body; when the provider then answers
+ * not-sent (a bounce, a stop-listed phone, a refused request), nobody holds
+ * the token, and a live capability for no reader is only surface. This revokes
+ * exactly the tokens it is handed — by hash, never by booking — so an earlier,
+ * delivered link for the same booking stays live.
+ */
+export async function revokeIssuedCapabilities(
+  db: DbExecutor,
+  input: { shopId: string; tokens: readonly string[]; now?: Date },
+): Promise<void> {
+  if (input.tokens.length === 0) return;
+  await db
+    .update(bookingCapabilities)
+    .set({ revokedAt: input.now ?? nowDate(), tokenSealed: null })
+    .where(
+      and(
+        eq(bookingCapabilities.shopId, input.shopId),
+        inArray(bookingCapabilities.tokenHash, input.tokens.map(hashCapabilityToken)),
+        isNull(bookingCapabilities.revokedAt),
+      ),
+    );
+}

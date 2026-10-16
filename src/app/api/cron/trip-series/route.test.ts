@@ -5,6 +5,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/db/trips", () => ({ rollAllSeriesForward: vi.fn() }));
+vi.mock("@/db/shops", () => ({ clearPassedReopensOn: vi.fn(async () => 0) }));
 vi.mock("@/db/rehearsals", () => ({ clearFinishedRehearsals: vi.fn() }));
 vi.mock("@/db/waitlist-roll", () => ({
   rollSailedSeriesWaitlists: vi.fn(async () => ({ rolled: 0, invited: 0 })),
@@ -19,6 +20,7 @@ vi.mock("@sentry/nextjs", () => ({
 
 const { getDb } = await import("@/db/client");
 const { rollAllSeriesForward } = await import("@/db/trips");
+const { clearPassedReopensOn } = await import("@/db/shops");
 const { clearFinishedRehearsals } = await import("@/db/rehearsals");
 const Sentry = await import("@sentry/nextjs");
 const { GET } = await import("./route");
@@ -126,6 +128,13 @@ describe("GET /api/cron/trip-series — reporting", () => {
     expect(clearFinishedRehearsals).toHaveBeenCalledWith(FAKE_DB);
     await expect(response.json()).resolves.toMatchObject({ rehearsalsCleared: 2 });
     expect(summaryLine()).toEqual(expect.objectContaining({ rehearsalsCleared: 2 }));
+  });
+
+  it("takes a passed back-on-the-water date off Settings in the same pass", async () => {
+    vi.mocked(clearPassedReopensOn).mockResolvedValueOnce(3);
+    await GET(cronRequest(`Bearer ${secret}`));
+    expect(clearPassedReopensOn).toHaveBeenCalledWith(FAKE_DB);
+    expect(summaryLine()).toEqual(expect.objectContaining({ reopensCleared: 3 }));
   });
 
   // A pass with nothing to add is the *normal* case — the horizon only needs

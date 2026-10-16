@@ -365,6 +365,13 @@
           "src/lib/trip-admission.test.ts": "918 -> 984",
           "src/lib/waivers.test.ts": "1205 -> 1402"
         }
+      },
+      {
+        "why": "list entries that cannot live in a sibling: export.test.ts column decisions (#2445, #2446, #2425) and the label-maps row for the named buddy alert",
+        "files": {
+          "src/db/export.test.ts": "1670 -> 1673",
+          "src/i18n/label-maps.test.ts": "1327 -> 1334"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -400,14 +407,14 @@
     "src/db/divers.test.ts": 3077,
     "src/db/erasure-coverage.test.ts": 1178,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1669,
+    "src/db/export.test.ts": 1672,
     "src/db/import.test.ts": 1077,
     "src/db/manifests.test.ts": 3725,
     "src/db/no-show.test.ts": 1165,
     "src/db/notifications.test.ts": 2007,
     "src/db/orders.test.ts": 3163,
     "src/db/participant-types.test.ts": 1216,
-    "src/db/readiness.test.ts": 1691,
+    "src/db/readiness.test.ts": 1519,
     "src/db/recap.test.ts": 2138,
     "src/db/refunds.test.ts": 1154,
     "src/db/reminders.test.ts": 1078,
@@ -424,7 +431,7 @@
     "src/db/waiver-issue.test.ts": 1178,
     "src/db/waivers-medical.test.ts": 1004,
     "src/db/work-orders.test.ts": 1408,
-    "src/i18n/label-maps.test.ts": 1327,
+    "src/i18n/label-maps.test.ts": 1334,
     "src/lib/agency-check.test.ts": 930,
     "src/lib/dive-prep.test.ts": 1983,
     "src/lib/import.test.ts": 1459,
@@ -481,12 +488,12 @@
         }
       }
     ],
-    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 310,
+    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 309,
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 429,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 383,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 332,
     "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx#EditCoursePage": 519,
-    "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 381,
+    "src/app/shop/[shopSlug]/divers/[personId]/_components/CertificationsGroup.tsx#CertificationsGroup": 378,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 333,
     "src/app/shop/[shopSlug]/gear/page.tsx#GearRegisterPage": 308,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 420,
@@ -498,11 +505,11 @@
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 332,
     "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 329,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 424,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 363,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 356,
     "src/components/OfflineManifestManager.tsx#OfflineManifestManager": 345,
     "src/db/checkouts.ts#startBookingCheckout": 303,
     "src/db/export.ts#loadShopExportContext": 338,
-    "src/db/reminders.ts#sendDueReminders": 340,
+    "src/db/reminders.ts#sendDueReminders": 332,
     "src/db/reporting.ts#getMonthlyReport": 338,
     "src/db/seed-dive-sites.ts#seedDiveSites": 467,
     "src/db/seed-history.ts#seedHistory": 742,
@@ -564,9 +571,9 @@
     "src/app/onboard/page.tsx": 479,
     "src/app/page.tsx": 592,
     "src/app/pricing/page.tsx": 468,
-    "src/app/ready/[token]/page.tsx": 673,
+    "src/app/ready/[token]/page.tsx": 669,
     "src/app/s/[shopSlug]/page.tsx": 882,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 529,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 524,
     "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
     "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx": 727,
     "src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx": 406,
@@ -585,7 +592,7 @@
     "src/app/shop/[shopSlug]/staffing/page.tsx": 593,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 501,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 517
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 511
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

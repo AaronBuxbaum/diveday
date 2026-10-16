@@ -10,7 +10,7 @@ import { agencyCheckCopies } from "@/app/shop/[shopSlug]/_components/agency-chec
 import {
   addAgencyListedCardsAction,
   agencyCheckAction,
-} from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
+} from "@/app/shop/[shopSlug]/divers/[personId]/agency-check-actions";
 import {
   WaitlistInvite,
   type WaitlistInviteCopy,
@@ -990,7 +990,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
           16px under its edge with 40px to the first station. Unpulled, they
           sit the header's 32px under the band like every first block. */}
       {allHomeLine && evening ? (
-        <EarnedMomentLine className="-mt-4 tabular-nums">
+        <EarnedMomentLine tone="ink" className="-mt-4 tabular-nums">
           {/* **Souls, not seats** (issue #1346). The one sentence in the
               product about who came home used to leave the crew out of both
               numbers — and they are the people most reliably still in the
@@ -1014,7 +1014,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
           booking is still: the fact holds all day, and a celebration replayed
           on every visit stops meaning anything. */}
       {factOfScaleLine && factOfScale ? (
-        <EarnedMomentLine animate={false}>
+        <EarnedMomentLine tone="ink" animate={false}>
           <span className="font-medium">
             {factOfScale.kind === "first_boat"
               ? t("shopHome.spine.factOfScale.firstBoat")
@@ -1053,7 +1053,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
               exactly how a celebration stops meaning anything (the rule
               `EarnedMomentLine` carries). The two lines above are today's and
               reset with the day; this one does not. */}
-          <EarnedMomentLine animate={false} className="flex items-center gap-2">
+          <EarnedMomentLine tone="ink" animate={false} className="flex items-center gap-2">
             <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-accent" />
             {t("shopHome.spine.firstBooking")}
           </EarnedMomentLine>

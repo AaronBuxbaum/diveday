@@ -20,6 +20,9 @@
     "blowout_called": "{actor} called a weather blow-out",
     "incident_report_filed": "{actor} filed an incident report",
     "incident_report_addendum_added": "{actor} added to an incident report",
+    "incident_draft_discarded": "{actor} deleted an incident report draft",
+    "incident_legal_hold_set": "{actor} put a legal hold on an incident report",
+    "incident_legal_hold_released": "{actor} released the legal hold on an incident report",
     "seat_added": "{actor} added {diver} to the trip",
     "seat_added_walk_in": "{actor} added {diver} to the trip as a walk-in",
     "seat_added_from_trip_link": "{actor} added a seat for {diver} from their trip link",
@@ -83,7 +86,8 @@
     "demo_nitrox_logged": "{actor} logged {diver}’s nitrox card off the plastic",
     "demo_own_computer_confirmed": "{actor} confirmed {diver} is bringing their own computer",
     "demo_paper_card_reminded": "{actor} reminded {diver} to bring the paper card to the dock",
-    "participant_type_changed": "{actor} changed {diver} from {from, select, snorkeler {snorkeling} rider {riding along} other {diving}} to {type, select, snorkeler {snorkeling} rider {riding along} other {diving}}{certCheck, select, cleared {, which cleared a card check} overridden {, past a missing card} other {}}"
+    "participant_type_changed": "{actor} changed {diver} from {from, select, snorkeler {snorkeling} rider {riding along} other {diving}} to {type, select, snorkeler {snorkeling} rider {riding along} other {diving}}{certCheck, select, cleared {, which cleared a card check} overridden {, past a missing card} other {}}",
+    "course_form_medical_changed": "{actor} {marked, select, yes {marked} other {took the medical mark off}} the course form {form}{marked, select, yes { as a medical statement} other {}}"
   },
   "unknown": "An earlier entry",
   "review": {

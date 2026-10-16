@@ -13,6 +13,7 @@
     "applyConfirm": "Yes, apply to every date",
     "applyDescription": "Copies this date’s title, description, capacity, pricing, and dive plan onto every upcoming date. Each date keeps its own time, crew, roster, and conditions.",
     "applyDescriptionWithCrew": "Copies this date’s title, description, capacity, pricing, and dive plan onto every upcoming date. Each date keeps its own time, roster, and conditions.",
+    "standingCrewLine": "{names} {count, plural, one {crews} other {crew}} every date.",
     "standingCrew": "Crew every upcoming date with {names}, and each new one as it opens",
     "saving": "Saving…",
     "stopRepeating": "Stop repeating",

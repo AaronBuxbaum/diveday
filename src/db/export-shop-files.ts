@@ -1315,7 +1315,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
   shopFile(WAIVER_RECORDS_CSV),
   {
     file: "course_forms.csv",
-    header: ["id", "title", "current_version", "deleted_at", "created_at"],
+    header: ["id", "title", "current_version", "medical_screening", "deleted_at", "created_at"],
     rows: ({ courseFormRows, courseFormVersionRows }) =>
       courseFormRows.map((row) => {
         const latest = courseFormVersionRows
@@ -1324,7 +1324,14 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
             (newest, version) => (!newest || version.version > newest.version ? version : newest),
             undefined,
           );
-        return [row.id, latest?.title, latest?.version, row.deletedAt, row.createdAt];
+        return [
+          row.id,
+          latest?.title,
+          latest?.version,
+          row.medicalScreening,
+          row.deletedAt,
+          row.createdAt,
+        ];
       }),
     note: EXPORT_FILE_NOTES["course_forms.csv"],
   },
@@ -1586,6 +1593,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "filed_at",
       "filed_by_person_id",
       "filed_by_name",
+      "legal_hold_at",
+      "deleted_at",
     ],
     rows: ({ personName, tripTitle, tripStartsAt, incidentReportRows }) =>
       incidentReportRows.map((row) => [
@@ -1615,6 +1624,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.filedAt,
         row.filedByPersonId,
         row.filedByPersonId ? personName.get(row.filedByPersonId) : null,
+        row.legalHoldAt,
+        row.deletedAt,
       ]),
     note: EXPORT_FILE_NOTES["incident_reports.csv"],
   },

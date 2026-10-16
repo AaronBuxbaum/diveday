@@ -2,7 +2,7 @@ import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-
 import {
   addAgencyListedCardsAction,
   agencyCheckAction,
-} from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
+} from "@/app/shop/[shopSlug]/divers/[personId]/agency-check-actions";
 import type { AppDb } from "@/db/client";
 import {
   addToWaitlistAction,

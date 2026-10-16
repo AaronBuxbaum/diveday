@@ -1,7 +1,7 @@
-import { and, eq, exists, gt, isNull, or, sql } from "drizzle-orm";
+import { and, eq, exists, gt, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { cache } from "react";
 import type { BrandBadgeCode, BrandDisplayFontCode } from "@/lib/brand";
-import type { CalendarDate } from "@/lib/calendar-date";
+import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DockDayRhythm } from "@/lib/diver-planning";
@@ -164,6 +164,32 @@ export async function setShopReopensOn(db: AppDb, shopId: string, reopensOn: Cal
     .where(eq(shops.id, shopId))
     .returning({ id: shops.id });
   return shop ?? null;
+}
+
+/**
+ * The nightly roll's sweep of "Back on the water" dates that have passed.
+ * `offSeason` already ignores a past date, so a diver sees nothing wrong, but
+ * Settings would keep showing last season's date as if it were current. A date
+ * is passed once it is before the shop's own today, in the shop's zone; the day
+ * itself is not. Returns how many shops were cleared.
+ */
+export async function clearPassedReopensOn(db: AppDb, now: Date = nowDate()): Promise<number> {
+  const dated = await db
+    .select({ id: shops.id, reopensOn: shops.reopensOn, zone: shops.timezone })
+    .from(shops)
+    .where(isNotNull(shops.reopensOn));
+  const passed = dated
+    .filter(
+      (shop) => shop.reopensOn !== null && shop.reopensOn < calendarDateInTimezone(now, shop.zone),
+    )
+    .map((shop) => shop.id);
+  if (passed.length === 0) return 0;
+  const cleared = await db
+    .update(shops)
+    .set({ reopensOn: null })
+    .where(inArray(shops.id, passed))
+    .returning({ id: shops.id });
+  return cleared.length;
 }
 
 /** Turns Stripe Tax on or off for charges created after this setting is saved. */

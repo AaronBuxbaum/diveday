@@ -119,6 +119,13 @@ type ActivityParamShapes = {
     cleared: string;
   };
   /**
+   * A staffer marked a course form as a medical statement the boarding gate
+   * holds, or took the mark off (issue #2337). The mark is not part of the
+   * words, so it writes no version and asks no student to sign again; this line
+   * is its whole history. `marked` is `yes` when it went on, `no` when it came off.
+   */
+  course_form_medical_changed: { actor: string; form: string; marked: "yes" | "no" };
+  /**
    * …or the crew boarded them anyway, which takes it back at the rail. Its own
    * line rather than the undo above, because it says something the undo does
    * not: the boat carried somebody the desk had written off, which is exactly
@@ -146,6 +153,9 @@ type ActivityParamShapes = {
    */
   incident_report_filed: { actor: string };
   incident_report_addendum_added: { actor: string };
+  incident_draft_discarded: { actor: string };
+  incident_legal_hold_set: { actor: string };
+  incident_legal_hold_released: { actor: string };
   /** A staffer seated a diver. */
   seat_added: { actor: string; diver: string };
   /** …as a walk-in, which is the same act with a different story behind it. */
@@ -355,6 +365,7 @@ export const ACTIVITY_CODES = [
   "booking_no_show_undone",
   "booking_no_show_undo_refused",
   "participant_type_changed",
+  "course_form_medical_changed",
   "booking_no_show_boarded",
   "booking_no_show_missing_after_dive",
   "identity_confirmed",
@@ -365,6 +376,9 @@ export const ACTIVITY_CODES = [
   "blowout_called",
   "incident_report_filed",
   "incident_report_addendum_added",
+  "incident_draft_discarded",
+  "incident_legal_hold_set",
+  "incident_legal_hold_released",
   "seat_added",
   "seat_added_walk_in",
   "seat_added_from_trip_link",

@@ -16,7 +16,7 @@ import {
 } from "@/db/schema";
 import { trackEvent } from "@/lib/analytics";
 import { authSecret } from "@/lib/auth-secret";
-import type { Role } from "@/lib/authz";
+import { isStaff, type Role } from "@/lib/authz";
 import { nowMs } from "@/lib/clock";
 import { verifyCredentials } from "@/lib/credentials";
 import { log } from "@/lib/log";
@@ -154,7 +154,16 @@ function diveDayCredentialsPlugin() {
           // better-auth quickstart, a client SDK, OAuth — an explicit three
           // fields is what keeps a staff member's bcrypt hash out of a login
           // response (security review finding).
-          return ctx.json({ user: { id: user.id, email: user.email, name: verified.name } });
+          //
+          // `shopSlug` is beside the user, not in it: the one place sign-in
+          // lands (`src/app/sign-in/actions.ts`) goes straight to the staffer's
+          // own shop instead of bouncing through `/shop`. Only a staff session
+          // names one, the same condition the edge's `/shop` redirect asks
+          // (`src/proxy.ts`).
+          return ctx.json({
+            user: { id: user.id, email: user.email, name: verified.name },
+            shopSlug: isStaff(verified.roles) && verified.shopSlug ? verified.shopSlug : null,
+          });
         },
       ),
     },

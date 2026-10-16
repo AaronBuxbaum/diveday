@@ -14,6 +14,7 @@ import {
   type IncidentSeverity,
   type IncidentViewer,
   incidentFilingGaps,
+  mayDecideIncidentRecord,
   mayReadIncidentReport,
   mayStartIncidentReport,
   mayWriteIncidentReport,
@@ -52,6 +53,9 @@ import { liveTrip } from "./trips-live";
  * Nothing here is read by readiness, roll call, booking or the close-out. A
  * report is a record, never a gate.
  */
+
+/** A report nobody has discarded: every live read carries this (ADR 20260820-every-delete-is-soft). */
+const liveReport = isNull(incidentReports.deletedAt);
 
 /** Who started a report, read by name beside it. */
 const creators = alias(people, "incident_creators");
@@ -93,7 +97,8 @@ export type IncidentWriteRefusal =
   | "subject_not_found"
   | "already_listed"
   | "blank"
-  | "too_long";
+  | "too_long"
+  | "held";
 
 /** Start a draft on a departure. */
 export async function startIncidentReport(
@@ -152,15 +157,19 @@ async function lockForWrite(
       handoverDetail: incidentReports.handoverDetail,
       handedOverAt: incidentReports.handedOverAt,
       followUp: incidentReports.followUp,
+      legalHoldAt: incidentReports.legalHoldAt,
     })
     .from(incidentReports)
-    .where(and(eq(incidentReports.id, reportId), eq(incidentReports.shopId, shopId)))
+    // A discarded draft is gone to every write, as a report that never existed.
+    .where(and(eq(incidentReports.id, reportId), eq(incidentReports.shopId, shopId), liveReport))
     .limit(1)
     .for("update");
   // A report reached under another departure's address is not this report.
-  if (!report || report.tripId !== tripId) return { report: null, allowed: false } as const;
+  if (!report || report.tripId !== tripId) {
+    return { report: null, allowed: false, viewer: null } as const;
+  }
   const viewer = await loadIncidentViewer(db, shopId, report.tripId, actorPersonId);
-  return { report, allowed: mayWriteIncidentReport(viewer, report) } as const;
+  return { report, allowed: mayWriteIncidentReport(viewer, report), viewer } as const;
 }
 
 /** Save a draft's fields. A filed report is refused: it changes only by addendum. */
@@ -268,6 +277,88 @@ export async function addIncidentAddendum(
       tripId: report.tripId,
       actorPersonId: input.actorPersonId,
       entry: { code: "incident_report_addendum_added" },
+    });
+    return { ok: true } as const;
+  });
+}
+
+/**
+ * **Discard a draft that should never have been started** (a wrong departure,
+ * a slip of the thumb). An owner only. It is the one way a report leaves the
+ * product's screens, so what it refuses is the point:
+ *
+ * - **a filed report**, by any path: the code refuses it here and the
+ *   database refuses it too (`incident_reports_only_a_draft_is_discarded`);
+ * - **a held report**, until the hold is released;
+ * - **anyone but an owner**, including the draft's own author and a manager.
+ *
+ * The delete is soft (`deleted_at`): the row, its people and its text stay in
+ * the table until the seven-year prune takes them, and no screen reads it. The
+ * departure's activity trail says who discarded one, with none of its words.
+ * Somebody who could not read the report is told it does not exist.
+ */
+export async function discardIncidentDraft(
+  db: AppDb,
+  input: WriteTarget,
+): Promise<{ ok: true } | { ok: false; reason: IncidentWriteRefusal }> {
+  return db.transaction(async (tx) => {
+    const { report, allowed, viewer } = await lockForWrite(tx, input);
+    if (!report || !allowed || !viewer) return { ok: false, reason: "not_found" } as const;
+    if (!mayDecideIncidentRecord(viewer)) return { ok: false, reason: "not_allowed" } as const;
+    if (report.status !== "draft") return { ok: false, reason: "filed" } as const;
+    if (report.legalHoldAt !== null) return { ok: false, reason: "held" } as const;
+    await tx
+      .update(incidentReports)
+      .set({ deletedAt: nowDate() })
+      .where(
+        and(
+          eq(incidentReports.id, input.reportId),
+          eq(incidentReports.shopId, input.shopId),
+          eq(incidentReports.status, "draft"),
+          isNull(incidentReports.legalHoldAt),
+          liveReport,
+        ),
+      );
+    await recordTripActivity(tx, {
+      shopId: input.shopId,
+      tripId: report.tripId,
+      actorPersonId: input.actorPersonId,
+      entry: { code: "incident_draft_discarded" },
+    });
+    return { ok: true } as const;
+  });
+}
+
+/**
+ * **Put a legal hold on a report, or release it.** An owner only. The
+ * seven-year prune skips a held report (`PRUNE_ARMS.incident_reports`); a held
+ * report cannot be discarded. Setting a hold that is set, or releasing one that
+ * is not, changes nothing and writes no trail line.
+ */
+export async function setIncidentLegalHold(
+  db: AppDb,
+  input: WriteTarget & { held: boolean },
+): Promise<{ ok: true } | { ok: false; reason: IncidentWriteRefusal }> {
+  return db.transaction(async (tx) => {
+    const { report, allowed, viewer } = await lockForWrite(tx, input);
+    if (!report || !allowed || !viewer) return { ok: false, reason: "not_found" } as const;
+    if (!mayDecideIncidentRecord(viewer)) return { ok: false, reason: "not_allowed" } as const;
+    if ((report.legalHoldAt !== null) === input.held) return { ok: true } as const;
+    await tx
+      .update(incidentReports)
+      .set({ legalHoldAt: input.held ? nowDate() : null })
+      .where(
+        and(
+          eq(incidentReports.id, input.reportId),
+          eq(incidentReports.shopId, input.shopId),
+          liveReport,
+        ),
+      );
+    await recordTripActivity(tx, {
+      shopId: input.shopId,
+      tripId: report.tripId,
+      actorPersonId: input.actorPersonId,
+      entry: { code: input.held ? "incident_legal_hold_set" : "incident_legal_hold_released" },
     });
     return { ok: true } as const;
   });
@@ -393,6 +484,10 @@ export type IncidentReportView = {
   addenda: { id: string; body: string; authorName: string; createdAt: Date }[];
   /** Whether this viewer may edit the draft or add an addendum. */
   mayWrite: boolean;
+  /** Whether an owner has put a legal hold on it (retention skips it). */
+  legalHold: boolean;
+  /** Whether this viewer may discard the draft or set or release the hold: owners. */
+  mayDecide: boolean;
 };
 
 /**
@@ -422,7 +517,7 @@ export async function getIncidentReport(
     .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
     .leftJoin(filers, eq(filers.id, incidentReports.filedByPersonId))
     .leftJoin(diveSites, eq(diveSites.id, incidentReports.diveSiteId))
-    .where(and(eq(incidentReports.id, reportId), eq(incidentReports.shopId, shopId)))
+    .where(and(eq(incidentReports.id, reportId), eq(incidentReports.shopId, shopId), liveReport))
     .limit(1);
   if (!row) return null;
   const viewer = await loadIncidentViewer(db, shopId, row.report.tripId, viewerPersonId);
@@ -518,6 +613,8 @@ export async function getIncidentReport(
     })),
     addenda: addendumRows,
     mayWrite: mayWriteIncidentReport(viewer, report),
+    legalHold: report.legalHoldAt !== null,
+    mayDecide: mayDecideIncidentRecord(viewer),
   };
 }
 
@@ -593,6 +690,7 @@ export async function listTripIncidentReports(
       and(
         eq(incidentReports.shopId, shopId),
         eq(incidentReports.tripId, tripId),
+        liveReport,
         seesAll ? undefined : eq(incidentReports.createdByPersonId, viewerPersonId),
       ),
     )
@@ -630,7 +728,7 @@ export async function listShopIncidentReports(
     // diveday:allow-deleted-trips: a report outlives a deleted departure.
     .innerJoin(trips, eq(trips.id, incidentReports.tripId))
     .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
-    .where(and(eq(incidentReports.shopId, shopId), gte(at, from), lt(at, to)))
+    .where(and(eq(incidentReports.shopId, shopId), liveReport, gte(at, from), lt(at, to)))
     .orderBy(desc(at), desc(incidentReports.id));
   return rows.map(toLine);
 }

@@ -15,7 +15,7 @@ import type { RentalPricing } from "@/lib/rentals";
 import { canSayRunningLate, runningLateShown } from "@/lib/running-late";
 import { hasSailed } from "@/lib/trips";
 import { shopWaiverStatus } from "@/lib/waivers";
-import { offerableWelcomeCue, type WelcomeCue } from "@/lib/welcome-cue";
+import { offerableWelcomeCue, type WelcomeCue, type WelcomeHello } from "@/lib/welcome-cue";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
 import { firstActiveIntroCourse, hasActiveRefresherCourse } from "./courses";
@@ -357,6 +357,8 @@ export type ReadyPageData = {
   welcomeOffer: WelcomeCue | null;
   /** Whether they have said yes. Their own answer, on their own link. */
   welcomeShared: boolean;
+  /** What they chose to add to the hello (#2425); null without a yes. */
+  welcomeHello: WelcomeHello | null;
   /**
    * What this course asks a student to work through before day 1 (ADR
    * 20261008-course-learning-materials), read through `readLearningMaterials`
@@ -387,6 +389,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       participantType: bookings.participantType,
       lastDivedBand: bookings.lastDivedBand,
       welcomeSharedAt: bookings.welcomeSharedAt,
+      welcomeHello: bookings.welcomeHello,
       courseMaterialsDoneAt: bookings.courseMaterialsDoneAt,
       diveIntent: bookings.diveIntent,
       reEntryAsk: bookings.reEntryAsk,
@@ -665,6 +668,7 @@ export async function getReadyPageData(
       now,
     }),
     welcomeShared: row.welcomeSharedAt !== null,
+    welcomeHello: row.welcomeSharedAt !== null ? row.welcomeHello : null,
     learningMaterials: readLearningMaterials(trip.course?.learningMaterials),
     courseMaterialsDone: row.courseMaterialsDoneAt !== null || materialsDoneElsewhere,
     courseStarted: trip.startsAt.getTime() <= now.getTime(),
