@@ -48,7 +48,8 @@
   },
   "collection": {
     "cash": "Efectivo",
-    "card_machine": "Terminal de pago"
+    "card_machine": "Terminal de pago",
+    "room_charge": "Cargo a la habitación"
   },
   "detail": {
     "fallbackDescription": "Pedido",
@@ -92,7 +93,9 @@
     "refunding": "Reembolsando…",
     "paidAtCounter": {
       "cash": "Pagado en efectivo el {date}",
-      "card_machine": "Pagado con terminal de pago el {date}"
+      "card_machine": "Pagado con terminal de pago el {date}",
+      "room_charge": "Cargado a la habitación {room} el {date}",
+      "room_charge_hotel": "Cargado a la habitación {room} · {hotel} el {date}"
     },
     "notice": {
       "refreshed": "Estado actualizado desde Stripe.",
@@ -117,7 +120,12 @@
     },
     "recordPayment": {
       "label": "Registrar pago:",
-      "recording": "Registrando…"
+      "recording": "Registrando…",
+      "roomCharge": "Cargar a la habitación",
+      "roomNumber": "Habitación",
+      "roomHotel": "Hotel",
+      "roomHotelHint": "Si el centro atiende a más de uno.",
+      "roomConfirm": "Registrar cargo a la habitación"
     }
   },
   "index": {
@@ -157,8 +165,13 @@
       "title": "Cobra con DiveDay",
       "body": "Conecta Stripe y la recepción podrá enviar pedidos desde aquí."
     },
-    "emptyAll": "Todavía no hay pedidos de DiveDay.",
-    "emptyFiltered": "Ningún pedido de DiveDay coincide con estos filtros.",
+    "roomCharges": {
+      "line": "Cargos a habitaciones en {month}: {lines}",
+      "hotel": "{hotel} {amount} en {count, plural, one {# pedido} other {# pedidos}}",
+      "unnamed": "{amount} en {count, plural, one {# pedido} other {# pedidos}}"
+    },
+    "emptyAll": "Todavía no hay pedidos.",
+    "emptyFiltered": "Ningún pedido coincide con estos filtros.",
     "ledger": {
       "today": "Hoy · {date}",
       "continued": "{day}, continuación",

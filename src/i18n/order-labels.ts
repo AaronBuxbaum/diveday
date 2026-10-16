@@ -1,5 +1,5 @@
 import type { OrderCollection, OrderStatus } from "@/db/schema";
-import type { StaffMessageKey } from "./staff-messages";
+import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 /**
  * **What an order's status is called, and what colour it wears.**
@@ -86,9 +86,38 @@ type CounterCollection = Exclude<OrderCollection, "stripe_invoice">;
 export const ORDER_COLLECTION_KEYS: Record<CounterCollection, StaffMessageKey> = {
   cash: "orders.collection.cash",
   card_machine: "orders.collection.card_machine",
+  room_charge: "orders.collection.room_charge",
 };
 
 export const ORDER_PAID_AT_COUNTER_KEYS: Record<CounterCollection, StaffMessageKey> = {
   cash: "orders.detail.paidAtCounter.cash",
   card_machine: "orders.detail.paidAtCounter.card_machine",
+  room_charge: "orders.detail.paidAtCounter.room_charge",
 };
+
+/**
+ * "Paid in cash Fri, Oct 9", or for a resort guest "Charged to room 412 ·
+ * Reef Hotel Fri, Oct 9" (fifth-loop ideas, item 57): the room and hotel are
+ * the order's own, so the front desk's monthly bill can be checked line by line.
+ */
+export function paidAtCounterLine(
+  t: StaffTranslator,
+  input: {
+    collection: CounterCollection;
+    date: string;
+    roomNumber?: string | null;
+    roomHotel?: string | null;
+  },
+): string {
+  if (input.collection === "room_charge") {
+    const room = input.roomNumber ?? "";
+    return input.roomHotel
+      ? t("orders.detail.paidAtCounter.room_charge_hotel", {
+          room,
+          hotel: input.roomHotel,
+          date: input.date,
+        })
+      : t("orders.detail.paidAtCounter.room_charge", { room, date: input.date });
+  }
+  return t(ORDER_PAID_AT_COUNTER_KEYS[input.collection], { date: input.date });
+}

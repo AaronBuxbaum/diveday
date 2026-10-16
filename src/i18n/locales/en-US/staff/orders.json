@@ -48,7 +48,8 @@
   },
   "collection": {
     "cash": "Cash",
-    "card_machine": "Card machine"
+    "card_machine": "Card machine",
+    "room_charge": "Room charge"
   },
   "detail": {
     "fallbackDescription": "Order",
@@ -92,7 +93,9 @@
     "refunding": "Refunding…",
     "paidAtCounter": {
       "cash": "Paid in cash {date}",
-      "card_machine": "Paid by card machine {date}"
+      "card_machine": "Paid by card machine {date}",
+      "room_charge": "Charged to room {room} {date}",
+      "room_charge_hotel": "Charged to room {room} · {hotel} {date}"
     },
     "notice": {
       "refreshed": "Status refreshed from Stripe.",
@@ -117,7 +120,12 @@
     },
     "recordPayment": {
       "label": "Record payment:",
-      "recording": "Recording…"
+      "recording": "Recording…",
+      "roomCharge": "Charge to room",
+      "roomNumber": "Room",
+      "roomHotel": "Hotel",
+      "roomHotelHint": "If the shop serves more than one.",
+      "roomConfirm": "Record room charge"
     }
   },
   "index": {
@@ -157,8 +165,13 @@
       "title": "Take payments with DiveDay",
       "body": "Connect Stripe and the front desk can send orders from here."
     },
-    "emptyAll": "No DiveDay orders yet.",
-    "emptyFiltered": "No DiveDay orders match these filters.",
+    "roomCharges": {
+      "line": "Room charges in {month}: {lines}",
+      "hotel": "{hotel} {amount} on {count, plural, one {# order} other {# orders}}",
+      "unnamed": "{amount} on {count, plural, one {# order} other {# orders}}"
+    },
+    "emptyAll": "No orders yet.",
+    "emptyFiltered": "No orders match these filters.",
     "ledger": {
       "today": "Today · {date}",
       "continued": "{day}, continued",

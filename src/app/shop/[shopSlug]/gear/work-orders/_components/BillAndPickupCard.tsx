@@ -9,9 +9,9 @@ import type { CustomerGearNotice, WorkOrder } from "@/db/schema";
 import { billAndPickupFacts } from "@/db/work-order-follow-up";
 import {
   ORDER_COLLECTION_KEYS,
-  ORDER_PAID_AT_COUNTER_KEYS,
   ORDER_STATUS_KEYS,
   ORDER_STATUS_TONES,
+  paidAtCounterLine,
 } from "@/i18n/order-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
@@ -200,7 +200,8 @@ export async function BillAndPickupCard({
                     ? t("benchFollowUp.bill.sent", {
                         date: formatShortDate(bill.sentAt, locale, shop.timezone),
                       })
-                    : t(ORDER_PAID_AT_COUNTER_KEYS[bill.collection], {
+                    : paidAtCounterLine(t, {
+                        collection: bill.collection,
                         date: formatShortDate(bill.sentAt, locale, shop.timezone),
                       })}
                 </span>

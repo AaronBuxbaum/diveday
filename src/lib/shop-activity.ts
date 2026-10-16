@@ -95,6 +95,7 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   order_refunded: "money",
   order_paid_cash: "money",
   order_paid_card_machine: "money",
+  order_paid_room_charge: "money",
   paid_after_close_refunded: "money",
   seat_refunded: "money",
   seat_self_refunded: "money",

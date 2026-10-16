@@ -188,6 +188,8 @@ export default async function OrderDetailPage({
           <PaidAtCounterLine
             collection={counterCollection}
             paidAt={order.order.paidAt}
+            roomNumber={order.order.roomNumber}
+            roomHotel={order.order.roomHotel}
             locale={locale}
             timezone={timezone}
             t={t}

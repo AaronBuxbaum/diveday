@@ -14,6 +14,7 @@ import { listImportedPaymentHistory } from "@/db/imported-payment-history";
 import { ORDER_DEFAULT_RANGE_DAYS, pagedOrdersByDay } from "@/db/orders";
 import { getShopPersonName } from "@/db/people";
 import { canPersonViewShopReports } from "@/db/reporting";
+import { roomChargesByHotel } from "@/db/room-charges";
 import { orderStatus } from "@/db/schema";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getShopTripTitle } from "@/db/trips";
@@ -27,10 +28,11 @@ import {
   isValidCalendarDate,
 } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { formatMoneyCents, formatShortDate } from "@/lib/format";
+import { formatMoneyCents, formatShortDate, monthNames } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { isManagedStorageUrl } from "@/lib/storage/blob-host";
+import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { orderLedgerRow } from "./_components/ledger-row";
 import {
@@ -50,6 +52,7 @@ import {
 } from "./_components/OwedMoneyQueues";
 import { PaymentsSetupCard } from "./_components/PaymentsSetupCard";
 import { PayoutLines, readBackOffice } from "./_components/PayoutLines";
+import { RoomChargesLine } from "./_components/RoomChargesLine";
 import { type OrdersHrefOverrides, orderIndexFilter, ordersIndexHref } from "./order-index-filter";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -224,6 +227,14 @@ export default async function OrdersIndexPage({
   ) : null;
   const { stuckPaymentOperations, owedRefunds, paidAfterClose, failedRefunds, payouts } =
     await readBackOffice(db, shop.id, canReconcilePayments);
+  // This month's room charges per hotel, for the owner or manager who settles
+  // with the front desk (fifth-loop ideas, item 57).
+  const todayWall = utcToWallTime(nowDate(), shop.timezone);
+  const thisMonth = { year: todayWall.year, month: todayWall.month };
+  const monthRange = shopMonthBounds(thisMonth, shop.timezone);
+  const roomCharges = canExportOrders
+    ? await roomChargesByHotel(db, shop.id, monthRange.from, monthRange.to)
+    : [];
 
   // One reading of the URL, shared with "Download orders (CSV)" so the file
   // holds the orders this page shows (`orderIndexFilter`).
@@ -372,6 +383,13 @@ export default async function OrdersIndexPage({
         section="money"
         current="orders"
         roles={session.user.roles}
+        t={t}
+      />
+
+      <RoomChargesLine
+        totals={roomCharges}
+        month={monthNames(locale)[thisMonth.month - 1] ?? ""}
+        locale={locale}
         t={t}
       />
 
