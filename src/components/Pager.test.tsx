@@ -72,7 +72,7 @@ describe("Pager", () => {
         total={t("orders.index.pagination.total", { count: 323 })}
       />,
     );
-    expect(screen.getByText("Page 1 of 7 · 323 orders")).toBeInTheDocument();
+    expect(screen.getByText("Page 1 of 7 · 323 entries")).toBeInTheDocument();
   });
 
   it("names its navigation landmark from the shared key set", () => {
