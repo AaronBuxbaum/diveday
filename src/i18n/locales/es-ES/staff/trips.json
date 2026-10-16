@@ -455,7 +455,8 @@
     "recipientsHeading": "A quién le llega",
     "recipientsMore": "{count, plural, one {No se muestra # persona elegible más.} other {No se muestran # personas elegibles más.}}",
     "recipientsMoreNoRequirement": "{count, plural, one {No se muestra # más.} other {No se muestran # más.}}",
-    "recipients": "Destinatarios: {names}"
+    "recipients": "Destinatarios: {names}",
+    "leadTime": "Las salidas del {weekday} suelen vender el {percent} % de sus plazas en los últimos 3 días."
   },
   "roster": {
     "addFirstNoteSummary": "Añadir una nota privada",
