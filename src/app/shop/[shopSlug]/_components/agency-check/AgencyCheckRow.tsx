@@ -112,7 +112,11 @@ export function AgencyCheckRow({
               aria-busy={state?.phase === "checking"}
               className={LINK_BUTTON}
             >
-              {state?.phase === "checking" ? copy.checking : copy.check}
+              {state?.phase === "checking"
+                ? copy.checking
+                : card.kind
+                  ? copy.checkKind[card.kind]
+                  : copy.check}
             </button>
           ) : null}
           {outcome && settled ? (

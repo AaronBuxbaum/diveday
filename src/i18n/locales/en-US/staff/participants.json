@@ -33,7 +33,8 @@
     "comingAs": "Coming as: {type}",
     "typeLabel": "Coming as",
     "save": "Save",
-    "changeAnyway": "Change anyway"
+    "changeAnyway": "Change anyway",
+    "snorkelerMedicalHint": "To board them riding only, change this seat to Rider under Coming as."
   },
   "headCount": {
     "aboardOfTotalPeople": "{aboard} of {total, plural, one {# person} other {# people}} aboard",

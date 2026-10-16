@@ -523,6 +523,15 @@ export const trips = pgTable(
      */
     diversToldStartsAt: timestamp("divers_told_starts_at", { withTimezone: true }),
     /**
+     * **Whether the meeting point has moved since the divers were last told**
+     * (#2446), kept beside `divers_told_starts_at` for the same reason: the
+     * "Tell them" notice after an Undo reads it here, and a posted form field
+     * is never trusted for what the notice says. ORed in by each move that
+     * holds a notice, cleared with `divers_told_starts_at` when a notice is
+     * sent or the divers' time is current again.
+     */
+    diversToldMeetingPoint: boolean("divers_told_meeting_point").notNull().default(false),
+    /**
      * Set when staff delete an empty departure (ADR 20260820-every-delete-is-soft).
      *
      * `deleteTrip` still refuses a departure with any roster, wait-list entry or
@@ -564,6 +573,13 @@ export const trips = pgTable(
      * Null until then, and for ever on a departure whose count closed in time.
      */
     rollCallAlertedAt: timestamp("roll_call_alerted_at", { withTimezone: true }),
+    /**
+     * **When the shop's shore contact was told** (H-118): the same alert's
+     * shore copy, claimed on its own so a failed shore send is tried again on
+     * the next pass and a delivery ashore never reads as "Owners alerted".
+     * Null until then, and for ever on a shop with no confirmed shore contact.
+     */
+    rollCallShoreAlertedAt: timestamp("roll_call_shore_alerted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

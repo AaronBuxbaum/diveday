@@ -14,6 +14,7 @@ import {
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
 } from "@/test/staff-session";
+import type { ShowMedicalAnswersResult } from "./actions";
 
 // The page is invoked directly, outside Next's request scope, so the db handle,
 // better-auth and request headers are stubbed and nothing else (same shape as
@@ -31,18 +32,41 @@ const { auth } = (await import("@/lib/auth")) as unknown as {
   auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
 const SignedWaiverPage = (await import("./page")).default;
+const { MedicalAnswers } = await import("./_components/MedicalAnswers");
 
 /** The seeded refusal (`seed-medical-review.ts`) names this physician. */
 const PHYSICIAN = "Dr. Imani Reyes";
 const FLAGGED = RSTC_QUESTIONNAIRE.questions.find((q) => q.id === "q3");
 const UNFLAGGED = RSTC_QUESTIONNAIRE.questions.find((q) => q.id === "q4");
 
-/** Every string the page's element tree carries, without rendering a component. */
+/**
+ * Every string the page's element tree carries, in children and in every prop
+ * (a client component's data arrives as props, and props are what reach the
+ * browser), without rendering a component.
+ */
 function textIn(node: unknown, found: string[] = []): string[] {
   if (typeof node === "string") found.push(node);
   else if (Array.isArray(node)) for (const child of node) textIn(child, found);
-  else if (isValidElement<{ children?: unknown }>(node)) textIn(node.props.children, found);
+  else if (isValidElement<Record<string, unknown>>(node))
+    for (const value of Object.values(node.props)) textIn(value, found);
+  else if (node && typeof node === "object")
+    for (const value of Object.values(node)) textIn(value, found);
   return found;
+}
+
+/** The "Show answers" action the page hands `MedicalAnswers`, if any. */
+function showActionIn(node: unknown): (() => Promise<ShowMedicalAnswersResult>) | undefined {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const found = showActionIn(child);
+      if (found) return found;
+    }
+    return undefined;
+  }
+  if (!isValidElement<{ children?: unknown; show?: unknown }>(node)) return undefined;
+  if (node.type === MedicalAnswers)
+    return node.props.show as (() => Promise<ShowMedicalAnswersResult>) | undefined;
+  return showActionIn(node.props.children);
 }
 
 async function renderAs(
@@ -110,27 +134,40 @@ async function renderAs(
       recordId: record.id,
     }),
   });
-  return textIn(tree).join("\n");
+  return { text: textIn(tree).join("\n"), show: showActionIn(tree) };
 }
 
 describe("a signed release's medical answers", () => {
+  // Issue #2157: no render carries the full questionnaire, for anyone. An
+  // owner or manager reads the physician and gets "Show answers", whose action
+  // records the read before it sends every answer back.
   it.each([
     ["owner", ["owner"]],
     ["manager", ["manager"]],
-  ] as const)("the %s reads every answer and the physician's name", async (_, roles) => {
-    const text = await renderAs([...roles]);
-    expect(text).toContain(FLAGGED?.prompt);
-    expect(text).toContain(UNFLAGGED?.prompt);
-    expect(text).toContain(PHYSICIAN);
-  });
+  ] as const)(
+    "the %s reads the physician's name, and every answer only through Show answers",
+    async (_, roles) => {
+      const { text, show } = await renderAs([...roles]);
+      expect(text).toContain(FLAGGED?.prompt);
+      expect(text).not.toContain(UNFLAGGED?.prompt);
+      expect(text).toContain(PHYSICIAN);
+      if (!show) throw new Error("expected a Show answers action");
+      const shown = await show();
+      if (!shown.ok) throw new Error("expected Show answers to send the answers");
+      const prompts = shown.answers.map((answer) => answer.prompt);
+      expect(prompts).toContain(FLAGGED?.prompt);
+      expect(prompts).toContain(UNFLAGGED?.prompt);
+    },
+  );
 
   it.each([["instructor"], ["divemaster"], ["captain"], ["crew"]] as const)(
     "a %s sees only the flagged prompt, never the other answers or the physician",
     async (role) => {
-      const text = await renderAs([role]);
+      const { text, show } = await renderAs([role]);
       expect(text).toContain(FLAGGED?.prompt);
       expect(text).not.toContain(UNFLAGGED?.prompt);
       expect(text).not.toContain(PHYSICIAN);
+      expect(show).toBeUndefined();
     },
   );
 });
@@ -143,10 +180,11 @@ describe("a signed release's medical answers", () => {
  */
 describe("a signed release's medical answers, against a session that claims too much", () => {
   it("reads the live roles, not a session that claims the owner's", async () => {
-    const text = await renderAs(["crew"], { sessionRoles: ["owner"] });
+    const { text, show } = await renderAs(["crew"], { sessionRoles: ["owner"] });
     expect(text).toContain(FLAGGED?.prompt);
     expect(text).not.toContain(UNFLAGGED?.prompt);
     expect(text).not.toContain(PHYSICIAN);
+    expect(show).toBeUndefined();
   });
 
   it("does not find another shop's record, even for this shop's owner", async () => {

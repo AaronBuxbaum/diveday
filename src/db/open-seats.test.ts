@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 import { DAY_MS, HOUR_MS } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
-import { comparableDepartures, getTripOpenSeatsDebrief } from "./open-seats";
+import {
+  comparableDepartures,
+  getMonthDeparturesWithEmptySeats,
+  getTripOpenSeatsDebrief,
+} from "./open-seats";
 import { bookings, people, shops, trips } from "./schema";
 import { createTrip } from "./trips";
 
@@ -116,5 +120,45 @@ describe("getTripOpenSeatsDebrief", () => {
     const ahead = await departure(db, shop.id, { daysAgo: -2, capacity: 4, booked: 1 });
     expect(await getTripOpenSeatsDebrief(db, shop.id, full.id, "UTC", NOW)).toBeNull();
     expect(await getTripOpenSeatsDebrief(db, shop.id, ahead.id, "UTC", NOW)).toBeNull();
+  });
+});
+
+describe("getMonthDeparturesWithEmptySeats", () => {
+  const window = {
+    startUtc: new Date(NOW.getTime() - 30 * DAY_MS),
+    endUtc: new Date(NOW.getTime() + 30 * DAY_MS),
+  };
+
+  it("counts sailed departures with unsold seats in the window, cancelled seats not counting as sold", async () => {
+    const { db, shop } = ctx;
+    const short = await departure(db, shop.id, { daysAgo: 1, capacity: 6, booked: 2 });
+    await departure(db, shop.id, { daysAgo: 2, capacity: 2, booked: 2 });
+    await departure(db, shop.id, { daysAgo: -3, capacity: 6, booked: 0 });
+    await departure(db, shop.id, { daysAgo: 90, capacity: 6, booked: 0 });
+    const [booking] = await db.select().from(bookings).where(eq(bookings.tripId, short.id));
+    if (!booking) throw new Error("no booking");
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
+    const summary = await getMonthDeparturesWithEmptySeats(db, shop.id, window, NOW);
+    expect(summary).toMatchObject({ departures: 1, seats: 5 });
+    expect(summary.list[0]).toMatchObject({ tripId: short.id, openSeats: 5 });
+  });
+
+  it("leaves out a cancelled or deleted departure and another shop's", async () => {
+    const { db, shop } = ctx;
+    const cancelled = await departure(db, shop.id, { daysAgo: 1, capacity: 6, booked: 1 });
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, cancelled.id));
+    const deleted = await departure(db, shop.id, { daysAgo: 2, capacity: 6, booked: 0 });
+    await db.update(trips).set({ deletedAt: NOW }).where(eq(trips.id, deleted.id));
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Reef", slug: "other-reef-empty-seats", timezone: "UTC" })
+      .returning();
+    if (!other) throw new Error("other shop");
+    await departure(db, other.id, { daysAgo: 1, capacity: 6, booked: 0 });
+    expect(await getMonthDeparturesWithEmptySeats(db, shop.id, window, NOW)).toEqual({
+      departures: 0,
+      seats: 0,
+      list: [],
+    });
   });
 });

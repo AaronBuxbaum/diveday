@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
@@ -20,6 +20,7 @@ import {
   type IssuedCapability,
   issueBookingCapabilities,
   issueBookingCapability,
+  revokeIssuedCapabilities,
 } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { lastDayStartsAt } from "./departure-notes";
@@ -30,7 +31,7 @@ import {
   sendAndRecordNotification,
 } from "./notifications";
 import { bookings, heldSends, people, shops, trips } from "./schema";
-import { stopListedSmsProvider } from "./sms-opt-outs";
+import { isSmsOptedOut, optedOutPhones, stopListedSmsProvider } from "./sms-opt-outs";
 import { liveTrip, notRehearsal } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
@@ -130,7 +131,7 @@ async function stillAhead(
 async function clearDiversTold(db: AppDb, shopId: string, tripId: string) {
   await db
     .update(trips)
-    .set({ diversToldStartsAt: null })
+    .set({ diversToldStartsAt: null, diversToldMeetingPoint: false })
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)));
 }
 
@@ -156,7 +157,12 @@ export async function holdRescheduleNotice(
     tripId: string;
     /** The start a server-side move just replaced. Absent for "Tell them". */
     movedFrom?: Date;
-    meetingPointMoved: boolean;
+    /**
+     * Whether this move moved the meeting point. Absent for "Tell them", which
+     * reads what was recorded (`trips.divers_told_meeting_point`) and never a
+     * form (#2446).
+     */
+    meetingPointMoved?: boolean;
     actorPersonId: string | null;
     now?: Date;
   },
@@ -167,6 +173,7 @@ export async function holdRescheduleNotice(
       startsAt: trips.startsAt,
       status: trips.status,
       diversToldStartsAt: trips.diversToldStartsAt,
+      diversToldMeetingPoint: trips.diversToldMeetingPoint,
     })
     .from(trips)
     // A rehearsal tells nobody anything (ADR 20261012-rehearsal-departures):
@@ -180,6 +187,8 @@ export async function holdRescheduleNotice(
   // is on its way rather than "Telling 11 divers".
   if (!(await stillAhead(db, trip, input.now ?? nowDate()))) return null;
   const toldStartsAt = trip.diversToldStartsAt ?? input.movedFrom ?? null;
+  // The place has moved if an earlier move said so or this one does.
+  const placeMoved = trip.diversToldMeetingPoint || (input.meetingPointMoved ?? false);
 
   const pendingRows = await db
     .select({ id: heldSends.id, payload: heldSends.payload })
@@ -199,7 +208,7 @@ export async function holdRescheduleNotice(
           kind: "trip_rescheduled",
           tripId: input.tripId,
           previousStartsAt: toldStartsAt.toISOString(),
-          meetingPointMoved: input.meetingPointMoved,
+          meetingPointMoved: placeMoved,
         },
         trip.startsAt,
       )
@@ -218,21 +227,25 @@ export async function holdRescheduleNotice(
     );
   }
   // Back where the divers were told (or never moved): they know the time.
+  const hasRecord = Boolean(trip.diversToldStartsAt) || trip.diversToldMeetingPoint;
   if (!merged) {
-    if (trip.diversToldStartsAt) await clearDiversTold(db, input.shopId, input.tripId);
+    if (hasRecord) await clearDiversTold(db, input.shopId, input.tripId);
     return null;
   }
 
   const told = await rescheduleAudienceCount(db, input.shopId, input.tripId);
   // Nobody on the boat holds the old time; whoever books next sees the new one.
   if (told === 0) {
-    if (trip.diversToldStartsAt) await clearDiversTold(db, input.shopId, input.tripId);
+    if (hasRecord) await clearDiversTold(db, input.shopId, input.tripId);
     return null;
   }
-  if (trip.diversToldStartsAt?.getTime() !== toldStartsAt?.getTime()) {
+  if (
+    trip.diversToldStartsAt?.getTime() !== toldStartsAt?.getTime() ||
+    trip.diversToldMeetingPoint !== merged.meetingPointMoved
+  ) {
     await db
       .update(trips)
-      .set({ diversToldStartsAt: toldStartsAt })
+      .set({ diversToldStartsAt: toldStartsAt, diversToldMeetingPoint: merged.meetingPointMoved })
       .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)));
   }
   const held = await holdSend(db, {
@@ -305,36 +318,72 @@ export async function sendRescheduleNotices(
   // review 2026-10-13b, item 36): this loop minted one per seat, three
   // statements each, the shape `sendDepartureNote` left (item 35). The same
   // seats as before: not a held one, not one with nowhere to send it.
+  // A phone-only seat on the STOP list, at a shop with no WhatsApp of its own,
+  // gets a refused text: no link is minted for it (#2451).
+  const stopped = await optedOutPhones(
+    db,
+    seats.flatMap(({ person }) => {
+      const phone = person.email ? null : smsRecipient(person.phone);
+      return phone ? [phone] : [];
+    }),
+  );
   const links = channels.origin
     ? await issueBookingCapabilities(db, {
         shopId: shop.id,
         bookingIds: seats
-          .filter(
-            ({ booking, person }) =>
-              !booking.identityUnconfirmedAt && (person.email || smsRecipient(person.phone)),
-          )
+          .filter(({ booking, person }) => {
+            if (booking.identityUnconfirmedAt) return false;
+            if (person.email) return true;
+            const phone = smsRecipient(person.phone);
+            return Boolean(phone) && !(stopped.has(phone as string) && !channels.whatsApp);
+          })
           .map(({ booking }) => booking.id),
         purpose: "readiness",
         now,
       })
     : new Map<string, IssuedCapability>();
-  for (const { booking, person } of seats) {
-    if (booking.identityUnconfirmedAt) {
-      outcome.identityHeld += 1;
-      continue;
+  const toldBookingIds = new Set<string>();
+  try {
+    for (const { booking, person } of seats) {
+      if (booking.identityUnconfirmedAt) {
+        outcome.identityHeld += 1;
+        // Nothing re-sends this when staff confirm who the diver is unless the
+        // skip is remembered (#2445): the earliest start the seat last knew, and
+        // whether the place moved.
+        await db
+          .update(bookings)
+          .set({
+            rescheduleMissedFrom: sql`coalesce(${bookings.rescheduleMissedFrom}, ${previousStartsAt.toISOString()}::timestamptz)`,
+            rescheduleMissedPlace: payload.meetingPointMoved
+              ? true
+              : sql`${bookings.rescheduleMissedPlace}`,
+          })
+          .where(and(eq(bookings.id, booking.id), eq(bookings.shopId, shopId)));
+        continue;
+      }
+      const told = await tellSeat(db, {
+        shop,
+        trip,
+        booking,
+        person,
+        previousStartsAt,
+        meetingPoint,
+        channels,
+        now,
+        capability: links.get(booking.id) ?? null,
+      });
+      outcome[told] += 1;
+      if (told === "told") toldBookingIds.add(booking.id);
     }
-    const told = await tellSeat(db, {
-      shop,
-      trip,
-      booking,
-      person,
-      previousStartsAt,
-      meetingPoint,
-      channels,
-      now,
-      capability: links.get(booking.id) ?? null,
-    });
-    outcome[told] += 1;
+  } finally {
+    // A pass that throws part-way leaves no live link behind for a notice that
+    // did not go, those it never reached included (#2451).
+    const unsent = [...links]
+      .filter(([bookingId]) => !toldBookingIds.has(bookingId))
+      .map(([, link]) => link.token);
+    if (unsent.length > 0) {
+      await revokeIssuedCapabilities(db, { shopId: shop.id, tokens: unsent, now });
+    }
   }
   // The divers have the new time now; a later move starts from this one.
   if (outcome.told > 0) await clearDiversTold(db, shop.id, trip.id);
@@ -411,10 +460,14 @@ async function tellSeat(
   }
   const locale = recipientLocale(person.locale, shop.defaultLocale);
   const t = diverTranslator(locale);
+  // A STOP-listed phone-only seat mints nothing (#2451); the one-seat path
+  // checks here what the whole-departure path checks in a batch.
+  const refusedText =
+    !person.email && Boolean(phone) && !channels.whatsApp && (await isSmsOptedOut(db, phone ?? ""));
   const capability =
     input.capability !== undefined
       ? input.capability
-      : channels.origin
+      : channels.origin && !refusedText
         ? await issueBookingCapability(db, {
             shopId: shop.id,
             bookingId: booking.id,
@@ -422,6 +475,14 @@ async function tellSeat(
             now,
           })
         : null;
+  // The link was minted ahead of the send; when the send did not go nobody
+  // holds it, so it is taken back (#2451).
+  const settle = async (told: "told" | "failed"): Promise<"told" | "failed"> => {
+    if (told === "failed" && capability) {
+      await revokeIssuedCapabilities(db, { shopId: shop.id, tokens: [capability.token], now });
+    }
+    return told;
+  };
   const readinessUrl = capability
     ? new URL(readinessLinkPath(capability.token), `${channels.origin}/`).toString()
     : undefined;
@@ -494,7 +555,7 @@ async function tellSeat(
         whatsapp: channels.whatsApp,
       });
     }
-    return delivery.status === "sent" ? "told" : "failed";
+    return settle(delivery.status === "sent" ? "told" : "failed");
   } else if (courtesy) {
     const { delivery } = await sendCourtesyMessage(courtesy, {
       sms: channels.smsProvider,
@@ -506,9 +567,9 @@ async function tellSeat(
       kind: "trip_rescheduled",
       delivery,
     });
-    return delivery.status === "sent" ? "told" : "failed";
+    return settle(delivery.status === "sent" ? "told" : "failed");
   }
-  return "failed";
+  return settle("failed");
 }
 
 /**
@@ -567,4 +628,100 @@ export async function sendSeatMoveNotice(
     now,
     seatMovedAt: input.movedAt,
   });
+}
+
+/**
+ * **The notice a held seat missed, sent once staff confirm the diver** (#2445).
+ *
+ * `sendRescheduleNotices` skips a seat whose identity is held, and leaves the
+ * start the seat last knew on the booking (`reschedule_missed_from`). When the
+ * hold clears (`confirmBookingIdentity`, or a split that gives the seat its own
+ * record) this sends the same notice that seat would have had, to the address
+ * on the person it now belongs to.
+ *
+ * **Exactly once, and not lost.** The columns are claimed and cleared in one statement before
+ * anything is sent, so a second confirm, a retry or a race finds nothing owed. A send that
+ * does not go puts the claim back, so the next confirm tries again.
+ * A seat still held, no longer on the boat, on a departure that has left or is
+ * a rehearsal, or back at the start it knew with the place unmoved, sends
+ * nothing; the claim is cleared in each case because nothing is owed.
+ */
+export async function sendMissedRescheduleNotice(
+  db: AppDb,
+  input: { shopId: string; bookingId: string },
+  options: SendRescheduleNoticesOptions = {},
+): Promise<"told" | "failed" | "nothing"> {
+  const now = options.now ?? nowDate();
+  const owed = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({ from: bookings.rescheduleMissedFrom, place: bookings.rescheduleMissedPlace })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          isNotNull(bookings.rescheduleMissedFrom),
+          isNull(bookings.identityUnconfirmedAt),
+        ),
+      )
+      .limit(1)
+      .for("update");
+    if (!row?.from) return null;
+    await tx
+      .update(bookings)
+      .set({ rescheduleMissedFrom: null, rescheduleMissedPlace: false })
+      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)));
+    return { from: row.from, place: row.place };
+  });
+  if (!owed) return "nothing";
+
+  const [row] = await db
+    .select({ trip: trips, shop: shops, booking: bookings, person: people })
+    .from(bookings)
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, input.shopId)))
+    .innerJoin(shops, eq(shops.id, trips.shopId))
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shopId)))
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        eq(bookings.shopId, input.shopId),
+        inArray(bookings.status, [...TOLD_STATUSES]),
+        isNull(people.deletedAt),
+        liveTrip(),
+        notRehearsal(),
+      ),
+    )
+    .limit(1);
+  if (row?.trip.status !== "scheduled") return "nothing";
+  const timeMoved = owed.from.getTime() !== row.trip.startsAt.getTime();
+  // Moved and moved back while the seat was held, with the place unmoved.
+  if (!timeMoved && !owed.place) return "nothing";
+  if (!(await stillAhead(db, row.trip, now))) return "nothing";
+  // A notice that did not go, by a refusal or a throw, is still owed: put the
+  // claim back, keeping any earlier start a later skip has recorded since (#2445).
+  const putBack = () =>
+    db
+      .update(bookings)
+      .set({
+        rescheduleMissedFrom: sql`coalesce(${bookings.rescheduleMissedFrom}, ${owed.from.toISOString()}::timestamptz)`,
+        rescheduleMissedPlace: owed.place ? true : sql`${bookings.rescheduleMissedPlace}`,
+      })
+      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)));
+  let told: "told" | "failed";
+  try {
+    told = await tellSeat(db, {
+      ...row,
+      previousStartsAt: owed.from,
+      meetingPoint: owed.place
+        ? meetingPointForMessage(meetingPointOfRows(row.shop, row.trip))
+        : undefined,
+      channels: await seatChannels(db, input.shopId, options),
+      now,
+    });
+  } catch (error) {
+    await putBack();
+    throw error;
+  }
+  if (told === "failed") await putBack();
+  return told;
 }

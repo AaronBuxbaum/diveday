@@ -1,0 +1,869 @@
+{
+  "area": "bonaire",
+  "method": "Bonaire and Klein Bonaire: the whole Bonaire National Marine Park, west coast from Boka Bartol to Willemstoren Lighthouse, the Lac Bay east-coast sites and the Klein Bonaire ring. Official list: STINAPA's current Bonaire National Marine Park dive-site map (sites 01-61 on Bonaire, A-Z on Klein Bonaire, linked from stinapabonaire.org/bonaire-national-marine-park as 'Download our Dive Site Map'), counted as one list; the same STINAPA page and its rules page are the authority for closures. Operator lists, one each: Buddy Dive Resort's 2025-26 brochure site table (1-63 plus Klein Bonaire), Beyond the Corals' dive-site page (same numbering), Dive Friends Bonaire's staff-picks site list, and VIP Diving's top-five site list; Buddy Dive's east-coast page is Buddy Dive again and adds no list. The Tourism Corporation Bonaire site directory (bonaireisland.com, 20 entries) counts as one tourism-board list; its single 'Andrea 1 & 2' entry is credited to both Andreas. Captain Don's Habitat, Bruce Bowker's Carib Inn, Wannadive, Harbour Village and Toucan Diving were read but publish no site list (only a house reef or 'over 50 moored sites'), Great Adventures' site renders no text and Bonaire Dive & Adventure's domain is parked, so none of them is counted; bonaire.com, infobonaire.com, divers-guide, DivePlannerPro and PADI pages were read for leads only. A site is counted when it is named, recreationally divable and on at least two of these lists; names follow the STINAPA map with the operators' alternative names as aliases (C 'Jerry's Reef' is the operators' 'Jerry's Sponges'). Excluded: the six Washington Slagbaai National Park sites (01-06), because STINAPA states the park remains closed for diving; Town Pier, which the map marks closed under the ISPS code; Twixt and Vallerie's Hill, on the STINAPA map only; and Yellow Submarine and Turtle City, each on one operator list only. No list gives coordinates, so no positions are recorded. Counted 2026-10-14.",
+  "sources": [
+    "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+    "https://stinapabonaire.org/bonaire-national-marine-park/",
+    "https://stinapabonaire.org/rules-and-regulations/",
+    "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+    "https://buddydive.com/east-coast-diving/",
+    "https://beyondthecorals.com/bonaire/dive-sites/",
+    "https://www.divefriendsbonaire.com/blogs/dive-friends-bonaire-staff-picks-the-best-dive-sites-in-bonaire",
+    "https://www.vipdiving.com/blog-article/bonaires-top-5-must-dive-sites",
+    "https://bonaireisland.com/experiences/diving/sites/"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Boka Bartol",
+      "template": null,
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ],
+      "excluded": "closed: inside Washington Slagbaai National Park, which STINAPA says remains closed for diving (https://stinapabonaire.org/bonaire-national-marine-park/)"
+    },
+    {
+      "name": "Playa Benge",
+      "template": null,
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ],
+      "excluded": "closed: inside Washington Slagbaai National Park, which STINAPA says remains closed for diving (https://stinapabonaire.org/bonaire-national-marine-park/)"
+    },
+    {
+      "name": "Playa Funchi",
+      "template": null,
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/"
+      ],
+      "excluded": "closed: inside Washington Slagbaai National Park, which STINAPA says remains closed for diving (https://stinapabonaire.org/bonaire-national-marine-park/)"
+    },
+    {
+      "name": "Bisé Morto",
+      "template": null,
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ],
+      "excluded": "closed: inside Washington Slagbaai National Park, which STINAPA says remains closed for diving (https://stinapabonaire.org/bonaire-national-marine-park/)"
+    },
+    {
+      "name": "Wayaka",
+      "template": null,
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/"
+      ],
+      "excluded": "closed: inside Washington Slagbaai National Park, which STINAPA says remains closed for diving (https://stinapabonaire.org/bonaire-national-marine-park/)"
+    },
+    {
+      "name": "Boka Slagbaai",
+      "template": null,
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ],
+      "excluded": "closed: inside Washington Slagbaai National Park, which STINAPA says remains closed for diving (https://stinapabonaire.org/bonaire-national-marine-park/)"
+    },
+    {
+      "name": "Nukove (Doblet)",
+      "template": "nukove-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/"
+      ]
+    },
+    {
+      "name": "Carel's Vision",
+      "template": "carels-vision-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Karpata",
+      "template": "karpata-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/",
+        "https://www.vipdiving.com/blog-article/bonaires-top-5-must-dive-sites"
+      ]
+    },
+    {
+      "name": "La Dania's Leap",
+      "template": "la-danias-leap-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Rappel",
+      "template": "rappel-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Bloodlet",
+      "template": "bloodlet-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Tolo (Ol' Blue, Boka di Tolo)",
+      "template": "tolo-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/"
+      ]
+    },
+    {
+      "name": "Country Garden",
+      "template": "country-garden-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://www.divefriendsbonaire.com/blogs/dive-friends-bonaire-staff-picks-the-best-dive-sites-in-bonaire"
+      ]
+    },
+    {
+      "name": "Bon Bini na Kas",
+      "template": null,
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "1000 Steps",
+      "template": "1000-steps-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/",
+        "https://www.vipdiving.com/blog-article/bonaires-top-5-must-dive-sites"
+      ]
+    },
+    {
+      "name": "Weber's Joy (Witch's Hut)",
+      "template": "webers-joy-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Jeff Davis Memorial",
+      "template": "jeff-davis-memorial-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Kalli's Reef",
+      "template": "kallis-reef-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Oil Slick Leap",
+      "template": "oil-slick-leap-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/"
+      ]
+    },
+    {
+      "name": "Barkadera",
+      "template": "barkadera-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Andrea II",
+      "template": "andrea-ii-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/",
+        "https://www.divefriendsbonaire.com/blogs/dive-friends-bonaire-staff-picks-the-best-dive-sites-in-bonaire"
+      ]
+    },
+    {
+      "name": "Andrea I",
+      "template": "andrea-i-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/"
+      ]
+    },
+    {
+      "name": "Petrie's Pillar",
+      "template": null,
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Small Wall",
+      "template": "small-wall-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Cliff",
+      "template": "cliff-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "La Machaca",
+      "template": "la-machaca-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Reef Scientifico",
+      "template": "reef-scientifico-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Buddy's Reef",
+      "template": "buddys-reef-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Yellow Submarine",
+      "template": null,
+      "listedBy": [
+        "https://www.divefriendsbonaire.com/blogs/dive-friends-bonaire-staff-picks-the-best-dive-sites-in-bonaire"
+      ],
+      "excluded": "on one operator list only (Dive Friends, its house reef); not on the STINAPA map"
+    },
+    {
+      "name": "Bari Reef",
+      "template": "bari-reef-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/"
+      ]
+    },
+    {
+      "name": "Front Porch",
+      "template": "front-porch-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Something Special",
+      "template": "something-special-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Town Pier",
+      "template": null,
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ],
+      "excluded": "closed: the STINAPA map marks it 'Dive site closed (ISPS Code)'"
+    },
+    {
+      "name": "Calabas Reef",
+      "template": "calabas-reef-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "18th Palm (Eighteenth Palm)",
+      "template": "eighteen-palms-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Windsock",
+      "template": "windsock-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/"
+      ]
+    },
+    {
+      "name": "Corporal Meiss (North Belnem)",
+      "template": "corporal-meiss-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Bachelor's Beach",
+      "template": "bachelors-beach-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Chez Hines",
+      "template": "chez-hines-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Lighthouse Point",
+      "template": "lighthouse-point-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Punt Vierkant",
+      "template": "punt-vierkant-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "The Lake",
+      "template": "the-lake-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Hilma Hooker",
+      "template": "hilma-hooker-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/",
+        "https://www.vipdiving.com/blog-article/bonaires-top-5-must-dive-sites"
+      ]
+    },
+    {
+      "name": "Angel City",
+      "template": "angel-city-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Alice in Wonderland",
+      "template": "alice-in-wonderland-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/"
+      ]
+    },
+    {
+      "name": "Aquarius",
+      "template": "aquarius-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Larry's Lair",
+      "template": "larrys-lair-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Jeannie's Glory",
+      "template": "jeannies-glory-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Salt Pier",
+      "template": "salt-pier-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/",
+        "https://www.divefriendsbonaire.com/blogs/dive-friends-bonaire-staff-picks-the-best-dive-sites-in-bonaire",
+        "https://www.vipdiving.com/blog-article/bonaires-top-5-must-dive-sites"
+      ]
+    },
+    {
+      "name": "Salt City (Saliña Abou)",
+      "template": "salt-city-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Invisibles",
+      "template": "invisibles-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://www.divefriendsbonaire.com/blogs/dive-friends-bonaire-staff-picks-the-best-dive-sites-in-bonaire"
+      ]
+    },
+    {
+      "name": "Tori's Reef",
+      "template": "toris-reef-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/"
+      ]
+    },
+    {
+      "name": "Pink Beach (Kabayé)",
+      "template": "pink-beach-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://www.divefriendsbonaire.com/blogs/dive-friends-bonaire-staff-picks-the-best-dive-sites-in-bonaire"
+      ]
+    },
+    {
+      "name": "White Slave",
+      "template": "white-slave-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Margate Bay",
+      "template": "margate-bay-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Red Beryl",
+      "template": "red-beryl-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Atlantis",
+      "template": "atlantis-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Vista Blue",
+      "template": "vista-blue-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Sweet Dreams",
+      "template": "sweet-dreams-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Red Slave (Peleké)",
+      "template": "red-slave-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/",
+        "https://www.divefriendsbonaire.com/blogs/dive-friends-bonaire-staff-picks-the-best-dive-sites-in-bonaire",
+        "https://www.vipdiving.com/blog-article/bonaires-top-5-must-dive-sites"
+      ]
+    },
+    {
+      "name": "Willemstoren Lighthouse",
+      "template": "willemstoren-lighthouse-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Cai",
+      "template": null,
+      "listedBy": [
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "White Hole",
+      "template": null,
+      "listedBy": [
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/"
+      ]
+    },
+    {
+      "name": "Turtle City",
+      "template": null,
+      "listedBy": ["https://buddydive.com/east-coast-diving/"],
+      "excluded": "on one operator list only (Buddy Dive's east-coast page); not on the STINAPA map"
+    },
+    {
+      "name": "No Name (Playita)",
+      "template": "no-name-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/"
+      ]
+    },
+    {
+      "name": "Ebo's Reef",
+      "template": "ebos-reef-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Jerry's Reef (Jerry's Sponges)",
+      "template": "jerrys-reef-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Just a Nice Dive",
+      "template": "just-a-nice-dive-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Nearest Point (Piedra Kolet)",
+      "template": "nearest-point-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Keepsake",
+      "template": null,
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Bonaventure",
+      "template": "bonaventure-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Monte's Divi (Monte's Divi Tree)",
+      "template": "montes-divi-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/"
+      ]
+    },
+    {
+      "name": "Rock Pile",
+      "template": "rock-pile-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Joanne's Sunchi",
+      "template": "joannes-sunchi-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Captain Don's Reef",
+      "template": "captain-dons-reef-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "South Bay",
+      "template": "south-bay-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Hands Off",
+      "template": "hands-off-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Forest",
+      "template": null,
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/",
+        "https://www.divefriendsbonaire.com/blogs/dive-friends-bonaire-staff-picks-the-best-dive-sites-in-bonaire"
+      ]
+    },
+    {
+      "name": "South West Corner",
+      "template": null,
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Munk's Haven",
+      "template": null,
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/",
+        "https://bonaireisland.com/experiences/diving/sites/"
+      ]
+    },
+    {
+      "name": "Twixt",
+      "template": null,
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg"
+      ],
+      "excluded": "on the official list only (STINAPA); no operator list names it"
+    },
+    {
+      "name": "Sharon's Serenity",
+      "template": "sharons-serenity-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Vallerie's Hill",
+      "template": null,
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg"
+      ],
+      "excluded": "on the official list only (STINAPA); no operator list names it"
+    },
+    {
+      "name": "Mi Dushi (Johanna's Revenge)",
+      "template": "mi-dushi-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Yellow Man",
+      "template": null,
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Carl's Hill (Punt P'abou)",
+      "template": "carls-hill-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Ebo's Special",
+      "template": "ebos-special-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Leonora's Reef",
+      "template": "leonoras-reef-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Knife",
+      "template": "knife-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    },
+    {
+      "name": "Sampler",
+      "template": "sampler-bonaire",
+      "listedBy": [
+        "https://stinapabonaire.org/wp-content/uploads/2026/04/STINAPA-BNMP-folder-pag.2-scaled.jpg",
+        "https://buddydive.com/wp-content/uploads/2025/08/All-Brochure-2025-26-English-ONLINE.pdf",
+        "https://beyondthecorals.com/bonaire/dive-sites/"
+      ]
+    }
+  ]
+}

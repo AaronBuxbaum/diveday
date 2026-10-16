@@ -1,5 +1,5 @@
 import type { DbExecutor } from "@/db/client";
-import { crewTipsOnBoats, tipsByDeparture } from "@/db/crew-tips";
+import { crewTipShare, tipsByDeparture } from "@/db/crew-tips";
 import { getMonthlyReport } from "@/db/reporting";
 import { type DayTakings, dayTakings } from "@/lib/closeout";
 import { summarizeMonth } from "@/lib/reporting";
@@ -45,7 +45,7 @@ export async function readDayMoney(
         })
       : null,
     reader.withTakings ? tipsByDeparture(db, shop.id, day) : [],
-    crewTipsOnBoats(db, shop.id, reader.personId, week),
+    crewTipShare(db, shop.id, reader.personId, week),
   ]);
   return { takings: report ? dayTakings(summarizeMonth(report), boatTips) : null, crewTipsCents };
 }

@@ -44,7 +44,10 @@ export { type TemplateVariant, templateBytes } from "./db-template-read";
  */
 async function inputsFingerprint(): Promise<string> {
   const hash = createHash("sha256");
-  for (const root of ["drizzle", "src/db"]) {
+  // `src/content` because the seed publishes its course and dive-site catalogs
+  // from there (seed-catalog.ts, seed-dive-site-catalog.ts): a content-only
+  // change otherwise reuses a snapshot holding the old catalog.
+  for (const root of ["drizzle", "src/db", "src/content"]) {
     const files = (await readdir(root, { recursive: true, withFileTypes: true }))
       .filter((entry) => entry.isFile())
       .map((entry) => path.join(entry.parentPath, entry.name))

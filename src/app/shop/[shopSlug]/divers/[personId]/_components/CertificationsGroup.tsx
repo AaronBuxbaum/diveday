@@ -1,11 +1,10 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { CertificationCardRow } from "@/components/person/rows";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { InsetGroup } from "@/components/ui/ledger";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { agencyCheckOffered, agencyCheckQuery } from "@/lib/agency-check";
 import {
   type CertificationCardKind,
   certificationCardRowState,
@@ -17,8 +16,6 @@ import type { DiverStatusRow } from "@/lib/diver-status";
 import { formatShortDate } from "@/lib/format";
 import { isUnsightedSelfDeclaration, needsCardSighting } from "@/lib/readiness";
 import {
-  addAgencyListedCardsAction,
-  agencyCheckAction,
   deleteCertificationAction,
   deleteSpecialtyAction,
   markCertifiedAction,
@@ -27,6 +24,7 @@ import {
 } from "../card-actions";
 import { AgencyCheckLink } from "./AgencyCheckLink";
 import { CardSightingForm } from "./CardSightingForm";
+import { agencyCheckActions, levelCardCheck, listedChecks } from "./card-checks";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { fileGap } from "./file-gap";
 import { MarkCertifiedControl } from "./MarkCertifiedControl";
@@ -119,52 +117,13 @@ function CardRow({
   );
 }
 
-/** The agency check's two actions, bound to this diver: the check, and filing the page's other cards. */
-function agencyCheckActions(shopSlug: string, personId: string) {
-  return {
-    action: agencyCheckAction.bind(null, shopSlug, personId),
-    addListed: addAgencyListedCardsAction.bind(null, shopSlug, personId),
-  };
-}
-
-/**
- * The lookup the extension would type for this card, or null when there is
- * none to offer. PADI's waits for the shop's own switch (H-121); off, the card
- * keeps its "(member sign-in)" link.
- */
-function offeredCheckQuery(
-  card: CheckedCard,
-  person: { fullName: string; dateOfBirth: string | null },
-  shop: Shop,
-) {
-  if (!agencyCheckOffered(card.agency, shop)) return null;
-  return agencyCheckQuery({
-    agency: card.agency,
-    fullName: person.fullName,
-    dateOfBirth: person.dateOfBirth,
-    identifier: card.identifier,
-  });
-}
-
-/**
- * A level card's check: the lookup, or null for a self-declared card or one
- * with none to offer, and whether the shop's switch is what keeps it off.
- */
-type CheckedCard = {
-  agency: Parameters<typeof agencyCheckQuery>[0]["agency"];
-  identifier: string | null;
-};
-
-function levelCardCheck(
-  card: CheckedCard,
-  person: { fullName: string; dateOfBirth: string | null },
-  shop: Shop,
-  selfDeclared: boolean,
-) {
-  return {
-    query: selfDeclared ? null : offeredCheckQuery(card, person, shop),
-    switchedOff: !selfDeclared && !agencyCheckOffered(card.agency, shop),
-  };
+/** What a card's mark-certified control shows: the import to confirm, the card waiting, or settled. */
+function markState(card: {
+  status: "pending" | "verified";
+  importedAt: Date | null;
+  reviewedAt: Date | null;
+}) {
+  return needsImportConfirm(card) ? "confirm" : card.status === "pending" ? "pending" : "settled";
 }
 
 /**
@@ -178,6 +137,7 @@ function PendingCardFoot({
   t,
   card,
   awaiting,
+  check,
 }: {
   t: StaffTranslator;
   card: {
@@ -186,10 +146,20 @@ function PendingCardFoot({
     agency: keyof typeof AGENCY_KEYS;
   };
   awaiting: boolean;
+  /**
+   * The agency check, for a card the extension may check (issue #2592): the
+   * link becomes a button when the extension is here. Rendered for a settled
+   * card too, so a check that just certified it keeps its Undo toast.
+   */
+  check?: ComponentProps<typeof AgencyCheckLink>["check"];
 }) {
   return (
     <>
-      {awaiting ? <AgencyCheckLink agency={card.agency} t={t} /> : null}
+      {check ? (
+        <AgencyCheckLink agency={card.agency} t={t} check={check} />
+      ) : awaiting ? (
+        <AgencyCheckLink agency={card.agency} t={t} />
+      ) : null}
       {card.listedFromCertificationId ? (
         <span className="block">
           {t("divers.certifications.listedByAgency", { agency: t(AGENCY_KEYS[card.agency]) })}
@@ -419,6 +389,7 @@ export function CertificationsGroup({
   const markCertified = markCertifiedCopy(t);
   const markCertify = markCertifiedAction.bind(null, shopSlug, personId);
   const agencyCheck = agencyCheckActions(shopSlug, personId);
+  const listed = listedChecks(diver.person, shop, agencyCheck);
   const deleteLevel = deleteCertificationAction.bind(null, shopSlug, personId);
   const deleteSpecialty = deleteSpecialtyAction.bind(null, shopSlug, personId);
   // The diver's own "I hold no card", still standing: set, never cleared by
@@ -541,13 +512,7 @@ export function CertificationsGroup({
                 action={markCertify}
                 certificationId={card.id}
                 cardType="level"
-                state={
-                  needsImportConfirm(card)
-                    ? "confirm"
-                    : card.status === "pending"
-                      ? "pending"
-                      : "settled"
-                }
+                state={markState(card)}
                 copy={markCertified}
               />
             )}
@@ -577,7 +542,12 @@ export function CertificationsGroup({
         detail={
           <>
             {card.identifier}
-            <PendingCardFoot t={t} card={card} awaiting={awaiting} />
+            <PendingCardFoot
+              t={t}
+              card={card}
+              awaiting={awaiting}
+              check={listed(card, { id: card.id, type: "specialty", kind: card.specialty })}
+            />
           </>
         }
         actions={
@@ -594,13 +564,7 @@ export function CertificationsGroup({
                 action={markCertify}
                 certificationId={card.id}
                 cardType="specialty"
-                state={
-                  needsImportConfirm(card)
-                    ? "confirm"
-                    : card.status === "pending"
-                      ? "pending"
-                      : "settled"
-                }
+                state={markState(card)}
                 copy={markCertified}
               />
             )}
@@ -634,7 +598,16 @@ export function CertificationsGroup({
                 sighted: its agency is often the "other" placeholder and its
                 title drops the agency, so a lookup link would send the staffer
                 to an agency nobody named. The sighted claim gets one. */}
-            <PendingCardFoot t={t} card={card} awaiting={awaiting && !selfDeclared} />
+            <PendingCardFoot
+              t={t}
+              card={card}
+              awaiting={awaiting && !selfDeclared}
+              check={
+                selfDeclared
+                  ? undefined
+                  : listed(card, { id: card.id, type: "nitrox", kind: "nitrox" })
+              }
+            />
           </>
         }
         actions={
@@ -652,13 +625,7 @@ export function CertificationsGroup({
                 action={markCertify}
                 certificationId={card.id}
                 cardType="nitrox"
-                state={
-                  needsImportConfirm(card)
-                    ? "confirm"
-                    : card.status === "pending"
-                      ? "pending"
-                      : "settled"
-                }
+                state={markState(card)}
                 copy={markCertified}
               />
             )}

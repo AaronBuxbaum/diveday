@@ -1,3 +1,4 @@
+import type { welcomeHello } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 
@@ -12,6 +13,19 @@ import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
  *
  * Framework-free and code-only — the words are `src/i18n/welcome-cue-labels.ts`.
  */
+/** What a first-timer chose to add to the hello (issue #2425): a fixed choice, never free text. */
+export type WelcomeHello = (typeof welcomeHello.enumValues)[number];
+
+/**
+ * The choices in the order `/ready` offers them. A tuple with a `satisfies`,
+ * like `DIVE_INTENTS`: a value here that the pgEnum lacks is a compile error.
+ */
+export const WELCOME_HELLOS = [
+  "first_ocean_dive",
+  "celebrating",
+  "nervous",
+] as const satisfies readonly WelcomeHello[];
+
 export type WelcomeCue = { kind: "first_trip" } | { kind: "returning"; years: number };
 
 /**

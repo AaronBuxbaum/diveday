@@ -2,8 +2,10 @@ import { and, asc, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
+import { seatListPriceCents } from "@/lib/deposits";
 import { seatName } from "@/lib/held-seat";
 import { log } from "@/lib/log";
+import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
@@ -15,13 +17,14 @@ import {
   staleBookingCapabilityForToken,
   verifyBookingCapability,
 } from "./booking-capabilities";
-import { tripAdmissionFor } from "./bookings";
+import { partySeatGoesWithLead, tripAdmissionFor } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
 import { recordTripActivity } from "./operations";
 import { findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
+  bookingPayments,
   bookings,
   certifications,
   courses,
@@ -541,6 +544,12 @@ export type PartySeatClaim = {
    * panel renders as the seat's name with no link rather than an error.
    */
   claim: IssuedCapability | null;
+  /**
+   * The lead may pay for this seat online (issue #2474): unclaimed, priced and
+   * not yet settled. A fact about the seat only; whether the page may charge
+   * at all (a connected shop, a lead the page trusts) is `canPayPartySeats`.
+   */
+  payable: boolean;
 };
 
 /** The party lead's own booking, joined beside each of the party's seats. */
@@ -614,10 +623,17 @@ export async function issuePartySeatClaims(
         .orderBy(desc(waiverTemplates.createdAt))
         .limit(1)})`,
       leadTripId: partyLead.tripId,
+      course: courses,
+      paymentStatus: bookingPayments.status,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .leftJoin(courses, eq(courses.id, trips.courseId))
+    .leftJoin(
+      bookingPayments,
+      and(eq(bookingPayments.bookingId, bookings.id), eq(bookingPayments.shopId, input.shopId)),
+    )
     // The seat's current waiver and no other — a superseded record is a
     // replaced one, and counting it would report a seat as signed on paperwork
     // the shop has already withdrawn.
@@ -673,10 +689,13 @@ export async function issuePartySeatClaims(
             now,
           )
         : false,
-      cancelsWithLead:
-        row.booking.status === "booked" &&
+      cancelsWithLead: partySeatGoesWithLead(row.booking) && row.booking.tripId === row.leadTripId,
+      payable:
         row.booking.claimedAt === null &&
-        row.booking.tripId === row.leadTripId,
+        row.booking.tripId === row.leadTripId &&
+        seatListPriceCents(row.trip, row.course, row.booking.participantType) !== null &&
+        !isCapturedPaymentStatus(row.paymentStatus) &&
+        row.paymentStatus !== "waived",
       claim: claims.get(row.booking.id) ?? null,
     });
   }

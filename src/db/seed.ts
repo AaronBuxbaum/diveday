@@ -84,6 +84,7 @@ import {
   reviewReplies,
   shopPromoCodes,
   shopPromoRedemptions,
+  shopShoreAlertTokens,
   shopStripeAccounts,
   shops,
   specialtyCertifications,
@@ -1655,10 +1656,21 @@ export async function resetDemoSchedule(
   // `shops.temperature_unit` rides along for the same reason: it is the second
   // half of the same settings pair and leaks exactly the same way once a spec
   // flips it.
+  // The shore contact's alert address (H-118) is the same class of leak: a
+  // spec that saves one would leave the next spec's emergency reference
+  // holding it. A demo shop never sends to it, and its links go with it.
   await db
     .update(shops)
-    .set({ reviewUrl: null, ...DEMO_SHOP_UNIT_COLUMNS })
+    .set({
+      reviewUrl: null,
+      ...DEMO_SHOP_UNIT_COLUMNS,
+      shoreAlertEmail: null,
+      shoreAlertConsentAt: null,
+      shoreAlertConsentByPersonId: null,
+      shoreAlertConfirmedAt: null,
+    })
     .where(eq(shops.id, shopId));
+  await db.delete(shopShoreAlertTokens).where(eq(shopShoreAlertTokens.shopId, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
   // ...and puts back the one connection the canonical demo is configured with:
   // its Stripe test-mode account, when the deployment names one (ADR

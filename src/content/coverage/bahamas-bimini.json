@@ -1,0 +1,143 @@
+{
+  "area": "bahamas-bimini",
+  "method": "Bimini and Cat Cay: North and South Bimini reefs, wrecks and walls on the Great Bahama Bank edge. No Bahamas National Trust dive-site list exists, so the official stand-in is the tourism list, meaning the Bahamas Ministry of Tourism (bahamas.com dive, island, blog and natural-wonders pages) together with the Bahamas Diving Association pages it co-publishes (read through the Wayback Machine, 2005-06), counted as one list: here its dive page, Bimini island page, Bimini Road and Sapona natural-wonder pages, a Bimini wildlife article and the 2006 Bahamas Diving Association Scuba Bimini feature. Operator list: Neal Watson's Bimini Scuba Center and the Bimini Big Game Club's Favorite Dive Sites page, which publishes the Scuba Center's dives, counted together as one list. Scuba Bimini and Bimini Undersea publish no readable list (biminiundersea.com now serves spam), and the liveaboards publish no readable itinerary. Tiger Beach is credited to Grand Bahama. A site counts when named, recreationally divable and on at least two independent lists. One-list names, the 140-foot-plus Continental Shelf drift, snorkel-first Honeymoon Harbour and the unnamed hammerhead site are excluded with reasons. Counted 2026-10-14.",
+  "sources": [
+    "https://www.bahamas.com/island/bimini",
+    "https://www.bahamas.com/plan-your-trip/diving",
+    "https://www.bahamas.com/natural-wonders/sapona-shipwreck",
+    "https://www.bahamas.com/natural-wonders/bimini-road",
+    "https://www.bahamas.com/blog/dive-deeper-into-wildlife-adventures",
+    "https://web.archive.org/web/20060324043526/http://www.bahamasdiving.com/6729/with_flash/html/scubabimini.html",
+    "https://biggameclubbimini.com/diving-adventure/favorite-dive-sites/",
+    "https://biggameclubbimini.com/diving-adventure/bimini-dive-safaris/",
+    "https://www.biminiscubacenter.com/reef-sharks",
+    "https://www.biminiscubacenter.com/best-of",
+    "https://www.biminiscubacenter.com/stingrays"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Bimini Road (Atlantis Road)",
+      "template": "bimini-road",
+      "listedBy": [
+        "https://www.bahamas.com/natural-wonders/bimini-road",
+        "https://biggameclubbimini.com/diving-adventure/favorite-dive-sites/"
+      ]
+    },
+    {
+      "name": "Bimini Barge",
+      "template": null,
+      "listedBy": ["https://biggameclubbimini.com/diving-adventure/favorite-dive-sites/"],
+      "excluded": "named on one list only (Big Game Club / Neal Watson's)"
+    },
+    {
+      "name": "The Strip",
+      "template": "the-strip-bimini",
+      "listedBy": [
+        "https://biggameclubbimini.com/diving-adventure/favorite-dive-sites/",
+        "https://web.archive.org/web/20060324043526/http://www.bahamasdiving.com/6729/with_flash/html/scubabimini.html"
+      ]
+    },
+    {
+      "name": "Turtle Rocks",
+      "template": null,
+      "listedBy": ["https://biggameclubbimini.com/diving-adventure/favorite-dive-sites/"],
+      "excluded": "named on one list only (Big Game Club / Neal Watson's)"
+    },
+    {
+      "name": "Triangle Rocks",
+      "template": null,
+      "listedBy": ["https://www.biminiscubacenter.com/reef-sharks"],
+      "excluded": "named on one list only (Neal Watson's)"
+    },
+    {
+      "name": "Sapona (S.S. Sapona)",
+      "template": "sapona-wreck-bimini",
+      "listedBy": [
+        "https://www.bahamas.com/natural-wonders/sapona-shipwreck",
+        "https://web.archive.org/web/20060324043526/http://www.bahamasdiving.com/6729/with_flash/html/scubabimini.html",
+        "https://biggameclubbimini.com/diving-adventure/favorite-dive-sites/",
+        "https://www.biminiscubacenter.com/reef-sharks"
+      ]
+    },
+    {
+      "name": "Coach Sugar Wreck Site (Wreck Alley)",
+      "template": null,
+      "listedBy": ["https://www.biminiscubacenter.com/best-of"],
+      "excluded": "named on one list only (Neal Watson's); the tourism list describes the wrecks without naming the site"
+    },
+    {
+      "name": "Bullards Barge Coral Nursery",
+      "template": null,
+      "listedBy": ["https://www.biminiscubacenter.com/best-of"],
+      "excluded": "named on one list only (Neal Watson's)"
+    },
+    {
+      "name": "Honeymoon Harbour",
+      "template": null,
+      "listedBy": [
+        "https://www.biminiscubacenter.com/stingrays",
+        "https://www.bahamas.com/blog/dive-deeper-into-wildlife-adventures"
+      ],
+      "excluded": "snorkel-first shallow stingray sandbar; operator sells it as snorkel only"
+    },
+    {
+      "name": "Rainbow Reef",
+      "template": null,
+      "listedBy": ["https://biggameclubbimini.com/diving-adventure/favorite-dive-sites/"],
+      "excluded": "named on one list only (Big Game Club / Neal Watson's)"
+    },
+    {
+      "name": "Moray Alley",
+      "template": "moray-alley-bimini",
+      "listedBy": [
+        "https://biggameclubbimini.com/diving-adventure/favorite-dive-sites/",
+        "https://web.archive.org/web/20060324043526/http://www.bahamasdiving.com/6729/with_flash/html/scubabimini.html"
+      ]
+    },
+    {
+      "name": "Little Caverns",
+      "template": null,
+      "listedBy": [
+        "https://biggameclubbimini.com/diving-adventure/favorite-dive-sites/",
+        "https://web.archive.org/web/20060324043526/http://www.bahamasdiving.com/6729/with_flash/html/scubabimini.html"
+      ]
+    },
+    {
+      "name": "Victory Reef (Tuna Alley, The Nodules)",
+      "template": "victory-reef-bimini",
+      "listedBy": [
+        "https://www.bahamas.com/plan-your-trip/diving",
+        "https://www.bahamas.com/island/bimini",
+        "https://web.archive.org/web/20060324043526/http://www.bahamasdiving.com/6729/with_flash/html/scubabimini.html",
+        "https://biggameclubbimini.com/diving-adventure/favorite-dive-sites/"
+      ]
+    },
+    {
+      "name": "Bimini Wall",
+      "template": null,
+      "listedBy": ["https://www.bahamas.com/plan-your-trip/diving"],
+      "excluded": "named on one list only (tourism list)"
+    },
+    {
+      "name": "Continental Shelf (drift)",
+      "template": null,
+      "listedBy": [
+        "https://biggameclubbimini.com/diving-adventure/favorite-dive-sites/",
+        "https://www.bahamas.com/island/bimini"
+      ],
+      "excluded": "technical depth; starts at 140 feet along the wall edge"
+    },
+    {
+      "name": "Hammer Headquarters (Great Hammerhead Safari site)",
+      "template": null,
+      "listedBy": [
+        "https://biggameclubbimini.com/diving-adventure/bimini-dive-safaris/",
+        "https://www.biminiscubacenter.com/reef-sharks",
+        "https://www.bahamas.com/blog/dive-deeper-into-wildlife-adventures"
+      ],
+      "excluded": "named on one list only (Neal Watson's); the tourism list describes the dive without naming the site"
+    }
+  ]
+}

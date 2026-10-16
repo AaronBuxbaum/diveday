@@ -243,35 +243,9 @@ describe("TripDayPlan's profile", () => {
     expect(screen.queryByText(/What the crew logged/)).not.toBeInTheDocument();
   });
 
-  it("ends the day on the log entry waiting after it, and closes the run over it", () => {
-    // UX review 2026-10-10, item 35: the recap's log entry is the keepsake a
-    // booking turns into, and the page selling the day never said so.
-    render(
-      <TripDayPlan
-        briefings={[briefing()]}
-        shop={SHOP}
-        locale={DEFAULT_DIVER_LOCALE}
-        nextOpensOnRule
-        logEntry={{
-          startsAt: new Date("2026-07-21T18:30:00Z"),
-          isCourse: false,
-        }}
-      />,
-    );
-    expect(screen.getByText("After you dive, your log entry is waiting for you.")).toBeVisible();
-    const preview = screen.getByTestId("log-entry-preview");
-    expect(preview).toHaveAttribute("aria-hidden", "true");
-    expect(within(preview).getByText("Dive log entry")).toBeInTheDocument();
-    expect(within(preview).getByText("French Reef")).toBeInTheDocument();
-    // Nobody has recorded anything yet: the shop's signature belongs on the
-    // real card the crew writes, never on the promise of one.
-    expect(within(preview).queryByText(/Recorded by/)).not.toBeInTheDocument();
-    // A line follows the run, so the run closes itself even over a door.
-    for (const line of lines()) expect(line).toHaveClass("last:border-b");
-  });
-
-  it("says nothing about a log entry on a day that has sailed", () => {
+  it("holds no log entry any more: it lives behind the pitch's door", () => {
     render(<TripDayPlan briefings={[briefing()]} shop={SHOP} locale={DEFAULT_DIVER_LOCALE} />);
+    expect(screen.getByText("French Reef")).toBeInTheDocument();
     expect(screen.queryByTestId("log-entry-preview")).not.toBeInTheDocument();
   });
 

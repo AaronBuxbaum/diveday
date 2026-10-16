@@ -97,6 +97,7 @@ import { pushRollCallRows } from "./today-roll-call-rows";
 import type { TodayRowsContext } from "./today-rows-context";
 import { at, shopDay } from "./today-shared";
 import { pushShopRows } from "./today-shop-rows";
+import { meetingWindowsByTrip } from "./trip-meeting-windows";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { latestTripStagesByTrip } from "./trip-stages";
 import { countShopTrips, crewClashesByTrip, listStaff } from "./trips";
@@ -358,6 +359,13 @@ export type OpenRollCall = {
    * that could mean either is exactly the wording that stops being read.
    */
   uncounted: number;
+  /**
+   * Of the people at that checkpoint, how many have no result yet: nobody has
+   * recorded them missing or back aboard. Beside `uncounted` because a
+   * missing row's `uncounted` is only the people recorded not back aboard,
+   * and the stale-roll-call alert says both numbers (EAP review on H-118).
+   */
+  awaiting: number;
   /** How many people that checkpoint was counting (see `inAfterDivePopulation`). */
   total: number;
   /**
@@ -377,6 +385,11 @@ export type OpenRollCall = {
    * or null. Optional so a gap assembled by hand says nothing about it.
    */
   alertedAt?: Date | null;
+  /**
+   * When the shop's shore contact was sent the same alert (H-118,
+   * `trips.roll_call_shore_alerted_at`), or null. Optional for the same reason.
+   */
+  shoreAlertedAt?: Date | null;
 };
 
 /**
@@ -491,6 +504,7 @@ export async function listRollCallGaps(
       priceCents: trips.priceCents,
       plannedDives: trips.plannedDives,
       alertedAt: trips.rollCallAlertedAt,
+      shoreAlertedAt: trips.rollCallShoreAlertedAt,
     })
     .from(trips)
     .where(
@@ -650,6 +664,10 @@ export async function listRollCallGaps(
         population[dive] = (population[dive] ?? 0) + 1;
         if (state !== undefined) recorded[dive] = (recorded[dive] ?? 0) + 1;
         if (isAccountedForAfterDive(state)) continue;
+        // The latest checkpoint speaks (issue #2404): "not back" after dive 1
+        // is settled by "back aboard" after a later dive, the rule
+        // `listUnaccountedForByTrip` and `homewardCheckpointGap` keep.
+        if (state === "not_boarded" && states.slice(dive + 1).includes("boarded")) continue;
         unaccounted[dive] = (unaccounted[dive] ?? 0) + 1;
         if (state === "not_boarded") notBackAboard[dive] = (notBackAboard[dive] ?? 0) + 1;
       }
@@ -686,6 +704,7 @@ export async function listRollCallGaps(
       underway,
       stale,
       alertedAt: trip.alertedAt,
+      shoreAlertedAt: trip.shoreAlertedAt,
     };
 
     // A human said a diver did not come back. That outranks every other gap on
@@ -710,6 +729,7 @@ export async function listRollCallGaps(
         reason: "missing_diver",
         diveNumber: missingDive,
         uncounted: notBackAboard[missingDive] ?? 0,
+        awaiting: (unaccounted[missingDive] ?? 0) - (notBackAboard[missingDive] ?? 0),
         total: population[missingDive] ?? 0,
       });
     } else if (openDive >= 1) {
@@ -718,6 +738,7 @@ export async function listRollCallGaps(
         reason: "after_dive_uncounted",
         diveNumber: openDive,
         uncounted: unaccounted[openDive] ?? 0,
+        awaiting: (unaccounted[openDive] ?? 0) - (notBackAboard[openDive] ?? 0),
         total: population[openDive] ?? 0,
       });
     }
@@ -738,6 +759,8 @@ export async function listRollCallGaps(
         reason: "missing_crew",
         diveNumber: crewMissingDive,
         uncounted: crewNotBackAboard[crewMissingDive] ?? 0,
+        awaiting:
+          (crewUnaccounted[crewMissingDive] ?? 0) - (crewNotBackAboard[crewMissingDive] ?? 0),
         total: crewPopulation[crewMissingDive] ?? 0,
       });
     } else if (crewOpenDive >= 1) {
@@ -746,6 +769,7 @@ export async function listRollCallGaps(
         reason: "crew_uncounted",
         diveNumber: crewOpenDive,
         uncounted: crewUnaccounted[crewOpenDive] ?? 0,
+        awaiting: (crewUnaccounted[crewOpenDive] ?? 0) - (crewNotBackAboard[crewOpenDive] ?? 0),
         total: crewPopulation[crewOpenDive] ?? 0,
       });
     }
@@ -762,6 +786,7 @@ export async function listRollCallGaps(
           reason: "no_roll_call",
           diveNumber: 0,
           uncounted: bookingIds.length,
+          awaiting: bookingIds.length,
           total: bookingIds.length,
         });
       } else if (departureAwaiting > 0) {
@@ -770,6 +795,7 @@ export async function listRollCallGaps(
           reason: "departure_uncounted",
           diveNumber: 0,
           uncounted: departureAwaiting,
+          awaiting: departureAwaiting,
           total: bookingIds.length,
         });
       }
@@ -861,7 +887,7 @@ async function standingCrewClashes(
   // The departure roll call is read here for every one of these departures,
   // not borrowed from the station reader: a boat that left more than an hour
   // ago is no longer a station, and it is the boat this question is about.
-  const [clashes, divers, crew, stages] = await Promise.all([
+  const [clashes, divers, crew, stages, meetingWindows] = await Promise.all([
     crewClashesByTrip(db, shopId, ids, now),
     listDepartureRollCallByTrip(db, shopId, ids),
     listDepartureCrewRollCallByTrip(db, shopId, ids),
@@ -870,6 +896,7 @@ async function standingCrewClashes(
       shopId,
       started.map((trip) => trip.id),
     ),
+    meetingWindowsByTrip(db, started),
   ]);
   // Out is the departure phase's own answer (`tripPhaseOf`), the rule
   // `blockedAboardOnBoatsOut` reads too: one rule, one answer. A `home` from
@@ -884,6 +911,7 @@ async function standingCrewClashes(
       timeZone,
       stage: stages.get(trip.id) ?? null,
       cancelled: false,
+      meetingWindows: meetingWindows.get(trip.id),
     }) === "aboard";
   return {
     clashes,
@@ -1085,11 +1113,14 @@ async function blockedAboardOnBoatsOut(
   // blocked divers come through the ordinary path with `aboard` set there.
   const candidates = sailed.filter((trip) => !inWindowTripIds.has(trip.id));
   if (candidates.length === 0) return { out: [], blocked: [] };
-  const stages = await latestTripStagesByTrip(
-    db,
-    shopId,
-    candidates.map((trip) => trip.id),
-  );
+  const [stages, meetingWindows] = await Promise.all([
+    latestTripStagesByTrip(
+      db,
+      shopId,
+      candidates.map((trip) => trip.id),
+    ),
+    meetingWindowsByTrip(db, candidates),
+  ]);
   const byClock = candidates.filter(
     (trip) =>
       tripPhaseOf({
@@ -1098,6 +1129,7 @@ async function blockedAboardOnBoatsOut(
         now,
         timeZone,
         stage: stages.get(trip.id) ?? null,
+        meetingWindows: meetingWindows.get(trip.id),
         // Deliberately the scheduled reading even for a cancelled row: the
         // question is whether the boat is on the water, and the roll call
         // below decides whether a cancelled one ever left.
@@ -1219,7 +1251,9 @@ async function departureCardFacts(db: AppDb, shopId: string, trips: readonly Dep
     );
   }
 
-  return { diveIntents, boatNames, crewByTrip };
+  // Only a multi-day run reads its windows (no query for a single sailing).
+  const meetingWindows = await meetingWindowsByTrip(db, trips);
+  return { diveIntents, boatNames, crewByTrip, meetingWindows };
 }
 
 type DepartureCardInputs = Awaited<ReturnType<typeof departureCardFacts>> & {
@@ -1227,6 +1261,7 @@ type DepartureCardInputs = Awaited<ReturnType<typeof departureCardFacts>> & {
   departureRollCall: Awaited<ReturnType<typeof listDepartureRollCallByTrip>>;
   departureCrewRollCall: Awaited<ReturnType<typeof listDepartureCrewRollCallByTrip>>;
   stagesByTrip: Awaited<ReturnType<typeof latestTripStagesByTrip>>;
+  meetingWindows: Awaited<ReturnType<typeof meetingWindowsByTrip>>;
 };
 
 /** One shop-day's departure cards, from facts already read. No queries. */
@@ -1244,6 +1279,7 @@ function summarizeDepartures(
     diveIntents,
     boatNames,
     crewByTrip,
+    meetingWindows,
   } = inputs;
   return trips.map((trip) => {
     const rows = readinessByTrip.get(trip.id) ?? [];
@@ -1318,6 +1354,7 @@ function summarizeDepartures(
         timeZone,
         stage: stagesByTrip.get(trip.id) ?? null,
         cancelled: false,
+        meetingWindows: meetingWindows.get(trip.id),
       }),
       // Absent from the map means nobody aboard answered, and an empty tally is
       // what makes the station render no line at all.
@@ -1564,7 +1601,7 @@ async function readTodayWave(
     helpRequests,
     rawStaff,
     credentialRows,
-    { diveIntents, boatNames, crewByTrip },
+    { diveIntents, boatNames, crewByTrip, meetingWindows },
     boatsOut,
     opsAlerts,
     reviewsAwaiting,
@@ -1754,6 +1791,7 @@ async function readTodayWave(
     diveIntents,
     boatNames,
     crewByTrip,
+    meetingWindows,
     boatsOut,
     opsAlerts,
     reviewsAwaiting,
@@ -1906,6 +1944,7 @@ export async function getTodayWork(
     diveIntents,
     boatNames,
     crewByTrip,
+    meetingWindows,
     boatsOut,
     shopUnits,
     crewedAssignments,
@@ -2014,6 +2053,7 @@ export async function getTodayWork(
       diveIntents,
       boatNames,
       crewByTrip,
+      meetingWindows,
     },
     now,
     timeZone,

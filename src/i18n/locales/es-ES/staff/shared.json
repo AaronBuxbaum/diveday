@@ -278,6 +278,7 @@
     "divers": "Buceadores",
     "inbox": "Mensajes",
     "money": "Dinero",
+    "safety": "Seguridad",
     "courses": "Cursos",
     "gear": "Equipo",
     "settings": "Ajustes",
@@ -409,7 +410,8 @@
       },
       "checklist": {
         "heading": "Antes de salir del muelle",
-        "checkedLabel": "Verificado — presiona para quitar la marca",
+        "checkedLabel": "Verificado — presiona dos veces para quitar la marca",
+        "confirmClear": "Presiona otra vez para quitar la marca",
         "uncheckedLabel": "Sin verificar — presiona para marcarlo"
       },
       "counter": {
@@ -485,7 +487,9 @@
   "buddyTeam": {
     "with": "Pareja: {names}",
     "separatedDock": "Compañero aún no a bordo",
-    "separatedAfterDive": "Compañero sin regresar a bordo"
+    "separatedAfterDive": "Compañero sin regresar a bordo",
+    "separatedDockNamed": "{name} aún no a bordo",
+    "separatedAfterDiveNamed": "{name} sin regresar a bordo"
   },
   "payments": {
     "connect": "Conectar pagos"
@@ -525,7 +529,12 @@
     "returning": "de vuelta tras {years, plural, one {# año} other {# años}}",
     "dockLine": "Saluda a {name}: {card}.",
     "dockLineNoCard": "Saluda a {name}.",
-    "dockLineSays": "Saluda a {name}: dice {level}."
+    "dockLineSays": "Saluda a {name}: dice {level}.",
+    "hello": {
+      "firstOceanDive": "Su primera inmersión en mar abierto.",
+      "celebrating": "Celebra algo.",
+      "nervous": "Con algo de nervios."
+    }
   },
   "diveIntent": {
     "onTheList": "En la lista de hoy: {list}",
@@ -593,6 +602,7 @@
     "paid": "Pago de {amount} a tu banco el {date}, por lo cobrado del {from} al {to}",
     "paidOneDay": "Pago de {amount} a tu banco el {date}, por lo cobrado el {from}",
     "paidNoSpan": "Pago de {amount} a tu banco el {date}",
+    "canceled": "Se canceló un pago de {amount} previsto para el {date}.",
     "failed": "Falló un pago de {amount} previsto para el {date}. Revisa la cuenta bancaria en Stripe."
   }
 }

@@ -39,7 +39,11 @@ import { sendAndRecordNotification } from "./notifications";
 import { paymentsByBooking } from "./payments";
 import { queryAll } from "./query-helpers";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
-import { refundBookingOnShopCancellation, shopCancellationPaymentStory } from "./refunds";
+import {
+  queueBookingRefundOnShopCancellation,
+  refundBookingOnShopCancellation,
+  shopCancellationPaymentStory,
+} from "./refunds";
 import type { BlowoutCause, BlowoutMessageStatus, PaymentStatus } from "./schema";
 import {
   bookings,
@@ -111,6 +115,15 @@ export type CallBlowoutOutcome =
       reason: "not_found" | "trip_departed" | "failed";
     };
 
+/**
+ * What happens to the money when a call-off cancels paid seats (H-123).
+ * `release` sends the card captures back at once; `queue` leaves them captured
+ * for a refund holder to release, because the person who called it off may not
+ * move money (`canRefund`, H-14). A system caller (the head-count sweep) is
+ * never a person with a role and releases.
+ */
+export type BlowoutRefundMode = "release" | "queue";
+
 export type CallBlowoutInput = {
   shopId: string;
   tripId: string;
@@ -124,6 +137,8 @@ export type CallBlowoutInput = {
    * cancelled keeps the cause the call was made with.
    */
   cause?: BlowoutCause;
+  /** Whether the refunds go back now or wait for a refund holder. Release unless said. */
+  refunds?: BlowoutRefundMode;
   /** Injectable for tests; defaults to the environment-configured provider. */
   provider?: NotificationProvider;
   /** Injectable for tests; defaults to the environment-configured Stripe seam. */
@@ -287,6 +302,7 @@ async function finishTripBlowout(
     now,
     provider: input.provider,
     checkout: input.checkout,
+    refunds: input.refunds,
     alsoCalled,
   });
 
@@ -588,6 +604,7 @@ async function sendPendingBlowoutMessages(
     now: Date;
     provider?: NotificationProvider;
     checkout?: CheckoutProvider;
+    refunds?: BlowoutRefundMode;
     /** Sister departures canceled by the same day call; never offered. */
     alsoCalled?: readonly string[];
   },
@@ -655,11 +672,17 @@ async function sendPendingBlowoutMessages(
       // one diver is refunded once; a booking already `refunded` reads back as
       // `unpaid` and no second reversal is attempted, which is what makes a
       // resume safe (ADR 20260813-shop-cancellation-refunds-itself).
-      const refund = await refundBookingOnShopCancellation(
-        db,
-        { shopId: input.shopId, bookingId: row.diver.bookingId },
-        input.checkout,
-      );
+      const refund =
+        input.refunds === "queue"
+          ? await queueBookingRefundOnShopCancellation(db, {
+              shopId: input.shopId,
+              bookingId: row.diver.bookingId,
+            })
+          : await refundBookingOnShopCancellation(
+              db,
+              { shopId: input.shopId, bookingId: row.diver.bookingId },
+              input.checkout,
+            );
       // The diver's other active seats — never offer a boat they're already on.
       const activeSeats = await db
         .select({ tripId: bookings.tripId })

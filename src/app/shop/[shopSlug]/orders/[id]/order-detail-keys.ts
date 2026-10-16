@@ -51,5 +51,6 @@ export const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }>
     key: "orders.detail.notice.refundNeedsReconciliation",
   },
   "not-authorized": { tone: "danger", key: "orders.detail.notice.notAuthorized" },
+  "dispute-not-authorized": { tone: "danger", key: "orders.detail.notice.disputeNotAuthorized" },
   "demo-disabled": { tone: "neutral", key: "orders.detail.notice.demoDisabled" },
 };

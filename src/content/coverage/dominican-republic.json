@@ -1,0 +1,858 @@
+{
+  "area": "dominican-republic",
+  "method": "Whole country, with the dive centers' coverage running east to west and around to the north: Sosúa/Cabarete, Samaná/Las Galeras, Punta Cana/Bávaro, Bayahibe with Parque Nacional del Este (Cotubanamá) and Catalina and Saona islands, then La Caleta/Boca Chica and Juan Dolio. No official marine-park, mooring or Ministerio de Medio Ambiente dive-site list was found (searched in Spanish and English; Fundemar and the park pages publish none), so the Ministry of Tourism's own site pages (godominicanrepublic.com, one list) stood in for the official list at Sosúa, La Caleta and Boca Chica. Operator lists read: Scuba Dive Sosua, Dive Cabarete, Sosua Diving Center, Superior Dive Sosua, Las Galeras Divers (through the Wayback Machine, 2025 snapshot), Ozeanic Caribbean (Samaná town), Dressel Divers, Grand Bay of the Sea, ScubaCaribe, Pro Dive International, Coral Point Diving, Go Dive Bayahibe, ScubaFun, Dominican Divers, Ultra Marine Divers, Caribbean Divers Boca Chica and Aquatrack (Santo Domingo, which lists sites across the country). A site is counted when named on at least two of these independent lists (each operator once, the Ministry of Tourism once); everything else keeps its row with the reason. Operator lists that were not readable (Reef Oasis, SeaPro, Treasure Divers, Ocean Diving, Dolin, Scubaquatic) were not counted. Caves (Padre Nuestro, El Chicho, Cueva Taína, Cueva de Chopa) are excluded as beyond the cavern zone, Don Quico as technical depth, and the Silver Bank and Monte Cristi whale and archaeological trips as snorkel-only or permit-only. Saint George (about 40 m top-to-bottom, mostly dived at 25 to 35 m) and Piedra Bonita (a pinnacle dived at 7 to 25 m) are counted as recreational because every operator sells them to Advanced Open Water divers. Pro Dive's list pools Bavaro, Bayahibe and Saona sites without a heading, so its Saona items were assigned by the names. No list gave coordinates, so no positions are recorded. Counted 2026-10-14.",
+  "sources": [
+    "https://scubadivesosua.com/dive-sites",
+    "https://www.divecabarete.com/dive-sites",
+    "https://sosuadivingcenter.com/scuba-diving-excursions/",
+    "https://superiordivesosua.com/diving-dominican-republic-dive-sites-sosua/",
+    "https://www.godominicanrepublic.com/things-to-do/airport-wall",
+    "http://aqua-track.com/english/diving/sites.html",
+    "https://www.divecabarete.com/fun-dives",
+    "https://web.archive.org/web/20250119103600/http://www.las-galeras-divers.com/us/diving-spots.html",
+    "https://gosamana-dominicanrepublic.com/scuba-diving-center-dive-shop-samana-town-bay-dominican-republic-H2O-ozeanic-caribbean.html",
+    "https://www.dresseldivers.com/dive/dominican-republic/punta-cana-scuba-diving/",
+    "https://www.grandbay-puntacana.com/sites",
+    "https://www.scubacaribe.com/diving/dominican-republic/punta-cana/",
+    "https://www.prodiveinternational.com/fr/dive-site/",
+    "https://www.dominicandivers.com/dive-sites",
+    "https://www.coralpointdiving.com/En/divesite.html",
+    "https://godivebayahibe.com/dive-sites-bayahibe/",
+    "https://www.scubacaribe.com/diving/dominican-republic/bayahibe/",
+    "https://scubafun.info/en/diving.html",
+    "https://www.ultramarinedivers.com/",
+    "https://prodiveinternational.com/diving/dominican-republic/bayahibe/local-diving/",
+    "https://www.godominicanrepublic.com/things-to-do/parque-nacional-submarino-la-caleta",
+    "https://www.godominicanrepublic.com/things-to-do/diving-in-boca-chica",
+    "https://www.caribbeandivers.de/en/tauchplätze"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Airport Wall (Airport Wall / Elephant)",
+      "template": "airport-wall-sosua",
+      "listedBy": [
+        "https://scubadivesosua.com/dive-sites",
+        "https://www.divecabarete.com/dive-sites",
+        "https://sosuadivingcenter.com/scuba-diving-excursions/",
+        "https://superiordivesosua.com/diving-dominican-republic-dive-sites-sosua/",
+        "https://www.godominicanrepublic.com/things-to-do/airport-wall",
+        "http://aqua-track.com/english/diving/sites.html"
+      ]
+    },
+    {
+      "name": "Elephant (Elephante)",
+      "template": null,
+      "listedBy": [
+        "https://www.divecabarete.com/fun-dives",
+        "https://sosuadivingcenter.com/scuba-diving-excursions/",
+        "https://superiordivesosua.com/diving-dominican-republic-dive-sites-sosua/"
+      ]
+    },
+    {
+      "name": "Three Rocks (3 Rocks)",
+      "template": "three-rocks-sosua",
+      "listedBy": [
+        "https://scubadivesosua.com/dive-sites",
+        "https://www.divecabarete.com/dive-sites",
+        "https://sosuadivingcenter.com/scuba-diving-excursions/",
+        "https://superiordivesosua.com/diving-dominican-republic-dive-sites-sosua/"
+      ]
+    },
+    {
+      "name": "Coral Gardens (Coral Garden, Coral Garden Wall)",
+      "template": "coral-gardens-sosua",
+      "listedBy": [
+        "https://scubadivesosua.com/dive-sites",
+        "https://www.divecabarete.com/dive-sites",
+        "https://sosuadivingcenter.com/scuba-diving-excursions/",
+        "https://superiordivesosua.com/diving-dominican-republic-dive-sites-sosua/"
+      ]
+    },
+    {
+      "name": "Canyon (Rob's Rock)",
+      "template": "canyon-sosua",
+      "listedBy": [
+        "https://scubadivesosua.com/dive-sites",
+        "https://www.divecabarete.com/dive-sites",
+        "https://sosuadivingcenter.com/scuba-diving-excursions/",
+        "https://superiordivesosua.com/diving-dominican-republic-dive-sites-sosua/"
+      ]
+    },
+    {
+      "name": "La Puntilla (West Wall cannons)",
+      "template": "la-puntilla-sosua",
+      "listedBy": [
+        "https://scubadivesosua.com/dive-sites",
+        "https://www.divecabarete.com/dive-sites",
+        "https://sosuadivingcenter.com/scuba-diving-excursions/",
+        "https://superiordivesosua.com/diving-dominican-republic-dive-sites-sosua/"
+      ]
+    },
+    {
+      "name": "West Wall",
+      "template": "west-wall-sosua",
+      "listedBy": [
+        "https://www.divecabarete.com/dive-sites",
+        "https://sosuadivingcenter.com/scuba-diving-excursions/",
+        "https://superiordivesosua.com/diving-dominican-republic-dive-sites-sosua/"
+      ]
+    },
+    {
+      "name": "Deep Wall",
+      "template": null,
+      "listedBy": [
+        "https://www.divecabarete.com/dive-sites",
+        "https://sosuadivingcenter.com/scuba-diving-excursions/",
+        "https://superiordivesosua.com/diving-dominican-republic-dive-sites-sosua/"
+      ]
+    },
+    {
+      "name": "Mini Wall",
+      "template": null,
+      "listedBy": [
+        "https://sosuadivingcenter.com/scuba-diving-excursions/",
+        "https://superiordivesosua.com/diving-dominican-republic-dive-sites-sosua/"
+      ]
+    },
+    {
+      "name": "Palmeras (Palmera)",
+      "template": null,
+      "listedBy": [
+        "https://www.divecabarete.com/dive-sites",
+        "https://sosuadivingcenter.com/scuba-diving-excursions/",
+        "https://superiordivesosua.com/diving-dominican-republic-dive-sites-sosua/"
+      ]
+    },
+    {
+      "name": "Pyramids (Piramid)",
+      "template": null,
+      "listedBy": [
+        "https://sosuadivingcenter.com/scuba-diving-excursions/",
+        "https://superiordivesosua.com/diving-dominican-republic-dive-sites-sosua/"
+      ]
+    },
+    {
+      "name": "Larimar I and II",
+      "template": "larimar-sosua",
+      "listedBy": [
+        "https://sosuadivingcenter.com/scuba-diving-excursions/",
+        "https://superiordivesosua.com/diving-dominican-republic-dive-sites-sosua/"
+      ]
+    },
+    {
+      "name": "Ray Point (Chiquita Reef)",
+      "template": "ray-point-sosua",
+      "listedBy": [
+        "https://sosuadivingcenter.com/scuba-diving-excursions/",
+        "https://superiordivesosua.com/diving-dominican-republic-dive-sites-sosua/",
+        "http://aqua-track.com/english/diving/sites.html"
+      ]
+    },
+    {
+      "name": "Zingara Wreck",
+      "template": "zingara-wreck-sosua",
+      "listedBy": [
+        "https://scubadivesosua.com/dive-sites",
+        "https://www.divecabarete.com/dive-sites",
+        "https://sosuadivingcenter.com/scuba-diving-excursions/",
+        "https://superiordivesosua.com/diving-dominican-republic-dive-sites-sosua/"
+      ]
+    },
+    {
+      "name": "Five Rocks",
+      "template": null,
+      "listedBy": ["https://superiordivesosua.com/diving-dominican-republic-dive-sites-sosua/"],
+      "excluded": "on one list only (Superior Dive Sosua)"
+    },
+    {
+      "name": "Miguelina wreck",
+      "template": null,
+      "listedBy": ["https://superiordivesosua.com/diving-dominican-republic-dive-sites-sosua/"],
+      "excluded": "on one list only (Superior Dive Sosua; named only as an alternative to the Canyon wall)"
+    },
+    {
+      "name": "Piedra Bonita (The Tower), Cabo Cabrón",
+      "template": "piedra-bonita-cabo-cabron",
+      "listedBy": [
+        "https://web.archive.org/web/20250119103600/http://www.las-galeras-divers.com/us/diving-spots.html",
+        "https://gosamana-dominicanrepublic.com/scuba-diving-center-dive-shop-samana-town-bay-dominican-republic-H2O-ozeanic-caribbean.html"
+      ]
+    },
+    {
+      "name": "Tibisi 1 and 2 (Cabo Cabrón)",
+      "template": "tibisi-cabo-cabron",
+      "listedBy": [
+        "https://web.archive.org/web/20250119103600/http://www.las-galeras-divers.com/us/diving-spots.html",
+        "https://gosamana-dominicanrepublic.com/scuba-diving-center-dive-shop-samana-town-bay-dominican-republic-H2O-ozeanic-caribbean.html"
+      ]
+    },
+    {
+      "name": "Cueva de Chopa",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20250119103600/http://www.las-galeras-divers.com/us/diving-spots.html"
+      ],
+      "excluded": "cave beyond the cavern zone (entrance at about 23 m, inside the collapsed cliff), and on one list only (Las Galeras Divers)"
+    },
+    {
+      "name": "Puerto Malo",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20250119103600/http://www.las-galeras-divers.com/us/diving-spots.html"
+      ],
+      "excluded": "on one list only (Las Galeras Divers)"
+    },
+    {
+      "name": "La Laguna",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20250119103600/http://www.las-galeras-divers.com/us/diving-spots.html"
+      ],
+      "excluded": "on one list only (Las Galeras Divers)"
+    },
+    {
+      "name": "La Herradura",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20250119103600/http://www.las-galeras-divers.com/us/diving-spots.html"
+      ],
+      "excluded": "on one list only (Las Galeras Divers)"
+    },
+    {
+      "name": "Playita (Las Galeras)",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20250119103600/http://www.las-galeras-divers.com/us/diving-spots.html"
+      ],
+      "excluded": "on one list only (Las Galeras Divers)"
+    },
+    {
+      "name": "Coral Garden (Las Galeras)",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20250119103600/http://www.las-galeras-divers.com/us/diving-spots.html"
+      ],
+      "excluded": "on one list only (Las Galeras Divers)"
+    },
+    {
+      "name": "Barco Hundido (Las Galeras)",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20250119103600/http://www.las-galeras-divers.com/us/diving-spots.html"
+      ],
+      "excluded": "on one list only (Las Galeras Divers)"
+    },
+    {
+      "name": "Fronton",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20250119103600/http://www.las-galeras-divers.com/us/diving-spots.html"
+      ],
+      "excluded": "on one list only (Las Galeras Divers)"
+    },
+    {
+      "name": "Los Carriles 1",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20250119103600/http://www.las-galeras-divers.com/us/diving-spots.html"
+      ],
+      "excluded": "on one list only (Las Galeras Divers)"
+    },
+    {
+      "name": "Wall La Farola (Cayo La Farola)",
+      "template": null,
+      "listedBy": [
+        "https://gosamana-dominicanrepublic.com/scuba-diving-center-dive-shop-samana-town-bay-dominican-republic-H2O-ozeanic-caribbean.html"
+      ],
+      "excluded": "on one list only (Ozeanic Caribbean, Samaná town)"
+    },
+    {
+      "name": "Ferry Wreck (Samaná Bay)",
+      "template": null,
+      "listedBy": [
+        "https://gosamana-dominicanrepublic.com/scuba-diving-center-dive-shop-samana-town-bay-dominican-republic-H2O-ozeanic-caribbean.html"
+      ],
+      "excluded": "on one list only (Ozeanic Caribbean, Samaná town)"
+    },
+    {
+      "name": "Barco Monika (Samaná)",
+      "template": null,
+      "listedBy": [
+        "https://gosamana-dominicanrepublic.com/scuba-diving-center-dive-shop-samana-town-bay-dominican-republic-H2O-ozeanic-caribbean.html"
+      ],
+      "excluded": "on one list only (Ozeanic Caribbean, Samaná town)"
+    },
+    {
+      "name": "Silver Bank and Samaná Bay humpback whale trips",
+      "template": null,
+      "listedBy": ["http://aqua-track.com/english/diving/sites.html"],
+      "excluded": "snorkel-only whale-watching trips, not a scuba site"
+    },
+    {
+      "name": "Astron Wreck",
+      "template": "astron-wreck-punta-cana",
+      "listedBy": [
+        "https://www.dresseldivers.com/dive/dominican-republic/punta-cana-scuba-diving/",
+        "https://www.grandbay-puntacana.com/sites",
+        "https://www.scubacaribe.com/diving/dominican-republic/punta-cana/",
+        "https://www.prodiveinternational.com/fr/dive-site/",
+        "http://aqua-track.com/english/diving/sites.html"
+      ]
+    },
+    {
+      "name": "Monica Wreck",
+      "template": "monica-wreck-punta-cana",
+      "listedBy": [
+        "https://www.grandbay-puntacana.com/sites",
+        "https://www.scubacaribe.com/diving/dominican-republic/punta-cana/",
+        "https://www.prodiveinternational.com/fr/dive-site/",
+        "http://aqua-track.com/english/diving/sites.html"
+      ]
+    },
+    {
+      "name": "Park Reef",
+      "template": "park-reef-punta-cana",
+      "listedBy": [
+        "https://www.dresseldivers.com/dive/dominican-republic/punta-cana-scuba-diving/",
+        "https://www.grandbay-puntacana.com/sites",
+        "https://www.prodiveinternational.com/fr/dive-site/"
+      ]
+    },
+    {
+      "name": "Cuevitas",
+      "template": "cuevitas-punta-cana",
+      "listedBy": [
+        "https://www.dresseldivers.com/dive/dominican-republic/punta-cana-scuba-diving/",
+        "https://www.grandbay-puntacana.com/sites",
+        "https://www.scubacaribe.com/diving/dominican-republic/punta-cana/",
+        "https://www.prodiveinternational.com/fr/dive-site/"
+      ]
+    },
+    {
+      "name": "Rondana",
+      "template": "rondana-punta-cana",
+      "listedBy": [
+        "https://www.dresseldivers.com/dive/dominican-republic/punta-cana-scuba-diving/",
+        "https://www.prodiveinternational.com/fr/dive-site/"
+      ]
+    },
+    {
+      "name": "Coral Garden (Punta Cana)",
+      "template": "coral-garden-punta-cana",
+      "listedBy": [
+        "https://www.dresseldivers.com/dive/dominican-republic/punta-cana-scuba-diving/",
+        "https://www.scubacaribe.com/diving/dominican-republic/punta-cana/"
+      ]
+    },
+    {
+      "name": "Shark Point (Cabeza de Toro)",
+      "template": null,
+      "listedBy": [
+        "https://www.grandbay-puntacana.com/sites",
+        "https://www.dominicandivers.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Coco Loco Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.dresseldivers.com/dive/dominican-republic/punta-cana-scuba-diving/"
+      ],
+      "excluded": "on one list only (Dressel Divers)"
+    },
+    {
+      "name": "Cristino's Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.dresseldivers.com/dive/dominican-republic/punta-cana-scuba-diving/"
+      ],
+      "excluded": "on one list only (Dressel Divers)"
+    },
+    {
+      "name": "Edward's Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.dresseldivers.com/dive/dominican-republic/punta-cana-scuba-diving/"
+      ],
+      "excluded": "on one list only (Dressel Divers)"
+    },
+    {
+      "name": "Chorizo",
+      "template": null,
+      "listedBy": [
+        "https://www.dresseldivers.com/dive/dominican-republic/punta-cana-scuba-diving/"
+      ],
+      "excluded": "on one list only (Dressel Divers)"
+    },
+    {
+      "name": "Paradise Reef",
+      "template": null,
+      "listedBy": ["https://www.prodiveinternational.com/fr/dive-site/"],
+      "excluded": "on one list only (Pro Dive International)"
+    },
+    {
+      "name": "Patato (Batato)",
+      "template": null,
+      "listedBy": ["https://www.prodiveinternational.com/fr/dive-site/"],
+      "excluded": "on one list only (Pro Dive International)"
+    },
+    {
+      "name": "Tunnel Reef",
+      "template": null,
+      "listedBy": ["https://www.prodiveinternational.com/fr/dive-site/"],
+      "excluded": "on one list only (Pro Dive International)"
+    },
+    {
+      "name": "La Taberna",
+      "template": null,
+      "listedBy": ["https://www.prodiveinternational.com/fr/dive-site/"],
+      "excluded": "on one list only (Pro Dive International)"
+    },
+    {
+      "name": "The Submarine",
+      "template": null,
+      "listedBy": ["https://www.grandbay-puntacana.com/sites"],
+      "excluded": "on one list only (Grand Bay of the Sea)"
+    },
+    {
+      "name": "Anchor (Monica anchor chain)",
+      "template": null,
+      "listedBy": ["https://www.grandbay-puntacana.com/sites"],
+      "excluded": "on one list only (Grand Bay of the Sea)"
+    },
+    {
+      "name": "Rock City",
+      "template": null,
+      "listedBy": ["https://www.grandbay-puntacana.com/sites"],
+      "excluded": "on one list only (Grand Bay of the Sea)"
+    },
+    {
+      "name": "Finger Coral Plantation",
+      "template": null,
+      "listedBy": ["https://www.grandbay-puntacana.com/sites"],
+      "excluded": "on one list only (Grand Bay of the Sea)"
+    },
+    {
+      "name": "El Niño",
+      "template": null,
+      "listedBy": ["https://www.grandbay-puntacana.com/sites"],
+      "excluded": "on one list only (Grand Bay of the Sea)"
+    },
+    {
+      "name": "Macao Rock",
+      "template": null,
+      "listedBy": ["http://aqua-track.com/english/diving/sites.html"],
+      "excluded": "on one list only (Aquatrack)"
+    },
+    {
+      "name": "Macao cave",
+      "template": null,
+      "listedBy": ["http://aqua-track.com/english/diving/sites.html"],
+      "excluded": "cave dive, not a recreational site"
+    },
+    {
+      "name": "Atlantic Princess Wreck",
+      "template": "atlantic-princess-wreck-bayahibe",
+      "listedBy": [
+        "https://www.coralpointdiving.com/En/divesite.html",
+        "https://godivebayahibe.com/dive-sites-bayahibe/",
+        "https://www.scubacaribe.com/diving/dominican-republic/bayahibe/",
+        "https://www.prodiveinternational.com/fr/dive-site/",
+        "https://www.dominicandivers.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Saint George Wreck",
+      "template": "saint-george-wreck-bayahibe",
+      "listedBy": [
+        "https://www.coralpointdiving.com/En/divesite.html",
+        "https://godivebayahibe.com/dive-sites-bayahibe/",
+        "https://scubafun.info/en/diving.html",
+        "https://www.scubacaribe.com/diving/dominican-republic/bayahibe/",
+        "https://www.prodiveinternational.com/fr/dive-site/",
+        "https://www.dominicandivers.com/dive-sites",
+        "http://aqua-track.com/english/diving/sites.html",
+        "https://www.ultramarinedivers.com/"
+      ]
+    },
+    {
+      "name": "Viva Shallow",
+      "template": "viva-shallow-bayahibe",
+      "listedBy": [
+        "https://www.coralpointdiving.com/En/divesite.html",
+        "https://godivebayahibe.com/dive-sites-bayahibe/",
+        "https://www.prodiveinternational.com/fr/dive-site/",
+        "https://www.dominicandivers.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Dominicus Reef",
+      "template": "dominicus-reef-bayahibe",
+      "listedBy": [
+        "https://www.coralpointdiving.com/En/divesite.html",
+        "https://www.prodiveinternational.com/fr/dive-site/",
+        "https://www.dominicandivers.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Peñón (El Peñón I, II and III)",
+      "template": "el-penon-bayahibe",
+      "listedBy": [
+        "https://www.coralpointdiving.com/En/divesite.html",
+        "https://godivebayahibe.com/dive-sites-bayahibe/",
+        "https://scubafun.info/en/diving.html",
+        "https://www.prodiveinternational.com/fr/dive-site/",
+        "https://www.dominicandivers.com/dive-sites",
+        "http://aqua-track.com/english/diving/sites.html"
+      ]
+    },
+    {
+      "name": "Guaraguao (I and II)",
+      "template": "guaraguao-bayahibe",
+      "listedBy": [
+        "https://www.coralpointdiving.com/En/divesite.html",
+        "https://www.dominicandivers.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Tortuga (La Tortuga)",
+      "template": null,
+      "listedBy": [
+        "https://www.coralpointdiving.com/En/divesite.html",
+        "https://www.prodiveinternational.com/fr/dive-site/"
+      ]
+    },
+    {
+      "name": "Coca Wreck (Coco Wreck)",
+      "template": null,
+      "listedBy": [
+        "https://www.coralpointdiving.com/En/divesite.html",
+        "https://www.scubacaribe.com/diving/dominican-republic/bayahibe/",
+        "https://prodiveinternational.com/diving/dominican-republic/bayahibe/local-diving/"
+      ]
+    },
+    {
+      "name": "Coral Nursery (Coco Reef)",
+      "template": "coral-nursery-bayahibe",
+      "listedBy": [
+        "https://godivebayahibe.com/dive-sites-bayahibe/",
+        "https://prodiveinternational.com/diving/dominican-republic/bayahibe/local-diving/"
+      ]
+    },
+    {
+      "name": "La Playita (Playta)",
+      "template": "la-playita-bayahibe",
+      "listedBy": [
+        "https://godivebayahibe.com/dive-sites-bayahibe/",
+        "https://www.prodiveinternational.com/fr/dive-site/"
+      ]
+    },
+    {
+      "name": "Catalina Wall (The Wall)",
+      "template": "catalina-wall",
+      "listedBy": [
+        "https://www.coralpointdiving.com/En/divesite.html",
+        "https://www.scubacaribe.com/diving/dominican-republic/bayahibe/",
+        "https://www.prodiveinternational.com/fr/dive-site/",
+        "http://aqua-track.com/english/diving/sites.html",
+        "https://www.dominicandivers.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Catalina Aquarium",
+      "template": "catalina-aquarium",
+      "listedBy": [
+        "https://www.coralpointdiving.com/En/divesite.html",
+        "https://www.scubacaribe.com/diving/dominican-republic/bayahibe/",
+        "https://www.prodiveinternational.com/fr/dive-site/",
+        "http://aqua-track.com/english/diving/sites.html"
+      ]
+    },
+    {
+      "name": "Shark Point (Saona)",
+      "template": null,
+      "listedBy": [
+        "https://www.prodiveinternational.com/fr/dive-site/",
+        "http://aqua-track.com/english/diving/sites.html"
+      ]
+    },
+    {
+      "name": "Lucas Reef",
+      "template": null,
+      "listedBy": ["https://www.coralpointdiving.com/En/divesite.html"],
+      "excluded": "on one list only (Coral Point Diving)"
+    },
+    {
+      "name": "Matthew's wreck (Dragon Smoke)",
+      "template": null,
+      "listedBy": ["https://www.coralpointdiving.com/En/divesite.html"],
+      "excluded": "on one list only (Coral Point Diving)"
+    },
+    {
+      "name": "Manny's Reef",
+      "template": null,
+      "listedBy": ["https://www.coralpointdiving.com/En/divesite.html"],
+      "excluded": "on one list only (Coral Point Diving)"
+    },
+    {
+      "name": "Magallanes",
+      "template": null,
+      "listedBy": ["https://www.coralpointdiving.com/En/divesite.html"],
+      "excluded": "on one list only (Coral Point Diving)"
+    },
+    {
+      "name": "El Faro (Saona)",
+      "template": null,
+      "listedBy": ["https://www.prodiveinternational.com/fr/dive-site/"],
+      "excluded": "on one list only (Pro Dive International)"
+    },
+    {
+      "name": "El Canal (Saona)",
+      "template": null,
+      "listedBy": ["https://www.prodiveinternational.com/fr/dive-site/"],
+      "excluded": "on one list only (Pro Dive International)"
+    },
+    {
+      "name": "El Toro (Saona)",
+      "template": null,
+      "listedBy": ["https://www.prodiveinternational.com/fr/dive-site/"],
+      "excluded": "on one list only (Pro Dive International)"
+    },
+    {
+      "name": "La Parguera (Saona)",
+      "template": null,
+      "listedBy": ["https://www.prodiveinternational.com/fr/dive-site/"],
+      "excluded": "on one list only (Pro Dive International)"
+    },
+    {
+      "name": "Canon Reef (Saona)",
+      "template": null,
+      "listedBy": ["https://www.prodiveinternational.com/fr/dive-site/"],
+      "excluded": "on one list only (Pro Dive International)"
+    },
+    {
+      "name": "La Raya",
+      "template": null,
+      "listedBy": ["https://www.prodiveinternational.com/fr/dive-site/"],
+      "excluded": "on one list only (Pro Dive International)"
+    },
+    {
+      "name": "Sting Ray Point",
+      "template": null,
+      "listedBy": ["https://www.prodiveinternational.com/fr/dive-site/"],
+      "excluded": "on one list only (Pro Dive International)"
+    },
+    {
+      "name": "Ruben",
+      "template": null,
+      "listedBy": ["https://www.prodiveinternational.com/fr/dive-site/"],
+      "excluded": "on one list only (Pro Dive International)"
+    },
+    {
+      "name": "Dreams Shallow",
+      "template": null,
+      "listedBy": ["https://www.prodiveinternational.com/fr/dive-site/"],
+      "excluded": "on one list only (Pro Dive International)"
+    },
+    {
+      "name": "La Roca",
+      "template": null,
+      "listedBy": ["https://www.prodiveinternational.com/fr/dive-site/"],
+      "excluded": "on one list only (Pro Dive International)"
+    },
+    {
+      "name": "Gypsy Wreck",
+      "template": null,
+      "listedBy": ["https://www.prodiveinternational.com/fr/dive-site/"],
+      "excluded": "on one list only (Pro Dive International)"
+    },
+    {
+      "name": "El Hipódromo",
+      "template": null,
+      "listedBy": ["https://www.prodiveinternational.com/fr/dive-site/"],
+      "excluded": "on one list only (Pro Dive International)"
+    },
+    {
+      "name": "Jardín Oriental",
+      "template": null,
+      "listedBy": ["https://www.prodiveinternational.com/fr/dive-site/"],
+      "excluded": "on one list only (Pro Dive International)"
+    },
+    {
+      "name": "El Tildo",
+      "template": null,
+      "listedBy": ["https://www.prodiveinternational.com/fr/dive-site/"],
+      "excluded": "on one list only (Pro Dive International)"
+    },
+    {
+      "name": "Círculo",
+      "template": null,
+      "listedBy": ["https://www.dominicandivers.com/dive-sites"],
+      "excluded": "on one list only (Dominican Divers)"
+    },
+    {
+      "name": "Ivan and Dana sculpture park",
+      "template": null,
+      "listedBy": ["https://www.dominicandivers.com/dive-sites"],
+      "excluded": "on one list only (Dominican Divers)"
+    },
+    {
+      "name": "Padre Nuestro cave",
+      "template": null,
+      "listedBy": [
+        "https://www.dominicandivers.com/dive-sites",
+        "http://aqua-track.com/english/diving/sites.html"
+      ],
+      "excluded": "cave beyond the cavern zone (300 m main tunnel)"
+    },
+    {
+      "name": "El Chicho cave (Cueva de Chicho)",
+      "template": null,
+      "listedBy": [
+        "https://www.dominicandivers.com/dive-sites",
+        "http://aqua-track.com/english/diving/sites.html"
+      ],
+      "excluded": "cave beyond the cavern zone; the shop sells it as a cavern discovery card course only for experienced divers"
+    },
+    {
+      "name": "Cueva Taína",
+      "template": null,
+      "listedBy": [
+        "https://www.dominicandivers.com/dive-sites",
+        "https://www.prodiveinternational.com/fr/dive-site/",
+        "http://aqua-track.com/english/diving/sites.html"
+      ],
+      "excluded": "cave beyond the cavern zone (to 48 m)"
+    },
+    {
+      "name": "Hickory Wreck (La Caleta)",
+      "template": null,
+      "listedBy": [
+        "https://www.godominicanrepublic.com/things-to-do/parque-nacional-submarino-la-caleta",
+        "http://aqua-track.com/english/diving/sites.html"
+      ]
+    },
+    {
+      "name": "El Limón Wreck (La Caleta)",
+      "template": null,
+      "listedBy": [
+        "https://www.godominicanrepublic.com/things-to-do/parque-nacional-submarino-la-caleta",
+        "http://aqua-track.com/english/diving/sites.html"
+      ]
+    },
+    {
+      "name": "Capitán Alsina Wreck (La Caleta)",
+      "template": null,
+      "listedBy": [
+        "https://www.godominicanrepublic.com/things-to-do/parque-nacional-submarino-la-caleta",
+        "http://aqua-track.com/english/diving/sites.html"
+      ]
+    },
+    {
+      "name": "Don Quico Wreck (La Caleta)",
+      "template": null,
+      "listedBy": [
+        "https://www.godominicanrepublic.com/things-to-do/parque-nacional-submarino-la-caleta"
+      ],
+      "excluded": "technical depth (about 58 m / 190 ft), and on one list only (Ministry of Tourism)"
+    },
+    {
+      "name": "Coral Garden (Boca Chica)",
+      "template": null,
+      "listedBy": ["https://www.godominicanrepublic.com/things-to-do/diving-in-boca-chica"],
+      "excluded": "on one list only (Ministry of Tourism)"
+    },
+    {
+      "name": "El Letrero (Boca Chica)",
+      "template": null,
+      "listedBy": ["https://www.godominicanrepublic.com/things-to-do/diving-in-boca-chica"],
+      "excluded": "on one list only (Ministry of Tourism)"
+    },
+    {
+      "name": "Catuan Wreck (Boca Chica)",
+      "template": null,
+      "listedBy": ["https://www.caribbeandivers.de/en/tauchplätze"],
+      "excluded": "on one list only (Caribbean Divers Boca Chica)"
+    },
+    {
+      "name": "Almendra",
+      "template": null,
+      "listedBy": ["https://www.caribbeandivers.de/en/tauchplätze"],
+      "excluded": "on one list only (Caribbean Divers Boca Chica)"
+    },
+    {
+      "name": "Boya Blanca East and West",
+      "template": null,
+      "listedBy": ["https://www.caribbeandivers.de/en/tauchplätze"],
+      "excluded": "on one list only (Caribbean Divers Boca Chica)"
+    },
+    {
+      "name": "Cabu",
+      "template": null,
+      "listedBy": ["https://www.caribbeandivers.de/en/tauchplätze"],
+      "excluded": "on one list only (Caribbean Divers Boca Chica)"
+    },
+    {
+      "name": "Canyons East and West (Boca Chica)",
+      "template": null,
+      "listedBy": ["https://www.caribbeandivers.de/en/tauchplätze"],
+      "excluded": "on one list only (Caribbean Divers Boca Chica)"
+    },
+    {
+      "name": "Gabi",
+      "template": null,
+      "listedBy": ["https://www.caribbeandivers.de/en/tauchplätze"],
+      "excluded": "on one list only (Caribbean Divers Boca Chica)"
+    },
+    {
+      "name": "Parede",
+      "template": null,
+      "listedBy": ["https://www.caribbeandivers.de/en/tauchplätze"],
+      "excluded": "on one list only (Caribbean Divers Boca Chica)"
+    },
+    {
+      "name": "Picadilly",
+      "template": null,
+      "listedBy": ["https://www.caribbeandivers.de/en/tauchplätze"],
+      "excluded": "on one list only (Caribbean Divers Boca Chica)"
+    },
+    {
+      "name": "Pica Rocca",
+      "template": null,
+      "listedBy": ["https://www.caribbeandivers.de/en/tauchplätze"],
+      "excluded": "on one list only (Caribbean Divers Boca Chica)"
+    },
+    {
+      "name": "Rockadilly",
+      "template": null,
+      "listedBy": ["https://www.caribbeandivers.de/en/tauchplätze"],
+      "excluded": "on one list only (Caribbean Divers Boca Chica)"
+    },
+    {
+      "name": "Stingray (Boca Chica)",
+      "template": null,
+      "listedBy": ["https://www.caribbeandivers.de/en/tauchplätze"],
+      "excluded": "on one list only (Caribbean Divers Boca Chica)"
+    },
+    {
+      "name": "Tanya V Wreck (Juan Dolio)",
+      "template": null,
+      "listedBy": ["http://aqua-track.com/english/diving/sites.html"],
+      "excluded": "on one list only (Aquatrack)"
+    },
+    {
+      "name": "Monte Cristi National Park wrecks and Cayo Arena",
+      "template": null,
+      "listedBy": ["http://aqua-track.com/english/diving/sites.html"],
+      "excluded": "permit-only archaeological wrecks, and Cayo Arena is a snorkel stop"
+    },
+    {
+      "name": "Silver Bank humpback whale trips",
+      "template": null,
+      "listedBy": ["http://aqua-track.com/english/diving/sites.html"],
+      "excluded": "snorkel-only whale-watching trips, not a scuba site"
+    }
+  ]
+}

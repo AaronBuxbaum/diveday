@@ -46,6 +46,12 @@
     "saving": "Guardando…",
     "add": "Añadir una credencial",
     "noneOnFile": "Sin acreditaciones registradas",
+    "missing": {
+      "instructor": "Sin titulación de instructor registrada",
+      "assistant_instructor": "Sin titulación de Instructor Asistente registrada",
+      "divemaster": "Sin titulación de divemaster registrada",
+      "captain": "Sin licencia de patrón registrada"
+    },
     "kinds": {
       "instructor_rating": "Titulación de instructor",
       "assistant_instructor_rating": "Titulación de Instructor Asistente",

@@ -10,10 +10,12 @@ import type { DiverProfile, Shop } from "./shared";
 // Every control in this group reaches a server action, and with it the whole
 // Next server runtime. The suite is about what the group *says*, so they are
 // stubbed rather than booted — the same call `WaiverGroup.test.tsx` makes.
-vi.mock("../card-actions", () => ({
+vi.mock("../agency-check-actions", () => ({
   addAgencyListedCardsAction: vi.fn(),
-  addCardAction: vi.fn(),
   agencyCheckAction: vi.fn(),
+}));
+vi.mock("../card-actions", () => ({
+  addCardAction: vi.fn(),
   clearNoCertificationAction: vi.fn(),
   deleteCertificationAction: vi.fn(),
   deleteSpecialtyAction: vi.fn(),
@@ -595,6 +597,84 @@ describe("the agency check, with the extension", () => {
       screen.getByText(/^Checked with SSI by Rae Owner on Thu,\sOct\s8\.$/),
     ).toBeInTheDocument();
     expect(screen.getByText("Priya Sharma · Open Water Diver")).toBeInTheDocument();
+  });
+});
+
+/**
+ * **A pending nitrox or specialty card gets the check too** (issue #2592), by
+ * the same rule the action judges it by: a card with a number of its own, never
+ * one a card sighting must confirm. Worded by kind, so a diver's level card and
+ * nitrox card at one agency do not wear the same button.
+ */
+describe("the agency check on a nitrox or specialty card", () => {
+  const nitroxCard = (extra: Record<string, unknown> = {}) => ({
+    id: "n-1",
+    agency: "ssi",
+    status: "pending",
+    identifier: "AB12345",
+    selfDeclaredAt: null,
+    issuedByShopAt: null,
+    listedFromCertificationId: null,
+    importedAt: null,
+    reviewedAt: null,
+    reviewNote: null,
+    ...extra,
+  });
+  const deepCard = (extra: Record<string, unknown> = {}) => ({
+    ...nitroxCard({ id: "s-1", specialty: "deep" }),
+    ...extra,
+  });
+
+  function withExtension(run: () => void) {
+    document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
+    try {
+      run();
+    } finally {
+      document.documentElement.removeAttribute("data-diveday-cert-check");
+    }
+  }
+
+  it("turns the agency's link into a button for each kind, worded by the card", () => {
+    withExtension(() => {
+      renderGroup(
+        diver({
+          nitroxCertifications: [nitroxCard()],
+          specialtyCertifications: [deepCard()],
+        } as unknown as Partial<DiverProfile>),
+      );
+      expect(screen.getByRole("button", { name: "Check Nitrox with SSI" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Check Deep with SSI" })).toBeInTheDocument();
+    });
+  });
+
+  it("keeps the plain link without the extension", () => {
+    renderGroup(
+      diver({
+        nitroxCertifications: [nitroxCard()],
+        specialtyCertifications: [deepCard()],
+      } as unknown as Partial<DiverProfile>),
+    );
+    expect(screen.getAllByRole("link", { name: "Check with SSI" })).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: /Check .* with SSI/ })).toBeNull();
+  });
+
+  it("offers no button on a card a sighting must confirm, or on a settled one", () => {
+    withExtension(() => {
+      renderGroup(
+        diver({
+          nitroxCertifications: [
+            // The diver's own tick, a card this shop issued, a listed card with no number, a settled one.
+            nitroxCard({ id: "n-claim", selfDeclaredAt: new Date("2026-10-01T00:00:00Z") }),
+            nitroxCard({ id: "n-settled", status: "verified", reviewedAt: new Date() }),
+          ],
+          specialtyCertifications: [
+            deepCard({ id: "s-issued", issuedByShopAt: new Date("2026-10-01T00:00:00Z") }),
+            deepCard({ id: "s-nonumber", identifier: null, listedFromCertificationId: "c-1" }),
+          ],
+        } as unknown as Partial<DiverProfile>),
+      );
+      expect(screen.queryByRole("button", { name: /Check .* with SSI/ })).toBeNull();
+    });
   });
 });
 

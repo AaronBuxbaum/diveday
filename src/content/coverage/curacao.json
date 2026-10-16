@@ -1,0 +1,795 @@
+{
+  "area": "curacao",
+  "method": "Curaçao and Klein Curaçao, ordered from Klein Curaçao and the east point along the south coast to Westpunt. No official site list exists: CARMABI and the Curaçao Marine Park publish no named-site or mooring list, so the Curaçao Tourist Board's dive-and-snorkel site list (curacao.com) stands in as the one non-operator list. Operator lists read: Ocean Encounters (also LionsDive), GO WEST Diving (also All West Apartments; boat schedule and shore-diving pages counted as one list), Fundiving Curaçao, Scuba Do, Dive Curaçao (Dive Center Lagun and Pietermaai), Scubaçao and Blue Bay Dive; each counts as one list. Not counted: DivePlannerPro pages (a platform's 'reachable from' aggregate, not the shop's list), caribseasports.com (a numbered list on a domain now carrying casino spam), Wannadive (Bonaire only now), and guides, blogs and PADI/SSI directories, read for leads only. A site is counted when it is named, recreationally divable on scuba and on at least two independent lists. Where a list sells several features as one dive (Smokey's with Kathy's Paradise; Marie Pampoen with Car Pile, Pierbaai and Oswaldo's Drop-off) it is one row with the features as aliases. Region names (Westpoint, Caracasbaai) and one-list names are kept as excluded rows. Eastpoint is counted because four operators sell it as a named dive. The tourist board's 'Playa Hundu Lost Anchor' entry describes a deserted cove, so it is credited to Playa Hundu only; its 'Kas Abou/Lower House' to Cas Abou; its 'Airplane Wreck' (Santa Martha) to Santa Martha; its 'Playa Kenepa' to Grote Knip. Counted 2026-10-14.",
+  "sources": [
+    "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+    "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+    "https://www.gowestdiving.com/diving-curacao/dive-sites/",
+    "https://www.gowestdiving.com/diving-curacao/shore-diving-curacao/",
+    "https://fundivingcuracao.com/en/dive-sites",
+    "https://scubadocuracao.com/all-dive-sites",
+    "https://www.divecuracao.info/dive/curacao-diving-guide/",
+    "https://scubacao.com/places/",
+    "https://bluebay-curacao.com/activities/diving"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Klein Curaçao",
+      "template": "klein-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://fundivingcuracao.com/en/dive-sites",
+        "https://scubadocuracao.com/all-dive-sites",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Tarpon Bridge",
+      "template": null,
+      "listedBy": ["https://www.divecuracao.info/dive/curacao-diving-guide/"],
+      "excluded": "on one list only (Dive Curaçao)"
+    },
+    {
+      "name": "Eastpoint",
+      "template": "eastpoint-curacao",
+      "listedBy": [
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://scubadocuracao.com/all-dive-sites",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "No Way (Punt Kanon)",
+      "template": null,
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Awa Blancu",
+      "template": null,
+      "listedBy": ["https://www.divecuracao.info/dive/curacao-diving-guide/"],
+      "excluded": "on one list only (Dive Curaçao)"
+    },
+    {
+      "name": "Guliauw",
+      "template": null,
+      "listedBy": ["https://www.curacao.com/en/category/scuba-diving-and-snorkeling"],
+      "excluded": "on one list only (Curaçao Tourist Board)"
+    },
+    {
+      "name": "Black Rock (Piedra Pretu)",
+      "template": "black-rock-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Smokey's (Punti Sanchi) and Kathy's Paradise",
+      "template": "smokeys-kathys-paradise-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Fuik Sea",
+      "template": null,
+      "listedBy": ["https://www.oceanencounters.com/excursions/curacao-dive-sites/"],
+      "excluded": "on one list only (Ocean Encounters)"
+    },
+    {
+      "name": "Newport (Nieuwpoort)",
+      "template": "newport-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Booby Trap",
+      "template": "booby-trap-curacao",
+      "listedBy": [
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Eel Valley",
+      "template": "eel-valley-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Barbara Beach to Director's Bay drift",
+      "template": null,
+      "listedBy": ["https://scubadocuracao.com/all-dive-sites"],
+      "excluded": "on one list only (Scuba Do)"
+    },
+    {
+      "name": "Barracuda Point (Punt'i Piku)",
+      "template": "barracuda-point-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Caracasbaai",
+      "template": null,
+      "listedBy": ["https://scubacao.com/places/"],
+      "excluded": "on one list only (Scubaçao); an area name whose dives are counted as Lost Anchor, Small Wall, Director's Bay and Tugboat"
+    },
+    {
+      "name": "Lost Anchor",
+      "template": "lost-anchor-curacao",
+      "listedBy": [
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Small Wall (Kabayé)",
+      "template": "small-wall-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Scarlett Gorgonians",
+      "template": null,
+      "listedBy": ["https://www.oceanencounters.com/excursions/curacao-dive-sites/"],
+      "excluded": "on one list only (Ocean Encounters)"
+    },
+    {
+      "name": "Director's Bay",
+      "template": "directors-bay-curacao",
+      "listedBy": [
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://www.gowestdiving.com/diving-curacao/shore-diving-curacao/",
+        "https://fundivingcuracao.com/en/dive-sites",
+        "https://scubadocuracao.com/all-dive-sites",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Director's Bay to Tugboat drift",
+      "template": null,
+      "listedBy": ["https://scubadocuracao.com/all-dive-sites"],
+      "excluded": "duplicate of Director's Bay and Tugboat (Scuba Do's drift between the two)"
+    },
+    {
+      "name": "Tugboat",
+      "template": "tugboat-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://www.gowestdiving.com/diving-curacao/shore-diving-curacao/",
+        "https://fundivingcuracao.com/en/dive-sites",
+        "https://scubadocuracao.com/all-dive-sites",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Turtle Rock",
+      "template": null,
+      "listedBy": ["https://scubacao.com/places/"],
+      "excluded": "on one list only (Scubaçao)"
+    },
+    {
+      "name": "Beacon Point (Kabes di Baranka)",
+      "template": "beacon-point-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Diver's Leap",
+      "template": "divers-leap-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://fundivingcuracao.com/en/dive-sites",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Jan Thiel (Jan Thiel Bay)",
+      "template": "jan-thiel-bay-curacao",
+      "listedBy": [
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://scubadocuracao.com/all-dive-sites",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Sandy's Plateau (Boka di Sorsaka)",
+      "template": "sandys-plateau-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Sweet Bottom",
+      "template": "sweet-bottom-curacao",
+      "listedBy": [
+        "https://fundivingcuracao.com/en/dive-sites",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "La Palapa",
+      "template": null,
+      "listedBy": [
+        "https://fundivingcuracao.com/en/dive-sites",
+        "https://scubadocuracao.com/all-dive-sites"
+      ]
+    },
+    {
+      "name": "Saba (tugboat wreck)",
+      "template": "saba-tugboat-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Cornelius Bay",
+      "template": "cornelius-bay-curacao",
+      "listedBy": [
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Shipwreck Point (SS Oranje Nassau)",
+      "template": null,
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Stella Maris",
+      "template": null,
+      "listedBy": ["https://www.divecuracao.info/dive/curacao-diving-guide/"],
+      "excluded": "on one list only (Dive Curaçao, as Ocean Encounters' house reef; not on Ocean Encounters' own site list)"
+    },
+    {
+      "name": "Marie Pampoen (Car Pile, Pierbaai Reef, Oswaldo's Drop-off)",
+      "template": "marie-pampoen-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://fundivingcuracao.com/en/dive-sites",
+        "https://scubadocuracao.com/all-dive-sites",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Atlantis",
+      "template": null,
+      "listedBy": ["https://scubacao.com/places/"],
+      "excluded": "on one list only (Scubaçao house reef)"
+    },
+    {
+      "name": "Boca Simon",
+      "template": null,
+      "listedBy": ["https://www.curacao.com/en/category/scuba-diving-and-snorkeling"],
+      "excluded": "on one list only (Curaçao Tourist Board)"
+    },
+    {
+      "name": "Tarpon City",
+      "template": null,
+      "listedBy": ["https://www.divecuracao.info/dive/curacao-diving-guide/"],
+      "excluded": "on one list only (Dive Curaçao)"
+    },
+    {
+      "name": "Superior Producer",
+      "template": "superior-producer-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://fundivingcuracao.com/en/dive-sites",
+        "https://scubadocuracao.com/all-dive-sites",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Double Reef",
+      "template": "double-reef-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.oceanencounters.com/excursions/curacao-dive-sites/",
+        "https://www.gowestdiving.com/diving-curacao/shore-diving-curacao/",
+        "https://fundivingcuracao.com/en/dive-sites",
+        "https://scubadocuracao.com/all-dive-sites",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Water Factory",
+      "template": null,
+      "listedBy": ["https://www.divecuracao.info/dive/curacao-diving-guide/"],
+      "excluded": "on one list only (Dive Curaçao)"
+    },
+    {
+      "name": "Piscadera Bay",
+      "template": null,
+      "listedBy": ["https://www.divecuracao.info/dive/curacao-diving-guide/"],
+      "excluded": "on one list only (Dive Curaçao)"
+    },
+    {
+      "name": "Piscadera Playa Largu (Long Beach)",
+      "template": "long-beach-piscadera-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Blue Bay: The Wall",
+      "template": "blue-bay-wall-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://bluebay-curacao.com/activities/diving",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Blue Bay: The Garden",
+      "template": "blue-bay-garden-curacao",
+      "listedBy": [
+        "https://bluebay-curacao.com/activities/diving",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Small Harbour",
+      "template": null,
+      "listedBy": ["https://scubadocuracao.com/all-dive-sites"],
+      "excluded": "on one list only (Scuba Do)"
+    },
+    {
+      "name": "Halfway",
+      "template": null,
+      "listedBy": ["https://www.curacao.com/en/category/scuba-diving-and-snorkeling"],
+      "excluded": "on one list only (Curaçao Tourist Board)"
+    },
+    {
+      "name": "Snake Bay (Playa Wachi)",
+      "template": "snake-bay-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://scubadocuracao.com/all-dive-sites",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Boka Sami",
+      "template": "boca-sami-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Kaap Mal Meeuw",
+      "template": null,
+      "listedBy": ["https://www.curacao.com/en/category/scuba-diving-and-snorkeling"],
+      "excluded": "on one list only (Curaçao Tourist Board, inside its Boka Sami and Snake Bay entry)"
+    },
+    {
+      "name": "Kokomo Beach (Vaersenbaai)",
+      "template": "kokomo-beach-curacao",
+      "listedBy": [
+        "https://scubadocuracao.com/all-dive-sites",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Vaersenbaai Car Wrecks (Lover's Beach)",
+      "template": "vaersenbaai-car-wrecks-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Pestbaai",
+      "template": null,
+      "listedBy": ["https://www.divecuracao.info/dive/curacao-diving-guide/"],
+      "excluded": "on one list only (Dive Curaçao)"
+    },
+    {
+      "name": "Basora",
+      "template": null,
+      "listedBy": ["https://www.curacao.com/en/category/scuba-diving-and-snorkeling"],
+      "excluded": "on one list only (Curaçao Tourist Board)"
+    },
+    {
+      "name": "Light Tower",
+      "template": null,
+      "listedBy": ["https://www.curacao.com/en/category/scuba-diving-and-snorkeling"],
+      "excluded": "on one list only (Curaçao Tourist Board)"
+    },
+    {
+      "name": "The Crash",
+      "template": null,
+      "listedBy": ["https://www.curacao.com/en/category/scuba-diving-and-snorkeling"],
+      "excluded": "on one list only (Curaçao Tourist Board)"
+    },
+    {
+      "name": "Seldom Reef",
+      "template": "seldom-reef-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Rif Sint Marie",
+      "template": "rif-sint-marie-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Daaibooi",
+      "template": "daaibooi-curacao",
+      "listedBy": [
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Porto Marie (The Valley)",
+      "template": "porto-mari-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Cas Abou (Kas Abou, Lower House)",
+      "template": "cas-abou-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.gowestdiving.com/diving-curacao/shore-diving-curacao/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Playa Largu (San Juan)",
+      "template": "playa-largu-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.gowestdiving.com/diving-curacao/shore-diving-curacao/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Playa Manzaliña",
+      "template": null,
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Boka Grandi",
+      "template": null,
+      "listedBy": ["https://www.curacao.com/en/category/scuba-diving-and-snorkeling"],
+      "excluded": "on one list only (Curaçao Tourist Board)"
+    },
+    {
+      "name": "Mike's Place",
+      "template": null,
+      "listedBy": ["https://www.curacao.com/en/category/scuba-diving-and-snorkeling"],
+      "excluded": "on one list only (Curaçao Tourist Board)"
+    },
+    {
+      "name": "Playa Shon Mosa",
+      "template": null,
+      "listedBy": ["https://www.divecuracao.info/dive/curacao-diving-guide/"],
+      "excluded": "on one list only (Dive Curaçao)"
+    },
+    {
+      "name": "Playa Chiki",
+      "template": null,
+      "listedBy": ["https://www.divecuracao.info/dive/curacao-diving-guide/"],
+      "excluded": "on one list only (Dive Curaçao)"
+    },
+    {
+      "name": "Playa Hundu",
+      "template": "playa-hundu-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Santa Martha (Airplane Wreck)",
+      "template": null,
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "San Nicolas",
+      "template": null,
+      "listedBy": ["https://www.divecuracao.info/dive/curacao-diving-guide/"],
+      "excluded": "on one list only (Dive Curaçao)"
+    },
+    {
+      "name": "Mako's Mountain",
+      "template": "makos-mountain-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.gowestdiving.com/diving-curacao/dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Hell's Corner",
+      "template": "hells-corner-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Black Coral Garden",
+      "template": "black-coral-garden-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.gowestdiving.com/diving-curacao/dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Rediho",
+      "template": "rediho-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.gowestdiving.com/diving-curacao/dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Dwayne's Release (Scooter)",
+      "template": "duanes-release-curacao",
+      "listedBy": [
+        "https://www.gowestdiving.com/diving-curacao/dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Playa Hulu",
+      "template": "playa-hulu-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.gowestdiving.com/diving-curacao/dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Sponge Forest",
+      "template": "sponge-forest-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.gowestdiving.com/diving-curacao/dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "The Blue Room",
+      "template": "blue-room-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.gowestdiving.com/diving-curacao/dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Mushroom Forest",
+      "template": "mushroom-forest-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.gowestdiving.com/diving-curacao/dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Red Bush City",
+      "template": null,
+      "listedBy": ["https://www.gowestdiving.com/diving-curacao/dive-sites/"],
+      "excluded": "on one list only (GO WEST Diving)"
+    },
+    {
+      "name": "Black Sand Beach (Boca Santu Pretu, Catherine wreck)",
+      "template": "black-sand-beach-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.gowestdiving.com/diving-curacao/dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Santa Cruz Reef",
+      "template": null,
+      "listedBy": ["https://www.divecuracao.info/dive/curacao-diving-guide/"],
+      "excluded": "on one list only (Dive Curaçao)"
+    },
+    {
+      "name": "Lagun Cliff",
+      "template": null,
+      "listedBy": ["https://www.gowestdiving.com/diving-curacao/dive-sites/"],
+      "excluded": "on one list only (GO WEST Diving)"
+    },
+    {
+      "name": "Playa Lagun",
+      "template": "playa-lagun-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.gowestdiving.com/diving-curacao/dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Cave of Love",
+      "template": null,
+      "listedBy": ["https://www.gowestdiving.com/diving-curacao/dive-sites/"],
+      "excluded": "on one list only (GO WEST Diving)"
+    },
+    {
+      "name": "Playa Jeremi",
+      "template": "playa-jeremi-curacao",
+      "listedBy": [
+        "https://www.gowestdiving.com/diving-curacao/shore-diving-curacao/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Paradise",
+      "template": "paradise-curacao",
+      "listedBy": [
+        "https://www.gowestdiving.com/diving-curacao/dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Kleine Knip (Playa Kenepa Chikitu)",
+      "template": "kleine-knip-curacao",
+      "listedBy": [
+        "https://www.gowestdiving.com/diving-curacao/shore-diving-curacao/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Grote Knip (Playa Kenepa Grandi)",
+      "template": "grote-knip-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Kortape",
+      "template": "kortape-curacao",
+      "listedBy": [
+        "https://www.gowestdiving.com/diving-curacao/dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Sweet Alice (Playa Forti)",
+      "template": "sweet-alice-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Playa Piskadó (Playa Grandi, Neptune's Reef)",
+      "template": "playa-piskado-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.gowestdiving.com/diving-curacao/dive-sites/",
+        "https://www.gowestdiving.com/diving-curacao/shore-diving-curacao/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Alice in Wonderland (Playa Kalki)",
+      "template": "alice-in-wonderland-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.gowestdiving.com/diving-curacao/shore-diving-curacao/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Elvin's Plane Wreck",
+      "template": null,
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.gowestdiving.com/diving-curacao/dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/"
+      ]
+    },
+    {
+      "name": "Watamula",
+      "template": "watamula-curacao",
+      "listedBy": [
+        "https://www.curacao.com/en/category/scuba-diving-and-snorkeling",
+        "https://www.gowestdiving.com/diving-curacao/dive-sites/",
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "Playa Gipy",
+      "template": null,
+      "listedBy": [
+        "https://www.divecuracao.info/dive/curacao-diving-guide/",
+        "https://scubacao.com/places/"
+      ]
+    },
+    {
+      "name": "North Point",
+      "template": null,
+      "listedBy": ["https://www.divecuracao.info/dive/curacao-diving-guide/"],
+      "excluded": "on one list only (Dive Curaçao)"
+    },
+    {
+      "name": "Westpoint",
+      "template": null,
+      "listedBy": ["https://scubadocuracao.com/all-dive-sites"],
+      "excluded": "on one list only (Scuba Do); a region name, not one site"
+    }
+  ]
+}

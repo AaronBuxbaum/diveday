@@ -136,6 +136,7 @@ export type RetainedTable =
   | "account_tokens"
   | "account_sessions"
   | "shop_contact_email_confirmation_tokens"
+  | "shop_shore_alert_tokens"
   | "booking_capabilities"
   | "booking_payment_events"
   | "push_subscriptions"
@@ -265,6 +266,15 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * table forever.
    */
   shop_contact_email_confirmation_tokens: 90,
+  /**
+   * A year from `created_at` (H-118 review): the shore contact's confirmation
+   * links and the stop link every roll-call alert carries. A stop link never
+   * expires on its own, because an opt-out that stops working leaves somebody
+   * unable to stop the mail; a year is longer than any shop goes between
+   * alerts, and each alert brings a fresh one. The rows hold the address, so
+   * they do not sit forever either.
+   */
+  shop_shore_alert_tokens: 365,
   /**
    * The same 90 days past `expires_at` again (H-82, issue #1726): a booking
    * link — readiness, confirm, claim, handoff, course forms — is a hashed

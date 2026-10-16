@@ -7,6 +7,7 @@
     "noEmail": "Sin correo — marcado para llamar",
     "noDivers": "No hay nadie reservado en esta salida. Llamarla cancela la salida.",
     "departed": "Esta salida está en curso o ya zarpó, así que no hay nada que cancelar.",
+    "moneyNoteHeld": "Desde aquí no se devuelven los pagos con tarjeta: un propietario o gerente libera los reembolsos, y a esos buceadores se les avisa de que se les debe uno. Lo que se haya cobrado en el mostrador queda en tus manos.",
     "button": "Cancelar por mal tiempo",
     "calling": "Cancelando…"
   },
@@ -38,12 +39,19 @@
     "rebookedBadge": "Reservó de nuevo",
     "unresolvedBadge": "Sin resolver",
     "noPayment": "Sin pago registrado",
+    "heldHeading": "{count, plural, one {# pago sigue retenido.} other {# pagos siguen retenidos.}}",
+    "heldRelease": "Los pagos con tarjeta vuelven a la tarjeta. Lo cobrado en el mostrador te toca devolverlo a ti.",
+    "heldWaiting": "Un propietario o gerente libera los reembolsos con tarjeta. A los buceadores se les ha avisado de que se les debe uno.",
+    "release": "Devolver los pagos con tarjeta",
+    "releasing": "Enviando…",
     "resend": "Reintentar los mensajes no enviados",
     "resending": "Reintentando…",
     "empty": "No había nadie reservado cuando se llamó la cancelación."
   },
   "notices": {
     "called": "Cancelación llamada. La salida queda cancelada y el mensaje de cada buceador está en camino.",
+    "refundsReleased": "Reembolsos con tarjeta enviados. Lo que no pudo volver sigue apareciendo como pendiente en Pedidos.",
+    "refundNotAuthorized": "Solo un propietario o gerente envía reembolsos.",
     "resumed": "Se reintentaron los mensajes no enviados.",
     "departed": "Esta salida está en curso o ya zarpó, así que no se canceló nada.",
     "error": "No se canceló nada: esta salida se eliminó o no se pudo leer en este momento. Ábrela desde el calendario para revisarla y vuelve a llamar la cancelación.",

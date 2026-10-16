@@ -296,6 +296,42 @@ describe("writing a course form", () => {
     expect((await formTitled(db, shop.id, "Course release"))?.version).toBe(1);
   });
 
+  /**
+   * The medical statement marker is the form's identity, not its words (#2337):
+   * a post that names nothing about it leaves it alone, and only the form's own
+   * hidden "unmarked" value, with the box unticked, clears it.
+   */
+  it("keeps the medical marker when the post names none, and clears it only when told", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const created = await createCourseForm(db, {
+      shopId: shop.id,
+      title: "Course release",
+      body: FORM_BODY,
+      actorPersonId: owner,
+      medicalScreening: true,
+    });
+    const marked = async () =>
+      (await listCourseForms(db, shop.id)).find((form) => form.id === created.id)?.medicalScreening;
+    const post = (...extra: string[]) => {
+      const formData = formPost({ formId: created.id, title: "Course release", body: FORM_BODY });
+      for (const value of extra) formData.append("medicalScreening", value);
+      return formData;
+    };
+
+    await redirectedTo(() => saveCourseFormAction(post()));
+    expect(await marked()).toBe(true);
+
+    await redirectedTo(() => saveCourseFormAction(post("unmarked", "on")));
+    expect(await marked()).toBe(true);
+
+    await redirectedTo(() => saveCourseFormAction(post("unmarked")));
+    expect(await marked()).toBe(false);
+
+    await redirectedTo(() => saveCourseFormAction(post("unmarked", "on")));
+    expect(await marked()).toBe(true);
+  });
+
   it("refuses a form too short to be one, beside the new-form box", async () => {
     const { db, shop, owner } = await context();
     signIn(shop, owner);

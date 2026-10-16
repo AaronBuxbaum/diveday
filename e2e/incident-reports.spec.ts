@@ -83,9 +83,9 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   await page.waitForURL(/\/reports\/safety/);
   // The demo crew have no credential on file, and the tab says so rather than
   // reading a clean zero (third review, item 2).
-  await expect(page.getByText(/No credential on file for \d+ of/)).toBeVisible();
+  await expect(page.getByText(/Nothing on file for their role on \d+ of/)).toBeVisible();
   await expect(
-    page.getByRole("region", { name: "Crew who sailed with no credential on file" }),
+    page.getByRole("region", { name: "Crew who sailed with no credential for their role on file" }),
   ).toBeVisible();
   const listed = page
     .getByRole("region", { name: "Incident reports" })

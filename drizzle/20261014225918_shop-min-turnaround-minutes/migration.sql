@@ -1,0 +1,2 @@
+ALTER TABLE "shops" ADD COLUMN "min_turnaround_minutes" integer DEFAULT 30 NOT NULL;--> statement-breakpoint
+ALTER TABLE "shops" ADD CONSTRAINT "shops_min_turnaround_minutes_range" CHECK ("min_turnaround_minutes" >= 0 and "min_turnaround_minutes" <= 240);

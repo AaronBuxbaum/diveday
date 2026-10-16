@@ -1,9 +1,11 @@
+import { LogEntryPreview } from "@/components/LogEntryPreview";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { Badge } from "@/components/ui/badge";
 import { LedgerGroup } from "@/components/ui/ledger";
 import type { PublicCrewMember } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
 import { siteFit } from "@/lib/diver-planning";
+import { formatShortDate } from "@/lib/format";
 import { capturePhoto } from "@/lib/marine-life-tiles";
 
 import { TripCrewLine } from "./TripCrewLine";
@@ -66,6 +68,8 @@ export function TripPitch({
   briefings,
   crew,
   locale,
+  timeZone,
+  logEntry,
   embed = false,
 }: {
   briefings: DiveBriefing[];
@@ -73,6 +77,17 @@ export function TripPitch({
   crew: readonly PublicCrewMember[];
   /** The negotiated request locale, not the shop's stored default. */
   locale: string;
+  /** The shop's zone, for the date on the log entry's miniature. */
+  timeZone: string;
+  /**
+   * **Where the day ends up** (UX review 2026-10-10, item 35): the recap's log
+   * entry, which a booked diver's link turns into once the boat is home. One
+   * line and a miniature at the end of the door's body, so the page's bound
+   * above the form is unchanged (ADR 20260904-reef-all-the-way-down,
+   * decision 1; moved here from `TripDayPlan` by issue #2430). Absent on a day
+   * that has already sailed.
+   */
+  logEntry?: { startsAt: Date; isCourse: boolean };
   /**
    * Whether the page is rendering inside an embed frame, where the whole column
    * is `w-full` rather than `max-w-xl` — so a third of it is 413px at 1280
@@ -90,7 +105,7 @@ export function TripPitch({
   // row, and the certification the trip asks for is the page's own
   // requirement note under this block.
   const fitWord = dayFitWord(briefings, t);
-  const doorHasContent = pitchHasDoor(briefings, crew);
+  const doorHasContent = pitchHasDoor(briefings, crew, Boolean(logEntry));
   if (!fitWord && tiles.length === 0 && !doorHasContent) return null;
   return (
     <section>
@@ -163,6 +178,23 @@ export function TripPitch({
             <TripMoments briefings={briefings} locale={locale} />
             <TripSiteNotes briefings={briefings} locale={locale} />
             <TripCrewLine crew={crew} locale={locale} className="mt-6" />
+            {logEntry ? (
+              <div className={pitchHasDoor(briefings, crew) ? "mt-6" : undefined}>
+                <LogEntryPreview
+                  line={t("trip.logEntryWaiting")}
+                  date={formatShortDate(logEntry.startsAt, locale, timeZone)}
+                  siteNames={[
+                    ...new Set(
+                      briefings
+                        .map(({ diveSite }) => diveSite?.name)
+                        .filter((name): name is string => Boolean(name)),
+                    ),
+                  ]}
+                  isCourse={logEntry.isCourse}
+                  t={t}
+                />
+              </div>
+            ) : null}
           </div>
         </LedgerGroup>
       ) : null}
@@ -180,8 +212,10 @@ export function TripPitch({
 export function pitchHasDoor(
   briefings: DiveBriefing[],
   crew: readonly PublicCrewMember[],
+  hasLogEntry = false,
 ): boolean {
   return (
+    (hasLogEntry && briefings.length > 0) ||
     fieldGuideCardsFor(briefings).length > 0 ||
     crew.length > 0 ||
     routeSitesFor(briefings).length > 0 ||
@@ -201,9 +235,10 @@ export function pitchHasDoor(
 export function pitchOpensOnDoor(
   briefings: DiveBriefing[],
   crew: readonly PublicCrewMember[],
+  hasLogEntry = false,
 ): boolean {
   return (
-    pitchHasDoor(briefings, crew) &&
+    pitchHasDoor(briefings, crew, hasLogEntry) &&
     dayFitTone(briefings) === null &&
     fieldGuideCardsFor(briefings).length === 0
   );

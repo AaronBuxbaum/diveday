@@ -17,6 +17,7 @@ import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { seatName } from "@/lib/held-seat";
 import { normalizeEmailAddress } from "@/lib/inbox";
+import { rowCanBeReactivated } from "@/lib/no-show";
 import {
   holdsRegisterKind,
   isDiver,
@@ -78,6 +79,7 @@ import {
 } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { getShopCurrency } from "./stripe-accounts";
+import { type SendRescheduleNoticesOptions, sendMissedRescheduleNotice } from "./trip-rescheduled";
 import { liveTrip } from "./trips-live";
 import { heldSeatCounts, sellableCapacity } from "./trips-queries";
 
@@ -1087,7 +1089,9 @@ async function writeSeat(
     .where(and(eq(bookings.tripId, trip.id), eq(bookings.personId, person.id)))
     .limit(1);
   if (existing) {
-    if (existing.status !== "cancelled") return { ok: false, reason: "already_booked" };
+    if (!rowCanBeReactivated(existing.status, trip.startsAt)) {
+      return { ok: false, reason: "already_booked" };
+    }
     await tx
       .update(bookings)
       .set({
@@ -2694,6 +2698,53 @@ async function releaseSelfCancelledSeat(
 }
 
 /**
+ * **The one rule for which party seats a lead's cancel takes with it**: still
+ * `booked` and not claimed by their own diver. `cancelUnclaimedPartySeats`
+ * applies it to cancel, `previewPartyCancel` to count, and the lead's party
+ * panel (`issuePartySeatClaims`) to list, so what the SMS prompt and the email
+ * say can never differ from what the settle does.
+ */
+export function partySeatGoesWithLead(seat: {
+  status: (typeof bookings.$inferSelect)["status"];
+  claimedAt: Date | null;
+}): boolean {
+  return seat.status === "booked" && seat.claimedAt === null;
+}
+
+/**
+ * How many party seats a lead's cancel would take with it, and how many it
+ * would leave booked, read without changing anything. Zero and zero for a
+ * booking that is not a lead (a member's own cancel never reaches another
+ * seat) or that has no party. The same selection as
+ * `cancelUnclaimedPartySeats`: this shop, this lead, the lead's own departure,
+ * not already canceled.
+ */
+export async function previewPartyCancel(
+  db: DbExecutor,
+  input: { shopId: string; leadBookingId: string },
+): Promise<{ goes: number; stays: number }> {
+  const [lead] = await db
+    .select({ tripId: bookings.tripId, partyLeadBookingId: bookings.partyLeadBookingId })
+    .from(bookings)
+    .where(and(eq(bookings.id, input.leadBookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  if (!lead || lead.partyLeadBookingId !== null) return { goes: 0, stays: 0 };
+  const seats = await db
+    .select({ status: bookings.status, claimedAt: bookings.claimedAt })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.partyLeadBookingId, input.leadBookingId),
+        eq(bookings.tripId, lead.tripId),
+        ne(bookings.status, "cancelled"),
+      ),
+    );
+  const goes = seats.filter(partySeatGoesWithLead).length;
+  return { goes, stays: seats.length - goes };
+}
+
+/**
  * **The lead's unclaimed seats go with the lead** (batch 6 item 10). Inside
  * the lead's own cancel transaction, so the seats and the lead are released
  * together or not at all. Only seats whose `party_lead_booking_id` is this
@@ -2741,7 +2792,7 @@ export async function cancelUnclaimedPartySeats(
   const outcome: PartyCancelOutcome = { cancelled: [], stayed: [] };
   for (const seat of seats) {
     const name = seatName(seat.fullName, seat);
-    if (seat.claimedAt !== null || seat.status !== "booked") {
+    if (!partySeatGoesWithLead(seat)) {
       outcome.stayed.push({ bookingId: seat.bookingId, seatName: name });
       continue;
     }
@@ -3083,6 +3134,7 @@ export async function confirmBookingIdentity(
     bookingId: string;
     actorPersonId: string;
   },
+  notices: SendRescheduleNoticesOptions = {},
 ) {
   const booking = await db.transaction(async (tx) => {
     const [row] = await tx
@@ -3121,6 +3173,13 @@ export async function confirmBookingIdentity(
     actorPersonId: input.actorPersonId,
     code,
   });
+  // The reschedule notice the hold skipped, once (#2445). After the trail, so a
+  // send that throws cannot lose the record that the tap happened.
+  await sendMissedRescheduleNotice(
+    db,
+    { shopId: input.shopId, bookingId: input.bookingId },
+    notices,
+  );
   return true;
 }
 
@@ -3353,6 +3412,7 @@ export async function sameNameHeldSeats(
 export async function splitBookingIdentity(
   db: AppDb,
   input: SplitBookingIdentityInput,
+  notices: SendRescheduleNoticesOptions = {},
 ): Promise<SplitBookingIdentityResult> {
   const fullName = input.fullName.trim().slice(0, SPLIT_NAME_MAX);
   if (!fullName) return { ok: false, reason: "name_required" };
@@ -3623,6 +3683,15 @@ export async function splitBookingIdentity(
     actorPersonId: input.actorPersonId,
     code: "identity_split_off",
   });
+  // Each moved seat missed the reschedule notice while it was held; the new
+  // record's own address hears it once (#2445).
+  for (const seat of split.seats) {
+    await sendMissedRescheduleNotice(
+      db,
+      { shopId: input.shopId, bookingId: seat.bookingId },
+      notices,
+    );
+  }
   return {
     ok: true,
     personId: split.personId,

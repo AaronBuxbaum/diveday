@@ -13,6 +13,9 @@ export const READY_NOTICES: Record<
   "pay-paid": { tone: "success", key: "ready.paymentReceived" },
   "error-waiver": { tone: "danger", key: "ready.waiverUnavailable" },
   "error-pay": { tone: "danger", key: "ready.paymentUnavailable" },
+  // Back from the checkout a party lead opened for a seat they added (#2474).
+  "pay-seat-paid": { tone: "success", key: "seatClaim.seatPaidNotice" },
+  "error-seat-pay": { tone: "danger", key: "seatClaim.payUnavailable" },
   "pay-cancelled": { tone: "neutral", key: "ready.paymentCancelled" },
   // The code typed at booking had nothing left, so no payment page opened; the
   // seat is held and the Pay step below takes the full fare.
