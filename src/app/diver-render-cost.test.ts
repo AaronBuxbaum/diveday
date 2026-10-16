@@ -111,6 +111,7 @@ async function readyAfterTheDiveReads(db: AppDb, token: string) {
     locale: "en-US",
     t: diverTranslator("en-US"),
     mintHandoff: true,
+    delivered: true,
     params: {},
     actions: {
       submitReview: noop,
@@ -139,6 +140,7 @@ async function recapPageReads(db: AppDb, bookingId: string) {
     locale: "en-US",
     t: diverTranslator("en-US"),
     mintHandoff: false,
+    delivered: false,
     params: {},
     actions: {
       submitReview: noop,
@@ -275,7 +277,12 @@ describe("how many round trips a diver's page waits for, one after another", () 
 // beside the seat checks with the trip in the same wave, so the recap is 3
 // phases where it was 7. The after-state's 5 are its next-dive read and the
 // handoff it mints.
-const READY_AFTER_CEILING = 59;
+// 59 → 60 statements (layer r5-4, fifth-loop ideas item 37): the diver's own
+// later seats, read once beside the next-dive pick for both the pick and the
+// "You're booked" line, and only on a delivered link. The layer's other reads
+// went into ones already here: the boat's shared photos ride the diver's own
+// photo read, and this page asks the welcome reader for no dive-day count.
+const READY_AFTER_CEILING = 60;
 const READY_AFTER_PHASE_CEILING = 12;
 // `/recap/[token]`, replayed from item 32: the recap's 3 and the after-state's
 // next-dive read, with no handoff. Before item 32 the same reads were 7 + 2.

@@ -108,25 +108,36 @@ export async function nextDiveForBooking(
      * matching candidate is wearing that very row.
      */
     dayLensId: string | null;
+    /**
+     * The person's own later seats, already in flight from the caller, so one
+     * read serves the pick and the caller's "You're booked" line; an empty
+     * list on a link that may not read them, so the pick does not change with
+     * them (security review r5-4, second pass, FIX 1). Absent, the pick reads
+     * them itself.
+     */
+    booked?: Promise<readonly BookedDeparture[]>;
+    /** No pick at all for a person who holds a later seat (item 37). */
+    noneIfBooked?: boolean;
     now?: Date;
   },
 ): Promise<NextDivePick | null> {
   const now = input.now ?? nowDate();
-  const [{ trips }, held] = await Promise.all([
+  const [{ trips }, booked] = await Promise.all([
     pagedUpcomingTripsWithCounts(db, input.shopId, {
       publicOnly: true,
       hasSpace: true,
       limit: NEXT_DIVE_CANDIDATE_WINDOW,
       now,
     }),
-    bookedDepartures(db, { shopId: input.shopId, personId: input.personId, now }),
+    input.booked ?? bookedDepartures(db, { shopId: input.shopId, personId: input.personId, now }),
   ]);
+  if (input.noneIfBooked && booked.length > 0) return null;
   // **Never a seat they already hold** (fifth-loop ideas, item 37): offering
   // Sana "Back to Molasses Reef" on a departure she is booked on reads as the
   // shop not knowing her.
-  const heldIds = new Set(held.map((trip) => trip.tripId));
+  const bookedIds = new Set(booked.map((trip) => trip.tripId));
   const upcoming = trips.filter(
-    (trip) => trip.id !== input.justDivedTripId && !heldIds.has(trip.id),
+    (trip) => trip.id !== input.justDivedTripId && !bookedIds.has(trip.id),
   );
   if (upcoming.length === 0) return null;
 

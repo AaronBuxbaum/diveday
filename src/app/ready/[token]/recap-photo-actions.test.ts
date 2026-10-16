@@ -55,14 +55,14 @@ const { uploadRecapPhotoFromReadyAction } = await import("./recap-photo-actions"
 
 const BOOKING_ID = "0f2a9c1e-1111-4222-8333-444444444444";
 
-function context(identityHeld: boolean) {
+function context(identityHeld: boolean, delivered = true) {
   return {
     ok: true,
     db: {},
     bookingId: BOOKING_ID,
     data: { identityHeld } as unknown as ReadyPageData,
     ownLocale: null,
-    delivered: true,
+    delivered,
   };
 }
 
@@ -98,6 +98,12 @@ describe("uploadRecapPhotoFromReadyAction", () => {
 
   it("keeps it on this recap alone when the box is left empty", async () => {
     await landing(photoForm(false));
+    expect(vi.mocked(addRecapPhoto).mock.calls[0]?.[1]).toMatchObject({ shareWithBoat: false });
+  });
+
+  it("keeps the photo on this recap alone from an undelivered link, ticked or not (second pass, N-a)", async () => {
+    contextFor.mockResolvedValueOnce(context(false, false));
+    expect(await landing(photoForm(true))).toBe(`/recap/recap-for-${BOOKING_ID}?photo=added`);
     expect(vi.mocked(addRecapPhoto).mock.calls[0]?.[1]).toMatchObject({ shareWithBoat: false });
   });
 

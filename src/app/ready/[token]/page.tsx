@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { HeldAfterDiveCard, NoShowCard } from "@/app/ready/[token]/_components/AfterDiveDoors";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
-import { afterStateActions } from "@/app/ready/[token]/_components/after-state-actions";
+import { readyAfterStateProps } from "@/app/ready/[token]/_components/after-state-actions";
 import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
 import { cancelledNoticeForReady } from "@/app/ready/[token]/_components/CancelledNotice";
 import { CertificationEntries } from "@/app/ready/[token]/_components/CertificationEntries";
@@ -48,7 +48,6 @@ import { getShopBySlug } from "@/db/shops";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripWithBooked, listTripDives } from "@/db/trips";
-import { buildAfterStateProps } from "@/features/recap-after-state";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { checklistDetailText } from "@/i18n/readiness-summary-labels";
@@ -125,7 +124,7 @@ export default async function ReadyTokenPage({
   if (!capability) {
     return readyDeadLink({ db, token, cancelled, sent, anonT });
   }
-  const { bookingId, shopId: capabilityShopId } = capability;
+  const { bookingId, shopId: capabilityShopId, delivered } = capability;
 
   /**
    * **The booked card in the first paint** (UX review 2026-10-10, items 7 and
@@ -140,7 +139,7 @@ export default async function ReadyTokenPage({
    * `getBookedCard`), and a held diver reads the hold in the thread under it.
    */
   const found = justBooked
-    ? await getBookedCard(db, { shopId: capabilityShopId, bookingId })
+    ? await getBookedCard(db, { shopId: capabilityShopId, bookingId, delivered })
     : null;
   const card =
     found && !found.bookingCancelled && !found.departureCancelled && !theBoatIsHome(found.trip)
@@ -151,7 +150,7 @@ export default async function ReadyTokenPage({
       db={db}
       token={token}
       bookingId={bookingId}
-      delivered={capability.delivered}
+      delivered={delivered}
       search={{ saved, error, pay, justBooked }}
       anonT={anonT}
       underBookedHeader={card !== null}
@@ -259,17 +258,14 @@ async function DiverReadinessPage({
     if (recapState.kind === "waiting") return <RecapWaitingCard shop={shopContact} t={t} />;
     const recap = recapState.kind === "recap" ? recapState.data : null;
     if (!recap) return <NoShowCard shop={shopContact} t={t} />;
-    const after = await buildAfterStateProps({
+    const after = await readyAfterStateProps({
       db,
       data: recap,
       bookingId,
       locale,
       t,
-      mintHandoff: true,
-      // This route carries none of the three: each action redirects to
-      // `/recap/<token>`, which is where its notice is read.
-      params: {},
-      actions: afterStateActions(token, bookingId),
+      token,
+      delivered,
     });
     return (
       <DiverIntlProvider

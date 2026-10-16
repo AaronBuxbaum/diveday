@@ -44,6 +44,7 @@ const PARTY_LEFT_KEYS: Record<PartyLeftReason, StaffMessageKey> = {
   training_course: "manifest.buddyPartyLeftReason.training_course",
   too_large: "manifest.buddyPartyLeftReason.too_large",
   young_child: "manifest.buddyPartyLeftReason.young_child",
+  minor_age_conflict: "manifest.buddyPartyLeftReason.minor_age_conflict",
   minor_age_unknown: "manifest.buddyPartyLeftReason.minor_age_unknown",
   junior_without_adult: "manifest.buddyPartyLeftReason.junior_without_adult",
 };

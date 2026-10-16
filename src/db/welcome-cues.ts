@@ -4,7 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { diveDayOrdinal } from "@/lib/prior-visits";
 import { hasReturned } from "@/lib/trips";
 import type { AppDb, DbExecutor } from "./client";
-import { diveDay } from "./dive-days";
+import { numberedDiveDay } from "./dive-days";
 import { queryAll } from "./query-helpers";
 import { bookings, people, priorVisits, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -29,7 +29,7 @@ export type WelcomeCueInputs = {
   nonDiver: boolean;
   /**
    * Which dive day with the shop this departure's day is, for a diver seat:
-   * `diveDayOrdinal` over their dive days (`diveDay()`) and imported visits,
+   * `diveDayOrdinal` over their dive days (`numberedDiveDay()`) and imported visits,
    * through this departure's own local day. The recap's own count, so the
    * crew and the diver are told one number. Null on a snorkeler's or a
    * rider's seat. Feeds the milestone (H-128).
@@ -90,7 +90,7 @@ function lastCounted(
 /**
  * **Which dive day each diver seat's departure is** (H-128; dive-domain review
  * of layer r5-4, fix 2): `diveDayOrdinal` over the person's dive days by the
- * one rule (`diveDay()`) and their imported visits, through that departure's
+ * one rule (`numberedDiveDay()`) and their imported visits, through that departure's
  * own local day. Not "before now": two boats ahead carry two numbers, and the
  * recap later stamps the same one. A snorkeler's or a rider's seat has none.
  */
@@ -102,20 +102,15 @@ async function diveDayCountsForSeats(
     personId: string;
     participantType: string;
     startsAt: Date;
+    /** The shop's zone, read with the seat so the count costs no read of its own. */
+    timezone: string;
   }[],
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
   const divers = seats.filter((seat) => seat.participantType === "diver");
   const personIds = [...new Set(divers.map((seat) => seat.personId))];
   if (personIds.length === 0) return counts;
-  const [shop, days, visits] = await queryAll(db, [
-    () =>
-      db
-        .select({ timezone: shops.timezone })
-        .from(shops)
-        .where(eq(shops.id, shopId))
-        .limit(1)
-        .then((rows) => rows[0]),
+  const [days, visits] = await queryAll(db, [
     () =>
       db
         .select({ personId: bookings.personId, startsAt: trips.startsAt })
@@ -125,8 +120,7 @@ async function diveDayCountsForSeats(
           and(
             eq(bookings.shopId, shopId),
             inArray(bookings.personId, personIds),
-            eq(bookings.participantType, "diver"),
-            diveDay(),
+            numberedDiveDay(),
           ),
         ),
     () =>
@@ -139,15 +133,14 @@ async function diveDayCountsForSeats(
         .from(priorVisits)
         .where(and(eq(priorVisits.shopId, shopId), inArray(priorVisits.personId, personIds))),
   ]);
-  const timezone = shop?.timezone ?? "UTC";
   for (const seat of divers) {
     counts.set(
       seat.bookingId,
       diveDayOrdinal({
         diveDayStarts: days.filter((day) => day.personId === seat.personId).map((d) => d.startsAt),
         visits: visits.filter((visit) => visit.personId === seat.personId),
-        timezone,
-        throughDay: calendarDateInTimezone(seat.startsAt, timezone),
+        timezone: seat.timezone,
+        throughDay: calendarDateInTimezone(seat.startsAt, seat.timezone),
       }),
     );
   }
@@ -169,6 +162,12 @@ export async function welcomeCueInputsByBooking(
   shopId: string,
   tripId: string,
   now: Date = nowDate(),
+  /**
+   * Whether to count each diver's dive days (`diveDayCount`). The diver's own
+   * page reads only the gap and says no milestone from here, so it skips the
+   * two reads the count costs; every staff reader keeps it.
+   */
+  options: { diveDayCounts: boolean } = { diveDayCounts: true },
 ): Promise<Map<string, WelcomeCueInputs>> {
   const prior = priorSeats(db, shopId, ne(bookings.tripId, tripId), now);
 
@@ -181,9 +180,11 @@ export async function welcomeCueInputsByBooking(
       lastDiveAt: prior.lastDiveAt,
       lastSeatAt: prior.lastSeatAt,
       startsAt: trips.startsAt,
+      timezone: shops.timezone,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(shops, eq(shops.id, bookings.shopId))
     .leftJoin(prior, eq(prior.personId, bookings.personId))
     .where(
       and(
@@ -195,7 +196,9 @@ export async function welcomeCueInputsByBooking(
       ),
     );
 
-  const counts = await diveDayCountsForSeats(db, shopId, rows);
+  const counts = options.diveDayCounts
+    ? await diveDayCountsForSeats(db, shopId, rows)
+    : new Map<string, number>();
   return new Map(
     rows.map((row) => [row.bookingId, { sharedAt: row.sharedAt, ...lastCounted(row, counts) }]),
   );
@@ -239,9 +242,11 @@ export async function sharedWelcomeSeatsByTrip(
       lastDiveAt: prior.lastDiveAt,
       lastSeatAt: prior.lastSeatAt,
       startsAt: trips.startsAt,
+      timezone: shops.timezone,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(shops, eq(shops.id, bookings.shopId))
     .innerJoin(people, eq(people.id, bookings.personId))
     .leftJoin(prior, eq(prior.personId, bookings.personId))
     .where(
@@ -333,9 +338,11 @@ export async function diveDayCountForSeat(
       participantType: bookings.participantType,
       status: bookings.status,
       startsAt: trips.startsAt,
+      timezone: shops.timezone,
     })
     .from(bookings)
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
+    .innerJoin(shops, eq(shops.id, bookings.shopId))
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId), liveTrip()))
     .limit(1);
   if (seat?.participantType !== "diver" || seat.status === "cancelled") return null;

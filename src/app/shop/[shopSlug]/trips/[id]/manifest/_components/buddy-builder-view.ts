@@ -1,4 +1,4 @@
-import { type listTripBuddyTeams, MIN_BUDDY_TEAM_SIZE, type PartyTeamPlan } from "@/db/buddy-pairs";
+import type { listTripBuddyTeams, PartyTeamPlan } from "@/db/buddy-pairs";
 import { partyLeftReasonText } from "@/i18n/buddy-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -86,33 +86,30 @@ export function buddyBuilderView({
     : null;
   // **Who came together, and who came alone** (fifth-loop ideas, item 50):
   // the divers still to team, grouped by the party they booked in. A line to
-  // build from, never a pairing made for anyone.
-  const byParty = new Map<string, string[]>();
-  for (const diver of unteamedDivers) {
-    const key = partyPlan.parties.get(diver.bookingId) ?? diver.bookingId;
-    byParty.set(key, [...(byParty.get(key) ?? []), diver.fullName]);
-  }
-  const groups = [...byParty.values()];
-  const together = groups.filter((names) => names.length >= MIN_BUDDY_TEAM_SIZE);
-  const alone = groups.filter((names) => names.length === 1).map(([name]) => name ?? "");
+  // build from, never a pairing made for anyone. Every name is the plan's own
+  // seat, the one "Team up each party" reads (dive-domain review of layer
+  // r5-4, second pass, N7), so the lines and the tap cannot disagree.
+  const nameOf = (bookingId: string) => partyPlan.names.get(bookingId) ?? "";
+  const together = [...partyPlan.teamable, ...partyPlan.left.map((party) => party.bookingIds)];
   const groupList = cachedListFormat(locale, { type: "unit", style: "short" });
-  const nameOf = new Map(manifest.divers.map((diver) => [diver.bookingId, diver.fullName]));
   const partyLines =
     together.length === 0
       ? null
       : {
           together: t("manifest.buddyCameTogether", {
-            parties: groupList.format(together.map((names) => teamNameList.format(names))),
+            parties: groupList.format(together.map((ids) => teamNameList.format(ids.map(nameOf)))),
           }),
           alone:
-            alone.length === 0
+            partyPlan.alone.length === 0
               ? null
-              : t("manifest.buddyCameAlone", { names: groupList.format(alone) }),
+              : t("manifest.buddyCameAlone", {
+                  names: groupList.format(partyPlan.alone.map(nameOf)),
+                }),
           // Each party the tap leaves, said with its reason (dive-domain
           // review of layer r5-4, BLOCK 1): a junior, an intro dive, a family.
           left: partyPlan.left.map(({ bookingIds, reason }) =>
             t("manifest.buddyPartyLeft", {
-              names: teamNameList.format(bookingIds.map((id) => nameOf.get(id) ?? "")),
+              names: teamNameList.format(bookingIds.map(nameOf)),
               reason: partyLeftReasonText(t, reason),
             }),
           ),

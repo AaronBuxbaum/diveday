@@ -1,4 +1,5 @@
 import type { DiveSpecialty } from "@/db/schema";
+import { JUNIOR_AGE_END } from "@/lib/age";
 import { MIN_CARD_NUMBER_LENGTH } from "@/lib/card-number";
 import type { CERTIFICATION_AGENCIES } from "@/lib/certification-options";
 
@@ -468,8 +469,6 @@ export const RECORD_LINES = 4;
 export const EVIDENCE_MAX_LENGTH = 280;
 /** The most page text the server reads. A results page is far smaller. */
 export const PAGE_TEXT_MAX_LENGTH = 50_000;
-/** PADI's junior ratings become the full rating on the diver's 15th birthday. */
-export const JUNIOR_UPGRADE_AGE = 15;
 
 /** Lower case, no accents, every run of punctuation and space one space. */
 export function foldText(text: string): string {
@@ -825,7 +824,7 @@ function readAgencyPage(input: AgencyPageInput): {
     );
     if (limited) return "limited_card";
     if (oneDiver && recordLines.some(juniorLevel)) {
-      if (!input.birthDate || ageOn(input.birthDate, input.today) < JUNIOR_UPGRADE_AGE) {
+      if (!input.birthDate || ageOn(input.birthDate, input.today) < JUNIOR_AGE_END) {
         return "junior_under_15";
       }
     }

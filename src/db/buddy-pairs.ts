@@ -460,6 +460,10 @@ export type PartyTeamPlan = {
   teamable: string[][];
   /** Parties of two or more it leaves, with the reason the panel says. */
   left: { bookingIds: string[]; reason: PartyLeftReason }[];
+  /** Diver seats still to team that came alone. */
+  alone: string[];
+  /** The name on each seat above, so the panel says the plan's own seats. */
+  names: Map<string, string>;
 };
 
 /**
@@ -493,7 +497,13 @@ export async function planPartyTeams(
     .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, trips.shopId)))
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .limit(1);
-  const plan: PartyTeamPlan = { parties: new Map(), teamable: [], left: [] };
+  const plan: PartyTeamPlan = {
+    parties: new Map(),
+    teamable: [],
+    left: [],
+    alone: [],
+    names: new Map(),
+  };
   if (!departure) return plan;
   const [seats, teamed] = await queryAll(db, [
     () =>
@@ -505,6 +515,7 @@ export async function planPartyTeams(
           status: bookings.status,
           heldAt: bookings.identityUnconfirmedAt,
           declaredMinorAt: bookings.minorDeclaredAt,
+          fullName: people.fullName,
           dateOfBirth: people.dateOfBirth,
           verifiedCard: sql<boolean>`exists (select 1 from ${certifications} where ${certifications.shopId} = ${bookings.shopId} and ${certifications.personId} = ${bookings.personId} and ${certifications.status} = 'verified' and ${certifications.deletedAt} is null)`,
         })
@@ -537,6 +548,7 @@ export async function planPartyTeams(
       isDiver(seat.participantType) &&
       !onATeam.has(seat.bookingId);
     if (!stillToTeam) continue;
+    plan.names.set(seat.bookingId, seat.fullName);
     byParty.set(key, [
       ...(byParty.get(key) ?? []),
       {
@@ -551,8 +563,11 @@ export async function planPartyTeams(
   }
   const course = departure.courseId ? { intro: Boolean(departure.intro) } : null;
   for (const party of byParty.values()) {
-    if (party.length < MIN_BUDDY_TEAM_SIZE) continue;
     const bookingIds = party.map((seat) => seat.bookingId);
+    if (party.length < MIN_BUDDY_TEAM_SIZE) {
+      plan.alone.push(...bookingIds);
+      continue;
+    }
     const reason = partyLeftReason(
       { course },
       party.map((seat) => seat.member),

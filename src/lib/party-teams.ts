@@ -11,31 +11,32 @@
  * - **A course departure.** An intro (DSD, Try Scuba) participant always dives
  *   with an instructor (glossary **DSD**); a student on a training dive is the
  *   instructor's to place. Two friends on either are not a self-reliant pair.
- * - **More than {@link PARTY_TEAM_MAX}.** A family of four arrives together
- *   and dives in pairs the divemaster picks.
- * - **A diver under {@link CHILD_AGE_LIMIT}.** A 10-11-year-old dives with a
- *   PADI Professional or a certified parent or guardian (glossary **Junior
- *   certification**), and only the divemaster can tell whether the adult beside
- *   them is either.
+ * - **A diver under {@link JUNIOR_YOUNGEST_BAND_END}.** A 10-11-year-old dives
+ *   with a PADI Professional or a certified parent or guardian (glossary
+ *   **Junior certification**), and only the divemaster can tell whether the
+ *   adult beside them is either.
+ * - **A seat whose "Under 18" box and date of birth disagree.** One of them is
+ *   wrong, and which one decides who the party's adult is.
  * - **A minor with no date of birth.** The "Under 18" box says a seat is a
  *   minor and nothing about which band: it could be ten.
- * - **A diver under {@link JUNIOR_AGE_LIMIT} with no certified adult.** A
- *   12-14-year-old dives with a certified adult: a diver of
- *   {@link ADULT_AGE} or more, by a date of birth on file, holding a verified
- *   card, in the same party.
+ * - **A diver under {@link JUNIOR_AGE_END} with no certified adult on file.** A
+ *   12-14-year-old dives with a certified adult: a diver of {@link ADULT_AGE}
+ *   or more, by a date of birth on file, holding a verified card, in the same
+ *   party.
+ * - **More than {@link PARTY_TEAM_MAX}.** A family of four arrives together
+ *   and dives in pairs the divemaster picks.
  *
  * Boring on purpose: plain comparisons, a fixed order, no scoring. The order
- * decides only which reason is said when several apply.
+ * decides only which reason is said when several apply, so every age reason
+ * comes before the size one: the divemaster who splits a family of four by
+ * hand must be told there is a child in it (dive-domain review of layer r5-4,
+ * second pass, F2). The bands are PADI's and SSI's, from `src/lib/age.ts`.
  */
+
+import { ADULT_AGE, JUNIOR_AGE_END, JUNIOR_YOUNGEST_BAND_END } from "@/lib/age";
 
 /** The largest party one tap makes a team of. */
 export const PARTY_TEAM_MAX = 3;
-/** Under this age a junior is the divemaster's to place, adult or not. */
-export const CHILD_AGE_LIMIT = 12;
-/** Under this age a junior needs a certified adult in the party. */
-export const JUNIOR_AGE_LIMIT = 15;
-/** The age a party's certified adult has reached. */
-export const ADULT_AGE = 18;
 
 /** One diver seat in a party, as the decision needs it. */
 export type PartyMember = {
@@ -51,10 +52,11 @@ export type PartyMember = {
 export type PartyLeftReason =
   | "intro_course"
   | "training_course"
-  | "too_large"
   | "young_child"
+  | "minor_age_conflict"
   | "minor_age_unknown"
-  | "junior_without_adult";
+  | "junior_without_adult"
+  | "too_large";
 
 /** The departure the party is on: its course, if it is one. */
 export type PartyDeparture = { course: { intro: boolean } | null };
@@ -69,17 +71,22 @@ export function partyLeftReason(
 ): PartyLeftReason | null {
   if (departure.course?.intro) return "intro_course";
   if (departure.course) return "training_course";
-  if (members.length > PARTY_TEAM_MAX) return "too_large";
-  if (members.some((member) => member.age !== null && member.age < CHILD_AGE_LIMIT)) {
+  if (members.some((member) => member.age !== null && member.age < JUNIOR_YOUNGEST_BAND_END)) {
     return "young_child";
+  }
+  if (
+    members.some((member) => member.declaredMinor && member.age !== null && member.age >= ADULT_AGE)
+  ) {
+    return "minor_age_conflict";
   }
   if (members.some((member) => member.age === null && member.declaredMinor)) {
     return "minor_age_unknown";
   }
-  const junior = members.some((member) => member.age !== null && member.age < JUNIOR_AGE_LIMIT);
+  const junior = members.some((member) => member.age !== null && member.age < JUNIOR_AGE_END);
   const certifiedAdult = members.some(
     (member) => member.age !== null && member.age >= ADULT_AGE && member.verifiedCard,
   );
   if (junior && !certifiedAdult) return "junior_without_adult";
+  if (members.length > PARTY_TEAM_MAX) return "too_large";
   return null;
 }

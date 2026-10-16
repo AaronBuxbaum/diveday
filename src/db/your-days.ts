@@ -10,7 +10,7 @@ import { RECAP_TOKEN_MAX_AGE_MS, recapLinkPath } from "@/lib/recap-links";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
-import { diveDay } from "./dive-days";
+import { diveDay, numberedDiveDay } from "./dive-days";
 import { sendAndRecordNotification } from "./notifications";
 import { bookings, people, priorVisits, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -90,18 +90,14 @@ export async function listYourDays(
         ),
       )
       .orderBy(asc(trips.startsAt), asc(trips.title), asc(bookings.id)),
-    // Every dive day, this booking's included: the numbering counts them all,
-    // as the recap's own count does; a held one is numbered but never listed.
+    // Every dive day, this booking's included, by the recap's own rule
+    // (`numberedDiveDay`): diver seats only, never a held one, which may be
+    // somebody else's day (security review r5-4, second pass, N-b).
     db
-      .select({
-        bookingId: bookings.id,
-        startsAt: trips.startsAt,
-        title: trips.title,
-        heldAt: bookings.identityUnconfirmedAt,
-      })
+      .select({ bookingId: bookings.id, startsAt: trips.startsAt, title: trips.title })
       .from(bookings)
       .innerJoin(trips, eq(trips.id, bookings.tripId))
-      .where(and(mine, diveDay(), liveTrip(), lte(trips.startsAt, now)))
+      .where(and(mine, numberedDiveDay(), liveTrip(), lte(trips.startsAt, now)))
       .orderBy(asc(trips.startsAt), asc(trips.title), asc(bookings.id)),
     db
       .select({ visitedOn: priorVisits.visitedOn, statusLabel: priorVisits.statusLabel })
@@ -114,8 +110,8 @@ export async function listYourDays(
   // row's own local day, so a row and the recap it mails agree.
   const diveDayStarts = divedDays.map((day) => day.startsAt);
   const past = divedDays
-    .filter((day) => day.bookingId !== input.bookingId && day.heldAt === null)
-    .map(({ heldAt: _heldAt, ...day }) => ({
+    .filter((day) => day.bookingId !== input.bookingId)
+    .map((day) => ({
       ...day,
       dayNumber: diveDayOrdinal({
         diveDayStarts,

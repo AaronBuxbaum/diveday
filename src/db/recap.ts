@@ -10,6 +10,7 @@ import {
   ne,
   notInArray,
   or,
+  type SQL,
   sql,
 } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
@@ -45,7 +46,7 @@ import { loadActiveStaffRoles } from "./authz";
 import { getBoatForHistory } from "./boats";
 import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
-import { diveDay } from "./dive-days";
+import { numberedDiveDay } from "./dive-days";
 import { listSiteFieldGuides } from "./dive-sites";
 import { diveDaysBefore, listExecutedDives } from "./executed-dives";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
@@ -738,16 +739,16 @@ async function loadRecapPageData(
           eq(bookings.shopId, row.shopId),
           eq(bookings.personId, row.personId),
           // **The one dive-day rule** (`src/db/dive-days.ts`, issue #1694),
-          // which the counter's name-match prompt reads too. A blown-out
-          // departure is not a dive day unless the crew logged a dive on it
-          // (H-84): a cancellation leaves its bookings active by design, so a
-          // plain status read counts days nobody dived, and the imported half
-          // of this merge refuses exactly that (`did_not_happen`, below).
+          // on diver seats that are not held (`numberedDiveDay`), the days the
+          // milestone and "Your days" count too. A blown-out departure is not
+          // a dive day unless the crew logged a dive on it (H-84): a
+          // cancellation leaves its bookings active by design, so a plain
+          // status read counts days nobody dived, and the imported half of
+          // this merge refuses exactly that (`did_not_happen`, below).
           // `visitMilestone` is exact equality on {1, 10, 25, 50, 100}, so a
           // day that moves in or out skips a stamp permanently rather than
-          // blurring it: which is why this count may never disagree with the
-          // prompt that names the day to a staffer.
-          diveDay(),
+          // blurring it: which is why the three readers may never disagree.
+          numberedDiveDay(),
           lte(trips.startsAt, row.tripStartsAt),
         ),
       ),
@@ -979,17 +980,33 @@ async function listRecapPhotosForBooking(
   bookingId: string,
   tripId?: string,
 ): Promise<RecapPhotoView[]> {
-  const [diverRows, crewRows, boatRows] = await Promise.all([
+  const [diverRows, crewRows] = await Promise.all([
+    // The diver's own photos and the boat's shared ones in one read: the
+    // other seats' half carries the rules of {@link boatShares}.
     db
       .select({
         id: recapPhotos.id,
+        bookingId: recapPhotos.bookingId,
         imageUrl: recapPhotos.imageUrl,
         caption: recapPhotos.caption,
         sharedWithBoatAt: recapPhotos.sharedWithBoatAt,
         createdAt: recapPhotos.createdAt,
+        sharerName: people.fullName,
       })
       .from(recapPhotos)
-      .where(and(eq(recapPhotos.shopId, shopId), eq(recapPhotos.bookingId, bookingId)))
+      .innerJoin(
+        bookings,
+        and(eq(bookings.id, recapPhotos.bookingId), eq(bookings.shopId, recapPhotos.shopId)),
+      )
+      .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
+      .where(
+        and(
+          eq(recapPhotos.shopId, shopId),
+          tripId
+            ? or(eq(recapPhotos.bookingId, bookingId), boatShares(tripId, bookingId))
+            : eq(recapPhotos.bookingId, bookingId),
+        ),
+      )
       .orderBy(desc(recapPhotos.createdAt)),
     tripId
       ? db
@@ -1002,78 +1019,63 @@ async function listRecapPhotosForBooking(
           .where(and(eq(tripRecapPhotos.shopId, shopId), eq(tripRecapPhotos.tripId, tripId)))
           .orderBy(desc(tripRecapPhotos.createdAt))
       : Promise.resolve([]),
-    tripId ? listBoatSharedPhotos(db, shopId, tripId, bookingId) : Promise.resolve([]),
   ]);
+  const own = diverRows.filter((row) => row.bookingId === bookingId);
+  const shared = diverRows.filter((row) => row.bookingId !== bookingId);
+  // A seat left at the dock is off the boat (ADR 20261016-shared-boat-photos
+  // §3), asked only when somebody shared anything at all.
+  const ashore =
+    shared.length > 0 && tripId
+      ? await bookingsLeftAtTheDock(
+          db,
+          [...new Set(shared.map((row) => row.bookingId))].map((id) => ({
+            booking: { id },
+            shop: { id: shopId },
+            trip: { id: tripId },
+          })),
+        )
+      : new Set<string>();
   return [
-    ...diverRows.map(({ sharedWithBoatAt, ...photo }) =>
-      sharedWithBoatAt ? { ...photo, sharedWithBoat: true } : photo,
+    ...own.map(({ id, imageUrl, caption, sharedWithBoatAt, createdAt }) =>
+      sharedWithBoatAt
+        ? { id, imageUrl, caption, createdAt, sharedWithBoat: true }
+        : { id, imageUrl, caption, createdAt },
     ),
     ...crewRows.map((photo) => ({ ...photo, caption: null })),
-    ...boatRows,
+    ...shared
+      .filter((row) => !ashore.has(row.bookingId))
+      .map(({ id, imageUrl, caption, createdAt, sharerName }) => ({
+        id,
+        imageUrl,
+        caption,
+        createdAt,
+        sharedBy: firstNameOf(sharerName, sharerName),
+      })),
   ]
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .map(({ createdAt: _createdAt, ...photo }) => photo);
 }
 
 /**
- * The photos other divers on this departure shared with the boat, each with
- * the sharer's first name. Never this booking's own (those are read above).
+ * The photos other divers on this departure shared with the boat. Never this
+ * booking's own (those are the other half of the read above).
  *
  * Only from a seat a recap would show (ADR 20261016-shared-boat-photos §3;
  * security review of layer r5-4, F2): not cancelled or a no-show, not held
- * (its holder may not be the person whose name it would carry), not left at
- * the dock, and not a removed or erased diver's.
+ * (its holder may not be the person whose name it would carry), and not a
+ * removed or erased diver's; a seat left at the dock is dropped after the read.
  */
-async function listBoatSharedPhotos(
-  db: AppDb,
-  shopId: string,
-  tripId: string,
-  bookingId: string,
-): Promise<(RecapPhotoView & { createdAt: Date })[]> {
-  const rows = await db
-    .select({
-      id: recapPhotos.id,
-      imageUrl: recapPhotos.imageUrl,
-      caption: recapPhotos.caption,
-      createdAt: recapPhotos.createdAt,
-      sharerName: people.fullName,
-      sharerBookingId: recapPhotos.bookingId,
-    })
-    .from(recapPhotos)
-    .innerJoin(
-      bookings,
-      and(eq(bookings.id, recapPhotos.bookingId), eq(bookings.shopId, recapPhotos.shopId)),
-    )
-    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
-    .where(
-      and(
-        eq(recapPhotos.shopId, shopId),
-        eq(recapPhotos.tripId, tripId),
-        eq(bookings.tripId, tripId),
-        ne(recapPhotos.bookingId, bookingId),
-        isNotNull(recapPhotos.sharedWithBoatAt),
-        notInArray(bookings.status, ["cancelled", "no_show"]),
-        isNull(bookings.identityUnconfirmedAt),
-        isNull(people.deletedAt),
-        isNull(people.anonymizedAt),
-      ),
-    )
-    .orderBy(desc(recapPhotos.createdAt));
-  if (rows.length === 0) return [];
-  const ashore = await bookingsLeftAtTheDock(
-    db,
-    [...new Set(rows.map((row) => row.sharerBookingId))].map((id) => ({
-      booking: { id },
-      shop: { id: shopId },
-      trip: { id: tripId },
-    })),
-  );
-  return rows
-    .filter((row) => !ashore.has(row.sharerBookingId))
-    .map(({ sharerName, sharerBookingId: _sharer, ...photo }) => ({
-      ...photo,
-      sharedBy: firstNameOf(sharerName, sharerName),
-    }));
+function boatShares(tripId: string, bookingId: string): SQL {
+  return and(
+    eq(recapPhotos.tripId, tripId),
+    eq(bookings.tripId, tripId),
+    ne(recapPhotos.bookingId, bookingId),
+    isNotNull(recapPhotos.sharedWithBoatAt),
+    notInArray(bookings.status, ["cancelled", "no_show"]),
+    isNull(bookings.identityUnconfirmedAt),
+    isNull(people.deletedAt),
+    isNull(people.anonymizedAt),
+  ) as SQL;
 }
 
 export type RecapPhotoEligibility =

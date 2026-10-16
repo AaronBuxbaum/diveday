@@ -955,11 +955,16 @@
   three a **buddy team** in one tap (`planPartyTeams`, `formPartyTeams` in
   `src/db/buddy-pairs.ts`). **One tap never guesses about who may dive with whom** (dive-domain
   review of layer r5-4): it leaves for the divemaster, saying why on a "Left for you" line, every
-  party on an intro or a course departure, a party of more than three, one with a diver under 12,
-  one with a minor whose date of birth is not on file, and one with a diver under 15 and no diver
-  of 18 or more holding a verified card in the same party (`partyLeftReason` in
-  `src/lib/party-teams.ts`, read against **Junior certification**). Only booked and checked-in
-  diver seats that are not held count; the button's number and the tap read the one plan.
+  party on an intro or a course departure, one with a diver under 12, one whose "Under 18" box
+  disagrees with a date of birth, one with a minor whose date of birth is not on file, one with a
+  diver under 15 and no diver of 18 or more by a date of birth on file holding a verified card the
+  shop has not deleted in the same party, and a party of more than three. Every age reason is said
+  before the size one, so whoever splits a family of four by hand is told there is a child in it.
+  Ages are taken on the departure's own local date; the bands are PADI's and SSI's, kept once in
+  `src/lib/age.ts` (`partyLeftReason` in `src/lib/party-teams.ts`, read against **Junior
+  certification**). Only booked and checked-in diver seats that are not held count, and every line
+  on the panel and the button's number are drawn from that one plan. A team built by hand has no
+  such check.
 - **Participant type** — what a booked person is doing on a departure: a **diver**, a
   **snorkeler**, or a **rider** (`bookings.participant_type`, codes in
   `src/lib/participant-types.ts`). Every booking has exactly one, and it defaults to diver. All
@@ -1425,8 +1430,10 @@
   Blue Mantis" counts, and what a **milestone stamp** is awarded for. One calendar day in the shop's
   own zone, merged across the diver's own DiveDay bookings and the **prior visit** rows a shop imported
   from wherever it kept them before (`mergeShopHistory`, `src/lib/prior-visits.ts`) — so a two-tank
-  morning and an afternoon single on one date are one day, not two. **A day nobody dived is never
-  one**: a cancelled booking, a no-show, an imported visit standing `did_not_happen`, and a
+  morning and an afternoon single on one date are one day, not two. A diver's numbered days (the
+  recap's count, the **milestone** and **Your days**) count only their **diver** seats that are not
+  held (`numberedDiveDay`): a day they rode along is not one of theirs.
+  **A day nobody dived is never one**: a cancelled booking, a no-show, an imported visit standing `did_not_happen`, and a
   cancelled departure are all excluded, the last of those because a blow-out leaves its bookings
   active by design and the count read them as days until a review caught it (2026-08-28). **A
   `no_show` has no escape in any of the three readers** (issue #1558, settled the other way by a
@@ -1463,13 +1470,16 @@
   each side as a count with no badge (H-128): "25th dive day with us" under the name on the roster
   and the manifest, and "Say hello to Bjorn: 25th dive day with us." on Today, for a diver who
   said the crew may know (the welcome cue's consent); "Your 25th dive day with Blue Mantis
-  Divers." on the diver's booked moment. One number for every reader: the distinct days in the
-  shop's zone, merged across the diver's own seats and imported visits (`mergeShopHistory`), up to
-  and including this departure's own local day (`diveDayOrdinal` in `src/lib/prior-visits.ts`), so
-  an afternoon boat after a morning one is the same day, and two future boats on different dates
-  are two different counts. The recap's ordinal and the rows of **Your days** count the same way.
-  Silent on every other count, and on a snorkeler's or a rider's seat. Not the **Milestone
-  stamp**, which is the recap's roundel and also marks the first day.
+  Divers." on the diver's booked moment, and only on a link mailed to the contact on file, never a
+  booking redirect. One number for every reader: the distinct days in the shop's zone, merged
+  across the diver's own diver seats that are not held (`numberedDiveDay` in
+  `src/db/dive-days.ts`) and imported visits (`mergeShopHistory`), up to and including this
+  departure's own local day (`diveDayOrdinal` in `src/lib/prior-visits.ts`), so an afternoon boat
+  after a morning one is the same day, two future boats on different dates are two different
+  counts, and a day they rode along or snorkeled is not counted. The recap's ordinal and the rows
+  of **Your days** count the same days. Silent on every other count, and on a snorkeler's or a
+  rider's seat. Not the **Milestone stamp**, which is the recap's roundel and also marks the first
+  day.
 - **Standing line** — the one line under a diver's name on their record that says what they are to
   the shop: "23 visits since Mar 2024 · last out Sep 30 · $2,140 spent · brought 2 friends"
   (`diverStanding` in `src/lib/diver-standing.ts`). Visits are the record's own count, every seat
@@ -1625,8 +1635,8 @@
   **Drawn only on a delivered link** (security review of layer r5-4, F1): a readiness link DiveDay
   mailed to the contact on file (`booking_capabilities.delivered`), never the one a booking or a
   seat claim redirects its browser to, because that browser proved only that it typed a name and
-  an address. Never on a held seat, and a held seat is never one of its rows. Read in
-  `src/db/your-days.ts`; see
+  an address. Never on a held seat; a held seat is never one of its rows and never counted in
+  their numbers. Read in `src/db/your-days.ts`; see
   [20261016-fresh-link-per-booking-row](../../architecture/decisions/20261016-fresh-link-per-booking-row.md).
 - **Your week** — a crew member's next three departures, on their Today below the day: the boat
   and departure, when, their job on it (`trip_assignments.trip_role`, "On the crew" when the

@@ -145,8 +145,9 @@
     "training_course": "course dive",
     "too_large": "more than three",
     "young_child": "a diver under 12",
+    "minor_age_conflict": "an Under 18 box that disagrees with a date of birth",
     "minor_age_unknown": "a minor with no date of birth",
-    "junior_without_adult": "a junior with no certified adult"
+    "junior_without_adult": "a junior with no certified adult on file"
   },
   "buddyTeamLabel": "Team {number, number, ::00}",
   "buddyCancelledName": "{name} (seat canceled)",

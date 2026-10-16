@@ -145,7 +145,9 @@ describe("listYourDays", () => {
       .where(inArray(bookings.id, [sooner, first]));
     const days = await listYourDays(db, { shopId: shop.id, bookingId: here, now: NOW });
     expect(days.upcoming.map((d) => d.bookingId)).toEqual([later]);
-    expect(days.past.map((d) => d.bookingId)).toEqual([second]);
+    // Nor is it counted: possibly somebody else's day, it would push this
+    // person's numbers up (security review r5-4, second pass, N-b).
+    expect(days.past.map((d) => [d.bookingId, d.dayNumber])).toEqual([[second, 1]]);
     expect(
       await planYourDayLink(db, {
         shopId: shop.id,

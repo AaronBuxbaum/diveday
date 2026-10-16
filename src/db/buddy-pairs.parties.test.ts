@@ -1,10 +1,11 @@
 import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { formPartyTeams, listTripBuddyTeams, planPartyTeams } from "./buddy-pairs";
 import type { AppDb } from "./client";
-import { bookings, certifications, courses, people } from "./schema";
+import { bookings, certifications, courses, people, shops } from "./schema";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test.
@@ -86,8 +87,12 @@ describe("party teams (fifth-loop ideas, item 50)", () => {
 describe("which parties one tap leaves for the divemaster", () => {
   const DAY = 24 * 60 * 60 * 1000;
 
-  async function departure(db: AppDb, shopId: string, courseId?: string) {
-    const startsAt = new Date(nowDate().getTime() + 5 * DAY);
+  async function departure(
+    db: AppDb,
+    shopId: string,
+    courseId?: string,
+    startsAt = new Date(nowDate().getTime() + 5 * DAY),
+  ) {
     const trip = await createTrip(db, {
       shopId,
       title: "Party reef",
@@ -111,8 +116,13 @@ describe("which parties one tap leaves for the divemaster", () => {
   type Member = {
     age: number | null;
     minor?: boolean;
-    card?: boolean;
+    /** A verified card unless said otherwise; false is no card at all. */
+    card?: boolean | "pending" | "self_declared" | "deleted";
     type?: "diver" | "snorkeler" | "rider";
+    /** Matched to this person on a guess (`identity_unconfirmed_at`). */
+    held?: boolean;
+    /** An exact date of birth, in place of `age`. */
+    dateOfBirth?: string;
   };
 
   let made = 0;
@@ -133,18 +143,26 @@ describe("which parties one tap leaves for the divemaster", () => {
         .values({
           shopId,
           fullName: `Party member ${made}`,
-          dateOfBirth: member.age === null ? null : bornYearsBefore(trip.startsAt, member.age),
+          dateOfBirth:
+            member.dateOfBirth ??
+            (member.age === null ? null : bornYearsBefore(trip.startsAt, member.age)),
         })
         .returning({ id: people.id });
       if (!person) throw new Error("person not created");
-      if (member.card ?? true) {
+      const card = member.card ?? true;
+      if (card !== false) {
         await db.insert(certifications).values({
           shopId,
           personId: person.id,
           agency: "padi",
           level: "open_water",
-          identifier: `PARTY-${made}`,
-          status: "verified",
+          ...(card === "self_declared"
+            ? { selfDeclaredAt: nowDate(), status: "pending" as const }
+            : {
+                identifier: `PARTY-${made}`,
+                status: card === "pending" ? ("pending" as const) : ("verified" as const),
+              }),
+          deletedAt: card === "deleted" ? nowDate() : null,
         });
       }
       const type = member.type ?? "diver";
@@ -159,6 +177,7 @@ describe("which parties one tap leaves for the divemaster", () => {
           status: "booked",
           partyLeadBookingId: lead,
           minorDeclaredAt: member.minor ? nowDate() : null,
+          ...(member.held ? { identityUnconfirmedAt: nowDate(), identityBookedAs: "P. M." } : {}),
         })
         .returning({ id: bookings.id });
       if (!seat) throw new Error("seat not created");
@@ -270,6 +289,89 @@ describe("which parties one tap leaves for the divemaster", () => {
     await party(db, shop.id, trip, [adult, adult]);
     expect(await tap(db, shop.id, trip.id)).toBe(0);
     expect(await reasons(db, shop.id, trip.id)).toEqual(["training_course"]);
+  });
+
+  /**
+   * **What does not make an adult certified** (dive-domain review of layer
+   * r5-4, second pass, N8): only a verified card the shop has not deleted. A
+   * card waiting for review, one the diver only declared, and one staff
+   * deleted all leave the junior without a certified adult.
+   */
+  for (const card of ["pending", "self_declared", "deleted"] as const) {
+    it(`leaves a thirteen-year-old whose adult's card is ${card.replace("_", "-")}`, async () => {
+      const { db, shop } = ctx;
+      const trip = await departure(db, shop.id);
+      await party(db, shop.id, trip, [
+        { age: 44, card },
+        { age: 13, minor: true },
+      ]);
+      expect(await tap(db, shop.id, trip.id)).toBe(0);
+      expect(await reasons(db, shop.id, trip.id)).toEqual(["junior_without_adult"]);
+    });
+  }
+
+  it("does not count a held seat as the party's adult", async () => {
+    const { db, shop } = ctx;
+    const trip = await departure(db, shop.id);
+    await party(db, shop.id, trip, [
+      { age: 13, minor: true },
+      { age: 44, held: true },
+      { age: 14, minor: true },
+    ]);
+    expect(await tap(db, shop.id, trip.id)).toBe(0);
+    expect(await reasons(db, shop.id, trip.id)).toEqual(["junior_without_adult"]);
+  });
+
+  it("leaves a party whose Under 18 box says minor and whose date of birth says adult", async () => {
+    const { db, shop } = ctx;
+    const trip = await departure(db, shop.id);
+    await party(db, shop.id, trip, [{ age: 40, minor: true }, { age: 13 }]);
+    expect(await tap(db, shop.id, trip.id)).toBe(0);
+    expect(await reasons(db, shop.id, trip.id)).toEqual(["minor_age_conflict"]);
+  });
+
+  it("says the child in a family of four, not only its size", async () => {
+    const { db, shop } = ctx;
+    const trip = await departure(db, shop.id);
+    await party(db, shop.id, trip, [
+      adult,
+      adult,
+      { age: 13, minor: true },
+      { age: 10, minor: true },
+    ]);
+    expect(await tap(db, shop.id, trip.id)).toBe(0);
+    expect(await reasons(db, shop.id, trip.id)).toEqual(["young_child"]);
+  });
+
+  /**
+   * Ages are taken on the departure's own local date, never the UTC one. The
+   * departure leaves at 02:30 UTC, the evening before in New York: an adult whose 18th birthday is that local date is 18, and one
+   * whose birthday is the UTC date is still 17 at the dock.
+   */
+  it("counts an 18th birthday on the departure's own local date, and not the day after", async () => {
+    const { db, shop } = ctx;
+    const startsAt = new Date(nowDate().getTime() + 6 * DAY);
+    startsAt.setUTCHours(2, 30, 0, 0);
+    const timezone = "America/New_York";
+    await db.update(shops).set({ timezone }).where(eq(shops.id, shop.id));
+    const trip = await departure(db, shop.id, undefined, startsAt);
+    const localDay = calendarDateInTimezone(startsAt, timezone);
+    const utcDay = startsAt.toISOString().slice(0, 10);
+    expect(localDay).not.toBe(utcDay);
+    const eighteenOn = (day: string) => `${Number(day.slice(0, 4)) - 18}${day.slice(4)}`;
+    await party(db, shop.id, trip, [
+      { age: null, dateOfBirth: eighteenOn(localDay) },
+      { age: 13, minor: true },
+    ]);
+    expect(await tap(db, shop.id, trip.id)).toBe(1);
+
+    const later = await departure(db, shop.id, undefined, startsAt);
+    await party(db, shop.id, later, [
+      { age: null, dateOfBirth: eighteenOn(utcDay) },
+      { age: 13, minor: true },
+    ]);
+    expect(await tap(db, shop.id, later.id)).toBe(0);
+    expect(await reasons(db, shop.id, later.id)).toEqual(["junior_without_adult"]);
   });
 
   it("on a mixed boat, teams only the parties it may and says why it left the rest", async () => {

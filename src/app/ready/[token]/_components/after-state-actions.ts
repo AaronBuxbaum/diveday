@@ -4,7 +4,7 @@ import {
   submitRecapPulseAction,
   submitReviewAction,
 } from "@/app/recap/[token]/actions";
-import type { AfterStateProps } from "@/features/recap-after-state";
+import { type AfterStateProps, buildAfterStateProps } from "@/features/recap-after-state";
 import { signRecapToken } from "@/lib/recap-links";
 
 /**
@@ -23,4 +23,25 @@ export function afterStateActions(token: string, bookingId: string): AfterStateP
     startTip: startTipAction.bind(null, recapToken),
     submitPulse: submitRecapPulseAction.bind(null, recapToken),
   };
+}
+
+/**
+ * **The after-state on `/ready`**: the recap's own reader with this page's
+ * doors, minting a handoff, and saying the diver's other seats only on a link
+ * mailed to the contact on file (`delivered`; security review r5-4, second
+ * pass, FIX 1). No notice params: each action redirects to `/recap/<token>`,
+ * which reads them.
+ */
+export function readyAfterStateProps(
+  input: Omit<Parameters<typeof buildAfterStateProps>[0], "mintHandoff" | "params" | "actions"> & {
+    token: string;
+  },
+): Promise<AfterStateProps> {
+  const { token, ...rest } = input;
+  return buildAfterStateProps({
+    ...rest,
+    mintHandoff: true,
+    params: {},
+    actions: afterStateActions(token, input.bookingId),
+  });
 }

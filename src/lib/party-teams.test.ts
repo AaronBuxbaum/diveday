@@ -109,6 +109,39 @@ describe("partyLeftReason", () => {
     expect(partyLeftReason(FUN_DIVE, [adult(), child(null)])).toBe("minor_age_unknown");
   });
 
+  describe("a party of four or more (second pass, F2)", () => {
+    it("says the child before the size: whoever splits it by hand must know", () => {
+      expect(partyLeftReason(FUN_DIVE, [adult(), adult(), child(13), child(10)])).toBe(
+        "young_child",
+      );
+    });
+
+    it("says the junior with no certified adult before the size", () => {
+      expect(
+        partyLeftReason(FUN_DIVE, [adult({ verifiedCard: false }), adult(), child(13), child(14)]),
+      ).toBe("too_large");
+      expect(
+        partyLeftReason(FUN_DIVE, [
+          adult({ verifiedCard: false }),
+          adult({ verifiedCard: false }),
+          child(13),
+          child(14),
+        ]),
+      ).toBe("junior_without_adult");
+    });
+  });
+
+  describe('an "Under 18" box and a date of birth that disagree (second pass, N5)', () => {
+    it("leaves the party: which one is wrong decides who its adult is", () => {
+      expect(partyLeftReason(FUN_DIVE, [adult(), child(40)])).toBe("minor_age_conflict");
+      expect(partyLeftReason(FUN_DIVE, [child(13), child(19)])).toBe("minor_age_conflict");
+    });
+
+    it("is not raised by a minor whose date of birth agrees", () => {
+      expect(partyLeftReason(FUN_DIVE, [adult(), child(17)])).toBeNull();
+    });
+  });
+
   it("says the course before anything else about the party", () => {
     expect(
       partyLeftReason({ course: { intro: true } }, [child(10), child(11), adult(), adult()]),

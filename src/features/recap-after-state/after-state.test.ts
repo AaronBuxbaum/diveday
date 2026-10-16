@@ -59,6 +59,7 @@ describe("buildAfterStateProps", () => {
       params: {},
       actions,
       mintHandoff: false,
+      delivered: false,
     });
     const text = serialized(props);
     expect(text).not.toContain(data.personId);
@@ -69,9 +70,9 @@ describe("buildAfterStateProps", () => {
     expect(props).not.toHaveProperty("personId");
   });
 
-  it("offers the share-with-the-boat tick from the readiness link only (security review r5-4, F3)", async () => {
+  it("offers the share-with-the-boat tick from a delivered readiness link only (security review r5-4, F3 and N-a)", async () => {
     const { data, bookingId } = await recapData();
-    const build = (mintHandoff: boolean) =>
+    const build = (mintHandoff: boolean, delivered: boolean) =>
       buildAfterStateProps({
         db: ctx.db,
         data,
@@ -81,9 +82,11 @@ describe("buildAfterStateProps", () => {
         params: {},
         actions,
         mintHandoff,
+        delivered,
       });
-    expect((await build(true)).canShareWithBoat).toBe(true);
-    expect((await build(false)).canShareWithBoat).toBe(false);
+    expect((await build(true, true)).canShareWithBoat).toBe(true);
+    expect((await build(true, false)).canShareWithBoat).toBe(false);
+    expect((await build(false, false)).canShareWithBoat).toBe(false);
   });
 
   it("puts no URL, token, slug or id on the saved postcard", async () => {
@@ -97,6 +100,7 @@ describe("buildAfterStateProps", () => {
       params: {},
       actions,
       mintHandoff: true,
+      delivered: true,
     });
     const postcard = JSON.stringify(props.postcard);
     expect(postcard).not.toMatch(/https?:|\/s\/|\/ready\/|\/recap\//);
@@ -127,6 +131,7 @@ describe("buildAfterStateProps", () => {
         params: {},
         actions,
         mintHandoff: false,
+        delivered: false,
       });
     expect((await build(certified)).postcard.facts[1]).toEqual({
       label: "Certified",
@@ -146,6 +151,7 @@ describe("buildAfterStateProps", () => {
       params: {},
       actions,
       mintHandoff: false,
+      delivered: false,
     });
     expect(props.nextDiveHref).toBeNull();
     expect(serialized(props)).not.toMatch(/[?&#]handoff=|\/h\//);
@@ -188,13 +194,63 @@ describe("buildAfterStateProps", () => {
       actions,
     };
 
-    const ready = await buildAfterStateProps({ ...base, mintHandoff: true });
+    const ready = await buildAfterStateProps({ ...base, mintHandoff: true, delivered: true });
     expect(ready.bookedNext?.title).toBe(ahead.title);
     expect(ready.nextDive).toBeNull();
 
-    const recap = await buildAfterStateProps({ ...base, mintHandoff: false });
+    const recap = await buildAfterStateProps({ ...base, mintHandoff: false, delivered: false });
     expect(recap.bookedNext ?? null).toBeNull();
-    expect(serialized(recap)).not.toContain(ahead.title);
+  });
+
+  /**
+   * **A booking-redirect link says nothing of the person's other seats**
+   * (security review r5-4, second pass, FIX 1). Whoever booked as Ana holds
+   * that link until a month after the day; once the day is over, it must not
+   * tell them Ana's next booked departure, mint a handoff carrying her gear, or
+   * hide the next-dive card because she holds one.
+   */
+  it("shows no booked seat and mints no handoff on an undelivered /ready link", async () => {
+    const { data, bookingId } = await recapData();
+    const [own] = await ctx.db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    const startsAt = new Date(nowDate().getTime() + 7 * 24 * 60 * 60 * 1000);
+    const ahead = await createTrip(ctx.db, {
+      shopId: ctx.shop.id,
+      title: "Ana's private Saturday",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+      capacity: 6,
+      plannedDives: 2,
+      isPrivate: true,
+    });
+    if (!own || !ahead) throw new Error("later departure not created");
+    await ctx.db.insert(bookings).values({
+      shopId: ctx.shop.id,
+      tripId: ahead.id,
+      personId: own.personId,
+      bookedAs: "diver",
+    });
+    const base = {
+      db: ctx.db,
+      data,
+      bookingId,
+      locale: "en-US" as const,
+      t: diverTranslator("en-US"),
+      params: {},
+      actions,
+      mintHandoff: true,
+    };
+
+    const redirect = await buildAfterStateProps({ ...base, delivered: false });
+    expect(redirect.bookedNext ?? null).toBeNull();
+    expect(redirect.nextDiveHref).toBeNull();
+    expect(serialized(redirect)).not.toContain(ahead.title);
+    // The card is what it would be with no later seat at all.
+    await ctx.db.delete(bookings).where(eq(bookings.tripId, ahead.id));
+    const withoutTheSeat = await buildAfterStateProps({ ...base, delivered: false });
+    expect(redirect.nextDive?.tripId ?? null).toBe(withoutTheSeat.nextDive?.tripId ?? null);
   });
 
   it("passes the URL's notice params through untouched, for the component to read through noticeFromParam", async () => {
@@ -209,6 +265,7 @@ describe("buildAfterStateProps", () => {
       params,
       actions,
       mintHandoff: false,
+      delivered: false,
     });
     expect(props.params).toEqual(params);
     expect(props.ownReview).toBeNull();

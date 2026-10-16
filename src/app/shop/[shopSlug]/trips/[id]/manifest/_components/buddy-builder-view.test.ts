@@ -13,11 +13,23 @@ const manifest = tripManifest({
   crew: [crewMember()],
 });
 
-function view(
-  buddyError?: string,
-  teamed: string[] = [],
-  partyPlan: PartyTeamPlan = { parties: new Map(), teamable: [], left: [] },
-) {
+const NAMES = new Map([
+  ["b-1", "Ana Ruiz"],
+  ["b-2", "Ben Okafor"],
+]);
+
+function plan(overrides: Partial<PartyTeamPlan>): PartyTeamPlan {
+  return {
+    parties: new Map(),
+    teamable: [],
+    left: [],
+    alone: [],
+    names: NAMES,
+    ...overrides,
+  };
+}
+
+function view(buddyError?: string, teamed: string[] = [], partyPlan: PartyTeamPlan = plan({})) {
   return buddyBuilderView({
     manifest,
     buddyTeamsList: teamed.length
@@ -60,11 +72,11 @@ describe("buddyBuilderView", () => {
 
   it("says who came together and who came alone, and counts the parties the action would team", () => {
     expect(view().panel.partyLines).toBeNull();
-    const { panel } = view(undefined, [], {
-      parties: new Map([["b-2", "b-1"]]),
-      teamable: [["b-1", "b-2"]],
-      left: [],
-    });
+    const { panel } = view(
+      undefined,
+      [],
+      plan({ parties: new Map([["b-2", "b-1"]]), teamable: [["b-1", "b-2"]] }),
+    );
     expect(panel.partyLines).toEqual({
       together: t("manifest.buddyCameTogether", { parties: "Ana Ruiz and Ben Okafor" }),
       alone: null,
@@ -79,11 +91,14 @@ describe("buddyBuilderView", () => {
    * tap leaves is named with the reason.
    */
   it("counts no party the plan leaves, and says why it was left", () => {
-    const { panel } = view(undefined, [], {
-      parties: new Map([["b-2", "b-1"]]),
-      teamable: [],
-      left: [{ bookingIds: ["b-1", "b-2"], reason: "young_child" }],
-    });
+    const { panel } = view(
+      undefined,
+      [],
+      plan({
+        parties: new Map([["b-2", "b-1"]]),
+        left: [{ bookingIds: ["b-1", "b-2"], reason: "young_child" }],
+      }),
+    );
     expect(panel.partyLines?.teamable).toBe(0);
     expect(panel.partyLines?.left).toEqual([
       t("manifest.buddyPartyLeft", {
@@ -91,5 +106,34 @@ describe("buddyBuilderView", () => {
         reason: t("manifest.buddyPartyLeftReason.young_child"),
       }),
     ]);
+  });
+
+  /**
+   * Dive-domain review of layer r5-4, second pass, N7: every line is drawn from
+   * the plan, never a second reading of the manifest. A party the plan leaves
+   * is said even with no party to team, and a seat the manifest no longer lists
+   * keeps the plan's own name for it.
+   */
+  it("draws every line from the plan's own seats and names", () => {
+    const { panel } = view(
+      undefined,
+      [],
+      plan({
+        left: [{ bookingIds: ["b-1", "b-9"], reason: "junior_without_adult" }],
+        alone: ["b-2"],
+        names: new Map([...NAMES, ["b-9", "Dara Ruiz"]]),
+      }),
+    );
+    expect(panel.partyLines).toEqual({
+      together: t("manifest.buddyCameTogether", { parties: "Ana Ruiz and Dara Ruiz" }),
+      alone: t("manifest.buddyCameAlone", { names: "Ben Okafor" }),
+      left: [
+        t("manifest.buddyPartyLeft", {
+          names: "Ana Ruiz and Dara Ruiz",
+          reason: t("manifest.buddyPartyLeftReason.junior_without_adult"),
+        }),
+      ],
+      teamable: 0,
+    });
   });
 });

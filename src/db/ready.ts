@@ -85,7 +85,16 @@ export type BookedCard = {
 
 export async function getBookedCard(
   db: AppDb,
-  { shopId, bookingId }: { shopId: string; bookingId: string },
+  {
+    shopId,
+    bookingId,
+    delivered,
+  }: {
+    shopId: string;
+    bookingId: string;
+    /** The link was mailed to the contact on file; only then is a count said. */
+    delivered: boolean;
+  },
 ): Promise<BookedCard | null> {
   const [row] = await db
     .select({
@@ -115,10 +124,12 @@ export async function getBookedCard(
   if (!row) return null;
   const identityHeld = row.identityUnconfirmedAt !== null;
   // A held seat speaks for a record staff have not matched to whoever booked
-  // (#2082), so it is told no count of that record's days.
-  const milestone = identityHeld
-    ? null
-    : diveDayMilestone(await diveDayCountForSeat(db, shopId, bookingId));
+  // (#2082), and a booking redirect proved only a typed name and address
+  // (security review r5-4, second pass, N-c): neither is told a count.
+  const milestone =
+    identityHeld || !delivered
+      ? null
+      : diveDayMilestone(await diveDayCountForSeat(db, shopId, bookingId));
   return {
     shop: {
       name: row.shopName,
@@ -501,7 +512,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     // The same reader the manifest uses, so "First dive with us" means the
     // same thing on the diver's own page as it does under their name at the
     // rail (issue #1182).
-    welcomeCueInputsByBooking(db, row.shopId, row.tripId, now),
+    welcomeCueInputsByBooking(db, row.shopId, row.tripId, now, { diveDayCounts: false }),
     // Recall, not inference: who kept this diver's fit after a previous trip.
     // Read here rather than folded into `getRentalFit`'s row, because the
     // staffer's name comes from a join this page is the only caller of.

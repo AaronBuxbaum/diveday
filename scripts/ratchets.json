@@ -456,7 +456,7 @@
         }
       }
     ],
-    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 305,
+    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 304,
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 425,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 383,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 331,
@@ -541,7 +541,7 @@
     "src/app/onboard/page.tsx": 479,
     "src/app/page.tsx": 581,
     "src/app/pricing/page.tsx": 468,
-    "src/app/ready/[token]/page.tsx": 660,
+    "src/app/ready/[token]/page.tsx": 656,
     "src/app/s/[shopSlug]/page.tsx": 879,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 526,
     "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
