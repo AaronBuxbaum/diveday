@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applicableMedicalQuestions,
   applicableResponsesOnly,
+  awaitsPhysician,
   calculateMedicalResult,
   emptyMedicalAnswers,
   findQuestionnaireVersion,
@@ -11,6 +12,7 @@ import {
   questionnaireForJurisdiction,
   RSTC_QUESTIONNAIRE,
   readMedicalAnswers,
+  referralQuestionRefs,
   validateMedicalAnswers,
 } from "./medical";
 
@@ -326,5 +328,69 @@ describe("pruning inapplicable answers", () => {
 
   it("drops a key the questionnaire does not have at all", () => {
     expect(applicableResponsesOnly(RSTC_QUESTIONNAIRE, { not_a_question: true })).toEqual({});
+  });
+});
+
+/**
+ * **What the doctor's page names** (fifth-loop ideas, item 17; H-127): the
+ * numbers of the answers that call for a physician, never their words.
+ */
+describe("referral question references", () => {
+  const answered = (yes: string[]) => {
+    const answers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
+    for (const id of yes) answers.responses[id] = true;
+    return answers;
+  };
+
+  it("names a numbered question and a Box item by number, never by prompt", () => {
+    const refs = referralQuestionRefs(answered(["q3", "q2", "box_b_2"]));
+    expect(refs).toEqual([
+      { kind: "question", number: 3 },
+      { kind: "box", box: "B", number: 2 },
+    ]);
+    expect(JSON.stringify(refs)).not.toContain("cholesterol");
+  });
+
+  it("leaves out a yes that only opened a Box", () => {
+    expect(referralQuestionRefs(answered(["q2"]))).toEqual([]);
+  });
+
+  it("names nothing for a clear form, no form, or an unfinished one", () => {
+    expect(referralQuestionRefs(answered([]))).toEqual([]);
+    expect(referralQuestionRefs(null)).toEqual([]);
+    const unfinished = answered(["q3"]);
+    delete unfinished.responses.q5;
+    expect(referralQuestionRefs(unfinished)).toEqual([]);
+  });
+
+  it("names v2's dental question as itself", () => {
+    const v2 = findQuestionnaireVersion("rstc", 2);
+    if (!v2) throw new Error("v2 missing");
+    const answers = emptyMedicalAnswers(v2);
+    answers.responses.dental_recovery = true;
+    expect(referralQuestionRefs(answers)).toEqual([{ kind: "dental" }]);
+  });
+});
+
+describe("whether a record waits on a physician", () => {
+  const held = {
+    status: "medical_review" as const,
+    supersededAt: null,
+    medicalClearedAt: null,
+    medicalClearanceDeclinedAt: null,
+    anonymizedAt: null,
+  };
+
+  it("is a hold nobody has answered", () => {
+    expect(awaitsPhysician(held)).toBe(true);
+    expect(awaitsPhysician({ ...held, status: "completed" })).toBe(false);
+  });
+
+  it("ends with either answer, a fresh link, or erasure", () => {
+    const at = new Date("2026-10-01T00:00:00.000Z");
+    expect(awaitsPhysician({ ...held, medicalClearedAt: at })).toBe(false);
+    expect(awaitsPhysician({ ...held, medicalClearanceDeclinedAt: at })).toBe(false);
+    expect(awaitsPhysician({ ...held, supersededAt: at })).toBe(false);
+    expect(awaitsPhysician({ ...held, anonymizedAt: at })).toBe(false);
   });
 });

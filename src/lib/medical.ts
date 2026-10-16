@@ -589,3 +589,83 @@ export function emptyMedicalAnswers(questionnaire: MedicalQuestionnaire): Medica
     responses: Object.fromEntries(questionnaire.questions.map((question) => [question.id, false])),
   };
 }
+
+/**
+ * Where a referral answer sits on the published form: a numbered question, an
+ * item in a lettered Box, or version 2's standalone dental question.
+ */
+export type MedicalReferralRef =
+  | { kind: "question"; number: number }
+  | { kind: "box"; box: string; number: number }
+  | { kind: "dental" };
+
+function referralRef(questionId: string): MedicalReferralRef | null {
+  const numbered = /^q(\d+)$/.exec(questionId);
+  if (numbered) return { kind: "question", number: Number(numbered[1]) };
+  const boxed = /^box_([a-g])_(\d+)$/.exec(questionId);
+  if (boxed) return { kind: "box", box: boxed[1].toUpperCase(), number: Number(boxed[2]) };
+  return questionId === "dental_recovery" ? { kind: "dental" } : null;
+}
+
+/**
+ * **The numbers a diver hands their doctor, never the answers** (H-127, ADR
+ * 20261016-doctor-referral-page). Only the yeses that call for evaluation: a
+ * primary yes that merely opened a Box is implied by the Box item it led to,
+ * and a clear, missing or unfinished form names nothing.
+ */
+export function referralQuestionRefs(answers: MedicalAnswers | null): MedicalReferralRef[] {
+  if (!answers) return [];
+  const result = calculateMedicalResult(answers);
+  if (result.status !== "physician_review") return [];
+  return result.flaggedQuestionIds.flatMap((id) => referralRef(id) ?? []);
+}
+
+/**
+ * Whether this release still waits on a physician's written answer: held for
+ * review, neither answer recorded, not replaced by a fresh link, not erased.
+ * The doctor's page opens only for such a record.
+ */
+export function awaitsPhysician(record: {
+  status: string;
+  supersededAt: Date | null;
+  medicalClearedAt: Date | null;
+  medicalClearanceDeclinedAt: Date | null;
+  anonymizedAt: Date | null;
+}): boolean {
+  return (
+    record.status === "medical_review" &&
+    !record.supersededAt &&
+    !record.medicalClearedAt &&
+    !record.medicalClearanceDeclinedAt &&
+    !record.anonymizedAt
+  );
+}
+
+/**
+ * **The examiner's half of the published form**, which the diver's doctor
+ * fills in and signs. English, like the questionnaire it belongs to (H-01/H-03).
+ * The participant's name and birthdate are printed into it; everything else is
+ * the physician's to write.
+ */
+export const PHYSICIAN_EVALUATION_FORM = {
+  title: "Diver Medical | Medical Examiner's Evaluation Form",
+  participantName: "Participant name",
+  birthdate: "Birthdate",
+  request:
+    "The above-named person requests your opinion of their medical suitability to participate in recreational scuba diving or freediving training or activity. Please visit uhms.org for medical guidance on medical conditions as they relate to diving. Review the areas relevant to your patient as part of your evaluation.",
+  resultHeading: "Evaluation result",
+  approved:
+    "Approved. I find no conditions that I consider incompatible with recreational scuba diving or freediving.",
+  notApproved:
+    "Not approved. I find conditions that I consider incompatible with recreational scuba diving or freediving.",
+  signature: "Signature of certified medical doctor or other legally certified medical provider",
+  date: "Date",
+  examinerFields: [
+    "Medical examiner's name",
+    "Clinical degree(s)",
+    "Clinic/Hospital",
+    "Address",
+    "Phone",
+    "Email",
+  ],
+} as const;

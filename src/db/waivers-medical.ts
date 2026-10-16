@@ -7,10 +7,12 @@ import { and, desc, eq, isNotNull, isNull, or } from "drizzle-orm";
 import { canRetireMedicalRefusal } from "@/lib/authz";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { awaitsPhysician, type MedicalReferralRef, referralQuestionRefs } from "@/lib/medical";
 import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
-import { waiverRecords } from "./schema";
+import { people, waiverRecords } from "./schema";
+import { livePerson } from "./trips-live";
 import { activeStaffAttestorId } from "./waivers-in-person";
 
 /**
@@ -397,4 +399,38 @@ export async function getMedicalClearanceDocument(
     )
     .limit(1);
   return row?.url ? { url: row.url, personId: row.personId } : null;
+}
+
+/** What the doctor's page prints: who the form is for, and which answers to ask about. */
+export type DoctorReferral = {
+  fullName: string;
+  /** The calendar date on file, or null for a line the diver writes in. */
+  dateOfBirth: string | null;
+  refs: MedicalReferralRef[];
+};
+
+/**
+ * **The doctor's page's one read** (fifth-loop ideas, item 17; H-127, ADR
+ * 20261016-doctor-referral-page). The caller has already resolved `record`
+ * from the diver's own waiver link, so this widens nothing: it adds the
+ * person's name and date of birth and turns the stored answers into question
+ * numbers here, so the answers themselves never reach the page. Null for a
+ * release no longer waiting on a physician, or a diver since removed.
+ */
+export async function getDoctorReferral(
+  db: DbExecutor,
+  record: typeof waiverRecords.$inferSelect,
+): Promise<DoctorReferral | null> {
+  if (!awaitsPhysician(record)) return null;
+  const [person] = await db
+    .select({ fullName: people.fullName, dateOfBirth: people.dateOfBirth })
+    .from(people)
+    .where(and(eq(people.id, record.personId), eq(people.shopId, record.shopId), livePerson()))
+    .limit(1);
+  if (!person) return null;
+  return {
+    fullName: person.fullName,
+    dateOfBirth: person.dateOfBirth,
+    refs: referralQuestionRefs(record.medicalAnswers),
+  };
 }

@@ -1,6 +1,6 @@
 # H-127: What does a referred diver's "Take this to your doctor" page carry?
 
-- **Status:** Chosen
+- **Status:** Implemented
 - **Human owner:** Product owner
 
 ## Decision or approval needed
@@ -17,6 +17,6 @@ The choice, and where it is said.
 
 ## Unblocks / follow-up
 
-Layer r5-3 builds it.
+Implemented by layer r5-3: `/waivers/[token]/doctor`, opened from the held waiver page's "Take this to your doctor" ([ADR 20261016-doctor-referral-page](../../architecture/decisions/20261016-doctor-referral-page.md)).
 
 Part of the [human decision log](README.md#decision-register).

@@ -392,5 +392,6 @@ script again.
 | 20261014-incident-kind-severity | An incident report files with… |
 | 20261014-parent-signs-minor-release | A parent signs a child's… |
 | 20261014-starting-content-is-measured-and-vetted | Starting content is measured by… |
+| 20261016-doctor-referral-page | Print question numbers, never answers,… |
 
 <!-- adr-index:end -->

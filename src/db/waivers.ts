@@ -61,6 +61,8 @@ export {
   recordInPersonWaiver,
 } from "./waivers-in-person";
 export {
+  type DoctorReferral,
+  getDoctorReferral,
   getMedicalClearanceDocument,
   hasUnansweredMedicalHold,
   type MedicalEvaluationOutcome,

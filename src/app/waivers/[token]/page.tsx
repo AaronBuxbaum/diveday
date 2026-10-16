@@ -21,7 +21,12 @@ import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz } from "@/lib/format";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
-import { medicalProgress, medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
+import {
+  awaitsPhysician,
+  medicalProgress,
+  medicalQuestionField,
+  questionnaireForJurisdiction,
+} from "@/lib/medical";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { completeWaiverAction } from "./actions";
@@ -153,13 +158,9 @@ export default async function WaiverPage({
         })
       : null;
     const readyPath = readyCapability ? readinessLinkPath(readyCapability.token) : null;
-    // **The medical step does not tick on a hold.** A record the shop is
-    // holding for a written sign-off is signed and received, and its medical
-    // side is *open* — the copy three lines above says a doctor must confirm
-    // before this diver can go out. A rail closing at "3 of 3 done" under that
-    // sentence is the product turning its own blocking state into a checkbox
-    // (glossary, **Waiver / release**), and the diver who reads the last thing
-    // on the page walks away believing the paperwork is finished.
+    // **The medical step does not tick on a hold**: the record is signed but its
+    // medical side is open, and "3 of 3 done" under "a doctor must confirm" would
+    // turn the blocking state into a checkbox (glossary, **Waiver / release**).
     const signedRail = waiverRailProgress({
       medicalAnswered: 0,
       medicalTotal: 0,
@@ -173,6 +174,7 @@ export default async function WaiverPage({
         locale={locale}
         needsReview={needsReview}
         readyPath={readyPath}
+        doctorPath={awaitsPhysician(state.record) ? `/waivers/${token}/doctor` : null}
         signedRail={signedRail}
         diveSitesList={diveSitesList}
       />

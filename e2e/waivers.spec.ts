@@ -250,6 +250,23 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // and turns up at the dock unboardable.
   await expect(page.getByTestId("waiver-step-rail")).toContainText("2 of 3 done");
 
+  // The page a referred diver hands their doctor (H-127): the form with their
+  // name in it, the question number, never the answer, and the way back.
+  await page.getByRole("link", { name: "Take this to your doctor" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Take this to your doctor", level: 1 }),
+  ).toBeVisible();
+  const form = page.getByTestId("doctor-evaluation-form");
+  await expect(form).toContainText("Medical Examiner's Evaluation Form");
+  await expect(form).toContainText("Priya Sharma");
+  await expect(page.getByTestId("doctor-referral-refs")).toHaveText("Question 3");
+  await expect(page.getByText("I struggle to perform moderate exercise")).toHaveCount(0);
+  await expect(
+    page.getByText(
+      "Bring the signed page to the dock, or send a photo to front.desk@mail.example.",
+    ),
+  ).toBeVisible();
+
   // Back on the roster, the single button now reports the completed-but-flagged
   // state, and the medical answer is spelled out for staff follow-up.
   await page.goto(staffTripUrl);
