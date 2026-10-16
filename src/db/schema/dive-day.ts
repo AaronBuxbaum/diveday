@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   bigserial,
   check,
+  date,
   index,
   integer,
   jsonb,
@@ -12,10 +13,11 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { BoatPaperRecord, BoatSafetyNotice } from "@/lib/boat-safety";
 import type { ReadinessBlocker } from "@/lib/readiness";
 import { bookings } from "./bookings";
 import { people, shops } from "./core";
-import { trips } from "./trips";
+import { boats, trips } from "./trips";
 
 /**
  * The day on the boat: roll call (divers and crew), the pre-departure
@@ -262,9 +264,10 @@ export const rollCallCrewEvents = pgTable(
  * oxygen aboard", "Life jackets counted" — in the order the shop wants it read
  * (ADR 20260824-pre-departure-safety-check).
  *
- * **DiveDay authors none of this.** The required set differs by flag state,
- * vessel class and jurisdiction, so the label is free text the shop writes for
- * itself, not a code this table looks up. `sortOrder` is the shop's own
+ * **DiveDay authors none of this** but the oxygen line a new shop starts with
+ * (`createSignedUpShop`, issue #2301), which is the shop's to edit from then.
+ * The required set differs by flag state, vessel class and jurisdiction, so the
+ * label is free text, not a code this table looks up. `sortOrder` is the shop's own
  * reading order, not a priority; it may repeat or skip after edits, and reads
  * always resolve ties on `createdAt`.
  */
@@ -671,3 +674,47 @@ export const tripBlowoutDivers = pgTable(
 );
 
 export type BlowoutMessageStatus = (typeof blowoutMessageStatus.enumValues)[number];
+
+/**
+ * **The boat's papers and kit notices as they stood at the departure
+ * checkpoint** (#2300, Aaron 2026-10-13). The live boat-safety section reads
+ * the boat as it is *now*, so once a departure has sailed it is hidden: paper
+ * dates are typed over when renewed and kit moves between hulls. This is the
+ * record the departure log and its incident export read instead.
+ *
+ * One row per departure, rewritten by each departure-checkpoint roll-call
+ * write until the boat sails (`hasSailed`) and never after, so it holds what
+ * the crew had in front of them as the boat left. No row means nobody recorded
+ * roll call at the departure checkpoint before it sailed, which the log says.
+ *
+ * `papers` keeps the certificate's limits and every paper date verbatim;
+ * `notices` keeps the codes the pre-departure check raised about papers and
+ * kit (never the head-count lines, which the roll call itself records), worded
+ * at render time like every other code on that document.
+ */
+export const departureBoatSafetySnapshots = pgTable(
+  "departure_boat_safety_snapshots",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    boatId: uuid("boat_id")
+      .notNull()
+      .references(() => boats.id),
+    /** The hull's name then: a boat renamed later still reads as it sailed. */
+    boatName: text("boat_name").notNull(),
+    /** The departure's own local day the notices were judged on. */
+    judgedOn: date("judged_on").notNull(),
+    papers: jsonb("papers").$type<BoatPaperRecord>().notNull(),
+    notices: jsonb("notices").$type<BoatSafetyNotice[]>().notNull(),
+    capturedAt: timestamp("captured_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("departure_boat_safety_snapshots_trip_idx").on(table.tripId),
+    index("departure_boat_safety_snapshots_shop_idx").on(table.shopId),
+  ],
+);

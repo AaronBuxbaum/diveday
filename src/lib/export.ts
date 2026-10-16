@@ -32,7 +32,7 @@ export type ExportFile = { name: string; content: string | Uint8Array };
 export const EXPORT_FILE_NOTES = {
   "shop.csv": "The shop profile, packing checklist, rental catalog, and rental prices.",
   "boats.csv":
-    "The shop's boats: the seats each sells, the passenger limit on its certificate when the shop recorded one, and the dates its next safety inspection is due and its registration and insurance expire, and its radio identity: the call sign, upper case, and the nine-digit MMSI the emergency card prints for departures on that boat. Every date is a calendar day the shop typed; an empty one was never recorded.",
+    "The shop's boats: the seats each sells, the passenger limit and the total-persons limit (crew included) on its certificate when the shop recorded them, the dates its certificate expires, its next safety inspection is due and its registration and insurance expire, and its radio identity: the call sign, upper case, and the nine-digit MMSI the emergency card prints for departures on that boat. Every date is a calendar day the shop typed; an empty one was never recorded.",
   "trip_lenses.csv":
     "The shop's trip tags, as they appear on its public schedule. trips.csv points at one by lens_id.",
   "contacts.csv":
@@ -135,9 +135,11 @@ export const EXPORT_FILE_NOTES = {
   "work_order_events.csv":
     "Each ticket's own history, oldest first (seq is the order things actually happened in): the row that opened it, every status move with where it came from and went to, and every hand-over to a technician, each with the staff member who did it. This is what 'who had it, and for how long' is read out of.",
   "pre_departure_checklist_items.csv":
-    "The shop's own pre-departure safety line, in the shop's own reading order (sort_order) — DiveDay authors none of it. A deleted item is here too, carrying its deleted_at stamp; its history in pre_departure_check_events.csv stays readable regardless.",
+    "The shop's own pre-departure safety line, in the shop's own reading order (sort_order). DiveDay writes only the oxygen line a new shop starts with, and the shop may change it. A deleted item is here too, carrying its deleted_at stamp; its history in pre_departure_check_events.csv stays readable regardless.",
   "pre_departure_check_events.csv":
     "Append-only history of every tap against a checklist item, oldest first: status 'checked' or 'cleared' (an explicit undo of a mis-tap), who recorded it and when, and whether it was recorded live or synced from an offline device. The newest event per item is that item's current answer for the departure. Informs only — nothing here ever gated a departure from sailing.",
+  "departure_boat_safety_snapshots.csv":
+    "The boat's papers and kit as they stood at each departure's roll call, one row per departure, for the departure log: papers is the certificate limits and paper dates verbatim (JSON), notices the codes DiveDay raised about them on the departure's own day (judged_on, JSON). Rewritten on each departure roll-call tap until the boat sailed, never after. Informs only: nothing here ever stopped a departure.",
   "prior_visits.csv":
     "Visit history carried in from the shop's previous system when its divers were imported — one row per booking that system held, never a DiveDay trip. status_label and amount_label are that system's own words and figures, kept verbatim and never normalized: a row can say canceled or no-show, so these are booking records, not evidence of a dive. amount_label is display text with no currency column and was never summed into any DiveDay total. Nothing here was ever read by boarding, capacity, or reporting.",
   "imported_payment_history.csv":

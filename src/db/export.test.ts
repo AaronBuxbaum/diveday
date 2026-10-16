@@ -84,6 +84,7 @@ const EXPECTED_FILES = [
   "work_order_events.csv",
   "pre_departure_checklist_items.csv",
   "pre_departure_check_events.csv",
+  "departure_boat_safety_snapshots.csv",
   "prior_visits.csv",
   "imported_payment_history.csv",
   "internal_notes.csv",
@@ -181,6 +182,7 @@ const EXPORTED_TABLES = [
   "work_order_events",
   "pre_departure_checklist_items",
   "pre_departure_check_events",
+  "departure_boat_safety_snapshots",
   "prior_visits",
   "imported_payment_history",
   "orders",
@@ -587,6 +589,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   work_order_events: ["shop_id"],
   pre_departure_checklist_items: ["shop_id"],
   pre_departure_check_events: ["shop_id"],
+  departure_boat_safety_snapshots: ["shop_id"],
   prior_visits: [
     "shop_id",
     // The re-import idempotency key, derived from the columns that *are*

@@ -186,15 +186,34 @@ export const boats = pgTable(
      */
     certifiedPassengers: integer("certified_passengers"),
     /**
-     * The boat's three paper clocks, each a shop-local calendar date (no
-     * instant in it): when the next safety inspection is due, when the
-     * registration runs out, and when the hull insurance does. Nullable each,
+     * **Total persons aboard, crew included**, when the certificate prints that
+     * limit too (#2302). Some flag states, Spain among them, print only this
+     * one number. Optional and independent of `certifiedPassengers`: a shop
+     * whose certificate carries only a passenger figure is never asked for it.
+     *
+     * Checked at the manifest, never at the point of sale: the pre-departure
+     * check says when the people booked, or counted aboard, plus the crew pass
+     * it (`boatSafetyNotices`). The booking transaction counts seats exactly
+     * as before (Aaron, 2026-10-13).
+     */
+    certifiedTotalPersons: integer("certified_total_persons"),
+    /**
+     * The boat's paper clocks, each a shop-local calendar date (no instant in
+     * it): when the next safety inspection is due, when the registration runs
+     * out, and when the hull insurance does (and `coiExpiresOn` below). Nullable each,
      * and each informs ahead of time: 90 days for the inspection, 60 for the
      * other two (`src/lib/boat-safety.ts`). Stored on the boat rather than as events because the shop
      * renews a document by typing the next date over the last one; the
      * history of a paper is the paper itself.
      */
     inspectionDueOn: date("inspection_due_on"),
+    /**
+     * When the certificate itself runs out (#2302): a Certificate of Inspection
+     * carries its own expiry, years apart from the annual inspection above,
+     * and either lapsing grounds a passenger vessel. Same shape and same
+     * 90-day horizon as the inspection.
+     */
+    coiExpiresOn: date("coi_expires_on"),
     registrationExpiresOn: date("registration_expires_on"),
     insuranceExpiresOn: date("insurance_expires_on"),
     /**
@@ -235,6 +254,16 @@ export const boats = pgTable(
     ),
     // An MMSI is nine digits; anything else read over the radio is a wrong number.
     check("boats_mmsi_nine_digits", sql`${table.mmsi} is null or ${table.mmsi} ~ '^[0-9]{9}$'`),
+    check(
+      "boats_certified_total_persons_positive",
+      sql`${table.certifiedTotalPersons} is null or ${table.certifiedTotalPersons} between 1 and 999`,
+    ),
+    // Passengers are some of the persons aboard: more passengers than persons
+    // is a typo, refused at save too (`boatSeatsRefusal`).
+    check(
+      "boats_certified_passengers_within_total",
+      sql`${table.certifiedPassengers} is null or ${table.certifiedTotalPersons} is null or ${table.certifiedPassengers} <= ${table.certifiedTotalPersons}`,
+    ),
   ],
 );
 

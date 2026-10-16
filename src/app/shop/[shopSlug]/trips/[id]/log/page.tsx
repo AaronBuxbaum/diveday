@@ -24,6 +24,7 @@ import type { RollCallCheckpoint } from "@/lib/manifests";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { BoatAtDeparture } from "./_components/BoatAtDeparture";
 import { CertificationLine } from "./_components/CertificationLine";
 import { ExecutedDivesTable } from "./_components/ExecutedDivesTable";
 import { IncidentReportsSection } from "./_components/IncidentReportsSection";
@@ -360,6 +361,7 @@ export default async function IncidentExportPage({
         )}
       </section>
 
+      <BoatAtDeparture boatSafety={doc.boatSafety} locale={locale} dateTime={dateTime} t={t} />
       <section aria-labelledby="incident-evidence-heading">
         <h2 id="incident-evidence-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.evidenceHeading")}

@@ -37,6 +37,7 @@ import { medicalWaiverMark } from "@/lib/waivers";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
+import { captureDepartureBoatSafety } from "./boat-safety";
 import { listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { listTripGearAssignments } from "./gear";
@@ -1659,6 +1660,32 @@ function scheduledOrCountingHeads(tripId: string) {
   );
 }
 
+/**
+ * **Whether this trip's roll call takes writes**, asked with the writers' own
+ * predicate (`scheduledOrCountingHeads`) so the manifest never draws a control
+ * the writer would refuse, nor hides one it would accept (#2285). False for a
+ * trip that is not this shop's.
+ */
+export async function rollCallOpenOnTrip(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.id, tripId),
+        eq(trips.shopId, shopId),
+        scheduledOrCountingHeads(tripId),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
+}
+
 export async function recordRollCall(
   db: AppDb,
   input: {
@@ -1909,6 +1936,11 @@ export async function recordRollCall(
   // through this one function; see ADR 20260726-manifest-push-refresh).
   if (outcome.ok && !outcome.duplicate) {
     await publishManifestEvent(db, input.shopId, input.tripId);
+    // The boat's papers and kit as the boat leaves (#2300), for the departure
+    // log once the live section is gone. After the commit, and never throws.
+    if ((input.checkpoint ?? "departure") === "departure") {
+      await captureDepartureBoatSafety(db, input.shopId, input.tripId);
+    }
   }
   logOfflineRetractionSignals(input, outcome);
   return outcome;
@@ -2236,6 +2268,11 @@ export async function recordCrewRollCall(
   // it raises none.
   if (outcome.ok && !outcome.duplicate) {
     await publishManifestEvent(db, input.shopId, input.tripId);
+    // The boat's papers and kit as the boat leaves (#2300), for the departure
+    // log once the live section is gone. After the commit, and never throws.
+    if ((input.checkpoint ?? "departure") === "departure") {
+      await captureDepartureBoatSafety(db, input.shopId, input.tripId);
+    }
   }
   logOfflineRetractionSignals(input, outcome);
   return outcome;

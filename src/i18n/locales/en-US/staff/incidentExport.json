@@ -1,4 +1,9 @@
 {
+  "boatHeading": "The boat at departure",
+  "boatCaptured": "{boatName}, as recorded at the departure roll call, {date}",
+  "boatNotRecorded": "Not recorded",
+  "boatNoNotices": "No paper or safety kit notice on the day.",
+  "boatNotCaptured": "No record of the boat’s papers and safety kit: no boat, or no roll call at the departure checkpoint before it sailed.",
   "actionCleared": "Entry cleared (correction)",
   "buddyCrewTag": "crew",
   "buddyPairedBy": "Recorded by {name}, {at}",

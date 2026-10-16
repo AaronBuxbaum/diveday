@@ -666,8 +666,9 @@
       "title": "Aún no hay nada en la lista",
       "body": "Añade la primera línea abajo. La tripulación la ve en el manifiesto de cada salida."
     },
+    "defaultLine": "Kit de O2 a bordo y tanque lleno",
     "addLabel": "Nueva línea",
-    "addPlaceholder": "Kit de oxígeno de emergencia a bordo",
+    "addPlaceholder": "Chalecos salvavidas contados, uno por persona",
     "addSubmit": "Añadir",
     "delete": "Eliminar",
     "moveUp": "Subir",

@@ -74,6 +74,9 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   //    branch is chosen by an ordinary client render instead of by error
   //    recovery.
   const [storeRead, setStoreRead] = useState(false);
+  // True when that read threw (#2637): a copy may exist and simply failed to
+  // open, which the screen must never word as "nothing saved".
+  const [storeReadFailed, setStoreReadFailed] = useState(false);
   /**
    * Unsynced roll call this device threw away at the retention ceiling
    * (`OFFLINE_MANIFEST_PENDING_GRACE_MS`). Read from storage rather than
@@ -233,10 +236,14 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
             // the whole premise of this surface. The cross-shop purge runs in
             // its own effect above and repaints if it removes anything.
             showList(saved);
+            setStoreReadFailed(false);
             setStoreRead(true);
             void reconcileList(saved, await resolveTenant());
           })
-          .catch(() => setMessage(t("shared.offlineManifest.reconcile.listLoadError")))
+          .catch(() => {
+            setStoreReadFailed(true);
+            setMessage(t("shared.offlineManifest.reconcile.listLoadError"));
+          })
           // Settled either way: a device whose storage can't be opened at all
           // has still been *looked at*, and the error message it lands on says
           // more than an "opening…" state that never ends.
@@ -273,7 +280,10 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
         );
         if (saved && navigator.onLine) void reconcile();
       })
-      .catch(() => setMessage(t("shared.offlineManifest.reconcile.singleLoadError")))
+      .catch(() => {
+        setStoreReadFailed(true);
+        setMessage(t("shared.offlineManifest.reconcile.singleLoadError"));
+      })
       .finally(() => {
         setStoreRead(true);
         refreshDiscarded();
@@ -301,6 +311,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     message,
     setMessage,
     storeRead,
+    storeReadFailed,
     discarded,
     acknowledgeDiscarded,
     reconcile,

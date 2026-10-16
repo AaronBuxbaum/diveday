@@ -139,6 +139,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Backup destination
 - Blocked / Ready
 - Boarding
+- Boat at departure
 - Boat clash
 - Boat mode
 - Boat papers
@@ -147,6 +148,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Buddy team
 - Cancellation window
 - Certificate passenger limit
+- Certificate total-persons limit
 - Check-in
 - Close-out
 - Connected Stripe account

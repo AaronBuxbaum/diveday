@@ -7,6 +7,7 @@ import { routeSource } from "@/test/route-source";
  * the page's layout is the visual suite's to photograph.
  */
 const SOURCE = routeSource(import.meta.dirname, "page.tsx");
+const READS = routeSource(import.meta.dirname, "_components/manifest-reads.ts");
 
 /**
  * **A held seat's particulars stay withheld on every reader** (`held-seat.ts`,
@@ -38,5 +39,28 @@ describe("a stale checkpoint in the URL", () => {
     expect(at, "the page reads openCheckpoint's stale answer").toBeGreaterThan(-1);
     const branch = SOURCE.slice(at, SOURCE.indexOf(";", at));
     expect(branch).toContain('redirect(shopPath(shopSlug, "trips", tripId, "manifest"))');
+  });
+});
+
+/**
+ * **A cancelled departure nobody counted on reads closed** (#2285): the page
+ * reads the writers' own gate and hands the answer to both roll-call lists
+ * and the banner, so neither list can draw a control the writer refuses.
+ */
+describe("a cancelled departure's roll call", () => {
+  it("reads the writers' gate and closes both lists and the banner on it", () => {
+    expect(READS).toMatch(/cancelledRollCall\(\{[^}]*rollCallOpen/s);
+    expect(SOURCE).toContain("    cancelled,\n");
+    const diverList = SOURCE.slice(
+      SOURCE.indexOf("<DiverRollCall"),
+      SOURCE.indexOf("<CrewRollCall"),
+    );
+    expect(diverList).toContain('rollCallClosed: cancelled === "closed",');
+    const crewList = SOURCE.slice(
+      SOURCE.indexOf("<CrewRollCall"),
+      SOURCE.indexOf("/>", SOURCE.indexOf("<CrewRollCall")),
+    );
+    expect(crewList).toContain('rollCallClosed={cancelled === "closed"}');
+    expect(SOURCE).toContain("<CancelledRollCallBanner state={cancelled}");
   });
 });

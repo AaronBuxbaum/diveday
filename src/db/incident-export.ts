@@ -14,6 +14,7 @@ import {
   rosterCutoff,
 } from "@/lib/incident-export";
 import { canPersonExportIncidentRecord } from "./authz";
+import { departureBoatSafetySnapshot } from "./boat-safety";
 import { listTripBuddyTeamEvents, listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb } from "./client";
 import { listExecutedDives } from "./executed-dives";
@@ -214,40 +215,49 @@ export async function getIncidentExport(
   // manifest drops them: this document states the pairing as it stood for the
   // people who were aboard, and the trail below is where a cancelled member's
   // membership survives.
-  const [teamRows, teamEventRows, checklistItems, checklistChecks, rosterRows, reportRows] =
-    await Promise.all([
-      listTripBuddyTeams(db, shopId, tripId),
-      listTripBuddyTeamEvents(db, shopId, tripId),
-      listChecklistItemsForTrip(db, shopId, tripId),
-      latestPreDepartureChecksForTrip(db, shopId, tripId),
-      // Seats and crew places changed on this departure, as the shop's trail
-      // recorded them (safety sheet 2026-10-15, item 7); the builder keeps
-      // those from the boat being due out (`rosterCutoff`), which can be
-      // before the scheduled start. An erased line that named someone by
-      // record comes too, as a line naming nobody (auditor review 2026-10-16,
-      // item 12). `seq` breaks a tie on the instant: this document is hashed,
-      // so its order cannot be a coin toss.
-      db
-        .select({
-          code: activityEvents.code,
-          params: activityEvents.params,
-          occurredAt: activityEvents.occurredAt,
-        })
-        .from(activityEvents)
-        .where(
-          and(
-            eq(activityEvents.shopId, shopId),
-            eq(activityEvents.tripId, tripId),
-            inArray(activityEvents.code, [...ROSTER_CHANGE_CODES, ACTIVITY_REDACTED.code]),
-            // A line that names nobody by record, as a person or a seat, is a
-            // name erasure could not reach (security review 2026-10-16, F1):
-            // not printed.
-            or(isNotNull(activityEvents.subjectPersonId), isNotNull(activityEvents.bookingId)),
-          ),
-        )
-        .orderBy(asc(activityEvents.occurredAt), asc(activityEvents.seq)),
-      listDepartureLogIncidentReports(db, shopId, tripId, generatedByPersonId),
-    ]);
+  const [
+    teamRows,
+    teamEventRows,
+    checklistItems,
+    checklistChecks,
+    rosterRows,
+    reportRows,
+    boatSafety,
+  ] = await Promise.all([
+    listTripBuddyTeams(db, shopId, tripId),
+    listTripBuddyTeamEvents(db, shopId, tripId),
+    listChecklistItemsForTrip(db, shopId, tripId),
+    latestPreDepartureChecksForTrip(db, shopId, tripId),
+    // Seats and crew places changed on this departure, as the shop's trail
+    // recorded them (safety sheet 2026-10-15, item 7); the builder keeps
+    // those from the boat being due out (`rosterCutoff`), which can be
+    // before the scheduled start. An erased line that named someone by
+    // record comes too, as a line naming nobody (auditor review 2026-10-16,
+    // item 12). `seq` breaks a tie on the instant: this document is hashed,
+    // so its order cannot be a coin toss.
+    db
+      .select({
+        code: activityEvents.code,
+        params: activityEvents.params,
+        occurredAt: activityEvents.occurredAt,
+      })
+      .from(activityEvents)
+      .where(
+        and(
+          eq(activityEvents.shopId, shopId),
+          eq(activityEvents.tripId, tripId),
+          inArray(activityEvents.code, [...ROSTER_CHANGE_CODES, ACTIVITY_REDACTED.code]),
+          // A line that names nobody by record, as a person or a seat, is a
+          // name erasure could not reach (security review 2026-10-16, F1):
+          // not printed.
+          or(isNotNull(activityEvents.subjectPersonId), isNotNull(activityEvents.bookingId)),
+        ),
+      )
+      .orderBy(asc(activityEvents.occurredAt), asc(activityEvents.seq)),
+    listDepartureLogIncidentReports(db, shopId, tripId, generatedByPersonId),
+    // The boat as it stood at the departure checkpoint (#2300).
+    departureBoatSafetySnapshot(db, shopId, tripId),
+  ]);
   // Everyone the export gate above admits may read this list; this is a second
   // lock, so a gate that drifted wider fails closed rather than printing "no
   // reports" (auditor review 2026-10-16, item 12).
@@ -350,6 +360,7 @@ export async function getIncidentExport(
           : undefined,
       };
     }),
+    boatSafety,
     generatedAt,
     generatedByName,
   });

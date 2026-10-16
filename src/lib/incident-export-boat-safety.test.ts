@@ -1,0 +1,99 @@
+import { describe, expect, it } from "vitest";
+import {
+  buildIncidentExport,
+  type IncidentExportInput,
+  incidentExportContentHash,
+} from "./incident-export";
+import { buildTripManifest, rollCallCheckpoints } from "./manifests";
+
+/**
+ * **The boat at the departure checkpoint** (issue 2300): the departure log
+ * carries the snapshot verbatim, states its absence as null, and a log
+ * printed before snapshots existed keeps its integrity code.
+ */
+
+const TRIP = {
+  id: "trip-1",
+  title: "Two-Tank Reef",
+  startsAt: new Date("2026-08-04T13:00:00.000Z"),
+  endsAt: new Date("2026-08-04T18:00:00.000Z"),
+  plannedDives: 2,
+};
+
+function baseInput(): IncidentExportInput {
+  const divers = [
+    {
+      bookingId: "b1",
+      fullName: "Ana Diaz",
+      email: null,
+      emergencyContactName: "Pat Reyes",
+      emergencyContactPhone: "+1 555 0100",
+      rentalFit: { state: "own_kit" as const },
+      nitroxRequested: false,
+      checkedIn: false,
+    },
+  ];
+  return {
+    shop: { name: "Blue Mantis", slug: "blue-mantis", timezone: "America/New_York" },
+    manifests: rollCallCheckpoints(TRIP.plannedDives).map((checkpoint) =>
+      buildTripManifest({ trip: TRIP, checkpoint, crew: [], divers }),
+    ),
+    diverEvidence: [],
+    events: [],
+    generatedAt: new Date("2026-08-04T20:00:00.000Z"),
+    generatedByName: "Rae Owner",
+  };
+}
+
+describe("the boat at the departure checkpoint on the departure log ", () => {
+  const snapshot = {
+    boatName: "Reef Runner",
+    judgedOn: "2026-08-04",
+    capturedAt: new Date("2026-08-04T12:40:00.000Z"),
+    papers: {
+      certifiedPassengers: 12,
+      certifiedTotalPersons: 15,
+      coiExpiresOn: "2027-05-01",
+      inspectionDueOn: "2026-08-01",
+      registrationExpiresOn: null,
+      insuranceExpiresOn: null,
+    },
+    notices: [
+      { code: "paper", paper: "inspection", dueOn: "2026-08-01", expired: true, days: 3 },
+    ] as const,
+  };
+
+  it("states no snapshot as null, and hashes exactly as before snapshots existed", () => {
+    const doc = buildIncidentExport(baseInput());
+    expect(doc.boatSafety).toBeNull();
+    const { contentHash, boatSafety: _boatSafety, ...rest } = doc;
+    // A log printed before #2300 carried no boatSafety at all; its code holds.
+    expect(
+      incidentExportContentHash({ ...rest, boatSafety: null } as Parameters<
+        typeof incidentExportContentHash
+      >[0]),
+    ).toBe(contentHash);
+  });
+
+  it("carries the papers and notices verbatim, and the hash covers them", () => {
+    const without = buildIncidentExport(baseInput());
+    const doc = buildIncidentExport({ ...baseInput(), boatSafety: snapshot });
+    expect(doc.boatSafety).toEqual({
+      boatName: "Reef Runner",
+      judgedOn: "2026-08-04",
+      capturedAt: "2026-08-04T12:40:00.000Z",
+      papers: snapshot.papers,
+      notices: [...snapshot.notices],
+    });
+    expect(doc.contentHash).not.toBe(without.contentHash);
+
+    const renewed = buildIncidentExport({
+      ...baseInput(),
+      boatSafety: { ...snapshot, papers: { ...snapshot.papers, inspectionDueOn: "2027-08-01" } },
+    });
+    expect(renewed.contentHash).not.toBe(doc.contentHash);
+    expect(buildIncidentExport({ ...baseInput(), boatSafety: snapshot }).contentHash).toBe(
+      doc.contentHash,
+    );
+  });
+});

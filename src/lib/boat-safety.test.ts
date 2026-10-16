@@ -36,6 +36,7 @@ const unit = (overrides: Partial<SafetyKitUnit> = {}): SafetyKitUnit => ({
 });
 
 const papers = (overrides: Partial<Parameters<typeof boatPaperNotices>[0]> = {}) => ({
+  coiExpiresOn: null,
   inspectionDueOn: null,
   registrationExpiresOn: null,
   insuranceExpiresOn: null,
@@ -185,7 +186,12 @@ describe("boatPaperNotices", () => {
   it("looks 90 days ahead for the inspection and 60 for registration and insurance", () => {
     // Booking an inspection or renewing a policy takes weeks; new pads are a
     // parcel. The papers' windows are wider than the kit's 30 days.
-    expect(BOAT_PAPER_HORIZON_DAYS).toEqual({ inspection: 90, registration: 60, insurance: 60 });
+    expect(BOAT_PAPER_HORIZON_DAYS).toEqual({
+      coi: 90,
+      inspection: 90,
+      registration: 60,
+      insurance: 60,
+    });
     const at = (key: "inspectionDueOn" | "insuranceExpiresOn", dueOn: string) =>
       boatPaperNotices(papers({ [key]: dueOn }), TODAY).length;
     expect(at("inspectionDueOn", "2027-01-07")).toBe(1); // 90 days
@@ -196,6 +202,19 @@ describe("boatPaperNotices", () => {
 
   it("says nothing for a paper the shop never dated", () => {
     expect(boatPaperNotices(papers(), TODAY)).toEqual([]);
+  });
+
+  // #2302: the certificate's own expiry is a paper apart from the annual
+  // inspection, and either lapsing grounds the boat.
+  it("names the certificate's own expiry apart from the inspection", () => {
+    expect(
+      boatPaperNotices(
+        papers({ coiExpiresOn: "2026-10-05", inspectionDueOn: "2027-09-01" }),
+        TODAY,
+      ),
+    ).toEqual([{ code: "paper", paper: "coi", dueOn: "2026-10-05", expired: true, days: 4 }]);
+    expect(boatPaperNotices(papers({ coiExpiresOn: "2027-01-07" }), TODAY)).toHaveLength(1);
+    expect(boatPaperNotices(papers({ coiExpiresOn: "2027-01-08" }), TODAY)).toEqual([]);
   });
 });
 
@@ -268,7 +287,12 @@ describe("boatSafetyNotices", () => {
     kindsOnRegister: GearItemKind[] = ["aed", "flares", "o2_kit"],
   ) =>
     boatSafetyNotices({
-      boat: { certifiedPassengers, ...papers({ insuranceExpiresOn: "2026-10-30" }) },
+      boat: {
+        certifiedPassengers,
+        certifiedTotalPersons: null,
+        ...papers({ insuranceExpiresOn: "2026-10-30" }),
+      },
+      crew: { assigned: 2, boarded: 0 },
       kit: [
         unit({ clocks: [{ kind: "aed_pads", servicedOn: "2024-10-21", nextDueOn: "2026-10-21" }] }),
         unit({
@@ -332,7 +356,8 @@ describe("boatSafetyNotices", () => {
   it("judges each clock against the departure's own date", () => {
     const next = (onDate: string) =>
       boatSafetyNotices({
-        boat: { certifiedPassengers: null, ...papers() },
+        boat: { certifiedPassengers: null, certifiedTotalPersons: null, ...papers() },
+        crew: { assigned: 0, boarded: 0 },
         kit: [
           unit({
             clocks: [{ kind: "aed_pads", servicedOn: "2024-10-21", nextDueOn: "2026-10-21" }],
@@ -350,11 +375,115 @@ describe("boatSafetyNotices", () => {
   it("is empty for a boat with nothing to say", () => {
     expect(
       boatSafetyNotices({
-        boat: { certifiedPassengers: null, ...papers() },
+        boat: { certifiedPassengers: null, certifiedTotalPersons: null, ...papers() },
+        crew: { assigned: 0, boarded: 0 },
         kit: [],
         kindsOnRegister: new Set(),
         passengers: { booked: 30, boarded: 0 },
         onDate: TODAY,
+      }),
+    ).toEqual([]);
+  });
+});
+
+/**
+ * **Total persons, crew included** (#2302, Aaron 2026-10-13): beside the
+ * passenger check, never instead of it. Some certificates print only this one
+ * number (Spain among them), so it must work alone too.
+ */
+describe("boatSafetyNotices and the total-persons limit", () => {
+  const notices = (input: {
+    certifiedPassengers?: number | null;
+    certifiedTotalPersons: number | null;
+    passengers: { booked: number; boarded: number };
+    crew: { assigned: number; boarded: number };
+  }) =>
+    boatSafetyNotices({
+      boat: {
+        certifiedPassengers: input.certifiedPassengers ?? null,
+        certifiedTotalPersons: input.certifiedTotalPersons,
+        ...papers(),
+      },
+      kit: [],
+      kindsOnRegister: new Set(),
+      passengers: input.passengers,
+      crew: input.crew,
+      onDate: TODAY,
+    });
+
+  it("counts the crew with the people booked against total persons", () => {
+    // 10 divers fit a 10-passenger limit; 10 divers and 3 crew do not fit 12.
+    expect(
+      notices({
+        certifiedPassengers: 10,
+        certifiedTotalPersons: 12,
+        passengers: { booked: 10, boarded: 0 },
+        crew: { assigned: 3, boarded: 0 },
+      }),
+    ).toEqual([{ code: "over_total_persons", persons: 13, limit: 12, counted: false }]);
+  });
+
+  it("works on a certificate that prints only total persons", () => {
+    expect(
+      notices({
+        certifiedTotalPersons: 12,
+        passengers: { booked: 11, boarded: 0 },
+        crew: { assigned: 2, boarded: 0 },
+      }),
+    ).toEqual([{ code: "over_total_persons", persons: 13, limit: 12, counted: false }]);
+  });
+
+  it("switches to the people counted aboard, crew included, once they pass it", () => {
+    expect(
+      notices({
+        certifiedTotalPersons: 12,
+        passengers: { booked: 12, boarded: 11 },
+        crew: { assigned: 2, boarded: 2 },
+      }),
+    ).toEqual([{ code: "over_total_persons", persons: 13, limit: 12, counted: true }]);
+    // Halfway up the gangway the list still says it.
+    expect(
+      notices({
+        certifiedTotalPersons: 12,
+        passengers: { booked: 12, boarded: 4 },
+        crew: { assigned: 2, boarded: 1 },
+      }),
+    ).toEqual([{ code: "over_total_persons", persons: 14, limit: 12, counted: false }]);
+  });
+
+  it("is exactly at the limit, and silent there", () => {
+    expect(
+      notices({
+        certifiedTotalPersons: 12,
+        passengers: { booked: 10, boarded: 10 },
+        crew: { assigned: 2, boarded: 2 },
+      }),
+    ).toEqual([]);
+  });
+
+  it("says both lines when both limits are passed, passengers first", () => {
+    expect(
+      notices({
+        certifiedPassengers: 10,
+        certifiedTotalPersons: 12,
+        passengers: { booked: 11, boarded: 0 },
+        crew: { assigned: 2, boarded: 0 },
+      }).map((notice) => notice.code),
+    ).toEqual(["over_certificate", "over_total_persons"]);
+  });
+
+  it("is danger, as loud as the passenger line", () => {
+    expect(
+      boatSafetyNoticeTone({ code: "over_total_persons", persons: 13, limit: 12, counted: false }),
+    ).toBe("danger");
+  });
+
+  it("says nothing on a boat with no total-persons figure, however many crew", () => {
+    expect(
+      notices({
+        certifiedTotalPersons: null,
+        passengers: { booked: 10, boarded: 10 },
+        crew: { assigned: 40, boarded: 40 },
       }),
     ).toEqual([]);
   });
@@ -365,6 +494,7 @@ describe("lifeSafetyNotices", () => {
     const notices = boatSafetyNotices({
       boat: {
         certifiedPassengers: 4,
+        certifiedTotalPersons: null,
         ...papers({ insuranceExpiresOn: "2026-10-01" }),
       },
       kit: [
@@ -383,6 +513,7 @@ describe("lifeSafetyNotices", () => {
       ],
       kindsOnRegister: new Set(["aed", "flares", "first_aid_kit"]),
       passengers: { booked: 9, boarded: 0 },
+      crew: { assigned: 0, boarded: 0 },
       onDate: TODAY,
     });
     expect(lifeSafetyNotices(notices)).toEqual([
@@ -403,7 +534,11 @@ describe("expiredBoatSafetyNotices", () => {
   it("keeps only what has already run out, for Today's owner row", () => {
     const notices = expiredBoatSafetyNotices(
       boatSafetyNotices({
-        boat: { certifiedPassengers: 12, ...papers({ insuranceExpiresOn: "2026-10-30" }) },
+        boat: {
+          certifiedPassengers: 12,
+          certifiedTotalPersons: null,
+          ...papers({ insuranceExpiresOn: "2026-10-30" }),
+        },
         kit: [
           unit({
             clocks: [
@@ -414,6 +549,7 @@ describe("expiredBoatSafetyNotices", () => {
         ],
         kindsOnRegister: new Set(["aed", "o2_kit"]),
         passengers: { booked: 20, boarded: 0 },
+        crew: { assigned: 0, boarded: 0 },
         onDate: TODAY,
       }),
     );
@@ -522,10 +658,15 @@ describe("a lapsed boat paper (H-136)", () => {
 
   it("leads the boat's lines after missing kit and the certificate, and refuses nothing", () => {
     const notices = boatSafetyNotices({
-      boat: { certifiedPassengers: 12, ...papers({ insuranceExpiresOn: "2026-10-08" }) },
+      boat: {
+        certifiedPassengers: 12,
+        certifiedTotalPersons: null,
+        ...papers({ insuranceExpiresOn: "2026-10-08" }),
+      },
       kit: [],
       kindsOnRegister: new Set(["aed"]),
       passengers: { booked: 14, boarded: 0 },
+      crew: { assigned: 0, boarded: 0 },
       onDate: TODAY,
     });
     expect(notices.map((notice) => [notice.code, boatSafetyNoticeTone(notice)])).toEqual([
@@ -618,6 +759,35 @@ describe("boatSeatsRefusal (H-107)", () => {
         upcomingDepartures: [{ capacity: 14, on: "2026-10-10" }],
       }),
     ).toMatchObject({ code: "seats_above_certificate" });
+  });
+});
+
+describe("boatSeatsRefusal and total persons (#2302)", () => {
+  it("refuses more passengers than persons, a typo on the certificate", () => {
+    expect(
+      boatSeatsRefusal({ capacity: 8, certifiedPassengers: 14, certifiedTotalPersons: 12 }),
+    ).toEqual({ code: "passengers_above_total_persons", passengers: 14, limit: 12 });
+  });
+
+  it("lets passengers up to persons through, and either figure alone", () => {
+    expect(
+      boatSeatsRefusal({ capacity: 8, certifiedPassengers: 12, certifiedTotalPersons: 12 }),
+    ).toBeNull();
+    expect(
+      boatSeatsRefusal({ capacity: 8, certifiedPassengers: null, certifiedTotalPersons: 12 }),
+    ).toBeNull();
+    expect(
+      boatSeatsRefusal({ capacity: 8, certifiedPassengers: 12, certifiedTotalPersons: null }),
+    ).toBeNull();
+  });
+
+  it("never caps the seats on sale at total persons: the booking count is unchanged", () => {
+    // Aaron, 2026-10-13: the total-persons check is the manifest's, and the
+    // seat counting of the booking transaction does not change.
+    expect(
+      boatSeatsRefusal({ capacity: 20, certifiedPassengers: null, certifiedTotalPersons: 12 }),
+    ).toBeNull();
+    expect(sellableSeats(20, null)).toBe(20);
   });
 });
 

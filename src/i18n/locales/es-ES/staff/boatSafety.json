@@ -4,11 +4,20 @@
     "booked": "{passengers, plural, one {# persona reservada} other {# personas reservadas}}; el certificado del barco permite {limit}.",
     "aboard": "{passengers, plural, one {# pasajero a bordo} other {# pasajeros a bordo}}; el certificado del barco permite {limit}."
   },
+  "overTotalPersons": {
+    "booked": "{persons, plural, one {# persona} other {# personas}} entre reservas y tripulación; el certificado permite {limit} en total.",
+    "aboard": "{persons, plural, one {# persona a bordo} other {# personas a bordo}} con la tripulación; el certificado permite {limit} en total."
+  },
   "missing": {
     "o2Kit": "No hay oxígeno de emergencia a bordo",
     "aed": "No hay DEA a bordo"
   },
   "paper": {
+    "coi": {
+      "due": "Certificado del barco: vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
+      "expired": "Certificado del barco: venció el {date}",
+      "beforeDeparture": "Certificado del barco: vence el {date}, antes de esta salida"
+    },
     "inspection": {
       "due": "Próxima inspección de seguridad: {days, plural, =0 {hoy} one {en # día} other {en # días}}",
       "expired": "Inspección de seguridad: vencía el {date}",

@@ -693,11 +693,22 @@
   The field reads **passengers only, not crew**, the same people capacity counts: everyone aboard
   but the crew. A boat saved over it before H-107 keeps sailing, its fleet row says so in danger
   ink, and its next save must fix it (`src/lib/boat-safety.ts`).
-- **Boat papers** — a boat's three dated documents: when its next safety inspection is due, and
-  when its registration and hull insurance expire (`boats.inspection_due_on`,
-  `registration_expires_on`, `insurance_expires_on`). Typed over in Settings, Boats when renewed,
-  so the paper itself is the history. Each has its own window — 90 days for the inspection, 60 for
-  registration and insurance (`BOAT_PAPER_HORIZON_DAYS`) — inside which a departure on that boat
+- **Certificate total-persons limit** — the second number some certificates print: everyone
+  aboard, **crew included** (`boats.certified_total_persons`, issue 2302). Optional, and independent
+  of the **certificate passenger limit**: some flag states (Spain among them) print only this one,
+  and a certificate with only a passenger figure is never asked for it. Checked at the manifest
+  beside the passenger line and never at the point of sale: when the people booked plus the crew
+  named for the departure pass it, the Boat tab says so in danger ink, and once the crew roll call
+  has counted more people and crew aboard than it allows, the line counts them instead. Passengers
+  above persons is refused at save as a typo (`passengers_above_total_persons`). The booking
+  transaction counts seats exactly as before (Aaron, 2026-10-13).
+- **Boat papers** — a boat's four dated documents: when its certificate itself expires (a
+  Certificate of Inspection runs for years, apart from the annual inspection, issue 2302), when its
+  next safety inspection is due, and when its registration and hull insurance expire
+  (`boats.coi_expires_on`, `inspection_due_on`, `registration_expires_on`,
+  `insurance_expires_on`). Typed over in Settings, Boats when renewed,
+  so the paper itself is the history. Each has its own window — 90 days for the certificate and the
+  inspection, 60 for registration and insurance (`BOAT_PAPER_HORIZON_DAYS`) — inside which a departure on that boat
   names the paper above its pre-departure checklist and Today carries a quiet owner errand
   (`boat_papers_due`). Once a paper lapses it reads in danger ink with the boat and the date
   ("Hull insurance ended Oct 8."), and Today shows it as its own danger row, `boat_papers_lapsed`,
@@ -705,6 +716,12 @@
   itself, since the policy's cover ends that day. A paper still good today that lapses before a
   later departure reads "ends {date}, before this departure" on that departure. A lapsed paper
   never blocks a departure (H-136). `boat_safety_expired` is the safety kit's row, not the papers'.
+- **Boat at departure** — the boat's papers and its papers-and-kit notices as they stood when the
+  boat left, kept for the departure log (`departure_boat_safety_snapshots`, issue 2300). Written by
+  each departure roll-call tap, diver or crew, live or synced, and rewritten until the departure
+  has sailed, never after; judged on the departure's own local day. Head-count lines are left out
+  because the roll call records them. A departure with none says so on the log rather than
+  showing the boat as it is today.
 - **Safety kit** — the boat's own emergency equipment kept on the **gear register** as units:
   `o2_kit`, `aed`, `first_aid_kit` and `flares` (roadmap N-08). Each may be assigned **aboard** one
   boat (`gear_items.aboard_boat_id`; any other kind is never aboard), and runs **service clocks**

@@ -92,6 +92,7 @@ describe("useSavedManifest on a trip", () => {
     await waitFor(() => expect(result.current.storeRead).toBe(true));
     expect(result.current.envelope).toBeNull();
     expect(result.current.message).toBe(line("noneForTrip"));
+    expect(result.current.storeReadFailed).toBe(false);
   });
 
   it("settles on an error line when the store cannot be read", async () => {
@@ -99,6 +100,7 @@ describe("useSavedManifest on a trip", () => {
     const { result } = at("trip=trip-1");
     await waitFor(() => expect(result.current.storeRead).toBe(true));
     expect(result.current.message).toBe(line("singleLoadError"));
+    expect(result.current.storeReadFailed).toBe(true);
   });
 
   it("keeps a checkpoint from the URL the trip actually has", async () => {
@@ -221,6 +223,7 @@ describe("useSavedManifest on the list", () => {
     const { result } = at("");
     await waitFor(() => expect(result.current.storeRead).toBe(true));
     expect(result.current.message).toBe(line("listLoadError"));
+    expect(result.current.storeReadFailed).toBe(true);
   });
 
   it("syncs only the signed-in shop's copies with pending events, and merges them back", async () => {

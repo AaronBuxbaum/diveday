@@ -356,6 +356,8 @@
       "eyebrow": "Offline manifest",
       "emptyHeading": "Nothing saved on this phone yet",
       "emptyHint": "While you still have signal, open the trip’s live manifest. It keeps this device’s copy current on its own.",
+      "readFailedHeading": "Couldn’t open this phone’s saved copy",
+      "readFailedHint": "Reload this page once. If it still won’t open, use the printed manifest.",
       "removedOtherShopHeading": "That saved copy has been removed",
       "removedOtherShopMessage": "A different shop is signed in on this tablet.",
       "removedOtherShopHint": "This trip was saved by a different shop, so its copy was removed from this tablet when the shop signed in here changed. Roll call for it has to be recorded on that shop’s own live manifest.",

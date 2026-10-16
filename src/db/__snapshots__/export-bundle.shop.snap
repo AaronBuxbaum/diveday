@@ -54,7 +54,7 @@ work_order_items.csv 5 rows ce6893dd561ce87b [id,work_order_id,customer_gear_ite
 work_order_lines.csv 6 rows 0022fe458b76adf0 [id,work_order_id,kind,description,quantity_hundredths,unit_amount_cents,deleted_at,created_at,updated_at]
 work_order_care.csv 1 rows 2972f1aff7906853 [id,work_order_id,customer_gear_item_id,kind,passed,performed_on,next_due_on,next_due_dives,created_at]
 work_order_events.csv 15 rows 79407b4eb6304a70 [id,seq,work_order_id,kind,from_status,to_status,technician_person_id,technician_name,actor_person_id,actor_name,created_at]
-pre_departure_checklist_items.csv 5 rows 063121156dbf5537 [id,label,sort_order,deleted_at,created_at,updated_at]
+pre_departure_checklist_items.csv 5 rows 9ebc19091895953a [id,label,sort_order,deleted_at,created_at,updated_at]
 pre_departure_check_events.csv 5 rows b3a1c1197f764b5d [id,trip_id,checklist_item_id,checklist_item_label,status,source,client_event_id,note,recorded_by_person_id,recorded_by_name,occurred_at,created_at]
 prior_visits.csv 3 rows 2b5449b25f88920f [id,person_id,person_name,visited_on,title,status_label,amount_label,source_label,source_reference,imported_at]
 imported_payment_history.csv 2 rows 0822811603094a89 [id,person_id,person_name,occurred_on,direction,title,status_label,amount_label,amount_cents,currency,payment_reference,receipt_reference,receipt_document_url,source_label,source_reference,stripe_reference,imported_at]

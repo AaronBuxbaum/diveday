@@ -1042,6 +1042,8 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "trip_last_minute_promo_recipients",
   "trip_blowouts",
   "trip_blowout_divers",
+  // One row per departure, read as part of its departure log (#2300).
+  "departure_boat_safety_snapshots",
   // What the bench told a customer and the orders it raised (ADR
   // 20261008-work-order-follow-up). Read with the ticket or the piece they are
   // about, which the shop keeps; a reminder row is also what stops a second

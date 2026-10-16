@@ -43,6 +43,7 @@ import {
   crewAssignmentRequests,
   crewAvailabilityBlocks,
   customerGearItems,
+  departureBoatSafetySnapshots,
   divePackageEntitlements,
   diveSiteCreatures,
   diveSiteMoments,
@@ -1344,6 +1345,9 @@ export async function resetDemoSchedule(
   // boats and dive_packages below (RESET_KEEPS). Only the per-departure taps
   // against them are schedule-scoped operational history.
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
+  await db
+    .delete(departureBoatSafetySnapshots)
+    .where(eq(departureBoatSafetySnapshots.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
   await deleteHeldSendsAndDeskRows(db, shopId);
   await db.delete(formDrafts).where(eq(formDrafts.shopId, shopId));
@@ -1390,6 +1394,8 @@ export async function resetDemoSchedule(
     .update(boats)
     .set({
       certifiedPassengers: null,
+      certifiedTotalPersons: null,
+      coiExpiresOn: null,
       inspectionDueOn: null,
       registrationExpiresOn: null,
       insuranceExpiresOn: null,

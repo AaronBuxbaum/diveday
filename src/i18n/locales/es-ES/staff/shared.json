@@ -356,6 +356,8 @@
       "eyebrow": "Manifiesto sin conexión",
       "emptyHeading": "Todavía no hay nada guardado en este teléfono",
       "emptyHint": "Mientras aún tengas señal, abre el manifiesto en vivo de la salida: mantiene al día la copia de este dispositivo.",
+      "readFailedHeading": "No se pudo abrir la copia guardada en este teléfono",
+      "readFailedHint": "Recarga esta página una vez. Si sigue sin abrirse, usa el manifiesto impreso.",
       "removedOtherShopHeading": "Esa copia guardada se eliminó",
       "removedOtherShopMessage": "En esta tablet hay otro centro con la sesión iniciada.",
       "removedOtherShopHint": "Esta salida la guardó otro centro, así que su copia se eliminó de esta tablet cuando cambió el centro con la sesión iniciada aquí. Su pase de lista debe registrarse en el manifiesto en vivo de ese centro.",

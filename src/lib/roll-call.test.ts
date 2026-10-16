@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   blockedAtRail,
   boardedBefore,
+  cancelledRollCall,
   carryForwardNotBoarded,
   isNotBackAboard,
   medicalHoldAfterDive,
@@ -347,5 +348,25 @@ describe("boardedBefore", () => {
     expect(boardedBefore([undefined, null])).toBe(false);
     expect(boardedBefore([standing("not_boarded"), standing("not_boarded", true)])).toBe(false);
     expect(boardedBefore([standing("not_boarded"), standing("boarded")])).toBe(true);
+  });
+});
+
+describe("cancelledRollCall (#2285)", () => {
+  it("says nothing on a departure that is not cancelled", () => {
+    expect(cancelledRollCall({ cancelled: false, rollCallOpen: true })).toBeNull();
+  });
+
+  it("closes the roll call of a cancelled departure nobody counted on", () => {
+    expect(cancelledRollCall({ cancelled: true, rollCallOpen: false })).toBe("closed");
+  });
+
+  it("keeps a cancelled departure's count open once it has begun", () => {
+    expect(cancelledRollCall({ cancelled: true, rollCallOpen: true })).toBe("still_counting");
+  });
+
+  it("never closes a departure that is not cancelled, whatever the writers say", () => {
+    // Only a cancellation closes a page: a scheduled trip whose gate read
+    // false (a stale read) keeps its controls, and the writer answers.
+    expect(cancelledRollCall({ cancelled: false, rollCallOpen: false })).toBeNull();
   });
 });

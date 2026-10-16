@@ -44,6 +44,11 @@ const PAPER_KEYS: Record<
   BoatPaper,
   { due: StaffMessageKey; expired: StaffMessageKey; beforeDeparture: StaffMessageKey }
 > = {
+  coi: {
+    due: "boatSafety.paper.coi.due",
+    expired: "boatSafety.paper.coi.expired",
+    beforeDeparture: "boatSafety.paper.coi.beforeDeparture",
+  },
   inspection: {
     due: "boatSafety.paper.inspection.due",
     expired: "boatSafety.paper.inspection.expired",
@@ -85,6 +90,13 @@ export function boatSafetyNoticeText(
           passengers: notice.passengers,
           limit: notice.limit,
         },
+      );
+    case "over_total_persons":
+      return t(
+        notice.counted
+          ? "boatSafety.overTotalPersons.aboard"
+          : "boatSafety.overTotalPersons.booked",
+        { persons: notice.persons, limit: notice.limit },
       );
     case "kit_missing":
       return t(MISSING_KEYS[notice.kind]);

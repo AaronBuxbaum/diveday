@@ -48,6 +48,7 @@ export function DiverRowPanel({
     addPrivateNoteAction,
     startMissingDiverReport,
     rollCallButtonCopy,
+    rollCallClosed,
     t,
   } = context;
   const { rc, rowState, blockedAtDock, capsuleKind, medicalHoldInPanel } = state;
@@ -197,7 +198,8 @@ export function DiverRowPanel({
         — retracting a mark may never be harder than making
         one, and asserting aboard over a missing mark is not a
         thumb-under-a-list act). */}
-      {rowState.notBackAboard ? (
+      {/* No roll-call control at all on a closed cancelled departure (#2285). */}
+      {rowState.notBackAboard && !rollCallClosed ? (
         <RollCallBackAboardControl
           kind="diver"
           subjectId={diver.bookingId}
@@ -228,16 +230,18 @@ export function DiverRowPanel({
       {/* The deliberate second step. It is here, and nowhere
         else on this page, because reaching it has to cost a
         tap on the person's own name first (decision 3). */}
-      <RollCallExceptionControl
-        kind="diver"
-        subjectId={diver.bookingId}
-        checkpoint={checkpoint}
-        isDeparture={isDeparture}
-        rollCall={rc}
-        action={rollCallAction}
-        copy={rollCallButtonCopy(diver.bookingId)}
-        t={t}
-      />
+      {rollCallClosed ? null : (
+        <RollCallExceptionControl
+          kind="diver"
+          subjectId={diver.bookingId}
+          checkpoint={checkpoint}
+          isDeparture={isDeparture}
+          rollCall={rc}
+          action={rollCallAction}
+          copy={rollCallButtonCopy(diver.bookingId)}
+          t={t}
+        />
+      )}
     </div>
   );
 }
