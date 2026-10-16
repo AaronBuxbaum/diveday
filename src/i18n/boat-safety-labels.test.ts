@@ -228,7 +228,9 @@ describe("boatSafetyNoticeText and the certificate's second limit", () => {
       expired,
       days,
     });
-    expect(boatSafetyNoticeText(en, "en-US", coi(false, 30))).toBe("Boat certificate expires in 30 days");
+    expect(boatSafetyNoticeText(en, "en-US", coi(false, 30))).toBe(
+      "Boat certificate expires in 30 days",
+    );
     expect(boatSafetyNoticeText(en, "en-US", coi(true, 2))).toMatch(
       /^Boat certificate expired Oct\s1,\s2026$/,
     );
