@@ -190,6 +190,9 @@ export default defineConfig({
   // No retries: a flake must fail the run so it gets fixed when it's found,
   // not silently papered over by a re-run. This is what keeps the suite honest
   // and fast — every failure is real and surfaces on the first attempt.
+  // The one exception lives in ci.yml, not here: a shard whose log carries the
+  // renderer probe's "wedged, not slow" verdict reruns its failed tests once
+  // with `--last-failed` (#2633, docs/engineering/testing.md "Flakes").
   retries: 0,
   // A proven flake tagged `@quarantine` (with its issue and a 7-day expiry,
   // `pnpm check:e2e-hygiene`) leaves every PR, push-gate and local run, and
