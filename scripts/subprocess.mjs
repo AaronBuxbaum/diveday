@@ -186,6 +186,27 @@ function timeoutMessage(command, args, timeoutMs) {
   return `\`${argv}\` did not finish within ${timeoutMs / 1000}s and was killed. Nothing here waits on it any longer; rerun that command yourself to see what it is blocked on.`;
 }
 
+/**
+ * A command is a program name or path and its arguments are strings, never a
+ * shell line: `shell` is refused, and a NUL byte (which truncates a path at the
+ * OS boundary) is rejected before anything is spawned.
+ */
+function requireArgv(command, args, options, caller) {
+  const argv = [command, ...(args ?? [])];
+  if (
+    typeof command !== "string" ||
+    command === "" ||
+    argv.some((part) => typeof part !== "string" || part.includes("\0"))
+  ) {
+    throw new Error(
+      `${caller} takes a program name and an array of string arguments, with no NUL bytes.`,
+    );
+  }
+  if (options.shell) {
+    throw new Error(`${caller} never runs through a shell; pass an argument array.`);
+  }
+}
+
 function requireBound(timeoutMs, caller) {
   if (typeof timeoutMs !== "number" || !Number.isFinite(timeoutMs) || timeoutMs <= 0) {
     throw new Error(
@@ -202,6 +223,7 @@ function requireBound(timeoutMs, caller) {
  */
 export function runBounded(command, args, { timeoutMs, ...options } = {}) {
   requireBound(timeoutMs, "runBounded");
+  requireArgv(command, args, options, "runBounded");
   const result = spawnSync(command, args, {
     killSignal: "SIGKILL",
     ...options,
@@ -225,6 +247,7 @@ export function runBounded(command, args, { timeoutMs, ...options } = {}) {
  */
 export function readBounded(command, args, { timeoutMs, ...options } = {}) {
   requireBound(timeoutMs, "readBounded");
+  requireArgv(command, args, options, "readBounded");
   try {
     return execFileSync(command, args, {
       killSignal: "SIGKILL",
