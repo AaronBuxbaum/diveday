@@ -1,6 +1,6 @@
 # H-132: How does one booking's page lead to the diver's other days with the shop?
 
-- **Status:** Chosen
+- **Status:** Implemented
 - **Human owner:** Product owner
 
 ## Decision or approval needed
@@ -17,6 +17,6 @@ The choice, and where it is said.
 
 ## Unblocks / follow-up
 
-Layer r5-4 builds it.
+Built by layer r5-4: "Your days with us" on `/ready`, each row a send of a fresh link to the email on file ([20261016-fresh-link-per-booking-row](../../architecture/decisions/20261016-fresh-link-per-booking-row.md)).
 
 Part of the [human decision log](README.md#decision-register).

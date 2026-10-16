@@ -1,6 +1,6 @@
 # H-129: May a diver share a photo with everyone on the boat?
 
-- **Status:** Chosen
+- **Status:** Implemented
 - **Human owner:** Product owner
 
 ## Decision or approval needed
@@ -17,6 +17,6 @@ The choice, and where it is said.
 
 ## Unblocks / follow-up
 
-Layer r5-4 builds it.
+Built by layer r5-4: a per-photo "Share with the boat" flag, off by default, set by the sharer; staff delete through the recap's moderation ([20261016-shared-boat-photos](../../architecture/decisions/20261016-shared-boat-photos.md)).
 
 Part of the [human decision log](README.md#decision-register).
