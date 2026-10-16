@@ -314,6 +314,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Waiver / release
 - Waiver activity
 - Waiver completion
+- Weather day
 - Week totals
 - WhatsApp sender
 - Working shift

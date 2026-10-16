@@ -396,6 +396,7 @@ script again.
 | 20261015-coverage-and-mutation-testing | Measure the safety files with… |
 | 20261015-incident-draft-discard-and-hold | An owner may delete an… |
 | 20261015-roll-call-records-readiness | A count aboard keeps what… |
+| 20261016-bookkeeper-month-end-email | The month's files may be… |
 | 20261016-doctor-referral-page | The doctor's page: the official… |
 | 20261016-fresh-link-per-booking-row | A booking's page lists the… |
 | 20261016-shared-boat-photos | A diver may share a… |
