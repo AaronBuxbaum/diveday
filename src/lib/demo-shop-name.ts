@@ -25,6 +25,19 @@ export const DEMO_SHOP_NAME_COOKIE = "diveday_demo_name";
 const LIFETIME_MS = 7 * DAY_MS;
 export const DEMO_SHOP_NAME_MAX_AGE_SECONDS = LIFETIME_MS / 1000;
 
+/**
+ * Only staff screens read the name, so the cookie lives under `/shop`. A
+ * cookie is named by its name *and* path: clearing it must name this path,
+ * or the browser keeps the old one (security review, 2026-10-16).
+ */
+export const DEMO_SHOP_NAME_COOKIE_PATH = "/shop";
+
+/** What `cookies().delete` is given to take the name off this browser. */
+export const DEMO_SHOP_NAME_COOKIE_CLEAR = {
+  name: DEMO_SHOP_NAME_COOKIE,
+  path: DEMO_SHOP_NAME_COOKIE_PATH,
+} as const;
+
 const PURPOSE = "demo-shop-name:";
 const VALUE = /^(\d{1,15})\.([A-Za-z0-9_-]{1,400})\.([A-Za-z0-9_-]{43})$/;
 

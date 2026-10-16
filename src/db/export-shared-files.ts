@@ -403,9 +403,10 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
       in: "shop",
       value: (row) => row.courseMaterialsDoneByPersonId,
     },
-    { header: "hotel_pickup_location", in: "shop", value: (row) => row.hotelPickupLocation },
-    // What the diver said they cannot eat on a lunch-aboard boat (item 56).
-    { header: "dietary_note", in: "shop", value: (row) => row.dietaryNote },
+    // Where to collect the diver, and their lunch preference (item 56):
+    // statements the diver made, so they are theirs as well.
+    { header: "hotel_pickup_location", in: "both", value: (row) => row.hotelPickupLocation },
+    { header: "dietary_note", in: "both", value: (row) => row.dietaryNote },
     { header: "pickup_time", in: "shop", value: (row) => row.pickupTime },
     {
       header: "payment_status",

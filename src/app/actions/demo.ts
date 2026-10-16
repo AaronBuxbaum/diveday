@@ -20,6 +20,8 @@ import {
 } from "@/lib/demo-seat";
 import {
   DEMO_SHOP_NAME_COOKIE,
+  DEMO_SHOP_NAME_COOKIE_CLEAR,
+  DEMO_SHOP_NAME_COOKIE_PATH,
   DEMO_SHOP_NAME_MAX_AGE_SECONDS,
   signDemoShopName,
 } from "@/lib/demo-shop-name";
@@ -86,14 +88,14 @@ async function wearVisitorShopName(shopId: string, typed: unknown): Promise<void
   const jar = await cookies();
   const value = signDemoShopName(shopId, typed);
   if (!value) {
-    jar.delete(DEMO_SHOP_NAME_COOKIE);
+    jar.delete(DEMO_SHOP_NAME_COOKIE_CLEAR);
     return;
   }
   jar.set(DEMO_SHOP_NAME_COOKIE, value, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
-    path: "/shop",
+    path: DEMO_SHOP_NAME_COOKIE_PATH,
     maxAge: DEMO_SHOP_NAME_MAX_AGE_SECONDS,
   });
 }

@@ -1,7 +1,11 @@
+import { ResponseCookies } from "next/dist/compiled/@edge-runtime/cookies";
 import { describe, expect, it } from "vitest";
 import { DAY_MS } from "@/lib/clock";
 import { cleanVisitorShopName, VISITOR_SHOP_NAME_MAX } from "./demo-identity";
 import {
+  DEMO_SHOP_NAME_COOKIE,
+  DEMO_SHOP_NAME_COOKIE_CLEAR,
+  DEMO_SHOP_NAME_COOKIE_PATH,
   DEMO_SHOP_NAME_MAX_AGE_SECONDS,
   demoShopNameFor,
   signDemoShopName,
@@ -69,5 +73,18 @@ describe("the demo shop name cookie", () => {
   it("refuses garbage", () => {
     expect(demoShopNameFor(undefined, SHOP, NOW)).toBeNull();
     expect(demoShopNameFor("not-a-cookie", SHOP, NOW)).toBeNull();
+  });
+});
+
+describe("clearing the name", () => {
+  it("expires the cookie at the path it was set on, so an empty submit really takes it off", () => {
+    const headers = new Headers();
+    const jar = new ResponseCookies(headers);
+    jar.delete(DEMO_SHOP_NAME_COOKIE_CLEAR);
+    const header = headers.get("set-cookie") ?? "";
+    expect(DEMO_SHOP_NAME_COOKIE_PATH).toBe("/shop");
+    expect(header).toContain(`${DEMO_SHOP_NAME_COOKIE}=;`);
+    expect(header).toContain("Path=/shop");
+    expect(header).toMatch(/Expires=Thu, 01 Jan 1970|Max-Age=0/);
   });
 });
