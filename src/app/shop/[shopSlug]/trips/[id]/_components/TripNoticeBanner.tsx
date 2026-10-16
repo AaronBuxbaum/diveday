@@ -359,10 +359,12 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "participants.notices.diversFull",
   },
+  // A type change, unlike an add, has a fix on the row: Remove booking and
+  // seat them again (dive-domain review H9).
   "participant-type-unavailable": {
     form: "roster",
     tone: "danger",
-    key: "participants.notices.typeUnavailable",
+    key: "participants.notices.typeChangeUnavailable",
   },
   "participant-type-on-team": {
     form: "roster",
