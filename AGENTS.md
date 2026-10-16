@@ -32,7 +32,7 @@ a worker returns a path plus at most ten lines
 | --- | --- |
 | `pnpm dev` | dev server; wait for **`dev: serving … — warmed in Ns`**; one per checkout (**run** skill) |
 | `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`, `pnpm e2e:affected`, `pnpm verify:push` | the **verify** skill's checklist |
-| `pnpm check:repo` | 59 static guards, each naming itself and the offending line ([repo-checks.md](docs/agents/repo-checks.md)) |
+| `pnpm check:repo` | 61 static guards, each naming itself and the offending line ([repo-checks.md](docs/agents/repo-checks.md)) |
 | `pnpm agent:doctor`, `node scripts/stack-map.mjs` | what this environment trips you on; your stack's layers |
 
 Other commands: [working-rules.md](docs/agents/working-rules.md#commands). Pass args to a `pnpm`

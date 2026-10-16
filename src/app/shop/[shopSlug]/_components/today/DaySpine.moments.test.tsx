@@ -356,9 +356,9 @@ describe("the two horizon rows", () => {
     // The caret is at the row's trailing edge, like the week link's chevron.
     expect(summary?.lastElementChild?.tagName).toBe("svg");
 
-    const week = screen.getByText("This week").closest("li");
-    expect(week).toHaveClass("min-h-14", "sm:rounded-panel");
-    expect(week?.parentElement).toHaveClass("sm:rounded-panel", "sm:bg-surface-sunken");
+    const week = container.querySelectorAll("details")[1];
+    expect(week).toHaveClass("sm:rounded-panel", "sm:bg-surface-sunken", "open:sm:col-span-2");
+    expect(week.querySelector("summary")).toHaveClass("min-h-14");
     expect(fold?.className).not.toContain("shadow-bed");
     expect(screen.getByText("This week")).toHaveClass("text-base", "font-semibold");
   });
@@ -382,8 +382,9 @@ describe("the two horizon rows", () => {
     const fold = container.querySelector("details");
     expect(fold?.className).not.toContain("border-t-0");
     expect(fold?.querySelector("summary")).toHaveClass("border-t");
-    const week = screen.getByText("This week").closest("li");
-    expect(week).toHaveClass("border-t", "last:border-b");
+    const week = container.querySelectorAll("details")[1];
+    expect(week.querySelector("summary")).toHaveClass("border-t");
+    expect(week.className).toContain("max-sm:[&>summary]:border-b");
   });
 
   /**
@@ -404,7 +405,7 @@ describe("the two horizon rows", () => {
       tomorrow: [departure({ tripId: "t2", title: "Night Dive", startsAt: hoursFromNow(26) })],
     });
     const fold = container.querySelector("details");
-    const weekPanel = screen.getByText("This week").closest("li")?.parentElement;
+    const weekPanel = container.querySelectorAll("details")[1];
     const step = (element: Element | null | undefined) =>
       (element?.className ?? "")
         .split(/\s+/)
@@ -421,8 +422,7 @@ describe("the two horizon rows", () => {
     expect(weekPanel).toHaveClass("sm:inset-ring", "sm:inset-ring-transparent");
     // No call site adds a sunken fill of its own inside the sunken panel.
     expect(fold?.className).not.toContain("[&>summary]:hover:bg-surface-sunken");
-    const weekRow = screen.getByText("This week").closest("li");
-    expect(weekRow?.className.split(/\s+/)).not.toContain("hover:bg-surface-sunken");
+    expect(weekPanel.className).not.toContain("[&>summary]:hover:bg-surface-sunken");
   });
 
   it("renders no Tomorrow row on a day with nothing sailing tomorrow", () => {
@@ -430,20 +430,20 @@ describe("the two horizon rows", () => {
     expect(screen.queryByText(/^Tomorrow/)).toBeNull();
   });
 
-  it("makes 'This week' a plain link to the board with nothing to expand", () => {
-    renderSpine({
+  it("expands 'This week' in place to its jobs, with a door to the board inside", () => {
+    const { container } = renderSpine({
       actions: [
         action({ id: "today", departure: boat("t1") }),
         action({ id: "friday", departure: boat("t9") }),
       ],
     });
-    const week = screen.getByText("This week").closest("li");
+    const week = container.querySelector("details");
     expect(week).not.toBeNull();
-    expect(week?.querySelector("details")).toBeNull();
-    expect(within(week as HTMLElement).getByRole("link")).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/schedule/board",
-    );
+    expect(week).not.toHaveAttribute("open");
+    expect(within(week as HTMLElement).getByText("This week")).toBeInTheDocument();
+    expect(
+      within(week as HTMLElement).getByRole("link", { name: "Open the board" }),
+    ).toHaveAttribute("href", "/shop/blue-mantis/schedule/board");
   });
 
   it("renders no 'This week' row when the rest of the week is clear", () => {

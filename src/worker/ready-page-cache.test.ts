@@ -29,14 +29,12 @@ function fakeStorage() {
       const entries = caches.get(name) ?? new Map<string, Response>();
       caches.set(name, entries);
       return {
-        keys: async () =>
-          [...entries.keys()].map((path) => new Request(`${ORIGIN}${path}`)),
+        keys: async () => [...entries.keys()].map((path) => new Request(`${ORIGIN}${path}`)),
         delete: async (key: string | Request) => entries.delete(pathOf(key)),
         put: async (key: string | Request, response: Response) => {
           entries.set(pathOf(key), response);
         },
-        match: async (key: string | Request) =>
-          entries.get(pathOf(key))?.clone(),
+        match: async (key: string | Request) => entries.get(pathOf(key))?.clone(),
       };
     },
   };
@@ -44,39 +42,24 @@ function fakeStorage() {
 }
 
 /** The live page as the server renders it: kept until `keepUntil` (default: well past NOW). */
-function page(
-  body = "<p>Ready</p>",
-  init: ResponseInit = {},
-  keepUntil = NOW + 30 * DAY_MS,
-) {
-  return new Response(
-    `<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/>${body}`,
-    {
-      status: 200,
-      headers: { "content-type": "text/html; charset=utf-8" },
-      ...init,
-    },
-  );
+function page(body = "<p>Ready</p>", init: ResponseInit = {}, keepUntil = NOW + 30 * DAY_MS) {
+  return new Response(`<meta name="${READY_KEEP_UNTIL_META}" content="${keepUntil}"/>${body}`, {
+    status: 200,
+    headers: { "content-type": "text/html; charset=utf-8" },
+    ...init,
+  });
 }
 
 describe("readyPagePath", () => {
   it("answers a readiness link on this origin and nothing else", () => {
-    expect(readyPagePath(new URL(`${ORIGIN}/ready/${TOKEN}`), ORIGIN)).toBe(
+    expect(readyPagePath(new URL(`${ORIGIN}/ready/${TOKEN}`), ORIGIN)).toBe(`/ready/${TOKEN}`);
+    expect(readyPagePath(new URL(`${ORIGIN}/ready/${TOKEN}?saved=seat`), ORIGIN)).toBe(
       `/ready/${TOKEN}`,
     );
-    expect(
-      readyPagePath(new URL(`${ORIGIN}/ready/${TOKEN}?saved=seat`), ORIGIN),
-    ).toBe(`/ready/${TOKEN}`);
-    expect(
-      readyPagePath(new URL(`https://evil.example/ready/${TOKEN}`), ORIGIN),
-    ).toBeNull();
-    expect(
-      readyPagePath(new URL(`${ORIGIN}/ready/${TOKEN}/forms`), ORIGIN),
-    ).toBeNull();
+    expect(readyPagePath(new URL(`https://evil.example/ready/${TOKEN}`), ORIGIN)).toBeNull();
+    expect(readyPagePath(new URL(`${ORIGIN}/ready/${TOKEN}/forms`), ORIGIN)).toBeNull();
     expect(readyPagePath(new URL(`${ORIGIN}/ready/short`), ORIGIN)).toBeNull();
-    expect(
-      readyPagePath(new URL(`${ORIGIN}/shop/blue-mantis`), ORIGIN),
-    ).toBeNull();
+    expect(readyPagePath(new URL(`${ORIGIN}/shop/blue-mantis`), ORIGIN)).toBeNull();
   });
 });
 
@@ -95,23 +78,13 @@ describe("saveReadyPage and readyPageFallback", () => {
   });
 
   it("keeps one copy, the last page rendered, and serves it by its own path", async () => {
-    expect(
-      await saveReadyPage(store.storage, `/ready/${OTHER}`, page("older"), NOW),
-    ).toBe(true);
-    expect(
-      await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("newer"), NOW),
-    ).toBe(true);
+    expect(await saveReadyPage(store.storage, `/ready/${OTHER}`, page("older"), NOW)).toBe(true);
+    expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("newer"), NOW)).toBe(true);
     expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(1);
 
-    const served = await readyPageFallback(
-      store.storage,
-      `/ready/${TOKEN}`,
-      NOW + 1000,
-    );
+    const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1000);
     expect(await served?.text()).toContain("newer");
-    expect(
-      await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW),
-    ).toBeUndefined();
+    expect(await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW)).toBeUndefined();
   });
 
   /**
@@ -138,18 +111,12 @@ describe("saveReadyPage and readyPageFallback", () => {
     expect(stored).not.toContain(TOKEN);
     expect(stored).toContain("__diveday_kept_token__");
 
-    const served = await readyPageFallback(
-      store.storage,
-      `/ready/${TOKEN}`,
-      NOW + 1000,
-    );
+    const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1000);
     const text = await served?.text();
     expect(text).toContain(`href="/ready/${TOKEN}/forms"`);
     expect(text).toContain(`<p>${TOKEN}</p>`);
     expect(text).not.toContain("__diveday_kept_token__");
-    expect(
-      await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW + 1000),
-    ).toBeUndefined();
+    expect(await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW + 1000)).toBeUndefined();
   });
 
   /** A party seat's claim link is a second bearer token; the copy keeps none of it. */
@@ -163,11 +130,7 @@ describe("saveReadyPage and readyPageFallback", () => {
     expect(stored).not.toContain(claim);
     expect(stored).toContain("/claim/__diveday_claim_not_kept__");
 
-    const served = await readyPageFallback(
-      store.storage,
-      `/ready/${TOKEN}`,
-      NOW + 1000,
-    );
+    const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1000);
     expect(await served?.text()).not.toContain(claim);
   });
 
@@ -179,12 +142,8 @@ describe("saveReadyPage and readyPageFallback", () => {
   it("stops serving the copy the moment the page said, and keeps none the page did not ask for", async () => {
     const path = `/ready/${TOKEN}`;
     await saveReadyPage(store.storage, path, page("x", {}, NOW + 1000), NOW);
-    expect(
-      await readyPageFallback(store.storage, path, NOW + 999),
-    ).toBeDefined();
-    expect(
-      await readyPageFallback(store.storage, path, NOW + 1001),
-    ).toBeUndefined();
+    expect(await readyPageFallback(store.storage, path, NOW + 999)).toBeDefined();
+    expect(await readyPageFallback(store.storage, path, NOW + 1001)).toBeUndefined();
     expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(0);
 
     await saveReadyPage(store.storage, path, page(), NOW);
@@ -199,9 +158,7 @@ describe("saveReadyPage and readyPageFallback", () => {
       ),
     ).toBe(false);
     expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(0);
-    expect(
-      await saveReadyPage(store.storage, path, page("x", {}, NOW - 1), NOW),
-    ).toBe(false);
+    expect(await saveReadyPage(store.storage, path, page("x", {}, NOW - 1), NOW)).toBe(false);
   });
 
   it("forgets the copy for a path, and only that path's", async () => {
@@ -214,9 +171,7 @@ describe("saveReadyPage and readyPageFallback", () => {
 
   it("keeps nothing that is not the page itself", async () => {
     const path = `/ready/${TOKEN}`;
-    expect(
-      await saveReadyPage(store.storage, path, page("x", { status: 404 }), NOW),
-    ).toBe(false);
+    expect(await saveReadyPage(store.storage, path, page("x", { status: 404 }), NOW)).toBe(false);
     expect(
       await saveReadyPage(
         store.storage,
@@ -227,9 +182,7 @@ describe("saveReadyPage and readyPageFallback", () => {
     ).toBe(false);
     const redirected = page();
     Object.defineProperty(redirected, "redirected", { value: true });
-    expect(await saveReadyPage(store.storage, path, redirected, NOW)).toBe(
-      false,
-    );
+    expect(await saveReadyPage(store.storage, path, redirected, NOW)).toBe(false);
     const opaque = page();
     Object.defineProperty(opaque, "type", { value: "opaque" });
     expect(await saveReadyPage(store.storage, path, opaque, NOW)).toBe(false);
@@ -239,13 +192,9 @@ describe("saveReadyPage and readyPageFallback", () => {
   it("deletes a copy older than two weeks rather than serving it", async () => {
     const path = `/ready/${TOKEN}`;
     await saveReadyPage(store.storage, path, page(), NOW);
-    expect(
-      await readyPageFallback(
-        store.storage,
-        path,
-        NOW + READY_COPY_MAX_AGE_MS + 1,
-      ),
-    ).toBe(undefined);
+    expect(await readyPageFallback(store.storage, path, NOW + READY_COPY_MAX_AGE_MS + 1)).toBe(
+      undefined,
+    );
     expect(store.caches.get(READY_CACHE_NAME)?.size).toBe(0);
   });
 });
@@ -253,8 +202,6 @@ describe("saveReadyPage and readyPageFallback", () => {
 describe("readyPageStylesheets", () => {
   it("finds the page's own stylesheets and nobody else's", () => {
     const html = `<link rel="stylesheet" href="/_next/static/css/app.css"/><link href="https://cdn.example/_next/static/css/x.css"/><script src="/_next/static/chunks/a.js"></script>`;
-    expect(readyPageStylesheets(html, ORIGIN)).toEqual([
-      "/_next/static/css/app.css",
-    ]);
+    expect(readyPageStylesheets(html, ORIGIN)).toEqual(["/_next/static/css/app.css"]);
   });
 });

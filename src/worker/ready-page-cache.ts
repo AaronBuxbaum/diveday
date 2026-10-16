@@ -61,9 +61,7 @@ const TOKEN_PLACEHOLDER = "__diveday_kept_token__";
 const CLAIM_TOKEN_PATTERN = /\/claim\/[A-Za-z0-9_-]{43}/g;
 const CLAIM_REMOVED = "/claim/__diveday_claim_not_kept__";
 
-const KEEP_UNTIL_PATTERN = new RegExp(
-  `<meta name="${READY_KEEP_UNTIL_META}" content="(\\d+)"`,
-);
+const KEEP_UNTIL_PATTERN = new RegExp(`<meta name="${READY_KEEP_UNTIL_META}" content="(\\d+)"`);
 
 /** The token in a readiness path (`/ready/<token>`). */
 function tokenOf(path: string): string {
@@ -71,13 +69,8 @@ function tokenOf(path: string): string {
 }
 
 async function pathHash(path: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(path),
-  );
-  return [...new Uint8Array(digest)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(path));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 /** Every entry in the copy's cache, the one copy included. */
@@ -129,17 +122,12 @@ export async function saveReadyPage(
     return false;
   }
   const headers = new Headers(response.headers);
-  headers.set(
-    KEEP_UNTIL_HEADER,
-    String(Math.min(named, now + READY_COPY_MAX_AGE_MS)),
-  );
+  headers.set(KEEP_UNTIL_HEADER, String(Math.min(named, now + READY_COPY_MAX_AGE_MS)));
   headers.set(PATH_HASH_HEADER, await pathHash(path));
   // The page's links carry the token; a same-origin script reading the stored
   // body must not recover it (residual D1), so it is put back on the way out.
   const copy = new Response(
-    html
-      .replaceAll(tokenOf(path), TOKEN_PLACEHOLDER)
-      .replace(CLAIM_TOKEN_PATTERN, CLAIM_REMOVED),
+    html.replaceAll(tokenOf(path), TOKEN_PLACEHOLDER).replace(CLAIM_TOKEN_PATTERN, CLAIM_REMOVED),
     {
       status: response.status,
       statusText: response.statusText,
@@ -165,12 +153,8 @@ export async function readyPageFallback(
     await cache.delete(READY_COPY_KEY);
     return undefined;
   }
-  if (cached.headers.get(PATH_HASH_HEADER) !== (await pathHash(path)))
-    return undefined;
-  const html = (await cached.text()).replaceAll(
-    TOKEN_PLACEHOLDER,
-    tokenOf(path),
-  );
+  if (cached.headers.get(PATH_HASH_HEADER) !== (await pathHash(path))) return undefined;
+  const html = (await cached.text()).replaceAll(TOKEN_PLACEHOLDER, tokenOf(path));
   return new Response(html, {
     status: cached.status,
     statusText: cached.statusText,
@@ -179,16 +163,10 @@ export async function readyPageFallback(
 }
 
 /** Drop the kept copy if it is `path`'s: the seat it was for has just been cancelled. */
-export async function forgetReadyPage(
-  storage: CacheStorage,
-  path: string,
-): Promise<void> {
+export async function forgetReadyPage(storage: CacheStorage, path: string): Promise<void> {
   const cache = await storage.open(READY_CACHE_NAME);
   const cached = await cache.match(READY_COPY_KEY);
-  if (
-    cached &&
-    cached.headers.get(PATH_HASH_HEADER) === (await pathHash(path))
-  ) {
+  if (cached && cached.headers.get(PATH_HASH_HEADER) === (await pathHash(path))) {
     await cache.delete(READY_COPY_KEY);
   }
 }
@@ -201,9 +179,7 @@ export async function forgetReadyPage(
  */
 export function readyPageStylesheets(html: string, origin: string): string[] {
   const paths = new Set<string>();
-  for (const match of html.matchAll(
-    /href="([^"#?]*\/_next\/static\/[^"?#]+\.css)"/g,
-  )) {
+  for (const match of html.matchAll(/href="([^"#?]*\/_next\/static\/[^"?#]+\.css)"/g)) {
     const url = new URL(match[1] ?? "", origin);
     if (url.origin === origin) paths.add(url.pathname);
   }

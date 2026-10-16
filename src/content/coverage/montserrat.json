@@ -1,0 +1,37 @@
+{
+  "area": "montserrat",
+  "method": "Montserrat, the north and west coasts only (the volcanic exclusion zone closes the south and southeast to diving). No official site or mooring list exists online, and no operator publishes named sites: Scuba Montserrat (the operator the Montserrat Tourism Authority lists) states \"over 50 dive sites\" on its diving page without naming one and names only Rendezvous Bay as a snorkel trip and the Woodlands artificial reef as a conservation project; the Tourism Authority water sports page names no dive site; Montserrat Island Dive Centre has no readable site of its own; the Green Monkey (divemontserrat.com) is closed and its domain is a parked page; Seawolf Diving School's domain redirects in a loop. Only two active operators exist on the island. Magazines and guides (PADI, Scuba Diving, Frommer's) name a handful of sites, but they are leads and are never counted, so every candidate below is excluded and the counted total is zero. The Montserrat count cannot be made until Scuba Montserrat or the Tourism Authority publishes named sites, or the island is surveyed with the operators directly. Counted 2026-10-14.",
+  "sources": [
+    "https://www.padi.com/diving-in/montserrat/",
+    "https://www.scubadiving.com/montserrat",
+    "https://www.scubamontserrat.com/marine-conservation"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Rendezvous Bay",
+      "template": null,
+      "listedBy": ["https://www.padi.com/diving-in/montserrat/"],
+      "excluded": "named only by a travel guide as a dive site; the operator and tourism pages describe it as a snorkel trip"
+    },
+    {
+      "name": "Little Redonda",
+      "template": null,
+      "listedBy": ["https://www.padi.com/diving-in/montserrat/"],
+      "excluded": "named only by a travel guide; no operator or official list names it"
+    },
+    {
+      "name": "Pot of Gold",
+      "template": null,
+      "listedBy": ["https://www.scubadiving.com/montserrat"],
+      "excluded": "named only by a magazine; no operator or official list names it"
+    },
+    {
+      "name": "Woodlands Artificial Reef (Montserrat Reef Project)",
+      "template": null,
+      "listedBy": ["https://www.scubamontserrat.com/marine-conservation"],
+      "excluded": "reef-ball conservation project named on one operator page, not listed as a dive site"
+    }
+  ]
+}

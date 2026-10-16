@@ -1,0 +1,32 @@
+name: Closed issue labels
+
+# Issues close through `Closes #n` when a pull request merges, which never reaches
+# `tracker.closeIssue` (scripts/tracker.mjs), so the labels that only describe an open
+# issue's queue stayed: on 2026-10-13, 267 closed issues still said `in-progress` and 500 or
+# more `ready-for-agent`. This strips them on every close, whichever door closed it.
+# `needs-triage` stays on purpose: persona-bots reads closed `needs-triage` issues to know
+# which findings a human already ended. The backlog of already-closed issues is swept once
+# with `node scripts/check-follow-ups.mjs --sweep-closed`.
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  issues: write
+
+jobs:
+  strip:
+    name: Strip open-only labels from a closed issue
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Remove in-progress and ready-for-agent
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
+        # A label the issue does not carry answers 404; that is the common case, not a failure.
+        run: |
+          for label in in-progress ready-for-agent; do
+            gh api --method DELETE "repos/$REPO/issues/$NUMBER/labels/$label" >/dev/null 2>&1 || true
+          done

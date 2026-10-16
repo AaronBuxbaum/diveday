@@ -93,18 +93,35 @@ async function beginWalk(page: Page): Promise<void> {
 /**
  * Press Tab (or Shift+Tab) once and describe wherever focus landed.
  *
- * A landing on `<body>` is retried once rather than failed on. Chromium keeps a
- * "sequential focus navigation starting point" that `blur()` does not reset, so
- * the first Tab after following a `<Link>` — whose anchor the client router
- * left mounted-but-hidden — spends itself resetting to the document start
- * instead of advancing. The second press moves. Two in a row is a genuine dead
- * end and still throws.
+ * A landing on `<body>` is retried once, but only as a walk's *first* press. Chromium keeps a
+ * "sequential focus navigation starting point" that `blur()` does not reset, so the first Tab
+ * after following a `<Link>` — whose anchor the client router left mounted-but-hidden — spends
+ * itself resetting to the document start instead of advancing. The second press moves. Two in a
+ * row is a genuine dead end and still throws.
+ *
+ * Anywhere later in a walk a landing on `<body>` is a finding, not a quirk: focus was taken away
+ * or ran off the end of the page. Retrying it would press Tab again from the document start and
+ * report the skip link as "tab order jumped backwards" — the symptom, not the stop it happened
+ * after.
  */
 async function tab(page: Page, direction: "forward" | "back" = "forward"): Promise<FocusStop> {
   const key = direction === "forward" ? "Tab" : "Shift+Tab";
   await page.keyboard.press(key);
   let stop = await snapshotFocus(page);
   if (!stop) {
+    const previous = await page.evaluate(() => {
+      const prev = (window as unknown as { __kbPrev?: HTMLElement | null }).__kbPrev;
+      if (!prev) return null;
+      return (prev.getAttribute("aria-label") ?? prev.textContent ?? prev.tagName)
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 60);
+    });
+    if (previous !== null) {
+      throw new Error(
+        `${key} moved focus to the document body after "${previous}" — focus was taken away or the tab order ran out mid-walk`,
+      );
+    }
     await page.keyboard.press(key);
     stop = await snapshotFocus(page);
   }

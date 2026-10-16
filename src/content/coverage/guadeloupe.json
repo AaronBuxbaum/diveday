@@ -1,0 +1,250 @@
+{
+  "area": "guadeloupe",
+  "method": "Guadeloupe archipelago: Basse-Terre (Réserve Cousteau and Pigeon Islets, Bouillante to Pointe-Noire), Grande-Terre, Les Saintes, Marie-Galante, La Désirade and Petite-Terre. The Parc national de la Guadeloupe publishes no machine-readable list of the reserve's moorings or dive sites (searched in French; the park's pages name only the fixed moorings in general), so no official list is used; the Guadeloupe Islands tourism board page (lesilesdeguadeloupe.com) counts as one list. Operator lists read in French: Centre des Ilets (Bouillante), Les Heures Saines (Malendure; its reserve, wrecks, off-park and Sec Pâté pages), Atlantis Plongée, Archipel Plongée (wrecks page only), Bleu Passion (wreck dives page only), plus Pisquettes and La Dive Bouteille (Les Saintes; both publish their site maps as images or script-rendered pages, so only their named Sec Pâté is readable) and the Manbalaou club on Marie-Galante (site list not published as text). A site is counted when named on at least two independent lists; sites on one list are kept as excluded. Alternate names are merged (Pointe à Lézard on Atlantis is Pointe Lézarde). The wreck Gustavia lies at 40 m, the recreational limit, and is counted. Grande-Terre, Marie-Galante, La Désirade and Petite-Terre are thin: their sites appear only on the tourism board page, so they are excluded as single-list. Aggregators (divessi, diveplannerpro, manawa, blogs) were read for leads only. Counted 2026-10-14.",
+  "sources": [
+    "https://www.plongee-guadeloupe.fr/les-plongees/",
+    "https://www.heures-saines.com/spots-de-plongee/reserve-cousteau/",
+    "https://www.heures-saines.com/spots-de-plongee/exploration-epaves/",
+    "https://www.heures-saines.com/spots-de-plongee/hors-du-parc-national/",
+    "https://www.heures-saines.com/spots-de-plongee/plongee-sur-sec-pate/",
+    "https://www.atlantisformation-guadeloupe.com/Ou-plonger-en-Guadeloupe-les-spots-qu-il-ne-faut-surtout-pas-rater_a26.amp.html",
+    "https://www.archipel-plongee.com/plongee-exploration.php",
+    "https://www.bleupassionguadeloupe.com/pages/activites/fundives.html",
+    "https://www.pisquettes.com/",
+    "https://www.dive-bouteille.com/",
+    "https://www.lesilesdeguadeloupe.com/en/experiences/diving-in-guadeloupe/diving-spots-in-guadeloupe/"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Jardin de Corail",
+      "template": "jardin-de-corail-pigeon",
+      "listedBy": [
+        "https://www.plongee-guadeloupe.fr/les-plongees/",
+        "https://www.heures-saines.com/spots-de-plongee/reserve-cousteau/",
+        "https://www.atlantisformation-guadeloupe.com/Ou-plonger-en-Guadeloupe-les-spots-qu-il-ne-faut-surtout-pas-rater_a26.amp.html"
+      ]
+    },
+    {
+      "name": "Pointe Carangue",
+      "template": "pointe-carangue",
+      "listedBy": [
+        "https://www.plongee-guadeloupe.fr/les-plongees/",
+        "https://www.heures-saines.com/spots-de-plongee/reserve-cousteau/"
+      ]
+    },
+    {
+      "name": "La Piscine",
+      "template": null,
+      "listedBy": [
+        "https://www.plongee-guadeloupe.fr/les-plongees/",
+        "https://www.heures-saines.com/spots-de-plongee/reserve-cousteau/"
+      ]
+    },
+    {
+      "name": "L'Aquarium",
+      "template": null,
+      "listedBy": [
+        "https://www.plongee-guadeloupe.fr/les-plongees/",
+        "https://www.heures-saines.com/spots-de-plongee/reserve-cousteau/"
+      ]
+    },
+    {
+      "name": "Bouée Anticyclonique",
+      "template": null,
+      "listedBy": ["https://www.plongee-guadeloupe.fr/les-plongees/"],
+      "excluded": "on one list only (centre-des-ilets)"
+    },
+    {
+      "name": "Pointe Barracuda",
+      "template": "pointe-barracuda-pigeon",
+      "listedBy": [
+        "https://www.plongee-guadeloupe.fr/les-plongees/",
+        "https://www.heures-saines.com/spots-de-plongee/reserve-cousteau/"
+      ]
+    },
+    {
+      "name": "Pointe Malendure",
+      "template": "pointe-malendure",
+      "listedBy": [
+        "https://www.plongee-guadeloupe.fr/les-plongees/",
+        "https://www.heures-saines.com/spots-de-plongee/reserve-cousteau/"
+      ]
+    },
+    {
+      "name": "Jardin Japonais",
+      "template": "jardin-japonais",
+      "listedBy": [
+        "https://www.plongee-guadeloupe.fr/les-plongees/",
+        "https://www.heures-saines.com/spots-de-plongee/reserve-cousteau/"
+      ]
+    },
+    {
+      "name": "Anse Négresse",
+      "template": null,
+      "listedBy": [
+        "https://www.plongee-guadeloupe.fr/les-plongees/",
+        "https://www.heures-saines.com/spots-de-plongee/reserve-cousteau/"
+      ]
+    },
+    {
+      "name": "Franjack (Franjack wreck)",
+      "template": "franjack-wreck",
+      "listedBy": [
+        "https://www.plongee-guadeloupe.fr/les-plongees/",
+        "https://www.heures-saines.com/spots-de-plongee/exploration-epaves/",
+        "https://www.atlantisformation-guadeloupe.com/Ou-plonger-en-Guadeloupe-les-spots-qu-il-ne-faut-surtout-pas-rater_a26.amp.html",
+        "https://www.archipel-plongee.com/plongee-exploration.php",
+        "https://www.bleupassionguadeloupe.com/pages/activites/fundives.html"
+      ]
+    },
+    {
+      "name": "Gustavia",
+      "template": "gustavia-wreck",
+      "listedBy": [
+        "https://www.plongee-guadeloupe.fr/les-plongees/",
+        "https://www.heures-saines.com/spots-de-plongee/exploration-epaves/",
+        "https://www.atlantisformation-guadeloupe.com/Ou-plonger-en-Guadeloupe-les-spots-qu-il-ne-faut-surtout-pas-rater_a26.amp.html",
+        "https://www.archipel-plongee.com/plongee-exploration.php"
+      ]
+    },
+    {
+      "name": "Augustin Fresnel (Augustin Fresnel II)",
+      "template": "augustin-fresnel-wreck",
+      "listedBy": [
+        "https://www.plongee-guadeloupe.fr/les-plongees/",
+        "https://www.heures-saines.com/spots-de-plongee/exploration-epaves/",
+        "https://www.atlantisformation-guadeloupe.com/Ou-plonger-en-Guadeloupe-les-spots-qu-il-ne-faut-surtout-pas-rater_a26.amp.html",
+        "https://www.archipel-plongee.com/plongee-exploration.php",
+        "https://www.bleupassionguadeloupe.com/pages/activites/fundives.html"
+      ]
+    },
+    {
+      "name": "Sec Pâté (Sec Pate)",
+      "template": "sec-pate",
+      "listedBy": [
+        "https://www.plongee-guadeloupe.fr/les-plongees/",
+        "https://www.heures-saines.com/spots-de-plongee/plongee-sur-sec-pate/",
+        "https://www.pisquettes.com/",
+        "https://www.dive-bouteille.com/",
+        "https://www.lesilesdeguadeloupe.com/en/experiences/diving-in-guadeloupe/diving-spots-in-guadeloupe/"
+      ]
+    },
+    {
+      "name": "Pointe Lézarde (Pointe à Lézard)",
+      "template": "pointe-lezarde-guadeloupe",
+      "listedBy": [
+        "https://www.plongee-guadeloupe.fr/les-plongees/",
+        "https://www.heures-saines.com/spots-de-plongee/reserve-cousteau/",
+        "https://www.atlantisformation-guadeloupe.com/Ou-plonger-en-Guadeloupe-les-spots-qu-il-ne-faut-surtout-pas-rater_a26.amp.html"
+      ]
+    },
+    {
+      "name": "La Kaye",
+      "template": null,
+      "listedBy": [
+        "https://www.plongee-guadeloupe.fr/les-plongees/",
+        "https://www.heures-saines.com/spots-de-plongee/reserve-cousteau/"
+      ]
+    },
+    {
+      "name": "Pointe Mahaut",
+      "template": null,
+      "listedBy": ["https://www.heures-saines.com/spots-de-plongee/reserve-cousteau/"],
+      "excluded": "on one list only (heures-saines)"
+    },
+    {
+      "name": "Pointe Quecy",
+      "template": null,
+      "listedBy": ["https://www.heures-saines.com/spots-de-plongee/hors-du-parc-national/"],
+      "excluded": "on one list only (heures-saines)"
+    },
+    {
+      "name": "Les Tortues",
+      "template": null,
+      "listedBy": ["https://www.heures-saines.com/spots-de-plongee/hors-du-parc-national/"],
+      "excluded": "on one list only (heures-saines)"
+    },
+    {
+      "name": "Le Souffleur",
+      "template": null,
+      "listedBy": ["https://www.heures-saines.com/spots-de-plongee/hors-du-parc-national/"],
+      "excluded": "on one list only (heures-saines)"
+    },
+    {
+      "name": "Pointe Thomas",
+      "template": null,
+      "listedBy": ["https://www.heures-saines.com/spots-de-plongee/hors-du-parc-national/"],
+      "excluded": "on one list only (heures-saines)"
+    },
+    {
+      "name": "Pointe Melle Rose",
+      "template": null,
+      "listedBy": ["https://www.heures-saines.com/spots-de-plongee/hors-du-parc-national/"],
+      "excluded": "on one list only (heures-saines)"
+    },
+    {
+      "name": "Phare du Vieux Fort",
+      "template": null,
+      "listedBy": ["https://www.heures-saines.com/spots-de-plongee/hors-du-parc-national/"],
+      "excluded": "on one list only (heures-saines)"
+    },
+    {
+      "name": "Machette",
+      "template": null,
+      "listedBy": [
+        "https://www.atlantisformation-guadeloupe.com/Ou-plonger-en-Guadeloupe-les-spots-qu-il-ne-faut-surtout-pas-rater_a26.amp.html"
+      ],
+      "excluded": "on one list only (atlantis)"
+    },
+    {
+      "name": "Champagne",
+      "template": null,
+      "listedBy": [
+        "https://www.atlantisformation-guadeloupe.com/Ou-plonger-en-Guadeloupe-les-spots-qu-il-ne-faut-surtout-pas-rater_a26.amp.html"
+      ],
+      "excluded": "on one list only (atlantis)"
+    },
+    {
+      "name": "Avion de Port-Louis (Plane wreck)",
+      "template": null,
+      "listedBy": [
+        "https://www.lesilesdeguadeloupe.com/en/experiences/diving-in-guadeloupe/diving-spots-in-guadeloupe/"
+      ],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Les Arches (The Arches, Anse-Bertrand)",
+      "template": null,
+      "listedBy": [
+        "https://www.lesilesdeguadeloupe.com/en/experiences/diving-in-guadeloupe/diving-spots-in-guadeloupe/"
+      ],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Jardin de Corail (Marie-Galante)",
+      "template": null,
+      "listedBy": [
+        "https://www.lesilesdeguadeloupe.com/en/experiences/diving-in-guadeloupe/diving-spots-in-guadeloupe/"
+      ],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Grand Ancre",
+      "template": null,
+      "listedBy": [
+        "https://www.lesilesdeguadeloupe.com/en/experiences/diving-in-guadeloupe/diving-spots-in-guadeloupe/"
+      ],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "La Pipe (The Pipe, Pointe des Colibris, La Désirade)",
+      "template": null,
+      "listedBy": [
+        "https://www.lesilesdeguadeloupe.com/en/experiences/diving-in-guadeloupe/diving-spots-in-guadeloupe/"
+      ],
+      "excluded": "on one list only (tourism)"
+    }
+  ]
+}

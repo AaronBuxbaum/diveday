@@ -1,0 +1,272 @@
+{
+  "area": "saba",
+  "method": "Saba National Marine Park, the whole island (leeward pinnacles and walls, Fort Bay and Ladder Bay area, Wells Bay, the windward reefs). The official list is the Saba Conservation Foundation's dive-mooring layer (dive_moorings.kml, 25 numbered moorings with positions), read with the park's dive-area page, which groups the numbered sites but names only a few. The operator list is Sea Saba's dive-sites page (28 names in five areas; sabadeep.com now serves the same Sea Saba pages, so it counts once). Saba Deep and Saba Divers no longer publish a site list (their domains are parked or for sale), so no third independent list exists; Saba Tourism links to Sea Saba's map. A site is counted when it is on both the park mooring layer and Sea Saba's list, matching names across spelling (Otto's Limits, Abrams Hole, Shark Shoals) and treating Sea Saba's Tent Wall and Tent Deep as the park's Tent Reef Wall and Tent Reef Deep. Park moorings Sea Saba does not name (Halcyon, Greer Gut, Giles Quarter Shallow) and Sea Saba names with no matching park mooring (Tent Shallow, Tent Boulders, Tedran Wall, 50/50, Cove Bay) are one-list names and stay out of the count. Shore diving is prohibited and every site is a boat dive on a mooring; nothing on either list is snorkel-only or beyond 40 m. Counted 2026-10-14.",
+  "sources": [
+    "http://www.sabapark.org/maps/dive_moorings.kml",
+    "https://sabapark.org/saba-national-marine-park/dive-sites-dive-operators/",
+    "https://www.seasaba.com/sabas-dive-sites",
+    "https://www.sabatourism.com/diving"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Third Encounter (Eye of the Needle)",
+      "template": "third-encounter-saba",
+      "position": [17.63165, -63.27462],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Twilight Zone",
+      "template": "twilight-zone-saba",
+      "position": [17.6328, -63.27302],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Outer Limits",
+      "template": "outer-limits-saba",
+      "position": [17.63315, -63.27298],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Mt. Michel",
+      "template": "mt-michel-saba",
+      "position": [17.62813, -63.27378],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Halcyon",
+      "template": null,
+      "position": [17.62867, -63.27317],
+      "listedBy": ["http://www.sabapark.org/maps/dive_moorings.kml"],
+      "excluded": "on the official mooring list only (Sea Saba does not name it)"
+    },
+    {
+      "name": "Shark Shoals",
+      "template": "shark-shoals-saba",
+      "position": [17.64578, -63.265],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Diamond Rock",
+      "template": "diamond-rock-saba",
+      "position": [17.64717, -63.25667],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Man o' War Shoals",
+      "template": "man-o-war-shoals-saba",
+      "position": [17.64665, -63.25533],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Otto's Limits",
+      "template": "ottos-limits-saba",
+      "position": [17.64553, -63.25345],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Torrens Point",
+      "template": "torrens-point-saba",
+      "position": [17.6433, -63.25332],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Customs House",
+      "template": "customs-house-saba",
+      "position": [17.6319, -63.25822],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Porites Point",
+      "template": "porites-point-saba",
+      "position": [17.62932, -63.25888],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Babylon",
+      "template": "babylon-saba",
+      "position": [17.62852, -63.25958],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Ladder Labyrinth",
+      "template": "ladder-labyrinth-saba",
+      "position": [17.62623, -63.26007],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Hot Springs",
+      "template": "hot-springs-saba",
+      "position": [17.62463, -63.25958],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Rays n' Anchors",
+      "template": "rays-n-anchors-saba",
+      "position": [17.62305, -63.25957],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "50/50",
+      "template": null,
+      "listedBy": ["https://www.seasaba.com/sabas-dive-sites"],
+      "excluded": "on one list only (Sea Saba); no matching mooring on the official list"
+    },
+    {
+      "name": "Tent Reef Wall (Tent Wall)",
+      "template": "tent-reef-wall-saba",
+      "position": [17.61728, -63.25873],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Tent Reef",
+      "template": "tent-reef-saba",
+      "position": [17.61633, -63.2585],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Tent Reef Deep (Tent Deep)",
+      "template": "tent-reef-deep-saba",
+      "position": [17.61648, -63.25588],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Tent Shallow",
+      "template": null,
+      "listedBy": ["https://www.seasaba.com/sabas-dive-sites"],
+      "excluded": "on one list only (Sea Saba); no separate mooring on the official list"
+    },
+    {
+      "name": "Tent Boulders",
+      "template": null,
+      "listedBy": ["https://www.seasaba.com/sabas-dive-sites"],
+      "excluded": "on one list only (Sea Saba); no separate mooring on the official list"
+    },
+    {
+      "name": "Tedran Wall",
+      "template": null,
+      "listedBy": ["https://www.seasaba.com/sabas-dive-sites"],
+      "excluded": "on one list only (Sea Saba); no separate mooring on the official list"
+    },
+    {
+      "name": "Greer Gut",
+      "template": null,
+      "position": [17.61182, -63.24175],
+      "listedBy": ["http://www.sabapark.org/maps/dive_moorings.kml"],
+      "excluded": "on the official mooring list only (Sea Saba does not name it)"
+    },
+    {
+      "name": "Giles Quarter Shallow",
+      "template": null,
+      "position": [17.61183, -63.24133],
+      "listedBy": ["http://www.sabapark.org/maps/dive_moorings.kml"],
+      "excluded": "on the official mooring list only (Sea Saba does not name it)"
+    },
+    {
+      "name": "Big Rock Market",
+      "template": "big-rock-market-saba",
+      "position": [17.61252, -63.23623],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Hole in the Corner",
+      "template": "hole-in-the-corner-saba",
+      "position": [17.6177, -63.22637],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Abraham's Hole (Abrams Hole)",
+      "template": null,
+      "position": [17.61837, -63.22373],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Cove Bay",
+      "template": null,
+      "listedBy": ["https://www.seasaba.com/sabas-dive-sites"],
+      "excluded": "on one list only (Sea Saba); no matching mooring on the official list"
+    },
+    {
+      "name": "Core Gut",
+      "template": "core-gut-saba",
+      "position": [17.63108, -63.21765],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    },
+    {
+      "name": "Green Island",
+      "template": "green-island-saba",
+      "position": [17.64838, -63.23077],
+      "listedBy": [
+        "http://www.sabapark.org/maps/dive_moorings.kml",
+        "https://www.seasaba.com/sabas-dive-sites"
+      ]
+    }
+  ]
+}
