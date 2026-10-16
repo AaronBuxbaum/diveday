@@ -454,12 +454,12 @@ describe("boatSafetyNoticeTone", () => {
 });
 
 /**
- * **A lapsed paper reads in danger ink** (decision H-125): hull insurance,
+ * **A lapsed paper reads in danger ink** (decision H-129): hull insurance,
  * registration or the safety inspection past its date is the one fact that
  * makes a claim uncovered, so it is drawn as loud as missing oxygen. It is
  * never a gate: nothing here or downstream refuses a departure for it.
  */
-describe("a lapsed boat paper (H-125)", () => {
+describe("a lapsed boat paper (H-129)", () => {
   it("is danger for each of the three papers, the day after its date and every day after", () => {
     for (const paper of BOAT_PAPERS) {
       for (const days of [1, 30]) {

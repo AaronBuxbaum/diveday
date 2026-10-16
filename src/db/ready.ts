@@ -559,7 +559,7 @@ export async function getReadyPageData(
   const canCancelBooking =
     row.status === "booked" &&
     !hasSailed(trip.startsAt, now) &&
-    // Counted aboard a boat past its time: `selfCancelBooking` refuses it (H-122).
+    // Counted aboard a boat past its time: `selfCancelBooking` refuses it (H-126).
     !(
       await heldAtTheDoor(db, {
         shopId: row.shopId,

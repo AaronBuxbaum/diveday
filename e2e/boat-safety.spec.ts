@@ -99,7 +99,7 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   await page.goto(reefManifest);
   const section = page.getByRole("region", { name: `${BOAT}: papers and safety kit` });
   await expect(section).toBeVisible();
-  // A lapsed paper is danger ink, named by its date (H-125).
+  // A lapsed paper is danger ink, named by its date (H-129).
   await expect(section.getByText(/^Hull insurance ended /)).toHaveClass(/text-danger-strong/);
   await expect(section.getByText("AED e2e: pads expire in 12 days")).toBeVisible();
   await page.emulateMedia({ media: "print" });

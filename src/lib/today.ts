@@ -206,7 +206,7 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // in the water, and it is fixed before the lines come off, not after.
   boat_safety_kit: 13.5,
   high_wind_alert: 14,
-  // **A boat's paper has lapsed** (H-125): hull insurance, registration or the
+  // **A boat's paper has lapsed** (H-129): hull insurance, registration or the
   // safety inspection past its date — the fact that makes a claim uncovered.
   // Loud, under the kit and the weather, and still never a gate.
   boat_papers_lapsed: 14.5,
@@ -677,7 +677,7 @@ export const ACTION_KIND_META = {
   // but it is the one boat row nobody should scroll past.
   boat_safety_kit: { tone: "danger" },
   // Neutral while a paper is only coming due; danger once it has run out
-  // (H-125); warning once kit the boat is meant to carry has.
+  // (H-129); warning once kit the boat is meant to carry has.
   boat_papers_due: { tone: "neutral" },
   boat_papers_lapsed: { tone: "danger" },
   boat_safety_expired: { tone: "warning" },

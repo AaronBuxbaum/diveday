@@ -1639,7 +1639,7 @@ export type RestoreBookingOutcome =
  *   existing booking; putting them back is undoing a clerical slip, not
  *   selling a seat the hold was meant to stop.
  * - *Already departed.* `cancelBooking` refuses only a diver marked aboard a
- *   boat that has left (H-122); every other row can still be removed at sea —
+ *   boat that has left (H-126); every other row can still be removed at sea —
  *   a departed trip is still `scheduled` and roll call stays live. Refusing
  *   the undo there would make a misclick on an at-sea manifest permanent, and
  *   the two errors are not symmetric: an under-listed manifest costs a
@@ -2490,7 +2490,7 @@ async function changeParticipantType(
 
 /**
  * A staff removal's outcome. `aboard_at_sea`: the boat carried this seat or
- * may be carrying it (H-122, `aboardAtSeaBookingIds`), at sea or home, and
+ * may be carrying it (H-126, `aboardAtSeaBookingIds`), at sea or home, and
  * `hold` says which: on the water by the roll call, or never counted at the
  * dock of a sailed departure.
  */
@@ -2506,7 +2506,7 @@ export type CancelBookingOutcome =
 
 /**
  * **A staff member takes a seat off the roster.** Refused for a seat the boat
- * carried or may be carrying (H-122): a cancelled booking is nobody to every
+ * carried or may be carrying (H-126): a cancelled booking is nobody to every
  * roll-call reader, so the removal would drop a person on the water from the
  * count, and after the boat is home it would erase that they sailed. Asked
  * inside the transaction, under the trip and the seat locks the crew's
@@ -2684,7 +2684,7 @@ export async function selfCancelBooking(
       return { ok: false, reason: "trip_departed" };
     }
     // Within the hour `hasSailed` allows, a boat past its time or taken out by
-    // the crew with this diver counted aboard has left all the same (H-122).
+    // the crew with this diver counted aboard has left all the same (H-126).
     const atSea = await aboardAtSeaBookingIds(tx, {
       shopId: input.shopId,
       tripId: row.tripId,
@@ -2794,7 +2794,7 @@ export async function cancelUnclaimedPartySeats(
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id))
     .for("update", { of: bookings });
   // A party seat counted aboard a boat that has left stays, like a claimed one
-  // (H-122).
+  // (H-126).
   const atSea = await aboardAtSeaBookingIds(tx, {
     shopId: input.shopId,
     tripId: input.tripId,
