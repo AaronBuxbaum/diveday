@@ -19,6 +19,7 @@ import { tripTabsCopy } from "../_components/trip-tabs-copy";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { bindManifestActions } from "./_components/bound-actions";
 import { buddyBuilderView } from "./_components/buddy-builder-view";
+import { CancelledRollCallBanner } from "./_components/CancelledRollCallBanner";
 import { CatchUpStrip } from "./_components/CatchUpStrip";
 import { CheckpointSwitch } from "./_components/CheckpointSwitch";
 import { CrewRollCall } from "./_components/CrewRollCall";
@@ -132,6 +133,7 @@ export default async function TripManifestPage({
     diveIntents,
     stageStrip,
     meetingPoint,
+    cancelled,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
@@ -234,6 +236,7 @@ export default async function TripManifestPage({
           reading of where the boat is, and a second one above it would be the
           same fact twice. */}
       <TripTabs shopSlug={shopSlug} tripId={tripId} current="boat" copy={tripTabsCopy(t)} />
+      <CancelledRollCallBanner state={cancelled} t={t} />
       <PrintedSoulsOnBoard manifest={manifest} t={t} />
       {/* **The catch-up strip**, under the masthead and above the instrument,
           exactly where the canvas draws it (ADR 20260904-reef-all-the-way-down
@@ -332,6 +335,7 @@ export default async function TripManifestPage({
             notesByBooking,
             todayTrailByBooking: todayTrailBySubject,
             rollCallAction: actions.rollCall,
+            rollCallClosed: cancelled === "closed",
             addPrivateNoteAction: actions.addPrivateNote,
             rollCallButtonCopy,
             buddyTeamLabel,
@@ -355,6 +359,7 @@ export default async function TripManifestPage({
           timezone={shop.timezone}
           todayTrailBySubject={todayTrailBySubject}
           crewRollCallAction={actions.crewRollCall}
+          rollCallClosed={cancelled === "closed"}
           crewRollCallButtonCopy={crewRollCallButtonCopy}
           buddyTeamLabel={buddyTeamLabel}
           t={t}

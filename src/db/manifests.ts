@@ -1639,6 +1639,32 @@ function scheduledOrCountingHeads(tripId: string) {
   );
 }
 
+/**
+ * **Whether this trip's roll call takes writes**, asked with the writers' own
+ * predicate (`scheduledOrCountingHeads`) so the manifest never draws a control
+ * the writer would refuse, nor hides one it would accept (#2285). False for a
+ * trip that is not this shop's.
+ */
+export async function rollCallOpenOnTrip(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.id, tripId),
+        eq(trips.shopId, shopId),
+        scheduledOrCountingHeads(tripId),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
+}
+
 export async function recordRollCall(
   db: AppDb,
   input: {

@@ -10,6 +10,8 @@
     "errorRefusal": "No se guardó. Revisa tu conexión y vuelve a tocar.",
     "openRollCall": "Abrir pase de lista"
   },
+  "cancelledRollCallClosed": "Esta salida está cancelada. No se contó a nadie a bordo, así que el pase de lista está cerrado.",
+  "cancelledRollCallStillCounting": "Esta salida está cancelada. El pase de lista sigue abierto porque el conteo ya había empezado.",
   "skipToRollCall": "Ir al pase de lista",
   "stillToBoardHeading": "Pendientes de embarcar ({count})",
   "notCountedBackHeading": "Sin contabilizar a bordo todavía ({count})",

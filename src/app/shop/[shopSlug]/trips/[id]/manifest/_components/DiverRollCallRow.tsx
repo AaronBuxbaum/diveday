@@ -55,6 +55,7 @@ export function DiverRollCallRow({
     todayTrailByBooking,
     rollCallAction,
     rollCallButtonCopy,
+    rollCallClosed,
     buddyTeamLabel,
     t,
   } = context;
@@ -164,7 +165,7 @@ export function DiverRollCallRow({
           mark={
             rowState.notBackAboard ? (
               <RollCallMark state="notBack" />
-            ) : boardingControlShown ? (
+            ) : boardingControlShown && !rollCallClosed ? (
               <RollCallMarkButton
                 kind="diver"
                 subjectId={diver.bookingId}

@@ -31,6 +31,12 @@ export type DiverRollCallContext = {
   /** The non-implied roll-call events for this diver across today's checkpoints. */
   todayTrailByBooking?: ReadonlyMap<string, readonly PersonTrailEntry[]>;
   rollCallAction: RollCallAction;
+  /**
+   * The departure is cancelled and nobody was counted before it was (#2285):
+   * every roll-call write is refused, so no row or sheet draws a roll-call
+   * control. What is recorded still reads.
+   */
+  rollCallClosed?: boolean;
   addPrivateNoteAction: PrivateNoteAction;
   /**
    * One `RollCallButtonCopy` per diver: the "not ready" refusal embeds a rich
