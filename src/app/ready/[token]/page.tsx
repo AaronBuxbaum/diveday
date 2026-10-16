@@ -29,6 +29,7 @@ import {
   readyStepLine,
   readyThreadFacts,
 } from "@/app/ready/[token]/_components/thread-facts";
+import { YourDays } from "@/app/ready/[token]/_components/YourDays";
 import {
   startTipAction,
   submitRecapPulseAction,
@@ -289,7 +290,24 @@ async function DiverReadinessPage({
         timeZone={detail.shop.timezone}
         namespaces={["recap", "common", "booking", "reviews", "trip"]}
       >
-        <AfterState context={after} />
+        <AfterState
+          context={{
+            ...after,
+            yourDays: (
+              <YourDays
+                db={db}
+                token={token}
+                shopId={shop.id}
+                bookingId={bookingId}
+                shopName={detail.shop.name}
+                timezone={detail.shop.timezone}
+                locale={locale}
+                t={t}
+                identityHeld={data.identityHeld}
+              />
+            ),
+          }}
+        />
       </DiverIntlProvider>
     );
   }
@@ -585,6 +603,17 @@ async function DiverReadinessPage({
             partySeatClaims,
             partyAllSet,
           }}
+        />
+        <YourDays
+          db={db}
+          token={token}
+          shopId={shop.id}
+          bookingId={bookingId}
+          shopName={detail.shop.name}
+          timezone={detail.shop.timezone}
+          locale={locale}
+          t={t}
+          identityHeld={data.identityHeld}
         />
       </>
     );

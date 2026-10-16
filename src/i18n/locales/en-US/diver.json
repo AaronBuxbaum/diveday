@@ -5528,6 +5528,16 @@
       "datesTwo": "You asked for {date}, or {alternate}.",
       "reply": "We’ll get back to you by email or phone.",
       "call": "To talk sooner, call {phone}."
+    },
+    "otherDayLink": {
+      "subject": "Your link for {tripTitle}",
+      "body": "Here is the link you asked for to your day with {shopName}: {tripTitle}.",
+      "openLink": "Open your trip prep"
+    },
+    "logEntryLink": {
+      "subject": "Your log entry for {tripTitle}",
+      "body": "Here is the link to your log entry from {tripTitle} with {shopName}.",
+      "openLink": "Open your log entry"
     }
   },
   "brand": {
@@ -5604,5 +5614,19 @@
     "signedOne": "Signed. The next form is below.",
     "linkDeadTitle": "This link no longer works",
     "linkDeadBody": "Ask {shopName} to send your course forms again."
+  },
+  "yourDays": {
+    "heading": "Your days with {shopName}",
+    "note": "Each link goes to the email on file.",
+    "comingUp": "Coming up",
+    "logbook": "Your log",
+    "upcomingRow": "{date} · {title}, {time}",
+    "pastRow": "{ordinal} dive day · {title} · {date}",
+    "send": "Email me the link",
+    "sending": "Sending…",
+    "sent": "Sent to the email on file.",
+    "rateLimited": "That’s a lot of links at once. Try again in a little while.",
+    "failed": "That didn’t send. Try again in a moment.",
+    "unavailable": "That day isn’t available anymore."
   }
 }

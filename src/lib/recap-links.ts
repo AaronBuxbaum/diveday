@@ -22,7 +22,7 @@ import { nowMs } from "./clock";
 
 const RECAP_PURPOSE = "recap:";
 /** A diver revisiting a season later should still find their recap working. */
-const RECAP_TOKEN_MAX_AGE_MS = 180 * DAY_MS;
+export const RECAP_TOKEN_MAX_AGE_MS = 180 * DAY_MS;
 
 function recapSecret(): string {
   const dedicated = process.env.RECAP_LINK_SECRET;

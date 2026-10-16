@@ -5528,6 +5528,16 @@
       "datesTwo": "Pediste el {date} o el {alternate}.",
       "reply": "Te responderemos por correo o por teléfono.",
       "call": "Si quieres hablar antes, llama al {phone}."
+    },
+    "otherDayLink": {
+      "subject": "Tu enlace para {tripTitle}",
+      "body": "Aquí está el enlace que pediste para tu día con {shopName}: {tripTitle}.",
+      "openLink": "Abre tu preparación"
+    },
+    "logEntryLink": {
+      "subject": "Tu registro de {tripTitle}",
+      "body": "Aquí está el enlace a tu registro de {tripTitle} con {shopName}.",
+      "openLink": "Abre tu registro"
     }
   },
   "brand": {
@@ -5604,5 +5614,19 @@
     "signedOne": "Firmado. El siguiente formulario está abajo.",
     "linkDeadTitle": "Este enlace ya no funciona",
     "linkDeadBody": "Pide a {shopName} que te envíe de nuevo los formularios del curso."
+  },
+  "yourDays": {
+    "heading": "Tus días con {shopName}",
+    "note": "Cada enlace llega al correo que tenemos registrado.",
+    "comingUp": "Próximos",
+    "logbook": "Tu bitácora",
+    "upcomingRow": "{date} · {title}, {time}",
+    "pastRow": "{ordinal} día de buceo · {title} · {date}",
+    "send": "Envíame el enlace",
+    "sending": "Enviando…",
+    "sent": "Lo enviamos al correo registrado.",
+    "rateLimited": "Son muchos enlaces a la vez. Inténtalo de nuevo en un rato.",
+    "failed": "No se pudo enviar. Inténtalo de nuevo en un momento.",
+    "unavailable": "Ese día ya no está disponible."
   }
 }

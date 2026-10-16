@@ -336,8 +336,12 @@ const readinessLinkSchema = z.object({
    * every sender before course forms meant; `course_forms` is the waiver send
    * finding the release signed and the course's forms still owed (ADR
    * 20261008-course-forms), so the words say that instead of "expired".
+   * `other_day` and `log_entry` are a diver asking, from one booking's page,
+   * for the link to another of their days with the shop (H-132, ADR
+   * 20261016-fresh-link-per-booking-row): an upcoming day's trip prep, or a
+   * past day's recap, whose URL rides in `readinessUrl`.
    */
-  purpose: z.enum(["course_forms"]).optional(),
+  purpose: z.enum(["course_forms", "other_day", "log_entry"]).optional(),
 });
 
 const waitlistInviteSchema = z.object({

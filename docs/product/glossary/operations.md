@@ -1589,6 +1589,12 @@
   their own password, which flips the account to **active**. A shop may never end up with zero
   people holding the `owner` role: removing, disabling, or demoting the shop's last owner is
   refused. See [20260726-staff-invite-accounts](../../architecture/decisions/20260726-staff-invite-accounts.md).
+- **Your days** — a diver's other bookings with the shop, listed on one booking's page as "Your
+  days with {shop}": upcoming seats, and the six newest past dive days numbered as the recap stamps
+  them. A row is a send, never a door: "Email me the link" mails that day's own page (a fresh
+  readiness link, or a recap link for a past day) to the address on file, so one link still opens
+  one booking (H-132). Read in `src/db/your-days.ts`; see
+  [20261016-fresh-link-per-booking-row](../../architecture/decisions/20261016-fresh-link-per-booking-row.md).
 - **Your week** — a crew member's next three departures, on their Today below the day: the boat
   and departure, when, their job on it (`trip_assignments.trip_role`, "On the crew" when the roster
   did not say), and the one crew gap the staffing week would draw on it, from the same pass

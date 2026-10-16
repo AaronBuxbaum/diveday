@@ -6,7 +6,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { sendFindMyBookingLinks } from "./find-my-booking";
-import { activityEvents, bookings, shops, trips } from "./schema";
+import { activityEvents, bookings, notificationDeliveries, people, shops, trips } from "./schema";
 import { createTrip, setTripStatus, upcomingTripsWithCounts } from "./trips";
 
 const failBooking = vi.hoisted(() => ({ id: null as string | null }));
@@ -189,7 +189,7 @@ describe("sendFindMyBookingLinks", () => {
     expect(sent).toHaveBeenCalledTimes(1);
   });
 
-  it("does not reissue a booking whose departure has already sailed past the buffer", async () => {
+  it("does not reissue a booking whose departure has already sailed past the buffer, and sends its log entry instead", async () => {
     const { db, shop } = ctx;
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("expected a seeded trip");
@@ -214,7 +214,61 @@ describe("sendFindMyBookingLinks", () => {
       origin: APP_ORIGIN,
       now,
     });
-    expect(sent).not.toHaveBeenCalled();
+    // No trip-prep link for a boat that has sailed. The address has no current
+    // booking at all, so it gets that day's log entry (H-132): a recap link.
+    expect(sent).toHaveBeenCalledTimes(1);
+    const notification = sent.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(notification).toMatchObject({ purpose: "log_entry", to: "nora@example.com" });
+    expect(String(notification.readinessUrl)).toContain("/recap/");
+  });
+
+  it("sends an address's latest log entry at most once a day, and not while it holds a current booking", async () => {
+    const { db, shop } = ctx;
+    const now = nowDate();
+    const at = (hours: number) => new Date(now.getTime() + hours * 60 * 60 * 1000);
+    const past = await createTrip(db, {
+      shopId: shop.id,
+      title: "Last month's reef",
+      startsAt: at(-24 * 30),
+      endsAt: at(-24 * 30 + 4),
+      capacity: 6,
+      plannedDives: 2,
+    });
+    if (!past) throw new Error("trip not created");
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Lena Ortiz", email: "log.days@example.com" })
+      .returning();
+    if (!person) throw new Error("person not created");
+    await db.insert(bookings).values({
+      shopId: shop.id,
+      tripId: past.id,
+      personId: person.id,
+      bookedAs: "diver",
+    });
+    const ask = () =>
+      sendFindMyBookingLinks(db, {
+        shopId: shop.id,
+        email: "log.days@example.com",
+        origin: APP_ORIGIN,
+        now,
+      });
+
+    await ask();
+    expect(sent).toHaveBeenCalledTimes(1);
+    // The delivery row is what the once-a-day guard reads; the mock records
+    // none, so stand one in as the real send would have.
+    const first = sent.mock.calls[0]?.[0] as { bookingId: string } | undefined;
+    if (!first) throw new Error("expected a send");
+    await db.insert(notificationDeliveries).values({
+      shopId: shop.id,
+      bookingId: first.bookingId,
+      kind: "readiness_link",
+      status: "sent",
+      attemptedAt: now,
+    });
+    await ask();
+    expect(sent).toHaveBeenCalledTimes(1);
   });
 
   it("does not reissue a canceled booking", async () => {
