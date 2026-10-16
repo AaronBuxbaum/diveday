@@ -925,10 +925,9 @@ describe("decideTripAdmission — participant types (ADR 20261007-participant-ty
  * **A release that lapses before the departure is never a reason to refuse
  * the sale.** Admission takes no release at all: whether a diver's waiver
  * stands is something they can fix before the boat leaves, so it is
- * readiness's question. Here the seat sells three weeks out to a diver whose
- * release readiness already blocks today, because it is measured at the
- * departure (issue #2611): admission must still admit, or it refuses someone
- * who can re-sign in time.
+ * readiness's question. The seat sells three weeks out to a diver whose
+ * release readiness blocks today (measured at the departure, #2611): admission
+ * must still admit, or it refuses someone who can re-sign in time.
  */
 describe("decideTripAdmission — a release that lapses before the departure", () => {
   it("admits the seat while readiness blocks it, today and on the day", () => {
@@ -955,7 +954,6 @@ describe("decideTripAdmission — a release that lapses before the departure", (
       supersededAt: null,
     } as WaiverRecord;
     const readinessAt = (now: Date) => {
-      // Measured at the departure (issue #2611), as the roster does.
       const resolution = {
         bookingWaiver: release,
         personSignedWaivers: [release],
@@ -972,12 +970,10 @@ describe("decideTripAdmission — a release that lapses before the departure", (
         now,
       });
     };
-    // Readiness now says so today, three weeks ahead; admission still admits.
     const ahead = readinessAt(today);
     expect(ahead.status).toBe("blocked");
     expect(ahead.blockers).toContainEqual(expect.objectContaining({ code: "waiver_lapsed" }));
-    // And on the day the release has lapsed: blocked, and named as a signature
-    // that ran out rather than one nobody ever sent.
+    // On the day: blocked, named as a signature that ran out, not one never sent.
     const onTheDay = readinessAt(departure);
     expect(onTheDay.status).toBe("blocked");
     expect(onTheDay.blockers).toContainEqual(expect.objectContaining({ code: "waiver_lapsed" }));
