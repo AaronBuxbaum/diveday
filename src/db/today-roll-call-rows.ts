@@ -3,6 +3,7 @@ import {
   crewClashSailedDetailText,
   openCrewActionText,
   openRollCallActionText,
+  rollCallAlertedText,
   rollCallGapDetailText,
 } from "@/i18n/today-labels";
 import { formatDateTimeTz } from "@/lib/format";
@@ -83,14 +84,13 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
         label: `${gap.title} · ${formatDateTimeTz(gap.endsAt, locale, timeZone)}`,
       },
       aboutDeparture: true,
-      // The owners were alerted (batch 6, item 6): said on the row the alert
-      // was about, with its time in the shop's zone, so whoever opens Today
-      // knows the call has gone out and when.
-      detail: gap.alertedAt
-        ? `${rollCallGapDetailText(t, gap)} ${t("today.detail.rollCallAlerted", {
-            time: formatDateTimeTz(gap.alertedAt, locale, timeZone),
-          })}`
-        : rollCallGapDetailText(t, gap),
+      // The owners were alerted (batch 6, item 6), and the shore contact too
+      // (H-118; dive-domain re-review #7): said on the row the alert was
+      // about, with its time in the shop's zone, so whoever opens Today knows
+      // who has heard and when.
+      detail: [rollCallGapDetailText(t, gap), rollCallAlertedText(t, gap, locale, timeZone)]
+        .filter(Boolean)
+        .join(" "),
       actionLabel: openRollCallActionText(t),
       // Straight to the checkpoint that is open, not the manifest's default
       // departure tab — one tap from the queue to the count that closes it.

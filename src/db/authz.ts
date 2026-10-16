@@ -1,10 +1,13 @@
 import { and, eq } from "drizzle-orm";
 import { cache } from "react";
 import {
+  canAddDiver,
+  canBackfillIntegrations,
   canCallDayBlowout,
   canConfigureTrips,
   canDeleteDiver,
   canErasePersonalData,
+  canExportDisputeSheet,
   canExportIncidentRecord,
   canManageBilling,
   canManageMessagingSettings,
@@ -140,6 +143,10 @@ export const canPersonManagePaymentSettings = (db: DbExecutor, shopId: string, p
 export const canPersonManageBilling = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManageBilling);
 
+/** Live DB-checked companion of the owner-only integration backfill gate (src/lib/authz.ts). */
+export const canPersonBackfillIntegrations = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canBackfillIntegrations);
+
 export const canPersonManageMessagingSettings = (
   db: DbExecutor,
   shopId: string,
@@ -161,6 +168,10 @@ export const canPersonViewShopActivity = (db: DbExecutor, shopId: string, person
  */
 export const canPersonManageOrders = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManageOrders);
+
+/** Live DB-checked companion of the dispute-sheet gate (src/lib/authz.ts). */
+export const canPersonExportDisputeSheet = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canExportDisputeSheet);
 
 export const canPersonManageWaiverTemplates = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManageWaiverTemplates);
@@ -187,6 +198,10 @@ export const canPersonManageRentalSettings = (db: DbExecutor, shopId: string, pe
     personId,
     (roles) => canManageShopSettings(roles) && canManagePaymentSettings(roles),
   );
+
+/** Live DB-checked companion of the add-a-diver gate, which every staff role holds (src/lib/authz.ts). */
+export const canPersonAddDiver = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canAddDiver);
 
 export const canPersonDeleteDiver = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canDeleteDiver);

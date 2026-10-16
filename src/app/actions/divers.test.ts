@@ -18,9 +18,11 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn(async () => ({}) as never) };
 });
+vi.mock("@/db/authz", () => ({ canPersonAddDiver: vi.fn(async () => true) }));
 vi.mock("@/db/divers", () => ({ createDiver: vi.fn(), findLiveDiverIdByEmail: vi.fn() }));
 vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
+const { canPersonAddDiver } = await import("@/db/authz");
 const { createDiver, findLiveDiverIdByEmail } = await import("@/db/divers");
 const { requireStaffSession } = await import("@/lib/session");
 const { createDiverFromSearchAction } = await import("./divers");
@@ -68,5 +70,24 @@ describe("createDiverFromSearchAction", () => {
       "11111111-1111-4111-8111-111111111111",
       expect.stringMatching(/^taken@example\.com$/i),
     );
+  });
+
+  it("sends a staffer the live gate refuses back to the roster, creating nobody", async () => {
+    vi.mocked(requireStaffSession).mockResolvedValue(
+      staffSession({
+        shopId: "11111111-1111-4111-8111-111111111111",
+        shopSlug: "reef-life",
+        personId: "22222222-2222-4222-8222-222222222222",
+      }),
+    );
+    vi.mocked(createDiver).mockClear();
+    vi.mocked(canPersonAddDiver).mockResolvedValueOnce(false);
+    const data = new FormData();
+    data.set("query", "Walk Up");
+
+    expect(await redirectedTo(() => createDiverFromSearchAction(data))).toBe(
+      noticeUrl(shopPath("reef-life", "divers"), "not-authorized"),
+    );
+    expect(createDiver).not.toHaveBeenCalled();
   });
 });

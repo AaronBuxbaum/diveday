@@ -23,7 +23,8 @@ in [route-map.md](route-map.md).
 - Read `foo.test.ts` before `foo.ts`: tests are the contract.
 - Iterate with one focused test and quiet output. The whole suite belongs to CI; the shell guard
   refuses a bare `pnpm test` / `pnpm e2e` / `pnpm check`.
-- Redirect a long run to a file and read the failing part; never pipe it through `tail`.
+- Redirect a long run to a scratchpad file, not beside the checkouts, and read the failing part;
+  never pipe it through `tail`.
 
 ## Commands
 
@@ -36,7 +37,7 @@ in [route-map.md](route-map.md).
 | `pnpm agent:doctor` | Node against `.nvmrc`, `gh`, `origin/main`'s age, `node_modules`, stray processes, remote branches with no open PR and the stack, each with its fix; a row only a human can change (the Node, the branches) is `info` and stays out of the two-line summary the session-start block carries |
 | `node scripts/stack-map.mjs` | the stack HEAD is in — layers bottom to top, the top, other tips, merged sub-branches, each layer's paths — derived from remote refs (`--json` for a machine); the per-prompt line carries the position |
 | `pnpm check:env` / `pnpm env:manual` | the two structural facts about configuration, and the one file a human edits — see `.claude/rules/infra.md` |
-| `pnpm check:repo` | 58 static guards over the repository, spawned concurrently so one run reports every failure rather than the first. Each guard names itself and prints the offending line; the ones whose *why* is not obvious from that message are written up in [docs/agents/repo-checks.md](repo-checks.md) |
+| `pnpm check:repo` | 61 static guards over the repository, spawned concurrently so one run reports every failure rather than the first. Each guard names itself and prints the offending line; the ones whose *why* is not obvious from that message are written up in [docs/agents/repo-checks.md](repo-checks.md) |
 | `pnpm check:follow-ups` | every open `needs-triage` issue is still actionable cold. The one guard that calls `gh`, so it is not in `check:repo`: it runs daily in `.github/workflows/follow-ups.yml`, and locally reports **SKIPPED** when `gh` cannot answer ([docs/agents/issue-tracker.md](issue-tracker.md)'s "Filing a follow-up") |
 | `pnpm check:context-budget` | the words every session loads before it reads any code — this file, `CLAUDE.md`, any unscoped `.claude/rules/*.md`, and every skill's and reviewer agent's `description:` line — ratcheted (`--write` banks a fall, `--absorb "<why>"` records a deliberate rise), plus a 240-word cap on any single line. The fix for red is never to compress the prose: move the long half into `docs/` or a path-scoped rule and leave a pointer |
 | `pnpm check:copy` / `check:domain-strings` / `check:tokens` / `check:architecture` / `check:type-ramp` / `check:voice` / `check:locale` / `check:e2e-hygiene` / `check:route-coverage` / `check:critical-text` / `check:closing-keywords` / `check:rental-fit-caps` | the individual guards, each also inside `check:repo`; the ratcheted ones share `--report <path>` / `--write` / `--absorb`. What each refuses is in the path-scoped rule for the files it reads and in [docs/agents/repo-checks.md](repo-checks.md) |
@@ -83,7 +84,7 @@ runs. Pass args directly. The shell guard refuses the bare form.
   target branch before calling work complete.
 - **Stack everything, across threads, and run one PR's CI at a time: cut every branch from the
   newest open one, any thread's, related or not, as a draft with `base` on it; the thread that owns
-  the stack pushes one layer at a time, because concurrent runs cancel each other.** That is
+  the stack pushes one layer at a time, because overlapping runs queue on a 20-job cap.** That is
   Aaron's rule; the CI half dates from 2026-10-12, when 15 to 19 layers pushed together cost 126
   cancelled runs and 90 failed jobs. Push a layer, let its run finish, then push the next; a thread
   whose layer sits on another thread's stack leaves the push order to the thread that owns it. A
@@ -155,7 +156,13 @@ runs. Pass args directly. The shell guard refuses the bare form.
   test is never a follow-up, and someone else's entry is never a drive-by.
 - **A failing or flaky test is part of the work, even when unrelated to your change.** Fix it
   before calling the work done — never skip it, widen a timeout to paper over a flake, or leave it
-  red for someone else. Check **Parallel work** first for an in-flight fix on the same test.
+  red for someone else. Check **Parallel work** first for an in-flight fix on the same test. The
+  one exception is a **proven** flake (it failed and passed on one sha with no code change, or
+  failed in the nightly flake hunt): it may be quarantined instead, with an open `needs-triage`
+  issue and an expiry at most 7 days out, at most 3 at once (`@quarantine`,
+  [testing.md](../engineering/testing.md#what-runs-when)'s "Flakes"; `check:e2e-hygiene`). It
+  then runs nightly only, and its expiry turns every branch red. "Fix any flake you meet" stalled
+  unrelated PRs on someone else's flake (test review decision 4, 2026-10-14).
 - **A pushed PR is not done until visual diffs are accounted for.** Review every diff image for
   what the code explains; never wave a mismatch through. Baselines live in S3 keyed by git commit
   (ADR 20260729-reg-suit-visual-regression), so "approving" an intentional change means saying in
@@ -196,10 +203,13 @@ runs. Pass args directly. The shell guard refuses the bare form.
   specs live in `e2e/`. The dependency direction is one way — `app → features → lib/db` — and
   `pnpm check:architecture` enforces it.
 - **Tests travel with behavior.** New features include happy-path and important failure-path
-  tests; bug fixes begin with a failing regression test. Every important **flow** a user runs gets
-  an `e2e/` spec, and every important **surface** they look at gets a capture in
-  `e2e/visual.spec.ts` (the **e2e-and-visual** skill; if unsure whether something qualifies, it
-  does).
+  tests; bug fixes begin with a failing regression test. Which layer each test belongs to is
+  [testing.md](../engineering/testing.md#how-a-change-decides-its-tests)'s six-step list, and the
+  browser floor is its [critical journeys](../engineering/testing.md#critical-journeys) table,
+  which `pnpm check:critical-journeys` holds. It replaced "every important flow gets a spec, every
+  important surface a capture" (test review decision 2, 2026-10-14), which grew ten-plus "add
+  captures" issues by rule while ranking no walk above another. A spec finds elements by role and
+  message key, never a sentence (`check:e2e-hygiene`'s long-literal ratchet).
 - **Copy comes from a message bundle, never a component; every sentence earns its place, or it is
   deleted; every delete is soft and the word on screen is still "Delete"; a rendered date names its
   zone and never a hard-coded locale; time is read through the clock; a new page ships with a

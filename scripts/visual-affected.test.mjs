@@ -173,8 +173,13 @@ describe("what a pull request captures", () => {
         "vercel.json",
         "e2e/fixtures/booking-party.spec.ts",
         "src/lib/orphan.ts",
+        ".coderabbit.yaml",
+        ".agents/skills/tdd/SKILL.md",
+        ".gitattributes",
       ]),
     ).toHaveLength(2);
+    // Imported by next.config.ts and src/, so never inert.
+    expect(picked(["config/env-registry.mjs"]).mode).toBe("all");
   });
 });
 
@@ -397,6 +402,14 @@ describe("edits to the visual spec and its helpers", () => {
     expect(picked([4])).toContain("a trip's crew renders true to the design (light)");
     expect(picked([4])).not.toContain("the gear register renders true to the design (light)");
     expect(picked([1]).mode).toBe("all");
+  });
+
+  it("captures everything when the edited lines were not read, or another file is unbounded", () => {
+    expect(picked(["e2e/visual.spec.ts"]).mode).toBe("all");
+    expect(picked(["e2e/helpers.ts"]).mode).toBe("all");
+    expect(visual([16], { changed: ["e2e/visual.spec.ts", "src/app/globals.css"] }).mode).toBe(
+      "all",
+    );
   });
 
   it("reads a diff's changed lines, a deletion marking both neighbours", () => {

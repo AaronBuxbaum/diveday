@@ -19,6 +19,19 @@
  * take back a different device's more recent check.
  */
 
+/**
+ * **Clearing a checked item takes two taps** (#2481, #2567): how long a checked
+ * item waits for the second tap before it stands down. One number for the
+ * live checklist and the offline copy, so the two never ask differently.
+ */
+export const CLEAR_CONFIRM_TIMEOUT_MS = 5000;
+
+/**
+ * How soon after the first tap a second one may clear. A bounced or doubled
+ * tap lands well inside this and is ignored; a deliberate second tap does not.
+ */
+export const CLEAR_CONFIRM_MIN_GAP_MS = 400;
+
 /** The retraction. Re-tapping an already-checked item takes the mark off. */
 export type PreDepartureCheckStatus = "checked" | "cleared";
 

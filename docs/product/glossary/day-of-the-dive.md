@@ -12,6 +12,9 @@
   refunds each seat's card capture by itself as of 2026-08-13 (ADR
   [20260813-shop-cancellation-refunds-itself](../../architecture/decisions/20260813-shop-cancellation-refunds-itself.md));
   a counter payment, a disconnected account, or a Stripe refusal still leaves the refund to staff.
+  Only a caller with the refund right (owner or manager) sends the card refunds as it runs; anyone
+  else who calls it off leaves them queued for one of those two to release
+  ([H-123](../human-decisions/H-123-call-off-queues-refunds-for-a-refund-holder.md)).
   A departure **underway** (past its start time, or with anybody recorded at roll call) cannot be
   blown out, and the day call is for owners, managers and captains only.
   **It cancels the *trip* and leaves every booking active**, and every reader downstream has to expect that
@@ -96,4 +99,7 @@
   warning tone the certification phrase wears everywhere (`welcomeDockLineUnchecked`,
   `src/i18n/welcome-cue-labels.ts`). **Nitrox is never on it**: a greeting is not a fill
   clearance, and enriched air is the fill station's question. It informs and gates nothing; the
-  boarding gate is readiness.
+  boarding gate is readiness. It may end with the diver's own **hello choice** (`welcome_hello`:
+  first ocean dive, celebrating something, a little nervous), asked on `/ready` under the same
+  yes as the cue, a fixed choice and never free text, cleared when the yes is taken back. A
+  booking's free text never reaches the line.

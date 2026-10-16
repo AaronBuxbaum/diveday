@@ -69,10 +69,10 @@ export const ROLL_CALL_ROW_TONE = {
   boarded: "border-success bg-success-tint",
   notBoarded: "border-warning bg-warning-tint",
   /** Carried forward from the dock rather than recorded here — same hue, quieter. */
-  notBoardedImplied: "border-dashed border-warning/60 bg-warning/5",
+  notBoardedImplied: "border-dashed border-warning/60 bg-warning-tint",
   awaiting: "border-border-strong bg-surface-sunken",
   /** Awaiting *and* blocked: readiness is the thing to fix before boarding. */
-  blocked: "border-danger bg-danger/5",
+  blocked: "border-danger bg-danger-tint",
   // Pinned against the domain type so the two halves cannot drift: a recorded
   // tone named in `src/lib/manifests.ts` with no fill here, or a fill renamed
   // here while a surface still asks for it, is a compile error rather than a

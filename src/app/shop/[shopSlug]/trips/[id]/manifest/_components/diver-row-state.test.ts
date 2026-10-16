@@ -79,6 +79,37 @@ describe("diverRowState's one capsule", () => {
     expect(at({ depthAdvisory: deep, birthday: { status: "today" } })).toBe("depth");
     expect(at({ birthday: { status: "today" } })).toBe("birthday");
   });
+
+  it("gives a split team after a dive the capsule and keeps the medical hold for the panel", () => {
+    const state = diverRowState(
+      diver({
+        boardedEarlier: true,
+        readiness: { status: "blocked", blockers: [{ code: "medical_not_cleared" }] },
+        buddyAlert: "separated_after_dive",
+        buddyTeam: { teamId: "t-1", others: [] },
+      }),
+      "after_dive_1",
+      false,
+      "America/New_York",
+    );
+    expect(state.capsuleKind).toBe("buddy");
+    expect(state.medicalHold).toBe("medical_not_cleared");
+    expect(state.medicalHoldInPanel).toBe("medical_not_cleared");
+  });
+
+  it("does not repeat the medical hold in the panel when the capsule already carries it", () => {
+    const state = diverRowState(
+      diver({
+        boardedEarlier: true,
+        readiness: { status: "blocked", blockers: [{ code: "medical_review" }] },
+      }),
+      "after_dive_2",
+      false,
+      "America/New_York",
+    );
+    expect(state.capsuleKind).toBe("medicalHold");
+    expect(state.medicalHoldInPanel).toBeNull();
+  });
 });
 
 describe("diverRowState's gate", () => {

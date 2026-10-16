@@ -118,7 +118,75 @@ export type MovePreflightFacts = {
    * on it is a conversation.
    */
   crewAway: readonly string[];
+  /**
+   * **Tight turnarounds** (issue #2141, Aaron's decision (b)): other live,
+   * scheduled departures the move would put closer than the shop's minimum
+   * turnaround gap without overlapping them — on the same hull, or sharing a
+   * crew member who leaves from a different meeting point. Information only:
+   * H-80's half-open overlap is the clash, and nose to tail stays the plan.
+   */
+  turnarounds: readonly MoveTurnaround[];
 };
+
+/** One near miss: what is squeezed, against which departure, by how many minutes. */
+export type MoveTurnaround = {
+  kind: "boat" | "crew";
+  /** The hull's name, or the crew member's. */
+  name: string;
+  departure: string;
+  /** Whole minutes between one departure due back and the other leaving. */
+  minutes: number;
+};
+
+/** The shop's minimum turnaround gap until it sets its own (Aaron, 2026-10-13). */
+export const DEFAULT_MIN_TURNAROUND_MINUTES = 30;
+
+/** What the settings field accepts; zero turns the line off. */
+export const MIN_TURNAROUND_LIMITS = { min: 0, max: 240 } as const;
+
+/** A submitted minimum turnaround, or null when it is not a whole number in range. */
+export function parseMinTurnaroundMinutes(raw: string | null | undefined): number | null {
+  if (raw === null || raw === undefined || raw.trim() === "") return null;
+  const minutes = Number(raw);
+  if (!Number.isInteger(minutes)) return null;
+  if (minutes < MIN_TURNAROUND_LIMITS.min || minutes > MIN_TURNAROUND_LIMITS.max) return null;
+  return minutes;
+}
+
+type Window = { startsAt: Date; endsAt: Date };
+
+/**
+ * **The near miss** (issue #2141): the tightest gap, in whole minutes, between
+ * any leg of the moved departure and any leg of another, when that gap is
+ * under `minGapMinutes` — or null.
+ *
+ * Null when any pair of legs overlaps: that is a clash, said by its own line
+ * through H-80's half-open predicate, and this never restates or changes it.
+ * Exactly at the gap is quiet; one minute under speaks. Nose to tail (a gap of
+ * zero) speaks here, because no boat unloads, rinses, refills and boards the
+ * next group in no time — and stays silent as a clash.
+ */
+export function turnaroundGapMinutes(
+  moved: readonly Window[],
+  other: readonly Window[],
+  minGapMinutes: number,
+): number | null {
+  if (minGapMinutes <= 0) return null;
+  const minGapMs = minGapMinutes * 60_000;
+  let tightest: number | null = null;
+  for (const a of moved) {
+    for (const b of other) {
+      // The half-open overlap the clash readers share: nose to tail is not one.
+      if (a.startsAt < b.endsAt && a.endsAt > b.startsAt) return null;
+      const gapMs =
+        b.startsAt >= a.endsAt
+          ? b.startsAt.getTime() - a.endsAt.getTime()
+          : a.startsAt.getTime() - b.endsAt.getTime();
+      if (gapMs < minGapMs && (tightest === null || gapMs < tightest)) tightest = gapMs;
+    }
+  }
+  return tightest === null ? null : Math.floor(tightest / 60_000);
+}
 
 /**
  * One thing the move will do. A section exists only when it has something to
@@ -128,6 +196,7 @@ export type MovePreflightSection =
   | { kind: "boat"; clashes: readonly { boat: string; departure: string }[] }
   | { kind: "crew"; clashes: readonly { name: string; departure: string }[] }
   | { kind: "crewAway"; names: readonly string[] }
+  | { kind: "turnaround"; items: readonly MoveTurnaround[] }
   | {
       /** Seats that have already had a reminder naming the current date. */
       kind: "told";
@@ -172,6 +241,12 @@ export function composeMovePreflight(facts: MovePreflightFacts): MovePreflight {
   if (facts.boatClashes.length > 0) sections.push({ kind: "boat", clashes: facts.boatClashes });
   if (facts.crewClashes.length > 0) sections.push({ kind: "crew", clashes: facts.crewClashes });
   if (facts.crewAway.length > 0) sections.push({ kind: "crewAway", names: facts.crewAway });
+  // The near miss sits under every clash line (issue #2141): information about
+  // the squeeze, never a reason the move is refused, and nothing it says
+  // reaches `blocked`.
+  if (facts.turnarounds.length > 0) {
+    sections.push({ kind: "turnaround", items: facts.turnarounds });
+  }
 
   // Silence when nobody has been told. A departure whose divers have heard
   // nothing yet costs no letters, and saying "0 have been told" is the empty

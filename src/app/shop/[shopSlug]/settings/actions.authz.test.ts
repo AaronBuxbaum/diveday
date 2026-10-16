@@ -1,8 +1,15 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { mediaDeletionAttempts, processorErasureObligations } from "@/db/schema";
+import {
+  mediaDeletionAttempts,
+  processorErasureObligations,
+  shopShoreAlertTokens,
+  shops,
+} from "@/db/schema";
 import { getShopById } from "@/db/shops";
+import { calendarDateInTimezone, shiftCalendarDateMonths } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
   demoteOwnerToManager,
@@ -46,7 +53,11 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { revalidatePath } = await import("next/cache");
 const { requireStaffSession } = await import("@/lib/session");
-const { saveDockDayRhythmAction, saveEmergencyReferenceAction } = await import("./boat-actions");
+const {
+  resendShoreAlertConfirmationAction,
+  saveDockDayRhythmAction,
+  saveEmergencyReferenceAction,
+} = await import("./boat-actions");
 const { saveHotelPickupAction } = await import("./dock-day/pickup-actions");
 const { savePackingAction } = await import("./booking-actions");
 const { dischargeProcessorErasureAction, retryMediaDeletionAction, retryProcessorErasureAction } =
@@ -55,8 +66,13 @@ const { disconnectAction, refreshAction, saveTaxAction } = await import("./money
 const { saveRegulatorServiceAction, saveRentalItemsAction, saveRentalPricingAction } = await import(
   "./rental-actions"
 );
-const { saveAddressAction, saveShopFeatureAction, saveTimezoneAction, saveUnitsAction } =
-  await import("./shop-actions");
+const {
+  saveAddressAction,
+  saveReopensOnAction,
+  saveShopFeatureAction,
+  saveTimezoneAction,
+  saveUnitsAction,
+} = await import("./shop-actions");
 const { saveCrewScheduleAction } = await import("./team-actions");
 const { saveProfileAction } = await import("./website-actions");
 
@@ -327,6 +343,26 @@ describe("every settings mutation refuses the daily crew", () => {
     expect((await getShopById(db, shop.id))?.timezone).toBe(before?.timezone);
   });
 
+  it("refuses a back-on-the-water date more than eighteen months out, and keeps the old one", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const today = calendarDateInTimezone(nowDate(), shop.timezone);
+
+    const form = new FormData();
+    form.set("reopensOn", "2062-03-01");
+    expect(await redirectedTo(() => saveReopensOnAction(form))).toBe(
+      `/shop/${shop.slug}/settings?notice=reopens-invalid&saved=season`,
+    );
+    expect((await getShopById(db, shop.id))?.reopensOn).toBeNull();
+
+    const near = shiftCalendarDateMonths(today, 12);
+    form.set("reopensOn", near);
+    expect(await redirectedTo(() => saveReopensOnAction(form))).toBe(
+      `/shop/${shop.slug}/settings?notice=reopens-saved&saved=season`,
+    );
+    expect((await getShopById(db, shop.id))?.reopensOn).toBe(near);
+  });
+
   it("refuses a captain's address change", async () => {
     const { db, shop, captain } = await context();
     signIn(shop, captain);
@@ -381,7 +417,7 @@ describe("every settings mutation refuses the daily crew", () => {
    * handed.
    */
   it("refuses a captain's emergency reference, rental catalog, rental prices and profile", async () => {
-    const { db, shop, captain } = await context();
+    const { db, shop, captain, owner } = await context();
     signIn(shop, captain);
     const before = await getShopById(db, shop.id);
     const refused = `/shop/${shop.slug}/settings?notice=not-authorized`;
@@ -391,6 +427,20 @@ describe("every settings mutation refuses the daily crew", () => {
     emergency.set("emergencyLabel-0", "Chamber");
     emergency.set("emergencyPhone-0", "+1 555 0100");
     expect(await redirectedTo(() => saveEmergencyReferenceAction(emergency))).toBe(refused);
+    // "Send the link again" mails an outside address: owner/manager work too.
+    // An address waiting for its link, so an ungated resend would mint one.
+    await db
+      .update(shops)
+      .set({
+        shoreAlertEmail: "shore@example.com",
+        shoreAlertConsentAt: new Date(),
+        shoreAlertConsentByPersonId: owner,
+      })
+      .where(eq(shops.id, shop.id));
+    expect(await redirectedTo(() => resendShoreAlertConfirmationAction())).toBe(refused);
+    expect(
+      await db.select().from(shopShoreAlertTokens).where(eq(shopShoreAlertTokens.shopId, shop.id)),
+    ).toEqual([]);
 
     const items = new FormData();
     items.set("drysuit", "on");
@@ -457,6 +507,70 @@ describe("every settings mutation refuses the daily crew", () => {
       `/shop/${shop.slug}/settings/dock-day?notice=pickup-saved`,
     );
     expect((await getShopById(db, shop.id))?.offersHotelPickup).toBe(false);
+  });
+
+  /**
+   * H-118: the shore contact's alert address saves only with the box that
+   * records their consent, keeps who and when, and clearing it clears both.
+   * The seeded shop is a demo, which sends nothing and says so; the link and
+   * the rest are `shore-alert-actions.test.ts`.
+   */
+  it("saves a shore contact's alert address only with its consent", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const page = `/shop/${shop.slug}/settings/emergency-reference?notice=`;
+    const form = (email: string, consent: boolean) => {
+      const data = new FormData();
+      data.set("emergencyVessel", "Blue Mantis II");
+      data.set("shoreAlertEmail", email);
+      if (consent) data.set("shoreAlertConsent", "on");
+      return data;
+    };
+    const stored = async () => {
+      const row = await getShopById(db, shop.id);
+      return {
+        email: row?.shoreAlertEmail,
+        consentAt: row?.shoreAlertConsentAt,
+        by: row?.shoreAlertConsentByPersonId,
+        vessel: row?.emergencyReference.vessel,
+      };
+    };
+    const before = await stored();
+
+    expect(
+      await redirectedTo(() => saveEmergencyReferenceAction(form("shore@example.com", false))),
+    ).toBe(`${page}shore-alert-consent-missing`);
+    expect(await redirectedTo(() => saveEmergencyReferenceAction(form("VHF 16", true)))).toBe(
+      `${page}shore-alert-invalid`,
+    );
+    // A refusal saves nothing, the reference included.
+    expect(await stored()).toEqual(before);
+
+    expect(
+      await redirectedTo(() => saveEmergencyReferenceAction(form("shore@example.com", true))),
+    ).toBe(`${page}shore-alert-saved-demo`);
+    const saved = await stored();
+    expect(saved).toMatchObject({
+      email: "shore@example.com",
+      by: owner,
+      vessel: "Blue Mantis II",
+    });
+    expect(saved.consentAt).toBeInstanceOf(Date);
+
+    expect(await redirectedTo(() => saveEmergencyReferenceAction(form("", false)))).toBe(
+      `${page}shore-alert-cleared`,
+    );
+    expect(await stored()).toMatchObject({ email: null, consentAt: null, by: null });
+  });
+
+  it("refuses a captain's shore contact address like the rest of the reference", async () => {
+    const { db, shop, captain } = await context();
+    signIn(shop, captain);
+    const data = new FormData();
+    data.set("shoreAlertEmail", "mine@example.com");
+    data.set("shoreAlertConsent", "on");
+    await redirectedTo(() => saveEmergencyReferenceAction(data));
+    expect((await getShopById(db, shop.id))?.shoreAlertEmail).toBeNull();
   });
 
   /**

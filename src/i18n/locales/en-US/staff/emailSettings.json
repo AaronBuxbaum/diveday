@@ -12,6 +12,6 @@
   },
   "afterHours": {
     "heading": "After-hours messages",
-    "description": "An email when divers write in outside desk hours, {opens} to {closes} {zone}. One every half hour at most."
+    "description": "An email when divers write in outside desk hours, {opens} to {closes} {zone}. One every half hour at most. A missed one can arrive within the hour."
   }
 }

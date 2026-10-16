@@ -51,7 +51,7 @@ import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { latestTripStage } from "@/db/trip-stages";
-import { getTripWithBooked, listTripDives } from "@/db/trips";
+import { getTripWithBookedOnce, listTripDives } from "@/db/trips";
 import { buildAfterStateProps } from "@/features/recap-after-state";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
@@ -78,6 +78,7 @@ import { readAfterTheDive } from "./_components/after-dive-reads";
 import { UnavailableReadyLink } from "./_components/ExpiredLink";
 import { confirmCarriedFactsFromReady, saveTanksFromReady } from "./gear-actions";
 import { saveEmergencyContactFromReady } from "./paperwork-actions";
+import { terminalCardIn } from "./terminal-card";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = diverTranslator(await requestLocale());
@@ -193,15 +194,12 @@ async function DiverReadinessPage({
   anonT: DiverTranslator;
   underBookedHeader: boolean;
 }) {
+  const alone = terminalCardIn(underBookedHeader, token);
   const data = await getReadyPageData(db, bookingId);
-  if (!data) {
-    // `ready.unavailableBody`, not the waiver subtree's identical sentence,
-    // which this read until issue #1334. The two say the same words today, so
-    // nothing on screen moves — but `/waivers` and `/ready` are different
-    // surfaces with different rescues, and a reword of one should not be able
-    // to reach the other by accident.
-    return <UnavailableReadyLink t={anonT} />;
-  }
+  // `ready.unavailableBody`, not the waiver subtree's identical sentence
+  // (issue #1334): `/waivers` and `/ready` have different rescues, and a
+  // reword of one should not reach the other by accident.
+  if (!data) return alone(<UnavailableReadyLink t={anonT} />);
 
   const { detail, shop, person } = data;
   const locale = await requestLocale(shop.defaultLocale);
@@ -209,12 +207,10 @@ async function DiverReadinessPage({
 
   if (detail.cancelled) {
     // The shop took this seat off the boat and this diver still holds a live
-    // link to it. Staff cancellation revokes the booking's capabilities too, so
-    // reaching here means the read above won the race against that revoke —
-    // rare, and the one path on which a diver learns from this page rather than
-    // from the shop. What it says about their money is read from the payment
-    // row, never from anything on the URL.
-    return cancelledNoticeForReady(db, data, bookingId, locale, t);
+    // link: the read above won a race against the capability revoke. Rare, and
+    // the one path a diver learns from this page, not the shop. Money is read
+    // from the payment row. `alone(null)` is the exit under the booked header.
+    return alone(null) ?? cancelledNoticeForReady(db, data, bookingId, locale, t);
   }
 
   /**
@@ -260,11 +256,11 @@ async function DiverReadinessPage({
     identityHeld: data.identityHeld,
   });
   if (afterDive.afterTheDive) {
-    if (data.identityHeld) return <HeldAfterDiveCard shop={shopContact} t={t} />;
+    if (data.identityHeld) return alone(<HeldAfterDiveCard shop={shopContact} t={t} />);
     const recapState = await afterDive.recap();
-    if (recapState.kind === "waiting") return <RecapWaitingCard shop={shopContact} t={t} />;
+    if (recapState.kind === "waiting") return alone(<RecapWaitingCard shop={shopContact} t={t} />);
     const recap = recapState.kind === "recap" ? recapState.data : null;
-    if (!recap) return <NoShowCard shop={shopContact} t={t} />;
+    if (!recap) return alone(<NoShowCard shop={shopContact} t={t} />);
     const recapToken = signRecapToken(bookingId);
     const after = await buildAfterStateProps({
       db,
@@ -283,14 +279,14 @@ async function DiverReadinessPage({
         submitPulse: submitRecapPulseAction.bind(null, recapToken),
       },
     });
-    return (
+    return alone(
       <DiverIntlProvider
         locale={locale}
         timeZone={detail.shop.timezone}
         namespaces={["recap", "common", "booking", "reviews", "trip"]}
       >
         <AfterState context={after} />
-      </DiverIntlProvider>
+      </DiverIntlProvider>,
     );
   }
 
@@ -337,7 +333,7 @@ async function DiverReadinessPage({
     // shop row `PackingSection` needs for its units and rental catalogue.
     const threadTripReads = Promise.all([
       getShopBySlug(db, shop.slug),
-      getTripWithBooked(db, shop.id, data.trip.id),
+      getTripWithBookedOnce(db, shop.id, data.trip.id),
       listTripDives(db, shop.id, data.trip.id),
       listTripChangeEvents(db, shop.id, data.trip.id),
       // The crew who agreed to be named (issue #1181, D21), the same filter as

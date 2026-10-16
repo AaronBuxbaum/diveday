@@ -1,7 +1,11 @@
 import { eq } from "drizzle-orm";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createNitroxCertification, verifiedNitroxPersonIds } from "@/db/nitrox";
-import { createCertification, createSpecialtyCertification } from "@/db/readiness";
+import {
+  createCertification,
+  createSpecialtyCertification,
+  reviewCertification,
+} from "@/db/readiness";
 import { certifications, nitroxCertifications, people, specialtyCertifications } from "@/db/schema";
 import { recordSelfDeclaredCards } from "@/db/self-declared-cards";
 import { fileScopedShopContext } from "@/test/db";
@@ -40,6 +44,22 @@ const { markCertifiedAction } = await import("./card-actions");
 
 const ctx = fileScopedShopContext();
 
+// The suite freezes the clock, so two reviews would carry one instant: move it
+// on a minute at a time between them, and put it back after each test.
+const FROZEN_CLOCK = process.env.DIVEDAY_CLOCK;
+let minutesLater = 0;
+function laterBy(minutes: number) {
+  minutesLater += minutes;
+  process.env.DIVEDAY_CLOCK = new Date(
+    Date.parse(FROZEN_CLOCK ?? "") + minutesLater * 60_000,
+  ).toISOString();
+}
+afterEach(() => {
+  minutesLater = 0;
+  if (FROZEN_CLOCK === undefined) delete process.env.DIVEDAY_CLOCK;
+  else process.env.DIVEDAY_CLOCK = FROZEN_CLOCK;
+});
+
 async function context() {
   const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
@@ -55,12 +75,19 @@ async function context() {
   return { db, shop, personId: person.id };
 }
 
-function tap(certificationId: string, cardType: string, intent?: "undo") {
+function tap(certificationId: string, cardType: string, intent?: "undo", reviewedAt?: string) {
   const formData = new FormData();
   formData.set("certificationId", certificationId);
   formData.set("cardType", cardType);
   if (intent) formData.set("intent", intent);
+  if (reviewedAt) formData.set("reviewedAt", reviewedAt);
   return formData;
+}
+
+/** The Undo the toast offers for a tap: the card and the review it was rendered for. */
+function offeredUndo(tapped: Awaited<ReturnType<typeof markCertifiedAction>>) {
+  if (!tapped?.ok || !tapped.undo) throw new Error("the tap offered no Undo");
+  return tapped.undo;
 }
 
 describe("undoing a one-tap card review", () => {
@@ -81,7 +108,7 @@ describe("undoing a one-tap card review", () => {
       shop.slug,
       personId,
       null,
-      tap(card.id, "level", "undo"),
+      tap(card.id, "level", "undo", offeredUndo(tapped).reviewedAt),
     );
 
     expect(undone).toEqual({ ok: true, effect: "undone" });
@@ -100,12 +127,12 @@ describe("undoing a one-tap card review", () => {
     });
     if (!card) throw new Error("card insert failed");
 
-    await markCertifiedAction(shop.slug, personId, null, tap(card.id, "specialty"));
+    const tapped = await markCertifiedAction(shop.slug, personId, null, tap(card.id, "specialty"));
     const undone = await markCertifiedAction(
       shop.slug,
       personId,
       null,
-      tap(card.id, "specialty", "undo"),
+      tap(card.id, "specialty", "undo", offeredUndo(tapped).reviewedAt),
     );
 
     expect(undone).toEqual({ ok: true, effect: "undone" });
@@ -126,13 +153,13 @@ describe("undoing a one-tap card review", () => {
     });
     if (!card) throw new Error("card insert failed");
 
-    await markCertifiedAction(shop.slug, personId, null, tap(card.id, "nitrox"));
+    const tapped = await markCertifiedAction(shop.slug, personId, null, tap(card.id, "nitrox"));
     expect(await verifiedNitroxPersonIds(db, shop.id)).toContain(personId);
     const undone = await markCertifiedAction(
       shop.slug,
       personId,
       null,
-      tap(card.id, "nitrox", "undo"),
+      tap(card.id, "nitrox", "undo", offeredUndo(tapped).reviewedAt),
     );
 
     expect(undone).toEqual({ ok: true, effect: "undone" });
@@ -168,11 +195,171 @@ describe("undoing a one-tap card review", () => {
       shop.slug,
       personId,
       null,
-      tap(claim.id, "level", "undo"),
+      tap(claim.id, "level", "undo", "2026-07-20T12:00:00.000Z"),
     );
 
     expect(undone).toEqual({ ok: false, reason: "not-undoable" });
     const [row] = await db.select().from(certifications).where(eq(certifications.id, claim.id));
     expect(row?.status).toBe("verified");
+  });
+
+  it("refuses an Undo that names no review, or a nonsense one, and the card stays certified", async () => {
+    const { db, shop, personId } = await context();
+    const card = await createCertification(db, {
+      shopId: shop.id,
+      personId,
+      agency: "padi",
+      level: "rescue",
+      identifier: "UNDO-NO-STAMP",
+    });
+    if (!card) throw new Error("card insert failed");
+    await markCertifiedAction(shop.slug, personId, null, tap(card.id, "level"));
+
+    for (const reviewedAt of [undefined, "", "not a date"]) {
+      const undone = await markCertifiedAction(
+        shop.slug,
+        personId,
+        null,
+        tap(card.id, "level", "undo", reviewedAt),
+      );
+      expect(undone).toEqual({ ok: false, reason: "not-undoable" });
+    }
+    const [row] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    expect(row?.status).toBe("verified");
+  });
+
+  /**
+   * **A stale Undo wipes nothing** (issue #2612). Mark certified, the toast
+   * stays on screen, the card is re-reviewed through the agency check, then the
+   * first toast's Undo (or a replayed post) arrives: the agency-checked review
+   * and its evidence must survive.
+   */
+  it("does not let a stale Undo wipe a later agency-checked review", async () => {
+    const { db, shop, personId } = await context();
+    const card = await createCertification(db, {
+      shopId: shop.id,
+      personId,
+      agency: "padi",
+      level: "rescue",
+      identifier: "UNDO-STALE-LEVEL",
+    });
+    if (!card) throw new Error("card insert failed");
+    const tapped = await markCertifiedAction(shop.slug, personId, null, tap(card.id, "level"));
+    const stale = offeredUndo(tapped).reviewedAt;
+
+    // The agency check re-reviews it a moment later and files its evidence.
+    laterBy(1);
+    const rechecked = await reviewCertification(db, {
+      shopId: shop.id,
+      certificationId: card.id,
+      status: "verified",
+      agencyChecked: true,
+      reviewNote: "PADI page lists this diver at Rescue.",
+    });
+    expect(rechecked.ok).toBe(true);
+
+    const undone = await markCertifiedAction(
+      shop.slug,
+      personId,
+      null,
+      tap(card.id, "level", "undo", stale),
+    );
+
+    expect(undone).toEqual({ ok: false, reason: "not-undoable" });
+    const [row] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    expect(row?.status).toBe("verified");
+    expect(row?.agencyCheckedAt).not.toBeNull();
+    expect(row?.reviewNote).toBe("PADI page lists this diver at Rescue.");
+    expect(row?.reviewedAt).not.toBeNull();
+  });
+
+  it("refuses to undo an agency-checked review even with its exact stamp", async () => {
+    const { db, shop, personId } = await context();
+    const card = await createCertification(db, {
+      shopId: shop.id,
+      personId,
+      agency: "padi",
+      level: "rescue",
+      identifier: "UNDO-FORGED",
+    });
+    if (!card) throw new Error("card insert failed");
+    const checked = await reviewCertification(db, {
+      shopId: shop.id,
+      certificationId: card.id,
+      status: "verified",
+      agencyChecked: true,
+      reviewNote: "PADI page lists this diver at Rescue.",
+    });
+    if (!checked.ok || !checked.certification.reviewedAt) throw new Error("agency review failed");
+
+    const undone = await markCertifiedAction(
+      shop.slug,
+      personId,
+      null,
+      tap(card.id, "level", "undo", checked.certification.reviewedAt.toISOString()),
+    );
+
+    expect(undone).toEqual({ ok: false, reason: "not-undoable" });
+    const [row] = await db.select().from(certifications).where(eq(certifications.id, card.id));
+    expect(row?.agencyCheckedAt).not.toBeNull();
+    expect(row?.status).toBe("verified");
+  });
+
+  it("refuses a specialty or nitrox Undo once the card has been reviewed again", async () => {
+    const { db, shop, personId } = await context();
+    const specialty = await createSpecialtyCertification(db, {
+      shopId: shop.id,
+      personId,
+      agency: "padi",
+      specialty: "wreck",
+      identifier: "UNDO-STALE-WRECK",
+    });
+    const nitrox = await createNitroxCertification(db, {
+      shopId: shop.id,
+      personId,
+      agency: "padi",
+      identifier: "UNDO-STALE-EANX",
+    });
+    if (!specialty || !nitrox) throw new Error("card insert failed");
+    const specialtyTap = offeredUndo(
+      await markCertifiedAction(shop.slug, personId, null, tap(specialty.id, "specialty")),
+    );
+    const nitroxTap = offeredUndo(
+      await markCertifiedAction(shop.slug, personId, null, tap(nitrox.id, "nitrox")),
+    );
+
+    // Each is undone and certified again: a newer review than the toasts' own.
+    laterBy(1);
+    for (const [id, cardType, offered] of [
+      [specialty.id, "specialty", specialtyTap],
+      [nitrox.id, "nitrox", nitroxTap],
+    ] as const) {
+      await markCertifiedAction(
+        shop.slug,
+        personId,
+        null,
+        tap(id, cardType, "undo", offered.reviewedAt),
+      );
+      laterBy(1);
+      await markCertifiedAction(shop.slug, personId, null, tap(id, cardType));
+      const replay = await markCertifiedAction(
+        shop.slug,
+        personId,
+        null,
+        tap(id, cardType, "undo", offered.reviewedAt),
+      );
+      expect(replay, cardType).toEqual({ ok: false, reason: "not-undoable" });
+    }
+    const [wreck] = await db
+      .select()
+      .from(specialtyCertifications)
+      .where(eq(specialtyCertifications.id, specialty.id));
+    const [eanx] = await db
+      .select()
+      .from(nitroxCertifications)
+      .where(eq(nitroxCertifications.id, nitrox.id));
+    expect(wreck?.status).toBe("verified");
+    expect(eanx?.status).toBe("verified");
+    expect(await verifiedNitroxPersonIds(db, shop.id)).toContain(personId);
   });
 });

@@ -18,6 +18,7 @@ import { cancellationDeadline } from "@/lib/deposits";
 import { formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
+import type { MarkRetry } from "@/lib/payment-marks";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
@@ -27,7 +28,7 @@ import { carryTargetLabel } from "./carry-target-label";
 import { DepartureNoteSection } from "./DepartureNoteSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
-import type { RosterActions, RosterRecord, SeatMove } from "./roster-model";
+import type { PartyPreview, RosterActions, RosterRecord, SeatMove } from "./roster-model";
 import { TripInvitationGroup } from "./TripInvitationSection";
 import { TripNoticeBanner } from "./TripNoticeBanner";
 import { WaitlistGroup } from "./WaitlistSection";
@@ -43,6 +44,8 @@ export type TripRosterActions = {
    * the form with the typed values rather than redirecting (issue #1674). */
   markRosterWaiverInPersonAction: PaperWaiverAction;
   markPaymentAction: FormAction;
+  previewPartyPaymentAction: FormAction;
+  markPartyPaidAction: FormAction;
   removeBookingAction: FormAction;
   moveSeat?: SeatMove;
   /** The demand banner's "Carry the wait list" (third UX review, item 12). */
@@ -85,6 +88,10 @@ export type TripRosterContentContext = {
   confirmPhone?: string;
   undoBookingId?: string;
   keepOpenBookingId?: string;
+  /** A refused Paid mark, to reopen the sheet holding what was typed (issue #2607). */
+  paymentMarkRetry?: { bookingId: string } & MarkRetry;
+  /** A party payment waiting on its confirm (issue #2605). */
+  partyPreview?: PartyPreview;
   /** The seat whose paper release was refused for a namesake co-signer (#1573). */
   namesakeRefusedBookingId?: string;
   /** The seat whose change into diving the card check just refused. */
@@ -92,8 +99,6 @@ export type TripRosterContentContext = {
   mayWriteOffPayment: boolean;
   /** Whether this staffer may raise an invoice — see `RosterSection`. */
   canManageOrders: boolean;
-  /** The canonical Trip surface already owns the masthead capacity read. */
-  compact?: boolean;
   /**
    * What reads as the roster's consequence rather than its footnote — on the
    * departure page, the packing list derived from these very seats.
@@ -140,11 +145,12 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     confirmPhone,
     undoBookingId,
     keepOpenBookingId,
+    paymentMarkRetry,
+    partyPreview,
     namesakeRefusedBookingId,
     participantTypeCertBookingId,
     mayWriteOffPayment,
     canManageOrders,
-    compact = false,
     afterRoster = null,
     arrival,
     record,
@@ -250,8 +256,6 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           certifyDefaultLevel: guests.certifyDefaultLevel,
           courseHasMaterials: guests.courseHasMaterials,
           courseMaterialsOpen: guests.courseMaterialsOpen,
-          compact,
-          showSummaryHeading: !compact,
         }}
         rows={{
           roster,
@@ -270,12 +274,16 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           packageDivesByBooking: guests.packageDivesByBooking,
           paymentMarksByBooking: guests.paymentMarksByBooking,
           keepOpenBookingId,
+          paymentMarkRetry,
+          partyPreview,
           namesakeRefusedBookingId,
           participantTypeCertBookingId,
         }}
         actions={{
           markRosterWaiverInPersonAction: actions.markRosterWaiverInPersonAction,
           markPaymentAction: actions.markPaymentAction,
+          previewPartyPaymentAction: actions.previewPartyPaymentAction,
+          markPartyPaidAction: actions.markPartyPaidAction,
           removeBookingAction: actions.removeBookingAction,
           moveSeat: actions.moveSeat,
           setParticipantTypeAction: actions.setParticipantTypeAction,

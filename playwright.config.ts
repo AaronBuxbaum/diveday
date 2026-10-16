@@ -191,6 +191,10 @@ export default defineConfig({
   // not silently papered over by a re-run. This is what keeps the suite honest
   // and fast — every failure is real and surfaces on the first attempt.
   retries: 0,
+  // A proven flake tagged `@quarantine` (with its issue and a 7-day expiry,
+  // `pnpm check:e2e-hygiene`) leaves every PR, push-gate and local run, and
+  // runs nightly in e2e-nightly.yml, which sets DIVEDAY_RUN_QUARANTINE=1.
+  grepInvert: process.env.DIVEDAY_RUN_QUARANTINE === "1" ? undefined : /@quarantine\b/,
   // e2e/visual.spec.ts writes raw `page.screenshot()` PNGs into e2e/screenshots
   // (gitignored); `reg-suit` then diffs them against the baseline for this
   // branch's parent commit, pulled from S3. Nothing visual is committed to the

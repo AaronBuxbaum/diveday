@@ -368,7 +368,7 @@ export const ENV_GROUPS = [
       "account.application.deauthorized, charge.refunded, charge.refund.updated,",
       "charge.dispute.created, charge.dispute.updated, charge.dispute.closed (ADR",
       "20261009-stripe-reversals-reach-diveday; charge.refund.updated is issue #2291),",
-      "payout.paid and payout.failed (ADR 20261012-payouts-reach-diveday).",
+      "payout.paid, payout.failed and payout.canceled (ADR 20261012-payouts-reach-diveday).",
       "Keep the two secrets in 1Password. They never enter the AWS",
       "credentials secret -- they reach Vercel from .env.manual.",
     ],
@@ -606,11 +606,13 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
-      "Encryption key for third-party credentials DiveDay stores on a shop's behalf --",
-      "today, each shop's WhatsApp access token (ADR",
-      "20260802-whatsapp-cloud-api-per-shop). Derived from APP_SECRET_SEED. Rotating",
-      "it without re-sealing the existing rows degrades every connected shop back to",
-      "SMS -- read the WhatsApp runbook before rotating.",
+      "Encryption key for secrets DiveDay stores: each staffer's two-factor secret and",
+      "recovery codes, each shop's WhatsApp access token and connector credentials, and",
+      "queued notifications (ADR 20260802-whatsapp-cloud-api-per-shop). Derived from",
+      "APP_SECRET_SEED. Never rotate it in one step: put the old value in",
+      "SECRET_ENCRYPTION_KEY_PREVIOUS first, which opens what the old key sealed while the",
+      "new one seals everything written from then on. The rotation runbook is in",
+      "docs/engineering/infrastructure-runbook.md.",
     ],
     keys: [
       {
@@ -618,12 +620,25 @@ export const ENV_GROUPS = [
         from: "derived",
         targets: LOCAL_AND_VERCEL,
         absent:
-          "the WhatsApp settings page says so and refuses to store anything, a waiver link is " +
+          "every staffer who turned on two-factor is locked out: sign-in demands the second " +
+          "factor, and neither the authenticator code nor a recovery code can be checked without " +
+          "this key. Two-factor cannot be turned on, the WhatsApp settings page says so and " +
+          "refuses to store anything, a waiver link is " +
           "minted fresh on every send instead of the diver being handed the one they already have, " +
           "and the notification retry queue stores nothing and drains nothing -- a send the provider " +
           "refuses transiently is dropped rather than retried (notification.queue_seal_unavailable). " +
-          "Rotating it has the same effect on rows already queued under the old key: they are parked " +
-          "as sealed_payload_unreadable and are not re-sent.",
+          "Rotating it without SECRET_ENCRYPTION_KEY_PREVIOUS has the same lockout, and rows " +
+          "already queued under the old key are parked as sealed_payload_unreadable and not re-sent.",
+      },
+      {
+        key: "SECRET_ENCRYPTION_KEY_PREVIOUS",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent:
+          "no rotation is in progress, and only SECRET_ENCRYPTION_KEY opens anything. Remove it " +
+          "only once every two-factor account has signed in since the rotation (each secret is " +
+          "re-sealed then) and has replaced recovery codes issued before it: those stay hashed " +
+          "under this key, and stop working when it goes.",
       },
     ],
   },

@@ -268,6 +268,14 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
     .filter({ hasText: "I struggle to perform moderate exercise" });
   await expect(flagged).toContainText("Yes");
   await expect(page.getByText("Waiting on a physician’s evaluation.")).toBeVisible();
+  // The rest of the questionnaire is read on purpose (issue #2157): at rest
+  // only the flagged prompt is on the page, and "Show answers" puts the
+  // reader on the diver's trail before every answer arrives.
+  const answers = page.getByRole("listitem").filter({ hasText: /No$/ });
+  await expect(answers).toHaveCount(0);
+  await page.getByRole("button", { name: "Show answers" }).click();
+  await expect(answers.first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Show answers" })).toHaveCount(0);
 });
 
 test("the medical questionnaire refuses to complete with an unanswered question, even past client validation", async ({

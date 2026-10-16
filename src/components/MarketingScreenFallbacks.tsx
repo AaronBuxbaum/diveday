@@ -8,6 +8,8 @@ import { StatusMark } from "@/components/ui/StatusMark";
 import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
+import { staffTranslator } from "@/i18n/staff-messages";
+import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
 
 /**
  * Each fallback takes `locale` as a plain prop rather than reading
@@ -242,6 +244,9 @@ export function CaptainRollCallFallback({
  */
 export function FrontDeskReadinessFallback({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
+  // The stage chip is the staff chip's own word, read from the staff bundle by
+  // the same key, so the picture cannot drift from the product (#2402).
+  const stageWord = staffTranslator(locale)(STAGE_WORD_KEYS.boarding);
   const rows = [
     {
       kind: t("fallback.kindWaiver"),
@@ -267,7 +272,7 @@ export function FrontDeskReadinessFallback({ locale }: { locale: DiverLocale }) 
             <span className={FIGURE_INLINE_CLASS}>{t("fallback.todayStart")}</span>
             <span className="text-xs text-muted">{t("fallback.todayEnds")}</span>
             <span className="rounded-full bg-warning-tint px-2 py-0.5 text-xs font-medium text-warning-strong">
-              {t("fallback.phaseCheckin")}
+              {stageWord}
             </span>
           </p>
           <h3 className="mt-1 text-sm font-semibold">{t("fallback.tripName")}</h3>

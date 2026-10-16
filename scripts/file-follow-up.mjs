@@ -580,12 +580,13 @@ async function main() {
     );
   }
   if (open) {
+    // A warning, not a refusal: word overlap cannot tell three different capture requests from
+    // one item filed twice, and the triage routine folds true twins (check-follow-ups.mjs).
     const twin = nearDuplicate(parsed.title, open);
     if (twin) {
       console.error(
-        `file-follow-up: DID NOT FILE — #${twin.number} “${twin.title}” is open and starts with the same words. Add this to it as a comment, or fold both into one issue; if it really is a different item, give it a title that says how.`,
+        `file-follow-up: #${twin.number} “${twin.title}” is open and reads like this one. Filing anyway; if it is the same item, comment on #${twin.number} and close the new one as a duplicate.`,
       );
-      process.exit(1);
     }
     const inbox = open.filter((issue) =>
       (issue.labels ?? []).some((label) => label.name === LABEL),

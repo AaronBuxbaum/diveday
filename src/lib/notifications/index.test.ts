@@ -465,6 +465,40 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
     });
   });
 
+  // H-118 security review: the shore contact's roll-call alert can be stopped
+  // from the mail client's own button too.
+  it("lifts the shore contact's stop link into the one-click header pair", async () => {
+    const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    await notify(
+      {
+        kind: "roll_call_stale_shore",
+        shopId: "00000000-0000-4000-8000-000000000010",
+        tripId: "00000000-0000-4000-8000-000000000012",
+        to: "delivered+shore@dive.day",
+        locale: "en-US",
+        shopName: "Blue Mantis",
+        shopPhone: null,
+        tripTitle: "Two-Tank Reef",
+        diveNumber: 1,
+        notBackAboard: 0,
+        awaiting: 1,
+        endsAt: new Date("2026-10-14T20:00:00Z"),
+        timezone: "America/New_York",
+        alertedAt: new Date("2026-10-14T21:06:00Z"),
+        stopUrl: "https://diveday.example/unsubscribe/tok_shore",
+      },
+      provider,
+    );
+
+    const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
+    expect(command.input.Content?.Simple?.Headers).toContainEqual({
+      Name: "List-Unsubscribe",
+      Value: "<https://diveday.example/unsubscribe/tok_shore/one-click>",
+    });
+  });
+
   it("sets Reply-To from the sender profile and tags every send with its kind and shop", async () => {
     const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };
     const provider = sesNotificationProvider(sesConfig, { client });

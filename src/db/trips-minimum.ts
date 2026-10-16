@@ -4,6 +4,7 @@ import { effectiveMinimum, MINIMUM_SEATS_DECISION_HOURS_DEFAULT } from "@/lib/mi
 import type { AppDb } from "./client";
 import { flushUrgentCrewNotices, recordCrewCalledOff } from "./crew-notices";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
+import { recordSystemTripActivity } from "./operations";
 import { bookings, people, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -212,6 +213,12 @@ export async function cancelDeparturesBelowMinimum(
           tripIds: [updated.id],
           actorPersonId: null,
           now,
+        });
+        // And the staff trail says the system did it, and why (issue #2539).
+        await recordSystemTripActivity(tx, {
+          shopId: departure.shopId,
+          tripId: updated.id,
+          reason: "minimum_not_met",
         });
       }
       return updated;

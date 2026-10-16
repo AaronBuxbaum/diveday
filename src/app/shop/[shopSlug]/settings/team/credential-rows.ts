@@ -11,7 +11,9 @@ const RENEWAL_WINDOW_DAYS = 30;
 /**
  * The roles that sail on a card: an instructor's or divemaster's rating, a
  * captain's license. A card for one of these with nothing recorded says so,
- * because absence is what the Safety tab cannot judge (third review, item 2).
+ * and one with a credential that does not answer the role names the missing
+ * kind (`rolesMissingCredential`), because absence is what the Safety tab
+ * cannot judge (third review, item 2; issue #2548).
  */
 export const CREDENTIALED_ROLES: readonly Role[] = [
   "instructor",
@@ -21,7 +23,12 @@ export const CREDENTIALED_ROLES: readonly Role[] = [
 ];
 
 /** One person's credentials, as their own card reads them. */
-export type CardCredential = { id: string; name: string; renewalWord: string | null };
+export type CardCredential = {
+  id: string;
+  name: string;
+  kind: string;
+  renewalWord: string | null;
+};
 
 /** The ledger's rows, each renewal measured against the shop's own today. */
 export function credentialRowsFor(
@@ -29,7 +36,7 @@ export function credentialRowsFor(
   today: string,
   locale: string,
   t: StaffTranslator,
-): (CredentialRow & { personId: string; name: string })[] {
+): (CredentialRow & { personId: string; name: string; kind: string })[] {
   const dueSoonThrough = shiftCalendarDate(today, RENEWAL_WINDOW_DAYS);
   return credentials.map(({ credential, person }) => {
     const renewal: RenewalState = !credential.renewsAt
@@ -67,6 +74,7 @@ export function credentialRowsFor(
       renewal,
       personId: person.id,
       name: credential.name,
+      kind: credential.kind,
       reviewed: credential.status === "verified",
       reviewLabel:
         credential.status === "verified"

@@ -370,7 +370,7 @@ describe("course forms — authoring (in-memory PGlite)", () => {
         body: form.body,
         actorPersonId: ctx.staff.id,
       }),
-    ).toEqual({ ok: true, versioned: false });
+    ).toEqual({ ok: true, versioned: false, marked: false });
 
     expect(
       await saveCourseFormVersion(ctx.db, {
@@ -380,7 +380,7 @@ describe("course forms — authoring (in-memory PGlite)", () => {
         body: `${BODY} Revised.`,
         actorPersonId: ctx.staff.id,
       }),
-    ).toEqual({ ok: true, versioned: true });
+    ).toEqual({ ok: true, versioned: true, marked: false });
     const current = (await listCourseForms(ctx.db, ctx.shop.id)).find((row) => row.id === form.id);
     expect(current).toMatchObject({ id: form.id, version: 2, body: `${BODY} Revised.` });
   });

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { PrintButton } from "@/components/PrintButton";
@@ -10,7 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, FormStatus } from "@/components/ui/form";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
-import { canPersonManageOrders, canPersonRefund } from "@/db/authz";
+import { canPersonExportDisputeSheet, canPersonManageOrders, canPersonRefund } from "@/db/authz";
 import { getOrderBookingContext } from "@/db/order-booking";
 import { getOrder, isVoidableCounterOrder } from "@/db/orders";
 import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
@@ -68,8 +69,11 @@ export default async function OrderDetailPage({
   const timezone = shop.timezone ?? "UTC";
   // Refunds are owner/manager only (H-14, ADR 20260724-role-authorization);
   // hide the control from other staff. refundAction re-checks regardless.
-  const [canRefund, header, booking] = await Promise.all([
+  const [canRefund, canDisputeSheet, header, booking] = await Promise.all([
     canPersonRefund(db, shop.id, session.user.personId),
+    // The dispute sheet needs a seat to describe, so an order raised for none
+    // (a gear sale, a package) has no door to it.
+    order.order.bookingId ? canPersonExportDisputeSheet(db, shop.id, session.user.personId) : false,
     loadOrderHeader(db, {
       shopId: shop.id,
       orderId: order.order.id,
@@ -114,7 +118,21 @@ export default async function OrderDetailPage({
         title={order.person.fullName}
         description={order.order.description || t("orders.detail.fallbackDescription")}
         // A diver who paid at the counter and asks for something on paper.
-        actions={<PrintButton label={t("print.sheet.door")} quiet />}
+        actions={
+          <>
+            {canDisputeSheet ? (
+              <Link
+                href={shopPath(shopSlug, "orders", order.order.id, "print", "dispute")}
+                // Opening the sheet writes a trail line, so a viewport prefetch must not open it.
+                prefetch={false}
+                className={buttonClass({ variant: "ghost", size: "sm", className: "print:hidden" })}
+              >
+                {t("disputeSheet.door")}
+              </Link>
+            ) : null}
+            <PrintButton label={t("print.sheet.door")} quiet />
+          </>
+        }
         meta={
           <OrderMeta
             order={order.order}

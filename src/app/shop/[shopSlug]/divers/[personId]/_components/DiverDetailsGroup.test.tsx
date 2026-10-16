@@ -105,7 +105,7 @@ describe("DiverDetailsGroup", () => {
         }}
       />,
     );
-    expect(document.body).not.toHaveTextContent("18 or older");
+    expect(document.body).not.toHaveTextContent("18 or older, per");
   });
 
   it("is a closed door that names a missing contact in warning ink", () => {
@@ -169,5 +169,67 @@ describe("DiverDetailsGroup", () => {
     expect(details).toHaveAttribute("open");
     expect(details).toHaveTextContent(/15/);
     expect(details).toHaveTextContent(/Can’t board/);
+  });
+
+  // Issue #2167: emptying a stored date takes "They're 18 or older" in the
+  // same save, so the box is offered beside a date and refused on the field.
+  it("offers the 18-or-older box only while a date is on file", () => {
+    const props = {
+      shopSlug: "blue-mantis",
+      personId: "person-1",
+      t,
+      locale: "en-US",
+      timezone: "America/New_York",
+      country: "US",
+    };
+    const bare = diver(null);
+    const { queryByLabelText, getByLabelText, rerender } = render(
+      <DiverDetailsGroup {...props} diver={bare} />,
+    );
+    expect(queryByLabelText(/18 or older/)).toBeNull();
+
+    rerender(
+      <DiverDetailsGroup
+        {...props}
+        diver={{ ...bare, person: { ...bare.person, dateOfBirth: "1990-01-01" } }}
+      />,
+    );
+    const box = getByLabelText("They’re 18 or older");
+    expect(box).toHaveAttribute("name", "adultAttested");
+    expect(box).not.toBeChecked();
+  });
+
+  // Dive-domain review of #2167: the box overrides the date it clears, so a
+  // date that makes the diver a minor today is named on the box itself.
+  it("names the age on file when the date makes the diver a minor", () => {
+    const minor = diver(null);
+    const { getByLabelText } = render(
+      <DiverDetailsGroup
+        shopSlug="blue-mantis"
+        personId="person-1"
+        t={t}
+        locale="en-US"
+        timezone="America/New_York"
+        country="US"
+        diver={{ ...minor, person: { ...minor.person, dateOfBirth: "2013-05-02" } }}
+      />,
+    );
+    const box = getByLabelText(
+      "They’re 18 or older. The date on file makes them 13. Ticking this says that date was wrong.",
+    );
+    expect(box).toHaveAttribute("name", "adultAttested");
+  });
+
+  it("puts a refused clear on the date field", () => {
+    const status: GroupStatus = {
+      form: "details",
+      tone: "danger",
+      text: "To clear the date of birth, select “They’re 18 or older”.",
+      field: "diver-date-of-birth",
+    };
+    const { getByLabelText } = renderGroup({ open: true, status });
+    const field = getByLabelText(/Date of birth/);
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAccessibleDescription(status.text);
   });
 });

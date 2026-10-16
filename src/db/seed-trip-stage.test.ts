@@ -1,9 +1,11 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { MINUTE_MS } from "@/lib/clock";
+import { HOUR_MS, MINUTE_MS } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
-import { people, tripAssignments, tripStageEvents } from "./schema";
+import { people, tripAssignments, tripStageEvents, trips } from "./schema";
+import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 import { demoStageTaps } from "./seed-trip-stage";
+import { listRollCallGaps } from "./today";
 
 /**
  * **The demo's taps sit where a crew would have made them, relative to the
@@ -107,5 +109,53 @@ describe("seedTripStage", () => {
         [...crew].sort((a, b) => (a.fullName < b.fullName ? -1 : 1))[0];
       expect(tap.by).toBe(expected?.personId);
     }
+  });
+
+  it("names the departure's captain on every stamp, never a deckhand", async () => {
+    // A demo visitor reads "Home · Keiko Tanaka" on a boat whose captain is
+    // Sal Moretti as a deckhand confirming the boat is home (issue #2503).
+    const { db, shop } = await seededShopContext();
+    const taps = await db
+      .select({ tripId: tripStageEvents.tripId, by: tripStageEvents.recordedByPersonId })
+      .from(tripStageEvents)
+      .where(eq(tripStageEvents.shopId, shop.id));
+    expect(taps.length).toBeGreaterThan(0);
+    for (const tap of taps) {
+      const crew = await db
+        .select({ personId: tripAssignments.personId, tripRole: tripAssignments.tripRole })
+        .from(tripAssignments)
+        .where(eq(tripAssignments.tripId, tap.tripId));
+      // No crew at all is the one case the writer falls back to the shop's captain.
+      if (crew.length === 0) continue;
+      const captains = crew.filter((member) => member.tripRole === "captain");
+      expect(
+        captains.map((member) => member.personId),
+        `trip ${tap.tripId}`,
+      ).toContain(tap.by);
+    }
+  });
+
+  /**
+   * **The dawn boat's evening reads calm** (issue #2501). It is back, its stage
+   * says Home, and every diver and crew member was counted at every checkpoint
+   * by the seed (`seedCompletedRollCall`), so Today raises no "No roll call
+   * recorded" row for it. `listRollCallGaps` is not what changed.
+   */
+  it("leaves no roll call gap on the dawn boat once it is home", async () => {
+    const { db, shop } = await seededShopContext();
+    const [dawn] = await db
+      .select({ id: trips.id, endsAt: trips.endsAt })
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), eq(trips.title, DEMO_COMPLETED_TRIP_TITLE)));
+    expect(dawn).toBeDefined();
+    const home = await db
+      .select({ stage: tripStageEvents.stage })
+      .from(tripStageEvents)
+      .where(and(eq(tripStageEvents.tripId, dawn?.id ?? ""), eq(tripStageEvents.stage, "home")));
+    expect(home).toHaveLength(1);
+
+    const evening = new Date((dawn?.endsAt.getTime() ?? 0) + 2 * HOUR_MS);
+    const gaps = await listRollCallGaps(db, shop.id, evening);
+    expect(gaps.filter((gap) => gap.tripId === dawn?.id)).toEqual([]);
   });
 });

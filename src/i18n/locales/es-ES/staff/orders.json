@@ -108,6 +108,7 @@
       "notAuthorized": "Los reembolsos están limitados a propietarios y gerentes. Pide a uno de ellos que lo tramite.",
       "voidNotAuthorized": "Anular pedidos está limitado a propietarios y gerentes.",
       "demoDisabled": "Este es un pedido de demostración, así que no se puede modificar.",
+      "disputeNotAuthorized": "Las hojas de disputa son solo para propietarios y gerentes. Pide a uno de ellos que imprima esta.",
       "fallback": "Algo cambió en este pedido. Los detalles de abajo están al día.",
       "paymentRecorded": "Pago registrado. Stripe ya no se lo pedirá al buceador.",
       "paymentStripeRefused": "Stripe no quiso marcar esta factura como pagada. Es posible que el buceador acabe de pagarla en línea, así que actualiza antes de registrar nada.",
@@ -148,6 +149,10 @@
     "filteredByDiver": "Mostrando los pedidos de {name}.",
     "filteredByTrip": "Mostrando los pedidos de {title}.",
     "openFilteredTrip": "Abrir la salida",
+    "cancelledSeatsOnly": "Mostrando los pedidos que quedan en plazas canceladas. Cada uno puede necesitar un reembolso o anularse.",
+    "backToLiveSeats": "Volver a los pedidos de la salida",
+    "cancelledSeatsLine": "{count, plural, one {# pedido más está} other {# pedidos más están}} en plazas canceladas ›",
+    "liveSeatsLine": "{count, plural, one {# pedido está} other {# pedidos están}} en plazas que siguen a bordo ›",
     "setupCard": {
       "title": "Cobra con DiveDay",
       "body": "Conecta Stripe y la recepción podrá enviar pedidos desde aquí."

@@ -2,13 +2,18 @@ import { and, eq, isNull, ne } from "drizzle-orm";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { courseFormsLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
-import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { log } from "@/lib/log";
+import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { type CourtesyProviders, sendCourtesyMessage } from "@/lib/notifications/courtesy";
 import { smsProviderFromEnvironment, smsRecipient } from "@/lib/notifications/sms";
 import { issueCourseFormsCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { getCourseFormsForBooking } from "./course-forms";
-import { sendAndRecordNotification, sendNotification } from "./notifications";
+import {
+  retryBookingConfirmation,
+  sendAndRecordNotification,
+  sendNotification,
+} from "./notifications";
 import { getBookingReadiness } from "./readiness";
 import { bookings, people, shops, trips } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
@@ -610,6 +615,13 @@ export async function settleJoinWaiverDelivery(
     bookingId: string;
     link: JoinWaiverLink;
     confirmationSent: boolean;
+    /**
+     * The provider's id for the confirmation that carried the link. Stored on
+     * the waiver's delivery so a bounce on the confirmation flips the waiver
+     * to bounced too (issue #2473), which `applyProviderEmailEvent` does for
+     * every delivery row sharing the id.
+     */
+    confirmationProviderMessageId?: string;
     now?: Date;
   },
 ): Promise<IssueAndDeliverWaiverResult | null> {
@@ -620,10 +632,88 @@ export async function settleJoinWaiverDelivery(
     shopId: input.shopId,
     waiverRecordId: input.link.waiverRecordId,
     channel: "email",
-    delivery: { status: "sent" },
+    delivery: { status: "sent", providerMessageId: input.confirmationProviderMessageId },
     now: input.now,
   });
   return null;
+}
+
+/**
+ * The waiver link a re-sent confirmation carries (issue #2473): the booking's
+ * live link, handed back by `issueWaiverRequest` (ADR
+ * 20260820-waiver-links-are-reused-not-reissued) rather than a second one,
+ * while a waiver is still owed or out. Null when none is owed (signed, or the
+ * trip asks for none), the seat is held, or there is no origin to build a link
+ * on; the resend then goes out as before.
+ */
+async function liveWaiverLinkForResend(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+): Promise<JoinWaiverLink | null> {
+  const origin = publicAppUrl();
+  if (!origin) return null;
+  const readiness = await getBookingReadiness(db, shopId, bookingId);
+  const owed = readiness?.blockers.some(
+    (blocker) =>
+      blocker.code === "waiver_not_sent" ||
+      blocker.code === "waiver_lapsed" ||
+      blocker.code === "waiver_pending",
+  );
+  if (!owed) return null;
+  const [seat] = await db
+    .select({ identityUnconfirmedAt: bookings.identityUnconfirmedAt })
+    .from(bookings)
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .limit(1);
+  if (!seat || seat.identityUnconfirmedAt) return null;
+  const outcome = await issueWaiverRequest(db, { shopId, bookingId });
+  if (!outcome.ok) return null;
+  return {
+    url: new URL(`/waivers/${outcome.token}`, `${origin}/`).toString(),
+    expiresAt: outcome.expiresAt,
+    waiverRecordId: outcome.recordId,
+  };
+}
+
+/**
+ * **Re-send a booking's confirmation with its waiver step** (issue #2473):
+ * staff's "resend" used to drop the waiver link, because the token is never
+ * stored in the clear. The live link is handed back and rides in the mail as
+ * the first step, and once the mail has left, the waiver's delivery is
+ * recorded against the confirmation's message id so a bounce reaches both.
+ * Returns what `retryBookingConfirmation` returns.
+ */
+export async function resendConfirmationWithWaiver(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  provider?: NotificationProvider,
+) {
+  const link = await liveWaiverLinkForResend(db, shopId, bookingId).catch((error: unknown) => {
+    log("booking.resend_waiver_link_failed", "error", {
+      bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+    return null;
+  });
+  const delivery = await retryBookingConfirmation(
+    db,
+    shopId,
+    bookingId,
+    provider,
+    link ?? undefined,
+  );
+  if (link && delivery?.status === "sent") {
+    await settleJoinWaiverDelivery(db, {
+      shopId,
+      bookingId,
+      link,
+      confirmationSent: true,
+      confirmationProviderMessageId: delivery.providerMessageId,
+    });
+  }
+  return delivery;
 }
 
 /**

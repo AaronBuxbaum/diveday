@@ -3,6 +3,8 @@ import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
+import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
+
 /**
  * E2E specs may not paper over a race — they must wait for the thing the page
  * itself renders when the awaited work is done.
@@ -323,6 +325,153 @@ export function findHygieneViolations(source) {
   return violations;
 }
 
+/**
+ * **Quarantine: a proven flake leaves the PR path for at most seven days.**
+ *
+ * A test tagged `@quarantine` (in its title or its `tag:` option) is skipped by
+ * every PR and local run (`grepInvert` in playwright.config.ts) and runs nightly
+ * in e2e-nightly.yml, where `DIVEDAY_RUN_QUARANTINE=1` lets it back in. The tag
+ * is owned, not parked: the line carrying it, or one of the
+ * {@link QUARANTINE_WINDOW} lines above it, says
+ *
+ *     // diveday:quarantine #1234 until 2026-10-22: <what flakes>
+ *
+ * naming the open issue that tracks the fix and a date no more than
+ * {@link QUARANTINE_MAX_DAYS} days out. The day after that date this guard fails
+ * on every branch, so a lapsed quarantine turns CI red rather than becoming a
+ * permanent skip. At most {@link QUARANTINE_CAP} tests are quarantined at once
+ * (testing review decision 4, 2026-10-14). Whether the issue is still open is not
+ * read here: check:repo opens no network connection.
+ */
+export const QUARANTINE_MARKER = "diveday:quarantine";
+export const QUARANTINE_MAX_DAYS = 7;
+export const QUARANTINE_CAP = 3;
+const QUARANTINE_WINDOW = 4;
+const QUARANTINE_TAG = /@quarantine\b/;
+const QUARANTINE_LINE = /diveday:quarantine\s+#(\d+)\s+until\s+(\d{4}-\d{2}-\d{2})/;
+
+const isCommentLine = (line) => {
+  const trimmed = line.trim();
+  return trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*");
+};
+
+/** Every `@quarantine` tag in a spec, with the issue and expiry its marker names (or nulls). */
+export function findQuarantines(source) {
+  const lines = source.split("\n");
+  const found = [];
+  lines.forEach((line, index) => {
+    if (isCommentLine(line) || !QUARANTINE_TAG.test(line)) return;
+    let marker = null;
+    for (let at = index; at >= Math.max(0, index - QUARANTINE_WINDOW); at -= 1) {
+      if (lines[at].includes(QUARANTINE_MARKER)) {
+        marker = lines[at];
+        break;
+      }
+    }
+    const parsed = marker?.match(QUARANTINE_LINE);
+    found.push({
+      line: index + 1,
+      issue: parsed ? Number(parsed[1]) : null,
+      until: parsed ? parsed[2] : null,
+    });
+  });
+  return found;
+}
+
+/** `YYYY-MM-DD` plus `days`, in UTC. */
+function addDays(day, days) {
+  const at = new Date(`${day}T00:00:00Z`);
+  at.setUTCDate(at.getUTCDate() + days);
+  return at.toISOString().slice(0, 10);
+}
+
+/**
+ * The problems with a set of quarantines (`[{ file, line, issue, until }]`) on `today`
+ * (`YYYY-MM-DD`). Pure, so the date is an argument rather than a clock read.
+ */
+export function auditQuarantines(quarantines, today) {
+  const problems = [];
+  const latest = addDays(today, QUARANTINE_MAX_DAYS);
+  for (const { file, line, issue, until } of quarantines) {
+    const where = `${file}:${line}`;
+    if (issue === null || until === null) {
+      problems.push(
+        `${where} [quarantine]: @quarantine needs \`// ${QUARANTINE_MARKER} #<open issue> until <YYYY-MM-DD>: <what flakes>\` on the tag's line or the ${QUARANTINE_WINDOW} above it.`,
+      );
+    } else if (until < today) {
+      problems.push(
+        `${where} [quarantine]: the quarantine for #${issue} expired on ${until}. Fix the flake and drop the tag; a quarantine is never renewed by moving the date.`,
+      );
+    } else if (until > latest) {
+      problems.push(
+        `${where} [quarantine]: expiry ${until} is more than ${QUARANTINE_MAX_DAYS} days out (latest ${latest}) for #${issue}.`,
+      );
+    }
+  }
+  if (quarantines.length > QUARANTINE_CAP) {
+    problems.push(
+      `${quarantines.length} tests are quarantined; at most ${QUARANTINE_CAP} may be at once. Fix one before quarantining another.`,
+    );
+  }
+  return problems;
+}
+
+/**
+ * **Long English sentences in locators, ratcheted.**
+ *
+ * A spec that finds an element by a whole sentence (`getByText("…")`,
+ * `toContainText("…")`) breaks on every rewording, and only the run that happens
+ * to include that spec notices: the dominant break class in the 2026-10-14 CI
+ * audit (242 such literals). A string literal of {@link LONG_LITERAL} or more
+ * characters passed to either is counted per file in scripts/ratchets.json under
+ * `e2e-long-literals`; a count may only fall. Find the element by role and
+ * accessible name, or read the sentence from its message bundle
+ * (`.claude/rules/e2e.md` shows both). Interpolations in a template literal do
+ * not count toward its length.
+ */
+export const LONG_LITERAL = 40;
+export const LITERAL_GUARD = "e2e-long-literals";
+const LITERAL_CALL = /\b(?:getByText|toContainText)\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g;
+
+/** Each long literal passed to getByText/toContainText: `[{ line, text }]`. */
+export function findLongLiterals(source) {
+  const hits = [];
+  const lines = source.split("\n");
+  for (const match of source.matchAll(LITERAL_CALL)) {
+    const text = match[1] === "`" ? match[2].replace(/\$\{[^}]*\}/g, "") : match[2];
+    if (text.length < LONG_LITERAL) continue;
+    const line = source.slice(0, match.index).split("\n").length;
+    if (isCommentLine(lines[line - 1])) continue;
+    hits.push({ line, text: match[2] });
+  }
+  return hits;
+}
+
+/** Per-file long-literal counts (`Map<file, hits>`) against the banked allowance. */
+export function auditLongLiterals(counts, allowed) {
+  const failures = [];
+  for (const [file, hits] of counts) {
+    const allowance = allowed[file] ?? 0;
+    if (hits.length > allowance) {
+      failures.push(
+        `${file} [long-literal]: ${hits.length} getByText/toContainText literals of ${LONG_LITERAL}+ characters, baseline allows ${allowance}:\n${hits.map((hit) => `    ${hit.line}: ${hit.text}`).join("\n")}\n    Find it by role and name, or read the sentence from its message bundle (.claude/rules/e2e.md).`,
+      );
+    } else if (hits.length < allowance) {
+      failures.push(
+        `${file} [long-literal]: down to ${hits.length} from ${allowance} — bank it in this change (\`node scripts/check-e2e-hygiene.mjs --write\`).`,
+      );
+    }
+  }
+  for (const file of Object.keys(allowed)) {
+    if (!counts.has(file)) {
+      failures.push(
+        `${file} [long-literal]: clean or gone — remove its baseline entry (\`node scripts/check-e2e-hygiene.mjs --write\`).`,
+      );
+    }
+  }
+  return failures;
+}
+
 async function walk(relativeDirectory) {
   const absoluteDirectory = path.join(process.cwd(), relativeDirectory);
   let entries;
@@ -342,26 +491,61 @@ async function walk(relativeDirectory) {
 }
 
 async function main() {
+  const root = process.cwd();
   const problems = [];
+  const quarantines = [];
+  const literals = new Map();
   for (const file of await walk("e2e")) {
-    const contents = await readFile(path.join(process.cwd(), file), "utf8");
+    const contents = await readFile(path.join(root, file), "utf8");
     for (const violation of findHygieneViolations(contents)) {
       const rule = rules.find((r) => r.id === violation.rule);
       problems.push(
         `${file}:${violation.line} [${violation.rule}]: ${violation.text}\n    ${rule.message}`,
       );
     }
+    for (const quarantine of findQuarantines(contents)) quarantines.push({ file, ...quarantine });
+    const long = findLongLiterals(contents);
+    if (long.length > 0) literals.set(file, long);
   }
 
-  if (problems.length > 0) {
-    console.error(`E2E hygiene violations:\n${problems.map((p) => `- ${p}`).join("\n")}`);
-    console.error(
-      `A timing guess is never the fix — wait for what the page renders when the work is done (debug skill: "A flake is a bug"). If a line is genuinely deterministic, acknowledge it with \`${ACKNOWLEDGEMENT} <rule>: <why>\` naming the mechanism.`,
+  const { counts: allowed, exists } = await readCounts(root, LITERAL_GUARD);
+  const { write, absorb } = ratchetFlags();
+  if (write || absorb !== null) {
+    process.exit(
+      await bankCounts({
+        root,
+        guard: LITERAL_GUARD,
+        script: "check-e2e-hygiene",
+        counts: literals,
+        allowed,
+        exists,
+        note: `getByText/toContainText string literals of ${LONG_LITERAL}+ characters in e2e/, per file, written before the ratchet (testing review decision 8). A count may only fall. Written by \`node scripts/check-e2e-hygiene.mjs --write\`.`,
+        refusal: "Find the new element by role and name, or read its sentence from the bundle",
+        absorb,
+        summary: (files, total) => `${files} files, ${total} long literals`,
+      }),
     );
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const policy = [...auditQuarantines(quarantines, today), ...auditLongLiterals(literals, allowed)];
+
+  if (problems.length > 0 || policy.length > 0) {
+    console.error(
+      `E2E hygiene violations:\n${[...problems, ...policy].map((p) => `- ${p}`).join("\n")}`,
+    );
+    if (problems.length > 0) {
+      console.error(
+        `A timing guess is never the fix — wait for what the page renders when the work is done (debug skill: "A flake is a bug"). If a line is genuinely deterministic, acknowledge it with \`${ACKNOWLEDGEMENT} <rule>: <why>\` naming the mechanism.`,
+      );
+    }
     process.exit(1);
   }
 
-  console.log("e2e-hygiene: no sleeps, networkidle waits, or retry shims in e2e/");
+  const total = [...literals.values()].reduce((sum, hits) => sum + hits.length, 0);
+  console.log(
+    `e2e-hygiene: no sleeps, networkidle waits, or retry shims in e2e/; ${quarantines.length}/${QUARANTINE_CAP} quarantined; ${total} banked long literals`,
+  );
 }
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) await main();
