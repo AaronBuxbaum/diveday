@@ -9,8 +9,8 @@ import {
   markCheckoutPaidBySessionId,
   startBookingCheckout,
 } from "./checkouts";
-import { sendPartyPaymentReceipt } from "./party-payment-receipt";
-import { people } from "./schema";
+import { type ReportedSettlement, sendPartyPaymentReceipt } from "./party-payment-receipt";
+import { bookingCheckoutBookings, bookingCheckouts, people } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts, updateTrip } from "./trips";
 
@@ -76,8 +76,11 @@ async function deliverPaid(
   g: Awaited<ReturnType<typeof group>>,
   email: ReturnType<typeof fakeEmail>,
   settledCents: number | null = 31_590,
+  reported: Partial<ReportedSettlement> = {},
 ) {
-  const outcome = { firstCompletion: false };
+  const outcome: { firstCompletion: boolean; reportedOverCeiling?: boolean } = {
+    firstCompletion: false,
+  };
   const checkout = await markCheckoutPaidBySessionId(
     g.db,
     g.checkout.stripeSessionId,
@@ -89,7 +92,16 @@ async function deliverPaid(
   if (checkout && outcome.firstCompletion) {
     return {
       first: true,
-      result: await sendPartyPaymentReceipt(g.db, checkout, { provider: email.provider }),
+      result: await sendPartyPaymentReceipt(
+        g.db,
+        checkout,
+        {
+          currency: g.checkout.currency,
+          overCeiling: outcome.reportedOverCeiling ?? false,
+          ...reported,
+        },
+        { provider: email.provider },
+      ),
     };
   }
   return { first: false, result: null };
@@ -135,6 +147,69 @@ describe("sendPartyPaymentReceipt", () => {
     const g = await group(["Pat Party", "Sam Second"]);
     const email = fakeEmail();
     expect((await deliverPaid(g, email, null)).result).toBe("no_settled_total");
+    expect(email.sent).toHaveLength(0);
+  });
+
+  it("sends nothing when Stripe reported more than could have been asked, which the record clamps", async () => {
+    const g = await group(["Pat Party", "Sam Second"]);
+    const email = fakeEmail();
+    // The asked total is 36,000 with no tax: 90,000 is not a figure to read back.
+    expect((await deliverPaid(g, email, 90_000)).result).toBe("not_trusted");
+    expect(email.sent).toHaveLength(0);
+  });
+
+  it("sends nothing when the session's currency is not the checkout's, or is absent", async () => {
+    const mismatch = await group(["Pat Party", "Sam Second"]);
+    const first = fakeEmail();
+    expect((await deliverPaid(mismatch, first, 31_590, { currency: "eur" })).result).toBe(
+      "not_trusted",
+    );
+    expect(first.sent).toHaveLength(0);
+  });
+
+  it("sends nothing when the session names no currency at all", async () => {
+    const g = await group(["Pat Party", "Sam Second"]);
+    const email = fakeEmail();
+    expect((await deliverPaid(g, email, 31_590, { currency: null })).result).toBe("not_trusted");
+    expect(email.sent).toHaveLength(0);
+  });
+
+  it("sends nothing when the lead's latest checkout is a different one than the one completing", async () => {
+    const g = await group(["Pat Party", "Sam Second"]);
+    const email = fakeEmail();
+    const checkout = await markCheckoutPaidBySessionId(
+      g.db,
+      g.checkout.stripeSessionId,
+      undefined,
+      31_590,
+    );
+    if (!checkout) throw new Error("expected the checkout");
+    // A newer, completed attempt over the same seats: the lead's latest.
+    const { id: _id, ...rest } = checkout;
+    const [newer] = await g.db
+      .insert(bookingCheckouts)
+      .values({
+        ...rest,
+        stripeSessionId: "cs_newer_attempt",
+        createdAt: new Date(checkout.createdAt.getTime() + 60_000),
+      })
+      .returning();
+    if (!newer) throw new Error("expected a newer checkout");
+    const seats = await g.db
+      .select()
+      .from(bookingCheckoutBookings)
+      .where(eq(bookingCheckoutBookings.checkoutId, checkout.id));
+    await g.db
+      .insert(bookingCheckoutBookings)
+      .values(seats.map(({ id: _seat, ...seat }) => ({ ...seat, checkoutId: newer.id })));
+    expect(
+      await sendPartyPaymentReceipt(
+        g.db,
+        checkout,
+        { currency: checkout.currency, overCeiling: false },
+        { provider: email.provider },
+      ),
+    ).toBe("not_trusted");
     expect(email.sent).toHaveLength(0);
   });
 

@@ -25,7 +25,10 @@ import {
  * as well. The figure is what `settledPartyPayment` reads, Stripe's reported
  * total, and it must equal the checkout's own settled total: if the two ever
  * disagree, or Stripe reported no total, nothing is sent. Nothing is computed
- * from the asked price.
+ * from the asked price. Nothing is sent either when Stripe's total was more than
+ * could have been asked (the recorded figure was clamped), when the session's
+ * currency is not the checkout's, or when the lead's latest checkout is a
+ * different one.
  *
  * Group checkouts only (a lead plus at least one covered seat), and not a
  * deposit, which is not "what the seats cost". A single seat's card checkout
@@ -37,15 +40,26 @@ export type PartyPaymentReceiptOutcome =
   | "not_sent"
   | "not_a_group"
   | "no_settled_total"
+  | "not_trusted"
   | "no_address";
+
+/**
+ * What the completing Stripe event itself said, beside what DiveDay recorded:
+ * the receipt reads a figure back to a person, so it sends only when the two
+ * agree. `currency` is the session's own (absent counts as a mismatch), and
+ * `overCeiling` says Stripe's total was more than could have been asked, so
+ * the recorded figure was clamped and is not Stripe's.
+ */
+export type ReportedSettlement = { currency: string | null; overCeiling: boolean };
 
 export async function sendPartyPaymentReceipt(
   db: AppDb,
   checkout: Pick<BookingCheckout, "id" | "shopId" | "isDeposit" | "settledTotalCents">,
+  reported: ReportedSettlement,
   options: { provider?: NotificationProvider } = {},
 ): Promise<PartyPaymentReceiptOutcome> {
   try {
-    return await send(db, checkout, options);
+    return await send(db, checkout, reported, options);
   } catch (error) {
     log("party_payment_receipt.failed", "error", {
       checkoutId: checkout.id,
@@ -59,10 +73,12 @@ export async function sendPartyPaymentReceipt(
 async function send(
   db: AppDb,
   checkout: Pick<BookingCheckout, "id" | "shopId" | "isDeposit" | "settledTotalCents">,
+  reported: ReportedSettlement,
   options: { provider?: NotificationProvider },
 ): Promise<PartyPaymentReceiptOutcome> {
   if (checkout.isDeposit) return "not_a_group";
   if (!checkout.settledTotalCents) return "no_settled_total";
+  if (reported.overCeiling) return "not_trusted";
   const covered = await db
     .select({ bookingId: bookingCheckoutBookings.bookingId })
     .from(bookingCheckoutBookings)
@@ -91,6 +107,13 @@ async function send(
 
   const paid = await settledPartyPayment(db, checkout.shopId, lead.id);
   if (!paid || paid.amountCents !== checkout.settledTotalCents) return "no_settled_total";
+  // The lead's latest checkout must be this one: a newer attempt would read
+  // another checkout's figure back under this one's name.
+  if (paid.checkoutId !== checkout.id) return "not_trusted";
+  // A figure in one currency read back in another is worse than no receipt.
+  if (!reported.currency || reported.currency.toLowerCase() !== paid.currency.toLowerCase()) {
+    return "not_trusted";
+  }
 
   const [row] = await db
     .select({ booking: bookings, person: people, trip: trips, shop: shops })

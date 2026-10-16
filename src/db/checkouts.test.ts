@@ -2865,6 +2865,7 @@ describe("settledPartyPayment", () => {
 
     await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId, undefined, 31_590);
     expect(await settledPartyPayment(db, shop.id, lead)).toEqual({
+      checkoutId: started.checkout.id,
       amountCents: 31_590,
       currency: started.checkout.currency,
       seats: 2,

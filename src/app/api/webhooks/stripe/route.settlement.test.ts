@@ -73,7 +73,9 @@ function completesNow() {
 const paid = {
   id: "evt_1",
   type: "checkout.session.completed",
-  data: { object: { id: "cs_123", payment_status: "paid", amount_total: 36_000 } },
+  data: {
+    object: { id: "cs_123", payment_status: "paid", amount_total: 36_000, currency: "usd" },
+  },
 };
 
 beforeEach(() => {
@@ -101,7 +103,7 @@ describe("a paid booking checkout", () => {
       undefined,
       36_000,
       undefined,
-      { firstCompletion: false },
+      { firstCompletion: false, reportedOverCeiling: false },
     );
     expect(markTipPaidBySessionId).not.toHaveBeenCalled();
   });
@@ -119,7 +121,7 @@ describe("a paid booking checkout", () => {
       undefined,
       undefined,
       undefined,
-      { firstCompletion: false },
+      { firstCompletion: false, reportedOverCeiling: false },
     );
     expect(markTipPaidBySessionId).not.toHaveBeenCalled();
   });
@@ -130,7 +132,27 @@ describe("the party receipt (issue 2566)", () => {
     completesNow();
     expect((await post(paid)).status).toBe(200);
     expect(sendPartyPaymentReceipt).toHaveBeenCalledTimes(1);
-    expect(sendPartyPaymentReceipt).toHaveBeenCalledWith(FAKE_DB, FAKE_CHECKOUT);
+    expect(sendPartyPaymentReceipt).toHaveBeenCalledWith(FAKE_DB, FAKE_CHECKOUT, {
+      currency: "usd",
+      overCeiling: false,
+    });
+  });
+
+  it("hands over the session's own currency, none when Stripe sent none, and Stripe's over-ceiling total", async () => {
+    vi.mocked(markCheckoutPaidBySessionId).mockImplementation(
+      async (_db, _id, _account, _total, _tax, outcome) => {
+        if (outcome) {
+          outcome.firstCompletion = true;
+          outcome.reportedOverCeiling = true;
+        }
+        return FAKE_CHECKOUT as never;
+      },
+    );
+    await post({ ...paid, data: { object: { id: "cs_123", payment_status: "paid" } } });
+    expect(sendPartyPaymentReceipt).toHaveBeenCalledWith(FAKE_DB, FAKE_CHECKOUT, {
+      currency: null,
+      overCeiling: true,
+    });
   });
 
   it("is not sent when the checkout was already completed (a replay or a fresh-id redelivery)", async () => {
