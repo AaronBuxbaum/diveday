@@ -588,6 +588,12 @@ export const trips = pgTable(
     // already leaves private departures out leaves it out too, by construction.
     check("trips_rehearsal_is_private", sql`not ${table.isRehearsal} or ${table.isPrivate}`),
     index("trips_series_starts_idx").on(table.seriesId, table.startsAt),
+    // Foreign keys a query filters on (#2492): a course's departures
+    // (progression, materials, forms) and a hull's upcoming departures (the
+    // certificate edit locks them, the clash check reads them). Other
+    // reads scope by `shop_id` first and ride the shop/starts_at indexes.
+    index("trips_course_starts_idx").on(table.courseId, table.startsAt),
+    index("trips_boat_starts_idx").on(table.boatId, table.startsAt),
     // Partial, over the live rows only: every listing read carries
     // `deleted_at is null`, and a deleted departure is rare enough that
     // indexing the tombstones alongside them would pay for nothing.
@@ -715,6 +721,8 @@ export const tripDives = pgTable(
   (table) => [
     uniqueIndex("trip_dives_trip_number_unique").on(table.tripId, table.diveNumber),
     index("trip_dives_trip_idx").on(table.tripId, table.diveNumber),
+    // "Which departures dive this site" (dive-sites.ts), a read by site alone.
+    index("trip_dives_dive_site_idx").on(table.diveSiteId),
     // The same bounds `DOCK_DAY_LIMITS.boatRideMinutes` puts on the shop-wide
     // figure this falls back to (src/lib/diver-planning.ts), so an import or a
     // hand-written fix cannot write a leg the form would have refused.

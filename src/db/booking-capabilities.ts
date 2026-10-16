@@ -132,26 +132,59 @@ export async function issueBookingCapabilities(
       ),
     );
   if (found.length === 0) return issued;
+  return mintBookingCapabilities(db, {
+    shopId: input.shopId,
+    seats: found.map((booking) => ({ bookingId: booking.id, tripEndsAt: booking.tripEndsAt })),
+    purpose: input.purpose,
+    now,
+  });
+}
+
+/**
+ * **The minting half of {@link issueBookingCapabilities}, for a caller that has
+ * already read its bookings** (#2488): the organizer's party panel reads every
+ * seat with its departure in one statement, so asking the database again which
+ * of them exist and when their boats return was a round trip spent learning
+ * what the caller held.
+ *
+ * The caller owns the proof that every seat is this shop's and not cancelled,
+ * read in the same request: nothing here re-checks it. The rules after that
+ * are the same as ever: each booking's live set stays within
+ * `MAX_LIVE_CAPABILITIES_PER_PURPOSE`, its oldest retired first, and the
+ * retiring finishes before the new rows go in.
+ */
+export async function mintBookingCapabilities(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    seats: Array<{ bookingId: string; tripEndsAt: Date }>;
+    purpose: CapabilityPurpose;
+    now: Date;
+  },
+): Promise<Map<string, IssuedCapability>> {
+  const issued = new Map<string, IssuedCapability>();
+  const seats = [...new Map(input.seats.map((seat) => [seat.bookingId, seat])).values()];
+  if (seats.length === 0) return issued;
 
   await retireOldestLiveCapabilities(
     db,
     input.shopId,
-    found.map((booking) => booking.id),
+    seats.map((seat) => seat.bookingId),
     input.purpose,
-    now,
+    input.now,
   );
 
-  const rows = found.map((booking) => {
+  const rows = seats.map((seat) => {
     const token = createCapabilityToken();
-    const expiresAt = capabilityExpiryFor(booking.tripEndsAt, now);
-    issued.set(booking.id, { token, expiresAt });
+    const expiresAt = capabilityExpiryFor(seat.tripEndsAt, input.now);
+    issued.set(seat.bookingId, { token, expiresAt });
     return {
       shopId: input.shopId,
-      bookingId: booking.id,
+      bookingId: seat.bookingId,
       purpose: input.purpose,
       tokenHash: hashCapabilityToken(token),
       tokenSealed: null,
-      issuedAt: now,
+      issuedAt: input.now,
       expiresAt,
     };
   });

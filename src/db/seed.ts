@@ -352,7 +352,7 @@ export async function seedIfEmpty(db: DbExecutor): Promise<void> {
  * below is where it is exercised. The photo is one of the bundled Molasses
  * Reef frames the site catalog already ships.
  */
-const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
+export const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
   brandHeroImageUrl: `/dive-sites/${encodeURIComponent("Elkhorn coral 8 Molasses Reef 20080309.jpg")}`,
   // i18n-exempt: a shop writes its own alt text, like its tagline.
   brandHeroImageAlt: "Elkhorn coral on Molasses Reef, sunlight from above",
@@ -386,13 +386,14 @@ export const MINTED_DEMO_BRAND_COLOR = "#158462";
  *
  * The logo is a bundled frame, as the cover photo is, because the fleet
  * configures no media storage, so an upload through the form is refused. A
- * different frame, so the tile and the cover read as two photos.
+ * different frame from the cover and from every seeded site's lead photo, so
+ * the tile reads as its own picture (`seed-brand-photos.test.ts` holds it).
  */
-const MINTED_DEMO_BRAND: Partial<typeof shops.$inferInsert> = {
+export const MINTED_DEMO_BRAND: Partial<typeof shops.$inferInsert> = {
   ...DEMO_SHOP_BRAND,
   brandColor: MINTED_DEMO_BRAND_COLOR,
   brandDisplayFont: "bricolage_grotesque",
-  logoUrl: `/dive-sites/${encodeURIComponent("French Angelfish Molasses Reef 20080309.jpg")}`,
+  logoUrl: `/dive-sites/${encodeURIComponent("Sand Key Light 2005.jpg")}`,
 };
 
 /**

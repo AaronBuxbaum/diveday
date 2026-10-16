@@ -32,7 +32,7 @@ import {
 } from "./rental-fit";
 import { bookings, certifications, people, shops, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
-import { getTripWithBooked } from "./trips";
+import { getTripWithBookedOnce } from "./trips";
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
 import { welcomeCueInputsByBooking } from "./welcome-cues";
 
@@ -428,7 +428,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     // diveday:allow-deleted-trips: the window and course columns only; the
-    // trip itself is read through `getTripWithBooked`, which keeps `liveTrip()`.
+    // trip itself is read through `getTripWithBookedOnce`, which keeps `liveTrip()`.
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(eq(bookings.id, bookingId))
     .limit(1);
@@ -459,7 +459,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     welcomeInputs,
     fitConfirmation,
   ] = await Promise.all([
-    getTripWithBooked(db, row.shopId, row.tripId),
+    getTripWithBookedOnce(db, row.shopId, row.tripId),
     reEntryOffersOpen ? hasActiveRefresherCourse(db, row.shopId) : false,
     // Only for a diver whose "I'm not certified yet" stands: the one door the
     // certification step opens for them (third UX review, item 23).

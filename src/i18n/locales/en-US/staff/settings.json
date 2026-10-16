@@ -307,7 +307,7 @@
       "notice": "The rental catalog, rental prices, and Stripe connection are limited to owners and managers. The settings above are open to all staff."
     },
     "rentals": {
-      "heading": "What we rent",
+      "heading": "Rentals",
       "detail": "Tick what you rent. Unticked gear leaves the kit form, and fits that already ask for it stay on the prep list, marked.",
       "legend": "Rentable gear and services",
       "submit": "Save rental catalog",
@@ -564,6 +564,7 @@
   },
   "team": {
     "title": "Team",
+    "unnamedInviter": "A teammate",
     "notice": {
       "invited": "Invite sent.",
       "inviteResent": "Invite resent.",

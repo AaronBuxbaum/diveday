@@ -1858,6 +1858,12 @@ export async function getTodayWork(
    * Omitted, all actions are returned.
    */
   roles?: readonly Role[],
+  /**
+   * Whether to ask the marine forecast provider for the high-wind rows. A
+   * caller that never reads `highWind` (the weekly digest) passes false: no
+   * request goes out and `highWind` resolves to `[]`. Defaults true.
+   */
+  withForecast = true,
 ): Promise<TodayWork> {
   // The one horizon every readiness surface shares (src/lib/operational-window.ts).
   const { to: horizon } = operationalWindow(now);
@@ -1892,13 +1898,15 @@ export async function getTodayWork(
   // answers null.
   const owingBookingIds = owingSeatIds(inWindow, readinessByTrip);
   const noOpenOrders = new Map<string, { id: string; hostedInvoiceUrl: string | null }>();
-  const highWind = highWindActions(inWindow, forecastsForDepartures(inWindow, now), {
-    shopSlug,
-    timeZone,
-    locale,
-    t,
-    roles,
-  });
+  const highWind = withForecast
+    ? highWindActions(inWindow, forecastsForDepartures(inWindow, now), {
+        shopSlug,
+        timeZone,
+        locale,
+        t,
+        roles,
+      })
+    : Promise.resolve<TodayAction[]>([]);
 
   // **One wave** (`readTodayWave`): every read takes only the shop, the
   // window and the clock, so none waits on another. Beside it, the cards a

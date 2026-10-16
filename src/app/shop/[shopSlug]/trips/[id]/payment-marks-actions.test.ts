@@ -32,7 +32,7 @@ vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("@/lib/session");
-const { markPaymentAction } = await import("./actions");
+const { markPaymentAction } = await import("./roster-payment-actions");
 const { markPartyPaidAction, previewPartyPaymentAction } = await import("./party-payment-actions");
 
 type SeededContext = Awaited<ReturnType<typeof seededShopContext>>;

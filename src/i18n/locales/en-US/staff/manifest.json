@@ -131,7 +131,7 @@
   "medicalRidingOnlyNotCleared": "A physician did not clear this person on {date}: riding only, not in the water",
   "medicalRidingOnlyReferral": "Referred to a physician on {date} with no answer on file: riding only, not in the water",
   "medicalReferralLink": "View the referral",
-  "medicalRefusalLink": "View the refusal",
+  "medicalRefusalLink": "View the physician’s decision",
   "resolveBlockersLink": "Resolve blockers on Divers →",
   "addNoteSummary": "Add a note",
   "rollCallRecordedByPlain": "{label} {date} by {name}",

@@ -909,19 +909,21 @@ async function createBookingRecord(
 ): Promise<BookingOutcome> {
   const tx = db;
   await boundLockWaits(tx);
-  // FOR UPDATE serializes concurrent bookings on the same trip: under READ
+  // FOR NO KEY UPDATE (not FOR UPDATE, which also blocks every insert that
+  // references the trip by foreign key) serializes concurrent bookings on the
+  // same trip, as the roll-call and series paths do: under READ
   // COMMITTED two transactions could otherwise both read `booked = capacity-1`
   // and both insert. The unit suite runs on PGlite, which is single-connection
   // and therefore cannot exhibit the race — but this is no longer untested.
   // `src/db/bookings.postgres.test.ts` races two real connections for the last
   // seat against a genuine Postgres server in CI, and asserts exactly one
-  // wins; with this `.for("update")` removed, a one-seat trip sells two.
+  // wins; with this `.for("no key update")` removed, a one-seat trip sells two.
   const [trip] = await tx
     .select()
     .from(trips)
     .where(and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId), liveTrip()))
     .limit(1)
-    .for("update");
+    .for("no key update", { of: trips });
   if (!tripTakesSeatFrom(trip, req.actor)) return { ok: false, reason: "trip_unavailable" };
   const participantType: ParticipantType = req.participantType ?? "diver";
   // A course session takes divers only, and the public form sells only the
@@ -1673,7 +1675,7 @@ export async function restoreBooking(
       .from(trips)
       .where(and(eq(trips.id, booking.tripId), liveTrip()))
       .limit(1)
-      .for("update");
+      .for("no key update", { of: trips });
     if (!trip) return "not_found";
     // Read under the same lock. A cancelled departure has no roster to
     // restore onto; reinstating the trip is the recovery, and then the undo

@@ -1,6 +1,7 @@
+import { sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { createTestDb } from "@/db/client";
 import { createAuth } from "@/lib/auth";
+import { unseededTestDb } from "@/test/db";
 
 /**
  * better-auth 1.7.3 compares the Drizzle tables it was handed against the
@@ -19,12 +20,18 @@ import { createAuth } from "@/lib/auth";
  * What it does *not* prove: the check introspects the Drizzle table objects,
  * not the database, so it pins `src/db/schema.ts` against better-auth's models
  * and says nothing about whether the matching migration was generated.
- * `createTestDb()` applies the committed migration chain, so a missing one
- * fails this suite by another route — just not through this assertion.
+ * The test database is the migrated snapshot (`unseededTestDb`), so a missing
+ * migration fails this suite by another route — just not through this assertion.
  */
 describe("the better-auth schema contract (in-memory PGlite)", () => {
   it("serves a request instead of refusing on a schema mismatch", async () => {
-    const auth = createAuth(await createTestDb());
+    // The migrated snapshot, hydrated, not a whole-schema PGlite built inside
+    // the test (about 9 s alone, over its limit with three suites at once).
+    const db = await unseededTestDb();
+    // The no-cookie read below never touches the database, and a PGlite closed
+    // before its first query hangs the teardown: one round trip first.
+    await db.execute(sql`select 1`);
+    const auth = createAuth(db);
 
     // Any endpoint would do — the check runs ahead of all of them. This one
     // needs no state: no cookie, so the honest answer is a null session, and

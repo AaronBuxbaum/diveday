@@ -4,23 +4,24 @@ import {
   agencyCheckAction,
 } from "@/app/shop/[shopSlug]/divers/[personId]/agency-check-actions";
 import type { AppDb } from "@/db/client";
+import { markPartyPaidAction, previewPartyPaymentAction } from "../party-payment-actions";
+import {
+  confirmDiverIdentityAction,
+  saveRosterEmergencyContactAction,
+  splitDiverIdentityAction,
+} from "../roster-identity-actions";
+import { markPaymentAction } from "../roster-payment-actions";
 import {
   addToWaitlistAction,
   carryWaitlistAction,
-  confirmDiverIdentityAction,
   createDirectTripInvitationAction,
-  markPaymentAction,
-  markRosterWaiverInPersonAction,
   recordTripInvitationAction,
   removeBookingAction,
-  saveRosterEmergencyContactAction,
-  sendNewWaiverAction,
   setParticipantTypeAction,
-  splitDiverIdentityAction,
   undoRemoveBookingAction,
   updateBookingPickupAction,
-} from "../actions";
-import { markPartyPaidAction, previewPartyPaymentAction } from "../party-payment-actions";
+} from "../roster-seating-actions";
+import { markRosterWaiverInPersonAction, sendNewWaiverAction } from "../roster-waiver-actions";
 import { courseRosterActions } from "./course-roster-actions";
 import { noteRosterActions } from "./note-roster-actions";
 import { seatMoveFor } from "./seat-move";

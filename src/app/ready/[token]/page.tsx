@@ -50,7 +50,7 @@ import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { latestTripStage } from "@/db/trip-stages";
-import { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trips";
+import { getTripWithBookedOnce, listTripDives, tripPublicCrew } from "@/db/trips";
 import { buildAfterStateProps } from "@/features/recap-after-state";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
@@ -332,7 +332,7 @@ async function DiverReadinessPage({
     // shop row `PackingSection` needs for its units and rental catalogue.
     const threadTripReads = Promise.all([
       getShopBySlug(db, shop.slug),
-      getTripWithBooked(db, shop.id, data.trip.id),
+      getTripWithBookedOnce(db, shop.id, data.trip.id),
       listTripDives(db, shop.id, data.trip.id),
       listTripChangeEvents(db, shop.id, data.trip.id),
       // Only the crew who agreed to be named (issue #1181, D21). This thread is

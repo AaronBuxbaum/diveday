@@ -84,7 +84,8 @@
     "errors": "Couldn’t send to {names}. Open the roster to check the booking.",
     "confirmResend": "Yes, resend",
     "neverMind": "Never mind",
-    "emptySelection": "Tick at least one diver, then send the waiver to the whole selection."
+    "emptySelection": "Tick at least one diver, then send the waiver to the whole selection.",
+    "unnamedDiver": "A diver"
   },
   "connectivity": {
     "online": "Online",

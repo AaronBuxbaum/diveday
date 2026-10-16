@@ -9,11 +9,17 @@ import {
   activityEvents,
   orders,
   reviewModerationEvents,
+  shops,
   tripChangeEvents,
   tripReviews,
   trips,
 } from "./schema";
-import { listShopActivityPeople, pagedShopActivity, recordShopActivity } from "./shop-activity";
+import {
+  listShopActivityPeople,
+  pagedShopActivity,
+  recordShopActivity,
+  recordShopActivityWithin,
+} from "./shop-activity";
 import { getTripRoster, listStaff, upcomingTripsWithCounts, updateTrip } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -144,6 +150,25 @@ describe("recordShopActivity", () => {
         write: { code: "order_refunded", orderId: owner.id },
       }),
     ).toBe(false);
+  });
+
+  it("leaves the edit committed when the line inside its savepoint fails (#2396)", async () => {
+    const { db, shop } = ctx;
+    const { owner } = await bookedSeat(db, shop.id);
+    const name = `Activity savepoint ${owner.id.slice(0, 8)}`;
+    await db.transaction(async (tx) => {
+      await tx.update(shops).set({ name }).where(eq(shops.id, shop.id));
+      // An actor who is no one: the line's insert is refused inside its own
+      // savepoint, and the transaction around it must carry on.
+      const written = await recordShopActivityWithin(tx, {
+        shopId: shop.id,
+        actorPersonId: "00000000-0000-4000-8000-000000000000",
+        write: { code: "order_refunded", orderId: owner.id },
+      });
+      expect(written).toBe(false);
+    });
+    const [after] = await db.select({ name: shops.name }).from(shops).where(eq(shops.id, shop.id));
+    expect(after?.name).toBe(name);
   });
 
   it("files a moved line when the details form changes a departure's time, and none otherwise (#2313)", async () => {
