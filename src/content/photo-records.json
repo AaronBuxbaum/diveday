@@ -218,6 +218,14 @@
       "sourceSize": [2257, 1293],
       "reviewed": "2026-10-15"
     },
+    "dive-sites/Diamond Rock Saba.jpg": {
+      "subject": "site:diamond-rock-saba",
+      "source": "File:Diamond Rock Saba.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "MikemNico",
+      "sourceSize": [3648, 2736],
+      "reviewed": "2026-10-15"
+    },
     "dive-sites/Director's Bay Curacao (34750561502).jpg": {
       "subject": "site:directors-bay-curacao",
       "source": "File:Director's Bay Curacao (34750561502).jpg",
@@ -345,6 +353,14 @@
       "licence": "CC BY 2.0",
       "artist": "amanderson2",
       "sourceSize": [4288, 3216],
+      "reviewed": "2026-10-15"
+    },
+    "dive-sites/Jardin de corail.jpg": {
+      "subject": "site:jardin-de-corail-pigeon",
+      "source": "File:Jardin de corail.jpg",
+      "licence": "CC BY-SA 4.0",
+      "artist": "Christophe Foucault",
+      "sourceSize": [1600, 1200],
       "reviewed": "2026-10-15"
     },
     "dive-sites/Kleine Knip Curacao (34800921431).jpg": {
@@ -611,6 +627,14 @@
       "licence": "CC BY 2.0",
       "artist": "Serge Melki from Indianapolis, USA",
       "sourceSize": [2100, 1500],
+      "reviewed": "2026-10-15"
+    },
+    "dive-sites/Underwater sculptures at Molinere Underwater Sculpture Park.jpg": {
+      "subject": "site:molinere-underwater-sculpture-park",
+      "source": "File:Underwater sculptures at Molinere Underwater Sculpture Park.jpg",
+      "licence": "CC BY 2.0",
+      "artist": "Boris Kasimov",
+      "sourceSize": [3968, 2976],
       "reviewed": "2026-10-15"
     },
     "dive-sites/Underwater Vegetation - Carwash Cenote QR.jpg": {
@@ -3581,6 +3605,10 @@
     }
   },
   "unphotographed": {
+    "site:accra": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:adolphus-busch": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -3629,6 +3657,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:anchor-point-statia": {
+      "reason": "Commons holds no underwater frame of this Sint Eustatius Marine Park site; searches return only surface landscape or nothing",
+      "checked": "2026-10-15"
+    },
     "site:anchor-wall-cayman-brac": {
       "reason": "Commons has no photograph identified as anchor-wall-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
       "checked": "2026-10-15"
@@ -3669,8 +3701,40 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:anguillita-anguilla": {
+      "reason": "Commons holds no underwater frame of this Anguilla site; only satellite or surface views, or nothing clearing the rules",
+      "checked": "2026-10-15"
+    },
+    "site:anina-wreck": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:ankas-place-roatan": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:anse-3-airs": {
+      "reason": "Commons has only surface photographs of the shore, headland or beach; nothing underwater that shows this dive site as a diver meets it (Anse a l'Ane and bay views, not Anse 3 Airs underwater)",
+      "checked": "2026-10-15"
+    },
+    "site:anse-chastanet-reef": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
+    "site:anse-cochon": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
+    "site:anse-dufour": {
+      "reason": "Commons has only surface photographs of the shore, headland or beach; nothing underwater that shows this dive site as a diver meets it (Anse Dufour beach views)",
+      "checked": "2026-10-15"
+    },
+    "site:anse-fortune": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it",
+      "checked": "2026-10-15"
+    },
+    "site:anse-la-raye-wall": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:antares-freighter": {
@@ -3679,6 +3743,10 @@
     },
     "site:aquarium-grand-cayman": {
       "reason": "Commons has no photo of this site; a name search returns only unrelated books, art and places",
+      "checked": "2026-10-15"
+    },
+    "site:aquarium-statia": {
+      "reason": "Commons holds no underwater frame of this Sint Eustatius Marine Park site; searches return only surface landscape or nothing",
       "checked": "2026-10-15"
     },
     "site:aquarium-west-providenciales": {
@@ -3697,6 +3765,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:arnos-vale-reef-tobago": {
+      "reason": "Commons holds no underwater frame of this Tobago or Grenadines site; only surface, aerial or generic Caribbean views",
+      "checked": "2026-10-15"
+    },
     "site:astron-wreck-punta-cana": {
       "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
       "checked": "2026-10-15"
@@ -3713,6 +3785,10 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:augustin-fresnel-wreck": {
+      "reason": "Only an 800px panorama of Le Fresnel surfaced, below the 1024px rule",
+      "checked": "2026-10-15"
+    },
     "site:avocet-dredge": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -3725,6 +3801,14 @@
       "reason": "Commons has no photo of this site; a name search returns only unrelated books, art and places",
       "checked": "2026-10-15"
     },
+    "site:babylon-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
+      "checked": "2026-10-15"
+    },
+    "site:bajan-queen": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:bajo-bonito-san-andres": {
       "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
       "checked": "2026-10-15"
@@ -3735,6 +3819,10 @@
     },
     "site:barcadera-reef-aruba": {
       "reason": "Commons has no photo of this reef; the nearest are aerial shots of the Barcadera industrial harbour",
+      "checked": "2026-10-15"
+    },
+    "site:barge": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:bari-reef-bonaire": {
@@ -3757,9 +3845,17 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:barracuda-reef-antigua": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it",
+      "checked": "2026-10-15"
+    },
     "site:barracuda-reef-fort-lauderdale": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:barracuda-reef-statia": {
+      "reason": "Commons holds no underwater frame of this Sint Eustatius Marine Park site; searches return only surface landscape or nothing",
+      "checked": "2026-10-15"
     },
     "site:barracuda-wall-cozumel": {
       "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
@@ -3793,6 +3889,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:bell-buoy": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:belton-johnson-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -3821,9 +3921,21 @@
       "reason": "Commons has no photograph identified as bert-brothers-boulders-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
       "checked": "2026-10-15"
     },
+    "site:berwyn": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:betek-ar-pen": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:bianca-c-wreck": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
+    "site:big-rock-market-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
+      "checked": "2026-10-15"
     },
     "site:big-rock-utila": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
@@ -3889,6 +4001,10 @@
       "reason": "Commons has no photograph identified as blacktip-boulevard-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
       "checked": "2026-10-15"
     },
+    "site:blairs-reef-statia": {
+      "reason": "Commons holds no underwater frame of this Sint Eustatius Marine Park site; searches return only surface landscape or nothing",
+      "checked": "2026-10-15"
+    },
     "site:blonde-rock-bvi": {
       "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
       "checked": "2026-10-15"
@@ -3899,6 +4015,10 @@
     },
     "site:blue-bay-garden-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:blue-bead-hole-statia": {
+      "reason": "Commons holds no underwater frame of this Sint Eustatius Marine Park site; searches return only surface landscape or nothing",
       "checked": "2026-10-15"
     },
     "site:blue-channel-roatan": {
@@ -3937,6 +4057,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:bone-yard": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:bonnies-arch": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -3947,6 +4071,18 @@
     },
     "site:booby-trap-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:boot": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
+    "site:boss-reef": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
+    "site:bottle-ground": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:boynton-stepping-stone-reef": {
@@ -3965,12 +4101,24 @@
       "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
       "checked": "2026-10-15"
     },
+    "site:brightledge": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
+    "site:brimstone-shallows": {
+      "reason": "Search returned only Brimstone Hill fortress photographs, which is a fort on land",
+      "checked": "2026-10-15"
+    },
     "site:briny-breezes-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
     "site:bronco-billy-george-dog": {
       "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
+    "site:buccaneer-wreck": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:bud-bar-wreck": {
@@ -4013,6 +4161,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:cades-reef": {
+      "reason": "Search returned only generic Caribbean island views and a zoology expedition scan; nothing showing Cades Reef",
+      "checked": "2026-10-15"
+    },
     "site:calabas-reef-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -4045,6 +4197,10 @@
       "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
       "checked": "2026-10-15"
     },
+    "site:cap-salomon": {
+      "reason": "Search returned only shell specimen plates and a topside sunset; nothing underwater at this site",
+      "checked": "2026-10-15"
+    },
     "site:captain-dan-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -4067,6 +4223,10 @@
     },
     "site:carels-vision-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:carib-cargo-sint-maarten": {
+      "reason": "Commons holds no underwater frame of this Sint Maarten site; searches return only unrelated bridges, tugs and ships",
       "checked": "2026-10-15"
     },
     "site:carib-point-roatan": {
@@ -4105,6 +4265,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:castle-bank": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:catalina-aquarium": {
       "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
       "checked": "2026-10-15"
@@ -4120,6 +4284,10 @@
     "site:cayman-salvager": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:ce-trek": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
     },
     "site:cedral-wall-cozumel": {
       "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
@@ -4145,12 +4313,20 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:champagne-reef-dominica": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it",
+      "checked": "2026-10-15"
+    },
     "site:chankanaab-bolones-cozumel": {
       "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
       "checked": "2026-10-15"
     },
     "site:chankanaab-reef-cozumel": {
       "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:charles-l-brown-statia": {
+      "reason": "Commons holds no underwater frame of this Sint Eustatius Marine Park site; searches return only surface landscape or nothing",
       "checked": "2026-10-15"
     },
     "site:charlies-chimney-little-cayman": {
@@ -4183,6 +4359,10 @@
     },
     "site:chiefs-quarters-roatan": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:chien-tong-statia": {
+      "reason": "Commons holds no underwater frame of this Sint Eustatius Marine Park site; searches return only surface landscape or nothing",
       "checked": "2026-10-15"
     },
     "site:chikin-ha-cenote": {
@@ -4229,8 +4409,16 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:clarkes-bank": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:cliff-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:close-encounters": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:coconut-wall-little-cayman": {
@@ -4251,6 +4439,10 @@
     },
     "site:colombia-shallows-cozumel": {
       "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:colombier-saint-barthelemy": {
+      "reason": "Commons holds no underwater frame of this Saint-Barthelemy site; only surface or aerial views of the islet and coast",
       "checked": "2026-10-15"
     },
     "site:conception-island-wall": {
@@ -4297,6 +4489,10 @@
       "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
       "checked": "2026-10-15"
     },
+    "site:coral-gardens-dominica": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it",
+      "checked": "2026-10-15"
+    },
     "site:coral-gardens-sharkplaneo-great-dog": {
       "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
       "checked": "2026-10-15"
@@ -4305,12 +4501,28 @@
       "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
       "checked": "2026-10-15"
     },
+    "site:coral-gardens-soufriere": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:coral-nursery-bayahibe": {
       "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
       "checked": "2026-10-15"
     },
+    "site:coralita-sint-maarten": {
+      "reason": "Commons holds no underwater frame of this Sint Maarten site; searches return only unrelated bridges, tugs and ships",
+      "checked": "2026-10-15"
+    },
+    "site:core-gut-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
+      "checked": "2026-10-15"
+    },
     "site:cornelius-bay-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:cornwallis": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:corporal-meiss-bonaire": {
@@ -4327,6 +4539,14 @@
     },
     "site:cow-and-calf-rocks-st-thomas": {
       "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
+      "checked": "2026-10-15"
+    },
+    "site:craters-edge-dominica": {
+      "reason": "Search returned only US Navy diver training photos, not this site",
+      "checked": "2026-10-15"
+    },
+    "site:crique-abricot": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it",
       "checked": "2026-10-15"
     },
     "site:crocker-reef": {
@@ -4351,6 +4571,10 @@
     },
     "site:current-cut-eleuthera": {
       "reason": "No Commons photo of Current Cut; results were unrelated or an aerial of Long Island tidal flats.",
+      "checked": "2026-10-15"
+    },
+    "site:customs-house-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
       "checked": "2026-10-15"
     },
     "site:cypress-canyons": {
@@ -4425,6 +4649,10 @@
       "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
       "checked": "2026-10-15"
     },
+    "site:divers-dream-tobago": {
+      "reason": "Commons holds no underwater frame of this Tobago or Grenadines site; only surface, aerial or generic Caribbean views",
+      "checked": "2026-10-15"
+    },
     "site:divers-leap-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -4457,6 +4685,10 @@
       "reason": "Commons has no photograph identified as donnas-delight-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
       "checked": "2026-10-15"
     },
+    "site:dottins": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:double-d-french-cay": {
       "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
       "checked": "2026-10-15"
@@ -4469,12 +4701,24 @@
       "reason": "Commons has no photograph identified as double-wall-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
       "checked": "2026-10-15"
     },
+    "site:double-wreck-statia": {
+      "reason": "Commons holds no underwater frame of this Sint Eustatius Marine Park site; searches return only surface landscape or nothing",
+      "checked": "2026-10-15"
+    },
+    "site:dragon-bay-reef": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:dragons-lair": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
     "site:driveway-west-caicos": {
       "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
+    "site:drop-off-east-statia": {
+      "reason": "Commons holds no underwater frame of this Sint Eustatius Marine Park site; searches return only surface landscape or nothing",
       "checked": "2026-10-15"
     },
     "site:dry-rocks-east-cooper-island": {
@@ -4499,6 +4743,10 @@
     },
     "site:duppy-waters": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:dutchmans-reef-tobago": {
+      "reason": "Commons holds no underwater frame of this Tobago or Grenadines site; only surface, aerial or generic Caribbean views",
       "checked": "2026-10-15"
     },
     "site:eagle-ray-pass": {
@@ -4569,6 +4817,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:eillon": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:el-aguila-roatan": {
       "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
       "checked": "2026-10-15"
@@ -4605,12 +4857,20 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:ends-reef-tobago-cays": {
+      "reason": "Commons holds no underwater frame of this Tobago or Grenadines site; only surface, aerial or generic Caribbean views",
+      "checked": "2026-10-15"
+    },
     "site:escalones": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
     "site:esmeralda-canyons": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:fairyland-saint-lucia": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:fami-tugs": {
@@ -4633,6 +4893,10 @@
       "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
       "checked": "2026-10-15"
     },
+    "site:fish-bowl-sint-maarten": {
+      "reason": "Commons holds no underwater frame of this Sint Maarten site; searches return only unrelated bridges, tugs and ships",
+      "checked": "2026-10-15"
+    },
     "site:fish-den-roatan": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
@@ -4649,6 +4913,10 @@
       "reason": "Commons has no photograph identified as fisheries-reef-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
       "checked": "2026-10-15"
     },
+    "site:flamingo-bay": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:flamingo-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -4657,16 +4925,48 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:flying-reef-tobago": {
+      "reason": "Commons holds no underwater frame of this Tobago or Grenadines site; only surface, aerial or generic Caribbean views",
+      "checked": "2026-10-15"
+    },
+    "site:fork-reef": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:fort-pickens-jetty": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:fourchue-saint-barthelemy": {
+      "reason": "Commons holds no underwater frame of this Saint-Barthelemy site; only surface or aerial views of the islet and coast",
+      "checked": "2026-10-15"
+    },
+    "site:franjack-wreck": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it",
+      "checked": "2026-10-15"
     },
     "site:frank-sound-gardens": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:frenchmans-reef-sint-maarten": {
+      "reason": "Commons holds no underwater frame of this Sint Maarten site; searches return only unrelated bridges, tugs and ships",
+      "checked": "2026-10-15"
+    },
+    "site:friars-bay-reef": {
+      "reason": "Results were US Navy diver training photos, not this reef",
+      "checked": "2026-10-15"
+    },
+    "site:frigate-bay-reef": {
+      "reason": "Search returned only beach views, paintings of the 1782 battle and a crab; nothing underwater",
+      "checked": "2026-10-15"
+    },
     "site:front-porch-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:fuh-sheng-sint-maarten": {
+      "reason": "Commons holds no underwater frame of this Sint Maarten site; searches return only unrelated bridges, tugs and ships",
       "checked": "2026-10-15"
     },
     "site:g-spot-french-cay": {
@@ -4687,6 +4987,10 @@
     },
     "site:ghost-mountain-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:gibraltar-statia": {
+      "reason": "Commons holds no underwater frame of this Sint Eustatius Marine Park site; searches return only surface landscape or nothing",
       "checked": "2026-10-15"
     },
     "site:gibson-bight-roatan": {
@@ -4733,6 +5037,14 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:grand-caille": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
+    "site:grand-canyon-statia": {
+      "reason": "Commons holds no underwater frame of this Sint Eustatius Marine Park site; searches return only surface landscape or nothing",
+      "checked": "2026-10-15"
+    },
     "site:grass-cay-st-thomas": {
       "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
       "checked": "2026-10-15"
@@ -4749,8 +5061,16 @@
       "reason": "The only Commons photograph at the site is people posing at the surface with a camera rig.",
       "checked": "2026-10-14"
     },
+    "site:green-island-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
+      "checked": "2026-10-15"
+    },
     "site:green-outhouse-wall-roatan": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:green-point-reef": {
+      "reason": "Search returned only 1847 letters, unrelated to the site",
       "checked": "2026-10-15"
     },
     "site:greenhouse-reef-cayman-brac": {
@@ -4760,6 +5080,14 @@
     "site:grey-ghost-tug": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:gros-ilets-saint-barthelemy": {
+      "reason": "Commons holds no underwater frame of this Saint-Barthelemy site; only surface or aerial views of the islet and coast",
+      "checked": "2026-10-15"
+    },
+    "site:grotte-aux-couleurs": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it",
+      "checked": "2026-10-15"
     },
     "site:grouper-grotto": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -4784,6 +5112,10 @@
     "site:gulfstream-ledge": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:gustavia-wreck": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it",
+      "checked": "2026-10-15"
     },
     "site:guy-harvey-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -4817,6 +5149,14 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:hangover-statia": {
+      "reason": "Commons holds no underwater frame of this Sint Eustatius Marine Park site; searches return only surface landscape or nothing",
+      "checked": "2026-10-15"
+    },
+    "site:happy-valley": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:harbor-reef-aruba": {
       "reason": "Commons has no photo of this site; no search result mentions it",
       "checked": "2026-10-15"
@@ -4841,9 +5181,17 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:hema-1-wreck": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:hen-and-chickens": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:hen-and-chicks-sint-maarten": {
+      "reason": "Commons holds no underwater frame of this Sint Maarten site; searches return only unrelated bridges, tugs and ships",
+      "checked": "2026-10-15"
     },
     "site:hepps-pipeline": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -4851,6 +5199,10 @@
     },
     "site:high-rock-drop-off-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:high-wire": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:highway-to-heaven-west-caicos": {
@@ -4861,12 +5213,20 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:hms-proselyte-sint-maarten": {
+      "reason": "Commons holds no underwater frame of this Sint Maarten site; searches return only unrelated bridges, tugs and ships",
+      "checked": "2026-10-15"
+    },
     "site:hog-heaven-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
     "site:hol-chan-marine-reserve": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:hole-in-the-corner-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
       "checked": "2026-10-15"
     },
     "site:hole-in-the-wall-aruba": {
@@ -4889,6 +5249,14 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:horseshoe-reef-tobago-cays": {
+      "reason": "Commons holds no underwater frame of this Tobago or Grenadines site; only surface, aerial or generic Caribbean views",
+      "checked": "2026-10-15"
+    },
+    "site:hot-springs-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
+      "checked": "2026-10-15"
+    },
     "site:houseboat-duzaway-wreck": {
       "reason": "Commons candidates are 1947 hurricane-damage photos (2026-10-14).",
       "checked": "2026-10-14"
@@ -4896,6 +5264,10 @@
     "site:ichetucknee-blue-hole": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:ida-maria-wreck-anguilla": {
+      "reason": "Commons holds no underwater frame of this Anguilla site; only satellite or surface views, or nothing clearing the rules",
+      "checked": "2026-10-15"
     },
     "site:indian-shores-landing-ships": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -4923,6 +5295,10 @@
     },
     "site:ironshore-gardens": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:isabella-reef-sint-maarten": {
+      "reason": "Commons holds no underwater frame of this Sint Maarten site; searches return only unrelated bridges, tugs and ships",
       "checked": "2026-10-15"
     },
     "site:jack-mckenneys-canyons": {
@@ -4957,8 +5333,16 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:japanese-gardens-tobago": {
+      "reason": "Commons holds no underwater frame of this Tobago or Grenadines site; only surface, aerial or generic Caribbean views",
+      "checked": "2026-10-15"
+    },
     "site:jardin-del-eden-cenote": {
       "reason": "No Commons photo that recognisably shows this cenote cleared the rules; searches by name and alternatives found only the access path or unrelated frames.",
+      "checked": "2026-10-15"
+    },
+    "site:jardin-japonais": {
+      "reason": "Only a single generic feather-duster close-up surfaced; nothing showing this site",
       "checked": "2026-10-15"
     },
     "site:jardines-playa-del-carmen": {
@@ -5065,6 +5449,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:kahonee": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:kallis-reef-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -5077,8 +5465,16 @@
       "reason": "Commons has no photo of this site; no search result mentions it",
       "checked": "2026-10-15"
     },
+    "site:kariwak-reef-tobago": {
+      "reason": "Commons holds no underwater frame of this Tobago or Grenadines site; only surface, aerial or generic Caribbean views",
+      "checked": "2026-10-15"
+    },
     "site:kathleens-reef": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:kelleston-drain-tobago": {
+      "reason": "Commons holds no underwater frame of this Tobago or Grenadines site; only surface, aerial or generic Caribbean views",
       "checked": "2026-10-15"
     },
     "site:kellys-caverns": {
@@ -5087,6 +5483,10 @@
     },
     "site:kens-mountain-cayman-brac": {
       "reason": "Commons has no photograph identified as kens-mountain-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
+      "checked": "2026-10-15"
+    },
+    "site:keyhole-pinnacles": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:killer-pillar": {
@@ -5153,6 +5553,10 @@
       "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
       "checked": "2026-10-15"
     },
+    "site:la-roche": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:la-rocosa-san-andres": {
       "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
       "checked": "2026-10-15"
@@ -5160,6 +5564,14 @@
     "site:labonte-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:labym-dominica": {
+      "reason": "Only a topside view of Scotts Head bay surfaced; nothing underwater",
+      "checked": "2026-10-15"
+    },
+    "site:ladder-labyrinth-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
+      "checked": "2026-10-15"
     },
     "site:lady-carmen-tug": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -5209,6 +5621,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:lesleen-m-wreck": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:lighthouse-ledge": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -5233,6 +5649,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:little-bay-anguilla": {
+      "reason": "Commons holds no underwater frame of this Anguilla site; only satellite or surface views, or nothing clearing the rules",
+      "checked": "2026-10-15"
+    },
     "site:little-bight-utila": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
@@ -5243,6 +5663,14 @@
     },
     "site:little-house-on-the-prairie": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:little-sandy-lane": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
+    "site:lobster-reef": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:lodge-anchor-grand-cayman": {
@@ -5256,6 +5684,10 @@
     "site:loggerhead-reef-jupiter": {
       "reason": "Candidates on Commons show the Loggerhead Marinelife Center, not the reef (2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:london-bridge-tobago": {
+      "reason": "Commons holds no underwater frame of this Tobago or Grenadines site; only surface, aerial or generic Caribbean views",
+      "checked": "2026-10-15"
     },
     "site:lone-star-ledges-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -5289,6 +5721,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:lucys-barge-sint-maarten": {
+      "reason": "Commons holds no underwater frame of this Sint Maarten site; searches return only unrelated bridges, tugs and ships",
+      "checked": "2026-10-15"
+    },
     "site:lulu-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -5319,6 +5755,10 @@
     },
     "site:mama-vina-wreck-playa-del-carmen": {
       "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
+      "checked": "2026-10-15"
+    },
+    "site:man-o-war-shoals-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
       "checked": "2026-10-15"
     },
     "site:manchones-reef-isla-mujeres": {
@@ -5369,6 +5809,14 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:maycocks-bay": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
+    "site:mayreau-gardens": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:mccurleys-wall": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -5407,6 +5855,10 @@
     },
     "site:middle-chute-cayman-brac": {
       "reason": "Commons has no photograph identified as middle-chute-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
+      "checked": "2026-10-15"
+    },
+    "site:mikes-maze-sint-maarten": {
+      "reason": "Commons holds no underwater frame of this Sint Maarten site; searches return only unrelated bridges, tugs and ships",
       "checked": "2026-10-15"
     },
     "site:mikes-mountain-little-cayman": {
@@ -5465,6 +5917,10 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:mopion-reef": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:moray-alley-bimini": {
       "reason": "No Commons photo of Moray Alley off Bimini.",
       "checked": "2026-10-15"
@@ -5477,12 +5933,28 @@
       "reason": "Hits were a navy ship at the pier, a sea star and a panorama; none shows the pier as a dive site.",
       "checked": "2026-10-15"
     },
+    "site:mount-charlie": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
+    "site:mount-irvine-extension-tobago": {
+      "reason": "Commons holds no underwater frame of this Tobago or Grenadines site; only surface, aerial or generic Caribbean views",
+      "checked": "2026-10-15"
+    },
+    "site:mount-irvine-wall-tobago": {
+      "reason": "Commons holds no underwater frame of this Tobago or Grenadines site; only surface, aerial or generic Caribbean views",
+      "checked": "2026-10-15"
+    },
     "site:mountain-point-virgin-gorda": {
       "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
       "checked": "2026-10-15"
     },
     "site:mr-bud-wreck-roatan": {
       "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
+      "checked": "2026-10-15"
+    },
+    "site:mt-michel-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
       "checked": "2026-10-15"
     },
     "site:musa-underwater-museum-cancun": {
@@ -5521,6 +5993,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:mv-maverick-tobago": {
+      "reason": "Commons holds no underwater frame of this Tobago or Grenadines site; only surface, aerial or generic Caribbean views",
+      "checked": "2026-10-15"
+    },
     "site:mv-miss-joann": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -5532,6 +6008,10 @@
     "site:mv-skippin-sue": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:nahoon-wreck": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it; the Saint-Pierre wrecks that surface are different wrecks",
+      "checked": "2026-10-15"
     },
     "site:narwal-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -5601,6 +6081,10 @@
       "reason": "Commons has no photo of this site; the only hits are close-ups of fish from an iNaturalist import",
       "checked": "2026-10-15"
     },
+    "site:northern-exposure": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:northern-lights-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -5621,6 +6105,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:nursing-station-statia": {
+      "reason": "Commons holds no underwater frame of this Sint Eustatius Marine Park site; searches return only surface landscape or nothing",
+      "checked": "2026-10-15"
+    },
     "site:oakland-ridges": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -5637,6 +6125,10 @@
       "reason": "Commons candidates are unrelated military photos (2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:old-fort": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:old-isaacs": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -5649,9 +6141,17 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:one-step-beyond-sint-maarten": {
+      "reason": "Commons holds no underwater frame of this Sint Maarten site; searches return only unrelated bridges, tugs and ships",
+      "checked": "2026-10-15"
+    },
     "site:oops-barge": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:oosterdiep-wreck-anguilla": {
+      "reason": "Commons holds no underwater frame of this Anguilla site; only satellite or surface views, or nothing clearing the rules",
+      "checked": "2026-10-15"
     },
     "site:ophelia-brian-wreck": {
       "reason": "The Commons candidate shows another vessel (2026-10-14).",
@@ -5669,6 +6169,14 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:ottos-limits-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
+      "checked": "2026-10-15"
+    },
+    "site:outer-limits-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
+      "checked": "2026-10-15"
+    },
     "site:overheat-reef-roatan": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
@@ -5679,6 +6187,10 @@
     },
     "site:packet-rock-st-thomas": {
       "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
+      "checked": "2026-10-15"
+    },
+    "site:pain-de-sucre-saint-barthelemy": {
+      "reason": "Commons holds no underwater frame of this Saint-Barthelemy site; only surface or aerial views of the islet and coast",
       "checked": "2026-10-15"
     },
     "site:painted-walls-dead-chest": {
@@ -5699,6 +6211,10 @@
     },
     "site:palancar-horseshoe-cozumel": {
       "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:pamir": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:paradise-canyons-ambergris": {
@@ -5789,17 +6305,45 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:petit-tabac-reef": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
+    "site:petite-sirene": {
+      "reason": "Only Saint-Pierre wreck frames and a boat ramp surfaced, which are different sites; none shows the Petite Sirene plateau and wall",
+      "checked": "2026-10-15"
+    },
+    "site:petites-jorasses": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it",
+      "checked": "2026-10-15"
+    },
+    "site:pieces-of-eight": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:piedra-bonita-cabo-cabron": {
       "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:pigeon-island-dive": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:pillar-coral-roatan": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:pillars-of-hercules": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it",
+      "checked": "2026-10-15"
+    },
     "site:pimelious-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:pinese-reef-petit-st-vincent": {
+      "reason": "Commons holds no underwater frame of this Tobago or Grenadines site; only surface, aerial or generic Caribbean views",
+      "checked": "2026-10-15"
     },
     "site:pink-beach-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
@@ -5811,6 +6355,14 @@
     },
     "site:pirates-point-reef-little-cayman": {
       "reason": "Commons has no photograph identified as pirates-point-reef-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
+      "checked": "2026-10-15"
+    },
+    "site:piscine-de-salomon": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it; search returned only gardens and coral-disease close-ups from elsewhere",
+      "checked": "2026-10-15"
+    },
+    "site:piton-wall": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:playa-hulu-curacao": {
@@ -5833,9 +6385,53 @@
       "reason": "Commons has no photo of this site; no search result mentions it",
       "checked": "2026-10-15"
     },
+    "site:point-guignard": {
+      "reason": "Results were US Navy training photos, a sperm whale and bird plates; none shows Point Guignard",
+      "checked": "2026-10-15"
+    },
+    "site:pointe-barracuda-pigeon": {
+      "reason": "The only candidate is a topside view of the point from shore; no underwater frame of the site",
+      "checked": "2026-10-15"
+    },
+    "site:pointe-burgos": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it",
+      "checked": "2026-10-15"
+    },
+    "site:pointe-carangue": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it",
+      "checked": "2026-10-15"
+    },
+    "site:pointe-de-la-baleine": {
+      "reason": "Only Saint-Pierre wreck photographs and 1902 archive prints turned up, which are different sites; none shows the Pointe de la Baleine reef",
+      "checked": "2026-10-15"
+    },
+    "site:pointe-lezarde": {
+      "reason": "Search returned shell specimen plates and shore views of the point; nothing underwater",
+      "checked": "2026-10-15"
+    },
+    "site:pointe-lezarde-guadeloupe": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it",
+      "checked": "2026-10-15"
+    },
+    "site:pointe-malendure": {
+      "reason": "Frames found are generic Antilles fauna close-ups (urchin, anemones, spirorbis, lionfish), not recognisably this point",
+      "checked": "2026-10-15"
+    },
     "site:pompano-drop-off": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:porites-point-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
+      "checked": "2026-10-15"
+    },
+    "site:porpoise-sint-maarten": {
+      "reason": "Commons holds no underwater frame of this Sint Maarten site; searches return only unrelated bridges, tugs and ships",
+      "checked": "2026-10-15"
+    },
+    "site:prickly-pear-cays-anguilla": {
+      "reason": "Commons holds no underwater frame of this Anguilla site; only satellite or surface views, or nothing clearing the rules",
+      "checked": "2026-10-15"
     },
     "site:prince-albert-wreck-roatan": {
       "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
@@ -5885,9 +6481,21 @@
       "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
       "checked": "2026-10-15"
     },
+    "site:purple-rain": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
+    "site:puruni-wreck": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:qualman-barge-deerfield": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:quarter-wreck": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
     },
     "site:radar-reef-cayman-brac": {
       "reason": "Commons has no photograph identified as radar-reef-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
@@ -5921,6 +6529,10 @@
       "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
       "checked": "2026-10-15"
     },
+    "site:rays-n-anchors-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
+      "checked": "2026-10-15"
+    },
     "site:rebel-wreck": {
       "reason": "Commons candidates show streets, cars and other ships (2026-10-14).",
       "checked": "2026-10-14"
@@ -5949,6 +6561,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:remorqueur-tintamarre-saint-martin": {
+      "reason": "Commons holds no underwater frame of this Saint-Martin site; only surface views of the rock or unrelated harbour photos",
+      "checked": "2026-10-15"
+    },
     "site:renaissance-airplanes-aruba": {
       "reason": "Commons has no photo of the airplane wrecks; the nearest are resort-island beach and flamingo shots",
       "checked": "2026-10-15"
@@ -5963,6 +6579,10 @@
     },
     "site:river-of-sands-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:river-taw": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it",
       "checked": "2026-10-15"
     },
     "site:rjs-ledge": {
@@ -5980,6 +6600,18 @@
     "site:robert-edmister-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:rocher-creole-saint-martin": {
+      "reason": "Commons holds no underwater frame of this Saint-Martin site; only surface views of the rock or unrelated harbour photos",
+      "checked": "2026-10-15"
+    },
+    "site:rocher-de-la-perle": {
+      "reason": "Search returned a 1808 naval print, a beach and eel close-ups from elsewhere; nothing showing this site underwater",
+      "checked": "2026-10-15"
+    },
+    "site:rocher-du-diamant": {
+      "reason": "Commons has only surface views of the rock from shore or sea; no underwater frame of its walls and gorgonians",
+      "checked": "2026-10-15"
     },
     "site:rock-and-roll-french-cay": {
       "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
@@ -6021,6 +6653,10 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:round-bar-reef": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:round-rock-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -6047,6 +6683,10 @@
     },
     "site:saint-george-wreck-bayahibe": {
       "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
+    },
+    "site:saline-point": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:salt-city-bonaire": {
@@ -6097,6 +6737,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:sandy-deep-anguilla": {
+      "reason": "Commons holds no underwater frame of this Anguilla site; only satellite or surface views, or nothing clearing the rules",
+      "checked": "2026-10-15"
+    },
     "site:sandys-plateau-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -6129,6 +6773,14 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:scotts-head-drop-off": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it",
+      "checked": "2026-10-15"
+    },
+    "site:scotts-head-pinnacle": {
+      "reason": "Every Commons frame is topside (headland, causeway, village); none is underwater at the pinnacle",
+      "checked": "2026-10-15"
+    },
     "site:scuba-bowl-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -6149,8 +6801,16 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:sec-pate": {
+      "reason": "Only a Malendure beach view surfaced; Sec Pate is an offshore islet-top and nothing shows it underwater",
+      "checked": "2026-10-15"
+    },
     "site:seldom-reef-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:shakem-wreck": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:shamrock-wreck": {
@@ -6159,6 +6819,10 @@
     },
     "site:shangri-la-playa-del-carmen": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-15"
+    },
+    "site:shark-bank": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:shark-dive-cara-a-cara-roatan": {
@@ -6173,8 +6837,16 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:shark-reef-grenada": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:shark-reef-stella-maris": {
       "reason": "No Commons photo of Shark Reef at Stella Maris; hits were 1989 Long Island land scenes.",
+      "checked": "2026-10-15"
+    },
+    "site:shark-shoals-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
       "checked": "2026-10-15"
     },
     "site:sharons-serenity-bonaire": {
@@ -6188,6 +6860,10 @@
     "site:sheridan-tug": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:sk2-wreck": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
     },
     "site:skalahein-aruba": {
       "reason": "Commons has no photo of this site; no search result mentions it",
@@ -6207,6 +6883,10 @@
     },
     "site:smokeys-kathys-paradise-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:smugglers-cove-reef": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:snake-bay-curacao": {
@@ -6297,6 +6977,14 @@
       "reason": "Commons has no photo of this site; no search result mentions it",
       "checked": "2026-10-15"
     },
+    "site:stavronikita": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
+    "site:stenapa-reef-statia": {
+      "reason": "Commons holds no underwater frame of this Sint Eustatius Marine Park site; searches return only surface landscape or nothing",
+      "checked": "2026-10-15"
+    },
     "site:stingray-point-utila": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
@@ -6305,12 +6993,20 @@
       "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
       "checked": "2026-10-15"
     },
+    "site:sunken-rock-antigua": {
+      "reason": "Results were US Navy diver photos and Canary Islands beach shots, not Sunken Rock",
+      "checked": "2026-10-15"
+    },
     "site:sunset-house-reef": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
     "site:superior-producer-curacao": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:supermans-flight": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:suzannes-ledge": {
@@ -6345,6 +7041,10 @@
       "reason": "No Commons photo that recognisably shows this cenote cleared the rules; searches by name and alternatives found only the access path or unrelated frames.",
       "checked": "2026-10-15"
     },
+    "site:talata-wreck": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it",
+      "checked": "2026-10-15"
+    },
     "site:tarpon-reef-cayman-brac": {
       "reason": "Commons has no photograph identified as tarpon-reef-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
       "checked": "2026-10-15"
@@ -6357,6 +7057,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:teigland-cable-reef-sint-maarten": {
+      "reason": "Commons holds no underwater frame of this Sint Maarten site; searches return only unrelated bridges, tugs and ships",
+      "checked": "2026-10-15"
+    },
     "site:telephone-pole-san-salvador": {
       "reason": "No Commons photo of the Telephone Pole wall; hits were generic San Salvador species close-ups, not the site.",
       "checked": "2026-10-15"
@@ -6368,6 +7072,18 @@
     "site:tenneco-towers": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:tent-reef-deep-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
+      "checked": "2026-10-15"
+    },
+    "site:tent-reef-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
+      "checked": "2026-10-15"
+    },
+    "site:tent-reef-wall-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
+      "checked": "2026-10-15"
     },
     "site:tetes-place-providencia": {
       "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
@@ -6409,6 +7125,10 @@
       "reason": "Commons has no photo of this site; a name search returns only unrelated books, art and places",
       "checked": "2026-10-15"
     },
+    "site:the-bridge-sint-maarten": {
+      "reason": "Commons holds no underwater frame of this Sint Maarten site; searches return only unrelated bridges, tugs and ships",
+      "checked": "2026-10-15"
+    },
     "site:the-cave-providencia": {
       "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
       "checked": "2026-10-15"
@@ -6419,6 +7139,10 @@
     },
     "site:the-chimney-great-dog": {
       "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
+      "checked": "2026-10-15"
+    },
+    "site:the-cliffs-statia": {
+      "reason": "Commons holds no underwater frame of this Sint Eustatius Marine Park site; searches return only surface landscape or nothing",
       "checked": "2026-10-15"
     },
     "site:the-crack-providenciales": {
@@ -6441,8 +7165,16 @@
       "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
       "checked": "2026-10-15"
     },
+    "site:the-gregory-sint-maarten": {
+      "reason": "Commons holds no underwater frame of this Sint Maarten site; searches return only unrelated bridges, tugs and ships",
+      "checked": "2026-10-15"
+    },
     "site:the-gully-west-caicos": {
       "reason": "Commons holds no vetted frame recognisably showing this named Turks and Caicos dive site; no candidate cleared the rules or showed this specific place",
+      "checked": "2026-10-15"
+    },
+    "site:the-humps-statia": {
+      "reason": "Commons holds no underwater frame of this Sint Eustatius Marine Park site; searches return only surface landscape or nothing",
       "checked": "2026-10-15"
     },
     "site:the-invisibles-virgin-gorda": {
@@ -6469,6 +7201,10 @@
       "reason": "Commons has no photograph identified as the-meadows-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
       "checked": "2026-10-15"
     },
+    "site:the-muff": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:the-pillars-miami": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -6485,6 +7221,14 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:the-rock-st-kitts": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it",
+      "checked": "2026-10-15"
+    },
+    "site:the-sisters-tobago": {
+      "reason": "Commons holds no underwater frame of this Tobago or Grenadines site; only surface, aerial or generic Caribbean views",
+      "checked": "2026-10-15"
+    },
     "site:the-strip-bimini": {
       "reason": "No Commons photo of the Strip reef off Bimini.",
       "checked": "2026-10-15"
@@ -6499,6 +7243,10 @@
     },
     "site:theos-wreck": {
       "reason": "Commons has only a photograph of the ship afloat before she was sunk, not the wreck as a diver meets it.",
+      "checked": "2026-10-15"
+    },
+    "site:third-encounter-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
       "checked": "2026-10-15"
     },
     "site:thomas-heyward-liberty-ship": {
@@ -6541,8 +7289,16 @@
       "reason": "Commons has no photo of this site; no search result mentions it",
       "checked": "2026-10-15"
     },
+    "site:toc-vers-saint-barthelemy": {
+      "reason": "Commons holds no underwater frame of this Saint-Barthelemy site; only surface or aerial views of the islet and coast",
+      "checked": "2026-10-15"
+    },
     "site:tolo-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:tombant-de-larbre-mort": {
+      "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it",
       "checked": "2026-10-15"
     },
     "site:tombstone-cayman-brac": {
@@ -6569,6 +7325,10 @@
       "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
       "checked": "2026-10-15"
     },
+    "site:torrens-point-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
+      "checked": "2026-10-15"
+    },
     "site:tortuga-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -6589,8 +7349,20 @@
       "reason": "Commons has no photograph identified as treehouse-reef-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
       "checked": "2026-10-15"
     },
+    "site:trident-wreck": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:trinity-caves": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:triple-wreck-statia": {
+      "reason": "Commons holds no underwater frame of this Sint Eustatius Marine Park site; searches return only surface landscape or nothing",
+      "checked": "2026-10-15"
+    },
+    "site:trou-diable-saint-lucia": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:tug-born-again": {
@@ -6604,6 +7376,10 @@
     "site:tug-orange": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:tugboat-simpson-bay-sint-maarten": {
+      "reason": "Commons holds no underwater frame of this Sint Maarten site; searches return only unrelated bridges, tugs and ships",
+      "checked": "2026-10-15"
     },
     "site:tugboat-zuess": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -6623,6 +7399,18 @@
     },
     "site:turtle-reef-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:turtle-reef-saint-lucia": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
+    "site:twilight-zone-saba": {
+      "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
+      "checked": "2026-10-15"
+    },
+    "site:tyrrel-bay-wreck-grenada": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:ultra-freeze-wreck": {
@@ -6705,6 +7493,10 @@
       "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
       "checked": "2026-10-15"
     },
+    "site:veronica-l-wreck": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
+    },
     "site:vertigo-guanaja": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
@@ -6712,6 +7504,10 @@
     "site:veterans-reef-circle-of-heroes": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:vicky-b-wreck": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
     },
     "site:vickys-reef-san-salvador": {
       "reason": "No Commons photo of Vicky's Reef San Salvador.",
@@ -6723,6 +7519,10 @@
     },
     "site:villa-blanca-wall-cozumel": {
       "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
+      "checked": "2026-10-15"
+    },
+    "site:virgins-cove": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
     "site:vista-blue-bonaire": {
@@ -6772,6 +7572,10 @@
     "site:wet-and-wild-reef": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:whibble-reef": {
+      "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
+      "checked": "2026-10-15"
     },
     "site:white-coast-tug": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",

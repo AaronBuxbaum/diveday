@@ -60,7 +60,10 @@ test.describe("the activity log's gate", () => {
     page,
   }) => {
     await page.goto("/shop/blue-mantis/settings/activity");
-    await expect(page).toHaveURL(/notice=activity-not-authorized/);
+    // Today strips `?notice=` on hydration (FlashParams), so the one-shot
+    // param is not a stable thing to assert on: the landing path and the
+    // rendered banner are.
+    await expect(page).toHaveURL(/\/shop\/blue-mantis(\?|$)/);
     await expect(
       page.getByText("The activity log is limited to owners and managers."),
     ).toBeVisible();

@@ -1,0 +1,301 @@
+{
+  "area": "sint-maarten",
+  "method": "Dutch Sint Maarten: the Man of War Shoal Marine Park south of Philipsburg and the dive moorings the Nature Foundation manages along the south and southwest coast, plus the east-side sites toward Anguilla and St Barth; French-side sites are counted in saint-martin. Lists: the Nature Foundation's dive-site map on its marine park page (official; 27 named sites, no positions), the French Reserve Naturelle de Saint-Martin's dive-site layer plongee.kml (a different authority's list, with positions, which also maps Dutch sites; counted as one), The Scuba Shop SXM (current page and its old site, one operator), SXM Divers' dive-sites page, the Sint Maarten Tourism Bureau's dive article (Carib Cargo, Teigland, Fish Bowl, Mike's Maze, Proselyte, One Step Beyond, Molly Beday, Hen and Chicks), and Blue Odyssey Diving's night-dive page (a French-side operator naming the Dutch wrecks). Ocean Explorers and Dive Sint Maarten (formerly Octopus Diving) publish no site list; Dive Safaris and Aqua Mania have no readable site page. A site is counted when named on at least two of these lists; Moonscape is counted on the two official lists. Positions are from the French reserve layer where its name matches (Le Coréen read as Fuh Sheng, Le Roro as Carib Cargo and Le Remorqueur at Simpson Bay as the Tugboat, by position against the Nature Foundation map). Names on one list only, including unmatched names in the French layer, are excluded. Fuh Sheng (about 36 m) and Isabella Reef (about 30 m) are advanced but inside recreational limits. Counted 2026-10-14.",
+  "sources": [
+    "https://naturefoundationsxm.org/marine-park/",
+    "http://reservenaturelle-saint-martin.com/maps/plongee.kml",
+    "https://thescubashopsxm.com/dive-sites-of-st-maarten/",
+    "http://www.thescubashop.net/OldWebsite/thesites.htm",
+    "https://www.sxmdivers.com/sxm-dive-sites",
+    "https://visitstmaarten.com/dive-discoveries",
+    "https://blue-odyssey-diving.com/plongee-de-nuit"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "The Gregory (Long Bay Reef)",
+      "template": "the-gregory-sint-maarten",
+      "position": [18.04155, -63.14102],
+      "listedBy": [
+        "https://naturefoundationsxm.org/marine-park/",
+        "http://reservenaturelle-saint-martin.com/maps/plongee.kml",
+        "https://thescubashopsxm.com/dive-sites-of-st-maarten/",
+        "https://www.sxmdivers.com/sxm-dive-sites",
+        "https://blue-odyssey-diving.com/plongee-de-nuit"
+      ]
+    },
+    {
+      "name": "Fuh Sheng",
+      "template": "fuh-sheng-sint-maarten",
+      "position": [18.03937, -63.1449],
+      "listedBy": [
+        "https://naturefoundationsxm.org/marine-park/",
+        "http://reservenaturelle-saint-martin.com/maps/plongee.kml",
+        "https://thescubashopsxm.com/dive-sites-of-st-maarten/"
+      ]
+    },
+    {
+      "name": "Menares",
+      "template": null,
+      "position": [18.03787, -63.1465],
+      "listedBy": ["http://reservenaturelle-saint-martin.com/maps/plongee.kml"],
+      "excluded": "on one list only (the French nature reserve's dive layer, no depth)"
+    },
+    {
+      "name": "Porpoise",
+      "template": "porpoise-sint-maarten",
+      "position": [18.02888, -63.12788],
+      "listedBy": [
+        "https://naturefoundationsxm.org/marine-park/",
+        "http://reservenaturelle-saint-martin.com/maps/plongee.kml",
+        "https://thescubashopsxm.com/dive-sites-of-st-maarten/"
+      ]
+    },
+    {
+      "name": "Tugboat (Simpson Bay)",
+      "template": "tugboat-simpson-bay-sint-maarten",
+      "position": [18.03633, -63.1048],
+      "listedBy": [
+        "https://naturefoundationsxm.org/marine-park/",
+        "http://reservenaturelle-saint-martin.com/maps/plongee.kml",
+        "https://thescubashopsxm.com/dive-sites-of-st-maarten/"
+      ]
+    },
+    {
+      "name": "The Bridge (Le Pont)",
+      "template": "the-bridge-sint-maarten",
+      "position": [18.02103, -63.1127],
+      "listedBy": [
+        "https://naturefoundationsxm.org/marine-park/",
+        "http://reservenaturelle-saint-martin.com/maps/plongee.kml",
+        "https://thescubashopsxm.com/dive-sites-of-st-maarten/",
+        "https://www.sxmdivers.com/sxm-dive-sites",
+        "https://blue-odyssey-diving.com/plongee-de-nuit"
+      ]
+    },
+    {
+      "name": "Isabella Reef",
+      "template": "isabella-reef-sint-maarten",
+      "position": [18.01817, -63.1181],
+      "listedBy": [
+        "https://naturefoundationsxm.org/marine-park/",
+        "http://reservenaturelle-saint-martin.com/maps/plongee.kml",
+        "https://thescubashopsxm.com/dive-sites-of-st-maarten/"
+      ]
+    },
+    {
+      "name": "Charlie Shoal",
+      "template": null,
+      "listedBy": ["https://naturefoundationsxm.org/marine-park/"],
+      "excluded": "on one list only (Nature Foundation map)"
+    },
+    {
+      "name": "Frenchman's Reef",
+      "template": "frenchmans-reef-sint-maarten",
+      "position": [18.0168, -63.09412],
+      "listedBy": [
+        "https://naturefoundationsxm.org/marine-park/",
+        "http://reservenaturelle-saint-martin.com/maps/plongee.kml",
+        "https://thescubashopsxm.com/dive-sites-of-st-maarten/"
+      ]
+    },
+    {
+      "name": "Moonscape",
+      "template": null,
+      "position": [18.01617, -63.10373],
+      "listedBy": [
+        "https://naturefoundationsxm.org/marine-park/",
+        "http://reservenaturelle-saint-martin.com/maps/plongee.kml"
+      ]
+    },
+    {
+      "name": "Whity",
+      "template": null,
+      "position": [18.01708, -63.10302],
+      "listedBy": ["http://reservenaturelle-saint-martin.com/maps/plongee.kml"],
+      "excluded": "on one list only (the French nature reserve's dive layer)"
+    },
+    {
+      "name": "Emma's Wall",
+      "template": null,
+      "listedBy": ["https://thescubashopsxm.com/dive-sites-of-st-maarten/"],
+      "excluded": "on one list only (The Scuba Shop SXM, old site)"
+    },
+    {
+      "name": "Cow Boy Reef",
+      "template": null,
+      "listedBy": ["https://naturefoundationsxm.org/marine-park/"],
+      "excluded": "on one list only (Nature Foundation map)"
+    },
+    {
+      "name": "Fort Amsterdam",
+      "template": null,
+      "listedBy": ["https://naturefoundationsxm.org/marine-park/"],
+      "excluded": "on one list only (Nature Foundation map)"
+    },
+    {
+      "name": "Little Bay",
+      "template": null,
+      "listedBy": ["https://thescubashopsxm.com/dive-sites-of-st-maarten/"],
+      "excluded": "on one list only (The Scuba Shop SXM, a shallow training site)"
+    },
+    {
+      "name": "Carib Cargo (Carib Ghost)",
+      "template": "carib-cargo-sint-maarten",
+      "position": [17.99362, -63.06973],
+      "listedBy": [
+        "https://naturefoundationsxm.org/marine-park/",
+        "http://reservenaturelle-saint-martin.com/maps/plongee.kml",
+        "https://thescubashopsxm.com/dive-sites-of-st-maarten/",
+        "https://www.sxmdivers.com/sxm-dive-sites",
+        "https://visitstmaarten.com/dive-discoveries",
+        "https://blue-odyssey-diving.com/plongee-de-nuit"
+      ]
+    },
+    {
+      "name": "Lucy's Barge",
+      "template": "lucys-barge-sint-maarten",
+      "listedBy": [
+        "https://naturefoundationsxm.org/marine-park/",
+        "https://thescubashopsxm.com/dive-sites-of-st-maarten/"
+      ]
+    },
+    {
+      "name": "Proselyte Reef (HMS Proselyte)",
+      "template": "hms-proselyte-sint-maarten",
+      "position": [17.9895, -63.05825],
+      "listedBy": [
+        "https://naturefoundationsxm.org/marine-park/",
+        "http://reservenaturelle-saint-martin.com/maps/plongee.kml",
+        "https://thescubashopsxm.com/dive-sites-of-st-maarten/",
+        "https://www.sxmdivers.com/sxm-dive-sites",
+        "https://visitstmaarten.com/dive-discoveries"
+      ]
+    },
+    {
+      "name": "Teigland / Cable Reef",
+      "template": "teigland-cable-reef-sint-maarten",
+      "position": [17.98767, -63.05893],
+      "listedBy": [
+        "https://naturefoundationsxm.org/marine-park/",
+        "http://reservenaturelle-saint-martin.com/maps/plongee.kml",
+        "https://thescubashopsxm.com/dive-sites-of-st-maarten/",
+        "https://www.sxmdivers.com/sxm-dive-sites",
+        "https://visitstmaarten.com/dive-discoveries"
+      ]
+    },
+    {
+      "name": "Mike's Maze",
+      "template": "mikes-maze-sint-maarten",
+      "listedBy": [
+        "https://naturefoundationsxm.org/marine-park/",
+        "https://thescubashopsxm.com/dive-sites-of-st-maarten/",
+        "https://www.sxmdivers.com/sxm-dive-sites",
+        "https://visitstmaarten.com/dive-discoveries"
+      ]
+    },
+    {
+      "name": "Coralita",
+      "template": "coralita-sint-maarten",
+      "listedBy": [
+        "https://naturefoundationsxm.org/marine-park/",
+        "https://thescubashopsxm.com/dive-sites-of-st-maarten/"
+      ]
+    },
+    {
+      "name": "Shark Hotel",
+      "template": null,
+      "listedBy": ["https://naturefoundationsxm.org/marine-park/"],
+      "excluded": "on one list only (Nature Foundation map)"
+    },
+    {
+      "name": "Fish Bowl",
+      "template": "fish-bowl-sint-maarten",
+      "listedBy": [
+        "https://naturefoundationsxm.org/marine-park/",
+        "https://thescubashopsxm.com/dive-sites-of-st-maarten/",
+        "https://www.sxmdivers.com/sxm-dive-sites",
+        "https://visitstmaarten.com/dive-discoveries"
+      ]
+    },
+    {
+      "name": "Les Grottes",
+      "template": null,
+      "position": [17.98872, -63.05862],
+      "listedBy": ["http://reservenaturelle-saint-martin.com/maps/plongee.kml"],
+      "excluded": "on one list only (the French nature reserve's dive layer)"
+    },
+    {
+      "name": "Le Cirque",
+      "template": null,
+      "position": [17.99198, -63.05625],
+      "listedBy": ["http://reservenaturelle-saint-martin.com/maps/plongee.kml"],
+      "excluded": "on one list only (the French nature reserve's dive layer)"
+    },
+    {
+      "name": "Arche",
+      "template": null,
+      "position": [17.9877, -63.05162],
+      "listedBy": ["http://reservenaturelle-saint-martin.com/maps/plongee.kml"],
+      "excluded": "on one list only (the French nature reserve's dive layer)"
+    },
+    {
+      "name": "Requin",
+      "template": null,
+      "position": [17.98867, -63.05348],
+      "listedBy": ["http://reservenaturelle-saint-martin.com/maps/plongee.kml"],
+      "excluded": "on one list only (the French nature reserve's dive layer)"
+    },
+    {
+      "name": "Fish Fest",
+      "template": null,
+      "listedBy": ["https://www.sxmdivers.com/sxm-dive-sites"],
+      "excluded": "on one list only (SXM Divers, which says no other company dives it)"
+    },
+    {
+      "name": "Pelican Rock",
+      "template": null,
+      "listedBy": ["https://naturefoundationsxm.org/marine-park/"],
+      "excluded": "on one list only (Nature Foundation map)"
+    },
+    {
+      "name": "Cow and Calf",
+      "template": null,
+      "listedBy": ["https://naturefoundationsxm.org/marine-park/"],
+      "excluded": "on one list only (Nature Foundation map)"
+    },
+    {
+      "name": "Molly Beday",
+      "template": null,
+      "listedBy": [
+        "https://naturefoundationsxm.org/marine-park/",
+        "https://thescubashopsxm.com/dive-sites-of-st-maarten/",
+        "https://visitstmaarten.com/dive-discoveries"
+      ]
+    },
+    {
+      "name": "Hen and Chicks / Moonhole",
+      "template": "hen-and-chicks-sint-maarten",
+      "position": [18.01078, -63.00755],
+      "listedBy": [
+        "https://naturefoundationsxm.org/marine-park/",
+        "http://reservenaturelle-saint-martin.com/maps/plongee.kml",
+        "https://thescubashopsxm.com/dive-sites-of-st-maarten/",
+        "https://www.sxmdivers.com/sxm-dive-sites",
+        "https://visitstmaarten.com/dive-discoveries"
+      ]
+    },
+    {
+      "name": "One Step Beyond",
+      "template": "one-step-beyond-sint-maarten",
+      "position": [17.98852, -62.99932],
+      "listedBy": [
+        "https://naturefoundationsxm.org/marine-park/",
+        "http://reservenaturelle-saint-martin.com/maps/plongee.kml",
+        "https://thescubashopsxm.com/dive-sites-of-st-maarten/",
+        "https://visitstmaarten.com/dive-discoveries"
+      ]
+    }
+  ]
+}

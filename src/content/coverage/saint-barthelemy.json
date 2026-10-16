@@ -1,0 +1,147 @@
+{
+  "area": "saint-barthelemy",
+  "method": "Saint-Barthélemy and its islets (Fourchue, Colombier, Toc Vers, Frégate, Pelée, Boulanger, Coco, Grenadins) plus Groupers, the reef halfway to Saint-Martin. There is no official site list: the Agence Territoriale de l'Environnement's 2023 reserve brochure says 23 dive sites and shows five zones but names no sites, and its Sur l'eau page only names Les Petits Saints as an area where scuba is allowed, so it counts for that site alone. The operator lists are Serial Divers' sites page and Ouanalao Dive's nos-spots page (two independent operators; both group sites by island or rock, so a named area is one row), with one more list for Groupers: the Saint-Martin nature reserve's dive layer (Petit Grouper, with position) and The Scuba Shop SXM (Little Groupers). Plongée Caraibes' domain is gone (last archived 2017) and no West Indies Dive, Big Blue or other operator site could be found or read. A site is counted when it is on at least two lists. Single-operator names (Boulanger, Coco, Grenadins, Cayes d'Or et Est, the Kayali and Non Stop wrecks, L'Âne Rouge) are excluded; the Cayes are also described as deep. Counted 2026-10-14.",
+  "sources": [
+    "https://www.serialdivers.com/fr/plongee/sites-plongee/",
+    "https://ouanalaodive.com/nos-spots/",
+    "https://www.agencedelenvironnement.fr/fr/page/sur-l-eau",
+    "https://www.agencedelenvironnement.fr/upload/Depliant-RN-2023-FR-US-68409571444b2.pdf",
+    "http://reservenaturelle-saint-martin.com/maps/plongee.kml",
+    "https://thescubashopsxm.com/dive-sites-of-st-maarten/"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Pain de Sucre",
+      "template": "pain-de-sucre-saint-barthelemy",
+      "listedBy": [
+        "https://www.serialdivers.com/fr/plongee/sites-plongee/",
+        "https://ouanalaodive.com/nos-spots/"
+      ]
+    },
+    {
+      "name": "Gros Îlets (Aquarium)",
+      "template": "gros-ilets-saint-barthelemy",
+      "listedBy": [
+        "https://www.serialdivers.com/fr/plongee/sites-plongee/",
+        "https://ouanalaodive.com/nos-spots/"
+      ]
+    },
+    {
+      "name": "Les Petits Saints",
+      "template": null,
+      "listedBy": [
+        "https://www.agencedelenvironnement.fr/fr/page/sur-l-eau",
+        "https://www.serialdivers.com/fr/plongee/sites-plongee/"
+      ]
+    },
+    {
+      "name": "Épave du Non Stop et du Dakar",
+      "template": null,
+      "listedBy": ["https://ouanalaodive.com/nos-spots/"],
+      "excluded": "on one list only (Ouanalao Dive)"
+    },
+    {
+      "name": "Épave du Kayali",
+      "template": null,
+      "listedBy": ["https://ouanalaodive.com/nos-spots/"],
+      "excluded": "on one list only (Ouanalao Dive; Serial Divers describes a wreck at Pain de Sucre without naming it)"
+    },
+    {
+      "name": "L'Âne Rouge",
+      "template": null,
+      "listedBy": ["https://ouanalaodive.com/nos-spots/"],
+      "excluded": "on one list only (Ouanalao Dive)"
+    },
+    {
+      "name": "Colombier (Pointe de Colombier, Tombant de Colombier)",
+      "template": "colombier-saint-barthelemy",
+      "listedBy": [
+        "https://www.serialdivers.com/fr/plongee/sites-plongee/",
+        "https://ouanalaodive.com/nos-spots/"
+      ]
+    },
+    {
+      "name": "Fourchue",
+      "template": "fourchue-saint-barthelemy",
+      "listedBy": [
+        "https://www.serialdivers.com/fr/plongee/sites-plongee/",
+        "https://ouanalaodive.com/nos-spots/"
+      ]
+    },
+    {
+      "name": "Boulanger",
+      "template": null,
+      "listedBy": ["https://www.serialdivers.com/fr/plongee/sites-plongee/"],
+      "excluded": "on one list only (Serial Divers)"
+    },
+    {
+      "name": "Pelée",
+      "template": null,
+      "listedBy": [
+        "https://www.serialdivers.com/fr/plongee/sites-plongee/",
+        "https://ouanalaodive.com/nos-spots/"
+      ]
+    },
+    {
+      "name": "Toc Vers",
+      "template": "toc-vers-saint-barthelemy",
+      "listedBy": [
+        "https://www.serialdivers.com/fr/plongee/sites-plongee/",
+        "https://ouanalaodive.com/nos-spots/"
+      ]
+    },
+    {
+      "name": "Baril de Bœuf (Le Bœuf)",
+      "template": null,
+      "listedBy": [
+        "https://www.serialdivers.com/fr/plongee/sites-plongee/",
+        "https://ouanalaodive.com/nos-spots/"
+      ]
+    },
+    {
+      "name": "Roche Roubes",
+      "template": null,
+      "listedBy": [
+        "https://www.serialdivers.com/fr/plongee/sites-plongee/",
+        "https://ouanalaodive.com/nos-spots/"
+      ]
+    },
+    {
+      "name": "Groupers (Petit Grouper, Little Groupers)",
+      "template": null,
+      "position": [17.9472, -62.9518],
+      "listedBy": [
+        "https://www.serialdivers.com/fr/plongee/sites-plongee/",
+        "https://thescubashopsxm.com/dive-sites-of-st-maarten/",
+        "http://reservenaturelle-saint-martin.com/maps/plongee.kml"
+      ]
+    },
+    {
+      "name": "Grenadins",
+      "template": null,
+      "listedBy": ["https://www.serialdivers.com/fr/plongee/sites-plongee/"],
+      "excluded": "on one list only (Serial Divers)"
+    },
+    {
+      "name": "Coco",
+      "template": null,
+      "listedBy": ["https://www.serialdivers.com/fr/plongee/sites-plongee/"],
+      "excluded": "on one list only (Serial Divers)"
+    },
+    {
+      "name": "Cayes d'Or et Est",
+      "template": null,
+      "listedBy": ["https://www.serialdivers.com/fr/plongee/sites-plongee/"],
+      "excluded": "on one list only (Serial Divers), described as far-off deep dives for level 2 with 50 dives"
+    },
+    {
+      "name": "Toiny",
+      "template": null,
+      "position": [17.94307, -62.92725],
+      "listedBy": ["http://reservenaturelle-saint-martin.com/maps/plongee.kml"],
+      "excluded": "on one list only (the French nature reserve's dive layer, no depth)"
+    }
+  ]
+}

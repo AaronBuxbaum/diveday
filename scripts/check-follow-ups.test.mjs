@@ -5,15 +5,17 @@ import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
 import {
+  closedLabelSweep,
   findIssueProblems,
   INBOX_CEILING,
   inboxProblem,
   missingTouchedProblem,
   nearDuplicate,
+  questionRoutingMoves,
   readyIssueProblems,
   SKIPPED_EXIT,
   TOUCHED_TIMEOUT,
-  titleKey,
+  titleWords,
   touchedPathAccepted,
   touchedPathExists,
   unverifiedTouchedProblem,
@@ -677,20 +679,86 @@ describe("the inbox ceiling", () => {
 });
 
 describe("near-duplicate titles", () => {
-  it("keys a title on its first six words, case and punctuation aside", () => {
-    expect(titleKey("Add a visual capture of the empty Gear page")).toBe(
-      "add a visual capture of the",
-    );
-    expect(titleKey("Don't: refuse `x`")).toBe("dont refuse x");
+  it("reduces a title to its words, leading verb, stopwords, case and punctuation aside", () => {
+    expect([...titleWords("Add a visual capture of the empty Gear page")]).toEqual([
+      "visual",
+      "capture",
+      "empty",
+      "gear",
+      "page",
+    ]);
+    expect([...titleWords("Don't: refuse `x`")]).toEqual(["dont", "refuse", "x"]);
   });
 
-  it("finds the open issue that starts the same way, and leaves a different one alone", () => {
+  // 2026-10-13: the six-word key matched only #2412, #2418 and #2423, three different capture
+  // requests, and missed duplicates with reworded openings.
+  it("leaves three different capture requests apart", () => {
     const open = [
-      { number: 2412, title: "Add a visual capture of the empty Gear page on the fresh demo shop" },
-      { number: 2461, title: "Subscribe the Stripe Connect webhook to payout.paid" },
+      { number: 2412, title: "Add a visual capture of the empty Gear page" },
+      { number: 2418, title: "Add a visual capture of the empty packages page" },
     ];
-    expect(nearDuplicate("Add a visual capture of the staff 404", open)?.number).toBe(2412);
-    expect(nearDuplicate("Add a visual capture for diver pages", open)).toBeNull();
+    expect(nearDuplicate("Add a visual capture of the staff 404", open)).toBeNull();
+    expect(nearDuplicate("Add a visual capture of the empty Gear page", open)?.number).toBe(2412);
+  });
+
+  it("finds a twin whose opening is reworded or whose words are reordered", () => {
+    const open = [
+      { number: 2461, title: "Subscribe the Stripe Connect webhook to payout.paid" },
+      { number: 2470, title: "Refuse a follow-up body the guard would reject sometimes" },
+    ];
+    expect(
+      nearDuplicate("Make the Stripe Connect webhook subscribe to payout.paid", open)?.number,
+    ).toBe(2461);
+    expect(nearDuplicate("Refuse a follow-up body the guard would reject", open)?.number).toBe(
+      2470,
+    );
+    expect(nearDuplicate("Subscribe the Stripe webhook to refunds", open)).toBeNull();
     expect(nearDuplicate("", open)).toBeNull();
+  });
+});
+
+describe("routing the questions already in the inbox", () => {
+  const issue = (number, kind, labels = ["needs-triage"]) => ({
+    number,
+    title: `Issue ${number}`,
+    body: `**Kind:** ${kind}\n**Effort:** S`,
+    labels: labels.map((name) => ({ name })),
+  });
+
+  // 2026-10-13: 31 open needs-triage issues were `**Kind:** question`; the routing to
+  // ready-for-human applied only to new filings.
+  it("moves every open question to ready-for-human, and nothing else", () => {
+    const moves = questionRoutingMoves([
+      issue(1, "question"),
+      issue(2, "cleanup"),
+      issue(3, "question", ["needs-triage", "parked"]),
+      issue(4, "improvement"),
+    ]);
+    expect(moves).toEqual([
+      { number: 1, add: ["ready-for-human"], remove: ["needs-triage"] },
+      { number: 3, add: ["ready-for-human"], remove: ["needs-triage"] },
+    ]);
+  });
+
+  it("leaves a body that only mentions the word question alone", () => {
+    const mention = {
+      ...issue(5, "risk"),
+      body: "**Kind:** risk\nIs this a question? **Kind:** question in prose",
+    };
+    expect(questionRoutingMoves([mention])).toEqual([]);
+  });
+});
+
+describe("sweeping labels off closed issues", () => {
+  it("strips in-progress and ready-for-agent, and keeps needs-triage for persona-bots", () => {
+    const closed = [
+      { number: 7, labels: [{ name: "in-progress" }, { name: "ready-for-agent" }] },
+      { number: 8, labels: [{ name: "needs-triage" }, { name: "bug" }] },
+      { number: 9, labels: [{ name: "ready-for-agent" }] },
+    ];
+    expect(closedLabelSweep(closed)).toEqual([
+      { number: 7, remove: ["in-progress", "ready-for-agent"] },
+      { number: 9, remove: ["ready-for-agent"] },
+    ]);
   });
 });

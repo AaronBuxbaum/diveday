@@ -38,15 +38,22 @@ export function repoSlug(env = process.env) {
 }
 
 /**
- * The real runner: `gh api <args>`, bounded, with an optional JSON document on stdin. The buffer is 32 MB because a page of 100 closed pull requests is about
- * 2.3 MB, and spawnSync's 1 MB default cut gh off with an empty stderr (the nightly
- * expire-claims run, 2026-10-15).
+ * How much a `gh api` call may print. spawnSync's default is 1 MiB, and one page of 100 closed
+ * pull requests was 2,279,829 bytes on 2026-10-13 (their bodies are long): the read died with
+ * ENOBUFS and `expire-claims` exited 2 on an empty "failed:" (seen again on the nightly run of
+ * 2026-10-15, cut off with an empty stderr). Open-issue pages were 706 KB.
+ */
+export const GH_MAX_BUFFER = 64 * 1024 * 1024;
+
+/**
+ * The real runner: `gh api <args>`, bounded, with an optional JSON document on stdin. `run` is
+ * injectable so a test can read the options without spawning gh.
  */
 export function ghApi(args, input, run = runBounded) {
   return run("gh", ["api", ...args], {
     encoding: "utf8",
     input,
-    maxBuffer: 32 * 1024 * 1024,
+    maxBuffer: GH_MAX_BUFFER,
     stdio: ["pipe", "pipe", "pipe"],
     timeoutMs: SUBPROCESS_TIMEOUTS.ghCli,
   });
@@ -72,6 +79,13 @@ export function toIssue(raw) {
 export function toComment(raw) {
   return { body: raw.body ?? "", createdAt: raw.created_at ?? "" };
 }
+
+/**
+ * The fields `toPull` reads, selected by `gh` itself so a page of pull requests carries no
+ * bodies (2.28 MB a page with them, a few KB without).
+ */
+const PULL_FIELDS_JQ =
+  "[.[] | {number, title, state, html_url, merged_at, head: {ref: .head.ref}}]";
 
 /** One REST pull request, reduced to what the scripts read. */
 export function toPull(raw) {
@@ -107,9 +121,12 @@ export function createTracker({ repo = repoSlug(), run = ghApi, log = console.lo
   function call(args, input) {
     const result = run(args, input);
     if (result?.status !== 0) {
-      const why = String(result?.stderr ?? result?.error?.message ?? "gh failed")
-        .trim()
-        .split("\n")[0];
+      // A spawn failure (ENOBUFS, ENOENT) leaves stderr empty; name its code, not nothing.
+      const stderr = String(result?.stderr ?? "").trim();
+      const spawn = result?.error
+        ? [result.error.code, result.error.message].filter(Boolean).join(" ")
+        : "";
+      const why = (stderr || spawn || `gh exited ${result?.status}`).split("\n")[0];
       throw new TrackerError(`\`gh api ${args.join(" ")}\` failed: ${why}`);
     }
     const text = String(result.stdout ?? "").trim();
@@ -121,16 +138,16 @@ export function createTracker({ repo = repoSlug(), run = ghApi, log = console.lo
     }
   }
 
-  function get(endpoint) {
-    return call([endpoint]);
+  function get(endpoint, jq) {
+    return call(jq ? [endpoint, "--jq", jq] : [endpoint]);
   }
 
-  /** Every page of a list endpoint, up to `limit` items. */
-  function getAll(endpoint, limit) {
+  /** Every page of a list endpoint, up to `limit` items; `jq` filters each page inside `gh`. */
+  function getAll(endpoint, limit, jq) {
     const items = [];
     const joiner = endpoint.includes("?") ? "&" : "?";
     for (let page = 1; page <= MAX_PAGES && items.length < limit; page += 1) {
-      const batch = get(`${endpoint}${joiner}per_page=${PAGE_SIZE}&page=${page}`) ?? [];
+      const batch = get(`${endpoint}${joiner}per_page=${PAGE_SIZE}&page=${page}`, jq) ?? [];
       if (!Array.isArray(batch)) throw new TrackerError(`${endpoint} did not return a list`);
       items.push(...batch);
       if (batch.length < PAGE_SIZE) break;
@@ -186,7 +203,9 @@ export function createTracker({ repo = repoSlug(), run = ghApi, log = console.lo
     },
 
     listPulls({ state = "open", limit = 500 } = {}) {
-      return getAll(`${base}/pulls?state=${encodeURIComponent(state)}`, limit).map(toPull);
+      return getAll(`${base}/pulls?state=${encodeURIComponent(state)}`, limit, PULL_FIELDS_JQ).map(
+        toPull,
+      );
     },
 
     /** Files an issue; returns `{ number, url }` (null under a dry run). */

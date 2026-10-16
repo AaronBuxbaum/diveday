@@ -23,7 +23,8 @@ in [route-map.md](route-map.md).
 - Read `foo.test.ts` before `foo.ts`: tests are the contract.
 - Iterate with one focused test and quiet output. The whole suite belongs to CI; the shell guard
   refuses a bare `pnpm test` / `pnpm e2e` / `pnpm check`.
-- Redirect a long run to a file and read the failing part; never pipe it through `tail`.
+- Redirect a long run to a scratchpad file, not beside the checkouts, and read the failing part;
+  never pipe it through `tail`.
 
 ## Commands
 
@@ -36,7 +37,7 @@ in [route-map.md](route-map.md).
 | `pnpm agent:doctor` | Node against `.nvmrc`, `gh`, `origin/main`'s age, `node_modules`, stray processes, remote branches with no open PR and the stack, each with its fix; a row only a human can change (the Node, the branches) is `info` and stays out of the two-line summary the session-start block carries |
 | `node scripts/stack-map.mjs` | the stack HEAD is in — layers bottom to top, the top, other tips, merged sub-branches, each layer's paths — derived from remote refs (`--json` for a machine); the per-prompt line carries the position |
 | `pnpm check:env` / `pnpm env:manual` | the two structural facts about configuration, and the one file a human edits — see `.claude/rules/infra.md` |
-| `pnpm check:repo` | 59 static guards over the repository, spawned concurrently so one run reports every failure rather than the first. Each guard names itself and prints the offending line; the ones whose *why* is not obvious from that message are written up in [docs/agents/repo-checks.md](repo-checks.md) |
+| `pnpm check:repo` | 61 static guards over the repository, spawned concurrently so one run reports every failure rather than the first. Each guard names itself and prints the offending line; the ones whose *why* is not obvious from that message are written up in [docs/agents/repo-checks.md](repo-checks.md) |
 | `pnpm check:follow-ups` | every open `needs-triage` issue is still actionable cold. The one guard that calls `gh`, so it is not in `check:repo`: it runs daily in `.github/workflows/follow-ups.yml`, and locally reports **SKIPPED** when `gh` cannot answer ([docs/agents/issue-tracker.md](issue-tracker.md)'s "Filing a follow-up") |
 | `pnpm check:context-budget` | the words every session loads before it reads any code — this file, `CLAUDE.md`, any unscoped `.claude/rules/*.md`, and every skill's and reviewer agent's `description:` line — ratcheted (`--write` banks a fall, `--absorb "<why>"` records a deliberate rise), plus a 240-word cap on any single line. The fix for red is never to compress the prose: move the long half into `docs/` or a path-scoped rule and leave a pointer |
 | `pnpm check:copy` / `check:domain-strings` / `check:tokens` / `check:architecture` / `check:type-ramp` / `check:voice` / `check:locale` / `check:e2e-hygiene` / `check:route-coverage` / `check:critical-text` / `check:closing-keywords` / `check:rental-fit-caps` | the individual guards, each also inside `check:repo`; the ratcheted ones share `--report <path>` / `--write` / `--absorb`. What each refuses is in the path-scoped rule for the files it reads and in [docs/agents/repo-checks.md](repo-checks.md) |
@@ -83,7 +84,7 @@ runs. Pass args directly. The shell guard refuses the bare form.
   target branch before calling work complete.
 - **Stack everything, across threads, and run one PR's CI at a time: cut every branch from the
   newest open one, any thread's, related or not, as a draft with `base` on it; the thread that owns
-  the stack pushes one layer at a time, because concurrent runs cancel each other.** That is
+  the stack pushes one layer at a time, because overlapping runs queue on a 20-job cap.** That is
   Aaron's rule; the CI half dates from 2026-10-12, when 15 to 19 layers pushed together cost 126
   cancelled runs and 90 failed jobs. Push a layer, let its run finish, then push the next; a thread
   whose layer sits on another thread's stack leaves the push order to the thread that owns it. A
