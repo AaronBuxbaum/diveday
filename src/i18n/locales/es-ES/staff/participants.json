@@ -8,7 +8,7 @@
     "onBuddyTeam": "Primero sácalo de su pareja de buceo. Una pareja de buceo es solo de buceadores.",
     "certBlocked": "Su tarjeta para esta salida no está en el registro. Revísala primero o cámbialo de todos modos.",
     "closed": "Ya es tarde para ese cambio. Nada cambia cuando el barco ya volvió.",
-    "boardedNotReady": "Ya embarcó y no está listo para bucear. Primero resuelve lo que lo bloquea.",
+    "boardedNotReady": "Ya está a bordo y no está listo para bucear. Primero resuelve lo que lo bloquea. Con el barco fuera no se puede cambiar de todos modos.",
     "owed": "Guardado. Su plaza ahora cuesta más, así que debe la diferencia."
   },
   "terms": {

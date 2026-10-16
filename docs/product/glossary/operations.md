@@ -954,8 +954,9 @@
   snorkeler or rider seat sits beside them only where the shop has priced it, is asked none of the
   course's gates or forms, and is never in training (issue #2226). Staff change a booking's type
   from the roster ("Coming as"): joining the dive runs the card check and needs "Change anyway" (an
-  owner, manager or instructor) to pass a missing card, also out on the water after departure
-  (issue #2225); nothing changes once the departure is home, and on a course session a student
+  owner, manager or instructor) to pass a missing card before departure. Out on the water after
+  departure (issue #2225) the seat may join the dive only if it is cleared to board, with no
+  override; nothing changes once the departure is home, and on a course session a student
   never stops diving and a passenger never starts. See
   [ADR 20261007-participant-types](../../architecture/decisions/20261007-participant-types.md).
 - **Booked as** — the participant type a booking was made with (`bookings.booked_as`), set once by

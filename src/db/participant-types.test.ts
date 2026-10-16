@@ -837,6 +837,7 @@ describe("joining the dive after departure", () => {
 
   it("lets a rider with the card the trip asks for dive, thirty minutes after departure", async () => {
     const { db, shop, trip, staff, ids, bookingId } = await atSea();
+    await cardOnlyGate(db, shop.id, trip.id);
     await cardAt(db, shop.id, bookingId, "advanced_open_water");
 
     expect(await change(db, ids, bookingId, "diver")).toMatchObject({ ok: true, changed: true });
@@ -859,24 +860,59 @@ describe("joining the dive after departure", () => {
     const { db, shop, trip, ids, bookingId } = await atSea();
     await openWaterCard(db, shop.id, bookingId);
 
-    expect(await change(db, ids, bookingId, "diver")).toMatchObject({
+    // At sea the card gap is the boarding gate's answer: no "Change anyway".
+    expect(await change(db, ids, bookingId, "diver")).toEqual({
       ok: false,
-      reason: "cert_blocked",
-      refusal: { requiredLevel: "advanced_open_water", heldLevel: "open_water" },
+      reason: "boarded_not_ready",
     });
     const [row] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
     expect(row?.participantType).toBe("rider");
     expect(await trail(db, trip.id)).toHaveLength(0);
   });
 
-  it("writes past the card check only on Change anyway, naming who and that it was at sea", async () => {
+  it("never writes past the card check at sea, even on Change anyway (dock review H1)", async () => {
+    // Out on the water there is no rail left to stop them: the person is
+    // already aboard, so joining the dive asks the boarding gate itself.
+    const { db, shop, trip, ids, bookingId } = await atSea();
+    await cardOnlyGate(db, shop.id, trip.id);
+    await openWaterCard(db, shop.id, bookingId);
+
+    expect(await change(db, ids, bookingId, "diver", true)).toEqual({
+      ok: false,
+      reason: "boarded_not_ready",
+    });
+    const [row] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    expect(row?.participantType).toBe("rider");
+    expect(await trail(db, trip.id)).toHaveLength(0);
+  });
+
+  it("refuses a rider on a medical hold at sea, though the card is fine and nobody marked them boarded", async () => {
+    const { db, shop, trip, ids, bookingId } = await atSea();
+    await cardAt(db, shop.id, bookingId, "advanced_open_water");
+    await heldRelease(db, shop.id, bookingId, "referral");
+
+    expect(await change(db, ids, bookingId, "diver")).toEqual({
+      ok: false,
+      reason: "boarded_not_ready",
+    });
+    const [row] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    expect(row?.participantType).toBe("rider");
+    expect(await trail(db, trip.id)).toHaveLength(0);
+  });
+
+  it("still writes past the card check on Change anyway before the time on the board", async () => {
     const { db, shop, trip, staff, ids, bookingId } = await atSea();
+    const now = nowDate().getTime();
+    await db
+      .update(trips)
+      .set({ startsAt: new Date(now + 3_600_000) })
+      .where(eq(trips.id, trip.id));
     await openWaterCard(db, shop.id, bookingId);
 
     expect(await change(db, ids, bookingId, "diver", true)).toMatchObject({ ok: true });
     const [entry] = await trail(db, trip.id);
     expect(entry?.actorPersonId).toBe(staff.id);
-    expect(entry?.params).toMatchObject({ certCheck: "overridden", atSea: "yes" });
+    expect(entry?.params).toMatchObject({ certCheck: "overridden", atSea: "no" });
     // Only the sale-time check was skipped: the boarding gate still asks.
     const rows = await listTripReadiness(db, shop.id, trip.id);
     expect(rows.find((r) => r.booking.id === bookingId)?.readiness.status).toBe("blocked");

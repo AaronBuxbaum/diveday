@@ -2195,7 +2195,8 @@ export type SetParticipantTypeOutcome =
         | "on_buddy_team"
         /**
          * Joining the dive on a seat the rail already recorded boarded at
-         * departure, when the boarding gate would refuse it as a diver. The
+         * departure, or on any seat once the boat is at sea, when the
+         * boarding gate would refuse it as a diver. The
          * boarding record was granted to a snorkeler or a rider; it is never
          * carried over to a diver it would not have been granted to. No
          * override: the gate is the boarding gate, and the crew answer it.
@@ -2253,10 +2254,12 @@ export type SetParticipantTypeInput = {
  * **Joining the water runs the booking-time card check** for this person, the
  * same `tripAdmissionFor` a new diver's seat takes. A refusal is returned as
  * `cert_blocked` with the missing card named, and only `confirmCertBlock`
- * writes past it. The boarding gate still asks for the card: a seat not yet
- * boarded meets it at the rail, and a seat the rail already recorded boarded
- * at departure is re-checked here as a diver, inside this transaction, and the
- * whole change rolls back (`boarded_not_ready`) when it would not pass.
+ * writes past it, and only before the time on the board. The boarding gate
+ * still asks for the card: a seat not yet boarded meets it at the rail, and a
+ * seat the rail recorded boarded at departure, or any seat once the boat is at
+ * sea, is re-checked here as a diver, inside this transaction, and the whole
+ * change rolls back (`boarded_not_ready`) when it would not pass. At sea no
+ * override writes past either check.
  *
  * Money is left where it is (a refund stays staff-initiated, H-07), but a
  * pending checkout that quoted this seat at its old type is retired, so it can
@@ -2401,6 +2404,10 @@ async function changeParticipantType(
         Boolean(trip.courseId),
       );
       if (!admission.admitted) {
+        // At sea the person is already aboard, so no rail is left to catch a
+        // card the override skipped (dock review of #2225, H1): there is no
+        // "Change anyway" out there, and the boarding gate below answers.
+        if (atSea) return { ok: false, reason: "boarded_not_ready" };
         if (!input.confirmCertBlock) {
           return { ok: false, reason: "cert_blocked", refusal: admission.refusal };
         }
@@ -2447,7 +2454,10 @@ async function changeParticipantType(
     // this seat boarded at departure as a snorkeler or a rider; the boarding
     // gate (`recordRollCall`) is asked again, now, as the diver it is
     // becoming, and the whole change rolls back if it would refuse.
-    if (isDiver(to) && (await boardedAtDeparture(tx, shopId, trip.id, booking.id))) {
+    // At sea the same holds with no roll call at all: a seat that is out on
+    // the water is aboard whatever the rail recorded, so it is asked the
+    // boarding gate now (dock review of #2225, H1).
+    if (isDiver(to) && (atSea || (await boardedAtDeparture(tx, shopId, trip.id, booking.id)))) {
       const readiness = await getBookingReadiness(tx, shopId, booking.id);
       if (readiness?.status !== "ready") throw new BoardedNotReady();
     }

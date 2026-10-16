@@ -8,7 +8,7 @@
     "onBuddyTeam": "Take them off their buddy team first. A buddy team is divers only.",
     "certBlocked": "Their card for this trip isn’t on file. Check it first, or change anyway.",
     "closed": "Too late for that change. Nothing changes once the boat is home.",
-    "boardedNotReady": "They’re boarded, and not ready to dive. Clear what’s blocking them first.",
+    "boardedNotReady": "They’re aboard, and not ready to dive. Clear what’s blocking them first. Once the boat has left there’s no changing anyway.",
     "owed": "Saved. Their seat costs more now, so they owe the difference."
   },
   "terms": {
