@@ -640,11 +640,11 @@ describe("who may run each action on the trip page", () => {
     "setCourseMaterialsDoneAction",
     "markCardProcessedAction",
     "updateBookingPickupAction",
-    // **A rider added at the dock** (batch 4, D6) is the counter's walk-in at
-    // the rail: whoever holds the roster when somebody turns up, on the same
-    // terms as seating a walk-in. Everything that limits the seat is in the
-    // one seating path it goes through (capacity, the certificate, a sailed or
-    // canceled departure), it never seats a diver, and the trail names who did it.
+    "updateBookingDietaryNoteAction",
+    // **A rider added at the dock** (batch 4, D6) is the counter's walk-in at the rail: whoever
+    // holds the roster when somebody turns up, on the same terms as seating a walk-in. All that
+    // limits the seat is in the one seating path it goes through (capacity, the certificate, a
+    // sailed or canceled departure), it never seats a diver, and the trail names who did it.
     "addDockRiderAction",
     // **A note to everyone on a departure** (batch 4, J4): "the marina lot is
     // closed" is known first by whoever is at the dock, and the precedent is

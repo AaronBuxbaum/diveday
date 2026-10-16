@@ -13,20 +13,18 @@ type NextDeparture = NonNullable<Awaited<ReturnType<typeof getTodayWork>>["nextD
  * available, and the next boat if there is one.
  */
 export function TodayQuietDay({
-  shopId,
-  shopSlug,
+  shop,
   nextDeparture,
   locale,
-  timeZone,
   t,
 }: {
-  shopId: string;
-  shopSlug: string;
+  /** The signed-in shop, the one row every query below names (security review N7). */
+  shop: { id: string; slug: string; timezone: string };
   nextDeparture: NextDeparture | null;
   locale: string;
-  timeZone: string;
   t: StaffTranslator;
 }) {
+  const { id: shopId, slug: shopSlug, timezone: timeZone } = shop;
   return (
     <div className="mt-8 flex flex-col gap-4">
       <QuietDayThinBoats

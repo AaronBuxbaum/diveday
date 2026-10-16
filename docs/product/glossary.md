@@ -28,6 +28,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Clearing a declared-uncertified stamp
 - CMAS
 - Confirm to clear
+- Course ladder
 - Declared uncertified
 - Depth ceiling
 - Depth marker
@@ -127,6 +128,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 
 [glossary/operations.md](glossary/operations.md)
 
+- 30-day invite cooldown
 - Activation milestone
 - After-state
 - Arrival event
@@ -172,6 +174,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Deposit
 - Desk hours
 - Didn't sail
+- Dietary note
 - Discarded draft
 - Dive briefing
 - Dive day
@@ -198,11 +201,13 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Incident report
 - Instruction fee / e-learning fee
 - Integrity-sealed waiver
+- Invite suggestion
 - Invoice
 - Last-minute deal
 - Last-minute list
 - Learning materials
 - Legal hold
+- Lunch aboard
 - Manifest
 - Medical hold
 - Medical questionnaire
@@ -275,6 +280,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Station echo
 - STOP list
 - The record
+- Thin boat
 - Tide window
 - Tight turnaround
 - Tip

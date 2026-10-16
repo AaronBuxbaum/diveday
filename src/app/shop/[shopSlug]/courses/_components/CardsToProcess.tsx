@@ -75,7 +75,7 @@ export function CardsToProcess({
                       })}
                     </span>
                     {late ? (
-                      <span className="ml-2 font-medium text-warning-strong">
+                      <span className="ms-2 font-medium text-warning-strong">
                         {t("courses.processing.late")}
                       </span>
                     ) : null}

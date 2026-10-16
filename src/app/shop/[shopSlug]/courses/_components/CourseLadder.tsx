@@ -103,7 +103,7 @@ export function CourseLadder({
                       <span>
                         <span className="font-medium">{person.fullName}</span>
                         {person.medicalReferral ? (
-                          <span className="ml-2 text-warning-strong">
+                          <span className="ms-2 text-warning-strong">
                             {t("courses.ladder.referral")}
                           </span>
                         ) : null}

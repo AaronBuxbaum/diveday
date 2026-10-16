@@ -551,14 +551,7 @@ async function TodayBody({
         t={t}
       />
       {quietDay ? (
-        <TodayQuietDay
-          shopId={shop.id}
-          shopSlug={shopSlug}
-          nextDeparture={nextDeparture}
-          locale={locale}
-          timeZone={shop.timezone}
-          t={t}
-        />
+        <TodayQuietDay shop={shop} nextDeparture={nextDeparture} locale={locale} t={t} />
       ) : (
         <DaySpine
           context={{

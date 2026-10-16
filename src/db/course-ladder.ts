@@ -243,7 +243,7 @@ async function ladderFacts(
       db
         .select({ id: people.id, dateOfBirth: people.dateOfBirth })
         .from(people)
-        .where(and(eq(people.shopId, shopId), inArray(people.id, personIds))),
+        .where(and(eq(people.shopId, shopId), inArray(people.id, personIds), livePerson())),
   ]);
   for (const row of births) facts.set(row.id, { heldLevels: [], dateOfBirth: row.dateOfBirth });
   for (const card of cards) {
