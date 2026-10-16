@@ -119,6 +119,7 @@ export async function GET() {
       const boatSafety = departure
         ? boatSafetySection(
             t,
+            locale,
             await departureBoatSafetyFor(db, shop.id, {
               tripId,
               startsAt: departure.trip.startsAt,

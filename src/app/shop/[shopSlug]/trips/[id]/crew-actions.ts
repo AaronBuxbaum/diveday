@@ -34,6 +34,7 @@ export async function updateTripCrewAction(
         shopId: s.user.shopId,
         tripId,
         actorPersonId: s.user.personId,
+        subjectPersonId: change.personId,
         entry:
           change.operation === "assign"
             ? { code: "crew_assigned", crew: crewName }

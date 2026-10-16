@@ -1127,9 +1127,9 @@ describe("restoreBooking (undo of a roster removal)", () => {
    * clerical slip, not selling a seat.
    *
    * An **already-departed** trip does not refuse either, and this one is a
-   * safety matter rather than a nicety: `cancelBooking` has no trip-state gate
-   * at all and the Remove control renders on every roster row, including at
-   * sea (a departed trip is still `scheduled`, and roll call stays live). If
+   * safety matter rather than a nicety: `cancelBooking` refuses only a diver
+   * marked aboard (H-122), and Remove still works on every other row at sea
+   * (a departed trip is still `scheduled`, and roll call stays live). If
    * the undo refused there, one misclick would strike a diver off an at-sea
    * manifest permanently. The two errors are not symmetric — an under-listed
    * manifest costs a search, an over-listed one costs a tap.

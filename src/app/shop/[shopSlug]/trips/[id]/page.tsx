@@ -188,7 +188,7 @@ export default async function ManageTripPage({
   // roster's own vocabulary also speaks is the roster's.
   const deskNoticeDefinition = noticeFromParam(notice, DESK_NOTICES);
   const tripNotice: FormNotice | undefined =
-    resolveTripNotice({ notice, count, form, gate, tripId, locale }) ??
+    resolveTripNotice({ notice, count, form, gate, tripId, locale, bid, roster: guests.roster }) ??
     (deskNoticeDefinition
       ? { form: "page", tone: deskNoticeDefinition.tone, text: t(deskNoticeDefinition.key) }
       : undefined);

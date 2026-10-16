@@ -23,6 +23,7 @@ import {
 } from "@/lib/recurrence";
 import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
 import { utcToWallTime, type WallTime, wallTimeToUtc } from "@/lib/zoned";
+import { departureMayBeAtSea } from "./aboard-at-sea";
 import { callDayBlowout } from "./blowouts";
 import type { AppDb, AppTransaction } from "./client";
 import { flushUrgentCrewNotices, recordCrewCalledOff } from "./crew-notices";
@@ -891,6 +892,8 @@ export type OffCadenceSeriesTrip = {
  * date would report a perfectly good departure as orphaned. An instance with no
  * slot at all (created before the ledger existed) is left out — there is nothing
  * to judge it against, and guessing would offer to cancel a real departure.
+ * So is one the crew have taken out before its time (`departureMayBeAtSea`,
+ * H-122): a bulk call-off never cancels a boat on the water.
  */
 export async function listOffCadenceSeriesTrips(
   db: AppDb,
@@ -930,12 +933,17 @@ export async function listOffCadenceSeriesTrips(
     pattern: { intervalWeeks: series.intervalWeeks, weekdays: series.weekdayMask },
     endsOn: series.endsOn,
   };
-  return rows
-    .filter(
-      (row): row is typeof row & { occurrenceDate: string } =>
-        row.occurrenceDate !== null && !seriesFiresOn(cadence, row.occurrenceDate),
-    )
-    .map((row) => ({ ...row }));
+  const offCadence = rows.filter(
+    (row): row is typeof row & { occurrenceDate: string } =>
+      row.occurrenceDate !== null && !seriesFiresOn(cadence, row.occurrenceDate),
+  );
+  const ashore: OffCadenceSeriesTrip[] = [];
+  for (const row of offCadence) {
+    const tripId = row.id;
+    if (await departureMayBeAtSea(db, { shopId, tripId, startsAt: row.startsAt, now })) continue;
+    ashore.push({ ...row });
+  }
+  return ashore;
 }
 
 /**
@@ -968,6 +976,30 @@ export async function cancelOffCadenceSeriesTrips(
   const stale = await listOffCadenceSeriesTrips(db, shopId, seriesId, now);
   if (stale.length === 0) return 0;
   const cancelledIds = await db.transaction(async (tx) => {
+    // Asked again under each trip's row lock, the one the roll call takes: the
+    // crew may have taken one out since the list was read (H-122).
+    const locked = await tx
+      .select({ id: trips.id, startsAt: trips.startsAt })
+      .from(trips)
+      .where(
+        and(
+          eq(trips.shopId, shopId),
+          liveTrip(),
+          inArray(
+            trips.id,
+            stale.map((trip) => trip.id),
+          ),
+        ),
+      )
+      .orderBy(asc(trips.id))
+      .for("update");
+    const ashoreIds: string[] = [];
+    for (const trip of locked) {
+      const tripId = trip.id;
+      if (await departureMayBeAtSea(tx, { shopId, tripId, startsAt: trip.startsAt, now })) continue;
+      ashoreIds.push(tripId);
+    }
+    if (ashoreIds.length === 0) return [];
     const cancelled = await tx
       .update(trips)
       // Same stamp as any other cancellation. An off-cadence occurrence being
@@ -981,10 +1013,7 @@ export async function cancelOffCadenceSeriesTrips(
           eq(trips.shopId, shopId),
           eq(trips.seriesId, seriesId),
           eq(trips.status, "scheduled"),
-          inArray(
-            trips.id,
-            stale.map((trip) => trip.id),
-          ),
+          inArray(trips.id, ashoreIds),
         ),
       )
       .returning({ id: trips.id });

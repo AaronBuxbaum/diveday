@@ -11,8 +11,6 @@ import {
   lte,
   ne,
   notInArray,
-  type SQL,
-  type SQLWrapper,
   sql,
 } from "drizzle-orm";
 import {
@@ -46,8 +44,6 @@ import {
   certifications,
   nitroxCertifications,
   people,
-  rollCallCrewEvents,
-  rollCallEvents,
   shops,
   specialtyCertifications,
   tripAssignments,
@@ -56,7 +52,7 @@ import {
   trips,
 } from "./schema";
 import { liveTrip } from "./trips-live";
-import { setTripStatus } from "./trips-record";
+import { rollCallStartedOn, setTripStatus } from "./trips-record";
 
 /**
  * The blow-out cascade (docs ADR 20260804-blowout-cascade, glossary
@@ -141,13 +137,6 @@ export async function callTripBlowout(
   // Its crew hear it is off now (ADR 20261009-crew-hear-about-their-boats).
   await flushUrgentCrewNotices(db, { shopId: input.shopId, tripIds: [input.tripId], now });
   return outcome;
-}
-
-/** Whether anybody, diver or crew, has a roll-call or boarding event on this trip. */
-function rollCallStartedOn(tripId: SQLWrapper | string): SQL<boolean> {
-  return sql<boolean>`(exists (select 1 from ${rollCallEvents} where ${rollCallEvents.tripId} = ${tripId}) or exists (select 1 from ${rollCallCrewEvents} where ${rollCallCrewEvents.tripId} = ${tripId}))`.mapWith(
-    Boolean,
-  );
 }
 
 type BlowoutSetup = Extract<Awaited<ReturnType<typeof setUpTripBlowout>>, { ok: true }>;

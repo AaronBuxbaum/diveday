@@ -7,6 +7,15 @@
     "writtenBy": "Escrito por {name}",
     "notTimed": "Aún sin hora"
   },
+  "missingDiver": {
+    "start": "Empezar un informe de buceador desaparecido",
+    "alreadyStarted": "Ya lo empezó {name}.",
+    "alreadyFiled": "Ya lo presentó {name}.",
+    "notMissing": "Ya no figura como sin regresar a bordo.",
+    "notAllowed": "Solo la tripulación de esta salida, los propietarios y los gerentes pueden empezar un informe.",
+    "failed": "El informe no se abrió. Toca de nuevo.",
+    "backToManifest": "Volver al manifiesto"
+  },
   "status": {
     "draft": "Borrador",
     "filed": "Presentado"
@@ -180,5 +189,12 @@
     "unrecordedTitle": "Tripulantes que salieron sin acreditación registrada",
     "unrecordedSailings": "{count, plural, one {# salida} other {# salidas}} este mes",
     "noDepartures": "Ninguna salida volvió este mes."
+  },
+  "delete": {
+    "trigger": "Eliminar borrador",
+    "confirm": "¿Eliminar este borrador? El registro de la salida lo mostrará como borrador eliminado.",
+    "confirmLabel": "Eliminar",
+    "cancel": "Cancelar",
+    "pending": "Eliminando…"
   }
 }

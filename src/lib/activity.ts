@@ -144,6 +144,11 @@ type ActivityParamShapes = {
    */
   incident_report_filed: { actor: string };
   incident_report_addendum_added: { actor: string };
+  /**
+   * **An unfiled incident draft was deleted** (ADR 20261016-incident-drafts):
+   * its writer, an owner or a manager retired it. The actor only, like filing.
+   */
+  incident_draft_deleted: { actor: string };
   /** A staffer seated a diver. */
   seat_added: { actor: string; diver: string };
   /** …as a walk-in, which is the same act with a different story behind it. */
@@ -312,6 +317,7 @@ export const ACTIVITY_CODES = [
   "blowout_called",
   "incident_report_filed",
   "incident_report_addendum_added",
+  "incident_draft_deleted",
   "seat_added",
   "seat_added_walk_in",
   "seat_added_from_trip_link",

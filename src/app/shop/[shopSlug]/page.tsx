@@ -20,6 +20,7 @@ import {
   RoleOrientationLine,
 } from "@/app/shop/[shopSlug]/_components/today/RoleOrientationCard";
 import { recapStatusLine } from "@/app/shop/[shopSlug]/_components/today/recap-status";
+import { readTodayWork } from "@/app/shop/[shopSlug]/_components/today/today-work";
 import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessions";
 import { YourWeek } from "@/app/shop/[shopSlug]/_components/today/YourWeek";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
@@ -41,7 +42,7 @@ import { canPersonViewShopReports } from "@/db/reporting";
 import { seasonScale } from "@/db/season-scale";
 import { shopByIdCached } from "@/db/shops";
 import { canAcceptPayments, shopStripeAccountForRender } from "@/db/stripe-accounts";
-import { getShopDayDepartures, getTodayWork } from "@/db/today";
+import { getShopDayDepartures } from "@/db/today";
 import { countShopTrips } from "@/db/trips";
 import { isOrientationDismissed } from "@/db/user-accounts";
 import {
@@ -55,7 +56,6 @@ import { daySpineSummaryText } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { assembleEveningClose } from "@/lib/closeout";
-import { shopCrewTarget } from "@/lib/crew-schedule";
 import { FORM_DRAFT_RESUME_SUFFIX } from "@/lib/form-drafts";
 import {
   formatDateTimeTz,
@@ -393,22 +393,19 @@ async function TodayBody({
   // role read of the first wave) and the day closing; and the tips on the reader's own boats.
   const [work, tomorrowDepartures, [headCountCloses, canOpenLog], sailedBefore, dayMoney] =
     await Promise.all([
-      getTodayWork(
+      // The lens, the live money gate (Stripe and photo-deletion chores, task 157) and the reader.
+      readTodayWork({
         db,
-        shop.id,
+        shop,
         shopSlug,
-        shop.timezone,
+        reader: session.user,
+        lens,
         now,
-        lens ? session.user.personId : undefined,
         t,
         locale,
-        // Stuck Stripe operations and failed photo deletions are owner/manager chores — same gate
-        // as Reports (task 157), read live above.
         canReadShopMoney,
         evidence,
-        shopCrewTarget(shop),
-        session.user.roles,
-      ),
+      }),
       getShopDayDepartures(db, shop.id, shop.timezone, tomorrowNoon(now, shop.timezone), evidence),
       eveningClose.stations.length > 0
         ? Promise.all([

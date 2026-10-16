@@ -1,6 +1,7 @@
 // i18n-exempt-file: test fixture; only the roster's tests import it, and its names are seeded data.
 import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
+import type { AboardHold } from "@/db/aboard-at-sea";
 import type { SameNameHeldSeat } from "@/db/bookings";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -127,6 +128,8 @@ export type RosterFixtureOptions = {
   certifyDefaultLevel?: "open_water" | "advanced_open_water" | null;
   /** "Move to another departure", when the page offers it. */
   moveSeat?: SeatMove;
+  /** Seats marked aboard a boat that has left, whose Remove refuses (H-122). */
+  aboardAtSea?: ReadonlyMap<string, AboardHold>;
 };
 
 function rosterProps({
@@ -148,6 +151,7 @@ function rosterProps({
   splitAsksDateOfBirth,
   certifyDefaultLevel,
   moveSeat,
+  aboardAtSea,
 }: RosterFixtureOptions) {
   return {
     trip: {
@@ -179,6 +183,7 @@ function rosterProps({
       sameNameHeldSeats,
       heldSeatLastDiveDay,
       packageDivesByBooking,
+      aboardAtSea,
     },
     actions: {
       markRosterWaiverInPersonAction: noRefusal,

@@ -17,6 +17,7 @@ import { canSayRunningLate, runningLateShown } from "@/lib/running-late";
 import { hasSailed } from "@/lib/trips";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { offerableWelcomeCue, type WelcomeCue } from "@/lib/welcome-cue";
+import { heldAtTheDoor } from "./aboard-at-sea";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
 import { firstActiveIntroCourse, hasActiveRefresherCourse } from "./courses";
@@ -581,7 +582,19 @@ export async function getReadyPageData(
         : "forfeit"
       : "no_policy";
 
-  const canCancelBooking = row.status === "booked" && !hasSailed(trip.startsAt, now);
+  const canCancelBooking =
+    row.status === "booked" &&
+    !hasSailed(trip.startsAt, now) &&
+    // Counted aboard a boat past its time: `selfCancelBooking` refuses it (H-122).
+    !(
+      await heldAtTheDoor(db, {
+        shopId: row.shopId,
+        tripId: row.tripId,
+        startsAt: trip.startsAt,
+        now,
+        bookingIds: [bookingId],
+      })
+    ).has(bookingId);
   const identityHeld = row.identityUnconfirmedAt !== null;
   // **A lead the page could charge pays before adding anyone** (security
   // review of layer 8, D3). The link is shared by design, so without this a

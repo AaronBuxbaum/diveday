@@ -1,4 +1,4 @@
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { tripRescheduledEmail } from "@/lib/notifications/email";
@@ -9,6 +9,7 @@ import { formBuddyTeam } from "./buddy-pairs";
 import type { AppDb } from "./client";
 import { listTripActivity } from "./operations";
 import {
+  activityEvents,
   bookings,
   certifications,
   courses,
@@ -369,6 +370,20 @@ describe("moveSeat (the consequence path)", () => {
       (await listTripActivity(db, shop.id, tripId)).map((entry) => entry.code);
     expect(await codes(from.id)).toContain("seat_moved_away");
     expect(await codes(to.id)).toContain("seat_moved_here");
+    // Both lines name whose seat by record, written with the move (security
+    // review 2026-10-16, F1).
+    const subjects = await db
+      .select({ subject: activityEvents.subjectPersonId })
+      .from(activityEvents)
+      .where(
+        and(
+          inArray(activityEvents.tripId, [from.id, to.id]),
+          inArray(activityEvents.code, ["seat_moved_away", "seat_moved_here"]),
+        ),
+      );
+    expect(subjects).toHaveLength(2);
+    if (!moved.ok) throw new Error("expected a move");
+    expect(subjects.every((row) => row.subject === moved.personId)).toBe(true);
   });
 });
 

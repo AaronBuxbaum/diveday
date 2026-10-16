@@ -49,9 +49,9 @@ import { E2E_FROZEN_CLOCK } from "./servers";
 import { mintOnboardFormPath } from "./setup-link";
 
 /**
- * Visual regression coverage. Two hundred and ninety-seven `capture()` calls,
+ * Visual regression coverage. Three hundred `capture()` calls,
  * each shot in light at a phone and a desktop viewport and in dark at the
- * desktop viewport alone (`DARK_VIEWPORTS`) — 912 screenshots per run, down
+ * desktop viewport alone (`DARK_VIEWPORTS`) — 921 screenshots per run, down
  * from 1,218 when dark took both widths (see ADR
  * 20260729-reg-suit-visual-regression). Keep this count in sync when adding a
  * surface; each `capture()` call costs 3 screenshots per CI run — 4 for a
@@ -4174,7 +4174,7 @@ for (const scheme of ["light", "dark"] as const) {
         const seeded = await page.request.post("/api/test/seed-trouble-states?uncountedSeat=1");
         expect(seeded.ok()).toBe(true);
         const { uncountedSeat } = (await seeded.json()) as {
-          uncountedSeat?: { tripId: string };
+          uncountedSeat?: { tripId: string; personName: string };
         };
         if (!uncountedSeat) throw new Error("seed-trouble-states left no seat uncounted");
         await page.goto(counterPath("blue-mantis", uncountedSeat.tripId));
@@ -4183,6 +4183,36 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: /^Didn’t sail · \d+$/ }).waitFor();
         await page.getByRole("heading", { name: /^Not counted at the dock · 1$/ }).waitFor();
         await capture(page, "trip-record-uncounted", scheme);
+
+        // Remove on that seat (H-122): held as possibly carried, and told how
+        // to let it go, never that it sailed.
+        const row = page
+          .locator('#roster li[id^="booking-"]')
+          .filter({ hasText: uncountedSeat.personName })
+          .first();
+        await openRosterDetails(row);
+        await row.locator("summary", { hasText: /^\s*Remove booking\s*$/ }).click();
+        await row.getByRole("status").filter({ hasText: "at the dock, so the boat may" }).waitFor();
+        await expect(row.getByRole("button", { name: "Yes, remove booking" })).toHaveCount(0);
+        await capture(page, "trip-remove-uncounted-refused", scheme);
+      });
+
+      // **Remove on a diver marked aboard a boat that has left** (H-122). The
+      // dawn boat boarded its sailed seats and is home, so a sailed row's
+      // Remove opens on why it will not, with nothing to confirm.
+      test(`Remove on a diver marked aboard says why it will not (${scheme})`, async ({ page }) => {
+        const tripId = await seededTripId(page, "blue-mantis", SAILED_TRIP);
+        await page.goto(counterPath("blue-mantis", tripId));
+        await page.getByRole("heading", { name: /^Sailed · \d+$/ }).waitFor();
+        const row = page
+          .locator('#roster li[id^="booking-"]')
+          .filter({ has: page.locator("summary", { hasText: /^\s*Remove booking\s*$/ }) })
+          .first();
+        await openRosterDetails(row);
+        await row.locator("summary", { hasText: /^\s*Remove booking\s*$/ }).click();
+        await row.getByRole("status").filter({ hasText: "sailed on this departure" }).waitFor();
+        await expect(row.getByRole("button", { name: "Yes, remove booking" })).toHaveCount(0);
+        await capture(page, "trip-remove-aboard-refused", scheme);
       });
 
       /**
@@ -6271,6 +6301,42 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "incident-report-draft", scheme);
       });
 
+      // The one Today line an unfiled report leaves for owners and managers
+      // (safety sheet 2026-10-15, item 3): how many, who started the oldest,
+      // and when, opening the draft. Started here, so the seed stays clean.
+      test(`an unfiled incident report is one line on Today (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        await openTripAbout(page);
+        await page
+          .getByRole("region", { name: "Incident reports" })
+          .getByRole("button", { name: "Report an incident" })
+          .click();
+        await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
+        await page.goto("/shop/blue-mantis");
+        await page.getByText(/1 incident report not filed, started today by /).waitFor();
+        await capture(page, "today-incident-unfiled", scheme);
+      });
+
+      // The log's last section with a report on it (safety sheet 2026-10-15,
+      // item 5): an unfiled draft says so and who started it, and links to it.
+      test(`the departure log lists its incident reports (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        const tripPath = new URL(page.url()).pathname;
+        await openTripAbout(page);
+        await page
+          .getByRole("region", { name: "Incident reports" })
+          .getByRole("button", { name: "Report an incident" })
+          .click();
+        await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
+        await page.goto(`${tripPath}/log`);
+        const section = page.locator("section", {
+          has: page.getByRole("heading", { name: "Incident reports" }),
+        });
+        await section.getByText(/^Draft not filed, started by /).waitFor();
+        await section.scrollIntoViewIfNeeded();
+        await capture(page, "departure-log-incident-reports", scheme);
+      });
+
       // The month's Safety tab beside Reports: roll calls, dock marks, card
       // checks written past, crew credentials and the month's incident
       // reports, read from what the shop already records.
@@ -7787,6 +7853,15 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(
           page.getByRole("dialog").getByRole("button", { name: "Not back aboard", exact: true }),
         ).toBeVisible();
+        // The panel the alarm leaves open, with the report's door in it (safety
+        // sheet 2026-10-15, item 2): "Start a missing diver report" under "Mark
+        // back aboard", for the owner signed in here.
+        const startReport = page
+          .getByRole("dialog")
+          .getByRole("button", { name: /^Start a missing diver report — / });
+        await startReport.evaluate((button) => button.scrollIntoView({ block: "center" }));
+        await page.mouse.move(0, 0);
+        await capture(page, "manifest-not-back-aboard-panel", scheme);
         // Closed again for the shot: the alarm this capture is about is what
         // the *list* shows — the pinned danger line and the one red row — and a
         // panel left open would photograph a person's contact card instead.

@@ -1,6 +1,8 @@
 import type { MediaDeletionKind, PaymentOperationKind } from "@/db/schema";
+import { calendarDateInTimezone, calendarDaysBetween } from "@/lib/calendar-date";
 import { DSD_RATIO } from "@/lib/course-ratios";
 import type { DepthUnit } from "@/lib/depth-units";
+import { formatRelativeDay, formatShortDate, formatWeekday } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { firstNameOf } from "@/lib/person-name";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "@/lib/readiness";
@@ -51,7 +53,9 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   gear_service_due: "today.actionKind.gearServiceDue",
   boat_safety_kit: "today.actionKind.boatSafetyKit",
   boat_papers_due: "today.actionKind.boatPapersDue",
+  boat_papers_lapsed: "today.actionKind.boatPapersLapsed",
   boat_safety_expired: "today.actionKind.boatSafetyExpired",
+  incident_report_unfiled: "today.actionKind.incidentReportUnfiled",
   work_order_late: "today.actionKind.workOrderLate",
   work_order_uncollected: "today.actionKind.workOrderUncollected",
   staff_credential_due: "today.actionKind.staffCredentialDue",
@@ -681,6 +685,47 @@ export function owedRefundGroupDetailText(
  * who had already found it, every morning, forever — copy-restraint's fifth
  * deletion.
  */
+/**
+ * The unfiled incident report line (safety sheet 2026-10-15, item 3): how many
+ * drafts sit unfiled, and who started the oldest and when. `day` says how
+ * `when` reads: `relative` ("today", "yesterday"), `weekday` ("Tuesday"),
+ * `date` ("Oct 12"), so each language can put its own word before a date.
+ */
+export function incidentReportUnfiledSubjectText(
+  t: StaffTranslator,
+  input: { count: number; name: string; when: string; day: "relative" | "weekday" | "date" },
+): string {
+  return t("today.incidentReportUnfiled.subject", input);
+}
+
+/**
+ * When a draft was started, the way the desk says it: "today" or "yesterday",
+ * the weekday within the past week ("Tuesday"), else the date ("Oct 12"). In
+ * the shop's zone, by calendar day.
+ */
+export function incidentDraftStartedWhen(
+  startedAt: Date,
+  now: Date,
+  locale: string,
+  timeZone: string,
+): { day: "relative" | "weekday" | "date"; when: string } {
+  const daysAgo = calendarDaysBetween(
+    calendarDateInTimezone(startedAt, timeZone),
+    calendarDateInTimezone(now, timeZone),
+  );
+  if (daysAgo >= 0 && daysAgo <= 1) {
+    return { day: "relative", when: formatRelativeDay(startedAt, now, locale, timeZone) };
+  }
+  if (daysAgo > 1 && daysAgo < 7) {
+    return { day: "weekday", when: formatWeekday(startedAt, locale, timeZone) };
+  }
+  return { day: "date", when: formatShortDate(startedAt, locale, timeZone) };
+}
+
+export function openIncidentReportActionText(t: StaffTranslator): string {
+  return t("today.actionLabel.openIncidentReport");
+}
+
 export function reviewsPendingSubjectText(t: StaffTranslator, count: number): string {
   return t("today.reviewsPending.subject", { count });
 }

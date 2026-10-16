@@ -1,7 +1,8 @@
-import { and, asc, desc, eq, gte, inArray, isNull, lt, ne, sql } from "drizzle-orm";
+import { type AnyColumn, and, asc, desc, eq, gte, inArray, isNull, lt, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { seatName } from "@/lib/held-seat";
 import {
   INCIDENT_SHORT_TEXT_MAX,
   INCIDENT_TEXT_MAX,
@@ -18,6 +19,7 @@ import {
   mayStartIncidentReport,
   mayWriteIncidentReport,
 } from "@/lib/incident-reports";
+import { OFFLINE_EVENT_SKEW_MS } from "@/lib/offline-events";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { recordTripActivity } from "./operations";
@@ -36,7 +38,7 @@ import {
   trips,
   userAccounts,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * **Incident reports** (ADR 20261012-incident-reports): one per incident, on a
@@ -95,29 +97,357 @@ export type IncidentWriteRefusal =
   | "blank"
   | "too_long";
 
-/** Start a draft on a departure. */
+type StartedDraft =
+  | { ok: true; reportId: string; reused: boolean }
+  | { ok: false; reason: IncidentWriteRefusal };
+
+/** Every answer a draft holds; a draft whose answers are all null says nothing yet. */
+const DRAFT_ANSWER_COLUMNS = [
+  incidentReports.occurredAt,
+  incidentReports.diveSiteId,
+  incidentReports.locationText,
+  incidentReports.whatHappened,
+  incidentReports.kind,
+  incidentReports.severity,
+  incidentReports.firstAidGiven,
+  incidentReports.oxygenGiven,
+  incidentReports.oxygenMinutes,
+  incidentReports.emergencyServicesCalled,
+  incidentReports.handoverKind,
+  incidentReports.handoverDetail,
+  incidentReports.handedOverAt,
+  incidentReports.followUp,
+] as const;
+
+/**
+ * Start a draft on a departure, or reopen the **untouched** one this person
+ * just started.
+ *
+ * **A double tap is not a second report** (safety sheet 2026-10-15, item 3):
+ * a second tap of "Report an incident" (a slow phone at the dock) used to
+ * insert a second empty draft into the list the owner and the insurer read.
+ * Now it answers with the writer's own unfiled draft on that departure, but
+ * only while that draft says nothing at all: no answer and nobody named
+ * (domain review 2026-10-16). A draft about something else is a different
+ * incident, and "one report per incident" (ADR 20261012-incident-reports,
+ * amended by 20261016-incident-drafts) means the writer gets a new one.
+ * Somebody else's draft is never handed over, so reuse widens nobody's view.
+ *
+ * Race-safe by a transaction-scoped advisory lock on (departure, writer):
+ * two taps arriving together queue, and the second reads the draft the first
+ * committed (`incident-reports.postgres.test.ts`). A hash collision only
+ * serializes two unrelated starts for a moment.
+ */
 export async function startIncidentReport(
   db: AppDb,
   input: { shopId: string; tripId: string; actorPersonId: string },
-): Promise<{ ok: true; reportId: string } | { ok: false; reason: IncidentWriteRefusal }> {
-  const [trip] = await db
+): Promise<StartedDraft> {
+  return db.transaction((tx) => openUntouchedDraft(tx, input));
+}
+
+/** The live departure, and whether this person may start a report on it. */
+async function startGate(
+  tx: DbExecutor,
+  input: { shopId: string; tripId: string; actorPersonId: string },
+): Promise<IncidentWriteRefusal | null> {
+  const [trip] = await tx
     .select({ id: trips.id })
     .from(trips)
     .where(and(liveTrip(), eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)))
     .limit(1);
-  if (!trip) return { ok: false, reason: "not_found" };
-  const viewer = await loadIncidentViewer(db, input.shopId, input.tripId, input.actorPersonId);
-  if (!mayStartIncidentReport(viewer)) return { ok: false, reason: "not_allowed" };
-  const [row] = await db
+  if (!trip) return "not_found";
+  const viewer = await loadIncidentViewer(tx, input.shopId, input.tripId, input.actorPersonId);
+  return mayStartIncidentReport(viewer) ? null : "not_allowed";
+}
+
+/** A new, empty draft by this writer. */
+async function insertDraft(
+  tx: DbExecutor,
+  input: { shopId: string; tripId: string; actorPersonId: string },
+  fields: { kind?: IncidentKind; occurredAt?: Date } = {},
+): Promise<string | null> {
+  const now = nowDate();
+  const [row] = await tx
     .insert(incidentReports)
     .values({
       shopId: input.shopId,
       tripId: input.tripId,
       createdByPersonId: input.actorPersonId,
+      createdAt: now,
+      updatedAt: now,
+      ...fields,
     })
     .returning({ id: incidentReports.id });
-  if (!row) return { ok: false, reason: "not_found" };
-  return { ok: true, reportId: row.id };
+  return row?.id ?? null;
+}
+
+/** `startIncidentReport`'s body, inside the caller's transaction. */
+async function openUntouchedDraft(
+  tx: DbExecutor,
+  input: { shopId: string; tripId: string; actorPersonId: string },
+): Promise<StartedDraft> {
+  const refused = await startGate(tx, input);
+  if (refused) return { ok: false, reason: refused };
+  await tx.execute(
+    sql`select pg_advisory_xact_lock(hashtext('incident_report_draft'), hashtext(${`${input.tripId}:${input.actorPersonId}`}))`,
+  );
+  const [open] = await tx
+    .select({ id: incidentReports.id })
+    .from(incidentReports)
+    .where(
+      and(
+        eq(incidentReports.shopId, input.shopId),
+        eq(incidentReports.tripId, input.tripId),
+        eq(incidentReports.createdByPersonId, input.actorPersonId),
+        eq(incidentReports.status, "draft"),
+        isNull(incidentReports.deletedAt),
+        ...DRAFT_ANSWER_COLUMNS.map((column) => isNull(column)),
+        sql`not exists (select 1 from ${incidentReportPeople} where ${incidentReportPeople.reportId} = ${incidentReports.id})`,
+      ),
+    )
+    // diveday:allow-time-id-order: picks the one draft to reopen; nobody is shown this order.
+    .orderBy(asc(incidentReports.createdAt), asc(incidentReports.id))
+    .limit(1);
+  if (open) return { ok: true, reportId: open.id, reused: true };
+  const reportId = await insertDraft(tx, input);
+  if (!reportId) return { ok: false, reason: "not_found" };
+  return { ok: true, reportId, reused: false };
+}
+
+/** Who is missing: a diver by their seat, or a crew member of this departure. */
+export type MissingSubject =
+  | { kind: "diver"; bookingId: string }
+  | { kind: "crew"; personId: string };
+
+/**
+ * When a standing "not back aboard" began, from one subject's after-dive
+ * roll-call events oldest first: per checkpoint, the first `not_boarded` of
+ * the unbroken run that ends with the checkpoint's latest event; across
+ * checkpoints, the earliest. Null when no checkpoint stands that way now
+ * (never marked, or marked back aboard or cleared since).
+ *
+ * The earliest, not the newest (domain review 2026-10-16): an offline copy of
+ * the same alarm synced seven minutes later, or the same diver still missing
+ * at the next count, is the same disappearance, and an insurer reads the
+ * first time the crew said so. The dock's `not_boarded` is "never left",
+ * never a missing diver, so the caller leaves the departure checkpoint out.
+ */
+export function standingNotBackAboardSince(
+  events: readonly { checkpoint: string; status: string; occurredAt: Date }[],
+): Date | null {
+  const runStart = new Map<string, Date | null>();
+  for (const event of events) {
+    if (event.status !== "not_boarded") runStart.set(event.checkpoint, null);
+    else if (!runStart.get(event.checkpoint)) runStart.set(event.checkpoint, event.occurredAt);
+  }
+  let since: Date | null = null;
+  for (const start of runStart.values()) {
+    if (start && (!since || start < since)) since = start;
+  }
+  return since;
+}
+
+/** The subject's after-dive roll-call events on this departure, oldest first. */
+async function afterDiveEvents(
+  tx: DbExecutor,
+  input: { shopId: string; tripId: string; subject: MissingSubject },
+) {
+  const { subject } = input;
+  if (subject.kind === "diver") {
+    return tx
+      .select({
+        checkpoint: rollCallEvents.checkpoint,
+        status: rollCallEvents.status,
+        occurredAt: rollCallEvents.occurredAt,
+      })
+      .from(rollCallEvents)
+      .where(
+        and(
+          eq(rollCallEvents.shopId, input.shopId),
+          eq(rollCallEvents.tripId, input.tripId),
+          eq(rollCallEvents.bookingId, subject.bookingId),
+          ne(rollCallEvents.checkpoint, "departure"),
+        ),
+      )
+      .orderBy(
+        asc(rollCallEvents.occurredAt),
+        asc(rollCallEvents.createdAt),
+        asc(rollCallEvents.seq),
+      );
+  }
+  return tx
+    .select({
+      checkpoint: rollCallCrewEvents.checkpoint,
+      status: rollCallCrewEvents.status,
+      occurredAt: rollCallCrewEvents.occurredAt,
+    })
+    .from(rollCallCrewEvents)
+    .where(
+      and(
+        eq(rollCallCrewEvents.shopId, input.shopId),
+        eq(rollCallCrewEvents.tripId, input.tripId),
+        eq(rollCallCrewEvents.personId, subject.personId),
+        ne(rollCallCrewEvents.checkpoint, "departure"),
+      ),
+    )
+    .orderBy(
+      asc(rollCallCrewEvents.occurredAt),
+      asc(rollCallCrewEvents.createdAt),
+      asc(rollCallCrewEvents.seq),
+    );
+}
+
+/** Whether the subject is on this departure: a seat booked on it, or its crew. */
+async function subjectOnDeparture(
+  tx: DbExecutor,
+  input: { shopId: string; tripId: string; subject: MissingSubject },
+): Promise<boolean> {
+  const { subject } = input;
+  if (subject.kind === "diver") {
+    const [seat] = await tx
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.id, subject.bookingId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.tripId, input.tripId),
+        ),
+      )
+      .limit(1);
+    return Boolean(seat);
+  }
+  const [member] = await tx
+    .select({ personId: tripAssignments.personId })
+    .from(tripAssignments)
+    .innerJoin(people, eq(people.id, tripAssignments.personId))
+    .where(
+      and(
+        eq(tripAssignments.tripId, input.tripId),
+        eq(tripAssignments.personId, subject.personId),
+        eq(people.shopId, input.shopId),
+      ),
+    )
+    .limit(1);
+  return Boolean(member);
+}
+
+export type MissingDiverStart =
+  | { ok: true; reportId: string; reused: boolean }
+  | { ok: false; reason: IncidentWriteRefusal | "not_missing" }
+  /** Somebody else's open report already names them; who started it, nothing more. */
+  | { ok: false; reason: "already_started"; startedByName: string }
+  /** Somebody else's filed report already names them; who filed it, nothing more. */
+  | { ok: false; reason: "already_filed"; filedByName: string };
+
+/**
+ * **"Start a missing diver report"** from a manifest row marked not back
+ * aboard (safety sheet 2026-10-15, item 2): a diver's seat, or a crew member
+ * of the departure (domain review 2026-10-16). One report per missing person:
+ *
+ * - A **Missing diver report on this departure that already names them as
+ *   affected, started during this disappearance**, draft or filed, is the
+ *   report, whoever started it (domain re-review 2026-10-16, items 1 and 2).
+ *   Its writer, an owner or a manager gets it back, a filed one to add a
+ *   note to. Anyone else (a second crew member tapping for the same diver)
+ *   is told who started or filed it, and is given neither its contents nor a
+ *   second report. "This disappearance" is the standing run of marks: a
+ *   report started before the diver was last marked back aboard is about an
+ *   earlier one, and a new report is started.
+ * - Otherwise a **new** draft, of kind Missing diver, timed at the earliest
+ *   standing mark ({@link standingNotBackAboardSince}), naming them as
+ *   affected. Never the writer's other draft: a missing diver folded into an
+ *   injury report reads to an insurer as no missing-diver report at all.
+ *
+ * Race-safe by an advisory lock on (departure, missing person), so two crew
+ * tapping together make one report. No new state or mode: the result is an
+ * ordinary draft, filed the ordinary way.
+ *
+ * Refused as `not_missing` when they have no standing after-dive "not back
+ * aboard" mark on this departure (marked back aboard meanwhile, or not on
+ * this departure at all), so a stale tap writes nothing.
+ */
+export async function startMissingDiverReport(
+  db: AppDb,
+  input: { shopId: string; tripId: string; subject: MissingSubject; actorPersonId: string },
+): Promise<MissingDiverStart> {
+  return db.transaction(async (tx): Promise<MissingDiverStart> => {
+    // Who may write first, so a refused caller learns nothing about the seat.
+    const refused = await startGate(tx, input);
+    if (refused) return { ok: false, reason: refused === "not_found" ? "not_allowed" : refused };
+    if (!(await subjectOnDeparture(tx, input))) return { ok: false, reason: "not_missing" };
+    const since = standingNotBackAboardSince(await afterDiveEvents(tx, input));
+    if (!since) return { ok: false, reason: "not_missing" };
+    const { subject } = input;
+    const subjectId = subject.kind === "diver" ? subject.bookingId : subject.personId;
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext('incident_report_missing'), hashtext(${`${input.tripId}:${subjectId}`}))`,
+    );
+    const filers = alias(people, "incident_missing_filers");
+    const [open] = await tx
+      .select({
+        id: incidentReports.id,
+        status: incidentReports.status,
+        createdByPersonId: incidentReports.createdByPersonId,
+        createdByName: creators.fullName,
+        filedByName: filers.fullName,
+      })
+      .from(incidentReports)
+      .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
+      .leftJoin(filers, eq(filers.id, incidentReports.filedByPersonId))
+      .innerJoin(incidentReportPeople, eq(incidentReportPeople.reportId, incidentReports.id))
+      .where(
+        and(
+          eq(incidentReports.shopId, input.shopId),
+          eq(incidentReports.tripId, input.tripId),
+          eq(incidentReports.kind, "missing_diver"),
+          isNull(incidentReports.deletedAt),
+          // This disappearance's, not an earlier one's the diver came back
+          // from. A tablet's clock may run ahead of the server's by the
+          // offline skew, so the mark can postdate the report it opened.
+          gte(incidentReports.createdAt, new Date(since.getTime() - OFFLINE_EVENT_SKEW_MS)),
+          eq(incidentReportPeople.involvement, "affected"),
+          subject.kind === "diver"
+            ? eq(incidentReportPeople.bookingId, subject.bookingId)
+            : eq(incidentReportPeople.personId, subject.personId),
+        ),
+      )
+      // diveday:allow-time-id-order: picks the one report to reopen; nobody is shown this order.
+      .orderBy(asc(incidentReports.createdAt), asc(incidentReports.id))
+      .limit(1);
+    if (open) {
+      const viewer = await loadIncidentViewer(tx, input.shopId, input.tripId, input.actorPersonId);
+      if (mayReadIncidentReport(viewer, open)) return { ok: true, reportId: open.id, reused: true };
+      if (open.status === "filed") {
+        return { ok: false, reason: "already_filed", filedByName: open.filedByName ?? "" };
+      }
+      return { ok: false, reason: "already_started", startedByName: open.createdByName };
+    }
+    const reportId = await insertDraft(tx, input, { kind: "missing_diver", occurredAt: since });
+    if (!reportId) return { ok: false, reason: "not_found" };
+    await tx.insert(incidentReportPeople).values({
+      shopId: input.shopId,
+      reportId,
+      involvement: "affected",
+      ...(subject.kind === "diver"
+        ? { bookingId: subject.bookingId }
+        : { personId: subject.personId }),
+    });
+    return { ok: true, reportId, reused: false };
+  });
+}
+
+/**
+ * Whether this person may start a report on this departure: the manifest
+ * shows "Start a missing diver report" only to them. The write re-checks.
+ */
+export async function mayStartTripIncidentReport(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  personId: string,
+): Promise<boolean> {
+  return mayStartIncidentReport(await loadIncidentViewer(db, shopId, tripId, personId));
 }
 
 /** Which report a write is for: the shop, the departure it hangs off, and who is writing. */
@@ -154,7 +484,14 @@ async function lockForWrite(
       followUp: incidentReports.followUp,
     })
     .from(incidentReports)
-    .where(and(eq(incidentReports.id, reportId), eq(incidentReports.shopId, shopId)))
+    .where(
+      and(
+        eq(incidentReports.id, reportId),
+        eq(incidentReports.shopId, shopId),
+        // A deleted draft answers every write as a missing report does.
+        isNull(incidentReports.deletedAt),
+      ),
+    )
     .limit(1)
     .for("update");
   // A report reached under another departure's address is not this report.
@@ -369,6 +706,44 @@ export async function removeIncidentPerson(
   });
 }
 
+/**
+ * **Delete an unfiled draft** (ADR 20261016-incident-drafts; domain review
+ * 2026-10-16): a double start, a test, something that turned out to be
+ * nothing. Its writer, an owner or a manager may (`mayWriteIncidentReport`);
+ * a filed report is refused, since it changes only by addendum. Soft: the row
+ * stays and the departure log lists it as a deleted draft; it leaves every
+ * working list, Today's line and the report's own door. The departure's trail
+ * names who deleted it and nothing of what it said.
+ */
+export async function deleteIncidentDraft(
+  db: AppDb,
+  input: WriteTarget,
+): Promise<{ ok: true } | { ok: false; reason: IncidentWriteRefusal }> {
+  return db.transaction(async (tx) => {
+    const { report, allowed } = await lockForWrite(tx, input);
+    if (!report || !allowed) return { ok: false, reason: "not_found" } as const;
+    if (report.status !== "draft") return { ok: false, reason: "filed" } as const;
+    await tx
+      .update(incidentReports)
+      .set({ deletedAt: nowDate(), deletedByPersonId: input.actorPersonId })
+      .where(
+        and(
+          eq(incidentReports.id, input.reportId),
+          eq(incidentReports.shopId, input.shopId),
+          eq(incidentReports.status, "draft"),
+          isNull(incidentReports.deletedAt),
+        ),
+      );
+    await recordTripActivity(tx, {
+      shopId: input.shopId,
+      tripId: report.tripId,
+      actorPersonId: input.actorPersonId,
+      entry: { code: "incident_draft_deleted" },
+    });
+    return { ok: true } as const;
+  });
+}
+
 export type IncidentPersonLine = {
   id: string;
   kind: "booking" | "staff" | "outsider";
@@ -422,7 +797,13 @@ export async function getIncidentReport(
     .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
     .leftJoin(filers, eq(filers.id, incidentReports.filedByPersonId))
     .leftJoin(diveSites, eq(diveSites.id, incidentReports.diveSiteId))
-    .where(and(eq(incidentReports.id, reportId), eq(incidentReports.shopId, shopId)))
+    .where(
+      and(
+        eq(incidentReports.id, reportId),
+        eq(incidentReports.shopId, shopId),
+        isNull(incidentReports.deletedAt),
+      ),
+    )
     .limit(1);
   if (!row) return null;
   const viewer = await loadIncidentViewer(db, shopId, row.report.tripId, viewerPersonId);
@@ -440,6 +821,8 @@ export async function getIncidentReport(
           outsiderName: incidentReportPeople.outsiderName,
           involvement: incidentReportPeople.involvement,
           seatName: seatPeople.fullName,
+          identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+          identityBookedAs: bookings.identityBookedAs,
           staffName: people.fullName,
         })
         .from(incidentReportPeople)
@@ -453,7 +836,7 @@ export async function getIncidentReport(
         // name within each: the order an insurer reads a list of people in.
         .orderBy(
           asc(incidentReportPeople.involvement),
-          sql`coalesce(${seatPeople.fullName}, ${people.fullName}, ${incidentReportPeople.outsiderName})`,
+          sql`coalesce(${heldSeatName(seatPeople.fullName)}, ${people.fullName}, ${incidentReportPeople.outsiderName})`,
           asc(incidentReportPeople.id),
         ),
     () =>
@@ -513,7 +896,13 @@ export async function getIncidentReport(
     people: personRows.map((person) => ({
       id: person.id,
       kind: person.bookingId ? "booking" : person.personId ? "staff" : "outsider",
-      name: person.seatName ?? person.staffName ?? person.outsiderName ?? "",
+      // A held seat by the name it was booked as (issue #2128): the person it
+      // was matched to may be somebody else.
+      name:
+        (person.seatName !== null ? seatName(person.seatName, person) : null) ??
+        person.staffName ??
+        person.outsiderName ??
+        "",
       involvement: person.involvement,
     })),
     addenda: addendumRows,
@@ -593,11 +982,137 @@ export async function listTripIncidentReports(
       and(
         eq(incidentReports.shopId, shopId),
         eq(incidentReports.tripId, tripId),
+        isNull(incidentReports.deletedAt),
         seesAll ? undefined : eq(incidentReports.createdByPersonId, viewerPersonId),
       ),
     )
     .orderBy(desc(incidentReports.createdAt), asc(creators.fullName), desc(incidentReports.id));
   return { mayStart: mayStartIncidentReport(viewer), reports: rows.map(toLine) };
+}
+
+/** One unfiled draft, as Today's line names it: who started it and when. */
+export type UnfiledIncidentDraft = {
+  id: string;
+  tripId: string;
+  createdAt: Date;
+  createdByName: string;
+};
+
+/**
+ * **Every unfiled draft in the shop, oldest first**, for the owner's and
+ * managers' one line on Today (safety sheet 2026-10-15, item 3): an injury
+ * started on the boat and left as a private draft while the insurer's notice
+ * window runs. Owners and managers only, re-read live here: they may already
+ * read every report, so the line widens nobody's view. Anyone else, or no
+ * viewer at all, gets nothing. A report outlives a deleted departure, and so
+ * does an unfiled one's line.
+ */
+export async function listUnfiledIncidentDrafts(
+  db: DbExecutor,
+  shopId: string,
+  viewerPersonId: string,
+): Promise<UnfiledIncidentDraft[]> {
+  const roles = await loadActiveStaffRoles(db, shopId, viewerPersonId);
+  if (
+    !mayReadIncidentReport(
+      { personId: viewerPersonId, roles, onCrew: false },
+      { createdByPersonId: "" },
+    )
+  ) {
+    return [];
+  }
+  return (
+    db
+      .select({
+        id: incidentReports.id,
+        tripId: incidentReports.tripId,
+        createdAt: incidentReports.createdAt,
+        createdByName: creators.fullName,
+      })
+      .from(incidentReports)
+      .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
+      // diveday:allow-deleted-trips: a report outlives a deleted departure, and so does its line.
+      .innerJoin(trips, and(eq(trips.id, incidentReports.tripId), notRehearsal()))
+      .where(
+        and(
+          eq(incidentReports.shopId, shopId),
+          eq(incidentReports.status, "draft"),
+          isNull(incidentReports.deletedAt),
+        ),
+      )
+      .orderBy(asc(incidentReports.createdAt), asc(creators.fullName), asc(incidentReports.id))
+  );
+}
+
+/** Who filed a report, read by name beside it on the departure log. */
+const filers = alias(people, "incident_filers");
+/** Who deleted an unfiled draft, read by name on the departure log. */
+const deleters = alias(people, "incident_deleters");
+
+/** One report as the departure log lists it: where it stands, never what it says. */
+export type DepartureLogIncidentReport = {
+  reportId: string;
+  status: IncidentReportStatus;
+  kind: IncidentKind | null;
+  severity: IncidentSeverity | null;
+  filedAt: Date | null;
+  filedByName: string | null;
+  addendaCount: number;
+  createdAt: Date;
+  createdByName: string;
+  /** A draft deleted unfiled, and by whom; null on every other report. */
+  deletedAt: Date | null;
+  deletedByName: string | null;
+};
+
+/**
+ * **A departure's reports, for its log** (safety sheet 2026-10-15, item 5),
+ * oldest first: kind, severity, when filed and by whom, how many addenda, and
+ * who started an unfiled draft. Never what happened, nor who was involved.
+ * Only for a reader who may already read every report (owners and managers),
+ * re-read live here; anyone else gets null, so the log widens nobody's
+ * view. Reads the departure without `liveTrip()`: a report outlives it.
+ */
+export async function listDepartureLogIncidentReports(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  viewerPersonId: string,
+): Promise<DepartureLogIncidentReport[] | null> {
+  const roles = await loadActiveStaffRoles(db, shopId, viewerPersonId);
+  if (
+    !mayReadIncidentReport(
+      { personId: viewerPersonId, roles, onCrew: false },
+      { createdByPersonId: "" },
+    )
+  ) {
+    // Null, never an empty list: a log built for someone who may not read the
+    // list must fail, not say the departure has no reports.
+    return null;
+  }
+  return db
+    .select({
+      reportId: incidentReports.id,
+      status: incidentReports.status,
+      kind: incidentReports.kind,
+      severity: incidentReports.severity,
+      filedAt: incidentReports.filedAt,
+      filedByName: filers.fullName,
+      addendaCount: sql<number>`(
+        select count(*)::int from ${incidentReportAddenda}
+        where ${incidentReportAddenda.reportId} = ${incidentReports.id}
+      )`,
+      createdAt: incidentReports.createdAt,
+      createdByName: creators.fullName,
+      deletedAt: incidentReports.deletedAt,
+      deletedByName: deleters.fullName,
+    })
+    .from(incidentReports)
+    .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
+    .leftJoin(filers, eq(filers.id, incidentReports.filedByPersonId))
+    .leftJoin(deleters, eq(deleters.id, incidentReports.deletedByPersonId))
+    .where(and(eq(incidentReports.shopId, shopId), eq(incidentReports.tripId, tripId)))
+    .orderBy(asc(incidentReports.createdAt), asc(creators.fullName), asc(incidentReports.id));
 }
 
 /**
@@ -630,19 +1145,35 @@ export async function listShopIncidentReports(
     // diveday:allow-deleted-trips: a report outlives a deleted departure.
     .innerJoin(trips, eq(trips.id, incidentReports.tripId))
     .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
-    .where(and(eq(incidentReports.shopId, shopId), gte(at, from), lt(at, to)))
+    .where(
+      and(
+        eq(incidentReports.shopId, shopId),
+        isNull(incidentReports.deletedAt),
+        gte(at, from),
+        lt(at, to),
+      ),
+    )
     .orderBy(desc(at), desc(incidentReports.id));
   return rows.map(toLine);
 }
 
-/** The bookings on a departure a draft may name, with the diver's name. */
+/**
+ * A seat's name in SQL, as `seatName` gives it: a held seat (issue #2128) by
+ * the name it was booked as, any other by the person on it. Reads `bookings`.
+ */
+function heldSeatName(fullName: AnyColumn) {
+  return sql<string>`case when ${bookings.identityUnconfirmedAt} is not null then coalesce(nullif(btrim(${bookings.identityBookedAs}), ''), ${fullName}) else ${fullName} end`;
+}
+
+/** The bookings on a departure a draft may name, with the diver's name, a held seat's as booked. */
 export async function listIncidentSeatChoices(
   db: DbExecutor,
   shopId: string,
   tripId: string,
 ): Promise<{ bookingId: string; name: string }[]> {
-  const rows = await db
-    .select({ bookingId: bookings.id, name: people.fullName })
+  const name = heldSeatName(people.fullName);
+  return db
+    .select({ bookingId: bookings.id, name })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .where(
@@ -652,8 +1183,7 @@ export async function listIncidentSeatChoices(
         ne(bookings.status, "cancelled"),
       ),
     )
-    .orderBy(asc(people.fullName), asc(bookings.id));
-  return rows;
+    .orderBy(asc(name), asc(bookings.id));
 }
 
 /** The departure's crew, first, for naming a staffer; then nobody else is offered. */

@@ -144,7 +144,7 @@ describe("StageStrip on the way home with a roll call open", () => {
   const open = {
     ...copy,
     rollCallOpen: {
-      line: "2 divers not marked after dive 2.",
+      line: "2 people not marked after dive 2.",
       openLabel: "Open roll call",
       href: "/shop/blue-mantis/trips/trip-1/manifest?checkpoint=after_dive_2",
     },
@@ -152,7 +152,7 @@ describe("StageStrip on the way home with a roll call open", () => {
 
   it("says who is unmarked and links straight to that roll call", () => {
     render(<StageStrip action={noop} copy={open} current="heading_in" />);
-    expect(screen.getByRole("status").textContent).toBe("2 divers not marked after dive 2.");
+    expect(screen.getByRole("status").textContent).toBe("2 people not marked after dive 2.");
     expect(screen.getByRole("link", { name: "Open roll call" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/trips/trip-1/manifest?checkpoint=after_dive_2",

@@ -1,4 +1,16 @@
-import { and, asc, count, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  ne,
+  type SQL,
+  type SQLWrapper,
+  sql,
+} from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { sellableSeats } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
@@ -28,6 +40,8 @@ import {
   diveSites,
   people,
   personRoles,
+  rollCallCrewEvents,
+  rollCallEvents,
   tripAssignments,
   tripDives,
   tripScheduleDays,
@@ -887,6 +901,13 @@ export async function updateTripConditions(
       holdStarted: patch.conditionsHold === true && !before.conditionsHold,
     };
   });
+}
+
+/** Whether anybody, diver or crew, has a roll-call or boarding event on this trip. */
+export function rollCallStartedOn(tripId: SQLWrapper | string): SQL<boolean> {
+  return sql<boolean>`(exists (select 1 from ${rollCallEvents} where ${rollCallEvents.tripId} = ${tripId}) or exists (select 1 from ${rollCallCrewEvents} where ${rollCallCrewEvents.tripId} = ${tripId}))`.mapWith(
+    Boolean,
+  );
 }
 
 export async function setTripStatus(
