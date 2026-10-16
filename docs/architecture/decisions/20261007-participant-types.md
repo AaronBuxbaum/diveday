@@ -67,8 +67,10 @@ trip-row lock, never as a pre-check.
   and a paid seat whose new type lists higher is saved with a notice that the difference is owed
   and a `balance_owed` desk event. Leaving diving releases the seat's unclaimed gear-register
   reservations for the kinds the new type does not use. No change is accepted once the departure is
-  home or cancelled, and joining the dive is refused from the departure time on (not the selling
-  grace of `hasSailed`). Leaving it stays open between dives.
+  home or cancelled. Out on the water a seat may change either way (amended 2026-10-13, issue
+  #2225): the partner who rode dive 1 may dive the second tank, through the same card check and
+  role-gated "Change anyway", and the boarding re-check for a seat recorded boarded. A change
+  made after the time on the board says so on the trail line ("after departure").
 - **The original type is kept.** `bookings.booked_as` records the type the seat was booked as and
   never changes. Every writer states it, and the column has no default, so an insert that forgets it
   fails to compile. A default of diver was the expand half of expand/contract, kept for the one

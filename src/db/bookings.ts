@@ -2158,11 +2158,9 @@ export type SetParticipantTypeOutcome =
       reason: /** No live seat by that id on that departure at this shop. */
         | "not_found"
         /**
-         * The departure is cancelled or deleted, it has come home, or its
-         * departure time has passed and the change is *into* diving. A seat
-         * leaving the water stays possible between dives, which is when it
-         * happens; a seat joining the dive after the dock check would skip that
-         * check.
+         * The departure is cancelled or deleted, or it has come home. Out on
+         * the water a seat may still change either way: joining the dive meets
+         * the card check and, once boarded, the boarding gate (issue #2225).
          */
         | "trip_unavailable"
         /** A course session seats divers only. */
@@ -2332,13 +2330,18 @@ async function changeParticipantType(
     if (from === to) return { ok: true, changed: false, from, tripId: trip.id, owedCents: 0 };
     const now = nowDate();
     // Home is final: the head count is closed and the record is what it was.
-    // Departure time is final only for joining the dive, which would skip the dock's
-    // card check; leaving the water between dives is exactly when it happens.
-    // The time on the board, not `hasSailed`'s grace: that buffer is for
-    // selling a seat to someone running late, not for who goes in the water.
-    if (hasReturned(trip.endsAt, now) || (isDiver(to) && now >= trip.startsAt)) {
+    // Out on the water a seat may change either way (issue #2225, Aaron
+    // 2026-10-13): the partner who rode dive 1 dives the second tank, and the
+    // boat that left ten minutes late still has a dock. Joining the dive after
+    // the time on the board meets the same two checks it would before it — the
+    // booking-time card check below, past which only `confirmCertBlock` writes,
+    // and the boarding gate for a seat the rail recorded boarded — and its trail
+    // line says it happened at sea. The time on the board, not `hasSailed`'s
+    // grace: that buffer is for selling a seat to someone running late.
+    if (hasReturned(trip.endsAt, now)) {
       return { ok: false, reason: "trip_unavailable" };
     }
+    const atSea = now >= trip.startsAt;
     if (trip.courseId && !isDiver(to)) {
       return { ok: false, reason: "participant_type_unavailable" };
     }
@@ -2468,6 +2471,7 @@ async function changeParticipantType(
         type: to,
         certCheck,
         cleared: cleared.join(","),
+        atSea: atSea ? "yes" : "no",
       },
     });
     await recordDeskEvent(tx, {

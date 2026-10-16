@@ -496,6 +496,8 @@ export type TripActivityEntry =
       certCheck: "none" | "cleared" | "overridden";
       /** The certification blocker codes the seat stopped facing, comma-joined; empty for none. */
       cleared: string;
+      /** Whether the change was made after the time on the board (issue #2225). */
+      atSea: "yes" | "no";
     }
   | { code: "crew_assigned" | "crew_removed"; crew: string }
   | {

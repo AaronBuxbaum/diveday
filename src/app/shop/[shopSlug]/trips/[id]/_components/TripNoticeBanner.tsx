@@ -333,7 +333,7 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "participants.notices.onBuddyTeam",
   },
-  // Too late: joining after the departure time, or anything once home.
+  // Too late: the departure is home or cancelled.
   "participant-type-closed": {
     form: "roster",
     tone: "danger",

@@ -117,6 +117,7 @@ type ActivityParamShapes = {
     type: "diver" | "snorkeler" | "rider";
     certCheck: "none" | "cleared" | "overridden";
     cleared: string;
+    atSea: "yes" | "no";
   };
   /**
    * A staffer marked a course form as a medical statement the boarding gate
