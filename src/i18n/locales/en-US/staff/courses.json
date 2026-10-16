@@ -196,5 +196,22 @@
     "add": "Add a material",
     "max": "A course holds up to {max, plural, one {# material} other {# materials}}.",
     "empty": "Nothing yet. Add the eLearning or reading students finish before day 1."
+  },
+  "ladder": {
+    "heading": "Next steps",
+    "taster": "{count, plural, one {# did {course} in the last 12 months} other {# did {course} in the last 12 months}} · {wentOn} went on to {next}",
+    "certified": "{count, plural, one {# diver certified here in {course} in the last 12 months has no {next} booked} other {# divers certified here in {course} in the last 12 months have no {next} booked}}",
+    "nextSession": "Next {next}: {date} ({booked} of {capacity})",
+    "noSession": "No {next} with a seat on the board yet.",
+    "seeWho": "See who",
+    "invite": "Invite",
+    "inviting": "Inviting…",
+    "inviteAria": "Invite {name} to {next}",
+    "notice": {
+      "invite-sent": "Invite sent.",
+      "invite-opted-out": "Invitation recorded but not emailed: this diver turned off optional emails from the shop.",
+      "invite-cooldown": "Not sent: this diver had an invite from the shop in the last 30 days.",
+      "invite-failed": "That invite didn’t go out. Try again."
+    }
   }
 }

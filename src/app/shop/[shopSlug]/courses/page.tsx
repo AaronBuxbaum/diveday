@@ -12,6 +12,7 @@ import { SearchField } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { getCourseLadder } from "@/db/course-ladder";
 import {
   COURSE_LIST_VIEWS,
   type CourseListView,
@@ -25,12 +26,16 @@ import { nextSessionStartByCourse } from "@/db/trips";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
 import { courseTotalCents } from "@/lib/courses";
 import { formatMoneyScanned, formatShortDate, joinFacts } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursesPath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
+import { noticeFromParam } from "@/lib/staff-notices";
+import { CourseLadder } from "./_components/CourseLadder";
 import { CourseRoster, type CourseRosterRow } from "./_components/CourseRoster";
+import { inviteToCourseSessionAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -59,7 +64,18 @@ const COURSE_VIEW_KEYS: Record<CourseListView, StaffMessageKey> = {
  * catalog. Hiding a course from that catalog lives on the course's own editor,
  * beside Save: it is a rare act, and 55 standing Hide buttons were 55 controls
  * nobody was reaching for. Staff-only, like everything else under
- * `/shop/**` — that catalog is `/s/[shopSlug]/courses`, which this page used
+ * `/shop/** What an invite from the course ladder did (`inviteToCourseSessionAction`). */
+const LADDER_NOTICES: Record<
+  string,
+  { key: StaffMessageKey; tone: "success" | "warning" | "danger" }
+> = {
+  "invite-sent": { key: "courses.ladder.notice.invite-sent", tone: "success" },
+  "invite-opted-out": { key: "courses.ladder.notice.invite-opted-out", tone: "warning" },
+  "invite-cooldown": { key: "courses.ladder.notice.invite-cooldown", tone: "warning" },
+  "invite-failed": { key: "courses.ladder.notice.invite-failed", tone: "danger" },
+};
+
+/**` — that catalog is `/s/[shopSlug]/courses`, which this page used
  * to render as its other half behind a session check (ADR
  * 20260803-public-shop-namespace).
  *
@@ -73,12 +89,12 @@ export default async function CoursesPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ page?: string; q?: string; view?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; view?: string; notice?: string }>;
 }) {
   await connection(); // visibility can change between requests — render per request
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { page, q, view: viewParam } = await searchParams;
+  const { page, q, view: viewParam, notice } = await searchParams;
   // **Find a course in one line** (third UX review, item 35): 55 courses over
   // three pages had paging and nothing else.
   const query = q?.trim() ?? "";
@@ -99,6 +115,7 @@ export default async function CoursesPage({
 
   const locale = await requestLocale(shop.defaultLocale);
   const st = staffTranslator(locale);
+  const ladderNotice = noticeFromParam(notice, LADDER_NOTICES);
 
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
   // range so a bookmarked page past the end lands on the last real one. The
@@ -113,7 +130,7 @@ export default async function CoursesPage({
   // Together rather than in sequence: only the second needs the page of
   // courses, and the permission read does not, so awaiting them one after the
   // other would buy a serial round trip for nothing.
-  const [canSchedule, nextSessions, formsAwaitingText, everOnBoard] = await Promise.all([
+  const [canSchedule, nextSessions, formsAwaitingText, everOnBoard, ladder] = await Promise.all([
     // Scheduling is owner/manager/instructor work, so the button is absent —
     // not disabled — for anyone else (AGENTS.md: gate by not rendering). The
     // new-trip page re-checks against live roles either way.
@@ -144,6 +161,8 @@ export default async function CoursesPage({
       shop.id,
       courseList.map((course) => course.id),
     ),
+    // Who finished a course here and never took the next step (item 45).
+    getCourseLadder(db, shop.id, nowDate()),
   ]);
   const base = `/shop/${shopSlug}/courses`;
   // The search and the view travel with every page turn and chip.
@@ -308,6 +327,12 @@ export default async function CoursesPage({
         }
       />
 
+      {ladderNotice ? (
+        <ShopNotice tone={ladderNotice.tone} className="mt-6">
+          {st(ladderNotice.key)}
+        </ShopNotice>
+      ) : null}
+
       {formsAwaitingText[0] ? (
         <ShopNotice tone="warning" className="mt-6">
           {st("courses.list.formsAwaitingTextSummary", { count: formsAwaitingText.length })}
@@ -385,6 +410,13 @@ export default async function CoursesPage({
       ) : (
         <CourseRoster rows={rows} className="mt-8" />
       )}
+      <CourseLadder
+        steps={ladder}
+        invite={inviteToCourseSessionAction.bind(null, shop.slug)}
+        locale={locale}
+        timeZone={shop.timezone}
+        t={st}
+      />
       <Pager
         page={coursePage.page}
         pageCount={coursePage.pageCount}

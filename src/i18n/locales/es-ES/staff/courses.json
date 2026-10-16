@@ -196,5 +196,22 @@
     "add": "Añadir un material",
     "max": "Un curso admite hasta {max, plural, one {# material} other {# materiales}}.",
     "empty": "Aún no hay nada. Añade el eLearning o la lectura que los alumnos terminan antes del día 1."
+  },
+  "ladder": {
+    "heading": "Siguientes pasos",
+    "taster": "{count, plural, one {# hizo {course} en los últimos 12 meses} other {# hicieron {course} en los últimos 12 meses}} · {wentOn} siguieron con {next}",
+    "certified": "{count, plural, one {# buceador certificado aquí en {course} en los últimos 12 meses no tiene {next} reservado} other {# buceadores certificados aquí en {course} en los últimos 12 meses no tienen {next} reservado}}",
+    "nextSession": "Próximo {next}: {date} ({booked} de {capacity})",
+    "noSession": "Todavía no hay {next} con plaza en el tablero.",
+    "seeWho": "Ver quiénes",
+    "invite": "Invitar",
+    "inviting": "Invitando…",
+    "inviteAria": "Invitar a {name} a {next}",
+    "notice": {
+      "invite-sent": "Invitación enviada.",
+      "invite-opted-out": "Invitación registrada, pero no enviada por correo: este buceador desactivó los correos opcionales del centro.",
+      "invite-cooldown": "No se envió: este buceador recibió una invitación del centro en los últimos 30 días.",
+      "invite-failed": "Esa invitación no salió. Vuelve a intentarlo."
+    }
   }
 }
