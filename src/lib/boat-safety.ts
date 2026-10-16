@@ -152,6 +152,35 @@ export type BoatPaperRecord = BoatPaperDates & {
   certifiedTotalPersons: number | null;
 };
 
+/** The six certificate and paper fields a boat save can change, in the fleet row's order. */
+export const BOAT_PAPER_FIELDS = [
+  "certifiedPassengers",
+  "certifiedTotalPersons",
+  "coiExpiresOn",
+  "inspectionDueOn",
+  "registrationExpiresOn",
+  "insuranceExpiresOn",
+] as const satisfies readonly (keyof BoatPaperRecord)[];
+
+export type BoatPaperField = (typeof BOAT_PAPER_FIELDS)[number];
+
+/**
+ * **What a boat save changed on the certificate and papers** (records review
+ * 2), one entry per field whose value moved, old and new as written ("none"
+ * for a value not recorded). `before` null is a new boat.
+ */
+export function boatPaperChanges(
+  before: BoatPaperRecord | null,
+  after: BoatPaperRecord,
+): { field: BoatPaperField; from: string; to: string }[] {
+  const written = (value: number | string | null) => (value === null ? "none" : String(value));
+  return BOAT_PAPER_FIELDS.flatMap((field) => {
+    const from = before ? before[field] : null;
+    const to = after[field];
+    return from === to ? [] : [{ field, from: written(from), to: written(to) }];
+  });
+}
+
 /**
  * The notices a departure-checkpoint snapshot keeps (#2300): papers and kit,
  * never the head-count lines, which the roll call itself records.

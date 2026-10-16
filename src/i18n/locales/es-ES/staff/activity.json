@@ -64,6 +64,7 @@
     "review_reply_edited": "{actor} cambió la respuesta a una reseña",
     "review_reply_deleted": "{actor} eliminó la respuesta a una reseña",
     "shore_alert_contact_set": "{actor} añadió el correo del contacto en tierra para los avisos del pase de lista",
+    "boat_papers_changed": "{actor} cambió {field, select, certifiedPassengers {el límite de pasajeros del certificado} certifiedTotalPersons {el total de personas del certificado} coiExpiresOn {la caducidad del certificado} inspectionDueOn {la fecha de la inspección} registrationExpiresOn {la caducidad de la matrícula} insuranceExpiresOn {la caducidad del seguro} other {la documentación}} de {boat} de {from, select, none {sin registrar} other {{from}}} a {to, select, none {sin registrar} other {{to}}}",
     "shore_alert_contact_changed": "{actor} cambió el correo del contacto en tierra para los avisos del pase de lista",
     "shore_alert_contact_cleared": "{actor} quitó el correo del contacto en tierra para los avisos del pase de lista",
     "shore_alert_contact_stopped": "El contacto en tierra dejó los avisos del pase de lista con el enlace de uno de ellos",

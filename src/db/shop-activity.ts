@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
 import type { ActivityEntry } from "@/lib/activity";
 import { STAFF_ROLES } from "@/lib/authz";
+import type { BoatPaperField } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
@@ -331,6 +332,14 @@ export type ShopActivityWrite =
       since: string;
     }
   | {
+      /** A boat's certificate or paper field, before and after (records review 2). */
+      code: "boat_papers_changed";
+      boat: string;
+      field: BoatPaperField;
+      from: string;
+      to: string;
+    }
+  | {
       code:
         | "shore_alert_contact_set"
         | "shore_alert_contact_changed"
@@ -504,6 +513,23 @@ async function writeShopActivity(
       orderId: null,
       subjectPersonId: null,
       entry: { code: write.code, params: { actor: actor.name } },
+    };
+  } else if (write.code === "boat_papers_changed") {
+    values = {
+      tripId: null,
+      bookingId: null,
+      orderId: null,
+      subjectPersonId: null,
+      entry: {
+        code: write.code,
+        params: {
+          actor: actor.name,
+          boat: write.boat,
+          field: write.field,
+          from: write.from,
+          to: write.to,
+        },
+      },
     };
   } else {
     // A shop-level line about the shop's own settings (the shore contact's

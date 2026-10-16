@@ -1,9 +1,15 @@
 import { and, asc, count, eq, gt, isNotNull, isNull, ne } from "drizzle-orm";
-import { type BoatSeatsRefusal, boatSeatsRefusal } from "@/lib/boat-safety";
+import {
+  type BoatPaperRecord,
+  type BoatSeatsRefusal,
+  boatPaperChanges,
+  boatSeatsRefusal,
+} from "@/lib/boat-safety";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import { boats, trips } from "./schema";
+import { recordShopActivityWithin } from "./shop-activity";
 import { liveTrip } from "./trips-live";
 
 export type Boat = typeof boats.$inferSelect;
@@ -141,6 +147,8 @@ export async function createBoat(
   capacity: number,
   description: string | null = null,
   papers?: BoatPapersInput,
+  /** The staffer saving it, for the papers' activity line (records review 2). */
+  actorPersonId?: string,
 ): Promise<Boat> {
   const [boat] = await db
     .insert(boats)
@@ -155,7 +163,36 @@ export async function createBoat(
   if (!boat) {
     throw new Error("createBoat: failed to insert boat");
   }
+  if (actorPersonId) await recordPaperChanges(db, shopId, actorPersonId, null, boat);
   return boat;
+}
+
+function paperRecord(boat: Boat): BoatPaperRecord {
+  return {
+    certifiedPassengers: boat.certifiedPassengers,
+    certifiedTotalPersons: boat.certifiedTotalPersons,
+    coiExpiresOn: boat.coiExpiresOn,
+    inspectionDueOn: boat.inspectionDueOn,
+    registrationExpiresOn: boat.registrationExpiresOn,
+    insuranceExpiresOn: boat.insuranceExpiresOn,
+  };
+}
+
+/** One activity line per certificate or paper field the save moved (records review 2). */
+async function recordPaperChanges(
+  db: DbExecutor,
+  shopId: string,
+  actorPersonId: string,
+  before: Boat | null,
+  after: Boat,
+): Promise<void> {
+  for (const change of boatPaperChanges(before ? paperRecord(before) : null, paperRecord(after))) {
+    await recordShopActivityWithin(db, {
+      shopId,
+      actorPersonId,
+      write: { code: "boat_papers_changed", boat: after.name, ...change },
+    });
+  }
 }
 
 export async function updateBoat(
@@ -204,12 +241,14 @@ export async function updateBoatWithinCertificate(
     papers: BoatPapersInput;
     timeZone: string;
     now?: Date;
+    /** The staffer saving it, for the papers' activity line (records review 2). */
+    actorPersonId?: string;
   },
 ): Promise<BoatSaveOutcome> {
   const { shopId, boatId, now = nowDate() } = input;
   return db.transaction(async (tx): Promise<BoatSaveOutcome> => {
     const [boat] = await tx
-      .select({ id: boats.id })
+      .select()
       .from(boats)
       .where(and(eq(boats.shopId, shopId), eq(boats.id, boatId), isNull(boats.deletedAt)))
       .limit(1)
@@ -253,7 +292,11 @@ export async function updateBoatWithinCertificate(
       })
       .where(and(eq(boats.shopId, shopId), eq(boats.id, boatId)))
       .returning();
-    return saved ? { ok: true, boat: saved } : { ok: false, reason: "not_found" };
+    if (!saved) return { ok: false, reason: "not_found" };
+    if (input.actorPersonId) {
+      await recordPaperChanges(tx, shopId, input.actorPersonId, boat, saved);
+    }
+    return { ok: true, boat: saved };
   });
 }
 

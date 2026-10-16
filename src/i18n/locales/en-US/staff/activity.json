@@ -64,6 +64,7 @@
     "review_reply_edited": "{actor} changed the reply to a review",
     "review_reply_deleted": "{actor} deleted the reply to a review",
     "shore_alert_contact_set": "{actor} set the shore contact’s email for roll-call alerts",
+    "boat_papers_changed": "{actor} changed {boat}’s {field, select, certifiedPassengers {certificate passenger limit} certifiedTotalPersons {certificate total persons} coiExpiresOn {certificate expiry} inspectionDueOn {inspection due date} registrationExpiresOn {registration expiry} insuranceExpiresOn {insurance expiry} other {papers}} from {from, select, none {not recorded} other {{from}}} to {to, select, none {not recorded} other {{to}}}",
     "shore_alert_contact_changed": "{actor} changed the shore contact’s email for roll-call alerts",
     "shore_alert_contact_cleared": "{actor} removed the shore contact’s email for roll-call alerts",
     "shore_alert_contact_stopped": "The shore contact stopped roll-call alerts with the link in one",
