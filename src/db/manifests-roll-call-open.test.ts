@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { recordCrewRollCall, recordRollCall, rollCallOpenOnTrip } from "./manifests";
 import { rollCallCrewEvents, rollCallEvents, shops, tripAssignments, trips } from "./schema";
@@ -151,5 +152,49 @@ describe("rollCallOpenOnTrip", () => {
       .returning({ id: shops.id });
     if (!elsewhere) throw new Error("second shop missing");
     expect(await rollCallOpenOnTrip(db, elsewhere.id, reef.id)).toBe(false);
+  });
+
+  // Records review 8: a tap made offline before the cancel still reaches the
+  // record when it syncs; one made after the cancel, or live, does not.
+  it("takes an offline count made before the cancel, and nothing made after it", async () => {
+    const { db, shop, reef, bookingId, staffId } = await reefDeparture();
+    const cancelledAt = nowDate();
+    await ctx.db
+      .update(trips)
+      .set({ status: "cancelled", cancelledAt })
+      .where(eq(trips.id, reef.id));
+    const offline = (occurredAt: Date, clientEventId: string) =>
+      recordCrewRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: staffId,
+        recordedByPersonId: staffId,
+        status: "boarded",
+        source: "offline",
+        clientEventId,
+        offlineSnapshotSavedAt: new Date(cancelledAt.getTime() - 3 * 3_600_000),
+        occurredAt,
+      });
+    expect(
+      await offline(
+        new Date(cancelledAt.getTime() + 60_000),
+        "eeeeeeee-2285-4285-8285-eeeeeeeeeee1",
+      ),
+    ).toEqual({ ok: false, reason: "trip_unavailable" });
+    expect(
+      await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId,
+        recordedByPersonId: staffId,
+        status: "boarded",
+        occurredAt: new Date(cancelledAt.getTime() - 60_000),
+      }),
+    ).toEqual({ ok: false, reason: "booking_unavailable" });
+    const before = await offline(
+      new Date(cancelledAt.getTime() - 60_000),
+      "eeeeeeee-2285-4285-8285-eeeeeeeeeee2",
+    );
+    expect(before.ok).toBe(true);
   });
 });

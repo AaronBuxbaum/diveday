@@ -10,7 +10,7 @@
     "errorRefusal": "That didn’t save. Check your connection and tap again.",
     "openRollCall": "Open roll call"
   },
-  "cancelledRollCallClosed": "This departure is canceled. Nobody was counted aboard, so roll call is closed.",
+  "cancelledRollCallClosed": "This departure is canceled and nobody has been counted aboard, so roll call is closed. If anyone is aboard, reinstate the trip to count them.",
   "cancelledRollCallStillCounting": "This departure is canceled. Roll call stays open because the count had started.",
   "skipToRollCall": "Skip to roll call",
   "stillToBoardHeading": "Still to board ({count})",

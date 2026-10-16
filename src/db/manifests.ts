@@ -1632,10 +1632,18 @@ async function pauseRecapOnMissingAfterDive(
  * who is aboard and who came back. The blow-out refuses such a trip outright
  * (`setUpTripBlowout`); this is the other side of the same rule. The id is
  * bound as a value so the subqueries cannot match another trip's rows.
+ *
+ * An offline tap made before the cancel (`offlineOccurredAt` earlier than
+ * `cancelled_at`) is taken too: the crew counted with no signal while the
+ * departure was still on, and its sync must not lose that count (records
+ * review 8). A live write, or an offline one made after the cancel, is not.
  */
-function scheduledOrCountingHeads(tripId: string) {
+function scheduledOrCountingHeads(tripId: string, offlineOccurredAt: Date | null = null) {
   return or(
     eq(trips.status, "scheduled"),
+    offlineOccurredAt
+      ? sql`${trips.cancelledAt} > ${offlineOccurredAt.toISOString()}::timestamptz`
+      : undefined,
     sql`exists (select 1 from ${rollCallEvents} where ${rollCallEvents.tripId} = ${tripId})`,
     sql`exists (select 1 from ${rollCallCrewEvents} where ${rollCallCrewEvents.tripId} = ${tripId})`,
   );
@@ -1740,7 +1748,7 @@ export async function recordRollCall(
           eq(bookings.shopId, input.shopId),
           eq(bookings.tripId, input.tripId),
           ne(bookings.status, "cancelled"),
-          scheduledOrCountingHeads(input.tripId),
+          scheduledOrCountingHeads(input.tripId, source === "offline" ? occurredAt : null),
         ),
       )
       .limit(1)
@@ -2026,7 +2034,7 @@ export async function recordCrewRollCall(
           liveTrip(),
           eq(trips.id, input.tripId),
           eq(trips.shopId, input.shopId),
-          scheduledOrCountingHeads(input.tripId),
+          scheduledOrCountingHeads(input.tripId, source === "offline" ? occurredAt : null),
         ),
       )
       .limit(1)
