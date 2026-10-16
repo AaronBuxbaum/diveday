@@ -171,6 +171,7 @@ export async function issueBookingCapabilities(
     seats: found.map((booking) => ({ bookingId: booking.id, tripEndsAt: booking.tripEndsAt })),
     purpose: input.purpose,
     now,
+    delivered: input.delivered,
   });
 }
 
@@ -194,6 +195,8 @@ export async function mintBookingCapabilities(
     seats: Array<{ bookingId: string; tripEndsAt: Date }>;
     purpose: CapabilityPurpose;
     now: Date;
+    /** As {@link issueBookingCapability}'s: every token goes only into a message. */
+    delivered?: boolean;
   },
 ): Promise<Map<string, IssuedCapability>> {
   const issued = new Map<string, IssuedCapability>();

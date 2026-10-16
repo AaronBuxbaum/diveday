@@ -1,1 +1,0 @@
-ALTER TABLE "recap_photos" ADD COLUMN "shared_with_boat_at" timestamp with time zone;

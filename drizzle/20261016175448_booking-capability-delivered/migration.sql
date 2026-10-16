@@ -1,1 +1,0 @@
-ALTER TABLE "booking_capabilities" ADD COLUMN "delivered" boolean DEFAULT false NOT NULL;
