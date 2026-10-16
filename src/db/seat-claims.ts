@@ -9,7 +9,7 @@ import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
-import { isCompletedWaiverCurrent } from "@/lib/waivers";
+import { isCompletedWaiverCurrent, waiverClockInstant } from "@/lib/waivers";
 import {
   type IssuedCapability,
   mintBookingCapabilities,
@@ -691,7 +691,9 @@ export async function issuePartySeatClaims(
         ? isCompletedWaiverCurrent(
             row.waiver,
             row.generation === null ? null : Number(row.generation),
-            now,
+            // The roster's instant for this seat (issue #2611): a release that
+            // runs out before the trip is one the diver signs again.
+            waiverClockInstant({ now, startsAt: row.trip.startsAt, endsAt: row.trip.endsAt }),
           )
         : false,
       cancelsWithLead: partySeatGoesWithLead(row.booking) && row.booking.tripId === row.leadTripId,

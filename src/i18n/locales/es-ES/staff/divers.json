@@ -398,6 +398,7 @@
     "waiverSigned": "Firmada",
     "waiverMedicalReview": "Revisión médica",
     "waiverGoodUntil": "Válido hasta el {date}",
+    "waiverRunsOut": "Caduca el {date}, antes de la salida. Hay que firmar de nuevo.",
     "waiverLastSigned": "Firmado por última vez el {date}",
     "waiverGuardianMissing": "Firmada el {date} solo por el buceador; falta la firma de su madre, padre o tutor",
     "waiverHeldSince": "En espera desde el {date}",

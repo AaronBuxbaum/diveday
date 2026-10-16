@@ -60,7 +60,14 @@ function waiverDetail(
 ): string {
   const date = (value: Date) => formatCalendarDate(calendarDateInTimezone(value, timezone), locale);
   if (diver.waiver.state === "current") {
-    const goodUntil = t("divers.stats.waiverGoodUntil", { date: date(diver.waiver.expiresAt) });
+    // Valid today, gone before the trip: the roster blocks that seat, so the
+    // record says why instead of "Good until" (issue #2611).
+    const goodUntil = t(
+      diver.waiver.runsOutBeforeTrip
+        ? "divers.stats.waiverRunsOut"
+        : "divers.stats.waiverGoodUntil",
+      { date: date(diver.waiver.expiresAt) },
+    );
     // A minor's release names its co-signer beside the date, so the record
     // says who signed it the same way the roster and the manifest do.
     const guardian = diver.waiver.medical?.guardian;
@@ -112,7 +119,12 @@ function waiverSummary(
   const text = waiverRowStateText(t, state);
   const date = (value: Date) => formatCalendarDate(calendarDateInTimezone(value, timezone), locale);
   if (diver.waiver.state === "current") {
-    const dated = `${text} · ${t("divers.stats.waiverGoodUntil", { date: date(diver.waiver.expiresAt) })}`;
+    const dated = `${text} · ${t(
+      diver.waiver.runsOutBeforeTrip
+        ? "divers.stats.waiverRunsOut"
+        : "divers.stats.waiverGoodUntil",
+      { date: date(diver.waiver.expiresAt) },
+    )}`;
     // A minor's release names its co-signer on the closed door too: a current
     // waiver with nothing to do is a plain row, and this is the one place the
     // record says who signed it with them.
@@ -198,7 +210,8 @@ export function WaiverGroup({
   const needsAction =
     diver.waiver.state === "none" ||
     diver.waiver.state === "expired" ||
-    diver.waiver.state === "guardian_missing";
+    diver.waiver.state === "guardian_missing" ||
+    (diver.waiver.state === "current" && diver.waiver.runsOutBeforeTrip);
   // A hold has exactly one way out, and it is not another link: the diver comes
   // back with a physician's evaluation and a staffer records it (issue #1252).
   // Before this the group offered nothing at all here, because the only lift in

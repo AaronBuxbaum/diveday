@@ -398,6 +398,7 @@
     "waiverSigned": "Signed",
     "waiverMedicalReview": "Medical review",
     "waiverGoodUntil": "Good until {date}",
+    "waiverRunsOut": "Runs out {date}, before the trip. Sign again.",
     "waiverLastSigned": "Last signed {date}",
     "waiverGuardianMissing": "Signed {date} by the diver alone; a parent or guardian still has to sign",
     "waiverHeldSince": "Held since {date}",

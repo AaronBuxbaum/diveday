@@ -18,6 +18,7 @@ const REMINDER_ACTION_KEYS: Record<ReminderActionCode, DiverMessageKey> = {
   // reminder itself (see `REMINDER_ACTION_CODES`).
   waiver_expired: "notifications.reminderAction.waiverExpired",
   waiver_lapsed: "notifications.reminderAction.waiverLapsed",
+  waiver_runs_out: "notifications.reminderAction.waiverRunsOut",
   course_form_unsigned: "notifications.reminderAction.courseFormUnsigned",
   course_form_guardian_missing: "notifications.reminderAction.courseFormUnsigned",
   certification_missing: "notifications.reminderAction.certificationMissing",

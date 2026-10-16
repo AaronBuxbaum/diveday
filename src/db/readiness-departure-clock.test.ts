@@ -73,15 +73,35 @@ describe("a release that lapses before the departure", () => {
 
     const readiness = await blockersAt(seat, new Date(startsAt.getTime() - 14 * HOUR_MS));
     expect(readiness.status).toBe("blocked");
-    expect(readiness.blockers.map((b) => b.code)).toEqual(["waiver_lapsed"]);
+    expect(readiness.blockers.map((b) => b.code)).toEqual(["waiver_runs_out"]);
   });
 
   it("stays ready when the release outlasts the departure", async () => {
     const seat = await signedReefSeat();
     const startsAt = seat.reef.startsAt;
-    await lapseAt(seat, new Date(startsAt.getTime() + 2 * HOUR_MS));
+    await lapseAt(seat, new Date(seat.reef.endsAt.getTime() + 2 * HOUR_MS));
 
     const readiness = await blockersAt(seat, new Date(startsAt.getTime() - 14 * HOUR_MS));
+    expect(readiness).toEqual({ status: "ready", blockers: [] });
+  });
+
+  it("blocks a release that lapses mid-trip, between the start and the end", async () => {
+    const seat = await signedReefSeat();
+    const { startsAt, endsAt } = seat.reef;
+    await lapseAt(seat, new Date((startsAt.getTime() + endsAt.getTime()) / 2));
+
+    const readiness = await blockersAt(seat, new Date(startsAt.getTime() - 14 * HOUR_MS));
+    expect(readiness.blockers.map((b) => b.code)).toEqual(["waiver_runs_out"]);
+  });
+
+  it("reads a multi-day trip already under way at now, so day two of four is ready", async () => {
+    const seat = await signedReefSeat();
+    const startsAt = seat.reef.startsAt;
+    const endsAt = new Date(startsAt.getTime() + 4 * DAY_MS);
+    await seat.db.update(trips).set({ endsAt }).where(eq(trips.id, seat.reef.id));
+    await lapseAt(seat, new Date(startsAt.getTime() + 2 * DAY_MS));
+
+    const readiness = await blockersAt(seat, new Date(startsAt.getTime() + DAY_MS));
     expect(readiness).toEqual({ status: "ready", blockers: [] });
   });
 
@@ -103,7 +123,7 @@ describe("a release that lapses before the departure", () => {
 
     const readiness = await blockersAt(seat, new Date(startsAt.getTime() - 6 * HOUR_MS));
     expect(readiness.status).toBe("blocked");
-    expect(readiness.blockers.map((b) => b.code)).toEqual(["waiver_lapsed"]);
+    expect(readiness.blockers.map((b) => b.code)).toEqual(["waiver_runs_out"]);
   });
 
   it("clears a liveaboard whose release outlasts its return", async () => {

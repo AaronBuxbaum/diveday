@@ -9,11 +9,11 @@ import { isHeldToMedical } from "@/lib/participant-types";
 import { openSecret, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import {
-  isCleanCompletion,
+  bookingRecordLapsed,
   isCompletedWaiverCurrent,
-  isSignatureCurrent,
   isUnresolvedMedicalHold,
   WAIVER_LINK_TTL_MS,
+  waiverClockInstant,
 } from "@/lib/waivers";
 import type { AppDb, DbExecutor } from "./client";
 import { bookings, people, trips, waiverRecords, waiverTemplates } from "./schema";
@@ -97,6 +97,8 @@ export async function issueWaiverRequest(
             dateOfBirth: people.dateOfBirth,
             minorDeclaredAt: bookings.minorDeclaredAt,
             tripStatus: trips.status,
+            tripStartsAt: trips.startsAt,
+            tripEndsAt: trips.endsAt,
             identityUnconfirmedAt: bookings.identityUnconfirmedAt,
             participantType: bookings.participantType,
           })
@@ -167,14 +169,16 @@ export async function issueWaiverRequest(
     // `waiver_lapsed`, and the fix is this fresh link. A hold or a refusal on
     // a seat in the water still stands; neither is a clean completion. A
     // rider's seat reads a held record as a signature (H-109), so it lapses
-    // with the signature's own clock.
+    // with the signature's own clock. **Measured where the roster measures it**
+    // (`waiverClockInstant`, issue #2611): a release that runs out before the
+    // trip is blocked there, so this door must take a fresh signature for it,
+    // not answer "already completed".
     const heldToMedical = isHeldToMedical(booking?.participantType);
+    const clockAt = booking
+      ? waiverClockInstant({ now, startsAt: booking.tripStartsAt, endsAt: booking.tripEndsAt })
+      : now;
     const lapsed = (record: (typeof current)[number]) =>
-      heldToMedical
-        ? isCleanCompletion(record) &&
-          !isCompletedWaiverCurrent(record, template.materialGeneration, now)
-        : (record.status === "completed" || record.status === "medical_review") &&
-          !isSignatureCurrent(record, template.materialGeneration, now);
+      bookingRecordLapsed(record, template.materialGeneration, clockAt, heldToMedical);
     const alreadyStanding = booking
       ? current.some(
           (record) =>
@@ -185,7 +189,7 @@ export async function issueWaiverRequest(
       : current.some(
           (record) =>
             isUnresolvedMedicalHold(record) ||
-            (isCompletedWaiverCurrent(record, template.materialGeneration, now) &&
+            (isCompletedWaiverCurrent(record, template.materialGeneration, clockAt) &&
               !guardianSignatureMissing(record, signer)),
         );
     if (alreadyStanding) {

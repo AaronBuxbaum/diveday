@@ -3,7 +3,7 @@ import type { TripRequirement, WaiverRecord } from "@/db/schema";
 import { calculateReadiness } from "./readiness";
 import {
   effectiveWaiverForBooking,
-  releaseLapsedForBooking,
+  releaseLapseForBooking,
   WAIVER_SIGNATURE_VALIDITY_MS,
   waiverClockInstant,
 } from "./waivers";
@@ -47,12 +47,14 @@ describe("a release that lapses between today and the departure", () => {
       bookingWaiver: release,
       personSignedWaivers: [release],
       currentTemplateVersion: 1,
-      now: waiverClockInstant({ now: at, ...trip }),
     };
     return calculateReadiness({
       requirement: waiverOnly,
-      waiver: effectiveWaiverForBooking(resolution),
-      releaseLapsed: releaseLapsedForBooking(resolution),
+      waiver: effectiveWaiverForBooking({
+        ...resolution,
+        now: waiverClockInstant({ now: at, ...trip }),
+      }),
+      releaseLapse: releaseLapseForBooking({ ...resolution, now: at, ...trip }),
       certifications: [],
       paymentStatus: "paid",
       timezone: "UTC",
@@ -60,15 +62,21 @@ describe("a release that lapses between today and the departure", () => {
     });
   }
 
-  it("reads as blocked on today's roster, as a lapsed release and not an unsent one", () => {
+  it("reads as blocked on today's roster, as running out before the trip", () => {
     const result = rosterAt(today);
     expect(result.status).toBe("blocked");
+    expect(result.blockers.map((blocker) => blocker.code)).toEqual(["waiver_runs_out"]);
+  });
+
+  it("reads as lapsed once the trip is under way and the release has aged out", () => {
+    const result = rosterAt(new Date(departure.getTime() + 60 * 60 * 1000));
     expect(result.blockers.map((blocker) => blocker.code)).toEqual(["waiver_lapsed"]);
   });
 
-  it("reads the same on the morning of the dive", () => {
-    const result = rosterAt(new Date(departure.getTime() - 3 * 60 * 60 * 1000));
-    expect(result.blockers.map((blocker) => blocker.code)).toEqual(["waiver_lapsed"]);
+  it("reads the same on the morning of the dive: still valid, runs out before the trip", () => {
+    const early = new Date(today.getTime() + 13 * 24 * 60 * 60 * 1000);
+    const result = rosterAt(early);
+    expect(result.blockers.map((blocker) => blocker.code)).toEqual(["waiver_runs_out"]);
   });
 
   it("stays cleared when the release outlasts the departure", () => {
@@ -81,11 +89,31 @@ describe("a release that lapses between today and the departure", () => {
     ).toEqual({ status: "ready", blockers: [] });
   });
 
+  it("blocks a trip whose release lapses mid-trip, even a night dive, before it sails", () => {
+    const sails = {
+      startsAt: new Date(today.getTime() + 13 * 24 * 60 * 60 * 1000 + 22 * 60 * 60 * 1000),
+    };
+    // The release runs out 14 days on: a 3-hour night dive starting 13d22h ends after it.
+    const result = rosterAt(today, {
+      ...sails,
+      endsAt: new Date(sails.startsAt.getTime() + 3 * 60 * 60 * 1000),
+    });
+    expect(result.blockers.map((blocker) => blocker.code)).toEqual(["waiver_runs_out"]);
+  });
+
   it("blocks a liveaboard on the day it ends, not the day it sails", () => {
     const sails = { startsAt: new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000) };
     const returns = new Date(sails.startsAt.getTime() + 10 * 24 * 60 * 60 * 1000);
     const result = rosterAt(today, { ...sails, endsAt: returns });
-    expect(result.blockers.map((blocker) => blocker.code)).toEqual(["waiver_lapsed"]);
+    expect(result.blockers.map((blocker) => blocker.code)).toEqual(["waiver_runs_out"]);
+  });
+
+  it("reads a multi-day trip already under way at now: day two of seven is ready", () => {
+    const underWay = {
+      startsAt: new Date(today.getTime() - 24 * 60 * 60 * 1000),
+      endsAt: new Date(today.getTime() + 6 * 24 * 60 * 60 * 1000),
+    };
+    expect(rosterAt(today, underWay)).toEqual({ status: "ready", blockers: [] });
   });
 
   it("never measures earlier than now, so a trip under way is read as today", () => {

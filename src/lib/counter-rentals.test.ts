@@ -234,6 +234,7 @@ describe("counterRentalWaiverStanding", () => {
     recordId: "w-1",
     signedAt: new Date("2026-09-01T15:00:00Z"),
     expiresAt: new Date("2027-09-01T15:00:00Z"),
+    runsOutBeforeTrip: false,
   };
 
   it("carries an earlier refusal and an open referral as days, and nothing else", () => {

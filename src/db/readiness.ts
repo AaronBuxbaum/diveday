@@ -24,7 +24,7 @@ import {
   effectiveWaiverForBooking,
   overriddenReferral,
   overriddenRefusal,
-  releaseLapsedForBooking,
+  releaseLapseForBooking,
   riderMedicalHold,
   waiverClockInstant,
 } from "@/lib/waivers";
@@ -1776,11 +1776,12 @@ export async function listTripsReadiness(
       ? calendarDateInTimezone(courseRow.startsAt, timezone)
       : null;
 
-    // **The release's clocks run at the departure** (issue #2611): the later of
-    // now and the trip's end (multi-day) or start, never before now. The
-    // night-before roster, Today and the reminder then agree with the dock, and
-    // a liveaboard's release that lapses mid-trip blocks before it sails. Cards,
-    // payment and age keep their own instants.
+    // **The release's clocks run at the departure** (issue #2611): while the
+    // trip has not started, at its end; once under way, at now. The
+    // night-before roster, Today and the reminder then agree with the dock, a
+    // night dive's release that lapses mid-dive blocks before it sails, and a
+    // liveaboard guest on day two reads at now. Cards, payment and age keep
+    // their own instants.
     const waiverNow = waiverClockInstant({
       now,
       startsAt: courseRow?.startsAt ?? null,
@@ -1799,12 +1800,14 @@ export async function listTripsReadiness(
       currentTemplateVersion: currentTemplateGeneration,
       now: waiverNow,
     });
-    const releaseLapsed = releaseLapsedForBooking({
+    const releaseLapse = releaseLapseForBooking({
       bookingWaiver: row.waiver,
       personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
       currentTemplateVersion: currentTemplateGeneration,
       heldToMedical: isHeldToMedical(row.booking.participantType),
-      now: waiverNow,
+      now,
+      startsAt: courseRow?.startsAt ?? null,
+      endsAt: courseRow?.endsAt ?? null,
     });
     const referral = overriddenReferral(
       effectiveWaiver,
@@ -1873,7 +1876,7 @@ export async function listTripsReadiness(
         requirement,
         siteRequirement,
         waiver: effectiveWaiver,
-        releaseLapsed,
+        releaseLapse,
         certifications: certificationsByPerson.get(row.person.id) ?? [],
         // Measured against this departure: only a course that finishes before
         // it sails can be the card this diver boards on.

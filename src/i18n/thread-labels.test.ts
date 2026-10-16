@@ -132,6 +132,10 @@ describe("threadNextKey", () => {
       "Next: get a fresh waiver link.",
       "Siguiente: consigue un enlace nuevo para la exención.",
     ],
+    waiver_runs_out: [
+      "Next: get a fresh waiver link.",
+      "Siguiente: consigue un enlace nuevo para la exención.",
+    ],
     waiver_pending: ["Next: sign your waiver.", "Siguiente: firma tu exención."],
     waiver_expired: [
       "Next: get a fresh waiver link.",
