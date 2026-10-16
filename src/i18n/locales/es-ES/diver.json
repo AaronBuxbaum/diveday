@@ -148,6 +148,12 @@
     "freeCancellationUntil": "Cancelación gratuita hasta el {when}",
     "sharedDemoNote": "Esta es la demo compartida: cualquiera que la pruebe puede ver lo que escribes aquí.",
     "theDay": "El día",
+    "dayRhythmLine": "En el muelle a las {dock} · regreso hacia las {back}",
+    "siteReviews": {
+      "heading": "De quienes ya fueron",
+      "quote": "“{words}”",
+      "byline": "{name} · {date}"
+    },
     "lookFor": "Busca",
     "momentsHeading": "Momentos de buceadores",
     "theRoute": "{count, plural, one {La ruta} other {Las rutas}}",

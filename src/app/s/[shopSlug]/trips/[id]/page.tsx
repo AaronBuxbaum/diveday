@@ -251,10 +251,9 @@ export default async function TripDetailPage({
     : null;
   const diveBriefings = dayBriefings(tripDives, briefing.extras, t);
   const coverPhoto = dayCoverPhoto(diveBriefings);
-  // The dock-day rhythm's inputs (per-site bottom times, per-leg travel) are
-  // gone from this page with `PackingSection`: what to bring and when to be
-  // there is preparation, and preparation belongs to the thread the diver
-  // reaches after booking (ADR 20260827-the-divers-thread, decision 2).
+  // The dock-day rhythm's full run stays on the thread the diver reaches after
+  // booking (ADR 20260827-the-divers-thread, decision 2); "The day" carries its
+  // two ends in one line (fifth-loop ideas, item 19).
   const perDiverPriceCents = perDiverBookingPriceCents(trip, trip.course);
   const { stripeAccount, payAtBooking, offerCodeField } = payment;
   // The money lines the form's one block states, resolved here so the deposit
@@ -373,6 +372,7 @@ export default async function TripDetailPage({
               briefings={diveBriefings}
               nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew)}
               sightings={briefing.seen}
+              siteReviews={briefing.siteReviews}
               shop={shop}
               locale={locale}
               logEntry={inPast ? undefined : { startsAt: trip.startsAt, isCourse: !!trip.course }}
@@ -381,6 +381,12 @@ export default async function TripDetailPage({
                 depthUnit: shop.depthUnit,
                 diveMode: trip.diveMode,
                 dayCount: meetingDays.length,
+                // The day's two ends, in one line (fifth-loop ideas, item 19):
+                // a one-day boat only; a course says its own day.
+                day:
+                  trip.course || meetingDays.length > 1
+                    ? undefined
+                    : { startsAt: trip.startsAt, endsAt: trip.endsAt, plannedDives: trip.plannedDives },
               }}
             />
             {/* **The bound** (ADR 20260904-reef-all-the-way-down, decision 1). The
