@@ -102,6 +102,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 [glossary/money.md](glossary/money.md)
 
 - Billing standing
+- Booking lead time
 - Cancellation notice
 - Card dispute
 - Checkout sale / tip sale
@@ -111,6 +112,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Failed refund
 - First paid month
 - Free term
+- Month-end email
 - Owed
 - Paid after close
 - Paid mark
