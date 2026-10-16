@@ -658,7 +658,7 @@
     "waitingBody": "Vuelve a abrir este enlace más tarde.",
     "heldHeading": "Tu día de buceo lo tiene el centro",
     "heldBody": "{shop} está verificando quién iba en esta reserva. Pídeles lo que necesites de esta salida.",
-    "photoAdded": "Añadida a tu resumen. ¡Gracias por compartirla!",
+    "photoAdded": "Añadida a tu resumen. Gracias por compartirla.",
     "photoMissing": "Elige primero una foto y luego añádela.",
     "photoUnsupported": "Este centro todavía no tiene activada la subida de fotos, así que etiquétalas cuando publiques.",
     "photoFailed": "Esa foto no se ha subido. Prueba con un JPEG o PNG de menos de 5 MB.",
@@ -5141,7 +5141,7 @@
       "body": "Se acaba de liberar una plaza en {tripTitle}, y te la ofrecemos a ti.",
       "claim": "Resérvala antes de que se agote",
       "claimLink": "Reservar tu plaza",
-      "footer": "La plaza no está reservada a tu nombre, así que no esperes demasiado. ¡Nos vemos en el barco!",
+      "footer": "La plaza no está reservada a tu nombre, así que no esperes demasiado. Nos vemos en el barco.",
       "subjectParty": "Se liberaron {seats} plazas en {tripTitle}",
       "bodyParty": "Se acaban de liberar {seats} plazas en {tripTitle}, y te las ofrecemos para tu grupo.",
       "rolledBody": "La salida del {sailed} ya zarpó. El {date} tiene lugar, y te ofrecemos {seats, plural, one {una plaza} other {# plazas}} en {tripTitle}."
@@ -5196,7 +5196,7 @@
       "flySafeAfterReturnDivesPlanned": "Te pedimos esperar al menos hasta el {when} antes de volar: planificamos más de una inmersión, así que {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
       "flySafeAfterReturnEarlierDay": "Te pedimos esperar al menos hasta el {when} antes de volar: nuestros registros muestran otro día de buceo en los últimos dos días, así que {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
       "seeRecap": "Ver el resumen de tu día",
-      "footer": "Si te encantó, lo mejor que puedes hacer es traer a un compañero la próxima vez. ¡Nos vemos en el agua!"
+      "footer": "Si te encantó, lo mejor que puedes hacer es traer a un compañero la próxima vez. Nos vemos en el agua."
     },
     "welcome": {
       "subject": "Bienvenido a DiveDay, {shopName}",
@@ -5346,7 +5346,7 @@
       "courseBody": "{shopName}: {tripTitle} empieza {when} ({date}, {time}).",
       "materials": "Antes de tu primer día: {names}.",
       "materialsWithLink": "Antes de tu primer día: {names} ({url}).",
-      "recap": "{shopName}: ¡gracias por bucear {tripTitle}! Tu resumen: {recapUrl}",
+      "recap": "{shopName}: gracias por bucear con nosotros. Tu resumen: {recapUrl}",
       "waiver": "{shopName}: firma tu exención de buceo antes de bucear — {url}",
       "waiverForTrip": "{shopName}: firma tu exención de buceo para {tripTitle} — {url}",
       "stopLine": "Responde STOP para darte de baja.",

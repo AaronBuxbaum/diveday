@@ -547,6 +547,42 @@ export function threeDots(value) {
 }
 
 /**
+ * An exclamation mark in a diver's message (fifth-loop ideas, item 24,
+ * 2026-10-16).
+ *
+ * The diver bundle speaks in one plain voice: the dock time, the release, the
+ * recap. Four strings broke it ("Thanks for sharing!", "See you on the boat!",
+ * "See you in the water!" and the recap text) and read as a different writer
+ * on the one page the diver keeps. Scoped to `diver.json` alone: a staff
+ * string never carried the mark, and the marketing pages have their own shape
+ * rules. Spanish refuses the opening `¡` as well as the closing `!`.
+ *
+ * The one exception is the WhatsApp template body Meta reviews for each shop
+ * at sign-up (`notifications.whatsappTemplate.body`): its words are a
+ * registered template, changed only with a new template, never by a sweep.
+ */
+export const EXCLAMATION_ALLOWLIST = new Set(["notifications.whatsappTemplate.body"]);
+
+/** The bundle file the exclamation rule reads. */
+export const EXCLAMATION_BUNDLE = "diver.json";
+
+export function exclamations(value, key = "") {
+  if (EXCLAMATION_ALLOWLIST.has(key)) return [];
+  const found = [];
+  for (const match of value.matchAll(/[!¡]/g)) {
+    const before = value.slice(0, match.index).split(/\s+/).filter(Boolean).slice(-2);
+    const after = value
+      .slice(match.index + 1)
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2);
+    const text = `${before.join(" ")}${match[0]}${after.join(" ")}`.trim();
+    found.push({ rule: "exclamation", text });
+  }
+  return found;
+}
+
+/**
  * The four **shape** rules (2026-09-24, the voice decision — H-89 in
  * docs/product/human-decisions/README.md, "The builder's note" in docs/design/brand.md).
  *
@@ -1267,9 +1303,11 @@ export async function scanBundles() {
       const bundle = JSON.parse(await readFile(path.join(ROOT, file), "utf8"));
       const hits = [];
       const entries = [];
+      const diverBundle = path.basename(file) === EXCLAMATION_BUNDLE;
       walkValues(bundle, "", (key, value) => {
         entries.push({ key, value });
         for (const tell of findTells(value, locale, key)) hits.push({ key, ...tell });
+        if (diverBundle) for (const tell of exclamations(value, key)) hits.push({ key, ...tell });
       });
       hits.push(...housePhrases(entries, locale));
       if (hits.length > 0) {

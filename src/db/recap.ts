@@ -1638,7 +1638,7 @@ async function sendRecaps(
     const locale = recipientLocale(person.locale, shop.defaultLocale);
     const t = diverTranslator(locale);
     const smsBody = recapUrl
-      ? t("notifications.sms.recap", { shopName: shop.name, tripTitle: trip.title, recapUrl })
+      ? t("notifications.sms.recap", { shopName: shop.name, recapUrl })
       : "";
 
     if (recapUrl && person.email && !person.courtesyEmailOptOutAt) {

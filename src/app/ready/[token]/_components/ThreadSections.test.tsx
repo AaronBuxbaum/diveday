@@ -105,18 +105,13 @@ describe("ThreadSections", () => {
     expect(screen.getByRole("button", { name: t("ready.cancelSpot") })).toBeTruthy();
   });
 
-  it("names the planned sites in order and the dock call unless a pickup replaces it", () => {
+  it("names the planned sites in order, and leaves the dock call to the masthead (ideas item 23)", () => {
     render(<ThreadSections context={context()} />);
     expect(seen.arrival?.sites).toEqual(["Molasses"]);
-    expect(seen.arrival?.dockCallMinutes).toBe(30);
+    expect(seen.arrival).not.toHaveProperty("dockCallMinutes");
     expect(seen.arrival?.downloadHref).toContain("?booking=tok");
     expect(seen.packing?.siteBottomTimes).toEqual([45, undefined]);
     expect(seen.packing?.legTravelTimes).toEqual([20, 15]);
-    cleanup();
-    const pickedUp = context();
-    (pickedUp.data as unknown as { pickupTime: string }).pickupTime = "7:00 AM";
-    render(<ThreadSections context={pickedUp} />);
-    expect(seen.arrival?.dockCallMinutes).toBeNull();
   });
 
   it("shows the party panel only to a party lead, with its all-set close", () => {

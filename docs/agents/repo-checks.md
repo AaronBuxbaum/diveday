@@ -223,6 +223,11 @@ hit. Five pending labels said "Saving..." against 281 strings spelling it `…` 
 them off: the 63 hits left after one sweep are a refusal's next action or an ICU plural's two
 branches, and the reasoning is at `SHAPE_SCOPES` in the script.
 
+The **exclamation mark** is a hit in `diver.json` alone, `¡` and `!` both: four diver strings
+ended in one ("See you on the boat!") against a bundle that otherwise keeps a plain voice (fifth-loop
+ideas, item 24). The one exemption is `notifications.whatsappTemplate.body`, the template Meta
+reviews for each shop at sign-up; the list is `EXCLAMATION_ALLOWLIST` in the script.
+
 It holds the **house quotation marks** the same way: `“ ”` everywhere a person reads them, and a straight `"` is a hit. Same collision as the apostrophe at a fifth of the volume — 24 strings carrying 54 straight characters against 238 spelling them curly when this was swept (issue #1664), and colliding one scroll apart: `marketing.guides.fareharbor.coexist.intro` read *everything between "booked" and "back at the dock"* while `…eve.coexist.intro` made the same move in `“ ”`. On a page whose whole purpose is to be believed that reads as a typographic slip rather than a choice.
 
 **It has no exemption list, which is the difference worth knowing.** The apostrophe rule must strip ICU-quoted spans because a straight `'` is what *makes* `'{depth18}'` a literal. `"` means nothing to ICU in any mode, so no value needs it, and the rule landed at zero the same day it was written. More than half the sweep was not marketing prose but the CSV importer's row notes in `settings.json`, which quote an interpolated value — `Email “{email}” doesn’t look valid` — and those are prose too: the value is read aloud inside a sentence rather than set as a code literal. Spanish sweeps identically; `src/i18n/locales/es-ES/README.md` settles `“ ”` over the peninsular `« »`, so like the apostrophe this sits beside `proseDashes` rather than in `RULES`.
