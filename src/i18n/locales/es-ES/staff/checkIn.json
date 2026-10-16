@@ -51,6 +51,7 @@
     "line": "Atendido en el mostrador, no embarcó{reason, select, medical {: médico} waiver {: exención} card {: certificación} age {: edad} identity {: identidad} payment {: pago} other {}}",
     "badge": "No embarcó",
     "money": "No se cobró ni se reembolsó nada. Abre su fila para mover la reserva a otra salida.",
+    "moneyRemove": "No se cobró ni se reembolsó nada. Abre su fila para quitar la reserva y reembolsarla a mano.",
     "noWaitlist": "No hay nadie esperando esta plaza."
   },
   "settledAllBoarded": "Todos embarcados",
@@ -110,6 +111,7 @@
     "turnAwayReasonNotBlocking": "Su fila cambió. Elige un motivo que aparezca ahora.",
     "noShowWindowClosed": "Esa salida queda demasiado atrás para marcar que alguien no vino. Cambia la reserva desde su fila.",
     "noShowNotMarked": "Ese buceador no está marcado como que no vino.",
+    "noShowTurnedAwayDeparted": "Ese buceador no embarcó por decisión del mostrador y el barco ya salió, así que no puede volver a esta salida. Abre su fila para quitar la reserva.",
     "noShowTripFull": "La plaza liberada ya se ocupó, así que ese buceador no puede volver a esta salida.",
     "noShowCourseRatioFull": "Esa sesión está en su límite de ratio instructor-alumno, así que ese buceador no puede volver a ella. Asigna otro instructor primero."
   },

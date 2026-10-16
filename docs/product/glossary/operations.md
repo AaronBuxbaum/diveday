@@ -183,19 +183,27 @@
   lock, and never the evidence: no medical answer or card detail is stored. The desk's door and the
   writer read one predicate (`turnAwayOffer` / `turnAwayGate`). Open before the boat leaves, unlike
   "Not here", inside the **arrivals window**; **an arrived (checked-in) diver cannot be turned away
-  once the boat has sailed** (`sailed`), while a booked row after sailing keeps the door. On a
+  from the boat's scheduled start** (`sailed`; the boundary "Not here" opens on, not `hasSailed`'s
+  buffered hour), while a booked row after the start keeps the door. On a
   **held seat** only "identity" (and "payment" when the seat owes) is offered or accepted, the trail
   names the booked-as name (`seatName`, as "Not here" does), the matched diver's story says nothing
   about the seat, and a split clears the category. A turned-away seat **cannot be paid** from the
   diver's page (checkout and `canPay` take a held seat only); before the day ends that page says
   only "The shop released your seat on this departure. Talk to the desk."; reminders skip it. Its
   next day is **the same booking moved** (`moveBooking` books it on the new departure and clears
-  the turn-away; payment and package coverage ride on the row), never a new seat. **Removed
+  the turn-away; payment and package coverage ride on the row), never a new seat, and **only before
+  the departure's scheduled start**: from it, and always for a party's lead (`leads_party`), the
+  door is Remove (default for dde-3 #4/#5). Releasing the seat (turned away or "Not here")
+  **withdraws any pending checkout** on it, so a late payment lands as paid after close, and checkout
+  recovery skips a seat no longer held. A lead's page keeps the party claim panel. **Removed
   afterwards** it reads "turned away, then removed": no cancellation window applies, nothing is
   refunded on its own (`manual`, `turned_away`), and `turned_away_at` stays. **Erasure** clears the
-  category and keeps `turned_away_at`. "Put back on the list", the rail's reclaim (never refused for
-  capacity; a sold seat shows as the manifest's over-capacity count) and a move clear both, and a
-  seat back on the boat never carries either (`bookings_turned_away_is_released`).
+  category and keeps `turned_away_at`. "Put back on the list" (only before the scheduled start,
+  `turned_away_departed` after it), the rail's reclaim and a move clear both, and a seat back on the
+  boat never carries either (`bookings_turned_away_is_released`). The rail's reclaim is refused for
+  capacity **at the departure checkpoint only** ("Boat full. See the desk.", `boat_full`; default
+  for dde-3 #6); an after-dive head count is never refused, and a boat over shows as the manifest's
+  over-capacity count.
 - **Seat release** — the confirm tap on a **no-show** *is* the release. There is no second tap, no
   timer, no evening sweep and no `seat_released_at` column: `no_show` leaves the statuses that hold
   a seat (**seat held**), so the boat reads one seat lighter the moment the mark lands and the next

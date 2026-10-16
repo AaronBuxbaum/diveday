@@ -72,7 +72,7 @@ import {
   type ThreadStep,
   theBoatIsHome,
 } from "@/lib/thread-steps";
-import { HeldAfterDiveCard, NoShowCard, ReleasedSeatCard } from "./_components/AfterDiveDoors";
+import { HeldAfterDiveCard, NoShowCard, releasedSeat } from "./_components/AfterDiveDoors";
 import { readAfterTheDive } from "./_components/after-dive-reads";
 import { UnavailableReadyLink } from "./_components/ExpiredLink";
 import { confirmCarriedFactsFromReady, saveTanksFromReady } from "./gear-actions";
@@ -289,7 +289,7 @@ async function DiverReadinessPage({
       </DiverIntlProvider>
     );
   }
-  if (data.seatReleased) return <ReleasedSeatCard shop={shopContact} t={t} />;
+  if (data.seatReleased) return releasedSeat(db, shop.id, bookingId, locale, shopContact, t);
 
   const notice = noticeFromParam(
     saved ? `saved-${saved}` : error ? `error-${error}` : pay ? `pay-${pay}` : undefined,

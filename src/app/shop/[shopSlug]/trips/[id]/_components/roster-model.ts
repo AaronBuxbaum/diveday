@@ -242,23 +242,28 @@ export type RosterActions = {
 export type SeatMove = {
   action: (formData: FormData) => void;
   targets: readonly { id: string; label: string }[];
-  /** The departure has left: only a seat the desk turned away still moves. */
+  /** The departure has left (`hasSailed`): a booked seat no longer moves. */
   departed: boolean;
+  /** The departure's scheduled start has passed: a turned-away seat no longer moves. */
+  started: boolean;
 };
 
 /**
  * Whether this row offers "Move to another departure". A booked seat, while
  * the boat is in; checked in or absent is the day's own record. A seat the
- * desk turned away moves before and after the boat leaves (layer 3 review,
- * dde-2 #3): the desk's money line sends staff here, and `moveBooking` books
- * it on the new departure.
+ * desk turned away moves until the boat's scheduled start (layer 3 review,
+ * dde-2 #3; re-review dde-3 #4+#5): the desk's money line sends staff here,
+ * and `moveBooking` books it on the new departure. From the start its door
+ * is Remove.
  */
 export function seatMoveForRow(
   booking: { status: string; turnedAwayAt: Date | null },
   moveSeat: SeatMove | undefined,
 ): SeatMove | undefined {
   if (!moveSeat) return undefined;
-  if (booking.status === "no_show" && booking.turnedAwayAt !== null) return moveSeat;
+  if (booking.status === "no_show" && booking.turnedAwayAt !== null) {
+    return moveSeat.started ? undefined : moveSeat;
+  }
   return booking.status === "booked" && !moveSeat.departed ? moveSeat : undefined;
 }
 

@@ -1889,13 +1889,19 @@ export async function moveBooking(
       return { ok: false, reason: "not_found" };
     }
     // **A seat the desk turned away moves too** (layer 3 review, dde-2 #3):
-    // the desk's money line sends staff here, and the diver never boarded,
-    // so the source having sailed says nothing about them. It lands booked on
+    // the desk's money line sends staff here before the boat leaves. It lands booked on
     // the new departure; the turn-away was about the old one and stays on its
     // trail. A plain no-show does not move: that is the day's own record.
     const turnedAway = booking.status === "no_show" && booking.turnedAwayAt !== null;
     if (booking.status !== "booked" && !turnedAway) return { ok: false, reason: "not_movable" };
-    if (!turnedAway && hasSailed(source.startsAt, now)) return { ok: false, reason: "departed" };
+    // A turned-away seat moves only before the source's scheduled start
+    // (layer 3 re-review, dde-3 #4 and #5): after it, the boat may be out with
+    // an offline after-dive mark still to sync, and the move would wipe the
+    // turn-away from the departure's record. The door then is Remove.
+    const departed = turnedAway
+      ? now.getTime() >= source.startsAt.getTime()
+      : hasSailed(source.startsAt, now);
+    if (departed) return { ok: false, reason: "departed" };
     if (!tripTakesSeatFrom(target, "staff") || target.isRehearsal || source.isRehearsal) {
       return { ok: false, reason: "target_unavailable" };
     }

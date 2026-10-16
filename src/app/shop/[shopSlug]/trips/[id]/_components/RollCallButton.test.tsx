@@ -59,6 +59,17 @@ describe("RollCallButton", () => {
     vi.unstubAllGlobals();
   });
 
+  /** dde-3 #6: a turned-away seat the desk has since sold is not the rail's to take back. */
+  it("says the boat is full when the server refuses a reclaim over capacity", async () => {
+    setup(mockAction({ ok: false, reason: "boat_full" }), {
+      ...DEFAULT_COPY,
+      boatFull: "Boat full. See the desk.",
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Board" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Boat full. See the desk.");
+    expect(screen.getByRole("button")).toHaveTextContent("Board");
+  });
+
   it("shows no rollback message and triggers haptic vibration when the board succeeds", async () => {
     const vibrateMock = vi.fn();
     vi.stubGlobal("navigator", { vibrate: vibrateMock });

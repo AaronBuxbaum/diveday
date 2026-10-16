@@ -41,10 +41,17 @@ export function noShowSalvageCopy(input: {
    * (layer 3 review, dde-2 #3).
    */
   turnedAway?: boolean;
+  /**
+   * The turned-away seat cannot be moved: the boat's start has passed, or the
+   * diver leads a party (dde-3 #4+#5, #7). The money line names Remove.
+   */
+  moveClosed?: boolean;
 }): NoShowSalvageCopy {
   const { t, offer, shopSlug, tripId, diver } = input;
   if (input.turnedAway) {
-    const money = { line: t("checkIn.turnAway.money") };
+    const money = {
+      line: input.moveClosed ? t("checkIn.turnAway.moneyRemove") : t("checkIn.turnAway.money"),
+    };
     if (offer.kind === "waitlist") {
       return {
         line: t("checkIn.noShow.waiting", { count: offer.count }),

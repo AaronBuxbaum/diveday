@@ -1,6 +1,11 @@
+import type { ReactNode } from "react";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
+import { PartyClaimPanel } from "@/components/PartyClaimPanel";
+import type { AppDb } from "@/db/client";
 import type { Shop } from "@/db/schema";
+import { issuePartySeatClaims } from "@/db/seat-claims";
 import type { DiverTranslator } from "@/i18n/messages";
+import { partyClaimSeats } from "./PartySection";
 
 type ShopContact = Pick<Shop, "name" | "contactEmail" | "contactPhone">;
 
@@ -78,7 +83,16 @@ export function HeldAfterDiveCard({ shop, t }: { shop: ShopContact; t: DiverTran
  * the shop released the seat, talk to the desk. Never the reason: a bearer
  * link is no place to print a medical or card category.
  */
-export function ReleasedSeatCard({ shop, t }: { shop: ShopContact; t: DiverTranslator }) {
+export function ReleasedSeatCard({
+  shop,
+  t,
+  children,
+}: {
+  shop: ShopContact;
+  t: DiverTranslator;
+  /** A party lead's claim panel: their members' seats are still held (dde-3 #7). */
+  children?: ReactNode;
+}) {
   return (
     <ExpiredLinkCard
       glyph="quiet"
@@ -86,6 +100,29 @@ export function ReleasedSeatCard({ shop, t }: { shop: ShopContact; t: DiverTrans
       text={t("ready.seatReleasedBody")}
       shop={shop}
       t={t}
-    />
+    >
+      {children}
+    </ExpiredLinkCard>
+  );
+}
+
+/**
+ * The released seat's page. A party's lead keeps the links their party claims
+ * seats with, because the members' seats are still held (layer 3 re-review,
+ * dde-3 #7); everyone else gets the card alone (the panel renders nothing).
+ */
+export async function releasedSeat(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  locale: string,
+  shop: ShopContact,
+  t: DiverTranslator,
+) {
+  const claims = await issuePartySeatClaims(db, { shopId, leadBookingId: bookingId });
+  return (
+    <ReleasedSeatCard shop={shop} t={t}>
+      <PartyClaimPanel locale={locale} seats={partyClaimSeats(claims)} />
+    </ReleasedSeatCard>
   );
 }

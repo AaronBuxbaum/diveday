@@ -1,8 +1,9 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { seatName } from "@/lib/held-seat";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { type TurnAwayGate, type TurnAwayReason, turnAwayGate } from "@/lib/turn-away";
+import { expirePendingCheckoutsForBooking } from "./checkouts";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { onTheWaterByRollCall } from "./manifests";
@@ -129,6 +130,9 @@ export async function turnBookingAway(
       .where(and(eq(bookings.id, seat.id), inArray(bookings.status, [...SEAT_HELD_STATUSES])))
       .returning({ id: bookings.id });
     if (!updated) return { ok: false, reason: "already_marked" };
+    // A checkout opened before the release would charge for a seat the shop
+    // may now sell (dde-3 #3).
+    await expirePendingCheckoutsForBooking(tx, input.shopId, seat.id);
 
     await tx.insert(activityEvents).values({
       shopId: input.shopId,
@@ -150,4 +154,29 @@ export async function turnBookingAway(
   // A seat leaving the expected list is news for the crew walking to the boat.
   if (result.ok) await publishManifestEvent(db, input.shopId, result.tripId);
   return result;
+}
+
+/**
+ * Which of these seats lead a party still on the books: the seats
+ * `moveBooking` refuses with `leads_party`. The desk reads it for its
+ * turned-away rows only, so their money line never names a move that will be
+ * refused (layer 3 re-review, dde-3 #7).
+ */
+export async function partyLeadBookingIds(
+  db: DbExecutor,
+  shopId: string,
+  bookingIds: readonly string[],
+): Promise<Set<string>> {
+  if (bookingIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ leadId: bookings.partyLeadBookingId })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        inArray(bookings.partyLeadBookingId, [...bookingIds]),
+        ne(bookings.status, "cancelled"),
+      ),
+    );
+  return new Set(rows.flatMap((row) => (row.leadId ? [row.leadId] : [])));
 }

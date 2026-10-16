@@ -1,6 +1,6 @@
 import { and, count, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { HOUR_MS, MINUTE_MS } from "@/lib/clock";
+import { HOUR_MS, MINUTE_MS, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { turnAwayReasons } from "@/lib/turn-away";
@@ -631,6 +631,223 @@ describe("turnBookingAway, after review", () => {
       .set({ capacity: aboard - 1 })
       .where(eq(trips.id, trip.id));
     expect((await getTripManifest(db, shop.id, trip.id))?.summary.overCapacity).toBe(1);
+  });
+});
+
+/**
+ * Layer 3 second review (dde-3, 2026-10-16). Each boundary is tested at the
+ * edge itself: exactly the scheduled start, exactly a full boat.
+ */
+describe("turnBookingAway, second review", () => {
+  const atStart = (ctx: Ctx, minutes: number) =>
+    new Date(ctx.trip.startsAt.getTime() + minutes * MINUTE_MS);
+
+  /** #1: an arrived diver is presumed aboard from the scheduled start, not an hour after. */
+  it("refuses an arrived diver from the scheduled start", async () => {
+    const ctx = await context();
+    const { db, shop, staffId, bookingId } = ctx;
+    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));
+    for (const minutes of [0, 10, 59]) {
+      expect(
+        await turnBookingAway(db, {
+          shopId: shop.id,
+          bookingId,
+          reason: "waiver",
+          recordedByPersonId: staffId,
+          now: atStart(ctx, minutes),
+        }),
+      ).toEqual({ ok: false, reason: "sailed" });
+    }
+    expect(await seatRow(db, bookingId)).toEqual({ status: "checked_in", reason: null });
+    // The control: a minute before the boat, the desk can still refuse them.
+    expect(
+      await turnBookingAway(db, {
+        shopId: shop.id,
+        bookingId,
+        reason: "waiver",
+        recordedByPersonId: staffId,
+        now: atStart(ctx, -1),
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
+  /**
+   * #2: turned away at 07:40, Undo at 09:30 used to restore `checked_in` from
+   * the arrival trail: a diver ashore shown aboard, and missing at the rail.
+   */
+  it("refuses to put a turned-away diver back once the boat's start has passed", async () => {
+    const ctx = await context();
+    const { db, shop, trip, staffId, bookingId } = ctx;
+    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));
+    await turnBookingAway(db, {
+      shopId: shop.id,
+      bookingId,
+      reason: "waiver",
+      recordedByPersonId: staffId,
+      now: atStart(ctx, -20),
+    });
+    const before = await heldSeats(db, trip.id);
+    for (const minutes of [0, 90]) {
+      expect(
+        await undoBookingNoShow(db, {
+          shopId: shop.id,
+          bookingId,
+          recordedByPersonId: staffId,
+          now: atStart(ctx, minutes),
+        }),
+      ).toEqual({ ok: false, reason: "turned_away_departed" });
+    }
+    expect(await seatRow(db, bookingId)).toEqual({ status: "no_show", reason: "waiver" });
+    expect(await heldSeats(db, trip.id)).toBe(before);
+    // The control: a minute before the boat, the desk can take it back.
+    expect(
+      await undoBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId,
+        recordedByPersonId: staffId,
+        now: atStart(ctx, -1),
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
+  /** #2's scope: a plain "Not here" is still undone as the lines come off. */
+  it("still puts a plain no-show back after the start", async () => {
+    const ctx = await context();
+    const { db, shop, staffId, bookingId } = ctx;
+    await markBookingNoShow(db, {
+      shopId: shop.id,
+      bookingId,
+      recordedByPersonId: staffId,
+      now: atStart(ctx, 5),
+    });
+    expect(
+      await undoBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId,
+        recordedByPersonId: staffId,
+        now: atStart(ctx, 30),
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
+  /**
+   * #4 and #5 (orchestrator default): a turned-away seat moves only before
+   * the source's scheduled start. After it, the door is Remove, and the
+   * turn-away stays on the record.
+   */
+  it("moves a turned-away seat only before the boat's start", async () => {
+    const ctx = await context();
+    const { db, shop, trip, staffId, bookingId } = ctx;
+    await turnBookingAway(db, {
+      shopId: shop.id,
+      bookingId,
+      reason: "waiver",
+      recordedByPersonId: staffId,
+      now: atStart(ctx, -30),
+    });
+    const [target] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "Another Reef Run",
+        startsAt: new Date(trip.startsAt.getTime() + 48 * HOUR_MS),
+        endsAt: new Date(trip.startsAt.getTime() + 52 * HOUR_MS),
+        capacity: 6,
+      })
+      .returning();
+    if (!target) throw new Error("target trip insert failed");
+    const move = (now: Date) =>
+      moveBooking(db, {
+        shopId: shop.id,
+        fromTripId: trip.id,
+        toTripId: target.id,
+        bookingId,
+        now,
+      });
+    for (const minutes of [0, 120]) {
+      expect(await move(atStart(ctx, minutes))).toEqual({ ok: false, reason: "departed" });
+    }
+    expect(await turnedAwayAt(db, bookingId)).toEqual({ at: atStart(ctx, -30), tripId: trip.id });
+    expect(await move(atStart(ctx, -1))).toMatchObject({ ok: true });
+  });
+
+  /**
+   * #6 (orchestrator default): at the departure checkpoint, Boarded on a
+   * turned-away seat whose place the desk has since sold is refused; the
+   * after-dive head count never is.
+   */
+  it("refuses a departure boarding that would put the boat over, never an after-dive one", async () => {
+    const ctx = await context();
+    const { db, shop, trip, staffId, bookingId, now } = ctx;
+    await turnBookingAway(db, {
+      shopId: shop.id,
+      bookingId,
+      reason: "waiver",
+      recordedByPersonId: staffId,
+      now,
+    });
+    await signWaiver(ctx);
+    // Exactly full without them: the freed seat was sold.
+    const held = await heldSeats(db, trip.id);
+    await db.update(trips).set({ capacity: held }).where(eq(trips.id, trip.id));
+    const board = (checkpoint?: "after_dive_1") =>
+      recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId,
+        recordedByPersonId: staffId,
+        status: "boarded",
+        checkpoint,
+      });
+    expect(await board()).toEqual({ ok: false, reason: "boat_full" });
+    expect(await seatRow(db, bookingId)).toEqual({ status: "no_show", reason: "waiver" });
+    // Offline, the same tap synced later is refused the same way.
+    const synced = nowMs();
+    expect(
+      await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId,
+        recordedByPersonId: staffId,
+        status: "boarded",
+        source: "offline",
+        clientEventId: "dddddddd-3333-4333-8333-dddddddddddd",
+        offlineSnapshotSavedAt: new Date(synced - 2 * HOUR_MS),
+        occurredAt: new Date(synced - HOUR_MS),
+      }),
+    ).toEqual({ ok: false, reason: "boat_full" });
+    expect(await seatRow(db, bookingId)).toEqual({ status: "no_show", reason: "waiver" });
+    // A head count after a dive is never refused: the body is on the boat.
+    expect(await board("after_dive_1")).toMatchObject({ ok: true });
+    expect(await seatRow(db, bookingId)).toEqual({ status: "booked", reason: null });
+  });
+
+  it("takes a turned-away seat back at departure while one place is free", async () => {
+    const ctx = await context();
+    const { db, shop, trip, staffId, bookingId, now } = ctx;
+    await turnBookingAway(db, {
+      shopId: shop.id,
+      bookingId,
+      reason: "waiver",
+      recordedByPersonId: staffId,
+      now,
+    });
+    await signWaiver(ctx);
+    const held = await heldSeats(db, trip.id);
+    await db
+      .update(trips)
+      .set({ capacity: held + 1 })
+      .where(eq(trips.id, trip.id));
+    expect(
+      await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId,
+        recordedByPersonId: staffId,
+        status: "boarded",
+      }),
+    ).toMatchObject({ ok: true });
+    expect(await seatRow(db, bookingId)).toEqual({ status: "booked", reason: null });
   });
 });
 

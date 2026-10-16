@@ -15,6 +15,7 @@ import { type SimilarDeparture, similarDepartures } from "@/lib/similar-departur
 import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
 import { tripCourseCrewCounts } from "./bookings";
+import { expirePendingCheckoutsForBooking } from "./checkouts";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { onTheWaterByRollCall } from "./manifests";
@@ -69,7 +70,13 @@ export type UndoNoShowOutcome =
         /** The boat has room, but every diver's seat has gone (ADR 20261007-participant-types). */
         | "divers_full"
         | "course_ratio_full"
-        | "trip_cancelled";
+        | "trip_cancelled"
+        /**
+         * The desk turned this diver away and the boat's scheduled start has
+         * passed: they are ashore, and putting them back would show them
+         * aboard (layer 3 re-review, dde-3 #2).
+         */
+        | "turned_away_departed";
     };
 
 /**
@@ -198,6 +205,8 @@ export async function markBookingNoShow(
       .where(and(eq(bookings.id, seat.id), inArray(bookings.status, [...SEAT_HELD_STATUSES])))
       .returning({ id: bookings.id });
     if (!updated) return { ok: false, reason: "already_marked" };
+    // The released seat is not the diver's to pay for any more (dde-3 #3).
+    await expirePendingCheckoutsForBooking(tx, input.shopId, seat.id);
 
     await tx.insert(activityEvents).values({
       shopId: input.shopId,
@@ -276,6 +285,7 @@ export async function undoBookingNoShow(
         status: bookings.status,
         tripId: bookings.tripId,
         participantType: bookings.participantType,
+        turnedAwayAt: bookings.turnedAwayAt,
         personName: people.fullName,
       })
       .from(bookings)
@@ -302,12 +312,21 @@ export async function undoBookingNoShow(
         diverCapacity: trips.diverCapacity,
         status: trips.status,
         courseId: trips.courseId,
+        startsAt: trips.startsAt,
       })
       .from(trips)
       .where(and(eq(trips.id, seat.tripId), eq(trips.shopId, input.shopId), liveTrip()))
       .limit(1);
     if (!trip) return { ok: false, reason: "not_found" };
     if (trip.status === "cancelled") return { ok: false, reason: "trip_cancelled" };
+    // A diver the desk turned away was seen ashore. From the scheduled start
+    // (the boundary `turnAwayGate` closes on) putting them back would restore
+    // `checked_in` from the arrival trail and show them aboard a boat that
+    // left without them (dde-3 #2). A plain "Not here" keeps its Undo: that
+    // diver may be walking up as the lines come off.
+    if (seat.turnedAwayAt !== null && now.getTime() >= trip.startsAt.getTime()) {
+      return { ok: false, reason: "turned_away_departed" };
+    }
 
     // Counted under the lock, and counting only the seats somebody else holds:
     // this booking is `no_show` right now, so it is not in the total, and the

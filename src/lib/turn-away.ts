@@ -1,7 +1,6 @@
 import { heldSeatBlockers } from "./identity-match";
 import { arrivalsWindow } from "./operational-window";
 import type { ReadinessBlocker, ReadinessBlockerCode, ReadinessResult } from "./readiness";
-import { hasSailed } from "./trips";
 
 /**
  * **"Turned away" at the desk** (safety sheet 2026-10-15, item 6; H-124).
@@ -186,7 +185,10 @@ function turnAwayDoor(
   if (input.bookingStatus !== "booked" && input.bookingStatus !== "checked_in") {
     return "not_booked";
   }
-  if (input.bookingStatus === "checked_in" && hasSailed(input.startsAt, input.now)) {
+  // The scheduled start, the boundary "Not here" opens on (`noShowGate`), not
+  // `hasSailed`'s buffered hour: a diver checked in at 07:30 for an 08:00 boat
+  // is presumed aboard from 08:00.
+  if (input.bookingStatus === "checked_in" && input.now.getTime() >= input.startsAt.getTime()) {
     return "sailed";
   }
   if (input.tripStatus === "cancelled") return "trip_cancelled";

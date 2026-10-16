@@ -89,6 +89,11 @@ export const DESK_NOTICES: DeskNoticeMap = {
   "no-show-course-ratio-full": { tone: "danger", key: "checkIn.notice.noShowCourseRatioFull" },
   "no-show-not-found": { tone: "danger", key: "checkIn.notice.notFound" },
   "no-show-staff-not-found": { tone: "danger", key: "checkIn.notice.staffNotFound" },
+  // The desk turned this diver away and the boat's start has passed (dde-3 #2).
+  "no-show-turned-away-departed": {
+    tone: "warning",
+    key: "checkIn.notice.noShowTurnedAwayDeparted",
+  },
   // "Turned away" (H-124). The roll-call refusals come first for the reason
   // the no-show's do; the rest say what changed on the row since it was drawn.
   "turn-away-already-boarded": { tone: "danger", key: "checkIn.notice.turnAwayAlreadyBoarded" },

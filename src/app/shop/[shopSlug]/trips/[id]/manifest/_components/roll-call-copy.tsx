@@ -29,6 +29,7 @@ export function rollCallCopies(
   function rollCallButtonCopy(bookingId: string) {
     return {
       errorRefusal,
+      boatFull: t("trips.rollCall.boatFull"),
       blockedMessage: t.rich("trips.rollCall.stillBlocked", {
         tripLink: (chunks) => (
           <Link href={`${shopPath(shopSlug, "trips", tripId)}#booking-${bookingId}`}>{chunks}</Link>

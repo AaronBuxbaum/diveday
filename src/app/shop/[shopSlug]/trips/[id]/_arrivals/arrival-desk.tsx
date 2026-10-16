@@ -7,6 +7,7 @@ import { type CheckInQueueRow, listCheckInQueue } from "@/db/check-in";
 import type { AppDb } from "@/db/client";
 import { noShowSalvage } from "@/db/no-show";
 import { listCertificationSummaries } from "@/db/self-declared-cards";
+import { partyLeadBookingIds } from "@/db/turn-away";
 import { welcomeCueInputsByBooking } from "@/db/welcome-cues";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
@@ -140,28 +141,42 @@ export async function buildArrivalDesk({
     personIds: rows.filter(isNoShowAtCounter).map((row) => row.personId),
     now,
   });
+  // A party's lead cannot be moved (`moveBooking`'s `leads_party`), so a
+  // turned-away lead's one money door is Remove (dde-3 #7).
+  const partyLeads = await partyLeadBookingIds(
+    db,
+    shopId,
+    rows.filter(isTurnedAwayAtCounter).map((row) => row.bookingId),
+  );
 
   const controls = new Map<string, ReactNode>();
   const below = new Map<string, ReactNode>();
   for (const row of rows) {
     const ready = row.readiness.status === "ready";
     if (row.bookingStatus === "no_show") {
+      // A diver the desk turned away was seen ashore: from the boat's start
+      // their seat neither comes back nor moves (`undoBookingNoShow`'s
+      // `turned_away_departed`, `moveBooking`'s `departed`; dde-3 #2, #4+#5).
+      const turnedAwayAfterStart =
+        row.turnedAwayAt !== null && now.getTime() >= row.startsAt.getTime();
       // **The released seat, and what to do with it.** The group says "Not
       // here"; the row's one act is walking it back for the diver who turns up
       // as the lines come off.
-      controls.set(
-        row.bookingId,
-        <RowActionForm action={undoNoShow} sendFailedLabel={t("checkIn.sendFailedButton")}>
-          <input type="hidden" name="bookingId" value={row.bookingId} />
-          <SubmitButton
-            pendingLabel={t("checkIn.noShow.undoing")}
-            ariaLabel={t("checkIn.noShow.undoAriaLabel", { name: row.personName })}
-            className={buttonClass({ variant: "ghost", size: "sm" })}
-          >
-            {t("checkIn.noShow.undo")}
-          </SubmitButton>
-        </RowActionForm>,
-      );
+      if (!turnedAwayAfterStart) {
+        controls.set(
+          row.bookingId,
+          <RowActionForm action={undoNoShow} sendFailedLabel={t("checkIn.sendFailedButton")}>
+            <input type="hidden" name="bookingId" value={row.bookingId} />
+            <SubmitButton
+              pendingLabel={t("checkIn.noShow.undoing")}
+              ariaLabel={t("checkIn.noShow.undoAriaLabel", { name: row.personName })}
+              className={buttonClass({ variant: "ghost", size: "sm" })}
+            >
+              {t("checkIn.noShow.undo")}
+            </SubmitButton>
+          </RowActionForm>,
+        );
+      }
       // **Turned away says so, in its own words** (H-124): the desk saw this
       // diver and refused them, which is not "did not arrive". The reason is
       // the category alone.
@@ -183,6 +198,7 @@ export async function buildArrivalDesk({
             diver: { id: row.personId, name: row.personName },
             formatWhen: (startsAt) => formatWeekdayTime(startsAt, locale, timeZone),
             turnedAway: turnedAway !== null,
+            moveClosed: turnedAwayAfterStart || partyLeads.has(row.bookingId),
           })}
         />
       ) : null;

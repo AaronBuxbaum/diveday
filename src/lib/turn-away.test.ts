@@ -31,6 +31,15 @@ function gate(overrides: Partial<TurnAwayGateInput> = {}) {
   });
 }
 
+const rowAt = (now: Date): Omit<TurnAwayGateInput, "reason"> => ({
+  bookingStatus: "booked",
+  onTheWater: null,
+  tripStatus: "scheduled",
+  startsAt: DEPARTURE,
+  now,
+  readiness: blocked("certification_missing"),
+});
+
 describe("turnAwayReasons", () => {
   it("offers each of the row's own categories once, in a fixed order", () => {
     expect(
@@ -145,6 +154,19 @@ describe("turnAwayGate", () => {
         reason: "payment",
       }),
     ).toBe("sailed");
+  });
+
+  /**
+   * Layer 3 re-review (dde-3 #1): the door closes on an arrived diver at the
+   * scheduled start, the boundary "Not here" opens on, not an hour later.
+   */
+  it("refuses an arrived diver from the scheduled start, not the sailing buffer", () => {
+    const at = (minutes: number) => new Date(DEPARTURE.getTime() + minutes * MINUTE_MS);
+    expect(gate({ bookingStatus: "checked_in", now: at(-1) })).toBe("eligible");
+    expect(gate({ bookingStatus: "checked_in", now: at(0) })).toBe("sailed");
+    expect(gate({ bookingStatus: "checked_in", now: at(10) })).toBe("sailed");
+    expect(gate({ bookingStatus: "checked_in", now: at(59) })).toBe("sailed");
+    expect(turnAwayOffer({ ...rowAt(at(10)), bookingStatus: "checked_in" })).toEqual([]);
   });
 
   /** A booked row after sailing keeps today's behavior (product call, noted). */

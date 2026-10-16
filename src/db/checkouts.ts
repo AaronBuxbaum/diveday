@@ -1077,6 +1077,40 @@ export async function recordCheckoutPaymentIntent(
 }
 
 /**
+ * **Withdraw every pending checkout quoting this seat**, for a writer that has
+ * just released it (the desk's "Turned away" and "Not here"; layer 3 re-review,
+ * dde-3 #3). The caller holds the seat's lock, the order every checkout-retiring
+ * writer takes (issue #2335). A tab completed afterwards lands as paid after
+ * close (`markCheckoutPaidBySessionId`), money for a person to refund, never a
+ * payment booked to a seat the shop may have sold.
+ */
+export async function expirePendingCheckoutsForBooking(
+  tx: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<void> {
+  const linked = tx
+    .select({ id: bookingCheckoutBookings.checkoutId })
+    .from(bookingCheckoutBookings)
+    .where(
+      and(
+        eq(bookingCheckoutBookings.shopId, shopId),
+        eq(bookingCheckoutBookings.bookingId, bookingId),
+      ),
+    );
+  await tx
+    .update(bookingCheckouts)
+    .set({ status: "expired" })
+    .where(
+      and(
+        eq(bookingCheckouts.shopId, shopId),
+        eq(bookingCheckouts.status, "pending"),
+        inArray(bookingCheckouts.id, linked),
+      ),
+    );
+}
+
+/**
  * Lock every seat a checkout covers, in id order, before anything touches the
  * checkout row itself. The one lock order for a seat and its checkout (issue
  * #2335): the expiring writers in `src/db/bookings.ts` hold the seat and then

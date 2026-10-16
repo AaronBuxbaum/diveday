@@ -360,10 +360,11 @@ describe("waiverControls on a rehearsal", () => {
  * a plain no-show or an arrived seat still has none.
  */
 describe("seatMoveForRow", () => {
-  const move = (departed: boolean) => ({
+  const move = (departed: boolean, started = departed) => ({
     action: () => {},
     targets: [{ id: "t", label: "T" }],
     departed,
+    started,
   });
   const booking = (status: string, turnedAwayAt: Date | null = null) => ({ status, turnedAwayAt });
 
@@ -372,10 +373,12 @@ describe("seatMoveForRow", () => {
     expect(seatMoveForRow(booking("booked"), move(true))).toBeUndefined();
   });
 
-  it("moves a turned-away seat before and after the boat leaves", () => {
+  /** dde-3 #4+#5: until the scheduled start, not the sailing buffer. */
+  it("moves a turned-away seat only before the boat's scheduled start", () => {
     const turnedAway = booking("no_show", new Date("2026-10-16T07:00:00Z"));
     expect(seatMoveForRow(turnedAway, move(false))).toBeDefined();
-    expect(seatMoveForRow(turnedAway, move(true))).toBeDefined();
+    expect(seatMoveForRow(turnedAway, move(false, true))).toBeUndefined();
+    expect(seatMoveForRow(turnedAway, move(true))).toBeUndefined();
   });
 
   it("never moves a plain no-show or an arrived seat", () => {

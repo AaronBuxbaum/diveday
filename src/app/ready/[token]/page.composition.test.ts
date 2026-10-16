@@ -292,9 +292,22 @@ describe("a held seat after the dive", () => {
  */
 describe("a seat the desk released", () => {
   it("answers with its own card before the prep page, after the finished day", () => {
-    const released = positionOf("if (data.seatReleased) return <ReleasedSeatCard");
+    const released = positionOf("if (data.seatReleased) return releasedSeat(");
     expect(released).toBeGreaterThan(positionOf("if (afterDive.afterTheDive)"));
     expect(released).toBeLessThan(positionOf("<ThreadStatus"));
+  });
+
+  /**
+   * Layer 3 re-review (dde-3 #7): a party's lead turned away at the desk still
+   * holds the links their party claims seats with. The card keeps the panel.
+   */
+  it("keeps the lead's party claim panel on the released card", () => {
+    expect(SOURCE).toContain(
+      "if (data.seatReleased) return releasedSeat(db, shop.id, bookingId, locale, shopContact, t);",
+    );
+    expect(component("AfterDiveDoors.tsx")).toMatch(
+      /issuePartySeatClaims\(db, \{ shopId, leadBookingId: bookingId \}\)[\s\S]*?<ReleasedSeatCard[\s\S]*?<PartyClaimPanel/,
+    );
   });
 });
 

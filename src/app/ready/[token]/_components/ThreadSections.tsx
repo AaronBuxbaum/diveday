@@ -13,15 +13,13 @@ import type { listTripChangeEvents } from "@/db/trip-change-events";
 import type { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
-import { claimLinkPath } from "@/lib/booking-capabilities";
 import { formatShortDate } from "@/lib/format";
-import { publicAppUrl } from "@/lib/notifications";
 import { publicTripArrivalCardPath } from "@/lib/public-routes";
 import { addSeatFromReady, cancelMyBookingAction } from "../booking-actions";
 import { CourseMaterials } from "./CourseMaterials";
 import { CANCEL_PREVIEW_KEY } from "./cancel-notices";
 import { PartyCancelPlan, partyCancelSeats } from "./PartyCancelPlan";
-import { PartySection } from "./PartySection";
+import { PartySection, partyClaimSeats } from "./PartySection";
 import { RunningLate } from "./RunningLate";
 
 /** What the thread's streamed reads hand the sections under the spine. */
@@ -61,18 +59,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
     partyAllSet,
   } = context;
   const { detail, shop } = data;
-  const claimOrigin = publicAppUrl();
-  const partySeats = partySeatClaims.map((seat) => ({
-    bookingId: seat.bookingId,
-    seatName: seat.seatName,
-    claimed: seat.claimed,
-    waiverSigned: seat.waiverSigned,
-    claimUrl: seat.claim
-      ? claimOrigin
-        ? new URL(claimLinkPath(seat.claim.token), `${claimOrigin}/`).toString()
-        : claimLinkPath(seat.claim.token)
-      : null,
-  }));
+  const partySeats = partyClaimSeats(partySeatClaims);
   // Dive 1 first, in the dive plan's own order: where a site names its own
   // time in the water, that is what the day's rhythm counts rather than the
   // shop-wide default (src/lib/diver-planning.ts).

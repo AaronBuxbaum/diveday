@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { listCheckInQueue } from "@/db/check-in";
 import { createCertification } from "@/db/readiness";
-import { bookings, certifications, nitroxCertifications, trips } from "@/db/schema";
+import { bookings, certifications, nitroxCertifications, people, trips } from "@/db/schema";
 import { welcomeCueInputsByBooking } from "@/db/welcome-cues";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { HOUR_MS, nowDate } from "@/lib/clock";
@@ -201,6 +201,74 @@ describe("the counter's turned-away door (H-124)", () => {
     expect(below).not.toHaveTextContent("Marking someone not here");
     expect(below).not.toHaveTextContent("Open their orders");
     expect(below.querySelector('a[href*="/bookings/new/"]')).toBeNull();
+  });
+});
+
+/** Layer 3 re-review (dde-3 #2, #4+#5, #7): the doors a turned-away row still has. */
+describe("a turned-away row around the boat's start", () => {
+  async function turnedAwaySeat() {
+    const seat = await firstTimerAtTheCounter();
+    const at = (minutes: number) => new Date(seat.trip.startsAt.getTime() + minutes * 60_000);
+    await seat.db
+      .update(bookings)
+      .set({ status: "no_show", turnedAwayReason: "card", turnedAwayAt: at(-40) })
+      .where(eq(bookings.id, seat.bookingId));
+    return { seat, at };
+  }
+
+  async function deskAt(seat: Awaited<ReturnType<typeof firstTimerAtTheCounter>>, now: Date) {
+    const desk = await buildArrivalDesk({
+      db: seat.db,
+      shopId: seat.shop.id,
+      shopSlug: seat.shop.slug,
+      tripId: seat.trip.id,
+      trip: seat.trip,
+      now,
+      locale: "en-US",
+      timeZone: seat.shop.timezone,
+      t: staffTranslator("en-US"),
+    });
+    if (!desk) throw new Error("the boat is outside its arrivals window");
+    const control = render(<div>{desk.arrival.controls.get(seat.bookingId)}</div>).container;
+    const below = render(<div>{desk.arrival.below.get(seat.bookingId)}</div>).container;
+    return { control, below };
+  }
+
+  const MOVE = "Open their row to move the booking to another day.";
+  const REMOVE = "Open their row to remove the booking and refund it by hand.";
+
+  it("keeps Undo and the move a minute before the start, and offers neither from it", async () => {
+    const { seat, at } = await turnedAwaySeat();
+    const before = await deskAt(seat, at(-1));
+    expect(before.control).toHaveTextContent("Put back on the list");
+    expect(before.below).toHaveTextContent(MOVE);
+    for (const minutes of [0, 10]) {
+      const after = await deskAt(seat, at(minutes));
+      expect(after.control).not.toHaveTextContent("Put back on the list");
+      expect(after.below).toHaveTextContent("Seen at the desk, turned away: card");
+      expect(after.below).toHaveTextContent(REMOVE);
+      expect(after.below).not.toHaveTextContent(MOVE);
+    }
+  });
+
+  /** #7: a party's lead cannot be moved (`leads_party`), so their door is Remove. */
+  it("offers a party's lead Remove, never the move", async () => {
+    const { seat, at } = await turnedAwaySeat();
+    const [member] = await seat.db
+      .insert(people)
+      .values({ shopId: seat.shop.id, fullName: "Pia Party" })
+      .returning();
+    if (!member) throw new Error("member insert failed");
+    await seat.db.insert(bookings).values({
+      bookedAs: "diver",
+      shopId: seat.shop.id,
+      tripId: seat.trip.id,
+      personId: member.id,
+      partyLeadBookingId: seat.bookingId,
+    });
+    const { below } = await deskAt(seat, at(-30));
+    expect(below).toHaveTextContent(REMOVE);
+    expect(below).not.toHaveTextContent(MOVE);
   });
 });
 

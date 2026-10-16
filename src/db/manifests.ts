@@ -25,6 +25,7 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
+import { seatRefusal } from "@/lib/participant-types";
 import { runningLateShown } from "@/lib/running-late";
 import { medicalWaiverMark } from "@/lib/waivers";
 import { welcomeCueFor } from "@/lib/welcome-cue";
@@ -51,6 +52,7 @@ import { lockSeatDeparture } from "./seat-locks";
 import { getShopById } from "./shops";
 import { crewClashes } from "./trips-crew";
 import { liveTrip } from "./trips-live";
+import { heldSeatCounts, sellableCapacity } from "./trips-queries";
 import { getTripWithBooked } from "./trips-record";
 import { getTripRoster } from "./trips-roster";
 import { welcomeCueInputsByBooking } from "./welcome-cues";
@@ -1233,6 +1235,12 @@ export type RecordRollCallOutcome =
         | "booking_unavailable"
         | "staff_not_found"
         | "not_ready"
+        /**
+         * Boarded at departure on a seat the desk turned away and has since
+         * sold: taking it back would put the boat over its capacity (layer 3
+         * re-review, dde-3 #6). After-dive head counts are never refused.
+         */
+        | "boat_full"
         | "invalid_checkpoint"
         | "newer_event_exists"
         /**
@@ -1547,7 +1555,13 @@ export async function recordRollCall(
         id: bookings.id,
         status: bookings.status,
         personId: bookings.personId,
+        participantType: bookings.participantType,
+        turnedAwayAt: bookings.turnedAwayAt,
         plannedDives: trips.plannedDives,
+        shopId: trips.shopId,
+        boatId: trips.boatId,
+        capacity: trips.capacity,
+        diverCapacity: trips.diverCapacity,
       })
       .from(bookings)
       .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -1625,6 +1639,18 @@ export async function recordRollCall(
     if (input.status === "boarded" && checkpoint === "departure") {
       const readiness = await getBookingReadiness(tx, input.shopId, booking.id);
       if (readiness?.status !== "ready") return { ok: false, reason: "not_ready" };
+      // A seat the desk turned away and then sold is not the crew's to take
+      // back at the gangway: "Boat full. See the desk." (dde-3 #6). Counted
+      // under the departure lock taken above, as `undoBookingNoShow` counts.
+      // Only here: after a dive the body is on the boat, and the reclaim
+      // below stays unrefusable.
+      if (booking.status === "no_show" && booking.turnedAwayAt !== null) {
+        const held = await heldSeatCounts(tx, input.shopId, input.tripId);
+        const capacity = await sellableCapacity(tx, booking);
+        if (seatRefusal(booking.participantType, { ...booking, capacity }, held)) {
+          return { ok: false, reason: "boat_full" };
+        }
+      }
     }
 
     const [event] = await tx

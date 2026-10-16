@@ -60,6 +60,7 @@ describe("the move to another departure", () => {
     action: () => {},
     targets: [{ id: "t-2", label: "Two-Tank Reef · Sat, Oct 24, 8:00 AM EDT" }],
     departed: false,
+    started: false,
   };
 
   it("offers the departures on a booked seat", () => {
@@ -79,11 +80,10 @@ describe("the move to another departure", () => {
   });
 
   /**
-   * Layer 3 review (dde-2 #3): the desk's money line sends staff to move a
-   * turned-away seat, so the door is on that row even once the boat has left.
+   * Layer 3 review (dde-2 #3) and re-review (dde-3 #4+#5): a turned-away seat
+   * moves until the boat's scheduled start, and from it the door is Remove.
    */
-  it("moves a turned-away seat after the boat has left, and no booked one", () => {
-    const departed = { ...moveSeat, departed: true };
+  it("moves a turned-away seat only before the boat's start", () => {
     const turnedAway = {
       ...ready,
       booking: {
@@ -93,8 +93,15 @@ describe("the move to another departure", () => {
         turnedAwayReason: "card" as const,
       },
     };
-    renderRoster({ ...fixtures, roster: [turnedAway], moveSeat: departed });
+    renderRoster({ ...fixtures, roster: [turnedAway], moveSeat });
     expect(screen.getByText("Move to another departure")).toBeInTheDocument();
+    cleanup();
+    renderRoster({ ...fixtures, roster: [turnedAway], moveSeat: { ...moveSeat, started: true } });
+    expect(screen.queryByText("Move to another departure")).toBeNull();
+    cleanup();
+    const departed = { ...moveSeat, started: true, departed: true };
+    renderRoster({ ...fixtures, roster: [turnedAway], moveSeat: departed });
+    expect(screen.queryByText("Move to another departure")).toBeNull();
     cleanup();
     renderRoster({ ...fixtures, roster: [ready], moveSeat: departed });
     expect(screen.queryByText("Move to another departure")).toBeNull();

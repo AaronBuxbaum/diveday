@@ -1,17 +1,28 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { HOUR_MS } from "@/lib/clock";
+import { turnAwayReasons } from "@/lib/turn-away";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeCheckout, fakeEmail, fakeSms } from "@/test/fakes";
 import { anonymizeDiver } from "./anonymize";
 import { createBookingParty } from "./bookings";
-import { startBookingCheckout } from "./checkouts";
+import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
+import { markBookingNoShow } from "./no-show";
 import { getBookingPayment, setBookingPayment } from "./payments";
+import { getBookingReadiness } from "./readiness";
 import { refundBookingOnCancellation } from "./refunds";
 import { sendDueReminders } from "./reminders";
-import { bookings, notificationDeliveries, people, personRoles, trips } from "./schema";
+import {
+  bookingCheckouts,
+  bookings,
+  notificationDeliveries,
+  people,
+  personRoles,
+  trips,
+} from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { upcomingTripsWithCounts, updateTrip } from "./trips";
+import { listStaff, upcomingTripsWithCounts, updateTrip } from "./trips";
+import { turnBookingAway } from "./turn-away";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -191,5 +202,112 @@ describe("a seat the desk turned away", () => {
       .from(bookings)
       .where(eq(bookings.id, bookingId));
     expect(after).toEqual({ status: "no_show", reason: null, at });
+  });
+});
+
+/**
+ * Layer 3 re-review (dde-3 #3): a checkout the diver opened before the desk
+ * released the seat must not charge for it afterwards. The release withdraws
+ * it, as a move does, so a late completion lands on the Orders index as paid
+ * after close for a person to refund, never on the released seat.
+ */
+describe("a checkout opened before the seat was released", () => {
+  async function pendingCheckout() {
+    const base = await seat();
+    const { db, shop, reef, bookingId } = base;
+    await upsertShopStripeAccount(db, shop.id, "acct_released");
+    await setShopStripeAccountStatus(db, "acct_released", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    await updateTrip(db, shop.id, reef.id, {
+      title: reef.title,
+      startsAt: reef.startsAt,
+      endsAt: reef.endsAt,
+      capacity: reef.capacity,
+      plannedDives: reef.plannedDives,
+      priceCents: 18_000,
+    });
+    const started = await startBookingCheckout(
+      db,
+      {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingIds: [bookingId],
+        customerEmail: "turned-away-money@example.com",
+        successUrl: "https://diveday.example/return",
+        cancelUrl: "https://diveday.example/cancel",
+        describeLine: ({ tripTitle }: { tripTitle: string }) => tripTitle,
+      },
+      fakeCheckout(),
+    );
+    if (!started.ok) throw new Error(`checkout start failed: ${started.reason}`);
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("seeded staff missing");
+    const checkoutRow = async () => {
+      const [row] = await db
+        .select({
+          status: bookingCheckouts.status,
+          paidAfterCloseAt: bookingCheckouts.paidAfterCloseAt,
+        })
+        .from(bookingCheckouts)
+        .where(eq(bookingCheckouts.id, started.checkout.id));
+      return row;
+    };
+    return {
+      ...base,
+      staffId: staff.person.id,
+      sessionId: started.checkout.stripeSessionId,
+      checkoutRow,
+    };
+  }
+
+  it("is withdrawn when the desk turns the diver away 30 hours ahead", async () => {
+    const { db, shop, reef, bookingId, staffId, sessionId, checkoutRow } = await pendingCheckout();
+    const readiness = await getBookingReadiness(db, shop.id, bookingId);
+    if (!readiness) throw new Error("readiness missing");
+    const [reason] = turnAwayReasons(readiness);
+    if (!reason) throw new Error("seat is not blocked");
+    expect(
+      await turnBookingAway(db, {
+        shopId: shop.id,
+        bookingId,
+        reason,
+        recordedByPersonId: staffId,
+        now: new Date(reef.startsAt.getTime() - 30 * HOUR_MS),
+      }),
+    ).toMatchObject({ ok: true });
+    expect((await checkoutRow())?.status).toBe("expired");
+    // The old tab completes anyway: the money is reported, not booked to the seat.
+    expect(await markCheckoutPaidBySessionId(db, sessionId, undefined, 18_000)).toBeNull();
+    expect((await checkoutRow())?.paidAfterCloseAt).not.toBeNull();
+    expect((await getBookingPayment(db, shop.id, bookingId))?.status ?? "unpaid").toBe("unpaid");
+  });
+
+  it("is withdrawn when the desk marks the diver not here", async () => {
+    const { db, shop, reef, bookingId, staffId, checkoutRow } = await pendingCheckout();
+    expect(
+      await markBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId,
+        recordedByPersonId: staffId,
+        now: new Date(reef.startsAt.getTime() + 10 * 60 * 1000),
+      }),
+    ).toMatchObject({ ok: true });
+    expect((await checkoutRow())?.status).toBe("expired");
+  });
+
+  it("is left alone when the desk's tap is refused", async () => {
+    const { db, shop, reef, bookingId, staffId, checkoutRow } = await pendingCheckout();
+    expect(
+      await markBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId,
+        recordedByPersonId: staffId,
+        now: new Date(reef.startsAt.getTime() - 60 * 1000),
+      }),
+    ).toMatchObject({ ok: false, reason: "before_departure" });
+    expect((await checkoutRow())?.status).toBe("pending");
   });
 });
