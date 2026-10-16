@@ -19,6 +19,7 @@ import {
 import { GUARDIAN_RELATIONSHIPS } from "@/lib/guardian";
 import { INCIDENT_KINDS, INCIDENT_SEVERITIES } from "@/lib/incident-reports";
 import type { BuddyAlert, RollCallLabel } from "@/lib/manifests";
+import type { PartyLeftReason } from "@/lib/party-teams";
 import { CARDINAL_DIRECTIONS, SEA_STATES, WIND_STATES } from "@/lib/marine-forecast";
 import { PLAN_CHANGE_REASONS } from "@/lib/plan-change";
 import {
@@ -40,7 +41,7 @@ import { stripComments } from "@/test/source";
 import { SHOP_ACTIVITY_KIND_KEYS, shopActivityLineText } from "./activity-labels";
 import { boatSafetyNoticeText } from "./boat-safety-labels";
 import { boatWorkText } from "./boat-work-labels";
-import { buddyAlertText } from "./buddy-labels";
+import { buddyAlertText, partyLeftReasonText } from "./buddy-labels";
 import {
   CARD_STATUS_KEYS,
   CERTIFICATION_ROW_STATE_BADGE,
@@ -261,6 +262,16 @@ const BOAT_WORK_CODES = everyCodeOf<BoatWorkCode>({
 const BUDDY_ALERTS = everyCodeOf<BuddyAlert>({
   separated_dock: true,
   separated_after_dive: true,
+});
+
+const PARTY_LEFT_REASONS = everyCodeOf<PartyLeftReason>({
+  intro_course: true,
+  training_course: true,
+  young_child: true,
+  minor_age_conflict: true,
+  minor_age_unknown: true,
+  junior_without_adult: true,
+  too_large: true,
 });
 
 const WAIVER_ROW_STATES = everyCodeOf<WaiverRowState>({
@@ -519,6 +530,13 @@ const CASES: readonly LabelMapCase[] = [
     map: "BUDDY_ALERT_NAMED_KEYS",
     rows: codeRows(BUDDY_ALERTS, (locale, alert) =>
       buddyAlertText(staffTranslator(locale), alert, ["Ravi Patel"]),
+    ),
+  },
+  {
+    module: "buddy-labels.ts",
+    map: "PARTY_LEFT_KEYS",
+    rows: codeRows(PARTY_LEFT_REASONS, (locale, reason) =>
+      partyLeftReasonText(staffTranslator(locale), reason),
     ),
   },
   {

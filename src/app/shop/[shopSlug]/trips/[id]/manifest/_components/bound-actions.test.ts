@@ -7,10 +7,12 @@ vi.mock("../actions", () => {
     [
       "addBuddyTeamMemberAction",
       "addManifestPrivateNoteAction",
+      "answerSnagAction",
       "crewRollCallAction",
       "dissolveBuddyTeamAction",
       "formBuddyTeamAction",
       "markTripCaughtUpAction",
+      "noteSnagAction",
       "preDepartureCheckAction",
       "removeBuddyTeamMemberAction",
       "rollCallAction",
@@ -45,6 +47,8 @@ describe("bindManifestActions", () => {
       actions.addPrivateNote,
       actions.markTripCaughtUp,
       actions.preDepartureCheck,
+      actions.noteSnag,
+      actions.answerSnag,
       actions.setTripStage,
     ]) {
       expect((action as unknown as { context: unknown }).context).toEqual(narrow);
