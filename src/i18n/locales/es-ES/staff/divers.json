@@ -180,7 +180,16 @@
     "letterOther": "#",
     "pagination": {
       "total": "{count, plural, one {# buceador} other {# buceadores}}"
-    }
+    },
+    "viewNotBack": "Sin volver en 12 meses",
+    "lastDivedGroup": "Inmersión más reciente primero",
+    "lastDived": "última inmersión {date}",
+    "neverDived": "aún sin inmersiones",
+    "sortLabel": "Ordenar:",
+    "sortName": "Nombre",
+    "sortLastDived": "Última inmersión",
+    "sortAriaLabel": "Orden del registro",
+    "downloadList": "Descargar esta lista (CSV)"
   },
   "header": {
     "noContactDetails": "Aún sin datos de contacto",
@@ -201,7 +210,8 @@
     "emergencyContactPhoneLabel": "Teléfono del contacto de emergencia",
     "saving": "Guardando…",
     "saveDetails": "Guardar datos",
-    "visits": "{count, plural, one {# visita} other {# visitas}}"
+    "visits": "{count, plural, one {# visita} other {# visitas}}",
+    "packageBalance": "Paquete: quedan {left} de {of, plural, one {# inmersión} other {# inmersiones}}"
   },
   "bookActivity": {
     "courseOrDiveLabel": "Salida",
@@ -210,7 +220,7 @@
     "bookActivityButton": "Reservar",
     "noOpenActivities": "Ninguna salida próxima tiene plazas libres.",
     "noEmailNote": "Sin correo registrado. Entrégale el enlace de la exención en persona o agrega una dirección a su ficha.",
-    "bookDeparture": "Reservar una salida"
+    "bookDeparture": "Agregar una reserva"
   },
   "payments": {
     "shopPaymentFallback": "Pago del centro"
@@ -416,6 +426,8 @@
   "notices": {
     "alreadyBooked": "Este buceador ya está reservado en esa actividad.",
     "booked": "Reservado. Revísalo abajo, luego crea y envía la factura.",
+    "bookedConfirmed": "Reservado, y su confirmación va en camino. Revísalo abajo, luego crea y envía la factura.",
+    "bookedConfirmedNoInvoice": "Reservado, y su confirmación va en camino.",
     "bookedNoInvoice": "Reservado.",
     "bookedWaiverUndelivered": "Reservado, pero no se envió su exención por correo. Abre la pestaña Buceadores de la salida para enviarla o compartir el enlace.",
     "bookedIdentityUnconfirmed": "Reservado, pero la plaza queda retenida hasta que confirmes que es la misma persona. Abre la pestaña Buceadores de la salida para confirmarlo.",
@@ -550,6 +562,8 @@
     "canceled": "cancelada",
     "tripCalledOff": "salida suspendida",
     "noShow": "no se presentó",
+    "turnedAway": "atendido en el mostrador, no embarcó{reason, select, medical {: médico} waiver {: exención} card {: certificación} age {: edad} identity {: identidad} payment {: pago} other {}}",
+    "turnedAwayRemoved": "atendido en el mostrador, no embarcó{reason, select, medical {: médico} waiver {: exención} card {: certificación} age {: edad} identity {: identidad} payment {: pago} other {}}; después se quitó la reserva",
     "notCountedBack": "no se contó de vuelta a bordo",
     "showAll": "Ver las {count}",
     "newInvoice": "Nueva factura"

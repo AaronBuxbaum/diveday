@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { DIVER_LOCALES, type DiverLocale, isDiverLocale, toDiverLocale } from "@/i18n/settings";
 import { isValidCalendarDate } from "@/lib/calendar-date";
+import { CERTIFICATION_AGENCIES } from "@/lib/certification-options";
 import { ALERTING_LEVELS, CEILING_UNITS, COST_PROVIDERS } from "@/lib/cost-guardrails";
 import { COURSE_INQUIRY_EXPERIENCE } from "@/lib/course-inquiry";
 import {
@@ -25,6 +26,7 @@ import {
   SETUP_PHONE_MAX,
   SETUP_TEXT_MAX,
 } from "@/lib/setup-requests";
+import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 
 /**
  * Every kind of notification DiveDay sends, as a discriminated union of zod
@@ -121,17 +123,31 @@ const meetingPointSchema = z.object({
 const centsSchema = z.number().int().min(1).max(100_000_000);
 
 /**
- * This seat's money as the booking form showed it (`seatMoneyTerms`): a code
- * and amounts in minor units, never a sentence.
+ * This seat's money as the booking form showed it (`seatMoneyTerms`), or the
+ * party's when the lead holds several seats (`partyMoneyTerms`, fourth UX
+ * review item 5): a code and amounts in minor units, never a sentence.
+ * `seats` is how many priced seats the figure covers; absent means one.
  */
+const seatsSchema = z.number().int().min(1).max(100).optional();
 const seatMoneySchema = z.discriminatedUnion("due", [
-  z.object({ due: z.literal("at_shop"), amountCents: centsSchema, currency: z.string().length(3) }),
-  z.object({ due: z.literal("online"), amountCents: centsSchema, currency: z.string().length(3) }),
+  z.object({
+    due: z.literal("at_shop"),
+    amountCents: centsSchema,
+    currency: z.string().length(3),
+    seats: seatsSchema,
+  }),
+  z.object({
+    due: z.literal("online"),
+    amountCents: centsSchema,
+    currency: z.string().length(3),
+    seats: seatsSchema,
+  }),
   z.object({
     due: z.literal("deposit"),
     depositCents: centsSchema,
     balanceCents: centsSchema,
     currency: z.string().length(3),
+    seats: seatsSchema,
   }),
 ]);
 
@@ -371,6 +387,10 @@ const waitlistInviteSchema = z.object({
   /** The invite timestamp, so each explicit re-invite is a distinct send. */
   invitedAt: z.date(),
   unsubscribeUrl: z.url().max(2_000),
+  /** The waiting party's size (fourth review, item 34). */
+  partySize: z.number().int().min(1).max(MAX_PUBLIC_PARTY_SIZE).optional(),
+  /** The run's date that filled, for an invite the nightly roll sent (item 31). */
+  sailedStartsAt: z.date().optional(),
 });
 
 /**
@@ -1146,7 +1166,12 @@ const weeklyDigestSectionSchema = z.discriminatedUnion("kind", [
     kind: z.literal("money"),
     revenueCents: z.number().int(),
     tipsCents: z.number().int().min(0),
-    openOrders: z.number().int().min(0),
+    owed: z.object({
+      orderCents: z.number().int().min(0),
+      orderCount: z.number().int().min(0),
+      seatCents: z.number().int().min(0),
+      seatCount: z.number().int().min(0),
+    }),
     currency: z.string().trim().min(3).max(3),
     url: z.url().max(2_000),
   }),
@@ -1177,6 +1202,18 @@ const weeklyDigestSectionSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("overdue"),
     count: z.number().int().min(1),
+    url: z.url().max(2_000),
+  }),
+  z.object({
+    kind: z.literal("safety"),
+    openRollCalls: z.number().int().min(0),
+    uncrewed: z.number().int().min(0),
+    incidents: z.number().int().min(0),
+    url: z.url().max(2_000),
+  }),
+  z.object({
+    kind: z.literal("gear_service"),
+    due: z.number().int().min(1),
     url: z.url().max(2_000),
   }),
 ]);
@@ -1330,6 +1367,12 @@ const courseCertifiedSchema = z.object({
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   level: z.enum(DECLARABLE_CERTIFICATION_LEVELS),
+  /** The course the shop ran: what the card says, ahead of DiveDay's rung. */
+  courseTitle: z.string().trim().min(1).max(200).optional(),
+  /** Under 15 on the recorded date, so the card is a Junior card. */
+  junior: z.literal(true).optional(),
+  /** The course's agency, which issues the card; absent, the message names none. */
+  agency: z.enum(CERTIFICATION_AGENCIES).optional(),
   recordedAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   /** The shop's next public course on from this level; the url is built server-side. */
@@ -1552,7 +1595,7 @@ const rollCallStaleSchema = z.object({
 });
 
 /**
- * **A filed incident report of kind "missing diver"** (H-126, decided
+ * **A filed incident report of kind "missing diver"** (H-138, decided
  * 2026-10-16; `sendMissingDiverAlerts`, src/db/missing-diver-alerts.ts). Staff
  * safety mail to each of the shop's owners at once, once per report: whoever
  * filed it chose "missing diver" on purpose, so the shop does not wait for the

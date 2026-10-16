@@ -1,4 +1,4 @@
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { tripRescheduledEmail } from "@/lib/notifications/email";
@@ -7,11 +7,14 @@ import { fakeEmail, fakeSms } from "@/test/fakes";
 import { createBooking, listSeatMoveTargets, moveBooking } from "./bookings";
 import { formBuddyTeam } from "./buddy-pairs";
 import type { AppDb } from "./client";
+import { hasMoveAsk, recordMoveAsk } from "./inbound-messages";
 import { listTripActivity } from "./operations";
 import {
+  activityEvents,
   bookings,
   certifications,
   courses,
+  inboundMessages,
   people,
   tripDeskEvents,
   tripHelpRequests,
@@ -307,6 +310,30 @@ describe("moveBooking", () => {
     });
   });
 
+  /**
+   * Dive-domain review F1 of layer r4-1: an "Ask to move" is about the old
+   * departure. The move answers it, so the new date's page offers the ask
+   * again and the Inbox row stops waiting.
+   */
+  it("answers the diver's standing Ask to move", async () => {
+    const { db, shop, from, to, seat } = await setup();
+    const asked = await recordMoveAsk(db, {
+      shopId: shop.id,
+      bookingId: seat.bookingId,
+      now: new Date(nowMs() - 60_000),
+    });
+    if (asked.status !== "recorded") throw new Error(`expected recorded, got ${asked.status}`);
+    expect(await hasMoveAsk(db, shop.id, seat.bookingId)).toBe(true);
+
+    expect(await move(db, shop.id, from.id, to.id, seat.bookingId)).toMatchObject({ ok: true });
+    const [row] = await db
+      .select({ answeredAt: inboundMessages.answeredAt })
+      .from(inboundMessages)
+      .where(eq(inboundMessages.id, asked.id));
+    expect(row?.answeredAt).not.toBeNull();
+    expect(await hasMoveAsk(db, shop.id, seat.bookingId)).toBe(false);
+  });
+
   it("leaves a help request the old crew already handled on the old departure", async () => {
     const { db, shop, from, to, seat } = await setup();
     await db.insert(tripHelpRequests).values({
@@ -369,6 +396,20 @@ describe("moveSeat (the consequence path)", () => {
       (await listTripActivity(db, shop.id, tripId)).map((entry) => entry.code);
     expect(await codes(from.id)).toContain("seat_moved_away");
     expect(await codes(to.id)).toContain("seat_moved_here");
+    // Both lines name whose seat by record, written with the move (security
+    // review 2026-10-16, F1).
+    const subjects = await db
+      .select({ subject: activityEvents.subjectPersonId })
+      .from(activityEvents)
+      .where(
+        and(
+          inArray(activityEvents.tripId, [from.id, to.id]),
+          inArray(activityEvents.code, ["seat_moved_away", "seat_moved_here"]),
+        ),
+      );
+    expect(subjects).toHaveLength(2);
+    if (!moved.ok) throw new Error("expected a move");
+    expect(subjects.every((row) => row.subject === moved.personId)).toBe(true);
   });
 });
 
@@ -387,6 +428,22 @@ describe("listSeatMoveTargets", () => {
     expect(targets.map((target) => target.startsAt.getTime())).toEqual(
       [...targets.map((target) => target.startsAt.getTime())].sort((a, b) => a - b),
     );
+  });
+});
+
+describe("listSeatMoveTargets, with the seats each has left", () => {
+  // "Carry the wait list" offered boats with no seat as if they could help
+  // (dive-domain review r4-4, N9): each target says what it has left.
+  it("counts the seats a target still sells", async () => {
+    const { db, shop, from, to } = await setup(2);
+    await seatOn(db, shop.id, to.id, "Ola Seated");
+    const target = (await listSeatMoveTargets(db, shop.id, from.id)).find(
+      (row) => row.id === to.id,
+    );
+    expect(target?.seatsLeft).toBe(1);
+    await seatOn(db, shop.id, to.id, "Pia Seated");
+    const full = (await listSeatMoveTargets(db, shop.id, from.id)).find((row) => row.id === to.id);
+    expect(full?.seatsLeft).toBe(0);
   });
 });
 

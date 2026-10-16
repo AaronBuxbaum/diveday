@@ -10,6 +10,8 @@ const copy = {
   // The shipped words (`manifest.emergency.empty`): a fact, with no errand.
   empty: "No emergency numbers recorded for this shop.",
   vesselLabel: "Vessel:",
+  callSignLabel: "Call sign:",
+  mmsiLabel: "MMSI:",
   shoreContactLabel: "Shore contact:",
   planLabel: "First moves",
 };
@@ -17,6 +19,76 @@ const copy = {
 afterEach(cleanup);
 
 describe("EmergencyReferenceCard", () => {
+  it("prints the departure's own boat and never the shop-wide hull beside it (fourth review, item 11)", () => {
+    const { container } = render(
+      <EmergencyReferenceCard
+        copy={copy}
+        reference={{
+          ...EMPTY_EMERGENCY_REFERENCE,
+          // What `emergencyReferenceForDeparture` hands over for a boat: the
+          // shop line cleared, the boat in its place.
+          lines: [{ label: "DAN", phone: "+1 919 684 9111" }],
+          vessel: "",
+          boat: { name: "Mantis I", callSign: "WDM2201", mmsi: "338055502" },
+        }}
+      />,
+    );
+    expect(container.textContent).toContain("Vessel: Mantis I");
+    expect(container.textContent).toContain("Call sign: WDM2201");
+    expect(container.textContent).toContain("MMSI: 338055502");
+    expect(container.textContent).not.toContain("Mantis II");
+    expect(screen.queryByText(copy.empty)).toBeNull();
+  });
+
+  it("leaves out a radio fact the boat's row does not hold", () => {
+    const { container } = render(
+      <EmergencyReferenceCard
+        copy={copy}
+        reference={{
+          ...EMPTY_EMERGENCY_REFERENCE,
+          boat: { name: "Mantis I", callSign: null, mmsi: null },
+        }}
+      />,
+    );
+    expect(container.textContent).toContain("Vessel: Mantis I");
+    expect(container.textContent).not.toContain("Call sign:");
+    expect(container.textContent).not.toContain("MMSI:");
+  });
+
+  it("still states the absence under a boat when the shop has no numbers", () => {
+    // A hull name is not an emergency number: a departure on a boat with an
+    // empty reference must not read as a filled card.
+    const { container } = render(
+      <EmergencyReferenceCard
+        copy={copy}
+        reference={{
+          ...EMPTY_EMERGENCY_REFERENCE,
+          boat: { name: "Mantis I", callSign: "WDM2201", mmsi: null },
+        }}
+      />,
+    );
+    expect(container.textContent).toContain("Vessel: Mantis I");
+    expect(container.textContent).toContain("Call sign: WDM2201");
+    expect(screen.getByText(copy.empty)).toBeTruthy();
+  });
+
+  it("prints the shop's vessel line under a boat whose row holds no radio fact (review B1)", () => {
+    const { container } = render(
+      <EmergencyReferenceCard
+        copy={copy}
+        reference={{
+          ...EMPTY_EMERGENCY_REFERENCE,
+          vessel: "VHF 16, MMSI 338055501",
+          boat: { name: "Mantis I", callSign: null, mmsi: null },
+        }}
+      />,
+    );
+    expect(container.textContent).toContain("Vessel: Mantis I");
+    expect(container.textContent).toContain("VHF 16, MMSI 338055501");
+    // One "Vessel:" label: the shop line reads as the boat's, not a second hull.
+    expect(container.textContent?.match(/Vessel:/g)).toHaveLength(1);
+  });
+
   it("renders every number as reference text — nothing here can place a call", () => {
     const { container } = render(
       <EmergencyReferenceCard

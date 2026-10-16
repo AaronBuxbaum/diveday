@@ -387,6 +387,7 @@
       "readyBadge": "Listo cuando se guardó",
       "blockedBadge": "Bloqueado cuando se guardó",
       "notHereBadge": "Marcado “no vino” cuando se guardó",
+      "turnedAwayBadge": "Marcado “no embarcó” cuando se guardó",
       "statePendingSuffix": "· esperando para enviarse",
       "emergencyContact": "Contacto de emergencia",
       "notOnFile": "Sin datos registrados",
@@ -468,6 +469,7 @@
     "itemDrysuitGlovesWithSize": "{item} {size}: traje seco, ¿húmedos o secos?",
     "itemDrysuitWeightCheck": "{item}: traje seco, verificar el lastre en el agua",
     "itemNoLongerRented": "{item} (el centro ya no alquila esto)",
+    "itemSizeMissing": "{item} (falta la talla)",
     "notRecorded": "No hay equipo registrado, aún no se ha preguntado",
     "ownKit": "Trae su propio equipo",
     "needsStaffFit": "Necesita ajuste del personal en el check-in",
@@ -529,8 +531,9 @@
     "never": "nunca"
   },
   "welcomeCue": {
-    "firstTrip": "primera vez con nosotros",
-    "returning": "de vuelta tras {years, plural, one {# año} other {# años}}",
+    "firstTrip": "Primera inmersión con nosotros",
+    "firstTime": "Primera vez con nosotros",
+    "returning": "De vuelta tras {years, plural, one {# año} other {# años}}",
     "dockLine": "Saluda a {name}: {card}.",
     "dockLineNoCard": "Saluda a {name}.",
     "dockLineSays": "Saluda a {name}: dice {level}.",
@@ -597,7 +600,8 @@
     "splitting": "Creando…"
   },
   "boatWork": {
-    "missingSizes": "{count, plural, one {A # persona le faltan} other {A # personas les faltan}} tallas de alquiler",
+    "missingSize": "{count} sin talla",
+    "kitUnasked": "{count} sin preguntar por su equipo",
     "ungatedNitrox": "{count, plural, one {# buceador quiere nitrox y recibe aire} other {# buceadores quieren nitrox y reciben aire}} a menos que se verifique una certificación antes de que salga el barco",
     "missingContact": "{count, plural, one {# persona no tiene} other {# personas no tienen}} contacto de emergencia",
     "openOrders": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}"

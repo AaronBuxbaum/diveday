@@ -5,6 +5,7 @@ import { type CourseLearningMaterial, readLearningMaterials } from "@/lib/course
 import { seatListPriceCents, withinCancellationWindow } from "@/lib/deposits";
 import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
+import { seatIsHeld } from "@/lib/no-show";
 import { publicAppUrl } from "@/lib/notifications";
 import type { ParticipantType } from "@/lib/participant-types";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
@@ -16,10 +17,12 @@ import { canSayRunningLate, runningLateShown } from "@/lib/running-late";
 import { hasSailed } from "@/lib/trips";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { offerableWelcomeCue, type WelcomeCue, type WelcomeHello } from "@/lib/welcome-cue";
+import { heldAtTheDoor } from "./aboard-at-sea";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
 import { firstActiveIntroCourse, hasActiveRefresherCourse } from "./courses";
 import { getHelpRequestForBooking, type HelpRequest } from "./help-requests";
+import { hasMoveAsk } from "./inbound-messages";
 import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingPayment } from "./payments";
 import { type BookingReadinessDetail, getBookingReadinessDetail } from "./readiness";
@@ -108,7 +111,9 @@ export async function getBookedCard(
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
     .limit(1);
-  if (!row) return null;
+  // A seat the desk released is not one the card may claim (layer 3 review,
+  // dde-1 F2): no card, and the full path answers with its own.
+  if (!row || row.status === "no_show") return null;
   const identityHeld = row.identityUnconfirmedAt !== null;
   return {
     shop: {
@@ -281,6 +286,14 @@ export type ReadyPageData = {
   helpRequest: HelpRequest | null;
   /** True when the shop can actually take a card for this trip right now. */
   canPay: boolean;
+  /** The shop runs hotel pickups, so Day-of details asks about one (fourth UX review, item 8). */
+  offersHotelPickup: boolean;
+  /**
+   * This seat is priced, unpaid, and the page cannot take a card for it: the
+   * money is owed at the shop, and `/ready` says how much, the party's unclaimed
+   * seats included (fourth UX review, item 5).
+   */
+  owesAtShop: boolean;
   /**
    * What this seat is (ADR 20261007-participant-types): its price is its own,
    * and a snorkeler or a rider is not asked a diver's questions.
@@ -314,6 +327,20 @@ export type ReadyPageData = {
    */
   canCancelBooking: boolean;
   /**
+   * The desk saw this diver and turned them away (H-135), rather than marking
+   * them not here. After the departure the page says the shop could not take
+   * them, never that they did not make it. The category is not carried: the
+   * diver was there, and a bearer link is no place to print it.
+   */
+  turnedAway: boolean;
+  /**
+   * The desk released this seat (turned away, or marked not here). Before
+   * the day is over the page says only that the shop released it and to talk
+   * to the desk, with no category, and draws no checklist, payment or
+   * running-late control (layer 3 review, dde-1 F2).
+   */
+  seatReleased: boolean;
+  /**
    * **"Add a seat"** (UX review 2026-10-11, item 13): this booking may lead a
    * party seat added from the page. The same moment a seat may be released
    * (`canCancelBooking`), never on a held seat, and never on a party member's
@@ -337,6 +364,16 @@ export type ReadyPageData = {
    * open and nothing has been said, and the said line while it is open after.
    */
   runningLate: { open: boolean; saidAt: Date | null };
+  /**
+   * **"Ask to move"** (H-126). Past the free-cancellation window, or on a
+   * trip with none, a paid cancel returns nothing right away, so the diver
+   * may ask the shop for another date instead: `open` while that ask could be
+   * made — a paid seat the diver may still release, not held, on their own
+   * booking — and `asked` while one about this departure stands
+   * (`hasMoveAsk`), so the page says so rather than offering it twice. Null
+   * everywhere else. The move itself is staff's.
+   */
+  moveAsk: "open" | "asked" | null;
   /**
    * **The departure itself was called off** — `trips.status`, not the
    * booking's.
@@ -396,6 +433,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       hotelPickupLocation: bookings.hotelPickupLocation,
       pickupTime: bookings.pickupTime,
       status: bookings.status,
+      turnedAwayAt: bookings.turnedAwayAt,
       runningLateAt: bookings.runningLateAt,
       bookingCreatedAt: bookings.createdAt,
       carriedFactsConfirmedAt: bookings.carriedFactsConfirmedAt,
@@ -415,6 +453,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       rentalItems: shops.rentalItems,
       rentalPricing: shops.rentalPricing,
       dockCallMinutes: shops.dockCallMinutes,
+      offersHotelPickup: shops.offersHotelPickup,
       personEmail: people.email,
       personLocale: people.locale,
       emergencyContactName: people.emergencyContactName,
@@ -480,7 +519,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     getShopStripeAccount(db, row.shopId),
     verifiedNitroxPersonIds(db, row.shopId),
     nitroxCardOnFilePersonIds(db, row.shopId),
-    // The same reader the manifest uses, so "first time with us" means the
+    // The same reader the manifest uses, so "First dive with us" means the
     // same thing on the diver's own page as it does under their name at the
     // rail (issue #1182).
     welcomeCueInputsByBooking(db, row.shopId, row.tripId, now),
@@ -550,8 +589,16 @@ export async function getReadyPageData(
   // This seat's own price: a snorkeler is never asked for the dive fare
   // (ADR 20261007-participant-types).
   const perDiverPriceCents = seatListPriceCents(trip, trip.course, row.participantType);
+  // **Only a seat the diver still holds is payable** (layer 3 review, dde-2
+  // #1): a seat the desk released may already be resold, and a capture on it
+  // is money for a place the diver no longer has. `startBookingCheckout`
+  // refuses it server-side as well.
   const canPay = Boolean(
-    perDiverPriceCents && !settled && canAcceptPayments(stripeAccount) && publicAppUrl(),
+    seatIsHeld(row.status) &&
+      perDiverPriceCents &&
+      !settled &&
+      canAcceptPayments(stripeAccount) &&
+      publicAppUrl(),
   );
 
   // `captured`, not `settled`: a waived booking has no money to give back, so
@@ -566,7 +613,19 @@ export async function getReadyPageData(
         : "forfeit"
       : "no_policy";
 
-  const canCancelBooking = row.status === "booked" && !hasSailed(trip.startsAt, now);
+  const canCancelBooking =
+    row.status === "booked" &&
+    !hasSailed(trip.startsAt, now) &&
+    // Counted aboard a boat past its time: `selfCancelBooking` refuses it (H-133).
+    !(
+      await heldAtTheDoor(db, {
+        shopId: row.shopId,
+        tripId: row.tripId,
+        startsAt: trip.startsAt,
+        now,
+        bookingIds: [bookingId],
+      })
+    ).has(bookingId);
   const identityHeld = row.identityUnconfirmedAt !== null;
   // **A lead the page could charge pays before adding anyone** (security
   // review of layer 8, D3). The link is shared by design, so without this a
@@ -574,6 +633,17 @@ export async function getReadyPageData(
   // page that takes no payment here (pay at the dock), opens the door.
   const canAddSeat =
     canCancelBooking && !identityHeld && row.partyLeadBookingId === null && (settled || !canPay);
+  // Past the free window, or with no window at all, a paid cancel returns
+  // nothing right away: the diver may ask the shop to move them instead.
+  const moveAskable =
+    canCancelBooking &&
+    !identityHeld &&
+    (cancelPreview === "forfeit" || cancelPreview === "no_policy");
+  const moveAsk: ReadyPageData["moveAsk"] = moveAskable
+    ? (await hasMoveAsk(db, row.shopId, bookingId))
+      ? "asked"
+      : "open"
+    : null;
 
   const canPayPartySeats =
     canCancelBooking &&
@@ -645,9 +715,14 @@ export async function getReadyPageData(
     hotelPickupLocation: row.hotelPickupLocation,
     pickupTime: row.pickupTime,
     canPay,
+    offersHotelPickup: row.offersHotelPickup,
+    owesAtShop: Boolean(perDiverPriceCents) && !settled && !canPay,
     cancelPreview,
     canCancelBooking,
+    turnedAway: row.status === "no_show" && row.turnedAwayAt !== null,
+    seatReleased: row.status === "no_show",
     canAddSeat,
+    moveAsk,
     canPayPartySeats,
     runningLate: {
       open: canSayRunningLate({
@@ -664,6 +739,7 @@ export async function getReadyPageData(
     // have consented. The staff surfaces read the consented one.
     welcomeOffer: offerableWelcomeCue({
       lastDivedAt: welcomeInputs.get(bookingId)?.lastDivedAt ?? null,
+      nonDiver: welcomeInputs.get(bookingId)?.nonDiver ?? false,
       tripEndsAt: trip.endsAt,
       now,
     }),

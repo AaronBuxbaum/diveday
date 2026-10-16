@@ -63,6 +63,13 @@ describe("the words the es-ES README settled", () => {
       expect(rules({ k: "certificaciones, liberaciones, notas" })).toEqual(["waiver"]);
     });
 
+    it("refuses the English word, and leaves it inside a name or a file name", () => {
+      expect(rules({ k: "Completa tu waiver para {tripTitle}" })).toEqual(["waiver"]);
+      expect(rules({ k: "{count} waivers importados" })).toEqual(["waiver"]);
+      expect(rules({ k: "Cambiarte de Smartwaiver a DiveDay" })).toEqual([]);
+      expect(rules({ k: "waiver_records.csv guarda el hash de cada exención." })).toEqual([]);
+    });
+
     it("accepts exención", () => {
       expect(rules({ k: "Tengo la exención firmada de este buceador." })).toEqual([]);
     });
@@ -333,6 +340,34 @@ describe("the words the es-ES README settled", () => {
       expect(rules({ k: "Agregar buzo" })).toEqual([]);
       expect(rules({ k: "Trae bañador y toalla" })).toEqual([]);
     });
+  });
+
+  describe("joining a list is anotarse", () => {
+    it("refuses the reflexive apuntarse in every shape the bundles used", () => {
+      expect(rules({ k: "Apuntándote…" })).toEqual(["sign-up"]);
+      expect(rules({ k: "Apuntarme a la lista de espera" })).toEqual(["sign-up"]);
+      expect(rules({ k: "Apúntate a la lista" })).toEqual(["sign-up"]);
+      expect(rules({ k: "no hay lista de espera a la que apuntarse." })).toEqual(["sign-up"]);
+      expect(rules({ k: "que los buceadores se apunten a una lista" })).toEqual(["sign-up"]);
+    });
+
+    it("leaves the plain verb alone, which is pointing", () => {
+      expect(rules({ k: "Ese endpoint apunta a una dirección privada" })).toEqual([]);
+      expect(rules({ k: "Apunta tu luz al borde de su hueco" })).toEqual([]);
+      expect(rules({ k: "no le apuntes la luz a los ojos" })).toEqual([]);
+      expect(rules({ k: "triángulos oscuros que apuntan hacia el vientre" })).toEqual([]);
+      expect(rules({ k: "Anotándote…" })).toEqual([]);
+    });
+  });
+
+  it("reads past an ICU select's case keys, never past its words", () => {
+    // `waiver` as a case key is the turned-away reason's code, which no
+    // reader sees; the same word as the case's text is still the mistake.
+    expect(rules({ k: "No embarcó{reason, select, waiver {: exención} other {}}" })).toEqual([]);
+    expect(rules({ k: "No embarcó{reason, select, waiver {: waiver} other {}}" })).toEqual([
+      "waiver",
+    ]);
+    expect(rules({ k: "Completa tu waiver {tripTitle}" })).toEqual(["waiver"]);
   });
 
   it("reports every rule a single string breaks, not only the first", () => {

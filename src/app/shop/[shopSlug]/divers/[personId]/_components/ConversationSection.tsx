@@ -64,7 +64,9 @@ export function ConversationSection({
 
   const inbound = entries.filter((entry) => entry.direction === "inbound");
   const unanswered = inbound.filter((entry) => entry.message.answeredAt === null).length;
-  const latest = inbound.at(-1);
+  // An "Ask to move" from the booking page (H-126) sits in the thread but is
+  // nothing to answer *on*: the composer answers the last thing they wrote.
+  const latest = inbound.filter((entry) => entry.message.channel !== "page").at(-1);
   const latestWhatsApp = inbound.filter((entry) => entry.message.channel === "whatsapp").at(-1);
   // A typed WhatsApp reply is only accepted for 24 hours after the diver's own
   // last WhatsApp message — measured from that message, not from the one being
@@ -102,10 +104,17 @@ export function ConversationSection({
           const key = entry.direction === "inbound" ? entry.message.id : `reply-${entry.reply.id}`;
           const meta =
             entry.direction === "inbound"
-              ? t("inbox.thread.received", {
-                  name: diverName,
-                  date: formatDateTimeTz(entry.message.receivedAt, locale, timezone),
-                })
+              ? t(
+                  // An "Ask to move" (H-126) is a button, not words: the
+                  // line says what was asked, and a note follows if any.
+                  entry.message.channel === "page"
+                    ? "inbox.thread.askedToMove"
+                    : "inbox.thread.received",
+                  {
+                    name: diverName,
+                    date: formatDateTimeTz(entry.message.receivedAt, locale, timezone),
+                  },
+                )
               : // A reply with no staffer behind it is one DiveDay sent on the
                 // shop's behalf — a reply-keyword confirmation (ADR
                 // 20260909-reply-keywords). Named as that rather than as
@@ -131,11 +140,13 @@ export function ConversationSection({
             >
               <p className="text-sm text-muted">{meta}</p>
               {/* Their words and the shop's, as typed. */}
-              <p
-                className={`mt-1 whitespace-pre-wrap ${entry.direction === "outbound" ? "text-muted" : ""}`.trim()}
-              >
-                {body}
-              </p>
+              {body.trim() ? (
+                <p
+                  className={`mt-1 whitespace-pre-wrap ${entry.direction === "outbound" ? "text-muted" : ""}`.trim()}
+                >
+                  {body}
+                </p>
+              ) : null}
               {entry.direction === "outbound" && entry.reply.status !== "sent" ? (
                 <p className="mt-1 text-sm text-danger">{t("inbox.thread.sendFailed")}</p>
               ) : null}
@@ -152,7 +163,10 @@ export function ConversationSection({
                     ? "inbox.reply.whatsapp"
                     : "inbox.reply.email",
                   {
-                    address: replyDestination(replyTo.message.channel, replyTo.message.fromAddress),
+                    address: replyDestination(
+                      replyTo.message.channel === "whatsapp" ? "whatsapp" : "email",
+                      replyTo.message.fromAddress,
+                    ),
                   },
                 )}
               >

@@ -722,8 +722,13 @@ export async function findTripOnBoard(
   page: Page,
   shopSlug: string,
   title: string | RegExp,
+  options: { daysOut?: number } = {},
 ): Promise<Locator> {
-  await page.goto(`/shop/${shopSlug}/schedule/board`);
+  // A caller that knows how far out the seed puts the departure opens that
+  // week directly: a month out is five full board renders crawled one at a
+  // time, which is most of a 15-second test on a loaded box.
+  const week = options.daysOut === undefined ? "" : `?week=${daysFromNow(options.daysOut)}`;
+  await page.goto(`/shop/${shopSlug}/schedule/board${week}`);
   return walkBoardWeeksFor(page, title);
 }
 
@@ -736,8 +741,9 @@ export async function tripPathByTitle(
   page: Page,
   shopSlug: string,
   title: string | RegExp,
+  options: { daysOut?: number } = {},
 ): Promise<string> {
-  const link = await findTripOnBoard(page, shopSlug, title);
+  const link = await findTripOnBoard(page, shopSlug, title, options);
   const href = await link.getAttribute("href");
   if (!href) throw new Error(`no trip card found for ${title}`);
   return href;
@@ -777,9 +783,18 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** A seeded departure's trip id, found the way staff reach it. */
-export async function seededTripId(page: Page, shopSlug: string, title: string): Promise<string> {
-  const href = await tripPathByTitle(page, shopSlug, title);
+/**
+ * A seeded departure's trip id, found the way staff reach it. `daysOut` is the
+ * seed's own offset for the departure (`at(31, …)`): the board opens on that
+ * week instead of crawling to it from this one.
+ */
+export async function seededTripId(
+  page: Page,
+  shopSlug: string,
+  title: string,
+  options: { daysOut?: number } = {},
+): Promise<string> {
+  const href = await tripPathByTitle(page, shopSlug, title, options);
   const tripId = href.match(/\/trips\/([0-9a-f-]+)/i)?.[1];
   if (!tripId) throw new Error(`could not read a trip id from "${href}" for ${title}`);
   return tripId;

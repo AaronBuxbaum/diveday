@@ -50,7 +50,16 @@ export type CancellationRefundOutcome =
   /** Nothing was captured (unpaid, waived, or already refunded). */
   | { status: "unpaid" }
   /** Refund is owed but can't be automated here — staff must issue it. */
-  | { status: "manual"; reason: "not_stripe" | "not_connected" | "not_refundable" }
+  /**
+   * Refund is owed, or may be, but can't be automated here — staff must issue
+   * it. `turned_away`: the desk turned this diver away before the seat was
+   * removed (H-135), so the diver's cancellation window does not apply and
+   * whether the fare is moved, refunded or kept is a person's call.
+   */
+  | {
+      status: "manual";
+      reason: "not_stripe" | "not_connected" | "not_refundable" | "turned_away";
+    }
   /**
    * Another refund of this same seat is already at Stripe. Refused *locally*
    * rather than sent as a second reversal — see {@link claimBookingRefund}.
@@ -384,7 +393,7 @@ export async function refundBookingOnCancellation(
   const now = input.now ?? nowDate();
 
   const [row] = await db
-    .select({ trip: trips })
+    .select({ trip: trips, turnedAwayAt: bookings.turnedAwayAt })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
@@ -404,6 +413,14 @@ export async function refundBookingOnCancellation(
     async (tx, payment) => {
       if (!isCapturedPaymentStatus(payment?.status)) {
         return { proceed: false, outcome: { status: "unpaid" } };
+      }
+      // **Turned away, then removed** (layer 3 review, dde-2 #2): the diver
+      // did not cancel, so their cancellation window is not the rule. A
+      // "past the window, non-refundable" here would be a forfeit nobody
+      // decided. Nothing moves automatically; the order is where a person
+      // moves, refunds or keeps it.
+      if (row.turnedAwayAt) {
+        return { proceed: false, outcome: { status: "manual", reason: "turned_away" } };
       }
 
       const decision = refundOnCancellation(row.trip, payment.amountCents ?? 0, now);

@@ -44,12 +44,13 @@ function renderDetails(
     dayCount: 1,
     laterDates: [],
   },
+  shown: Trip = trip,
 ) {
   return render(
     <DetailsSection
       context={{
         action: () => {},
-        trip: trip,
+        trip: shown,
         diveSiteList: [],
         tripDiveList: [],
         startWall: wall,
@@ -102,5 +103,36 @@ describe("a departure that meets on several days", () => {
     fireEvent.change(screen.getByRole("spinbutton", { name: /Days/ }), { target: { value: "3" } });
     expect(screen.queryByLabelText("Day 2")).toBeNull();
     expect(document.querySelector('input[name="meetingDate"]')).toBeNull();
+  });
+});
+
+/**
+ * A priced course holds the session's price (fourth UX review, item 26):
+ * checkout charges the course fee plus its eLearning fee, so an editable box
+ * here set a number nobody is charged.
+ */
+describe("a session of a priced course", () => {
+  it("states the course's price and offers no price box, keeping the stored value", () => {
+    const session = {
+      ...trip,
+      courseId: "course-1",
+      course: { title: "Open Water", priceCents: 54_900, eLearningPriceCents: 16_000 },
+    } as unknown as Trip;
+    renderDetails(undefined, session);
+    expect(screen.getByText(/^\$709(\.00)? per diver, the course’s price$/)).toBeTruthy();
+    const price = document.querySelector<HTMLInputElement>('input[name="priceDollars"]');
+    expect(price?.type).toBe("hidden");
+    expect(price?.value).toBe("120");
+  });
+
+  it("keeps the price box for a course with no price of its own", () => {
+    const session = {
+      ...trip,
+      courseId: "course-1",
+      course: { title: "Open Water", priceCents: null, eLearningPriceCents: null },
+    } as unknown as Trip;
+    renderDetails(undefined, session);
+    const price = document.querySelector<HTMLInputElement>('input[name="priceDollars"]');
+    expect(price?.type).toBe("number");
   });
 });

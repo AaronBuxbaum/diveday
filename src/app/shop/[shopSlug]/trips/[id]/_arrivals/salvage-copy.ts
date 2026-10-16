@@ -32,8 +32,40 @@ export function noShowSalvageCopy(input: {
   diver: { id: string; name: string };
   /** The page holds the locale and the shop's zone; this holds neither. */
   formatWhen: (startsAt: Date) => string;
+  /**
+   * The desk turned this diver away (H-135) rather than marking them not
+   * here. Their next day is **their own booking moved** (`moveBooking` takes a
+   * turned-away seat), so the panel names that door, on their row, and offers
+   * no new booking: a second seat would charge them twice or spend a package
+   * dive twice, and their orders hold no refund for a seat paid at checkout
+   * (layer 3 review, dde-2 #3).
+   */
+  turnedAway?: boolean;
+  /**
+   * The turned-away seat cannot be moved: the boat's start has passed, or the
+   * diver leads a party (dde-3 #4+#5, #7). The money line names Remove.
+   */
+  moveClosed?: boolean;
 }): NoShowSalvageCopy {
   const { t, offer, shopSlug, tripId, diver } = input;
+  if (input.turnedAway) {
+    const money = {
+      line: input.moveClosed ? t("checkIn.turnAway.moneyRemove") : t("checkIn.turnAway.money"),
+    };
+    if (offer.kind === "waitlist") {
+      return {
+        line: t("checkIn.noShow.waiting", { count: offer.count }),
+        links: [
+          {
+            href: `/shop/${shopSlug}/trips/${tripId}#waitlist`,
+            label: t("checkIn.noShow.waitingDoor"),
+          },
+        ],
+        money,
+      };
+    }
+    return { line: t("checkIn.turnAway.noWaitlist"), links: [], money };
+  }
   const money = {
     line: t("checkIn.noShow.money"),
     href: `/shop/${shopSlug}/orders?personId=${encodeURIComponent(diver.id)}`,

@@ -1,6 +1,11 @@
 import { getDb } from "@/db/client";
 import { getMonthMoneyDetail } from "@/db/report-lines";
-import { canPersonViewShopReports, crewCountsByTrip, getMonthlyReport } from "@/db/reporting";
+import {
+  canPersonViewShopReports,
+  crewCountsByTrip,
+  getMonthlyReport,
+  getYearMonthInputs,
+} from "@/db/reporting";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -12,6 +17,7 @@ import { formatPercent, formatReportMoney, summarizeMonth, tripFillRate } from "
 import { requireStaffSession } from "@/lib/session";
 import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 import { monthReportCsv } from "./month-report-csv";
+import { yearReportCsv } from "./year-report-csv";
 
 /**
  * A CSV of one month's report — "just this month's numbers" for an owner's
@@ -27,7 +33,8 @@ import { monthReportCsv } from "./month-report-csv";
  * second serializer. `?month=` is read directly, not re-clamped to
  * the shop's own earliest month the way the page's picker is: a hand-edited
  * out-of-range month downloads an honest, empty report rather than a page
- * that needs a floor to stay usable.
+ * that needs a floor to stay usable. `?year=` cuts the year instead, as
+ * twelve month rows (`yearReportCsv`).
  */
 export async function GET(request: Request) {
   const session = await requireStaffSession();
@@ -41,7 +48,32 @@ export async function GET(request: Request) {
 
   const now = nowDate();
   const todayWall = utcToWallTime(now, shop.timezone);
-  const requested = parseMonthKey(new URL(request.url).searchParams.get("month"));
+  const search = new URL(request.url).searchParams;
+  const yearParam = search.get("year");
+  if (yearParam !== null) {
+    // The year as twelve month rows (fourth UX review, item 25). Parsed, never
+    // trusted: four digits, no later than this year.
+    const year = /^\d{4}$/.test(yearParam) ? Number(yearParam) : null;
+    if (year === null || year > todayWall.year) {
+      return new Response("Expected year=YYYY", { status: 400 });
+    }
+    const months = await getYearMonthInputs(db, shop.id, {
+      timeZone: shop.timezone,
+      currency,
+      year,
+      now,
+    });
+    const money = (cents: number) => formatReportMoney(cents, currency, shop.defaultLocale);
+    const csv = yearReportCsv(
+      months.map(({ month, input }) => ({ month, report: summarizeMonth(input) })),
+      money,
+    );
+    return csvResponse(
+      csv,
+      `diveday-report-${shop.slug}-${year}-${exportDateStamp(now, shop.timezone)}.csv`,
+    );
+  }
+  const requested = parseMonthKey(search.get("month"));
   const current: MonthRef = requested ?? { year: todayWall.year, month: todayWall.month };
   const { from: monthStart, to: monthEnd } = shopMonthBounds(current, shop.timezone);
 
@@ -90,7 +122,13 @@ export async function GET(request: Request) {
     money,
   );
 
-  const fileName = `diveday-report-${shop.slug}-${monthKey(current)}-${exportDateStamp(now, shop.timezone)}.csv`;
+  return csvResponse(
+    csv,
+    `diveday-report-${shop.slug}-${monthKey(current)}-${exportDateStamp(now, shop.timezone)}.csv`,
+  );
+}
+
+function csvResponse(csv: string, fileName: string): Response {
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",

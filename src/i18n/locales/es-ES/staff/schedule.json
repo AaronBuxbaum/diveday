@@ -184,7 +184,8 @@
     "noBoats": "Sin barcos",
     "quietDays": "{first} a {last}",
     "runsDays": "{days, plural, one {# día} other {# días}}",
-    "sailed": "Zarpó"
+    "sailed": "Zarpó",
+    "crewAway": "{name} ausente {dates}"
   },
   "addBooking": "Agregar una reserva"
 }

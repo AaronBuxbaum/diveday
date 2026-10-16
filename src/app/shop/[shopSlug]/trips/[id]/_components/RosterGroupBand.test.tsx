@@ -30,7 +30,7 @@ describe("the roster's row geometry", () => {
     }
     // The band inside the add-diver box draws none of its own.
     const band = within(addDiver as HTMLElement).getByRole("heading", {
-      name: "Add a diver",
+      name: "Add a booking",
     }).parentElement;
     expect(band).not.toBe(addDiver);
     expect(band).not.toHaveClass("border-t");

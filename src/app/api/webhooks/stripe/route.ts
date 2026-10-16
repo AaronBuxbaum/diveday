@@ -9,7 +9,7 @@ import {
 import type { AppDb } from "@/db/client";
 import { getDb } from "@/db/client";
 import {
-  markOrderPaidByInvoiceId,
+  applyInvoicePaid,
   markOrderVoidedByInvoiceId,
   recordOrderPaymentIntent,
 } from "@/db/orders";
@@ -51,6 +51,8 @@ import { applyPayoutEvent } from "./payout-event";
 const invoiceObjectSchema = z.object({
   id: z.string().min(1),
   amount_paid: z.number().int().optional(),
+  // True on the echo of a counter settle (`recordPaymentOnOpenOrder`).
+  paid_out_of_band: z.boolean().optional(),
   total_tax_amounts: z
     .array(z.object({ amount: z.number().int().nonnegative() }))
     .nullable()
@@ -131,6 +133,56 @@ const refundObjectSchema = z.object({
     .nullable()
     .optional(),
 });
+
+/**
+ * Settle the order an invoice backs (`applyInvoicePaid`), remember the
+ * PaymentIntent that paid it, and tell the integrations. Returns the outcome
+ * to log, or `"deferred"` while a counter claim on the invoice is in flight.
+ * A counter settlement logs its order id: when the counter call died after
+ * Stripe answered, no activity line names the staffer, and this line is what
+ * the request log can be joined on to find who tapped.
+ */
+async function handleInvoicePaid(
+  db: AppDb,
+  event: StripeWebhookEvent,
+): Promise<{ outcome: string; extra?: LogContext }> {
+  const invoice = invoiceObjectSchema.safeParse(event.data.object);
+  if (!invoice.success) return { outcome: "malformed_payload" };
+  const outcome = await applyInvoicePaid(db, {
+    stripeInvoiceId: invoice.data.id,
+    amountPaidCents: invoice.data.amount_paid ?? 0,
+    expectedAccountId: event.account,
+    taxCents: invoiceTaxCents(invoice.data),
+    paidOutOfBand: invoice.data.paid_out_of_band,
+  });
+  if (outcome.status === "deferred") return { outcome: "deferred" };
+  if (outcome.status === "not_found") return { outcome: "order_not_found" };
+  // Only an order Stripe collected (`settled` is a row still a Stripe invoice
+  // under its lock): a counter order's money never passed through a
+  // PaymentIntent, whatever attempts the invoice holds.
+  const paymentIntentId =
+    outcome.status === "settled" ? invoicePaymentIntentId(event.data.object) : null;
+  if (paymentIntentId) {
+    await recordOrderPaymentIntent(db, {
+      stripeInvoiceId: invoice.data.id,
+      paymentIntentId,
+      expectedAccountId: event.account,
+    });
+  }
+  // A paid order enqueues `order.paid` for every connected integration.
+  // Stripe's webhook is the most common way an order becomes paid, so draining
+  // here is what makes the write-driven path worth having at all (ADR
+  // 20260919-integration-delivery-is-write-driven). After the 200, never before
+  // it: Stripe retries on a slow response, and a provider's latency must not
+  // become a redelivery.
+  dispatchIntegrationsAfterResponse();
+  return outcome.status === "settled"
+    ? { outcome: "order_paid" }
+    : {
+        outcome: "order_paid_at_counter",
+        extra: { orderId: outcome.order.id, shopId: outcome.order.shopId },
+      };
+}
 
 /**
  * Void the order an invoice backs, and tell the integrations (`order.voided`,
@@ -554,35 +606,9 @@ export async function POST(request: Request) {
   try {
     switch (event.type) {
       case "invoice.paid": {
-        const invoice = invoiceObjectSchema.safeParse(event.data.object);
-        if (invoice.success) {
-          const order = await markOrderPaidByInvoiceId(
-            db,
-            invoice.data.id,
-            invoice.data.amount_paid ?? 0,
-            event.account,
-            invoiceTaxCents(invoice.data),
-          );
-          logOutcome(order ? "order_paid" : "order_not_found");
-          const paymentIntentId = order ? invoicePaymentIntentId(event.data.object) : null;
-          if (paymentIntentId) {
-            await recordOrderPaymentIntent(db, {
-              stripeInvoiceId: invoice.data.id,
-              paymentIntentId,
-              expectedAccountId: event.account,
-            });
-          }
-          // A paid order enqueues `order.paid` for every connected
-          // integration. Stripe's webhook is the most common way an order
-          // becomes paid, so draining here is what makes the write-driven
-          // path worth having at all (ADR
-          // 20260919-integration-delivery-is-write-driven). After the 200
-          // below, never before it: Stripe retries on a slow response, and a
-          // provider's latency must not become a redelivery.
-          if (order) dispatchIntegrationsAfterResponse();
-        } else {
-          logOutcome("malformed_payload");
-        }
+        const { outcome, extra } = await handleInvoicePaid(db, event);
+        if (outcome === "deferred") deferred = true;
+        else logOutcome(outcome, extra);
         break;
       }
       case "invoice.voided": {
@@ -793,7 +819,7 @@ export async function POST(request: Request) {
     // *does* retry rather than marking this delivery done (PAY-M1).
     //
     // Every handler this dispatch can reach is safely re-runnable:
-    // `markOrderPaidByInvoiceId`/`markOrderVoidedByInvoiceId` are transactional
+    // `applyInvoicePaid`/`markOrderVoidedByInvoiceId` are transactional
     // and transition-gated, `markCheckoutPaidBySessionId` never overwrites a
     // recorded settled total and dedupes its promo redemption,
     // `markTipPaidBySessionId` early-returns once paid, both

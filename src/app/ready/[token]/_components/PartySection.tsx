@@ -1,7 +1,10 @@
 import { AddSeat } from "@/app/ready/[token]/_components/AddSeat";
 import { PartyClaimPanel, type PartyClaimSeat } from "@/components/PartyClaimPanel";
 import { SettledCheck } from "@/components/ui/SettledCheck";
+import type { issuePartySeatClaims } from "@/db/seat-claims";
 import type { DiverTranslator } from "@/i18n/messages";
+import { claimLinkPath } from "@/lib/booking-capabilities";
+import { publicAppUrl } from "@/lib/notifications";
 
 /**
  * The party's section of the thread: the claim panel, its all-set line, and
@@ -16,6 +19,7 @@ export function PartySection({
   seats,
   allSet,
   addSeatAction,
+  signWaiverAction,
   payAction,
   t,
 }: {
@@ -26,6 +30,8 @@ export function PartySection({
   allSet: boolean;
   /** Bound to the page's token when the booking may lead a seat; null otherwise. */
   addSeatAction: ((formData: FormData) => Promise<void>) | null;
+  /** "Sign Mia's waiver" (H-124), bound to the page's token. */
+  signWaiverAction?: (formData: FormData) => Promise<void>;
   /** Bound to the page's token when the lead may pay for a seat they added; null otherwise. */
   payAction: ((formData: FormData) => Promise<void>) | null;
   t: DiverTranslator;
@@ -33,7 +39,12 @@ export function PartySection({
   if (seats.length === 0 && !addSeatAction) return null;
   return (
     <div id="party-seats" className="scroll-mt-8 space-y-3">
-      <PartyClaimPanel locale={locale} seats={seats} payAction={payAction} />
+      <PartyClaimPanel
+        locale={locale}
+        seats={seats}
+        signWaiverAction={signWaiverAction}
+        payAction={payAction}
+      />
       {allSet ? (
         <p>
           <SettledCheck settled label={t("thread.partyAllSet")} className="text-sm text-muted" />
@@ -42,4 +53,29 @@ export function PartySection({
       {addSeatAction ? <AddSeat action={addSeatAction} t={t} /> : null}
     </div>
   );
+}
+
+/**
+ * The organizer's issued claims as the panel renders them: each unclaimed
+ * seat's shareable link, absolute where the app knows its origin. Read by the
+ * thread and by the released-seat card (dde-3 #7).
+ */
+export function partyClaimSeats(
+  claims: Awaited<ReturnType<typeof issuePartySeatClaims>>,
+): PartyClaimSeat[] {
+  const claimOrigin = publicAppUrl();
+  return claims.map((seat) => ({
+    bookingId: seat.bookingId,
+    seatName: seat.seatName,
+    claimed: seat.claimed,
+    waiverSigned: seat.waiverSigned,
+    signForMinor: seat.signForMinor,
+    minorNote: seat.minorNote,
+    payable: seat.payable,
+    claimUrl: seat.claim
+      ? claimOrigin
+        ? new URL(claimLinkPath(seat.claim.token), `${claimOrigin}/`).toString()
+        : claimLinkPath(seat.claim.token)
+      : null,
+  }));
 }

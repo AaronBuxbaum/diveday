@@ -7,8 +7,8 @@ import { createBooking, createBookingParty } from "./bookings";
 import type { AppDb } from "./client";
 import { recordInboundMessage } from "./inbound-messages";
 import { handleInboundReplyKeyword } from "./reply-keywords";
-import { bookings, inboundMessages, people, staffReplies, trips } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { bookings, inboundMessages, people, rollCallEvents, staffReplies, trips } from "./schema";
+import { listStaff, upcomingTripsWithCounts } from "./trips";
 
 /**
  * **The failure paths are the feature** (ADR 20260909-reply-keywords).
@@ -222,6 +222,35 @@ describe("handleInboundReplyKeyword — what it refuses", () => {
         shopId: shop.id,
         inboundMessageId: messageId,
         now: afterwards,
+        provider,
+      }),
+    ).toBe("nothing_to_cancel");
+    expect(await statusOf(db, bookingId)).toBe("booked");
+  });
+
+  it("refuses a `C` inside the late hour once the dock counted the diver aboard (H-133)", async () => {
+    const { db, shop, trip, bookingId } = await context();
+    const provider = acceptingProvider();
+    const [recorder] = await listStaff(db, shop.id);
+    if (!recorder) throw new Error("seeded staff missing");
+    await db.insert(rollCallEvents).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId,
+      recordedByPersonId: recorder.person.id,
+      status: "boarded",
+      checkpoint: "departure",
+      occurredAt: new Date(trip.startsAt.getTime() + 5 * 60 * 1000),
+    });
+    // Twenty minutes past its time: `hasSailed` says not yet, the dock says aboard.
+    const at = new Date(trip.startsAt.getTime() + 20 * 60 * 1000);
+    const messageId = await inbound(db, shop.id, "C", { receivedAt: at });
+
+    expect(
+      await handleInboundReplyKeyword(db, {
+        shopId: shop.id,
+        inboundMessageId: messageId,
+        now: at,
         provider,
       }),
     ).toBe("nothing_to_cancel");

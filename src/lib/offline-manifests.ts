@@ -4,7 +4,7 @@ import { type ArrivalStatus, latestArrival } from "./arrival";
 import type { BoatSafetySection } from "./boat-safety";
 import type { CalendarDate } from "./calendar-date";
 import { nowDate } from "./clock";
-import type { EmergencyReference } from "./emergency-reference";
+import type { DepartureEmergencyReference } from "./emergency-reference";
 // Dependency-free too (type-only imports), for the same reason.
 import { withholdHeldSeatParticulars } from "./held-seat";
 import type { TripManifest } from "./manifests";
@@ -128,7 +128,7 @@ export type OfflineManifestPayload = {
      * signal would throw during render, with no `error.tsx` under
      * `/offline-manifest` to catch it. It fails toward silence instead.
      */
-    emergencyReference?: EmergencyReference;
+    emergencyReference?: DepartureEmergencyReference;
   };
   /**
    * The shop's own pre-departure safety line, and the last known answer to
@@ -359,6 +359,16 @@ export type OfflineManifestPayload = {
            * looked like before the counter could say it.
            */
           notHere?: boolean;
+          /**
+           * **The desk saw this diver and turned them away** (H-135; layer 3
+           * review, dde-1 F3): set only beside `notHere`, which it refines.
+           * Without it the dock copy badged a turned-away diver "Not here", the
+           * opposite statement about a person the desk stood in front of.
+           * Optional and additive, like `notHere` (no record-version bump):
+           * absent reads as the plain write-off, which is what every copy
+           * saved before it said.
+           */
+          turnedAway?: true;
           /**
            * **The diver's own "running late"** (#2319), as an ISO instant:
            * when they said it, and nothing else — no channel, no message.
@@ -951,6 +961,7 @@ export function serializeManifests(
         bookedAs: diver.bookedAs,
         checkedIn: diver.checkedIn,
         notHere: diver.notHere,
+        ...(diver.notHere && diver.turnedAway ? { turnedAway: true as const } : {}),
         ...(diver.runningLateAt ? { runningLateAt: diver.runningLateAt.toISOString() } : {}),
         // Dates only, and absent when there is nothing to warn about: see the
         // allow-list type above.

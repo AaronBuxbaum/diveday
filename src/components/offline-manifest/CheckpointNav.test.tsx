@@ -70,17 +70,17 @@ const priyaAndMarcusAboard = (checkpoint: "after_dive_1") => [
 afterEach(cleanup);
 
 describe("OfflineCheckpointNav", () => {
-  it("asks first when the count before is open, and names the divers unmarked", () => {
+  it("asks first when the count before is open, and names the people unmarked", () => {
     const trip = open(twoDiveCopy(), "after_dive_1");
     fireEvent.click(screen.getByRole("button", { name: /after dive 2/i }));
-    expect(screen.getByRole("alert").textContent).toBe("2 divers not marked after dive 1.");
+    expect(screen.getByRole("alert").textContent).toBe("2 people not marked after dive 1.");
     expect(trip.setCheckpoint).not.toHaveBeenCalled();
   });
 
   it("leaves crew with no dock result out of the count", () => {
     open(twoDiveCopy([tap("after_dive_1", { bookingId: "b-priya" })]), "after_dive_1");
     fireEvent.click(screen.getByRole("button", { name: /after dive 2/i }));
-    expect(screen.getByRole("alert").textContent).toBe("1 diver not marked after dive 1.");
+    expect(screen.getByRole("alert").textContent).toBe("1 person not marked after dive 1.");
   });
 
   it("counts a crew member boarded at the dock who has no result after the dive", () => {
@@ -95,7 +95,9 @@ describe("OfflineCheckpointNav", () => {
     expect(screen.getByRole("alert").textContent).toBe("1 crew not marked after dive 1.");
   });
 
-  it("counts a diver recorded not back aboard as unmarked", () => {
+  // Marked, but not back aboard: said on its own, never as "not marked"
+  // (dive-domain review, 2026-10-16).
+  it("names a diver recorded not back aboard as not back aboard", () => {
     open(
       twoDiveCopy([
         tap("after_dive_1", { bookingId: "b-priya" }),
@@ -104,7 +106,7 @@ describe("OfflineCheckpointNav", () => {
       "after_dive_1",
     );
     fireEvent.click(screen.getByRole("button", { name: /after dive 2/i }));
-    expect(screen.getByRole("alert").textContent).toBe("1 diver not marked after dive 1.");
+    expect(screen.getByRole("alert").textContent).toBe("1 person not back aboard after dive 1.");
   });
 
   it("opens straight away when nobody is unmarked", () => {
@@ -134,7 +136,7 @@ describe("OfflineCheckpointNav", () => {
 
   it("keeps saying the line on the checkpoint it opened", () => {
     const trip = open(twoDiveCopy([tap("after_dive_1", { bookingId: "b-priya" })]), "after_dive_2");
-    expect(screen.getByText(/1 diver not marked after dive 1\./).textContent).toContain(
+    expect(screen.getByText(/1 person not marked after dive 1\./).textContent).toContain(
       "Back to dive 1",
     );
     fireEvent.click(screen.getByRole("button", { name: "Back to dive 1" }));

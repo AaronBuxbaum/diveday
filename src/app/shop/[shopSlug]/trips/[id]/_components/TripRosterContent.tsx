@@ -24,6 +24,7 @@ import { isFull, seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { recordPaperCourseFormAction } from "../course-actions";
 import { AddDiverSection } from "./AddDiverSection";
+import { carryTargetLabel } from "./carry-target-label";
 import { DepartureNoteSection } from "./DepartureNoteSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
@@ -225,7 +226,9 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           >
             {t("trips.guests.scheduleAnotherDeparture")}
           </Link>
-          {actions.carryWaitlistAction && actions.moveSeat?.targets.length ? (
+          {actions.carryWaitlistAction &&
+          actions.moveSeat?.targets.length &&
+          !actions.moveSeat.departed ? (
             <CarryWaitlistForm
               action={actions.carryWaitlistAction}
               targets={actions.moveSeat.targets}
@@ -269,6 +272,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           agencyCheckCardsByPerson: guests.agencyCheckCardsByPerson,
           courseMaterialsDoneByPerson: guests.courseMaterialsDoneByPerson,
           sameNameHeldSeats: guests.sameNameHeldSeats,
+          aboardAtSea: guests.aboardAtSea,
           heldSeatLastDiveDay: guests.heldSeatLastDiveDay,
           packageDivesByBooking: guests.packageDivesByBooking,
           paymentMarksByBooking: guests.paymentMarksByBooking,
@@ -313,19 +317,38 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           record,
           waitingGroup:
             waitlist.length > 0 ? (
-              <WaitlistGroup
-                waitlist={waitlist}
-                shopSlug={shopSlug}
-                tripId={trip.id}
-                shopName={shopName}
-                tripTitle={trip.title}
-                tripWhen={formatShortDate(trip.startsAt, locale, timezone)}
-                certificationSummaries={certificationSummaries}
-                departureRequirement={dealRequirement}
-                locale={locale}
-                timezone={timezone}
-                canInvite={acceptsDivers}
-              />
+              <>
+                <WaitlistGroup
+                  waitlist={waitlist}
+                  shopSlug={shopSlug}
+                  tripId={trip.id}
+                  shopName={shopName}
+                  tripTitle={trip.title}
+                  tripWhen={formatShortDate(trip.startsAt, locale, timezone)}
+                  certificationSummaries={certificationSummaries}
+                  departureRequirement={dealRequirement}
+                  locale={locale}
+                  timezone={timezone}
+                  canInvite={acceptsDivers}
+                />
+                {/* **One waiting diver is worth carrying too** (fourth review,
+                    item 31). The demand banner, and the carry door inside it,
+                    wait for a cluster; a full boat with one lead offered
+                    staff only an invite to a boat with no seat. Under the list
+                    it is about, whenever the banner is not standing. */}
+                {!demand &&
+                isFull(seatsOnSale(trip)) &&
+                actions.carryWaitlistAction &&
+                actions.moveSeat?.targets.length ? (
+                  <div className="px-4 pb-4 sm:px-5">
+                    <CarryWaitlistForm
+                      action={actions.carryWaitlistAction}
+                      targets={actions.moveSeat.targets}
+                      t={t}
+                    />
+                  </div>
+                ) : null}
+              </>
             ) : null,
           invitedGroup:
             invitations.length > 0 ? (
@@ -510,7 +533,7 @@ function CarryWaitlistForm({
           <select id="carry-waitlist-to" name="toTripId" required className={controlClass}>
             {targets.map((target) => (
               <option key={target.id} value={target.id}>
-                {target.label}
+                {carryTargetLabel(target, t)}
               </option>
             ))}
           </select>

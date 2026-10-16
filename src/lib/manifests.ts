@@ -191,7 +191,7 @@ export type ManifestDiverInput = {
   /** The diver has a birthday today or within the callout window (H-21). */
   birthday?: BirthdayCallout | null;
   /**
-   * The word under this diver's name: first time with us, or back after a long
+   * The word under this diver's name: "First dive with us", or "Back after" a long
    * gap (issue #1182, delight report D22). Null unless the diver themselves
    * said the crew may know, and null again an hour after the boat is home.
    *
@@ -282,6 +282,12 @@ export type ManifestDiverInput = {
    * every roster looked like before the first writer landed.
    */
   notHere?: boolean;
+  /**
+   * The desk saw this diver and turned them away (H-135): a released seat like
+   * `notHere`, worded apart from it on the row. Display only, never a gate;
+   * absent reads as false.
+   */
+  turnedAway?: boolean;
   /**
    * Whether a standing `boarded` result sits at a checkpoint **before** this
    * one (domain review of #2123). False at an after-dive checkpoint means a

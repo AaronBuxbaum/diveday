@@ -27,11 +27,14 @@ test.describe("the year on Reports", () => {
     await expect(figures.getByText("Busiest day", { exact: true })).toBeVisible();
     await expect(figures.getByText("Quietest month", { exact: true })).toBeVisible();
 
-    // **Never money on the year.** The month keeps it; this page must not have
-    // inherited it, and the assertion is on the labels rather than on a
-    // currency glyph, which a shop in another currency would not print.
+    // **The year's money is its own row** (fourth UX review, item 25): net
+    // revenue, tax and tips for the owner, apart from the four figures, which
+    // stay the card's (divers, boats and sites, never money: ADR
+    // 20260908-one-hand). The year CSV sits beside it.
     await expect(figures.getByText("Net revenue")).toHaveCount(0);
-    await expect(page.getByText(/Tax collected/)).toHaveCount(0);
+    const money = page.getByRole("region", { name: "The year’s money" });
+    await expect(money.getByText("Tax collected")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Download the year (CSV)" })).toBeVisible();
   });
 
   test("the month page is one tap back", { tag: READ_ONLY }, async ({ page }) => {

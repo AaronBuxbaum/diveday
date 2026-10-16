@@ -18,6 +18,7 @@ import {
   setReviewPublished,
   setReviewStandout,
   setReviewsPublished,
+  staffReviewNarrow,
   submitTripReview,
 } from "./reviews";
 import { bookings, people, reviewModerationEvents, trips as tripsTable } from "./schema";
@@ -349,6 +350,35 @@ describe("public review reads", () => {
       average: 5,
       suppressedCount: 0,
     });
+  });
+});
+
+describe("narrowing the staff review list", () => {
+  it("finds 3 stars and under, and reviews with words, counting the groups alike", async () => {
+    const { db, shop, bookingIds } = await reviewContext(["Low Diver", "High Diver", "Bare Diver"]);
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 3, comment: "Sat at the dock" });
+    await submitTripReview(db, { bookingId: bookingIds[1], rating: 5, comment: "Lovely day" });
+    await submitTripReview(db, { bookingId: bookingIds[2], rating: 2, comment: "   " });
+
+    const low = await listShopReviewsForStaff(db, shop.id, { narrow: "low" });
+    expect(low.reviews.map((review) => review.rating).sort()).toEqual([2, 3]);
+    const worded = await listShopReviewsForStaff(db, shop.id, { narrow: "comment" });
+    expect(worded.reviews.map((review) => review.rating).sort()).toEqual([3, 5]);
+
+    const all = await countStaffReviewGroups(db, shop.id);
+    const lowGroups = await countStaffReviewGroups(db, shop.id, "low");
+    expect(lowGroups.waiting + lowGroups.published + lowGroups.hidden).toBe(2);
+    expect(all.waiting + all.published + all.hidden).toBe(3);
+    expect(await listShopReviewsForStaff(db, OTHER_SHOP_ID, { narrow: "low" })).toMatchObject({
+      total: 0,
+    });
+  });
+
+  it("reads only the two known narrowings from the URL", () => {
+    expect(staffReviewNarrow("low")).toBe("low");
+    expect(staffReviewNarrow("comment")).toBe("comment");
+    expect(staffReviewNarrow("all")).toBeNull();
+    expect(staffReviewNarrow(undefined)).toBeNull();
   });
 });
 

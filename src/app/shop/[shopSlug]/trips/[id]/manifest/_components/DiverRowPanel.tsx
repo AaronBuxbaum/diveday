@@ -8,6 +8,7 @@ import { shopPath } from "@/lib/staff-notices";
 import { DiverFacts, diverBlockerText } from "./DiverFacts";
 import type { DiverRollCallContext } from "./diver-roll-call-context";
 import type { DiverRowState } from "./diver-row-state";
+import { MissingReportButton } from "./MissingReportButton";
 import {
   ROW_DISCLOSURE_PANEL_CLASS,
   RollCallBackAboardControl,
@@ -45,6 +46,7 @@ export function DiverRowPanel({
     timezone,
     rollCallAction,
     addPrivateNoteAction,
+    startMissingDiverReport,
     rollCallButtonCopy,
     t,
   } = context;
@@ -204,6 +206,23 @@ export function DiverRowPanel({
           action={rollCallAction}
           copy={rollCallButtonCopy(diver.bookingId)}
           t={t}
+        />
+      ) : null}
+      {/* **The report, from the row that raised it** (safety sheet
+        2026-10-15, item 2). The trip page's "Report an incident" was the
+        only door, so the worst day's report was written from memory later.
+        This opens the one report for this missing diver, kind, diver and
+        time of the mark filled in, or says who already started it. Only for
+        those who may start one. */}
+      {rowState.notBackAboard && startMissingDiverReport ? (
+        <MissingReportButton
+          key={checkpoint}
+          action={startMissingDiverReport}
+          subject={{ field: "bookingId", id: diver.bookingId }}
+          checkpoint={checkpoint}
+          label={t("incidents.missingDiver.start")}
+          pendingLabel={t("incidents.trip.starting")}
+          ariaLabel={`${t("incidents.missingDiver.start")} — ${diver.fullName}`}
         />
       ) : null}
       {/* The deliberate second step. It is here, and nowhere

@@ -27,6 +27,8 @@
     "oxygenKept": "El equipo de oxígeno se guarda en",
     "firstAidKept": "El botiquín se guarda en",
     "lastChecked": "Última revisión",
-    "oxygenPressure": "Presión del O2"
+    "oxygenPressure": "Presión del O2",
+    "kitRegister": "Registro: {kits} a bordo de {boat}",
+    "kitRegisterServiced": "Registro: {kits} a bordo de {boat}; mantenimiento del equipo de oxígeno: {date}"
   }
 }

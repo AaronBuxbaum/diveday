@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext } from "@/test/db";
 import { trips } from "./schema";
-import { nextPublicTripInSeries } from "./series-next";
+import { nextPublicTripInSeries, publicRunOf } from "./series-next";
 import { createTripSeries } from "./trips-series";
 
 /**
@@ -85,6 +85,57 @@ describe("nextPublicTripInSeries", () => {
         tripId: other.id,
         now: BEFORE,
       }),
+    ).toBeNull();
+  });
+});
+
+/**
+ * Fourth UX review, item 35: a date in a weekly run says the boat runs every
+ * week, and names the run's next date after this one.
+ */
+describe("publicRunOf", () => {
+  it("names the cadence and the date after this one, wherever the diver is reading", async () => {
+    const [first, second, third] = await saturdays("Saturday Drift");
+    if (!first || !second || !third) throw new Error("expected three dates");
+    const fromFirst = await publicRunOf(ctx.db, {
+      shopId: ctx.shop.id,
+      tripId: first.id,
+      now: BEFORE,
+    });
+    expect(fromFirst).toEqual({
+      intervalWeeks: 1,
+      weekdayMask: weekdaySetFrom([SAT]),
+      next: second.startsAt,
+    });
+    // On the second date the next one is the third, never the first again.
+    expect(
+      (await publicRunOf(ctx.db, { shopId: ctx.shop.id, tripId: second.id, now: BEFORE }))?.next,
+    ).toEqual(third.startsAt);
+  });
+
+  it("names no next date past the run's last, skips a canceled or private one, and stays in its shop", async () => {
+    const [first, second, third, fourth] = await saturdays("Saturday Pinnacle");
+    if (!first || !second || !third || !fourth) throw new Error("expected four dates");
+    await ctx.db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, second.id));
+    await ctx.db.update(trips).set({ isPrivate: true }).where(eq(trips.id, third.id));
+    expect(
+      (await publicRunOf(ctx.db, { shopId: ctx.shop.id, tripId: first.id, now: BEFORE }))?.next,
+    ).toEqual(fourth.startsAt);
+    expect(
+      (await publicRunOf(ctx.db, { shopId: ctx.shop.id, tripId: fourth.id, now: BEFORE }))?.next,
+    ).toBeNull();
+    const otherShop = "00000000-0000-4000-8000-000000000000";
+    expect(
+      await publicRunOf(ctx.db, { shopId: otherShop, tripId: first.id, now: BEFORE }),
+    ).toBeNull();
+  });
+
+  it("answers nothing for a one-off", async () => {
+    const [first] = await saturdays("Saturday Arch");
+    if (!first) throw new Error("expected a date");
+    await ctx.db.update(trips).set({ seriesId: null }).where(eq(trips.id, first.id));
+    expect(
+      await publicRunOf(ctx.db, { shopId: ctx.shop.id, tripId: first.id, now: BEFORE }),
     ).toBeNull();
   });
 });

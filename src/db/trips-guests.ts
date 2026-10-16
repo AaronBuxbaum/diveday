@@ -1,6 +1,7 @@
 import { agencyCheckOffered } from "@/lib/agency-check";
 import { nowDate } from "@/lib/clock";
 import { courseCertifiesStudents, readLearningMaterials } from "@/lib/courses";
+import { departureUnderway } from "@/lib/day-blowout";
 import { demandRecommendation } from "@/lib/demand";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
 import { type ElearningQuery, elearningCheckQuery } from "@/lib/elearning-check";
@@ -12,6 +13,7 @@ import {
 import { combineCertRequirements } from "@/lib/readiness";
 import { isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
+import { type AboardHold, aboardAtSeaBookingIds } from "./aboard-at-sea";
 import { listAgencyCheckableCards } from "./agency-check";
 import { sameNameHeldSeats as findSameNameHeldSeats } from "./bookings";
 import type { AppDb } from "./client";
@@ -95,6 +97,7 @@ export async function getTripGuests(
     activity,
     stripeAccount,
     courseNextStepByBooking,
+    aboardAtSea,
   ] = await Promise.all([
     filters.confirmName ? findSimilarDivers(db, shop.id, filters.confirmName) : [],
     // The returning-diver picker only books, so it is skipped once the boat is
@@ -122,6 +125,14 @@ export async function getTripGuests(
     // What each student on a course session has already been told to do next
     // (issues #1196, #1205), so the roster's box opens holding it.
     courseNextStepsByBooking(db, shop.id, tripId),
+    // Who Remove refuses on this roster: seats the boat carried or may be
+    // carrying (H-133), the rule `cancelBooking` applies under its locks.
+    // Asked from the scheduled time on, so a boat still to sail pays nothing;
+    // a crew who take it out early with someone counted aboard are refused by
+    // `cancelBooking` itself, and the row's notice says why.
+    departureUnderway({ startsAt: trip.startsAt, rollCallStarted: false }, nowDate())
+      ? aboardAtSeaBookingIds(db, { shopId: shop.id, tripId, now: nowDate() })
+      : new Map<string, AboardHold>(),
   ]);
 
   // The last-minute pipeline: who said they are around on this date, who among
@@ -313,6 +324,8 @@ export async function getTripGuests(
     notesByBooking,
     courseNextStepByBooking,
     sameNameHeldSeats,
+    /** Seats the boat carried or may be carrying: Remove refuses them (H-133). */
+    aboardAtSea,
     /**
      * Per held seat, the matched diver's last dive day at this shop, or null
      * when there is none (issue #1789). Only held seats have an entry.
@@ -375,7 +388,8 @@ export async function getTripGuests(
     demand: demandRecommendation({
       capacity: trip.capacity,
       booked: trip.booked,
-      waitlisted: waitlist.length,
+      // Seats wanted, not leads: a waiting couple is two (fourth review, item 34).
+      waitlisted: waitlist.reduce((seats, { entry }) => seats + entry.partySize, 0),
     }),
     lastMinute: {
       matched: lastMinuteMatched,

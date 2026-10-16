@@ -7,6 +7,7 @@ import { buttonClass } from "@/components/ui/button";
 import { GroupLabel, groupLabelClass } from "@/components/ui/group-label";
 import { LedgerRow, ledgerRowBoxClass, ledgerRowRoomClass } from "@/components/ui/ledger";
 import { WeekPager } from "@/components/ui/week-pager";
+import { awayDatesText } from "@/i18n/away-labels";
 import { fill } from "@/i18n/fill";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import type { AvailabilityBlock } from "@/lib/crew-requests";
@@ -415,15 +416,7 @@ function CrewChip({
           the week says so, and the conversation is the shop's to have. */}
       {trip.awayBlocks.length > 0 ? (
         <WarningLine size="xs" className="mt-0.5">
-          {fill(words.awayConflict, {
-            dates: trip.awayBlocks
-              .map((block) =>
-                block.startsOn === block.endsOn
-                  ? formatShortDate(calendarDateToUtcMidnight(block.startsOn), locale, "UTC")
-                  : `${formatShortDate(calendarDateToUtcMidnight(block.startsOn), locale, "UTC")} – ${formatShortDate(calendarDateToUtcMidnight(block.endsOn), locale, "UTC")}`,
-              )
-              .join(", "),
-          })}
+          {fill(words.awayConflict, { dates: awayDatesText(trip.awayBlocks, locale) })}
         </WarningLine>
       ) : null}
     </Link>

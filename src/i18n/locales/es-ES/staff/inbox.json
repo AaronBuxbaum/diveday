@@ -8,7 +8,8 @@
   "channel": {
     "email": "Correo",
     "whatsapp": "WhatsApp",
-    "sms": "SMS"
+    "sms": "SMS",
+    "page": "Página de reserva"
   },
   "unknownSender": "Remitente desconocido",
   "keyword": {
@@ -19,6 +20,12 @@
   },
   "attachments": "{count, plural, one {# archivo adjunto, sigue con quien lo envió} other {# archivos adjuntos, siguen con quien los envió}}",
   "seat": "Reservó {trip}, {when}",
+  "nearStamp": "{day}, {time}",
+  "nearSeat": "{day} a las {time}",
+  "move": "Mover a otra salida",
+  "moveFor": "Mover la plaza de {name} en {trip} a otra salida",
+  "moveSeat": "Mover {trip}, {when}",
+  "moveSeatFor": "Mover la plaza de {name} en {trip}, {when}, a otra salida",
   "late": {
     "action": "Marcar que llega tarde",
     "actionFor": "Marcar que {name} llega tarde a {trip}",
@@ -49,6 +56,7 @@
     "heading": "Conversación",
     "summary": "{count, plural, one {# mensaje} other {# mensajes}}",
     "received": "{name} · {date}",
+    "askedToMove": "{name} pidió cambiar esta plaza desde su página de reserva · {date}",
     "sent": "{name} respondió · {date}",
     "sentAutomatically": "Enviado automáticamente · {date}",
     "sendFailed": "Este no les llegó.",

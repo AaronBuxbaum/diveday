@@ -86,6 +86,35 @@ describe("buildAfterStateProps", () => {
     expect(props.postcard.facts[0]).toEqual({ label: expect.any(String), value: "Ava After" });
   });
 
+  it("stamps the level a certifying session issued on the saved postcard", async () => {
+    // Fourth review, item 55: the peak of a course, on the image the diver keeps.
+    const { data, bookingId } = await recapData();
+    const certified = {
+      ...data,
+      course: {
+        title: "Open Water Diver",
+        nextStep: null,
+        certification: { level: "open_water" as const, issuedAt: data.trip.startsAt },
+      },
+    };
+    const build = (recap: typeof data) =>
+      buildAfterStateProps({
+        db: ctx.db,
+        data: recap,
+        bookingId,
+        locale: "en-US",
+        t: diverTranslator("en-US"),
+        params: {},
+        actions,
+        mintHandoff: false,
+      });
+    expect((await build(certified)).postcard.facts[1]).toEqual({
+      label: "Certified",
+      value: "Open Water",
+    });
+    expect((await build(data)).postcard.facts.map((fact) => fact.label)).not.toContain("Certified");
+  });
+
   it("never mints a handoff from the recap link, whatever the board offers", async () => {
     const { data, bookingId } = await recapData();
     const props = await buildAfterStateProps({

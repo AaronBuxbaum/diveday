@@ -23,6 +23,7 @@ import {
 } from "@/lib/recurrence";
 import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
 import { utcToWallTime, type WallTime, wallTimeToUtc } from "@/lib/zoned";
+import { departureMayBeAtSea } from "./aboard-at-sea";
 import { type BlowoutRefundMode, callDayBlowout } from "./blowouts";
 import type { AppDb, AppTransaction } from "./client";
 import { queryAll } from "./query-helpers";
@@ -905,6 +906,8 @@ export type OffCadenceSeriesTrip = {
  * date would report a perfectly good departure as orphaned. An instance with no
  * slot at all (created before the ledger existed) is left out — there is nothing
  * to judge it against, and guessing would offer to cancel a real departure.
+ * So is one the crew have taken out before its time (`departureMayBeAtSea`,
+ * H-133): a bulk call-off never cancels a boat on the water.
  */
 export async function listOffCadenceSeriesTrips(
   db: AppDb,
@@ -944,12 +947,17 @@ export async function listOffCadenceSeriesTrips(
     pattern: { intervalWeeks: series.intervalWeeks, weekdays: series.weekdayMask },
     endsOn: series.endsOn,
   };
-  return rows
-    .filter(
-      (row): row is typeof row & { occurrenceDate: string } =>
-        row.occurrenceDate !== null && !seriesFiresOn(cadence, row.occurrenceDate),
-    )
-    .map((row) => ({ ...row }));
+  const offCadence = rows.filter(
+    (row): row is typeof row & { occurrenceDate: string } =>
+      row.occurrenceDate !== null && !seriesFiresOn(cadence, row.occurrenceDate),
+  );
+  const ashore: OffCadenceSeriesTrip[] = [];
+  for (const row of offCadence) {
+    const tripId = row.id;
+    if (await departureMayBeAtSea(db, { shopId, tripId, startsAt: row.startsAt, now })) continue;
+    ashore.push({ ...row });
+  }
+  return ashore;
 }
 
 /** What "Cancel every upcoming date" and "Take them off" did. */

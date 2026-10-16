@@ -12,7 +12,7 @@ const departure: SimilarDeparture = {
   reason: "same_site",
 };
 
-function copyFor(offer: Parameters<typeof noShowSalvageCopy>[0]["offer"]) {
+function copyFor(offer: Parameters<typeof noShowSalvageCopy>[0]["offer"], turnedAway = false) {
   return noShowSalvageCopy({
     t,
     offer,
@@ -20,6 +20,7 @@ function copyFor(offer: Parameters<typeof noShowSalvageCopy>[0]["offer"]) {
     tripId: "trip-1",
     diver: { id: "person-1", name: "Nadia Petrov" },
     formatWhen: () => "Sat 8:00 AM",
+    turnedAway,
   });
 }
 
@@ -103,5 +104,29 @@ describe("noShowSalvageCopy", () => {
       expect(money.line).toBe("Marking someone not here does not charge or refund anything.");
       expect(money.href).toBe("/shop/blue-mantis/orders?personId=person-1");
     }
+  });
+
+  /**
+   * Layer 3 review (dde-2 #3): a turned-away diver's next day is their own
+   * booking moved, not a new one. A new seat would charge them twice or spend
+   * a package dive twice, and their orders hold no refund for a seat paid at
+   * checkout. So the panel names the one door that works (Move, on their row)
+   * and offers no new booking.
+   */
+  it("names only the move for a turned-away diver, and offers no new booking", () => {
+    for (const offer of [
+      { kind: "waitlist", count: 1 },
+      { kind: "rebook", departures: [departure] },
+      { kind: "none" },
+    ] as const) {
+      expect(copyFor(offer, true).money).toEqual({
+        line: "Nothing was charged or refunded. Open their row to move the booking to another day.",
+      });
+    }
+    const rebook = copyFor({ kind: "rebook", departures: [departure] }, true);
+    expect(rebook.line).toBe("Nobody is waiting for this seat.");
+    expect(rebook.links).toEqual([]);
+    expect(rebook.offerCopy).toBeUndefined();
+    expect(copyFor({ kind: "waitlist", count: 2 }, true).links).toHaveLength(1);
   });
 });

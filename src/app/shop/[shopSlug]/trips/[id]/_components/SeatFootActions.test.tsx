@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { rendersFlush } from "@/test/button-flush";
 import { fixtures, ready, renderRoster } from "./roster-test-fixtures";
@@ -58,7 +58,9 @@ describe("the seat's foot row sits on the text column through flush", () => {
 describe("the move to another departure", () => {
   const moveSeat = {
     action: () => {},
-    targets: [{ id: "t-2", label: "Two-Tank Reef · Sat, Oct 24, 8:00 AM EDT" }],
+    targets: [{ id: "t-2", label: "Two-Tank Reef · Sat, Oct 24, 8:00 AM EDT", seatsLeft: 3 }],
+    departed: false,
+    started: false,
   };
 
   it("offers the departures on a booked seat", () => {
@@ -77,10 +79,93 @@ describe("the move to another departure", () => {
     expect(screen.queryByText("Move to another departure")).toBeNull();
   });
 
+  /**
+   * Layer 3 review (dde-2 #3) and re-review (dde-3 #4+#5): a turned-away seat
+   * moves until the boat's scheduled start, and from it the door is Remove.
+   */
+  it("moves a turned-away seat only before the boat's start", () => {
+    const turnedAway = {
+      ...ready,
+      booking: {
+        ...ready.booking,
+        status: "no_show" as const,
+        turnedAwayAt: new Date("2026-10-16T07:00:00Z"),
+        turnedAwayReason: "card" as const,
+      },
+    };
+    renderRoster({ ...fixtures, roster: [turnedAway], moveSeat });
+    expect(screen.getByText("Move to another departure")).toBeInTheDocument();
+    cleanup();
+    renderRoster({ ...fixtures, roster: [turnedAway], moveSeat: { ...moveSeat, started: true } });
+    expect(screen.queryByText("Move to another departure")).toBeNull();
+    cleanup();
+    const departed = { ...moveSeat, started: true, departed: true };
+    renderRoster({ ...fixtures, roster: [turnedAway], moveSeat: departed });
+    expect(screen.queryByText("Move to another departure")).toBeNull();
+    cleanup();
+    renderRoster({ ...fixtures, roster: [ready], moveSeat: departed });
+    expect(screen.queryByText("Move to another departure")).toBeNull();
+  });
+
   it("is absent on a checked-in seat", () => {
     const checkedIn = { ...ready, booking: { ...ready.booking, status: "checked_in" as const } };
     renderRoster({ ...fixtures, roster: [checkedIn], moveSeat });
 
     expect(screen.queryByText("Move to another departure")).toBeNull();
+  });
+});
+
+/**
+ * **A diver marked aboard a boat that has left** (H-133): Remove says why it
+ * will not, and offers nothing that posts. `cancelBooking` refuses the same
+ * seat under its locks; this is the row saying so before anyone tries.
+ */
+describe("Remove on a diver marked aboard at sea", () => {
+  it("says the diver is aboard and carries no confirm and no submit", () => {
+    renderRoster({
+      ...fixtures,
+      roster: [ready],
+      aboardAtSea: new Map([[ready.booking.id, "on_the_water"]]),
+    });
+
+    const remove = screen.getByText("Remove booking");
+    fireEvent.click(remove);
+    expect(
+      screen.getByText(
+        "Rene Marsh sailed on this departure, so the booking stays. To give money back, refund their order.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Yes, remove booking" })).toBeNull();
+    // Not a form's control: nothing behind this Remove can post the removal.
+    expect(remove.closest("form")).toBeNull();
+  });
+
+  it("tells a seat nobody counted at the dock how to let it go, never that it sailed", () => {
+    renderRoster({
+      ...fixtures,
+      roster: [ready],
+      aboardAtSea: new Map([[ready.booking.id, "uncounted"]]),
+    });
+
+    const remove = screen.getByText("Remove booking");
+    fireEvent.click(remove);
+    expect(
+      screen.getByText(
+        "Nobody counted Rene Marsh at the dock, so the boat may have carried them. If they didn’t come, mark them Not boarded on the manifest, then remove the booking.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/sailed/)).toBeNull();
+    expect(remove.closest("form")).toBeNull();
+  });
+
+  it("leaves another diver's Remove as it was", () => {
+    renderRoster({
+      ...fixtures,
+      roster: [ready],
+      aboardAtSea: new Map([["someone-else", "on_the_water"]]),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove booking" }));
+    expect(screen.getByRole("button", { name: "Yes, remove booking" })).toBeInTheDocument();
   });
 });

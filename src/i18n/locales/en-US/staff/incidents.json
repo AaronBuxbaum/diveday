@@ -7,6 +7,15 @@
     "writtenBy": "Written by {name}",
     "notTimed": "Time not written yet"
   },
+  "missingDiver": {
+    "start": "Start a missing diver report",
+    "alreadyStarted": "Already started by {name}.",
+    "alreadyFiled": "Already filed by {name}.",
+    "notMissing": "No longer marked not back aboard.",
+    "notAllowed": "Only this departure’s crew, owners and managers can start a report.",
+    "failed": "The report did not open. Tap again.",
+    "backToManifest": "Back to manifest"
+  },
   "status": {
     "draft": "Draft",
     "filed": "Filed"
@@ -174,6 +183,10 @@
     "crewDetailUnrecorded": "Nothing on file for their role on {unrecorded} of {sailings, plural, one {# crew sailing} other {# crew sailings}}",
     "crewDetail": "{sailings, plural, one {# crew sailing} other {# crew sailings}}",
     "incidents": "Incident reports",
+    "noCrew": "Sailed with no crew on record",
+    "noCrewNone": "No crew recorded on any departure this month",
+    "noCrewDetail": "of {back}, listed below",
+    "noCrewTitle": "Departures that sailed with no crew on record",
     "boardingNote": "The dock roll call refuses a diver the readiness check has not cleared. A diver first counted at a later checkpoint is not in this figure.",
     "incidentsTitle": "Incident reports",
     "incidentsEmpty": "No incident reports this month.",

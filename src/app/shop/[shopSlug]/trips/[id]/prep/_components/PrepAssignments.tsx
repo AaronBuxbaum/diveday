@@ -25,21 +25,23 @@ import { WantedPiece } from "./WantedPiece";
 
 /** Which tagged unit each renting diver takes, and the set going out and coming home. */
 export function PrepAssignments({ view }: { view: PrepView }) {
-  const { prep, t, locale, shopSlug, tripId, idPrefix, cancelled } = view;
+  const { prep, t, locale, shopSlug, tripId, idPrefix, cancelled, sailed } = view;
   const { assignmentRows, loadOut, proposals } = prep;
   /**
    * The unit proposed for each piece still to pick, in roster order (UX audit
    * 2026-10-07, item 9): what the one-tap "Assign all" sends, and what each
-   * proposed row offers on its own. None on a cancelled departure.
+   * proposed row offers on its own. None on a cancelled departure, or once the
+   * boat has left the dock (fourth review, item 16).
    */
-  const proposalPicks = cancelled
-    ? []
-    : assignmentRows.flatMap(({ diver, wanted }) =>
-        wanted.flatMap((item) => {
-          const unit = proposals.get(proposalKey(diver.bookingId, item.kind));
-          return unit ? [{ bookingId: diver.bookingId, gearItemId: unit.id }] : [];
-        }),
-      );
+  const proposalPicks =
+    cancelled || sailed
+      ? []
+      : assignmentRows.flatMap(({ diver, wanted }) =>
+          wanted.flatMap((item) => {
+            const unit = proposals.get(proposalKey(diver.bookingId, item.kind));
+            return unit ? [{ bookingId: diver.bookingId, gearItemId: unit.id }] : [];
+          }),
+        );
   return (
     <section
       aria-labelledby={scopedId(idPrefix, "assignments-heading")}
@@ -62,7 +64,8 @@ export function PrepAssignments({ view }: { view: PrepView }) {
             t("gear.prep.cartLine", { units: loadOut.units, divers: loadOut.divers }),
             // Dropped on a cancellation: "still to pick" is an
             // instruction to pick, on a day nothing is picked for.
-            loadOut.stillToPick > 0 && !cancelled
+            // Dropped at sea too: nothing more is picked for a boat that left.
+            loadOut.stillToPick > 0 && !cancelled && !sailed
               ? t("gear.prep.cartStillToPick", { count: loadOut.stillToPick })
               : null,
             loadOut.serviceFlagged > 0

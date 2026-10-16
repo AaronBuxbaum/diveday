@@ -55,6 +55,7 @@ export function PrepBody({
   grouping,
   groupPath,
   cancelled = false,
+  sailed = false,
   emptyState = null,
   idPrefix,
   className,
@@ -106,6 +107,14 @@ export function PrepBody({
    */
   cancelled?: boolean;
   /**
+   * **A boat at sea packs nothing more** (fourth review, item 16). Once it
+   * has left the dock (`departureSailed`), "6 people missing rental sizes",
+   * "12 pieces still to pick" and "Assign all" are instructions for a
+   * morning that is over. The tanks, the kit list and every unit already on a
+   * diver stay: they are what went out, and what has to come back.
+   */
+  sailed?: boolean;
+  /**
    * What stands here when there is nobody to pack for. `/prep` is a page about
    * this list alone, so it says so and points at the roster; on the departure
    * page the roster is the section directly above, already saying the boat is
@@ -124,7 +133,7 @@ export function PrepBody({
   className: string;
 }) {
   const { checklist, gearFleetTotal, assignmentRows } = prep;
-  const view: PrepView = { prep, t, locale, shopSlug, tripId, idPrefix, cancelled };
+  const view: PrepView = { prep, t, locale, shopSlug, tripId, idPrefix, cancelled, sailed };
   // A shop that has never offered nitrox can never have live nitrox data here
   // (setBookingNitrox fails closed), so this is purely cosmetic for that
   // common case — but a shop that *disabled* nitrox after a diver requested
@@ -157,7 +166,7 @@ export function PrepBody({
           ) : (
             <>
               <PrepTanks view={view} showNitrox={showNitrox} />
-              <PrepFitGaps view={view} />
+              {sailed ? null : <PrepFitGaps view={view} />}
             </>
           )}
 

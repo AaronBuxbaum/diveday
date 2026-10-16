@@ -17,6 +17,12 @@
  * - **the same dive site**, which is the same *place* — the reason a diver
  *   picked this boat may well be the wreck it goes to.
  *
+ * **The run comes first** (fourth UX review, item 31). A repeating departure
+ * ("every Saturday") is one series of trips, and when this Saturday fills the
+ * answer a regular wants is next Saturday: the run's soonest later date with
+ * a seat is offered as `same_run`, ahead of any course or site match. Only
+ * that one date; the run's later dates still count by course or site.
+ *
  * Course outranks site, because a course session is a commitment to a
  * syllabus and a site is a preference. A departure that is both is reported as
  * the course, which is the stronger claim and the one worth making.
@@ -32,7 +38,7 @@
  */
 
 /** Why an alternative is being offered. Never a sentence — the surface picks the words. */
-export type SimilarReason = "same_course" | "same_site";
+export type SimilarReason = "same_run" | "same_course" | "same_site";
 
 export type SimilarDeparture = {
   tripId: string;
@@ -46,6 +52,9 @@ export type FullDeparture = {
   tripId: string;
   courseId: string | null;
   diveSiteId: string | null;
+  /** The repeating run it belongs to, and when it sails: its run's next date follows it. */
+  seriesId?: string | null;
+  startsAt?: Date;
 };
 
 /** One departure that might do instead, as the schedule reader already returns it. */
@@ -55,7 +64,11 @@ export type SimilarCandidate = {
   startsAt: Date;
   courseId: string | null;
   diveSiteId: string | null;
+  seriesId?: string | null;
 };
+
+/** How strongly each reason claims a departure: the run, then the course, then the site. */
+const REASON_RANK: Record<SimilarReason, number> = { same_run: 0, same_course: 1, same_site: 2 };
 
 /**
  * At most `limit` departures worth offering, soonest first within each kind of
@@ -74,6 +87,21 @@ export function similarDepartures(input: {
   const limit = input.limit ?? 2;
   if (limit <= 0) return [];
 
+  const { full } = input;
+  // The run's next date: the soonest candidate of the same series after the
+  // full one. Never an earlier date, which is not "next", and never a date of
+  // another run.
+  const nextOfRun = full.seriesId
+    ? input.candidates
+        .filter(
+          (candidate) =>
+            candidate.id !== full.tripId &&
+            candidate.seriesId === full.seriesId &&
+            (!full.startsAt || candidate.startsAt > full.startsAt),
+        )
+        .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime() || a.id.localeCompare(b.id))[0]
+    : undefined;
+
   const matched: SimilarDeparture[] = [];
   for (const candidate of input.candidates) {
     // The boat they could not get on is not an alternative to itself.
@@ -82,11 +110,13 @@ export function similarDepartures(input: {
     // site", and two absences are not a match — otherwise every fun dive with
     // no site set would read as similar to every other one.
     const reason: SimilarReason | null =
-      input.full.courseId && candidate.courseId === input.full.courseId
-        ? "same_course"
-        : input.full.diveSiteId && candidate.diveSiteId === input.full.diveSiteId
-          ? "same_site"
-          : null;
+      candidate.id === nextOfRun?.id
+        ? "same_run"
+        : input.full.courseId && candidate.courseId === input.full.courseId
+          ? "same_course"
+          : input.full.diveSiteId && candidate.diveSiteId === input.full.diveSiteId
+            ? "same_site"
+            : null;
     if (!reason) continue;
     matched.push({
       tripId: candidate.id,
@@ -99,7 +129,7 @@ export function similarDepartures(input: {
   return matched
     .sort(
       (a, b) =>
-        Number(a.reason === "same_site") - Number(b.reason === "same_site") ||
+        REASON_RANK[a.reason] - REASON_RANK[b.reason] ||
         a.startsAt.getTime() - b.startsAt.getTime() ||
         a.tripId.localeCompare(b.tripId),
     )

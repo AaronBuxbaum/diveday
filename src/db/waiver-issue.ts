@@ -608,6 +608,8 @@ export async function issueJoinWaiverLink(
  * not, the waiver goes on its own the old way, which hands back the same live
  * link (ADR 20260820-waiver-links-are-reused-not-reissued) rather than
  * minting a second one. Either way the diver is never left holding nothing.
+ * Returns that fallback's result, so a staff door can say whether the link
+ * reached anyone; null when the confirmation carried it.
  */
 export async function settleJoinWaiverDelivery(
   db: AppDb,
@@ -625,10 +627,9 @@ export async function settleJoinWaiverDelivery(
     confirmationProviderMessageId?: string;
     now?: Date;
   },
-): Promise<void> {
+): Promise<IssueAndDeliverWaiverResult | null> {
   if (!input.confirmationSent) {
-    await issueAndDeliverWaiver(db, input.shopId, input.bookingId, { now: input.now });
-    return;
+    return issueAndDeliverWaiver(db, input.shopId, input.bookingId, { now: input.now });
   }
   await recordWaiverDelivery(db, {
     shopId: input.shopId,
@@ -637,6 +638,7 @@ export async function settleJoinWaiverDelivery(
     delivery: { status: "sent", providerMessageId: input.confirmationProviderMessageId },
     now: input.now,
   });
+  return null;
 }
 
 /**

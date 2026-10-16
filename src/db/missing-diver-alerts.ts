@@ -12,7 +12,7 @@ import { incidentReports, shops, trips } from "./schema";
 import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
- * **A filed report of a missing diver tells the owners at once** (H-126,
+ * **A filed report of a missing diver tells the owners at once** (H-138,
  * decided 2026-10-16; the stale roll-call alert it rides beside is H-118,
  * `src/db/roll-call-alerts.ts`). Whoever filed the report chose "missing
  * diver" on purpose, so the shop does not wait for the roll call to go stale:

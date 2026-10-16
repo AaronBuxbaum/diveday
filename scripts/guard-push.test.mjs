@@ -32,7 +32,7 @@ const answers = (overrides = {}) => ({
 describe("an unverified push", () => {
   it("is refused, naming verify:push and the way to say why", () => {
     const reason = pushViolation("git push -u origin claude/layer", answers());
-    expect(reason).toMatch(/pnpm verify:push/);
+    expect(reason).toMatch(/pnpm verify:push --quick/);
     expect(reason).toContain(`${OVERRIDE}="<reason>" git push -u origin claude/layer`);
   });
 

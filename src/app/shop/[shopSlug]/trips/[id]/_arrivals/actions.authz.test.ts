@@ -56,6 +56,7 @@ const {
   checkInAction,
   markNoShowAction,
   offerAnotherDayAction,
+  turnAwayAction,
   undoCheckInAction,
   undoNoShowAction,
 } = await import("./actions");
@@ -78,6 +79,7 @@ describe("who may run each action at the counter", () => {
     "undoCheckInAction",
     "markNoShowAction",
     "undoNoShowAction",
+    "turnAwayAction",
     "offerAnotherDayAction",
   ];
 
@@ -162,6 +164,10 @@ describe("a refused session at the counter", () => {
     undoCheckInAction: (form) => undoCheckInAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
     markNoShowAction: (form) => markNoShowAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
     undoNoShowAction: (form) => undoNoShowAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
+    turnAwayAction: (form) => {
+      form.set("reason", "card");
+      return turnAwayAction(SHOP_SLUG, FOCUS_TRIP_ID, form);
+    },
     offerAnotherDayAction: (form) => {
       form.set("offerTripId", FOCUS_TRIP_ID);
       form.set("personId", BOOKING_ID);

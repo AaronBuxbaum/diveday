@@ -201,6 +201,7 @@ export function AfterState({
         visitCount={visitCount}
         siteMark={siteMark}
         postcard={postcard}
+        course={course}
       />
 
       {/* The one line the diver's body still needs after the record is closed

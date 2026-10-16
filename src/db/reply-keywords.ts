@@ -14,6 +14,7 @@ import {
   parseReplyKeyword,
 } from "@/lib/reply-keywords";
 import { hasSailed } from "@/lib/trips";
+import { heldAtTheDoor } from "./aboard-at-sea";
 import {
   type CancellationRefundSeen,
   sendBookingCancelledNotice,
@@ -164,7 +165,20 @@ async function cancellableBookings(
     )
     .orderBy(asc(trips.startsAt))
     .limit(MAX_CANDIDATE_BOOKINGS);
-  return rows.filter((row) => !hasSailed(row.startsAt, now));
+  const open: CandidateBooking[] = [];
+  for (const row of rows) {
+    if (hasSailed(row.startsAt, now)) continue;
+    // Counted aboard a boat past its time: `selfCancelBooking` refuses it (H-133).
+    const held = await heldAtTheDoor(db, {
+      shopId,
+      tripId: row.tripId,
+      startsAt: row.startsAt,
+      now,
+      bookingIds: [row.bookingId],
+    });
+    if (!held.has(row.bookingId)) open.push(row);
+  }
+  return open;
 }
 
 /**
@@ -582,7 +596,11 @@ async function handleCancelRequest(
   // is told so before they confirm. The count is the one `selfCancelBooking`
   // will act on (`previewPartyCancel` reads what `cancelUnclaimedPartySeats`
   // decides), so the prompt cannot promise what the settle does not do.
-  const party = await previewPartyCancel(db, { shopId, leadBookingId: subject.bookingId });
+  const party = await previewPartyCancel(db, {
+    shopId,
+    leadBookingId: subject.bookingId,
+    now,
+  });
   await answer(
     party.goes > 0
       ? t("notifications.replyKeyword.confirmCancelParty", {

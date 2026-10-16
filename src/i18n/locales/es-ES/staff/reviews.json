@@ -79,5 +79,12 @@
     "empty": "Escribe una respuesta antes de guardar.",
     "tooLong": "La respuesta admite hasta {max, plural, one {# carácter} other {# caracteres}}.",
     "notAnswerable": "Solo una reseña publicada con texto admite respuesta."
+  },
+  "narrow": {
+    "label": "Mostrar reseñas",
+    "all": "Todas",
+    "low": "3 estrellas o menos",
+    "comment": "Con comentario",
+    "none": "Ninguna reseña coincide con esta vista."
   }
 }

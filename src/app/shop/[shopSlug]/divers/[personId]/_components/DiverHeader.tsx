@@ -16,7 +16,7 @@ import type { DiverProfile } from "./shared";
  * the page's own column, which is the pattern the settings sub-pages already
  * use.
  *
- * **Book a departure is the page's one primary control**, and the only one:
+ * **Add a booking is the page's one primary control**, and the only one:
  * this record used to carry three to four primary-weight buttons and lead with
  * money. Its disclosure sits on the line beneath the header rather than in the
  * header's right-hand column, because the column is the width of its buttons
@@ -36,6 +36,7 @@ export function DiverHeader({
   book,
   moment,
   visits,
+  packages,
 }: {
   diver: DiverProfile;
   shopSlug: string;
@@ -43,7 +44,7 @@ export function DiverHeader({
   /** A saved-details confirmation, shown under the masthead. A refusal stays on the form. */
   status?: DiverNotice;
   /**
-   * The one primary: "Book a departure" and the trip picker it discloses.
+   * The one primary: "Add a booking" and the trip picker it discloses.
    * Absent for a removed diver, who may not be seated onto a boat at all.
    */
   book?: ReactNode;
@@ -55,6 +56,8 @@ export function DiverHeader({
   moment?: ReactNode;
   /** How many times this diver has been out with the shop, sailed plus imported. */
   visits: number;
+  /** Dives left on the packages this diver holds (fourth UX review, item 20); null when none. */
+  packages?: { left: number; of: number } | null;
 }) {
   return (
     <>
@@ -114,6 +117,9 @@ export function DiverHeader({
             ) : null}
             {visits > 0 ? (
               <span className="tabular-nums">{t("divers.header.visits", { count: visits })}</span>
+            ) : null}
+            {packages ? (
+              <span className="tabular-nums">{t("divers.header.packageBalance", packages)}</span>
             ) : null}
           </div>
         }

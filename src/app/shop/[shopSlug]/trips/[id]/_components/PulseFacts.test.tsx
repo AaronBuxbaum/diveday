@@ -6,7 +6,7 @@ import { PulseFacts, shownPulseFacts } from "./PulseFacts";
 
 afterEach(cleanup);
 
-const label = (count: number) => `${count} things to sort`;
+const label = (count: number) => `Needs you · ${count}`;
 
 describe("PulseFacts (UX audit item 23)", () => {
   it("renders nothing when nothing needs anyone", () => {
@@ -38,7 +38,7 @@ describe("PulseFacts (UX audit item 23)", () => {
     const fold = container.querySelector("details");
     expect(fold).not.toBeNull();
     expect(fold).not.toHaveAttribute("open");
-    expect(screen.getByText("2 things to sort")).toBeInTheDocument();
+    expect(screen.getByText("Needs you · 2")).toBeInTheDocument();
     expect(fold?.querySelectorAll("a")).toHaveLength(2);
   });
 

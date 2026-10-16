@@ -516,6 +516,7 @@ export async function rollCallAction(
         await trackEvent({ name: "roll_call_blocked", checkpoint });
         return { ok: false, reason: "not_ready" };
       }
+      if (outcome.reason === "boat_full") return { ok: false, reason: "boat_full" };
       return { ok: false, reason: "error" };
     }
   } catch {

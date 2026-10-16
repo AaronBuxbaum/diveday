@@ -15,7 +15,11 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { requestTranslator } from "@/i18n/request";
 import { courseDepthFormat } from "@/i18n/unit-labels";
 import { nowDate } from "@/lib/clock";
-import { courseTotalCents, resolveCourseContentDepths } from "@/lib/courses";
+import {
+  courseTotalCents,
+  perDiverBookingPriceCents,
+  resolveCourseContentDepths,
+} from "@/lib/courses";
 import { isEmbedWidget } from "@/lib/embed-routes";
 import { formatDayParts, formatMoneyScanned, formatTimeRange } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";
@@ -209,7 +213,7 @@ export default async function EmbedWidgetPage({
             .filter(Boolean)
             .join(" · ") || null
         }
-        price={money(trip.priceCents)}
+        price={money(perDiverBookingPriceCents(trip, trip.course))}
         seats={seats(trip)}
         href={`${origin}${publicTripPath(shopSlug, trip.id)}#book`}
         t={t}
@@ -298,7 +302,7 @@ export default async function EmbedWidgetPage({
                 .filter(Boolean)
                 .join(" · ") || null
             }
-            price={money(trip.priceCents)}
+            price={money(perDiverBookingPriceCents(trip, trip.course))}
             seats={seats(trip)}
             href={`${origin}${publicTripPath(shopSlug, trip.id)}#book`}
             t={t}

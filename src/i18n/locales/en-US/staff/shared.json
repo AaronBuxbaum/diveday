@@ -387,6 +387,7 @@
       "readyBadge": "Ready when saved",
       "blockedBadge": "Blocked when saved",
       "notHereBadge": "Not here when saved",
+      "turnedAwayBadge": "Turned away when saved",
       "statePendingSuffix": "· waiting to send",
       "emergencyContact": "Emergency contact",
       "notOnFile": "Not on file",
@@ -468,6 +469,7 @@
     "itemDrysuitGlovesWithSize": "{item} {size}: drysuit, wet or dry?",
     "itemDrysuitWeightCheck": "{item}: drysuit, weight check in the water",
     "itemNoLongerRented": "{item} (shop no longer rents this)",
+    "itemSizeMissing": "{item} (size missing)",
     "notRecorded": "No fit on file, not asked yet",
     "ownKit": "Own kit",
     "needsStaffFit": "Needs staff fit at check-in",
@@ -529,8 +531,9 @@
     "never": "never"
   },
   "welcomeCue": {
-    "firstTrip": "first time with us",
-    "returning": "back after {years, plural, one {# year} other {# years}}",
+    "firstTrip": "First dive with us",
+    "firstTime": "First time with us",
+    "returning": "Back after {years, plural, one {# year} other {# years}}",
     "dockLine": "Say hello to {name}: {card}.",
     "dockLineNoCard": "Say hello to {name}.",
     "dockLineSays": "Say hello to {name}: says {level}.",
@@ -597,7 +600,8 @@
     "splitting": "Creating…"
   },
   "boatWork": {
-    "missingSizes": "{count, plural, one {# person} other {# people}} missing rental sizes",
+    "missingSize": "{count} missing a size",
+    "kitUnasked": "{count} not asked about kit",
     "ungatedNitrox": "{count, plural, one {# diver wants nitrox and gets air} other {# divers want nitrox and get air}} unless a card is verified before the boat leaves",
     "missingContact": "{count, plural, one {# person has} other {# people have}} no emergency contact",
     "openOrders": "{count, plural, one {# order} other {# orders}} awaiting payment"

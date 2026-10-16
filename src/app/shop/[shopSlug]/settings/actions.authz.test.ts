@@ -58,6 +58,7 @@ const {
   saveDockDayRhythmAction,
   saveEmergencyReferenceAction,
 } = await import("./boat-actions");
+const { saveHotelPickupAction } = await import("./dock-day/pickup-actions");
 const { savePackingAction } = await import("./booking-actions");
 const { dischargeProcessorErasureAction, retryMediaDeletionAction, retryProcessorErasureAction } =
   await import("./data-actions");
@@ -397,9 +398,16 @@ describe("every settings mutation refuses the daily crew", () => {
       `/shop/${shop.slug}/settings?notice=not-authorized`,
     );
 
+    const pickup = new FormData();
+    pickup.set("offersHotelPickup", "on");
+    expect(await redirectedTo(() => saveHotelPickupAction(pickup))).toBe(
+      `/shop/${shop.slug}/settings?notice=not-authorized`,
+    );
+
     const after = await getShopById(db, shop.id);
     expect(after?.packingList).toEqual(before?.packingList);
     expect(after?.dockCallMinutes).toBe(before?.dockCallMinutes);
+    expect(after?.offersHotelPickup).toBe(before?.offersHotelPickup);
   });
 
   /**
@@ -487,6 +495,18 @@ describe("every settings mutation refuses the daily crew", () => {
       `/shop/${shop.slug}/settings/dock-day?notice=dock-saved`,
     );
     expect((await getShopById(db, shop.id))?.dockCallMinutes).toBe(90);
+
+    // "We offer hotel pickup" (fourth UX review, item 8): on, then off again.
+    const pickup = new FormData();
+    pickup.set("offersHotelPickup", "on");
+    expect(await redirectedTo(() => saveHotelPickupAction(pickup))).toBe(
+      `/shop/${shop.slug}/settings/dock-day?notice=pickup-saved`,
+    );
+    expect((await getShopById(db, shop.id))?.offersHotelPickup).toBe(true);
+    expect(await redirectedTo(() => saveHotelPickupAction(new FormData()))).toBe(
+      `/shop/${shop.slug}/settings/dock-day?notice=pickup-saved`,
+    );
+    expect((await getShopById(db, shop.id))?.offersHotelPickup).toBe(false);
   });
 
   /**

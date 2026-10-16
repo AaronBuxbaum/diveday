@@ -19,6 +19,23 @@ export function publicSchedulePath(shopSlug: string): string {
   return `${PUBLIC_SHOP_PREFIX}/${shopSlug}`;
 }
 
+/**
+ * DiveDay's own door for a diver who lost their link (fourth review, item
+ * 50): a picker of listed shops, each leading to that shop's find-my-booking.
+ */
+export const FIND_YOUR_BOOKING_PATH = "/find-your-booking";
+
+/** The find-my-booking row's id on the shop home, and so its fragment. */
+export const FIND_MY_BOOKING_FRAGMENT = "find-my-booking";
+
+/**
+ * A shop's find-my-booking row: the shop home, with the row open on arrival
+ * (`DisclosureRow` opens on its own fragment).
+ */
+export function publicFindMyBookingPath(shopSlug: string): string {
+  return `${publicSchedulePath(shopSlug)}#${FIND_MY_BOOKING_FRAGMENT}`;
+}
+
 /** The shop's public review archive. */
 export function publicReviewsPath(shopSlug: string): string {
   return `${publicSchedulePath(shopSlug)}/reviews`;

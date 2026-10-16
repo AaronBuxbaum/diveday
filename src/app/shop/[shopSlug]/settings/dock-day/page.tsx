@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
+import { ChoiceRow, FieldActions, FieldGrid } from "@/components/ui/form";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { listSiteBottomTimeOverrides } from "@/db/dive-sites";
 import { requestLocale } from "@/i18n/request";
@@ -8,6 +11,7 @@ import { noticeFromParam } from "@/lib/staff-notices";
 import { DockDayForm, TurnaroundForm } from "../_components/editors/BoatsSitesEditors";
 import { SettingsEditorPage } from "../_components/SettingsEditorPage";
 import { dockDayNoticeMessages } from "../sub-page-notices";
+import { saveHotelPickupAction } from "./pickup-actions";
 
 // See the sibling settings sub-pages (ADR 20260804-instant-navigation).
 export const instant = true;
@@ -60,6 +64,33 @@ export default async function DockDaySettingsPage({
         t={t}
         siteBottomTimeOverrides={siteBottomTimeOverrides}
       />
+      {/* Whether `/ready` asks a diver about a pickup at all (fourth UX
+          review, item 8): most shops run none, so it is off until a shop
+          says it does. Part of the same dock day, so it lives on this page. */}
+      <FieldGrid
+        as="form"
+        action={saveHotelPickupAction}
+        columns={1}
+        className="mt-8 border-t border-border pt-6"
+      >
+        <ChoiceRow
+          name="offersHotelPickup"
+          type="checkbox"
+          defaultChecked={shop.offersHotelPickup}
+          className="text-sm"
+        >
+          <span className="block font-medium">{t("settings.main.pickup.label")}</span>
+          <span className="block text-xs text-muted">{t("settings.main.pickup.description")}</span>
+        </ChoiceRow>
+        <FieldActions>
+          <SubmitButton
+            pendingLabel={t("settings.main.pickup.submitting")}
+            className={buttonClass({ variant: "secondary" })}
+          >
+            {t("settings.main.pickup.submit")}
+          </SubmitButton>
+        </FieldActions>
+      </FieldGrid>
       <TurnaroundForm shop={shop} t={t} />
     </SettingsEditorPage>
   );

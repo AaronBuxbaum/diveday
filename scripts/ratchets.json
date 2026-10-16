@@ -391,20 +391,81 @@
         "files": {
           "src/lib/trip-admission.test.ts": "984 -> 992"
         }
+      },
+      {
+        "why": "safety layer 2 merged onto ready-for-agent: both sides grew incident-reports.test.ts (held-seat naming, discard and hold)",
+        "files": {
+          "src/db/incident-reports.test.ts": "0 -> 1013"
+        }
+      },
+      {
+        "why": "merge of the stack top into fourth-review layer r4-1: both sides added to these files",
+        "files": {
+          "src/app/s/[shopSlug]/trips/[id]/actions.ts": "1110 -> 1118",
+          "src/db/seat-claims.test.ts": "1047 -> 1478",
+          "src/lib/notifications/email.test.ts": "1480 -> 1494"
+        }
+      },
+      {
+        "why": "merge of fourth-review layer r4-1 into r4-2: both sides added to these files",
+        "files": {
+          "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": "1057 -> 1072",
+          "src/db/staffing.test.ts": "946 -> 952"
+        }
+      },
+      {
+        "why": "merge of main into fourth-review layer r4-1: both sides added to seat-claims.test.ts",
+        "files": {
+          "src/db/seat-claims.test.ts": "1478 -> 1525"
+        }
+      },
+      {
+        "why": "fourth review layer 3 merged layer 2: both sides grew these files",
+        "files": {
+          "src/app/api/webhooks/stripe/route.replay.test.ts": "1369 -> 1417",
+          "src/app/api/webhooks/stripe/route.test.ts": "1876 -> 1931",
+          "src/app/api/webhooks/stripe/route.ts": "932 -> 958",
+          "src/db/export.test.ts": "1670 -> 1673",
+          "src/db/orders.test.ts": "3163 -> 3175",
+          "src/db/reporting.test.ts": "1594 -> 1633",
+          "src/db/reviews.test.ts": "1004 -> 1034",
+          "src/db/work-order-follow-up.test.ts": "0 -> 1213"
+        }
+      },
+      {
+        "why": "fourth review layer 4 merged layer 3: both sides grew these files",
+        "files": {
+          "src/app/s/[shopSlug]/trips/[id]/actions.ts": "1118 -> 1131",
+          "src/db/trips-queries.test.ts": "1143 -> 1209"
+        }
+      },
+      {
+        "why": "merge of PR 2652's stack into r4-3: both sides grew the order page (record payment, dispute sheet) and export.test.ts",
+        "files": {
+          "src/db/export.test.ts": "1673 -> 1675"
+        }
+      },
+      {
+        "why": "merge of the safety layer (#2687/#2688) into the ready-for-human batch",
+        "files": {
+          "src/app/api/webhooks/stripe/route.ts": "902 -> 923",
+          "src/lib/notifications/index.test.ts": "0 -> 915"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
     "src/app/api/test/seed-trouble-states/route.ts": 2040,
-    "src/app/api/webhooks/stripe/route.replay.test.ts": 1260,
-    "src/app/api/webhooks/stripe/route.test.ts": 1818,
+    "src/app/api/webhooks/stripe/route.replay.test.ts": 1308,
+    "src/app/api/webhooks/stripe/route.test.ts": 1873,
+    "src/app/api/webhooks/stripe/route.ts": 923,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
-    "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1110,
+    "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1131,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1323,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 929,
-    "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1057,
+    "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1072,
     "src/app/shop/[shopSlug]/schedule/board/actions.ts": 948,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.test.tsx": 1040,
-    "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": 1050,
+    "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": 1043,
     "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1180,
     "src/components/MarketingFeatureScreens.tsx": 1064,
     "src/components/search/CommandPalette.tsx": 1016,
@@ -424,37 +485,40 @@
     "src/db/divers.test.ts": 3077,
     "src/db/erasure-coverage.test.ts": 1178,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1628,
+    "src/db/export.test.ts": 1631,
     "src/db/import.test.ts": 1077,
+    "src/db/incident-reports.test.ts": 1011,
     "src/db/manifests.test.ts": 3725,
     "src/db/no-show.test.ts": 1165,
     "src/db/notifications.test.ts": 1875,
-    "src/db/orders.test.ts": 3162,
+    "src/db/orders.test.ts": 3174,
     "src/db/participant-types.test.ts": 1216,
     "src/db/readiness.test.ts": 1522,
     "src/db/recap.test.ts": 2138,
     "src/db/refunds.test.ts": 1154,
     "src/db/reminders.test.ts": 1078,
     "src/db/rental-fit.test.ts": 1227,
-    "src/db/reporting.test.ts": 1594,
+    "src/db/reporting.test.ts": 1633,
     "src/db/retention.test.ts": 1262,
-    "src/db/reviews.test.ts": 1004,
-    "src/db/seat-claims.test.ts": 1094,
+    "src/db/reviews.test.ts": 1034,
+    "src/db/seat-claims.test.ts": 1525,
     "src/db/self-declared-cards.test.ts": 1865,
-    "src/db/staffing.test.ts": 946,
+    "src/db/staffing.test.ts": 952,
     "src/db/trips-crew.test.ts": 1489,
-    "src/db/trips-queries.test.ts": 1143,
+    "src/db/trips-queries.test.ts": 1209,
     "src/db/trips-series.test.ts": 1785,
     "src/db/waiver-issue.test.ts": 1178,
     "src/db/waivers-medical.test.ts": 1004,
+    "src/db/work-order-follow-up.test.ts": 1213,
     "src/db/work-orders.test.ts": 1408,
     "src/i18n/label-maps.test.ts": 1349,
     "src/lib/agency-check.test.ts": 930,
     "src/lib/dive-prep.test.ts": 1983,
     "src/lib/import.test.ts": 1459,
-    "src/lib/incident-export.test.ts": 1187,
+    "src/lib/incident-export.test.ts": 1067,
     "src/lib/manifests.test.ts": 1320,
-    "src/lib/notifications/email.test.ts": 1480,
+    "src/lib/notifications/email.test.ts": 1494,
+    "src/lib/notifications/index.test.ts": 915,
     "src/lib/offline-manifest-store.test.ts": 1018,
     "src/lib/offline-manifests.test.ts": 2179,
     "src/lib/readiness.test.ts": 1684,
@@ -503,29 +567,48 @@
         "files": {
           "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": "0 -> 304"
         }
+      },
+      {
+        "why": "safety stack merge onto ready-for-agent: the trip page passes the removed seat (bid, roster) to tripPageNotices",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": "356 -> 358"
+        }
+      },
+      {
+        "why": "fourth review layer 3 merged layer 2: both sides grew these files",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": "366 -> 367"
+        }
+      },
+      {
+        "why": "Merge of the UX review stack (PR 2654) into safety layer 3: both sides added a prop to the trip page",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": "366 -> 368"
+        }
       }
     ],
-    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 309,
-    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 429,
+    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 304,
+    "src/app/s/[shopSlug]/page.tsx#SchedulePage": 425,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 332,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 333,
     "src/app/shop/[shopSlug]/gear/page.tsx#GearRegisterPage": 308,
-    "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 420,
+    "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 421,
+    "src/app/shop/[shopSlug]/page.tsx#TodayBody": 304,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 377,
-    "src/app/shop/[shopSlug]/reports/page.tsx#ReportsPage": 405,
+    "src/app/shop/[shopSlug]/reports/page.tsx#ReportsPage": 378,
     "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 310,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 332,
-    "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 329,
-    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 424,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 356,
+    "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 318,
+    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 335,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 368,
     "src/db/checkouts.ts#startBookingCheckout": 303,
     "src/db/export.ts#loadShopExportContext": 338,
     "src/db/reminders.ts#sendDueReminders": 332,
     "src/db/reporting.ts#getMonthlyReport": 338,
     "src/db/seed-dive-sites.ts#seedDiveSites": 467,
-    "src/db/seed-history.ts#seedHistory": 742,
+    "src/db/seed-history.ts#seedHistory": 726,
     "src/db/seed-more-trips.ts#seedMoreTrips": 642,
-    "src/db/seed-trips.ts#seedTrips": 431,
+    "src/db/seed-trips.ts#seedTrips": 392,
     "src/lib/import.ts#prepareContactImport": 508
   },
   "live-people": {
@@ -574,32 +657,56 @@
       {
         "why": "The register page carries the Gear section's tab strip (Register, Work orders) since the bench became its second tab (ADR 20261008-gear-work-orders)",
         "files": {}
+      },
+      {
+        "why": "safety stack merge onto ready-for-agent: the trip page passes the removed seat (bid, roster) to tripPageNotices",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/page.tsx": "511 -> 513"
+        }
+      },
+      {
+        "why": "merge of PR 2652's stack into r4-3: both sides grew the order page (record payment, dispute sheet) and export.test.ts",
+        "files": {
+          "src/app/shop/[shopSlug]/orders/[id]/page.tsx": "0 -> 401"
+        }
+      },
+      {
+        "why": "merge of PR 2652's stack into r4-5: the base thinned the trip route and this layer added its departure-needs read to the pulse",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/page.tsx": "511 -> 521"
+        }
+      },
+      {
+        "why": "Merge of the UX review stack (PR 2654) into safety layer 3: both sides added a prop to the trip page",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/page.tsx": "521 -> 523"
+        }
       }
     ],
     "src/app/onboard/page.tsx": 479,
-    "src/app/page.tsx": 592,
+    "src/app/page.tsx": 581,
     "src/app/pricing/page.tsx": 468,
-    "src/app/ready/[token]/page.tsx": 669,
-    "src/app/s/[shopSlug]/page.tsx": 882,
+    "src/app/ready/[token]/page.tsx": 665,
+    "src/app/s/[shopSlug]/page.tsx": 879,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 524,
     "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
     "src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx": 406,
-    "src/app/shop/[shopSlug]/dive-sites/page.tsx": 405,
     "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 506,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 779,
     "src/app/shop/[shopSlug]/gear/page.tsx": 479,
+    "src/app/shop/[shopSlug]/orders/[id]/page.tsx": 401,
     "src/app/shop/[shopSlug]/orders/page.tsx": 734,
-    "src/app/shop/[shopSlug]/page.tsx": 677,
+    "src/app/shop/[shopSlug]/page.tsx": 672,
     "src/app/shop/[shopSlug]/promos/page.tsx": 601,
-    "src/app/shop/[shopSlug]/reports/page.tsx": 662,
-    "src/app/shop/[shopSlug]/reviews/page.tsx": 466,
+    "src/app/shop/[shopSlug]/reports/page.tsx": 620,
+    "src/app/shop/[shopSlug]/reviews/page.tsx": 465,
     "src/app/shop/[shopSlug]/schedule/board/page.tsx": 416,
     "src/app/shop/[shopSlug]/settings/import/page.tsx": 508,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 789,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 593,
-    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 501,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 511
+    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 646,
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 494,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 523
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

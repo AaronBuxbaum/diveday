@@ -75,6 +75,18 @@ const RULES = [
     says: 'the waiver is "la exención", and the noun is feminine — every article and adjective reaching back to it moves with it (la, una, esta, firmada, archivada)',
   },
   {
+    id: "waiver",
+    // The English word itself, which the 2026-10-14 review found in the
+    // request email ("Completa tu waiver para {tripTitle}"), the reminder and
+    // the import wizard: 7 diver strings and 9 staff ones, all written after
+    // the README settled the word.
+    //
+    // Word-bounded, so `Smartwaiver` (a competitor's name in the switching
+    // guide) and `waiver_records.csv` (a file a shop really downloads) pass.
+    pattern: /\bwaivers?\b/i,
+    says: 'the waiver is "la exención" in Spanish too: "Completa tu exención", "Exención firmada". The English word survives only inside a proper name or a file name',
+  },
+  {
     id: "dive-site",
     // "Three terms were live for the same row in `dive_sites`" and the
     // 2026-08-05 sweep settled `sitio de buceo`. Both losing spellings were
@@ -234,6 +246,19 @@ const RULES = [
     says: 'check-in is "el check-in" (the feature, the phase, "Llegada y check-in"); the tap on a row stays "Registrar"',
   },
   {
+    id: "sign-up",
+    // README's vocabulary table — "apuntarse (a una lista)" -> "inscribirse /
+    // anotarse". The 2026-10-14 review found "Apuntándote…" on the wait-list
+    // button one line under "Anótate en la lista de espera".
+    //
+    // Only the reflexive shapes, because the plain verb is innocent and in the
+    // bundles: a backup endpoint "apunta a una dirección privada", the field
+    // guide says "apunta tu luz" and "no le apuntes la luz a los ojos".
+    pattern:
+      /\bap[uú]nt(?:a(?:r|ndo)?|á(?:ndo)?)?(?:me|te|se|nos)\b|\b(?:me|te|se|nos)\s+ap[uú]nt\w*/i,
+    says: 'joining a list is "anotarse" ("Anótate", "Anotándote…", "Anotarme en la lista de espera"). "Apuntarse" reads as Spain',
+  },
+  {
     id: "computer",
     // README's vocabulary table — "ordenador (de buceo)" -> "computadora (de
     // buceo)", in the table since the first sweep and unguarded until
@@ -286,6 +311,30 @@ const RULES = [
  */
 const allowed = new Map([]);
 
+/**
+ * The string without its ICU case keys: a bare word right before a `{`, inside
+ * an argument (`{reason, select, waiver {…}}`). Text outside every brace keeps
+ * its words, so "tu waiver {tripTitle}" is still read whole.
+ */
+function withoutCaseKeys(text) {
+  let out = "";
+  let depth = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (depth > 0 && /[A-Za-z_]/.test(char) && /[{}\s,]/.test(text[i - 1] ?? "")) {
+      const key = /^[\w-]+(?=\s*\{)/.exec(text.slice(i));
+      if (key) {
+        i += key[0].length - 1;
+        continue;
+      }
+    }
+    if (char === "{") depth += 1;
+    if (char === "}") depth = Math.max(0, depth - 1);
+    out += char;
+  }
+  return out;
+}
+
 /** Every offending value in one parsed bundle, with the count of strings read. */
 export function findSettledTerms(bundle, { relative = "" } = {}) {
   const violations = [];
@@ -302,9 +351,12 @@ export function findSettledTerms(bundle, { relative = "" } = {}) {
     if (typeof node !== "string") return;
     strings += 1;
     const reported = new Set();
+    // An ICU `select` case key (`waiver {: exención}`) is a code the reader
+    // never sees, so it is read with its keys taken out.
+    const read = withoutCaseKeys(node);
     for (const rule of rules) {
       if (rule.keys && !rule.keys.test(keyPath)) continue;
-      if (reported.has(rule.id) || !rule.pattern.test(node)) continue;
+      if (reported.has(rule.id) || !rule.pattern.test(read)) continue;
       if (allowed.has(`${relative}:${keyPath}:${rule.id}`)) continue;
       reported.add(rule.id);
       violations.push({ keyPath, text: node, rule: rule.id, says: rule.says });

@@ -82,7 +82,7 @@ async function staleRollCallPass(db: Awaited<ReturnType<typeof getDb>>) {
 }
 
 /**
- * The missing-diver alert's retry (H-126), held apart like the pass above: filing a
+ * The missing-diver alert's retry (H-138), held apart like the pass above: filing a
  * report sends at once, and this finds a filed report whose owners were not
  * all told. A throw is reported and answered as `null`; a report still untold
  * half an hour after filing (`overdue`) turns the monitor's check-in to error.

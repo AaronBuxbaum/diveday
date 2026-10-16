@@ -5,7 +5,7 @@ import type { DiveSiteTemplate } from "./types";
 export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
   {
     slug: "usns-vandenberg",
-    version: 2,
+    version: 3,
     area: "florida-keys-key-west",
     sources: [
       "https://visitfloridakeys.com/experiences/what-were-famous-for/diving-snorkeling/shipwrecks/vandenberg",
@@ -42,7 +42,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
         {
           name: "The crow's nest",
           kind: "wreckFeature",
-          note: "The shallowest steel at about 12 m — where a long safety stop becomes a pleasure.",
+          note: "The shallowest steel at about 12 m, the last look at her before the stop on the line.",
         },
         {
           name: "Bridge deck",

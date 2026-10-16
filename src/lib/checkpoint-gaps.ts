@@ -25,17 +25,25 @@ import { inAfterDivePopulation, type RollCallState } from "./roll-call-populatio
  * warned on every tap about crew nobody ever counts (dive-domain review
  * 20261014). The panel itself still holds the checkpoint open for them.
  *
- * The two halves stay apart, so the words can say "11 divers and 3 crew"
- * rather than a sum that hides which list to look at.
+ * The two halves stay apart, so the words can say "11 passengers and 3
+ * crew" rather than a sum that hides which list to look at. People recorded
+ * not back aboard are counted apart from both: they have been marked, and
+ * they are the missing-diver row, which is a different next step from a tap
+ * nobody has made yet (dive-domain review, 2026-10-16).
  */
 export type CheckpointGap =
   | {
       kind: "unmarked";
       checkpoint: RollCallCheckpoint;
-      /** Divers with no result here, plus divers recorded not back aboard. */
+      /**
+       * Passengers (divers, snorkelers and riders alike) with no result here.
+       * The name is older than the count.
+       */
       divers: number;
-      /** Crew in the after-dive count not accounted for here. */
+      /** Crew in the after-dive count with no result here. */
       crew: number;
+      /** Passengers and crew recorded not back aboard here. */
+      missing: number;
     }
   | {
       /**
@@ -86,14 +94,14 @@ function crewInAfterDiveCount(manifests: readonly GapManifest[]): Set<string> {
 }
 
 function unmarkedAt(manifest: GapManifest, counted: ReadonlySet<string>): CheckpointGap | null {
-  const divers = manifest.summary.awaiting + manifest.summary.notBackAboard;
-  const crew = manifest.crew.filter((member) =>
-    member.rollCall
-      ? isNotBackAboard(manifest.checkpoint, member.rollCall)
-      : counted.has(member.id),
+  const divers = manifest.summary.awaiting;
+  const crew = manifest.crew.filter((member) => !member.rollCall && counted.has(member.id)).length;
+  const crewMissing = manifest.crew.filter(
+    (member) => member.rollCall && isNotBackAboard(manifest.checkpoint, member.rollCall),
   ).length;
-  return divers + crew > 0
-    ? { kind: "unmarked", checkpoint: manifest.checkpoint, divers, crew }
+  const missing = manifest.summary.notBackAboard + crewMissing;
+  return divers + crew + missing > 0
+    ? { kind: "unmarked", checkpoint: manifest.checkpoint, divers, crew, missing }
     : null;
 }
 
@@ -146,7 +154,7 @@ export function previousCheckpointGaps(
  * **A last dive nobody counted, after a closed one, is worded as a plan
  * question** (dive-domain review 20261014): with no result for anybody there
  * and the dive before it closed, the likeliest story is a dive called off and
- * the plan left at the old count, and "8 divers not marked" would send the
+ * the plan left at the old count, and "8 people not marked" would send the
  * crew counting a boat that never went in. It stays a warning (`not_counted`)
  * so a skipped count is never silent; the words offer both ways out.
  */

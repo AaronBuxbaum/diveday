@@ -151,6 +151,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "address_postal_code",
       "address_country",
       "dock_call_minutes",
+      // Whether the shop runs hotel pickups: a restore must not start asking
+      // divers about a pickup the shop does not offer (fourth UX review, item 8).
+      "offers_hotel_pickup",
       // The rest of the shop's dock-day rhythm (ADR
       // 20260812-configurable-dock-day-rhythm). Six numbers that describe
       // how this shop runs a day — as much the shop's own record as its
@@ -247,6 +250,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.addressPostalCode,
         shop.addressCountry,
         shop.dockCallMinutes,
+        shop.offersHotelPickup,
         shop.gearSetupMinutes,
         shop.briefingMinutes,
         shop.boatRideMinutes,
@@ -293,6 +297,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "inspection_due_on",
       "registration_expires_on",
       "insurance_expires_on",
+      "call_sign",
+      "mmsi",
       "created_at",
     ],
     rows: ({ boatRows }) =>
@@ -305,6 +311,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.inspectionDueOn,
         row.registrationExpiresOn,
         row.insuranceExpiresOn,
+        row.callSign,
+        row.mmsi,
         row.createdAt,
       ]),
     note: EXPORT_FILE_NOTES["boats.csv"],
@@ -1595,6 +1603,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "filed_by_name",
       "legal_hold_at",
       "deleted_at",
+      "deleted_by_person_id",
+      "deleted_by_name",
     ],
     rows: ({ personName, tripTitle, tripStartsAt, incidentReportRows }) =>
       incidentReportRows.map((row) => [
@@ -1626,6 +1636,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.filedByPersonId ? personName.get(row.filedByPersonId) : null,
         row.legalHoldAt,
         row.deletedAt,
+        row.deletedByPersonId,
+        row.deletedByPersonId ? personName.get(row.deletedByPersonId) : null,
       ]),
     note: EXPORT_FILE_NOTES["incident_reports.csv"],
   },

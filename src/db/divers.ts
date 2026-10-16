@@ -395,6 +395,7 @@ export type DiverFilter =
   | "diving_today"
   | "needs_attention"
   | "missing_contact"
+  | "not_back"
   | "removed";
 
 export const DIVER_FILTERS = [
@@ -402,6 +403,9 @@ export const DIVER_FILTERS = [
   "diving_today",
   "needs_attention",
   "missing_contact",
+  // Dived with the shop, and not in the last twelve months (fourth UX review,
+  // item 27): the list a shop pulls to fill a quiet week.
+  "not_back",
   // The one view that leaves the active roster behind. Removal is reversible
   // by design (`restoreDiver`), but until this existed nothing in the UI could
   // *find* a removed diver — they vanished from the list, matched no search,
@@ -414,6 +418,49 @@ export const DIVER_FILTERS = [
 
 export function isDiverFilter(value: string | undefined): value is DiverFilter {
   return (DIVER_FILTERS as readonly string[]).includes(value ?? "");
+}
+
+/** How long without a dive puts a diver in "Not back in 12 months". */
+export const NOT_BACK_MONTHS = 12;
+
+/**
+ * The roster's order: by name (the default, filed under letters) or by the
+ * last time the diver went out with the shop, most recent first (fourth UX
+ * review, item 27).
+ */
+export type DiverSort = "name" | "last_dived";
+
+export function isDiverSort(value: string | undefined): value is DiverSort {
+  return value === "name" || value === "last_dived";
+}
+
+/**
+ * **When this diver last went out with the shop**: the latest departure that
+ * counts as a dive day for them (`diveDay`, the one rule every reader of dive
+ * days calls) and has left, or the latest visit the importer brought across,
+ * whichever is later. Null for a diver who has never been out. An imported
+ * visit is a calendar day with no time, read as noon UTC so it prints as the
+ * same day in every shop zone from UTC-11 to UTC+11.
+ *
+ * Correlated on `people.id`, so it reads one diver's rows per roster row and
+ * is only ever asked of the page (or the bounded export), never the table.
+ */
+function lastDivedAtSql(shopId: string, now: Date) {
+  return sql<Date | string | null>`greatest(
+    (select max(${trips.startsAt}) from ${bookings}
+      inner join ${trips} on ${trips.id} = ${bookings.tripId} and ${trips.shopId} = ${bookings.shopId}
+      where ${bookings.shopId} = ${shopId} and ${bookings.personId} = ${people.id}
+        and ${trips.startsAt} < ${now.toISOString()}::timestamptz and ${diveDay()}),
+    (select max((${priorVisits.visitedOn} + time '12:00')::timestamp at time zone 'UTC') from ${priorVisits}
+      where ${priorVisits.shopId} = ${shopId} and ${priorVisits.personId} = ${people.id})
+  )`;
+}
+
+/** The instant before which a last dive counts as "not back". */
+export function notBackCutoff(now: Date): Date {
+  const cutoff = new Date(now);
+  cutoff.setUTCMonth(cutoff.getUTCMonth() - NOT_BACK_MONTHS);
+  return cutoff;
 }
 
 /**
@@ -439,6 +486,9 @@ function diverFilterCondition(
   // "Removed" narrows by `deleted_at` alone (see `removalScope`) — there is no
   // second question to ask of a record that is off the active roster.
   if (filter === "removed") return undefined;
+  if (filter === "not_back") {
+    return sql`${lastDivedAtSql(shopId, context.now)} < ${notBackCutoff(context.now).toISOString()}::timestamptz`;
+  }
   if (filter === "missing_contact") {
     // "On file" needs both a name and a phone (glossary — Emergency contact), so
     // a hole in either lands the diver in this view.
@@ -543,6 +593,70 @@ function diverFilterCondition(
   return undefined;
 }
 
+type RosterOptions = {
+  query?: string;
+  filter?: DiverFilter;
+  timeZone?: string;
+  now?: Date;
+};
+
+/** The roster's WHERE: shop, divers only, the removal side, the view and the search. */
+function rosterScope(db: AppDb, shopId: string, options: RosterOptions) {
+  const filter = options.filter ?? "all";
+  const timeZone = options.timeZone ?? "UTC";
+  const now = options.now ?? nowDate();
+  return and(
+    eq(people.shopId, shopId),
+    eq(personRoles.role, "diver"),
+    removalScope(filter),
+    diverFilterCondition(db, filter, { shopId, timeZone, now }),
+    personSearchMatch(options.query?.trim() ?? ""),
+  );
+}
+
+/** Name then id, or most recent dive first with the never-dived last; both total orders. */
+function rosterOrder(sort: DiverSort | undefined, lastDivedAt: ReturnType<typeof lastDivedAtSql>) {
+  return sort === "last_dived"
+    ? [sql`${lastDivedAt} desc nulls last`, asc(people.fullName), asc(people.id)]
+    : [asc(people.fullName), asc(people.id)];
+}
+
+/** The most rows "Download this list (CSV)" writes; a roster past it is a bundle export. */
+export const DIVER_LIST_EXPORT_MAX = 5_000;
+
+/**
+ * **"Download this list (CSV)"** (fourth UX review, item 27): the roster as
+ * filtered, searched and sorted, for a shop calling its lapsed divers. Name,
+ * email, phone and the last dive only: the bundle export is the door to
+ * everything else, and dates of birth, insurance and emergency contacts have
+ * no business in a call list. The caller gates it on the people-export
+ * permission.
+ */
+export async function listDiversForExport(
+  db: AppDb,
+  shopId: string,
+  options: RosterOptions & { sort?: DiverSort } = {},
+) {
+  const now = options.now ?? nowDate();
+  const lastDivedAt = lastDivedAtSql(shopId, now);
+  const rows = await db
+    .select({
+      fullName: people.fullName,
+      email: people.email,
+      phone: people.phone,
+      lastDivedAt,
+    })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(rosterScope(db, shopId, { ...options, now }))
+    .orderBy(...rosterOrder(options.sort, lastDivedAt))
+    .limit(DIVER_LIST_EXPORT_MAX);
+  return rows.map((row) => ({
+    ...row,
+    lastDivedAt: row.lastDivedAt === null ? null : new Date(row.lastDivedAt),
+  }));
+}
+
 export async function listDiverSummaries(
   db: AppDb,
   shopId: string,
@@ -554,20 +668,12 @@ export async function listDiverSummaries(
     /** The shop's own timezone — what "diving today" is measured against. */
     timeZone?: string;
     now?: Date;
+    sort?: DiverSort;
   } = {},
 ) {
-  const query = options.query?.trim() ?? "";
-
-  const filter = options.filter ?? "all";
-  const timeZone = options.timeZone ?? "UTC";
   const now = options.now ?? nowDate();
-  const scope = and(
-    eq(people.shopId, shopId),
-    eq(personRoles.role, "diver"),
-    removalScope(filter),
-    diverFilterCondition(db, filter, { shopId, timeZone, now }),
-    personSearchMatch(query),
-  );
+  const scope = rosterScope(db, shopId, { ...options, now });
+  const lastDivedAt = lastDivedAtSql(shopId, now);
 
   // Offset rather than keyset. The roster used to page forward-only by cursor,
   // which meant a staffer three pages into "who is missing a safety contact"
@@ -587,11 +693,11 @@ export async function listDiverSummaries(
     },
     fetchRows: async (offset, limit) =>
       db
-        .select({ person: people })
+        .select({ person: people, lastDivedAt })
         .from(people)
         .innerJoin(personRoles, eq(personRoles.personId, people.id))
         .where(scope)
-        .orderBy(asc(people.fullName), asc(people.id))
+        .orderBy(...rosterOrder(options.sort, lastDivedAt))
         .limit(limit)
         .offset(offset),
   });
@@ -605,8 +711,9 @@ export async function listDiverSummaries(
   // roster-wide in one click, so what used to be incidental is systemic
   // (`security-reviewer` finding).
   return {
-    divers: page.rows.map(({ person }) => ({
+    divers: page.rows.map(({ person, lastDivedAt: last }) => ({
       ...person,
+      lastDivedAt: last === null ? null : new Date(last),
       dateOfBirth: null,
       diveInsurance: null,
       emergencyContactName: null,

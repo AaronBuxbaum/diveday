@@ -117,7 +117,8 @@ export type BoatPaper = (typeof BOAT_PAPERS)[number];
  * How far ahead each paper is said, longer than the kit's: booking an
  * inspection or renewing a policy takes weeks of lead time, where new pads are
  * a parcel. A paper inside its window is an owner's errand on Today and a line
- * on the manifest; past its date it escalates.
+ * on the manifest; past its date it escalates to danger ink (H-136), and still
+ * gates nothing.
  */
 export const BOAT_PAPER_HORIZON_DAYS: Record<BoatPaper, number> = {
   inspection: 90,
@@ -154,7 +155,18 @@ export type BoatSafetyNotice =
   | { code: "over_certificate"; passengers: number; limit: number; counted: boolean }
   /** No in-service unit of a must-carry kind aboard, on a shop that keeps one. */
   | { code: "kit_missing"; kind: MustCarryKitKind }
-  | { code: "paper"; paper: BoatPaper; dueOn: CalendarDate; expired: boolean; days: number }
+  | {
+      code: "paper";
+      paper: BoatPaper;
+      dueOn: CalendarDate;
+      expired: boolean;
+      days: number;
+      /**
+       * Lapsed on the date it is judged on, a later departure's, while still
+       * good today: it *ends* before the boat sails, it has not *ended*.
+       */
+      beforeDeparture?: true;
+    }
   | {
       code: "kit_clock";
       gearItemId: string;
@@ -242,14 +254,41 @@ export function kitMissingNotices(
   ).map((kind) => ({ code: "kit_missing", kind }));
 }
 
-/** The boat's papers that have run out or will inside each paper's own horizon. */
-export function boatPaperNotices(papers: BoatPaperDates, onDate: CalendarDate): BoatSafetyNotice[] {
+/**
+ * A paper's reading on `onDate`. Hull insurance lapses **on** its expiry date,
+ * because a marine policy's cover ends that day; registration and the
+ * inspection are good through theirs, like the kit's printed dates.
+ */
+function paperLapsed(paper: BoatPaper, dueOn: CalendarDate, onDate: CalendarDate) {
+  const days = calendarDaysBetween(onDate, dueOn);
+  if (paper === "insurance" && days === 0) return { expired: true, days: 0 };
+  return dated(dueOn, onDate, BOAT_PAPER_HORIZON_DAYS[paper]);
+}
+
+/**
+ * The boat's papers that have run out or will inside each paper's own horizon,
+ * judged on `onDate`. `today` is the shop's own date when that is a later
+ * departure's, so a paper still good today is said to end before it sails.
+ */
+export function boatPaperNotices(
+  papers: BoatPaperDates,
+  onDate: CalendarDate,
+  today: CalendarDate = onDate,
+): BoatSafetyNotice[] {
   const notices: BoatSafetyNotice[] = [];
   for (const paper of BOAT_PAPERS) {
     const dueOn = papers[PAPER_DATES[paper]];
     if (!dueOn) continue;
-    const reading = dated(dueOn, onDate, BOAT_PAPER_HORIZON_DAYS[paper]);
-    if (reading) notices.push({ code: "paper", paper, dueOn, ...reading });
+    const reading = paperLapsed(paper, dueOn, onDate);
+    if (!reading) continue;
+    const goodToday = !paperLapsed(paper, dueOn, today)?.expired;
+    notices.push({
+      code: "paper",
+      paper,
+      dueOn,
+      ...reading,
+      ...(reading.expired && goodToday ? { beforeDeparture: true as const } : {}),
+    });
   }
   return notices.sort(byUrgency);
 }
@@ -400,10 +439,12 @@ export function boatSafetyNotices(input: {
    */
   passengers: { booked: number; boarded: number };
   onDate: CalendarDate;
+  /** The shop's own date, when `onDate` is a later departure's (`boatPaperNotices`). */
+  today?: CalendarDate;
 }): BoatSafetyNotice[] {
   const notices: BoatSafetyNotice[] = [
     ...kitMissingNotices(input.kit, input.kindsOnRegister),
-    ...boatPaperNotices(input.boat, input.onDate),
+    ...boatPaperNotices(input.boat, input.onDate, input.today),
     ...safetyKitNotices(input.kit, input.onDate),
   ];
   const limit = input.boat.certifiedPassengers;
@@ -458,14 +499,21 @@ export type BoatSafetySection = {
 };
 
 /**
- * How loudly a notice is drawn. **Danger** for the two that mean the boat is
- * not as it should be to leave: must-carry kit missing, and more people than
- * the certificate allows. **Warning** for what has already gone wrong (a
- * lapsed date, kit flagged for service). **Neutral** for a heads-up.
+ * How loudly a notice is drawn. **Danger** for what means the boat is not as
+ * it should be to leave: must-carry kit missing, more people than the
+ * certificate allows, and a lapsed paper — hull insurance, registration or
+ * the safety inspection past its date, the fact that makes a claim uncovered
+ * (H-136). **Warning** for kit that has gone wrong (a lapsed clock, a unit
+ * flagged for service). **Neutral** for a heads-up.
+ *
+ * Tone only: a danger line here refuses nothing. The certificate's own gate
+ * lives at the point of sale (`sellableSeats`), and a lapsed paper has none —
+ * DiveDay cannot know a policy was renewed offline.
  */
 export function boatSafetyNoticeTone(notice: BoatSafetyNotice): BoatSafetyTone {
   if (notice.code === "over_certificate" || notice.code === "kit_missing") return "danger";
   if (notice.code === "kit_off_service") return "warning";
+  if (notice.code === "paper") return notice.expired ? "danger" : "neutral";
   return notice.expired ? "warning" : "neutral";
 }
 

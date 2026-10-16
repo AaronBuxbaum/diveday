@@ -5,6 +5,7 @@
       "packingSaved": "Lista de equipo guardada para todas las salidas.",
       "packingInvalid": "Agrega entre uno y doce artículos a la lista.",
       "dockSaved": "Hora de presentación en el muelle guardada para todas las confirmaciones y recordatorios.",
+      "pickupSaved": "Guardado. A los buceadores solo se les pregunta por la recogida cuando esto está activado.",
       "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
       "turnaroundSaved": "Margen entre salidas guardado.",
       "turnaroundInvalid": "Introduce un margen de entre 0 y 240 minutos.",
@@ -230,6 +231,12 @@
       "submitting": "Guardando…",
       "value": "{count, plural, one {# artículo} other {# artículos}}"
     },
+    "pickup": {
+      "label": "Ofrecemos recogida en el hotel",
+      "description": "Si está activado, la página de cada buceador pregunta si quiere que lo recojan y dónde se aloja.",
+      "submit": "Guardar recogida",
+      "submitting": "Guardando…"
+    },
     "dockCall": {
       "heading": "Ritmo del día de buceo",
       "description": "Todos estos números están en minutos.",
@@ -431,7 +438,7 @@
       },
       "lastMinuteList": {
         "heading": "Lista de última hora",
-        "label": "Permitir que los buceadores se apunten a una lista de última hora",
+        "label": "Permitir que los buceadores se anoten en una lista de última hora",
         "description": "Los buceadores dejan su correo y puedes ofrecerles plazas libres en una salida cercana."
       },
       "tips": {
@@ -467,7 +474,7 @@
       "heading": "Sitios de buceo"
     },
     "waivers": {
-      "heading": "Plantilla de exención"
+      "heading": "Exenciones y registros firmados"
     },
     "safetyChecklist": {
       "heading": "Lista de verificación previa a la salida"
@@ -527,6 +534,7 @@
       "lineExamples": "Cámara hiperbárica, línea de accidentes de buceo, guardacostas…",
       "phoneLabel": "Número {n}",
       "vesselLabel": "Embarcación",
+      "vesselHint": "Solo se imprime en las salidas sin embarcación. El indicativo y el MMSI de cada embarcación van en Embarcaciones.",
       "shoreContactLabel": "Contacto en tierra",
       "shoreContactDescription": "Un nombre y un número que lee la tripulación. DiveDay nunca escribe a esta línea.",
       "shoreAlertEmailLabel": "Correo del contacto en tierra para avisos del pase de lista",
@@ -559,7 +567,8 @@
       "submit": "Agregar paquete",
       "submitting": "Agregando…",
       "delete": "Eliminar",
-      "deleting": "Eliminando…"
+      "deleting": "Eliminando…",
+      "owed": "Inmersiones adeudadas en paquetes: {dives, number} ({value})"
     }
   },
   "team": {
@@ -813,10 +822,10 @@
         "wetsuit_size": "Talla de neopreno",
         "boot_size": "Talla de botas (se guarda como una sola talla de aletas y escarpines)",
         "fin_size": "Talla de aletas y escarpines",
-        "waiver_accepted": "Waiver aceptado",
-        "waiver_signed_at": "Waiver firmado",
-        "waiver_source_name": "Origen del waiver",
-        "waiver_document_url": "Documento del waiver",
+        "waiver_accepted": "Exención aceptada",
+        "waiver_signed_at": "Exención firmada",
+        "waiver_source_name": "Origen de la exención",
+        "waiver_document_url": "Documento de la exención",
         "medical_document_url": "Documento médico",
         "payment_date": "Fecha de pago",
         "payment_status": "Estado del pago",
@@ -834,7 +843,7 @@
         "visit_reference": "Referencia de reserva",
         "internal_notes": "Notas internas"
       },
-      "ignoredMedicalColumns": "Dejadas fuera a propósito: {columns}. No se reconocieron como columna de waiver, así que su contenido nunca se importa. En su lugar se confía en una columna “waiver aceptado” reconocida; ver más abajo.",
+      "ignoredMedicalColumns": "Dejadas fuera a propósito: {columns}. No se reconocieron como columna de exención, así que su contenido nunca se importa. En su lugar se confía en una columna “Exención aceptada” reconocida; ver más abajo.",
       "unmappedColumns": "No reconocidas, así que se ignoran: {columns}.",
       "waiverRowsNoticeOne": "{count} fila declara una exención ya aceptada en un centro anterior. DiveDay lo acepta, incluida la aptitud médica, y la marca como “importada”.",
       "waiverRowsNoticeOther": "{count} filas declaran una exención ya aceptada en un centro anterior. DiveDay lo acepta, incluida la aptitud médica, y la marca como “importada”.",
@@ -896,9 +905,9 @@
         "rowsSkippedNote": " {count} fila(s) omitidas.",
         "cardsHeldByAnother": "{count} número(s) de certificación del archivo ya están en otro buceador de tu centro, así que esos registros no se agregaron a nadie. Revisa el archivo por si hay un número repetido y luego revisa y agrega los registros de certificación en DiveDay.",
         "specialtyGateNote": "Una inmersión que requiere una de esas especialidades espera esa confirmación. Tócala en el registro del buceador y la puerta se abre.",
-        "waiversLineOne": "{count} waiver importado como aceptado, marcado “importado” en el perfil del buceador.",
-        "waiversLineOther": "{count} waivers importados como aceptados, marcados “importado” en el perfil del buceador.",
-        "waiversSkippedExistingNote": " {count} buceador(es) ya tenían un waiver vigente en el archivo, se dejaron sin tocar.",
+        "waiversLineOne": "{count} exención importada como aceptada, marcada “importado” en el perfil del buceador.",
+        "waiversLineOther": "{count} exenciones importadas como aceptadas, marcadas “importado” en el perfil del buceador.",
+        "waiversSkippedExistingNote": " {count} buceador(es) ya tenían una exención vigente en el archivo, se dejaron sin tocar.",
         "waiversSkippedNoTemplateNoteOne": " {count} omitido. Configura primero una plantilla de exención.",
         "waiversSkippedNoTemplateNoteOther": " {count} omitidos. Configura primero una plantilla de exención.",
         "waiverDocumentsFailedNote": " {count} enlace(s) de documento no se pudieron descargar y se dejaron fuera del registro.",

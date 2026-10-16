@@ -45,14 +45,14 @@ test("a staffer reads the inbox, opens the record, and answers the diver", async
   await expect(page).toHaveURL(/\/shop\/blue-mantis\/divers\/.*#message-/);
   const messageId = new URL(page.url()).hash.slice(1);
   const target = page.locator(`[id="${messageId}"]`);
-  await expect(target).toContainText(/Could I switch to the afternoon boat/);
+  await expect(target).toContainText(/won.t make today.s reef boat/);
   await expect(target).toBeInViewport({ ratio: 1 });
 
   // The group is a landmark of its own (`DiverFileGroupDisclosure` renders a
   // `<section aria-label>`), which is what lets this scope its assertions to
   // the conversation rather than to a record six sections long.
   const conversation = page.getByRole("region", { name: "Conversation" });
-  await expect(conversation.getByText(/Could I switch to the afternoon boat/)).toBeVisible();
+  await expect(conversation.getByText(/won.t make today.s reef boat/)).toBeVisible();
 
   // The composer names where the answer is going, not only how it will travel:
   // a diver can write from an address that is not the one on their record, and
@@ -127,4 +127,33 @@ test("a staffer marks a message done and moves it back", async ({ page }) => {
   await page.getByRole("button", { name: "More for the message from Diego Alvarez" }).click();
   await page.getByRole("button", { name: "Move back to waiting" }).click();
   await expect(page.getByRole("heading", { name: /Needs you · 3/ })).toBeVisible();
+});
+
+/**
+ * **A message asking to move a seat reaches the move** (fourth UX review, item
+ * 32). Priya's message names each seat she holds as a link to it on its
+ * roster, and the row's "⋯" offers a move for each, which lands on that
+ * seat with the roster's own move already open. Nothing on the Inbox moves a
+ * seat; the roster's one path does.
+ */
+test("a message about a seat opens it, and its menu opens the seat's move", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/inbox");
+  // She holds more than one seat (the reef boat and the wreck), so the row
+  // names each, and each has its own move (dive-domain review r4-4, F1).
+  const seat = page
+    .getByRole("link", { name: /^Booked on Two-Tank Reef — Molasses & French/ })
+    .first();
+  await expect(seat).toBeVisible();
+  await expect(seat).toHaveAttribute("href", /\/shop\/blue-mantis\/trips\/[^#]+#booking-/);
+
+  await page.getByRole("button", { name: "More for the message from Priya Sharma" }).click();
+  await page
+    .getByRole("link", { name: /^Move Priya Sharma’s seat on Two-Tank Reef — Molasses & French/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/trips\/[^#]+#move-booking-/);
+  // The roster's move, open on her seat: its one select and its button.
+  const move = page.locator(`[id="${new URL(page.url()).hash.slice(1)}"]`);
+  await expect(move.getByLabel("Departure")).toBeVisible();
+  await expect(move.getByRole("button", { name: "Move" })).toBeVisible();
 });

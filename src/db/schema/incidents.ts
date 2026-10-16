@@ -126,7 +126,7 @@ export const incidentReports = pgTable(
      */
     legalHoldAt: timestamp("legal_hold_at", { withTimezone: true }),
     /**
-     * **The missing-diver alert's lease** (H-126, decided 2026-10-16): stamped
+     * **The missing-diver alert's lease** (H-138, decided 2026-10-16): stamped
      * when a pass took the report to tell the owners, so two passes never send
      * at once. It is a lease, not the proof of a send: a pass that crashed
      * leaves it stamped, and once it is older than the lease the next pass
@@ -141,11 +141,21 @@ export const incidentReports = pgTable(
      * sent. Null until then; the report page says "Not reached yet" while it is.
      */
     missingAlertSentAt: timestamp("missing_alert_sent_at", { withTimezone: true }),
+    /** Who discarded the draft, named beside it on the departure log. */
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
   },
   (table) => [
     index("incident_reports_shop_trip_idx")
       .on(table.shopId, table.tripId, table.createdAt)
       .where(sql`${table.deletedAt} is null`),
+    // Today's "not filed" line reads the shop's live drafts, oldest first.
+    index("incident_reports_live_drafts_idx")
+      .on(table.shopId, table.createdAt)
+      .where(sql`${table.status} = 'draft' and ${table.deletedAt} is null`),
+    check(
+      "incident_reports_deleted_by_whom",
+      sql`(${table.deletedAt} is null) = (${table.deletedByPersonId} is null)`,
+    ),
     index("incident_reports_shop_occurred_idx").on(table.shopId, table.occurredAt),
     check(
       "incident_reports_only_a_draft_is_discarded",

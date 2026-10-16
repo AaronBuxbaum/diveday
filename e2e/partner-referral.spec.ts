@@ -80,7 +80,7 @@ test.describe("a partner's referral", () => {
     await choosePartySize(page, 1);
     await page.getByLabel("Name", { exact: true }).fill("Referred Rosa");
     await page.getByLabel("Email", { exact: true }).fill(`rosa-${e2eNow().getTime()}@example.com`);
-    await page.getByRole("button", { name: "Book these spots" }).click();
+    await page.getByRole("button", { name: "Book this seat" }).click();
     await expect(page).toHaveURL(/\/ready\//);
 
     await signInAsOwner(page);
@@ -129,7 +129,7 @@ test.describe("a partner's referral", () => {
     await choosePartySize(page, 1);
     await page.getByLabel("Name", { exact: true }).fill("Walk-in Wanda");
     await page.getByLabel("Email", { exact: true }).fill(`wanda-${e2eNow().getTime()}@example.com`);
-    await page.getByRole("button", { name: "Book these spots" }).click();
+    await page.getByRole("button", { name: "Book this seat" }).click();
     await expect(page).toHaveURL(/\/ready\//);
 
     await signInAsOwner(page);

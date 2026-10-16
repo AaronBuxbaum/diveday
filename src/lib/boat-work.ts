@@ -7,7 +7,7 @@ import { urgencyFor } from "./today";
  * boat and the boat's own band on the Divers tab both list these items, with
  * these counts, in this order, so the desk is never told the same boat's state
  * twice and differently. Hazards (who can't board, a missing instructor, a
- * boat clash) stay where they are; this is the "things to sort".
+ * boat clash) stay where they are; Today lists them for the boat beside its other rows.
  *
  * The counts come from one db reader (`src/db/boat-work.ts`); the rules about
  * which of them is worth saying live here, framework-free.
@@ -15,7 +15,10 @@ import { urgencyFor } from "./today";
 export type BoatWorkCode = "missing_sizes" | "ungated_nitrox" | "missing_contact" | "open_orders";
 
 export type BoatWorkCounts = {
-  missingFit: number;
+  /** Asked, with a rented piece left unsized. */
+  missingSize: number;
+  /** Never asked about their own kit. */
+  kitUnasked: number;
   ungatedNitrox: number;
   missingContact: number;
   openOrders: number;
@@ -28,7 +31,18 @@ export type BoatWorkCounts = {
  */
 export type BoatWorkTone = "work" | "warning";
 
-export type BoatWorkItem = { code: BoatWorkCode; count: number; tone: BoatWorkTone };
+/**
+ * One job and how many divers it names. The sizes job carries its two halves
+ * (fourth review, item 36): one line, "1 missing a size · 3 not asked about
+ * kit", because the Gear tab answers both, but never one sum that hides which
+ * conversation the desk is about to have.
+ */
+export type BoatWorkItem = {
+  code: BoatWorkCode;
+  count: number;
+  tone: BoatWorkTone;
+  sizes?: { missing: number; unasked: number };
+};
 
 /**
  * The items worth saying about a boat, in reading order.
@@ -45,7 +59,12 @@ export function boatWorkItems(
 ): BoatWorkItem[] {
   const close = urgencyFor(startsAt, now) !== "later";
   const items: BoatWorkItem[] = [
-    { code: "missing_sizes", count: counts.missingFit, tone: "work" },
+    {
+      code: "missing_sizes",
+      count: counts.missingSize + counts.kitUnasked,
+      tone: "work",
+      sizes: { missing: counts.missingSize, unasked: counts.kitUnasked },
+    },
     // A diver who planned for nitrox and breathes air has shorter
     // no-decompression limits than planned, so this one is a warning
     // (issue #2549, decided 2026-10-16), as Today's `nitrox_gate` already is.

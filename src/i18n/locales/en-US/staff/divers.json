@@ -180,7 +180,16 @@
     "letterOther": "#",
     "pagination": {
       "total": "{count, plural, one {# diver} other {# divers}}"
-    }
+    },
+    "viewNotBack": "Not back in 12 months",
+    "lastDivedGroup": "Most recent dive first",
+    "lastDived": "last dived {date}",
+    "neverDived": "no dives yet",
+    "sortLabel": "Sort:",
+    "sortName": "Name",
+    "sortLastDived": "Last dived",
+    "sortAriaLabel": "Roster order",
+    "downloadList": "Download this list (CSV)"
   },
   "header": {
     "noContactDetails": "No contact details yet",
@@ -201,7 +210,8 @@
     "emergencyContactPhoneLabel": "Emergency contact phone",
     "saving": "Saving…",
     "saveDetails": "Save details",
-    "visits": "{count, plural, one {# visit} other {# visits}}"
+    "visits": "{count, plural, one {# visit} other {# visits}}",
+    "packageBalance": "Package: {left} of {of, plural, one {# dive} other {# dives}} left"
   },
   "bookActivity": {
     "courseOrDiveLabel": "Departure",
@@ -210,7 +220,7 @@
     "bookActivityButton": "Book",
     "noOpenActivities": "No upcoming departure has a seat open.",
     "noEmailNote": "No email on file. Hand this diver their waiver link in person, or add an address to their record.",
-    "bookDeparture": "Book a departure"
+    "bookDeparture": "Add a booking"
   },
   "payments": {
     "shopPaymentFallback": "Shop payment"
@@ -416,6 +426,8 @@
   "notices": {
     "alreadyBooked": "This diver is already booked on that activity.",
     "booked": "Booked. Review it below, then create and send the invoice.",
+    "bookedConfirmed": "Booked, and their confirmation is on its way. Review it below, then create and send the invoice.",
+    "bookedConfirmedNoInvoice": "Booked, and their confirmation is on its way.",
     "bookedNoInvoice": "Booked.",
     "bookedWaiverUndelivered": "Booked, but their waiver wasn’t emailed. Open the trip’s Divers tab to send it or share the link.",
     "bookedIdentityUnconfirmed": "Booked, but the seat is held until you confirm it’s the same person. Open the trip’s Divers tab to confirm it.",
@@ -550,6 +562,8 @@
     "canceled": "canceled",
     "tripCalledOff": "trip called off",
     "noShow": "no-show",
+    "turnedAway": "seen at the desk, turned away{reason, select, medical {: medical} waiver {: waiver} card {: card} age {: age} identity {: identity} payment {: payment} other {}}",
+    "turnedAwayRemoved": "seen at the desk, turned away{reason, select, medical {: medical} waiver {: waiver} card {: card} age {: age} identity {: identity} payment {: payment} other {}}, then removed",
     "notCountedBack": "not counted back aboard",
     "showAll": "Show all {count}",
     "newInvoice": "New invoice"

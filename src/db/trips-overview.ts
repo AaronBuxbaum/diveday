@@ -209,7 +209,8 @@ export async function getTripOverview(
     boarded: pulseBoardedByTrip.get(tripId)?.size ?? 0,
     /** The boat's work as counts, for `boatWorkItems` (src/lib/boat-work.ts). */
     work: {
-      missingFit: work.missingFit.length,
+      missingSize: work.missingSize.length,
+      kitUnasked: work.kitUnasked.length,
       ungatedNitrox: work.ungatedNitrox.length,
       missingContact: work.missingContact.length,
       openOrders: work.openOrders,

@@ -78,7 +78,7 @@ describe("the sender and subject of layer 5's emails", () => {
   it("sends the booking confirmation as the shop, via DiveDay", () => {
     expect(sentAs(confirmation)).toEqual({
       from: '"Blue Mantis via DiveDay" <notifications@ses.dive.day>',
-      subject: "You’re on the boat — Two-Tank Reef",
+      subject: "You’re on the boat: Two-Tank Reef",
     });
   });
 

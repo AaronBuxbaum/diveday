@@ -2,6 +2,7 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
+import { seatName } from "@/lib/held-seat";
 import {
   type NoShowGate,
   noShowGate,
@@ -14,6 +15,7 @@ import { type SimilarDeparture, similarDepartures } from "@/lib/similar-departur
 import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
 import { tripCourseCrewCounts } from "./bookings";
+import { expirePendingCheckoutsForBooking } from "./checkouts";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { onTheWaterByRollCall } from "./manifests";
@@ -68,7 +70,13 @@ export type UndoNoShowOutcome =
         /** The boat has room, but every diver's seat has gone (ADR 20261007-participant-types). */
         | "divers_full"
         | "course_ratio_full"
-        | "trip_cancelled";
+        | "trip_cancelled"
+        /**
+         * The desk turned this diver away and the boat's scheduled start has
+         * passed: they are ashore, and putting them back would show them
+         * aboard (layer 3 re-review, dde-3 #2).
+         */
+        | "turned_away_departed";
     };
 
 /**
@@ -78,7 +86,7 @@ export type UndoNoShowOutcome =
  * `loadActiveStaffRoles` has already proven the person is this shop's, alive
  * and holding an active account, so `isStaff` is the only question left.
  */
-async function activeStaffRecorderId(
+export async function activeStaffRecorderId(
   tx: DbExecutor,
   shopId: string,
   personId: string,
@@ -142,7 +150,9 @@ export async function markBookingNoShow(
         tripId: trips.id,
         tripStatus: trips.status,
         startsAt: trips.startsAt,
-        personName: people.fullName,
+        fullName: people.fullName,
+        identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+        identityBookedAs: bookings.identityBookedAs,
       })
       .from(bookings)
       .innerJoin(trips, and(eq(trips.id, bookings.tripId), liveTrip()))
@@ -160,6 +170,9 @@ export async function markBookingNoShow(
     // board, is simply not found — a staff surface must never learn that a row
     // it may not see exists.
     if (!seat) return { ok: false, reason: "not_found" };
+    // The seat's name: on a held seat the one it was booked under, never the
+    // matched person's (security review 2026-10-16, F1).
+    const personName = seatName(seat.fullName, seat);
 
     const gate = noShowGate({
       bookingStatus: seat.status,
@@ -192,6 +205,8 @@ export async function markBookingNoShow(
       .where(and(eq(bookings.id, seat.id), inArray(bookings.status, [...SEAT_HELD_STATUSES])))
       .returning({ id: bookings.id });
     if (!updated) return { ok: false, reason: "already_marked" };
+    // The released seat is not the diver's to pay for any more (dde-3 #3).
+    await expirePendingCheckoutsForBooking(tx, input.shopId, seat.id);
 
     await tx.insert(activityEvents).values({
       shopId: input.shopId,
@@ -199,10 +214,10 @@ export async function markBookingNoShow(
       bookingId: seat.id,
       actorPersonId: recorder.id,
       code: "booking_no_show",
-      params: { actor: recorder.name, diver: seat.personName },
+      params: { actor: recorder.name, diver: personName },
       occurredAt: now,
     });
-    return { ok: true, bookingId: seat.id, tripId: seat.tripId, personName: seat.personName };
+    return { ok: true, bookingId: seat.id, tripId: seat.tripId, personName };
   });
   if (result.ok) await publishManifestEvent(db, input.shopId, result.tripId);
   return result;
@@ -270,6 +285,7 @@ export async function undoBookingNoShow(
         status: bookings.status,
         tripId: bookings.tripId,
         participantType: bookings.participantType,
+        turnedAwayAt: bookings.turnedAwayAt,
         personName: people.fullName,
       })
       .from(bookings)
@@ -296,12 +312,21 @@ export async function undoBookingNoShow(
         diverCapacity: trips.diverCapacity,
         status: trips.status,
         courseId: trips.courseId,
+        startsAt: trips.startsAt,
       })
       .from(trips)
       .where(and(eq(trips.id, seat.tripId), eq(trips.shopId, input.shopId), liveTrip()))
       .limit(1);
     if (!trip) return { ok: false, reason: "not_found" };
     if (trip.status === "cancelled") return { ok: false, reason: "trip_cancelled" };
+    // A diver the desk turned away was seen ashore. From the scheduled start
+    // (the boundary `turnAwayGate` closes on) putting them back would restore
+    // `checked_in` from the arrival trail and show them aboard a boat that
+    // left without them (dde-3 #2). A plain "Not here" keeps its Undo: that
+    // diver may be walking up as the lines come off.
+    if (seat.turnedAwayAt !== null && now.getTime() >= trip.startsAt.getTime()) {
+      return { ok: false, reason: "turned_away_departed" };
+    }
 
     // Counted under the lock, and counting only the seats somebody else holds:
     // this booking is `no_show` right now, so it is not in the total, and the
@@ -370,7 +395,13 @@ export async function undoBookingNoShow(
     const standing = await standingArrivalStatus(tx, input.shopId, seat.tripId, seat.id);
     const [updated] = await tx
       .update(bookings)
-      .set({ status: standing === "arrived" ? "checked_in" : "booked" })
+      // Back on the list, so no longer turned away either: the reason only
+      // ever sits on a released seat (`bookings_turned_away_is_released`).
+      .set({
+        status: standing === "arrived" ? "checked_in" : "booked",
+        turnedAwayReason: null,
+        turnedAwayAt: null,
+      })
       .where(and(eq(bookings.id, seat.id), eq(bookings.status, "no_show")))
       .returning({ id: bookings.id });
     if (!updated) return { ok: false, reason: "not_marked" };

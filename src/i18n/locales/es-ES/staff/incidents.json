@@ -7,6 +7,15 @@
     "writtenBy": "Escrito por {name}",
     "notTimed": "Aún sin hora"
   },
+  "missingDiver": {
+    "start": "Empezar un informe de buceador desaparecido",
+    "alreadyStarted": "Ya lo empezó {name}.",
+    "alreadyFiled": "Ya lo presentó {name}.",
+    "notMissing": "Ya no figura como sin regresar a bordo.",
+    "notAllowed": "Solo la tripulación de esta salida, los propietarios y los gerentes pueden empezar un informe.",
+    "failed": "El informe no se abrió. Toca de nuevo.",
+    "backToManifest": "Volver al manifiesto"
+  },
   "status": {
     "draft": "Borrador",
     "filed": "Presentado"
@@ -174,6 +183,10 @@
     "crewDetailUnrecorded": "Sin acreditación registrada para su función en {unrecorded} de {sailings, plural, one {# salida de tripulante} other {# salidas de tripulantes}}",
     "crewDetail": "{sailings, plural, one {# salida de tripulante} other {# salidas de tripulantes}}",
     "incidents": "Informes de incidentes",
+    "noCrew": "Zarparon sin tripulación registrada",
+    "noCrewNone": "No hay tripulación registrada en ninguna salida este mes",
+    "noCrewDetail": "de {back}, en la lista de abajo",
+    "noCrewTitle": "Salidas que zarparon sin tripulación registrada",
     "boardingNote": "El recuento del muelle rechaza a un buceador que la verificación de preparación no ha aprobado. Un buceador contado por primera vez en un recuento posterior no está en esta cifra.",
     "incidentsTitle": "Informes de incidentes",
     "incidentsEmpty": "No hay informes de incidentes este mes.",

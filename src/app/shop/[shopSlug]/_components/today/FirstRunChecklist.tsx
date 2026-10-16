@@ -39,7 +39,7 @@ import { shopPath } from "@/lib/staff-notices";
  * hook the onboarding e2e reads to prove there is exactly one.
  *
  * The group exists only while the shop has no departure at all, and never
- * comes back.
+ * comes back. One step outlives it: `ReleaseStillSample`.
  */
 
 export type FirstRunChecklistCopy = {

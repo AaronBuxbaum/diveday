@@ -33,7 +33,7 @@ const FILE_DOORS = [
  * dropped about 28px when the record arrived.
  *
  * - The meta: the contact links' 44px line (`buttonClass` `sm`).
- * - The act: Book a departure, an `md` button, 48px. Contact details is the
+ * - The act: Add a booking, an `md` button, 48px. Contact details is the
  *   first file door below, not a second button.
  * - The story: `BookingStoryRow`s on the ledger's box, their 12px inset
  *   round a date beside a two-line title from `sm` (44px), and the three

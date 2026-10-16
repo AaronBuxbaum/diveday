@@ -26,7 +26,12 @@ import { isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
 import { DOCK_DAY_FIELDS, parseDockDayRhythm } from "@/lib/diver-planning";
-import { MAX_EMERGENCY_LINES, normalizeEmergencyReference } from "@/lib/emergency-reference";
+import {
+  MAX_EMERGENCY_LINES,
+  normalizeCallSign,
+  normalizeEmergencyReference,
+  normalizeMmsi,
+} from "@/lib/emergency-reference";
 import { checkbox, formValue, readForm, text, trimmedText } from "@/lib/form-parse";
 import { parseMinTurnaroundMinutes } from "@/lib/move-preflight";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -83,6 +88,8 @@ const boatForm = z.object({
   inspectionDueOn: trimmedText(),
   registrationExpiresOn: trimmedText(),
   insuranceExpiresOn: trimmedText(),
+  callSign: trimmedText(),
+  mmsi: trimmedText(),
 });
 type BoatForm = z.infer<typeof boatForm>;
 
@@ -324,9 +331,10 @@ function boatDescription(form: BoatForm): string | null {
  * fleet row posts them. Every one optional, and an empty box is a cleared
  * value; anything that is not a whole number of passengers or a real calendar
  * day refuses the save rather than being dropped, so a typo is never stored as
- * "nothing said" (roadmap N-10).
+ * "nothing said" (roadmap N-10). The radio identity rides with them (fourth
+ * review, item 11): an MMSI that is not nine digits refuses the save the same way.
  */
-function boatPapers(form: BoatForm): BoatPapersInput | "invalid" {
+function boatPapers(form: BoatForm): BoatPapersInput | "invalid" | "radio-invalid" {
   const day = (
     name: "inspectionDueOn" | "registrationExpiresOn" | "insuranceExpiresOn",
   ): string | null | "invalid" => {
@@ -352,7 +360,19 @@ function boatPapers(form: BoatForm): BoatPapersInput | "invalid" {
   ) {
     return "invalid";
   }
-  return { certifiedPassengers, inspectionDueOn, registrationExpiresOn, insuranceExpiresOn };
+  const callSign = normalizeCallSign(form.callSign ?? "");
+  const mmsi = normalizeMmsi(form.mmsi ?? "");
+  // Its own refusal: "Provide a boat name and capacity." over a mistyped
+  // MMSI sent the owner looking at the two fields that were fine.
+  if (callSign === "invalid" || mmsi === "invalid") return "radio-invalid";
+  return {
+    certifiedPassengers,
+    inspectionDueOn,
+    registrationExpiresOn,
+    insuranceExpiresOn,
+    callSign,
+    mmsi,
+  };
 }
 
 /**
@@ -382,16 +402,17 @@ function certificateRefusal(page: string, boat: string, refusal: BoatSeatsRefusa
 
 /** Creates a new boat for the shop. */
 export async function createBoatAction(formData: FormData) {
-  const form = readForm(boatForm, formData);
   const session = await requireStaffSession();
   const page = shopPath(session.user.shopSlug, "settings", "boats");
   await settingsBlock(session);
+  const form = readForm(boatForm, formData);
 
   const name = form.name;
   const capacity = Number(form.capacity ?? 0);
   const description = boatDescription(form);
   const papers = boatPapers(form);
 
+  if (papers === "radio-invalid") redirect(noticeUrl(page, "boat-radio-invalid"));
   if (!name || Number.isNaN(capacity) || capacity <= 0 || papers === "invalid") {
     redirect(noticeUrl(page, "boat-invalid"));
   }
@@ -407,10 +428,10 @@ export async function createBoatAction(formData: FormData) {
 
 /** Updates an existing boat: its name, seats, line, certificate and papers. */
 export async function updateBoatAction(formData: FormData) {
-  const form = readForm(boatForm, formData);
   const session = await requireStaffSession();
   const page = shopPath(session.user.shopSlug, "settings", "boats");
   await settingsBlock(session);
+  const form = readForm(boatForm, formData);
 
   const rawBoatId = form.boatId;
   const boatId = typeof rawBoatId === "string" ? uuidParam(rawBoatId) : null;
@@ -419,6 +440,7 @@ export async function updateBoatAction(formData: FormData) {
   const description = boatDescription(form);
   const papers = boatPapers(form);
 
+  if (papers === "radio-invalid") redirect(noticeUrl(page, "boat-radio-invalid"));
   if (!boatId || !name || Number.isNaN(capacity) || capacity <= 0 || papers === "invalid") {
     redirect(noticeUrl(page, "boat-invalid"));
   }
@@ -444,10 +466,10 @@ export async function updateBoatAction(formData: FormData) {
 
 /** Deletes a boat from the shop. */
 export async function deleteBoatAction(formData: FormData) {
-  const form = readForm(boatForm, formData);
   const session = await requireStaffSession();
   const page = shopPath(session.user.shopSlug, "settings", "boats");
   await settingsBlock(session);
+  const form = readForm(boatForm, formData);
 
   const rawBoatId = form.boatId;
   const boatId = typeof rawBoatId === "string" ? uuidParam(rawBoatId) : null;

@@ -179,7 +179,7 @@ describe("EmbedBookedNotice", () => {
    */
   it("says the seat survived an abandoned payment", () => {
     renderNotice({ payNotice: "cancelled" });
-    expect(screen.getByText(/Your spot is safe/)).toBeVisible();
+    expect(screen.getByText(/Your seat is safe/)).toBeVisible();
   });
 
   it("says a used-up code left the seat held and the full price payable", () => {
@@ -189,7 +189,7 @@ describe("EmbedBookedNotice", () => {
 
   it("says nothing about payment when none was attempted", () => {
     renderNotice({});
-    expect(screen.queryByText(/Your spot is safe/)).toBeNull();
+    expect(screen.queryByText(/Your seat is safe/)).toBeNull();
     expect(screen.queryByText(/used up/)).toBeNull();
   });
 });

@@ -1140,4 +1140,70 @@ describe("nextSessionStartByCourse scope", () => {
     const { db, shop } = ctx;
     expect(await nextSessionStartByCourse(db, shop.id, [], "shop")).toEqual(new Map());
   });
+  /** Takes the session's one seat with a copy of a seeded booking. */
+  async function takeTheOnlySeat(tripId: string) {
+    const { db, shop } = ctx;
+    await db.update(trips).set({ capacity: 1 }).where(eq(trips.id, tripId));
+    const [seat] = await db.select().from(bookings).where(eq(bookings.shopId, shop.id)).limit(1);
+    if (!seat) throw new Error("the seeded shop has no bookings");
+    const { id: _id, createdAt: _createdAt, partyLeadBookingId: _lead, ...copy } = seat;
+    await db.insert(bookings).values({ ...copy, tripId, status: "booked" });
+  }
+
+  /**
+   * dive-domain review r4-4, F3: the catalog's "Next Fri, Oct 23" named a
+   * session a diver could not join. The storefront's answer is the first
+   * session that sells a seat: a conditions hold and a full session are
+   * skipped for the next one, and with none left the catalog asks for a date.
+   * The shop's own answer still counts them: they are on its books.
+   */
+  it("gives the storefront the first public session with a seat to sell", async () => {
+    const { db, shop, courseId } = await courseWithTwoSessions();
+    const held = new Date("2031-02-10T14:00:00Z");
+    const full = new Date("2031-02-20T14:00:00Z");
+    for (const startsAt of [held, full]) {
+      const trip = await createTrip(db, {
+        shopId: shop.id,
+        title: "Open course session",
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 3 * 60 * 60 * 1000),
+        capacity: 4,
+        plannedDives: 2,
+      });
+      if (!trip) throw new Error("trip creation failed");
+      await db
+        .update(trips)
+        .set({ courseId, conditionsHold: startsAt === held })
+        .where(eq(trips.id, trip.id));
+      if (startsAt === full) await takeTheOnlySeat(trip.id);
+    }
+    const storefront = await nextSessionStartByCourse(
+      db,
+      shop.id,
+      [courseId],
+      "storefront",
+      FAR_FUTURE,
+    );
+    expect(storefront.get(courseId)).toEqual(PUBLIC_START);
+    const own = await nextSessionStartByCourse(db, shop.id, [courseId], "shop", FAR_FUTURE);
+    expect(own.get(courseId)).toEqual(held);
+  });
+
+  it("gives the storefront no date when every public session ahead is full", async () => {
+    const { db, shop, courseId } = await courseWithTwoSessions();
+    const [open] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.startsAt, PUBLIC_START));
+    if (!open) throw new Error("expected the public session");
+    await takeTheOnlySeat(open.id);
+    const storefront = await nextSessionStartByCourse(
+      db,
+      shop.id,
+      [courseId],
+      "storefront",
+      FAR_FUTURE,
+    );
+    expect(storefront.has(courseId)).toBe(false);
+  });
 });

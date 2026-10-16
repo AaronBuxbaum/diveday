@@ -1,4 +1,16 @@
-import { and, asc, count, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  ne,
+  type SQL,
+  type SQLWrapper,
+  sql,
+} from "drizzle-orm";
 import { cache } from "react";
 import { STAFF_ROLES } from "@/lib/authz";
 import { sellableSeats } from "@/lib/boat-safety";
@@ -29,6 +41,8 @@ import {
   diveSites,
   people,
   personRoles,
+  rollCallCrewEvents,
+  rollCallEvents,
   tripAssignments,
   tripDives,
   tripScheduleDays,
@@ -223,6 +237,12 @@ export type PublicCrewMember = {
   /** What they are doing on *this* boat, or null when the roster did not say. */
   tripRole: TripCrewRole | null;
   languages: SpokenLanguageTag[];
+  /**
+   * Away on a day this departure meets (`diverCrewWithAway`, fourth UX review
+   * item 12). Then the diver reads the role and "to be confirmed", never the
+   * name: we do not promise a person who will not be there.
+   */
+  away?: boolean;
 };
 
 /**
@@ -903,6 +923,13 @@ export async function updateTripConditions(
       holdStarted: patch.conditionsHold === true && !before.conditionsHold,
     };
   });
+}
+
+/** Whether anybody, diver or crew, has a roll-call or boarding event on this trip. */
+export function rollCallStartedOn(tripId: SQLWrapper | string): SQL<boolean> {
+  return sql<boolean>`(exists (select 1 from ${rollCallEvents} where ${rollCallEvents.tripId} = ${tripId}) or exists (select 1 from ${rollCallCrewEvents} where ${rollCallCrewEvents.tripId} = ${tripId}))`.mapWith(
+    Boolean,
+  );
 }
 
 export async function setTripStatus(

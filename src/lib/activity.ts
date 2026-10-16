@@ -1,3 +1,5 @@
+import type { TurnAwayReason } from "./turn-away";
+
 /**
  * **What the shop's trail can say** — the closed set of things an
  * `activity_events` row records, and the names each one needs.
@@ -140,6 +142,14 @@ type ActivityParamShapes = {
    * the other is who the day is still looking for.
    */
   booking_no_show_missing_after_dive: { actor: string; diver: string };
+  /**
+   * The desk saw a diver readiness would not board and turned them away, which
+   * frees the seat as a no-show does (safety sheet 2026-10-15, item 6; H-135).
+   * Its own line, never `booking_no_show`'s: "did not arrive" about somebody
+   * the desk stood in front of is the record an insurer would misread.
+   * `reason` is a category from the seat's own blockers, never the evidence.
+   */
+  booking_turned_away: { actor: string; diver: string; reason: TurnAwayReason };
   /** Somebody was put on the crew for a departure. */
   crew_assigned: { actor: string; crew: string };
   /** …or taken off it. */
@@ -249,6 +259,15 @@ type ActivityParamShapes = {
    * customer's name lives on that row, where an erasure scrubs it.
    */
   order_refunded: { actor: string };
+  /**
+   * A staffer recorded an open invoice as paid over the counter, in cash or on
+   * the shop's card machine (`recordPaymentOnOpenOrder`), or a bench ticket as
+   * paid at pickup. Stripe stops asking for an invoice settled this way and
+   * cannot un-pay it, so the person behind it is worth a line. One code per
+   * method, so the sentence says how without a word passed in English.
+   */
+  order_paid_cash: { actor: string };
+  order_paid_card_machine: { actor: string };
   /**
    * Money a card paid on a checkout DiveDay had already closed, sent back from
    * the Orders index (issue #2335). On the departure the checkout was for.
@@ -385,6 +404,7 @@ export const ACTIVITY_CODES = [
   "course_form_medical_changed",
   "booking_no_show_boarded",
   "booking_no_show_missing_after_dive",
+  "booking_turned_away",
   "identity_confirmed",
   "identity_split",
   "identity_split_off",
@@ -421,6 +441,8 @@ export const ACTIVITY_CODES = [
   "integration_backfill_sent",
   "running_late_from_message",
   "order_refunded",
+  "order_paid_cash",
+  "order_paid_card_machine",
   "paid_after_close_refunded",
   "seat_refunded",
   "payment_waived",

@@ -42,7 +42,7 @@ signedInAsOwner();
  *   because a site cannot be scanned — the reef briefing has its own test
  *   below — but because this scan *books a seat*, and the seeded reef
  *   charter's price and free-seat count are load-bearing for other specs'
- *   "N spots left" text. The one priced charter with no site is the night
+ *   "N seats left" text. The one priced charter with no site is the night
  *   dive, and that is the one gated on a specialty.
  *
  * Its single day also keeps the page to one meeting window rather than the
@@ -104,7 +104,7 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
     await page
       .getByRole("list", { name: "Upcoming trips" })
       .locator("li")
-      // Not `exact`: the row's link is labelled "<title> · N spots left".
+      // Not `exact`: the row's link is labelled "<title> · N seats left".
       .filter({ hasText: BOOKING_TRIP })
       .getByRole("link", { name: BOOKING_TRIP })
       .click();
@@ -121,7 +121,7 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
     // An intro course asks the booker to attest to every diver's age, which a
     // charter does not — so this is one more control the scan above covers.
     await acceptAgeAttestation(page);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Ada/ })).toBeVisible();
     await expectNoA11yViolations(page);
   });
@@ -299,7 +299,7 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       { path: "/shop/blue-mantis/reports", heading: "Money" },
       { path: "/shop/blue-mantis/staffing", heading: "Schedule" },
       { path: "/shop/blue-mantis/courses", heading: "Courses" },
-      { path: "/shop/blue-mantis/waivers", heading: "The release" },
+      { path: "/shop/blue-mantis/waivers", heading: "Waivers and signed records" },
       { path: "/shop/blue-mantis/dive-sites", heading: "Dive-site library" },
       { path: "/shop/blue-mantis/dive-sites/catalog", heading: "DiveDay common dive sites" },
     ]);
@@ -689,7 +689,7 @@ test.describe("automated accessibility scans of the diver bearer-token surfaces"
     await page.getByLabel("Email", { exact: true }).fill(`iris-${e2eNow().getTime()}@example.com`);
     await page.getByLabel("Diver 2 name").fill("Tem Okafor");
     await page.getByLabel("Use the main contact’s email for this diver").check();
-    await page.getByRole("button", { name: "Book these spots" }).click();
+    await page.getByRole("button", { name: "Book 2 seats" }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Iris/ })).toBeVisible();
 
     // Booking lands on the readiness page itself now (ADR
@@ -859,6 +859,8 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
       // Where every "Get set up" door lands, and the `EntryDone` it ends on.
       { path: "/get-set-up", heading: /\S/ },
       { path: "/get-set-up/sent", heading: /\S/ },
+      // DiveDay's door for a diver who lost their link: a list of shops.
+      { path: "/find-your-booking", heading: /\S/ },
       // **A door that has closed** (issue #1123). Every route above is one a
       // person walks *through*, and `EntryDone` is a different composition
       // entirely — a decorative drawn mark in a circle, an `<h1>`, one muted
@@ -977,7 +979,7 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
    * Its own test rather than a leg of the booking scan: the cost is one
    * navigation, not shared setup, and the booking scan books a seat — which
    * this page's departure cannot spare, since its free-seat count is what other
-   * specs read as "N spots left".
+   * specs read as "N seats left".
    */
   test("the reef briefing has no automated a11y violations", async ({ page }) => {
     // Two page loads and one scan; the scan itself measured ~1.5s against a
@@ -986,7 +988,7 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("list", { name: "Upcoming trips" })).toBeVisible();
     // Reached the way a diver reaches it. The row's accessible name carries the
-    // seat count — "<title> · N spots left" — so this matches a fragment of the
+    // seat count — "<title> · N seats left" — so this matches a fragment of the
     // title rather than the whole name, which would go stale the moment a seat
     // sells.
     await page

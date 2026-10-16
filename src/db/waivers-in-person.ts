@@ -2,7 +2,7 @@
  * Waivers: a release signed at the counter, attested by a staff member.
  * Imported through the `./waivers` barrel.
  */
-import { and, desc, eq, isNull, ne } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import {
@@ -27,8 +27,8 @@ import {
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
-import { bookings, people, trips, waiverRecords, waiverTemplates } from "./schema";
-import { shopTimezone } from "./waivers-templates";
+import { bookings, people, trips, waiverRecords } from "./schema";
+import { getCurrentWaiverTemplate, shopTimezone } from "./waivers-templates";
 
 export type InPersonWaiverOutcome =
   | { ok: true; recordId: string; alreadySigned: boolean }
@@ -450,12 +450,7 @@ export async function recordInPersonWaiver(
       guardianRelationship = input.guardian.relationship;
     }
 
-    const [template] = await tx
-      .select()
-      .from(waiverTemplates)
-      .where(and(eq(waiverTemplates.shopId, input.shopId), isNull(waiverTemplates.deletedAt)))
-      .orderBy(desc(waiverTemplates.createdAt))
-      .limit(1);
+    const template = await getCurrentWaiverTemplate(tx, input.shopId);
     if (!template) return { ok: false, reason: "template_not_found" };
 
     const standing = await standingWaiverRecord(tx, {

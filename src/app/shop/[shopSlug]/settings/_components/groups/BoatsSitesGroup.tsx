@@ -5,9 +5,17 @@ import { BOATS_SITES_GROUP, SettingsGroup, type SettingsView } from "./kit";
 /**
  * The Boats & sites group. The emergency reference and the dock-day rhythm,
  * which were rows here, are pages of their own (#1854); the dock day's
- * site-override read went with it, so the group no longer reads anything.
+ * site-override read went with it. The one figure it shows, the boats still
+ * missing a radio identity, the page reads and hands in.
  */
-export function BoatsSitesGroup({ view }: { view: SettingsView }) {
+export function BoatsSitesGroup({
+  view,
+  boatsWithoutRadioIdentity,
+}: {
+  view: SettingsView;
+  /** Live boats with neither a call sign nor an MMSI (review B1), named on the fleet's door. */
+  boatsWithoutRadioIdentity: number;
+}) {
   const { shop, shopSlug, t } = view;
   return (
     <SettingsGroup group={BOATS_SITES_GROUP} label={t(BOATS_SITES_GROUP.labelKey)}>
@@ -18,7 +26,15 @@ export function BoatsSitesGroup({ view }: { view: SettingsView }) {
             left alone: turning the option back on brings the fleet back
             exactly as it was. */}
         {shop.hasBoatDiving ? (
-          <SettingsDoorRow href={`/shop/${shopSlug}/settings/boats`} heading={t("boats.heading")} />
+          <SettingsDoorRow
+            href={`/shop/${shopSlug}/settings/boats`}
+            heading={t("boats.heading")}
+            note={
+              boatsWithoutRadioIdentity > 0
+                ? t("boats.radioIdentityMissing", { count: boatsWithoutRadioIdentity })
+                : undefined
+            }
+          />
         ) : null}
 
         {/* A reference library the daily surfaces consume — the board's add

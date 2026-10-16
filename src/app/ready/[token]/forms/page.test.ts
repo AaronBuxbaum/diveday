@@ -163,7 +163,7 @@ describe("the course-form page", () => {
 
     expect(html).toContain("Course form 1");
     expect(html).toContain("Form 1 of 2");
-    expect(html).toContain(BODY.replace("'", "&#x27;"));
+    expect(html).toContain(BODY.replaceAll("'", "&#x27;"));
     expect(html).toContain(`As booked: ${ctx.seat.fullName}`);
     // An adult signs alone: no guardian card.
     expect(html).not.toContain('name="guardianName"');
@@ -443,7 +443,7 @@ describe("the forms-only link", () => {
     const html = await rendered(token);
     expect(html).toContain("This link no longer works");
     expect(html).toContain(
-      `Ask ${ctx.shop.name.replace("'", "&#x27;")} to send your course forms again.`,
+      `Ask ${ctx.shop.name.replaceAll("'", "&#x27;")} to send your course forms again.`,
     );
     expect(html).not.toContain("Course form 1");
   });

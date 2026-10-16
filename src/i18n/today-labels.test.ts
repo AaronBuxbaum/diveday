@@ -4,7 +4,10 @@ import {
   crewClashDetailText,
   crewClashSailedDetailText,
   daySpineSummaryText,
+  helpRequestDetailText,
+  reviewsPendingSubjectText,
   rollCallGapDetailText,
+  unansweredMessagesSubjectText,
 } from "./today-labels";
 
 /**
@@ -165,6 +168,36 @@ describe("a missing-person row", () => {
           ? "Recaps are held until the roll call is corrected."
           : "Los resúmenes quedan retenidos hasta que se corrija el pase de lista.",
       );
+    }
+  });
+});
+
+// Fourth review, item 43: "Diego Alvarez · Diego Alvarez asked for help: Carry
+// gear." said the name twice and capitalized mid-sentence, and Needs you rows
+// ended with and without a period. One rule: a row's sentence ends with a
+// period, in both locales; the name that leads a row is a label and does not.
+describe("a Needs you row's sentence", () => {
+  const locales = [staffTranslator("en-US"), staffTranslator("es-ES")];
+
+  it("does not repeat the name the row already leads with", () => {
+    const en = staffTranslator("en-US");
+    expect(helpRequestDetailText(en, { kind: "carry_gear", status: "requested" })).toBe(
+      "Asked for help: carry gear.",
+    );
+    expect(helpRequestDetailText(en, { kind: "find_group", status: "acknowledged" })).toBe(
+      "Waiting for help: finding their group.",
+    );
+  });
+
+  it("ends with a period, the count-only rows included", () => {
+    for (const t of locales) {
+      for (const text of [
+        helpRequestDetailText(t, { kind: "first_timer", status: "requested" }),
+        reviewsPendingSubjectText(t, 2),
+        unansweredMessagesSubjectText(t, 3),
+      ]) {
+        expect(text).toMatch(/\.$/);
+      }
     }
   });
 });

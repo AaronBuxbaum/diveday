@@ -1,5 +1,5 @@
 import { TONE_PANEL_CLASS, TONE_PANEL_IN_OVERLAY_CLASS } from "@/components/ui/card";
-import { type EmergencyReference, hasEmergencyReference } from "@/lib/emergency-reference";
+import { type DepartureEmergencyReference, hasEmergencyReference } from "@/lib/emergency-reference";
 
 /**
  * **The card a crew reads during, on every surface that survives a bad day.**
@@ -20,6 +20,8 @@ export type EmergencyReferenceCopy = {
   /** The absence, stated, when the shop has recorded nothing — never a hidden panel. */
   empty: string;
   vesselLabel: string;
+  callSignLabel: string;
+  mmsiLabel: string;
   shoreContactLabel: string;
   planLabel: string;
 };
@@ -31,7 +33,8 @@ export function EmergencyReferenceCard({
   headingId = "emergency-reference-heading",
   inOverlay = false,
 }: {
-  reference: EmergencyReference;
+  /** The departure's own boat rides on it when there is one (`emergencyReferenceForDeparture`). */
+  reference: DepartureEmergencyReference;
   copy: EmergencyReferenceCopy;
   className?: string;
   /** Unique when several responsive/print copies share a page. */
@@ -58,7 +61,7 @@ export function EmergencyReferenceCard({
       <h2 id={headingId} className="text-base font-semibold text-danger-strong">
         {copy.heading}
       </h2>
-      {filled ? (
+      {filled || reference.boat ? (
         <div className="mt-3 flex flex-col gap-2 text-sm">
           {reference.lines.map((line) => (
             <p key={`${line.label}-${line.phone}`} className="flex flex-wrap gap-x-2">
@@ -82,7 +85,33 @@ export function EmergencyReferenceCard({
           ))}
           {/* `text-pretty` on the two free-text lines: the shop's own words
               wrap, and in Spanish the vessel line ended on one word. */}
-          {reference.vessel ? (
+          {/* **The departure's own boat**, off its row in Settings > Boats
+              (fourth review, item 11): the name, then the two facts read
+              over the radio, each on its own labelled line so a figure is
+              never read as the other. The shop's vessel line is the fallback
+              for a departure on no boat, and for a boat whose row holds no
+              radio fact yet (review B1), where it prints unlabelled under
+              the boat's name, a note on this boat rather than a second vessel. */}
+          {reference.boat ? (
+            <>
+              <p className="text-pretty">
+                <span className="font-medium">{copy.vesselLabel}</span> {reference.boat.name}
+              </p>
+              {reference.boat.callSign ? (
+                <p>
+                  <span className="font-medium">{copy.callSignLabel}</span>{" "}
+                  <span className="font-mono">{reference.boat.callSign}</span>
+                </p>
+              ) : null}
+              {reference.boat.mmsi ? (
+                <p>
+                  <span className="font-medium">{copy.mmsiLabel}</span>{" "}
+                  <span className="font-mono tabular-nums">{reference.boat.mmsi}</span>
+                </p>
+              ) : null}
+              {reference.vessel ? <p className="text-pretty">{reference.vessel}</p> : null}
+            </>
+          ) : reference.vessel ? (
             <p className="text-pretty">
               <span className="font-medium">{copy.vesselLabel}</span> {reference.vessel}
             </p>
@@ -101,7 +130,8 @@ export function EmergencyReferenceCard({
             </div>
           ) : null}
         </div>
-      ) : (
+      ) : null}
+      {filled ? null : (
         // Never nothing: a silently empty panel is indistinguishable from a shop
         // that has no numbers. It states the absence and asks for nothing —
         // this reader is offshore, with no signal and usually no permission to

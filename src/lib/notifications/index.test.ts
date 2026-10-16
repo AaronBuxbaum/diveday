@@ -83,7 +83,7 @@ describe("notify", () => {
       Destination: { ToAddresses: ["delivered+booking@dive.day"] },
       Content: {
         Simple: {
-          Subject: { Data: "You’re on the boat — Two-Tank Reef", Charset: "UTF-8" },
+          Subject: { Data: "You’re on the boat: Two-Tank Reef", Charset: "UTF-8" },
         },
       },
     });
@@ -391,7 +391,7 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
       Destination: { ToAddresses: ["delivered+booking@dive.day"] },
       Content: {
         Simple: {
-          Subject: { Data: "You’re on the boat — Two-Tank Reef", Charset: "UTF-8" },
+          Subject: { Data: "You’re on the boat: Two-Tank Reef", Charset: "UTF-8" },
         },
       },
     });
@@ -765,6 +765,39 @@ describe("waitlistInviteEmail", () => {
     expect(email.html).toContain('href="https://diveday.example/s/blue-mantis/trips/trip-1"');
     expect(email.html).toContain("&lt;Reef &quot;Special&quot;&gt;");
     expect(email.html).toContain("Blue Mantis &amp; Co.");
+  });
+});
+
+describe("waitlistInviteEmail for a party and for a rolled lead", () => {
+  const base = {
+    locale: "en-US" as const,
+    diverName: "Nora Quinn",
+    shopName: "Blue Mantis",
+    tripTitle: "Saturday Two-Tank",
+    // Saturday Oct 24, 8:00 AM in New York.
+    startsAt: new Date("2026-10-24T12:00:00.000Z"),
+    endsAt: new Date("2026-10-24T15:00:00.000Z"),
+    timezone: "America/New_York",
+    bookingUrl: "https://diveday.example/s/blue-mantis/trips/trip-2",
+    unsubscribeUrl: "https://diveday.example/unsubscribe/tok_abc123",
+  };
+
+  it("offers a waiting party its seats together (fourth review, item 34)", () => {
+    const email = waitlistInviteEmail({ ...base, partySize: 2 });
+    expect(email.subject).toBe("2 seats opened up on Saturday Two-Tank");
+    expect(email.text).toContain("2 seats just opened on Saturday Two-Tank");
+  });
+
+  // "has sailed", not "filled": the roll carries every date that sailed with
+  // leads, and one may have sailed with a seat free (dive-domain review r4-4, N6).
+  it("says the date they asked for has sailed and this one has room (fourth review, item 31)", () => {
+    const email = waitlistInviteEmail({
+      ...base,
+      sailedStartsAt: new Date("2026-10-17T12:00:00.000Z"),
+    });
+    expect(email.text).toMatch(/Sat,\sOct\s17 has sailed\. Sat,\sOct\s24 has room/);
+    expect(email.text).not.toContain("just opened");
+    expect(email.html).toContain("<strong>Saturday Two-Tank</strong>");
   });
 });
 

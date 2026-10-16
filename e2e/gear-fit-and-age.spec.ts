@@ -378,7 +378,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     await page.getByLabel("Name").fill(diverName);
     await page.getByLabel("Email").fill(`late-bloomer-${stamp}@example.com`);
     await acceptAgeAttestation(page);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     // The confirmation heading greets by first name only ("...boat, Late!").
     await expect(
       page.getByRole("heading", {

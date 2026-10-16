@@ -232,7 +232,11 @@ function OfflineDiverRow({
               name and a diver still walking down the dock are the
               same row. */}
             {diver.notHere ? (
-              <Badge tone="neutral">{t("shared.offlineManifest.single.notHereBadge")}</Badge>
+              <Badge tone="neutral">
+                {diver.turnedAway
+                  ? t("shared.offlineManifest.single.turnedAwayBadge")
+                  : t("shared.offlineManifest.single.notHereBadge")}
+              </Badge>
             ) : null}
             {/* The live roll call's capsule for the same facts, strongest
               first (`medicalWarningChips`): a rider riding only under a

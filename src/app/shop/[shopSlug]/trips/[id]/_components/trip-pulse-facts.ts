@@ -5,6 +5,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type BoatWorkItem, boatWorkItems } from "@/lib/boat-work";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import { shopPath } from "@/lib/staff-notices";
+import type { TodayAction } from "@/lib/today";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -19,7 +20,12 @@ import { boatClashText } from "./trip-crew-notes";
 type TripOverview = NonNullable<Awaited<ReturnType<typeof getTripOverview>>>;
 
 /** One quiet link in the Divers tab's pulse: a fact about the boat and the door to its fix. */
-export type TripPulseFact = { text: string; href: string; tone?: "danger" | "warning" };
+export type TripPulseFact = {
+  text: string;
+  href: string;
+  tone?: "danger" | "warning";
+  key?: string;
+};
 
 /**
  * Capacity moved into the masthead ring in slice 5e. Non-seat pulse facts
@@ -38,6 +44,7 @@ export function tripPulseFacts({
   tripId,
   startsAt,
   now,
+  needs,
   t,
 }: {
   pulseNeeded: boolean;
@@ -53,6 +60,11 @@ export function tripPulseFacts({
   /** When the boat leaves, and the page's clock: the boat's work asks both. */
   startsAt: Date;
   now: Date;
+  /**
+   * Today's own rows for this departure (`getDepartureNeeds`), or null when
+   * the boat is outside Today's window and the band says the boat's work alone.
+   */
+  needs: readonly TodayAction[] | null;
   t: StaffTranslator;
 }): TripPulseFact[] {
   return pulseNeeded
@@ -124,18 +136,39 @@ export function tripPulseFacts({
               },
             ]
           : []),
-        // **The boat's work** (third review, item 4): the same items, counts
-        // and words Today's rows for this boat carry, from one reader
-        // (`boatWorkItems`). Work, not hazards, so it reads in the pulse's
-        // neutral ink below the facts that hold the boat up, except nitrox
-        // asked for with no verified card, which carries its warning tone.
-        ...boatWorkItems(pulse.work, { startsAt, now }).map((item) => ({
-          text: boatWorkText(t, item),
-          href: boatWorkHref(item, { shopSlug, tripId }),
-          ...(item.tone === "warning" ? { tone: "warning" as const } : {}),
-        })),
+        // **What Needs you lists for this boat** (fourth review, item 36):
+        // Today's own rows, so "Needs you · 7" here is the seven Today shows,
+        // in the words it shows them. Work, not hazards, so it reads in the
+        // pulse's neutral ink below the facts that hold the boat up; a hazard
+        // Today also lists (a blocked diver's waiver) is both a line above and
+        // a row in the list, as it is one tap away on Today. Outside Today's
+        // window, the boat's work alone (`boatWorkItems`, third review item 4):
+        // the same items, counts and words, except nitrox asked for with no
+        // verified card, which carries its warning tone.
+        ...(needs
+          ? needs.map((action) => ({
+              key: action.id,
+              text: todayRowText(action),
+              href: awayFromThisPage(action.href, shopPath(shopSlug, "trips", tripId)),
+            }))
+          : boatWorkItems(pulse.work, { startsAt, now }).map((item) => ({
+              text: boatWorkText(t, item),
+              href: boatWorkHref(item, { shopSlug, tripId }),
+              ...(item.tone === "warning" ? { tone: "warning" as const } : {}),
+            }))),
       ]
     : [];
+}
+
+/** A Today row as one line: the person, then the sentence, as the row reads on Today. */
+function todayRowText(action: TodayAction): string {
+  if (action.aboutDeparture || !action.subject) return action.detail;
+  return action.detail ? `${action.subject} · ${action.detail}` : action.subject;
+}
+
+/** A Today row that opens this very page lands on its roster instead, never a dead tap. */
+function awayFromThisPage(href: string, tripHref: string): string {
+  return href === tripHref ? `${tripHref}#roster` : href;
 }
 
 /**
@@ -169,7 +202,7 @@ export function tripPulseFactsOf(
   >,
   page: Pick<
     Parameters<typeof tripPulseFacts>[0],
-    "liveBoatClashes" | "shopSlug" | "tripId" | "now" | "t"
+    "liveBoatClashes" | "shopSlug" | "tripId" | "now" | "t" | "needs"
   >,
 ): TripPulseFact[] {
   return tripPulseFacts({
