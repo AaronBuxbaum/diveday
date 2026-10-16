@@ -486,6 +486,40 @@ describe("previewWeeklyDigest", () => {
     expect(ownerKinds.includes("gear_service")).toBe(facts.grades.reports.gearServiceDue > 0);
   });
 
+  /**
+   * **The boat worth a deal, and last year's week** (fifth loop, item 29):
+   * both are money calls, so the owner reads them and the crew does not.
+   */
+  it("names the week's emptiest boat for the owner only, linked to its deal form", async () => {
+    const { db, shop, owner, captain, monday } = await context();
+    const facts = await readWeeklyDigestFacts(db, shop, monday);
+    expect(facts.grades.staff.thisWeek.weakest).toBeNull();
+    expect(facts.grades.staff.money.lastYearRevenueCents).toBeNull();
+    const weakest = facts.grades.reports.thisWeek.weakest;
+    if (weakest) {
+      expect(weakest.booked * 2).toBeLessThan(weakest.capacity);
+      expect(weakest.startsAt.getTime()).toBeGreaterThan(monday.getTime());
+    }
+    const thisWeekOf = async (personId: string) => {
+      const preview = await previewWeeklyDigest(db, {
+        shop,
+        personId,
+        origin: ORIGIN,
+        now: monday,
+      });
+      if (preview?.kind !== "weekly_digest") throw new Error("no preview");
+      return preview.sections.find((section) => section.kind === "this_week");
+    };
+    const ownerWeek = await thisWeekOf(owner.personId);
+    if (weakest && ownerWeek?.kind === "this_week") {
+      expect(ownerWeek.weakest?.url).toBe(
+        `${ORIGIN}/shop/${shop.slug}/trips/${weakest.tripId}?view=details#last-minute-deal`,
+      );
+    }
+    const crewWeek = await thisWeekOf(captain.personId);
+    if (crewWeek?.kind === "this_week") expect(crewWeek.weakest).toBeNull();
+  });
+
   it("previews nothing for somebody who is not staff here", async () => {
     const { db, shop, monday } = await context();
     expect(

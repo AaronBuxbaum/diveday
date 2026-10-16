@@ -1163,6 +1163,8 @@ const weeklyDigestSectionSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("money"),
     revenueCents: z.number().int(),
+    /** The same week a year before (fifth loop, item 29); absent on an older payload. */
+    lastYearRevenueCents: z.number().int().nullable().optional(),
     tipsCents: z.number().int().min(0),
     owed: z.object({
       orderCents: z.number().int().min(0),
@@ -1179,6 +1181,20 @@ const weeklyDigestSectionSchema = z.discriminatedUnion("kind", [
     seatsFilled: z.number().int().min(0),
     seats: z.number().int().min(0),
     url: z.url().max(2_000),
+    /**
+     * The week's emptiest boat no deal has gone out for, and the trip's deal
+     * form (fifth loop, item 29); absent on an older payload.
+     */
+    weakest: z
+      .object({
+        title: z.string().trim().min(1).max(200),
+        startsAt: z.date(),
+        booked: z.number().int().min(0),
+        capacity: z.number().int().min(1),
+        url: z.url().max(2_000),
+      })
+      .nullable()
+      .optional(),
   }),
   z.object({
     kind: z.literal("waivers"),

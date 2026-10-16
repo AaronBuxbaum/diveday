@@ -25,6 +25,7 @@ import {
   WEEKLY_DIGEST_SECTION_PATHS,
   type WeeklyDigestFactGrades,
   type WeeklyDigestSection,
+  weakestDeparture,
   weeklyDigestGrade,
   weeklyDigestSections,
   weeklyDigestWanted,
@@ -48,6 +49,7 @@ import {
   weeklyDigestSends,
 } from "./schema";
 import { getTodayWork } from "./today";
+import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
@@ -266,13 +268,21 @@ export async function readWeeklyDigestFacts(
 ): Promise<{ weeks: DigestWeeks; grades: WeeklyDigestFactGrades }> {
   const weeks = digestWeeks(now, shop.timezone);
 
-  const lastWeekReport = await getMonthlyReport(
-    db,
-    shop.id,
-    weeks.lastWeek.startUtc,
-    weeks.lastWeek.endUtc,
-    { timeZone: shop.timezone, currency: shop.currency },
-  );
+  // Last week and the same week a year before (fifth loop, item 29), read
+  // the one way so the two figures cannot be on different bases. 364 days
+  // keeps the weekdays aligned: Monday to Monday.
+  const yearBefore = (date: Date) => new Date(date.getTime() - 364 * 86_400_000);
+  const reportOpts = { timeZone: shop.timezone, currency: shop.currency };
+  const [lastWeekReport, yearAgoReport] = await Promise.all([
+    getMonthlyReport(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc, reportOpts),
+    getMonthlyReport(
+      db,
+      shop.id,
+      yearBefore(weeks.lastWeek.startUtc),
+      yearBefore(weeks.lastWeek.endUtc),
+      reportOpts,
+    ),
+  ]);
 
   // One readiness pass, shared with Today below so the two cannot disagree.
   const evidence = await inHorizonReadiness(db, shop.id, now);
@@ -312,15 +322,27 @@ export async function readWeeklyDigestFacts(
     );
   const [reportsToday, staffToday] = await Promise.all([todayQueue(true), todayQueue(false)]);
 
-  const [bookingsMade, reviewsReceived, awaiting, dateRequestsWaiting, owed, incidents] =
-    await Promise.all([
-      countBookingsMade(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
-      countReviewsReceived(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
-      readReviewsAwaitingModeration(db, shop.id),
-      countDateRequestsWaiting(db, shop.id, weeks, weeks.weekOf),
-      readOwed(db, shop, now),
-      countIncidentsFiled(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
-    ]);
+  const [
+    bookingsMade,
+    reviewsReceived,
+    awaiting,
+    dateRequestsWaiting,
+    owed,
+    incidents,
+    neverSentDeal,
+  ] = await Promise.all([
+    countBookingsMade(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
+    countReviewsReceived(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
+    readReviewsAwaitingModeration(db, shop.id),
+    countDateRequestsWaiting(db, shop.id, weeks, weeks.weekOf),
+    readOwed(db, shop, now),
+    countIncidentsFiled(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
+    tripIdsNeverSentLastMinuteDeal(
+      db,
+      shop.id,
+      thisWeekTrips.map((trip) => trip.id),
+    ),
+  ]);
   // Today's own rows, counted rather than detected twice (item 24).
   const countKinds = (kinds: ReadonlySet<TodayActionKind>) =>
     reportsToday.actions.filter((action) => kinds.has(action.kind)).length;
@@ -330,6 +352,7 @@ export async function readWeeklyDigestFacts(
       departures: thisWeekTrips.length,
       seatsFilled: thisWeekTrips.reduce((sum, trip) => sum + trip.booked, 0),
       seats: thisWeekTrips.reduce((sum, trip) => sum + trip.capacity, 0),
+      weakest: null,
     },
     waiversOutstanding: { divers: owingDivers.size, departures: owingTrips.size },
     reviews: { received: reviewsReceived, awaitingModeration: awaiting.count },
@@ -340,6 +363,11 @@ export async function readWeeklyDigestFacts(
     grades: {
       reports: {
         ...shared,
+        // The boat worth a deal is a money call, so it is the Reports grade's.
+        thisWeek: {
+          ...shared.thisWeek,
+          weakest: weakestDeparture(thisWeekTrips, neverSentDeal, now),
+        },
         lastWeek: {
           bookingsMade,
           departures: lastWeekReport.trips.length,
@@ -351,6 +379,8 @@ export async function readWeeklyDigestFacts(
         // the Reports page cannot disagree about what the week took.
         money: {
           revenueCents: lastWeekReport.revenueCents,
+          // Quiet until the shop sailed that week a year ago.
+          lastYearRevenueCents: yearAgoReport.trips.length > 0 ? yearAgoReport.revenueCents : null,
           tipsCents: lastWeekReport.tipsCents,
           owed: {
             orderCents: owed.orders.cents,
@@ -397,10 +427,23 @@ export function digestSectionsWithLinks(
   origin: string,
   shopSlug: string,
 ): WeeklyDigestEmailSection[] {
-  return sections.map((section) => ({
-    ...section,
-    url: `${origin}${shopPath(shopSlug, ...WEEKLY_DIGEST_SECTION_PATHS[section.kind])}`,
-  }));
+  return sections.map((section) => {
+    const url = `${origin}${shopPath(shopSlug, ...WEEKLY_DIGEST_SECTION_PATHS[section.kind])}`;
+    if (section.kind !== "this_week") return { ...section, url };
+    const { weakest, ...rest } = section;
+    return {
+      ...rest,
+      url,
+      // The trip's own deal form, as Today's open-seats row links it.
+      weakest: weakest && {
+        title: weakest.title,
+        startsAt: weakest.startsAt,
+        booked: weakest.booked,
+        capacity: weakest.capacity,
+        url: `${origin}${shopPath(shopSlug, "trips", weakest.tripId)}?view=details#last-minute-deal`,
+      },
+    };
+  });
 }
 
 /** Where a staffer changes their own answer. */

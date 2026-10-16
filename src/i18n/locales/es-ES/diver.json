@@ -5379,12 +5379,15 @@
         "tips": "{amount} en propinas para repartir con la tripulación.",
         "link": "Abrir Dinero",
         "owedOrders": "Por cobrar {amount} en {count, plural, one {# pedido abierto} other {# pedidos abiertos}}.",
-        "owedSeats": "Por cobrar {amount} en {count, plural, one {# plaza que zarpó sin pagar} other {# plazas que zarparon sin pagar}}."
+        "owedSeats": "Por cobrar {amount} en {count, plural, one {# plaza que zarpó sin pagar} other {# plazas que zarparon sin pagar}}.",
+        "tookVsLastYear": "Las salidas de la semana pasada dejaron {amount} después de impuestos, {direction, select, more {{diff} más que} less {{diff} menos que} other {lo mismo que}} la misma semana del año pasado."
       },
       "thisWeek": {
         "heading": "Esta semana, {range}",
         "board": "{departures, plural, one {# salida} other {# salidas}} en la agenda, {filled} de {seats} plazas reservadas ({percent} %).",
-        "link": "Abrir la agenda"
+        "link": "Abrir la agenda",
+        "weakest": "{when}: {title} tiene {booked} de {capacity} plazas reservadas.",
+        "dealLink": "Enviar una oferta de última hora"
       },
       "waivers": {
         "heading": "Exenciones",

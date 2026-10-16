@@ -5379,12 +5379,15 @@
         "tips": "{amount} in tips to pass on to the crew.",
         "link": "Open Money",
         "owedOrders": "Owed {amount} on {count, plural, one {# open order} other {# open orders}}.",
-        "owedSeats": "Owed {amount} on {count, plural, one {# seat that sailed unpaid} other {# seats that sailed unpaid}}."
+        "owedSeats": "Owed {amount} on {count, plural, one {# seat that sailed unpaid} other {# seats that sailed unpaid}}.",
+        "tookVsLastYear": "Last week’s departures took {amount} after tax, {direction, select, more {{diff} more than} less {{diff} less than} other {the same as}} the same week last year."
       },
       "thisWeek": {
         "heading": "This week, {range}",
         "board": "{departures, plural, one {# departure} other {# departures}} on the board, {filled} of {seats} seats booked ({percent}%).",
-        "link": "Open the schedule"
+        "link": "Open the schedule",
+        "weakest": "{when}: {title} has {booked} of {capacity} booked.",
+        "dealLink": "Send a last-minute deal"
       },
       "waivers": {
         "heading": "Waivers",

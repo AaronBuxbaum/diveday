@@ -9,6 +9,7 @@ import {
   seatFillPercent,
   WEEKLY_DIGEST_CRON_CRONTAB,
   type WeeklyDigestFacts,
+  weakestDeparture,
   weeklyDigestGrade,
   weeklyDigestMayBeDueSomewhere,
   weeklyDigestSections,
@@ -17,13 +18,14 @@ import {
 
 const QUIET: WeeklyDigestFacts = {
   lastWeek: { bookingsMade: 0, departures: 0, seatsFilled: 0, seats: 0 },
-  thisWeek: { departures: 0, seatsFilled: 0, seats: 0 },
+  thisWeek: { departures: 0, seatsFilled: 0, seats: 0, weakest: null },
   waiversOutstanding: { divers: 0, departures: 0 },
   reviews: { received: 0, awaitingModeration: 0 },
   dateRequestsWaiting: 0,
   overdueTodayItems: 0,
   money: {
     revenueCents: 0,
+    lastYearRevenueCents: null,
     tipsCents: 0,
     owed: { orderCents: 0, orderCount: 0, seatCents: 0, seatCount: 0 },
     currency: "usd",
@@ -249,21 +251,24 @@ describe("weeklyDigestSections", () => {
   it("speaks for an off-season week with only the coming week on the board", () => {
     const sections = weeklyDigestSections({
       ...QUIET,
-      thisWeek: { departures: 1, seatsFilled: 0, seats: 8 },
+      thisWeek: { departures: 1, seatsFilled: 0, seats: 8, weakest: null },
     });
-    expect(sections).toEqual([{ kind: "this_week", departures: 1, seatsFilled: 0, seats: 8 }]);
+    expect(sections).toEqual([
+      { kind: "this_week", departures: 1, seatsFilled: 0, seats: 8, weakest: null },
+    ]);
   });
 
   it("orders every section when every one has something", () => {
     const sections = weeklyDigestSections({
       lastWeek: { bookingsMade: 1, departures: 1, seatsFilled: 1, seats: 1 },
-      thisWeek: { departures: 1, seatsFilled: 1, seats: 2 },
+      thisWeek: { departures: 1, seatsFilled: 1, seats: 2, weakest: null },
       waiversOutstanding: { divers: 3, departures: 1 },
       reviews: { received: 2, awaitingModeration: 0 },
       dateRequestsWaiting: 2,
       overdueTodayItems: 5,
       money: {
         revenueCents: 412_000,
+        lastYearRevenueCents: null,
         tipsCents: 39_500,
         owed: { orderCents: 128_300, orderCount: 2, seatCents: 0, seatCount: 0 },
         currency: "usd",
@@ -295,6 +300,7 @@ describe("the money section", () => {
   it("says what last week took, the tips to pass on and what the shop is owed", () => {
     const money = {
       revenueCents: 412_000,
+      lastYearRevenueCents: 358_000,
       tipsCents: 39_500,
       owed: { orderCents: 128_300, orderCount: 2, seatCents: 0, seatCount: 0 },
       currency: "usd",
@@ -308,6 +314,7 @@ describe("the money section", () => {
       ...QUIET,
       money: {
         revenueCents: 0,
+        lastYearRevenueCents: null,
         tipsCents: 0,
         owed: { orderCents: 0, orderCount: 0, seatCents: 9_500, seatCount: 1 },
         currency: "usd",
@@ -362,5 +369,40 @@ describe("weeklyDigestGrade", () => {
     expect(weeklyDigestGrade(["captain"])).toBe("staff");
     expect(weeklyDigestGrade(["instructor", "divemaster"])).toBe("staff");
     expect(weeklyDigestGrade([])).toBe("staff");
+  });
+});
+
+/**
+ * **The boat worth a deal** (fifth loop, item 29): the Monday email names
+ * this week's emptiest departure no deal has gone out for.
+ */
+describe("weakestDeparture", () => {
+  const NOW = new Date("2026-10-05T12:00:00Z");
+  const boat = (id: string, startsAt: string, booked: number, capacity = 8) => ({
+    id,
+    title: id,
+    startsAt: new Date(startsAt),
+    booked,
+    capacity,
+  });
+
+  it("picks the smallest share booked, earliest on a tie", () => {
+    const trips = [
+      boat("thu", "2026-10-08T12:00:00Z", 1),
+      boat("tue", "2026-10-06T12:00:00Z", 1),
+      boat("wed", "2026-10-07T12:00:00Z", 3),
+    ];
+    const weakest = weakestDeparture(trips, new Set(["thu", "tue", "wed"]), NOW);
+    expect(weakest?.tripId).toBe("tue");
+    expect(weakest).toMatchObject({ booked: 1, capacity: 8 });
+  });
+
+  it("skips a boat that had its deal, one at least half full, and one already gone", () => {
+    const trips = [
+      boat("dealt", "2026-10-06T12:00:00Z", 0),
+      boat("half", "2026-10-07T12:00:00Z", 4),
+      boat("gone", "2026-10-05T11:00:00Z", 0),
+    ];
+    expect(weakestDeparture(trips, new Set(["half", "gone"]), NOW)).toBeNull();
   });
 });

@@ -128,7 +128,13 @@ export type WeeklyDigestFacts = {
     seatsFilled: number;
     seats: number;
   };
-  thisWeek: { departures: number; seatsFilled: number; seats: number };
+  thisWeek: {
+    departures: number;
+    seatsFilled: number;
+    seats: number;
+    /** The week's emptiest boat no deal has gone out for; Reports grade only. */
+    weakest: WeakestDeparture | null;
+  };
   /** Divers on this week's boats still owing a waiver, and on how many boats. */
   waiversOutstanding: { divers: number; departures: number };
   reviews: { received: number; awaitingModeration: number };
@@ -143,6 +149,11 @@ export type WeeklyDigestFacts = {
    */
   money: {
     revenueCents: number;
+    /**
+     * What the same week a year before took, on the same basis (fifth loop,
+     * item 29); null until the shop has a departure in that week.
+     */
+    lastYearRevenueCents: number | null;
     tipsCents: number;
     /** What the shop is owed (`readOwed`, fourth UX review, item 23). */
     owed: WeeklyDigestOwed;
@@ -160,6 +171,56 @@ export type WeeklyDigestFacts = {
    */
   safety: WeeklyDigestSafety;
 };
+
+/** A departure this week worth a last-minute deal (fifth loop, item 29). */
+export type WeakestDeparture = {
+  tripId: string;
+  title: string;
+  startsAt: Date;
+  booked: number;
+  capacity: number;
+};
+
+/**
+ * **The boat to send a deal for**: of this week's departures still to leave,
+ * the one with the smallest share of its seats booked, under half, that no
+ * last-minute deal has gone out for. Earliest first on a tie, since the
+ * nearer boat has less time to fill. Null when every boat is at least half
+ * full or already had its deal.
+ */
+export function weakestDeparture(
+  trips: readonly {
+    id: string;
+    title: string;
+    startsAt: Date;
+    booked: number;
+    capacity: number;
+  }[],
+  neverSentDeal: ReadonlySet<string>,
+  now: Date,
+): WeakestDeparture | null {
+  let weakest: WeakestDeparture | null = null;
+  for (const trip of trips) {
+    if (trip.startsAt.getTime() <= now.getTime()) continue;
+    if (trip.capacity <= 0 || trip.booked * 2 >= trip.capacity) continue;
+    if (!neverSentDeal.has(trip.id)) continue;
+    const share = trip.booked / trip.capacity;
+    const best = weakest ? weakest.booked / weakest.capacity : Number.POSITIVE_INFINITY;
+    if (
+      share < best ||
+      (weakest && share === best && trip.startsAt.getTime() < weakest.startsAt.getTime())
+    ) {
+      weakest = {
+        tripId: trip.id,
+        title: trip.title,
+        startsAt: trip.startsAt,
+        booked: trip.booked,
+        capacity: trip.capacity,
+      };
+    }
+  }
+  return weakest;
+}
 
 export type WeeklyDigestOwed = {
   orderCents: number;
@@ -194,6 +255,7 @@ export function weeklyDigestGrade(roles: readonly Role[]): keyof WeeklyDigestFac
 export function noMoney(currency: string): WeeklyDigestFacts["money"] {
   return {
     revenueCents: 0,
+    lastYearRevenueCents: null,
     tipsCents: 0,
     owed: { orderCents: 0, orderCount: 0, seatCents: 0, seatCount: 0 },
     currency,
@@ -219,11 +281,18 @@ export type WeeklyDigestSection =
   | {
       kind: "money";
       revenueCents: number;
+      lastYearRevenueCents: number | null;
       tipsCents: number;
       owed: WeeklyDigestOwed;
       currency: string;
     }
-  | { kind: "this_week"; departures: number; seatsFilled: number; seats: number }
+  | {
+      kind: "this_week";
+      departures: number;
+      seatsFilled: number;
+      seats: number;
+      weakest: WeakestDeparture | null;
+    }
   | { kind: "waivers"; divers: number; departures: number }
   | { kind: "reviews"; received: number; awaitingModeration: number }
   | { kind: "date_requests"; waiting: number }
