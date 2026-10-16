@@ -100,12 +100,13 @@ export function DiverFacts({
     return (
       <div className={`grid gap-2 text-base${columns === 2 ? " sm:grid-cols-2" : ""}`}>
         <p className="text-muted">{t("manifest.identityWithheldDetails")}</p>
-        {diver.emergencyContactName && diver.emergencyContactPhone ? (
+        {/* Its own field, never `emergencyContact*` (H7, Y3). */}
+        {diver.heldEmergencyContact ? (
           <p>
             <span className="font-bold">{t("manifest.heldEmergencyContactLabel")}</span>
             <span className="mt-0.5 block text-muted">
-              {diver.emergencyContactName} ·{" "}
-              <span className="whitespace-nowrap">{diver.emergencyContactPhone}</span>
+              {diver.heldEmergencyContact.name} ·{" "}
+              <span className="whitespace-nowrap">{diver.heldEmergencyContact.phone}</span>
             </span>
           </p>
         ) : null}

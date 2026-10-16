@@ -325,6 +325,13 @@ export type OfflineManifestPayload = {
            */
           identityWithheld?: true;
           /**
+           * Beside `identityWithheld` only: the contact the desk recorded for
+           * the person on the held seat (issue #2145), in a field of its own
+           * so the view never reads `emergencyContact*` for it (H7, Y3).
+           * Optional and additive (no record-version bump).
+           */
+          heldEmergencyContact?: { name: string; phone: string };
+          /**
            * **The desk released this seat** (`notHere`, issue #1209) — the
            * other thing the counter can say about a booking, and the one a
            * crew with no signal has no other way to learn.
@@ -943,6 +950,9 @@ export function serializeManifests(
         bookingId: diver.bookingId,
         fullName: diver.fullName,
         ...(diver.identityWithheld ? { identityWithheld: true as const } : {}),
+        ...(diver.identityWithheld && diver.heldEmergencyContact
+          ? { heldEmergencyContact: diver.heldEmergencyContact }
+          : {}),
         emergencyContactName: diver.emergencyContactName,
         emergencyContactPhone: diver.emergencyContactPhone,
         rentalFit: diver.rentalFit,

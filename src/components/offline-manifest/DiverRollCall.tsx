@@ -337,12 +337,14 @@ function OfflineDiverRow({
                 <>
                   <p className="text-muted">{t("manifest.identityWithheldDetails")}</p>
                   {/* The desk's contact for the person on the seat (issue
-                    #2145), saved in place of the matched record's. */}
-                  {diver.emergencyContactName && diver.emergencyContactPhone ? (
+                    #2145), saved in a field of its own, and only on a row
+                    the save withheld: nothing from `emergencyContact*` is
+                    ever read here (H7, Y3). */}
+                  {diver.identityWithheld && diver.heldEmergencyContact ? (
                     <p>
                       <span className="font-bold">{t("manifest.heldEmergencyContactLabel")}</span>
                       <span className="mt-0.5 block text-muted">
-                        {`${diver.emergencyContactName} · ${diver.emergencyContactPhone}`}
+                        {`${diver.heldEmergencyContact.name} · ${diver.heldEmergencyContact.phone}`}
                       </span>
                     </p>
                   ) : null}

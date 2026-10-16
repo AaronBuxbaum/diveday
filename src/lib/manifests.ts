@@ -174,6 +174,14 @@ export type ManifestDiverInput = {
    */
   identityWithheld?: boolean;
   /**
+   * Set only by `withholdHeldSeatParticulars`, beside `identityWithheld`: the
+   * contact the desk recorded for the person on this held seat (issue #2145).
+   * Its own field, never `emergencyContact*`, which a withheld row leaves
+   * empty, so no surface can show the matched record's next of kin as the
+   * seat's (dive-domain review H7, security review Y3).
+   */
+  heldEmergencyContact?: { name: string; phone: string } | null;
+  /**
    * Set beside `identityWithheld`: withholding dropped at least one blocker
    * measured against the matched person, so the crew line says other holds may
    * still apply. Deliberately a boolean with no category: which hold it was

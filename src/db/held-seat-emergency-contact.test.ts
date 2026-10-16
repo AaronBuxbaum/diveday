@@ -139,10 +139,9 @@ describe("a held seat's emergency contact", () => {
     const { manifest, row } = await manifestRow(bookingId, trip.id);
     const shown = withholdHeldSeatParticulars(row);
     expect(shown.identityWithheld).toBe(true);
-    expect([shown.emergencyContactName, shown.emergencyContactPhone]).toEqual([
-      "Rosa Vega",
-      "+34 600 333 444",
-    ]);
+    // Its own field, so no surface can mistake it for the record's (H7, Y3).
+    expect([shown.emergencyContactName, shown.emergencyContactPhone]).toEqual([null, null]);
+    expect(shown.heldEmergencyContact).toEqual({ name: "Rosa Vega", phone: "+34 600 333 444" });
 
     const saved = JSON.stringify(
       serializeManifests(

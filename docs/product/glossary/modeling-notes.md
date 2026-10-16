@@ -70,7 +70,8 @@
   `src/lib/held-seat.ts`; issue #1690). In the withheld contact's place stands the **held seat's own
   emergency contact**, which the desk records on the roster for the person in front of them
   (`bookings.held_emergency_contact_*`, issue #2145): written on the booking, never on the matched
-  record, shown on the manifest, its sheet and the crew phone's copy, moved onto the new record at a
+  record, shown on the manifest, its sheet and the crew phone's copy from a field of its own
+  (`heldEmergencyContact`, never `emergencyContact*`, which a withheld row leaves empty), moved onto the new record at a
   split from whichever moving seat holds it (two different ones refuse the split), and at a confirm copied onto a record with none; beside a different one, the staffer
   picks which stands in the armed "Same person", which refuses until they do. The Gear tab packs nothing of the matched diver's for it
   either: its booked-as name, no sizes and no verified nitrox card until the desk confirms who it

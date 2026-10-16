@@ -124,9 +124,10 @@ export function withholdHeldSeatParticulars(diver: ManifestDiver): ManifestDiver
     moreHoldsBehindConfirmation: dropped > 0,
     email: null,
     // The matched record's next of kin never; the one the desk recorded for
-    // the person on this seat (issue #2145) stands in its place.
-    emergencyContactName: diver.identityClaim?.heldEmergencyContact?.name ?? null,
-    emergencyContactPhone: diver.identityClaim?.heldEmergencyContact?.phone ?? null,
+    // the person on this seat (issue #2145) rides in a field of its own (H7).
+    emergencyContactName: null,
+    emergencyContactPhone: null,
+    heldEmergencyContact: diver.identityClaim?.heldEmergencyContact ?? null,
     rentalFit: { state: "not_recorded" },
     nitroxRequested: false,
     age: null,

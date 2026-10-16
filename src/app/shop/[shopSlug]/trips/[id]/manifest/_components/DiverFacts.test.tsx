@@ -286,8 +286,9 @@ describe("DiverFacts, drawn on its own", () => {
       <DiverFacts
         diver={diver({
           identityWithheld: true,
-          emergencyContactName: "Rosa Vega",
-          emergencyContactPhone: "+34 600 333 444",
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+          heldEmergencyContact: { name: "Rosa Vega", phone: "+34 600 333 444" },
         })}
         locale="en-US"
         timezone="America/New_York"
@@ -298,5 +299,23 @@ describe("DiverFacts, drawn on its own", () => {
     expect(screen.getByText(t("manifest.heldEmergencyContactLabel"))).toBeInTheDocument();
     expect(screen.getByText(/Rosa Vega/)).toBeInTheDocument();
     expect(screen.getByText(t("manifest.identityWithheldDetails"))).toBeInTheDocument();
+  });
+
+  it("prints nothing from the record's contact on a held seat, whatever reaches it (H7)", () => {
+    render(
+      <DiverFacts
+        diver={diver({
+          identityWithheld: true,
+          emergencyContactName: "Pilar Vega",
+          emergencyContactPhone: "+34 600 111 222",
+        })}
+        locale="en-US"
+        timezone="America/New_York"
+        columns={2}
+        t={t}
+      />,
+    );
+    expect(screen.queryByText(/Pilar Vega/)).toBeNull();
+    expect(screen.queryByText(t("manifest.heldEmergencyContactLabel"))).toBeNull();
   });
 });
