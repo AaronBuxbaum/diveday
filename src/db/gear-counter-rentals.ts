@@ -453,6 +453,11 @@ export async function createCounterRental(
             personId: person.id,
             reservedFrom,
             reservedUntil,
+            // The rental's identity is this transaction's stamp (see
+            // `sameCounterRental`), so it is the database's `now()`, never the
+            // app clock: a pinned clock gives two rentals one instant and the
+            // tickets would merge.
+            createdAt: sql`now()`,
           })
           .returning({ id: gearReservations.id });
         if (!row) throw new Error("createCounterRental: insert returned no row");
