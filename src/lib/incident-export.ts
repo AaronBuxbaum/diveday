@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
 import type { Certification, NitroxCertification, SpecialtyCertification } from "@/db/schema";
+import { type ActivityCode, activityParams } from "./activity";
 import type { DepthUnit } from "./depth-units";
 import { withholdHeldSeatParticulars } from "./held-seat";
+import type { IncidentKind, IncidentSeverity } from "./incident-reports";
 import {
   type RollCallCheckpoint,
   type RollCallLabel,
@@ -327,7 +329,59 @@ export type IncidentTimelineEntry =
       teamNumber: number;
       memberNames: string[];
       recordedByName: string;
+    }
+  /**
+   * A seat added, removed or moved **after the departure's scheduled start**
+   * (safety sheet 2026-10-15, item 7): the roster section prints who is on the
+   * boat now, and a seat taken off after the boat left would otherwise vanish
+   * from the one document an investigator compares the head count against.
+   * Before the start, the roster is still being made and is not this log's
+   * business. Names as the shop's activity trail recorded them at the time.
+   */
+  | {
+      kind: "roster_change";
+      occurredAt: string;
+      /** A roster change is about the departure, not about a checkpoint. */
+      checkpoint: null;
+      action: IncidentRosterChangeAction;
+      /** Whose seat. */
+      subjectName: string;
+      /** Who made the change; the diver themselves for a self-cancel. */
+      recordedByName: string;
     };
+
+/** What happened to a seat, in the timeline's words (`roster_change`). */
+export type IncidentRosterChangeAction = "added" | "removed" | "moved_away" | "moved_here";
+
+/**
+ * One incident report on the departure, as the log lists it (safety sheet
+ * 2026-10-15, item 5): that it exists and where it stands, **never what it
+ * says**. What happened and who was hurt stay behind the report's own gate;
+ * this list only stops a log being handed over that is silent about a report
+ * the shop holds.
+ */
+export type IncidentLogReport = {
+  /** Plumbing for the link; never printed and never hashed. */
+  reportId: string;
+  status: "draft" | "filed";
+  /** Null on a draft that does not say yet. */
+  kind: IncidentKind | null;
+  severity: IncidentSeverity | null;
+  filedAt: string | null;
+  filedByName: string | null;
+  addendaCount: number;
+  createdAt: string;
+  createdByName: string;
+};
+
+/**
+ * Which recipe {@link incidentExportContentHash} follows. Version 1 is every
+ * log printed before roster changes and incident reports joined the document;
+ * version 2 hashes both, and the version itself. A printout carries its
+ * version, so an old one is still checked against the facts it was made from.
+ */
+export const INCIDENT_EXPORT_HASH_VERSION = 2;
+export type IncidentExportHashVersion = 1 | 2;
 
 export type IncidentExportDocument = {
   meta: {
@@ -371,6 +425,10 @@ export type IncidentExportDocument = {
   preDepartureCheck: IncidentPreDepartureCheckEntry[];
   /** Every stored roll-call event and crew count, oldest first. Empty is stated by the UI. */
   timeline: IncidentTimelineEntry[];
+  /** The departure's incident reports, oldest first: a list, never their contents. */
+  incidentReports: IncidentLogReport[];
+  /** The recipe {@link contentHash} was made with, printed beside it. */
+  hashVersion: IncidentExportHashVersion;
   /**
    * SHA-256 (hex) over the canonical JSON of the document's **printed facts**,
    * shown in the footer. Tamper-*evidence*, not a signature: re-generating the
@@ -398,6 +456,59 @@ export type IncidentTimelineEventInput = {
   occurredAt: Date;
   createdAt: Date;
 };
+
+/** One roster act from the shop's activity trail (`roster_change`). */
+export type IncidentRosterChangeInput = {
+  action: IncidentRosterChangeAction;
+  subjectName: string;
+  recordedByName: string;
+  occurredAt: Date;
+};
+
+/**
+ * The activity-trail codes that change who holds a seat on this departure,
+ * and what each one did. A no-show is left out on purpose: it changes nothing
+ * about who is on the roster, and roll call already records who was aboard.
+ */
+const ROSTER_CHANGE_BY_CODE = {
+  seat_added: "added",
+  seat_added_walk_in: "added",
+  seat_added_from_trip_link: "added",
+  rider_added_at_dock: "added",
+  booking_restored: "added",
+  booking_removed: "removed",
+  seat_self_cancelled: "removed",
+  seat_self_refunded: "removed",
+  party_seat_self_cancelled: "removed",
+  party_seat_self_refunded: "removed",
+  seat_moved_away: "moved_away",
+  seat_moved_here: "moved_here",
+} as const satisfies Partial<Record<ActivityCode, IncidentRosterChangeAction>>;
+
+/** Every code {@link rosterChangeFromActivity} reads, for the query that loads them. */
+export const ROSTER_CHANGE_CODES = Object.keys(ROSTER_CHANGE_BY_CODE) as ActivityCode[];
+
+/**
+ * One activity-trail line as a roster change, or null when it is not one (an
+ * erased line among them). Whose seat is the `diver` the line names; a diver
+ * cancelling their own seat is named only as the actor, so they are both.
+ */
+export function rosterChangeFromActivity(row: {
+  code: string;
+  params: unknown;
+  occurredAt: Date;
+}): IncidentRosterChangeInput | null {
+  if (!Object.hasOwn(ROSTER_CHANGE_BY_CODE, row.code)) return null;
+  const action = ROSTER_CHANGE_BY_CODE[row.code as keyof typeof ROSTER_CHANGE_BY_CODE];
+  const params = activityParams(row.params);
+  const recordedByName = params.actor ?? "";
+  return {
+    action,
+    subjectName: params.diver ?? recordedByName,
+    recordedByName,
+    occurredAt: row.occurredAt,
+  };
+}
 
 export type IncidentDiverEvidenceInput = {
   bookingId: string;
@@ -445,6 +556,13 @@ export type IncidentExportInput = {
     label: string;
     check?: { occurredAt: Date; recordedByName: string };
   }>;
+  /**
+   * Seat adds, removals and moves on this departure, oldest first, whenever
+   * made: the builder keeps those at or after the scheduled start.
+   */
+  rosterChanges?: readonly IncidentRosterChangeInput[];
+  /** The departure's reports, oldest first (`listDepartureLogIncidentReports`). */
+  incidentReports?: readonly IncidentLogReport[];
   generatedAt: Date;
   generatedByName: string;
 };
@@ -751,6 +869,22 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
       occurredAt: event.occurredAt,
       createdAt: event.createdAt,
     })),
+    // A seat changed once the boat was due out. The input arrives in the
+    // trail's own order, and the sort is stable, so a tie keeps it.
+    ...(input.rosterChanges ?? [])
+      .filter((change) => change.occurredAt.getTime() >= departure.trip.startsAt.getTime())
+      .map((change) => ({
+        entry: {
+          kind: "roster_change" as const,
+          occurredAt: change.occurredAt.toISOString(),
+          checkpoint: null,
+          action: change.action,
+          subjectName: change.subjectName,
+          recordedByName: change.recordedByName,
+        } satisfies IncidentTimelineEntry,
+        occurredAt: change.occurredAt,
+        createdAt: change.occurredAt,
+      })),
   ]
     .sort(timelineOrder)
     .map(({ entry }) => entry);
@@ -823,9 +957,11 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
       recordedByName: item.check?.recordedByName ?? null,
     })),
     timeline,
-  };
+    incidentReports: (input.incidentReports ?? []).map((report) => ({ ...report })),
+    hashVersion: INCIDENT_EXPORT_HASH_VERSION,
+  } satisfies Omit<IncidentExportDocument, "contentHash">;
 
-  return { ...body, contentHash: incidentExportContentHash(body) };
+  return { ...body, contentHash: incidentExportContentHash(body, body.hashVersion) };
 }
 
 /**
@@ -844,9 +980,18 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
  * the person as they stand today, not from the day's records, so a promotion
  * after the dive would otherwise change the code under a printout of the same
  * day, and every log printed before the field existed would stop matching.
+ *
+ * **Versioned** ({@link INCIDENT_EXPORT_HASH_VERSION}). Version 1 is the recipe
+ * every log printed before 2026-10-16 was sealed with: no roster changes, no
+ * incident reports, no version. Asked for version 1, this drops exactly those,
+ * so an old printout still checks against a fresh export of the same records.
+ * Version 2 adds both, and the version number itself, so no version-2 code can
+ * pass for a version-1 one.
  */
 export function incidentExportContentHash(
-  body: Omit<IncidentExportDocument, "contentHash">,
+  body: Omit<IncidentExportDocument, "contentHash" | "incidentReports" | "hashVersion"> &
+    Partial<Pick<IncidentExportDocument, "incidentReports">>,
+  version: IncidentExportHashVersion = INCIDENT_EXPORT_HASH_VERSION,
 ): string {
   const { tripId: _tripId, shopSlug: _shopSlug, ...meta } = body.meta;
   const facts = {
@@ -856,7 +1001,23 @@ export function incidentExportContentHash(
     crew: body.crew.map(({ currentRatings: _currentRatings, ...entry }) => entry),
     executedDives: body.executedDives,
     preDepartureCheck: body.preDepartureCheck,
-    timeline: body.timeline,
   };
-  return createHash("sha256").update(JSON.stringify(facts)).digest("hex");
+  if (version === 1) {
+    const timeline = body.timeline.filter((entry) => entry.kind !== "roster_change");
+    return createHash("sha256")
+      .update(JSON.stringify({ ...facts, timeline }))
+      .digest("hex");
+  }
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        hashVersion: version,
+        ...facts,
+        timeline: body.timeline,
+        incidentReports: (body.incidentReports ?? []).map(
+          ({ reportId: _reportId, ...report }) => report,
+        ),
+      }),
+    )
+    .digest("hex");
 }

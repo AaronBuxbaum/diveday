@@ -4,6 +4,12 @@ import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
 import { getIncidentExport } from "./incident-export";
+import {
+  addIncidentAddendum,
+  fileIncidentReport,
+  saveIncidentDraft,
+  startIncidentReport,
+} from "./incident-reports";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
 import {
   createChecklistItem,
@@ -12,7 +18,7 @@ import {
   recordPreDepartureCheck,
 } from "./pre-departure-check";
 import { createCertification, reviewCertification } from "./readiness";
-import { shops, waiverRecords } from "./schema";
+import { activityEvents, shops, waiverRecords } from "./schema";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -304,5 +310,126 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
       status: "verified",
       reviewedByName: staff.fullName,
     });
+  });
+});
+
+/**
+ * **A seat changed after the boat was due out, and the reports the shop
+ * holds** (safety sheet 2026-10-15, items 5 and 7), read from the records
+ * every other surface writes.
+ */
+describe("the departure log's roster changes and incident reports", () => {
+  it("lists a seat removed after the scheduled start, and not one changed before it", async () => {
+    const { db, shop, reef, staff } = await exportContext();
+    const minutes = (n: number) => new Date(reef.startsAt.getTime() + n * 60_000);
+    await db.insert(activityEvents).values([
+      {
+        shopId: shop.id,
+        tripId: reef.id,
+        actorPersonId: staff.id,
+        code: "seat_added",
+        params: { actor: staff.fullName, diver: "Early Bird" },
+        occurredAt: minutes(-90),
+      },
+      {
+        shopId: shop.id,
+        tripId: reef.id,
+        actorPersonId: staff.id,
+        code: "booking_removed",
+        params: { actor: staff.fullName, diver: "Late Leaver" },
+        occurredAt: minutes(20),
+      },
+      // A no-show changes no seat, and an erased line names nobody.
+      {
+        shopId: shop.id,
+        tripId: reef.id,
+        actorPersonId: staff.id,
+        code: "booking_no_show",
+        params: { actor: staff.fullName, diver: "Late Leaver" },
+        occurredAt: minutes(25),
+      },
+      {
+        shopId: shop.id,
+        tripId: reef.id,
+        actorPersonId: staff.id,
+        code: "redacted",
+        params: {},
+        occurredAt: minutes(30),
+      },
+    ]);
+
+    const doc = await getIncidentExport(db, shop.id, reef.id, staff.id);
+    if (!doc) throw new Error("expected a document");
+    const changes = doc.timeline.filter((entry) => entry.kind === "roster_change");
+    expect(changes).toEqual([
+      {
+        kind: "roster_change",
+        occurredAt: minutes(20).toISOString(),
+        checkpoint: null,
+        action: "removed",
+        subjectName: "Late Leaver",
+        recordedByName: staff.fullName,
+      },
+    ]);
+  });
+
+  it("lists the departure's reports by where they stand, and never what they say", async () => {
+    const { db, shop, reef, staff } = await exportContext();
+    const input = { shopId: shop.id, tripId: reef.id, actorPersonId: staff.id };
+    const filed = await startIncidentReport(db, input);
+    if (!filed.ok) throw new Error("expected a draft");
+    const secret = "Diver surfaced coughing after a fast ascent from 18 m.";
+    await saveIncidentDraft(db, {
+      ...input,
+      reportId: filed.reportId,
+      fields: {
+        occurredAt: nowDate(),
+        diveSiteId: null,
+        locationText: "North wall mooring",
+        whatHappened: secret,
+        kind: "injury",
+        severity: "moderate",
+        firstAidGiven: true,
+        oxygenGiven: false,
+        oxygenMinutes: null,
+        emergencyServicesCalled: false,
+        handoverKind: "diver",
+        handoverDetail: null,
+        handedOverAt: null,
+        followUp: null,
+      },
+    });
+    expect(await fileIncidentReport(db, { ...input, reportId: filed.reportId })).toEqual({
+      ok: true,
+    });
+    await addIncidentAddendum(db, {
+      ...input,
+      reportId: filed.reportId,
+      body: "Called back: fine.",
+    });
+    const draft = await startIncidentReport(db, input);
+    if (!draft.ok) throw new Error("expected a second draft");
+
+    const doc = await getIncidentExport(db, shop.id, reef.id, staff.id);
+    if (!doc) throw new Error("expected a document");
+    expect(doc.incidentReports).toHaveLength(2);
+    expect(doc.incidentReports.find((r) => r.reportId === filed.reportId)).toMatchObject({
+      status: "filed",
+      kind: "injury",
+      severity: "moderate",
+      filedByName: staff.fullName,
+      addendaCount: 1,
+    });
+    expect(doc.incidentReports.find((r) => r.reportId === draft.reportId)).toMatchObject({
+      status: "draft",
+      kind: null,
+      filedAt: null,
+      createdByName: staff.fullName,
+      addendaCount: 0,
+    });
+    const printed = JSON.stringify(doc);
+    expect(printed).not.toContain(secret);
+    expect(printed).not.toContain("North wall mooring");
+    expect(printed).not.toContain("Called back: fine.");
   });
 });

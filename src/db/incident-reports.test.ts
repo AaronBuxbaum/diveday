@@ -11,6 +11,7 @@ import {
   addIncidentPerson,
   fileIncidentReport,
   getIncidentReport,
+  listDepartureLogIncidentReports,
   listShopIncidentReports,
   listTripIncidentReports,
   listUnfiledIncidentDrafts,
@@ -477,6 +478,24 @@ describe("who reads what", () => {
     expect(
       (await listShopIncidentReports(db, shop.id, f.owner.id, ...september)).map((row) => row.id),
     ).not.toContain(started.reportId);
+  });
+
+  it("lists a departure's reports for its log to owners and managers only", async () => {
+    const { db, shop } = ctx;
+    const f = await fixture(db, shop.id);
+    const started = await startIncidentReport(db, {
+      shopId: shop.id,
+      tripId: f.trip.id,
+      actorPersonId: f.crew.id,
+    });
+    if (!started.ok) throw new Error("expected a draft");
+    const forOwner = await listDepartureLogIncidentReports(db, shop.id, f.trip.id, f.owner.id);
+    expect(forOwner.map((row) => row.reportId)).toContain(started.reportId);
+    // The writer reads their own report, but not the departure's list of them.
+    expect(await listDepartureLogIncidentReports(db, shop.id, f.trip.id, f.crew.id)).toEqual([]);
+    expect(await listDepartureLogIncidentReports(db, OTHER_SHOP, f.trip.id, f.owner.id)).toEqual(
+      [],
+    );
   });
 
   it("lists the shop's unfiled drafts, oldest first, to owners and managers only", async () => {

@@ -6237,6 +6237,26 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "today-incident-unfiled", scheme);
       });
 
+      // The log's last section with a report on it (safety sheet 2026-10-15,
+      // item 5): an unfiled draft says so and who started it, and links to it.
+      test(`the departure log lists its incident reports (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        const tripPath = new URL(page.url()).pathname;
+        await openTripAbout(page);
+        await page
+          .getByRole("region", { name: "Incident reports" })
+          .getByRole("button", { name: "Report an incident" })
+          .click();
+        await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
+        await page.goto(`${tripPath}/log`);
+        const section = page.locator("section", {
+          has: page.getByRole("heading", { name: "Incident reports" }),
+        });
+        await section.getByText(/^Draft not filed, started by /).waitFor();
+        await section.scrollIntoViewIfNeeded();
+        await capture(page, "departure-log-incident-reports", scheme);
+      });
+
       // The month's Safety tab beside Reports: roll calls, dock marks, card
       // checks written past, crew credentials and the month's incident
       // reports, read from what the shop already records.

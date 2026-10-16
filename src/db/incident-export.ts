@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, gte, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
 import {
@@ -6,17 +6,21 @@ import {
   type IncidentBuddyTeamEventInput,
   type IncidentBuddyTeamInput,
   type IncidentExportDocument,
+  type IncidentRosterChangeInput,
   type IncidentTimelineEventInput,
+  ROSTER_CHANGE_CODES,
+  rosterChangeFromActivity,
 } from "@/lib/incident-export";
 import { canPersonExportIncidentRecord } from "./authz";
 import { listTripBuddyTeamEvents, listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb } from "./client";
 import { listExecutedDives } from "./executed-dives";
+import { listDepartureLogIncidentReports } from "./incident-reports";
 import { getTripManifests } from "./manifests";
 import { survivingPersonNames } from "./people";
 import { latestPreDepartureChecksForTrip, listChecklistItemsForTrip } from "./pre-departure-check";
 import { listTripReadiness } from "./readiness";
-import { bookings, people, rollCallCrewEvents, rollCallEvents } from "./schema";
+import { activityEvents, bookings, people, rollCallCrewEvents, rollCallEvents } from "./schema";
 import { getShopById } from "./shops";
 
 /**
@@ -50,7 +54,8 @@ export async function getIncidentExport(
 ): Promise<IncidentExportDocument | null> {
   if (!(await canPersonExportIncidentRecord(db, shopId, generatedByPersonId))) return null;
   const manifests = await getTripManifests(db, shopId, tripId);
-  if (!manifests || manifests.length === 0) return null;
+  const departure = manifests?.[0];
+  if (!manifests || !departure) return null;
 
   const recorders = alias(people, "recorders");
   const [shop, readinessRows, generator, diverEventRows, crewEventRows, executedDiveRows] =
@@ -195,12 +200,37 @@ export async function getIncidentExport(
   // manifest drops them: this document states the pairing as it stood for the
   // people who were aboard, and the trail below is where a cancelled member's
   // membership survives.
-  const [teamRows, teamEventRows, checklistItems, checklistChecks] = await Promise.all([
-    listTripBuddyTeams(db, shopId, tripId),
-    listTripBuddyTeamEvents(db, shopId, tripId),
-    listChecklistItemsForTrip(db, shopId, tripId),
-    latestPreDepartureChecksForTrip(db, shopId, tripId),
-  ]);
+  const [teamRows, teamEventRows, checklistItems, checklistChecks, rosterRows, reportRows] =
+    await Promise.all([
+      listTripBuddyTeams(db, shopId, tripId),
+      listTripBuddyTeamEvents(db, shopId, tripId),
+      listChecklistItemsForTrip(db, shopId, tripId),
+      latestPreDepartureChecksForTrip(db, shopId, tripId),
+      // Seats changed once the boat was due out (safety sheet 2026-10-15,
+      // item 7), as the shop's trail recorded them. `seq` breaks a tie on the
+      // instant: this document is hashed, so its order cannot be a coin toss.
+      db
+        .select({
+          code: activityEvents.code,
+          params: activityEvents.params,
+          occurredAt: activityEvents.occurredAt,
+        })
+        .from(activityEvents)
+        .where(
+          and(
+            eq(activityEvents.shopId, shopId),
+            eq(activityEvents.tripId, tripId),
+            inArray(activityEvents.code, ROSTER_CHANGE_CODES),
+            gte(activityEvents.occurredAt, departure.trip.startsAt),
+          ),
+        )
+        .orderBy(asc(activityEvents.occurredAt), asc(activityEvents.seq)),
+      listDepartureLogIncidentReports(db, shopId, tripId, generatedByPersonId),
+    ]);
+  const rosterChanges = rosterRows.flatMap((row): IncidentRosterChangeInput[] => {
+    const change = rosterChangeFromActivity(row);
+    return change ? [change] : [];
+  });
   const buddyTeams: IncidentBuddyTeamInput[] = teamRows.map((team) => ({
     teamId: team.teamId,
     members: team.members.flatMap((member): IncidentBuddyTeamInput["members"][number][] =>
@@ -278,6 +308,13 @@ export async function getIncidentExport(
     })),
     buddyTeams,
     buddyTeamEvents,
+    rosterChanges,
+    // A list, never a report's contents (safety sheet 2026-10-15, item 5).
+    incidentReports: reportRows.map((report) => ({
+      ...report,
+      filedAt: report.filedAt?.toISOString() ?? null,
+      createdAt: report.createdAt.toISOString(),
+    })),
     preDepartureCheck: checklistItems.map((item) => {
       const check = checklistChecks.get(item.id);
       return {

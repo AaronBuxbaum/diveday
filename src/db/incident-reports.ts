@@ -840,6 +840,67 @@ export async function listUnfiledIncidentDrafts(
     .orderBy(asc(incidentReports.createdAt), asc(creators.fullName), asc(incidentReports.id));
 }
 
+/** Who filed a report, read by name beside it on the departure log. */
+const filers = alias(people, "incident_filers");
+
+/** One report as the departure log lists it: where it stands, never what it says. */
+export type DepartureLogIncidentReport = {
+  reportId: string;
+  status: IncidentReportStatus;
+  kind: IncidentKind | null;
+  severity: IncidentSeverity | null;
+  filedAt: Date | null;
+  filedByName: string | null;
+  addendaCount: number;
+  createdAt: Date;
+  createdByName: string;
+};
+
+/**
+ * **A departure's reports, for its log** (safety sheet 2026-10-15, item 5),
+ * oldest first: kind, severity, when filed and by whom, how many addenda, and
+ * who started an unfiled draft. Never what happened, nor who was involved.
+ * Only for a reader who may already read every report (owners and managers),
+ * re-read live here; anyone else gets nothing, so the log widens nobody's
+ * view. Reads the departure without `liveTrip()`: a report outlives it.
+ */
+export async function listDepartureLogIncidentReports(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  viewerPersonId: string,
+): Promise<DepartureLogIncidentReport[]> {
+  const roles = await loadActiveStaffRoles(db, shopId, viewerPersonId);
+  if (
+    !mayReadIncidentReport(
+      { personId: viewerPersonId, roles, onCrew: false },
+      { createdByPersonId: "" },
+    )
+  ) {
+    return [];
+  }
+  return db
+    .select({
+      reportId: incidentReports.id,
+      status: incidentReports.status,
+      kind: incidentReports.kind,
+      severity: incidentReports.severity,
+      filedAt: incidentReports.filedAt,
+      filedByName: filers.fullName,
+      addendaCount: sql<number>`(
+        select count(*)::int from ${incidentReportAddenda}
+        where ${incidentReportAddenda.reportId} = ${incidentReports.id}
+      )`,
+      createdAt: incidentReports.createdAt,
+      createdByName: creators.fullName,
+    })
+    .from(incidentReports)
+    .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
+    .leftJoin(filers, eq(filers.id, incidentReports.filedByPersonId))
+    .where(and(eq(incidentReports.shopId, shopId), eq(incidentReports.tripId, tripId)))
+    .orderBy(asc(incidentReports.createdAt), asc(creators.fullName), asc(incidentReports.id));
+}
+
 /**
  * Every report in the shop whose incident falls in `[from, to)` — or, for a
  * draft that does not yet say when, that was started then. Owners and managers

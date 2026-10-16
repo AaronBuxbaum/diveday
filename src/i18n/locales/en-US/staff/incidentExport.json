@@ -81,7 +81,7 @@
   "timelineBuddyMemberAdded": "Buddy team member added",
   "timelineBuddyMemberRemoved": "Buddy team member removed",
   "timelineBuddyMembers": "Members at that moment: {names}",
-  "timelineDescription": "Every roll-call entry for this departure, oldest first. Entries are append-only, so a correction adds a line and never rewrites one.",
+  "timelineDescription": "Every roll-call entry for this departure, and every seat added, removed or moved after its scheduled start, oldest first. Entries are append-only, so a correction adds a line and never rewrites one.",
   "timelineEmpty": "No roll-call entries have been recorded for this departure.",
   "timelineHeading": "Roll-call timeline",
   "timelineOfflineTag": "Recorded offline, synced later",
@@ -93,5 +93,17 @@
   "waiverMedicalReview": "Medical review flagged as required. Status only; the questionnaire’s answers are not part of this document.",
   "waiverNotSigned": "No current signed waiver on record.",
   "waiverPaperMarkedBy": "Recorded by {name} from an in-person signature.",
-  "waiverPending": "A waiver link was issued and has not been signed."
+  "waiverPending": "A waiver link was issued and has not been signed.",
+  "timelineSeatAdded": "Seat added",
+  "timelineSeatRemoved": "Seat removed",
+  "timelineSeatMovedAway": "Seat moved to another departure",
+  "timelineSeatMovedHere": "Seat moved here from another departure",
+  "reportsHeading": "Incident reports",
+  "reportsDescription": "The reports on this departure and where each stands. What they say stays on each report.",
+  "reportsEmpty": "No incident report has been started for this departure.",
+  "reportUnsorted": "Kind and severity not stated yet",
+  "reportFiled": "Filed {date} by {name}",
+  "reportDraft": "Draft not filed, started by {name} on {date}.",
+  "reportAddenda": "{count, plural, =0 {No later notes} one {# later note} other {# later notes}}",
+  "footerHashVersion": "version {version}"
 }

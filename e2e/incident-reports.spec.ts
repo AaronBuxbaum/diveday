@@ -52,11 +52,11 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   await expect(page.getByText("Draft saved.")).toBeVisible();
 
   // Unfiled, it is one line on the owner's Today, and the line opens it.
-  const reportUrl = page.url();
+  const reportPath = new URL(page.url()).pathname;
   await page.goto("/shop/blue-mantis");
   await expect(page.getByText(/1 incident report not filed, started today by /)).toBeVisible();
   await page.getByRole("link", { name: "Open report" }).click();
-  await page.waitForURL(reportUrl);
+  await page.waitForURL((url) => url.pathname === reportPath);
 
   // A diver, named by their seat on this departure.
   const people = page.getByRole("region", { name: "People involved" });

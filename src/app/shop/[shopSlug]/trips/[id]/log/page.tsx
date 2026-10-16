@@ -10,7 +10,7 @@ import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getIncidentExport } from "@/db/incident-export";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { staffJobWithRatings } from "@/i18n/staff-role-labels";
 import { depthInUnit } from "@/lib/depth-units";
 import {
@@ -26,12 +26,14 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { CertificationLine } from "./_components/CertificationLine";
+import { IncidentReportsSection } from "./_components/IncidentReportsSection";
 import { incidentSummaryRows } from "./_components/incident-summary";
 import { NumberedName } from "./_components/NumberedName";
 import {
   rollCallCheckpointPrintClass,
   rollCallTableMinWidth,
 } from "./_components/roll-call-columns";
+import { TimelineEntryText } from "./_components/TimelineEntryText";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — the claim every trips/[id] sibling makes (ADR
@@ -42,21 +44,6 @@ export const instant = true;
 
 export const metadata: Metadata = {
   title: "Departure log — DiveDay",
-};
-
-/**
- * What each act on a buddy team reads as in the timeline. Codes come from
- * `src/lib/incident-export.ts`; the words live here, like every other status
- * this page prints.
- */
-const BUDDY_TEAM_ACTION_KEYS: Record<
-  "formed" | "dissolved" | "member_added" | "member_removed",
-  StaffMessageKey
-> = {
-  formed: "incidentExport.timelineBuddyFormed",
-  dissolved: "incidentExport.timelineBuddyDissolved",
-  member_added: "incidentExport.timelineBuddyMemberAdded",
-  member_removed: "incidentExport.timelineBuddyMemberRemoved",
 };
 
 /**
@@ -530,69 +517,27 @@ export default async function IncidentExportPage({
                 <span className="font-mono text-xs text-muted tabular-nums">
                   {dateTime(entry.occurredAt)}
                 </span>
-                <span className="flex basis-full flex-wrap items-baseline gap-x-3 gap-y-1">
-                  {entry.checkpoint === null ? null : (
-                    <span className="text-muted">{checkpointText(entry.checkpoint)}</span>
-                  )}
-                  {entry.kind === "buddy_team" ? (
-                    <span className="font-semibold">
-                      {entry.teamNumber > 0
-                        ? t("incidentExport.buddyTeam", { number: entry.teamNumber })
-                        : t("incidentExport.buddyTeamUnnumbered")}{" "}
-                      — {t(BUDDY_TEAM_ACTION_KEYS[entry.action])}
-                    </span>
-                  ) : (
-                    <span className="font-semibold">
-                      {entry.subjectName}
-                      {entry.kind === "crew" ? ` (${t("incidentExport.crewTag")})` : ""} —{" "}
-                      {entry.action === "cleared"
-                        ? t("incidentExport.actionCleared")
-                        : rollCallLabelText(
-                            t,
-                            entry.action === "boarded"
-                              ? "boarded"
-                              : entry.checkpoint === "departure"
-                                ? "not_boarded"
-                                : "not_back_aboard",
-                          )}
-                    </span>
-                  )}
-                  <span className="text-muted">
-                    {t("incidentExport.recordedByName", { name: entry.recordedByName })}
-                  </span>
-                  {entry.kind === "buddy_team" ? (
-                    <span className="text-muted">
-                      {t("incidentExport.timelineBuddyMembers", {
-                        names: memberList.format(entry.memberNames),
-                      })}
-                    </span>
-                  ) : null}
-                  {(entry.kind === "diver" || entry.kind === "crew") &&
-                  entry.source === "offline" ? (
-                    <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-medium text-muted">
-                      {t("incidentExport.timelineOfflineTag")}
-                    </span>
-                  ) : null}
-                  {/* What the crew observed, on its own line below the facts, in
-                      their column, rather than wrapped into them (ADR
-                      20260828-a-missing-diver-gets-a-sentence). This is the half
-                      of the record a mark alone cannot carry, and the reason an
-                      investigator reading this page meets "surfaced 200 m north,
-                      picked up by Reef Runner at 14:31" instead of an
-                      unexplained red entry. It is inside the content hash, like
-                      every other fact here. */}
-                  {(entry.kind === "diver" || entry.kind === "crew") && entry.note ? (
-                    <span className="basis-full text-sm">{entry.note}</span>
-                  ) : null}
-                </span>
+                <TimelineEntryText entry={entry} t={t} memberList={memberList} />
               </li>
             ))}
           </ol>
         )}
       </section>
 
+      <IncidentReportsSection
+        reports={doc.incidentReports}
+        reportHref={(reportId) => shopPath(shopSlug, "trips", tripId, "incidents", reportId)}
+        t={t}
+        locale={locale}
+        timeZone={doc.meta.timezone}
+      />
+
       <footer className="break-inside-avoid border-t border-border pt-4 text-sm">
-        <p className="font-semibold">{t("incidentExport.footerHashLabel")}</p>
+        {/* The recipe's version beside the code: an old printout is checked with its own. */}
+        <p className="font-semibold">
+          {t("incidentExport.footerHashLabel")}
+          {"\u00a0"}· {t("incidentExport.footerHashVersion", { version: doc.hashVersion })}
+        </p>
         <p className="mt-1 font-mono text-xs break-all">{doc.contentHash}</p>
         <p className="mt-2 max-w-prose text-muted">{t("incidentExport.footerHashExplainer")}</p>
       </footer>
