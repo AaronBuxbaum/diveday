@@ -2,27 +2,38 @@ import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate, nowMs } from "@/lib/clock";
+import { formatShortDate } from "@/lib/format";
 import type { TodayAction } from "@/lib/today";
 import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
+import type { AppDb } from "./client";
 import { markInboundAnswered, recordInboundMessage } from "./inbound-messages";
+import { startIncidentReport } from "./incident-reports";
 import { queueMediaDeletion, resolveMediaDeletion } from "./media-deletions";
 import { recordStripeDispute } from "./payment-disputes";
 import { startPaymentOperation } from "./payment-operations";
 import { setBookingPayment } from "./payments";
 import { submitTripReview } from "./reviews";
-import { inboundMessages, orders, people, tripReviews } from "./schema";
+import {
+  inboundMessages,
+  incidentReports,
+  orders,
+  people,
+  tripAssignments,
+  tripReviews,
+} from "./schema";
 import { applyStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
 import { rowsContext } from "./today-rows-test-fixtures";
 import { pushShopRows } from "./today-shop-rows";
-import { getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff, setTripStatus, upcomingTripsWithCounts } from "./trips";
 
 const quiet = {
   opsAlerts: null,
   reviewsAwaiting: { count: 0, onlyId: null },
   unanswered: 0,
   openOrders: new Map(),
+  unfiledIncidentDrafts: [],
 };
 
 function rows(wave: Record<string, unknown>): TodayAction[] {
@@ -42,6 +53,63 @@ describe("pushShopRows", () => {
     expect(one?.href).toBe("/shop/blue-mantis/reviews#review-r1");
     const [several] = rows({ reviewsAwaiting: { count: 3, onlyId: null } });
     expect(several?.href).toBe("/shop/blue-mantis/reviews");
+  });
+
+  it("names an unfiled incident report: how many, who started the oldest, and when", () => {
+    // NOW is Tuesday 9:30 AM in Key Largo; the draft was started Saturday.
+    const draft = {
+      id: "r-1",
+      tripId: "trip-1",
+      createdAt: new Date("2026-07-18T19:00:00Z"),
+      createdByName: "Sal Rivera",
+    };
+    const [one] = rows({ unfiledIncidentDrafts: [draft] });
+    expect(one).toMatchObject({
+      kind: "incident_report_unfiled",
+      urgency: "now",
+      subject: "1 incident report not filed, started Saturday by Sal Rivera.",
+      detail: "",
+      href: "/shop/blue-mantis/trips/trip-1/incidents/r-1",
+      dueAt: null,
+    });
+    // Several are still one line, opening the oldest, which the line names.
+    const several = rows({
+      unfiledIncidentDrafts: [
+        { ...draft, createdAt: new Date("2026-07-02T15:00:00Z") },
+        { ...draft, id: "r-2", createdAt: new Date("2026-07-21T12:00:00Z"), createdByName: "Kai" },
+      ],
+    });
+    expect(several).toHaveLength(1);
+    // The date is the shop's short date, whatever spacing ICU puts in it.
+    expect(several[0]?.subject).toBe(
+      `2 incident reports not filed, the oldest started on ${formatShortDate(new Date("2026-07-02T15:00:00Z"), "en-US", "America/New_York")} by Sal Rivera.`,
+    );
+    expect(several[0]?.href).toBe("/shop/blue-mantis/trips/trip-1/incidents/r-1");
+  });
+
+  it("says today and yesterday in words, in the shop's own zone and language", () => {
+    const draft = { id: "r-1", tripId: "trip-1", createdByName: "Sal Rivera" };
+    // 1 AM UTC Tuesday is still Monday evening in Key Largo.
+    const [yesterday] = rows({
+      unfiledIncidentDrafts: [{ ...draft, createdAt: new Date("2026-07-21T01:00:00Z") }],
+    });
+    expect(yesterday?.subject).toBe(
+      "1 incident report not filed, started yesterday by Sal Rivera.",
+    );
+    const actions: TodayAction[] = [];
+    pushShopRows(
+      actions,
+      rowsContext(
+        {
+          ...quiet,
+          unfiledIncidentDrafts: [{ ...draft, createdAt: new Date("2026-07-21T12:00:00Z") }],
+        },
+        { locale: "es-ES", t: staffTranslator("es-ES") },
+      ),
+    );
+    expect(actions[0]?.subject).toBe(
+      "1 informe de incidente sin presentar, empezado hoy por Sal Rivera.",
+    );
   });
 
   it("raises one inbox row however many divers wrote back", () => {
@@ -459,5 +527,63 @@ describe("unanswered messages", () => {
 
     // Nothing waiting, no row — the queue never carries a zero.
     expect(await unansweredRow()).toHaveLength(0);
+  });
+});
+
+describe("unfiled incident reports on Today (safety sheet 2026-10-15, item 3)", () => {
+  async function today(
+    db: AppDb,
+    shop: { id: string; slug: string; timezone: string },
+    viewer?: string,
+  ) {
+    return getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shop.timezone,
+      nowDate(),
+      undefined,
+      staffTranslator("en-US"),
+      "en-US",
+      false,
+      undefined,
+      undefined,
+      undefined,
+      viewer,
+    );
+  }
+
+  it("tells the owner, and never a crew member, even the one who wrote it", async () => {
+    const { db, shop } = ctx;
+    const staff = await listStaff(db, shop.id);
+    const owner = staff.find((member) => member.roles.includes("owner"))?.person;
+    const crew = staff.find((member) => member.roles.includes("divemaster"))?.person;
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!owner || !crew || !trip) throw new Error("expected seeded staff and a departure");
+    await db.delete(incidentReports).where(eq(incidentReports.shopId, shop.id));
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: trip.id, personId: crew.id })
+      .onConflictDoNothing();
+    const started = await startIncidentReport(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      actorPersonId: crew.id,
+    });
+    if (!started.ok) throw new Error("expected a draft");
+
+    const unfiled = (work: Awaited<ReturnType<typeof today>>) =>
+      work.actions.filter((action) => action.kind === "incident_report_unfiled");
+    const forOwner = unfiled(await today(db, shop, owner.id));
+    expect(forOwner).toHaveLength(1);
+    expect(forOwner[0]?.href).toBe(
+      `/shop/${shop.slug}/trips/${trip.id}/incidents/${started.reportId}`,
+    );
+    expect(forOwner[0]?.subject).toContain(crew.fullName);
+    // The writer may read their own draft, but the line names the shop's
+    // drafts, which a crew member may not read: it stays the owner's.
+    expect(unfiled(await today(db, shop, crew.id))).toEqual([]);
+    // No reader named, no line: the digest reads the day with nobody behind it.
+    expect(unfiled(await today(db, shop))).toEqual([]);
   });
 });

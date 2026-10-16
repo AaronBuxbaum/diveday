@@ -6221,6 +6221,22 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "incident-report-draft", scheme);
       });
 
+      // The one Today line an unfiled report leaves for owners and managers
+      // (safety sheet 2026-10-15, item 3): how many, who started the oldest,
+      // and when, opening the draft. Started here, so the seed stays clean.
+      test(`an unfiled incident report is one line on Today (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        await openTripAbout(page);
+        await page
+          .getByRole("region", { name: "Incident reports" })
+          .getByRole("button", { name: "Report an incident" })
+          .click();
+        await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
+        await page.goto("/shop/blue-mantis");
+        await page.getByText(/1 incident report not filed, started today by /).waitFor();
+        await capture(page, "today-incident-unfiled", scheme);
+      });
+
       // The month's Safety tab beside Reports: roll calls, dock marks, card
       // checks written past, crew credentials and the month's incident
       // reports, read from what the shop already records.

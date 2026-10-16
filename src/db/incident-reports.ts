@@ -796,6 +796,50 @@ export async function listTripIncidentReports(
   return { mayStart: mayStartIncidentReport(viewer), reports: rows.map(toLine) };
 }
 
+/** One unfiled draft, as Today's line names it: who started it and when. */
+export type UnfiledIncidentDraft = {
+  id: string;
+  tripId: string;
+  createdAt: Date;
+  createdByName: string;
+};
+
+/**
+ * **Every unfiled draft in the shop, oldest first**, for the owner's and
+ * managers' one line on Today (safety sheet 2026-10-15, item 3): an injury
+ * started on the boat and left as a private draft while the insurer's notice
+ * window runs. Owners and managers only, re-read live here: they may already
+ * read every report, so the line widens nobody's view. Anyone else, or no
+ * viewer at all, gets nothing. A report outlives a deleted departure, and so
+ * does an unfiled one's line.
+ */
+export async function listUnfiledIncidentDrafts(
+  db: DbExecutor,
+  shopId: string,
+  viewerPersonId: string,
+): Promise<UnfiledIncidentDraft[]> {
+  const roles = await loadActiveStaffRoles(db, shopId, viewerPersonId);
+  if (
+    !mayReadIncidentReport(
+      { personId: viewerPersonId, roles, onCrew: false },
+      { createdByPersonId: "" },
+    )
+  ) {
+    return [];
+  }
+  return db
+    .select({
+      id: incidentReports.id,
+      tripId: incidentReports.tripId,
+      createdAt: incidentReports.createdAt,
+      createdByName: creators.fullName,
+    })
+    .from(incidentReports)
+    .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
+    .where(and(eq(incidentReports.shopId, shopId), eq(incidentReports.status, "draft")))
+    .orderBy(asc(incidentReports.createdAt), asc(creators.fullName), asc(incidentReports.id));
+}
+
 /**
  * Every report in the shop whose incident falls in `[from, to)` — or, for a
  * draft that does not yet say when, that was started then. Owners and managers

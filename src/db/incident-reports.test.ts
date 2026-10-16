@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowMs } from "@/lib/clock";
 import type { IncidentDraftFields } from "@/lib/incident-reports";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
@@ -12,6 +13,7 @@ import {
   getIncidentReport,
   listShopIncidentReports,
   listTripIncidentReports,
+  listUnfiledIncidentDrafts,
   removeIncidentPerson,
   saveIncidentDraft,
   startIncidentReport,
@@ -475,6 +477,34 @@ describe("who reads what", () => {
     expect(
       (await listShopIncidentReports(db, shop.id, f.owner.id, ...september)).map((row) => row.id),
     ).not.toContain(started.reportId);
+  });
+
+  it("lists the shop's unfiled drafts, oldest first, to owners and managers only", async () => {
+    const { db, shop } = ctx;
+    const f = await fixture(db, shop.id);
+    await db.delete(incidentReports).where(eq(incidentReports.shopId, shop.id));
+    const input = { shopId: shop.id, tripId: f.trip.id, actorPersonId: f.crew.id };
+    const filed = await startIncidentReport(db, input);
+    if (!filed.ok) throw new Error("expected a draft");
+    await saveIncidentDraft(db, { ...input, reportId: filed.reportId, fields: complete });
+    await fileIncidentReport(db, { ...input, reportId: filed.reportId });
+    const crews = await startIncidentReport(db, input);
+    const owners = await startIncidentReport(db, { ...input, actorPersonId: f.owner.id });
+    if (!crews.ok || !owners.ok) throw new Error("expected drafts");
+    // The clock is frozen, so age the owner's draft by hand: it is the oldest.
+    await db
+      .update(incidentReports)
+      .set({ createdAt: new Date(nowMs() - 60 * 60 * 1000) })
+      .where(eq(incidentReports.id, owners.reportId));
+
+    const listed = await listUnfiledIncidentDrafts(db, shop.id, f.owner.id);
+    // A filed report is not waiting on anyone; both drafts are, whoever wrote them.
+    expect(listed.map((row) => row.id)).toEqual([owners.reportId, crews.reportId]);
+    expect(listed[1]).toMatchObject({ tripId: f.trip.id, createdByName: f.crew.fullName });
+    // The writer of a draft still may not see the shop's list of them.
+    expect(await listUnfiledIncidentDrafts(db, shop.id, f.crew.id)).toEqual([]);
+    expect(await listUnfiledIncidentDrafts(db, shop.id, f.ashore.id)).toEqual([]);
+    expect(await listUnfiledIncidentDrafts(db, OTHER_SHOP, f.owner.id)).toEqual([]);
   });
 });
 

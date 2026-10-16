@@ -101,6 +101,7 @@ export type TodayActionKind =
   | "boat_safety_kit"
   | "boat_papers_due"
   | "boat_safety_expired"
+  | "incident_report_unfiled"
   | "work_order_late"
   | "work_order_uncollected"
   | "staff_credential_due"
@@ -211,6 +212,12 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // two into one row is what turns the red row into wallpaper (DOM-H3).
   roll_call_departure_open: 15,
   roll_call_not_started: 16,
+  // **An incident report started and never filed** (safety sheet 2026-10-15,
+  // item 3): somebody was hurt or nearly was, and the record sits as a private
+  // draft while the insurer's notice window runs. Nobody is in the water, so it
+  // ranks under every roll-call and boarding row; a written account of the
+  // worst day outranks the desk's chores and every money row below.
+  incident_report_unfiled: 16.5,
   dive_prep: 17,
   help_request: 18,
   payment: 18,
@@ -523,6 +530,9 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   // facts on the departure's own pre-departure check.
   boat_papers_due: ["owner", "manager"],
   boat_safety_expired: ["owner", "manager"],
+  // The two roles that may read every report (`canReadEveryIncidentReport`):
+  // the line names who started a draft, so nobody else is told of it.
+  incident_report_unfiled: ["owner", "manager"],
   gear_service_due: [
     "owner",
     "manager",
@@ -674,6 +684,8 @@ export const ACTION_KIND_META = {
   // or once kit the boat is meant to carry has.
   boat_papers_due: { tone: "neutral" },
   boat_safety_expired: { tone: "warning" },
+  // Warning: an account of a bad day is unfinished, not a person in danger.
+  incident_report_unfiled: { tone: "warning" },
   // Warning: the shop gave its word on a day and the day has gone. Ready and
   // not collected is the customer's errand, not the shop's failure.
   work_order_late: { tone: "warning" },
