@@ -16,11 +16,14 @@ import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
  * - `diveday-ratchets` merges `scripts/ratchets.json` as JSON, key by key. A count both sides
  *   moved takes the larger, which no guard can refuse as growth; `pnpm regen` then banks the
  *   true number. Absorb logs are unioned, so neither side's recorded reason is lost.
+ * - `diveday-durations` merges `scripts/test-durations.json` (path → milliseconds) the same way
+ *   and writes it in `merge-test-durations.mjs`'s code-unit key order, so a merge does not
+ *   reorder the file. It had no driver until 2026-10-13, when two layer merges stopped on it.
  * - `diveday-generated` merges line by line and settles a clashing hunk with our side
  *   (`git merge-file --ours`); `pnpm regen` rewrites the file from its sources.
  *
  * `.gitattributes` names the files. Git only runs a driver its config defines, so
- * `node scripts/merge-drivers.mjs install` writes the two definitions into `.git/config`; the
+ * `node scripts/merge-drivers.mjs install` writes the definitions into `.git/config`; the
  * `SessionStart` hook runs it for every session, and a human runs it once per clone.
  */
 
@@ -30,6 +33,10 @@ export const DRIVERS = {
   "diveday-ratchets": {
     name: "DiveDay ratchet counts (larger count wins; pnpm regen banks the truth)",
     driver: "node scripts/merge-drivers.mjs ratchets %O %A %B %P",
+  },
+  "diveday-durations": {
+    name: "DiveDay test durations (larger duration wins; the next refresh measures again)",
+    driver: "node scripts/merge-drivers.mjs durations %O %A %B %P",
   },
   "diveday-generated": {
     name: "DiveDay generated file (our side on a clash; pnpm regen rewrites it)",
@@ -85,6 +92,21 @@ export function mergeRatchetText(baseText, oursText, theirsText) {
   return `${JSON.stringify(ordered, null, 2)}\n`;
 }
 
+/** The durations file merged, in the shape `merge-test-durations.mjs` writes. */
+export function mergeDurationsText(baseText, oursText, theirsText) {
+  let base = {};
+  try {
+    base = JSON.parse(baseText);
+  } catch {
+    // No common ancestor: both sides are new.
+  }
+  const merged = mergeJson(base, JSON.parse(oursText), JSON.parse(theirsText));
+  const ordered = Object.fromEntries(
+    Object.entries(merged).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+  );
+  return `${JSON.stringify(ordered, null, 2)}\n`;
+}
+
 const NOTE = (file) =>
   `merge-drivers: ${file} merged mechanically; run \`pnpm regen\` before you commit the merge.`;
 
@@ -101,6 +123,22 @@ function ratchets([base, ours, theirs, file]) {
     return generated([base, ours, theirs, file]);
   }
   console.error(NOTE(file));
+  return 0;
+}
+
+function durations([base, ours, theirs, file]) {
+  try {
+    writeFileSync(
+      ours,
+      mergeDurationsText(
+        readFileSync(base, "utf8"),
+        readFileSync(ours, "utf8"),
+        readFileSync(theirs, "utf8"),
+      ),
+    );
+  } catch {
+    return generated([base, ours, theirs, file]);
+  }
   return 0;
 }
 
@@ -155,12 +193,15 @@ export function install(cwd = ROOT, { git = gitRunner(cwd) } = {}) {
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [command, ...args] = process.argv.slice(2);
   if (command === "ratchets") process.exit(ratchets(args));
+  if (command === "durations") process.exit(durations(args));
   if (command === "generated") process.exit(generated(args));
   if (command === "install") {
     const ok = install(process.cwd());
     console.log(ok ? "merge-drivers: installed in .git/config" : "merge-drivers: install failed");
     process.exit(ok ? 0 : 1);
   }
-  console.error("usage: node scripts/merge-drivers.mjs install | ratchets|generated %O %A %B %P");
+  console.error(
+    "usage: node scripts/merge-drivers.mjs install | ratchets|durations|generated %O %A %B %P",
+  );
   process.exit(2);
 }

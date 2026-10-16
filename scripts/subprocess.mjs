@@ -87,6 +87,12 @@ export const SUBPROCESS_TIMEOUTS = {
   vercelCli: 120_000,
   /** One `gh` call. */
   ghCli: 120_000,
+  /**
+   * One `gh api` read made *inside* a `PreToolUse` hook (`guard-bash.mjs` asking which branch
+   * a run belongs to). The hook's own ceiling is ten seconds and it fails open, so the read has
+   * to give up well inside that: a slow GitHub lets the command through rather than wedging it.
+   */
+  ghHookRead: 6_000,
   /** A sibling script in this repo that only reads and writes files. */
   nodeScript: 120_000,
   /**

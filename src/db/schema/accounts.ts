@@ -114,6 +114,15 @@ export const accountSecurity = pgTable("account_security", {
   totpSecretSealed: text("totp_secret_sealed"),
   totpEnabledAt: timestamp("totp_enabled_at", { withTimezone: true }),
   recoveryCodeHashes: jsonb("recovery_code_hashes").$type<string[]>().notNull().default([]),
+  /**
+   * `secretKeyFingerprint` of the key that sealed `totpSecretSealed` and of the
+   * key that hashed `recoveryCodeHashes`. Recovery codes cannot be re-hashed
+   * without their plaintext, so the two can differ after a rotation; these are
+   * what tell an operator which accounts still need SECRET_ENCRYPTION_KEY_PREVIOUS
+   * (docs/engineering/infrastructure-runbook.md). Null: issued before the column.
+   */
+  totpSecretKeyId: text("totp_secret_key_id"),
+  recoveryCodesKeyId: text("recovery_codes_key_id"),
   lastTotpStep: bigint("last_totp_step", { mode: "number" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

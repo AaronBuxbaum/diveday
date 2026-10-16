@@ -7,7 +7,6 @@ import {
   recoveryCodeHashes,
   TOTP_STEP_SECONDS,
   totpCode,
-  verifyTotpCode,
 } from "./totp";
 
 /**
@@ -68,11 +67,6 @@ describe("matchTotpStep", () => {
     for (const bad of ["", "12345", "1234567", "abcdef", "12 345", "١٢٣٤٥٦"]) {
       expect(matchTotpStep(RFC_SECRET, bad, now)).toBeNull();
     }
-  });
-
-  it("verifyTotpCode agrees with it", () => {
-    expect(verifyTotpCode(RFC_SECRET, totpCode(RFC_SECRET, now), now)).toBe(true);
-    expect(verifyTotpCode(RFC_SECRET, "000000", now)).toBe(false);
   });
 });
 

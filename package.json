@@ -85,6 +85,7 @@
     "check:migration-graph": "node scripts/check-migration-graph.mjs",
     "check:open-graph": "node scripts/check-open-graph.mjs",
     "check:node-version": "node scripts/check-node-version.mjs",
+    "check:action-pins": "node scripts/check-action-pins.mjs",
     "env:manual": "node scripts/env-manual.mjs",
     "check:env": "node scripts/check-env.mjs",
     "check:env-reads": "node scripts/check-env-reads.mjs",
