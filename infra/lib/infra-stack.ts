@@ -2845,7 +2845,7 @@ exports.handler = async (event) => {
       },
     );
 
-    const githubActionsPrincipal = (subCondition: string) =>
+    const githubActionsPrincipal = (subCondition: string | string[]) =>
       new iam.FederatedPrincipal(
         githubActionsOidcProvider.openIdConnectProviderArn,
         {
@@ -2866,6 +2866,51 @@ exports.handler = async (event) => {
         actions: ["secretsmanager:GetSecretValue"],
         resources: ["*"],
       });
+
+    // reg-suit's CI identity (issue #2543), replacing the long-lived
+    // `RegSuitUserAccessKey` that ci.yml's visual-report job read from two
+    // repository secrets on every pull request. A session token for this role
+    // lives for the job's own hour at most and names no secret anywhere.
+    //
+    // **Trusted from the two shapes of run that publish a snapshot, not `*`**:
+    // a pull request's own run and a run on `main` (a push, or a manual dispatch
+    // of it). A fork's pull request is never handed an OIDC token, and the
+    // nightly schedule does not publish. **Scoped to the visual bucket and to
+    // what `reg-suit run` does with it** -- list, read and write objects. No
+    // delete (the pruner, section 15, owns expiry and runs with its own role),
+    // no ACL (`enableACL` is false in regconfig.json), nothing outside this one
+    // bucket, and the same unscoped Deny on reading any secret the diff role
+    // carries.
+    const regSuitRole = new iam.Role(this, "GitHubActionsRegSuitRole", {
+      roleName: "diveday-github-actions-reg-suit",
+      assumedBy: githubActionsPrincipal([
+        `repo:${GITHUB_REPO_SUB}:pull_request`,
+        `repo:${GITHUB_REPO_SUB}:ref:refs/heads/main`,
+      ]),
+      description:
+        "Assumed by .github/workflows/ci.yml's visual-report job to publish and compare reg-suit snapshots in the visual bucket. Cannot delete objects or touch any other resource.",
+      maxSessionDuration: cdk.Duration.hours(1),
+    });
+    regSuitRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ListVisualBucket",
+        actions: ["s3:ListBucket", "s3:GetBucketLocation"],
+        resources: [bucket.bucketArn],
+      }),
+    );
+    regSuitRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ReadWriteVisualSnapshots",
+        actions: ["s3:GetObject", "s3:PutObject"],
+        resources: [bucket.arnForObjects("*")],
+      }),
+    );
+    regSuitRole.addToPolicy(denyReadingAnySecret());
+    new cdk.CfnOutput(this, "GitHubActionsRegSuitRoleArn", {
+      value: regSuitRole.roleArn,
+      description:
+        "role-to-assume for .github/workflows/ci.yml's visual-report job. Store as the AWS_REG_SUIT_ROLE_ARN repository variable.",
+    });
 
     const cdkDiffRole = new iam.Role(this, "GitHubActionsCdkDiffRole", {
       roleName: "diveday-github-actions-cdk-diff",
