@@ -600,7 +600,13 @@ const TODAY_CEILING = 71;
 // cards (`listAgencyCheckableCards`), one statement in `getTripGuests`' fan-out.
 // 52 → 54: the same read also asks for the divers' pending nitrox and specialty
 // cards (issue #2592), one statement each, in the same wave as the level read.
-const TRIP_CEILING = 54;
+// 54 → 65 (fifth loop, r5-6 item 44, H-141): the Invite section's past divers
+// of the site (`listInviteSuggestions`): the departure row, who is aboard or
+// already asked, the 30-day cooldown and the boat's gate in one wave, the
+// site's past divers, then every candidate's cards and courses in training in
+// one pass (`admittedUnderGate`). As merged it sent each candidate through the
+// booking gate one after another: 117 statements and 31 phases here.
+const TRIP_CEILING = 65;
 
 /**
  * Serial phases, the same way: lower one when a change removes a wait, never
@@ -627,7 +633,10 @@ const TODAY_PHASE_CEILING = 5;
 // those skip themselves (no held seat, wait list or course).
 // 6 → 5 (#2487): the departure row went out beside the four reads that never
 // waited on it (`loadTripSharedReads`).
-const TRIP_PHASE_CEILING = 5;
+// 5 → 6 (fifth loop, r5-6 item 44): the invite suggestions need the
+// departure's site before its past divers, and those before their cards: three
+// waves inside `getTripGuests`' first, one more than the roster's own path.
+const TRIP_PHASE_CEILING = 6;
 // The same page on a course departure with a held seat and a waitlist: the
 // shared wave (2), then the longest chain after it: the permission read (3
 // here, one request-cached statement chain in a real render) and the

@@ -12,9 +12,12 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import { nowDate } from "@/lib/clock";
 import { INVITE_SUGGESTIONS_SHOWN, inviteCooldownStart } from "@/lib/invite-suggestions";
+import { decideTripAdmission, type TripAdmissionEvidence } from "@/lib/trip-admission";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
-import { tripAdmissionFor } from "./bookings";
+import { readCertificationEvidenceFor } from "./certification-evidence";
+import { inTrainingBefore, listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
@@ -174,16 +177,23 @@ export async function listInviteSuggestions(
   db: DbExecutor,
   input: { shopId: string; tripId: string; now: Date },
 ): Promise<InviteSuggestions | null> {
-  const [trip] = await db
-    .select({ diveSiteId: trips.diveSiteId, courseId: trips.courseId, siteName: diveSites.name })
-    .from(trips)
-    .innerJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
-    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
-    .limit(1);
-  // A course session suggests nobody from its site (review F2).
-  if (!trip?.diveSiteId || trip.courseId) return null;
-
-  const [aboard, invitedHere, recent] = await queryAll(db, [
+  // One wave for everything that needs only the departure's id: the trip page
+  // waits on this list (staff render-cost tripwire), so the departure row, who
+  // is already aboard or asked, and the boat's gate all go out together.
+  const [[trip], aboard, invitedHere, recent, requirement, siteRequirement] = await queryAll(db, [
+    () =>
+      db
+        .select({
+          id: trips.id,
+          startsAt: trips.startsAt,
+          diveSiteId: trips.diveSiteId,
+          courseId: trips.courseId,
+          siteName: diveSites.name,
+        })
+        .from(trips)
+        .innerJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+        .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
+        .limit(1),
     () =>
       db
         .select({ personId: bookings.personId })
@@ -203,7 +213,11 @@ export async function listInviteSuggestions(
           and(eq(tripInvitations.shopId, input.shopId), eq(tripInvitations.tripId, input.tripId)),
         ),
     () => recentlyInvitedPeople(db, input.shopId, input.now),
+    () => getTripRequirements(db, input.shopId, input.tripId),
+    () => getTripSiteRequirement(db, input.shopId, input.tripId),
   ]);
+  // A course session suggests nobody from its site (review F2).
+  if (!trip?.diveSiteId || trip.courseId) return null;
   const exclude = new Set<string>(recent);
   for (const row of [...aboard, ...invitedHere]) if (row.personId) exclude.add(row.personId);
 
@@ -213,7 +227,10 @@ export async function listInviteSuggestions(
     now: input.now,
     exclude,
   });
-  const everyone = await admittedToTrip(db, input.shopId, input.tripId, pastDivers);
+  const everyone = await admittedUnderGate(db, input.shopId, trip, pastDivers, {
+    requirement,
+    siteRequirement,
+  });
   if (everyone.length === 0) return null;
   return {
     siteName: trip.siteName,
@@ -235,10 +252,38 @@ export async function admittedToTrip<T extends { personId: string }>(
   candidates: readonly T[],
 ): Promise<T[]> {
   if (candidates.length === 0) return [];
-  const [requirement, siteRequirement] = await queryAll(db, [
+  const [[trip], requirement, siteRequirement] = await queryAll(db, [
+    () =>
+      db
+        .select({ id: trips.id, startsAt: trips.startsAt })
+        .from(trips)
+        .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+        .limit(1),
     () => getTripRequirements(db, shopId, tripId),
     () => getTripSiteRequirement(db, shopId, tripId),
   ]);
+  if (!trip) return [];
+  return admittedUnderGate(db, shopId, trip, candidates, { requirement, siteRequirement });
+}
+
+/**
+ * {@link admittedToTrip} with the departure's gate already in hand. The same
+ * evidence `tripAdmissionFor` reads for one diver (their live cards and the
+ * levels their booked courses certify before this departure), read once for
+ * every candidate rather than one diver after another.
+ */
+async function admittedUnderGate<T extends { personId: string }>(
+  db: DbExecutor,
+  shopId: string,
+  trip: { id: string; startsAt: Date },
+  candidates: readonly T[],
+  gate: {
+    requirement: Awaited<ReturnType<typeof getTripRequirements>>;
+    siteRequirement: Awaited<ReturnType<typeof getTripSiteRequirement>>;
+  },
+): Promise<T[]> {
+  if (candidates.length === 0) return [];
+  const { requirement, siteRequirement } = gate;
   const demandsSomething = Boolean(
     requirement?.minimumCertificationLevel ||
       requirement?.requiredSpecialties.length ||
@@ -246,20 +291,34 @@ export async function admittedToTrip<T extends { personId: string }>(
       siteRequirement,
   );
   if (!demandsSomething) return [...candidates];
-  const admitted: T[] = [];
-  for (const candidate of candidates) {
-    const decision = await tripAdmissionFor(
-      db,
-      shopId,
-      tripId,
-      { id: candidate.personId },
-      false,
-      false,
-    );
-    if (decision.admitted) admitted.push(candidate);
-  }
-  return admitted;
+  const personIds = candidates.map((candidate) => candidate.personId);
+  const [evidenceByPerson, seatsInTraining] = await queryAll(db, [
+    () => readCertificationEvidenceFor(db, shopId, personIds),
+    () => listCourseSeatsInTraining(db, shopId, personIds),
+  ]);
+  const now = nowDate();
+  return candidates.filter((candidate) => {
+    const cards = evidenceByPerson.get(candidate.personId) ?? NO_CARDS;
+    const seats = seatsInTraining.filter((seat) => seat.personId === candidate.personId);
+    const evidence: TripAdmissionEvidence = {
+      ...cards,
+      levelsInTraining: inTrainingBefore(seats, trip, now).map((course) => course.level),
+    };
+    return decideTripAdmission({
+      requirement,
+      siteRequirement,
+      evidence,
+      identityUnconfirmed: false,
+      declared: undefined,
+    }).admitted;
+  });
 }
+
+const NO_CARDS: TripAdmissionEvidence = {
+  certifications: [],
+  specialtyCertifications: [],
+  nitroxCertifications: [],
+};
 
 /**
  * Whether one person would still be admitted to this departure: the send's

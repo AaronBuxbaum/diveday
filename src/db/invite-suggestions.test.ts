@@ -1,8 +1,11 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { INVITE_SUGGESTIONS_SHOWN } from "@/lib/invite-suggestions";
 import { fileScopedShopContext } from "@/test/db";
+import { tripAdmissionFor } from "./bookings";
 import {
+  admittedToTrip,
   createInvitationUnderCooldown,
   invitedWithinCooldown,
   listInviteSuggestions,
@@ -269,6 +272,76 @@ describe("listInviteSuggestions", () => {
     expect(
       await listInviteSuggestions(db, { shopId: shop.id, tripId: session.id, now }),
     ).toBeNull();
+  });
+});
+
+describe("admittedToTrip", () => {
+  it("agrees with the booking's own gate for every candidate, read in one pass", async () => {
+    const { db, shop, now, target, diver, card, trip } = await fixture();
+    const underLevel = await diver("Gate Under Level");
+    const advanced = await diver("Gate Advanced");
+    const deletedCard = await diver("Gate Deleted Card");
+    const trainee = await diver("Gate Trainee");
+    const stranger = await diver("Gate No Cards");
+    await card(underLevel.id, "open_water");
+    await card(advanced.id, "advanced_open_water");
+    await db.insert(certifications).values({
+      shopId: shop.id,
+      personId: deletedCard.id,
+      agency: "padi",
+      level: "advanced_open_water",
+      status: "verified",
+      identifier: "C-DELETED",
+      deletedAt: now,
+    });
+    // An Advanced course that finishes before the target sails: admission
+    // sells the seat on it (readiness still waits for the card).
+    const [course] = await db
+      .insert(courses)
+      .values({
+        shopId: shop.id,
+        title: "Gate Advanced Course",
+        slug: `gate-advanced-${now.getTime()}`,
+        certifiesLevel: "advanced_open_water",
+      })
+      .returning();
+    const session = await trip("Gate Advanced session", new Date(now.getTime() + 3 * DAY_MS));
+    await db.update(trips).set({ courseId: course.id }).where(eq(trips.id, session.id));
+    await db.insert(bookings).values({
+      bookedAs: "diver",
+      participantType: "diver",
+      shopId: shop.id,
+      tripId: session.id,
+      personId: trainee.id,
+      status: "booked",
+    });
+    await db.insert(tripRequirements).values({
+      shopId: shop.id,
+      tripId: target.id,
+      minimumCertificationLevel: "advanced_open_water",
+      requiredSpecialties: ["deep"],
+    });
+    await db.insert(specialtyCertifications).values({
+      shopId: shop.id,
+      personId: advanced.id,
+      agency: "padi",
+      specialty: "deep",
+      status: "verified",
+      identifier: "DEEP-GATE",
+    });
+
+    const candidates = [underLevel, advanced, deletedCard, trainee, stranger].map((p) => ({
+      personId: p.id,
+    }));
+    const one = async (personId: string) =>
+      (await tripAdmissionFor(db, shop.id, target.id, { id: personId }, false, false)).admitted;
+    const expected = [];
+    for (const c of candidates) if (await one(c.personId)) expected.push(c);
+
+    const got = await admittedToTrip(db, shop.id, target.id, candidates);
+    expect(got).toEqual(expected);
+    expect(got.map((c) => c.personId)).toContain(advanced.id);
+    expect(got.map((c) => c.personId)).not.toContain(underLevel.id);
   });
 });
 
