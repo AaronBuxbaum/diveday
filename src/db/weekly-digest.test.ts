@@ -1,5 +1,6 @@
 import { and, eq, ne } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { nowDate } from "@/lib/clock";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { messageFor } from "@/lib/notifications/render";
 import { dbNow, fileScopedShopContext, type seededShopContext } from "@/test/db";
@@ -292,6 +293,25 @@ describe("sendDueWeeklyDigests", () => {
 });
 
 describe("previewWeeklyDigest", () => {
+  it("never asks the marine forecast provider for anything (#2489)", async () => {
+    const { db, shop, owner } = await context();
+    const fetcher = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("no network"));
+    try {
+      await previewWeeklyDigest(db, {
+        shop,
+        personId: owner.personId,
+        origin: ORIGIN,
+        // Today's own clock: the seeded departures sit inside the provider's window.
+        now: nowDate(),
+      });
+      // The request, if one went out, starts a tick after the queue returns.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(fetcher).not.toHaveBeenCalled();
+    } finally {
+      fetcher.mockRestore();
+    }
+  });
+
   it("builds this staffer's email without claiming the week or minting a link", async () => {
     const { db, shop, instructor, monday } = await context();
     const preview = await previewWeeklyDigest(db, {

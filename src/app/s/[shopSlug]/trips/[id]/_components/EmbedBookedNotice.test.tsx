@@ -35,6 +35,7 @@ const readyRoute = "/s/reef-shop/trips/trip-1/ready?booking=tok";
 
 function renderNotice(
   overrides: {
+    fullName?: string;
     readinessLink?: string;
     mailState?: "none" | "confirmation" | "confirmationWithWaiver";
     payNotice?: string;
@@ -46,7 +47,14 @@ function renderNotice(
       shopSlug="reef-shop"
       locale="en-US"
       trip={trip}
-      confirmed={confirmed}
+      confirmed={
+        overrides.fullName === undefined
+          ? confirmed
+          : ({
+              ...confirmed,
+              person: { ...confirmed.person, fullName: overrides.fullName },
+            } as Confirmed)
+      }
       readinessLink={overrides.readinessLink ?? readyRoute}
       mailState={overrides.mailState ?? "none"}
       payNotice={overrides.payNotice}
@@ -60,6 +68,19 @@ describe("EmbedBookedNotice", () => {
   it("greets the diver by their first name", () => {
     renderNotice();
     expect(screen.getByRole("heading", { name: /You’ve got a seat, Ingrid/ })).toBeVisible();
+  });
+
+  it.each(["", "   "])(
+    "greets a nameless booking (%j) with the fallback word, never an empty comma",
+    (fullName) => {
+      renderNotice({ fullName });
+      expect(screen.getByRole("heading", { name: "You’ve got a seat, there." })).toBeVisible();
+    },
+  );
+
+  it("greets a name with a leading space by its first word, not the whole name", () => {
+    renderNotice({ fullName: " Nora Quinn" });
+    expect(screen.getByRole("heading", { name: /You’ve got a seat, Nora\./ })).toBeVisible();
   });
 
   /**

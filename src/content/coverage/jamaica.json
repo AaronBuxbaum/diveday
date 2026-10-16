@@ -1,0 +1,536 @@
+{
+  "area": "jamaica",
+  "method": "Jamaica's north and west coast resort areas: Negril, Montego Bay (with Lucea), Ocho Rios and Runaway Bay; Kingston and Port Royal were searched but no operator list was readable. No official list was found: the Montego Bay Marine Park Trust and Negril Marine Park publish no mooring or dive-site list, and NEPA has none online (the Trust site did not resolve), so the Jamaica Tourist Board's caves page (visitjamaica.com, counted as one list) is the only government-tied list and names just two sites. Operator lists read: ScubaCaribe (its Negril, Montego Bay and Ocho Rios dive-site map PDFs and web pages, which are for RIU guests), Negril Adventure Divers (Wayback snapshot), Reef Explorer Negril (its own guide page), Dressel Divers (Montego Bay and Lucea weekly plan) and Jamaica Scuba Divers (Runaway Bay). Resort Divers (Ocho Rios and Runaway Bay), One Love Scuba (Negril), Sandals and Beaches, and Garfield's Diving Station publish no site names, and Sun Divers, Negril Fun Diving and Marine Life Divers had no readable list. A site is counted when named on at least two independent lists (each operator once, the Tourist Board once). Almost every other site is on ScubaCaribe's maps alone, so it stays as an excluded one-list row rather than being dropped. Marley's Garden is on two lists but under two different towns, so it is held out until one shop confirms it. Magazines, blogs, PADI, Divessi and travel guides were used only for leads. No list gave coordinates. Counted 2026-10-14.",
+  "sources": [
+    "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Negril-Dive-Site-Map.pdf",
+    "https://web.archive.org/web/2025/https://www.negriladventuredivers.com/locations",
+    "https://reefexplorerjamaica.com/blog/the-ultimate-guide-to-scuba-diving-in-negril",
+    "https://www.visitjamaica.com/experiences/natural-wonders/caves/",
+    "https://www.scubacaribe.com/diving/jamaica/negril/",
+    "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Montego-Bay-Dive-Site-Map.pdf",
+    "https://www.dresseldivers.com/dive/jamaica/montego-bay-scuba-diving/",
+    "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Ocho-Rios-Dive-Site-Map.pdf",
+    "https://www.scuba-jamaica.com/divesites.htm"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Throne Room",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Negril-Dive-Site-Map.pdf",
+        "https://web.archive.org/web/2025/https://www.negriladventuredivers.com/locations",
+        "https://reefexplorerjamaica.com/blog/the-ultimate-guide-to-scuba-diving-in-negril",
+        "https://www.visitjamaica.com/experiences/natural-wonders/caves/"
+      ]
+    },
+    {
+      "name": "Tug Boat",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Negril-Dive-Site-Map.pdf",
+        "https://web.archive.org/web/2025/https://www.negriladventuredivers.com/locations"
+      ]
+    },
+    {
+      "name": "Deep Plane",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Negril-Dive-Site-Map.pdf",
+        "https://web.archive.org/web/2025/https://www.negriladventuredivers.com/locations"
+      ]
+    },
+    {
+      "name": "Sharks Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Negril-Dive-Site-Map.pdf",
+        "https://reefexplorerjamaica.com/blog/the-ultimate-guide-to-scuba-diving-in-negril"
+      ]
+    },
+    {
+      "name": "Arches",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Negril-Dive-Site-Map.pdf",
+        "https://reefexplorerjamaica.com/blog/the-ultimate-guide-to-scuba-diving-in-negril"
+      ]
+    },
+    {
+      "name": "Sand Slope",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Negril-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Cave Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Negril-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Treasure Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Negril-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Island Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Negril-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Kingfish Point",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Negril-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Gallery",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Negril-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Fantasy Reef (Negril)",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Negril-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Fish Pond (Negril)",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Negril-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Engine Block",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Negril-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Cable Reef Deep",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Negril-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Cable Reef Shallow",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Negril-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Golden Gates",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Negril-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Archers Reef (small airplane wreck)",
+      "template": null,
+      "listedBy": ["https://www.scubacaribe.com/diving/jamaica/negril/"],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Widow Maker (Widowmaker's Cave)",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Montego-Bay-Dive-Site-Map.pdf",
+        "https://www.visitjamaica.com/experiences/natural-wonders/caves/"
+      ]
+    },
+    {
+      "name": "Chubb Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Montego-Bay-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Sea World",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Montego-Bay-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Anthony's Wall",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Montego-Bay-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Stingray City (Montego Bay)",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Montego-Bay-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Dragon Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Montego-Bay-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Pelican Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Montego-Bay-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Riu Garden",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Montego-Bay-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Willow Tree",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Montego-Bay-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Fish Pond (Montego Bay)",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Montego-Bay-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Diamond Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Montego-Bay-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Plane Wreck (Montego Bay)",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Montego-Bay-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Spadefish Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Montego-Bay-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "White House Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Montego-Bay-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Airport Wall (Montego Bay)",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Montego-Bay-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "The Green Light",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Montego-Bay-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Big Drop Off",
+      "template": null,
+      "listedBy": ["https://www.dresseldivers.com/dive/jamaica/montego-bay-scuba-diving/"],
+      "excluded": "on one list only (Dressel Divers)"
+    },
+    {
+      "name": "Dream Wall",
+      "template": null,
+      "listedBy": ["https://www.dresseldivers.com/dive/jamaica/montego-bay-scuba-diving/"],
+      "excluded": "on one list only (Dressel Divers)"
+    },
+    {
+      "name": "Devil's Wall",
+      "template": null,
+      "listedBy": ["https://www.dresseldivers.com/dive/jamaica/montego-bay-scuba-diving/"],
+      "excluded": "on one list only (Dressel Divers)"
+    },
+    {
+      "name": "Fisherman's Valley",
+      "template": null,
+      "listedBy": ["https://www.dresseldivers.com/dive/jamaica/montego-bay-scuba-diving/"],
+      "excluded": "on one list only (Dressel Divers)"
+    },
+    {
+      "name": "Ibero Gardens",
+      "template": null,
+      "listedBy": ["https://www.dresseldivers.com/dive/jamaica/montego-bay-scuba-diving/"],
+      "excluded": "on one list only (Dressel Divers)"
+    },
+    {
+      "name": "Rocky Shallow",
+      "template": null,
+      "listedBy": ["https://www.dresseldivers.com/dive/jamaica/montego-bay-scuba-diving/"],
+      "excluded": "on one list only (Dressel Divers)"
+    },
+    {
+      "name": "The Canyons (Dressel, Montego Bay and Lucea)",
+      "template": null,
+      "listedBy": ["https://www.dresseldivers.com/dive/jamaica/montego-bay-scuba-diving/"],
+      "excluded": "on one list only (Dressel Divers)"
+    },
+    {
+      "name": "Dressel Discovery",
+      "template": null,
+      "listedBy": ["https://www.dresseldivers.com/dive/jamaica/montego-bay-scuba-diving/"],
+      "excluded": "on one list only (Dressel Divers)"
+    },
+    {
+      "name": "Jamaica Reef",
+      "template": null,
+      "listedBy": ["https://www.dresseldivers.com/dive/jamaica/montego-bay-scuba-diving/"],
+      "excluded": "on one list only (Dressel Divers)"
+    },
+    {
+      "name": "Rose Hall Reef",
+      "template": null,
+      "listedBy": ["https://www.dresseldivers.com/dive/jamaica/montego-bay-scuba-diving/"],
+      "excluded": "on one list only (Dressel Divers)"
+    },
+    {
+      "name": "Katherine's Wreck (SS Kathryn)",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Ocho-Rios-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Coral Garden (Ocho Rios)",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Ocho-Rios-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Rock Side Wall",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Ocho-Rios-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Rock Side",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Ocho-Rios-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Neverland Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Ocho-Rios-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Jewel Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Ocho-Rios-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Jewel Deep",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Ocho-Rios-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Marley's Garden",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Ocho-Rios-Dive-Site-Map.pdf",
+        "https://www.dresseldivers.com/dive/jamaica/montego-bay-scuba-diving/"
+      ],
+      "excluded": "the name appears on ScubaCaribe's Ocho Rios map (30 ft) and Dressel's Montego Bay and Lucea plan (40 ft); the lists place it in different towns, so it is not counted until a shop confirms one site"
+    },
+    {
+      "name": "The Mountain",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Ocho-Rios-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Great House Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Ocho-Rios-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Dunn's River",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Ocho-Rios-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Rio Chico Wall",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Ocho-Rios-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Ocho Rios Wall",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Ocho-Rios-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Fantasy Reef (Ocho Rios)",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Ocho-Rios-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Middle Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Ocho-Rios-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Dickie's Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Ocho-Rios-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Dickie's Deep",
+      "template": null,
+      "listedBy": [
+        "https://www.scubacaribe.com/wp-content/uploads/2024/05/Jamaica-Ocho-Rios-Dive-Site-Map.pdf"
+      ],
+      "excluded": "on one list only (ScubaCaribe)"
+    },
+    {
+      "name": "Canyon (Runaway Bay)",
+      "template": null,
+      "listedBy": ["https://www.scuba-jamaica.com/divesites.htm"],
+      "excluded": "on one list only (Jamaica Scuba Divers)"
+    },
+    {
+      "name": "Planes (Runaway Bay)",
+      "template": null,
+      "listedBy": ["https://www.scuba-jamaica.com/divesites.htm"],
+      "excluded": "on one list only (Jamaica Scuba Divers)"
+    },
+    {
+      "name": "Groupers Drop",
+      "template": null,
+      "listedBy": ["https://www.scuba-jamaica.com/divesites.htm"],
+      "excluded": "on one list only (Jamaica Scuba Divers)"
+    },
+    {
+      "name": "Nursery (Runaway Bay)",
+      "template": null,
+      "listedBy": ["https://www.scuba-jamaica.com/divesites.htm"],
+      "excluded": "on one list only (Jamaica Scuba Divers)"
+    },
+    {
+      "name": "Pockets Reef",
+      "template": null,
+      "listedBy": ["https://www.scuba-jamaica.com/divesites.htm"],
+      "excluded": "on one list only (Jamaica Scuba Divers)"
+    },
+    {
+      "name": "Reggae Queen",
+      "template": null,
+      "listedBy": ["https://www.scuba-jamaica.com/divesites.htm"],
+      "excluded": "on one list only (Jamaica Scuba Divers)"
+    },
+    {
+      "name": "Spanish Anchor",
+      "template": null,
+      "listedBy": ["https://www.scuba-jamaica.com/divesites.htm"],
+      "excluded": "on one list only (Jamaica Scuba Divers)"
+    },
+    {
+      "name": "Sunken city of Port Royal",
+      "template": null,
+      "listedBy": [],
+      "excluded": "permit-only archaeological site, and on no operator list read"
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import { openSeatsDebriefText } from "@/i18n/open-seats-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { formatShortDate } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { recurrenceSummary, type WeekdaySet } from "@/lib/recurrence";
 import { recurrenceSummaryText } from "./SeriesSection";
 
@@ -27,6 +28,8 @@ export function repeatsRowText(
     weekdayMask: WeekdaySet;
     endsOn: CalendarDate | null;
     futureScheduledCount: number;
+    /** Who crews every date, by name; empty when the run has no standing crew. */
+    standingCrewNames: string[];
   } | null,
 ): string {
   if (!series) return t("trips.about.oneTime");
@@ -39,9 +42,18 @@ export function repeatsRowText(
       endsOn: series.endsOn,
     }),
   );
-  return series.futureScheduledCount > 0
-    ? t("tripSeries.panel.summaryWithFuture", { summary, count: series.futureScheduledCount })
-    : t("tripSeries.panel.summaryAllDone", { summary });
+  const counted =
+    series.futureScheduledCount > 0
+      ? t("tripSeries.panel.summaryWithFuture", { summary, count: series.futureScheduledCount })
+      : t("tripSeries.panel.summaryAllDone", { summary });
+  // The run's standing crew, so a staffer sees it before hand-assigning a date
+  // the next apply would overwrite.
+  if (series.standingCrewNames.length === 0) return counted;
+  const crewLine = t("tripSeries.panel.standingCrewLine", {
+    names: cachedListFormat(locale, { type: "conjunction" }).format(series.standingCrewNames),
+    count: series.standingCrewNames.length,
+  });
+  return `${counted} ${crewLine}`;
 }
 
 /**

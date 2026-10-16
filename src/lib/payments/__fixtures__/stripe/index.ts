@@ -60,6 +60,7 @@ export type StripeEventFixture =
   | "checkout.session.expired"
   | "invoice.paid"
   | "invoice.voided"
+  | "payout.canceled"
   | "payout.failed"
   | "payout.paid";
 
@@ -91,6 +92,7 @@ export const STRIPE_EVENT_FIXTURES: readonly StripeEventFixture[] = [
   "checkout.session.expired",
   "invoice.paid",
   "invoice.voided",
+  "payout.canceled",
   "payout.failed",
   "payout.paid",
 ];

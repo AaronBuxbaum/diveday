@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { seatNewDiverAction } from "@/app/actions/seat-diver";
 import { SEAT_SURFACES, type SeatSurfaceId } from "@/app/actions/seat-diver-surfaces";
-import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/actions";
+import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions";
 import { getDb } from "@/db/client";
 import { createDiver, findSimilarDivers } from "@/db/divers";
 import { discardFormDraft } from "@/db/form-drafts";

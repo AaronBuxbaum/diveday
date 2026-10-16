@@ -84,7 +84,8 @@
     "errors": "Couldn’t send to {names}. Open the roster to check the booking.",
     "confirmResend": "Yes, resend",
     "neverMind": "Never mind",
-    "emptySelection": "Tick at least one diver, then send the waiver to the whole selection."
+    "emptySelection": "Tick at least one diver, then send the waiver to the whole selection.",
+    "unnamedDiver": "A diver"
   },
   "connectivity": {
     "online": "Online",
@@ -277,6 +278,7 @@
     "divers": "Divers",
     "inbox": "Inbox",
     "money": "Money",
+    "safety": "Safety",
     "courses": "Courses",
     "gear": "Gear",
     "settings": "Settings",
@@ -408,7 +410,8 @@
       },
       "checklist": {
         "heading": "Before you leave the dock",
-        "checkedLabel": "Checked — press to clear",
+        "checkedLabel": "Checked — press twice to clear",
+        "confirmClear": "Tap again to clear",
         "uncheckedLabel": "Not checked — press to mark checked"
       },
       "counter": {
@@ -485,7 +488,9 @@
   "buddyTeam": {
     "with": "Buddy team: {names}",
     "separatedDock": "Buddy not aboard yet",
-    "separatedAfterDive": "Buddy not back aboard"
+    "separatedAfterDive": "Buddy not back aboard",
+    "separatedDockNamed": "{name} not aboard yet",
+    "separatedAfterDiveNamed": "{name} not back aboard"
   },
   "payments": {
     "connect": "Connect payments"
@@ -526,7 +531,12 @@
     "returning": "Back after {years, plural, one {# year} other {# years}}",
     "dockLine": "Say hello to {name}: {card}.",
     "dockLineNoCard": "Say hello to {name}.",
-    "dockLineSays": "Say hello to {name}: says {level}."
+    "dockLineSays": "Say hello to {name}: says {level}.",
+    "hello": {
+      "firstOceanDive": "First ocean dive.",
+      "celebrating": "Celebrating something.",
+      "nervous": "A little nervous."
+    }
   },
   "diveIntent": {
     "onTheList": "On the list today: {list}",
@@ -595,6 +605,7 @@
     "paid": "Paid out {amount} on {date}, covering {from} to {to}",
     "paidOneDay": "Paid out {amount} on {date}, covering {from}",
     "paidNoSpan": "Paid out {amount} on {date}",
+    "canceled": "A payout of {amount} due {date} was canceled.",
     "failed": "A payout of {amount} due {date} failed. Check the bank account in Stripe."
   }
 }

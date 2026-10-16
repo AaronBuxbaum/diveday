@@ -102,6 +102,63 @@ async function read(bookingId: string) {
   return data;
 }
 
+/** A seat whose diver has never been aboard before, so the first-trip question is asked. */
+async function firstTimerSeat() {
+  const made = await seat();
+  const { db } = made;
+  const [own] = await db
+    .select({ personId: bookings.personId, tripId: bookings.tripId })
+    .from(bookings)
+    .where(eq(bookings.id, made.bookingId));
+  if (!own) throw new Error("seat vanished");
+  await db
+    .update(bookings)
+    .set({ status: "cancelled" })
+    .where(
+      and(
+        eq(bookings.personId, own.personId),
+        ne(bookings.id, made.bookingId),
+        ne(bookings.status, "cancelled"),
+      ),
+    );
+  await db
+    .update(bookings)
+    .set({ welcomeSharedAt: null, welcomeHello: null })
+    .where(eq(bookings.id, made.bookingId));
+  expect((await read(made.bookingId)).welcomeOffer).toEqual({ kind: "first_trip" });
+  return made;
+}
+
+describe("the first-timer's word to the crew", () => {
+  it("keeps the choice with the yes, changes it, and clears it with the consent", async () => {
+    const { bookingId, token } = await firstTimerSeat();
+    await save(token, { welcomeAsked: "1", welcomeShare: "on", welcomeHello: "celebrating" });
+    expect(await read(bookingId)).toMatchObject({
+      welcomeShared: true,
+      welcomeHello: "celebrating",
+    });
+
+    await save(token, { welcomeAsked: "1", welcomeShare: "on", welcomeHello: "nervous" });
+    expect((await read(bookingId)).welcomeHello).toBe("nervous");
+
+    await save(token, { welcomeAsked: "1", welcomeShare: "on", welcomeHello: "" });
+    expect(await read(bookingId)).toMatchObject({ welcomeShared: true, welcomeHello: null });
+
+    await save(token, { welcomeAsked: "1", welcomeShare: "on", welcomeHello: "nervous" });
+    await save(token, { welcomeAsked: "1", welcomeHello: "nervous" });
+    expect(await read(bookingId)).toMatchObject({ welcomeShared: false, welcomeHello: null });
+  });
+
+  it("refuses a choice outside the three, and stores nothing without the yes", async () => {
+    const { bookingId, token } = await firstTimerSeat();
+    expect(
+      await save(token, { welcomeAsked: "1", welcomeShare: "on", welcomeHello: "I have asthma" }),
+    ).toBe(`REDIRECT:/ready/${token}?error=day-of`);
+    await save(token, { welcomeAsked: "1", welcomeHello: "nervous" });
+    expect(await read(bookingId)).toMatchObject({ welcomeShared: false, welcomeHello: null });
+  });
+});
+
 describe("saveDayOfDetailsFromReady", () => {
   it("keeps every answer from one Save, not only the last", async () => {
     const { bookingId, token } = await seat();

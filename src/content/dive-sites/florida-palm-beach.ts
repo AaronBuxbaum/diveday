@@ -940,7 +940,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
   // Governor's Riverwalk Reef (Shasha Boekanier, St. Jacques, Gilbert Sea, Thozina)
   {
     slug: "governors-riverwalk-reef",
-    version: 1,
+    version: 2,
     area: "florida-palm-beach",
     sources: [
       "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Shasha%20Boekanier%27&outFields=Name,Depth,Relief,Lat_DD,Long_DD,DeployDate&returnGeometry=false&f=json",
@@ -958,8 +958,8 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Twenty years of growth have covered the hulls, and the fish and turtles move along the rock piles between them.",
       difficultyLevel: "advanced",
-      depthRange: "17–27 m (55–90 ft)",
-      maxDepthMeters: 28,
+      depthRange: "17–30 m (55–100 ft)",
+      maxDepthMeters: 30,
       currentNote:
         "A Gulf Stream drift: negative entry, stay with the group from wreck to wreck, and shoot an SMB before the ascent. Stay outside the hulls, and watch for boats near the inlet when you surface.",
       fitTone: "demanding",

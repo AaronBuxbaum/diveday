@@ -157,6 +157,54 @@ describe("a generated artifact printed through the shell", () => {
   });
 });
 
+/**
+ * The settings deny the Read tool six `.env` names, and the shell was the way round it:
+ * `grep -r . .env.local` printed production keys with no prompt (2026-10-13 review, row 26).
+ */
+describe("an environment file read through the shell", () => {
+  it("refuses a reader handed a .env file, and names what to use instead", () => {
+    expect(violationFor("grep -r . .env.local", scripts)).toMatch(/env-registry/);
+    expect(refuses("cat .env")).toBe(true);
+    expect(refuses("head -5 .env.manual")).toBe(true);
+    expect(refuses("rg SECRET ../wt-x/.env.vercel")).toBe(true);
+    expect(refuses("sed -n 1,20p /home/claude/diveday/.env.github")).toBe(true);
+    expect(refuses("ls && awk -F= '{print $2}' .env.local")).toBe(true);
+    expect(refuses("cat .env.local | grep STRIPE")).toBe(true);
+    expect(refuses("source .env.local")).toBe(true);
+  });
+
+  /** Every form the shell reads the same file through (security review of row 26). */
+  it("refuses a quoted path, a glob, a brace expansion, dd and a redirected read", () => {
+    expect(refuses('cat ".env.local"')).toBe(true);
+    expect(refuses("cat '.env'")).toBe(true);
+    expect(refuses("cat .env*")).toBe(true);
+    expect(refuses("cat .env.{local,vercel}")).toBe(true);
+    expect(refuses("head -3 .env.l?cal")).toBe(true);
+    expect(refuses("dd if=.env.local")).toBe(true);
+    expect(refuses("cat .env.local>x")).toBe(true);
+    expect(refuses("grep KEY < .env.local")).toBe(true);
+    expect(refuses("grep KEY <.env.vercel")).toBe(true);
+  });
+
+  /** `.env.example` is generated from the registry, holds no value, and is checked in. */
+  it("leaves .env.example, a listing, and a name that only starts with .env alone", () => {
+    expect(refuses("cat .env.example")).toBe(false);
+    expect(refuses("grep -n SECRET_ENCRYPTION_KEY .env.example")).toBe(false);
+    expect(refuses("ls -la .env.local")).toBe(false);
+    expect(refuses("cat .envrc.md")).toBe(false);
+    expect(refuses("grep -rn 'env.local' docs")).toBe(false);
+    expect(refuses("node scripts/render-env-example.mjs --write")).toBe(false);
+  });
+
+  it("leaves writing an env file, a quoted .env.example, and a glob over other names alone", () => {
+    expect(refuses("cat >> .env.local <<'EOF'\nFOO=bar\nEOF")).toBe(false);
+    expect(refuses("cat > .env.manual <<EOF\nSTRIPE_SECRET_KEY=\nEOF")).toBe(false);
+    expect(refuses('cat ".env.example"')).toBe(false);
+    expect(refuses("cat src/*.ts")).toBe(false);
+    expect(refuses('git commit -m "guard: refuse cat .env.local"')).toBe(false);
+  });
+});
+
 describe("discarding a shared working tree", () => {
   const dirty = { changes: () => [" M src/db/schema.ts", "?? scratch.ts"] };
   const clean = { changes: () => [] };
@@ -207,6 +255,42 @@ describe("discarding a shared working tree", () => {
     expect(violationFor("git push", scripts, clean)).toBeNull();
     // A branch whose *name* ends in main is not main.
     expect(violationFor("git push -u origin claude/fix-domain", scripts, clean)).toBeNull();
+  });
+});
+
+describe("cancelling a push run on main", () => {
+  const runs = {
+    "repos/{owner}/{repo}/101": { event: "push", branch: "main" },
+    "repos/AaronBuxbaum/diveday/101": { event: "push", branch: "main" },
+    "repos/{owner}/{repo}/202": { event: "pull_request", branch: "claude/x-1" },
+    "repos/{owner}/{repo}/303": { event: "schedule", branch: "main" },
+  };
+  const runOf = (repoPath, id) => runs[`${repoPath}/${id}`] ?? null;
+  const verdict = (command) => violationFor(command, scripts, { runOf, changes: () => [] });
+
+  it("refuses `gh run cancel` of a main push run, and says why", () => {
+    const reason = verdict("gh run cancel 101");
+    expect(reason).toMatch(/push to main/);
+    expect(reason).toMatch(/20-job cap/);
+    expect(verdict("gh run cancel 101 --repo AaronBuxbaum/diveday")).not.toBeNull();
+  });
+
+  it("refuses the REST endpoint, force-cancel included", () => {
+    expect(
+      verdict("gh api -X POST repos/AaronBuxbaum/diveday/actions/runs/101/cancel"),
+    ).not.toBeNull();
+    expect(
+      verdict("gh api --method POST /repos/AaronBuxbaum/diveday/actions/runs/101/force-cancel"),
+    ).not.toBeNull();
+  });
+
+  it("leaves alone a pull request's run, the nightly, a run it cannot read, and reading a run", () => {
+    expect(verdict("gh run cancel 202")).toBeNull();
+    expect(verdict("gh run cancel 303")).toBeNull();
+    expect(verdict("gh run cancel 999")).toBeNull();
+    expect(verdict("gh run cancel")).toBeNull();
+    expect(verdict("gh run view 101 --log-failed")).toBeNull();
+    expect(verdict("gh api repos/AaronBuxbaum/diveday/actions/runs/101")).toBeNull();
   });
 });
 

@@ -4,6 +4,7 @@ import { buttonClass } from "@/components/ui/button";
 import type { BookingMailState } from "@/db/notifications";
 import { diverTranslator } from "@/i18n/messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { firstNameOf } from "@/lib/person-name";
 import { publicSchedulePath } from "@/lib/public-routes";
 import type { Confirmed, Shop, Trip } from "./types";
 
@@ -85,7 +86,7 @@ export function EmbedBookedNotice({
     <div>
       <EarnedMoment
         title={t("booking.confirmedHeading", {
-          name: confirmed.person.fullName.split(" ")[0],
+          name: firstNameOf(confirmed.person.fullName, t("ready.namelessFallback")),
         })}
       >
         <p>

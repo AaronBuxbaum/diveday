@@ -37,7 +37,7 @@ const { moveSeat } = await import("@/db/seat-diver");
 const { requireShopSurface } = await import("@/lib/session");
 const { requireRosterBooking } = await import("./roster-booking");
 const { carryWaitlist } = await import("@/db/waitlist-roll");
-const { carryWaitlistAction, moveSeatAction } = await import("./actions");
+const { carryWaitlistAction, moveSeatAction } = await import("./roster-seating-actions");
 
 const SHOP_SLUG = "reef-life";
 const SHOP_ID = "11111111-1111-4111-8111-111111111111";

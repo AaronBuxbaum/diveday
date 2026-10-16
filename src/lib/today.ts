@@ -1601,8 +1601,8 @@ export type DaySpine = {
   desk: TodayAction[];
   /** The collapsed Tomorrow disclosure's body and count. */
   tomorrow: { stations: DayStation[]; jobs: number };
-  /** The rest of the horizon, as one count behind a link to the board. */
-  week: { jobs: number };
+  /** The rest of the horizon: a count, and the rows behind it, opened in place. */
+  week: { jobs: number; rows: TodayAction[] };
 };
 
 /** Tone first: danger, then warning, then everything quiet. */
@@ -1739,13 +1739,13 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
     stationFor(departure, rowsByTrip.get(departure.tripId) ?? []),
   );
 
-  const weekJobs = today.actions.filter(
+  const weekRows = today.actions.filter(
     (action) =>
       action.departure &&
       !stationed.has(action.departure.tripId) &&
       !out.has(action.departure.tripId) &&
       !AFTER_DIVE_ROLL_CALL_KINDS.has(action.kind),
-  ).length;
+  );
 
   return {
     stations,
@@ -1754,7 +1754,7 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
       stations: tomorrowStations,
       jobs: tomorrowStations.reduce((total, station) => total + station.rows.length, 0),
     },
-    week: { jobs: weekJobs },
+    week: { jobs: weekRows.length, rows: sortStationRows(weekRows) },
   };
 }
 

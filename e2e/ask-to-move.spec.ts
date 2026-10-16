@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
@@ -9,6 +10,8 @@ import {
   signInAsOwner,
   signOut,
 } from "./helpers";
+
+const diver = diverTranslator("en-US");
 
 /**
  * **Ask to move** (H-126). Past the free-cancellation window the diver's own
@@ -68,9 +71,7 @@ test.describe("ask to move", () => {
     await expect(page.getByText(/Can’t make this date\? Ask .+ to move you/)).toBeVisible();
     await page.getByLabel("Dates that would work (optional)").fill("Any Saturday in August");
     await page.getByRole("button", { name: "Ask to move" }).click();
-    await expect(
-      page.getByText("Sent. The shop will be in touch about another date."),
-    ).toBeVisible();
+    await expect(page.getByText(diver("ready.moveAsk.sent"))).toBeVisible();
     await expect(page.getByText(/You asked .+ to move you/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Ask to move" })).toHaveCount(0);
     // The cancel is still the diver's own, beneath it.

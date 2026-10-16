@@ -121,6 +121,48 @@ describe("PaymentStatusControl Paid mark", () => {
     expect(mark.querySelector('input[name="amount"]')).toHaveValue("120");
   });
 
+  it("reopens holding the status, amount and method of a mark the server refused", () => {
+    render(
+      <PaymentStatusControl
+        bookingId="booking-1"
+        status="unpaid"
+        allowedStatuses={["unpaid", "deposit_paid", "paid"]}
+        action={vi.fn()}
+        sourceNote={null}
+        refundNote={null}
+        mark={{ ...MARK, retry: { status: "deposit_paid", amountCents: 4_550, method: "card" } }}
+        copy={COPY}
+      />,
+    );
+    expect(screen.getByRole("combobox", { name: "Payment status" })).toHaveValue("deposit_paid");
+    expect(screen.getByTestId("payment-mark").querySelector('input[name="amount"]')).toHaveValue(
+      "45.5",
+    );
+    expect(screen.getByRole("radio", { name: "Card" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Cash" })).not.toBeChecked();
+  });
+
+  it("keeps the balance and an unpicked method when the refusal had neither", () => {
+    render(
+      <PaymentStatusControl
+        bookingId="booking-1"
+        status="unpaid"
+        allowedStatuses={["unpaid", "deposit_paid", "paid"]}
+        action={vi.fn()}
+        sourceNote={null}
+        refundNote={null}
+        mark={{ ...MARK, retry: { status: "paid", amountCents: null, method: null } }}
+        copy={COPY}
+      />,
+    );
+    expect(screen.getByTestId("payment-mark").querySelector('input[name="amount"]')).toHaveValue(
+      "120",
+    );
+    for (const name of ["Cash", "Card", "Other"]) {
+      expect(screen.getByRole("radio", { name })).not.toBeChecked();
+    }
+  });
+
   it("asks nothing when the seat's own status is re-submitted, or a non-money status is picked", () => {
     render(
       <PaymentStatusControl

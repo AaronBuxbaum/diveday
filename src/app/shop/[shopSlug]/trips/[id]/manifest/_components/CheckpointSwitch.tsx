@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { checkpointGapLine } from "@/components/checkpoint-gap-words";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { rollCallCheckpointShortText, rollCallCheckpointText } from "@/i18n/manifest-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -9,7 +10,6 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { CheckpointGapGuard, type CheckpointGapPrompt } from "./CheckpointGapGuard";
-import { checkpointGapLine } from "./checkpoint-gap-words";
 
 function checkpointHref(shopSlug: string, tripId: string, checkpoint: RollCallCheckpoint): string {
   return `/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=${checkpoint}`;

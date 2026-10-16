@@ -49,6 +49,9 @@ export const COPY: BuilderCopy = {
   impactBoatClash: "{boat} is already out on {departure} at that time.",
   impactCrewClash: "{name} is already rostered on {departure} at that time.",
   impactCrewAway: "{name} has told you they are away then.",
+  impactTurnaroundBoat: "Tight turnaround: {boat} has {minutes} min between this and {departure}.",
+  impactTurnaroundCrew:
+    "Tight turnaround: {name} has {minutes} min between this and {departure}, from another meeting point.",
   impactToldOne: "{count} diver has already been told this date. Moving it tells them the new one.",
   impactToldOther:
     "{count} divers have already been told this date. Moving it tells them the new one.",

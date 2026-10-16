@@ -124,13 +124,15 @@
   "medicalEarlierRefusal": "A physician did not clear this person on {date} (earlier waiver)",
   "medicalEarlierRefusalChip": "Physician said no before",
   "medicalReferralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file",
+  "medicalHoldNotClearedChip": "Not medically cleared",
+  "medicalHoldReviewChip": "Medical review open",
   "medicalReferralUnresolvedChip": "Referral still open",
   "medicalRidingOnlyNotClearedChip": "Riding only: MD said no",
   "medicalRidingOnlyReferralChip": "Riding only: referred",
   "medicalRidingOnlyNotCleared": "A physician did not clear this person on {date}: riding only, not in the water",
   "medicalRidingOnlyReferral": "Referred to a physician on {date} with no answer on file: riding only, not in the water",
   "medicalReferralLink": "View the referral",
-  "medicalRefusalLink": "View the refusal",
+  "medicalRefusalLink": "View the physician’s decision",
   "resolveBlockersLink": "Resolve blockers on Divers →",
   "addNoteSummary": "Add a note",
   "rollCallRecordedByPlain": "{label} {date} by {name}",
@@ -268,6 +270,8 @@
   },
   "staleRollCall": {
     "pushTitle": "Roll call still open",
-    "pushBody": "{title}: {count, plural, one {# person} other {# people}} not marked after dive {dive}."
+    "pushBody": "{title}: {awaiting, plural, one {# person has} other {# people have}} no result after dive {dive}.",
+    "pushBodyMissing": "{title}: {missing, plural, one {# person} other {# people}} recorded not back aboard after dive {dive}.",
+    "pushBodyBoth": "{title}: {missing, plural, one {# person} other {# people}} recorded not back aboard after dive {dive}; {awaiting, plural, one {# more has} other {# more have}} no result."
   }
 }

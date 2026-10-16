@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/actions";
+import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions";
 import { recordCourseInquiry } from "@/db/course-inquiries";
 import { discardFormDraft } from "@/db/form-drafts";
 import { isValidCalendarDate } from "@/lib/calendar-date";

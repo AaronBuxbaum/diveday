@@ -66,6 +66,45 @@ describe("setWelcomeConsent", () => {
     expect(withdrawn.get(seat.id)?.sharedAt).toBeNull();
   });
 
+  it("keeps the diver's choice only with the consent, and withdrawing clears it (#2425)", async () => {
+    const { db, shop, trip, seat } = await welcomeFixture();
+    const aboard = new Date(trip.endsAt.getTime() - 60_000);
+    const base = { shopId: shop.id, bookingId: seat.id, now: aboard };
+
+    await setWelcomeConsent(db, { ...base, shared: true, hello: "nervous" });
+    expect((await welcomeCueInputsByBooking(db, shop.id, trip.id)).get(seat.id)?.hello).toBe(
+      "nervous",
+    );
+
+    // Saying yes again without naming a choice leaves the choice alone.
+    await setWelcomeConsent(db, { ...base, shared: true });
+    expect((await welcomeCueInputsByBooking(db, shop.id, trip.id)).get(seat.id)?.hello).toBe(
+      "nervous",
+    );
+
+    // A choice can be changed, and taken back on its own.
+    await setWelcomeConsent(db, { ...base, shared: true, hello: "celebrating" });
+    await setWelcomeConsent(db, { ...base, shared: true, hello: null });
+    expect((await welcomeCueInputsByBooking(db, shop.id, trip.id)).get(seat.id)?.hello).toBeNull();
+
+    // Withdrawing the consent clears it, whatever the caller passes.
+    await setWelcomeConsent(db, { ...base, shared: true, hello: "nervous" });
+    await setWelcomeConsent(db, { ...base, shared: false, hello: "nervous" });
+    const [row] = await db
+      .select({ hello: bookings.welcomeHello, sharedAt: bookings.welcomeSharedAt })
+      .from(bookings)
+      .where(eq(bookings.id, seat.id));
+    expect(row).toEqual({ hello: null, sharedAt: null });
+  });
+
+  it("never reads a choice for a seat without the consent, even if the row holds one (#2425)", async () => {
+    const { db, shop, trip, seat } = await welcomeFixture();
+    await db.update(bookings).set({ welcomeHello: "nervous" }).where(eq(bookings.id, seat.id));
+    const inputs = await welcomeCueInputsByBooking(db, shop.id, trip.id);
+    expect(inputs.get(seat.id)?.sharedAt).toBeNull();
+    expect(inputs.get(seat.id)?.hello).toBeNull();
+  });
+
   it("counts the boat home on the exact stroke of the late-arrival hour", async () => {
     // The boundary itself, pinned because the e2e fleet's frozen clock lands on
     // it for this departure — so "the tie" is the ordinary case there, not a

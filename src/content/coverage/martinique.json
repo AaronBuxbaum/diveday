@@ -1,0 +1,350 @@
+{
+  "area": "martinique",
+  "method": "Martinique, whole island: the Anses d'Arlet and Diamant coast (south), Trois-Îlets, and the north Caribbean coast from Schoelcher through Saint-Pierre to Le Prêcheur. No official marine-park or government dive-site or mooring list exists online (the DEAL Martinique geology fiche on the Rocher du Diamant is not a site list), so the Martinique tourism site (martinique-tour.com, the tourism directory that also carries the club profiles of A Papa D'Lo Saint-Pierre and Diamant Sub Club) stands in as one list. Operator lists read in French: O Fil de l'Eau (Grande Anse d'Arlet, 27-site map and exploration pages), Espace Plongée Martinique (Pointe du Bout, its sites section), Canopée Bleue (Anses d'Arlet), Corail Club Caraïbes (Anse à l'Âne) and Alpha Plongée (Grande Anse). A Papa D'Lo and Diamant Sub Club have no site list of their own online (dead or parked domains), so their sites rest on the tourism profiles only. A site is counted when named on at least two independent lists; sites on one list stay as excluded. Name merges: Anse Dufour is also Pointe Dufour; Anse 3 Airs is also Anse 3 Aires; the Tombant des Anses is also the Tombant d'Arlet; Petites and Grandes Jorasses are one row because three operators publish them together, and only the Petites Jorasses (0-25 m) are inside recreational depth. The Roraima (50-60 m) is technical depth and excluded. The Saint-Pierre wrecks other than the Roraima, the northern cayes, and Diamant-area sites (Caye d'Obian, L'Arche, Fer à Cheval) are each on one list only, so they are excluded; the Saint-Pierre side is therefore thin because no Saint-Pierre or Diamant operator publishes a site list. Counted 2026-10-14.",
+  "sources": [
+    "https://www.ofildeleau-martinique.fr/sites-plongee/",
+    "https://espaceplongee-martinique.com/le-club/",
+    "https://espaceplongee-martinique.com/les-plongees/",
+    "https://www.canopeebleue.com/nos-plong%C3%A9es-et-d%C3%A9couvertes",
+    "https://corailclubcaraibes.com/le-centre/",
+    "https://alphaplongee.com/plongee-en-martinique/",
+    "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/les-spots-de-plongee-des-anses-darlet/",
+    "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/top-des-spots-de-plongee/",
+    "https://en.martinique-tour.com/offers/a-papa-dlo-plongee-martinique-saint-pierre-en-1363677/",
+    "https://en.martinique-tour.com/offres/dsc-plongee-le-diamant-en-2470740"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Anse Dufour (Pointe Dufour)",
+      "template": "anse-dufour",
+      "listedBy": [
+        "https://www.ofildeleau-martinique.fr/sites-plongee/",
+        "https://espaceplongee-martinique.com/le-club/",
+        "https://www.canopeebleue.com/nos-plong%C3%A9es-et-d%C3%A9couvertes",
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/les-spots-de-plongee-des-anses-darlet/"
+      ]
+    },
+    {
+      "name": "Anse 3 Airs (Anse 3 Aires)",
+      "template": "anse-3-airs",
+      "listedBy": [
+        "https://www.ofildeleau-martinique.fr/sites-plongee/",
+        "https://espaceplongee-martinique.com/le-club/",
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/les-spots-de-plongee-des-anses-darlet/"
+      ]
+    },
+    {
+      "name": "Pointe de la Baleine",
+      "template": "pointe-de-la-baleine",
+      "listedBy": [
+        "https://www.ofildeleau-martinique.fr/sites-plongee/",
+        "https://espaceplongee-martinique.com/le-club/",
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/les-spots-de-plongee-des-anses-darlet/"
+      ]
+    },
+    {
+      "name": "Épave du Nahoon",
+      "template": "nahoon-wreck",
+      "listedBy": [
+        "https://www.ofildeleau-martinique.fr/sites-plongee/",
+        "https://espaceplongee-martinique.com/le-club/",
+        "https://www.canopeebleue.com/nos-plong%C3%A9es-et-d%C3%A9couvertes",
+        "https://corailclubcaraibes.com/le-centre/",
+        "https://alphaplongee.com/plongee-en-martinique/",
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/les-spots-de-plongee-des-anses-darlet/"
+      ]
+    },
+    {
+      "name": "Anse Fortune",
+      "template": "anse-fortune",
+      "listedBy": [
+        "https://www.ofildeleau-martinique.fr/sites-plongee/",
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/les-spots-de-plongee-des-anses-darlet/"
+      ]
+    },
+    {
+      "name": "Piscine de Salomon",
+      "template": "piscine-de-salomon",
+      "listedBy": [
+        "https://www.ofildeleau-martinique.fr/sites-plongee/",
+        "https://espaceplongee-martinique.com/le-club/",
+        "https://www.canopeebleue.com/nos-plong%C3%A9es-et-d%C3%A9couvertes"
+      ]
+    },
+    {
+      "name": "Trou du Souffleur",
+      "template": null,
+      "listedBy": ["https://www.ofildeleau-martinique.fr/sites-plongee/"],
+      "excluded": "on one list only (ofildeleau)"
+    },
+    {
+      "name": "Cap Salomon",
+      "template": "cap-salomon",
+      "listedBy": [
+        "https://www.ofildeleau-martinique.fr/sites-plongee/",
+        "https://corailclubcaraibes.com/le-centre/",
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/les-spots-de-plongee-des-anses-darlet/"
+      ]
+    },
+    {
+      "name": "Tombant de l'Arbre Mort",
+      "template": "tombant-de-larbre-mort",
+      "listedBy": [
+        "https://www.ofildeleau-martinique.fr/sites-plongee/",
+        "https://espaceplongee-martinique.com/le-club/",
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/les-spots-de-plongee-des-anses-darlet/"
+      ]
+    },
+    {
+      "name": "La Pouponnière",
+      "template": null,
+      "listedBy": ["https://www.ofildeleau-martinique.fr/sites-plongee/"],
+      "excluded": "on one list only (ofildeleau)"
+    },
+    {
+      "name": "Pointe Lézarde",
+      "template": "pointe-lezarde",
+      "listedBy": [
+        "https://www.ofildeleau-martinique.fr/sites-plongee/",
+        "https://espaceplongee-martinique.com/le-club/",
+        "https://corailclubcaraibes.com/le-centre/",
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/les-spots-de-plongee-des-anses-darlet/"
+      ]
+    },
+    {
+      "name": "Grotte aux couleurs",
+      "template": "grotte-aux-couleurs",
+      "listedBy": [
+        "https://www.ofildeleau-martinique.fr/sites-plongee/",
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/les-spots-de-plongee-des-anses-darlet/"
+      ]
+    },
+    {
+      "name": "Crique Abricot",
+      "template": "crique-abricot",
+      "listedBy": [
+        "https://www.ofildeleau-martinique.fr/sites-plongee/",
+        "https://espaceplongee-martinique.com/le-club/",
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/les-spots-de-plongee-des-anses-darlet/"
+      ]
+    },
+    {
+      "name": "Petites et Grandes Jorasses",
+      "template": "petites-jorasses",
+      "listedBy": [
+        "https://www.ofildeleau-martinique.fr/sites-plongee/",
+        "https://espaceplongee-martinique.com/le-club/",
+        "https://corailclubcaraibes.com/le-centre/",
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/les-spots-de-plongee-des-anses-darlet/"
+      ]
+    },
+    {
+      "name": "Pointe Burgos",
+      "template": "pointe-burgos",
+      "listedBy": [
+        "https://www.ofildeleau-martinique.fr/sites-plongee/",
+        "https://www.canopeebleue.com/nos-plong%C3%A9es-et-d%C3%A9couvertes",
+        "https://corailclubcaraibes.com/le-centre/",
+        "https://alphaplongee.com/plongee-en-martinique/",
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/les-spots-de-plongee-des-anses-darlet/"
+      ]
+    },
+    {
+      "name": "Petite Sirène",
+      "template": "petite-sirene",
+      "listedBy": [
+        "https://www.ofildeleau-martinique.fr/sites-plongee/",
+        "https://corailclubcaraibes.com/le-centre/",
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/les-spots-de-plongee-des-anses-darlet/"
+      ]
+    },
+    {
+      "name": "Rocher du Diamant",
+      "template": "rocher-du-diamant",
+      "listedBy": [
+        "https://www.ofildeleau-martinique.fr/sites-plongee/",
+        "https://espaceplongee-martinique.com/le-club/",
+        "https://www.canopeebleue.com/nos-plong%C3%A9es-et-d%C3%A9couvertes",
+        "https://alphaplongee.com/plongee-en-martinique/",
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/top-des-spots-de-plongee/",
+        "https://en.martinique-tour.com/offres/dsc-plongee-le-diamant-en-2470740"
+      ]
+    },
+    {
+      "name": "Caye Tarpon",
+      "template": null,
+      "listedBy": ["https://www.ofildeleau-martinique.fr/sites-plongee/"],
+      "excluded": "on one list only (ofildeleau)"
+    },
+    {
+      "name": "Caye Vétiver",
+      "template": null,
+      "listedBy": ["https://www.ofildeleau-martinique.fr/sites-plongee/"],
+      "excluded": "on one list only (ofildeleau)"
+    },
+    {
+      "name": "Trou Rouge",
+      "template": null,
+      "listedBy": ["https://www.ofildeleau-martinique.fr/sites-plongee/"],
+      "excluded": "on one list only (ofildeleau)"
+    },
+    {
+      "name": "Épave du Lady V",
+      "template": null,
+      "listedBy": ["https://www.ofildeleau-martinique.fr/sites-plongee/"],
+      "excluded": "on one list only (ofildeleau)"
+    },
+    {
+      "name": "Cap Enragé",
+      "template": null,
+      "listedBy": ["https://www.ofildeleau-martinique.fr/sites-plongee/"],
+      "excluded": "on one list only (ofildeleau)"
+    },
+    {
+      "name": "Canyons de Babodi",
+      "template": null,
+      "listedBy": ["https://www.ofildeleau-martinique.fr/sites-plongee/"],
+      "excluded": "on one list only (ofildeleau)"
+    },
+    {
+      "name": "Épave du Roraima",
+      "template": null,
+      "listedBy": [
+        "https://www.ofildeleau-martinique.fr/sites-plongee/",
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/top-des-spots-de-plongee/"
+      ],
+      "excluded": "depth 50-60 m (technical)"
+    },
+    {
+      "name": "Rocher de la Perle",
+      "template": "rocher-de-la-perle",
+      "listedBy": [
+        "https://www.ofildeleau-martinique.fr/sites-plongee/",
+        "https://espaceplongee-martinique.com/les-plongees/",
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/top-des-spots-de-plongee/"
+      ]
+    },
+    {
+      "name": "Le Sous-Marin",
+      "template": null,
+      "listedBy": ["https://www.ofildeleau-martinique.fr/sites-plongee/"],
+      "excluded": "on one list only (ofildeleau)"
+    },
+    {
+      "name": "Faille de l'Anse Noire",
+      "template": null,
+      "listedBy": ["https://espaceplongee-martinique.com/le-club/"],
+      "excluded": "on one list only (espace-plongee)"
+    },
+    {
+      "name": "Jardin de Salomon",
+      "template": null,
+      "listedBy": ["https://espaceplongee-martinique.com/le-club/"],
+      "excluded": "on one list only (espace-plongee)"
+    },
+    {
+      "name": "Tombant des Anses (Tombant d'Arlet)",
+      "template": null,
+      "listedBy": [
+        "https://corailclubcaraibes.com/le-centre/",
+        "https://alphaplongee.com/plongee-en-martinique/",
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/les-spots-de-plongee-des-anses-darlet/"
+      ]
+    },
+    {
+      "name": "Lézardette",
+      "template": null,
+      "listedBy": [
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/les-spots-de-plongee-des-anses-darlet/"
+      ],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Épave du Tamaya",
+      "template": null,
+      "listedBy": [
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/top-des-spots-de-plongee/"
+      ],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Épave du Dahlia",
+      "template": null,
+      "listedBy": [
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/top-des-spots-de-plongee/",
+        "https://en.martinique-tour.com/offers/a-papa-dlo-plongee-martinique-saint-pierre-en-1363677/"
+      ],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Épave du Theresa Vigo",
+      "template": null,
+      "listedBy": [
+        "https://www.martinique-tour.com/profiter/la-plongee-en-martinique/top-des-spots-de-plongee/"
+      ],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Épave de l'Amélie",
+      "template": null,
+      "listedBy": [
+        "https://en.martinique-tour.com/offers/a-papa-dlo-plongee-martinique-saint-pierre-en-1363677/"
+      ],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Épave du Biscaye",
+      "template": null,
+      "listedBy": [
+        "https://en.martinique-tour.com/offers/a-papa-dlo-plongee-martinique-saint-pierre-en-1363677/"
+      ],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Épave du Diamant",
+      "template": null,
+      "listedBy": [
+        "https://en.martinique-tour.com/offers/a-papa-dlo-plongee-martinique-saint-pierre-en-1363677/"
+      ],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Caye d'Obian",
+      "template": null,
+      "listedBy": ["https://en.martinique-tour.com/offres/dsc-plongee-le-diamant-en-2470740"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "L'Arche",
+      "template": null,
+      "listedBy": ["https://en.martinique-tour.com/offres/dsc-plongee-le-diamant-en-2470740"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Fer à Cheval",
+      "template": null,
+      "listedBy": ["https://en.martinique-tour.com/offres/dsc-plongee-le-diamant-en-2470740"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Tombant de Trois-Rivières",
+      "template": null,
+      "listedBy": ["https://en.martinique-tour.com/offres/dsc-plongee-le-diamant-en-2470740"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Tombant de l'Anse Cafard",
+      "template": null,
+      "listedBy": ["https://en.martinique-tour.com/offres/dsc-plongee-le-diamant-en-2470740"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Tombant de l'Église",
+      "template": null,
+      "listedBy": ["https://en.martinique-tour.com/offres/dsc-plongee-le-diamant-en-2470740"],
+      "excluded": "on one list only (tourism)"
+    }
+  ]
+}

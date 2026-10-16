@@ -47,7 +47,9 @@ vi.mock("@/db/rental-fit", async (importOriginal) => {
 const { requireShopSurface } = await import("@/lib/session");
 const { confirmBookingIdentity, splitBookingIdentity } = await import("@/db/bookings");
 const { applyPaidRentalKindsToFit } = await import("@/db/rental-fit");
-const { confirmDiverIdentityAction, splitDiverIdentityAction } = await import("./actions");
+const { confirmDiverIdentityAction, splitDiverIdentityAction } = await import(
+  "./roster-identity-actions"
+);
 
 const SHOP_SLUG = "reef-life";
 const SHOP_ID = "11111111-1111-4111-8111-111111111111";

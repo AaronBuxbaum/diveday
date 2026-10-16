@@ -1,4 +1,4 @@
-import { HOUR_MS } from "./clock";
+import { HOUR_MS, nowDate } from "./clock";
 import { ARRIVALS_LOOKBACK_HOURS } from "./operational-window";
 import type { SimilarDeparture } from "./similar-departures";
 import { hasSailed } from "./trips";
@@ -245,4 +245,20 @@ export function salvageOffer(input: {
   if (input.waitlistCount > 0) return { kind: "waitlist", count: input.waitlistCount };
   if (input.alternatives.length > 0) return { kind: "rebook", departures: input.alternatives };
   return { kind: "none" };
+}
+
+/**
+ * Whether a seat the diver already has a row on can be taken again as a new
+ * booking: a cancelled one always, and a `no_show` one only while the
+ * departure is still ahead (#2484). A no-show has released its seat
+ * (`SEAT_HELD_STATUSES`), so the diver coming back for a later day of the same
+ * run is a fresh booking; the "never turned up" line stays in the departure's
+ * trail (`booking_no_show`), which reactivation does not touch. Once the
+ * departure has started, the mark is the record of what happened and the row
+ * stays refused.
+ */
+export function rowCanBeReactivated(status: string, startsAt: Date): boolean {
+  return (
+    status === "cancelled" || (status === "no_show" && startsAt.getTime() > nowDate().getTime())
+  );
 }

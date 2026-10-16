@@ -18,6 +18,7 @@ import {
   tripReadMarks,
   userAccounts,
 } from "./schema";
+import { insertShoreAlertToken } from "./shore-alert-test-fixtures";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -679,6 +680,8 @@ const STALE_AND_FRESH = {
         })
         .returning({ id: schema.shopContactEmailConfirmationTokens.id }),
     ),
+  shop_shore_alert_tokens: async ({ db, shop }, at) =>
+    insertShoreAlertToken(db, { shopId: shop.id, tokenHash: token(), createdAt: at }),
   booking_capabilities: async ({ db, shop, entry }, at, n) =>
     idOf(
       await db
@@ -1093,16 +1096,13 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "orders",
   "order_line_items",
   "tips",
-  // A card dispute on one of those orders or checkouts: one mutable row per
-  // dispute, kept current by Stripe, the shop's books like the order it is
-  // about (ADR 20261009-stripe-reversals-reach-diveday). Not a trail.
+  // A card dispute on one of those orders or checkouts: one mutable row per dispute,
+  // kept current by Stripe (ADR 20261009-stripe-reversals-reach-diveday). Not a trail.
   "payment_disputes",
-  // A payout to the shop's bank: one mutable row per Stripe payout, the books
-  // a bank statement is reconciled against (ADR 20261012-payouts-reach-diveday).
+  // A payout to the shop's bank, one row per Stripe payout (ADR 20261012-payouts-reach-diveday).
   "stripe_payouts",
-  // A refund Stripe reported failed after accepting it (issue #2291): one row
-  // per Stripe refund, the books' record that money said to have gone back
-  // did not, owed until it is refunded again. The shop's books, not a trail.
+  // A refund Stripe reported failed after accepting it (issue #2291): one row per
+  // Stripe refund, owed until it is refunded again. The shop's books, not a trail.
   "stripe_refund_failures",
   "dive_package_entitlements",
   "shop_promo_redemptions",

@@ -180,7 +180,7 @@
     "needsYouCountBeforeNext": "{count, plural, one {# thing} other {# things}} · {before, plural, =0 {none before the {time}} other {# before the {time}}}",
     "deskFoldLabel": "{count, plural, one {# more for other boats and the desk} other {# more for other boats and the desk}}",
     "needsYouLabel": "Needs you",
-    "crewTips": "Your boats earned {amount} in tips this week."
+    "crewTips": "Your share of tips this week: {amount}."
   },
   "quietAddDeparture": "Add a departure",
   "quietNextDepartureLabel": "Next departure",

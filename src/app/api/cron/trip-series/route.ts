@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { clearFinishedRehearsals } from "@/db/rehearsals";
+import { clearPassedReopensOn } from "@/db/shops";
 import { rollAllSeriesForward } from "@/db/trips";
 import { rollSailedSeriesWaitlists } from "@/db/waitlist-roll";
 import { requireCronSecret } from "@/lib/cron-auth";
@@ -76,6 +77,9 @@ export async function GET(request: Request) {
     // The same nightly pass takes finished rehearsals off the board once
     // fly-safe no longer reads them (ADR 20261012-rehearsal-departures).
     const rehearsalsCleared = await clearFinishedRehearsals(db);
+    // A "Back on the water" date that has passed comes off Settings
+    // (`clearPassedReopensOn`); the storefront had already stopped reading it.
+    const reopensCleared = await clearPassedReopensOn(db);
     // Leads nobody invited on a series date that sailed roll onto the run's
     // next date (third UX review, item 12).
     const waitlist = await rollSailedSeriesWaitlists(db);
@@ -104,6 +108,7 @@ export async function GET(request: Request) {
       // more slowly than they should.
       seriesDeferred: summary.deferred,
       rehearsalsCleared,
+      reopensCleared,
       waitlistRolled: waitlist.rolled,
       waitlistInvited: waitlist.invited,
     });

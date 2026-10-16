@@ -1,0 +1,337 @@
+{
+  "area": "sint-eustatius",
+  "method": "Statia National Marine Park, the whole island (the Southern Marine Park Reserve off Oranjestad, Orange Bay, the northern reserve around Jenkins Bay, Gibraltar). The base list is the 36 numbered sites on the St. Eustatius Tourism dive brochure and dive map, whose numbering matches STENAPA's park map (the park's own page and map image carry numbers only and says 60 sites; it names no sites, so it is cited for the numbering but not counted as a naming list). The operator lists are Scubaqua's dive-sites page (16 sites) and Golden Rock Dive Center's dive-sites page (9 sites); Golden Rock's Statia Divers page says Scubaqua is now integrated into its operation, so the two are treated as one owner and a site named by either operator is on one operator list. Dive Statia, the third center on the brochure, has no website or site list. A site is counted when it is on the Tourism/STENAPA list and on an operator list. The four reserve-boundary buoys (NW, SW, S, SE) are not dive sites and are left out; the snorkel sites (Blind Shoal, Twelve Guns, Inner Jenkins Bay) are excluded. Scubaqua gives Grand Canyon, The Cliffs and the drop-offs as 40+ m walls while the brochure gives mooring depths of 20 to 29 m; they are counted because the moored dive stays within recreational limits (Golden Rock puts Drop Off East's shallowest point at 20 m and calls it an advanced-certification wall). Counted 2026-10-14.",
+  "sources": [
+    "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf",
+    "https://statia-tourism.com/wp-content/uploads/2021/03/StEustatius_DiveMap2016.pdf",
+    "https://statiapark.org/diving/",
+    "https://statiapark.org/yachting/",
+    "https://www.statiapark.org/wp-content/uploads/2018/05/Stenapamap.png",
+    "https://www.scubaqua.com/divesites/",
+    "https://www.goldenrockdive.com/dive-sites",
+    "https://www.goldenrockresort.com/diving/statia-divers"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Gibraltar / North Point",
+      "template": "gibraltar-statia",
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf",
+        "https://www.scubaqua.com/divesites/"
+      ]
+    },
+    {
+      "name": "Outer Jenkins Bay",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure and STENAPA mooring numbering)"
+    },
+    {
+      "name": "Doobie's Crack",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure and STENAPA mooring numbering)"
+    },
+    {
+      "name": "Twin Sisters",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure and STENAPA mooring numbering)"
+    },
+    {
+      "name": "Inner Jenkins Bay",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "snorkel-only (marked as a snorkel site on the Tourism dive brochure)"
+    },
+    {
+      "name": "The Charles L. Brown (Charlie Brown)",
+      "template": "charles-l-brown-statia",
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf",
+        "https://www.scubaqua.com/divesites/",
+        "https://www.goldenrockdive.com/dive-sites"
+      ]
+    },
+    {
+      "name": "North Man",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure and STENAPA mooring numbering)"
+    },
+    {
+      "name": "Aquarium",
+      "template": "aquarium-statia",
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf",
+        "https://www.scubaqua.com/divesites/",
+        "https://www.goldenrockdive.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Blind Shoal",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "snorkel-only (marked as a snorkel site on the Tourism dive brochure)"
+    },
+    {
+      "name": "Twelve Guns",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "snorkel-only (marked as a snorkel site on the Tourism dive brochure)"
+    },
+    {
+      "name": "STENAPA Reef",
+      "template": "stenapa-reef-statia",
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf",
+        "https://www.scubaqua.com/divesites/",
+        "https://www.goldenrockdive.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Chien Tong",
+      "template": "chien-tong-statia",
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf",
+        "https://www.scubaqua.com/divesites/",
+        "https://www.goldenrockdive.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Stingray City",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure and STENAPA mooring numbering)"
+    },
+    {
+      "name": "Triple Wreck",
+      "template": "triple-wreck-statia",
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf",
+        "https://www.scubaqua.com/divesites/"
+      ]
+    },
+    {
+      "name": "Double Wreck",
+      "template": "double-wreck-statia",
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf",
+        "https://www.scubaqua.com/divesites/",
+        "https://www.goldenrockdive.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Crook's Castle",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure; STENAPA describes it as a snorkel site)"
+    },
+    {
+      "name": "Blair's Reef",
+      "template": "blairs-reef-statia",
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf",
+        "https://www.scubaqua.com/divesites/"
+      ]
+    },
+    {
+      "name": "Barracuda Reef (West)",
+      "template": "barracuda-reef-statia",
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf",
+        "https://www.scubaqua.com/divesites/",
+        "https://www.goldenrockdive.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Nursing Station",
+      "template": "nursing-station-statia",
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf",
+        "https://www.goldenrockdive.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Twin Peaks",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure and STENAPA mooring numbering)"
+    },
+    {
+      "name": "Anchor Point (South, West and North moorings)",
+      "template": "anchor-point-statia",
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf",
+        "https://www.scubaqua.com/divesites/"
+      ]
+    },
+    {
+      "name": "Hangover",
+      "template": "hangover-statia",
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf",
+        "https://www.scubaqua.com/divesites/",
+        "https://www.goldenrockdive.com/dive-sites"
+      ]
+    },
+    {
+      "name": "The Blocks",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure and STENAPA mooring numbering)"
+    },
+    {
+      "name": "Anchor Reef",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure and STENAPA mooring numbering)"
+    },
+    {
+      "name": "The Ledges",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure and STENAPA mooring numbering)"
+    },
+    {
+      "name": "Five Fingers North",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure and STENAPA mooring numbering)"
+    },
+    {
+      "name": "Five Fingers South",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure and STENAPA mooring numbering)"
+    },
+    {
+      "name": "Valley of Sponges",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure and STENAPA mooring numbering)"
+    },
+    {
+      "name": "The Humps",
+      "template": "the-humps-statia",
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf",
+        "https://www.scubaqua.com/divesites/"
+      ]
+    },
+    {
+      "name": "Mushroom Gardens",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure and STENAPA mooring numbering)"
+    },
+    {
+      "name": "Coral Gardens",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure and STENAPA mooring numbering)"
+    },
+    {
+      "name": "Cliffs / Down South (The Cliffs)",
+      "template": "the-cliffs-statia",
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf",
+        "https://www.scubaqua.com/divesites/"
+      ]
+    },
+    {
+      "name": "Grand Canyon",
+      "template": "grand-canyon-statia",
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf",
+        "https://www.scubaqua.com/divesites/"
+      ]
+    },
+    {
+      "name": "Drop Off West",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure; Scubaqua's 'Drop off' does not say which)"
+    },
+    {
+      "name": "Drop Off East",
+      "template": "drop-off-east-statia",
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf",
+        "https://www.goldenrockdive.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Blue Bead Hole",
+      "template": "blue-bead-hole-statia",
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf",
+        "https://www.scubaqua.com/divesites/"
+      ]
+    },
+    {
+      "name": "The Cave",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure and STENAPA mooring numbering)"
+    },
+    {
+      "name": "Five Canyons",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure and STENAPA mooring numbering)"
+    },
+    {
+      "name": "English Quarter",
+      "template": null,
+      "listedBy": [
+        "https://statia-tourism.com/wp-content/uploads/2023/03/Statia_dive-brochure_NL.pdf"
+      ],
+      "excluded": "on one list only (the Tourism dive brochure and STENAPA mooring numbering)"
+    }
+  ]
+}

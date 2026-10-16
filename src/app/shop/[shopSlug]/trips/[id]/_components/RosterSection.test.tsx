@@ -43,7 +43,7 @@ describe("the guests ledger (slice 5d)", () => {
    * found nothing at 2 on the page the desk uses most.
    */
   it("gives its group bands the level under the page title, skipping none", () => {
-    renderRoster({ ...fixtures, compact: true, showSummaryHeading: false });
+    renderRoster(fixtures);
 
     const bands = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
     expect(bands).toEqual(expect.arrayContaining(["Still to clear · 1", "Ready · 1"]));
@@ -110,7 +110,6 @@ describe("the guests ledger (slice 5d)", () => {
         ["c", signedWaiver],
         ["d", signedWaiver],
       ]) as WaiverByBooking,
-      compact: true,
     });
 
     expect(screen.getByRole("link", { name: "Asha Osei" })).toHaveClass(
@@ -165,6 +164,8 @@ describe("the guests ledger (slice 5d)", () => {
         ]),
         afterDive: new Set(),
         rollCallTaken: true,
+        unaccounted: new Set(),
+        countedAboardBlocked: new Map(),
       },
     });
     expect(screen.getByRole("heading", { name: "Sailed · 1" })).toBeVisible();
@@ -181,12 +182,60 @@ describe("the guests ledger (slice 5d)", () => {
         dock: new Map([[ready.booking.id, "boarded"]]),
         afterDive: new Set(),
         rollCallTaken: true,
+        unaccounted: new Set(),
+        countedAboardBlocked: new Map(),
       },
     });
     expect(screen.getByRole("heading", { name: "Sailed · 1" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Not counted at the dock · 1" })).toBeVisible();
     expect(screen.queryByRole("heading", { name: /Didn’t sail/ })).toBeNull();
     expect(screen.queryByRole("heading", { name: /No roll call taken/ })).toBeNull();
+  });
+
+  it("files a diver counted out and not back under its own band, never as Sailed", () => {
+    renderRoster({
+      ...fixtures,
+      record: {
+        dock: new Map([
+          [ready.booking.id, "boarded"],
+          [blocked.booking.id, "boarded"],
+        ]),
+        afterDive: new Set([blocked.booking.id]),
+        rollCallTaken: true,
+        unaccounted: new Set([blocked.booking.id]),
+        countedAboardBlocked: new Map(),
+      },
+    });
+    expect(screen.getByRole("heading", { name: "Not back aboard · 1" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Sailed · 1" })).toBeVisible();
+  });
+
+  it("says on a sailed row, in words and with no control, that the diver was counted aboard while blocked", () => {
+    renderRoster({
+      ...fixtures,
+      record: {
+        dock: new Map([
+          [ready.booking.id, "boarded"],
+          [blocked.booking.id, "boarded"],
+        ]),
+        afterDive: new Set([blocked.booking.id]),
+        rollCallTaken: true,
+        unaccounted: new Set(),
+        countedAboardBlocked: new Map([
+          [
+            blocked.booking.id,
+            { checkpoint: "after_dive_1", blockers: [{ code: "certification_missing" }] },
+          ],
+        ]),
+      },
+    });
+    expect(screen.getByRole("heading", { name: "Sailed · 2" })).toBeVisible();
+    expect(screen.getByText("1 counted aboard while blocked")).toBeVisible();
+    const line = screen.getByText(/Counted aboard \(After dive 1\) while blocked: /);
+    expect(line).toBeVisible();
+    // One line on the one seat, and the record asks for nothing: no Blocked capsule, no fixes.
+    expect(screen.getAllByText(/while blocked: /)).toHaveLength(1);
+    expect(screen.queryByText("Blocked")).toBeNull();
   });
 
   it("makes add diver the terminal ledger group, including on an empty roster", () => {
@@ -449,12 +498,11 @@ describe("the roster's row geometry", () => {
  * own step.
  */
 describe("the roster's place on the departure page", () => {
-  it("carries no top margin of its own when compact", () => {
+  it("carries no top margin of its own", () => {
     const { container } = renderRoster({
       roster: [],
       readiness: new Map() as ReadinessByBooking,
       waivers: new Map() as WaiverByBooking,
-      compact: true,
     });
     const roster = container.querySelector("#roster");
     expect(roster).not.toBeNull();
@@ -520,5 +568,56 @@ describe("the one-line row", () => {
       waivers: new Map() as WaiverByBooking,
     });
     expect(screen.queryByText("Waiver not signed yet")).toBeNull();
+  });
+});
+
+/**
+ * **A snorkeler held on a medical is told how to board them riding only**
+ * (H-109, issue #2382). Staff switch the seat to rider; the rider chip carries
+ * the warning. No new clearance exists, so the hint is only a pointer, and only
+ * on a seat that is in the water on a medical hold.
+ */
+describe("a snorkeler held on a medical", () => {
+  const hint = /change this seat to Rider/i;
+  const medicalBlockers = {
+    medical_review: [{ code: "medical_review", params: undefined }],
+    medical_not_cleared: [{ code: "medical_not_cleared", params: undefined }],
+  };
+
+  it.each(["medical_review", "medical_not_cleared"] as const)(
+    "points a snorkeler's %s hold at the switch to rider",
+    (code) => {
+      const snorkeler = entry("s", "Sky Lund", { participantType: "snorkeler" });
+      renderRoster({
+        roster: [snorkeler],
+        readiness: new Map([
+          ["s", readinessRow("blocked", medicalBlockers[code])],
+        ]) as ReadinessByBooking,
+        waivers: new Map([["s", signedWaiver]]) as WaiverByBooking,
+      });
+      expect(screen.getAllByText(hint)).toHaveLength(1);
+    },
+  );
+
+  it("says nothing of the kind to a diver on the same hold", () => {
+    renderRoster({
+      roster: [entry("d", "Dee Park", { participantType: "diver" })],
+      readiness: new Map([
+        ["d", readinessRow("blocked", medicalBlockers.medical_review)],
+      ]) as ReadinessByBooking,
+      waivers: new Map([["d", signedWaiver]]) as WaiverByBooking,
+    });
+    expect(screen.queryByText(hint)).toBeNull();
+  });
+
+  it("says nothing on a snorkeler blocked for something else", () => {
+    renderRoster({
+      roster: [entry("s", "Sky Lund", { participantType: "snorkeler" })],
+      readiness: new Map([
+        ["s", readinessRow("blocked", [{ code: "waiver_not_sent", params: undefined }])],
+      ]) as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+    });
+    expect(screen.queryByText(hint)).toBeNull();
   });
 });

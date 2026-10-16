@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import {
+  ChoiceRow,
   controlClass,
   Field,
   FieldActions,
@@ -17,8 +18,16 @@ import {
   dockDayOffsets,
 } from "@/lib/diver-planning";
 import { EMERGENCY_LINE_SLOTS } from "@/lib/emergency-reference";
-import { saveDockDayRhythmAction, saveEmergencyReferenceAction } from "../../boat-actions";
+import { formatDateTimeTz } from "@/lib/format";
+import { MIN_TURNAROUND_LIMITS } from "@/lib/move-preflight";
+import {
+  resendShoreAlertConfirmationAction,
+  saveDockDayRhythmAction,
+  saveEmergencyReferenceAction,
+  saveTurnaroundAction,
+} from "../../boat-actions";
 import type { SettingsShop } from "../groups/kit";
+import { ShoreAlertTickReset } from "../ShoreAlertTickReset";
 
 /*
  * **The emergency reference and the dock-day rhythm**, the two Boats & sites
@@ -83,92 +92,189 @@ const DOCK_DAY_FIELD_KEYS: Record<
   },
 };
 
-/** The numbers a crew dials during, and the plan (issue #688). */
+/**
+ * The numbers a crew dials during, and the plan (issue #688), with the shore
+ * contact's alert address beside the free-text shore contact (H-118): the
+ * consent box, drawn for the address on file (`shoreAlertConsentFor`), who
+ * recorded it and when, and whether the address has confirmed itself yet.
+ */
 export function EmergencyReferenceForm({
   shop,
   t,
+  locale,
+  consentByName = null,
   className = "",
 }: {
   shop: SettingsShop;
   t: StaffTranslator;
+  /** The request's locale, for the dates the consent and confirmation were recorded. */
+  locale: string;
+  /** Who recorded the consent on file, as the people row names them today. */
+  consentByName?: string | null;
   className?: string;
 }) {
+  const consentAt = shop.shoreAlertConsentAt;
+  const confirmedAt = shop.shoreAlertConfirmedAt;
+  const onFile = shop.shoreAlertEmail !== null && consentAt !== null;
+  const waiting = onFile && confirmedAt === null && !shop.isDemo;
+  const when = (at: Date) => formatDateTimeTz(at, locale, shop.timezone);
+  // The number an alert tells the shore contact to call is the shop's own
+  // phone (dive-domain re-review #2), so the shop sees which one it is.
+  const phone = shop.contactPhone?.trim();
+  const shoreAlertDescription = [
+    t("settings.main.emergency.shoreAlertEmailDescription"),
+    phone
+      ? t("settings.main.emergency.shoreAlertPhone", { phone })
+      : t("settings.main.emergency.shoreAlertNoPhone"),
+    shop.isDemo ? t("settings.main.emergency.shoreAlertDemo") : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
-    <form
-      action={saveEmergencyReferenceAction}
-      className={`flex flex-col gap-4 ${className}`.trim()}
-    >
-      <FieldGrid columns={2}>
-        {EMERGENCY_LINE_SLOTS.map((slot, index) => (
-          <Fragment key={slot}>
-            {/* The examples are the first line's description, which
-                wraps: as every label box's placeholder they were cut
-                mid-word in a half-width box (K-583). */}
-            <Field
-              label={t("settings.main.emergency.lineLabel", { n: index + 1 })}
-              description={index === 0 ? t("settings.main.emergency.lineExamples") : undefined}
-            >
-              <input
-                name={`emergencyLabel-${index}`}
-                type="text"
-                maxLength={80}
-                defaultValue={shop.emergencyReference.lines[index]?.label ?? ""}
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("settings.main.emergency.phoneLabel", { n: index + 1 })}>
-              <input
-                name={`emergencyPhone-${index}`}
-                type="tel"
-                maxLength={40}
-                defaultValue={shop.emergencyReference.lines[index]?.phone ?? ""}
-                className={controlClass}
-              />
-            </Field>
-          </Fragment>
-        ))}
-        <Field
-          label={t("settings.main.emergency.vesselLabel")}
-          description={t("settings.main.emergency.vesselHint")}
-        >
+    <>
+      <form
+        action={saveEmergencyReferenceAction}
+        className={`flex flex-col gap-4 ${className}`.trim()}
+      >
+        <FieldGrid columns={2}>
+          {EMERGENCY_LINE_SLOTS.map((slot, index) => (
+            <Fragment key={slot}>
+              {/* The examples are the first line's description, which
+                  wraps: as every label box's placeholder they were cut
+                  mid-word in a half-width box (K-583). */}
+              <Field
+                label={t("settings.main.emergency.lineLabel", { n: index + 1 })}
+                description={index === 0 ? t("settings.main.emergency.lineExamples") : undefined}
+              >
+                <input
+                  name={`emergencyLabel-${index}`}
+                  type="text"
+                  maxLength={80}
+                  defaultValue={shop.emergencyReference.lines[index]?.label ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={t("settings.main.emergency.phoneLabel", { n: index + 1 })}>
+                <input
+                  name={`emergencyPhone-${index}`}
+                  type="tel"
+                  maxLength={40}
+                  defaultValue={shop.emergencyReference.lines[index]?.phone ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+            </Fragment>
+          ))}
+          <Field
+            label={t("settings.main.emergency.vesselLabel")}
+            description={t("settings.main.emergency.vesselHint")}
+          >
+            <input
+              name="emergencyVessel"
+              type="text"
+              maxLength={120}
+              defaultValue={shop.emergencyReference.vessel}
+              className={controlClass}
+            />
+          </Field>
+          {/* Free text for a person to read; nothing is ever sent to it
+              (owner review #4 on H-118). */}
+          <Field
+            label={t("settings.main.emergency.shoreContactLabel")}
+            description={t("settings.main.emergency.shoreContactDescription")}
+          >
+            <input
+              name="emergencyShoreContact"
+              type="text"
+              maxLength={160}
+              defaultValue={shop.emergencyReference.shoreContact}
+              className={controlClass}
+            />
+          </Field>
+        </FieldGrid>
+        {/* An address DiveDay sends to, unlike the line above it: it saves
+            only with the box ticked for that address (`nextShoreAlertContact`),
+            and nothing goes to it until it confirms. */}
+        <FieldGrid columns={1}>
+          <Field
+            label={t("settings.main.emergency.shoreAlertEmailLabel")}
+            description={shoreAlertDescription}
+          >
+            <input
+              name="shoreAlertEmail"
+              type="email"
+              autoComplete="off"
+              maxLength={320}
+              defaultValue={shop.shoreAlertEmail ?? ""}
+              className={controlClass}
+            />
+          </Field>
           <input
-            name="emergencyVessel"
-            type="text"
-            maxLength={120}
-            defaultValue={shop.emergencyReference.vessel}
-            className={controlClass}
+            type="hidden"
+            name="shoreAlertConsentFor"
+            value={onFile ? (shop.shoreAlertEmail ?? "") : ""}
+          />
+          <ChoiceRow
+            name="shoreAlertConsent"
+            type="checkbox"
+            defaultChecked={onFile}
+            className="text-sm"
+          >
+            <span className="block">{t("settings.main.emergency.shoreAlertConsent")}</span>
+            {onFile && consentAt ? (
+              <span className="block text-xs text-muted">
+                {consentByName
+                  ? t("settings.main.emergency.shoreAlertConsentRecorded", {
+                      when: when(consentAt),
+                      name: consentByName,
+                    })
+                  : t("settings.main.emergency.shoreAlertConsentRecordedNoName", {
+                      when: when(consentAt),
+                    })}
+              </span>
+            ) : null}
+          </ChoiceRow>
+          {onFile && confirmedAt ? (
+            <p className="text-sm text-muted">
+              {t("settings.main.emergency.shoreAlertConfirmed", { when: when(confirmedAt) })}
+            </p>
+          ) : null}
+          {waiting ? (
+            <p className="text-sm text-muted">{t("settings.main.emergency.shoreAlertWaiting")}</p>
+          ) : null}
+          <ShoreAlertTickReset />
+        </FieldGrid>
+        <Field label={t("settings.main.emergency.planLabel")}>
+          <textarea
+            name="emergencyPlan"
+            rows={4}
+            maxLength={2000}
+            defaultValue={shop.emergencyReference.plan}
+            className={textareaClassFor(4)}
           />
         </Field>
-        <Field label={t("settings.main.emergency.shoreContactLabel")}>
-          <input
-            name="emergencyShoreContact"
-            type="text"
-            maxLength={160}
-            defaultValue={shop.emergencyReference.shoreContact}
-            className={controlClass}
-          />
-        </Field>
-      </FieldGrid>
-      <Field label={t("settings.main.emergency.planLabel")}>
-        <textarea
-          name="emergencyPlan"
-          rows={4}
-          maxLength={2000}
-          defaultValue={shop.emergencyReference.plan}
-          className={textareaClassFor(4)}
-        />
-      </Field>
-      {/* The hub's one Save: `md` in `FieldActions`. It was `sm` in
-          a bare div, 44px beside every other row's 48px (K-308). */}
-      <FieldActions>
-        <SubmitButton
-          pendingLabel={t("settings.main.emergency.saving")}
-          className={buttonClass({ variant: "secondary" })}
-        >
-          {t("settings.main.emergency.submit")}
-        </SubmitButton>
-      </FieldActions>
-    </form>
+        {/* The hub's one Save: `md` in `FieldActions`. It was `sm` in
+            a bare div, 44px beside every other row's 48px (K-308). */}
+        <FieldActions>
+          <SubmitButton
+            pendingLabel={t("settings.main.emergency.saving")}
+            className={buttonClass({ variant: "secondary" })}
+          >
+            {t("settings.main.emergency.submit")}
+          </SubmitButton>
+        </FieldActions>
+      </form>
+      {waiting ? (
+        <form action={resendShoreAlertConfirmationAction} className="mt-3">
+          <SubmitButton
+            pendingLabel={t("settings.main.emergency.shoreAlertResending")}
+            className={buttonClass({ variant: "ghost" })}
+          >
+            {t("settings.main.emergency.shoreAlertResend")}
+          </SubmitButton>
+        </form>
+      ) : null}
+    </>
   );
 }
 
@@ -284,5 +390,42 @@ export function DockDayForm({
         </div>
       ) : null}
     </>
+  );
+}
+
+/**
+ * **The turnaround between departures** (issue #2141, Aaron's decision (b)):
+ * one number, its own save. Advice for the schedule builder's Move panel when
+ * a hull, or a crew member leaving from another meeting point, would get less
+ * than this between one departure and the next; it never refuses a move.
+ */
+export function TurnaroundForm({ shop, t }: { shop: SettingsShop; t: StaffTranslator }) {
+  return (
+    <FieldGrid as="form" action={saveTurnaroundAction} columns={2} className="mt-8">
+      <Field
+        label={t("settings.main.turnaround.label")}
+        description={t("settings.main.turnaround.description")}
+      >
+        <input
+          name="minTurnaroundMinutes"
+          type="number"
+          inputMode="numeric"
+          required
+          min={MIN_TURNAROUND_LIMITS.min}
+          max={MIN_TURNAROUND_LIMITS.max}
+          step={5}
+          defaultValue={shop.minTurnaroundMinutes}
+          className={`${controlClass} tabular-nums`}
+        />
+      </Field>
+      <FieldActions>
+        <SubmitButton
+          pendingLabel={t("settings.main.dockCall.submitting")}
+          className={buttonClass({ variant: "secondary" })}
+        >
+          {t("settings.main.turnaround.submit")}
+        </SubmitButton>
+      </FieldActions>
+    </FieldGrid>
   );
 }

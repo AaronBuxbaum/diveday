@@ -131,7 +131,7 @@ export default async function TripManifestPage({
     liveDiveSites,
     catchUp,
     diveIntents,
-    stage,
+    stageStrip,
     meetingPoint,
     vessel,
     kitRecord,
@@ -280,7 +280,7 @@ export default async function TripManifestPage({
         {...stageStripProps(t, {
           manifests: completeManifests,
           shopSlug,
-          stage,
+          ...stageStrip,
           now: nowDate(),
           timeZone: shop.timezone,
           locale,
@@ -370,7 +370,7 @@ export default async function TripManifestPage({
           isDeparture={isDeparture}
           trip={departureManifest.trip}
           timeZone={shop.timezone}
-          stage={stage}
+          stage={stageStrip.stage}
           seats={manifest.divers}
         />
 

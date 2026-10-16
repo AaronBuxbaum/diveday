@@ -193,7 +193,9 @@
     "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open, no last-minute deal sent.",
     "waitlistSeat": "{seats, plural, one {# seat} other {# seats}} open, {waiting} on the wait list.",
     "crewAway": "{name} is away {dates}.",
-    "rollCallAlerted": "Owners alerted: {time}."
+    "rollCallAlerted": "Owners alerted: {time}.",
+    "rollCallAlertedWithShore": "Owners and shore contact alerted: {time}.",
+    "rollCallShoreAlerted": "Shore contact alerted: {time}."
   },
   "actionLabel": {
     "openRollCall": "Open roll call",

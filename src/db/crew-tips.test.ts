@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
-import { crewTipsOnBoats, tipsByDeparture } from "./crew-tips";
+import { crewTipShare, tipsByDeparture } from "./crew-tips";
 import { boats, bookings, people, shops, tips, tripAssignments, trips } from "./schema";
 
 /** Built on a bare shop so every figure is exact. */
@@ -70,8 +70,8 @@ async function tipOn(
   });
 }
 
-describe("crewTipsOnBoats", () => {
-  it("sums the paid tips on this week's boats this person crewed, and nobody else's", async () => {
+describe("crewTipShare", () => {
+  it("sums the reader's share of the paid tips on this week's boats they crewed, and nobody else's", async () => {
     const db = await unseededTestDb();
     const shop = await bareShop(db);
     const ana = await person(db, shop.id, "Ana Reyes");
@@ -106,11 +106,48 @@ describe("crewTipsOnBoats", () => {
     await tipOn(db, shop.id, lastWeek.id, 9_900);
     await tipOn(db, shop.id, deleted.id, 1_000);
 
-    expect(await crewTipsOnBoats(db, shop.id, ana.id, WEEK)).toBe(14_000);
-    expect(await crewTipsOnBoats(db, shop.id, ben.id, WEEK)).toBe(6_000);
+    // Ana crewed Monday alone and Friday with Ben: all of $80, and half of $60.
+    expect(await crewTipShare(db, shop.id, ana.id, WEEK)).toBe(8_000 + 3_000);
+    expect(await crewTipShare(db, shop.id, ben.id, WEEK)).toBe(3_000);
     // Another shop asking about Ana sees nothing.
     const other = await bareShop(db);
-    expect(await crewTipsOnBoats(db, other.id, ana.id, WEEK)).toBe(0);
+    expect(await crewTipShare(db, other.id, ana.id, WEEK)).toBe(0);
+  });
+
+  it("splits an odd amount the way the crew sheet does, and a captain sees only their own boats", async () => {
+    const db = await unseededTestDb();
+    const shop = await bareShop(db);
+    const ana = await person(db, shop.id, "Ana Reyes");
+    const ben = await person(db, shop.id, "Ben Okafor");
+    const cai = await person(db, shop.id, "Cai Lund");
+    const shared = await departure(db, shop.id, {
+      title: "Reef",
+      startsAt: "2026-10-06T13:00:00Z",
+    });
+    const others = await departure(db, shop.id, {
+      title: "Wreck",
+      startsAt: "2026-10-07T13:00:00Z",
+    });
+    await db.insert(tripAssignments).values([
+      { tripId: shared.id, personId: ana.id },
+      { tripId: shared.id, personId: ben.id },
+      { tripId: shared.id, personId: cai.id },
+      { tripId: others.id, personId: ben.id },
+    ]);
+    await tipOn(db, shop.id, shared.id, 10_000);
+    await tipOn(db, shop.id, others.id, 7_700);
+    const shares = [
+      await crewTipShare(db, shop.id, ana.id, WEEK),
+      await crewTipShare(db, shop.id, ben.id, WEEK),
+      await crewTipShare(db, shop.id, cai.id, WEEK),
+    ];
+    // Three ways: 3,334 / 3,333 / 3,333 by person id, so the pieces add back to the boat.
+    expect(shares[0]).toBeGreaterThanOrEqual(3_333);
+    expect(shares[0]).toBeLessThanOrEqual(3_334);
+    expect((shares[1] ?? 0) - 7_700).toBeGreaterThanOrEqual(3_333);
+    expect(shares[0] + (shares[1] ?? 0) - 7_700 + (shares[2] ?? 0)).toBe(10_000);
+    // Ana never reads Ben's Wreck tips.
+    expect(shares[0]).toBeLessThan(5_000);
   });
 });
 

@@ -5,11 +5,13 @@ import { getDb } from "@/db/client";
 import {
   addIncidentAddendum,
   addIncidentPerson,
+  discardIncidentDraft,
   fileIncidentReport,
   type IncidentSubject,
   type IncidentWriteRefusal,
   removeIncidentPerson,
   saveIncidentDraft,
+  setIncidentLegalHold,
   startIncidentReport,
 } from "@/db/incident-reports";
 import {
@@ -46,6 +48,7 @@ const REFUSAL_NOTICE: Record<
   subject_not_found: "subject-not-found",
   already_listed: "already-listed",
   blank: "blank-note",
+  held: "held",
 };
 
 const FIELD_NOTICE: Record<IncidentFieldRefusal, string> = {
@@ -242,4 +245,51 @@ export async function removeIncidentPersonAction(
     rowId,
   });
   settle(back, result, "person-removed", "people");
+}
+
+/**
+ * Delete an unfiled draft (an owner only; a filed report has no such door).
+ * Lands on the departure's incident list, where the draft is no longer.
+ */
+export async function discardIncidentDraftAction(
+  shopSlug: string,
+  tripId: string,
+  reportId: string,
+) {
+  const { session, shop } = await requireShopSurface(shopSlug);
+  requireIds(tripId, reportId);
+  const back = reportPath(shopSlug, tripId, reportId);
+  const result = await discardIncidentDraft(await getDb(), {
+    shopId: shop.id,
+    reportId,
+    tripId,
+    actorPersonId: session.user.personId,
+  });
+  if (result.ok) {
+    revalidateAndRedirect(
+      shopPath(shopSlug, "trips", tripId),
+      `${shopPath(shopSlug, "trips", tripId)}?view=details#incidents`,
+    );
+  }
+  settle(back, result, "saved", "discard");
+}
+
+/** Put a legal hold on a report, or release it (an owner only). */
+export async function setIncidentLegalHoldAction(
+  shopSlug: string,
+  tripId: string,
+  reportId: string,
+  held: boolean,
+) {
+  const { session, shop } = await requireShopSurface(shopSlug);
+  requireIds(tripId, reportId);
+  const back = reportPath(shopSlug, tripId, reportId);
+  const result = await setIncidentLegalHold(await getDb(), {
+    shopId: shop.id,
+    reportId,
+    tripId,
+    actorPersonId: session.user.personId,
+    held,
+  });
+  settle(back, result, held ? "hold-set" : "hold-released", "hold");
 }

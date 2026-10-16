@@ -1,9 +1,10 @@
 import type { PGlite } from "@electric-sql/pglite";
-import { and, asc, eq, gt } from "drizzle-orm";
+import { and, asc, eq, gt, isNotNull, notInArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { inHorizonReadiness } from "@/db/blockers";
 import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-capabilities";
+import { createBookingParty } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
 import { hasActiveCourses } from "@/db/courses";
@@ -15,7 +16,7 @@ import { getBookingPayment } from "@/db/payments";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getReadyPageData } from "@/db/ready";
 import { getShopReviewAggregate } from "@/db/reviews";
-import { bookings, people, personRoles, trips } from "@/db/schema";
+import { bookings, people, personRoles, trips, tripWaitlistEntries } from "@/db/schema";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { getShopStripeAccount } from "@/db/stripe-accounts";
@@ -29,6 +30,7 @@ import { listTripChangeEvents } from "@/db/trip-change-events";
 import { siteSightings } from "@/db/trip-sightings";
 import { latestTripStage } from "@/db/trip-stages";
 import {
+  createTrip,
   getTripWithBooked,
   listTripDives,
   listTripScheduleDays,
@@ -304,6 +306,45 @@ async function readinessLinkForUpcomingSeat(plain: AppDb, shopId: string) {
 }
 
 /**
+ * A readiness link on the lead of a party of `size` booked on the next
+ * departure, every other seat unclaimed — the shape `/ready` mints a claim
+ * link for per seat (#2488).
+ */
+async function readinessLinkForParty(plain: AppDb, shopId: string, size: number) {
+  // A departure of its own with room for the whole party.
+  const startsAt = new Date(nowDate().getTime() + 2 * 24 * 3_600_000);
+  const trip = await createTrip(plain, {
+    shopId,
+    title: "Party departure",
+    startsAt,
+    endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
+    capacity: 12,
+  });
+  if (!trip) throw new Error("trip not created");
+  const tripId = trip.id;
+  const stamp = `${nowDate().getTime()}`;
+  const party = await createBookingParty(
+    plain,
+    Array.from({ length: size }, (_, index) => ({
+      actor: "staff" as const,
+      shopId,
+      tripId,
+      fullName: `Party Seat ${index + 1}`,
+      email: `party-seat-${index + 1}-${stamp}@example.com`,
+    })),
+  );
+  const lead = party.ok ? party.bookings[0] : undefined;
+  if (!lead) throw new Error(`the party was not booked: ${JSON.stringify(party)}`);
+  const issued = await issueBookingCapability(plain, {
+    shopId,
+    bookingId: lead.bookingId,
+    purpose: "readiness",
+  });
+  if (!issued) throw new Error("no readiness link for the party lead");
+  return issued.token;
+}
+
+/**
  * The public booking page's reads, as the page awaits them: the shop, the
  * fan-out, then one wave of everything else (code review 2026-10-11, item 2).
  */
@@ -393,6 +434,74 @@ describe("what a diver's page sends", () => {
   });
 });
 
+/**
+ * **The trip page on a departure that wakes every trailing read** (#2487): a
+ * course session (materials, next steps), a held seat (the identity reads) and
+ * a wait-listed diver (the last-minute and waitlist reads). On the plain seed
+ * four of `getTripGuests`' five trailing reads skip themselves, so the ceiling
+ * above never saw the wave they make.
+ */
+describe("the trip page on a course departure with a held seat and a waitlist", () => {
+  it("reads overview and guests in a bounded number of phases", async () => {
+    const { plain, shop, ownerId } = await timedSeededShop();
+    const [trip] = await plain
+      .select({ id: trips.id })
+      .from(trips)
+      .where(
+        and(
+          eq(trips.shopId, shop.id),
+          liveTrip(),
+          isNotNull(trips.courseId),
+          gt(trips.startsAt, nowDate()),
+        ),
+      )
+      .orderBy(asc(trips.startsAt))
+      .limit(1);
+    if (!trip) throw new Error("the seeded shop has no upcoming course departure");
+    const [seat] = await plain
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.tripId, trip.id), eq(bookings.status, "booked")))
+      .limit(1);
+    if (!seat) throw new Error("the course departure has no booked seat");
+    await plain
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "Someone Else" })
+      .where(eq(bookings.id, seat.id));
+    const [waiting] = await plain
+      .select({ id: people.id })
+      .from(people)
+      .where(
+        and(
+          eq(people.shopId, shop.id),
+          notInArray(
+            people.id,
+            plain
+              .select({ id: bookings.personId })
+              .from(bookings)
+              .where(eq(bookings.tripId, trip.id)),
+          ),
+        ),
+      )
+      .limit(1);
+    if (!waiting) throw new Error("no diver is free to wait-list");
+    await plain.insert(tripWaitlistEntries).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: waiting.id,
+    });
+    const { db, phases } = phaseCountingDb(plain.$client as PGlite);
+    const shared = loadTripSharedReads(db, shop.id, trip.id);
+    await Promise.all([
+      getTripOverview(db, shop, trip.id, ownerId, undefined, shared),
+      getTripGuests(db, shop, trip.id, {}, shared),
+    ]);
+    expect(report("trip phases, held seat + waitlist + course", phases())).toBeLessThanOrEqual(
+      TRIP_WIDE_PHASE_CEILING,
+    );
+  });
+});
+
 describe("how many round trips a diver's page waits for, one after another", () => {
   it("reads the public booking page in a bounded number of phases", async () => {
     const { plain, shop } = await timedSeededShop();
@@ -408,6 +517,29 @@ describe("how many round trips a diver's page waits for, one after another", () 
     const token = await readinessLinkForUpcomingSeat(plain, shop.id);
     await readyPageReads(db, token);
     expect(report("ready phases", phases())).toBeLessThanOrEqual(READY_PHASE_CEILING);
+  });
+
+  // The party panel mints a claim link per unclaimed seat: in one statement
+  // for the whole party, so three seats wait no longer than one (#2488).
+  it("reads /ready for a party of three in a bounded number of phases", async () => {
+    const { plain, shop } = await timedSeededShop();
+    const { db, phases } = phaseCountingDb(plain.$client as PGlite);
+    const token = await readinessLinkForParty(plain, shop.id, 3);
+    await readyPageReads(db, token);
+    expect(report("ready phases, party of three", phases())).toBeLessThanOrEqual(
+      READY_PARTY_PHASE_CEILING,
+    );
+  });
+
+  it("sends no more statements for a party of six than for a party of three", async () => {
+    const small = await timedSeededShop();
+    const smallToken = await readinessLinkForParty(small.plain, small.shop.id, 3);
+    const threeSeats = await withQueryStats(() => readyPageReads(small.db, smallToken));
+    const large = await timedSeededShop();
+    const largeToken = await readinessLinkForParty(large.plain, large.shop.id, 6);
+    const sixSeats = await withQueryStats(() => readyPageReads(large.db, largeToken));
+    expect(report("ready, party of six", sixSeats.stats.queries)).toBe(threeSeats.stats.queries);
+    expect(threeSeats.stats.queries).toBeLessThanOrEqual(READY_PARTY_CEILING);
   });
 });
 
@@ -460,7 +592,9 @@ const TODAY_CEILING = 69;
 // shared prep list's fit check, and the open-orders count is the one it sent.
 // 51 → 52: the roster's agency check (H-105) reads the seated divers' checkable
 // cards (`listAgencyCheckableCards`), one statement in `getTripGuests`' fan-out.
-const TRIP_CEILING = 52;
+// 52 → 54: the same read also asks for the divers' pending nitrox and specialty
+// cards (issue #2592), one statement each, in the same wave as the level read.
+const TRIP_CEILING = 54;
 
 /**
  * Serial phases, the same way: lower one when a change removes a wait, never
@@ -485,7 +619,15 @@ const TODAY_PHASE_CEILING = 5;
 // and evidence go out in one wave (item 13), and `getTripGuests`' five trailing
 // reads are one wave too (item 12); on the departure measured here four of
 // those skip themselves (no held seat, wait list or course).
-const TRIP_PHASE_CEILING = 6;
+// 6 → 5 (#2487): the departure row went out beside the four reads that never
+// waited on it (`loadTripSharedReads`).
+const TRIP_PHASE_CEILING = 5;
+// The same page on a course departure with a held seat and a waitlist: the
+// shared wave (2), then the longest chain after it: the permission read (3
+// here, one request-cached statement chain in a real render) and the
+// off-cadence list that waits on it, or `getTripGuests`' fan-out and trailing
+// wave.
+const TRIP_WIDE_PHASE_CEILING = 6;
 
 /**
  * The diver pages, measured 2026-10-12 before their reads were grouped (code
@@ -497,11 +639,10 @@ const TRIP_PHASE_CEILING = 6;
 // an away crew member "to be confirmed", which reads the departure's schedule
 // days and the crew's days away beside the crew, in the same round trip.
 const PUBLIC_TRIP_CEILING = 20;
-// 36 → 38, for two reasons on two seeds. On layer 3's seed the replay's first
-// upcoming seat is paid with no cancellation policy, and its page reads whether
-// an Ask to move (H-126) stands (`hasMoveAsk`), two statements more. On this
-// layer's seed the seat is unpaid again, and the away-crew read above adds the
-// same two. Measured 38 here.
+// 36 → 38 (fourth review, item 12): the thread names the crew with who is
+// away on the departure's days (`diverCrewWithAway`), which reads the
+// schedule days and the days away beside the crew. Measured 38; the phases
+// stay 5, since both ride the thread's one wave.
 const READY_CEILING = 38;
 // 10 → 3: the shop, then `readTripPage`'s one wave (issue #2353; code review
 // 2026-10-11, item 2), whose chained reads — the briefings off the dives, the
@@ -513,7 +654,14 @@ const PUBLIC_TRIP_PHASE_CEILING = 3;
 // 12 → 5 (item 3): the capability; the readiness detail beside the booking
 // row and its fan-out (`getReadyPageData`); the readiness pass's one wave; and
 // the thread's one wave.
-// 5 → 7 on layer 3's seed, for its paid seat: whether an Ask to move stands is
-// read after the payment answers. 7 → 5 here: this seed's seat is unpaid, and
-// the away-crew read rides the thread's one wave. Measured 5.
 const READY_PHASE_CEILING = 5;
+// 11 → 7 (#2488): a party of three. The claim panel minted one link per seat,
+// one after another, each its own read, retire and insert; now the party's
+// links are one read of the seats (which carries each departure's end), one
+// read of the links already live, and one insert, whatever the party's size.
+// The two above them are the capability and the readiness detail, as for one
+// seat.
+const READY_PARTY_PHASE_CEILING = 7;
+// A party of three or six: the single seat's 38, plus the party panel's
+// own reads and one claim-link mint for every unclaimed seat together.
+const READY_PARTY_CEILING = 40;

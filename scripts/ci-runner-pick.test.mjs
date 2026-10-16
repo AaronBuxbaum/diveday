@@ -109,6 +109,6 @@ describe("what the step writes for runs-on", () => {
     });
     const lines = readFileSync(output, "utf8").trim().split("\n");
     expect(lines).toEqual([`runner=${GITHUB}`, `runner=${GITHUB}`, `runner=${GITHUB}`]);
-    expect(JSON.parse(lines[0].slice("runner=".length))).toBe("ubuntu-latest");
+    expect(JSON.parse(lines[0].slice("runner=".length))).toBe("ubuntu-24.04");
   });
 });

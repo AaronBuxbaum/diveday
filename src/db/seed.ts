@@ -84,6 +84,7 @@ import {
   reviewReplies,
   shopPromoCodes,
   shopPromoRedemptions,
+  shopShoreAlertTokens,
   shopStripeAccounts,
   shops,
   specialtyCertifications,
@@ -353,7 +354,7 @@ export async function seedIfEmpty(db: DbExecutor): Promise<void> {
  * below is where it is exercised. The photo is one of the bundled Molasses
  * Reef frames the site catalog already ships.
  */
-const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
+export const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
   brandHeroImageUrl: `/dive-sites/${encodeURIComponent("Elkhorn coral 8 Molasses Reef 20080309.jpg")}`,
   // i18n-exempt: a shop writes its own alt text, like its tagline.
   brandHeroImageAlt: "Elkhorn coral on Molasses Reef, sunlight from above",
@@ -387,13 +388,14 @@ export const MINTED_DEMO_BRAND_COLOR = "#158462";
  *
  * The logo is a bundled frame, as the cover photo is, because the fleet
  * configures no media storage, so an upload through the form is refused. A
- * different frame, so the tile and the cover read as two photos.
+ * different frame from the cover and from every seeded site's lead photo, so
+ * the tile reads as its own picture (`seed-brand-photos.test.ts` holds it).
  */
-const MINTED_DEMO_BRAND: Partial<typeof shops.$inferInsert> = {
+export const MINTED_DEMO_BRAND: Partial<typeof shops.$inferInsert> = {
   ...DEMO_SHOP_BRAND,
   brandColor: MINTED_DEMO_BRAND_COLOR,
   brandDisplayFont: "bricolage_grotesque",
-  logoUrl: `/dive-sites/${encodeURIComponent("French Angelfish Molasses Reef 20080309.jpg")}`,
+  logoUrl: `/dive-sites/${encodeURIComponent("Sand Key Light 2005.jpg")}`,
 };
 
 /**
@@ -1700,10 +1702,21 @@ export async function resetDemoSchedule(
   // `shops.temperature_unit` rides along for the same reason: it is the second
   // half of the same settings pair and leaks exactly the same way once a spec
   // flips it.
+  // The shore contact's alert address (H-118) is the same class of leak: a
+  // spec that saves one would leave the next spec's emergency reference
+  // holding it. A demo shop never sends to it, and its links go with it.
   await db
     .update(shops)
-    .set({ reviewUrl: null, ...DEMO_SHOP_UNIT_COLUMNS })
+    .set({
+      reviewUrl: null,
+      ...DEMO_SHOP_UNIT_COLUMNS,
+      shoreAlertEmail: null,
+      shoreAlertConsentAt: null,
+      shoreAlertConsentByPersonId: null,
+      shoreAlertConfirmedAt: null,
+    })
     .where(eq(shops.id, shopId));
+  await db.delete(shopShoreAlertTokens).where(eq(shopShoreAlertTokens.shopId, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
   // ...and puts back the one connection the canonical demo is configured with:
   // its Stripe test-mode account, when the deployment names one (ADR

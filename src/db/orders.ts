@@ -1,4 +1,18 @@
-import { and, asc, count, desc, eq, gte, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNull,
+  lt,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import { unionAll } from "drizzle-orm/pg-core";
 import { isStaff } from "@/lib/authz";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
@@ -1206,6 +1220,14 @@ export type ShopOrderFilter = {
    * invoice, a gear sale) is therefore on no trip and never matches.
    */
   tripId?: string;
+  /**
+   * Which of the booking's seats the orders sit on (issue #2550). `live` is a
+   * seat still on the boat (anything but cancelled, the set the roster and the
+   * boat's work count); `cancelled` is an order left on a seat that was
+   * released, which may still need a refund or a void. Unset is both, the
+   * shop's complete ledger. An order with no booking is on neither.
+   */
+  seats?: "live" | "cancelled";
   /** Inclusive lower bound on `created_at`. */
   from?: Date;
   /** Exclusive upper bound on `created_at`, so a whole day/month reads as `[from, to)`. */
@@ -1237,6 +1259,8 @@ export function shopOrderWhere(shopId: string, filter: ShopOrderFilter) {
     if (matches) conditions.push(matches);
   }
   if (filter.tripId) conditions.push(eq(bookings.tripId, filter.tripId));
+  if (filter.seats === "live") conditions.push(ne(bookings.status, "cancelled"));
+  if (filter.seats === "cancelled") conditions.push(eq(bookings.status, "cancelled"));
   if (filter.from) conditions.push(gte(orders.createdAt, filter.from));
   if (filter.to) conditions.push(lt(orders.createdAt, filter.to));
   return and(...conditions);
@@ -1628,6 +1652,11 @@ async function ledgerRowsFor(
  * `shopOrderWhere`, one set of joins — so the strip can never claim work the
  * page it opens does not show.
  *
+ * Seats still on the boat only, by default: the count is the boat's work, and
+ * an open order on a cancelled seat is a refund or a void to decide, not a
+ * payment to chase. The index shows those under their own line
+ * (`seats: "cancelled"`, issue #2550), never dropped from the ledger.
+ *
  * `open` and nothing else. Stripe's `open` is precisely "invoiced, not yet
  * paid"; `void`/`uncollectible` are settled decisions and `refunded` money
  * already moved. Counting those would put a number on the pulse that no one
@@ -1642,8 +1671,9 @@ export async function countOpenTripOrders(
   db: DbExecutor,
   shopId: string,
   tripId: string,
+  seats: "live" | "cancelled" = "live",
 ): Promise<number> {
-  return countTripOrders(db, shopId, tripId, "open");
+  return countTripOrders(db, shopId, tripId, "open", seats);
 }
 
 /**
@@ -1687,13 +1717,35 @@ export async function countTripOrders(
   shopId: string,
   tripId: string,
   status: OrderStatus,
+  seats?: "live" | "cancelled",
 ): Promise<number> {
   const [counted] = await db
     .select({ total: count() })
     .from(orders)
     .innerJoin(people, eq(people.id, orders.personId))
     .leftJoin(bookings, eq(bookings.id, orders.bookingId))
-    .where(shopOrderWhere(shopId, { status, tripId }));
+    .where(shopOrderWhere(shopId, { status, tripId, seats }));
+  return counted?.total ?? 0;
+}
+
+/**
+ * How many orders a filter lists, ignoring the page: the Orders index's line
+ * for the other half of a departure's seats ("2 more on cancelled seats")
+ * counts with the filter the list is read with, so the number and the rows
+ * behind its link agree (issue #2550).
+ */
+export async function countShopOrders(
+  db: DbExecutor,
+  shopId: string,
+  filter: ShopOrderFilter,
+): Promise<number> {
+  const [counted] = await db
+    .select({ total: count() })
+    .from(orders)
+    .innerJoin(people, eq(people.id, orders.personId))
+    .leftJoin(bookings, eq(bookings.id, orders.bookingId))
+    .leftJoin(trips, eq(trips.id, bookings.tripId))
+    .where(shopOrderWhere(shopId, filter));
   return counted?.total ?? 0;
 }
 
