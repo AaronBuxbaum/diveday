@@ -49,7 +49,7 @@ import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { type Notification, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { confirmationExtras } from "@/lib/notifications/confirmation-extras";
-import { isDiver, parsePartyTypes, rentsKind } from "@/lib/participant-types";
+import { isDiver, type ParticipantType, parsePartyTypes, rentsKind } from "@/lib/participant-types";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import {
   DIVER_NAME_MAX,
@@ -176,6 +176,7 @@ const waitlistForm = z.object({
   "fullName-0": formValue(),
   "email-0": formValue(),
   phone: formValue().transform((value) => value || undefined),
+  partySize: formValue(),
 });
 
 export async function bookSpot(
@@ -533,7 +534,7 @@ export async function bookSpot(
     bookings: outcome.bookings,
     ownLocale,
     readinessToken: readinessCapability?.token,
-    chargesOnline: payAtBookingForGear,
+    money: { chargesOnline: payAtBookingForGear, partyTypes },
   });
 
   // Persist each diver's chosen gear (and nitrox request) the moment their
@@ -781,7 +782,7 @@ async function sendJoinMail(
     bookings,
     ownLocale,
     readinessToken,
-    chargesOnline,
+    money: { chargesOnline, partyTypes },
   }: {
     shop: NonNullable<Awaited<ReturnType<typeof getShopBySlug>>>;
     trip: Awaited<ReturnType<typeof getTripWithBooked>>;
@@ -791,8 +792,12 @@ async function sendJoinMail(
     ownLocale: Awaited<ReturnType<typeof requestFirstHandLocale>>;
     /** The lead's `/ready` capability, when one was minted. */
     readinessToken: string | undefined;
-    /** Whether this booking went to a checkout, the rule the form used. */
-    chargesOnline: boolean;
+    money: {
+      /** Whether this booking went to a checkout, the rule the form used. */
+      chargesOnline: boolean;
+      /** What each seat of the party is, the lead's first: the money line sums them. */
+      partyTypes: readonly ParticipantType[];
+    };
   },
 ): Promise<void> {
   // One booking, one email (UX review 2026-10-11, item 7): the lead's waiver,
@@ -823,6 +828,7 @@ async function sendJoinMail(
           readinessUrl: readinessToken ? readinessEmailUrl(readinessToken) : undefined,
           waiver: leadWaiver,
           chargesOnline,
+          otherSeatTypes: partyTypes.slice(1),
         }),
       );
       confirmationSent = delivery.status === "sent";
@@ -975,6 +981,17 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
   if (!parsed.success) {
     redirect(`${publicTripPath(shopSlug, tripId)}?error=invalid${embedParam(embed, "&")}`);
   }
+  // How many wait together (fourth review, item 34), within the booking form's
+  // own bound. The lead's details are the entry; the party is a count.
+  const partySize = z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_PUBLIC_PARTY_SIZE)
+    .safeParse(joiner.ok ? joiner.data.partySize : undefined);
+  if (!partySize.success) {
+    redirect(`${publicTripPath(shopSlug, tripId)}?error=invalid${embedParam(embed, "&")}`);
+  }
   const dbi = await getDb();
   const shopNow = await getShopBySlug(dbi, shopSlug);
   if (!shopNow) {
@@ -986,6 +1003,7 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
     fullName: parsed.data.fullName,
     email: parsed.data.email,
     phone: parsed.data.phone || undefined,
+    partySize: partySize.data,
     // Bounded per *subject* address rather than per IP — the only key a
     // rotating set of submitters cannot clear (RATE_LIMITS.declarationByPerson).
     // An exhausted budget drops the claim; the wait-list join still succeeds,
@@ -1074,6 +1092,8 @@ function bookSpotConfirmation(input: {
   /** The lead's waiver, riding in the confirmation as its first step when one is owed. */
   waiver: { url: string; expiresAt: Date } | null;
   chargesOnline: boolean;
+  /** The party's other seats, all still the lead's at booking (fourth UX review, item 5). */
+  otherSeatTypes: readonly ParticipantType[];
 }): Notification {
   const { shop, trip, confirmed } = input;
   return {
@@ -1103,6 +1123,7 @@ function bookSpotConfirmation(input: {
       trip,
       course: trip.course ?? null,
       participantType: confirmed.booking.participantType,
+      partyTypes: input.otherSeatTypes,
       chargesOnline: input.chargesOnline,
       origin: publicAppUrl(),
     }),

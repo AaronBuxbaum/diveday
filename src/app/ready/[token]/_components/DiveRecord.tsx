@@ -2,6 +2,7 @@ import { SiteMark } from "@/components/illustration/SiteMark";
 import { SUB_TITLE_CLASS } from "@/components/ui/typography";
 import type { AfterStateProps } from "@/features/recap-after-state";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
+import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
 import { formatOrdinal } from "@/lib/format";
 import { visitMilestone } from "@/lib/visit-milestones";
@@ -65,6 +66,7 @@ export function DiveRecord({
   visitCount,
   siteMark,
   postcard,
+  course,
 }: Pick<
   AfterStateProps,
   | "t"
@@ -78,6 +80,7 @@ export function DiveRecord({
   | "visitCount"
   | "siteMark"
   | "postcard"
+  | "course"
 > & {
   trip: AfterStateProps["trip"];
 }) {
@@ -173,6 +176,18 @@ export function DiveRecord({
             (K-595); in print the band goes transparent. */}
         <dl className="mt-5 divide-y divide-border print:border-t print:border-border">
           <Fact label={t("recap.diverLabel")}>{diverName}</Fact>
+          {/* **The peak of a course, where the diver keeps it** (fourth review,
+              item 55). Only from the card this shop issued from this session
+              and marked verified (`src/db/recap.ts`, the same guard
+              `CourseAfterState` keeps), so it prints on the logbook page too:
+              it is something the shop wrote down, not something inferred. */}
+          {course?.certification ? (
+            <Fact label={t("recap.certifiedLabel")} testId={AFTER_STATE_TEST_IDS.certified}>
+              <span className="font-semibold text-primary">
+                {t(DIVER_CERTIFICATION_LEVEL_KEYS[course.certification.level])}
+              </span>
+            </Fact>
+          ) : null}
           <Fact label={t("recap.dateLabel")}>{when}</Fact>
           {trip.boatName ? <Fact label={t("recap.vesselLabel")}>{trip.boatName}</Fact> : null}
           {trip.crew.length > 0 ? (

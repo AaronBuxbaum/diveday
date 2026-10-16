@@ -3,7 +3,7 @@
   "instrument": {
     "hereOf": "<figure>{here}</figure> de {expected} aquí",
     "toCome": "{count} por llegar",
-    "cantBoard": "{count, plural, one {# persona todavía no puede embarcar} other {# personas todavía no pueden embarcar}}",
+    "cantBoard": "{count, plural, one {# bloqueado} other {# bloqueados}}",
     "notHere": "{count, plural, one {# persona no vino} other {# personas no vinieron}}",
     "turnedAway": "{count, plural, one {# persona no pudo embarcar} other {# personas no pudieron embarcar}}"
   },
@@ -86,6 +86,7 @@
     "waiverIdentityUnconfirmed": "Esta plaza queda retenida hasta que alguien confirme de quién se trata, así que todavía no se puede registrar una exención en papel en su ficha. Confírmalo en su fila y luego registra la exención.",
     "waiverError": "No se pudo registrar esa exención en papel. Inténtalo de nuevo.",
     "walkinAdded": "Añadido a la lista de este barco. Regístralo en su fila.",
+    "walkinAddedConfirmed": "Añadido a la lista de este barco, y su confirmación va en camino.",
     "walkinAddedWaiverUndelivered": "Añadido a la lista de este barco, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
     "walkinAddedIdentityUnconfirmed": "Añadido a la lista de este barco, pero la plaza queda retenida hasta que confirmes que es la misma persona. Confírmalo en su fila, aquí abajo, antes de que embarque.",
     "walkinFull": "Ese barco está completo. Añádelo a la lista de espera.",

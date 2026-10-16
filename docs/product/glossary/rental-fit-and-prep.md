@@ -266,7 +266,9 @@
   drysuit (`SIZED_RENTAL_KINDS`, `src/lib/rentals.ts`); every other piece has no size column, so it
   has no size to be missing. Named that way round on purpose: the unsized list was kept by hand as
   three, drifted to six without anybody noticing, and a diver renting a dive light read "Not
-  recorded" — a gap nobody could fill (#1805). "Not recorded" (nobody asked) and "incomplete" (asked, half blank) stay distinct.
+  recorded" — a gap nobody could fill (#1805). Two facts stay distinct, in the words Today and the
+  trip page count them by: **not asked about kit** (nobody asked) and **missing a size** (asked,
+  half blank).
   Completeness is a prompt for staff, never a gate: it refuses nobody a seat and blocks nobody from
   boarding.
 - **Needs staff fit** — the safe fallback when the shop can't fill a size a diver asked for (H-06):

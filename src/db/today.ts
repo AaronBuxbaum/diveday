@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, inArray, lte, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, lte, ne, or } from "drizzle-orm";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   highWindAlertDetailText,
@@ -11,6 +11,7 @@ import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
 import type { Role } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import type { AvailabilityBlock } from "@/lib/crew-requests";
 import { effectiveCrewRoles, groupCrewAssignments } from "@/lib/crew-roles";
 import type { DiveIntentCount } from "@/lib/dive-intent";
 import { DEFAULT_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
@@ -50,6 +51,7 @@ import { todayBoatSafety } from "./boat-safety";
 import { readBoatWork } from "./boat-work";
 import type { AppDb } from "./client";
 import { courseCrewCountsByTrip } from "./course-crew-counts";
+import { crewAwayByTrip } from "./crew-away";
 import { diveIntentTallyForTrips } from "./dive-intent";
 import {
   listFitAdjustedReturns,
@@ -92,6 +94,7 @@ import {
   paymentsRestrictedSince,
   shopStripeAccountForRender,
 } from "./stripe-accounts";
+import { pushCrewAwayRows } from "./today-crew-away-rows";
 import { pushDepartureRows } from "./today-departure-rows";
 import { pushEquipmentRows } from "./today-equipment-rows";
 import { pushRollCallRows } from "./today-roll-call-rows";
@@ -260,6 +263,12 @@ export type CrewedSessionSummary = {
   booked: number;
   ready: number;
   blocked: number;
+  /**
+   * The reader's own days away that this session meets on (fourth review,
+   * item 12; `crewAwayByTrip`). Empty when they are not away. Optional so a
+   * summary built elsewhere reads as "not away".
+   */
+  away?: AvailabilityBlock[];
 };
 
 export type TodayWork = {
@@ -1617,6 +1626,7 @@ async function readTodayWave(
     crewedAssignments,
     openOrders,
     unfiledIncidentDrafts,
+    crewAway,
   ] = await Promise.all([
     // Each booking's latest departure result, not just a head count. The card
     // needs to tell "already aboard" from "still ashore" from "never left the
@@ -1746,20 +1756,13 @@ async function readTodayWave(
       ),
     }),
     listWorkOrdersNeedingAttention(db, shopId, { todayLocal, timezone: timeZone }),
-    // Which in-window trips this person crews, when the caller asked.
-    personId && inWindow.length > 0
-      ? db
-          .select({ tripId: tripAssignments.tripId })
-          .from(tripAssignments)
-          .where(
-            and(
-              eq(tripAssignments.personId, personId),
-              inArray(
-                tripAssignments.tripId,
-                inWindow.map((trip) => trip.id),
-              ),
-            ),
-          )
+    // Which of the day's trips this person crews, when the caller asked.
+    personId
+      ? readerCrewedTrips(db, shopId, personId, {
+          windowTripIds: inWindow.map((trip) => trip.id),
+          dayStart: shopDayBounds(now, timeZone).from,
+          now,
+        })
       : null,
     // The payment rows' invoice controls (below): the open order behind each
     // owing seat, read only when the shop's own Stripe account can take a
@@ -1780,6 +1783,14 @@ async function readTodayWave(
     // only (`listUnfiledIncidentDrafts` re-reads their roles). A caller reading
     // the shop's whole day with nobody behind it (the digest) gets none.
     viewerPersonId ? listUnfiledIncidentDrafts(db, shopId, viewerPersonId) : [],
+    // Who is rostered on a departure ahead and said they are away on a day it
+    // meets (fourth review, item 12): the `crew_away` rows.
+    crewAwayByTrip(
+      db,
+      shopId,
+      inWindow.map((trip) => trip.id),
+      timeZone,
+    ),
   ]);
   return {
     departureRollCall,
@@ -1816,6 +1827,7 @@ async function readTodayWave(
     crewedAssignments,
     openOrders,
     unfiledIncidentDrafts,
+    crewAway,
   };
 }
 
@@ -1966,6 +1978,7 @@ export async function getTodayWork(
     boatsOut,
     shopUnits,
     crewedAssignments,
+    crewAway,
   } = wave;
 
   const helpRequestsByTrip = new Map<string, typeof helpRequests>();
@@ -2007,6 +2020,8 @@ export async function getTodayWork(
   };
 
   pushRollCallRows(actions, rows);
+
+  pushCrewAwayRows(actions, rows);
 
   pushDepartureRows(actions, rows);
 
@@ -2083,7 +2098,9 @@ export async function getTodayWork(
   let crewedSessions: CrewedSessionSummary[] = [];
   if (crewedAssignments) {
     const crewed = new Set(crewedAssignments.map((row) => row.tripId));
-    crewedTripIds = inWindow.filter((trip) => crewed.has(trip.id)).map((trip) => trip.id);
+    // Every crewed trip, not only the window's: the dawn boat still out is a
+    // card on the spine the window no longer holds (fourth review, item 14).
+    crewedTripIds = [...crewed];
     crewedSessions = inWindow
       .filter((trip) => trip.course && crewed.has(trip.id))
       .map((trip) => {
@@ -2096,6 +2113,7 @@ export async function getTodayWork(
           booked: trip.booked,
           ready: rows.filter((row) => row.readiness.status === "ready").length,
           blocked: rows.filter((row) => row.readiness.status === "blocked").length,
+          away: crewAway.get(trip.id)?.find((entry) => entry.personId === personId)?.blocks ?? [],
         };
       });
   }
@@ -2126,6 +2144,37 @@ export async function getTodayWork(
     crewedSessions,
     availableStaff,
   };
+}
+
+/**
+ * **Which of the day's departures the reader crews** (fourth review, item 14):
+ * the queue's own window, and every departure that has sailed since the shop's
+ * day began. The window looks only forward, so the captain's dawn boat, still
+ * out with them aboard, lost its "You're crewing" mark the moment it sailed
+ * while the 1:30 PM card kept its own. The mark follows the assignment, not
+ * the window.
+ */
+function readerCrewedTrips(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+  input: { windowTripIds: readonly string[]; dayStart: Date; now: Date },
+): Promise<{ tripId: string }[]> {
+  const sailedToday = and(gte(trips.startsAt, input.dayStart), lte(trips.startsAt, input.now));
+  return db
+    .select({ tripId: tripAssignments.tripId })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .where(
+      and(
+        eq(tripAssignments.personId, personId),
+        eq(trips.shopId, shopId),
+        liveTrip(),
+        input.windowTripIds.length > 0
+          ? or(inArray(trips.id, [...input.windowTripIds]), sailedToday)
+          : sailedToday,
+      ),
+    );
 }
 
 /**

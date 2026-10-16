@@ -5,6 +5,7 @@
       "packingSaved": "Packing checklist saved for every trip.",
       "packingInvalid": "Add between one and twelve packing items.",
       "dockSaved": "Dock call time saved for every confirmation and reminder.",
+      "pickupSaved": "Saved. Divers are asked about a pickup only when this is on.",
       "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
       "turnaroundSaved": "Turnaround saved.",
       "turnaroundInvalid": "Enter a turnaround between 0 and 240 minutes.",
@@ -229,6 +230,12 @@
       "submit": "Save packing checklist",
       "submitting": "Saving…",
       "value": "{count, plural, one {# item} other {# items}}"
+    },
+    "pickup": {
+      "label": "We offer hotel pickup",
+      "description": "When on, each diver’s page asks whether they want a pickup and where they’re staying.",
+      "submit": "Save pickup",
+      "submitting": "Saving…"
     },
     "dockCall": {
       "heading": "Dock-day rhythm",
@@ -467,7 +474,7 @@
       "heading": "Dive sites"
     },
     "waivers": {
-      "heading": "Waiver template"
+      "heading": "Waivers and signed records"
     },
     "safetyChecklist": {
       "heading": "Pre-departure checklist"
@@ -527,6 +534,7 @@
       "lineExamples": "Chamber, dive-accident hotline, coast guard…",
       "phoneLabel": "Number {n}",
       "vesselLabel": "Vessel",
+      "vesselHint": "Printed only on departures with no boat. Each boat’s call sign and MMSI go in Boats.",
       "shoreContactLabel": "Shore contact",
       "shoreContactDescription": "A name and number the crew reads. DiveDay never messages this line.",
       "shoreAlertEmailLabel": "Shore contact’s email for roll-call alerts",
@@ -559,7 +567,8 @@
       "submit": "Add package",
       "submitting": "Adding…",
       "delete": "Delete",
-      "deleting": "Deleting…"
+      "deleting": "Deleting…",
+      "owed": "Dives owed on packages: {dives, number} ({value})"
     }
   },
   "team": {

@@ -14,6 +14,8 @@ import {
   earliestReportedTripStart,
   getMonthlyReport,
   getShopYear,
+  getYearMonthInputs,
+  getYearToDate,
   pagedMonthlyReportTrips,
 } from "./reporting";
 import {
@@ -1237,6 +1239,43 @@ describe("crewCountsByTrip (issue #700 — crew load, never a cost)", () => {
  * quietest month" and "since May" answers about the fixture rather than about
  * the rule.
  */
+/**
+ * **The year's money** (fourth UX review, item 25): one month row per month
+ * begun, each "so far" at now, and one year-to-date read that sums them.
+ */
+describe("the year's money", () => {
+  const TZ = "America/New_York";
+  const NOW = new Date("2026-03-20T16:00:00Z");
+
+  it("reads a row per month begun, departures before now only, and the year as their sum", async () => {
+    const db = await unseededTestDb();
+    const [shop] = await db
+      .insert(shops)
+      .values({ name: "Money Year", slug: "money-year", timezone: TZ })
+      .returning();
+    if (!shop) throw new Error("shop insert failed");
+    const seat = async (day: string, cents: number) => {
+      const tripId = await makeTrip(db, shop.id, new Date(`${day}T13:00:00Z`), 10);
+      const personId = await makePerson(db, shop.id, `Diver ${day}`);
+      await pay(db, shop.id, await makeBooking(db, shop.id, tripId, personId), "paid", cents);
+    };
+    await seat("2026-01-10", 10_000);
+    await seat("2026-03-02", 9_500);
+    // Still to sail on the day the year is read: not in the year's money.
+    await seat("2026-03-28", 7_000);
+
+    const months = await getYearMonthInputs(db, shop.id, { timeZone: TZ, year: 2026, now: NOW });
+    expect(months.map(({ month }) => month.month)).toEqual([1, 2, 3]);
+    const revenue = months.map(({ input }) => summarizeMonth(input).revenueCents);
+    expect(revenue).toEqual([10_000, 0, 9_500]);
+    const ytd = summarizeMonth(
+      await getYearToDate(db, shop.id, { timeZone: TZ, year: 2026, now: NOW }),
+    );
+    expect(ytd.revenueCents).toBe(19_500);
+    expect(ytd.seatsBooked).toBe(2);
+  });
+});
+
 describe("getShopYear", () => {
   const TZ = "America/New_York";
   /** Noon in New York on 2026-08-27, the day the canvas draws. */

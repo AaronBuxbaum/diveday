@@ -102,4 +102,40 @@ describe("crewWeekFor", () => {
     if (!diver) throw new Error("failed to insert person");
     expect(await crewWeekFor(db, { shopId: shop.id, personId: diver.id, ...window() })).toEqual([]);
   });
+
+  /**
+   * **Said once** (fourth review, item 14): an instructor's Today lists their
+   * sessions above, so "Your week" leaves those out before it counts three,
+   * and still names the boat they crew.
+   */
+  it("leaves out the departures the page already lists, before the limit counts", async () => {
+    const { db, shop } = ctx;
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!instructor) throw new Error("seeded instructor missing");
+    const sessions = [
+      await departure(db, shop.id, "Refresher session A", 50),
+      await departure(db, shop.id, "Refresher session B", 56),
+      await departure(db, shop.id, "Refresher session C", 62),
+    ];
+    const charter = await departure(db, shop.id, "Deep wreck charter", 70);
+    for (const trip of [...sessions, charter]) {
+      expect(
+        await setTripCrew(db, shop.id, trip.id, [
+          { personId: instructor.person.id, tripRole: "instructor" },
+        ]),
+      ).toBe(true);
+    }
+    const read = (excludeTripIds?: string[]) =>
+      crewWeekFor(db, {
+        shopId: shop.id,
+        personId: instructor.person.id,
+        ...window(),
+        excludeTripIds,
+      });
+    expect((await read()).map((line) => line.title)).not.toContain("Deep wreck charter");
+    expect((await read(sessions.map((trip) => trip.id))).map((line) => line.title)).toContain(
+      "Deep wreck charter",
+    );
+  });
 });

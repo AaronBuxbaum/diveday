@@ -243,6 +243,15 @@ type ActivityParamShapes = {
    */
   order_refunded: { actor: string };
   /**
+   * A staffer recorded an open invoice as paid over the counter, in cash or on
+   * the shop's card machine (`recordPaymentOnOpenOrder`), or a bench ticket as
+   * paid at pickup. Stripe stops asking for an invoice settled this way and
+   * cannot un-pay it, so the person behind it is worth a line. One code per
+   * method, so the sentence says how without a word passed in English.
+   */
+  order_paid_cash: { actor: string };
+  order_paid_card_machine: { actor: string };
+  /**
    * Money a card paid on a checkout DiveDay had already closed, sent back from
    * the Orders index (issue #2335). On the departure the checkout was for.
    */
@@ -414,6 +423,8 @@ export const ACTIVITY_CODES = [
   "integration_backfill_sent",
   "running_late_from_message",
   "order_refunded",
+  "order_paid_cash",
+  "order_paid_card_machine",
   "paid_after_close_refunded",
   "seat_refunded",
   "payment_waived",

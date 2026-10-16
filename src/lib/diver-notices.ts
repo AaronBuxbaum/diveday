@@ -442,6 +442,8 @@ const NOTICE_KEYS: DiverNoticeMap = {
   // Book an activity. Every code below is emitted only by the seating path, so
   // none of them needs an explicit `?form=` to find its way home.
   booked: { form: "book", tone: "success", key: "divers.notices.booked" },
+  // Booked for a later day, and the diver was sent the confirmation.
+  "booked-confirmed": { form: "book", tone: "success", key: "divers.notices.bookedConfirmed" },
   "booked-waiver-undelivered": {
     form: "book",
     tone: "warning",
@@ -732,9 +734,11 @@ export function resolveDiverNotice({
         ? tripAdmissionRefusalText(t, refusal, locale)
         : notice === "booked" && !canRaiseInvoice
           ? t("divers.notices.bookedNoInvoice")
-          : notice === "merge-booking-conflict" && conflictDeparture
-            ? t("divers.notices.mergeBookingConflictOn", { departure: conflictDeparture })
-            : t(banner.key as StaffMessageKey),
+          : notice === "booked-confirmed" && !canRaiseInvoice
+            ? t("divers.notices.bookedConfirmedNoInvoice")
+            : notice === "merge-booking-conflict" && conflictDeparture
+              ? t("divers.notices.mergeBookingConflictOn", { departure: conflictDeparture })
+              : t(banner.key as StaffMessageKey),
     code: notice,
     link: notice === undefined ? undefined : NOTICE_LINKS[notice],
     field: banner.field,

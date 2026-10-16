@@ -12,7 +12,6 @@ import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-label
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { staffJobWithRatings } from "@/i18n/staff-role-labels";
-import { depthInUnit } from "@/lib/depth-units";
 import {
   formatDateTimeTz,
   formatShortDate,
@@ -26,6 +25,7 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { CertificationLine } from "./_components/CertificationLine";
+import { ExecutedDivesTable } from "./_components/ExecutedDivesTable";
 import { IncidentReportsSection } from "./_components/IncidentReportsSection";
 import { incidentSummaryRows } from "./_components/incident-summary";
 import { NumberedName } from "./_components/NumberedName";
@@ -422,64 +422,12 @@ export default async function IncidentExportPage({
         {doc.executedDives.length === 0 ? (
           <p className="mt-3 text-sm font-semibold">{t("incidentExport.executedDiveEmpty")}</p>
         ) : (
-          <Table className="mt-3">
-            <THead>
-              <Th>{t("incidentExport.executedDiveNumber")}</Th>
-              <Th>{t("incidentExport.executedDiveSite")}</Th>
-              <Th>{t("incidentExport.executedDiveTimes")}</Th>
-              <Th>{t("incidentExport.executedDiveDepth")}</Th>
-              <Th>{t("incidentExport.executedDiveConditions")}</Th>
-              <Th>{t("incidentExport.executedDiveSurfaceInterval")}</Th>
-              <Th>{t("incidentExport.executedDiveRecordedBy")}</Th>
-            </THead>
-            <TBody>
-              {doc.executedDives.map((dive) => (
-                <tr key={dive.diveNumber}>
-                  <Th scope="row">
-                    {t("incidentExport.executedDive", { number: dive.diveNumber })}
-                  </Th>
-                  <Td>{dive.actualSiteName ?? t("incidentExport.notOnFile")}</Td>
-                  <Td>
-                    {dive.enteredAt
-                      ? dateTime(dive.enteredAt)
-                      : t("incidentExport.executedDiveTimesMissing")}{" "}
-                    –{" "}
-                    {dive.exitedAt
-                      ? dateTime(dive.exitedAt)
-                      : t("incidentExport.executedDiveTimesMissing")}
-                  </Td>
-                  <Td>
-                    {dive.maxDepthMeters == null
-                      ? t("incidentExport.executedDiveFieldNotRecorded")
-                      : `${depthInUnit(dive.maxDepthMeters, "meters")} m / ${depthInUnit(dive.maxDepthMeters, "feet")} ft`}
-                  </Td>
-                  <Td>
-                    {typeof dive.observedConditions?.visibility === "string" ||
-                    typeof dive.observedConditions?.current === "string"
-                      ? t("incidentExport.executedDiveConditionValue", {
-                          visibility:
-                            typeof dive.observedConditions?.visibility === "string"
-                              ? dive.observedConditions.visibility
-                              : t("incidentExport.executedDiveFieldNotRecorded"),
-                          current:
-                            typeof dive.observedConditions?.current === "string"
-                              ? dive.observedConditions.current
-                              : t("incidentExport.executedDiveFieldNotRecorded"),
-                        })
-                      : t("incidentExport.executedDiveFieldNotRecorded")}
-                  </Td>
-                  <Td>
-                    {dive.surfaceIntervalMinutes == null
-                      ? t("incidentExport.executedDiveFieldNotRecorded")
-                      : t("incidentExport.executedDiveSurfaceIntervalValue", {
-                          minutes: dive.surfaceIntervalMinutes,
-                        })}
-                  </Td>
-                  <Td>{dive.recordedByName ?? t("incidentExport.notOnFile")}</Td>
-                </tr>
-              ))}
-            </TBody>
-          </Table>
+          <ExecutedDivesTable
+            dives={doc.executedDives}
+            locale={locale}
+            timeZone={doc.meta.timezone}
+            t={t}
+          />
         )}
       </section>
 

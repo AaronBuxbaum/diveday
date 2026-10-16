@@ -299,7 +299,7 @@ export async function listShopActivityPeople(db: AppDb, shopId: string) {
  * a caller cannot file a line about another tenant's seat or departure.
  */
 export type ShopActivityWrite =
-  | { code: "order_refunded"; orderId: string }
+  | { code: "order_refunded" | "order_paid_cash" | "order_paid_card_machine"; orderId: string }
   | { code: "paid_after_close_refunded"; checkoutId: string }
   | {
       code:
@@ -336,6 +336,17 @@ export type ShopActivityWrite =
         | "shore_alert_contact_changed"
         | "shore_alert_contact_cleared";
     };
+
+/** The line for counter money on an order, by how it was taken. */
+export function counterPaymentActivity(
+  orderId: string,
+  collection: "cash" | "card_machine",
+): ShopActivityWrite {
+  return {
+    code: collection === "cash" ? "order_paid_cash" : "order_paid_card_machine",
+    orderId,
+  };
+}
 
 /**
  * Write one of {@link ShopActivityWrite}'s lines. Returns whether it was
@@ -409,7 +420,7 @@ async function writeShopActivity(
     entry: ActivityEntry;
   } | null = null;
 
-  if (write.code === "order_refunded") {
+  if ("orderId" in write) {
     if (!isUuid(write.orderId)) return false;
     const [order] = await db
       .select({ id: orders.id, personId: orders.personId })

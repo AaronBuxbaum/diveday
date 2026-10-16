@@ -15,7 +15,7 @@
   "stageLabel": "Etapa",
   "about": {
     "add": "Añadir",
-    "addDiverJump": "Ir a añadir un buceador",
+    "addDiverJump": "Ir a añadir una reserva",
     "details": "Detalles",
     "viewPublic": "Ver página pública",
     "printPacket": "Imprimir paquete",
@@ -33,7 +33,8 @@
     "oneTime": "Salida única",
     "perDiver": "por buceador",
     "cancel": "Cancelar esta salida",
-    "more": "Más para esta salida"
+    "more": "Más para esta salida",
+    "meetingDaysSummary": "{count, plural, other {# días}} · {first} – {last}"
   },
   "openSeats": {
     "label": "Plazas sin vender",
@@ -91,6 +92,7 @@
     "bookingRestoreRatio": "No se pudo deshacer: la plaza liberada está ocupada y la sesión está en su ratio de instructor. Asigna otro instructor o usa la lista de espera.",
     "bookingRestoreCancelled": "No se pudo deshacer. Esta salida está cancelada. Reactiva la salida y vuelve a añadirlo.",
     "diverAdded": "Buceador añadido a la salida.",
+    "diverAddedConfirmed": "Buceador añadido. Su confirmación va en camino.",
     "diverAddedWaiverUndelivered": "Buceador añadido a la salida, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
     "diverAddedIdentityUnconfirmed": "Buceador añadido a la salida, pero la plaza queda retenida hasta que confirmes que es la misma persona. Confírmalo en su fila de abajo.",
     "diverWaitlisted": "Buceador añadido a la lista de espera.",
@@ -189,12 +191,12 @@
     "seats": "{booked} de {capacity} reservados · {open, plural, one {# plaza libre} other {# plazas libres}}",
     "seatsFull": "Barco completo — {capacity, plural, one {la # plaza reservada} other {las # plazas reservadas}}",
     "aboard": "{count} a bordo",
-    "blocked": "{count, plural, one {# persona todavía no puede embarcar} other {# personas todavía no pueden embarcar}}",
+    "blocked": "{count, plural, one {# bloqueado} other {# bloqueados}}",
     "needsInstructor": "El curso necesita instructor",
     "overRatio": "Ratio de alumnos excedida: añade un divemaster o AI",
     "overRatioInstructor": "Ratio de alumnos excedida: añade un instructor",
     "overIntroRatio": "Ratio de bautismo excedida: añade un instructor",
-    "toSort": "{count, plural, one {# cosa por resolver} other {# cosas por resolver}}",
+    "needsYou": "Pendiente · {count}",
     "noRequirements": "Define los requisitos para que alguien pueda embarcar",
     "boatClash": "{boat} también está asignado a {departure}"
   },
@@ -269,7 +271,9 @@
     "minimumDecisionLabel": "Decidir con",
     "minimumDecisionDescription": "Cuánto antes de la salida se toma la decisión. La página de reserva publica el momento exacto.",
     "diversSuffix": "buceadores",
-    "hoursBeforeSuffix": "horas de antelación"
+    "hoursBeforeSuffix": "horas de antelación",
+    "coursePrice": "{amount} por buceador, el precio del curso",
+    "coursePriceHint": "Se fija en el curso, con su cuota de eLearning"
   },
   "conditions": {
     "description": "Se muestra a los buceadores en lugar del pronóstico marino automático.",
@@ -290,6 +294,7 @@
     "holdOnSummary": "La pausa por condiciones está activa, así que no se aceptan nuevas reservas",
     "publishedAt": "Publicada {date}",
     "visibilityFact": "{value} de visibilidad",
+    "waterFact": "Agua {value}",
     "automatedWater": "Agua {value}",
     "automatedSeas": "Mar {height} {direction}",
     "automatedWind": "{speed} kt {direction}{hasGusts, select, yes { (rachas {gusts} kt)} other {}}",
@@ -367,7 +372,7 @@
     "remove": "Eliminar"
   },
   "addDiver": {
-    "heading": "Añadir un buceador",
+    "heading": "Añadir una reserva",
     "fullDescription": "El barco está lleno.",
     "findLabel": "Buscar un buceador habitual",
     "findPlaceholder": "Nombre, correo o teléfono",
@@ -400,7 +405,8 @@
     "hoursAgo": "hace {hours} h",
     "daysAgo": "hace {days} d",
     "emailSubject": "Se ha liberado una plaza en {tripTitle}",
-    "emailBody": "Hola {firstName},\n\nAcaba de liberarse una plaza en {tripTitle} ({tripWhen}) con {shopName}. Estás en su lista de espera, así que consíguela aquí antes de que se agote:\n{bookingUrl}\n\n¡Nos vemos en el barco!"
+    "emailBody": "Hola {firstName},\n\nAcaba de liberarse una plaza en {tripTitle} ({tripWhen}) con {shopName}. Estás en su lista de espera, así que consíguela aquí antes de que se agote:\n{bookingUrl}\n\n¡Nos vemos en el barco!",
+    "party": "Grupo de {count}"
   },
   "invitations": {
     "description": "Una invitación no reserva una plaza ni añade a nadie al manifiesto.",
@@ -706,6 +712,7 @@
     "carryWaitlistTo": "O ofréceles una salida que ya está en el tablero",
     "carryWaitlist": "Pasar la lista de espera",
     "carryWaitlistPending": "Pasando…",
+    "carryWaitlistTarget": "{target} · {count, plural, =0 {llena} one {queda # plaza} other {quedan # plazas}}",
     "activityHeading": "Actividad",
     "noActivity": "Todavía no hay actividad del personal registrada.",
     "promoteHeading": "Promocionar esta salida",

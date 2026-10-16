@@ -7,12 +7,17 @@ import {
   boatSafetyNoticeTone,
   passengersAboveCertificate,
 } from "@/lib/boat-safety";
+import { MAX_CALL_SIGN_LENGTH } from "@/lib/emergency-reference";
 
 /**
  * **The certificate and the three paper dates** (roadmap N-10), under the
  * boat's own line. Captioned, because a date box with only a placeholder says
  * nothing once it holds a date. All four optional: an empty box is a boat the
  * shop has not dated, and nothing reads it as expired.
+ *
+ * The boat's radio identity sits with its papers (fourth review, item 11):
+ * call sign and MMSI, the facts the departure's emergency card prints in
+ * place of the shop-wide vessel line.
  */
 export function BoatPaperFields({
   boat,
@@ -56,6 +61,29 @@ export function BoatPaperFields({
       </Field>
       <Field label={t("boats.insuranceExpiresLabel")}>
         <DateField name="insuranceExpiresOn" defaultValue={boat?.insuranceExpiresOn ?? ""} />
+      </Field>
+      <Field label={t("boats.callSignLabel")}>
+        <input
+          name="callSign"
+          type="text"
+          maxLength={MAX_CALL_SIGN_LENGTH}
+          autoCapitalize="characters"
+          autoComplete="off"
+          spellCheck={false}
+          defaultValue={boat?.callSign ?? ""}
+          className={`${controlClass} font-mono uppercase`}
+        />
+      </Field>
+      <Field label={t("boats.mmsiLabel")} description={t("boats.mmsiHint")}>
+        <input
+          name="mmsi"
+          type="text"
+          inputMode="numeric"
+          maxLength={11}
+          autoComplete="off"
+          defaultValue={boat?.mmsi ?? ""}
+          className={`${controlClass} font-mono tabular-nums`}
+        />
       </Field>
     </div>
   );

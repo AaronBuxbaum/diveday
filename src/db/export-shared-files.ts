@@ -452,6 +452,8 @@ export const WAITLIST_ENTRIES_CSV = sharedFile<ShopRow<"waitlistRows">>({
       in: "shop",
       value: (row, { personName }) => personName.get(row.personId),
     },
+    // The seats this lead waits for, themselves included (fourth review, item 34).
+    { header: "party_size", in: "both", value: (row) => row.partySize },
     { header: "invited_at", in: "both", value: (row) => row.invitedAt },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
   ],

@@ -90,7 +90,9 @@ export async function saveDayOfDetailsFromReady(token: string, formData: FormDat
   ) {
     writes.push(setBookingReEntryAsk(ctx.db, { shopId, bookingId, ask: answers.reEntryAsk }));
   }
-  if (answers.hotelPickupLocation !== undefined) {
+  // Only a shop that runs pickups asks, and the server, not the hidden field,
+  // is what keeps a hand-made post from storing one (security review N5).
+  if (answers.hotelPickupLocation !== undefined && data.offersHotelPickup) {
     const location = answers.hotelPickupLocation || null;
     if (location !== (data.hotelPickupLocation ?? null)) {
       writes.push(

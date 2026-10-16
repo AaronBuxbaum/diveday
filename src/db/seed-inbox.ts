@@ -75,9 +75,12 @@ export async function seedInbox(
       channel: "email",
       fromAddress: priya.email.toLowerCase(),
       // i18n-exempt: fixture text — what a diver typed, stored verbatim
-      subject: "Re: Your Saturday departure",
+      // About the seat she holds, today's reef boat (fourth UX review, item
+      // 32): the row names that boat, and its "⋯" offers the move. No hour:
+      // the boat sails at whatever hour keeps it on today's board.
+      subject: "Re: Your departure today",
       // i18n-exempt: fixture text — what a diver typed, stored verbatim
-      body: "Hi! Could I switch to the afternoon boat on Saturday? My flight lands at nine and I don't want to hold everyone up.\n\nPriya",
+      body: "Hi! My flight got pushed back and I won't make today's reef boat. Could I move to another day this week?\n\nPriya",
       receivedAt: hoursFromNow(-3),
       providerMessageId: `seed-inbox-${shopId}-priya`,
     },

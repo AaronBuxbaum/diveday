@@ -73,10 +73,14 @@ type MeetingPoint = {
   mapQuery?: string | null;
 };
 
-/** A seat's money, minor units and an ISO currency (`seatMoneyTerms`). */
-type ConfirmationMoney =
+/**
+ * A seat's money, or the party's (`seats` > 1), minor units and an ISO
+ * currency (`seatMoneyTerms`, `partyMoneyTerms`).
+ */
+type ConfirmationMoney = (
   | { due: "at_shop" | "online"; amountCents: number; currency: string }
-  | { due: "deposit"; depositCents: number; balanceCents: number; currency: string };
+  | { due: "deposit"; depositCents: number; balanceCents: number; currency: string }
+) & { seats?: number };
 
 type WaiverRequestEmailInput = {
   locale: DiverLocale;
@@ -131,6 +135,14 @@ type WaitlistInviteEmailInput = {
   bookingUrl: string;
   /** Self-serve opt-out of `waitlist_invite`/`trip_recap` courtesy email. */
   unsubscribeUrl: string;
+  /** How many seats the waiting party asked for (fourth review, item 34); one when absent. */
+  partySize?: number;
+  /**
+   * The run's date the diver waited for, when the nightly roll moved them to
+   * this one (fourth review, item 31): the invite then says that date filled
+   * and this one has room, rather than offering a date they never asked for.
+   */
+  sailedStartsAt?: Date;
 };
 
 type TripInvitationEmailInput = {
@@ -721,12 +733,30 @@ function confirmationMoneyLine(
   input: { locale: DiverLocale; startsAt: Date; timezone: string },
 ): string {
   const amount = (cents: number) => formatMoneyCents(cents, money.currency, input.locale);
+  // A lead holding several seats hears the party's figure, the one the form
+  // showed above the button (fourth UX review, item 5).
+  const party = (money.seats ?? 1) > 1;
+  const seats = money.seats ?? 1;
   if (money.due === "deposit") {
-    return t("notifications.bookingConfirmation.moneyDeposit", {
-      deposit: amount(money.depositCents),
-      balance: amount(money.balanceCents),
-      date: formatShortDate(input.startsAt, input.locale, input.timezone),
-    });
+    return t(
+      party
+        ? "notifications.bookingConfirmation.moneyPartyDeposit"
+        : "notifications.bookingConfirmation.moneyDeposit",
+      {
+        seats,
+        deposit: amount(money.depositCents),
+        balance: amount(money.balanceCents),
+        date: formatShortDate(input.startsAt, input.locale, input.timezone),
+      },
+    );
+  }
+  if (party) {
+    return t(
+      money.due === "online"
+        ? "notifications.bookingConfirmation.moneyPartyOnline"
+        : "notifications.bookingConfirmation.moneyPartyAtShop",
+      { seats, amount: amount(money.amountCents) },
+    );
   }
   return t(
     money.due === "online"
@@ -1000,22 +1030,33 @@ export function waitlistInviteEmail(input: WaitlistInviteEmailInput): Notificati
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
+  const seats = Math.max(1, input.partySize ?? 1);
 
-  const body = t("notifications.waitlistInvite.body", {
-    tripTitle: input.tripTitle,
-    shopName: input.shopName,
-  });
-  const bodyHtml = t("notifications.waitlistInvite.body", {
-    tripTitle: `<strong>${title}</strong>`,
-    shopName: escapeHtml(input.shopName),
-  });
+  // A rolled lead hears why the date moved; a party hears its count; anyone
+  // else, that a seat opened.
+  const bodyFor = (tripTitle: string) =>
+    input.sailedStartsAt
+      ? t("notifications.waitlistInvite.rolledBody", {
+          sailed: formatShortDate(input.sailedStartsAt, input.locale, input.timezone),
+          date,
+          seats,
+          tripTitle,
+        })
+      : seats > 1
+        ? t("notifications.waitlistInvite.bodyParty", { seats, tripTitle })
+        : t("notifications.waitlistInvite.body", { tripTitle, shopName: input.shopName });
+  const body = bodyFor(input.tripTitle);
+  const bodyHtml = bodyFor(`<strong>${title}</strong>`);
   const claim = t("notifications.waitlistInvite.claim");
   const footer = t("notifications.waitlistInvite.footer");
   const unsubscribe = t("notifications.common.courtesyUnsubscribe", { shopName: input.shopName });
   const unsubscribeUrl = escapeHtml(input.unsubscribeUrl);
 
   return {
-    subject: t("notifications.waitlistInvite.subject", { tripTitle: input.tripTitle }),
+    subject:
+      seats > 1
+        ? t("notifications.waitlistInvite.subjectParty", { seats, tripTitle: input.tripTitle })
+        : t("notifications.waitlistInvite.subject", { tripTitle: input.tripTitle }),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${date}\n${time}\n\n${claim}:\n${input.bookingUrl}\n\n${footer}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
     html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${emailButton(input.bookingUrl, t("notifications.waitlistInvite.claimLink"))}<p>${footer}</p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
   };

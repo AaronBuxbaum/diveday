@@ -502,7 +502,7 @@ describe("unanswered messages", () => {
       dueAt: null,
       href: `/shop/${shop.slug}/inbox`,
     });
-    expect(rows[0]?.subject).toBe("3 messages are waiting on an answer");
+    expect(rows[0]?.subject).toBe("3 messages are waiting on an answer.");
   });
 
   it("grows by one message and renders nothing once every one is answered", async () => {
@@ -517,7 +517,7 @@ describe("unanswered messages", () => {
       providerMessageId: "today-inbox-1",
     });
     if (recorded.status !== "recorded") throw new Error("message not recorded");
-    expect((await unansweredRow())[0]?.subject).toBe("4 messages are waiting on an answer");
+    expect((await unansweredRow())[0]?.subject).toBe("4 messages are waiting on an answer.");
 
     const live = await db
       .select({ id: inboundMessages.id })

@@ -2,6 +2,7 @@
 
 import { render } from "@testing-library/react";
 import { eq } from "drizzle-orm";
+import { isValidElement, type ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { listCheckInQueue } from "@/db/check-in";
 import { createCertification } from "@/db/readiness";
@@ -72,7 +73,7 @@ describe("the counter's welcome word (UX audit 2026-10-07, item 46)", () => {
       .update(bookings)
       .set({ welcomeSharedAt: seat.now })
       .where(eq(bookings.id, seat.bookingId));
-    expect(await belowFor(seat)).toHaveTextContent("first time with us");
+    expect(await belowFor(seat)).toHaveTextContent("First dive with us");
   });
 
   it("puts the dock line under the cue: the first name to say and the card they hold (UX review 2026-10-10, item 36)", async () => {
@@ -163,7 +164,7 @@ describe("the counter's welcome word (UX audit 2026-10-07, item 46)", () => {
       .set({ welcomeSharedAt: null })
       .where(eq(bookings.id, seat.bookingId));
     const below = await belowFor(seat);
-    expect(below).not.toHaveTextContent("first time with us");
+    expect(below).not.toHaveTextContent("First dive with us");
     expect(below).not.toHaveTextContent("Say hello");
   });
 });
@@ -304,3 +305,40 @@ function reasonsOffered(below: HTMLElement) {
     (input) => input.value,
   );
 }
+
+describe("the paper pass on an arrived row (fourth review, item 48)", () => {
+  /**
+   * Two controls at the row's end broke a short name over two lines at 390.
+   * The pass now sits under the name; the row's end holds "Checked in" alone.
+   */
+  it("puts Print a pass under a cleared, checked-in diver's name, not beside Checked in", async () => {
+    const { db, shop } = ctx;
+    const now = nowDate();
+    const queue = await listCheckInQueue(db, shop.id, { now });
+    const row = queue.find((r) => r.bookingStatus === "booked" && r.readiness.status === "ready");
+    if (!row) throw new Error("no cleared diver is booked inside the arrivals window");
+    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, row.bookingId));
+    const [trip] = await db.select().from(trips).where(eq(trips.id, row.tripId));
+    if (!trip) throw new Error("the trip is gone");
+    const desk = await buildArrivalDesk({
+      db,
+      shopId: shop.id,
+      shopSlug: shop.slug,
+      tripId: trip.id,
+      trip,
+      now,
+      locale: "en-US",
+      timeZone: shop.timezone,
+      t: staffTranslator("en-US"),
+    });
+    if (!desk) throw new Error("the boat is outside its arrivals window");
+    const below = render(<div>{desk.arrival.below.get(row.bookingId)}</div>).container;
+    expect(below).toHaveTextContent("Print a pass");
+    // The row's end is the undo tap alone (a client island, so read its
+    // element rather than mounting it without a router).
+    const end = desk.arrival.controls.get(row.bookingId) as ReactElement<{ checkedIn?: boolean }>;
+    expect(isValidElement(end)).toBe(true);
+    expect(end.type).not.toBe("span");
+    expect(end.props.checkedIn).toBe(true);
+  });
+});

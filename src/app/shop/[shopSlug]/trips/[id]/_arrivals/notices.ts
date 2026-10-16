@@ -1,8 +1,8 @@
 import type { ArrivalOfflineRefusal, CheckInOutcome, UndoCheckInOutcome } from "@/db/check-in";
 import type { MarkNoShowOutcome, UndoNoShowOutcome } from "@/db/no-show";
 import type { TurnAwayOutcome } from "@/db/turn-away";
-import type { StaffMessageKey } from "@/i18n/staff-messages";
-import type { NoticeCodeOf } from "@/lib/staff-notices";
+import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
+import { type FormNotice, type NoticeCodeOf, noticeFromParam } from "@/lib/staff-notices";
 
 /**
  * **What the desk's taps and the walk-in door can answer with**, in the
@@ -58,6 +58,8 @@ export const DESK_NOTICES: DeskNoticeMap = {
   "staff-not-found": { tone: "danger", key: "checkIn.notice.staffNotFound" },
   invalid: { tone: "danger", key: "checkIn.notice.invalid" },
   "walkin-added": { tone: "success", key: "checkIn.notice.walkinAdded" },
+  // A walk-in seated on a later day's boat hears the booking confirmation.
+  "walkin-added-confirmed": { tone: "success", key: "checkIn.notice.walkinAddedConfirmed" },
   // The walk-in's *ordinary* outcome: added on a name alone, there is no
   // address to mail a waiver to, so the notice says the link is still owed.
   "walkin-added-waiver-undelivered": {
@@ -123,3 +125,17 @@ export const DESK_NOTICES: DeskNoticeMap = {
   "offer-opted-out": { tone: "warning", key: "checkIn.notice.offerOptedOut" },
   "offer-unavailable": { tone: "neutral", key: "checkIn.notice.offerUnavailable" },
 };
+
+/**
+ * The desk's own refusals and walk-in outcomes, as the trip page's banner
+ * notice: page-level, because they have no form on the roster to sit beside.
+ * The page asks only after the roster's own vocabulary declined the code, so a
+ * code both speak is the roster's.
+ */
+export function deskFormNotice(
+  notice: string | undefined,
+  t: StaffTranslator,
+): FormNotice | undefined {
+  const definition = noticeFromParam(notice, DESK_NOTICES);
+  return definition ? { form: "page", tone: definition.tone, text: t(definition.key) } : undefined;
+}

@@ -58,7 +58,7 @@ describe("the seat's foot row sits on the text column through flush", () => {
 describe("the move to another departure", () => {
   const moveSeat = {
     action: () => {},
-    targets: [{ id: "t-2", label: "Two-Tank Reef · Sat, Oct 24, 8:00 AM EDT" }],
+    targets: [{ id: "t-2", label: "Two-Tank Reef · Sat, Oct 24, 8:00 AM EDT", seatsLeft: 3 }],
     departed: false,
     started: false,
   };

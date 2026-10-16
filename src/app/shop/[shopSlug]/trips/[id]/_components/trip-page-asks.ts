@@ -2,8 +2,8 @@ import type { AppDb } from "@/db/client";
 import { previewPartyPayment } from "@/db/payment-marks";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { readMarkRetry, readPartyAsk } from "@/lib/payment-marks";
-import { type FormNotice, noticeForForm, noticeFromParam } from "@/lib/staff-notices";
-import { DESK_NOTICES } from "../_arrivals/notices";
+import { type FormNotice, noticeForForm } from "@/lib/staff-notices";
+import { deskFormNotice } from "../_arrivals/notices";
 import type { PartyPreview } from "./roster-model";
 import { resolveTripNotice } from "./TripNoticeBanner";
 import { pageNoticesFor } from "./trip-notice-tabs";
@@ -22,12 +22,7 @@ export function tripPageNotices(
   input: Parameters<typeof resolveTripNotice>[0] & { t: StaffTranslator },
 ) {
   const { notice, t } = input;
-  const deskNoticeDefinition = noticeFromParam(notice, DESK_NOTICES);
-  const tripNotice: FormNotice | undefined =
-    resolveTripNotice(input) ??
-    (deskNoticeDefinition
-      ? { form: "page", tone: deskNoticeDefinition.tone, text: t(deskNoticeDefinition.key) }
-      : undefined);
+  const tripNotice: FormNotice | undefined = resolveTripNotice(input) ?? deskFormNotice(notice, t);
   return {
     tripNotice,
     lifecycleStatus: noticeForForm(tripNotice, "lifecycle"),

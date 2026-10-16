@@ -177,6 +177,7 @@ function countingInvoicing(atStripe?: { arrive: () => void; open: Promise<void> 
   const provider: InvoicingProvider = {
     createInvoice: unreachable,
     voidInvoice: unreachable,
+    markInvoicePaidOutOfBand: unreachable,
     retrieveInvoice: unreachable,
     resendInvoice: unreachable,
     async refundInvoice(

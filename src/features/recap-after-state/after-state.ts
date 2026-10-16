@@ -13,6 +13,7 @@ import { tipPresetsMajor } from "@/db/tips";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
 import { DIVER_CERT_LEVEL_KEYS, NEXT_DIVE_REASON_KEYS } from "@/i18n/next-dive-labels";
+import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
 import { handoffHref } from "@/lib/booking-handoff";
 import type { BrandDisplayFontCode } from "@/lib/brand";
@@ -371,6 +372,14 @@ function postcardFor(input: {
     : data.sites.map((site) => site.name);
   const facts: PostcardImage["facts"] = [
     { label: t("recap.diverLabel"), value: data.diverName },
+    ...(data.course?.certification
+      ? [
+          {
+            label: t("recap.certifiedLabel"),
+            value: t(DIVER_CERTIFICATION_LEVEL_KEYS[data.course.certification.level]),
+          },
+        ]
+      : []),
     { label: t("recap.dateLabel"), value: when },
     ...(trip.boatName ? [{ label: t("recap.vesselLabel"), value: trip.boatName }] : []),
     ...(trip.crew.length > 0 ? [{ label: t("recap.crewLabel"), value: trip.crew.join(", ") }] : []),

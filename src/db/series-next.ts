@@ -1,6 +1,6 @@
 import { and, asc, eq, gt, ne } from "drizzle-orm";
 import type { AppDb } from "./client";
-import { trips } from "./schema";
+import { tripSeries, trips } from "./schema";
 import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
@@ -40,4 +40,64 @@ export async function nextPublicTripInSeries(
     .orderBy(asc(trips.startsAt))
     .limit(1);
   return next ?? null;
+}
+
+/** A repeating departure's cadence, and the run's next public date after it. */
+export type PublicRun = {
+  intervalWeeks: number;
+  weekdayMask: number;
+  /** The next public, scheduled date of the same run after this one, or null. */
+  next: Date | null;
+};
+
+/**
+ * **The run a departure belongs to, as a diver reads it** (fourth UX review,
+ * item 35): "Runs every Saturday · next Sat, Oct 24" under the date of a
+ * weekly boat, so a regular sees the habit. The cadence is the series row's
+ * own (`recurrenceSummary` words it); the next date is the run's first public,
+ * scheduled, live date after both this one and the clock, never this one or
+ * an earlier one. Null for a one-off, or for another shop's departure.
+ */
+export async function publicRunOf(
+  db: AppDb,
+  input: { shopId: string; tripId: string; now: Date },
+): Promise<PublicRun | null> {
+  const [current] = await db
+    .select({
+      seriesId: trips.seriesId,
+      startsAt: trips.startsAt,
+      intervalWeeks: tripSeries.intervalWeeks,
+      weekdayMask: tripSeries.weekdayMask,
+    })
+    .from(trips)
+    .innerJoin(
+      tripSeries,
+      and(eq(tripSeries.id, trips.seriesId), eq(tripSeries.shopId, trips.shopId)),
+    )
+    .where(and(eq(trips.shopId, input.shopId), eq(trips.id, input.tripId), liveTrip()))
+    .limit(1);
+  if (!current?.seriesId) return null;
+  const after = current.startsAt > input.now ? current.startsAt : input.now;
+  const [next] = await db
+    .select({ startsAt: trips.startsAt })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, input.shopId),
+        eq(trips.seriesId, current.seriesId),
+        ne(trips.id, input.tripId),
+        eq(trips.status, "scheduled"),
+        eq(trips.isPrivate, false),
+        gt(trips.startsAt, after),
+        liveTrip(),
+        notRehearsal(),
+      ),
+    )
+    .orderBy(asc(trips.startsAt))
+    .limit(1);
+  return {
+    intervalWeeks: current.intervalWeeks,
+    weekdayMask: current.weekdayMask,
+    next: next?.startsAt ?? null,
+  };
 }

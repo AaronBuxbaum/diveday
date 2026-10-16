@@ -31,6 +31,7 @@ export async function seatMoveFor(input: {
     targets: targets.map((target) => ({
       id: target.id,
       label: `${target.title} · ${formatDateTimeTz(target.startsAt, input.locale, input.timeZone)}`,
+      seatsLeft: target.seatsLeft,
     })),
   };
 }

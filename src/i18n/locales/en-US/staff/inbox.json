@@ -8,7 +8,8 @@
   "channel": {
     "email": "Email",
     "whatsapp": "WhatsApp",
-    "sms": "Text"
+    "sms": "Text",
+    "page": "Booking page"
   },
   "unknownSender": "Unknown sender",
   "keyword": {
@@ -19,6 +20,12 @@
   },
   "attachments": "{count, plural, one {# attachment, still with the sender} other {# attachments, still with the sender}}",
   "seat": "Booked on {trip}, {when}",
+  "nearStamp": "{day}, {time}",
+  "nearSeat": "{day} {time}",
+  "move": "Move to another departure",
+  "moveFor": "Move {name}’s seat on {trip} to another departure",
+  "moveSeat": "Move {trip}, {when}",
+  "moveSeatFor": "Move {name}’s seat on {trip}, {when}, to another departure",
   "late": {
     "action": "Mark running late",
     "actionFor": "Mark {name} running late for {trip}",
@@ -46,6 +53,7 @@
     "heading": "Conversation",
     "summary": "{count, plural, one {# message} other {# messages}}",
     "received": "{name} · {date}",
+    "askedToMove": "{name} asked to move this seat from their booking page · {date}",
     "sent": "{name} replied · {date}",
     "sentAutomatically": "Sent automatically · {date}",
     "sendFailed": "This one did not reach them.",

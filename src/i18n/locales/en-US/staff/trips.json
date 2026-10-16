@@ -15,7 +15,7 @@
   "stageLabel": "Stage",
   "about": {
     "add": "Add",
-    "addDiverJump": "Jump to add a diver",
+    "addDiverJump": "Jump to add a booking",
     "details": "Details",
     "viewPublic": "View public page",
     "printPacket": "Print packet",
@@ -33,7 +33,8 @@
     "oneTime": "One-time departure",
     "perDiver": "per diver",
     "cancel": "Cancel this departure",
-    "more": "More for this departure"
+    "more": "More for this departure",
+    "meetingDaysSummary": "{count, plural, other {# days}} · {first} – {last}"
   },
   "openSeats": {
     "label": "Unsold seats",
@@ -91,6 +92,7 @@
     "bookingRestoreRatio": "Couldn’t undo. The freed seat is taken and this session is at its instructor ratio. Assign another instructor, or use the wait list.",
     "bookingRestoreCancelled": "Couldn’t undo. This trip has been canceled. Reinstate the trip first, then add them back.",
     "diverAdded": "Diver added to the trip.",
+    "diverAddedConfirmed": "Diver added. Their confirmation is on its way.",
     "diverAddedWaiverUndelivered": "Diver added to the trip, but their waiver wasn’t emailed. Send it or share the link from their row below.",
     "diverAddedIdentityUnconfirmed": "Diver added to the trip, but the seat is held until you confirm it’s the same person. Confirm it on their row below.",
     "diverWaitlisted": "Diver added to the wait list.",
@@ -189,12 +191,12 @@
     "seats": "{booked} of {capacity} booked · {open, plural, one {# seat open} other {# seats open}}",
     "seatsFull": "Full boat — {capacity, plural, one {the # seat is booked} other {all # seats booked}}",
     "aboard": "{count} aboard",
-    "blocked": "{count, plural, one {# person can’t board yet} other {# people can’t board yet}}",
+    "blocked": "{count} blocked",
     "needsInstructor": "Course needs instructor",
     "overRatio": "Over student ratio: add a DM or AI",
     "overRatioInstructor": "Over student ratio: add an instructor",
     "overIntroRatio": "Over intro ratio: add an instructor",
-    "toSort": "{count, plural, one {# thing to sort} other {# things to sort}}",
+    "needsYou": "Needs you · {count}",
     "noRequirements": "Set the requirements before anyone can board",
     "boatClash": "{boat} is also on {departure}"
   },
@@ -269,7 +271,9 @@
     "minimumDecisionLabel": "Decide by",
     "minimumDecisionDescription": "How long before departure the call is made. The booking page publishes the exact moment.",
     "diversSuffix": "divers",
-    "hoursBeforeSuffix": "hours before"
+    "hoursBeforeSuffix": "hours before",
+    "coursePrice": "{amount} per diver, the course’s price",
+    "coursePriceHint": "Set on the course, with its eLearning fee"
   },
   "conditions": {
     "description": "Replaces the automated marine outlook for divers.",
@@ -290,6 +294,7 @@
     "holdOnSummary": "Conditions hold is on, so new bookings are paused",
     "publishedAt": "Published {date}",
     "visibilityFact": "{value} visibility",
+    "waterFact": "Water {value}",
     "automatedWater": "Water {value}",
     "automatedSeas": "Seas {height} {direction}",
     "automatedWind": "{speed} kt {direction}{hasGusts, select, yes { (gusts {gusts} kt)} other {}}",
@@ -367,7 +372,7 @@
     "remove": "Remove"
   },
   "addDiver": {
-    "heading": "Add a diver",
+    "heading": "Add a booking",
     "fullDescription": "The boat is full.",
     "findLabel": "Find a returning diver",
     "findPlaceholder": "Name, email, or phone",
@@ -400,7 +405,8 @@
     "hoursAgo": "{hours}h ago",
     "daysAgo": "{days}d ago",
     "emailSubject": "A seat opened up on {tripTitle}",
-    "emailBody": "Hi {firstName},\n\nA seat just opened on {tripTitle} ({tripWhen}) with {shopName}. You’re on the wait list for it, so grab it here before it goes:\n{bookingUrl}\n\nSee you on the boat!"
+    "emailBody": "Hi {firstName},\n\nA seat just opened on {tripTitle} ({tripWhen}) with {shopName}. You’re on the wait list for it, so grab it here before it goes:\n{bookingUrl}\n\nSee you on the boat!",
+    "party": "Party of {count}"
   },
   "invitations": {
     "description": "An invitation does not hold a seat or add anyone to the manifest.",
@@ -706,6 +712,7 @@
     "carryWaitlistTo": "Or offer them a departure already on the board",
     "carryWaitlist": "Carry the wait list",
     "carryWaitlistPending": "Carrying…",
+    "carryWaitlistTarget": "{target} · {count, plural, =0 {full} one {# seat left} other {# seats left}}",
     "activityHeading": "Activity",
     "noActivity": "No staff activity recorded yet.",
     "promoteHeading": "Promote this trip",

@@ -1,7 +1,9 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { canonicalAgency } from "@/lib/courses";
+import { isJuniorOnDate } from "@/lib/depth-ceiling";
 import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { courseCertifiedText } from "@/lib/notifications/course-certified";
 import { type CourtesyProvider, sendCourtesyMessage } from "@/lib/notifications/courtesy";
@@ -13,7 +15,7 @@ import {
 import { publicCoursePath } from "@/lib/public-routes";
 import type { AppDb } from "./client";
 import { notificationProviderForDb, sendNotification } from "./notifications";
-import { courses, people, shops, trips } from "./schema";
+import { certificationAgency, courses, people, shops, trips } from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
 import { liveTrip, notRehearsal } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
@@ -109,12 +111,21 @@ export async function tellCourseCertified(
   const locale = recipientLocale(person.locale, shop.defaultLocale);
   const [issuing] = row.courseId
     ? await db
-        .select({ agency: courses.agency })
+        .select({ agency: courses.agency, title: courses.title })
         .from(courses)
         .where(and(eq(courses.id, row.courseId), eq(courses.shopId, shop.id)))
         .limit(1)
     : [];
   const next = await nextCourseAfter(db, shop.id, input.level, issuing?.agency ?? null);
+  // The card's issuer, named in the message only when it is one we know.
+  const agency = certificationAgency.enumValues.find((value) => value === issuing?.agency);
+  const junior =
+    person.dateOfBirth != null &&
+    isJuniorOnDate(person.dateOfBirth, calendarDateInTimezone(input.recordedAt, shop.timezone));
+  const card = {
+    ...(issuing?.title ? { courseTitle: issuing.title } : {}),
+    ...(junior ? { junior: true as const } : {}),
+  };
   const origin = providers.appOrigin === undefined ? publicAppUrl() : providers.appOrigin;
   const nextCourse =
     next && origin
@@ -137,6 +148,8 @@ export async function tellCourseCertified(
           diverName: person.fullName,
           shopName: shop.name,
           level: input.level,
+          ...card,
+          ...(agency ? { agency } : {}),
           recordedAt: input.recordedAt,
           timezone: shop.timezone,
           ...(nextCourse ? { nextCourse } : {}),
@@ -152,7 +165,7 @@ export async function tellCourseCertified(
     const sent = await sendCourtesyMessage(
       {
         to: phone,
-        body: courseCertifiedText({ locale, shopName: shop.name, level: input.level }),
+        body: courseCertifiedText({ locale, shopName: shop.name, level: input.level, ...card }),
         smsStopLine: t("notifications.sms.stopLine"),
         shopName: shop.name,
       },

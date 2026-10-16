@@ -549,6 +549,10 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   annotated screens it illustrates (since 2026-09-24 each screen there has its own role door), and
   both are still reachable and still tagged. `e2e/marketing.spec.ts` counts
   the hero's enabled controls so the budget can't quietly grow back.
+  **One line under the doors is a diver's, and sits outside the budget** (fourth review, item 50):
+  "Booked a dive? Find your booking", a sentence for the diver who followed a shop footer here, not a
+  door for the shop deciding. The spec pins it to exactly one link to `/find-your-booking` and counts
+  the shop's links without it.
   **The three fields are inside that budget, not beside it** (2026-09-10, ADR
   20260908-one-hand decision 6, possibility Y). The hero now takes a shop's name, one boat and a first
   departure, and redraws itself as that visitor's first day. Three boxes and a "Draw my day" button

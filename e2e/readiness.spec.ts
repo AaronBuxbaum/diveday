@@ -78,7 +78,7 @@ test.describe("staff-prepared trip", () => {
     // keeps the address label. Both ride inside Day-of details, which gates on
     // neither (ADR 20260827-the-divers-thread, decision 3).
     await openThreadStep(page, "dayof");
-    await expect(page.getByRole("heading", { name: "Want a morning pickup?" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Want a pickup?" })).toBeVisible();
     await expect(page.getByLabel("Where you’re staying")).toBeVisible();
   });
 
@@ -183,17 +183,13 @@ test.describe("staff-prepared trip", () => {
     await expect(
       arrivalCard.getByRole("link", { name: "front.desk@mail.example" }),
     ).toHaveAttribute("href", "mailto:front.desk@mail.example");
-    // The map is a plain roadmap embed built from the shop's own address —
-    // never a guessed location. The e2e context answers maps.google.com
-    // with an empty page (fixtures.ts), so this asserts the frame, not its
-    // contents.
-    await expect(arrivalCard.locator('iframe[title="Map of Blue Mantis Divers"]')).toHaveAttribute(
-      "src",
-      /100%20Ocean%20Drive/,
-    );
-    // And it is the *only* one: the deleted card is gone, not relocated.
+    // The map is drawn only once the map host answers (fourth UX review
+    // item 4, `useMapReachable`). The e2e context refuses that probe
+    // (fixtures.ts), which is a marina with one bar: the card carries no
+    // empty frame, and the address above it stands alone. The frame's own
+    // `src`, the shop's own address, is pinned in TripArrivalCard.test.tsx.
     await expect(page.getByRole("heading", { name: "Your dive shop" })).toHaveCount(0);
-    await expect(page.locator("iframe[title^='Map of']")).toHaveCount(1);
+    await expect(page.locator("iframe[title^='Map of']")).toHaveCount(0);
 
     // The question no form asked until 2026-08-21 (ADR
     // 20260821-currency-is-what-catches-people). It gates nothing, so what is
@@ -222,8 +218,8 @@ test.describe("staff-prepared trip", () => {
     // relaxed-revocation branch — which is the half of this that a unit test
     // cannot reach. Its own test because it ends the booking, which every
     // check in the test above needs live.
-    await page.getByRole("button", { name: "Cancel my spot" }).click();
-    await page.getByRole("button", { name: "Yes, cancel my spot" }).click();
+    await page.getByRole("button", { name: "Cancel my seat" }).click();
+    await page.getByRole("button", { name: "Yes, cancel my seat" }).click();
     await expect(page.getByRole("heading", { name: "This booking was canceled" })).toBeVisible();
     // Never a dead end: the schedule is one tap away (third UX review, item 16).
     await expect(page.getByRole("link", { name: "See what’s coming up" })).toHaveAttribute(
@@ -276,7 +272,7 @@ test.describe("staff-prepared trip", () => {
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
     await expect(
       page.getByRole("list", { name: "Upcoming trips" }).locator("li").filter({ hasText: title }),
-    ).toContainText("6 spots left");
+    ).toContainText("6 seats left");
   });
 });
 

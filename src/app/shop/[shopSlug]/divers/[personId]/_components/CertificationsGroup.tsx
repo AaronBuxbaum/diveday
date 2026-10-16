@@ -22,6 +22,7 @@ import {
   reviewAction,
   reviewSpecialtyAction,
 } from "../card-actions";
+import { AddCertificationForm } from "./AddCertificationForm";
 import { AgencyCheckLink } from "./AgencyCheckLink";
 import { CardSightingForm } from "./CardSightingForm";
 import { agencyCheckActions, levelCardCheck, listedChecks } from "./card-checks";
@@ -384,7 +385,7 @@ export function CertificationsGroup({
   const numberError = status?.field === "sighted-identifier" ? status.text : undefined;
   const numberErrorFor = (cardId: string) =>
     numberError && status?.cardId === cardId ? numberError : undefined;
-  const _groupStatus = numberError && status?.cardId ? undefined : status;
+  const groupStatus = numberError && status?.cardId ? undefined : status;
 
   const markCertified = markCertifiedCopy(t);
   const markCertify = markCertifiedAction.bind(null, shopSlug, personId);
@@ -668,6 +669,12 @@ export function CertificationsGroup({
           t={t}
           declared={noCertificationDeclared}
           empty={rows.length === 0}
+        />
+        <AddCertificationForm
+          t={t}
+          shopSlug={shopSlug}
+          personId={personId}
+          groupStatus={groupStatus}
         />
       </InsetGroup>
     </DiverFileGroupDisclosure>

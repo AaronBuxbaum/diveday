@@ -17,11 +17,14 @@ import { formatShortDate } from "@/lib/format";
 import { publicTripArrivalCardPath } from "@/lib/public-routes";
 import {
   addSeatFromReady,
+  askToMoveAction,
   cancelMyBookingAction,
   payForPartySeatFromReady,
 } from "../booking-actions";
+import { signMinorWaiverAction } from "../party-actions";
 import { CourseMaterials } from "./CourseMaterials";
 import { CANCEL_PREVIEW_KEY } from "./cancel-notices";
+import { MoveAsk } from "./MoveAsk";
 import { PartyCancelPlan, partyCancelSeats } from "./PartyCancelPlan";
 import { PartySection, partyClaimSeats } from "./PartySection";
 import { RunningLate } from "./RunningLate";
@@ -134,6 +137,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
           seats={partySeats}
           allSet={partyAllSet}
           addSeatAction={data.canAddSeat ? addSeatFromReady.bind(null, token) : null}
+          signWaiverAction={data.identityHeld ? undefined : signMinorWaiverAction.bind(null, token)}
           payAction={data.canPayPartySeats ? payForPartySeatFromReady.bind(null, token) : null}
           t={t}
         />
@@ -185,6 +189,16 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
           // there is a refund to preview, and the form's own `mt-3` stood
           // "Cancel my spot" 36px under the rule without one (K-156).
           <section className={`flex flex-col gap-3 ${THREAD_FOOT_SECTION_CLASS}`}>
+            {/* Past the free window, the ask comes before the forfeit (H-126). */}
+            {data.moveAsk ? (
+              <MoveAsk
+                state={data.moveAsk}
+                shopName={detail.shop.name}
+                shopPhone={fullShop?.contactPhone ?? null}
+                action={askToMoveAction.bind(null, token)}
+                t={t}
+              />
+            ) : null}
             {cancelPreviewKey ? (
               <p className="text-base text-muted">{t(cancelPreviewKey)}</p>
             ) : null}

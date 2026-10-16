@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_WAIVER_BODY } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
-import { loadFirstRunFacts } from "./first-run";
+import { liveReleaseIsSample, loadFirstRunFacts } from "./first-run";
 import { saveWaiverTemplate } from "./waivers-templates";
 
 const ctx = fileScopedShopContext();
@@ -55,5 +55,16 @@ describe("loadFirstRunFacts", () => {
     });
     const siteStep = facts.steps.diveSiteCount > 0 ? 1 : 0;
     expect(facts.doneCount).toBe(3 + siteStep);
+  });
+});
+
+/** The release step outlives first run on Today (fourth UX review, item 21). */
+describe("liveReleaseIsSample", () => {
+  it("is true while divers sign the sample, and false once the shop's own words are live", async () => {
+    const { db, shop } = ctx;
+    await saveWaiverTemplate(db, { shopId: shop.id, body: DEFAULT_WAIVER_BODY, material: true });
+    expect(await liveReleaseIsSample(db, shop.id)).toBe(true);
+    await saveWaiverTemplate(db, { shopId: shop.id, body: "Our own words.", material: true });
+    expect(await liveReleaseIsSample(db, shop.id)).toBe(false);
   });
 });

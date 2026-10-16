@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { boatStageOf, checkInOpen, departureStage, TRIP_PHASES, tripPhaseOf } from "./trip-phase";
+import {
+  boatStageOf,
+  checkInOpen,
+  departureSailed,
+  departureStage,
+  leftAboardOpen,
+  TRIP_PHASES,
+  tripPhaseOf,
+} from "./trip-phase";
 import type { TripStage } from "./trip-stages";
 
 const ZONE = "America/New_York";
@@ -422,6 +430,8 @@ describe("a departure with a diver not back aboard", () => {
     expect(departureStage(at(THREE_AM, { cancelled: true, unaccountedFor: true }))).toEqual({
       shown: null,
       finished: false,
+      // A cancelled departure never sails (`departureSailed`).
+      sailed: false,
       checkInOpen: false,
     });
   });
@@ -466,6 +476,100 @@ describe("a two-day course", () => {
     const home = "2026-07-22T20:30:00.000Z";
     expect(tripPhaseOf(at("2026-07-22T20:45:00.000Z", "home", home))).toBe("back");
     expect(boatStageOf(at("2026-07-22T20:45:00.000Z", "home", home))?.stage).toBe("home");
+  });
+});
+
+/**
+ * **A boat at sea reads as at sea** (fourth review, item 16). The seats chip
+ * and the dock's prep prompts stop once the boat has left, and "Left aboard"
+ * waits for "Heading in".
+ */
+describe("departureSailed and leftAboardOpen", () => {
+  const reading = (
+    now: string,
+    stage: TripStage | null,
+    recordedAt = "2026-07-21T14:30:00.000Z",
+    bounds = { startsAt, endsAt },
+  ) => ({
+    ...bounds,
+    now: new Date(now),
+    timeZone: ZONE,
+    stage: stage ? { stage, recordedAt: new Date(recordedAt) } : null,
+    cancelled: false,
+  });
+  // 09:00 local, two hours into the 07:00 boat.
+  const atSea = "2026-07-21T13:00:00.000Z";
+
+  it("is at the dock before the hour, and while the crew says boarding inside the buffer", () => {
+    expect(departureSailed(reading("2026-07-21T10:00:00.000Z", null))).toBe(false);
+    // Twenty minutes past the hour with no word: a boat running late is still
+    // at the dock until the departure buffer says otherwise.
+    expect(departureSailed(reading("2026-07-21T11:20:00.000Z", null))).toBe(false);
+    expect(
+      departureSailed(reading("2026-07-21T11:40:00.000Z", "boarding", "2026-07-21T10:50:00.000Z")),
+    ).toBe(false);
+  });
+
+  it("lets a Boarding nobody followed up yield to the clock, as silence does (review F3)", () => {
+    // The tap a busy dock makes is Boarding; the one it forgets is Underway.
+    // A tap never holds a boat at the dock longer than silence would.
+    expect(departureSailed(reading(atSea, "boarding", "2026-07-21T10:50:00.000Z"))).toBe(true);
+    expect(departureStage(reading(atSea, "boarding", "2026-07-21T10:50:00.000Z")).sailed).toBe(
+      true,
+    );
+    // A course's Boarding never does: its later days still need their kit.
+    const course = {
+      startsAt: new Date("2026-07-21T12:00:00.000Z"),
+      endsAt: new Date("2026-07-22T20:00:00.000Z"),
+    };
+    expect(
+      departureSailed(
+        reading("2026-07-21T15:00:00.000Z", "boarding", "2026-07-21T11:50:00.000Z", course),
+      ),
+    ).toBe(false);
+  });
+
+  it("has sailed once the crew says so, or the clock passes a single sailing's hour", () => {
+    for (const stage of ["underway", "surface", "heading_in"] as const) {
+      expect(departureSailed(reading(atSea, stage, "2026-07-21T12:50:00.000Z")), stage).toBe(true);
+    }
+    expect(departureSailed(reading(atSea, null))).toBe(true);
+    expect(departureStage(reading(atSea, null)).sailed).toBe(true);
+  });
+
+  it("has sailed once it is back", () => {
+    expect(departureSailed(reading("2026-07-21T22:00:00.000Z", null))).toBe(true);
+    expect(departureSailed(reading("2026-07-21T15:00:00.000Z", "home"))).toBe(true);
+  });
+
+  it("never sails a cancelled departure", () => {
+    expect(departureSailed({ ...reading(atSea, "underway"), cancelled: true })).toBe(false);
+  });
+
+  it("keeps a course's later days to pack for: no clock, and a night's home is tied up", () => {
+    const course = {
+      startsAt: new Date("2026-07-21T12:00:00.000Z"),
+      endsAt: new Date("2026-07-22T20:00:00.000Z"),
+    };
+    // Day two, 08:00 local, nothing tapped yet today.
+    expect(departureSailed(reading("2026-07-22T12:00:00.000Z", null, undefined, course))).toBe(
+      false,
+    );
+    // Day one, 18:00 local, home said at 17:00.
+    expect(
+      departureSailed(
+        reading("2026-07-21T22:00:00.000Z", "home", "2026-07-21T21:00:00.000Z", course),
+      ),
+    ).toBe(false);
+  });
+
+  it("opens Left aboard from heading in, and on a departure that is back", () => {
+    expect(leftAboardOpen(reading(atSea, "underway", "2026-07-21T12:50:00.000Z"))).toBe(false);
+    expect(leftAboardOpen(reading(atSea, "surface", "2026-07-21T12:50:00.000Z"))).toBe(false);
+    expect(leftAboardOpen(reading(atSea, null))).toBe(false);
+    expect(leftAboardOpen(reading(atSea, "heading_in", "2026-07-21T12:50:00.000Z"))).toBe(true);
+    expect(leftAboardOpen(reading("2026-07-21T15:00:00.000Z", "home"))).toBe(true);
+    expect(leftAboardOpen(reading("2026-07-21T22:00:00.000Z", null))).toBe(true);
   });
 });
 

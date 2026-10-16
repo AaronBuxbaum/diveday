@@ -167,7 +167,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
   },
   {
     slug: "benwood-wreck",
-    version: 2,
+    version: 3,
     area: "florida-keys-upper",
     sources: [
       "https://floridakeys.noaa.gov/shipwrecktrail/benwood.html",
@@ -191,7 +191,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       maxDepthMeters: 15,
       currentNote: "Mild, but it sits in open water off the reef line.",
       divePlan:
-        "Swim the length of the hull from bow to stern along the sand, then come back over the plates at about 9 m (30 ft) for the safety stop.",
+        "Swim the length of the hull from bow to stern along the sand, then come back over the plates at about 9 m (30 ft) and make the safety stop at 5 m (15 ft) before surfacing.",
       fitTone: "welcoming",
       fitNote:
         "Shallow enough for a long dive, and structured enough to be a real first wreck. Stay outside the plates.",
@@ -277,7 +277,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
   },
   {
     slug: "uscgc-duane",
-    version: 2,
+    version: 3,
     area: "florida-keys-upper",
     sources: [
       "https://floridakeys.noaa.gov/shipwrecktrail/duane.html",
@@ -300,7 +300,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       maxDepthMeters: 37,
       currentNote: "Can run strong on the surface and at depth.",
       divePlan:
-        "Descend the mooring to the deck, tour the superstructure and the wheelhouse, then ascend on reserve gas with a stop on the line. The crow's nest at about 18 m is a good place to spend it.",
+        "Descend the mooring to the deck, tour the superstructure and the wheelhouse, then ascend on reserve gas with a safety stop at 5 m (15 ft) on the line. The crow's nest at about 18 m is the last look at her on the way up.",
       fitTone: "demanding",
       fitNote:
         "Deep and current-swept, but upright and intact enough to be an excellent first big wreck once the depth is within your card.",
@@ -320,7 +320,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
         {
           name: "Crow's nest",
           kind: "wreckFeature",
-          note: "The shallowest point at about 18 m — where the safety stop happens on a good day.",
+          note: "The shallowest point at about 18 m, the last look at her before the stop on the line.",
         },
       ],
       creatureSlugs: [

@@ -10,8 +10,11 @@ import { everyPanelPrep, prepFor, t, tokens, viewOf } from "./prep-test-fixtures
 
 afterEach(cleanup);
 
-function renderAssignments(prep: TripPrep, { cancelled = false }: { cancelled?: boolean } = {}) {
-  return render(<PrepAssignments view={viewOf(prep, { cancelled })} />);
+function renderAssignments(
+  prep: TripPrep,
+  { cancelled = false, sailed = false }: { cancelled?: boolean; sailed?: boolean } = {},
+) {
+  return render(<PrepAssignments view={viewOf(prep, { cancelled, sailed })} />);
 }
 
 /**
@@ -97,6 +100,16 @@ describe("proposed units on the Gear tab", () => {
   it("offers every proposal in one tap", () => {
     renderAssignments(withProposal());
     expect(screen.getByRole("button", { name: "Assign the proposed unit" })).toBeInTheDocument();
+  });
+
+  /**
+   * **A boat at sea picks nothing more** (fourth review, item 16): "2 pieces
+   * still to pick" and "Assign all" are the dock's instructions.
+   */
+  it("asks for no picking once the boat has left the dock", () => {
+    renderAssignments(withProposal(), { sailed: true });
+    expect(screen.queryByText(/still to pick/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Assign the proposed unit" })).toBeNull();
   });
 
   it("proposes nothing on a departure that is not going", () => {

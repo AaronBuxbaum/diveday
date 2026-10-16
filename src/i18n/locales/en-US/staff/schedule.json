@@ -184,7 +184,8 @@
     "noBoats": "No boats",
     "quietDays": "{first} to {last}",
     "runsDays": "{days, plural, one {# day} other {# days}}",
-    "sailed": "Sailed"
+    "sailed": "Sailed",
+    "crewAway": "{name} away {dates}"
   },
   "addBooking": "Add a booking"
 }

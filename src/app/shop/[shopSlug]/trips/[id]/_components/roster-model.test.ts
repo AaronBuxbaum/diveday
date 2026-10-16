@@ -411,7 +411,7 @@ describe("waiverControls on a rehearsal", () => {
 describe("seatMoveForRow", () => {
   const move = (departed: boolean, started = departed) => ({
     action: () => {},
-    targets: [{ id: "t", label: "T" }],
+    targets: [{ id: "t", label: "T", seatsLeft: 1 }],
     departed,
     started,
   });

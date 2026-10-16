@@ -4,7 +4,7 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SUB_TITLE_CLASS } from "@/components/ui/typography";
 
 export type TripPulseFact = {
-  /** The whole sentence — "1 person can’t board yet" — never a bare count. */
+  /** The whole sentence — "1 blocked" — never a bare count. */
   text: string;
   /**
    * Where the fix lives: the filtered roster, the prep list, the crew panel,
@@ -12,6 +12,8 @@ export type TripPulseFact = {
    */
   href: string;
   /** Marks the facts that hold the boat up; the words already say so too. */
+  /** A stable React key when two facts share a door (two Today rows open the prep list). */
+  key?: string;
   tone?: "danger";
 };
 

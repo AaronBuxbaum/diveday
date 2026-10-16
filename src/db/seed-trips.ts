@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { depthToMeters } from "@/lib/depth-units";
 import type { DbExecutor } from "./client";
 import {
   type courses,
@@ -7,6 +8,7 @@ import {
   type diveSites,
   people,
   personRoles,
+  shops,
   type TripAssignmentRole,
   tripAssignments,
   tripDives,
@@ -601,17 +603,41 @@ export async function seedTrips(
     }),
   );
 
-  // Conditions are a live reading, not a description: the boat that sails today
-  // has this morning's numbers, the next two have yesterday's, and everything
-  // further out is honestly blank because nobody has looked yet.
+  await seedCrewConditions(db, shopId, tripRows);
+
+  return { tripRows, captainId, divemasterId };
+}
+
+/**
+ * Conditions are a live reading, not a description: the boat that sails today
+ * has this morning's numbers, the next two have yesterday's, and everything
+ * further out is honestly blank because nobody has looked yet.
+ */
+async function seedCrewConditions(
+  db: DbExecutor,
+  shopId: string,
+  tripRows: readonly { id: string }[],
+): Promise<void> {
+  // Typed the way a crew types them, in the shop's own unit: a round 60 ft is
+  // stored as its metres, so it reads back as 60 ft, not as 18 m's odd 59 ft
+  // (fourth review, item 54). Today's boat sails at whatever hour keeps it on
+  // the board, so its sentence names no time of day.
+  const [shopUnits] = await db
+    .select({ depthUnit: shops.depthUnit })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  const depthUnit = shopUnits?.depthUnit ?? "meters";
+  const visibility = (feet: number, meters: number) =>
+    depthToMeters(depthUnit === "feet" ? feet : meters, depthUnit);
   const conditions: Array<[number, Record<string, unknown>]> = [
     [
       0,
       {
         conditionsSummary:
-          "A calm morning is expected; the crew will confirm the final call at the dock.",
+          "Settled on the outer reef today. The crew make the final call at the dock.",
         waterTemperatureC: 27,
-        visibilityMeters: 18,
+        visibilityMeters: visibility(60, 18),
         surfaceConditions: "Light east breeze · gentle chop",
       },
     ],
@@ -621,18 +647,17 @@ export async function seedTrips(
         conditionsSummary:
           "Warm and still after dark. Bring a light layer for the surface interval.",
         waterTemperatureC: 28,
-        visibilityMeters: 15,
+        visibilityMeters: visibility(50, 15),
         surfaceConditions: "Glassy · no swell forecast",
       },
     ],
     [
       2,
       {
-        conditionsSummary:
-          "Open water, so the call is made at the dock. Expect current on the line.",
+        conditionsSummary: "Offshore, so the call is made at the dock. Expect current on the line.",
         waterTemperatureC: 26,
-        visibilityMeters: 24,
-        surfaceConditions: "Moderate southeast wind · 1 m swell",
+        visibilityMeters: visibility(80, 24),
+        surfaceConditions: `Moderate southeast wind · ${depthUnit === "feet" ? "3 ft" : "1 m"} swell`,
       },
     ],
   ];
@@ -644,6 +669,4 @@ export async function seedTrips(
       .set({ ...values, conditionsUpdatedAt: nowDate() })
       .where(eq(trips.id, trip.id));
   }
-
-  return { tripRows, captainId, divemasterId };
 }

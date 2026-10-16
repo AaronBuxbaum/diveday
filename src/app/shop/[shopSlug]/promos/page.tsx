@@ -391,7 +391,7 @@ export default async function PromosPage({
       {/* **A form that cannot submit does not stand open**: unconnected, the
           notice stands in for the composer, here when there are no codes and
           inside "New code" when there are (`PromoConnectNotice`). */}
-      {connected || promoPage.total > 0 ? null : (
+      {connected || promoPage.total > 0 || shop.isDemo ? null : (
         <PromoConnectNotice t={t} shopSlug={shopSlug} className="mb-6" />
       )}
 
@@ -406,7 +406,7 @@ export default async function PromosPage({
           `#new-code`. A client navigation to a fragment never runs the
           browser's own reveal, so a plain `<details>` would arrive collapsed
           with the refusal inside it. */}
-      {connected || promoPage.total > 0 ? (
+      {connected || (promoPage.total > 0 && !shop.isDemo) ? (
         <AutoOpenDetails
           id="new-code"
           openOnHash="new-code"

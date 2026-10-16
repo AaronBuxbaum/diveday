@@ -45,6 +45,7 @@ export async function getSafetyMonth(
         startsAt: trips.startsAt,
         endsAt: trips.endsAt,
         plannedDives: trips.plannedDives,
+        diveMode: trips.diveMode,
       })
       .from(trips)
       .where(
@@ -215,6 +216,7 @@ export async function getSafetyMonth(
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
       plannedDives: trip.plannedDives,
+      diveMode: trip.diveMode,
       bookingIds: bookingsByTrip.get(trip.id) ?? [],
       crew: crewByTrip.get(trip.id) ?? [],
     })),

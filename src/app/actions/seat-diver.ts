@@ -213,11 +213,16 @@ async function seat(
   // person's particulars, the waiver control among them (`RosterSection.tsx`'s
   // `showsPersonDetail`) — the link the waiver notice sends a staffer to fetch
   // is one of the things the confirm releases.
+  //
+  // Last, a seat whose confirmation went out says so (fourth
+  // UX review, item 3): "Diver added. Their confirmation is on its way."
   const notice = result.identityUnconfirmed
     ? surface.seatedIdentityUnconfirmedNotice
     : result.waiver === "not_delivered" || result.waiver === "failed"
       ? surface.seatedWaiverUndeliveredNotice
-      : surface.seatedNotice;
+      : result.confirmation === "sent"
+        ? surface.seatedConfirmationSentNotice
+        : surface.seatedNotice;
   revalidateAndRedirect(
     path,
     noticeUrl(path, notice, {

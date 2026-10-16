@@ -99,6 +99,13 @@ export type SeatSurface = {
    */
   seatedIdentityUnconfirmedNotice: string;
   /**
+   * The same seating, when the departure has not sailed (or, at the counter,
+   * is on a later day) and the diver was sent the booking confirmation (`SeatDiverConfirmation`'s `sent`, fourth UX
+   * review item 3). "Diver added to the trip." left the staffer guessing
+   * whether a phone booker had been told anything; this says they were.
+   */
+  seatedConfirmationSentNotice: string;
+  /**
    * Whether the settle URL carries the new booking id — the roster's
    * scroll-to-the-new-row-and-toast affordance. Surfaces without a roster to
    * scroll leave it off rather than trailing a meaningless query param.
@@ -155,6 +162,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     seatedNotice: "diver-added",
     seatedWaiverUndeliveredNotice: "diver-added-waiver-undelivered",
     seatedIdentityUnconfirmedNotice: "diver-added-identity-unconfirmed",
+    seatedConfirmationSentNotice: "diver-added-confirmed",
     carriesBookingId: true,
     invalidNotice: "diver-invalid",
     refusalNotice: TRIP_REFUSAL_NOTICE,
@@ -191,6 +199,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     seatedNotice: "walkin-added",
     seatedWaiverUndeliveredNotice: "walkin-added-waiver-undelivered",
     seatedIdentityUnconfirmedNotice: "walkin-added-identity-unconfirmed",
+    seatedConfirmationSentNotice: "walkin-added-confirmed",
     carriesBookingId: true,
     invalidNotice: "walkin-invalid",
     refusalNotice: {
@@ -224,6 +233,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     seatedNotice: "booked",
     seatedWaiverUndeliveredNotice: "booked-waiver-undelivered",
     seatedIdentityUnconfirmedNotice: "booked-identity-unconfirmed",
+    seatedConfirmationSentNotice: "booked-confirmed",
     carriesBookingId: false,
     invalidNotice: "booking-invalid",
     refusalNotice: {
@@ -266,6 +276,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     seatedNotice: "diver-added",
     seatedWaiverUndeliveredNotice: "diver-added-waiver-undelivered",
     seatedIdentityUnconfirmedNotice: "diver-added-identity-unconfirmed",
+    seatedConfirmationSentNotice: "diver-added-confirmed",
     carriesBookingId: true,
     invalidNotice: "diver-invalid",
     refusalNotice: TRIP_REFUSAL_NOTICE,

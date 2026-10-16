@@ -131,7 +131,7 @@ describe("the feature screens' words", () => {
     [
       "BookingCardFallback",
       BookingCardFallback,
-      ["Grab a spot", "Number of divers", "Book and pay"],
+      ["Grab a seat", "Number of divers", "Book and pay"],
     ],
     [
       "StorefrontFallback",

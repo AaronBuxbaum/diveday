@@ -85,6 +85,11 @@ export type DepthLimit = {
   level: CertificationLevel | null;
 };
 
+/** Under 15 on `onDate`: the diver's card is a Junior card, and the junior bands apply. */
+export function isJuniorOnDate(dateOfBirth: CalendarDate, onDate: CalendarDate): boolean {
+  return ageOnDate(dateOfBirth, onDate) <= JUNIOR_AGE_CEILING;
+}
+
 /**
  * The deepest a diver may go, given the best card they actually hold and — when
  * a date of birth is on file — the junior band they fall in.

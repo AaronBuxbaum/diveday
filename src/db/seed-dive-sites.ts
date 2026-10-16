@@ -59,7 +59,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           {
             name: "Historic ship's winch",
             kind: "reefHistory" as const,
-            note: "A ship's winch in a sand patch at about 7.5 m, worn smooth and grown over. A spotted moray usually has its head out of the drum.",
+            note: "A ship's winch in a sand patch at about 25 ft, worn smooth and grown over. A spotted moray usually has its head out of the drum.",
             photoUrl: marineLifeImage("spotted-moray"),
           },
           {
@@ -313,7 +313,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           {
             name: "Crow's nest",
             kind: "wreckFeature" as const,
-            note: "The shallowest point at about 18 m — where the safety stop happens on a good day.",
+            note: "The shallowest point, at about 60 ft: the last look at her on the way up the line.",
             photoUrl: commonsImage("Crow's nest of the USCGC Duane (2007).jpg"),
           },
         ],

@@ -237,3 +237,38 @@ export function demoTodayShifts(
   }
   return [dawn, shared];
 }
+
+/** The desk's day, shop-local: open at 8 AM, last signature by 6 PM. */
+const DESK_OPENS_HOUR = 8;
+const DESK_CLOSES_HOUR = 18;
+
+/**
+ * **A signature a staffer recorded happened while the desk was open** (fifth
+ * loop, section 6). `signedAtFor`'s day 0 is "a few minutes ago", which is a
+ * fine time for a diver to sign at home and a false one for a release the
+ * counter took on paper: a demo opened just after midnight printed "signed
+ * Oct 13, 11:24 PM. Recorded by staff from an in-person signature." on the
+ * departure log an insurer reads. The history back-fill's paper releases,
+ * signed the evening before, had the same fault. An instant outside desk hours moves back to
+ * the last hour the desk was open, keeping its minute and its tie-breaking
+ * millisecond, so it stays in the past and stays unique.
+ */
+export function withinDeskHours(instant: Date, timeZone: string = DEMO_SHOP_TIMEZONE): Date {
+  const wall = utcToWallTime(instant, timeZone);
+  if (wall.hour >= DESK_OPENS_HOUR && wall.hour < DESK_CLOSES_HOUR) return instant;
+  const day =
+    wall.hour < DESK_OPENS_HOUR
+      ? utcToWallTime(new Date(instant.getTime() - DAY_MS), timeZone)
+      : wall;
+  const closing = wallTimeToUtc(
+    {
+      year: day.year,
+      month: day.month,
+      day: day.day,
+      hour: DESK_CLOSES_HOUR - 1,
+      minute: wall.minute,
+    },
+    timeZone,
+  );
+  return new Date(closing.getTime() + (instant.getTime() % 1_000));
+}

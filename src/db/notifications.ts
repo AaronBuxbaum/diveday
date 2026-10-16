@@ -1261,6 +1261,30 @@ export async function sendCourseSeatConfirmation(
   });
 }
 
+/**
+ * **A diver the desk books for a later day hears what an online booker hears**
+ * (fourth UX review, item 3). A phone booking, a seat made from a date request
+ * or a weekly regular put on next Saturday used to get only the waiver
+ * request, and nothing at all when a signature was already on file: no date,
+ * no dock time, no meeting point, no `/ready` link until the seven-day
+ * reminder. The same confirmation `bookSpot` sends, built from the stored
+ * rows, with the diver's waiver riding in it as its first step when one is
+ * owed (`issueJoinWaiverLink`), so one seating is still one email. Null when
+ * the diver has no address on file.
+ */
+export async function sendStaffSeatingConfirmation(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  options: { waiver: { url: string; expiresAt: Date } | null; provider?: NotificationProvider },
+) {
+  return sendStoredBookingConfirmation(db, shopId, bookingId, {
+    isRetry: false,
+    provider: options.provider,
+    waiver: options.waiver,
+  });
+}
+
 async function sendStoredBookingConfirmation(
   db: AppDb,
   shopId: string,
@@ -1269,7 +1293,8 @@ async function sendStoredBookingConfirmation(
     isRetry: boolean;
     provider?: NotificationProvider;
     onlyWithMaterials?: boolean;
-    waiver?: { url: string; expiresAt: Date };
+    /** The diver's waiver link, when it rides in this confirmation. */
+    waiver?: { url: string; expiresAt: Date } | null;
   },
 ) {
   const [row] = await db

@@ -1,7 +1,8 @@
-import { and, asc, count, eq, gt, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { type BoatSeatsRefusal, boatSeatsRefusal } from "@/lib/boat-safety";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import type { VesselIdentity } from "@/lib/emergency-reference";
 import type { AppDb, DbExecutor } from "./client";
 import { boats, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -18,7 +19,68 @@ export type BoatPapersInput = {
   inspectionDueOn: string | null;
   registrationExpiresOn: string | null;
   insuranceExpiresOn: string | null;
+  /**
+   * The boat's radio identity (fourth review, item 11), normalized by the
+   * caller. Absent leaves it as it was; the fleet row always sends both.
+   */
+  callSign?: string | null;
+  mmsi?: string | null;
 };
+
+/**
+ * **The boat each departure sails on, as the emergency card names it** (fourth
+ * review, item 11): name, call sign and MMSI, keyed by trip. A departure on no
+ * boat is absent, and the card falls back to the shop's own vessel line.
+ *
+ * History, not the live fleet: a departure that sailed on a hull the shop has
+ * since deleted still names it (ADR 20260820-every-delete-is-soft), because
+ * which vessel was out is the first fact an incident review asks for.
+ */
+export async function departureVessels(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Map<string, VesselIdentity>> {
+  if (tripIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      tripId: trips.id,
+      name: boats.name,
+      callSign: boats.callSign,
+      mmsi: boats.mmsi,
+    })
+    .from(trips)
+    .innerJoin(boats, and(eq(boats.id, trips.boatId), eq(boats.shopId, shopId)))
+    .where(and(eq(trips.shopId, shopId), inArray(trips.id, [...tripIds]), liveTrip()));
+  return new Map(
+    rows.map((row) => [
+      row.tripId,
+      { name: row.name, callSign: row.callSign, mmsi: row.mmsi } satisfies VesselIdentity,
+    ]),
+  );
+}
+
+/**
+ * **How many live boats hold neither a call sign nor an MMSI** (review B1):
+ * the Settings hub names the number on the fleet's door, so the two fields
+ * that arrived empty on every existing boat are a visible job rather than a
+ * quiet gap. Until one is filled the emergency card keeps the shop's own
+ * vessel line under that boat (`emergencyReferenceForDeparture`).
+ */
+export async function countBoatsWithoutRadioIdentity(db: DbExecutor, shopId: string) {
+  const [row] = await db
+    .select({ value: count() })
+    .from(boats)
+    .where(
+      and(
+        eq(boats.shopId, shopId),
+        isNull(boats.deletedAt),
+        isNull(boats.callSign),
+        isNull(boats.mmsi),
+      ),
+    );
+  return row?.value ?? 0;
+}
 
 /** The shop's fleet: the hulls it has, never the ones it deleted. */
 export async function listBoats(db: AppDb, shopId: string): Promise<Boat[]> {

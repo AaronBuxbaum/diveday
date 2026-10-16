@@ -31,7 +31,15 @@ import { canPersonManageOrders } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { notificationProviderForDb, sendNotification } from "./notifications";
-import { type CreateOrderOutcome, createOrder, type NewOrderLineItem, voidOrder } from "./orders";
+import {
+  type CounterCollection,
+  type CreateOrderOutcome,
+  createOrder,
+  type NewOrderLineItem,
+  recordCounterOrder,
+  voidOrder,
+  voidPaidCounterOrder,
+} from "./orders";
 import { queryAll } from "./query-helpers";
 import {
   type CustomerGearNotice,
@@ -41,6 +49,7 @@ import {
   customerGearNotices,
   customerGearReminderSettings,
   gearItems,
+  type OrderCollection,
   orders,
   people,
   shops,
@@ -294,6 +303,8 @@ export type WorkOrderBillSummary = {
   amountPaidCents: number;
   currency: string;
   hostedInvoiceUrl: string | null;
+  /** How the money came: a Stripe invoice, or cash or card machine at pickup. */
+  collection: OrderCollection;
   sentAt: Date;
 };
 
@@ -311,6 +322,7 @@ export async function getWorkOrderBill(
       amountPaidCents: orders.amountPaidCents,
       currency: orders.currency,
       hostedInvoiceUrl: orders.hostedInvoiceUrl,
+      collection: orders.collection,
       sentAt: workOrderBills.createdAt,
     })
     .from(workOrderBills)
@@ -415,6 +427,92 @@ export async function billWorkOrder(
     return { ok: false, reason: "already_billed" };
   }
   return { ok: true, orderId: created.order.id };
+}
+
+export type CounterPaymentOutcome =
+  | { ok: true; orderId: string }
+  | { ok: false; reason: "not_found" | "not_customer" | "no_lines" | "already_billed" | "invalid" };
+
+/**
+ * **Paid at pickup, in cash or on the shop's card machine** (fourth UX review,
+ * item 19). The bill read "Collected at the counter." on an unpaid ticket,
+ * which looked paid, and nothing recorded the money, so cash bench work never
+ * reached Reports' Gear bench line.
+ *
+ * The ticket's lines become a paid counter order through `recordCounterOrder`
+ * (ADR 20261009-counter-payments), linked as the ticket's bill, so the card
+ * shows Paid, Reports files it under the bench, and a second bill is refused
+ * like any settled one. Any active staff member may record it, as any counter
+ * money; `recordCounterOrder` re-checks that, the payer's shop and the lines.
+ *
+ * One bill per ticket holds here as it does for Send the bill: refused up
+ * front while a bill is open or settled, and checked again under the ticket's
+ * lock, the loser's order voided rather than left as a second payment.
+ */
+export async function recordWorkOrderCounterPayment(
+  db: AppDb,
+  input: {
+    shopId: string;
+    workOrderId: string;
+    actorPersonId: string;
+    collection: CounterCollection;
+    description: string;
+    lineItems: NewOrderLineItem[];
+  },
+): Promise<CounterPaymentOutcome> {
+  const [workOrder] = await db
+    .select({ id: workOrders.id, personId: workOrders.personId })
+    .from(workOrders)
+    .where(
+      and(
+        eq(workOrders.id, input.workOrderId),
+        eq(workOrders.shopId, input.shopId),
+        isNull(workOrders.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!workOrder) return { ok: false, reason: "not_found" };
+  if (!workOrder.personId) return { ok: false, reason: "not_customer" };
+  if (input.lineItems.length === 0) return { ok: false, reason: "no_lines" };
+  const before = await getWorkOrderBill(db, input.shopId, workOrder.id);
+  if (!workOrderBillAllowsAnother(before?.status ?? null)) {
+    return { ok: false, reason: "already_billed" };
+  }
+
+  const recorded = await recordCounterOrder(db, {
+    shopId: input.shopId,
+    personId: workOrder.personId,
+    createdByPersonId: input.actorPersonId,
+    collection: input.collection,
+    description: input.description,
+    lineItems: input.lineItems,
+  });
+  if (!recorded.ok) return { ok: false, reason: "invalid" };
+
+  const linked = await db.transaction(async (tx) => {
+    await tx
+      .select({ id: workOrders.id })
+      .from(workOrders)
+      .where(eq(workOrders.id, workOrder.id))
+      .for("update");
+    const current = await getWorkOrderBill(tx, input.shopId, workOrder.id);
+    if (current && current.orderId !== before?.orderId) return false;
+    await tx.insert(workOrderBills).values({
+      shopId: input.shopId,
+      workOrderId: workOrder.id,
+      orderId: recorded.order.id,
+      createdByPersonId: input.actorPersonId,
+      createdAt: nowDate(),
+    });
+    return true;
+  });
+  if (!linked) {
+    // A second tap recorded the same money and lost the link: void it so one
+    // payment stands, the way `billWorkOrder` voids a losing invoice.
+    await voidPaidCounterOrder(db, input.shopId, recorded.order.id);
+    return { ok: false, reason: "already_billed" };
+  }
+  return { ok: true, orderId: recorded.order.id };
 }
 
 /** Which of these pieces have their service reminders turned off. */

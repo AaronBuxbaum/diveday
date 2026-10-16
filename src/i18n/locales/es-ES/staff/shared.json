@@ -465,6 +465,7 @@
     "itemDrysuitGlovesWithSize": "{item} {size}: traje seco, ¿húmedos o secos?",
     "itemDrysuitWeightCheck": "{item}: traje seco, verificar el lastre en el agua",
     "itemNoLongerRented": "{item} (el centro ya no alquila esto)",
+    "itemSizeMissing": "{item} (falta la talla)",
     "notRecorded": "No hay equipo registrado, aún no se ha preguntado",
     "ownKit": "Trae su propio equipo",
     "needsStaffFit": "Necesita ajuste del personal en el check-in",
@@ -526,8 +527,9 @@
     "never": "nunca"
   },
   "welcomeCue": {
-    "firstTrip": "primera vez con nosotros",
-    "returning": "de vuelta tras {years, plural, one {# año} other {# años}}",
+    "firstTrip": "Primera inmersión con nosotros",
+    "firstTime": "Primera vez con nosotros",
+    "returning": "De vuelta tras {years, plural, one {# año} other {# años}}",
     "dockLine": "Saluda a {name}: {card}.",
     "dockLineNoCard": "Saluda a {name}.",
     "dockLineSays": "Saluda a {name}: dice {level}.",
@@ -594,7 +596,8 @@
     "splitting": "Creando…"
   },
   "boatWork": {
-    "missingSizes": "{count, plural, one {A # persona le faltan} other {A # personas les faltan}} tallas de alquiler",
+    "missingSize": "{count} sin talla",
+    "kitUnasked": "{count} sin preguntar por su equipo",
     "ungatedNitrox": "{count, plural, one {# buceador quiere} other {# buceadores quieren}} nitrox sin certificación verificada",
     "missingContact": "{count, plural, one {# persona no tiene} other {# personas no tienen}} contacto de emergencia",
     "openOrders": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}"

@@ -12,14 +12,18 @@ import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-label
 // 20260804-instant-navigation.
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
-import { depthInUnit } from "@/lib/depth-units";
+import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
 import { formatShortDate, weekdayNames } from "@/lib/format";
 import { hasCrewPrediction } from "@/lib/marine-forecast";
 import { meetingPointLine, meetingPointOfRows } from "@/lib/meeting-point";
 import { toShopCurrency } from "@/lib/money";
 import type { requireShopSurface } from "@/lib/session";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
-import { temperatureUnitFor } from "@/lib/temperature-units";
+import {
+  type TemperatureUnit,
+  temperatureInUnit,
+  temperatureUnitFor,
+} from "@/lib/temperature-units";
 import { laterMeetingDates } from "@/lib/trip-days";
 import { clearConditionsAction, saveConditionsAction } from "../conditions-actions";
 import { updateTripCrewAction } from "../crew-actions";
@@ -69,6 +73,44 @@ export function assignedCrewNames(overview: TripOverview): string[] {
   return overview.staff
     .filter((entry) => overview.crew.crewIds.includes(entry.person.id))
     .map((entry) => entry.person.fullName);
+}
+
+/**
+ * The crew's published read as the Conditions row's facts, in the shop's own
+ * units: their sentence, the surface, the water and the visibility. The water
+ * is half of what a diver dresses for (fourth review, item 54).
+ */
+function crewConditionFacts(
+  trip: {
+    conditionsSummary: string | null;
+    surfaceConditions: string | null;
+    waterTemperatureC: number | null;
+    visibilityMeters: number | null;
+  },
+  depthUnit: DepthUnit,
+  temperatureUnit: TemperatureUnit,
+  t: StaffTranslator,
+): string[] {
+  return [
+    trip.conditionsSummary,
+    trip.surfaceConditions,
+    trip.waterTemperatureC !== null
+      ? t("trips.conditions.waterFact", {
+          value: `${temperatureInUnit(trip.waterTemperatureC, temperatureUnit)} ${t(
+            temperatureUnit === "fahrenheit"
+              ? "shared.temperature.fahrenheit"
+              : "shared.temperature.celsius",
+          )}`,
+        })
+      : null,
+    trip.visibilityMeters !== null
+      ? t("trips.conditions.visibilityFact", {
+          value: `${depthInUnit(trip.visibilityMeters, depthUnit)} ${t(
+            depthUnit === "feet" ? "shared.depth.feet" : "shared.depth.meters",
+          )}`,
+        })
+      : null,
+  ].filter((part): part is string => Boolean(part));
 }
 
 /**
@@ -147,17 +189,8 @@ export function tripAboutRows(context: TripAboutRowsContext) {
         ]
           .filter((part): part is string => Boolean(part))
           .join(" · ") || t("trips.requirements.summaryNoneRequired");
-  const conditionParts = [
-    trip.conditionsSummary,
-    trip.surfaceConditions,
-    trip.visibilityMeters !== null
-      ? t("trips.conditions.visibilityFact", {
-          value: `${depthInUnit(trip.visibilityMeters, shop.depthUnit)} ${t(
-            shop.depthUnit === "feet" ? "shared.depth.feet" : "shared.depth.meters",
-          )}`,
-        })
-      : null,
-  ].filter((part): part is string => Boolean(part));
+  const temperatureUnit = temperatureUnitFor(shop);
+  const conditionParts = crewConditionFacts(trip, shop.depthUnit, temperatureUnit, t);
   // The tide stands in for the at-rest line only when there is nothing else:
   // "No conditions yet" beside a known slack would be the summary
   // contradicting its own panel. It never joins a line that already has the
@@ -293,13 +326,13 @@ export function tripAboutRows(context: TripAboutRowsContext) {
           trip={trip}
           locale={locale}
           timezone={shop.timezone}
-          temperatureUnit={temperatureUnitFor(shop)}
+          temperatureUnit={temperatureUnit}
           depthUnit={shop.depthUnit}
           outlook={
             <ConditionsOutlookSlot
               locale={locale}
               timezone={shop.timezone}
-              temperatureUnit={temperatureUnitFor(shop)}
+              temperatureUnit={temperatureUnit}
               depthUnit={shop.depthUnit}
               automatedForecast={automatedForecast}
               tideLines={tideLines}

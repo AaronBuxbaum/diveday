@@ -149,6 +149,10 @@ const guardedRoots = ["src/app", "src/components"];
 export const DELIBERATELY_IDENTICAL = new Map([
   // Training-agency acronyms — brand names. `other` is the one real word in
   // the group and is translated.
+  // The boat's radio identity (fourth review, item 11): the ITU acronym a
+  // Spanish-speaking coastguard reads back as "MMSI".
+  ["staff/boats.json mmsiLabel", "maritime radio acronym"],
+  ["staff/manifest.json emergency.mmsiLabel", "maritime radio acronym"],
   ["diver.json common.certification.agencies.padi", "agency acronym"],
   ["diver.json common.certification.agencies.ssi", "agency acronym"],
   ["diver.json common.certification.agencies.naui", "agency acronym"],

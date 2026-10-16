@@ -331,6 +331,7 @@ exports[`the diver bundle's headers > are exactly the columns decided for the di
     "id",
     "trip_title",
     "trip_starts_at",
+    "party_size",
     "invited_at",
     "created_at",
   ],

@@ -71,6 +71,13 @@ describe("ThreadStatus", () => {
 });
 
 describe("ThreadSpine", () => {
+  it("names the checklist for a screen reader, above the steps' own H3s (fourth review, item 47)", () => {
+    render(<ThreadSpine steps={[step({ id: "sign" })]} heading="Your checklist" />);
+    const heading = screen.getByRole("heading", { level: 2, name: "Your checklist" });
+    expect(heading).toHaveClass("sr-only");
+    expect(heading.nextElementSibling?.tagName).toBe("OL");
+  });
+
   it("opens exactly one step at rest, and it is the current one", () => {
     const { container } = render(
       <ThreadSpine

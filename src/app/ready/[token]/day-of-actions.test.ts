@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getHelpRequestForBooking, updateHelpRequestStatus } from "@/db/help-requests";
 import { getReadyPageData } from "@/db/ready";
-import { bookings, trips } from "@/db/schema";
+import { bookings, shops, trips } from "@/db/schema";
 import { listStaff } from "@/db/trips";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -176,6 +176,15 @@ describe("saveDayOfDetailsFromReady", () => {
     expect(data.rentalFit?.note).toBe("Left ear is slow to clear.");
     expect(data.hotelPickupLocation).toBe("Marriott, room 214");
     expect(data.helpRequest?.kind).toBe("carry_gear");
+  });
+
+  // Security review N5 of layer r4-1: the page hides the field at a shop
+  // that runs no pickups, and the server keeps it hidden from a hand-made post.
+  it("stores no pickup location at a shop that runs no pickups", async () => {
+    const { db, shop, bookingId, token } = await seat();
+    await db.update(shops).set({ offersHotelPickup: false }).where(eq(shops.id, shop.id));
+    await save(token, { hotelPickupLocation: "Marriott, room 214" });
+    expect((await read(bookingId)).hotelPickupLocation).toBeNull();
   });
 
   it("never blanks a stored answer with Choose", async () => {

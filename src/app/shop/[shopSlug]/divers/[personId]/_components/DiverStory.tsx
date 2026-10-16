@@ -9,7 +9,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { bookingIsAhead } from "@/lib/diver-status";
-import { formatMoneyCents, formatShortDate, formatTime } from "@/lib/format";
+import { formatMoneyCents, formatNearDay, formatShortDate, formatTime } from "@/lib/format";
 import { SHOP_HISTORY_PREVIEW_COUNT } from "@/lib/prior-visits";
 import { canRaiseInvoiceFor } from "../_lib/invoice-door";
 import { seatMayBeFirstDive, storyNotes } from "../_lib/story-notes";
@@ -199,7 +199,11 @@ export function DiverStory({
         <BookingStoryRow
           key={`booking:${booking.id}`}
           t={t}
-          date={formatShortDate(trip.startsAt, locale, shop.timezone)}
+          // "Today" and "Tomorrow" as the Inbox says them (fourth review, item 45).
+          date={
+            formatNearDay(trip.startsAt, now, locale, shop.timezone) ??
+            formatShortDate(trip.startsAt, locale, shop.timezone)
+          }
           title={trip.title}
           meta={meta.join(" · ")}
           money={seatMoney(diver, booking.id, t, locale)}
@@ -249,7 +253,10 @@ export function DiverStory({
         <BookingStoryRow
           key={`order:${order.id}`}
           t={t}
-          date={formatShortDate(order.createdAt, locale, shop.timezone)}
+          date={
+            formatNearDay(order.createdAt, now, locale, shop.timezone) ??
+            formatShortDate(order.createdAt, locale, shop.timezone)
+          }
           title={order.description || t("divers.payments.shopPaymentFallback")}
           money={{
             state: ORDER_MONEY_STATE[order.status] ?? "open",

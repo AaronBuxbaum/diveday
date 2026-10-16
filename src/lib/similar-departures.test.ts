@@ -117,4 +117,89 @@ describe("similarDepartures", () => {
       }),
     ).toEqual([]);
   });
+
+  /**
+   * Fourth UX review, item 31: the weekly Saturday boat fills while next
+   * Saturday has room, and the matcher ignored the run, so the full page
+   * offered nothing. The run's next date with a seat is the first answer.
+   */
+  describe("a repeating departure", () => {
+    const RUN_FULL = {
+      tripId: "sat-17",
+      courseId: null,
+      diveSiteId: "site-a",
+      seriesId: "run-1",
+      startsAt: new Date("2030-08-17T13:00:00Z"),
+    };
+
+    it("offers the run's next date with room first, as its own reason", () => {
+      const rows = similarDepartures({
+        full: RUN_FULL,
+        candidates: [
+          candidate({
+            id: "same-site",
+            diveSiteId: "site-a",
+            startsAt: new Date("2030-08-18T13:00:00Z"),
+          }),
+          candidate({
+            id: "sat-31",
+            seriesId: "run-1",
+            startsAt: new Date("2030-08-31T13:00:00Z"),
+          }),
+          candidate({
+            id: "sat-24",
+            seriesId: "run-1",
+            startsAt: new Date("2030-08-24T13:00:00Z"),
+          }),
+        ],
+      });
+      expect(rows.map((row) => [row.tripId, row.reason])).toEqual([
+        ["sat-24", "same_run"],
+        ["same-site", "same_site"],
+      ]);
+    });
+
+    it("never calls an earlier date of the run its next one, nor another run's", () => {
+      const rows = similarDepartures({
+        full: RUN_FULL,
+        candidates: [
+          candidate({
+            id: "sat-10",
+            seriesId: "run-1",
+            startsAt: new Date("2030-08-10T13:00:00Z"),
+          }),
+          candidate({
+            id: "other-run",
+            seriesId: "run-2",
+            startsAt: new Date("2030-08-20T13:00:00Z"),
+          }),
+        ],
+      });
+      expect(rows).toEqual([]);
+    });
+
+    it("lets a later date of the run still match by its site", () => {
+      const rows = similarDepartures({
+        full: RUN_FULL,
+        candidates: [
+          candidate({
+            id: "sat-24",
+            seriesId: "run-1",
+            diveSiteId: "site-a",
+            startsAt: new Date("2030-08-24T13:00:00Z"),
+          }),
+          candidate({
+            id: "sat-31",
+            seriesId: "run-1",
+            diveSiteId: "site-a",
+            startsAt: new Date("2030-08-31T13:00:00Z"),
+          }),
+        ],
+      });
+      expect(rows.map((row) => [row.tripId, row.reason])).toEqual([
+        ["sat-24", "same_run"],
+        ["sat-31", "same_site"],
+      ]);
+    });
+  });
 });

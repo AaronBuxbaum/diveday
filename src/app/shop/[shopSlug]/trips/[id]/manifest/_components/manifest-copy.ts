@@ -11,6 +11,8 @@ export function emergencyReferenceCopy(t: StaffTranslator) {
     heading: t("manifest.emergency.heading"),
     empty: t("manifest.emergency.empty"),
     vesselLabel: t("manifest.emergency.vesselLabel"),
+    callSignLabel: t("manifest.emergency.callSignLabel"),
+    mmsiLabel: t("manifest.emergency.mmsiLabel"),
     shoreContactLabel: t("manifest.emergency.shoreContactLabel"),
     planLabel: t("manifest.emergency.planLabel"),
   };

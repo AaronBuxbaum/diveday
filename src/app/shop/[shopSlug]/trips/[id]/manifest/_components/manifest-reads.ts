@@ -1,3 +1,5 @@
+import { departureKitRecord } from "@/db/boat-safety";
+import { departureVessels } from "@/db/boats";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
 import type { AppDb } from "@/db/client";
 import { listDeskEventsSince } from "@/db/desk-events";
@@ -44,6 +46,8 @@ export async function readManifestPage(
     stage,
     meetingPoint,
     mayStartIncidentReport,
+    vessels,
+    kitRecord,
   ] = await Promise.all([
     getTripManifests(db, shopId, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
@@ -79,6 +83,12 @@ export async function readManifestPage(
     // Who may start an incident report here: a row marked not back aboard
     // offers the missing diver report to them alone (safety sheet item 2).
     mayStartTripIncidentReport(db, shopId, tripId, personId),
+    // The departure's own boat, for the emergency card and the printed head
+    // (fourth review, item 11).
+    departureVessels(db, shopId, [tripId]),
+    // The oxygen and first aid kit the register holds aboard that boat, for
+    // the printed kit lines (fourth review, item 17).
+    departureKitRecord(db, shopId, tripId),
   ]);
   // Each live site's field guide, for the dive log's "one thing you saw"
   // picker (issue #1190). Read after the sites resolve because it is keyed by
@@ -118,6 +128,8 @@ export async function readManifestPage(
     stageStrip: { stage, meetingWindows },
     meetingPoint,
     mayStartIncidentReport,
+    vessel: vessels.get(tripId) ?? null,
+    kitRecord,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,

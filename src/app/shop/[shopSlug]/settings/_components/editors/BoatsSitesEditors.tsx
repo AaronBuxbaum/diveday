@@ -165,7 +165,10 @@ export function EmergencyReferenceForm({
               </Field>
             </Fragment>
           ))}
-          <Field label={t("settings.main.emergency.vesselLabel")}>
+          <Field
+            label={t("settings.main.emergency.vesselLabel")}
+            description={t("settings.main.emergency.vesselHint")}
+          >
             <input
               name="emergencyVessel"
               type="text"

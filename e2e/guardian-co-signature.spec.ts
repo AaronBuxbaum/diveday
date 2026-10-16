@@ -1,6 +1,8 @@
 import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
+  choosePartySize,
   counterPath,
   createTrip,
   daysFromNow,
@@ -11,6 +13,8 @@ import {
   signOut,
   waiverLinkFromToast,
 } from "./helpers";
+
+const diverText = diverTranslator("en-US");
 
 /**
  * **A minor's release is signed twice** (ADR 20260907-guardian-co-signature).
@@ -325,4 +329,66 @@ test("a seat booked as under 18 asks for a parent on its release", async ({ page
   await sign.getByRole("button", { name: "Sign your waiver" }).click();
   await expect(page.getByRole("heading", { name: "Parent or guardian" })).toBeVisible();
   await expect(page.getByText(`${diver} is under 18`)).toBeVisible();
+});
+
+/**
+ * **A parent signs a child's release from their own page** (H-124, ADR
+ * 20261014-parent-signs-minor-release). Mia is booked "Under 18" with no
+ * email of her own, so nothing reaches anyone for her; the lead's panel offers
+ * "Sign Mia's waiver", which opens Mia's release with the guardian's card on
+ * the parent's device. Mia's claim link says a parent signs with her.
+ */
+test("a parent signs the release of a child they booked, from their own page", async ({ page }) => {
+  test.setTimeout(90_000);
+  const stamp = Date.now();
+  const title = `Family Run ${stamp}`;
+  const child = `Mia E2E ${stamp}`;
+  await createTrip(page, {
+    title,
+    date: daysFromNow(6),
+    departsAt: "08:00",
+    returnsAt: "11:00",
+    capacity: 6,
+  });
+  await signOut(page);
+
+  await page.goto(`/s/${SHOP}`, { waitUntil: "domcontentloaded" });
+  await page
+    .getByRole("list", { name: "Upcoming trips" })
+    .locator("li")
+    .filter({ hasText: title })
+    .getByRole("link")
+    .click();
+  await choosePartySize(page, 2);
+  await page.getByLabel("Name", { exact: true }).fill(`Dana E2E ${stamp}`);
+  await page.getByLabel("Email", { exact: true }).fill(`dana-${stamp}@example.com`);
+  await page.getByLabel("Diver 2 name").fill(child);
+  await page.getByLabel("Use the main contact’s email for this diver").check();
+  await page
+    .getByRole("checkbox", { name: /^Under 18/ })
+    .nth(1)
+    .check();
+  await page.getByRole("button", { name: "Book 2 seats" }).click();
+  await expect(page).toHaveURL(/\/ready\//);
+
+  const seatRow = page.locator("#party-seats li").filter({ hasText: child });
+  await expect(
+    seatRow.getByText(diverText("seatClaim.minorSignBody", { name: child })),
+  ).toBeVisible();
+  await seatRow.getByText("Show link").click();
+  const claimPath = ((await seatRow.locator("p.font-mono").textContent()) ?? "").match(
+    /\/claim\/[^\s/?#]+/,
+  )?.[0];
+  expect(claimPath).toBeTruthy();
+
+  await seatRow.getByRole("button", { name: `Sign ${child}’s waiver` }).click();
+  await expect(page).toHaveURL(/\/waivers\//);
+  await expect(page.getByRole("heading", { name: "Parent or guardian" })).toBeVisible();
+  await expect(page.getByText(`${child} is under 18`)).toBeVisible();
+
+  // The child's own claim link says the same thing to whoever opens it.
+  await page.goto(claimPath ?? "/");
+  await expect(
+    page.getByText(diverText("seatClaim.minorNote", { seatName: child }), { exact: false }),
+  ).toBeVisible();
 });

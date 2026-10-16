@@ -34,6 +34,20 @@ describe("the dive-site catalog", () => {
     expect(thin).toEqual([]);
   });
 
+  it("says safety stop only at 5 m, never at the top of a wreck", () => {
+    // A safety stop is 5 m / 15 ft. The catalog once called the Duane's 18 m
+    // crow's nest "where the safety stop happens", which a feet shop's
+    // divemaster then read aloud as a stop at 60 ft.
+    const misplaced = DIVE_SITE_TEMPLATES.flatMap(({ slug, briefing }) =>
+      [briefing.divePlan, briefing.description, ...(briefing.landmarks ?? []).map((l) => l.note)]
+        .flatMap((text) => (text ?? "").split(/(?<=\.)\s/))
+        .filter((sentence) => /safety stop/i.test(sentence) && /\d\s?m\b/.test(sentence))
+        .filter((sentence) => !/\b5 m\b/.test(sentence))
+        .map((sentence) => `${slug}: ${sentence}`),
+    );
+    expect(misplaced).toEqual([]);
+  });
+
   it("places every site and states a depth that agrees with itself", () => {
     const problems = DIVE_SITE_TEMPLATES.flatMap(({ slug, briefing }) => {
       const found: string[] = [];

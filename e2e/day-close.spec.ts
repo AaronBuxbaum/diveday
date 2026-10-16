@@ -159,6 +159,9 @@ test.describe("the evening on the home", () => {
     await expect(page.getByRole("region", { name: "What today made" })).toHaveCount(0);
     // And nothing stands in its place saying a number is being withheld: that
     // would tell the crew precisely what the gate exists not to tell them.
-    await expect(page.getByText(/in tips/)).toHaveCount(0);
+    // The takings' own tips sentence is the one held back; the captain's line
+    // about tips on the boats they crewed ("Your boats earned …") is theirs to
+    // read, and the demo's history boats carry this captain.
+    await expect(page.getByText(/^And .+ in tips\.$/)).toHaveCount(0);
   });
 });
