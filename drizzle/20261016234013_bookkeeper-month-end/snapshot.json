@@ -1,14 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "72711259-846f-4d02-8c0a-b4671b0201e0",
+  "id": "7138bfb8-ccb8-48a8-a149-59864b895e6b",
   "prevIds": [
-    "3d7fc55a-3967-4f48-90a3-b52a48da3569",
-    "44c0586d-ddc3-4af2-9187-992a8cd1a59b",
-    "84c8ad31-e474-4673-8616-9645699fffb6",
-    "beef9192-ca63-4022-a83e-fe29194e9c8a",
-    "bfed0621-33d6-443d-b1b2-d5e4134f76a4",
-    "f2e1375f-33bf-46eb-93e2-dc9bd1706c13"
+    "6f685a75-c058-41f0-9e84-4992d0bbc5b4"
   ],
   "ddl": [
     {
@@ -303,6 +298,16 @@
         "feet"
       ],
       "name": "depth_unit",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "card",
+        "cash",
+        "card_and_cash"
+      ],
+      "name": "desk_payment",
       "entityType": "enums",
       "schema": "public"
     },
@@ -1501,6 +1506,12 @@
     },
     {
       "isRlsEnabled": false,
+      "name": "boat_snags",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
       "name": "booking_arrival_events",
       "entityType": "tables",
       "schema": "public"
@@ -1724,6 +1735,12 @@
     {
       "isRlsEnabled": false,
       "name": "inbound_messages",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "inbox_saved_answers",
       "entityType": "tables",
       "schema": "public"
     },
@@ -3929,6 +3946,19 @@
       "generated": null,
       "identity": null,
       "name": "token_sealed",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "booking_capabilities"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "delivered",
       "entityType": "columns",
       "schema": "public",
       "table": "booking_capabilities"
@@ -7197,6 +7227,19 @@
       "table": "shops"
     },
     {
+      "type": "desk_payment",
+      "typeSchema": "public",
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "desk_payment",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
       "type": "integer",
       "typeSchema": null,
       "notNull": true,
@@ -9017,6 +9060,19 @@
       "table": "courses"
     },
     {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "gear_included",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "courses"
+    },
+    {
       "type": "integer",
       "typeSchema": null,
       "notNull": true,
@@ -10133,6 +10189,214 @@
       "entityType": "columns",
       "schema": "public",
       "table": "lost_items"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "boat_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "checklist_item_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "noted_on_trip_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "note",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "noted_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "noted_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "still_there_on_trip_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "still_there_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "still_there_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "fixed_on_trip_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "fixed_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "fixed_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boat_snags"
     },
     {
       "type": "uuid",
@@ -15826,6 +16090,97 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
+      "table": "inbox_saved_answers"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbox_saved_answers"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "source_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbox_saved_answers"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "title",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbox_saved_answers"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "body",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbox_saved_answers"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "deleted_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbox_saved_answers"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbox_saved_answers"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
       "table": "last_minute_list_unsubscribe_tokens"
     },
     {
@@ -20667,6 +21022,19 @@
     {
       "type": "timestamp with time zone",
       "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shared_with_boat_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "recap_photos"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
       "default": "now()",
@@ -24014,6 +24382,19 @@
       "generated": null,
       "identity": null,
       "name": "anonymized_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "waiver_records"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "doctor_unlock_failures",
       "entityType": "columns",
       "schema": "public",
       "table": "waiver_records"
@@ -28534,6 +28915,132 @@
           "opclass": null
         },
         {
+          "value": "boat_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "noted_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": "\"fixed_at\" is null",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "boat_snags_shop_boat_open_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "noted_on_trip_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "boat_snags_noted_on_trip_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "noted_by_person_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "boat_snags_noted_by_person_id_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "still_there_by_person_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "boat_snags_still_there_by_person_id_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "fixed_by_person_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "boat_snags_fixed_by_person_id_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
           "value": "trip_id",
           "isExpression": false,
           "asc": true,
@@ -30832,6 +31339,62 @@
       "entityType": "indexes",
       "schema": "public",
       "table": "inbound_messages"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "created_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "inbox_saved_answers_shop_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "inbox_saved_answers"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "source_person_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "inbox_saved_answers_source_person_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "inbox_saved_answers"
     },
     {
       "nameExplicit": true,
@@ -37012,6 +37575,159 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
+      "name": "boat_snags_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "boat_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "boats",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "boat_snags_boat_id_boats_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "checklist_item_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "pre_departure_checklist_items",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "boat_snags_scbYNnLxsRZb_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "noted_on_trip_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "trips",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "boat_snags_noted_on_trip_id_trips_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "noted_by_person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "boat_snags_noted_by_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "still_there_on_trip_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "trips",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "boat_snags_still_there_on_trip_id_trips_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "still_there_by_person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "boat_snags_still_there_by_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "fixed_on_trip_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "trips",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "boat_snags_fixed_on_trip_id_trips_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "fixed_by_person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "boat_snags_fixed_by_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
       "name": "booking_arrival_events_shop_id_shops_id_fkey",
       "entityType": "fks",
       "schema": "public",
@@ -38648,6 +39364,40 @@
       "entityType": "fks",
       "schema": "public",
       "table": "inbound_messages"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "inbox_saved_answers_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "inbox_saved_answers"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "source_person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "inbox_saved_answers_source_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "inbox_saved_answers"
     },
     {
       "nameExplicit": false,
@@ -42045,6 +42795,16 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "boat_snags_pkey",
+      "schema": "public",
+      "table": "boat_snags",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "booking_arrival_events_pkey",
       "schema": "public",
       "table": "booking_arrival_events",
@@ -42408,6 +43168,16 @@
       "name": "inbound_messages_pkey",
       "schema": "public",
       "table": "inbound_messages",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "inbox_saved_answers_pkey",
+      "schema": "public",
+      "table": "inbox_saved_answers",
       "entityType": "pks"
     },
     {
@@ -43597,6 +44367,27 @@
       "entityType": "checks",
       "schema": "public",
       "table": "lost_items"
+    },
+    {
+      "value": "char_length(\"note\") between 1 and 280",
+      "name": "boat_snags_note_length",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "value": "(\"fixed_at\" is null) = (\"fixed_by_person_id\" is null)",
+      "name": "boat_snags_fixed_whole",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "boat_snags"
+    },
+    {
+      "value": "(\"still_there_at\" is null) = (\"still_there_by_person_id\" is null)",
+      "name": "boat_snags_still_there_whole",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "boat_snags"
     },
     {
       "value": "(\"booking_id\" is not null) <> (\"crew_person_id\" is not null)",
