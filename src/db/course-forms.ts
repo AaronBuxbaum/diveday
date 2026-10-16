@@ -791,6 +791,9 @@ async function enrollmentFor(
         eq(bookings.id, bookingId),
         eq(bookings.shopId, shopId),
         ne(bookings.status, "cancelled"),
+        // A snorkeler or a rider on a course session is not enrolled, and owes
+        // none of its forms (issue #2226).
+        eq(bookings.participantType, "diver"),
         eq(people.shopId, shopId),
         eq(trips.shopId, shopId),
         ne(trips.status, "cancelled"),
@@ -1370,6 +1373,7 @@ export async function courseUpcomingEnrollment(
       and(
         eq(bookings.shopId, shopId),
         ne(bookings.status, "cancelled"),
+        eq(bookings.participantType, "diver"),
         eq(trips.shopId, shopId),
         eq(trips.courseId, courseId),
         ne(trips.status, "cancelled"),

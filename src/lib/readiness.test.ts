@@ -312,6 +312,23 @@ describe("calculateReadiness", () => {
     expect(result.blockers).toContainEqual(expect.objectContaining({ code: "under_minimum_age" }));
   });
 
+  it("asks a course's minimum age of its students only, never a snorkeler or rider beside them (#2226)", () => {
+    for (const participantType of ["snorkeler", "rider"] as const) {
+      const result = calculateReadiness({
+        timezone: "UTC",
+        requirement,
+        waiver: signedWaiver,
+        certifications: [],
+        participantType,
+        courseMinimumAge: 15,
+        dateOfBirth: "2012-03-01",
+        courseDate: "2026-08-15",
+        now,
+      });
+      expect(result.blockers.map((b) => b.code)).not.toContain("under_minimum_age");
+    }
+  });
+
   it("fails open on a missing date of birth or minimum age (H-08, option B)", () => {
     for (const input of [
       { courseMinimumAge: 15, dateOfBirth: undefined, courseDate: "2026-08-15" },

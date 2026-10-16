@@ -44,9 +44,15 @@ trip-row lock, never as a pre-check.
   zero as settled. An unpriced seat stays blocked until staff record or waive payment, as a diver's
   would.
 - **Divers only where it is diving.** A buddy team takes divers only (`not_a_diver`). Nitrox is a
-  diver's (check constraint `bookings_nitrox_is_a_divers`). A course session takes divers only
-  (`participant_type_unavailable`), since recording a student as a rider to get aboard would falsify
-  the record the crew reads at the rail.
+  diver's (check constraint `bookings_nitrox_is_a_divers`). A course session's students are
+  divers: enrollment is a diver's seat, and recording a student as a rider to get aboard would
+  falsify the record the crew reads at the rail. Amended 2026-10-13 (issue #2226): a course
+  session also sells snorkeler and rider seats where the shop names a price for them, from either
+  door (an unpriced one is refused even to staff, `participant_type_unavailable`). Such a seat is a
+  passenger: it is asked none of the course's card, age, ratio or form gates, is never counted as
+  in training, gets no Certify, materials or next-step controls, and is sent no course words. A
+  type change on a course session never takes a student out of diving and never puts a passenger
+  into it; snorkeler and rider swap only at a priced type.
 - **Gear by type.** A rider gets no rental step, packing line or tank. A snorkeler is offered and
   packed surface kit only (mask and fins, wetsuit, hood and gloves, camera), with no tank and no fit
   to chase.

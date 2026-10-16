@@ -13,6 +13,7 @@ import {
   issueShopCertification,
   issueShopNitroxCertification,
   issueShopSpecialtyCertification,
+  seatIsDiver,
 } from "@/db/readiness";
 import { diveSpecialty } from "@/db/schema";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
@@ -77,6 +78,11 @@ export async function certifyDiverFromRosterAction(
   // the booking gate trusts. Refused before any writer is reached, for all
   // three kinds of card.
   if ((await courseCertifiesOnTrip(db, s.user.shopId, tripId)) === "not_a_certifying_course") {
+    revalidateAndRedirect(back, noticeUrl(back, "certify-failed", { bid: bookingId }));
+  }
+  // **A snorkeler or a rider on the session is not a student** (issue #2226).
+  // The row draws no Certify control for one; a forged post is refused too.
+  if (!(await seatIsDiver(db, s.user.shopId, bookingId))) {
     revalidateAndRedirect(back, noticeUrl(back, "certify-failed", { bid: bookingId }));
   }
   const issued = { shopId: s.user.shopId, personId, tripId, issuedByPersonId: s.user.personId };

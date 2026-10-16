@@ -55,7 +55,11 @@ function signed(form: RequiredCourseForm): CourseFormSignature {
   };
 }
 
-async function readinessWith(blocks: boolean, signatures: CourseFormSignature[]) {
+async function readinessWith(
+  blocks: boolean,
+  signatures: CourseFormSignature[],
+  participantType?: "diver" | "snorkeler" | "rider",
+) {
   vi.resetModules();
   vi.doMock("./course-forms", async (importOriginal) => ({
     ...(await importOriginal<typeof import("./course-forms")>()),
@@ -69,6 +73,7 @@ async function readinessWith(blocks: boolean, signatures: CourseFormSignature[])
     now,
     timezone: "America/New_York",
     dateOfBirth: "1990-01-01",
+    participantType,
     courseForms: {
       shopId: SHOP,
       bookingId: BOOKING,
@@ -95,6 +100,13 @@ describe("medical-screening course forms (#2337)", () => {
     expect(result.blockers).toEqual([
       { code: "course_form_unsigned", params: { formTitle: "Medical questionnaire" } },
     ]);
+  });
+
+  it("asks no course form of a snorkeler or rider on the session, medical or not (#2226)", async () => {
+    for (const type of ["snorkeler", "rider"] as const) {
+      const result = await readinessWith(true, [], type);
+      expect(result.blockers.filter((b) => b.code.startsWith("course_form_"))).toEqual([]);
+    }
   });
 
   it("with the switch off, signing the medical form clears it", async () => {

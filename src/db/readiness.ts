@@ -463,6 +463,25 @@ export async function courseCertifiesOnTrip(
   return row.isIntroCourse ? "not_a_certifying_course" : "certifies";
 }
 
+/**
+ * Whether this seat is a student's: a diver's seat (issue #2226). A snorkeler
+ * or a rider on a course session is a passenger, and the session's roster
+ * never certifies one.
+ */
+export async function seatIsDiver(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<boolean> {
+  if (!isUuid(bookingId)) return false;
+  const [row] = await db
+    .select({ participantType: bookings.participantType })
+    .from(bookings)
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .limit(1);
+  return row?.participantType === "diver";
+}
+
 export async function issueShopCertification(
   db: AppDb,
   input: NewShopIssuedCertification,

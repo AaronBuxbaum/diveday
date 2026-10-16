@@ -950,10 +950,13 @@
   the shop's waiver; a diver and a snorkeler are held to its medical, a rider never (H-109). Only a
   diver is asked for a certification, may request
   nitrox, goes on a buddy team, is packed tanks for, uses a dive package, or counts against the
-  departure's **diver seats**. A course session sells divers only. Staff change a booking's type
+  departure's **diver seats**. On a course session the divers are the enrolled students; a
+  snorkeler or rider seat sits beside them only where the shop has priced it, is asked none of the
+  course's gates or forms, and is never in training (issue #2226). Staff change a booking's type
   from the roster ("Coming as"): joining the dive runs the card check and needs "Change anyway" (an
-  owner, manager or instructor) to pass a missing card, nothing changes once the departure is home,
-  and joining is refused from the departure time on. See
+  owner, manager or instructor) to pass a missing card, also out on the water after departure
+  (issue #2225); nothing changes once the departure is home, and on a course session a student
+  never stops diving and a passenger never starts. See
   [ADR 20261007-participant-types](../../architecture/decisions/20261007-participant-types.md).
 - **Booked as** — the participant type a booking was made with (`bookings.booked_as`), set once by
   every writer and never changed. A seat whose type moved since shows a warning-tone

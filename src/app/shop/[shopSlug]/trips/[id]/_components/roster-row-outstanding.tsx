@@ -10,6 +10,7 @@ import { StatusMarkColumn } from "@/components/ui/StatusMark";
 import { STAFF_RE_ENTRY_KEYS } from "@/i18n/dive-intent-labels";
 import { COURSE_FORMS_BLOCK_BOARDING } from "@/lib/course-forms";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
+import { isDiver } from "@/lib/participant-types";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { CourseFormsRowControl } from "./CourseFormsRowControl";
 import { ElearningCheck } from "./ElearningCheck";
@@ -186,34 +187,38 @@ export function rowOutstanding(seat: RowOutstandingInput) {
         </>
       ) : null}
 
-      <SeatCourseControls
-        bookingId={booking.id}
-        personId={person.id}
-        t={t}
-        certifyDiverAction={certifyDiverAction}
-        certifyDefaultLevel={certifyDefaultLevel}
-        saveCourseNextStepAction={saveCourseNextStepAction}
-        nextStep={courseNextStepByBooking?.get(booking.id) ?? ""}
-        setCourseMaterialsDoneAction={setCourseMaterialsDoneAction}
-        materialsDoneLine={
-          materialsDone
-            ? materialsDone.byName
-              ? t("trips.roster.materialsDoneLineBy", {
-                  date: formatShortDate(materialsDone.at, locale, shopTimezone),
-                  name: materialsDone.byName,
-                })
-              : t("trips.roster.materialsDoneLine", {
-                  date: formatShortDate(materialsDone.at, locale, shopTimezone),
-                })
-            : null
-        }
-        certifyMaterialsNote={
-          courseHasMaterials && !materialsDone ? t("trips.roster.certifyMaterialsNote") : null
-        }
-      />
+      {/* A course's student is its diver: a snorkeler or a rider on the
+          session is not certified, nudged or ticked off (issue #2226). */}
+      {isDiver(booking.participantType) ? (
+        <SeatCourseControls
+          bookingId={booking.id}
+          personId={person.id}
+          t={t}
+          certifyDiverAction={certifyDiverAction}
+          certifyDefaultLevel={certifyDefaultLevel}
+          saveCourseNextStepAction={saveCourseNextStepAction}
+          nextStep={courseNextStepByBooking?.get(booking.id) ?? ""}
+          setCourseMaterialsDoneAction={setCourseMaterialsDoneAction}
+          materialsDoneLine={
+            materialsDone
+              ? materialsDone.byName
+                ? t("trips.roster.materialsDoneLineBy", {
+                    date: formatShortDate(materialsDone.at, locale, shopTimezone),
+                    name: materialsDone.byName,
+                  })
+                : t("trips.roster.materialsDoneLine", {
+                    date: formatShortDate(materialsDone.at, locale, shopTimezone),
+                  })
+              : null
+          }
+          certifyMaterialsNote={
+            courseHasMaterials && !materialsDone ? t("trips.roster.certifyMaterialsNote") : null
+          }
+        />
+      ) : null}
       {/* The materials tick, read off PADI's own eLearning page when the
           DiveDay browser extension is here (H-106). */}
-      {elearningCheckAction ? (
+      {elearningCheckAction && isDiver(booking.participantType) ? (
         <ElearningCheck
           query={elearningQueryByBooking?.get(booking.id) ?? null}
           bookingId={booking.id}

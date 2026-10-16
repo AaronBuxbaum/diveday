@@ -401,7 +401,7 @@ describe("the gates a non-diver is not asked to clear", () => {
     });
   });
 
-  it("refuses a snorkeler or a rider on a course session", async () => {
+  it("refuses an unpriced snorkeler or rider on a course session", async () => {
     const { db, shop, trip } = await benwood();
     const [course] = await db
       .insert(courses)

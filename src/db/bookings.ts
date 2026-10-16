@@ -926,8 +926,9 @@ async function createBookingRecord(
     .for("no key update", { of: trips });
   if (!tripTakesSeatFrom(trip, req.actor)) return { ok: false, reason: "trip_unavailable" };
   const participantType: ParticipantType = req.participantType ?? "diver";
-  // A course session takes divers only, and the public form sells only the
-  // types this departure prices, read on the locked row (`participantTypeRefusal`).
+  // The public form sells only the types this departure prices, and a course
+  // session takes a non-diver only at a price the shop named, read on the
+  // locked row (`participantTypeRefusal`).
   const typeRefusal = participantTypeRefusal({ actor: req.actor, participantType, trip });
   if (typeRefusal) return { ok: false, reason: typeRefusal };
 
@@ -957,7 +958,11 @@ async function createBookingRecord(
   let { person, identityUnconfirmed, identityClaim } = resolved;
   const { pendingInsert } = resolved;
 
-  if (course) {
+  // Enrollment is a diver's (issue #2226): a snorkeler or a rider on a course
+  // session is a passenger beside the students, asked none of the course's
+  // card or age gates and counted against none of its in-water ratio.
+  const student = Boolean(course) && isDiver(participantType);
+  if (course && student) {
     const refusal = await courseEnrollmentFor(tx, req, course, person, trip.startsAt);
     if (refusal) return { ok: false, reason: refusal };
   }
@@ -978,7 +983,6 @@ async function createBookingRecord(
   // capacity, but a copied, rolled, reinstated or pre-H-107 departure can
   // still carry one, and this is the one gate all of them reach.
   const held = await heldSeatCounts(tx, trip.shopId, trip.id);
-  const booked = held.aboard;
   const seatFull = seatRefusal(
     participantType,
     { ...trip, capacity: await sellableCapacity(tx, trip) },
@@ -987,7 +991,8 @@ async function createBookingRecord(
   if (seatFull) {
     return { ok: false, reason: seatFull };
   }
-  const ratioRefusal = courseRatioRefusal(booked, entryLevelSeatCap);
+  // The ratio counts students, who are the divers on a course session.
+  const ratioRefusal = student ? courseRatioRefusal(held.divers, entryLevelSeatCap) : null;
   if (ratioRefusal) return { ok: false, reason: ratioRefusal };
 
   // The trip's own cert/specialty/nitrox gate (DOM-M6). Every door that sells a
@@ -1687,7 +1692,6 @@ export async function restoreBooking(
     // 20261007-participant-types).
     // The boat's certificate caps it under the same lock (H-107).
     const held = await heldSeatCounts(tx, trip.shopId, trip.id);
-    const booked = held.aboard;
     const full = seatRefusal(
       booking.participantType,
       { ...trip, capacity: await sellableCapacity(tx, trip) },
@@ -1695,7 +1699,9 @@ export async function restoreBooking(
     );
     if (full) return full;
 
-    if (trip.courseId) {
+    // The ratio counts students, the divers on a course session; a snorkeler
+    // or a rider beside them is not one (issue #2226).
+    if (trip.courseId && isDiver(booking.participantType)) {
       const [course] = await tx
         .select()
         .from(courses)
@@ -1707,7 +1713,7 @@ export async function restoreBooking(
       // instructor caps at zero and refuses too: a seat cannot be handed back
       // to a session that could not sell it in the first place.
       const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
-      if (seatCap !== null && booked >= seatCap) return "course_ratio_full";
+      if (seatCap !== null && held.divers >= seatCap) return "course_ratio_full";
     }
 
     await tx
@@ -1949,7 +1955,15 @@ export async function moveBooking(
       held,
     );
     if (full) return { ok: false, reason: full };
-    if (target.courseId) {
+    // A snorkeler or a rider moves only to a session that prices their seat,
+    // and is asked none of the course's student gates (issue #2226).
+    const typeRefusal = participantTypeRefusal({
+      actor: "staff",
+      participantType: booking.participantType,
+      trip: target,
+    });
+    if (typeRefusal) return { ok: false, reason: "target_unavailable" };
+    if (target.courseId && isDiver(booking.participantType)) {
       const [course] = await tx
         .select()
         .from(courses)
@@ -1958,7 +1972,7 @@ export async function moveBooking(
       const { instructorCount, assistantCount } = await tripCourseCrewCounts(tx, target.id);
       if (instructorCount === 0) return { ok: false, reason: "course_unstaffed" };
       const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
-      if (seatCap !== null && held.aboard >= seatCap) {
+      if (seatCap !== null && held.divers >= seatCap) {
         return { ok: false, reason: "course_ratio_full" };
       }
       // The course's own two gates, read again rather than trusted from the
@@ -2163,7 +2177,11 @@ export type SetParticipantTypeOutcome =
          * the card check and, once boarded, the boarding gate (issue #2225).
          */
         | "trip_unavailable"
-        /** A course session seats divers only. */
+        /**
+         * A course session: a student cannot stop diving, a passenger cannot
+         * start, and a snorkeler or rider changes only to a type the session
+         * prices (issue #2226).
+         */
         | "participant_type_unavailable"
         /** Becoming a diver, and every diver's seat is taken. */
         | "divers_full"
@@ -2342,7 +2360,16 @@ async function changeParticipantType(
       return { ok: false, reason: "trip_unavailable" };
     }
     const atSea = now >= trip.startsAt;
-    if (trip.courseId && !isDiver(to)) {
+    // On a course session the divers are the students (issue #2226). A student
+    // never stops being one by a type change, and a passenger never becomes
+    // one: that would skip the course's card, age and ratio gates. Between
+    // snorkeling and riding, only at a price the shop named.
+    if (
+      trip.courseId &&
+      (isDiver(from) ||
+        isDiver(to) ||
+        participantTypeRefusal({ actor: "staff", participantType: to, trip }))
+    ) {
       return { ok: false, reason: "participant_type_unavailable" };
     }
     if (isDiver(from) && !isDiver(to)) {

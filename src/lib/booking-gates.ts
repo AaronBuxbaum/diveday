@@ -2,7 +2,7 @@ import type { Certification } from "@/db/schema";
 import { checkMinimumAge } from "./age";
 import type { CalendarDate } from "./calendar-date";
 import type { CertificationLevel } from "./certification-levels";
-import { isDiver, offeredParticipantTypes, type ParticipantType } from "./participant-types";
+import { offeredParticipantTypes, type ParticipantType } from "./participant-types";
 import { hasVerifiedCertificationAtLeast } from "./readiness";
 
 /**
@@ -21,24 +21,25 @@ export type BookingActor = "staff" | "public";
 /**
  * Whether this departure takes a seat of this type from this door.
  *
- * A course session is diving by definition: its admission rule, its ratio and
- * its minimum age are about the student in the water, so recording somebody
- * as a snorkeler or a rider to get them aboard would be a lie in the record the
- * crew reads at the rail. And the public form sells only what the departure
- * prices, read on the locked row rather than trusted from the form's parse: a
- * shop that cleared its rider price between page load and post has stopped
- * selling that seat. Staff may seat any type on an ordinary departure.
+ * The public form sells only what the departure prices, read on the locked row
+ * rather than trusted from the form's parse: a shop that cleared its rider
+ * price between page load and post has stopped selling that seat. Staff may
+ * seat any type on an ordinary departure.
+ *
+ * **A course session's students are divers** (issue #2226, ADR
+ * 20261007-participant-types): its admission rule, its ratio and its minimum
+ * age are about the student in the water. The snorkeling spouse on the Open
+ * Water boat is a separate seat the shop has priced, from either door; an
+ * unpriced one is refused even to staff, because on a course session that is
+ * how a student would be written aboard as a rider.
  */
 export function participantTypeRefusal(input: {
   actor: BookingActor;
   participantType: ParticipantType;
-  trip: Parameters<typeof offeredParticipantTypes>[0];
+  trip: Parameters<typeof offeredParticipantTypes>[0] & { courseId?: string | null };
 }): "participant_type_unavailable" | null {
-  if (input.trip.courseId && !isDiver(input.participantType)) {
-    return "participant_type_unavailable";
-  }
   if (
-    input.actor === "public" &&
+    (input.actor === "public" || input.trip.courseId) &&
     !offeredParticipantTypes(input.trip).includes(input.participantType)
   ) {
     return "participant_type_unavailable";

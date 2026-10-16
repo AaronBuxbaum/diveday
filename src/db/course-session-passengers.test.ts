@@ -1,0 +1,211 @@
+// @vitest-environment node
+import { and, eq } from "drizzle-orm";
+import { describe, expect, it } from "vitest";
+import { nowMs } from "@/lib/clock";
+import type { ParticipantType } from "@/lib/participant-types";
+import { fileScopedShopContext } from "@/test/db";
+import { createBooking, setBookingParticipantType } from "./bookings";
+import { listCourseSeatsInTraining } from "./certifications-in-training";
+import type { AppDb } from "./client";
+import { seatIsDiver } from "./readiness";
+import { bookings, courses } from "./schema";
+import { createTrip, listStaff, setTripCrew, setTripParticipantTerms } from "./trips";
+
+// One seeded database for the file and a rolled-back transaction per test.
+const ctx = fileScopedShopContext();
+
+/**
+ * **A course session's students are its divers; a priced snorkeler or rider
+ * may ride beside them** (issue #2226, Aaron 2026-10-13, ADR
+ * 20261007-participant-types as amended).
+ *
+ * Adversarial throughout: every test asks whether a non-diver seat is a way
+ * to get a student aboard without the course's gates, or a way for a
+ * passenger to count as someone in training.
+ */
+
+/** 200 days out: clear of the seeded instructor's calendar whatever the hour. */
+const OFFSET_MS = 200 * 24 * 60 * 60 * 1000;
+
+let seq = 0;
+
+async function session(db: AppDb, shopId: string, courseTitle: string) {
+  const [course] = await db
+    .select()
+    .from(courses)
+    .where(and(eq(courses.shopId, shopId), eq(courses.title, courseTitle)));
+  if (!course) throw new Error(`${courseTitle} missing`);
+  const staff = await listStaff(db, shopId);
+  const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+  if (!instructor) throw new Error("seeded instructor missing");
+  seq += 1;
+  const startsAt = nowMs() + OFFSET_MS + seq * 6 * 60 * 60 * 1000;
+  const trip = await createTrip(db, {
+    shopId,
+    courseId: course.id,
+    title: `${courseTitle} — passengers ${seq}`,
+    startsAt: new Date(startsAt),
+    endsAt: new Date(startsAt + 4 * 60 * 60 * 1000),
+    capacity: 12,
+    plannedDives: 2,
+  });
+  if (!trip) throw new Error("session not created");
+  if (!(await setTripCrew(db, shopId, trip.id, [instructor.person.id]))) {
+    throw new Error("instructor not assigned");
+  }
+  return { trip, course, staff: instructor.person };
+}
+
+async function seat(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  participantType: ParticipantType,
+  actor: "staff" | "public" = "staff",
+) {
+  seq += 1;
+  return createBooking(db, {
+    actor,
+    shopId,
+    tripId,
+    participantType,
+    fullName: `Passenger ${seq}`,
+    email: `passenger-${seq}@example.com`,
+  });
+}
+
+async function priceRiders(db: AppDb, shopId: string, tripId: string) {
+  expect(
+    await setTripParticipantTerms(db, shopId, tripId, {
+      snorkelerPriceCents: null,
+      riderPriceCents: 2_500,
+      diverCapacity: null,
+    }),
+  ).toEqual({ ok: true });
+}
+
+describe("a non-diver seat on a course session", () => {
+  it("is refused unpriced from either door, and books once the shop names a price", async () => {
+    const { db, shop } = ctx;
+    const { trip } = await session(db, shop.id, "Advanced Open Water Diver");
+    for (const actor of ["staff", "public"] as const) {
+      expect(await seat(db, shop.id, trip.id, "rider", actor)).toMatchObject({
+        ok: false,
+        reason: "participant_type_unavailable",
+      });
+    }
+    await priceRiders(db, shop.id, trip.id);
+    for (const actor of ["staff", "public"] as const) {
+      expect(await seat(db, shop.id, trip.id, "rider", actor)).toMatchObject({ ok: true });
+    }
+    // Still unpriced: the snorkeler's seat stays shut.
+    expect(await seat(db, shop.id, trip.id, "snorkeler")).toMatchObject({
+      ok: false,
+      reason: "participant_type_unavailable",
+    });
+  });
+
+  it("asks the rider none of the course's card gate, and still asks every student", async () => {
+    const { db, shop } = ctx;
+    // Advanced asks for an Open Water card the walk-in does not have.
+    const { trip } = await session(db, shop.id, "Advanced Open Water Diver");
+    await priceRiders(db, shop.id, trip.id);
+    expect(await seat(db, shop.id, trip.id, "diver")).toMatchObject({
+      ok: false,
+      reason: "course_prerequisite",
+    });
+    expect(await seat(db, shop.id, trip.id, "rider")).toMatchObject({ ok: true });
+  });
+
+  it("counts against the boat and never against the students' ratio", async () => {
+    const { db, shop } = ctx;
+    // An intro session on one instructor: the ratio caps the students.
+    const { trip } = await session(db, shop.id, "Discover Scuba Diving");
+    await priceRiders(db, shop.id, trip.id);
+    let students = 0;
+    for (;;) {
+      const outcome = await seat(db, shop.id, trip.id, "diver");
+      if (!outcome.ok) {
+        expect(outcome).toMatchObject({ reason: "course_ratio_full" });
+        break;
+      }
+      students += 1;
+      if (students > 12) throw new Error("ratio never bound");
+    }
+    expect(students).toBeGreaterThan(0);
+    expect(await seat(db, shop.id, trip.id, "rider")).toMatchObject({ ok: true });
+    // And the rider did not take a student's place.
+    expect(await seat(db, shop.id, trip.id, "diver")).toMatchObject({
+      ok: false,
+      reason: "course_ratio_full",
+    });
+  });
+
+  it("is never in training for the level the course certifies", async () => {
+    const { db, shop } = ctx;
+    const { trip } = await session(db, shop.id, "Open Water Diver");
+    await priceRiders(db, shop.id, trip.id);
+    const rider = await seat(db, shop.id, trip.id, "rider");
+    const student = await seat(db, shop.id, trip.id, "diver");
+    if (!rider.ok || !student.ok) throw new Error("setup failed");
+    const ids = await db
+      .select({ id: bookings.id, personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.tripId, trip.id));
+    const personOf = (bookingId: string) => ids.find((row) => row.id === bookingId)?.personId;
+    const riderPerson = personOf(rider.bookingId);
+    const studentPerson = personOf(student.bookingId);
+    if (!riderPerson || !studentPerson) throw new Error("people missing");
+
+    const seats = await listCourseSeatsInTraining(db, shop.id, [riderPerson, studentPerson]);
+    expect(seats.map((row) => row.personId)).toEqual([studentPerson]);
+    expect(await seatIsDiver(db, shop.id, rider.bookingId)).toBe(false);
+    expect(await seatIsDiver(db, shop.id, student.bookingId)).toBe(true);
+  });
+});
+
+describe("a type change on a course session", () => {
+  it("never takes a student out of the water, nor puts a passenger in it", async () => {
+    const { db, shop } = ctx;
+    const { trip, staff } = await session(db, shop.id, "Open Water Diver");
+    await priceRiders(db, shop.id, trip.id);
+    const ids = { shopId: shop.id, tripId: trip.id, actorPersonId: staff.id };
+    const student = await seat(db, shop.id, trip.id, "diver");
+    const rider = await seat(db, shop.id, trip.id, "rider");
+    if (!student.ok || !rider.ok) throw new Error("setup failed");
+
+    expect(
+      await setBookingParticipantType(db, { ...ids, bookingId: student.bookingId, to: "rider" }),
+    ).toMatchObject({ ok: false, reason: "participant_type_unavailable" });
+    // "Change anyway" is a card override; it is no way around enrollment.
+    expect(
+      await setBookingParticipantType(db, {
+        ...ids,
+        bookingId: rider.bookingId,
+        to: "diver",
+        confirmCertBlock: true,
+      }),
+    ).toMatchObject({ ok: false, reason: "participant_type_unavailable" });
+  });
+
+  it("moves a rider to snorkeling only once the session prices it", async () => {
+    const { db, shop } = ctx;
+    const { trip, staff } = await session(db, shop.id, "Open Water Diver");
+    await priceRiders(db, shop.id, trip.id);
+    const ids = { shopId: shop.id, tripId: trip.id, actorPersonId: staff.id };
+    const rider = await seat(db, shop.id, trip.id, "rider");
+    if (!rider.ok) throw new Error("setup failed");
+
+    expect(
+      await setBookingParticipantType(db, { ...ids, bookingId: rider.bookingId, to: "snorkeler" }),
+    ).toMatchObject({ ok: false, reason: "participant_type_unavailable" });
+    await setTripParticipantTerms(db, shop.id, trip.id, {
+      snorkelerPriceCents: 4_000,
+      riderPriceCents: 2_500,
+      diverCapacity: null,
+    });
+    expect(
+      await setBookingParticipantType(db, { ...ids, bookingId: rider.bookingId, to: "snorkeler" }),
+    ).toMatchObject({ ok: true, changed: true });
+  });
+});

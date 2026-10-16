@@ -1,7 +1,7 @@
 {
   "notices": {
     "diversFull": "Every diver’s seat on this boat is taken. There’s still room for a snorkeler or a rider.",
-    "typeUnavailable": "A course session only takes divers.",
+    "typeUnavailable": "On a course session, students stay divers and nobody else becomes one. Snorkelers and riders need a price on the session.",
     "restoreDiversFull": "Couldn’t undo. Every diver’s seat has been taken since.",
     "noShowDiversFull": "Couldn’t put them back. Every diver’s seat has been taken since.",
     "typeSet": "Saved.",

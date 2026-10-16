@@ -958,7 +958,10 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // under-age student is under-age whether or not anyone has configured the
   // trip's cert gates yet. Measured on the day the course runs, matching the
   // booking gate (src/db/bookings.ts).
-  if (input.courseDate) {
+  // A course's student is its diver: a snorkeler or a rider beside them is
+  // asked neither the course's age nor its forms (issue #2226).
+  const student = isDiver(input.participantType);
+  if (input.courseDate && student) {
     const age = checkMinimumAge(input.dateOfBirth, input.courseMinimumAge, input.courseDate);
     if (age.status === "under") {
       blockers.push({
@@ -1033,7 +1036,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // lists a form has said, on its own, that every student signs it. Behind one
   // switch until the owner rules on block-or-warn (ADR 20261008-course-forms);
   // a form marked medical screening blocks whatever the switch says (#2337).
-  if (input.courseForms) {
+  if (input.courseForms && student) {
     for (const { form, gap } of courseFormGaps({
       ...input.courseForms,
       signer: {

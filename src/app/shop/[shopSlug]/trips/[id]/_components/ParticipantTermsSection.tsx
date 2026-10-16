@@ -134,7 +134,8 @@ export function ParticipantTermsSection({
 
 /**
  * The Details tab's "Snorkelers and riders" row (ADR 20261007-participant-types),
- * or no row at all on a course session, which seats divers only. Built here so
+ * a course session's too: its students are divers, and a priced snorkeler or
+ * rider seat sits beside them (issue #2226). Built here so
  * the route stays a list of rows; the editor is offered only to who may
  * configure the departure, and the action re-checks.
  */
@@ -153,7 +154,6 @@ export function participantTermsRows({
   canConfigure: boolean;
   shopSlug: string;
 }): TripAboutRow[] {
-  if (trip.course) return [];
   const t = staffTranslator(locale);
   const currency = toShopCurrency(shop.currency);
   const status = noticeForForm(tripNotice, "participant-terms");
