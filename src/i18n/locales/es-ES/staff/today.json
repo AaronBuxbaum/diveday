@@ -174,7 +174,7 @@
     "noRollCall": "Sin recuento registrado para {total, plural, one {# persona} other {# personas}}.",
     "boatWork": "{work}.",
     "missingFitNamed": "Le faltan tallas de alquiler.",
-    "ungatedNitroxNamed": "Quiere nitrox, sin certificación verificada.",
+    "ungatedNitroxNamed": "Quiere nitrox, recibe aire a menos que se verifique una certificación antes de que salga el barco.",
     "highWindAlert": "Previsión de viento de {speed} nudos{hasDirection, select, yes { del {direction}} other {}}{hasGusts, select, yes {, rachas de {gusts} nudos} other {}}.",
     "instructorMissing": "Sin instructor asignado.",
     "uncrewedCourse": "{divers, plural, one {# buceador reservado} other {# buceadores reservados}}, sin instructor.",

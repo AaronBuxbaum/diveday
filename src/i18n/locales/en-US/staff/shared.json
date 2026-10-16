@@ -596,7 +596,7 @@
   },
   "boatWork": {
     "missingSizes": "{count, plural, one {# person} other {# people}} missing rental sizes",
-    "ungatedNitrox": "{count, plural, one {# diver wants} other {# divers want}} nitrox with no verified card",
+    "ungatedNitrox": "{count, plural, one {# diver wants nitrox and gets air} other {# divers want nitrox and get air}} unless a card is verified before the boat leaves",
     "missingContact": "{count, plural, one {# person has} other {# people have}} no emergency contact",
     "openOrders": "{count, plural, one {# order} other {# orders}} awaiting payment"
   },

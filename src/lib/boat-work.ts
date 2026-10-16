@@ -1,3 +1,4 @@
+import { isDiver, type ParticipantType } from "./participant-types";
 import { urgencyFor } from "./today";
 
 /**
@@ -53,4 +54,20 @@ export function boatWorkItems(
     { code: "open_orders", count: counts.openOrders, tone: "work" },
   ];
   return items.filter((item) => item.count > 0);
+}
+
+/**
+ * **Whether a seat counts as nitrox asked for with no card that authorizes a
+ * fill** (issue #2549): a diver who wants nitrox and holds no verified card.
+ * Only a diver breathes a tank, so a snorkeler or a rider never counts, whatever
+ * their flag says (the database refuses the flag on them, and this holds the
+ * line if a row ever carried it). `hasFillCard` is the fill gate's own answer,
+ * `authorizesNitroxFill`.
+ */
+export function seatUngatedNitrox(seat: {
+  participantType: ParticipantType | null | undefined;
+  wantsNitrox: boolean;
+  hasFillCard: boolean;
+}): boolean {
+  return isDiver(seat.participantType) && seat.wantsNitrox && !seat.hasFillCard;
 }

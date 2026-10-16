@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boatWorkItems } from "./boat-work";
+import { boatWorkItems, seatUngatedNitrox } from "./boat-work";
 
 const now = new Date("2026-10-13T12:00:00Z");
 const tonight = new Date("2026-10-14T03:30:00Z");
@@ -52,5 +52,29 @@ describe("boatWorkItems", () => {
         "ungated_nitrox",
       ]);
     }
+  });
+});
+
+describe("seatUngatedNitrox", () => {
+  const asked = { wantsNitrox: true, hasFillCard: false };
+
+  it("counts a diver who wants nitrox with no card that authorizes a fill", () => {
+    expect(seatUngatedNitrox({ participantType: "diver", ...asked })).toBe(true);
+    expect(seatUngatedNitrox({ participantType: null, ...asked })).toBe(true);
+    expect(seatUngatedNitrox({ participantType: undefined, ...asked })).toBe(true);
+  });
+
+  it("never counts a snorkeler or a rider, whatever their flag says", () => {
+    expect(seatUngatedNitrox({ participantType: "snorkeler", ...asked })).toBe(false);
+    expect(seatUngatedNitrox({ participantType: "rider", ...asked })).toBe(false);
+  });
+
+  it("does not count a diver with a card, or one who never asked", () => {
+    expect(seatUngatedNitrox({ participantType: "diver", ...asked, hasFillCard: true })).toBe(
+      false,
+    );
+    expect(seatUngatedNitrox({ participantType: "diver", ...asked, wantsNitrox: false })).toBe(
+      false,
+    );
   });
 });

@@ -174,7 +174,7 @@
     "noRollCall": "No roll call recorded for {total, plural, one {# person} other {# people}}.",
     "boatWork": "{work}.",
     "missingFitNamed": "Missing rental sizes.",
-    "ungatedNitroxNamed": "Wants nitrox, no verified card.",
+    "ungatedNitroxNamed": "Wants nitrox, gets air unless a card is verified before the boat leaves.",
     "highWindAlert": "Forecast {speed} kt wind{hasDirection, select, yes { from {direction}} other {}}{hasGusts, select, yes {, gusts {gusts} kt} other {}}.",
     "instructorMissing": "No instructor assigned.",
     "uncrewedCourse": "{divers, plural, one {# diver} other {# divers}} booked, no instructor.",
