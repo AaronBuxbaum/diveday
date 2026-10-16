@@ -334,7 +334,19 @@ function OfflineDiverRow({
                 #1690). Either signal withholds: the saved flag, or
                 the identity blocker on the row, failing closed. */}
               {withheld ? (
-                <p className="text-muted">{t("manifest.identityWithheldDetails")}</p>
+                <>
+                  <p className="text-muted">{t("manifest.identityWithheldDetails")}</p>
+                  {/* The desk's contact for the person on the seat (issue
+                    #2145), saved in place of the matched record's. */}
+                  {diver.emergencyContactName && diver.emergencyContactPhone ? (
+                    <p>
+                      <span className="font-bold">{t("manifest.heldEmergencyContactLabel")}</span>
+                      <span className="mt-0.5 block text-muted">
+                        {`${diver.emergencyContactName} · ${diver.emergencyContactPhone}`}
+                      </span>
+                    </p>
+                  ) : null}
+                </>
               ) : (
                 <>
                   <p>

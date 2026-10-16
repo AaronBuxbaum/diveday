@@ -119,10 +119,17 @@ export function bookingIdentityColumns(
   identityUnconfirmedAt: Date | null;
   identityBookedAs: string | null;
   identityMatchedBy: IdentityClaim["matchedBy"] | null;
+  heldEmergencyContactName: null;
+  heldEmergencyContactPhone: null;
 } {
   return {
     identityUnconfirmedAt: identityUnconfirmed ? now : null,
     identityBookedAs: identityUnconfirmed ? (claim?.bookedAs ?? null) : null,
     identityMatchedBy: identityUnconfirmed ? (claim?.matchedBy ?? null) : null,
+    // A seat (re)written starts with no desk-recorded contact of its own
+    // (issue #2145): one from an earlier hold on a reactivated row was about
+    // whoever stood at the counter then.
+    heldEmergencyContactName: null,
+    heldEmergencyContactPhone: null,
   };
 }

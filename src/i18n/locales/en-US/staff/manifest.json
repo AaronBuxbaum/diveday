@@ -108,6 +108,7 @@
   "age": "Age {age}",
   "minorAge": "Minor · age {age}",
   "emergencyContactLabel": "Emergency contact",
+  "heldEmergencyContactLabel": "Emergency contact, from the desk",
   "crewClashDetail": "Also rostered on {departures} at these hours.",
   "crewClashConfirm": "{count, plural, one {# of the crew is also rostered on another boat at these hours.} other {# of the crew are also rostered on other boats at these hours.}} Confirm who sails.",
   "notOnFile": "Not on file",

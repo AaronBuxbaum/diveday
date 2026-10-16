@@ -523,6 +523,7 @@
     "editPickup": "Edit pickup",
     "emergencyContactEdit": "Edit emergency contact",
     "emergencyContactHeading": "Emergency contact",
+    "heldEmergencyContactHeading": "Emergency contact for the person on this seat",
     "emergencyContactMissing": "Not on file",
     "emergencyContactNameLabel": "Contact name",
     "emergencyContactOnFile": "{name} · {phone}",

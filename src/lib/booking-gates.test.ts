@@ -133,12 +133,20 @@ describe("bookingIdentityColumns", () => {
       identityUnconfirmedAt: now,
       identityBookedAs: "Sam Reef",
       identityMatchedBy: "shared_email",
+      heldEmergencyContactName: null,
+      heldEmergencyContactPhone: null,
     });
   });
 
   it("clears every column for a confirmed match, whatever claim rode along", () => {
     expect(
       bookingIdentityColumns(false, { bookedAs: "Sam Reef", matchedBy: "picked_name" }, now),
-    ).toEqual({ identityUnconfirmedAt: null, identityBookedAs: null, identityMatchedBy: null });
+    ).toEqual({
+      identityUnconfirmedAt: null,
+      identityBookedAs: null,
+      identityMatchedBy: null,
+      heldEmergencyContactName: null,
+      heldEmergencyContactPhone: null,
+    });
   });
 });

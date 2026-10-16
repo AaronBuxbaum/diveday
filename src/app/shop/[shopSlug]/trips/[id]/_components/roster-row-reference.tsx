@@ -43,7 +43,7 @@ export type RowReferenceInput = Pick<
   | "depthText"
   | "depthShared"
 > &
-  Pick<RowNotices, "emergencyContactBlock">;
+  Pick<RowNotices, "emergencyContactBlock" | "heldEmergencyContactBlock">;
 
 export function rowReference(seat: RowReferenceInput) {
   const {
@@ -73,6 +73,7 @@ export function rowReference(seat: RowReferenceInput) {
     depthText,
     depthShared,
     emergencyContactBlock,
+    heldEmergencyContactBlock,
   } = seat;
   const reference = (
     <>
@@ -162,7 +163,7 @@ export function rowReference(seat: RowReferenceInput) {
         {/* A contact already on file: a fact about the seat, which is what
             this panel is for. Only this state appears here — a missing one
             is a reason line under the name (principle 9). */}
-        {showsPersonDetail ? emergencyContactBlock : null}
+        {showsPersonDetail ? emergencyContactBlock : heldEmergencyContactBlock}
 
         {/* The full per-diver list, only when the reason lines compressed
             part of it into a count. */}

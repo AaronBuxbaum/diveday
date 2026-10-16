@@ -303,6 +303,18 @@ export const bookings = pgTable(
     /** Why the flag was raised — see {@link identityMatchKind}. Set and cleared with it. */
     identityMatchedBy: identityMatchKind("identity_matched_by"),
     /**
+     * **An emergency contact for the person on a held seat** (issue #2145,
+     * Aaron 2026-10-13, option b). While `identity_unconfirmed_at` is set the
+     * matched record's contact is withheld from the manifest, its sheet and the
+     * crew phone's copy, because it is somebody else's next of kin; the desk
+     * writes the contact for the person in front of them here instead, never on
+     * the matched record. Read only while the seat is held, in place of the
+     * withheld one; copied onto the new record at a split and cleared there and
+     * at a confirm. A pair or nothing (`bookings_held_emergency_contact_pair`).
+     */
+    heldEmergencyContactName: text("held_emergency_contact_name"),
+    heldEmergencyContactPhone: text("held_emergency_contact_phone"),
+    /**
      * **A reschedule notice this seat was skipped for** (#2445). While
      * `identity_unconfirmed_at` is set the reschedule notice does not go (the
      * address may be somebody else's), and nothing re-sends it when staff
@@ -461,6 +473,12 @@ export const bookings = pgTable(
       "bookings_course_next_step_bounded",
       sql`${table.courseNextStep} is null
         or (length(btrim(${table.courseNextStep})) > 0 and length(${table.courseNextStep}) <= 280)`,
+    ),
+    // A name nobody can ring, or a number with nobody to ask for, is not a
+    // contact the crew can use (`readEmergencyContact`'s rule, held here too).
+    check(
+      "bookings_held_emergency_contact_pair",
+      sql`(${table.heldEmergencyContactName} is null) = (${table.heldEmergencyContactPhone} is null)`,
     ),
     // A tick nobody is recorded as having made is not one the roster may show.
     check(

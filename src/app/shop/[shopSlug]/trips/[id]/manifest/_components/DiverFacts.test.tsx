@@ -262,9 +262,15 @@ describe("DiverFacts, drawn on its own", () => {
   });
 
   it("says a held seat's facts wait for confirmation instead of naming anybody's", () => {
+    // As `withholdHeldSeatParticulars` hands it over: the matched record's
+    // contact already cleared.
     render(
       <DiverFacts
-        diver={diver({ identityWithheld: true })}
+        diver={diver({
+          identityWithheld: true,
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+        })}
         locale="en-US"
         timezone="America/New_York"
         columns={2}
@@ -273,5 +279,24 @@ describe("DiverFacts, drawn on its own", () => {
     );
     expect(screen.getByText(t("manifest.identityWithheldDetails"))).toBeInTheDocument();
     expect(screen.queryByText(/Asha Iyer/)).toBeNull();
+  });
+
+  it("prints the contact the desk recorded for a held seat, on paper too (#2145)", () => {
+    render(
+      <DiverFacts
+        diver={diver({
+          identityWithheld: true,
+          emergencyContactName: "Rosa Vega",
+          emergencyContactPhone: "+34 600 333 444",
+        })}
+        locale="en-US"
+        timezone="America/New_York"
+        columns={2}
+        t={t}
+      />,
+    );
+    expect(screen.getByText(t("manifest.heldEmergencyContactLabel"))).toBeInTheDocument();
+    expect(screen.getByText(/Rosa Vega/)).toBeInTheDocument();
+    expect(screen.getByText(t("manifest.identityWithheldDetails"))).toBeInTheDocument();
   });
 });

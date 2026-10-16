@@ -156,7 +156,17 @@ export type ManifestDiverInput = {
    * (`identityReasonText`) rather than say "might be someone else" with
    * nothing to compare. Absent on a seat that was never held.
    */
-  identityClaim?: { bookedAs: string | null; matchedBy: IdentityMatchKind | null };
+  identityClaim?: {
+    bookedAs: string | null;
+    matchedBy: IdentityMatchKind | null;
+    /**
+     * The emergency contact the desk recorded for the person on this held seat
+     * (`bookings.held_emergency_contact_*`, issue #2145), which
+     * `withholdHeldSeatParticulars` shows in place of the matched record's.
+     * Null when none was recorded; absent on a manifest built by hand.
+     */
+    heldEmergencyContact?: { name: string; phone: string } | null;
+  };
   /**
    * Set only by `withholdHeldSeatParticulars` (`src/lib/held-seat.ts`): this
    * row is a held seat and the matched person's particulars were cleared, so a

@@ -523,6 +523,7 @@
     "editPickup": "Editar recogida",
     "emergencyContactEdit": "Editar contacto de emergencia",
     "emergencyContactHeading": "Contacto de emergencia",
+    "heldEmergencyContactHeading": "Contacto de emergencia de quien ocupa esta plaza",
     "emergencyContactMissing": "Sin registrar",
     "emergencyContactNameLabel": "Nombre del contacto",
     "emergencyContactOnFile": "{name} · {phone}",

@@ -1117,6 +1117,10 @@ async function scrubBookingRows(
         // The name a held seat was booked under (H-13) is somebody's name, and
         // after an erasure no one is left to ask whether it was them.
         identityBookedAs: null,
+        // The contact the desk recorded for the person on a held seat (issue
+        // #2145) names somebody and their number.
+        heldEmergencyContactName: null,
+        heldEmergencyContactPhone: null,
       })
       .where(inArray(bookings.id, bookingIds));
 

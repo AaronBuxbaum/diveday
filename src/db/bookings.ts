@@ -3170,7 +3170,16 @@ export async function confirmBookingIdentity(
   const booking = await db.transaction(async (tx) => {
     const [row] = await tx
       .update(bookings)
-      .set({ identityUnconfirmedAt: null, identityBookedAs: null, identityMatchedBy: null })
+      // The held seat's own contact (issue #2145) was only ever read while it
+      // was held; the confirmed record's contact stands now, and the desk's
+      // note of it is not copied onto that record.
+      .set({
+        identityUnconfirmedAt: null,
+        identityBookedAs: null,
+        identityMatchedBy: null,
+        heldEmergencyContactName: null,
+        heldEmergencyContactPhone: null,
+      })
       .where(
         and(
           eq(bookings.id, input.bookingId),
@@ -3476,6 +3485,8 @@ export async function splitBookingIdentity(
           tripId: bookings.tripId,
           personId: bookings.personId,
           bookedAs: bookings.identityBookedAs,
+          heldContactName: bookings.heldEmergencyContactName,
+          heldContactPhone: bookings.heldEmergencyContactPhone,
         })
         .from(bookings)
         .where(
@@ -3600,6 +3611,10 @@ export async function splitBookingIdentity(
           ...(dateOfBirth
             ? {}
             : { adultAttestedAt: now, adultAttestedByPersonId: input.actorPersonId }),
+          // The contact the desk recorded for the person on this seat while
+          // it was held (issue #2145) is theirs: it goes onto their record.
+          emergencyContactName: booking.heldContactName,
+          emergencyContactPhone: booking.heldContactPhone,
         })
         .returning({ id: people.id });
       if (!person) throw new Error("splitBookingIdentity: person insert returned no row");
@@ -3611,6 +3626,8 @@ export async function splitBookingIdentity(
           identityUnconfirmedAt: null,
           identityBookedAs: null,
           identityMatchedBy: null,
+          heldEmergencyContactName: null,
+          heldEmergencyContactPhone: null,
         })
         .where(and(inArray(bookings.id, seatIds), eq(bookings.shopId, input.shopId)));
 

@@ -19,8 +19,9 @@ import type { TripManifest } from "./manifests";
  * correct, so the printed sheet withholds as well, and says so in words.
  *
  * What stays is the **seat**: its name, its readiness word, its roll-call
- * mark, its check-in and desk release, its buddy team, its pickup, and the
- * blockers that belong to the seat (the identity question and its payment).
+ * mark, its check-in and desk release, its buddy team, its pickup, the
+ * emergency contact the desk recorded on the seat itself (issue #2145), and
+ * the blockers that belong to the seat (the identity question and its payment).
  * A seat that cannot board has to appear and has to say so. What waits is the
  * **person**: contact, age and minor status, birthday, welcome word, rental
  * sizes and nitrox, the medical mark, the depth advisory measured against the
@@ -122,8 +123,10 @@ export function withholdHeldSeatParticulars(diver: ManifestDiver): ManifestDiver
     identityWithheld: true,
     moreHoldsBehindConfirmation: dropped > 0,
     email: null,
-    emergencyContactName: null,
-    emergencyContactPhone: null,
+    // The matched record's next of kin never; the one the desk recorded for
+    // the person on this seat (issue #2145) stands in its place.
+    emergencyContactName: diver.identityClaim?.heldEmergencyContact?.name ?? null,
+    emergencyContactPhone: diver.identityClaim?.heldEmergencyContact?.phone ?? null,
     rentalFit: { state: "not_recorded" },
     nitroxRequested: false,
     age: null,
