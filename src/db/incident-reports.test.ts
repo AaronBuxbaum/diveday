@@ -72,6 +72,21 @@ async function fixture(db: AppDb, shopId: string) {
   return { trip, seat, owner, crew, ashore };
 }
 
+/** How many unfiled drafts one writer holds on one departure. */
+async function draftsBy(db: AppDb, tripId: string, personId: string): Promise<number> {
+  const rows = await db
+    .select({ id: incidentReports.id })
+    .from(incidentReports)
+    .where(
+      and(
+        eq(incidentReports.tripId, tripId),
+        eq(incidentReports.createdByPersonId, personId),
+        eq(incidentReports.status, "draft"),
+      ),
+    );
+  return rows.length;
+}
+
 describe("starting a report", () => {
   it("lets the departure's crew and the owner start one, and nobody else", async () => {
     const { db, shop } = ctx;
@@ -89,6 +104,55 @@ describe("starting a report", () => {
         actorPersonId: ashore.id,
       }),
     ).toEqual({ ok: false, reason: "not_allowed" });
+  });
+
+  it("opens the writer's own unfiled draft on a second tap rather than starting another", async () => {
+    const { db, shop } = ctx;
+    const { trip, crew } = await fixture(db, shop.id);
+    const input = { shopId: shop.id, tripId: trip.id, actorPersonId: crew.id };
+    const first = await startIncidentReport(db, input);
+    const second = await startIncidentReport(db, input);
+    expect(first).toMatchObject({ ok: true, reused: false });
+    expect(second).toMatchObject({ ok: true, reused: true });
+    if (!first.ok || !second.ok) throw new Error("expected drafts");
+    expect(second.reportId).toBe(first.reportId);
+    expect(await draftsBy(db, trip.id, crew.id)).toBe(1);
+  });
+
+  it("never hands one writer somebody else's draft", async () => {
+    const { db, shop } = ctx;
+    const { trip, crew, owner } = await fixture(db, shop.id);
+    const crews = await startIncidentReport(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      actorPersonId: crew.id,
+    });
+    // The owner may read the crew's draft, and still gets one of their own:
+    // reuse is the writer's own draft, never the departure's.
+    const owners = await startIncidentReport(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      actorPersonId: owner.id,
+    });
+    if (!crews.ok || !owners.ok) throw new Error("expected drafts");
+    expect(owners.reportId).not.toBe(crews.reportId);
+    expect(owners.reused).toBe(false);
+  });
+
+  it("starts a fresh draft once the writer's last one is filed", async () => {
+    const { db, shop } = ctx;
+    const { trip, crew } = await fixture(db, shop.id);
+    const input = { shopId: shop.id, tripId: trip.id, actorPersonId: crew.id };
+    const first = await startIncidentReport(db, input);
+    if (!first.ok) throw new Error("expected a draft");
+    await saveIncidentDraft(db, { ...input, reportId: first.reportId, fields: complete });
+    expect(await fileIncidentReport(db, { ...input, reportId: first.reportId })).toEqual({
+      ok: true,
+    });
+    const next = await startIncidentReport(db, input);
+    expect(next).toMatchObject({ ok: true, reused: false });
+    if (!next.ok) throw new Error("expected a draft");
+    expect(next.reportId).not.toBe(first.reportId);
   });
 
   it("refuses another shop's departure as if it did not exist", async () => {

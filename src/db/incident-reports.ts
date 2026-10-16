@@ -95,29 +95,77 @@ export type IncidentWriteRefusal =
   | "blank"
   | "too_long";
 
-/** Start a draft on a departure. */
+type StartedDraft =
+  | { ok: true; reportId: string; reused: boolean }
+  | { ok: false; reason: IncidentWriteRefusal };
+
+/**
+ * Start a draft on a departure, or open the one this person already has.
+ *
+ * **One unfiled draft per writer per departure** (safety sheet 2026-10-15,
+ * item 3): a second tap of "Report an incident" (a slow phone at the dock, a
+ * double tap) used to insert a second empty draft into the list the owner and
+ * the insurer read. Now it answers with the writer's oldest unfiled draft on
+ * that departure. Somebody else's draft is never handed over: it is not this
+ * writer's to read (`mayReadIncidentReport`), so reuse cannot widen who sees
+ * what. Once filed, the next tap starts a new draft.
+ *
+ * Race-safe by a transaction-scoped advisory lock on (departure, writer):
+ * two taps arriving together queue, and the second reads the draft the first
+ * committed (`incident-reports.postgres.test.ts`). A hash collision only
+ * serializes two unrelated starts for a moment.
+ */
 export async function startIncidentReport(
   db: AppDb,
   input: { shopId: string; tripId: string; actorPersonId: string },
-): Promise<{ ok: true; reportId: string } | { ok: false; reason: IncidentWriteRefusal }> {
-  const [trip] = await db
+): Promise<StartedDraft> {
+  return db.transaction((tx) => openOwnDraft(tx, input));
+}
+
+/** `startIncidentReport`'s body, inside the caller's transaction. */
+async function openOwnDraft(
+  tx: DbExecutor,
+  input: { shopId: string; tripId: string; actorPersonId: string },
+): Promise<StartedDraft> {
+  const [trip] = await tx
     .select({ id: trips.id })
     .from(trips)
     .where(and(liveTrip(), eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)))
     .limit(1);
   if (!trip) return { ok: false, reason: "not_found" };
-  const viewer = await loadIncidentViewer(db, input.shopId, input.tripId, input.actorPersonId);
+  const viewer = await loadIncidentViewer(tx, input.shopId, input.tripId, input.actorPersonId);
   if (!mayStartIncidentReport(viewer)) return { ok: false, reason: "not_allowed" };
-  const [row] = await db
+  await tx.execute(
+    sql`select pg_advisory_xact_lock(hashtext('incident_report_draft'), hashtext(${`${input.tripId}:${input.actorPersonId}`}))`,
+  );
+  const [open] = await tx
+    .select({ id: incidentReports.id })
+    .from(incidentReports)
+    .where(
+      and(
+        eq(incidentReports.shopId, input.shopId),
+        eq(incidentReports.tripId, input.tripId),
+        eq(incidentReports.createdByPersonId, input.actorPersonId),
+        eq(incidentReports.status, "draft"),
+      ),
+    )
+    // diveday:allow-time-id-order: picks the one draft to reopen; nobody is shown this order.
+    .orderBy(asc(incidentReports.createdAt), asc(incidentReports.id))
+    .limit(1);
+  if (open) return { ok: true, reportId: open.id, reused: true };
+  const now = nowDate();
+  const [row] = await tx
     .insert(incidentReports)
     .values({
       shopId: input.shopId,
       tripId: input.tripId,
       createdByPersonId: input.actorPersonId,
+      createdAt: now,
+      updatedAt: now,
     })
     .returning({ id: incidentReports.id });
   if (!row) return { ok: false, reason: "not_found" };
-  return { ok: true, reportId: row.id };
+  return { ok: true, reportId: row.id, reused: false };
 }
 
 /** Which report a write is for: the shop, the departure it hangs off, and who is writing. */
