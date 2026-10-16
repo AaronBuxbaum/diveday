@@ -13,6 +13,7 @@ import {
   excerpt,
   notRunHere,
   plan,
+  quickPlan,
   runStep,
   UNIT_SHARDS,
   writeStamps,
@@ -94,6 +95,50 @@ describe("the pre-push plan", () => {
       "check:repo",
       "guards",
     ]);
+  });
+});
+
+describe("the quick pre-push plan", () => {
+  it("runs the static checks and the unit tests the diff reaches, and no browser", () => {
+    const steps = quickPlan({
+      changed: ["src/lib/x.ts", "docs/a.md"],
+      related: ["src/lib/x.ts", "src/lib/y.test.ts"],
+    });
+    expect(names(steps)).toEqual([
+      "regen",
+      "lint",
+      "typecheck",
+      "check:repo",
+      "guards",
+      "related unit tests",
+    ]);
+    expect(steps.at(-1).args).toEqual([
+      "exec",
+      "vitest",
+      "related",
+      "--run",
+      "--project",
+      "!guards",
+      "--reporter=dot",
+      "src/lib/x.ts",
+      "src/lib/y.test.ts",
+    ]);
+  });
+
+  it("stops at the static checks for a docs-only diff or nothing to relate", () => {
+    const statics = ["regen", "lint", "typecheck", "check:repo", "guards"];
+    expect(names(quickPlan({ changed: ["AGENTS.md"], related: [] }))).toEqual(statics);
+    expect(names(quickPlan({ changed: ["src/lib/gone.ts"], related: [] }))).toEqual(statics);
+  });
+
+  it("says it left every spec and the unimported unit tests to CI", () => {
+    const lines = notRunHere({
+      quick: true,
+      specs: [],
+      allSpecs: ["e2e/a.spec.ts", "e2e/b.spec.ts", "e2e/visual.spec.ts"],
+    });
+    expect(lines.join("\n")).toMatch(/all 2 Playwright specs \(quick run\)/);
+    expect(lines.join("\n")).toMatch(/unit tests the diff does not import/);
   });
 });
 

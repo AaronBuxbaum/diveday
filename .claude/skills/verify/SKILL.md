@@ -27,12 +27,16 @@ Before every commit:
 
 Before every push:
 
-6. **`pnpm verify:push`**, in the background: everything above for the whole diff against the
-   layer below, plus what CI kept catching that this list used to leave out — `pnpm regen` and a
-   clean tree, the `guards` project, the whole unit suite in CI's four shards, and every
-   Playwright spec the diff reaches (`pnpm e2e:affected` prints them and why), with no time
-   budget. A green run ends with what it did not run (the unreached specs and the visual
-   captures): say "verify:push green", never "all tests pass locally". It stops at the first red step and prints
+6. **`pnpm verify:push --quick`**, the default before a push (Aaron, 2026-10-16: batch work into
+   large stacked PRs, don't wait on the full validation, fix forward when CI fails): `pnpm regen`
+   and a clean tree, lint, typecheck, `check:repo`, the `guards` project and `vitest related` over
+   the diff. Minutes, no browser. Push when it is green, open or update the PR, and work CI's
+   answer: a red job is the next commit on the same layer, not a reason to have waited.
+   **`pnpm verify:push`** (no flag) is the full run, worth its hour only when you want the
+   browser's answer before CI's: the whole unit suite in CI's four shards and every Playwright
+   spec the diff reaches (`pnpm e2e:affected` prints them and why). Either run ends with what it
+   did not run: say "verify:push --quick green" or "verify:push green", never "all tests pass
+   locally". It stops at the first red step and prints
    that step's tail. Green, it stamps HEAD; `git push` is refused for a commit without a stamp
    (`scripts/guard-push.mjs`), so a merge from the layer below means another run. It reads the
    layer below's CI first: on a red base it re-runs the files CI names and stamps only when they
@@ -40,7 +44,7 @@ Before every push:
    `--base-red <file…>` from its log. The reasons
    and the measurements: [verifying.md](../../../docs/agents/verifying.md#the-pre-push-gate).
 7. **One validated push per round.** Commit as often as you like; push once, when
-   `verify:push` is green for the round's work, because each push cancels the CI run of the one
+   `verify:push --quick` is green for the round's work, because each push cancels the CI run of the one
    before it (the measurement is in [verifying.md](../../../docs/agents/verifying.md#one-validated-push-per-round)).
    A push without a green run is right only when the `unpushed-work` hook is saving work before
    a turn ends, or when you push to learn what only CI can answer; write the reason in front of
