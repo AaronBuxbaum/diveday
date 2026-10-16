@@ -7,7 +7,12 @@ import { fileScopedShopContext } from "@/test/db";
 import { createBooking, setBookingParticipantType } from "./bookings";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb } from "./client";
-import { seatIsDiver } from "./readiness";
+import {
+  issueShopCertification,
+  issueShopNitroxCertification,
+  issueShopSpecialtyCertification,
+  studentOnSeat,
+} from "./readiness";
 import { bookings, courses } from "./schema";
 import { createTrip, listStaff, setTripCrew, setTripParticipantTerms } from "./trips";
 
@@ -159,8 +164,8 @@ describe("a non-diver seat on a course session", () => {
 
     const seats = await listCourseSeatsInTraining(db, shop.id, [riderPerson, studentPerson]);
     expect(seats.map((row) => row.personId)).toEqual([studentPerson]);
-    expect(await seatIsDiver(db, shop.id, rider.bookingId)).toBe(false);
-    expect(await seatIsDiver(db, shop.id, student.bookingId)).toBe(true);
+    expect(await studentOnSeat(db, shop.id, trip.id, rider.bookingId)).toBeNull();
+    expect(await studentOnSeat(db, shop.id, trip.id, student.bookingId)).toBe(studentPerson);
   });
 });
 
@@ -207,5 +212,73 @@ describe("a type change on a course session", () => {
     expect(
       await setBookingParticipantType(db, { ...ids, bookingId: rider.bookingId, to: "snorkeler" }),
     ).toMatchObject({ ok: true, changed: true });
+  });
+});
+
+/**
+ * **A card lands only on the student the seat holds** (reviews G4/Y2 of
+ * #2226): the roster's Certify posts a booking, and the person is read from
+ * that diver's seat, never from the form. Every writer refuses a person whose
+ * seat on the session is a passenger's, or held over who they are.
+ */
+describe("a shop-issued card on a course session", () => {
+  it("is refused for a passenger, at every writer, and writes no row", async () => {
+    const { db, shop } = ctx;
+    const { trip, staff } = await session(db, shop.id, "Open Water Diver");
+    await priceRiders(db, shop.id, trip.id);
+    const rider = await seat(db, shop.id, trip.id, "rider");
+    if (!rider.ok) throw new Error("setup failed");
+    const [row] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, rider.bookingId));
+    if (!row) throw new Error("rider missing");
+    const issued = {
+      shopId: shop.id,
+      personId: row.personId,
+      tripId: trip.id,
+      issuedByPersonId: staff.id,
+    };
+    expect(await issueShopCertification(db, { ...issued, level: "open_water" })).toBeNull();
+    expect(await issueShopSpecialtyCertification(db, { ...issued, specialty: "deep" })).toBeNull();
+    expect(await issueShopNitroxCertification(db, issued)).toBeNull();
+  });
+
+  it("names nobody for a seat on another departure, or another shop's", async () => {
+    const { db, shop } = ctx;
+    const { trip } = await session(db, shop.id, "Open Water Diver");
+    const other = await session(db, shop.id, "Open Water Diver");
+    const student = await seat(db, shop.id, trip.id, "diver");
+    if (!student.ok) throw new Error("setup failed");
+    expect(await studentOnSeat(db, shop.id, other.trip.id, student.bookingId)).toBeNull();
+    expect(
+      await studentOnSeat(db, "00000000-0000-0000-0000-000000000000", trip.id, student.bookingId),
+    ).toBeNull();
+  });
+
+  it("is refused for a seat held over who the student is", async () => {
+    const { db, shop } = ctx;
+    const { trip, staff } = await session(db, shop.id, "Open Water Diver");
+    const student = await seat(db, shop.id, trip.id, "diver");
+    if (!student.ok) throw new Error("setup failed");
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: new Date(), identityBookedAs: "Someone Else" })
+      .where(eq(bookings.id, student.bookingId));
+    const [row] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, student.bookingId));
+    if (!row) throw new Error("student missing");
+    expect(await studentOnSeat(db, shop.id, trip.id, student.bookingId)).toBeNull();
+    expect(
+      await issueShopCertification(db, {
+        shopId: shop.id,
+        personId: row.personId,
+        tripId: trip.id,
+        issuedByPersonId: staff.id,
+        level: "open_water",
+      }),
+    ).toBeNull();
   });
 });

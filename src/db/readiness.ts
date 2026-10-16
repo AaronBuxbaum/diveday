@@ -466,22 +466,34 @@ export async function courseCertifiesOnTrip(
 }
 
 /**
- * Whether this seat is a student's: a diver's seat (issue #2226). A snorkeler
- * or a rider on a course session is a passenger, and the session's roster
- * never certifies one.
+ * **The student this seat holds**, or null (issue #2226, reviews G4/Y2): the
+ * person on a live diver's seat of this shop's session, whose identity is not
+ * held (H-13). A snorkeler or a rider on a course session is a passenger, and
+ * the session's roster never certifies one. The roster's Certify reads the
+ * person from here, never from what the form posted.
  */
-export async function seatIsDiver(
+export async function studentOnSeat(
   db: DbExecutor,
   shopId: string,
+  tripId: string,
   bookingId: string,
-): Promise<boolean> {
-  if (!isUuid(bookingId)) return false;
+): Promise<string | null> {
+  if (!isUuid(bookingId) || !isUuid(tripId) || !isUuid(shopId)) return null;
   const [row] = await db
-    .select({ participantType: bookings.participantType })
+    .select({ personId: bookings.personId })
     .from(bookings)
-    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .where(
+      and(
+        eq(bookings.id, bookingId),
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, tripId),
+        ne(bookings.status, "cancelled"),
+        eq(bookings.participantType, "diver"),
+        isNull(bookings.identityUnconfirmedAt),
+      ),
+    )
     .limit(1);
-  return row?.participantType === "diver";
+  return row?.personId ?? null;
 }
 
 export async function issueShopCertification(
@@ -531,6 +543,10 @@ export async function issueShopCertification(
           eq(bookings.personId, input.personId),
           eq(bookings.shopId, input.shopId),
           ne(bookings.status, "cancelled"),
+          // A student's seat: a passenger is never certified, and a seat held
+          // over who is on it certifies nobody (reviews G4/Y2 of #2226).
+          eq(bookings.participantType, "diver"),
+          isNull(bookings.identityUnconfirmedAt),
         ),
       )
       .limit(1);
@@ -1221,6 +1237,8 @@ async function shopIssuedCourseContext(
         eq(bookings.personId, input.personId),
         eq(bookings.shopId, input.shopId),
         ne(bookings.status, "cancelled"),
+        eq(bookings.participantType, "diver"),
+        isNull(bookings.identityUnconfirmedAt),
       ),
     )
     .limit(1);
