@@ -109,7 +109,7 @@
     "identityRepointUnavailable": "That diver can’t take this seat. Pick another diver with this name, or use Different person.",
     "identityRepointMedicalHold": "This seat, or a held seat moving with it, is on a medical hold: a physician referral nobody has answered, or one the physician did not clear. To move it to another diver, cancel this seat and seat them fresh.",
     "identitySplitContactConflict": "The seats moving together have different emergency contacts. Record the right one on each, then try again.",
-    "identityDepartureClosed": "This departure is over or cancelled, so the seat stays where it is. “Same person” still settles it.",
+    "identityDepartureClosed": "This departure is over or canceled, so the seat stays where it is. “Same person” still settles it.",
     "identityContactDiffers": "This seat’s emergency contact isn’t the one on their record. Pick which to keep, then confirm.",
     "identityRepointAlreadyBooked": "That diver already has a seat on a departure this would move. Check their record before moving it.",
     "newWaiverSent": "New waiver sent. They stay blocked until they sign it.",

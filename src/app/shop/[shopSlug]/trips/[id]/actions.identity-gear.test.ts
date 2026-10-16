@@ -122,10 +122,9 @@ describe("Same person, with the seat's emergency contact", () => {
     await redirectedTo(() =>
       confirmDiverIdentityAction(SHOP_SLUG, TRIP_ID, form({ heldContact: "anything" })),
     );
-    expect(vi.mocked(confirmBookingIdentity).mock.calls.map(([, input]) => input.heldContact)).toEqual([
-      "use_held",
-      undefined,
-    ]);
+    expect(
+      vi.mocked(confirmBookingIdentity).mock.calls.map(([, input]) => input.heldContact),
+    ).toEqual(["use_held", undefined]);
   });
 });
 

@@ -440,17 +440,14 @@ describe("course forms — a form bound to an age (in-memory PGlite)", () => {
       formIds: [form.id],
       maxAgeYears: new Map([[form.id, 11]]),
     });
-    await ctx.db
-      .update(people)
-      .set({ dateOfBirth: null })
-      .where(eq(people.id, ctx.seat.personId));
+    await ctx.db.update(people).set({ dateOfBirth: null }).where(eq(people.id, ctx.seat.personId));
     const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.seat.bookingId);
     expect(readiness?.blockers).toContainEqual({
       code: "course_form_unsigned",
       params: { formTitle: form.title, formMaxAge: 11 },
     });
-    const [owed] = (await getCourseFormsForBooking(ctx.db, ctx.shop.id, ctx.seat.bookingId))
-      ?.outstanding ?? [];
+    const [owed] =
+      (await getCourseFormsForBooking(ctx.db, ctx.shop.id, ctx.seat.bookingId))?.outstanding ?? [];
     if (!owed) throw new Error("youth form not owed");
     const base = {
       shopId: ctx.shop.id,

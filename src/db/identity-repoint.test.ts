@@ -3,10 +3,9 @@ import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { createBooking } from "./bookings";
+import { createBooking, splitBookingIdentity } from "./bookings";
 import type { AppDb } from "./client";
 import { otherSameNamePeople, repointHeldBooking } from "./identity-repoint";
-import { splitBookingIdentity } from "./bookings";
 import { listTripActivity, pagedDiverActivity } from "./operations";
 import { getBookingReadiness } from "./readiness";
 import { bookings, people, shops, trips, waiverRecords } from "./schema";
@@ -293,7 +292,7 @@ describe("repointHeldBooking", () => {
   // Agency review G8: a seat of theirs the pre-check cannot see still lands
   // as the refusal, never as a thrown unique violation.
   it("answers a seat the pre-check missed as already on the departure", async () => {
-    const { db, shop, trip, second, bookingId, staff } = await namesakes();
+    const { db, shop, second, bookingId, staff } = await namesakes();
     const [other] = await db
       .insert(shops)
       .values({ name: "Race Shop", slug: "race-shop-repoint", timezone: "UTC" })

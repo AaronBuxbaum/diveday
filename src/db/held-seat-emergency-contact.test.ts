@@ -187,7 +187,13 @@ describe("a held seat's emergency contact", () => {
   /** The desk's contact for the person on the seat, recorded while it is held. */
   async function recordHeld(bookingId: string, name = "Rosa Vega", phone = "+34 600 333 444") {
     const { db, shop } = ctx;
-    await saveBookingEmergencyContact(db, { shopId: shop.id, bookingId, name, phone, actor: "staff" });
+    await saveBookingEmergencyContact(db, {
+      shopId: shop.id,
+      bookingId,
+      name,
+      phone,
+      actor: "staff",
+    });
   }
 
   async function contacts(bookingId: string, personId: string) {
@@ -277,7 +283,9 @@ describe("a held seat's emergency contact", () => {
   async function siblingSeat(tripId: string, email: string) {
     const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
-    const other = trips.find((row) => !row.courseId && row.id !== tripId && row.booked < row.capacity);
+    const other = trips.find(
+      (row) => !row.courseId && row.id !== tripId && row.booked < row.capacity,
+    );
     if (!other) throw new Error("no second open charter");
     const seat = await createBooking(db, {
       actor: "staff",

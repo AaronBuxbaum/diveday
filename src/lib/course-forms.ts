@@ -111,7 +111,9 @@ export function signatureSatisfies(
  * says, since it is asked only of a minor or of a student whose age the shop
  * does not know. A medical statement's bound is ignored (G3), so this one too.
  */
-export function isYouthForm(form: Pick<RequiredCourseForm, "maxAgeYears" | "medicalScreening">): boolean {
+export function isYouthForm(
+  form: Pick<RequiredCourseForm, "maxAgeYears" | "medicalScreening">,
+): boolean {
   return !form.medicalScreening && typeof form.maxAgeYears === "number" && form.maxAgeYears <= 17;
 }
 

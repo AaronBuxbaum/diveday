@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TripRequirement, WaiverRecord } from "@/db/schema";
+import { readinessBlockerText } from "@/i18n/readiness-labels";
+import { staffTranslator } from "@/i18n/staff-messages";
 import {
   COURSE_FORMS_BLOCK_BOARDING,
   type CourseFormSignature,
@@ -10,8 +12,6 @@ import {
   outstandingCourseForms,
   type RequiredCourseForm,
 } from "./course-forms";
-import { readinessBlockerText } from "@/i18n/readiness-labels";
-import { staffTranslator } from "@/i18n/staff-messages";
 import type { GuardianSigner } from "./guardian";
 import { aboardBlockerKind, BLOCKER_CATEGORY, calculateReadiness } from "./readiness";
 import { buildDiverChecklist } from "./readiness-summary";
@@ -191,7 +191,9 @@ describe("outstandingCourseForms — a form bound to an age", () => {
       youth.formId,
     ]);
     expect(
-      owed([signed({ formVersionId: youth.versionId, guardianSignedAt: now })], born(null), [youth]),
+      owed([signed({ formVersionId: youth.versionId, guardianSignedAt: now })], born(null), [
+        youth,
+      ]),
     ).toEqual([]);
   });
 
@@ -250,7 +252,9 @@ describe("outstandingCourseForms — a form bound to an age", () => {
     expect(readinessBlockerText(staffTranslator("en-US"), blocker)).toBe(
       "Youth form is for students 11 and under, and there’s no date of birth on file. Add it, or have it signed with a parent or guardian.",
     );
-    expect(readinessBlockerText(staffTranslator("es-ES"), blocker)).toContain("fecha de nacimiento");
+    expect(readinessBlockerText(staffTranslator("es-ES"), blocker)).toContain(
+      "fecha de nacimiento",
+    );
   });
 });
 

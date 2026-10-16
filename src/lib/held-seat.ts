@@ -194,7 +194,12 @@ export function movingHeldContact(
       continue;
     }
     const same = heldContactCarry(
-      { heldName: pair.name, heldPhone: pair.phone, recordName: found.name, recordPhone: found.phone },
+      {
+        heldName: pair.name,
+        heldPhone: pair.phone,
+        recordName: found.name,
+        recordPhone: found.phone,
+      },
       undefined,
     );
     if (same !== null) return "conflict";
