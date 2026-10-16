@@ -5165,7 +5165,12 @@
       },
       "sent": {
         "title": "Solicitud enviada",
-        "body": "Te escribiremos para abrir tu centro. Mientras tanto, la demo está abierta."
+        "body": "Te escribiremos para abrir tu centro. Mientras tanto, la demo está abierta.",
+        "paper": "¿En papel? Trae a nuestra primera llamada una foto de la planilla de un día.",
+        "spreadsheet": "Guarda tu lista de buceadores como CSV. La leemos contigo.",
+        "spreadsheetLink": "Qué leemos en ella",
+        "system": "Mientras esperas, descarga tu lista de clientes del sistema que usas hoy.",
+        "systemLink": "Pasos de exportación por sistema"
       }
     }
   },

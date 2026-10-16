@@ -70,7 +70,7 @@ export async function generateMetadata({
     title: `Courses — ${shop.name}`,
     description,
     alternates: { canonical },
-    robots: shopSearchListingRobots(shop.searchListingOptOutAt),
+    robots: shopSearchListingRobots(shop),
     openGraph: { ...openGraphSite, title: `Courses — ${shop.name}`, description, url: canonical },
   };
 }

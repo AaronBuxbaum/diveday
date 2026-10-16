@@ -95,7 +95,7 @@ beforeEach(async () => {
 
 describe("submitSetupRequestAction", () => {
   it("stores the request, mails onboarding, counts it, and lands on the thank-you page", async () => {
-    expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent" });
+    expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent?uses=booking_system" });
 
     const [row] = await db.select().from(setupRequests);
     expect(row).toMatchObject({
@@ -129,7 +129,7 @@ describe("submitSetupRequestAction", () => {
    */
   it("mails onboarding a setup link that opens the form for this request, once", async () => {
     const { openSetupLink, spendSetupLink } = await import("@/db/setup-links");
-    expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent" });
+    expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent?uses=booking_system" });
     const sent = vi.mocked(notify).mock.calls[0]?.[0];
     if (sent?.kind !== "setup_request_alert") throw new Error("expected the onboarding mail");
     const url = new URL(sent.setupUrl ?? "");
@@ -154,7 +154,7 @@ describe("submitSetupRequestAction", () => {
 
   it("keeps the request and leaves it unnotified when the mail does not leave", async () => {
     vi.mocked(notify).mockResolvedValue({ status: "not_configured" });
-    expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent" });
+    expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent?uses=booking_system" });
     const [row] = await db.select().from(setupRequests);
     expect(row?.notifiedAt).toBeNull();
   });
@@ -162,7 +162,7 @@ describe("submitSetupRequestAction", () => {
   it("still lands on the thank-you page when the mail throws", async () => {
     vi.mocked(notify).mockRejectedValue(new Error("SES exploded"));
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent" });
+    expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent?uses=booking_system" });
     expect(await db.select().from(setupRequests)).toHaveLength(1);
     logged.mockRestore();
   });
@@ -170,7 +170,7 @@ describe("submitSetupRequestAction", () => {
   it("answers a bot exactly like a person and stores, sends and counts nothing", async () => {
     const lines = vi.spyOn(console, "log").mockImplementation(() => {});
     expect(await submit(setUpForm({ website: "https://cheap-pills.example" }))).toEqual({
-      redirect: "/get-set-up/sent",
+      redirect: "/get-set-up/sent?uses=booking_system",
     });
     expect(await db.select().from(setupRequests)).toEqual([]);
     expect(notify).not.toHaveBeenCalled();
@@ -246,7 +246,7 @@ describe("submitSetupRequestAction", () => {
         at: twoHoursAgo,
       });
     }
-    expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent" });
+    expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent?uses=booking_system" });
   });
 
   it("does not spend the global bucket on an invalid request", async () => {

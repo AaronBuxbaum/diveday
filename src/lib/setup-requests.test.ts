@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  setupSentAdvice,
   parseSetupRequest,
   SETUP_CURRENT_SYSTEM_KEYS,
   SETUP_CURRENT_SYSTEMS,
@@ -137,5 +138,21 @@ describe("SETUP_CURRENT_SYSTEM_KEYS", () => {
     expect(Object.keys(SETUP_CURRENT_SYSTEM_KEYS).sort()).toEqual(
       [...SETUP_CURRENT_SYSTEMS].sort(),
     );
+  });
+});
+
+describe("setupSentAdvice", () => {
+  it("answers paper, a spreadsheet and another system each with its own first step", () => {
+    expect(setupSentAdvice("paper")).toEqual({ key: "marketing.setUp.sent.paper" });
+    expect(setupSentAdvice("spreadsheet")?.link?.destination).toBe("/switching/spreadsheet");
+    expect(setupSentAdvice("booking_system")?.link?.destination).toBe("/switching");
+    expect(setupSentAdvice("shop_software")?.key).toBe("marketing.setUp.sent.system");
+  });
+
+  it("says nothing more for something else, a missing answer or a crafted one", () => {
+    expect(setupSentAdvice("other")).toBeNull();
+    expect(setupSentAdvice(undefined)).toBeNull();
+    expect(setupSentAdvice(["paper", "paper"])).toBeNull();
+    expect(setupSentAdvice("constructor")).toBeNull();
   });
 });

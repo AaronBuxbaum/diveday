@@ -5165,7 +5165,12 @@
       },
       "sent": {
         "title": "Request sent",
-        "body": "We’ll write to you to set up your shop. The demo is open while you wait."
+        "body": "We’ll write to you to set up your shop. The demo is open while you wait.",
+        "paper": "Paper? Bring a photo of one day’s clipboard to our first call.",
+        "spreadsheet": "Save your diver list as a CSV. We’ll read it with you.",
+        "spreadsheetLink": "What we read in it",
+        "system": "While you wait, download your customer list from the system you use now.",
+        "systemLink": "Export steps by system"
       }
     }
   },
