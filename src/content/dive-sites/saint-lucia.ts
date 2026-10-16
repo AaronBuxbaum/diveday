@@ -852,12 +852,25 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       "https://smmainc.com/dive-sites/",
       "https://www.easterncaribbeandivingstlucia.com/dive-sites-list",
       "https://www.moorings.com/blog/best-diving-st-lucia",
+      "https://stlucia.org/en/things-to-do/diving/",
+      "https://divingaway.com/en/wreck-335/daini-koyomaru",
     ],
     briefing: {
       name: "Daini Koyomaru",
       locationName: "Anse Cochon, Anse La Raye, Saint Lucia",
 
-      // Approximate pin: the south end of Anse Cochon Bay. The Soufrière Marine Management Association says the dredger was sunk in the south end of Anse Cochon and the Moorings guide puts it close to Anse Cochon; no source publishes coordinates. OpenStreetMap maps the bay at 13.9273, -61.0590 and its southern neighbor Anse la Verdure at 13.9204, -61.0608. Placed in the water 426 m offshore of the mapped coast, 390 m from the Vicky B pin and 530 m from the SK2 pin. Good to about 2 km. Depth: the management association gives 108 ft, the operator list 110 ft and the Moorings guide 10 m to 33 m; the deepest is used. No source names a mooring, so the plan does not.
+      // Approximate pin: the south end of Anse Cochon Bay. The Soufrière Marine Management Association
+      // says the dredger was sunk at the south end of Anse Cochon, Divingaway puts it south of Anse
+      // Cochon and the Moorings guide close to Anse Cochon; no operator publishes coordinates (one
+      // crowd-sourced directory gives 13.91306, -61.09404, about 3.4 km west of this pin, which no
+      // other source supports, so it is not used). OpenStreetMap maps the bay at 13.9273, -61.0590 and
+      // its southern neighbor Anse la Verdure at 13.9204, -61.0608. Placed in the water 427 m offshore
+      // of the mapped coast, 389 m from the Vicky B pin and 558 m from the SK2 pin. Good to about 2 km.
+      // Depth: the management association, Saint Lucia's tourist board and Divingaway give 33 m (108
+      // ft), the operator list 110 ft and the Moorings guide 10 m to 33 m; the deepest is used. How she
+      // lies is reported two ways (on her side per the association and the tourist board, inverted per
+      // one diver's account), so the text says no more than that she is on her side. No source names a
+      // mooring, so the plan does not.
       forecastLatitude: 13.9235,
       forecastLongitude: -61.064,
       description:
@@ -871,7 +884,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       currentNote:
         "Strong currents are reported in the area of the wreck. Open water: carry an SMB and ascend on its line.",
       divePlan:
-        "Descend as the crew briefs to the upper side of the hull at about 10 m, work along the outside of the wreck, and come back up with reserve gas and a safety stop on an SMB line. Stay outside the hull. Staff confirm the diver's log before boarding.",
+        "Descend as the crew briefs, work along the outside of the wreck from her shallowest part near 10 m, keep the gauge in view as she falls toward 33 m, and come back up with reserve gas and a safety stop on an SMB line. Stay outside the hull. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote:
         "A big wreck down to 33 m in a strong current. For divers with deep training who read their gauge.",

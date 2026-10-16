@@ -7,8 +7,8 @@ import type { DiveSiteTemplate } from "./types";
  * water from the islets, points and beaches the clubs name (OpenStreetMap maps the islets and the
  * points); each says so in a comment. Where sources run past recreational depth on a plateau or
  * slope clubs dive as an Open Water outing, the plan is held at a stated floor. La Piscine,
- * L'Aquarium, Anse Négresse and La Caye (La Kaye) take their depths from the Heures Saines site
- * map, with an SSI center page and a second club as the cross-check.
+ * L'Aquarium and La Caye (La Kaye) take their depths from the Heures Saines site
+ * map, with a travel guide, a club's SSI center page and a travel agency's list as the cross-checks.
  */
 const HS_RESERVE = "https://www.heures-saines.com/spots-de-plongee/reserve-cousteau/";
 const HS_WRECKS = "https://www.heures-saines.com/spots-de-plongee/exploration-epaves/";
@@ -23,7 +23,9 @@ const ATLANTIS =
 const HS_MAP = "https://www.heures-saines.com/spots-de-plongee/carte-des-spots/";
 const PPK_SSI = "https://www.divessi.com/en/divecenter/ppk-plongee-guadeloupe-bouillante-716177";
 const VVANAT = "https://vvanat.fr/blog/plongee-guadeloupe-reserve-cousteau/";
-const DIVECHAMP = "https://divechamp.com/divesite/anse-negresse";
+const RENTILES = "https://www.rentiles.fr/blog-voyage/plongee-aux-ilets-pigeons.html";
+const SPOTS_EVASION = "https://spots-evasion.com/sejours/sejour-combine-plongee-guadeloupe/";
+const VVANAT_BOUILLANTE = "https://vvanat.fr/blog/hebergement-et-plongee-bouillante/";
 const PARK = "In or beside the reserve; confirm the zone.";
 
 export const GUADELOUPE: DiveSiteTemplate[] = [
@@ -420,7 +422,7 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
     slug: "la-piscine-pigeon",
     version: 1,
     area: "guadeloupe",
-    sources: [HS_MAP, ANSE_CARAIBE, ULTRAMARINA, VVANAT, PPK_SSI],
+    sources: [HS_MAP, ANSE_CARAIBE, ULTRAMARINA, VVANAT, PPK_SSI, RENTILES],
     briefing: {
       name: "La Piscine",
       locationName: "Pigeon Islets, Bouillante, Guadeloupe",
@@ -428,15 +430,18 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
       // (OpenStreetMap maps the islets' shores about 100 m apart at this longitude, and maps the
       // site's own point at 16.1672, -61.7896); placed in the channel between them, 35 m from the
       // nearest mapped shore, good to about 2 km.
-      // RULE 1: the Heures Saines site map and a travel guide put the wall's end at 40 m, so
-      // maxDepthMeters is 40 and the Deep specialty joins the Advanced Open Water gate. The sand
-      // and coral blocks by the mooring are the plan, with a 20 m floor. The club map calls the
-      // site open to every level and marks a no-navigation zone; the gate is the wall's depth.
-      // The cero is left out: the guide's "thazard franc" is not a certain match.
+      // RULE 1, capped at 40 m: the Heures Saines site map says the wall goes down to 40 m, a travel
+      // guide says rocks with lionfish at about 60 m and a directory lists 5 m to 50 m, so the wall
+      // does not stop at 40 m. maxDepthMeters is 40 (the recreational limit) and the Deep specialty
+      // joins the Advanced Open Water gate. The sand and coral blocks by the mooring are the plan,
+      // with a 20 m floor. The club map calls the site open to every level and marks a no-navigation
+      // zone; the gate is the wall's depth. Anse Caraïbe's "cavités" where morays hide are written
+      // as overhead, to stay out of. The cero is left out: the guide's "thazard franc" is not a
+      // certain match.
       forecastLatitude: 16.1672,
       forecastLongitude: -61.7894,
       description:
-        "The water between the two islets: pale sand, scattered coral blocks and small valleys of coral, with cavities where morays rest. A wall below the blocks falls to 40 m, covered in sponges and coral.",
+        "The water between the two islets: pale sand, scattered coral blocks and small valleys of coral, with cavities where morays rest. A wall below the blocks falls past 40 m, covered in sponges and coral.",
       marineLife: "Turtles · morays · lionfish · seahorses · French angelfish",
       marineLifeDescription:
         "Turtles are often here, and the coral blocks hide morays, lionfish and the odd seahorse.",
@@ -445,9 +450,9 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
       depthRange: "Up to 40 m (131 ft)",
       maxDepthMeters: 40,
       currentNote:
-        "A no-navigation zone covers the swimming area by the mooring, but carry an SMB for the ascent. Current not documented; ask the crew on the day.",
+        "Dive boats come to the islets, though a no-navigation zone covers the swimming area by the mooring; carry an SMB for the ascent. The cavities among the coral are overhead; stay out. Current not documented; ask the crew on the day.",
       divePlan:
-        "Down the mooring to the sand, along the coral blocks and valleys no deeper than 20 m as the plan's floor, and back up the mooring line with a safety stop. The wall continues to 40 m below the plan. Staff confirm the diver's log before boarding.",
+        "Down the mooring to the sand, along the coral blocks and valleys no deeper than 20 m as the plan's floor, and back up the mooring line with a safety stop. The wall below the plan runs to 40 m and on; stay above its edge. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote:
         "A bright, sheltered patch of coral on sand, with a wall to 40 m below it that asks for deep training.",
@@ -466,7 +471,7 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
     slug: "laquarium-pigeon",
     version: 1,
     area: "guadeloupe",
-    sources: [HS_MAP, ANSE_CARAIBE, ULTRAMARINA, VVANAT],
+    sources: [HS_MAP, ANSE_CARAIBE, ULTRAMARINA, VVANAT, SPOTS_EVASION],
     briefing: {
       name: "L'Aquarium",
       locationName: "Pigeon Islets, Bouillante, Guadeloupe",
@@ -477,8 +482,10 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
       // about 2 km.
       // RULE 2 terrace exception: the Heures Saines site map and Ultramarina run the gently sloping
       // plateau as a dive for every level, from the first dive, so it stays ungated with an 18 m
-      // floor. The sources put the wall below it at 50 m to 60 m, so the prose says it lies past the
-      // plan.
+      // floor. A travel agency lists the plateau dive at 0 m to 20 m and a club map says profiles
+      // reach 60 m; the wall below is put at 50 m (a travel guide, a club) to 60 m, so the prose
+      // says it lies past the plan. A listing of tunnels and boulders under this name is another
+      // L'Aquarium, in Les Saintes, and is not used.
       forecastLatitude: 16.1703,
       forecastLongitude: -61.7895,
       description:
@@ -500,7 +507,7 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
         "spiny-lobster",
         "lavender-rope-sponge",
         "branching-tube-sponge",
-        "common-sea-fan",
+        "green-sea-turtle",
       ],
     },
   },
@@ -508,7 +515,7 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
     slug: "la-caye-malendure",
     version: 1,
     area: "guadeloupe",
-    sources: [HS_MAP, PPK_SSI, HS_RESERVE],
+    sources: [HS_MAP, PPK_SSI, HS_RESERVE, VVANAT_BOUILLANTE],
     briefing: {
       name: "La Caye",
       locationName: "Malendure, Bouillante, Guadeloupe",
@@ -522,21 +529,21 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
       forecastLatitude: 16.1722,
       forecastLongitude: -61.7785,
       description:
-        "A shallow site of rock formations and coral canyons just off Malendure beach, where the rock fell into the sea. It is a nursery for small fish and a sleeping place for turtles, and the club dives it at night twice a week.",
-      marineLife: "Turtles · reef fish · coral",
+        "A shallow site of rock formations and coral canyons just off Malendure beach, where the rock fell into the sea. It is a nursery for small fish and a sleeping place for turtles, and it is dived at night as well as by day.",
+      marineLife: "Turtles · morays · reef fish · coral",
       marineLifeDescription:
-        "Turtles rest among the rocks at night, and young fish shelter in the canyons.",
+        "Turtles rest among the rocks at night, morays show on the night dive, and young fish shelter in the canyons.",
       conservationNote: PARK,
       difficultyLevel: "beginner",
       depthRange: "4–18 m (13–60 ft)",
       maxDepthMeters: 18,
       currentNote:
-        "Just off the club's beach, where boats come and go; carry an SMB and listen for engines. Current not documented; ask the crew on the day.",
+        "Just off Malendure beach, where boats come and go; carry an SMB and listen for engines. Current not documented; ask the crew on the day.",
       divePlan:
         "Wander the rocks and canyons at an easy pace and return the same way. A night dive follows the same route; carry a primary and a backup light, and staff confirm the diver's log before the dive.",
       fitTone: "welcoming",
       fitNote: "Shallow enough for a long, slow dive, by day or by torchlight.",
-      creatureSlugs: ["green-sea-turtle", "hawksbill-turtle", "french-grunt", "blue-tang"],
+      creatureSlugs: ["green-sea-turtle", "spotted-moray", "french-grunt", "blue-tang"],
     },
   },
 ];
