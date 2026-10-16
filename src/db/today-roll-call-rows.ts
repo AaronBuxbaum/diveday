@@ -122,6 +122,9 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
       .filter((gap) => gap.diveNumber >= 1 && !gap.stale)
       .map((gap) => gap.endsAt.getTime()),
   );
+  type ClashLeg = { clash: CrewClash; startsAt: Date };
+  type SailedLeg = { clash: CrewClash; endsAt: Date };
+  const standings = new Map<string, { ahead: ClashLeg[]; out: SailedLeg[] }>();
   for (const trip of crewClashState.departures) {
     const clashes = crewClashState.clashes.get(trip.id) ?? [];
     if (clashes.length === 0) continue;
@@ -130,8 +133,8 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
       [...(crewClashState.divers.get(trip.id)?.values() ?? [])].some(
         (state) => state === "boarded",
       ) || [...crewAnswered.values()].some((state) => state === "boarded");
-    const ahead: { clash: CrewClash; startsAt: Date }[] = [];
-    const out: { clash: CrewClash; endsAt: Date }[] = [];
+    const ahead: ClashLeg[] = [];
+    const out: SailedLeg[] = [];
     for (const clash of clashes) {
       const standing = crewClashPhase({
         legs: clash.legs,
@@ -147,6 +150,32 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
       }
       if (standing?.phase === "ahead") ahead.push({ clash, startsAt: standing.leg.startsAt });
     }
+    standings.set(trip.id, { ahead, out });
+  }
+  // **Say each clash once** (issue #2211), as the staffing week does through
+  // `sayEachClashOnce`: one person on two boats is one fact, and its row sits
+  // on the earlier departure, naming the other. The later one drops a clash
+  // only when the earlier one is saying it, so a partner outside this queue
+  // (or already past "ahead") never silences the only row that says it.
+  const startOrder = new Map(
+    [...crewClashState.departures]
+      .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime() || a.id.localeCompare(b.id))
+      .map((trip, index) => [trip.id, index]),
+  );
+  const sayAheadOnce = (tripId: string, ahead: readonly ClashLeg[]): ClashLeg[] =>
+    ahead.filter(({ clash }) => {
+      const partner = standings.get(clash.otherTripId);
+      const partnerSaysIt = partner?.ahead.some(
+        (leg) => leg.clash.personId === clash.personId && leg.clash.otherTripId === tripId,
+      );
+      if (!partnerSaysIt) return true;
+      return (startOrder.get(tripId) ?? 0) < (startOrder.get(clash.otherTripId) ?? 0);
+    });
+  for (const trip of crewClashState.departures) {
+    const standing = standings.get(trip.id);
+    if (!standing) continue;
+    const { out } = standing;
+    const ahead = sayAheadOnce(trip.id, standing.ahead);
     const when = at(trip.startsAt, timeZone, locale);
     const departure = { tripId: trip.id, label: `${trip.title} · ${when}` };
     if (out.length > 0) {

@@ -4190,8 +4190,8 @@ for (const scheme of ["light", "dark"] as const) {
        * **A crew member on two of today's boats** (H-80, issue #1776). Each
        * boat shows a full crew list, so the clash is invisible on both until
        * the queue says so. `?crewClash=1` slides a seeded departure onto
-       * today's through `moveTrip`, the one door into the state, and both
-       * stations carry the row.
+       * today's through `moveTrip`, the one door into the state, and the
+       * earlier boat's station carries the one row (issue #2211).
        */
       test(`today names a crew member on two boats at once (${scheme})`, async ({
         page,
