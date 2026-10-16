@@ -45,6 +45,7 @@ import {
   customerGearItems,
   divePackageEntitlements,
   diveSiteCreatures,
+  diveSiteMoments,
   diveSites,
   executedDives,
   formDrafts,
@@ -1498,6 +1499,8 @@ export async function resetDemoSchedule(
   await db.delete(tripSeriesSkips).where(eq(tripSeriesSkips.shopId, shopId));
   await db.delete(tripSeriesCrew).where(eq(tripSeriesCrew.shopId, shopId));
   await db.delete(tripSeries).where(eq(tripSeries.shopId, shopId));
+  // Retired (#2330) but still declared: an old row would hold its site's FK.
+  await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
   await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
   // A species request points at the site the staffer was writing when they hit
   // the wall, so it goes before the sites — the FK is `ON DELETE SET NULL`, but

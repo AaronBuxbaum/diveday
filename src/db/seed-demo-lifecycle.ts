@@ -35,6 +35,7 @@ import {
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
+  diveSiteMoments,
   diveSites,
   executedDives,
   formDrafts,
@@ -320,6 +321,8 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
   await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));
+  // Retired (#2330) but still declared: an old row would hold its site's FK.
+  await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
   await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
   // A species request points at the site the staffer was writing when they hit
   // the wall, so it goes before the sites — the FK is `ON DELETE SET NULL`, but
