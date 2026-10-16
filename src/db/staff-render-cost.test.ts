@@ -581,7 +581,10 @@ const CHROME_CEILING = 20;
 // away (`crewAwayByTrip`, the departures' crew, schedule days and days away)
 // and keeps every crew assignment on "Your week" (`readerCrewedTrips`), three
 // statements in the queue's one wave.
-const TODAY_CEILING = 69;
+// 69 → 70 (H-80, issue #2135): a boat on two departures at once is raised on
+// Today beside the crew clash (`boatClashesByTrip`), one batched read in the
+// same wave as the crew's.
+const TODAY_CEILING = 70;
 // 49 → 50: the roster reads each diver's unspent package dives for the payment
 // control (`spendableDivesForTrip`, H-79, issue #1697). The held seat's
 // last-dive-day read beside it (`lastDiveDaysHere`, #1789) skips itself when no
