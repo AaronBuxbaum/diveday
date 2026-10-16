@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Certification, NitroxCertification, SpecialtyCertification } from "@/db/schema";
+import type { BoatPaperRecord, BoatSafetyNotice } from "./boat-safety";
 import type { DepthUnit } from "./depth-units";
 import { withholdHeldSeatParticulars } from "./held-seat";
 import {
@@ -283,6 +284,21 @@ export type IncidentPreDepartureCheckEntry = {
   recordedByName: string | null;
 };
 
+/**
+ * **The boat's papers and kit notices as they stood at the departure
+ * checkpoint** (#2300): the last snapshot written before the boat sailed
+ * (`departure_boat_safety_snapshots`). The boat as it is today says nothing
+ * about the day; this does. Codes and dates verbatim, worded by the page.
+ */
+export type IncidentBoatSafety = {
+  boatName: string;
+  /** The departure's own local day the notices were judged on. */
+  judgedOn: string;
+  capturedAt: string;
+  papers: BoatPaperRecord;
+  notices: BoatSafetyNotice[];
+};
+
 export type IncidentTimelineEntry =
   | {
       kind: "diver" | "crew";
@@ -369,6 +385,12 @@ export type IncidentExportDocument = {
    * the section outright — the two read differently to an investigator.
    */
   preDepartureCheck: IncidentPreDepartureCheckEntry[];
+  /**
+   * The boat at the departure checkpoint (#2300), or null when no snapshot was
+   * taken (no boat, or no departure roll call before it sailed): the page
+   * states that absence rather than leaving the section out.
+   */
+  boatSafety: IncidentBoatSafety | null;
   /** Every stored roll-call event and crew count, oldest first. Empty is stated by the UI. */
   timeline: IncidentTimelineEntry[];
   /**
@@ -445,6 +467,14 @@ export type IncidentExportInput = {
     label: string;
     check?: { occurredAt: Date; recordedByName: string };
   }>;
+  /** The departure-checkpoint snapshot of the boat (#2300), when one was taken. */
+  boatSafety?: {
+    boatName: string;
+    judgedOn: string;
+    capturedAt: Date;
+    papers: BoatPaperRecord;
+    notices: readonly BoatSafetyNotice[];
+  } | null;
   generatedAt: Date;
   generatedByName: string;
 };
@@ -822,6 +852,15 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
       occurredAt: item.check ? item.check.occurredAt.toISOString() : null,
       recordedByName: item.check?.recordedByName ?? null,
     })),
+    boatSafety: input.boatSafety
+      ? {
+          boatName: input.boatSafety.boatName,
+          judgedOn: input.boatSafety.judgedOn,
+          capturedAt: input.boatSafety.capturedAt.toISOString(),
+          papers: input.boatSafety.papers,
+          notices: [...input.boatSafety.notices],
+        }
+      : null,
     timeline,
   };
 
@@ -856,6 +895,9 @@ export function incidentExportContentHash(
     crew: body.crew.map(({ currentRatings: _currentRatings, ...entry }) => entry),
     executedDives: body.executedDives,
     preDepartureCheck: body.preDepartureCheck,
+    // Only when one was taken, so a log printed before snapshots existed (or
+    // for a departure with none) keeps the code it was printed with.
+    ...(body.boatSafety ? { boatSafety: body.boatSafety } : {}),
     timeline: body.timeline,
   };
   return createHash("sha256").update(JSON.stringify(facts)).digest("hex");

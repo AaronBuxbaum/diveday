@@ -20,6 +20,7 @@ import {
   courses,
   customerGearItems,
   customerGearReminderSettings,
+  departureBoatSafetySnapshots,
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
@@ -551,6 +552,11 @@ export const EXPORT_TABLES = {
       asc(preDepartureCheckEvents.seq),
     ],
     scope: { shopColumn: preDepartureCheckEvents.shopId },
+  },
+  departureBoatSafetySnapshots: {
+    table: departureBoatSafetySnapshots,
+    order: [asc(departureBoatSafetySnapshots.capturedAt), asc(departureBoatSafetySnapshots.id)],
+    scope: { shopColumn: departureBoatSafetySnapshots.shopId },
   },
   priorVisits: {
     table: priorVisits,

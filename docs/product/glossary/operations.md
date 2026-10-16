@@ -659,6 +659,12 @@
   inspection, 60 for registration and insurance (`BOAT_PAPER_HORIZON_DAYS`) — inside which a departure on that boat
   names the paper above its pre-departure checklist and Today carries a quiet owner errand
   (`boat_papers_due`), escalating once it lapses (`boat_safety_expired`).
+- **Boat at departure** — the boat's papers and its papers-and-kit notices as they stood when the
+  boat left, kept for the departure log (`departure_boat_safety_snapshots`, issue 2300). Written by
+  each departure roll-call tap, diver or crew, live or synced, and rewritten until the departure
+  has sailed, never after; judged on the departure's own local day. Head-count lines are left out
+  because the roll call records them. A departure with none says so on the log rather than
+  showing the boat as it is today.
 - **Safety kit** — the boat's own emergency equipment kept on the **gear register** as units:
   `o2_kit`, `aed`, `first_aid_kit` and `flares` (roadmap N-08). Each may be assigned **aboard** one
   boat (`gear_items.aboard_boat_id`; any other kind is never aboard), and runs **service clocks**

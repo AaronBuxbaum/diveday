@@ -1,4 +1,9 @@
 {
+  "boatHeading": "El barco a la salida",
+  "boatCaptured": "{boatName}, tal como constaba en el pase de lista de salida, {date}",
+  "boatNotRecorded": "Sin registrar",
+  "boatNoNotices": "Ningún aviso de documentación ni de equipo de seguridad ese día.",
+  "boatNotCaptured": "No hay registro de la documentación ni del equipo de seguridad del barco: no había barco, o no se pasó lista en la salida antes de zarpar.",
   "actionCleared": "Registro anulado (corrección)",
   "buddyCrewTag": "tripulación",
   "buddyPairedBy": "Registrado por {name}, {at}",

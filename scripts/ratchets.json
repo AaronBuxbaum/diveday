@@ -370,6 +370,14 @@
           "src/db/export.test.ts": "1670 -> 1673",
           "src/i18n/label-maps.test.ts": "1327 -> 1334"
         }
+      },
+      {
+        "why": "A new departure table (departure_boat_safety_snapshots, issue 2300) is registered in the export, erasure and retention coverage lists, and the manifest and log routes gain one component and its props each (issues 2285, 2300)",
+        "files": {
+          "src/db/erasure-coverage.test.ts": "1178 -> 1180",
+          "src/db/export.test.ts": "1672 -> 1675",
+          "src/db/retention.test.ts": "1262 -> 1264"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -401,9 +409,9 @@
     "src/db/dive-sites.test.ts": 1174,
     "src/db/diver-merge.test.ts": 1285,
     "src/db/divers.test.ts": 3077,
-    "src/db/erasure-coverage.test.ts": 1178,
+    "src/db/erasure-coverage.test.ts": 1180,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1672,
+    "src/db/export.test.ts": 1675,
     "src/db/import.test.ts": 1077,
     "src/db/manifests.test.ts": 3725,
     "src/db/no-show.test.ts": 1165,
@@ -416,7 +424,7 @@
     "src/db/reminders.test.ts": 1078,
     "src/db/rental-fit.test.ts": 1227,
     "src/db/reporting.test.ts": 1594,
-    "src/db/retention.test.ts": 1262,
+    "src/db/retention.test.ts": 1264,
     "src/db/reviews.test.ts": 1004,
     "src/db/seat-claims.test.ts": 1094,
     "src/db/self-declared-cards.test.ts": 1865,
@@ -482,6 +490,12 @@
         "files": {
           "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": "0 -> 304"
         }
+      },
+      {
+        "why": "A new departure table (departure_boat_safety_snapshots, issue 2300) is registered in the export, erasure and retention coverage lists, and the manifest and log routes gain one component and its props each (issues 2285, 2300)",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": "424 -> 425"
+        }
       }
     ],
     "src/app/ready/[token]/page.tsx#DiverReadinessPage": 309,
@@ -495,10 +509,10 @@
     "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 310,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 332,
     "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 329,
-    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 424,
+    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 425,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 356,
     "src/db/checkouts.ts#startBookingCheckout": 303,
-    "src/db/export.ts#loadShopExportContext": 338,
+    "src/db/export.ts#loadShopExportContext": 334,
     "src/db/reminders.ts#sendDueReminders": 332,
     "src/db/reporting.ts#getMonthlyReport": 338,
     "src/db/seed-dive-sites.ts#seedDiveSites": 467,
@@ -553,6 +567,13 @@
       {
         "why": "The register page carries the Gear section's tab strip (Register, Work orders) since the bench became its second tab (ADR 20261008-gear-work-orders)",
         "files": {}
+      },
+      {
+        "why": "A new departure table (departure_boat_safety_snapshots, issue 2300) is registered in the export, erasure and retention coverage lists, and the manifest and log routes gain one component and its props each (issues 2285, 2300)",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": "756 -> 758",
+          "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": "501 -> 506"
+        }
       }
     ],
     "src/app/onboard/page.tsx": 479,
@@ -576,8 +597,8 @@
     "src/app/shop/[shopSlug]/settings/import/page.tsx": 508,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 789,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 593,
-    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 501,
+    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 758,
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 506,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 511
   },
   "tokens": {

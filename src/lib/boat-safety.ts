@@ -143,6 +143,25 @@ export type BoatPaperDates = {
   insuranceExpiresOn: CalendarDate | null;
 };
 
+/**
+ * The boat's certificate limits and paper dates verbatim, as the departure log
+ * keeps them at the departure checkpoint (#2300). Null is "not recorded".
+ */
+export type BoatPaperRecord = BoatPaperDates & {
+  certifiedPassengers: number | null;
+  certifiedTotalPersons: number | null;
+};
+
+/**
+ * The notices a departure-checkpoint snapshot keeps (#2300): papers and kit,
+ * never the head-count lines, which the roll call itself records.
+ */
+export function boatSnapshotNotices(notices: readonly BoatSafetyNotice[]): BoatSafetyNotice[] {
+  return notices.filter(
+    (notice) => notice.code !== "over_certificate" && notice.code !== "over_total_persons",
+  );
+}
+
 /** One unit of safety kit and its latest clock readings (`latestServiceClocks`). */
 export type SafetyKitUnit = {
   id: string;

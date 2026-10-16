@@ -1,8 +1,10 @@
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import {
+  type BoatPaperRecord,
   type BoatSafetyNotice,
   boatPaperNotices,
   boatSafetyNotices,
+  boatSnapshotNotices,
   departureSafetyDate,
   expiredBoatSafetyNotices,
   isLifeSafetyKitKind,
@@ -12,11 +14,14 @@ import {
   type SafetyKitUnit,
   safetyKitNotices,
 } from "@/lib/boat-safety";
-import type { CalendarDate } from "@/lib/calendar-date";
+import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import type { GearItemKind } from "@/lib/gear";
+import { log } from "@/lib/log";
+import { hasSailed } from "@/lib/trips";
 import type { DbExecutor } from "./client";
 import { latestServiceClocks } from "./gear";
-import { boats, gearItems, trips } from "./schema";
+import { boats, departureBoatSafetySnapshots, gearItems, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -278,4 +283,104 @@ export async function departureBoatId(
     .where(and(eq(trips.shopId, shopId), eq(trips.id, tripId), liveTrip()))
     .limit(1);
   return trip?.boatId ?? null;
+}
+
+/**
+ * **Keep the boat's papers and kit notices as they stand at the departure
+ * checkpoint** (#2300). Called after every departure-checkpoint roll-call
+ * write, diver or crew, live or offline: the row is rewritten each time until
+ * the departure has sailed (`hasSailed`), then never again, so the departure
+ * log reads what the crew had in front of them as the boat left rather than
+ * the boat as it is today.
+ *
+ * Never throws. The roll call it follows is already committed, and a missing
+ * snapshot is stated on the log as missing; a failure is logged, not raised
+ * into the rail.
+ */
+export async function captureDepartureBoatSafety(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  now: Date = nowDate(),
+): Promise<"captured" | "sailed" | "no_boat" | "failed"> {
+  try {
+    // Its own transaction (a savepoint when the caller holds one), so a failed
+    // statement here never aborts the caller's.
+    return await db.transaction((tx) => captureInTransaction(tx, shopId, tripId, now));
+  } catch (error) {
+    log("boat_safety.snapshot_failed", "error", {
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+    return "failed";
+  }
+}
+
+async function captureInTransaction(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  now: Date,
+): Promise<"captured" | "sailed" | "no_boat"> {
+  const [trip] = await db
+    .select({ startsAt: trips.startsAt, boatId: trips.boatId, timeZone: shops.timezone })
+    .from(trips)
+    .innerJoin(shops, eq(shops.id, trips.shopId))
+    .where(and(eq(trips.shopId, shopId), eq(trips.id, tripId), liveTrip()))
+    .limit(1);
+  if (!trip?.boatId) return "no_boat";
+  if (hasSailed(trip.startsAt, now)) return "sailed";
+  const [boat] = await db
+    .select(boatPaperColumns)
+    .from(boats)
+    .where(and(eq(boats.shopId, shopId), eq(boats.id, trip.boatId)))
+    .limit(1);
+  if (!boat) return "no_boat";
+  const judgedOn = calendarDateInTimezone(trip.startsAt, trip.timeZone);
+  const kit = await listSafetyKit(db, shopId);
+  const notices = boatSnapshotNotices(
+    boatSafetyNotices({
+      boat,
+      kit: kit.filter((unit) => unit.aboardBoatId === boat.id),
+      kindsOnRegister: kindsOf(kit),
+      // The head count is the roll call's own record; nothing here counts it.
+      passengers: { booked: 0, boarded: 0 },
+      crew: { assigned: 0, boarded: 0 },
+      onDate: judgedOn,
+    }),
+  );
+  const papers: BoatPaperRecord = {
+    certifiedPassengers: boat.certifiedPassengers,
+    certifiedTotalPersons: boat.certifiedTotalPersons,
+    coiExpiresOn: boat.coiExpiresOn,
+    inspectionDueOn: boat.inspectionDueOn,
+    registrationExpiresOn: boat.registrationExpiresOn,
+    insuranceExpiresOn: boat.insuranceExpiresOn,
+  };
+  const row = { boatId: boat.id, boatName: boat.name, judgedOn, papers, notices, capturedAt: now };
+  await db
+    .insert(departureBoatSafetySnapshots)
+    .values({ shopId, tripId, ...row })
+    .onConflictDoUpdate({ target: departureBoatSafetySnapshots.tripId, set: row });
+  return "captured";
+}
+
+/** The departure-checkpoint snapshot of this departure's boat, or null if none was taken. */
+export async function departureBoatSafetySnapshot(db: DbExecutor, shopId: string, tripId: string) {
+  const [row] = await db
+    .select({
+      boatName: departureBoatSafetySnapshots.boatName,
+      judgedOn: departureBoatSafetySnapshots.judgedOn,
+      papers: departureBoatSafetySnapshots.papers,
+      notices: departureBoatSafetySnapshots.notices,
+      capturedAt: departureBoatSafetySnapshots.capturedAt,
+    })
+    .from(departureBoatSafetySnapshots)
+    .where(
+      and(
+        eq(departureBoatSafetySnapshots.shopId, shopId),
+        eq(departureBoatSafetySnapshots.tripId, tripId),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
 }
