@@ -216,8 +216,12 @@ export function MoneyBlock({
         </dt>
         <dd className={FIGURE_INLINE_CLASS}>{money(dueNowCents)}</dd>
       </div>
+      {/* A `<dd>` in its own group: a `<dl>`'s groups hold only `<dt>`/`<dd>`, and
+          the sentence describes the figure above it (axe `definition-list`). */}
       {dueNow === "at_shop" && deskPayment ? (
-        <div className="text-sm text-muted">{t(DESK_PAYMENT_BOOKING_KEYS[deskPayment])}</div>
+        <div>
+          <dd className="text-sm text-muted">{t(DESK_PAYMENT_BOOKING_KEYS[deskPayment])}</dd>
+        </div>
       ) : null}
       {anyDeposit && balanceCents > 0 && balanceDueAt ? (
         <div className="text-sm text-muted tabular-nums">
