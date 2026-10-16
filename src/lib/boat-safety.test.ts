@@ -573,6 +573,37 @@ describe("boatSafetyNoticeTone", () => {
     expect(boatSafetyNoticeIsUrgent({ ...paper, expired: false })).toBe(false);
     expect(boatSafetyNoticeIsUrgent({ code: "kit_missing", kind: "aed" })).toBe(true);
   });
+
+  // Dive-domain review D3, records 6: a lapsed certificate or inspection means
+  // the boat is not certified to carry anyone. Danger, informing, never a gate.
+  it("is danger for a lapsed certificate or inspection, and only once lapsed", () => {
+    for (const which of ["coi", "inspection"] as const) {
+      const paper = { code: "paper", paper: which, dueOn: TODAY, days: 3 } as const;
+      expect(boatSafetyNoticeTone({ ...paper, expired: true })).toBe("danger");
+      expect(boatSafetyNoticeTone({ ...paper, expired: false })).toBe("neutral");
+    }
+    expect(
+      boatSafetyNoticeTone({
+        code: "paper",
+        paper: "registration",
+        dueOn: TODAY,
+        days: 3,
+        expired: true,
+      }),
+    ).toBe("warning");
+  });
+
+  it("raises a lapsed certificate or inspection on Today's departure row, for every role", () => {
+    const lapsed = (which: "coi" | "inspection" | "insurance") =>
+      ({ code: "paper", paper: which, dueOn: TODAY, days: 3, expired: true }) as const;
+    expect(lifeSafetyNotices([lapsed("coi"), lapsed("inspection"), lapsed("insurance")])).toEqual([
+      lapsed("coi"),
+      lapsed("inspection"),
+    ]);
+    expect(
+      lifeSafetyNotices([{ code: "paper", paper: "coi", dueOn: TODAY, days: 3, expired: false }]),
+    ).toEqual([]);
+  });
 });
 
 describe("departureSafetyDate", () => {

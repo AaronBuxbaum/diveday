@@ -545,15 +545,30 @@ export function boatSafetyNotices(input: {
 }
 
 /**
+ * The papers whose lapse means the boat is not certified to carry anyone: the
+ * certificate itself and its inspection (dive-domain review D3). Danger once
+ * lapsed, and on Today for every role. Informs; nothing refuses on it.
+ */
+function isLapsedCertification(notice: BoatSafetyNotice): boolean {
+  return (
+    notice.code === "paper" &&
+    notice.expired &&
+    (notice.paper === "coi" || notice.paper === "inspection")
+  );
+}
+
+/**
  * The notices Today raises **on a departure sailing today** (danger, every
- * role): a must-carry kind missing, and any clock on oxygen, the AED or flares
- * aboard that has run out or will inside the kit horizon.
+ * role): a must-carry kind missing, any clock on oxygen, the AED or flares
+ * aboard that has run out or will inside the kit horizon, and a lapsed
+ * certificate or inspection.
  */
 export function lifeSafetyNotices(notices: readonly BoatSafetyNotice[]): BoatSafetyNotice[] {
   return notices.filter(
     (notice) =>
       notice.code === "kit_missing" ||
-      (notice.code === "kit_clock" && isLifeSafetyKitKind(notice.kind)),
+      (notice.code === "kit_clock" && isLifeSafetyKitKind(notice.kind)) ||
+      isLapsedCertification(notice),
   );
 }
 
@@ -582,15 +597,16 @@ export type BoatSafetySection = {
 
 /**
  * How loudly a notice is drawn. **Danger** for what means the boat is not as
- * it should be to leave: must-carry kit missing, and more passengers or more
- * persons than the certificate allows. **Warning** for what has already gone wrong (a
+ * it should be to leave: must-carry kit missing, more passengers or more
+ * persons than the certificate allows, and a lapsed certificate or inspection. **Warning** for what has already gone wrong (a
  * lapsed date, kit flagged for service). **Neutral** for a heads-up.
  */
 export function boatSafetyNoticeTone(notice: BoatSafetyNotice): BoatSafetyTone {
   if (
     notice.code === "over_certificate" ||
     notice.code === "over_total_persons" ||
-    notice.code === "kit_missing"
+    notice.code === "kit_missing" ||
+    isLapsedCertification(notice)
   ) {
     return "danger";
   }

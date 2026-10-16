@@ -203,6 +203,8 @@ export async function todayBoatSafety(
         kit.filter((unit) => unit.aboardBoatId === boat.id),
         input.todayLocal,
       ),
+      // A lapsed certificate or inspection (dive-domain review D3).
+      ...boatPaperNotices(boat, input.todayLocal),
     ]);
     if (notices.length > 0) {
       departures.push({ tripId: departure.tripId, boatId: boat.id, boatName: boat.name, notices });
