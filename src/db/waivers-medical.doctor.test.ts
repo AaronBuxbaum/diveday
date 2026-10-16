@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { DOCTOR_UNLOCK_FAILURE_LIMIT } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
 import { bookings, people, trips, waiverRecords } from "./schema";
 import { listStaff } from "./trips";
@@ -61,7 +62,7 @@ describe("getDoctorReferral", () => {
   it("asks for the whole questionnaire when no date of birth is on file to unlock with", async () => {
     const { db, record } = await signed(medicalReferralAnswers, { dateOfBirth: null });
     expect(await getDoctorReferral(db, record)).toMatchObject({ answers: "whole" });
-    expect(await revealDoctorReferral(db, record, "1984-03-09")).toBe("mismatch");
+    expect(await revealDoctorReferral(db, record, "1984-03-09")).toBe("whole");
   });
 
   it("asks for the whole questionnaire on a paper hold, and says unfinished only for an unfinished form", async () => {
@@ -82,7 +83,7 @@ describe("getDoctorReferral", () => {
     expect(await revealDoctorReferral(db, record, "1984-03-10")).toBe("mismatch");
     expect(await revealDoctorReferral(db, record, "not a date")).toBe("mismatch");
     const shown = await revealDoctorReferral(db, record, "1984-03-09");
-    if (!shown || shown === "mismatch") throw new Error("expected the answers");
+    if (!shown || typeof shown === "string") throw new Error("expected the answers");
     expect(shown.items).toHaveLength(1);
     expect(shown.items[0]?.ref).toEqual({ kind: "question", number: 3 });
     expect(shown.items[0]?.prompt).toContain("exercise");
@@ -147,5 +148,37 @@ describe("getDoctorReferral", () => {
     const { db, person, record } = await signed(medicalReferralAnswers);
     await db.update(people).set({ deletedAt: now }).where(eq(people.id, person.id));
     expect(await getDoctorReferral(db, record)).toBeNull();
+  });
+
+  it("compares no date when there is nothing to unlock (a paper hold)", async () => {
+    const { db, record } = await signed(medicalReferralAnswers);
+    const paper = { ...record, medicalAnswers: null };
+    expect(await revealDoctorReferral(db, paper, "1984-03-09")).toBe("whole");
+    expect(await revealDoctorReferral(db, paper, "1990-01-01")).toBe("whole");
+    const [after] = await db
+      .select({ failures: waiverRecords.doctorUnlockFailures })
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, record.id));
+    expect(after?.failures).toBe(0);
+  });
+
+  it("counts only wrong dates, and locks the answers for the rest of the hold at the ceiling", async () => {
+    const { db, record } = await signed(medicalReferralAnswers);
+    const fresh = async () => {
+      const [row] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, record.id));
+      if (!row) throw new Error("record missing");
+      return row;
+    };
+    // A match spends nothing.
+    expect(await revealDoctorReferral(db, await fresh(), "1984-03-09")).not.toBe("mismatch");
+    expect((await fresh()).doctorUnlockFailures).toBe(0);
+    for (let tries = 1; tries < DOCTOR_UNLOCK_FAILURE_LIMIT; tries++) {
+      expect(await revealDoctorReferral(db, await fresh(), "1990-01-01")).toBe("mismatch");
+    }
+    // The last allowed wrong date locks it, and then even the right date shows nothing.
+    expect(await revealDoctorReferral(db, await fresh(), "1990-01-01")).toBe("whole");
+    expect((await fresh()).doctorUnlockFailures).toBe(DOCTOR_UNLOCK_FAILURE_LIMIT);
+    expect(await revealDoctorReferral(db, await fresh(), "1984-03-09")).toBe("whole");
+    expect(await getDoctorReferral(db, await fresh())).toMatchObject({ answers: "whole" });
   });
 });

@@ -16,6 +16,7 @@ export type DoctorAnswersCopy = {
   mismatch: string;
   rate: string;
   closed: string;
+  whole: string;
   note: string;
 };
 
@@ -48,6 +49,8 @@ export function DoctorAnswers({ token, copy }: { token: string; copy: DoctorAnsw
       </>
     );
   }
+
+  if (state.status === "whole") return <p className="mt-3 text-base text-muted">{copy.whole}</p>;
 
   const refusal =
     state.status === "mismatch"

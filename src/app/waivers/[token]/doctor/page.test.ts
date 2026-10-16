@@ -12,6 +12,7 @@ import {
   now,
   waiverContextFor,
 } from "@/db/waivers-test-fixtures";
+import { DOCTOR_UNLOCK_FAILURE_LIMIT } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -37,7 +38,11 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
-  return { ...actual, checkRateLimit: vi.fn(async () => ({ allowed: true, retryAfterMs: 0 })) };
+  return {
+    ...actual,
+    checkRateLimit: vi.fn(async () => ({ allowed: true, retryAfterMs: 0 })),
+    checkRateLimitFailClosed: vi.fn(async () => ({ allowed: true, retryAfterMs: 0 })),
+  };
 });
 vi.mock("@/i18n/request", () => ({
   requestLocale: vi.fn(async () => "en-US"),
@@ -45,13 +50,16 @@ vi.mock("@/i18n/request", () => ({
 }));
 
 const { getDb } = await import("@/db/client");
-const { checkRateLimit, RATE_LIMITS } = await import("@/lib/rate-limit");
+const { checkRateLimit, checkRateLimitFailClosed, RATE_LIMITS, rateLimitKey } = await import(
+  "@/lib/rate-limit"
+);
 const { default: DoctorReferralPage } = await import("./page");
 const { revealDoctorAnswersAction } = await import("./actions");
 
 afterEach(() => {
   vi.clearAllMocks();
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, retryAfterMs: 0 });
+  vi.mocked(checkRateLimitFailClosed).mockResolvedValue({ allowed: true, retryAfterMs: 0 });
 });
 
 /**
@@ -139,15 +147,32 @@ describe("the doctor's page", () => {
     );
   });
 
-  it("rate-limits the unlock per IP and per held release", async () => {
-    const { token } = await signedLink(medicalReferralAnswers);
+  it("rate-limits the unlock per IP, and per diver failing closed", async () => {
+    const { token, person } = await signedLink(medicalReferralAnswers);
     await reveal(token, "1984-03-09");
-    const configs = vi.mocked(checkRateLimit).mock.calls.map((call) => call[1]);
-    expect(configs).toEqual([RATE_LIMITS.capabilityAction, RATE_LIMITS.doctorAnswersByRecord]);
-    vi.mocked(checkRateLimit)
-      .mockResolvedValueOnce({ allowed: true, retryAfterMs: 0 })
-      .mockResolvedValueOnce({ allowed: false, retryAfterMs: 1000 });
+    expect(vi.mocked(checkRateLimit).mock.calls.map((call) => call.slice(0, 2))).toEqual([
+      [rateLimitKey("waiver-token", "203.0.113.7"), RATE_LIMITS.capabilityAction],
+    ]);
+    // Keyed by the diver, never the token, the record or the address: neither
+    // rotating addresses nor a reissued link buys a fresh budget.
+    expect(vi.mocked(checkRateLimitFailClosed).mock.calls.map((call) => call.slice(0, 2))).toEqual([
+      [rateLimitKey("doctor-answers", person.id), RATE_LIMITS.doctorAnswersByPerson],
+    ]);
+    vi.mocked(checkRateLimitFailClosed).mockResolvedValueOnce({ allowed: false, retryAfterMs: 1 });
     expect(await reveal(token, "1984-03-09")).toEqual({ status: "rate" });
+  });
+
+  it("says to go through the whole questionnaire once the wrong dates reach the ceiling", async () => {
+    const { db, token, person } = await signedLink(medicalReferralAnswers);
+    await db
+      .update(waiverRecords)
+      .set({ doctorUnlockFailures: DOCTOR_UNLOCK_FAILURE_LIMIT - 1 })
+      .where(eq(waiverRecords.personId, person.id));
+    expect(await reveal(token, "1990-01-01")).toEqual({ status: "whole" });
+    expect(await reveal(token, "1984-03-09")).toEqual({ status: "whole" });
+    const html = await render(token);
+    expect(html).toContain("Go through the whole questionnaire with your doctor.");
+    expect(html).not.toContain('name="birthdate"');
   });
 
   it("sends a clean release back to its waiver page", async () => {

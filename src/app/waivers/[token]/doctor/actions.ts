@@ -5,7 +5,12 @@ import { getShopById } from "@/db/shops";
 import { getWaiverForToken, revealDoctorReferral } from "@/db/waivers";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import {
+  checkRateLimit,
+  checkRateLimitFailClosed,
+  RATE_LIMITS,
+  rateLimitKey,
+} from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { referralRefLabel } from "./referral-labels";
 
@@ -15,6 +20,8 @@ export type DoctorAnswersState =
   | { status: "mismatch" }
   | { status: "rate" }
   | { status: "closed" }
+  /** Nothing to unlock, or the wrong-date ceiling is reached: the whole questionnaire. */
+  | { status: "whole" }
   | { status: "open"; items: { label: string; prompt: string }[]; source: string | null };
 
 /**
@@ -22,9 +29,10 @@ export type DoctorAnswersState =
  * (security review of layer r5-3, F1). The waiver link alone shows the page;
  * which conditions the diver answered yes to needs something only the diver
  * knows. Two nets: the shared per-IP bucket every waiver-link action spends
- * from, and a narrow one per held release, so a rotating set of addresses
- * cannot walk the birthdays either. Only the outcome comes back: the published
- * prompts on a match, and never the date on file.
+ * from, and a narrow one per diver that fails closed, so a rotating set of
+ * addresses cannot walk the birthdays either; under both, the record's
+ * lifetime ceiling of wrong dates (`revealDoctorReferral`). Only the outcome
+ * comes back: the published prompts on a match, and never the date on file.
  */
 export async function revealDoctorAnswersAction(
   token: string,
@@ -41,11 +49,13 @@ export async function revealDoctorAnswersAction(
   const state = await getWaiverForToken(db, token);
   if (state.state !== "completed") return { status: "closed" };
   const record = state.record;
+  // Keyed by the diver, so a reissued link buys no fresh budget; fails closed,
+  // because this one bucket stands in front of medical answers.
   if (
     !(
-      await checkRateLimit(
-        rateLimitKey("doctor-answers", record.id),
-        RATE_LIMITS.doctorAnswersByRecord,
+      await checkRateLimitFailClosed(
+        rateLimitKey("doctor-answers", record.personId),
+        RATE_LIMITS.doctorAnswersByPerson,
       )
     ).allowed
   ) {
@@ -59,6 +69,7 @@ export async function revealDoctorAnswersAction(
   );
   if (answers === null) return { status: "closed" };
   if (answers === "mismatch") return { status: "mismatch" };
+  if (answers === "whole") return { status: "whole" };
   const shop = await getShopById(db, record.shopId);
   const t = diverTranslator(await requestLocale(shop?.defaultLocale));
   return {

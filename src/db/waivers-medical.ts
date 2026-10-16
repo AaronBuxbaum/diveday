@@ -3,10 +3,11 @@
  * evaluation, the hold an unanswered one keeps, and retiring a refusal.
  * Imported through the `./waivers` barrel.
  */
-import { and, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { canRetireMedicalRefusal } from "@/lib/authz";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { log } from "@/lib/log";
 import {
   answeredMedicalForm,
   calculateMedicalResult,
@@ -16,7 +17,7 @@ import {
 } from "@/lib/medical";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { isUuid } from "@/lib/uuid";
-import { awaitsPhysician, doctorPageWithinTrip } from "@/lib/waivers";
+import { awaitsPhysician, DOCTOR_UNLOCK_FAILURE_LIMIT, doctorPageWithinTrip } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { bookings, people, trips, waiverRecords } from "./schema";
@@ -489,7 +490,9 @@ export async function getDoctorReferral(
 ): Promise<DoctorReferral | null> {
   const person = await heldPersonForDoctor(db, record, now);
   if (!person) return null;
-  const hasItems = referralItems(record.medicalAnswers).length > 0;
+  const hasItems =
+    referralItems(record.medicalAnswers).length > 0 &&
+    record.doctorUnlockFailures < DOCTOR_UNLOCK_FAILURE_LIMIT;
   const unfinished =
     record.medicalAnswers !== null &&
     calculateMedicalResult(record.medicalAnswers).status === "incomplete";
@@ -502,24 +505,47 @@ export async function getDoctorReferral(
 
 /**
  * **The answers, for whoever knows the diver's date of birth** (security
- * review of layer r5-3, F1). A forwarded or printed waiver link alone no
- * longer tells its reader which conditions the diver disclosed: the published
- * form's prompts sit behind a date of birth the page never prints. `mismatch`
- * for a wrong date, and null when the page itself would not open. The caller
- * rate-limits.
+ * review of layer r5-3, F1 and second-pass FIX-1). A forwarded or printed
+ * waiver link alone no longer tells its reader which conditions the diver
+ * disclosed: the published prompts sit behind a date of birth the page never
+ * prints.
+ *
+ * - null when the page itself would not open;
+ * - `whole` without comparing anything when there is nothing to unlock (no
+ *   referral items, no date on file), so the action never confirms a date of
+ *   birth for its own sake, and once the release has taken
+ *   `DOCTOR_UNLOCK_FAILURE_LIMIT` wrong dates;
+ * - `mismatch` for a wrong date, counted on the record, the attempt that
+ *   reaches the ceiling answering `whole` and logging
+ *   `doctor_answers.locked_out` with the record id only.
+ *
+ * A right date spends nothing. The caller rate-limits as well.
  */
 export async function revealDoctorReferral(
   db: DbExecutor,
   record: HeldRecord,
   enteredBirthdate: string,
   now: Date = nowDate(),
-): Promise<DoctorReferralAnswers | "mismatch" | null> {
+): Promise<DoctorReferralAnswers | "mismatch" | "whole" | null> {
   const person = await heldPersonForDoctor(db, record, now);
   if (!person) return null;
-  if (!person.dateOfBirth || !isValidCalendarDate(enteredBirthdate)) return "mismatch";
-  if (enteredBirthdate !== person.dateOfBirth) return "mismatch";
-  return {
-    items: referralItems(record.medicalAnswers),
-    form: answeredMedicalForm(record.medicalAnswers),
-  };
+  const items = referralItems(record.medicalAnswers);
+  if (items.length === 0 || !person.dateOfBirth) return "whole";
+  if (record.doctorUnlockFailures >= DOCTOR_UNLOCK_FAILURE_LIMIT) return "whole";
+  if (isValidCalendarDate(enteredBirthdate) && enteredBirthdate === person.dateOfBirth) {
+    return { items, form: answeredMedicalForm(record.medicalAnswers) };
+  }
+  // Counted in the statement, never from the read above: two tries racing each
+  // other must both be counted.
+  const [counted] = await db
+    .update(waiverRecords)
+    .set({ doctorUnlockFailures: sql`${waiverRecords.doctorUnlockFailures} + 1` })
+    .where(and(eq(waiverRecords.id, record.id), eq(waiverRecords.shopId, record.shopId)))
+    .returning({ failures: waiverRecords.doctorUnlockFailures });
+  const failures = counted?.failures ?? DOCTOR_UNLOCK_FAILURE_LIMIT;
+  if (failures < DOCTOR_UNLOCK_FAILURE_LIMIT) return "mismatch";
+  if (failures === DOCTOR_UNLOCK_FAILURE_LIMIT) {
+    log("doctor_answers.locked_out", "warn", { record: record.id });
+  }
+  return "whole";
 }

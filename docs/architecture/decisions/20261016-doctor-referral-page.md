@@ -23,7 +23,9 @@ the same gate (`doctorPageOpen`). It carries:
   Questionnaire*, 10346 EN, version 2026-01-01, page 3, named and linked
   (`RSTC_QUESTIONNAIRE.published`), never a restyled copy;
 - the **referral answers behind the diver's date of birth**: `revealDoctorAnswersAction` compares
-  the entered date with the one on file (rate-limited per IP and per release) and returns each
+  the entered date with the one on file (rate-limited per IP and per diver, failing closed; at 20
+  wrong dates per release, `waiver_records.doctor_unlock_failures`, the answers stay locked for the
+  rest of the hold) and returns each
   referral item's place and **published prompt**, never free-text detail, with the form version
   answered. With no date on file or nothing to show, the page says to go through the whole
   questionnaire;
@@ -38,15 +40,14 @@ It prints with a zero `@page` margin (`capabilityPagePrintRule`), so the browser
   public, so a number is the condition to any reader, a doctor cannot evaluate against a number,
   and the date of birth was a new identifier on a forwardable link.
 - **The blank form only**: the doctor would not know what to ask about.
-- **A separate doctor token**: a second capability to issue and revoke; the date-of-birth gate
-  protects the answers with nothing new to revoke.
-- **A restyled examiner's page** (first shipped): it could not be checked against the PDF from the
-  build container, and an unverified copy of a legal form must not stand in for it.
+- **A separate doctor token**: a second capability to issue and revoke.
+- **A restyled examiner's page** (first shipped): unchecked against the PDF, so it must not stand
+  in for the legal form.
 
 ## Consequences
 
 A forwarded link shows the diver's name and that an evaluation is pending, until a day after the
 departure. The conditions need the date of birth too, which the page never prints; the rate limit
-stops guessing, not someone who knows the birthday. The answers gate is a **review-driven
+and the ceiling stop guessing, not someone who knows the birthday. The answers gate is a **review-driven
 amendment** to H-127, noted there for the owner to revisit. Revisit if a jurisdiction needs another
 examiner form, or once page 3 is checked and pinned by sha256 like the questionnaire.

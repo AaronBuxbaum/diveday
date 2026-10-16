@@ -125,6 +125,7 @@ export default async function DoctorReferralPage({
               mismatch: t("waiver.doctor.unlockMismatch"),
               rate: t("waiver.doctor.unlockRate"),
               closed: t("waiver.doctor.unlockClosed"),
+              whole: t("waiver.doctor.answersWhole"),
               note: t("waiver.doctor.answersNote"),
             }}
           />
