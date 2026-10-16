@@ -30,7 +30,7 @@ import {
 } from "./_components/CounterPayment";
 import { DisabledDemoButton } from "./_components/DisabledDemoButton";
 import { OrderBookingLine } from "./_components/OrderBookingLine";
-import { OrderDisputeBanner, OrderMeta } from "./_components/OrderMeta";
+import { OrderDisputeBanner, OrderLostDisputes, OrderMeta } from "./_components/OrderMeta";
 import { refreshAction, refundAction, voidAction } from "./actions";
 import { KIND_KEYS, NOTICES, STATUS_KEYS } from "./order-detail-keys";
 import { loadOrderHeader } from "./order-header";
@@ -153,6 +153,7 @@ export default async function OrderDetailPage({
         <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
       ) : null}
       <OrderDisputeBanner dispute={header.dispute} timezone={timezone} locale={locale} t={t} />
+      <OrderLostDisputes lost={header.lostDisputes} timezone={timezone} locale={locale} t={t} />
       {/* `padding="lg"`: the receipt is a card someone works *inside* —
           Refresh, Void and Refund all live in it. No `title`; the page header
           above already names the order, and the status badge is the heading

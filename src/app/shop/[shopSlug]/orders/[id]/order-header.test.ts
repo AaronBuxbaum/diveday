@@ -73,6 +73,27 @@ describe("loadOrderHeader's dispute", () => {
   });
 });
 
+describe("loadOrderHeader's lost disputes (issue 2292)", () => {
+  it("shows a lost dispute's reversal to an owner and nothing to crew", async () => {
+    const { db, shop, order } = await disputedOrder();
+    await db
+      .update(paymentDisputes)
+      .set({
+        status: "lost",
+        closedAt: new Date("2026-10-12T00:00:00Z"),
+        reversedAt: new Date("2026-10-12T00:00:00Z"),
+      })
+      .where(eq(paymentDisputes.stripeDisputeId, "dp_banner"));
+    const input = { shopId: shop.id, orderId: order.id };
+    const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    const captain = await seededStaffPersonId(db, shop.id, SEEDED_CAPTAIN_EMAIL);
+    expect((await loadOrderHeader(db, { ...input, personId: owner })).lostDisputes).toMatchObject([
+      { amountCents: 5_000 },
+    ]);
+    expect((await loadOrderHeader(db, { ...input, personId: captain })).lostDisputes).toEqual([]);
+  });
+});
+
 describe("loadOrderHeader's rental ticket", () => {
   it("is null for an order no counter rental billed", async () => {
     const { db, shop, order } = await disputedOrder();

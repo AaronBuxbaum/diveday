@@ -273,6 +273,11 @@ type ActivityParamShapes = {
    */
   party_marked_paid: { actor: string; diver: string };
   /**
+   * A staffer matched a refund made in the Stripe dashboard on a party's
+   * checkout to this seat (issue #2293). The amount is on the payment trail.
+   */
+  dashboard_refund_matched: { actor: string; diver: string };
+  /**
    * **Who changed the board**: the schedule builder's four acts, which wrote
    * no actor anywhere until the activity log asked. Each is recorded on the
    * departure it changed; a repeating departure is one line, on its first
@@ -431,6 +436,7 @@ export const ACTIVITY_CODES = [
   "payment_marked_refunded",
   "payment_balance_written_off",
   "party_marked_paid",
+  "dashboard_refund_matched",
   "departure_added",
   "series_added",
   "departure_moved",

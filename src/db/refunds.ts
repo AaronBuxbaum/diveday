@@ -282,6 +282,12 @@ async function parkStripeReversal(
     chargeId: string;
     reason: "unattributed_refund" | "unrecorded_refund";
     amountRefundedCents: number;
+    /**
+     * An unattributed refund's own share of that figure — what this event took
+     * that no seat carries — which staff match to seats from the Orders index
+     * (`src/db/unattributed-refunds.ts`, issue #2293).
+     */
+    unattributedCents?: number;
   },
 ): Promise<void> {
   const note = `${input.reason}:${input.amountRefundedCents}`;
@@ -310,6 +316,7 @@ async function parkStripeReversal(
     ...input.target,
     stripeObjectId: input.chargeId,
     errorMessage: note,
+    amountCents: input.unattributedCents ?? null,
   });
   log("stripe_refund.parked", "warn", {
     shopId: input.shopId,
@@ -908,7 +915,9 @@ export async function refundBookingsForShopCancelledTrip(
  *   `order.refunded` integration event) or the seat now say what Stripe says.
  * - `checkout_unattributed` — recorded against a party checkout's running
  *   total, but no single seat on it can be named as the one refunded, so no
- *   seat's payment row was guessed at. Logged for staff to settle by hand.
+ *   seat's payment row was guessed at. Held as an unattributed amount on the
+ *   Orders index until staff pick the seat (`src/db/unattributed-refunds.ts`,
+ *   issue #2293); never split across the seats on a rule.
  * - `already_recorded` — Stripe's figure is already in DiveDay's books: the
  *   refund was DiveDay's own, or this is an older event arriving late.
  * - `deferred` — not yet: DiveDay's own refund of this money is mid-flight,
@@ -1204,6 +1213,7 @@ async function applyStripeChargeRefund(
         chargeId: input.chargeId,
         reason: "unattributed_refund",
         amountRefundedCents: input.amountRefundedCents,
+        unattributedCents: delta,
       });
       log("stripe_refund.checkout_unattributed", "warn", {
         shopId: current.shopId,

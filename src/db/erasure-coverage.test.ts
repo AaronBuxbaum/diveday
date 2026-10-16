@@ -313,8 +313,6 @@ const ERASURE_KEEPS: Record<string, string> = {
     "that a staff member's Monday email went out for a week — a date, a delivery status and a token hash. Only staff receive it, and the erasure refuses anyone holding a staff role",
 
   // --- the shop's own objects, holding nobody ------------------------------
-  trips:
-    "a departure: its site, its times, its capacity and the arrival words a shop wrote for everyone who books it",
   trip_dives: "the dives inside a departure, by site and order",
   trip_requirements:
     "the gates a departure sets — a certification level, specialties, whether a waiver is needed",

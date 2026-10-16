@@ -1105,9 +1105,10 @@ export const bookingCheckoutBookings = pgTable(
  * is not recorded at all. While `closed_at` is null the owner sees a Today row
  * with the amount and the evidence deadline.
  *
- * Informs, never moves money: a lost dispute is Stripe taking the funds back,
- * which the shop sees in its own Stripe balance; nothing here rewrites the
- * order or the seat.
+ * Never moves money and never rewrites the order or the seat. A dispute the
+ * shop lost is written as a reversal line of its own (`reversed_at`, issue
+ * #2292): the order still says what was paid, and the order page and Reports'
+ * money out show what the bank took back.
  */
 export const paymentDisputes = pgTable(
   "payment_disputes",
@@ -1132,6 +1133,13 @@ export const paymentDisputes = pgTable(
     openedAt: timestamp("opened_at", { withTimezone: true }).notNull(),
     /** Set once the dispute is decided (won, lost, or a warning closed). */
     closedAt: timestamp("closed_at", { withTimezone: true }),
+    /**
+     * The reversal line (issue #2292): when the dispute closed `lost`, so its
+     * amount left the shop's money. Set by the first lost close and never
+     * cleared or moved, so a replayed close writes no second reversal. Null
+     * for every dispute not lost.
+     */
+    reversedAt: timestamp("reversed_at", { withTimezone: true }),
     /**
      * The `created` time of the newest event applied. An older event delivered
      * late never overwrites a newer one — Stripe does not promise order.
@@ -1411,6 +1419,14 @@ export const paymentOperationIntents = pgTable(
     tripPromoId: uuid("trip_promo_id").references(() => tripLastMinutePromos.id),
     /** The Stripe object id once known, even if the local finalize write then failed. */
     stripeObjectId: text("stripe_object_id"),
+    /**
+     * Set only on a parked unattributed reversal (`parkStripeReversal`, issue
+     * #2293): the money a dashboard refund on a party checkout took that no
+     * seat carries yet. Staff match it to seats from the Orders index; each
+     * match takes what the seat held off this figure, and the row resolves at
+     * zero. Null on every other intent.
+     */
+    amountCents: integer("amount_cents"),
     errorMessage: text("error_message"),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
@@ -1443,6 +1459,10 @@ export const paymentOperationIntents = pgTable(
     check(
       "payment_operation_intents_single_promo",
       sql`${table.promoCodeId} is null or ${table.tripPromoId} is null`,
+    ),
+    check(
+      "payment_operation_intents_amount_nonnegative",
+      sql`${table.amountCents} is null or ${table.amountCents} >= 0`,
     ),
   ],
 );

@@ -37,9 +37,11 @@ the `order.refunded` the shop's books needed. A dispute was invisible until the 
 - **One recording path.** An order moves through `applyOrderUpdate`, as every DiveDay refund does,
   so its booking payment, Reports and `order.refunded` move together; the trail code is
   `stripe_dashboard_refund`. A checkout covering one paid seat moves that seat; a party checkout's
-  refund names no seat, so none is guessed at. It is counted on the checkout and put on the
-  stuck-operations queue, and until a human reconciles it no DiveDay refund runs against any seat
-  of that checkout (`needs_reconciliation`): the money may already be that seat's.
+  refund names no seat, so none is guessed at. It is counted on the checkout and held, with the
+  amount no seat carries, on the Orders index's "Refunds made in Stripe" queue, where staff pick the
+  seat it was for (issue #2293, product owner 2026-10-13: no proportional split). Until it is
+  matched, no DiveDay refund runs against any seat of that checkout (`needs_reconciliation`): the
+  money may already be that seat's. `src/db/unattributed-refunds.ts`.
 - **Stripe is asked only what it can answer.** The lookup runs with a key of the event's own mode,
   and a 4xx from it is read as "not DiveDay's" (logged, 200); only the network, a 429 or a 5xx is
   retried. A tip's PaymentIntent is recorded as its session completes, so a tip's refund or dispute
@@ -48,7 +50,11 @@ the `order.refunded` the shop's books needed. A dispute was invisible until the 
   event's `created` time so a late `updated` never reopens a closed one; an `updated` stamped the
   same second as the close does not either. An undecided dispute is a
   Today row for owners and managers, and a banner on its order, with the amount and the evidence
-  deadline. Nothing here moves money.
+  deadline. Nothing here moves money. *Amended 2026-10-16 (issue #2292, product owner 2026-10-13):*
+  a close with status `lost` writes a **reversal line**, `payment_disputes.reversed_at`, set by the
+  first lost close and never moved, so a replay writes no second one. The order keeps what was
+  paid; the order page shows the reversal as its own line and Reports' money out counts it in the
+  month it was lost.
 
 ## Alternatives considered
 
@@ -64,14 +70,17 @@ the `order.refunded` the shop's books needed. A dispute was invisible until the 
 - The Connect webhook must list the four new events; `config/env-registry.mjs` says so.
 - A refund that later **fails** at the bank (`charge.refund.updated`) is not handled: the books
   keep it. A lost dispute is not written onto the order either. Both are follow-ups if they occur.
+  *Amended 2026-10-16 (issue #2292):* a lost dispute is now a reversal line; see "Disputes are a
+  mirror" above.
   *Amended 2026-10-12 (issue #2291):* a failed or canceled refund is now handled. The endpoint
   also listens to `charge.refund.updated`; one `stripe_refund_failures` row per Stripe refund
   reverses the recorded refund on the order or checkout (and on a seat DiveDay refunded itself),
   and the diver shows as owed on the Orders index until a new refund brings `refunded_cents`
   back. Nothing is re-issued automatically, and the accounting integrations are not told.
 - A party checkout's dashboard refund is counted on the checkout but on no seat, so Reports still
-  shows those seats in full until staff mark the right one; it waits on the stuck-operations
-  queue, and automatic refunds of that checkout's seats wait with it.
+  shows those seats in full until staff pick the right one on the Orders index; automatic refunds
+  of that checkout's seats wait with it. Today still counts it among the payments that need a
+  check.
 - DiveDay's own refund write still adds its amount rather than setting Stripe's cumulative
   figure: setting it would swallow a dashboard refund made in the same minutes, which then never
   reaches the books. A confirmed-but-unrecorded own refund is held off by the deferral instead.

@@ -88,6 +88,7 @@
     "stillHeld": "Retenido",
     "disputeOpen": "El banco del titular de la tarjeta disputa {amount}. Envía tus pruebas a Stripe antes del {due}.",
     "disputeOpenNoDeadline": "El banco del titular de la tarjeta disputa {amount}. Respóndela en Stripe.",
+    "disputeLost": "Disputa perdida el {date}. El banco del titular de la tarjeta recuperó {amount}.",
     "refundAmountLabel": "Reembolsar ({currency})",
     "refunding": "Reembolsando…",
     "paidAtCounter": {
@@ -131,7 +132,10 @@
       "paidAfterCloseInProgress": "Ese reembolso ya está en camino.",
       "paidAfterCloseNeedsCheck": "Stripe ya devolvió parte de este pago. Revísalo antes en Pagos que necesitan revisión.",
       "paidAfterCloseNotConnected": "Tu cuenta de Stripe no está aceptando pagos, así que el reembolso no puede salir. Reembólsalo en Stripe.",
-      "paidAfterCloseFailed": "Stripe no aceptó ese reembolso. Inténtalo de nuevo o reembólsalo en Stripe."
+      "paidAfterCloseFailed": "Stripe no aceptó ese reembolso. Inténtalo de nuevo o reembólsalo en Stripe.",
+      "stripeRefundMatched": "Reembolso asignado a la plaza.",
+      "stripeRefundPartlyMatched": "Asignado. El resto de ese reembolso sigue esperando una plaza.",
+      "stripeRefundNotMatched": "Esa plaza no puede llevar este reembolso. Puede que ya esté asignado, o que la plaza no se pagara con ese pago."
     },
     "filters": {
       "searchLabel": "Buscar pedidos",
@@ -233,6 +237,13 @@
       "label": "Por cobrar:",
       "orders": "{amount} en {count, plural, one {# pedido abierto} other {# pedidos abiertos}}, el más antiguo del {date}",
       "seats": "{amount} en {count, plural, one {# plaza que zarpó sin pagar} other {# plazas que zarparon sin pagar}}"
+    },
+    "unattributedRefunds": {
+      "sectionLabel": "Reembolsos hechos en Stripe",
+      "heading": "{count, plural, one {# reembolso hecho en Stripe cubrió} other {# reembolsos hechos en Stripe cubrieron}} el pago de un grupo. Elige la plaza de cada uno.",
+      "seat": "{diver} · {held} pagado",
+      "matching": "Asignando…",
+      "openTrip": "Abrir salida"
     }
   }
 }

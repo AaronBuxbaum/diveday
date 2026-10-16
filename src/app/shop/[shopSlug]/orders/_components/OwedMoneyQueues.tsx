@@ -5,10 +5,38 @@ import { buttonClass } from "@/components/ui/button";
 import type { PaidAfterCloseCheckout } from "@/db/checkouts-paid-after-close";
 import type { listFailedRefunds } from "@/db/refund-failures";
 import type { OwedShopCancellationRefund } from "@/db/refunds";
+import type { UnattributedRefund } from "@/db/unattributed-refunds";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate, joinFacts } from "@/lib/format";
-import { refundPaidAfterCloseAction } from "../actions";
+import { matchStripeRefundAction, refundPaidAfterCloseAction } from "../actions";
 import { FACT_SEPARATOR, NOTICE_ROWS, OPEN_TRIP_LINE, OPEN_TRIP_LINK } from "./notice-rows";
+
+/**
+ * The Orders index's money queues, in the order a shop works them: what it
+ * owes for a cancelled departure, money paid after a checkout closed, refunds
+ * made in Stripe waiting for a seat, and refunds that failed. Each renders
+ * nothing while it is empty.
+ */
+export function MoneyOwedQueues({
+  queues,
+  ...shared
+}: Omit<QueueProps<never>, "queue"> & {
+  queues: {
+    owedRefunds: OwedShopCancellationRefund[];
+    paidAfterClose: PaidAfterCloseCheckout[];
+    unattributedRefunds: UnattributedRefund[];
+    failedRefunds: Awaited<ReturnType<typeof listFailedRefunds>>;
+  };
+}) {
+  return (
+    <>
+      <OwedRefundsQueue queue={queues.owedRefunds} {...shared} />
+      <PaidAfterCloseQueue queue={queues.paidAfterClose} {...shared} />
+      <UnattributedRefundsQueue queue={queues.unattributedRefunds} {...shared} />
+      <FailedRefundsQueue queue={queues.failedRefunds} {...shared} />
+    </>
+  );
+}
 
 type QueueProps<Row> = {
   queue: Row[];
@@ -186,6 +214,67 @@ export function FailedRefundsQueue({
                   </Link>
                 </span>
               ) : null}
+            </li>
+          ))}
+        </ul>
+      </ShopNotice>
+    </section>
+  );
+}
+
+/**
+ * A refund made in the Stripe dashboard on a party's checkout names an amount,
+ * never a seat (issue #2293). Each row offers the checkout's seats that still
+ * hold money from it; the tap says whose it was. Nothing is split on a rule.
+ * Renders nothing while none is waiting.
+ */
+export function UnattributedRefundsQueue({
+  queue,
+  shopSlug,
+  timeZone,
+  locale,
+  t,
+}: QueueProps<UnattributedRefund>) {
+  if (queue.length === 0) return null;
+  return (
+    <section aria-label={t("orders.index.unattributedRefunds.sectionLabel")} className="mb-6">
+      <ShopNotice tone="warning" role="status">
+        <p className="font-medium">
+          {t("orders.index.unattributedRefunds.heading", { count: queue.length })}
+        </p>
+        <ul className={NOTICE_ROWS}>
+          {queue.map((held) => (
+            <li key={held.intentId}>
+              {held.tripTitle ? <span className="font-medium">{held.tripTitle}</span> : null}
+              <span className="text-muted">
+                {held.tripTitle ? FACT_SEPARATOR : null}
+                {joinFacts([
+                  formatMoneyCents(held.amountCents, held.currency, locale),
+                  formatShortDate(held.refundedAt, locale, timeZone),
+                ])}
+              </span>{" "}
+              <span className={OPEN_TRIP_LINE}>
+                <Link href={`/shop/${shopSlug}/trips/${held.tripId}`} className={OPEN_TRIP_LINK}>
+                  {t("orders.index.unattributedRefunds.openTrip")}
+                </Link>
+              </span>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {held.seats.map((seat) => (
+                  <form key={seat.bookingId} action={matchStripeRefundAction}>
+                    <input type="hidden" name="intentId" value={held.intentId} />
+                    <input type="hidden" name="bookingId" value={seat.bookingId} />
+                    <SubmitButton
+                      pendingLabel={t("orders.index.unattributedRefunds.matching")}
+                      className={buttonClass({ variant: "secondary" })}
+                    >
+                      {t("orders.index.unattributedRefunds.seat", {
+                        diver: seat.diverName,
+                        held: formatMoneyCents(seat.heldCents, held.currency, locale),
+                      })}
+                    </SubmitButton>
+                  </form>
+                ))}
+              </div>
             </li>
           ))}
         </ul>

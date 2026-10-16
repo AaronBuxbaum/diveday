@@ -1031,7 +1031,6 @@ const OUTSIDE_RETENTION: readonly string[] = [
   // departures rather than the calendar.
   "trips",
   "trip_dives",
-  "trip_change_events",
   "executed_dives",
   "trip_sightings",
   "trip_assignments",
@@ -1069,7 +1068,6 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "recap_photos",
   "trip_recap_photos",
   "trip_reviews",
-  "review_moderation_events",
   // The shop's public reply under a review (batch 4, K2): lives as long as the
   // review it answers, and goes the way the review goes.
   "review_replies",

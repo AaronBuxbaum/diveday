@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { clearFinishedRehearsals } from "@/db/rehearsals";
 import { clearPassedReopensOn } from "@/db/shops";
+import { voidStalePublicPackageInvoices } from "@/db/stale-package-invoices";
 import { rollAllSeriesForward } from "@/db/trips";
 import { rollSailedSeriesWaitlists } from "@/db/waitlist-roll";
+import { nowDate } from "@/lib/clock";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
@@ -83,6 +85,15 @@ export async function GET(request: Request) {
     // Leads nobody invited on a series date that sailed roll onto the run's
     // next date (third UX review, item 12).
     const waitlist = await rollSailedSeriesWaitlists(db);
+    // A dive package bought on the public pages and left unpaid past its
+    // window is voided at Stripe and on the order (issue #2304). Its own
+    // failure never fails the roll: tomorrow's pass tries again.
+    const staleInvoices = await voidStalePublicPackageInvoices(db, { now: nowDate() }).catch(
+      async (error: unknown) => {
+        await sentry.captureException(error, { tags: { cron_scan: "stale_package_invoices" } });
+        return { considered: 0, voided: 0, failed: 0 };
+      },
+    );
 
     // A series that cannot be rolled is not a transient blip: it has had every
     // instance deleted, or its course was archived under it, and it will fail
@@ -111,6 +122,8 @@ export async function GET(request: Request) {
       reopensCleared,
       waitlistRolled: waitlist.rolled,
       waitlistInvited: waitlist.invited,
+      staleInvoicesVoided: staleInvoices.voided,
+      staleInvoicesFailed: staleInvoices.failed,
     });
 
     await sentry.captureCheckIn({

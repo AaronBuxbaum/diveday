@@ -50,6 +50,7 @@
 
 import { and, eq, inArray, isNotNull, isNull, ne, or, type SQL, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT, redactedUniqueValue } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
@@ -131,6 +132,7 @@ import {
   tips,
   tripLastMinutePromoRecipients,
   tripReviews,
+  trips,
   tripWaitlistEntries,
   userAccounts,
   waiverDeliveries,
@@ -1296,6 +1298,30 @@ async function scrubActivityEvents(
   // an event naming a *different person with the same name* loses its wording.
   // That trade is still the right way round — a line of history against a name
   // someone asked to have forgotten — but it is a line, not the log.
+  //
+  // One line is field-level rather than whole-line (issue #2315, Aaron
+  // 2026-10-13): an `order_refunded` line is a fact about the staffer who
+  // refunded, and names the customer only by `subject_person_id`. Erasing the
+  // customer drops that pointer and keeps nothing in `params` but the actor's
+  // name, so "who refunded this order?" survives. It runs first so the
+  // whole-line statement below no longer finds it by subject. A line the erased
+  // person wrote, or one hanging off a seat, is left to that statement.
+  await tx
+    .update(activityEvents)
+    .set({
+      subjectPersonId: null,
+      params: sql`jsonb_strip_nulls(jsonb_build_object('actor', ${activityEvents.params} -> 'actor'))`,
+    })
+    .where(
+      and(
+        eq(activityEvents.shopId, shopId),
+        eq(activityEvents.code, "order_refunded"),
+        eq(activityEvents.subjectPersonId, personId),
+        ne(activityEvents.actorPersonId, personId),
+        isNull(activityEvents.bookingId),
+      ),
+    );
+
   await tx
     .update(activityEvents)
     .set(ACTIVITY_REDACTED)
@@ -1328,6 +1354,98 @@ async function scrubActivityEvents(
       .returning({ id: activityEvents.id });
     logFuzzyMatch(ctx, "activity_event_name", byName.length);
   }
+  return [];
+}
+
+/**
+ * The handles a departure's title is searched for after an erasure: the full
+ * name and, when the name has more than one word, the family name (its last
+ * word), each trimmed of surrounding punctuation and dropped below
+ * {@link MIN_NAME_MATCH_CHARS} word characters.
+ */
+function titleNameHandles(fullName: string): string[] {
+  const edges = /^[^\p{L}\p{N}_]+|[^\p{L}\p{N}_]+$/gu;
+  const full = fullName.trim().replace(edges, "");
+  const words = full.split(/\s+/).filter(Boolean);
+  const family = words.length > 1 ? (words[words.length - 1] ?? "").replace(edges, "") : "";
+  const longEnough = (value: string) =>
+    [...value].filter((char) => WORD_CHAR.test(char)).length >= MIN_NAME_MATCH_CHARS;
+  return [...new Set([full, family].filter(longEnough))];
+}
+
+/**
+ * The erasure's "departure titles" sweep (issue #2315).
+ *
+ * A private departure is often titled with the diver's name ("Smith family
+ * charter"), and the title shows wherever the departure does: the schedule,
+ * the manifest, the activity log. A title is free text, so it cannot be
+ * scrubbed by matching a name in general; the rule is the product owner's
+ * (Aaron, 2026-10-13) and deliberately narrow:
+ *
+ * - **only their party is booked**: every seat on the departure that is not
+ *   cancelled is the erased diver's own or one of the party they lead
+ *   (`party_lead_booking_id` pointing at their seat), and they hold a seat
+ *   there in some state. A departure with anyone else aboard keeps its title,
+ *   because it is other people's departure too; a diver who joined someone
+ *   else's party does not get to rename it.
+ * - **the title contains their name**: the full name or the family name,
+ *   case-insensitively, anywhere in the title. A plain substring, as decided:
+ *   "The Smiths" must go as surely as "Smith charter", and the only departures
+ *   it can reach are the erased diver's own, so the over-reach is a neutral
+ *   title on their own charter. A name under three word characters is not
+ *   used, the same floor every name match here keeps.
+ *
+ * The new title is the staff bundle's neutral one in the shop's own language
+ * (`trips.erasedTitle`), "Private charter" or "Departure" by `is_private`.
+ * Deleted departures are reached too: the activity log keeps naming one.
+ */
+async function scrubDepartureTitles(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId, owned } = ctx;
+  const handles = titleNameHandles(ctx.fullName);
+  if (!owned || handles.length === 0) return [];
+
+  const [shop] = await tx
+    .select({ defaultLocale: shops.defaultLocale })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  const t = staffTranslator(shop?.defaultLocale);
+
+  const theirSeat = sql`exists (
+    select 1 from ${bookings} own
+    where own.trip_id = ${trips.id} and own.shop_id = ${shopId} and own.person_id = ${personId}
+  )`;
+  const nobodyElse = sql`not exists (
+    select 1 from ${bookings} other
+    where other.trip_id = ${trips.id}
+      and other.shop_id = ${shopId}
+      and other.status <> 'cancelled'
+      and other.person_id <> ${personId}
+      and not exists (
+        select 1 from ${bookings} lead
+        where lead.id = other.party_lead_booking_id
+          and lead.trip_id = ${trips.id}
+          and lead.shop_id = ${shopId}
+          and lead.person_id = ${personId}
+      )
+  )`;
+  const named = or(
+    ...handles.map((handle) => sql`strpos(lower(${trips.title}), lower(${handle})) > 0`),
+  ) as SQL;
+
+  const retitled = await tx
+    .update(trips)
+    .set({
+      title: sql`case when ${trips.isPrivate} then ${t("trips.erasedTitle.private")} else ${t("trips.erasedTitle.public")} end`,
+    })
+    // diveday:allow-deleted-trips: a deleted departure's title still shows in
+    // the activity log, so the erasure reaches it too.
+    .where(and(eq(trips.shopId, shopId), theirSeat, nobodyElse, named))
+    .returning({ id: trips.id });
+  logFuzzyMatch(ctx, "departure_title_name", retitled.length);
   return [];
 }
 
@@ -2427,6 +2545,7 @@ const SCRUB_SECTIONS = [
   scrubDiverLogin,
   scrubBookingRows,
   scrubActivityEvents,
+  scrubDepartureTitles,
   scrubBuddyTrail,
   scrubReviews,
   scrubPrivateWord,

@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, isNull, lt, or, type SQL } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, like, lt, not, or, type SQL } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import type { PaymentOperationIntent, PaymentOperationKind } from "./schema";
@@ -102,6 +102,21 @@ export function awaitingStripeReconciliation(): SQL {
   return or(
     isNotNull(paymentOperationIntents.stripeObjectId),
     eq(paymentOperationIntents.errorMessage, UNANSWERED_BY_STRIPE),
+  ) as SQL;
+}
+
+/**
+ * A dashboard refund on a party checkout that no seat carries yet
+ * (`parkStripeReversal` in `src/db/refunds.ts`, issue #2293): a `started`
+ * refund intent on a checkout, parked with the `unattributed_refund` note and
+ * the amount still to match. Status is the caller's to add.
+ */
+export function heldUnattributedRefund(): SQL {
+  return and(
+    eq(paymentOperationIntents.kind, "refund"),
+    isNotNull(paymentOperationIntents.checkoutId),
+    isNotNull(paymentOperationIntents.amountCents),
+    like(paymentOperationIntents.errorMessage, "unattributed\\_refund:%"),
   ) as SQL;
 }
 
@@ -268,6 +283,14 @@ export async function listStuckPaymentOperations(
   db: AppDb,
   shopId: string,
   olderThan: Date = new Date(nowDate().getTime() - STALE_AFTER_MS),
+  options: {
+    /**
+     * Leave out the dashboard refunds held for staff to match to a seat: the
+     * Orders index lists those in a queue of their own, with the seats to pick
+     * from (`listUnattributedRefunds`, issue #2293). Today keeps counting them.
+     */
+    withoutUnattributedRefunds?: boolean;
+  } = {},
 ): Promise<StuckPaymentOperation[]> {
   const intents = await db
     .select()
@@ -277,6 +300,7 @@ export async function listStuckPaymentOperations(
         eq(paymentOperationIntents.shopId, shopId),
         eq(paymentOperationIntents.status, "started"),
         lt(paymentOperationIntents.startedAt, olderThan),
+        options.withoutUnattributedRefunds ? not(heldUnattributedRefund()) : undefined,
       ),
     );
   if (intents.length === 0) return [];
