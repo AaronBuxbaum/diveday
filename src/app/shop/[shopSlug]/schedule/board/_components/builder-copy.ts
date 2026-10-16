@@ -101,6 +101,7 @@ export function scheduleBuilderCopy(st: StaffTranslator): BuilderCopy {
     impactBlockedNotScheduled: st("schedule.notices.notScheduled"),
     copyTo: st("schedule.builder.copyTo"),
     copyDescription: st("schedule.builder.copyDescription"),
+    copySameCrew: st("schedule.builder.copySameCrew"),
     departureTime: st("schedule.builder.departureTime"),
     copying: st("schedule.builder.copying"),
     copyIt: st("schedule.builder.copyIt"),

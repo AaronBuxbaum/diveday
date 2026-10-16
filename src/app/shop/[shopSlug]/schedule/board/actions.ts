@@ -20,6 +20,7 @@ import {
   createTripSeries,
   deleteTrip,
   duplicateTrip,
+  getTripCrewAssignments,
   listStaff,
   moveTrip,
   setTripCrew,
@@ -885,6 +886,7 @@ const duplicateSchema = z.object({
   tripId: z.uuid(),
   date: z.string(),
   startTime: z.string(),
+  sameCrew: z.literal("on").optional(),
 });
 
 export async function duplicateDepartureAction(shopSlug: string, formData: FormData) {
@@ -911,13 +913,26 @@ export async function duplicateDepartureAction(shopSlug: string, formData: FormD
     await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "invalid" });
     redirect(`${back}?builder=invalid`);
   }
+  // **"Same crew"** (fifth-loop ideas, item 53): the source's crew, roles and
+  // all, through `setTripCrew`, so a clash, an away day's conflict or a
+  // course's instructor rule refuses exactly as a hand assignment would. All
+  // or nothing: the copy stands either way, and the notice says the crew did
+  // not come.
+  const sourceCrew = parsed.data.sameCrew
+    ? await getTripCrewAssignments(db, shop.id, parsed.data.tripId)
+    : [];
+  const crewCame =
+    sourceCrew.length === 0 ||
+    (await setTripCrew(db, shop.id, copy.id, sourceCrew, {
+      actorPersonId: session.user.personId,
+    }));
   await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "ok" });
   await recordShopActivity(db, {
     shopId: shop.id,
     actorPersonId: session.user.personId,
     write: { code: "departure_copied", tripId: copy.id },
   });
-  revalidateAndRedirect(back, `${back}?builder=copied`);
+  revalidateAndRedirect(back, `${back}?builder=${crewCame ? "copied" : "copied-no-crew"}`);
 }
 
 export async function removeDepartureAction(shopSlug: string, formData: FormData) {
