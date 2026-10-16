@@ -27,6 +27,11 @@ for the same missing diver made two reports.
   affected.
 - Both starts are race-safe by a transaction-scoped advisory lock: on (departure, writer) for the
   first, on (departure, missing person) for the second.
+- **An unfiled draft can be deleted** by whoever may edit it (its writer, an owner, a manager),
+  softly (`deleted_at`, `deleted_by_person_id`; ADR 20260820-every-delete-is-soft). A filed report
+  never can. The departure's trail names who deleted it; the departure log still lists it as a
+  deleted draft; it leaves Today's "not filed" line, the departure's list and its own page.
+- **A rehearsal's drafts never raise Today's line** (ADR 20261012-rehearsal-departures).
 
 ## Alternatives considered
 
@@ -38,7 +43,7 @@ for the same missing diver made two reports.
 
 ## Consequences
 
-A writer can now hold several unfiled drafts on one departure, so an abandoned one needs a way
-out; the departure log and Today list each unfiled draft until it is filed. A second crew member
+A writer can now hold several unfiled drafts on one departure; Delete is the way out for an
+abandoned one, and the log keeps that it existed. A second crew member
 learns that a report exists and who started it, which is the one fact they need to stop writing
 a duplicate. Revisit if shops ask for a shared, co-written report.

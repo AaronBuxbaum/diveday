@@ -40,8 +40,12 @@ vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }))
 
 const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("@/lib/session");
-const { saveIncidentDraftAction, startIncidentReportAction, startMissingDiverReportAction } =
-  await import("./actions");
+const {
+  deleteIncidentDraftAction,
+  saveIncidentDraftAction,
+  startIncidentReportAction,
+  startMissingDiverReportAction,
+} = await import("./actions");
 
 /** A booked departure with the captain taken off its crew, so the captain is ashore. */
 async function context() {
@@ -204,6 +208,33 @@ describe("incident report actions refuse staff who may not write", () => {
         missingForm({ bookingId: seat.id }),
       ),
     ).toEqual({ message: "The report did not open. Tap again." });
+  });
+});
+
+describe("deleting a draft from its page", () => {
+  it("refuses a staffer who may not read the draft, and deletes nothing", async () => {
+    const { db, shop, tripId, owner, captain } = await context();
+    const started = await startIncidentReport(db, {
+      shopId: shop.id,
+      tripId,
+      actorPersonId: owner,
+    });
+    if (!started.ok) throw new Error("expected a draft");
+    signIn(db, shop, captain);
+    await expect(deleteIncidentDraftAction(shop.slug, tripId, started.reportId)).rejects.toThrow(
+      "NOT_FOUND",
+    );
+    const [row] = await db
+      .select({ deletedAt: incidentReports.deletedAt })
+      .from(incidentReports)
+      .where(eq(incidentReports.id, started.reportId));
+    expect(row?.deletedAt).toBeNull();
+
+    signIn(db, shop, owner);
+    const to = await redirectedTo(() =>
+      deleteIncidentDraftAction(shop.slug, tripId, started.reportId),
+    );
+    expect(to).toBe(`/shop/${shop.slug}/trips/${tripId}?view=details#incidents`);
   });
 });
 

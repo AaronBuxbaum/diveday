@@ -5,6 +5,7 @@ import { getDb } from "@/db/client";
 import {
   addIncidentAddendum,
   addIncidentPerson,
+  deleteIncidentDraft,
   fileIncidentReport,
   type IncidentSubject,
   type IncidentWriteRefusal,
@@ -308,4 +309,29 @@ export async function removeIncidentPersonAction(
     rowId,
   });
   settle(back, result, "person-removed", "people");
+}
+
+/**
+ * Delete an unfiled draft (ADR 20261016-incident-drafts): back to the
+ * departure's reports, where it is gone from the list. Soft; the departure
+ * log still lists it as a deleted draft.
+ */
+export async function deleteIncidentDraftAction(
+  shopSlug: string,
+  tripId: string,
+  reportId: string,
+) {
+  const { session, shop } = await requireShopSurface(shopSlug);
+  requireIds(tripId, reportId);
+  const result = await deleteIncidentDraft(await getDb(), {
+    shopId: shop.id,
+    reportId,
+    tripId,
+    actorPersonId: session.user.personId,
+  });
+  if (!result.ok) settle(reportPath(shopSlug, tripId, reportId), result, "", "file");
+  revalidateAndRedirect(
+    shopPath(shopSlug, "trips", tripId),
+    `${shopPath(shopSlug, "trips", tripId)}?view=details#incidents`,
+  );
 }

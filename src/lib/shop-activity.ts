@@ -68,6 +68,7 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   medical_clearance_opened: "safety",
   incident_report_filed: "safety",
   incident_report_addendum_added: "safety",
+  incident_draft_deleted: "safety",
   crew_assigned: "departures",
   crew_removed: "departures",
   blowout_called: "departures",

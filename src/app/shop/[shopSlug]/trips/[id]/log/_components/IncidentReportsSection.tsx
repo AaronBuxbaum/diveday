@@ -3,7 +3,7 @@ import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { INCIDENT_KIND_KEYS, INCIDENT_SEVERITY_KEYS } from "@/i18n/incident-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatDateTimeTz, formatShortDate } from "@/lib/format";
+import { formatDateTimeTz } from "@/lib/format";
 import type { IncidentLogReport } from "@/lib/incident-export";
 
 /**
@@ -50,24 +50,31 @@ export function IncidentReportsSection({
               key={report.reportId}
               className="break-inside-avoid flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:px-5"
             >
-              <Link href={reportHref(report.reportId)} className="font-semibold hover:underline">
-                {[
-                  report.kind ? t(INCIDENT_KIND_KEYS[report.kind]) : null,
-                  report.severity ? t(INCIDENT_SEVERITY_KEYS[report.severity]) : null,
-                ]
-                  .filter(Boolean)
-                  .join(" — ") || t("incidentExport.reportUnsorted")}
-              </Link>
+              {/* A deleted draft has no page to open (ADR
+                  20261016-incident-drafts): it is listed, by whom and when. */}
+              {report.deletedAt ? (
+                <span className="font-semibold">{reportTitle(report, t)}</span>
+              ) : (
+                <Link href={reportHref(report.reportId)} className="font-semibold hover:underline">
+                  {reportTitle(report, t)}
+                </Link>
+              )}
               <span className="text-muted">
-                {report.status === "filed" && report.filedAt
-                  ? t("incidentExport.reportFiled", {
-                      date: formatDateTimeTz(new Date(report.filedAt), locale, timeZone),
-                      name: report.filedByName ?? "",
+                {report.deletedAt
+                  ? t("incidentExport.reportDeleted", {
+                      creator: report.createdByName,
+                      name: report.deletedByName ?? "",
+                      date: formatDateTimeTz(new Date(report.deletedAt), locale, timeZone),
                     })
-                  : t("incidentExport.reportDraft", {
-                      name: report.createdByName,
-                      date: formatShortDate(new Date(report.createdAt), locale, timeZone),
-                    })}
+                  : report.status === "filed" && report.filedAt
+                    ? t("incidentExport.reportFiled", {
+                        date: formatDateTimeTz(new Date(report.filedAt), locale, timeZone),
+                        name: report.filedByName ?? "",
+                      })
+                    : t("incidentExport.reportDraft", {
+                        name: report.createdByName,
+                        date: formatDateTimeTz(new Date(report.createdAt), locale, timeZone),
+                      })}
               </span>
               {report.status === "filed" ? (
                 <span className="text-muted">
@@ -79,5 +86,17 @@ export function IncidentReportsSection({
         </ol>
       )}
     </section>
+  );
+}
+
+/** A report's kind and severity, or that neither is stated yet. */
+function reportTitle(report: IncidentLogReport, t: StaffTranslator): string {
+  return (
+    [
+      report.kind ? t(INCIDENT_KIND_KEYS[report.kind]) : null,
+      report.severity ? t(INCIDENT_SEVERITY_KEYS[report.severity]) : null,
+    ]
+      .filter(Boolean)
+      .join(" — ") || t("incidentExport.reportUnsorted")
   );
 }

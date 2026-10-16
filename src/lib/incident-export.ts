@@ -372,6 +372,12 @@ export type IncidentLogReport = {
   addendaCount: number;
   createdAt: string;
   createdByName: string;
+  /**
+   * A draft deleted unfiled, and by whom (ADR 20261016-incident-drafts): still
+   * listed, so a log never goes silent about a report somebody started.
+   */
+  deletedAt: string | null;
+  deletedByName: string | null;
 };
 
 /**

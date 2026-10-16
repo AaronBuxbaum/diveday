@@ -5,6 +5,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { listDiveSites } from "@/db/dive-sites";
 import {
   getIncidentReport,
@@ -22,6 +23,7 @@ import { uuidParam } from "@/lib/uuid";
 import {
   addIncidentAddendumAction,
   addIncidentPersonAction,
+  deleteIncidentDraftAction,
   fileIncidentReportAction,
   removeIncidentPersonAction,
   saveIncidentDraftAction,
@@ -170,6 +172,25 @@ export default async function IncidentReportPage({
           notice={noticeForForm(notice, "file")}
           t={t}
         />
+      ) : null}
+
+      {/* A draft started twice, or about nothing in the end, can be retired by
+          whoever may edit it (ADR 20261016-incident-drafts). Soft: the log
+          still lists it as a deleted draft. */}
+      {editing ? (
+        <form
+          action={deleteIncidentDraftAction.bind(null, shopSlug, tripId, reportId)}
+          className="print:hidden"
+        >
+          <InlineConfirm
+            triggerLabel={t("incidents.delete.trigger")}
+            message={t("incidents.delete.confirm")}
+            confirmLabel={t("incidents.delete.confirmLabel")}
+            cancelLabel={t("incidents.delete.cancel")}
+            pendingLabel={t("incidents.delete.pending")}
+            triggerClassName={buttonClass({ variant: "danger-ghost" })}
+          />
+        </form>
       ) : null}
 
       {report.status === "filed" ? (

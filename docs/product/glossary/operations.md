@@ -748,7 +748,10 @@
   affected, witness or gave aid. A **draft** is edited; filing needs the time, the place, what
   happened, the three yes/no answers, and the handover once emergency services or oxygen were
   involved, and a **filed** report is never
-  edited again: what comes later is an **addendum**, dated and attributed. The departure's crew
+  edited again: what comes later is an **addendum**, dated and attributed. An unfiled draft can be
+  **deleted** (softly; the departure log still lists it), and a second start reopens only an
+  untouched draft, or for a **missing diver** the one open report naming that person (ADR
+  20261016-incident-drafts). The departure's crew
   start one and read their own; owners and managers read all of them, on the trip's Details tab
   and the Reports **Safety** tab. Nothing a diver sees, and never a gate. It is not the
   **departure log**, which prints recorded facts and judges nothing; the report is the shop's

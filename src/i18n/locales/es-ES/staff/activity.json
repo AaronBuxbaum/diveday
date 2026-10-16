@@ -20,6 +20,7 @@
     "blowout_called": "{actor} canceló la salida por el clima",
     "incident_report_filed": "{actor} presentó un informe de incidente",
     "incident_report_addendum_added": "{actor} añadió una nota a un informe de incidente",
+    "incident_draft_deleted": "{actor} eliminó un borrador de informe de incidente sin presentar",
     "seat_added": "{actor} agregó a {diver} a la salida",
     "seat_added_walk_in": "{actor} agregó a {diver} a la salida sin reserva",
     "seat_added_from_trip_link": "{actor} agregó una plaza para {diver} desde su enlace de la salida",

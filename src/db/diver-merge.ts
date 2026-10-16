@@ -306,6 +306,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "incident_report_addenda.author_person_id": "who wrote the addendum",
   "incident_reports.created_by_person_id": "who started the incident report",
   "incident_reports.filed_by_person_id": "who filed the incident report",
+  "incident_reports.deleted_by_person_id": "who deleted the unfiled incident draft",
   "internal_notes.created_by_person_id": "who wrote the note",
   "marine_life_requests.requested_by_person_id": "which staffer asked for the species",
   "nitrox_certifications.deleted_by_person_id": "who removed the card",

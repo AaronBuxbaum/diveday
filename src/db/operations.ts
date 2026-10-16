@@ -504,6 +504,7 @@ export type TripActivityEntry =
         | "seat_self_refunded"
         | "incident_report_filed"
         | "incident_report_addendum_added"
+        | "incident_draft_deleted"
         | "departure_note_sent";
     };
 

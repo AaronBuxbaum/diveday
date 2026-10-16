@@ -188,5 +188,12 @@
     "unrecordedTitle": "Tripulantes que salieron sin acreditación registrada",
     "unrecordedSailings": "{count, plural, one {# salida} other {# salidas}} este mes",
     "noDepartures": "Ninguna salida volvió este mes."
+  },
+  "delete": {
+    "trigger": "Eliminar borrador",
+    "confirm": "¿Eliminar este borrador? El registro de la salida lo mostrará como borrador eliminado.",
+    "confirmLabel": "Eliminar",
+    "cancel": "Cancelar",
+    "pending": "Eliminando…"
   }
 }

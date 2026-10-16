@@ -24,6 +24,8 @@ const draft: IncidentLogReport = {
   addendaCount: 0,
   createdAt: "2026-10-12T14:00:00.000Z",
   createdByName: "Sal Rivera",
+  deletedAt: null,
+  deletedByName: null,
 };
 
 const filed: IncidentLogReport = {
@@ -50,9 +52,12 @@ function renderSection(reports: IncidentLogReport[], locale = "en-US") {
 }
 
 describe("IncidentReportsSection", () => {
-  it("says a draft is not filed and who started it, and links to it", () => {
-    renderSection([draft]);
-    expect(screen.getByText("Draft not filed, started by Sal Rivera on Mon, Oct 12.")).toBeTruthy();
+  it("says a draft is not filed and who started it, when in the shop's zone, and links to it", () => {
+    // Domain review 2026-10-16: the draft's date named no zone.
+    const { container } = renderSection([draft]);
+    expect(container.textContent).toMatch(
+      /Draft not filed, started by Sal Rivera on Oct\s12, 10:00\sAM\sEDT\./,
+    );
     const link = screen.getByRole("link", { name: "Kind and severity not stated yet" });
     expect(link.getAttribute("href")).toBe("/shop/blue-mantis/trips/trip-1/incidents/report-1");
   });
@@ -62,6 +67,17 @@ describe("IncidentReportsSection", () => {
     expect(screen.getByRole("link", { name: "Injury or illness — Moderate" })).toBeTruthy();
     expect(container.textContent).toMatch(/Filed Oct\s12, 2:30\sPM\sEDT by Rae Owner/);
     expect(container.textContent).toContain("2 later notes");
+  });
+
+  it("lists a deleted draft as one, by whom and when, with no link to it", () => {
+    // ADR 20261016-incident-drafts: a draft deleted unfiled stays on the log.
+    const { container } = renderSection([
+      { ...draft, deletedAt: "2026-10-13T13:00:00.000Z", deletedByName: "Rae Owner" },
+    ]);
+    expect(container.textContent).toMatch(
+      /Draft started by Sal Rivera, deleted unfiled by Rae Owner on Oct\s13, 9:00\sAM\sEDT\./,
+    );
+    expect(screen.queryByRole("link")).toBeNull();
   });
 
   it("states that there is none rather than leaving the section blank", () => {

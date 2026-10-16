@@ -188,5 +188,12 @@
     "unrecordedTitle": "Crew who sailed with no credential on file",
     "unrecordedSailings": "{count, plural, one {# sailing} other {# sailings}} this month",
     "noDepartures": "No departures came back this month."
+  },
+  "delete": {
+    "trigger": "Delete draft",
+    "confirm": "Delete this draft? The departure log will list it as a deleted draft.",
+    "confirmLabel": "Delete",
+    "cancel": "Cancel",
+    "pending": "Deleting…"
   }
 }

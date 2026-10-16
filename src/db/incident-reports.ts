@@ -36,7 +36,7 @@ import {
   trips,
   userAccounts,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * **Incident reports** (ADR 20261012-incident-reports): one per incident, on a
@@ -198,6 +198,7 @@ async function openUntouchedDraft(
         eq(incidentReports.tripId, input.tripId),
         eq(incidentReports.createdByPersonId, input.actorPersonId),
         eq(incidentReports.status, "draft"),
+        isNull(incidentReports.deletedAt),
         ...DRAFT_ANSWER_COLUMNS.map((column) => isNull(column)),
         sql`not exists (select 1 from ${incidentReportPeople} where ${incidentReportPeople.reportId} = ${incidentReports.id})`,
       ),
@@ -389,6 +390,7 @@ export async function startMissingDiverReport(
           eq(incidentReports.tripId, input.tripId),
           eq(incidentReports.status, "draft"),
           eq(incidentReports.kind, "missing_diver"),
+          isNull(incidentReports.deletedAt),
           subject.kind === "diver"
             ? eq(incidentReportPeople.bookingId, subject.bookingId)
             : eq(incidentReportPeople.personId, subject.personId),
@@ -463,7 +465,14 @@ async function lockForWrite(
       followUp: incidentReports.followUp,
     })
     .from(incidentReports)
-    .where(and(eq(incidentReports.id, reportId), eq(incidentReports.shopId, shopId)))
+    .where(
+      and(
+        eq(incidentReports.id, reportId),
+        eq(incidentReports.shopId, shopId),
+        // A deleted draft answers every write as a missing report does.
+        isNull(incidentReports.deletedAt),
+      ),
+    )
     .limit(1)
     .for("update");
   // A report reached under another departure's address is not this report.
@@ -678,6 +687,44 @@ export async function removeIncidentPerson(
   });
 }
 
+/**
+ * **Delete an unfiled draft** (ADR 20261016-incident-drafts; domain review
+ * 2026-10-16): a double start, a test, something that turned out to be
+ * nothing. Its writer, an owner or a manager may (`mayWriteIncidentReport`);
+ * a filed report is refused, since it changes only by addendum. Soft: the row
+ * stays and the departure log lists it as a deleted draft; it leaves every
+ * working list, Today's line and the report's own door. The departure's trail
+ * names who deleted it and nothing of what it said.
+ */
+export async function deleteIncidentDraft(
+  db: AppDb,
+  input: WriteTarget,
+): Promise<{ ok: true } | { ok: false; reason: IncidentWriteRefusal }> {
+  return db.transaction(async (tx) => {
+    const { report, allowed } = await lockForWrite(tx, input);
+    if (!report || !allowed) return { ok: false, reason: "not_found" } as const;
+    if (report.status !== "draft") return { ok: false, reason: "filed" } as const;
+    await tx
+      .update(incidentReports)
+      .set({ deletedAt: nowDate(), deletedByPersonId: input.actorPersonId })
+      .where(
+        and(
+          eq(incidentReports.id, input.reportId),
+          eq(incidentReports.shopId, input.shopId),
+          eq(incidentReports.status, "draft"),
+          isNull(incidentReports.deletedAt),
+        ),
+      );
+    await recordTripActivity(tx, {
+      shopId: input.shopId,
+      tripId: report.tripId,
+      actorPersonId: input.actorPersonId,
+      entry: { code: "incident_draft_deleted" },
+    });
+    return { ok: true } as const;
+  });
+}
+
 export type IncidentPersonLine = {
   id: string;
   kind: "booking" | "staff" | "outsider";
@@ -731,7 +778,13 @@ export async function getIncidentReport(
     .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
     .leftJoin(filers, eq(filers.id, incidentReports.filedByPersonId))
     .leftJoin(diveSites, eq(diveSites.id, incidentReports.diveSiteId))
-    .where(and(eq(incidentReports.id, reportId), eq(incidentReports.shopId, shopId)))
+    .where(
+      and(
+        eq(incidentReports.id, reportId),
+        eq(incidentReports.shopId, shopId),
+        isNull(incidentReports.deletedAt),
+      ),
+    )
     .limit(1);
   if (!row) return null;
   const viewer = await loadIncidentViewer(db, shopId, row.report.tripId, viewerPersonId);
@@ -902,6 +955,7 @@ export async function listTripIncidentReports(
       and(
         eq(incidentReports.shopId, shopId),
         eq(incidentReports.tripId, tripId),
+        isNull(incidentReports.deletedAt),
         seesAll ? undefined : eq(incidentReports.createdByPersonId, viewerPersonId),
       ),
     )
@@ -940,21 +994,33 @@ export async function listUnfiledIncidentDrafts(
   ) {
     return [];
   }
-  return db
-    .select({
-      id: incidentReports.id,
-      tripId: incidentReports.tripId,
-      createdAt: incidentReports.createdAt,
-      createdByName: creators.fullName,
-    })
-    .from(incidentReports)
-    .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
-    .where(and(eq(incidentReports.shopId, shopId), eq(incidentReports.status, "draft")))
-    .orderBy(asc(incidentReports.createdAt), asc(creators.fullName), asc(incidentReports.id));
+  return (
+    db
+      .select({
+        id: incidentReports.id,
+        tripId: incidentReports.tripId,
+        createdAt: incidentReports.createdAt,
+        createdByName: creators.fullName,
+      })
+      .from(incidentReports)
+      .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
+      // diveday:allow-deleted-trips: a report outlives a deleted departure, and so does its line.
+      .innerJoin(trips, and(eq(trips.id, incidentReports.tripId), notRehearsal()))
+      .where(
+        and(
+          eq(incidentReports.shopId, shopId),
+          eq(incidentReports.status, "draft"),
+          isNull(incidentReports.deletedAt),
+        ),
+      )
+      .orderBy(asc(incidentReports.createdAt), asc(creators.fullName), asc(incidentReports.id))
+  );
 }
 
 /** Who filed a report, read by name beside it on the departure log. */
 const filers = alias(people, "incident_filers");
+/** Who deleted an unfiled draft, read by name on the departure log. */
+const deleters = alias(people, "incident_deleters");
 
 /** One report as the departure log lists it: where it stands, never what it says. */
 export type DepartureLogIncidentReport = {
@@ -967,6 +1033,9 @@ export type DepartureLogIncidentReport = {
   addendaCount: number;
   createdAt: Date;
   createdByName: string;
+  /** A draft deleted unfiled, and by whom; null on every other report. */
+  deletedAt: Date | null;
+  deletedByName: string | null;
 };
 
 /**
@@ -1006,10 +1075,13 @@ export async function listDepartureLogIncidentReports(
       )`,
       createdAt: incidentReports.createdAt,
       createdByName: creators.fullName,
+      deletedAt: incidentReports.deletedAt,
+      deletedByName: deleters.fullName,
     })
     .from(incidentReports)
     .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
     .leftJoin(filers, eq(filers.id, incidentReports.filedByPersonId))
+    .leftJoin(deleters, eq(deleters.id, incidentReports.deletedByPersonId))
     .where(and(eq(incidentReports.shopId, shopId), eq(incidentReports.tripId, tripId)))
     .orderBy(asc(incidentReports.createdAt), asc(creators.fullName), asc(incidentReports.id));
 }
@@ -1044,7 +1116,14 @@ export async function listShopIncidentReports(
     // diveday:allow-deleted-trips: a report outlives a deleted departure.
     .innerJoin(trips, eq(trips.id, incidentReports.tripId))
     .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
-    .where(and(eq(incidentReports.shopId, shopId), gte(at, from), lt(at, to)))
+    .where(
+      and(
+        eq(incidentReports.shopId, shopId),
+        isNull(incidentReports.deletedAt),
+        gte(at, from),
+        lt(at, to),
+      ),
+    )
     .orderBy(desc(at), desc(incidentReports.id));
   return rows.map(toLine);
 }

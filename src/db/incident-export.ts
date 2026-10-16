@@ -314,6 +314,7 @@ export async function getIncidentExport(
       ...report,
       filedAt: report.filedAt?.toISOString() ?? null,
       createdAt: report.createdAt.toISOString(),
+      deletedAt: report.deletedAt?.toISOString() ?? null,
     })),
     preDepartureCheck: checklistItems.map((item) => {
       const check = checklistChecks.get(item.id);

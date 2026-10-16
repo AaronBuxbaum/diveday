@@ -102,4 +102,17 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   await expect(listed).toContainText("Moderate");
   await listed.click();
   await expect(page.getByText("Diver called at 18:00: discharged, feeling fine.")).toBeVisible();
+
+  // A draft started by mistake is deleted (ADR 20261016-incident-drafts): it
+  // leaves the departure's list, and the log still says it existed.
+  const tripPath = reportPath.replace(/\/incidents\/[0-9a-f-]+$/, "");
+  await page.goto(`${tripPath}?view=details`);
+  await section.getByRole("button", { name: "Report an incident" }).click();
+  await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
+  await page.getByRole("button", { name: "Delete draft" }).click();
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.waitForURL((url) => url.pathname === tripPath);
+  await expect(section.getByText("Draft", { exact: true })).toHaveCount(0);
+  await page.goto(`${tripPath}/log`);
+  await expect(page.getByText(/^Draft started by .+, deleted unfiled by .+ on /)).toBeVisible();
 });

@@ -33,6 +33,8 @@ describe("roster changes and incident reports on the departure log", () => {
     addendaCount: 0,
     createdAt: "2026-08-04T15:00:00.000Z",
     createdByName: "Sal Rivera",
+    deletedAt: null,
+    deletedByName: null,
   };
 
   it("keeps an old printout's code: version 1 is the recipe it was sealed with", () => {
