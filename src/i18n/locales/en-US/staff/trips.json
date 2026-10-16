@@ -459,7 +459,8 @@
     "recipientsHeading": "Who this goes to",
     "recipientsMore": "{count, plural, one {# more eligible recipient isn’t shown.} other {# more eligible recipients aren’t shown.}}",
     "recipientsMoreNoRequirement": "{count, plural, one {# more isn’t shown.} other {# more aren’t shown.}}",
-    "recipients": "Recipients: {names}"
+    "recipients": "Recipients: {names}",
+    "leadTime": "{weekday} departures usually sell {percent}% of their seats in the last 3 days."
   },
   "roster": {
     "addFirstNoteSummary": "Add a private note",

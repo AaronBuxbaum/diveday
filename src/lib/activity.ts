@@ -36,10 +36,15 @@
  * writer are listed: `minimum_not_met` is the hourly rule that cancels a
  * departure short of its minimum head count; `shore_contact_stopped` is the shore
  * contact stopping roll-call alerts from the link in an email, with no account
- * behind it. (The nightly series roll only adds
+ * behind it; `bookkeeper_stopped` is the bookkeeper stopping the month-end
+ * files the same way (security review N1). (The nightly series roll only adds
  * dates and cancels none, so it has no reason here.)
  */
-export const SYSTEM_REASONS = ["minimum_not_met", "shore_contact_stopped"] as const;
+export const SYSTEM_REASONS = [
+  "minimum_not_met",
+  "shore_contact_stopped",
+  "bookkeeper_stopped",
+] as const;
 export type SystemReason = (typeof SYSTEM_REASONS)[number];
 
 type ActivityParamShapes = {
@@ -311,6 +316,22 @@ type ActivityParamShapes = {
    */
   shore_alert_contact_stopped: Record<string, never>;
   /**
+   * **Who set the bookkeeper's month-end address** (item 35, security review
+   * F1): the address a month of diver names and money leaves the shop for,
+   * added, replaced or removed. Shop-level lines with no address in them.
+   */
+  bookkeeper_email_set: { actor: string };
+  bookkeeper_email_changed: { actor: string };
+  bookkeeper_email_cleared: { actor: string };
+  /**
+   * The same address saved again by someone other than its setter, who now
+   * stands behind it (security review F1, second pass): it can restart files
+   * held because the old setter lost access, so it is never silent.
+   */
+  bookkeeper_email_vouched: { actor: string };
+  /** The bookkeeper stopped the files with the link in one (N1): no actor. */
+  bookkeeper_email_stopped: Record<string, never>;
+  /**
    * An erasure ran over this line.
    *
    * A code rather than a blanked payload, so the row reads the same way it
@@ -434,6 +455,11 @@ export const ACTIVITY_CODES = [
   "shore_alert_contact_changed",
   "shore_alert_contact_cleared",
   "shore_alert_contact_stopped",
+  "bookkeeper_email_set",
+  "bookkeeper_email_changed",
+  "bookkeeper_email_cleared",
+  "bookkeeper_email_vouched",
+  "bookkeeper_email_stopped",
   "redacted",
   "demo_charter_confirmed",
   "demo_second_dive_moved",

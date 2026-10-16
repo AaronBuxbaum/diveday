@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 import { ActivityLog } from "@/components/ActivityLog";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { ScrollToHash } from "@/components/ScrollToHash";
@@ -25,6 +25,7 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { recordPaperCourseFormAction } from "../course-actions";
 import { AddDiverSection } from "./AddDiverSection";
 import { carryTargetLabel } from "./carry-target-label";
+import { DealLeadTime } from "./DealLeadTime";
 import { DepartureNoteSection } from "./DepartureNoteSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
@@ -475,6 +476,16 @@ export function TripPromoteAndActivity({
               currency={currency}
               status={noticeForForm(tripNotice, "last-minute-deal")}
               tripId={trip.id}
+              leadTime={
+                <Suspense fallback={null}>
+                  <DealLeadTime
+                    shopId={shop.id}
+                    startsAt={trip.startsAt}
+                    timeZone={timezone}
+                    locale={locale}
+                  />
+                </Suspense>
+              }
             />
           </div>
         </AutoOpenDetails>

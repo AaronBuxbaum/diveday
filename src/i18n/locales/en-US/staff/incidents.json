@@ -173,7 +173,7 @@
     "incidents": "Incident reports",
     "noCrew": "Sailed with no crew on record",
     "noCrewNone": "No crew recorded on any departure this month",
-    "noCrewDetail": "of {back}, listed below",
+    "noCrewDetail": "of {back, plural, one {# boat} other {# boats}} back, listed below",
     "noCrewTitle": "Departures that sailed with no crew on record",
     "boardingNote": "The dock roll call refuses a diver the readiness check has not cleared. A diver first counted at a later checkpoint is not in this figure.",
     "incidentsTitle": "Incident reports",
@@ -186,7 +186,28 @@
     "lapsedEmpty": "Nobody sailed on a lapsed credential.",
     "unrecordedTitle": "Crew who sailed with no credential for their role on file",
     "unrecordedSailings": "{count, plural, one {# sailing} other {# sailings}} this month",
-    "noDepartures": "No departures came back this month."
+    "noDepartures": "No departures came back this month.",
+    "year": {
+      "open": "The year",
+      "print": "Print the year",
+      "intro": "What the shop recorded on the year’s departures that are home. Lapsed credentials are read as the records stand today.",
+      "figuresLabel": "The year’s safety record",
+      "noDepartures": "No departures came back this year.",
+      "noCrewNone": "No crew recorded on any departure this year",
+      "activityLink": "The year’s safety activity",
+      "noCrewDetail": "of {back, plural, one {# boat} other {# boats}} back, listed on each month",
+      "noCrewMonths": "No crew recorded in {none} of {months, plural, one {# month} other {# months}}",
+      "rollCallsOpen": "{count, plural, one {# left open, listed on its month} other {# left open, listed on each month}}",
+      "boardedDetail": "{count, plural, =0 {Every seat marked at the dock} one {# seat never marked at the dock, on a roll call listed as open on its month} other {# seats never marked at the dock, on roll calls listed as open on each month}}",
+      "printedFor": "{shopName} · {start} to {end}, {year} · {zone}",
+      "printedOn": "Printed {date}",
+      "chooseYear": "Choose a year",
+      "previous": "Previous year",
+      "next": "Next year",
+      "earliestTitle": "This is your first year with departures",
+      "currentTitle": "You’re viewing the current year"
+    },
+    "incidentsValue": "{filed} filed{drafts, plural, =0 {} one { · # draft} other { · # drafts}}"
   },
   "discard": {
     "title": "Delete this draft",

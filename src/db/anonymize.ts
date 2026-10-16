@@ -68,6 +68,7 @@ import {
 } from "@/lib/waiver-integrity";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { canPersonErasePersonalData } from "./authz";
+import { BOOKKEEPER_CLEARED, tellOwnersAboutBookkeeper } from "./bookkeeper";
 import type { AppDb, AppTransaction } from "./client";
 import { queueMediaDeletion } from "./media-deletions";
 import {
@@ -416,6 +417,7 @@ export async function anonymizeDiver(
         alreadyAnonymized: true,
         queuedMediaDeletions: 0,
         raisedProcessorErasures: [] as ProcessorErasureObligation[],
+        bookkeeperCleared: false,
       } as const;
     }
 
@@ -459,6 +461,16 @@ export async function anonymizeDiver(
       owed: stillOwed,
     });
   }
+  // The shop's month-end files stop with the address, so its owners hear it
+  // and why, without the address (second-pass N3). Never throws.
+  if (outcome.bookkeeperCleared) {
+    await tellOwnersAboutBookkeeper(db, {
+      shopId: input.shopId,
+      what: { event: "cleared", by: "erasure" },
+      at: now,
+      actorPersonId: input.actorPersonId,
+    });
+  }
   return {
     ok: true,
     alreadyAnonymized: outcome.alreadyAnonymized,
@@ -483,6 +495,8 @@ type ScrubResult = {
   queuedMediaDeletions: number;
   /** The obligation rows this scrub created — the caller attempts them post-commit. */
   raisedProcessorErasures: ProcessorErasureObligation[];
+  /** The diver's address was the shop's bookkeeper's; the caller tells the owners post-commit. */
+  bookkeeperCleared: boolean;
 };
 
 /**
@@ -589,6 +603,8 @@ type ScrubSectionContext = ScrubContext & {
     kind: "recap_photo" | "waiver_document" | "payment_receipt",
     url: string | null,
   ) => Promise<void>;
+  /** What a sweep found that the caller acts on after the commit. */
+  found: { bookkeeperCleared: boolean };
 };
 
 /** The erasure's "people" sweep. */
@@ -2055,6 +2071,17 @@ async function scrubPiiBlob(
       .where(and(eq(shops.id, shopId), sql`lower(${shops.shoreAlertEmail}) = ${address}`))
       .returning({ id: shops.id });
     logFuzzyMatch(ctx, "shore_alert_email", cleared.length);
+    // The bookkeeper's month-end address (item 35), on the same footing: a
+    // diver's address there goes with the diver, with its confirmation, the
+    // hash of its confirm link and its claim, and the month stops leaving the
+    // shop until an owner sets an address again.
+    const unsent = await tx
+      .update(shops)
+      .set(BOOKKEEPER_CLEARED)
+      .where(and(eq(shops.id, shopId), sql`lower(${shops.bookkeeperEmail}) = ${address}`))
+      .returning({ id: shops.id });
+    logFuzzyMatch(ctx, "bookkeeper_email", unsent.length);
+    if (unsent.length > 0) ctx.found.bookkeeperCleared = true;
     await tx
       .delete(shopShoreAlertTokens)
       .where(and(eq(shopShoreAlertTokens.shopId, shopId), eq(shopShoreAlertTokens.email, address)));
@@ -2461,7 +2488,14 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     if (!url) return;
     if (await queueMediaDeletion(tx, { shopId, kind, url })) queued += 1;
   };
-  const section: ScrubSectionContext = { ...ctx, bookingIds, owned: bookingIds.length > 0, retire };
+  const found = { bookkeeperCleared: false };
+  const section: ScrubSectionContext = {
+    ...ctx,
+    bookingIds,
+    owned: bookingIds.length > 0,
+    retire,
+    found,
+  };
 
   // Every Stripe object this scrub finds standing for the erased diver, raised
   // as one ledger row apiece at the end of the transaction. Three tables feed
@@ -2488,5 +2522,9 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     targets: processorTargets,
   });
 
-  return { queuedMediaDeletions: queued, raisedProcessorErasures };
+  return {
+    queuedMediaDeletions: queued,
+    raisedProcessorErasures,
+    bookkeeperCleared: found.bookkeeperCleared,
+  };
 }

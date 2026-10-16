@@ -1721,3 +1721,14 @@
 - **Seat** — the one word for what a diver buys and what a boat holds, said by staff and divers alike ([H-133](../human-decisions/H-133-seat-is-the-word.md)): "3 seats left", "Book 2 seats", "Cancel my seat". Never "spot" for capacity. `scripts/check-seat-word.mjs` reads the staff bundles and `diver.json` both; its allowlist keeps words that are not the thing bought (a marine-life "spot", "on the spot").
 - **Ask to move** — a diver's request, from their own `/ready`, that the shop move their seat to another date ([H-137](../human-decisions/H-137-ask-to-move.md)). Offered on a paid seat the diver may still release where cancelling would return nothing right away: past the free-cancellation window, or on a trip with none. It is a request, not a move: it files one Inbox row per booking and departure on the `page` channel, naming the booking (`inbound_messages.booking_id`, `recordMoveAsk` in `src/db/inbound-messages.ts`), and the page then says it was asked while that row stands. Staff decide, and a move is a **seat move**, which answers the ask; one staff answered or deleted no longer stands, and asking again files it anew.
 - **Saved answer** — words the desk sends often enough to keep, offered as a chip above the reply box on a diver's record; a tap puts them in the box, and Send stays the reader's. The shop's own, like a template, and about no diver: `{name}` becomes the diver's first name and `{trip}` the departure they are next booked on. "Save this answer" under a reply that just went out writes one from the stored reply with that diver's name swapped for `{name}`, so the list grows from real replies; the Inbox lists them with a soft Delete and Put back. At most twelve live. Rows in `inbox_saved_answers` (`src/db/inbox-saved-answers.ts`), helpers in `src/lib/saved-answers.ts`.
+- **Weather day** — on Reports, a shop-local day with at least one departure the weather called
+  off and that stayed called off (`weatherCallsInWindow`, `src/db/blowouts.ts`; fifth loop, item
+  27). A departure reinstated after the call and sailed is not counted (dive-domain review F2). One
+  afternoon boat called while three others ran still makes it a day, so the words are "days with a
+  weather call", never "days lost" (N4). "Moved to another date" counts a diver from a called-off
+  departure who holds a live seat on another departure booked within 30 days of the call (N3).
+- **Days at sea** — on a teammate's card under Settings → Team, the shop-local days in the year
+  they were on the crew of a boat departure that sailed (`crewYearFacts`, `src/db/reporting.ts`;
+  fifth loop, item 32). Boats only: a shore day or a pool session is a day on the schedule, not at
+  sea (dive-domain review N1). It reads the crew list, not crew roll call, so a crew member listed
+  but recorded ashore still counts.

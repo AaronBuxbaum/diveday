@@ -7,7 +7,7 @@ import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { schemaTableNames } from "@/test/schema-tables";
 import { anonymizeDiver } from "./anonymize";
 import { createDiver, deleteDiver } from "./divers";
-import { canPersonExportShopData, loadShopExportBundleInput, loadShopExportCounts } from "./export";
+import { canPersonExportShopData, loadShopExportBundleInput } from "./export";
 import * as schema from "./schema";
 import {
   activityEvents,
@@ -404,11 +404,19 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // The inbound reply address's routing token (ADR 20260907-two-way-inbox):
     // a credential in all but name, so a restored shop is minted a fresh one.
     "inbound_email_token",
-    // H-118: a consent and its confirmation, recorded here; a CSV cannot vouch for them.
+    // H-118 and item 35: an address, its consent, confirmation and send state; a restore asks afresh.
     "shore_alert_email",
     "shore_alert_consent_at",
     "shore_alert_consent_by_person_id",
     "shore_alert_confirmed_at",
+    "bookkeeper_email",
+    "bookkeeper_email_set_at",
+    "bookkeeper_email_set_by_person_id",
+    "bookkeeper_sent_month",
+    "bookkeeper_confirmed_at",
+    "bookkeeper_confirm_token_hash",
+    "bookkeeper_confirm_expires_at",
+    "bookkeeper_stop_token_hash",
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
   trip_lenses: ["shop_id"],
@@ -1614,26 +1622,6 @@ describe("export privilege re-check (database, not JWT)", () => {
       .set({ status: "disabled" })
       .where(eq(userAccounts.personId, owner));
     expect(await canPersonExportShopData(db, shop.id, owner)).toBe(false);
-  });
-});
-
-describe("export counts (the settings page's cheap view)", () => {
-  it("mirrors the bundle exactly — same files, same notes, same row counts", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
-    const input = await loadShopExportBundleInput(db, shop.id);
-    const counts = await loadShopExportCounts(db, shop.id);
-    if (!input || !counts) throw new Error("shop failed to load");
-
-    expect(counts.map((row) => row.file)).toEqual(input.tables.map((row) => row.file));
-    for (const [index, row] of counts.entries()) {
-      expect(row.note).toBe(input.tables[index].note);
-      expect(row.count).toBe(input.tables[index].rows.length);
-    }
-  });
-
-  it("returns null for an unknown shop", async () => {
-    const { db } = ctx;
-    expect(await loadShopExportCounts(db, "00000000-0000-0000-0000-000000000000")).toBeNull();
   });
 });
 

@@ -98,5 +98,9 @@
   },
   "pagination": {
     "total": "{count, plural, one {# código} other {# códigos}}"
+  },
+  "outcome": {
+    "deal": "{count, plural, =0 {Ninguna reserva aún} one {# reservada · {amount} en plazas} other {# reservadas · {amount} en plazas}}",
+    "code": "{off} de descuento sobre {of} en plazas"
   }
 }

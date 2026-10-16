@@ -2,7 +2,12 @@ import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { SEGMENT_CORNER, SEGMENT_RAISED, segmentedTrackClass } from "@/components/ui/segmented";
 import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
-import { CREW_COLUMN, SEATS_COLUMN, WAIVERS_COLUMN } from "./_components/DepartureLedger";
+import {
+  CREW_COLUMN,
+  NET_COLUMN,
+  SEATS_COLUMN,
+  WAIVERS_COLUMN,
+} from "./_components/DepartureLedger";
 import { figureCellClass } from "./_components/MonthFigures";
 
 /**
@@ -88,6 +93,9 @@ export default function ReportsLoading() {
                   </div>
                   <div className={`h-3 w-12 shrink-0 ${CREW_COLUMN}`}>
                     <div className="h-3 w-12 rounded bg-surface-sunken" />
+                  </div>
+                  <div className={`h-3 w-14 shrink-0 ${NET_COLUMN}`}>
+                    <div className="h-3 w-14 rounded bg-surface-sunken lg:ms-auto" />
                   </div>
                   <div className={`h-3 w-24 shrink-0 ${WAIVERS_COLUMN}`}>
                     <div className="h-3 w-24 rounded bg-surface-sunken" />

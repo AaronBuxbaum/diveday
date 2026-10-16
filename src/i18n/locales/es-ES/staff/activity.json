@@ -69,6 +69,9 @@
     "shore_alert_contact_changed": "{actor} cambió el correo del contacto en tierra para los avisos del pase de lista",
     "shore_alert_contact_cleared": "{actor} quitó el correo del contacto en tierra para los avisos del pase de lista",
     "shore_alert_contact_stopped": "El contacto en tierra dejó los avisos del pase de lista con el enlace de uno de ellos",
+    "bookkeeper_email_set": "{actor} añadió el correo del contador para los archivos de fin de mes",
+    "bookkeeper_email_changed": "{actor} cambió el correo del contador para los archivos de fin de mes",
+    "bookkeeper_email_cleared": "{actor} quitó el correo del contador para los archivos de fin de mes",
     "redacted": "[eliminado]",
     "demo_charter_confirmed": "{actor} confirmó el chárter con el capitán",
     "demo_second_dive_moved": "{actor} movió el segundo buceo a French Reef por el oleaje",
@@ -89,7 +92,9 @@
     "demo_own_computer_confirmed": "{actor} confirmó que {diver} trae su propia computadora",
     "demo_paper_card_reminded": "{actor} le recordó a {diver} traer la tarjeta física al muelle",
     "participant_type_changed": "{actor} cambió a {diver} de {from, select, snorkeler {snorkel} rider {acompañante en el barco} other {buceo}} a {type, select, snorkeler {snorkel} rider {acompañante en el barco} other {buceo}}{certCheck, select, cleared {, y eso quitó una verificación de tarjeta} overridden {, aunque falta una tarjeta} other {}}",
-    "course_form_medical_changed": "{actor} {marked, select, yes {marcó} other {quitó la marca médica de}} el formulario del curso {form}{marked, select, yes { como declaración médica} other {}}"
+    "course_form_medical_changed": "{actor} {marked, select, yes {marcó} other {quitó la marca médica de}} el formulario del curso {form}{marked, select, yes { como declaración médica} other {}}",
+    "bookkeeper_email_vouched": "{actor} volvió a confirmar el correo del contador para los archivos de fin de mes",
+    "bookkeeper_email_stopped": "El contador dejó los archivos de fin de mes con el enlace de uno de ellos"
   },
   "unknown": "Una entrada anterior",
   "review": {

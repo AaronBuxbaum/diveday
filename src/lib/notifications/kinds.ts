@@ -1170,6 +1170,8 @@ const weeklyDigestSectionSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("money"),
     revenueCents: z.number().int(),
+    /** The same week a year before (fifth loop, item 29); absent on an older payload. */
+    lastYearRevenueCents: z.number().int().nullable().optional(),
     tipsCents: z.number().int().min(0),
     owed: z.object({
       orderCents: z.number().int().min(0),
@@ -1186,6 +1188,20 @@ const weeklyDigestSectionSchema = z.discriminatedUnion("kind", [
     seatsFilled: z.number().int().min(0),
     seats: z.number().int().min(0),
     url: z.url().max(2_000),
+    /**
+     * The week's emptiest boat no deal has gone out for, and the trip's deal
+     * form (fifth loop, item 29); absent on an older payload.
+     */
+    weakest: z
+      .object({
+        title: z.string().trim().min(1).max(200),
+        startsAt: z.date(),
+        booked: z.number().int().min(0),
+        capacity: z.number().int().min(1),
+        url: z.url().max(2_000),
+      })
+      .nullable()
+      .optional(),
   }),
   z.object({
     kind: z.literal("waivers"),
@@ -1354,6 +1370,44 @@ const courseInquiryReceivedSchema = z.object({
     })
     .optional(),
   timezone: z.string().trim().min(1).max(100),
+});
+
+/**
+ * **The month-end files, to the shop's bookkeeper** (fifth loop, item 35; ADR
+ * 20261016-bookkeeper-month-end-email). On the 2nd, the previous month's
+ * report, orders and crew sheet as CSV attachments, to the one address
+ * outside the shop's accounts that an owner or manager set behind the export
+ * step-up. The files ride inside this payload, so it is never queued
+ * (`notificationIsQueueable`): a queued row would hold a month of diver names
+ * and money in the database for the length of its retries. A send that fails
+ * releases the month's claim and the next day's pass tries again.
+ */
+const bookkeeperMonthEndSchema = z.object({
+  kind: z.literal("bookkeeper_month_end"),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  shopName: z.string().trim().min(1).max(120),
+  /** The month the files are for, `YYYY-MM`. */
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+  /**
+   * `/unsubscribe/<token>`: the bookkeeper's own stop (second-pass N1), and
+   * the `List-Unsubscribe` target. Minted with this month's claim.
+   */
+  stopUrl: z.url().max(2_000),
+  attachments: z
+    .array(
+      z.object({
+        /** A file name DiveDay built: letters, digits, dots and dashes, ending `.csv`. */
+        fileName: z
+          .string()
+          .regex(/^[A-Za-z0-9._-]+\.csv$/)
+          .max(200),
+        content: z.string().max(10_000_000),
+      }),
+    )
+    .min(1)
+    .max(3),
 });
 
 /**
@@ -1621,6 +1675,56 @@ const shoreAlertStoppedSchema = z.object({
   stoppedAt: z.date(),
 });
 
+/**
+ * **The link a bookkeeper's address receives before any month-end file goes
+ * to it** (security review B1; the shore contact's confirmation is the
+ * model). From the shop, in the shop's language, with no files: it says what
+ * agreeing means and that ignoring it sends nothing.
+ */
+const bookkeeperConfirmationSchema = z.object({
+  kind: z.literal("bookkeeper_confirmation"),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  shopName: z.string().trim().min(1).max(120),
+  confirmUrl: z.url().max(2_000),
+  expiresAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
+/**
+ * **What every owner hears about the bookkeeper's address** (security review
+ * B1 and F1, second pass): that it was set, changed, vouched for, confirmed
+ * or removed, and by whom, and one line on each month-end send naming where
+ * the files went. Staff operational mail, from DiveDay. A shop with no owner
+ * login sends it to its managers or its confirmed contact address (N5): the
+ * last has no person and no name.
+ */
+const bookkeeperNoticeSchema = z.object({
+  kind: z.literal("bookkeeper_notice"),
+  shopId: z.uuid(),
+  personId: z.uuid().nullable(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120).nullable(),
+  shopName: z.string().trim().min(1).max(120),
+  reportsUrl: z.url().max(2_000),
+  event: z.enum(["set", "changed", "vouched", "cleared", "confirmed", "sent"]),
+  /** On `cleared`: the bookkeeper's own stop link, or an erasure; absent when staff removed it. */
+  by: z.enum(["recipient", "erasure"]).optional(),
+  /** The bookkeeper's address: absent on a `cleared` by staff or by erasure. */
+  email: emailAddressSchema.optional(),
+  /** Who saved it: on `set`, `changed`, `vouched` and a staff `cleared`. */
+  actorName: z.string().trim().min(1).max(120).optional(),
+  /** `YYYY-MM`, on `sent`. */
+  month: z
+    .string()
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+    .optional(),
+  /** When it happened: one email per owner per event. */
+  at: z.date(),
+});
+
 export const notificationSenderSchema = z.object({
   replyTo: emailAddressSchema.optional(),
   /** One line, already in postal order (`shopAddressLines(...).join(", ")`). */
@@ -1700,6 +1804,9 @@ export const notificationSchema = z
     lostItemFoundSchema,
     courseCertifiedSchema,
     courseInquiryReceivedSchema,
+    bookkeeperMonthEndSchema,
+    bookkeeperConfirmationSchema,
+    bookkeeperNoticeSchema,
   ])
   .and(z.object({ sender: notificationSenderSchema.optional() }));
 
@@ -1739,6 +1846,10 @@ export function notificationSubjectEmail(notification: Notification): string | n
       return notification.ownerEmail;
     case "setup_request_alert":
       return notification.contactEmail;
+    // The bookkeeper's address in an owner's notice. Never queued, so no row
+    // holds it; named here so a future queued path is covered all the same.
+    case "bookkeeper_notice":
+      return notification.email ?? null;
     default:
       return null;
   }
@@ -1816,6 +1927,11 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "departure_note":
     case "lost_item_found":
     case "course_certified":
+    case "bookkeeper_month_end":
+    // A live link, and a bookkeeper's address in an owner's notice: a
+    // courtesy that missed its moment is not worth a row holding either.
+    case "bookkeeper_confirmation":
+    case "bookkeeper_notice":
       return false;
     default:
       return true;
@@ -1966,6 +2082,13 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per card written; a level already held writes none.
     case "course_certified":
       return `course-certified/${notification.certificationId}`;
+    // Never queued; one month per shop, which `bookkeeper_sent_month` claims.
+    case "bookkeeper_month_end":
+      return `bookkeeper-month-end/${notification.shopId}/${notification.month}`;
+    case "bookkeeper_confirmation":
+      return `bookkeeper-confirmation/${notification.shopId}/${notification.expiresAt.toISOString()}`;
+    case "bookkeeper_notice":
+      return `bookkeeper-notice/${notification.personId ?? "shop-contact"}/${notification.event}/${notification.at.toISOString()}`;
     // One Monday email per person per shop-local week — the same pair
     // `weekly_digest_sends` holds unique, so a queued retry and the claim
     // agree on what "this week's email" means.

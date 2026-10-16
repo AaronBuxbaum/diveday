@@ -177,4 +177,17 @@
   that sailed had somebody on record, never that nobody was asked. Boats only: "sailed" is a
   boat's word, so a shore day or pool session is never listed. A month with no crew recorded on
   any departure is a shop that does not roster crew here, so the figure gives way to one quiet
-  line, "No crew recorded on any departure this month" (`noCrewOnRecord`; review F1).
+  line, "No crew recorded on any departure this month" (`noCrewOnRecord`; review F1). Its
+  denominator is the boats back, not every departure (dive-domain review N5). On the **Safety
+  year** the figure is the sum of the months, each by that rule, so a month before the shop
+  rostered crew adds no boats; the year says how many months had none ("No crew recorded in 9 of
+  12 months").
+- **Safety year** — the Safety report over a whole year (`/shop/<slug>/safety?year=`; fifth loop,
+  item 33), the one page an insurer or broker is handed at renewal instead of twelve. Figures only,
+  each the sum of that year's month views read by their own rules (`getSafetyYear`,
+  `summarizeSafetyYear`; dive-domain review F1), with the boarding caveat under them. Printed, it
+  names the shop, the days it covers and the zone ("January 1 to October 16, 2026 · Eastern
+  Daylight Time") and the day it was printed, because an undated "so far" is worthless a month
+  later. Incident reports count filed reports, with drafts named beside them ("3 filed · 1 draft"):
+  a draft can still be discarded. The lists behind each figure stay on the months, and the year
+  says so.

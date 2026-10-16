@@ -14,12 +14,14 @@ import {
   lte,
   ne,
   not,
+  type SQL,
   sql,
   sum,
 } from "drizzle-orm";
 import { canViewShopReports, type Role } from "@/lib/authz";
 import type { MonthRef } from "@/lib/calendar";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
+import type { CertificationLevel } from "@/lib/certification-levels";
 import { nowDate } from "@/lib/clock";
 import { emptyParticipantCounts } from "@/lib/participant-types";
 import type { MonthlyReportInput, ReportTrip } from "@/lib/reporting";
@@ -36,6 +38,7 @@ import {
   bookingCheckouts,
   bookingPayments,
   bookings,
+  certifications,
   diveSites,
   importedPaymentHistory,
   orders,
@@ -44,6 +47,7 @@ import {
   tips,
   tripAssignments,
   tripDives,
+  tripLenses,
   trips,
   userAccounts,
   waiverRecords,
@@ -112,6 +116,90 @@ const ACTIVE_BOOKING_STATUSES = ["booked", "checked_in"] as const;
 const COLLECTED_PAYMENT_STATUSES = ["paid", "deposit_paid", "partly_refunded"] as const;
 
 /**
+ * **The month's trip spine**: every trip `where` admits, with its capacity and
+ * active-booking count. A left join keeps trips that sailed empty (count 0),
+ * which still offered seats and belong in the fill-rate denominator.
+ */
+async function monthTripSpine(db: DbExecutor, shopId: string, where: SQL | undefined) {
+  // The hull and the kind of day ride along (fifth loop, item 26): which boat
+  // and which trip kind earned the money is the owner's monthly question, and
+  // both are names on the departure's own row, re-scoped to the shop.
+  return db
+    .select({
+      tripId: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+      capacity: trips.capacity,
+      activeBookings: count(bookings.id),
+      boatName: boats.name,
+      lensName: tripLenses.name,
+      courseId: trips.courseId,
+    })
+    .from(trips)
+    .leftJoin(
+      bookings,
+      and(
+        eq(bookings.tripId, trips.id),
+        eq(bookings.shopId, shopId),
+        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+      ),
+    )
+    .leftJoin(boats, and(eq(boats.id, trips.boatId), eq(boats.shopId, shopId)))
+    .leftJoin(tripLenses, and(eq(tripLenses.id, trips.lensId), eq(tripLenses.shopId, shopId)))
+    .where(and(where, liveTrip()))
+    .groupBy(
+      trips.id,
+      trips.title,
+      trips.startsAt,
+      trips.capacity,
+      boats.name,
+      tripLenses.name,
+      trips.courseId,
+    );
+}
+
+type DepartureMoney = { gross: number; tax: number; passThrough: number };
+type MoneyRow = { tripId: string; total: unknown; tax?: unknown; passThrough?: unknown };
+
+/**
+ * **Each departure's own net** (fifth loop, item 26): `getMonthlyReport`'s six
+ * booking-borne money reads, each grouped by departure, tallied per departure
+ * and in total. The month is the departures' sum plus the money no departure
+ * names (counter orders, imported history), so a ledger row's net and the
+ * month's figure cannot disagree.
+ */
+function tallyByDeparture(reads: {
+  baseRevenue: readonly MoneyRow[];
+  recoveredDeposits: readonly MoneyRow[];
+  currentCheckoutTax: readonly MoneyRow[];
+  currentPassThrough: readonly MoneyRow[];
+  invoiceRevenue: readonly MoneyRow[];
+  invoiceBookingAmounts: readonly MoneyRow[];
+}): { tripMoney: Map<string, DepartureMoney>; bookedMoney: DepartureMoney } {
+  const tripMoney = new Map<string, DepartureMoney>();
+  const add = (tripId: string, gross: unknown, tax: unknown, passThrough: unknown) => {
+    const money = tripMoney.get(tripId) ?? { gross: 0, tax: 0, passThrough: 0 };
+    money.gross += Number(gross ?? 0);
+    money.tax += Number(tax ?? 0);
+    money.passThrough += Number(passThrough ?? 0);
+    tripMoney.set(tripId, money);
+  };
+  for (const row of reads.baseRevenue) add(row.tripId, row.total, 0, 0);
+  for (const row of reads.recoveredDeposits) add(row.tripId, row.total, row.tax, row.passThrough);
+  for (const row of reads.currentCheckoutTax) add(row.tripId, 0, row.total, 0);
+  for (const row of reads.currentPassThrough) add(row.tripId, 0, 0, row.total);
+  for (const row of reads.invoiceRevenue) add(row.tripId, row.total, row.tax, row.passThrough);
+  for (const row of reads.invoiceBookingAmounts) add(row.tripId, 0, row.total, row.passThrough);
+  const bookedMoney = { gross: 0, tax: 0, passThrough: 0 };
+  for (const money of tripMoney.values()) {
+    bookedMoney.gross += money.gross;
+    bookedMoney.tax += money.tax;
+    bookedMoney.passThrough += money.passThrough;
+  }
+  return { tripMoney, bookedMoney };
+}
+
+/**
  * The month's numbers, anchored to trips that *departed* in `[startUtc, endUtc)`.
  * Returns the raw per-trip rows and the revenue total; all the derived rates
  * live in the pure `summarizeMonth` (src/lib/reporting.ts) so this file stays a
@@ -158,28 +246,7 @@ export async function getMonthlyReport(
     lt(trips.startsAt, endUtc),
   );
 
-  // Trip spine: every trip in the window with its capacity and active-booking
-  // count. A left join keeps trips that sailed empty (count 0), which still
-  // offered seats and belong in the fill-rate denominator.
-  const tripRows = await db
-    .select({
-      tripId: trips.id,
-      title: trips.title,
-      startsAt: trips.startsAt,
-      capacity: trips.capacity,
-      activeBookings: count(bookings.id),
-    })
-    .from(trips)
-    .leftJoin(
-      bookings,
-      and(
-        eq(bookings.tripId, trips.id),
-        eq(bookings.shopId, shopId),
-        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
-      ),
-    )
-    .where(and(inWindow, liveTrip()))
-    .groupBy(trips.id, trips.title, trips.startsAt, trips.capacity);
+  const tripRows = await monthTripSpine(db, shopId, inWindow);
 
   // Waiver-complete bookings per trip. A waiver is signed once and then covers
   // every one of that diver's bookings (20260721-waiver-sign-once), so an active
@@ -221,8 +288,8 @@ export async function getMonthlyReport(
   // `bookings`/`bookingPayments` carry their own (independently-writable)
   // `shop_id` alongside the FK chain to `trips` — every join here is scoped
   // to both, so this never trusts a child row's own shop_id alone (CR-007).
-  const [baseRevenue] = await db
-    .select({ total: sum(bookingPayments.amountCents) })
+  const baseRevenue = await db
+    .select({ tripId: trips.id, total: sum(bookingPayments.amountCents) })
     .from(bookingPayments)
     .innerJoin(
       bookings,
@@ -235,7 +302,8 @@ export async function getMonthlyReport(
         eq(bookingPayments.shopId, shopId),
         inArray(bookingPayments.status, [...COLLECTED_PAYMENT_STATUSES]),
       ),
-    );
+    )
+    .groupBy(trips.id);
 
   // The one thing that current-state row loses: when a deposit is later topped
   // up by a balance payment, `setBookingPayment` overwrites the deposit amount
@@ -280,8 +348,9 @@ export async function getMonthlyReport(
         ), 0)::numeric
       / nullif(${bookingCheckouts.totalCents}, 0)
   )), 0)`;
-  const [recoveredDeposits] = await db
+  const recoveredDeposits = await db
     .select({
+      tripId: trips.id,
       total: recoveredDepositCents,
       tax: sum(bookingCheckoutBookings.taxCents),
       passThrough: recoveredPassThroughCents,
@@ -311,14 +380,15 @@ export async function getMonthlyReport(
         eq(bookingCheckouts.status, "completed"),
         eq(bookingPayments.status, "paid"),
       ),
-    );
+    )
+    .groupBy(trips.id);
 
   // Tax for a current booking payment comes from the checkout allocation, but
   // only while that checkout is still the payment row's provider. A later
   // invoice balance replaces the booking payment and has its own tax evidence
   // below; a deposit that it replaced is recovered by the query above.
-  const [currentCheckoutTax] = await db
-    .select({ total: sum(bookingCheckoutBookings.taxCents) })
+  const currentCheckoutTax = await db
+    .select({ tripId: trips.id, total: sum(bookingCheckoutBookings.taxCents) })
     .from(bookingCheckoutBookings)
     .innerJoin(
       bookingCheckouts,
@@ -341,13 +411,14 @@ export async function getMonthlyReport(
         eq(bookingPayments.providerRef, bookingCheckouts.stripeSessionId),
       ),
     )
-    .where(and(inWindow, inArray(bookingPayments.status, [...COLLECTED_PAYMENT_STATUSES])));
+    .where(and(inWindow, inArray(bookingPayments.status, [...COLLECTED_PAYMENT_STATUSES])))
+    .groupBy(trips.id);
 
   // The pass-through line is collected with the checkout but is not the
   // shop's revenue. Match it to the current booking payment by Stripe session
   // id so manual payments remain untouched.
-  const [currentPassThrough] = await db
-    .select({ total: sum(bookingCheckoutBookings.passThroughCents) })
+  const currentPassThrough = await db
+    .select({ tripId: trips.id, total: sum(bookingCheckoutBookings.passThroughCents) })
     .from(bookingCheckoutBookings)
     .innerJoin(
       bookingCheckouts,
@@ -370,14 +441,16 @@ export async function getMonthlyReport(
         eq(bookingPayments.providerRef, bookingCheckouts.stripeSessionId),
       ),
     )
-    .where(and(inWindow, inArray(bookingPayments.status, [...COLLECTED_PAYMENT_STATUSES])));
+    .where(and(inWindow, inArray(bookingPayments.status, [...COLLECTED_PAYMENT_STATUSES])))
+    .groupBy(trips.id);
 
   // Older/demo data can contain a paid invoice without the booking-payment
   // mirror (the invoice is still the authoritative collected amount). Use it
   // only when no current payment row exists, avoiding double counting the
   // normal webhook/manual-payment path above.
-  const [invoiceRevenue] = await db
+  const invoiceRevenue = await db
     .select({
+      tripId: trips.id,
       total: sum(orders.amountPaidCents),
       tax: sum(orders.taxCents),
       passThrough: sum(orders.passThroughCents),
@@ -410,15 +483,20 @@ export async function getMonthlyReport(
           ),
         ),
       ),
-    );
+    )
+    .groupBy(trips.id);
 
   // A paid staff invoice normally mirrors its collected total into
   // `booking_payments`, so the revenue query above deliberately excludes it.
   // Its tax and pass-through allocation still belong in separate report lines,
   // matched by providerRef so an unrelated manual payment on the same booking
   // cannot subtract amounts that were not part of the invoice being reported.
-  const [invoiceBookingAmounts] = await db
-    .select({ total: sum(orders.taxCents), passThrough: sum(orders.passThroughCents) })
+  const invoiceBookingAmounts = await db
+    .select({
+      tripId: trips.id,
+      total: sum(orders.taxCents),
+      passThrough: sum(orders.passThroughCents),
+    })
     .from(orders)
     .innerJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -437,7 +515,8 @@ export async function getMonthlyReport(
         inArray(orders.status, ["paid", "partly_refunded"]),
         gt(orders.amountPaidCents, 0),
       ),
-    );
+    )
+    .groupBy(trips.id);
 
   // **Orders that belong to no booking**: a gear rental at the counter, a
   // retail sale, an air fill. No departure names them, so they are anchored to
@@ -587,32 +666,38 @@ export async function getMonthlyReport(
 
   const waiverByTrip = new Map(waiverRows.map((row) => [row.tripId, Number(row.waiverComplete)]));
 
-  const reportTrips: ReportTrip[] = tripRows.map((row) => ({
-    tripId: row.tripId,
-    title: row.title,
-    startsAt: row.startsAt,
-    capacity: row.capacity,
-    activeBookings: Number(row.activeBookings),
-    waiverComplete: waiverByTrip.get(row.tripId) ?? 0,
-  }));
+  // **Each departure's own net** (fifth loop, item 26): the six booking-borne
+  // money reads above are grouped by departure, so a row's net and the month's
+  // total are one arithmetic (`tallyByDeparture`).
+  const { tripMoney, bookedMoney } = tallyByDeparture({
+    baseRevenue,
+    recoveredDeposits,
+    currentCheckoutTax,
+    currentPassThrough,
+    invoiceRevenue,
+    invoiceBookingAmounts,
+  });
 
-  const currentRevenueCents =
-    Number(baseRevenue?.total ?? 0) +
-    Number(recoveredDeposits?.total ?? 0) +
-    Number(invoiceRevenue?.total ?? 0) +
-    Number(standaloneOrderRevenue?.total ?? 0);
+  const reportTrips: ReportTrip[] = tripRows.map((row) => {
+    const money = tripMoney.get(row.tripId);
+    return {
+      tripId: row.tripId,
+      title: row.title,
+      startsAt: row.startsAt,
+      capacity: row.capacity,
+      activeBookings: Number(row.activeBookings),
+      waiverComplete: waiverByTrip.get(row.tripId) ?? 0,
+      netCents: money ? money.gross - money.tax - money.passThrough : 0,
+      boatName: row.boatName ?? null,
+      kindName: row.lensName ?? null,
+      isCourse: row.courseId !== null,
+    };
+  });
+
+  const currentRevenueCents = bookedMoney.gross + Number(standaloneOrderRevenue?.total ?? 0);
   const passThroughCents =
-    Number(currentPassThrough?.total ?? 0) +
-    Number(recoveredDeposits?.passThrough ?? 0) +
-    Number(invoiceRevenue?.passThrough ?? 0) +
-    Number(invoiceBookingAmounts?.passThrough ?? 0) +
-    Number(standaloneOrderRevenue?.passThrough ?? 0);
-  const taxCents =
-    Number(currentCheckoutTax?.total ?? 0) +
-    Number(recoveredDeposits?.tax ?? 0) +
-    Number(invoiceRevenue?.tax ?? 0) +
-    Number(invoiceBookingAmounts?.total ?? 0) +
-    Number(standaloneOrderRevenue?.tax ?? 0);
+    bookedMoney.passThrough + Number(standaloneOrderRevenue?.passThrough ?? 0);
+  const taxCents = bookedMoney.tax + Number(standaloneOrderRevenue?.tax ?? 0);
   const importedPaymentCents = Number(importedFinancialTotals?.payments ?? 0);
   const importedRefundCents = Number(importedFinancialTotals?.refunds ?? 0);
 
@@ -942,74 +1027,119 @@ export async function getShopYear(
   // Postgres refuses the query naming a column the GROUP BY plainly contains.
   const localDay = sql<string>`to_char(${trips.startsAt} at time zone ${timeZone}::text, 'YYYY-MM-DD')`;
 
-  const [dayRows, diverRows, boatRows, siteRows, firstSailed] = await queryAll(db, [
-    () =>
-      db
-        .select({ day: localDay, boats: count(), seats: sum(trips.capacity) })
-        .from(trips)
-        .where(and(sailedInYear, liveTrip(), notRehearsal()))
-        .groupBy(sql`1`),
-    () =>
-      db
-        .select({ day: localDay, divers: count(bookings.id) })
-        .from(trips)
-        .innerJoin(
-          bookings,
-          and(
-            eq(bookings.tripId, trips.id),
-            eq(bookings.shopId, shopId),
-            inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+  const [dayRows, diverRows, boatRows, plannedSiteRows, departureSiteRows, firstSailed] =
+    await queryAll(db, [
+      () =>
+        db
+          .select({ day: localDay, boats: count(), seats: sum(trips.capacity) })
+          .from(trips)
+          .where(and(sailedInYear, liveTrip(), notRehearsal()))
+          .groupBy(sql`1`),
+      () =>
+        db
+          .select({ day: localDay, divers: count(bookings.id) })
+          .from(trips)
+          .innerJoin(
+            bookings,
+            and(
+              eq(bookings.tripId, trips.id),
+              eq(bookings.shopId, shopId),
+              inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+            ),
+          )
+          .where(and(sailedInYear, liveTrip(), notRehearsal()))
+          .groupBy(sql`1`),
+      // Days per hull, not departures per hull: a boat that goes out twice in a
+      // day was at sea once. A departure with no boat on it contributes to the
+      // year's other figures and to no hull's count.
+      () =>
+        db
+          .select({
+            name: boats.name,
+            days: sql<number>`count(distinct to_char(${trips.startsAt} at time zone ${timeZone}::text, 'YYYY-MM-DD'))`,
+          })
+          .from(trips)
+          .innerJoin(boats, and(eq(boats.id, trips.boatId), eq(boats.shopId, shopId)))
+          .where(and(sailedInYear, liveTrip(), notRehearsal()))
+          .groupBy(boats.id, boats.name),
+      // The times a site was dived, from the day's plan. `trip_dives` carries no
+      // `shop_id` of its own (CR-007), so it is reached only through `trips`,
+      // and the site is scoped to the shop as well.
+      () =>
+        db
+          .select({
+            siteId: diveSites.id,
+            name: diveSites.name,
+            deletedAt: diveSites.deletedAt,
+            times: count(),
+          })
+          .from(tripDives)
+          .innerJoin(trips, eq(trips.id, tripDives.tripId))
+          .innerJoin(
+            diveSites,
+            and(eq(diveSites.id, tripDives.diveSiteId), eq(diveSites.shopId, shopId)),
+          )
+          .where(and(sailedInYear, liveTrip(), notRehearsal()))
+          .groupBy(diveSites.id, diveSites.name, diveSites.deletedAt),
+      // **The departure's own site, where the plan names none** (fifth loop,
+      // section 6). A shop that never fills in per-dive sites still chose a site
+      // for the departure, and its year read "0 sites" without this. Counted
+      // once per departure, and only for one whose plan names no site at all, so
+      // a planned dive is never counted twice.
+      () =>
+        db
+          .select({
+            siteId: diveSites.id,
+            name: diveSites.name,
+            deletedAt: diveSites.deletedAt,
+            times: count(),
+          })
+          .from(trips)
+          .innerJoin(
+            diveSites,
+            and(eq(diveSites.id, trips.diveSiteId), eq(diveSites.shopId, shopId)),
+          )
+          .where(
+            and(
+              sailedInYear,
+              liveTrip(),
+              notRehearsal(),
+              not(
+                exists(
+                  db
+                    .select({ id: tripDives.id })
+                    .from(tripDives)
+                    .where(and(eq(tripDives.tripId, trips.id), isNotNull(tripDives.diveSiteId))),
+                ),
+              ),
+            ),
+          )
+          .groupBy(diveSites.id, diveSites.name, diveSites.deletedAt),
+      // The shop's first day at sea, ever — the "since May" rule's only input.
+      () =>
+        db
+          .select({ startsAt: sql<Date | null>`min(${trips.startsAt})` })
+          .from(trips)
+          .where(
+            and(
+              eq(trips.shopId, shopId),
+              ne(trips.status, "cancelled"),
+              lte(trips.startsAt, sailedBy),
+              liveTrip(),
+              notRehearsal(),
+            ),
           ),
-        )
-        .where(and(sailedInYear, liveTrip(), notRehearsal()))
-        .groupBy(sql`1`),
-    // Days per hull, not departures per hull: a boat that goes out twice in a
-    // day was at sea once. A departure with no boat on it contributes to the
-    // year's other figures and to no hull's count.
-    () =>
-      db
-        .select({
-          name: boats.name,
-          days: sql<number>`count(distinct to_char(${trips.startsAt} at time zone ${timeZone}::text, 'YYYY-MM-DD'))`,
-        })
-        .from(trips)
-        .innerJoin(boats, and(eq(boats.id, trips.boatId), eq(boats.shopId, shopId)))
-        .where(and(sailedInYear, liveTrip(), notRehearsal()))
-        .groupBy(boats.id, boats.name),
-    // The times a site was dived, from the day's plan. `trip_dives` carries no
-    // `shop_id` of its own (CR-007), so it is reached only through `trips`,
-    // and the site is scoped to the shop as well.
-    () =>
-      db
-        .select({
-          siteId: diveSites.id,
-          name: diveSites.name,
-          deletedAt: diveSites.deletedAt,
-          times: count(),
-        })
-        .from(tripDives)
-        .innerJoin(trips, eq(trips.id, tripDives.tripId))
-        .innerJoin(
-          diveSites,
-          and(eq(diveSites.id, tripDives.diveSiteId), eq(diveSites.shopId, shopId)),
-        )
-        .where(and(sailedInYear, liveTrip(), notRehearsal()))
-        .groupBy(diveSites.id, diveSites.name, diveSites.deletedAt),
-    // The shop's first day at sea, ever — the "since May" rule's only input.
-    () =>
-      db
-        .select({ startsAt: sql<Date | null>`min(${trips.startsAt})` })
-        .from(trips)
-        .where(
-          and(
-            eq(trips.shopId, shopId),
-            ne(trips.status, "cancelled"),
-            lte(trips.startsAt, sailedBy),
-            liveTrip(),
-            notRehearsal(),
-          ),
-        ),
-  ]);
+    ]);
+
+  const siteTimes = new Map<string, (typeof plannedSiteRows)[number]>();
+  for (const row of [...plannedSiteRows, ...departureSiteRows]) {
+    const seen = siteTimes.get(row.siteId);
+    siteTimes.set(
+      row.siteId,
+      seen ? { ...seen, times: Number(seen.times) + Number(row.times) } : row,
+    );
+  }
+  const siteRows = [...siteTimes.values()];
 
   const diversByDay = new Map(diverRows.map((row) => [row.day, Number(row.divers)]));
   const days: ShopYearDay[] = dayRows
@@ -1048,4 +1178,180 @@ export async function getShopYear(
       }))
       .sort((left, right) => right.times - left.times || left.name.localeCompare(right.name)),
   };
+}
+
+/** One weekday's booking lead time, in the shop's own zone (fifth loop, item 34). */
+export type WeekdayLeadTime = {
+  /** ISO weekday of the departure, 1 Monday to 7 Sunday. */
+  isoWeekday: number;
+  /** Seats behind the figure. */
+  seats: number;
+  /** Half the seats were booked at least this many whole days before the boat left. */
+  medianDays: number;
+  /** Share of seats booked in the last three days before departure, 0 to 1. */
+  lastThreeDaysShare: number;
+};
+
+/**
+ * **How far ahead each day's boats sell** (fifth loop, item 34; glossary
+ * "Booking lead time"): every seat that held on a departure that sailed in
+ * `[startUtc, endUtc)`, its booking time joined to its departure time,
+ * grouped by the departure's weekday in the shop's zone.
+ *
+ * Boat departures only, never a shore day, a pool session or a course
+ * session (dive-domain review F6), and whole calendar days in the shop's zone
+ * (N2). Seats that held only (`booked`, `checked_in`): a cancelled booking is
+ * not a sale. The shop's own rehearsals and deleted departures stay out, as every
+ * other Reports figure keeps them out. The caller decides how much history is
+ * enough to say anything (`src/lib/lead-time.ts`).
+ */
+export async function bookingLeadTimes(
+  db: DbExecutor,
+  shopId: string,
+  window: { startUtc: Date; endUtc: Date; timeZone: string },
+): Promise<WeekdayLeadTime[]> {
+  // Calendar days in the shop's zone (dive-domain review N2): booked at 6 pm
+  // for the 8 am boat is the night before, a day ahead, not "on the day".
+  const leadDays = sql<number>`greatest((${trips.startsAt} at time zone ${window.timeZone}::text)::date - (${bookings.createdAt} at time zone ${window.timeZone}::text)::date, 0)`;
+  const rows = await db
+    .select({
+      isoWeekday: sql<number>`extract(isodow from ${trips.startsAt} at time zone ${window.timeZone}::text)`,
+      seats: count(bookings.id),
+      medianDays: sql<number>`percentile_disc(0.5) within group (order by ${leadDays})`,
+      lastThree: sql<number>`count(*) filter (where ${leadDays} < 3)`,
+    })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(trips.shopId, shopId),
+        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+        ne(trips.status, "cancelled"),
+        // Boats, as the words say (dive-domain review F6): a course session
+        // sells with its course weeks ahead and would pull the boats' figure.
+        eq(trips.diveMode, "boat"),
+        isNull(trips.courseId),
+        gte(trips.startsAt, window.startUtc),
+        lt(trips.startsAt, window.endUtc),
+        liveTrip(),
+        notRehearsal(),
+      ),
+    )
+    .groupBy(sql`1`);
+  return rows
+    .map((row) => {
+      const seats = Number(row.seats);
+      return {
+        isoWeekday: Number(row.isoWeekday),
+        seats,
+        medianDays: Number(row.medianDays ?? 0),
+        lastThreeDaysShare: seats > 0 ? Number(row.lastThree) / seats : 0,
+      };
+    })
+    .sort((left, right) => left.isoWeekday - right.isoWeekday);
+}
+
+/** The cards this shop issued in a window, by level (fifth loop, item 32). */
+export type CertifiedHere = {
+  total: number;
+  byLevel: { level: CertificationLevel; count: number }[];
+};
+
+/**
+ * **"Certifications issued here"** (fifth loop, item 32): the cards this shop's own
+ * instructors issued (`issued_by_shop_at`, ADR
+ * 20260824-shop-issued-certification-is-verified) in `[startUtc, endUtc)`,
+ * anchored to the tap that issued them. A card since deleted is not counted:
+ * the shop took it back. Levels in the order the most were issued.
+ */
+export async function certifiedHere(
+  db: DbExecutor,
+  shopId: string,
+  window: { startUtc: Date; endUtc: Date },
+): Promise<CertifiedHere> {
+  const rows = await db
+    .select({ level: certifications.level, count: count() })
+    .from(certifications)
+    .where(
+      and(
+        eq(certifications.shopId, shopId),
+        isNotNull(certifications.issuedByShopAt),
+        isNull(certifications.deletedAt),
+        gte(certifications.issuedByShopAt, window.startUtc),
+        lt(certifications.issuedByShopAt, window.endUtc),
+      ),
+    )
+    .groupBy(certifications.level);
+  const byLevel = rows
+    .map((row) => ({ level: row.level, count: Number(row.count) }))
+    .sort((left, right) => right.count - left.count || left.level.localeCompare(right.level));
+  return { total: byLevel.reduce((sum, row) => sum + row.count, 0), byLevel };
+}
+
+/** One crew member's year: certifications issued and boat days at sea. */
+export type CrewYear = { certified: number; daysAtSea: number };
+
+/**
+ * **Each team member's year** (fifth loop, item 32): the cards they issued
+ * and the shop-local days they were on a departure that sailed, for the Team
+ * cards. Days, not departures, the year view's own rule; a departure counts
+ * once it has sailed (`DEPARTURE_BUFFER_MS`), and never a cancelled one.
+ */
+export async function crewYearFacts(
+  db: DbExecutor,
+  shopId: string,
+  options: { timeZone: string; year: number; now: Date },
+): Promise<Map<string, CrewYear>> {
+  const { timeZone, year, now } = options;
+  const from = wallTimeToUtc({ year, month: 1, day: 1, hour: 0, minute: 0 }, timeZone);
+  const to = wallTimeToUtc({ year: year + 1, month: 1, day: 1, hour: 0, minute: 0 }, timeZone);
+  const sailedBy = new Date(now.getTime() - DEPARTURE_BUFFER_MS);
+  const [issued, days] = await queryAll(db, [
+    () =>
+      db
+        .select({ personId: certifications.issuedByPersonId, certified: count() })
+        .from(certifications)
+        .where(
+          and(
+            eq(certifications.shopId, shopId),
+            isNotNull(certifications.issuedByPersonId),
+            isNull(certifications.deletedAt),
+            gte(certifications.issuedByShopAt, from),
+            lt(certifications.issuedByShopAt, to),
+          ),
+        )
+        .groupBy(certifications.issuedByPersonId),
+    () =>
+      db
+        .select({
+          personId: tripAssignments.personId,
+          days: sql<number>`count(distinct to_char(${trips.startsAt} at time zone ${timeZone}::text, 'YYYY-MM-DD'))`,
+        })
+        .from(tripAssignments)
+        .innerJoin(trips, and(eq(trips.id, tripAssignments.tripId), eq(trips.shopId, shopId)))
+        .where(
+          and(
+            ne(trips.status, "cancelled"),
+            // At sea: boats only, never a shore day or a pool session (review N1).
+            eq(trips.diveMode, "boat"),
+            gte(trips.startsAt, from),
+            lt(trips.startsAt, to),
+            lte(trips.startsAt, sailedBy),
+            liveTrip(),
+            notRehearsal(),
+          ),
+        )
+        .groupBy(tripAssignments.personId),
+  ]);
+  const facts = new Map<string, CrewYear>();
+  for (const row of issued) {
+    if (!row.personId) continue;
+    facts.set(row.personId, { certified: Number(row.certified), daysAtSea: 0 });
+  }
+  for (const row of days) {
+    const seen = facts.get(row.personId) ?? { certified: 0, daysAtSea: 0 };
+    facts.set(row.personId, { ...seen, daysAtSea: Number(row.days) });
+  }
+  return facts;
 }

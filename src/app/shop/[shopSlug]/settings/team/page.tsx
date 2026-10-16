@@ -41,6 +41,7 @@ import { settingsPaneClass } from "../_components/settings-pane";
 import { StaffCardCredentials } from "./_components/StaffCardCredentials";
 import { StaffCredentials } from "./_components/StaffCredentials";
 import { StaffRolesDisclosure } from "./_components/StaffRolesDisclosure";
+import { type CrewYear, readStaffYears, StaffYearLine } from "./_components/StaffYear";
 import {
   deleteStaffCredentialAction,
   inviteStaffAction,
@@ -57,7 +58,7 @@ import {
 import { CREDENTIAL_KIND_KEYS } from "./credential-kinds";
 import { type CardCredential, credentialRowsFor } from "./credential-rows";
 import { noticeMessages } from "./notice-messages";
-import { TEAM_FORMS, teamNoticeForm, teamNoticeOnRoster } from "./notices";
+import { parseRoles, TEAM_FORMS, teamNoticeForm, teamNoticeOnRoster } from "./notices";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -193,6 +194,7 @@ function StaffRow({
   locale,
   timezone,
   t,
+  year,
 }: {
   member: StaffMember;
   /** This person's credentials on file, from the ledger at the foot. */
@@ -205,6 +207,7 @@ function StaffRow({
   /** The shop's own zone, so a consent stamp reads as the day the shop lived. */
   timezone: string;
   t: StaffTranslator;
+  year?: CrewYear;
 }) {
   const isDisabled = member.accountStatus === "disabled";
   const status = member.accountStatus === "active" ? null : statusBadge(t)[member.accountStatus];
@@ -219,6 +222,7 @@ function StaffRow({
         <div className="min-w-0">
           <p className="font-medium">{member.fullName}</p>
           <p className="text-sm text-muted wrap-anywhere">{member.email}</p>
+          <StaffYearLine year={year} t={t} />
           {/* What this person publishes to divers, when they have said yes on
               their own staffing page (issue #1357). Read-only here: the switch
               is theirs, and a shop that could edit it would be overriding
@@ -503,13 +507,6 @@ function StaffRow({
   );
 }
 
-/** A `?priorRoles=` value, kept to roles this app actually has. */
-function parseRoles(value: string | undefined): Role[] {
-  return (value ?? "")
-    .split(",")
-    .filter((role): role is Role => (STAFF_ROLES as readonly string[]).includes(role));
-}
-
 export default async function TeamSettingsPage({
   params,
   searchParams,
@@ -548,9 +545,10 @@ export default async function TeamSettingsPage({
     refusal: { notice: "team-not-authorized" },
   });
 
-  const [staff, credentials] = await Promise.all([
+  const [staff, credentials, years] = await Promise.all([
     listShopStaff(db, shop.id),
     listStaffCredentials(db, shop.id),
+    readStaffYears(db, shop, nowDate()),
   ]);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -699,6 +697,7 @@ export default async function TeamSettingsPage({
                   locale={locale}
                   timezone={shop.timezone}
                   t={t}
+                  year={years.get(member.personId)}
                 />
               ))}
             </InsetGroup>

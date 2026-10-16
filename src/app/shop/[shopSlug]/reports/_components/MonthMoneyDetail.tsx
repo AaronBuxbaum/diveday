@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -7,6 +8,7 @@ import { payoutSentence } from "@/i18n/payout-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { RevenueLine } from "@/lib/report-lines";
 import { shopPath } from "@/lib/staff-notices";
+import { MonthEndSection } from "./MonthEndSection";
 
 /** Each revenue line's name in the staff bundle. */
 export const BY_LINE_KEYS = {
@@ -220,22 +222,59 @@ export function QuietMonth({
 export function MonthFootnotes({
   taxCents,
   csvHref,
+  monthEnd,
   t,
   money,
 }: {
   taxCents: number;
   csvHref: string;
+  /**
+   * The month's other files (fifth loop, items 31 and 35): the crew sheet,
+   * all three as one zip, and the bookkeeper's address they go to on the 2nd.
+   */
+  monthEnd?: { shopSlug: string; month: string; locale: string; timeZone: string };
   t: StaffTranslator;
   money: (cents: number) => string;
 }) {
+  const link = "font-medium text-primary hover:underline";
   return (
-    <p className="mt-3 text-end text-sm text-muted tabular-nums">
-      {t("reports.taxLine", { amount: money(taxCents) })}
-      {" · "}
-      <a href={csvHref} className="font-medium text-primary hover:underline">
-        {t("reports.downloadCsv")}
-      </a>
-    </p>
+    <>
+      <p className="mt-3 text-end text-sm text-muted tabular-nums">
+        {t("reports.taxLine", { amount: money(taxCents) })}
+        {" · "}
+        <a href={csvHref} className={link}>
+          {t("reports.downloadCsv")}
+        </a>
+        {monthEnd ? (
+          <>
+            {" · "}
+            <a
+              href={`${shopPath(monthEnd.shopSlug, "settings", "export", "crew-sheet")}?month=${monthEnd.month}`}
+              className={link}
+            >
+              {t("reports.downloadCrewSheet")}
+            </a>
+            {" · "}
+            <a
+              href={`${shopPath(monthEnd.shopSlug, "reports", "download", "month-end")}?month=${monthEnd.month}`}
+              className={link}
+            >
+              {t("reports.downloadMonthEnd")}
+            </a>
+          </>
+        ) : null}
+      </p>
+      {monthEnd ? (
+        <Suspense fallback={null}>
+          <MonthEndSection
+            shopSlug={monthEnd.shopSlug}
+            locale={monthEnd.locale}
+            timeZone={monthEnd.timeZone}
+            t={t}
+          />
+        </Suspense>
+      ) : null}
+    </>
   );
 }
 

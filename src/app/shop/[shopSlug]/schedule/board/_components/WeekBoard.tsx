@@ -15,6 +15,8 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
 import { fill } from "@/i18n/fill";
 import { isUsualCrew, mostCommonCrew } from "@/lib/usual-crew";
 import { isSoldOut, seatFill } from "@/lib/week-seats";
+import type { WeekAsk } from "./builder-types";
+import { CopyLastYear, LastYearTally, type LastYearWeekView } from "./CopyLastYear";
 import { WEEK_DAY_GRID_CLASS, WEEK_EMPTY_DAY_CLASS, WEEK_ROW_BOX_CLASS } from "./week-geometry";
 import { weekRows } from "./week-rows";
 
@@ -139,7 +141,7 @@ export type WeekDay = {
 };
 
 /** Everything the week grid needs, assembled server-side. */
-export type BuilderWeek = {
+export type BuilderWeek = LastYearWeekView & {
   ariaLabel: string;
   /** "Aug 24 – 30, 2026". */
   rangeLabel: string;
@@ -178,17 +180,6 @@ export type BuilderWeek = {
   asked: WeekAsk[];
   /** "2 days" — how many are below, said once at the section's head. */
   askedCount: string;
-};
-
-/** One day the divers asked for, and the act that answers it. */
-export type WeekAsk = {
-  dateIso: string;
-  /** "Wed, Sep 2 · four people" — the date and the heads, already pluralised. */
-  lead: string;
-  /** Who asked, in the reader's own list grammar. */
-  who: string;
-  /** The builder, opened on that day with these leads carried forward. */
-  href: string;
 };
 
 /**
@@ -800,6 +791,7 @@ export function WeekBoard({
           <p data-week-seat-tally="" className="text-sm text-muted tabular-nums">
             {week.seatTally}
           </p>
+          <LastYearTally text={week.lastYearTally} />
           {/* The week a shop pins by the dock: beside the range it prints.
               Desk-sized only: on a phone it would push the tally onto a
               line of its own, and nobody prints the schedule from one. */}
@@ -1060,6 +1052,7 @@ export function WeekBoard({
 
       {/* A week of empty rows and no way forward is a dead end. One line, and
           it is a link to the week that has something in it. */}
+      <CopyLastYear copy={canConfigure ? week.copyLastYear : null} shopSlug={shopSlug} />
       {week.nextDeparture ? (
         <p className="px-2 py-6 text-sm text-muted">
           <Link href={week.nextDeparture.href} scroll={false} className="hover:underline">

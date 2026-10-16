@@ -34,7 +34,7 @@ import {
 } from "@/lib/week-board";
 import { weekSeatTally } from "@/lib/week-seats";
 import { toTimeInputValue, utcToWallTime } from "@/lib/zoned";
-import type { weekCrewRead } from "./board-reads";
+import type { LastYearWeek, weekCrewRead } from "./board-reads";
 import type { BuilderWeek, WeekEntry, WeekSpan } from "./WeekBoard";
 
 /**
@@ -121,6 +121,7 @@ export function boardWeekView({
   locale,
   tz,
   st,
+  lastYear,
 }: {
   shopSlug: string;
   weekStartIso: string;
@@ -138,6 +139,8 @@ export function boardWeekView({
   locale: string;
   tz: string;
   st: StaffTranslator;
+  /** The same week a year before (fifth loop, item 30). */
+  lastYear?: LastYearWeek;
 }): BuilderWeek | null {
   // ---- The week, for `xl` and up (ADR 20260827-clearwater-surface-language,
   // decision 5). Every string below is resolved here, for the request locale
@@ -382,6 +385,26 @@ export function boardWeekView({
             ...weekViewSpans.map((span) => span.seats),
           ]),
         }),
+        // **Last year beside this year** (fifth loop, item 30): quiet until
+        // the shop sailed that week a year ago.
+        lastYearTally:
+          lastYear && lastYear.total > 0
+            ? st("schedule.week.lastYearTally", { taken: lastYear.taken, total: lastYear.total })
+            : null,
+        // An empty week still to come, where last year had boats, offers them
+        // back in one act.
+        copyLastYear:
+          weekIsEmpty &&
+          lastYear &&
+          lastYear.departures > 0 &&
+          shiftWeek(weekStartIso, 1) > todayIso
+            ? {
+                line: st("schedule.week.lastYearLine", { count: lastYear.departures }),
+                label: st("schedule.week.lastYearCopy"),
+                pending: st("schedule.week.lastYearCopying"),
+                weekStart: weekStartIso,
+              }
+            : null,
         words: {
           previous: st("schedule.week.previous"),
           next: st("schedule.week.next"),

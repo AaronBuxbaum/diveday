@@ -132,6 +132,22 @@ describe("every handle a notification carries is reachable by the erasure sweep"
       source: "pricing",
       requestLocale: "en-US",
     } as Notification,
+    // The bookkeeper's address, in a notice to an owner (item 35). Never
+    // queued, but reachable all the same.
+    bookkeeper_notice: {
+      kind: "bookkeeper_notice",
+      shopId: "00000000-0000-4000-8000-000000000001",
+      personId: "00000000-0000-4000-8000-000000000002",
+      to: "owner@shop.invalid",
+      locale: "en-US",
+      recipientName: "Dana Reyes",
+      shopName: "Reef Line Divers",
+      reportsUrl: "https://diveday.invalid/shop/reef-line/reports#bookkeeper",
+      event: "sent",
+      email: "books@ledger.invalid",
+      month: "2026-09",
+      at: new Date("2026-10-02T13:09:00Z"),
+    } as Notification,
   };
 
   it("finds every kind in the union", () => {

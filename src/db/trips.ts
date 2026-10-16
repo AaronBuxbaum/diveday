@@ -147,8 +147,11 @@ export {
   listTripDiverContacts,
 } from "./trips-roster";
 export {
+  type CopyWeekOutcome,
+  copyWeekFromYearBefore,
   type DeleteTripOutcome,
   deleteTrip,
+  departuresWeekBefore,
   duplicateTrip,
   type MoveTripOutcome,
   moveTrip,

@@ -53,6 +53,9 @@ export function shopVoiceOf(notification: Notification): string | null {
     // hear from (H-118).
     case "roll_call_stale_shore":
     case "shore_alert_confirmation":
+    // The bookkeeper hears from the shop that set their address (item 35).
+    case "bookkeeper_month_end":
+    case "bookkeeper_confirmation":
       return notification.shopName;
     case "welcome":
     case "email_verification":
@@ -71,6 +74,7 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "stripe_payments_restricted":
     case "roll_call_stale":
     case "shore_alert_stopped":
+    case "bookkeeper_notice":
       return null;
   }
 }

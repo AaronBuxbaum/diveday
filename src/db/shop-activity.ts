@@ -334,7 +334,11 @@ export type ShopActivityWrite =
       code:
         | "shore_alert_contact_set"
         | "shore_alert_contact_changed"
-        | "shore_alert_contact_cleared";
+        | "shore_alert_contact_cleared"
+        | "bookkeeper_email_set"
+        | "bookkeeper_email_changed"
+        | "bookkeeper_email_cleared"
+        | "bookkeeper_email_vouched";
     };
 
 /** The line for counter money on an order, by how it was taken. */

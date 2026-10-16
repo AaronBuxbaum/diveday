@@ -255,3 +255,15 @@ export function zonedIsoString(date: Date, timeZone: string): string {
   const sign = offsetMs < 0 ? "-" : "+";
   return `${wall}:00${sign}${pad(Math.floor(offsetMinutes / 60))}:${pad(offsetMinutes % 60)}`;
 }
+
+/**
+ * The same wall-clock moment one year earlier in `timeZone`: "by this date
+ * last year" (fifth loop, item 25). February 29 steps back to February 28, the
+ * last day the earlier year has.
+ */
+export function sameMomentYearBefore(date: Date, timeZone: string): Date {
+  const wall = utcToWallTime(date, timeZone);
+  const year = wall.year - 1;
+  const lastDay = new Date(Date.UTC(year, wall.month, 0)).getUTCDate();
+  return wallTimeToUtc({ ...wall, year, day: Math.min(wall.day, lastDay) }, timeZone);
+}

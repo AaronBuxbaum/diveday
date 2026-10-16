@@ -3,6 +3,11 @@ import { connection } from "next/server";
 import { EntryDone, EntryShell } from "@/components/account/EntryShell";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import {
+  checkBookkeeperConfirmation,
+  isBookkeeperToken,
+  wasBookkeeperConfirmed,
+} from "@/db/bookkeeper";
 import { getDb } from "@/db/client";
 import {
   checkShopContactEmailConfirmation,
@@ -15,6 +20,7 @@ import {
 } from "@/db/shore-alert-tokens";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { nowDate } from "@/lib/clock";
 import { confirmContactEmail } from "./actions";
 
 export const metadata: Metadata = {
@@ -34,6 +40,8 @@ export const metadata: Metadata = {
  * saved shore address receives before any roll-call alert goes to it. Its
  * token lives in its own table, so the page tries the front desk's resolvers
  * and then the shore contact's, as `/unsubscribe/[token]` does for its kinds.
+ * The bookkeeper's link (item 35, security review B1) is the third: the
+ * month-end files go nowhere until the inbox they go to says yes here.
  */
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
@@ -109,6 +117,7 @@ async function ShoreConfirmation({
   const check = await checkShoreAlertConfirmation(db, { token });
   if (!check) {
     const shore = await isShoreAlertToken(db, { token });
+    if (!shore) return <BookkeeperConfirmation token={token} t={t} />;
     return (
       <EntryDone
         glyph="expired"
@@ -130,6 +139,59 @@ async function ShoreConfirmation({
       <form action={confirmContactEmail.bind(null, token)}>
         <SubmitButton pendingLabel={t("shoreConfirm.confirming")} className={buttonClass()}>
           {t("shoreConfirm.submit")}
+        </SubmitButton>
+      </form>
+    </EntryShell>
+  );
+}
+
+/** The bookkeeper's link (item 35, security review B1): the same three states. */
+async function BookkeeperConfirmation({
+  token,
+  t,
+}: {
+  token: string;
+  t: ReturnType<typeof diverTranslator>;
+}) {
+  const db = await getDb();
+  const confirmed = await wasBookkeeperConfirmed(db, { token });
+  if (confirmed) {
+    return (
+      <EntryDone
+        glyph="done"
+        title={t("bookkeeperConfirm.confirmedTitle")}
+        text={t("bookkeeperConfirm.confirmedText", { shopName: confirmed.shopName })}
+      />
+    );
+  }
+  const check = await checkBookkeeperConfirmation(db, { token, now: nowDate() });
+  if (!check) {
+    const bookkeeper = await isBookkeeperToken(db, { token });
+    return (
+      <EntryDone
+        glyph="expired"
+        title={t(
+          bookkeeper ? "bookkeeperConfirm.unavailableTitle" : "contactConfirm.unavailableTitle",
+        )}
+        text={t(
+          bookkeeper ? "bookkeeperConfirm.unavailableText" : "contactConfirm.unavailableText",
+        )}
+      />
+    );
+  }
+  return (
+    <EntryShell
+      wordmark
+      panel={false}
+      title={t("bookkeeperConfirm.title", { shopName: check.shopName })}
+      description={t("bookkeeperConfirm.description", {
+        shopName: check.shopName,
+        email: check.email,
+      })}
+    >
+      <form action={confirmContactEmail.bind(null, token)}>
+        <SubmitButton pendingLabel={t("bookkeeperConfirm.confirming")} className={buttonClass()}>
+          {t("bookkeeperConfirm.submit")}
         </SubmitButton>
       </form>
     </EntryShell>

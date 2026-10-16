@@ -2,8 +2,11 @@ import type { AppDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { crewAwayByTrip } from "@/db/crew-away";
 import { listDiveSites } from "@/db/dive-sites";
-import { tripCrewByTrip, type weekBoard } from "@/db/trips";
+import { departuresWeekBefore, tripCrewByTrip, weekBoard } from "@/db/trips";
+import type { CalendarDate } from "@/lib/calendar-date";
 import type { AvailabilityBlock } from "@/lib/crew-requests";
+import { shiftWeek } from "@/lib/week-board";
+import { weekSeatTally } from "@/lib/week-seats";
 
 type WeekRows = Awaited<ReturnType<typeof weekBoard>>;
 
@@ -65,4 +68,48 @@ export async function requestedCourseAndSite(
     requestedCourse: courses.find((row) => row.id === course) ?? null,
     requestedSite: sites.find((row) => row.id === site) ?? null,
   };
+}
+
+/** The same week a year before, as the board weighs it (fifth loop, item 30). */
+export type LastYearWeek = { taken: number; total: number; departures: number };
+
+/**
+ * **The same week last year**: its seat tally, counted by the rule this
+ * week's is (`weekSeatTally` over `weekBoard`'s cells and spans, so a course
+ * counts once), and how many departures a copy would put back up. Zero seats
+ * and zero departures for a shop with no year of history, and the board says
+ * nothing.
+ */
+export async function lastYearWeekRead(
+  db: AppDb,
+  shopId: string,
+  weekStartIso: CalendarDate,
+  timeZone: string,
+  now: Date,
+): Promise<LastYearWeek> {
+  const [rows, departures] = await Promise.all([
+    weekBoard(db, shopId, shiftWeek(weekStartIso, -52), timeZone, now),
+    departuresWeekBefore(db, shopId, weekStartIso, timeZone),
+  ]);
+  const tally = weekSeatTally([...Object.values(rows.days).flat(), ...rows.spans]);
+  return { ...tally, departures: departures.length };
+}
+
+/**
+ * **What the week is read beside** (fifth loop, item 30): who crews it and
+ * the same week a year before, in one entry of the page's wave so the route
+ * stays one page.
+ */
+export async function weekAroundRead(
+  db: AppDb,
+  shop: { id: string; crewScheduleEnabled: boolean; timezone: string },
+  weekRead: Promise<WeekRows>,
+  weekStartIso: CalendarDate,
+  now: Date,
+) {
+  const [crewByTrip, lastYear] = await Promise.all([
+    weekCrewRead(db, shop, weekRead),
+    lastYearWeekRead(db, shop.id, weekStartIso, shop.timezone, now),
+  ]);
+  return { crewByTrip, lastYear };
 }
