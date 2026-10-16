@@ -154,6 +154,9 @@ export async function startMissingDiverReportAction(
         message: t("incidents.missingDiver.alreadyStarted", { name: result.startedByName }),
       };
     }
+    if (result.reason === "already_filed") {
+      return { message: t("incidents.missingDiver.alreadyFiled", { name: result.filedByName }) };
+    }
     if (result.reason === "not_missing") {
       return { message: t("incidents.missingDiver.notMissing") };
     }

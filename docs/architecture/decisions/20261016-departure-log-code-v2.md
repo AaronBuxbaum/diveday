@@ -5,47 +5,43 @@
 
 ## Context
 
-The departure log prints a SHA-256 integrity code over its facts, and the footer promises that
-regenerating it from unchanged records reproduces the code. The safety sheet of 2026-10-15 added
-incident reports and late seat changes to the log, so their recipe changed and the code gained a
-version. The claims-auditor review of 2026-10-16 found two faults. The code sealed when the log
-was made and who made it, but the page builds the log as it is read, so no two copies ever
-matched. And a version-1 code could be asked for a log made after the change, sealing a
-document without its seat changes and reports. Precedent for a versioned seal:
-[20260802-diver-data-erasure](20260802-diver-data-erasure.md) (waiver integrity v2).
+The departure log prints a SHA-256 integrity code over its facts; regenerating it from unchanged
+records must reproduce the code. The safety sheet of 2026-10-15 added incident reports and late
+seat changes, so the recipe gained a version. The 2026-10-16 reviews found that the code sealed
+when and for whom the log was made (the page builds it as it is read, so no two copies matched),
+that time-dependent evidence moved with the print date, and that version 1 could seal a log
+missing the new facts. Precedent: [20260802-diver-data-erasure](20260802-diver-data-erasure.md).
 
 ## Decision
 
-- **Version 1** is the recipe of every log printed before 2026-10-16. It covers the header
-  (with when and for whom), the roster, the crew, the timeline without seat lines, the dives and
-  the checklist. A fresh export asked for version 1 still reproduces an old printout's code.
-- **Version 1 is refused from the cutover on**: `incidentExportContentHash` throws for a log whose
-  `generatedAt` is at or after `INCIDENT_EXPORT_V2_CUTOVER`, 2026-10-16T00:00:00Z.
-- **Version 2** is everything above plus:
-  - the seat and crew lines from when the boat was due out;
-  - the incident-report list;
-  - `hashVersion: 2`, so no version-2 code passes for a version-1 one.
-
-  It **leaves out `generatedAt` and `generatedByName`**. Both are still printed; neither is sealed.
-  Row ids, `currentRatings` and report ids stay out, as before.
-- **"Due out"** is the scheduled start, or the first departure roll-call mark if that came first.
-- **A roster line is printed only when it names its subject by record**
-  (`activity_events.subject_person_id`). A line erased at a person's request is printed as one that
-  names nobody.
+- **Version 1** is the recipe of every log printed before this change ships: header (with when
+  and for whom), roster, crew, timeline without seat lines, dives, checklist.
+- **Version 1 is refused for a log holding what version 2 added**: a seat or crew line from when
+  the boat was due out, an incident report, or a timeline line later than its own `generatedAt`
+  (which closes a backdated `generatedAt`). There is no cutover date.
+- **Version 2** adds the seat and crew lines, the incident-report list and `hashVersion: 2`, and
+  **leaves out `generatedAt` and `generatedByName`**, which are printed but not sealed. Row ids,
+  `currentRatings` and report ids stay out.
+- **Time-dependent evidence is stated as of when the boat was due out**: which waiver governs,
+  and whether it has lapsed.
+- **"Due out"** is the scheduled start, or the first departure roll-call mark if earlier.
+- **A roster line is printed only when it names its subject by record**: `subject_person_id`, or
+  the seat's `booking_id`, so erasure reaches it from whoever holds the seat now. An erased line
+  is printed naming nobody.
 
 ## Alternatives considered
 
-- **Seal the generation time and store each printed copy** to verify against. That is a document
-  store and a verification page. The owner's "check a printed code" page is a follow-up.
-- **Bump to version 3 instead of changing version 2.** Version 2 has not shipped, and no printout
-  carries it.
-- **Let version 1 answer for any log.** It would seal a document missing its late seat changes,
-  which is the fault this record exists to stop.
+- **Seal the generation time and store each printed copy.** A document store and a verification
+  page; the owner's "check a printed code" page is a follow-up.
+- **Bump to version 3.** Version 2 has not shipped.
+- **Let version 1 answer for any log.** It would seal a document missing its late seat changes.
+- **Refuse version 1 from a fixed date.** The main branch prints version 1 until this ships, so a
+  date refuses genuine printouts, and a backdated `generatedAt` walks past it.
 
 ## Consequences
 
-Two copies of one departure's log, printed by different people on different days, now carry the
-same code while the records are unchanged. A printed time or name can be edited without changing
-the code; those two lines are provenance, not evidence. A log printed between 2026-10-16 and this
-change's release, if any, was sealed with version 2 including the generation time, and will not
-reproduce. DiveDay is pre-pilot (H-49), so none exists outside a demo.
+Two copies of one log, printed by different people on different days, carry the same code while
+the records are unchanged. The printed time and name are provenance, not evidence. A version-1
+printout reproduces unless the departure has since gained a late seat or crew line or a report
+(refused), or a waiver lapsed between due-out and that printing (the old log stated it as of the
+printing). DiveDay is pre-pilot (H-49), so no such printout exists outside a demo.

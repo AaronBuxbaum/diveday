@@ -403,14 +403,6 @@ export type IncidentLogReport = {
 export const INCIDENT_EXPORT_HASH_VERSION = 2;
 export type IncidentExportHashVersion = 1 | 2;
 
-/**
- * **The instant version 2 took over** (ADR 20261016-departure-log-code-v2).
- * Every log made from here on is sealed with version 2, so a version-1 code
- * for one would seal a document missing its late seat changes and reports.
- * `incidentExportContentHash` refuses that request rather than answer it.
- */
-export const INCIDENT_EXPORT_V2_CUTOVER = new Date("2026-10-16T00:00:00.000Z");
-
 export type IncidentExportDocument = {
   meta: {
     shopName: string;
@@ -795,6 +787,11 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
   const departure = input.manifests[0];
   if (!departure) throw new Error("buildIncidentExport: no departure manifest");
   const evidenceByBooking = new Map(input.diverEvidence.map((entry) => [entry.bookingId, entry]));
+  // Evidence that lapses with time (a waiver link) is stated as it stood when
+  // the boat was due out, never as of the printing (domain re-review
+  // 2026-10-16, item 3): the log is built as it is read, and a code that moved
+  // with the print date would reproduce nothing.
+  const departureAt = new Date(rosterCutoff(departure.trip, input.events));
 
   // Teams number from their own list order, 1-based, and every surface on this
   // document reads the number off the same map — so the roster, the crew
@@ -882,7 +879,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
         certifications: evidence ? certificationEvidence(evidence) : [],
         waiver: waiverStatus(
           evidence?.waiver ?? null,
-          input.generatedAt,
+          departureAt,
           evidence?.waiverRecordedByName,
           evidence?.waiverMedicalClearedByName,
           evidence?.waiverMedicalClearanceDeclinedByName,
@@ -1039,6 +1036,25 @@ function unsealedMeta<T extends { generatedAt: string; generatedByName: string }
 }
 
 /**
+ * Whether a log holds anything no version-1 code could seal (ADR
+ * 20261016-departure-log-code-v2): a seat or crew line from when the boat was
+ * due out, an incident report, or a timeline line later than the log says it
+ * was made, which only a backdated `generatedAt` produces.
+ */
+function holdsVersion2Facts(
+  body: Pick<IncidentExportDocument, "meta" | "timeline"> &
+    Partial<Pick<IncidentExportDocument, "incidentReports">>,
+): boolean {
+  const madeAt = Date.parse(body.meta.generatedAt);
+  return (
+    (body.incidentReports ?? []).length > 0 ||
+    body.timeline.some(
+      (entry) => entry.kind === "roster_change" || Date.parse(entry.occurredAt) > madeAt,
+    )
+  );
+}
+
+/**
  * SHA-256 over the document's canonical JSON — the facts, not the rendered
  * words, so the same records hash identically in every locale. Field order is
  * fixed by construction above (`JSON.stringify` preserves insertion order),
@@ -1056,11 +1072,11 @@ function unsealedMeta<T extends { generatedAt: string; generatedByName: string }
  * day, and every log printed before the field existed would stop matching.
  *
  * **Versioned** ({@link INCIDENT_EXPORT_HASH_VERSION}). Version 1 is the recipe
- * every log printed before 2026-10-16 was sealed with: no roster changes, no
+ * every log printed before this change was sealed with: no roster changes, no
  * incident reports, no version. Asked for version 1, this drops exactly those,
  * so an old printout still checks against a fresh export of the same records,
- * and it refuses a log made from {@link INCIDENT_EXPORT_V2_CUTOVER} on, which
- * no version-1 code can honestly seal. Version 2 adds both, and the version
+ * and it refuses a log holding anything version 2 added, which no version-1
+ * code can honestly seal. Version 2 adds both, and the version
  * number itself, so no version-2 code can pass for a version-1 one.
  *
  * Version 2 also leaves out **when the log was made and for whom**: the page
@@ -1082,8 +1098,8 @@ export function incidentExportContentHash(
     preDepartureCheck: body.preDepartureCheck,
   };
   if (version === 1) {
-    if (Date.parse(body.meta.generatedAt) >= INCIDENT_EXPORT_V2_CUTOVER.getTime()) {
-      throw new Error("A log made after the version 2 cutover has no version 1 code.");
+    if (holdsVersion2Facts(body)) {
+      throw new Error("A log holding what version 2 added has no version 1 code.");
     }
     const timeline = body.timeline.filter((entry) => entry.kind !== "roster_change");
     return createHash("sha256")

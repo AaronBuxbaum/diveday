@@ -81,7 +81,7 @@
   "timelineBuddyMemberAdded": "Integrante añadido a la pareja de buceo",
   "timelineBuddyMemberRemoved": "Integrante quitado de la pareja de buceo",
   "timelineBuddyMembers": "Integrantes en ese momento: {names}",
-  "timelineDescription": "Cada entrada de recuento de esta salida, y cada plaza añadida, quitada o movida después de la hora de salida, de la más antigua a la más reciente. Las entradas solo se añaden: una corrección agrega una línea y nunca reescribe otra.",
+  "timelineDescription": "Cada entrada de recuento de esta salida, y cada cambio de plazas o tripulación desde que el barco debía salir (su hora prevista, o el primer recuento de salida si fue antes), de la más antigua a la más reciente. Las entradas solo se añaden: una corrección agrega una línea y nunca reescribe otra.",
   "timelineEmpty": "No se ha registrado ningún pase de lista para esta salida.",
   "timelineHeading": "Cronología del pase de lista",
   "timelineOfflineTag": "Registrado sin conexión, sincronizado después",

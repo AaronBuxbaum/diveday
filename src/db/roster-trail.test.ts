@@ -1,4 +1,6 @@
-import { and, eq } from "drizzle-orm";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import type { RosterChangeCode } from "@/lib/incident-export";
 import { fileScopedShopContext } from "@/test/db";
@@ -93,5 +95,52 @@ describe("a seat change on the departure's trail", () => {
         entry: { code: "booking_removed", diver: "Jo Smith" },
       });
     expect(typeof write).toBe("function");
+  });
+});
+
+describe("the backfill of roster lines written before they named their subject", () => {
+  /** Migration 20261016150423_roster-change-subjects, statement by statement. */
+  async function backfill() {
+    const text = readFileSync(
+      join(process.cwd(), "drizzle/20261016150423_roster-change-subjects/migration.sql"),
+      "utf8",
+    );
+    for (const statement of text.split("--> statement-breakpoint")) {
+      await ctx.db.execute(sql.raw(statement));
+    }
+  }
+
+  it("names a removed seat by the one person on the departure with that name", async () => {
+    const { db, shop, trip, owner, person } = await seat();
+    await db.insert(activityEvents).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      actorPersonId: owner.id,
+      code: "booking_removed",
+      params: { actor: owner.fullName, diver: person.fullName },
+    });
+    await backfill();
+    expect(await lines(trip.id, "booking_removed")).toContainEqual({
+      subject: person.id,
+      params: { actor: owner.fullName, diver: person.fullName },
+    });
+  });
+
+  it("leaves a moved-away line unnamed: the person by that name still aboard is not whose seat moved", async () => {
+    // Security re-review 2026-10-16, item 3: a moved seat no longer sits on
+    // its old departure, so the one same-named person still on it is
+    // somebody else, and the line would print against them.
+    const { db, shop, trip, owner, person } = await seat();
+    await db.insert(activityEvents).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      actorPersonId: owner.id,
+      code: "seat_moved_away",
+      params: { actor: owner.fullName, diver: person.fullName },
+    });
+    await backfill();
+    expect(await lines(trip.id, "seat_moved_away")).toEqual([
+      { subject: null, params: { actor: owner.fullName, diver: person.fullName } },
+    ]);
   });
 });

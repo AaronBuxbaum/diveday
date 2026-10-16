@@ -10,6 +10,7 @@ import {
   fileIncidentReport,
   getIncidentReport,
   listDepartureLogIncidentReports,
+  listIncidentSeatChoices,
   listShopIncidentReports,
   listTripIncidentReports,
   listUnfiledIncidentDrafts,
@@ -29,6 +30,7 @@ import {
 import { pruneExpiredRecords } from "./retention";
 import {
   activityEvents,
+  bookings,
   incidentReportAddenda,
   incidentReportPeople,
   incidentReports,
@@ -707,5 +709,47 @@ describe("retention", () => {
         .from(incidentReportAddenda)
         .where(eq(incidentReportAddenda.reportId, started.reportId)),
     ).toHaveLength(0);
+  });
+});
+
+describe("a held seat in a report", () => {
+  it("is named as booked, never as the person it was matched to", async () => {
+    // Domain re-review 2026-10-16, item 5 (issue #2128): a held seat's matched
+    // person may be somebody else entirely, so their name is not this diver's.
+    const { db, shop } = ctx;
+    const f = await fixture(db, shop.id);
+    await db
+      .update(bookings)
+      .set({
+        identityUnconfirmedAt: new Date("2026-07-01T12:00:00Z"),
+        identityBookedAs: " Jo Smith ",
+      })
+      .where(eq(bookings.id, f.seat.booking.id));
+    const matchedName = f.seat.person.fullName;
+    expect(matchedName).not.toBe("Jo Smith");
+
+    const choices = await listIncidentSeatChoices(db, shop.id, f.trip.id);
+    expect(choices).toContainEqual({ bookingId: f.seat.booking.id, name: "Jo Smith" });
+    expect(choices.some((choice) => choice.name === matchedName)).toBe(false);
+
+    const started = await startIncidentReport(db, {
+      shopId: shop.id,
+      tripId: f.trip.id,
+      actorPersonId: f.owner.id,
+    });
+    if (!started.ok) throw new Error("expected a draft");
+    expect(
+      await addIncidentPerson(db, {
+        shopId: shop.id,
+        tripId: f.trip.id,
+        reportId: started.reportId,
+        actorPersonId: f.owner.id,
+        subject: { kind: "booking", bookingId: f.seat.booking.id },
+        involvement: "affected",
+      }),
+    ).toEqual({ ok: true });
+    const view = await getIncidentReport(db, shop.id, started.reportId, f.owner.id);
+    expect(view?.people.map((person) => person.name)).toEqual(["Jo Smith"]);
+    expect(JSON.stringify(view)).not.toContain(matchedName);
   });
 });

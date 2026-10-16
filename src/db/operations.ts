@@ -522,6 +522,12 @@ type TripActivityInput = {
   shopId: string;
   tripId: string;
   actorPersonId: string;
+  /**
+   * The seat a line is about, so erasure's sweep by booking reaches it from
+   * whoever holds the seat now, a held seat split off to its own record
+   * included (security re-review 2026-10-16, item 1).
+   */
+  bookingId?: string;
 } & (
   | {
       entry: RosterTripActivityEntry;
@@ -558,6 +564,7 @@ export async function recordTripActivity(db: DbExecutor, input: TripActivityInpu
       shopId: input.shopId,
       tripId: input.tripId,
       actorPersonId: input.actorPersonId,
+      bookingId: input.bookingId ?? null,
       subjectPersonId: input.subjectPersonId ?? null,
       code: entry.code,
       params: { actor: scope.actorName, ...names },
@@ -601,6 +608,7 @@ export async function recordSeatChange(
     shopId: input.shopId,
     tripId: input.tripId,
     actorPersonId: input.actorPersonId,
+    bookingId: input.bookingId,
     subjectPersonId: seat.personId,
     entry: { code: input.code, diver: seatName(seat.fullName, seat) },
   });

@@ -741,11 +741,14 @@
   It ends with the departure's **incident reports**, as a list (kind, severity, filed or draft, by
   whom, deleted drafts too), never their contents. It reports recorded facts with timestamps and
   computes no safety judgment; every absence is stated ("Awaiting", "No certification evidence on
-  file") rather than left blank. A SHA-256 **integrity code** over the printed facts sits in the
-  footer with its **version**. It is tamper-evidence, not a signature: regenerating the export from
-  unchanged records reproduces the code, so two copies can be checked against each other. Version 2
-  prints, but does not seal, when the log was made and for whom; version 1 is only for logs made
-  before 2026-10-16 (ADR 20261016-departure-log-code-v2). Owner only, one tap from
+  file") rather than left blank. Evidence that lapses with time, such as a waiver, is stated as it
+  stood when the boat was due out, not when the log was printed. A SHA-256 **integrity code** over
+  the printed facts sits in the footer with its **version**. It is tamper-evidence, not a
+  signature: regenerating the export from unchanged records reproduces the code, so two copies can
+  be checked against each other. Version 2 prints, but does not seal, when the log was made and for
+  whom; version 1 is refused for a log holding anything version 2 added (a late seat or crew line,
+  an incident report) or a line later than the log says it was made (ADR
+  20261016-departure-log-code-v2). Owner only, one tap from
   the manifest (`/shop/<slug>/trips/<id>/log`).
 - **Incident report** — the shop's own written account of something that went wrong on a
   departure, for an insurer or an authority: when (in the shop's zone) and where, what happened,
@@ -758,8 +761,9 @@
   involved, and a **filed** report is never
   edited again: what comes later is an **addendum**, dated and attributed. An unfiled draft can be
   **deleted** (softly; the departure log still lists it), and a second start reopens only an
-  untouched draft, or for a **missing diver** the one open report naming that person (ADR
-  20261016-incident-drafts). The departure's crew
+  untouched draft, or for a **missing diver** the one report, draft or filed, naming that person
+  as affected since they were last marked back aboard (ADR 20261016-incident-drafts). The
+  departure's crew
   start one and read their own; owners and managers read all of them, on the trip's Details tab
   and the Reports **Safety** tab. Nothing a diver sees, and never a gate. It is not the
   **departure log**, which prints recorded facts and judges nothing; the report is the shop's

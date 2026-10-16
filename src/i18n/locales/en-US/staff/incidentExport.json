@@ -81,7 +81,7 @@
   "timelineBuddyMemberAdded": "Buddy team member added",
   "timelineBuddyMemberRemoved": "Buddy team member removed",
   "timelineBuddyMembers": "Members at that moment: {names}",
-  "timelineDescription": "Every roll-call entry for this departure, and every seat added, removed or moved after its scheduled start, oldest first. Entries are append-only, so a correction adds a line and never rewrites one.",
+  "timelineDescription": "Every roll-call entry for this departure, and every change to its seats or crew from when the boat was due out (its scheduled start, or the first departure roll call if earlier), oldest first. Entries are append-only, so a correction adds a line and never rewrites one.",
   "timelineEmpty": "No roll-call entries have been recorded for this departure.",
   "timelineHeading": "Roll-call timeline",
   "timelineOfflineTag": "Recorded offline, synced later",

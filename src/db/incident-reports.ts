@@ -1,7 +1,8 @@
-import { and, asc, desc, eq, gte, inArray, isNull, lt, ne, sql } from "drizzle-orm";
+import { type AnyColumn, and, asc, desc, eq, gte, inArray, isNull, lt, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { seatName } from "@/lib/held-seat";
 import {
   INCIDENT_SHORT_TEXT_MAX,
   INCIDENT_TEXT_MAX,
@@ -18,6 +19,7 @@ import {
   mayStartIncidentReport,
   mayWriteIncidentReport,
 } from "@/lib/incident-reports";
+import { OFFLINE_EVENT_SKEW_MS } from "@/lib/offline-events";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { recordTripActivity } from "./operations";
@@ -334,18 +336,24 @@ export type MissingDiverStart =
   | { ok: true; reportId: string; reused: boolean }
   | { ok: false; reason: IncidentWriteRefusal | "not_missing" }
   /** Somebody else's open report already names them; who started it, nothing more. */
-  | { ok: false; reason: "already_started"; startedByName: string };
+  | { ok: false; reason: "already_started"; startedByName: string }
+  /** Somebody else's filed report already names them; who filed it, nothing more. */
+  | { ok: false; reason: "already_filed"; filedByName: string };
 
 /**
  * **"Start a missing diver report"** from a manifest row marked not back
  * aboard (safety sheet 2026-10-15, item 2): a diver's seat, or a crew member
  * of the departure (domain review 2026-10-16). One report per missing person:
  *
- * - An **unfiled Missing diver draft on this departure that already names
- *   them** is the report, whoever started it. Its writer, an owner or a
- *   manager gets it back. Anyone else (a second crew member tapping for the
- *   same diver) is told who started it, and is given neither its contents
- *   nor a second report.
+ * - A **Missing diver report on this departure that already names them as
+ *   affected, started during this disappearance**, draft or filed, is the
+ *   report, whoever started it (domain re-review 2026-10-16, items 1 and 2).
+ *   Its writer, an owner or a manager gets it back, a filed one to add a
+ *   note to. Anyone else (a second crew member tapping for the same diver)
+ *   is told who started or filed it, and is given neither its contents nor a
+ *   second report. "This disappearance" is the standing run of marks: a
+ *   report started before the diver was last marked back aboard is about an
+ *   earlier one, and a new report is started.
  * - Otherwise a **new** draft, of kind Missing diver, timed at the earliest
  *   standing mark ({@link standingNotBackAboardSince}), naming them as
  *   affected. Never the writer's other draft: a missing diver folded into an
@@ -375,22 +383,30 @@ export async function startMissingDiverReport(
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtext('incident_report_missing'), hashtext(${`${input.tripId}:${subjectId}`}))`,
     );
+    const filers = alias(people, "incident_missing_filers");
     const [open] = await tx
       .select({
         id: incidentReports.id,
+        status: incidentReports.status,
         createdByPersonId: incidentReports.createdByPersonId,
         createdByName: creators.fullName,
+        filedByName: filers.fullName,
       })
       .from(incidentReports)
       .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
+      .leftJoin(filers, eq(filers.id, incidentReports.filedByPersonId))
       .innerJoin(incidentReportPeople, eq(incidentReportPeople.reportId, incidentReports.id))
       .where(
         and(
           eq(incidentReports.shopId, input.shopId),
           eq(incidentReports.tripId, input.tripId),
-          eq(incidentReports.status, "draft"),
           eq(incidentReports.kind, "missing_diver"),
           isNull(incidentReports.deletedAt),
+          // This disappearance's, not an earlier one's the diver came back
+          // from. A tablet's clock may run ahead of the server's by the
+          // offline skew, so the mark can postdate the report it opened.
+          gte(incidentReports.createdAt, new Date(since.getTime() - OFFLINE_EVENT_SKEW_MS)),
+          eq(incidentReportPeople.involvement, "affected"),
           subject.kind === "diver"
             ? eq(incidentReportPeople.bookingId, subject.bookingId)
             : eq(incidentReportPeople.personId, subject.personId),
@@ -402,6 +418,9 @@ export async function startMissingDiverReport(
     if (open) {
       const viewer = await loadIncidentViewer(tx, input.shopId, input.tripId, input.actorPersonId);
       if (mayReadIncidentReport(viewer, open)) return { ok: true, reportId: open.id, reused: true };
+      if (open.status === "filed") {
+        return { ok: false, reason: "already_filed", filedByName: open.filedByName ?? "" };
+      }
       return { ok: false, reason: "already_started", startedByName: open.createdByName };
     }
     const reportId = await insertDraft(tx, input, { kind: "missing_diver", occurredAt: since });
@@ -802,6 +821,8 @@ export async function getIncidentReport(
           outsiderName: incidentReportPeople.outsiderName,
           involvement: incidentReportPeople.involvement,
           seatName: seatPeople.fullName,
+          identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+          identityBookedAs: bookings.identityBookedAs,
           staffName: people.fullName,
         })
         .from(incidentReportPeople)
@@ -815,7 +836,7 @@ export async function getIncidentReport(
         // name within each: the order an insurer reads a list of people in.
         .orderBy(
           asc(incidentReportPeople.involvement),
-          sql`coalesce(${seatPeople.fullName}, ${people.fullName}, ${incidentReportPeople.outsiderName})`,
+          sql`coalesce(${heldSeatName(seatPeople.fullName)}, ${people.fullName}, ${incidentReportPeople.outsiderName})`,
           asc(incidentReportPeople.id),
         ),
     () =>
@@ -875,7 +896,13 @@ export async function getIncidentReport(
     people: personRows.map((person) => ({
       id: person.id,
       kind: person.bookingId ? "booking" : person.personId ? "staff" : "outsider",
-      name: person.seatName ?? person.staffName ?? person.outsiderName ?? "",
+      // A held seat by the name it was booked as (issue #2128): the person it
+      // was matched to may be somebody else.
+      name:
+        (person.seatName !== null ? seatName(person.seatName, person) : null) ??
+        person.staffName ??
+        person.outsiderName ??
+        "",
       involvement: person.involvement,
     })),
     addenda: addendumRows,
@@ -1130,14 +1157,23 @@ export async function listShopIncidentReports(
   return rows.map(toLine);
 }
 
-/** The bookings on a departure a draft may name, with the diver's name. */
+/**
+ * A seat's name in SQL, as `seatName` gives it: a held seat (issue #2128) by
+ * the name it was booked as, any other by the person on it. Reads `bookings`.
+ */
+function heldSeatName(fullName: AnyColumn) {
+  return sql<string>`case when ${bookings.identityUnconfirmedAt} is not null then coalesce(nullif(btrim(${bookings.identityBookedAs}), ''), ${fullName}) else ${fullName} end`;
+}
+
+/** The bookings on a departure a draft may name, with the diver's name, a held seat's as booked. */
 export async function listIncidentSeatChoices(
   db: DbExecutor,
   shopId: string,
   tripId: string,
 ): Promise<{ bookingId: string; name: string }[]> {
-  const rows = await db
-    .select({ bookingId: bookings.id, name: people.fullName })
+  const name = heldSeatName(people.fullName);
+  return db
+    .select({ bookingId: bookings.id, name })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .where(
@@ -1147,8 +1183,7 @@ export async function listIncidentSeatChoices(
         ne(bookings.status, "cancelled"),
       ),
     )
-    .orderBy(asc(people.fullName), asc(bookings.id));
-  return rows;
+    .orderBy(asc(name), asc(bookings.id));
 }
 
 /** The departure's crew, first, for naming a staffer; then nobody else is offered. */

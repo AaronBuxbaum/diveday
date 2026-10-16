@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { nowDate } from "@/lib/clock";
@@ -11,6 +11,7 @@ import {
   type IncidentTimelineEventInput,
   ROSTER_CHANGE_CODES,
   rosterChangeFromActivity,
+  rosterCutoff,
 } from "@/lib/incident-export";
 import { canPersonExportIncidentRecord } from "./authz";
 import { listTripBuddyTeamEvents, listTripBuddyTeams } from "./buddy-pairs";
@@ -59,56 +60,68 @@ export async function getIncidentExport(
   if (!manifests || !departure) return null;
 
   const recorders = alias(people, "recorders");
-  const [shop, readinessRows, generator, diverEventRows, crewEventRows, executedDiveRows] =
-    await Promise.all([
-      getShopById(db, shopId),
-      listTripReadiness(db, shopId, tripId, generatedAt),
-      db
-        .select({ fullName: people.fullName })
-        .from(people)
-        // diveday:allow-deleted-people: an incident document names who was there, removed since or not.
-        .where(and(eq(people.id, generatedByPersonId), eq(people.shopId, shopId)))
-        .limit(1),
-      // The full history, oldest first — not the latest-per-subject reduction
-      // the live manifest shows. An incident document is the audit trail.
-      db
-        .select({
-          event: rollCallEvents,
-          subject: people,
-          recorder: recorders,
-          heldAt: bookings.identityUnconfirmedAt,
-          bookedAs: bookings.identityBookedAs,
-        })
-        .from(rollCallEvents)
-        .innerJoin(bookings, eq(bookings.id, rollCallEvents.bookingId))
-        .innerJoin(people, eq(people.id, bookings.personId))
-        .innerJoin(recorders, eq(recorders.id, rollCallEvents.recordedByPersonId))
-        .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, tripId)))
-        // `seq` last, for a reason sharper here than anywhere else: this
-        // document is hashed, so two orderings of the same events produce two
-        // different SHA-256 integrity codes for one departure. A tie on
-        // transaction time would make the hash a coin toss.
-        .orderBy(
-          asc(rollCallEvents.occurredAt),
-          asc(rollCallEvents.createdAt),
-          asc(rollCallEvents.seq),
-        ),
-      db
-        .select({ event: rollCallCrewEvents, subject: people, recorder: recorders })
-        .from(rollCallCrewEvents)
-        .innerJoin(people, eq(people.id, rollCallCrewEvents.personId))
-        .innerJoin(recorders, eq(recorders.id, rollCallCrewEvents.recordedByPersonId))
-        .where(and(eq(rollCallCrewEvents.shopId, shopId), eq(rollCallCrewEvents.tripId, tripId)))
-        .orderBy(
-          asc(rollCallCrewEvents.occurredAt),
-          asc(rollCallCrewEvents.createdAt),
-          asc(rollCallCrewEvents.seq),
-        ),
-      listExecutedDives(db, shopId, tripId),
-    ]);
+  const [shop, generator, diverEventRows, crewEventRows, executedDiveRows] = await Promise.all([
+    getShopById(db, shopId),
+    db
+      .select({ fullName: people.fullName })
+      .from(people)
+      // diveday:allow-deleted-people: an incident document names who was there, removed since or not.
+      .where(and(eq(people.id, generatedByPersonId), eq(people.shopId, shopId)))
+      .limit(1),
+    // The full history, oldest first — not the latest-per-subject reduction
+    // the live manifest shows. An incident document is the audit trail.
+    db
+      .select({
+        event: rollCallEvents,
+        subject: people,
+        recorder: recorders,
+        heldAt: bookings.identityUnconfirmedAt,
+        bookedAs: bookings.identityBookedAs,
+      })
+      .from(rollCallEvents)
+      .innerJoin(bookings, eq(bookings.id, rollCallEvents.bookingId))
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .innerJoin(recorders, eq(recorders.id, rollCallEvents.recordedByPersonId))
+      .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, tripId)))
+      // `seq` last, for a reason sharper here than anywhere else: this
+      // document is hashed, so two orderings of the same events produce two
+      // different SHA-256 integrity codes for one departure. A tie on
+      // transaction time would make the hash a coin toss.
+      .orderBy(
+        asc(rollCallEvents.occurredAt),
+        asc(rollCallEvents.createdAt),
+        asc(rollCallEvents.seq),
+      ),
+    db
+      .select({ event: rollCallCrewEvents, subject: people, recorder: recorders })
+      .from(rollCallCrewEvents)
+      .innerJoin(people, eq(people.id, rollCallCrewEvents.personId))
+      .innerJoin(recorders, eq(recorders.id, rollCallCrewEvents.recordedByPersonId))
+      .where(and(eq(rollCallCrewEvents.shopId, shopId), eq(rollCallCrewEvents.tripId, tripId)))
+      .orderBy(
+        asc(rollCallCrewEvents.occurredAt),
+        asc(rollCallCrewEvents.createdAt),
+        asc(rollCallCrewEvents.seq),
+      ),
+    listExecutedDives(db, shopId, tripId),
+  ]);
   if (!shop) return null;
   const generatedByName = generator[0]?.fullName;
   if (!generatedByName) return null;
+  // Which signature governs, and whether it still stands, as of when the boat
+  // was due out (domain re-review 2026-10-16, item 3), the instant the
+  // builder states it at: never as of the printing, which moves.
+  const readinessRows = await listTripReadiness(
+    db,
+    shopId,
+    tripId,
+    new Date(
+      rosterCutoff(departure.trip, [
+        ...diverEventRows.map(({ event }) => event),
+        ...crewEventRows.map(({ event }) => event),
+      ]),
+    ),
+  );
 
   // A paper waiver and a certification review are accountable staff acts, not
   // anonymous completions. Resolve only the ids the governing evidence names,
@@ -226,9 +239,10 @@ export async function getIncidentExport(
             eq(activityEvents.shopId, shopId),
             eq(activityEvents.tripId, tripId),
             inArray(activityEvents.code, [...ROSTER_CHANGE_CODES, ACTIVITY_REDACTED.code]),
-            // A line that names nobody by record is a name erasure could not
-            // reach (security review 2026-10-16, F1): not printed.
-            isNotNull(activityEvents.subjectPersonId),
+            // A line that names nobody by record, as a person or a seat, is a
+            // name erasure could not reach (security review 2026-10-16, F1):
+            // not printed.
+            or(isNotNull(activityEvents.subjectPersonId), isNotNull(activityEvents.bookingId)),
           ),
         )
         .orderBy(asc(activityEvents.occurredAt), asc(activityEvents.seq)),

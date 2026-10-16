@@ -1,8 +1,15 @@
 import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { startIncidentReport } from "@/db/incident-reports";
+import {
+  fileIncidentReport,
+  saveIncidentDraft,
+  startIncidentReport,
+  startMissingDiverReport,
+} from "@/db/incident-reports";
+import { complete } from "@/db/incident-reports-test-fixtures";
 import { bookings, incidentReports, rollCallEvents, tripAssignments, trips } from "@/db/schema";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -180,6 +187,34 @@ describe("incident report actions refuse staff who may not write", () => {
     expect(await reportCount(db, tripId)).toBe(before);
   });
 
+  it("tells a crew member who filed the report, and starts none", async () => {
+    // Domain re-review 2026-10-16, item 1: a filed report is still the one
+    // report for this disappearance.
+    const { db, shop, tripId, owner, captain } = await context();
+    const bookingId = await markedMissing(db, shop.id, tripId, owner);
+    const started = await startMissingDiverReport(db, {
+      shopId: shop.id,
+      tripId,
+      subject: { kind: "diver", bookingId },
+      actorPersonId: owner,
+    });
+    if (!started.ok) throw new Error(`refused: ${started.reason}`);
+    const target = { shopId: shop.id, tripId, reportId: started.reportId, actorPersonId: owner };
+    await saveIncidentDraft(db, { ...target, fields: { ...complete, kind: "missing_diver" } });
+    expect(await fileIncidentReport(db, target)).toEqual({ ok: true });
+    await db.insert(tripAssignments).values({ tripId, personId: captain });
+    signIn(db, shop, captain);
+    const before = await reportCount(db, tripId);
+    const answer = await startMissingDiverReportAction(
+      shop.slug,
+      tripId,
+      null,
+      missingForm({ bookingId }),
+    );
+    expect(answer?.message).toMatch(/^Already filed by .+\.$/);
+    expect(await reportCount(db, tripId)).toBe(before);
+  });
+
   it("says so when the seat is no longer missing, and when the write fails", async () => {
     const { db, shop, tripId, owner } = await context();
     signIn(db, shop, owner);
@@ -261,7 +296,7 @@ async function markedMissing(db: AppDb, shopId: string, tripId: string, recorder
     recordedByPersonId: recorder,
     status: "not_boarded",
     checkpoint: "after_dive_1",
-    occurredAt: new Date("2026-10-01T15:42:00Z"),
+    occurredAt: nowDate(),
   });
   return seat.id;
 }

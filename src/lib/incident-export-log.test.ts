@@ -2,11 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   buildIncidentExport,
   hasRollCallEntries,
-  INCIDENT_EXPORT_V2_CUTOVER,
   incidentExportContentHash,
   rosterChangeFromActivity,
 } from "./incident-export";
-import { baseInput, TRIP } from "./incident-export-test-fixtures";
+import { baseInput, completedWaiver, TRIP, verifiedCard } from "./incident-export-test-fixtures";
 
 /**
  * **Seats changed after the boat was due out, and the reports the shop holds**
@@ -42,34 +41,92 @@ describe("roster changes and incident reports on the departure log", () => {
   it("keeps an old printout's code: version 1 is the recipe it was sealed with", () => {
     const plain = buildIncidentExport(baseInput());
     expect(incidentExportContentHash(plain, 1)).toBe(BASE_V1_HASH);
-    // The new facts do not move a version-1 code: they are not in its recipe.
-    const fuller = buildIncidentExport(
-      baseInput({ rosterChanges: [removal], incidentReports: [draft] }),
-    );
-    expect(incidentExportContentHash(fuller, 1)).toBe(BASE_V1_HASH);
   });
 
-  it("reproduces a version-2 code whoever prints it, and whenever", () => {
-    // The page builds the log at the moment it is read, for the person reading
-    // it (claims-auditor review 2026-10-16, item 2): both are printed on it,
-    // and neither is sealed, so two copies of the same records match.
-    const first = buildIncidentExport(baseInput());
-    const later = buildIncidentExport(
-      baseInput({ generatedAt: new Date("2026-08-09T08:00:00.000Z"), generatedByName: "Ana Ruiz" }),
+  it("gives a version-1 code to a log with nothing version 2 added, whenever it was made", () => {
+    // Domain re-review 2026-10-16, item 4: main still prints version 1 until
+    // this ships, so a fixed cutover date refused genuine printouts. A log
+    // made today of a departure with no late seat change and no report is
+    // exactly what version 1 sealed.
+    const { contentHash: _code, ...body } = buildIncidentExport(
+      baseInput({ generatedAt: new Date("2026-11-30T09:00:00.000Z") }),
     );
-    expect(later.meta.generatedAt).not.toBe(first.meta.generatedAt);
-    expect(later.contentHash).toBe(first.contentHash);
+    expect(() => incidentExportContentHash(body, 1)).not.toThrow();
   });
 
-  it("refuses a version-1 code for a log made from the version-2 cutover on", () => {
+  it("refuses a version-1 code for a log holding anything version 2 added", () => {
     // Version 1 leaves out the seat changes and the reports, so a version-1
-    // code for a newer log would seal a document missing both (item 3).
-    const at = (generatedAt: Date) => {
-      const { contentHash: _code, ...body } = buildIncidentExport(baseInput({ generatedAt }));
+    // code for such a log would seal a document missing both.
+    const v1 = (input: Parameters<typeof baseInput>[0]) => {
+      const { contentHash: _code, ...body } = buildIncidentExport(baseInput(input));
       return () => incidentExportContentHash(body, 1);
     };
-    expect(at(new Date(INCIDENT_EXPORT_V2_CUTOVER.getTime() - 1))).not.toThrow();
-    expect(at(INCIDENT_EXPORT_V2_CUTOVER)).toThrow(/version 1/);
+    expect(v1({ rosterChanges: [removal] })).toThrow(/version 1/);
+    expect(v1({ incidentReports: [draft] })).toThrow(/version 1/);
+    // A crew line is a roster line too.
+    expect(v1({ rosterChanges: [{ ...removal, action: "crew_removed" }] })).toThrow(/version 1/);
+    // A change before the boat was due out is not on the log, so not v2-only.
+    expect(
+      v1({ rosterChanges: [{ ...removal, occurredAt: new Date("2026-08-04T12:00:00.000Z") }] }),
+    ).not.toThrow();
+  });
+
+  it("refuses a version-1 code for a log dated before something it records", () => {
+    // A backdated generatedAt is not a way round the refusal above: a log
+    // cannot record what happened after it was made.
+    const { contentHash: _code, ...body } = buildIncidentExport(
+      baseInput({ generatedAt: new Date("2026-08-04T12:44:59.999Z") }),
+    );
+    expect(() => incidentExportContentHash(body, 1)).toThrow(/version 1/);
+    const { contentHash: _same, ...onTime } = buildIncidentExport(
+      baseInput({ generatedAt: new Date("2026-08-04T12:45:00.000Z") }),
+    );
+    expect(() => incidentExportContentHash(onTime, 1)).not.toThrow();
+  });
+
+  it("states a waiver as it stood when the boat was due out, so the code does not move with the print date", () => {
+    // Domain re-review 2026-10-16, item 3: a link that lapsed between two
+    // printings changed the version-2 code under unchanged records.
+    const pending = completedWaiver({
+      status: "pending",
+      signedAt: null,
+      completedAt: null,
+      expiresAt: new Date("2026-08-05T09:00:00.000Z"),
+    });
+    const at = (generatedAt: Date) =>
+      buildIncidentExport(
+        baseInput({
+          generatedAt,
+          diverEvidence: [
+            {
+              bookingId: "b1",
+              certifications: [verifiedCard()],
+              specialtyCertifications: [],
+              nitroxCertifications: [],
+              waiver: pending,
+            },
+          ],
+        }),
+      );
+    const before = at(new Date("2026-08-04T20:00:00.000Z"));
+    const after = at(new Date("2026-08-06T20:00:00.000Z"));
+    expect(after.contentHash).toBe(before.contentHash);
+    expect(after.roster[0]?.waiver?.state).toBe("awaiting_signature");
+    // Lapsed before the boat was due out (12:45): expired, however late it prints.
+    const lapsed = buildIncidentExport(
+      baseInput({
+        diverEvidence: [
+          {
+            bookingId: "b1",
+            certifications: [],
+            specialtyCertifications: [],
+            nitroxCertifications: [],
+            waiver: { ...pending, expiresAt: new Date("2026-08-04T12:44:00.000Z") },
+          },
+        ],
+      }),
+    );
+    expect(lapsed.roster[0]?.waiver?.state).toBe("expired");
   });
 
   it("seals version 2 by default, names it, and never matches a version-1 code", () => {

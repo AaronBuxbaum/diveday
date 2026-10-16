@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import {
+  addIncidentPerson,
+  fileIncidentReport,
   saveIncidentDraft,
   startIncidentReport,
   startMissingDiverReport,
@@ -26,7 +28,7 @@ import {
 const ctx = fileScopedShopContext();
 
 describe("a missing diver report from the manifest", () => {
-  const MARKED_AT = new Date("2026-10-01T15:42:00Z");
+  const MARKED_AT = new Date("2026-07-20T15:42:00Z");
 
   /** One roll-call tap on the fixture's seat, as the manifest records it. */
   async function mark(
@@ -164,7 +166,7 @@ describe("a missing diver report from the manifest", () => {
     expect(await draftsBy(db, f.trip.id, f.owner.id)).toBe(0);
   });
 
-  it("starts a new report once the open one is filed, or no longer says Missing diver", async () => {
+  it("starts a new report once the open one no longer says Missing diver", async () => {
     const { db, shop } = ctx;
     const f = await fixture(db, shop.id);
     await mark(db, f, "after_dive_1", "not_boarded", MARKED_AT);
@@ -188,14 +190,184 @@ describe("a missing diver report from the manifest", () => {
     expect(second.reportId).not.toBe(first.reportId);
   });
 
+  it("answers with the filed report for the same disappearance, never a second one", async () => {
+    // Domain re-review 2026-10-16, item 1: the report was filed at 10:30 and
+    // the diver is still marked missing; a later tap made a duplicate. Its
+    // writer or an owner gets the filed report, to add a note; anyone else
+    // learns who filed it.
+    const { db, shop } = ctx;
+    const f = await fixture(db, shop.id);
+    await db.insert(tripAssignments).values({ tripId: f.trip.id, personId: f.ashore.id });
+    await mark(db, f, "after_dive_1", "not_boarded", MARKED_AT);
+    const base = { shopId: shop.id, tripId: f.trip.id, subject: seatOf(f) };
+    const first = await startMissingDiverReport(db, { ...base, actorPersonId: f.crew.id });
+    if (!first.ok) throw new Error(`refused: ${first.reason}`);
+    const target = { shopId: shop.id, tripId: f.trip.id, reportId: first.reportId };
+    await saveIncidentDraft(db, {
+      ...target,
+      actorPersonId: f.crew.id,
+      fields: { ...complete, kind: "missing_diver", occurredAt: MARKED_AT },
+    });
+    expect(await fileIncidentReport(db, { ...target, actorPersonId: f.owner.id })).toEqual({
+      ok: true,
+    });
+
+    expect(await startMissingDiverReport(db, { ...base, actorPersonId: f.crew.id })).toEqual({
+      ok: true,
+      reportId: first.reportId,
+      reused: true,
+    });
+    expect(await startMissingDiverReport(db, { ...base, actorPersonId: f.owner.id })).toEqual({
+      ok: true,
+      reportId: first.reportId,
+      reused: true,
+    });
+    expect(await startMissingDiverReport(db, { ...base, actorPersonId: f.ashore.id })).toEqual({
+      ok: false,
+      reason: "already_filed",
+      filedByName: f.owner.fullName,
+    });
+    expect(await draftsBy(db, f.trip.id, f.ashore.id)).toBe(0);
+    expect(await draftsBy(db, f.trip.id, f.crew.id)).toBe(0);
+  });
+
+  it("starts a new report for a second disappearance, and leaves the first one alone", async () => {
+    // Domain re-review 2026-10-16, item 2: missing after dive 1 at 10:00, the
+    // draft at 10:05, back aboard at 10:20; missing again after dive 2 at
+    // 13:00. That is a second incident, with its own report and time.
+    const { db, shop } = ctx;
+    const f = await fixture(db, shop.id);
+    const at = (time: string) => new Date(`2026-07-20T${time}:00Z`);
+    await mark(db, f, "after_dive_1", "not_boarded", at("14:00"));
+    const input = {
+      shopId: shop.id,
+      tripId: f.trip.id,
+      subject: seatOf(f),
+      actorPersonId: f.crew.id,
+    };
+    const first = await startMissingDiverReport(db, input);
+    if (!first.ok) throw new Error(`refused: ${first.reason}`);
+    await db
+      .update(incidentReports)
+      .set({ createdAt: at("14:05") })
+      .where(eq(incidentReports.id, first.reportId));
+    await mark(db, f, "after_dive_1", "boarded", at("14:20"));
+    await mark(db, f, "after_dive_2", "not_boarded", at("17:00"));
+
+    const second = await startMissingDiverReport(db, input);
+    if (!second.ok) throw new Error(`refused: ${second.reason}`);
+    expect(second.reportId).not.toBe(first.reportId);
+    expect(await reportOf(db, second.reportId)).toMatchObject({ occurredAt: at("17:00") });
+    expect(await reportOf(db, first.reportId)).toMatchObject({ occurredAt: at("14:00") });
+    // Its own second tap is the same second report.
+    expect(await startMissingDiverReport(db, input)).toEqual({
+      ok: true,
+      reportId: second.reportId,
+      reused: true,
+    });
+  });
+
+  it("does not count a filed report from an earlier disappearance as this one's", async () => {
+    const { db, shop } = ctx;
+    const f = await fixture(db, shop.id);
+    const at = (time: string) => new Date(`2026-07-20T${time}:00Z`);
+    await mark(db, f, "after_dive_1", "not_boarded", at("14:00"));
+    const input = {
+      shopId: shop.id,
+      tripId: f.trip.id,
+      subject: seatOf(f),
+      actorPersonId: f.crew.id,
+    };
+    const first = await startMissingDiverReport(db, input);
+    if (!first.ok) throw new Error(`refused: ${first.reason}`);
+    const target = { shopId: shop.id, tripId: f.trip.id, reportId: first.reportId };
+    await saveIncidentDraft(db, {
+      ...target,
+      actorPersonId: f.crew.id,
+      fields: { ...complete, kind: "missing_diver", occurredAt: at("14:00") },
+    });
+    expect(await fileIncidentReport(db, { ...target, actorPersonId: f.crew.id })).toEqual({
+      ok: true,
+    });
+    await db
+      .update(incidentReports)
+      .set({ createdAt: at("14:05") })
+      .where(eq(incidentReports.id, first.reportId));
+    await mark(db, f, "after_dive_1", "boarded", at("14:20"));
+    await mark(db, f, "after_dive_2", "not_boarded", at("17:00"));
+    const second = await startMissingDiverReport(db, input);
+    expect(second).toMatchObject({ ok: true, reused: false });
+  });
+
+  it("allows a tablet clock a few minutes fast: a report started just before the mark's time is its", async () => {
+    // A boat tablet's clock may run up to five minutes ahead of the server
+    // (OFFLINE_EVENT_SKEW_MS), so the mark can read 13:03 while the report
+    // the crew opened on it was stamped 13:01. Same disappearance.
+    const { db, shop } = ctx;
+    const f = await fixture(db, shop.id);
+    const at = (time: string) => new Date(`2026-07-20T${time}:00Z`);
+    await mark(db, f, "after_dive_2", "not_boarded", at("17:03"), "offline");
+    const input = {
+      shopId: shop.id,
+      tripId: f.trip.id,
+      subject: seatOf(f),
+      actorPersonId: f.crew.id,
+    };
+    const first = await startMissingDiverReport(db, input);
+    if (!first.ok) throw new Error(`refused: ${first.reason}`);
+    await db
+      .update(incidentReports)
+      .set({ createdAt: at("17:01") })
+      .where(eq(incidentReports.id, first.reportId));
+    expect(await startMissingDiverReport(db, input)).toEqual({
+      ok: true,
+      reportId: first.reportId,
+      reused: true,
+    });
+  });
+
+  it("is not blocked by a report that names the diver only as a witness", async () => {
+    // Security re-review 2026-10-16, item 2.
+    const { db, shop } = ctx;
+    const f = await fixture(db, shop.id);
+    await mark(db, f, "after_dive_1", "not_boarded", MARKED_AT);
+    const other = await startIncidentReport(db, {
+      shopId: shop.id,
+      tripId: f.trip.id,
+      actorPersonId: f.owner.id,
+    });
+    if (!other.ok) throw new Error("expected a draft");
+    const target = { shopId: shop.id, tripId: f.trip.id, reportId: other.reportId };
+    await saveIncidentDraft(db, {
+      ...target,
+      actorPersonId: f.owner.id,
+      fields: { ...complete, kind: "missing_diver" },
+    });
+    expect(
+      await addIncidentPerson(db, {
+        ...target,
+        actorPersonId: f.owner.id,
+        subject: { kind: "booking", bookingId: f.seat.booking.id },
+        involvement: "witness",
+      }),
+    ).toEqual({ ok: true });
+    const started = await startMissingDiverReport(db, {
+      shopId: shop.id,
+      tripId: f.trip.id,
+      subject: seatOf(f),
+      actorPersonId: f.crew.id,
+    });
+    expect(started).toMatchObject({ ok: true, reused: false });
+  });
+
   it("times the report at the earliest standing mark: an offline copy later is the same mark", async () => {
     // Domain review 2026-10-16: the live mark at 10:00, then the phone's
     // offline copy of the same alarm synced at 10:07. The diver went missing at 10:00.
     const { db, shop } = ctx;
     const f = await fixture(db, shop.id);
-    const tenOClock = new Date("2026-10-01T14:00:00Z");
+    const tenOClock = new Date("2026-07-20T14:00:00Z");
     await mark(db, f, "after_dive_1", "not_boarded", tenOClock);
-    await mark(db, f, "after_dive_1", "not_boarded", new Date("2026-10-01T14:07:00Z"), "offline");
+    await mark(db, f, "after_dive_1", "not_boarded", new Date("2026-07-20T14:07:00Z"), "offline");
     const started = await startMissingDiverReport(db, {
       shopId: shop.id,
       tripId: f.trip.id,
@@ -210,9 +382,9 @@ describe("a missing diver report from the manifest", () => {
     // Still missing from dive 1 at 10:00, and again at the dive 2 count at 13:00.
     const { db, shop } = ctx;
     const f = await fixture(db, shop.id);
-    const tenOClock = new Date("2026-10-01T14:00:00Z");
+    const tenOClock = new Date("2026-07-20T14:00:00Z");
     await mark(db, f, "after_dive_1", "not_boarded", tenOClock);
-    await mark(db, f, "after_dive_2", "not_boarded", new Date("2026-10-01T17:00:00Z"));
+    await mark(db, f, "after_dive_2", "not_boarded", new Date("2026-07-20T17:00:00Z"));
     const started = await startMissingDiverReport(db, {
       shopId: shop.id,
       tripId: f.trip.id,
@@ -233,14 +405,14 @@ describe("a missing diver report from the manifest", () => {
       actorPersonId: f.crew.id,
     };
     // At the dock "not boarded" is "never left": no missing diver.
-    await mark(db, f, "departure", "not_boarded", new Date("2026-10-01T12:00:00Z"));
+    await mark(db, f, "departure", "not_boarded", new Date("2026-07-20T12:00:00Z"));
     expect(await startMissingDiverReport(db, input)).toEqual({
       ok: false,
       reason: "not_missing",
     });
     // Marked missing after dive 1, then back aboard: nothing stands.
-    await mark(db, f, "after_dive_1", "not_boarded", new Date("2026-10-01T14:00:00Z"));
-    await mark(db, f, "after_dive_1", "boarded", new Date("2026-10-01T14:05:00Z"));
+    await mark(db, f, "after_dive_1", "not_boarded", new Date("2026-07-20T14:00:00Z"));
+    await mark(db, f, "after_dive_1", "boarded", new Date("2026-07-20T14:05:00Z"));
     expect(await startMissingDiverReport(db, input)).toEqual({
       ok: false,
       reason: "not_missing",

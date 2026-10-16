@@ -17,12 +17,12 @@ for the same missing diver made two reports.
 - **"Report an incident" reuses only an untouched draft**: the writer's own unfiled draft on that
   departure with every answer null and nobody named. Anything else is a different incident, so a
   new draft is inserted. Somebody else's draft is never handed over.
-- **"Start a missing diver report" is one report per missing person.** It reuses an unfiled draft
-  of kind Missing diver on that departure that already names that seat (or that crew member),
-  whoever started it. Its writer, an owner or a manager is given it; anyone else is told "Already
-  started by {name}", with none of its contents and no second draft. Otherwise it inserts a new
-  draft of kind Missing diver, timed at the earliest standing "not back aboard" mark, naming the
-  person as affected. It never fills in the writer's other draft.
+- **"Start a missing diver report" is one report per disappearance.** It reuses a Missing diver
+  report on that departure, draft or filed, naming that seat (or crew member) as affected and
+  started since the current run of "not back aboard" marks began, less the tablet clock skew
+  (`OFFLINE_EVENT_SKEW_MS`). Its writer, an owner or a manager gets it; anyone else is told
+  "Already started by {name}" or "Already filed by {name}", and nothing more. Otherwise a new
+  draft of kind Missing diver, timed at the earliest standing mark, names the person as affected.
 - **Missing crew get the same button**, read from the crew roll call, the staffer named as
   affected.
 - Both starts are race-safe by a transaction-scoped advisory lock: on (departure, writer) for the
@@ -43,7 +43,6 @@ for the same missing diver made two reports.
 
 ## Consequences
 
-A writer can now hold several unfiled drafts on one departure; Delete is the way out for an
-abandoned one, and the log keeps that it existed. A second crew member
-learns that a report exists and who started it, which is the one fact they need to stop writing
-a duplicate. Revisit if shops ask for a shared, co-written report.
+A writer can hold several unfiled drafts on one departure; Delete is the way out for an abandoned
+one, and the log keeps that it existed. A second crew member learns only that a report exists and
+who started it. Revisit if shops ask for a shared, co-written report.

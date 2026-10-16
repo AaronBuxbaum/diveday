@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
+import { WAIVER_SIGNATURE_VALIDITY_MS } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
 import { getIncidentExport } from "./incident-export";
 import {
@@ -319,6 +320,59 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
  * every other surface writes.
  */
 describe("the departure log's roster changes and incident reports", () => {
+  it("states a waiver link as it stood when the boat was due out, whenever the log is printed", async () => {
+    // Domain re-review 2026-10-16, item 3: a link that lapsed between two
+    // printings changed the version-2 code under unchanged records.
+    const { db, shop, reef, staff } = await exportContext();
+    const minutes = (n: number) => new Date(reef.startsAt.getTime() + n * 60_000);
+    const first = await getIncidentExport(db, shop.id, reef.id, staff.id, minutes(30));
+    const unsent = first?.roster.find((entry) => entry.waiver?.state === "not_sent");
+    if (!unsent) throw new Error("expected a seat with no waiver");
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: unsent.bookingId });
+    if (!issued.ok) throw new Error("expected waiver link");
+    await db
+      .update(waiverRecords)
+      .set({ expiresAt: minutes(60) })
+      .where(eq(waiverRecords.bookingId, unsent.bookingId));
+    const before = await getIncidentExport(db, shop.id, reef.id, staff.id, minutes(30));
+    const after = await getIncidentExport(db, shop.id, reef.id, staff.id, minutes(120));
+    const stateOf = (doc: typeof before) =>
+      doc?.roster.find((entry) => entry.bookingId === unsent.bookingId)?.waiver?.state;
+    expect(stateOf(before)).toBe("awaiting_signature");
+    expect(stateOf(after)).toBe("awaiting_signature");
+    expect(after?.contentHash).toBe(before?.contentHash);
+  });
+
+  it("reads which signed waiver governs as of when the boat was due out, whenever the log is printed", async () => {
+    // The same fault one layer down: a signature whose year ran out between
+    // two printings stopped governing, and the seat read "not sent".
+    const { db, shop, reef, staff } = await exportContext();
+    const minutes = (n: number) => new Date(reef.startsAt.getTime() + n * 60_000);
+    const first = await getIncidentExport(db, shop.id, reef.id, staff.id, minutes(30));
+    const unsent = first?.roster.find((entry) => entry.waiver?.state === "not_sent");
+    if (!unsent) throw new Error("expected a seat with no waiver");
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: unsent.bookingId });
+    if (!issued.ok) throw new Error("expected waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: unsent.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    // Signed a year before an hour after the boat was due out.
+    const signedAt = new Date(minutes(60).getTime() - WAIVER_SIGNATURE_VALIDITY_MS);
+    await db
+      .update(waiverRecords)
+      .set({ signedAt, completedAt: signedAt })
+      .where(eq(waiverRecords.bookingId, unsent.bookingId));
+    const before = await getIncidentExport(db, shop.id, reef.id, staff.id, minutes(30));
+    const after = await getIncidentExport(db, shop.id, reef.id, staff.id, minutes(120));
+    const stateOf = (doc: typeof before) =>
+      doc?.roster.find((entry) => entry.bookingId === unsent.bookingId)?.waiver?.state;
+    expect(stateOf(before)).toBe("complete");
+    expect(stateOf(after)).toBe("complete");
+    expect(after?.contentHash).toBe(before?.contentHash);
+  });
+
   it("lists a seat removed after the scheduled start, and not one changed before it", async () => {
     const { db, shop, reef, staff } = await exportContext();
     const minutes = (n: number) => new Date(reef.startsAt.getTime() + n * 60_000);

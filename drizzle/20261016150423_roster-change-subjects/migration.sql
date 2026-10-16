@@ -8,7 +8,10 @@
 -- log does not lose its late seat changes.
 --
 -- A seat line: the one person holding a seat on that departure under the name
--- the line wrote, either as booked (a held seat) or as on file.
+-- the line wrote, either as booked (a held seat) or as on file. Not a
+-- `seat_moved_away` line: that seat is on another departure now, so a person
+-- of that name still on this one is somebody else (security re-review
+-- 2026-10-16, item 3). It stays without a subject.
 UPDATE "activity_events" AS "e"
 SET "subject_person_id" = "m"."person_id"
 FROM (
@@ -20,7 +23,7 @@ FROM (
     AND "line"."code" IN (
       'seat_added', 'seat_added_walk_in', 'seat_added_from_trip_link', 'rider_added_at_dock',
       'booking_restored', 'booking_removed', 'party_seat_self_cancelled',
-      'party_seat_self_refunded', 'seat_moved_away', 'seat_moved_here'
+      'party_seat_self_refunded', 'seat_moved_here'
     )
     AND "line"."params"->>'diver' IN ("p"."full_name", btrim("b"."identity_booked_as"))
   GROUP BY "line"."id"
