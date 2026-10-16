@@ -86,17 +86,13 @@ describe("confirming a stale proposal", () => {
     if (!trip) throw new Error("demo reef trip missing");
     const before = await getTripPrep(db, shop, trip.id);
     const row = before?.assignmentRows.find(
-      (entry) =>
-        !entry.diver.wantsNitrox && entry.wanted.some((need) => need.kind === "regulator"),
+      (entry) => !entry.diver.wantsNitrox && entry.wanted.some((need) => need.kind === "regulator"),
     );
     if (!row) throw new Error("seeded trip needs an air diver wanting a regulator");
     const proposed = before?.proposals.get(proposalKey(row.diver.bookingId, "regulator"));
     if (!proposed) throw new Error("no regulator proposed");
     // Since the tab loaded, the shop marked that regulator for nitrox.
-    await db
-      .update(gearItems)
-      .set({ nitroxDesignated: true })
-      .where(eq(gearItems.id, proposed.id));
+    await db.update(gearItems).set({ nitroxDesignated: true }).where(eq(gearItems.id, proposed.id));
     const screened = await screenGearPicks(
       db,
       shop,
@@ -108,4 +104,3 @@ describe("confirming a stale proposal", () => {
     expect(screened.refused).toBe(1);
   });
 });
-

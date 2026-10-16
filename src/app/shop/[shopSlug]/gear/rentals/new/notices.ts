@@ -41,6 +41,7 @@ export const RENT_OUT_NOTICES: Record<string, NoticeDefinition> = {
   "no-nitrox-card": { key: "counterRentals.new.notice.noNitroxCard", step: "rent" },
   "fill-invalid": { key: "counterRentals.new.notice.fillInvalid", step: "rent" },
   "fill-not-tank": { key: "counterRentals.new.notice.fillNotTank", step: "rent" },
+  "fill-missing": { key: "counterRentals.new.notice.fillMissing", step: "rent" },
   "card-recorded": { key: "counterRentals.new.notice.cardRecorded", step: "who", tone: "success" },
   "card-duplicate": { key: "counterRentals.new.notice.cardDuplicate", step: "who" },
   "card-not-recorded": { key: "counterRentals.new.notice.cardNotRecorded", step: "who" },

@@ -36,6 +36,7 @@ import {
   returnCounterRentalAction,
 } from "../actions";
 import { RentalTicketPayment } from "./_components/RentalTicketPayment";
+import { TankGas } from "./_components/TankGas";
 
 export const instant = true;
 
@@ -68,6 +69,10 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey; counted?
   invoiced: { tone: "warning", key: "counterRentals.ticket.notice.invoiced" },
   released: { tone: "success", key: "counterRentals.ticket.notice.released" },
   "not-found": { tone: "warning", key: "counterRentals.ticket.notice.notFound" },
+  "fill-corrected": { tone: "success", key: "counterRentals.ticket.notice.fillCorrected" },
+  "fill-invalid": { tone: "warning", key: "counterRentals.new.notice.fillInvalid" },
+  "fill-not-tank": { tone: "warning", key: "counterRentals.ticket.notice.fillRefused" },
+  "no-nitrox-card": { tone: "warning", key: "counterRentals.new.notice.noNitroxCard" },
   "concern-needs-words": {
     tone: "warning",
     key: "counterRentals.ticket.notice.concernNeedsWords",
@@ -215,6 +220,7 @@ export default async function CounterRentalTicketPage({
               </li>
             ))}
           </ul>
+          <TankGas t={t} ticketId={ticket.ticketId} units={ticket.units} />
         </section>
 
         {onWall.length > 0 || out.length > 0 ? (

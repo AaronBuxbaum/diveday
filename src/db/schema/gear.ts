@@ -630,6 +630,13 @@ export const gearReservations = pgTable(
      */
     fillO2Percent: integer("fill_o2_percent"),
     /**
+     * When and by whom the gas above was recorded or last corrected (domain
+     * review A3). Set together with `fill_o2_percent`, never apart
+     * (`gear_reservations_fill_recorded`). Not an analysis: the ticket says so.
+     */
+    fillRecordedAt: timestamp("fill_recorded_at", { withTimezone: true }),
+    fillRecordedByPersonId: uuid("fill_recorded_by_person_id").references(() => people.id),
+    /**
      * **When a hold that never left the counter was let go** (issue #2258).
      * Releasing stamps the row instead of deleting it (ADR
      * 20260820-every-delete-is-soft), so the record that a unit was held for
@@ -666,6 +673,10 @@ export const gearReservations = pgTable(
     check(
       "gear_reservations_fill_o2_percent",
       sql`${table.fillO2Percent} is null or (${table.bookingId} is null and ${table.fillO2Percent} >= 21 and ${table.fillO2Percent} <= 40)`,
+    ),
+    check(
+      "gear_reservations_fill_recorded",
+      sql`(${table.fillO2Percent} is null) = (${table.fillRecordedAt} is null)`,
     ),
     check(
       "gear_reservations_release_never_left",

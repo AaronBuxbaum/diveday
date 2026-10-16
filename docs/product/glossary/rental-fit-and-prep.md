@@ -183,9 +183,10 @@
   past is "Card seen", the staffer capturing and certifying the card they hold. Soft goods go to
   anybody. **The service screen** refuses a life-support unit whose service clock is overdue as of
   the window's last day or that has an open service concern, and lends a flagged soft-goods unit
-  only with its own "Lend anyway": the one place a **service clock** gates. A counter tank may carry
-  its **fill** (`gear_reservations.fill_o2_percent`: 21 is air, 22 to 40 is EANx, issue #2257),
-  printed on the ticket; EANx is refused unless the person's nitrox card authorizes a fill
+  only with its own "Lend anyway": the one place a **service clock** gates. Every counter tank
+  says its **fill** (`gear_reservations.fill_o2_percent`: 21 is air, 22 to 40 is EANx, issue #2257),
+  with who recorded it, printed on the ticket as recorded at the counter and not analyzed, and
+  correctable from the ticket while the tank is out; EANx is refused unless the person's nitrox card authorizes a fill
   (`authorizesNitroxFill`, the trip gate's predicate). A fill is what the staffer recorded, never
   an analyzer reading. **The waiver informs and never gates** (H-108): the
   release is the person's, so the new-rental form, the ticket and the Rentals list say its

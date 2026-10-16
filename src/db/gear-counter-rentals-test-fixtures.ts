@@ -98,6 +98,7 @@ export function lend(
     reservedUntil?: string;
     confirmedFlaggedIds?: string[];
     tankFills?: Record<string, number>;
+    fillRecordedByPersonId?: string;
   } = {},
 ) {
   return createCounterRental(db, {
@@ -109,6 +110,7 @@ export function lend(
     todayLocal: TODAY,
     confirmedFlaggedIds: extra.confirmedFlaggedIds,
     tankFills: extra.tankFills,
+    fillRecordedByPersonId: extra.fillRecordedByPersonId,
   });
 }
 

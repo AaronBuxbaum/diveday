@@ -410,7 +410,9 @@ export function CounterRentalCart({
 
 /**
  * A tank's gas (#2257): a menu, never a typed figure, so nothing is rounded
- * into a different mix. The writer refuses EANx without a nitrox card.
+ * into a different mix. Required, opening on a placeholder nobody can submit
+ * (domain review F1); the writer refuses a tank with no gas, and EANx without
+ * a nitrox card.
  */
 function TankFillField({
   unitId,
@@ -429,12 +431,13 @@ function TankFillField({
       <select
         name={`${FILL_FIELD_PREFIX}${unitId}`}
         defaultValue=""
+        required
         aria-label={aria}
         aria-describedby={hintId}
         className={`${controlClass.replace("w-full", "")} w-40`}
       >
         {words.fillOptions.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option key={option.value} value={option.value} disabled={option.value === ""}>
             {option.label}
           </option>
         ))}

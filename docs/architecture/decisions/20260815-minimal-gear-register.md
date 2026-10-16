@@ -481,7 +481,12 @@ released hold is not restorable: the unit is held again.
 
 Issue #2257, Aaron 2026-10-13 (option a). `gear_reservations.fill_o2_percent` (nullable integer)
 is the gas a staffer recorded in a counter-rented tank, as oxygen percent: 21 is air, 22 to 40 is
-EANx. Null means nobody recorded it. The database refuses it on a booking-held row and outside
+EANx. Every counter tank must say its gas (review of 2026-10-16, F1: a blank gas was the one way
+EANx could leave without meeting the card check), so `createCounterRental` refuses a tank with
+none (`fill_missing`); the column is null only on other kinds. `fill_recorded_at` and
+`fill_recorded_by_person_id` say who recorded it, and the ticket prints "recorded at the counter,
+not analyzed". A wrong gas is corrected from the ticket (`correctCounterTankFill`) through the same
+rules while the tank is held or out; it is never cleared. The database refuses it on a booking-held row and outside
 21 to 40 (`gear_reservations_fill_o2_percent`); `createCounterRental` refuses it on any kind but a
 tank, and refuses anything above 21 unless the person holds a nitrox card that passes
 `authorizesNitroxFill`, the one predicate every nitrox fill gate shares. That card read runs inside

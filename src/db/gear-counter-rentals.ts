@@ -1,4 +1,5 @@
 import { and, asc, eq, gte, inArray, isNotNull, isNull, lte, type SQL, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { CalendarDate } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { nowDate } from "@/lib/clock";
@@ -361,6 +362,8 @@ export async function createCounterRental(
      * #2257): 21 is air, 22 to 40 is EANx. A unit left out is not recorded.
      */
     tankFills?: Readonly<Record<string, number>>;
+    /** The staffer recording the gas, for the ticket's "recorded by" (domain review A3). */
+    fillRecordedByPersonId?: string;
   },
 ): Promise<CreateCounterRentalOutcome> {
   const reservedFrom = input.reservedFrom.trim();
@@ -411,9 +414,14 @@ export async function createCounterRental(
     o2Percent,
   }));
   if (fills.some((fill) => fill.kind === undefined)) return { ok: false, reason: "fill_invalid" };
+  const filledIds = new Set(fills.map((fill) => fill.unitId));
+  const unfilledTank = kinds.some((unit) => unit.kind === "tank" && !filledIds.has(unit.id));
   const fillShape = fills.flatMap(({ kind, o2Percent }) => (kind ? [{ kind, o2Percent }] : []));
   const fillShapeRefusal = counterTankFillRefusal(fillShape, true);
   if (fillShapeRefusal) return { ok: false, reason: fillShapeRefusal };
+  // **Every tank says its gas** (domain review F1): a blank gas was the one
+  // way an EANx fill could leave without meeting the card check.
+  if (unfilledTank) return { ok: false, reason: "fill_missing" };
   const verdicts = await counterRentalServiceVerdicts(db, input.shopId, kinds, reservedUntil);
   const confirmed = new Set(input.confirmedFlaggedIds ?? []);
   for (const unit of kinds) {
@@ -496,7 +504,13 @@ export async function createCounterRental(
             personId: person.id,
             reservedFrom,
             reservedUntil,
-            fillO2Percent: input.tankFills?.[unitId] ?? null,
+            ...(input.tankFills?.[unitId] === undefined
+              ? {}
+              : {
+                  fillO2Percent: input.tankFills[unitId],
+                  fillRecordedAt: sql`now()`,
+                  fillRecordedByPersonId: input.fillRecordedByPersonId ?? null,
+                }),
           })
           .returning({ id: gearReservations.id });
         if (!row) throw new Error("createCounterRental: insert returned no row");
@@ -693,6 +707,73 @@ export async function releaseCounterRental(
   return released.length > 0 ? { ok: true } : { ok: false, reason: "not_found" };
 }
 
+export type CorrectCounterTankFillOutcome =
+  | { ok: true }
+  | { ok: false; reason: "not_found" | CounterTankFillRefusal };
+
+/**
+ * **Correct the gas recorded on one counter tank** (domain reviews A3/F6,
+ * security review X5): the staffer who wrote the wrong gas puts the right one
+ * on the ticket, and the row then names them as its recorder. The same rules
+ * as renting it: a tank, 21 to 40, and above air only for a person whose
+ * nitrox card authorizes a fill (`authorizesNitroxFill`), read inside the
+ * write's transaction. There is no clearing: a counter tank always says its
+ * gas (F1). Only while the tank is held or out: once it is home or released,
+ * the record is history and is not rewritten.
+ */
+export async function correctCounterTankFill(
+  db: AppDb,
+  input: { shopId: string; reservationId: string; o2Percent: number; byPersonId: string },
+): Promise<CorrectCounterTankFillOutcome> {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({ kind: gearItems.kind, personId: gearReservations.personId })
+      .from(gearReservations)
+      .innerJoin(
+        gearItems,
+        and(eq(gearItems.id, gearReservations.gearItemId), eq(gearItems.shopId, input.shopId)),
+      )
+      .where(
+        and(
+          eq(gearReservations.id, input.reservationId),
+          eq(gearReservations.shopId, input.shopId),
+          isNull(gearReservations.bookingId),
+          isNotNull(gearReservations.personId),
+          openGearReservation(),
+        ),
+      )
+      .for("update", { of: gearReservations })
+      .limit(1);
+    if (!row?.personId) return { ok: false, reason: "not_found" };
+    const fill = [{ kind: row.kind, o2Percent: input.o2Percent }];
+    const shapeRefusal = counterTankFillRefusal(fill, true);
+    if (shapeRefusal) return { ok: false, reason: shapeRefusal };
+    if (isEnrichedFill(input.o2Percent)) {
+      const [card] = await tx
+        .select({ id: nitroxCertifications.id })
+        .from(nitroxCertifications)
+        .where(
+          and(
+            eq(nitroxCertifications.shopId, input.shopId),
+            eq(nitroxCertifications.personId, row.personId),
+            authorizesNitroxFill,
+          ),
+        )
+        .limit(1);
+      if (!card) return { ok: false, reason: "no_nitrox_card" };
+    }
+    await tx
+      .update(gearReservations)
+      .set({
+        fillO2Percent: input.o2Percent,
+        fillRecordedAt: nowDate(),
+        fillRecordedByPersonId: input.byPersonId,
+      })
+      .where(eq(gearReservations.id, input.reservationId));
+    return { ok: true };
+  });
+}
+
 export type CounterRentalUnit = {
   reservationId: string;
   gearItemId: string;
@@ -702,8 +783,11 @@ export type CounterRentalUnit = {
   checkedOutAt: Date | null;
   returnedAt: Date | null;
   returnOutcome: GearReturnOutcome | null;
-  /** The recorded gas, as oxygen percent (21 is air); null when nobody recorded it. */
+  /** The recorded gas, as oxygen percent (21 is air); null on anything but a tank. */
   fillO2Percent: number | null;
+  /** When and by whom the gas was recorded or last corrected (domain review A3). */
+  fillRecordedAt: Date | null;
+  fillRecordedByName: string | null;
 };
 
 export type CounterRentalTicket = {
@@ -802,6 +886,7 @@ async function counterRentalRows(
     openOnly?: boolean;
   },
 ): Promise<CounterRentalRow[]> {
+  const fillRecorder = alias(people, "fill_recorder");
   const rows = await db
     .select({
       reservationId: gearReservations.id,
@@ -813,6 +898,8 @@ async function counterRentalRows(
       returnedAt: gearReservations.returnedAt,
       returnOutcome: gearReservations.returnOutcome,
       fillO2Percent: gearReservations.fillO2Percent,
+      fillRecordedAt: gearReservations.fillRecordedAt,
+      fillRecordedByName: fillRecorder.fullName,
       personId: people.id,
       personName: people.fullName,
       reservedFrom: gearReservations.reservedFrom,
@@ -831,6 +918,13 @@ async function counterRentalRows(
     // The shop condition on the joined person is defense-in-depth, as on every
     // register read: the writer proves the person is this shop's.
     .innerJoin(people, and(eq(people.id, gearReservations.personId), eq(people.shopId, shopId)))
+    .leftJoin(
+      fillRecorder,
+      and(
+        eq(fillRecorder.id, gearReservations.fillRecordedByPersonId),
+        eq(fillRecorder.shopId, shopId),
+      ),
+    )
     .where(
       and(
         eq(gearReservations.shopId, shopId),
@@ -879,6 +973,8 @@ function groupCounterRentals(rows: readonly CounterRentalRow[]): CounterRentalTi
       returnedAt: row.returnedAt,
       returnOutcome: row.returnOutcome,
       fillO2Percent: row.fillO2Percent,
+      fillRecordedAt: row.fillRecordedAt,
+      fillRecordedByName: row.fillRecordedByName,
     });
   }
   return [...byKey.values()];

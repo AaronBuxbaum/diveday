@@ -1,3 +1,4 @@
+import { TANK_FILL_O2_PERCENT } from "@/lib/counter-rentals";
 import type { RentalItemKind } from "@/lib/dive-prep";
 import {
   GEAR_ITEM_STATUSES,
@@ -164,4 +165,22 @@ export function tankFillLabel(t: StaffTranslator, o2Percent: number): string {
   return o2Percent === 21
     ? t("counterRentals.fill.air")
     : t("counterRentals.fill.eanx", { percent: o2Percent });
+}
+
+/**
+ * A counter tank's gas menu (#2257): a placeholder nobody can submit, air,
+ * then EANx 22 to 40. Shared by the rent-out form and the ticket's correction.
+ */
+export function tankFillOptions(
+  t: StaffTranslator,
+  placeholder: string,
+): { value: string; label: string }[] {
+  const { air, max } = TANK_FILL_O2_PERCENT;
+  return [
+    { value: "", label: placeholder },
+    ...Array.from({ length: max - air + 1 }, (_, index) => ({
+      value: String(air + index),
+      label: tankFillLabel(t, air + index),
+    })),
+  ];
 }

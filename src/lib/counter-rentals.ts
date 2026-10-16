@@ -197,7 +197,11 @@ export function isEnrichedFill(o2Percent: number): boolean {
   return o2Percent > TANK_FILL_O2_PERCENT.air;
 }
 
-export type CounterTankFillRefusal = "fill_invalid" | "fill_not_tank" | "no_nitrox_card";
+export type CounterTankFillRefusal =
+  | "fill_invalid"
+  | "fill_not_tank"
+  | "fill_missing"
+  | "no_nitrox_card";
 
 /**
  * Whether these recorded fills may go on this rental, as a refusal or null.
