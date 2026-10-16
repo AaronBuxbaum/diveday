@@ -10,7 +10,7 @@
     "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
   ],
   "counted": "2026-10-14",
-  "promised": true,
+  "promised": false,
   "sites": [
     {
       "name": "Anse Chastanet Reef",
@@ -266,7 +266,7 @@
     },
     {
       "name": "Jalousie",
-      "template": "jalousie-gros-piton",
+      "template": null,
       "listedBy": [
         "https://scubastlucia.com/diving/",
         "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
