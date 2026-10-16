@@ -469,7 +469,8 @@
     "diverNHeading": "Diver {number}’s gear",
     "gearTotal": "Gear for this diver: {price}",
     "needGear": "Need rental gear?",
-    "skipBody": "Bringing your own kit? Leave this unchecked and you won’t be charged for gear. Check it to see what we rent."
+    "skipBody": "Bringing your own kit? Leave this unchecked and you won’t be charged for gear. Check it to see what we rent.",
+    "asLastTime": "Ticked as on your last trip."
   },
   "lastMinute": {
     "heading": "Want a deal on a last-minute seat?",

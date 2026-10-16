@@ -247,6 +247,7 @@ export default async function TripDetailPage({
         blankHref: `${publicTripPath(shopSlug, tripId)}#book`,
         lead: { fullName: knownDiver.fullName, email: knownDiver.email, phone: knownDiver.phone },
         lines: knownDiverFactLines(knownDiver.facts, t, { locale, timeZone: shop.timezone }),
+        lastGear: knownDiver.lastGear,
       }
     : null;
   const diveBriefings = dayBriefings(tripDives, briefing.extras, t);

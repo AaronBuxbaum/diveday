@@ -469,7 +469,8 @@
     "diverNHeading": "Equipo del buceador {number}",
     "gearTotal": "Equipo para este buceador: {price}",
     "needGear": "¿Necesitas alquilar equipo?",
-    "skipBody": "¿Traes tu propio equipo? Deja la casilla sin marcar y no te cobraremos alquiler. Márcala para ver lo que alquilamos."
+    "skipBody": "¿Traes tu propio equipo? Deja la casilla sin marcar y no te cobraremos alquiler. Márcala para ver lo que alquilamos.",
+    "asLastTime": "Marcado como en tu último viaje."
   },
   "lastMinute": {
     "heading": "¿Quieres una oferta de última hora?",
