@@ -372,6 +372,9 @@ export const tripDeskEventKind = pgEnum("trip_desk_event_kind", [
   // A type change raised a paid seat's price: the difference is owed, and
   // nothing collects it on its own.
   "balance_owed",
+  // A seat the desk turned away (H-124) taken off the roster: the strip says
+  // so, rather than that the diver gave it up.
+  "seat_turned_away",
 ]);
 
 export const tripDeskEvents = pgTable(

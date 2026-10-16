@@ -1,11 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { HOUR_MS } from "@/lib/clock";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import { turnAwayReasons } from "@/lib/turn-away";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeCheckout, fakeEmail, fakeSms } from "@/test/fakes";
 import { anonymizeDiver } from "./anonymize";
-import { createBookingParty } from "./bookings";
+import { cancelBooking, createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
 import { markBookingNoShow } from "./no-show";
 import { getBookingPayment, setBookingPayment } from "./payments";
@@ -18,6 +18,7 @@ import {
   notificationDeliveries,
   people,
   personRoles,
+  tripDeskEvents,
   trips,
 } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
@@ -62,6 +63,19 @@ async function seat() {
 }
 
 describe("a seat the desk turned away", () => {
+  it("tells the crew's catch-up strip it was turned away when Remove takes it off", async () => {
+    // Not "gave up a seat": the diver did not give it up, the desk refused it.
+    const { db, shop, bookingId, turnAway } = await seat();
+    await turnAway(nowDate());
+    expect(await cancelBooking(db, shop.id, bookingId)).toMatchObject({ ok: true });
+    expect(
+      await db
+        .select({ kind: tripDeskEvents.kind })
+        .from(tripDeskEvents)
+        .where(eq(tripDeskEvents.bookingId, bookingId)),
+    ).toEqual([{ kind: "seat_turned_away" }]);
+  });
+
   /** dde-2 #1: turned away for payment at 07:00, paid at 07:10 for a resold seat. */
   it("cannot be paid for", async () => {
     const { db, shop, reef, bookingId, turnAway } = await seat();

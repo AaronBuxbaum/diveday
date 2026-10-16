@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { seatName } from "@/lib/held-seat";
 import type { RosterChangeCode } from "@/lib/incident-export";
+import type { TurnAwayReason } from "@/lib/turn-away";
 import { isUuid } from "@/lib/uuid";
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
@@ -479,17 +480,21 @@ export type RosterTripActivityEntry =
   | {
       code: Exclude<
         RosterChangeCode,
-        CrewChangeCode | "seat_self_cancelled" | "seat_self_refunded"
+        CrewChangeCode | "seat_self_cancelled" | "seat_self_refunded" | "booking_turned_away"
       >;
       diver: string;
     }
+  | { code: "booking_turned_away"; diver: string; reason: TurnAwayReason }
   | { code: CrewChangeCode; crew: string }
   | { code: "seat_self_cancelled" | "seat_self_refunded" };
 
 type CrewChangeCode = "crew_assigned" | "crew_removed";
 
 /** A seat change named by `recordSeatChange`, which reads the name itself. */
-export type SeatChangeCode = Extract<RosterTripActivityEntry, { diver: string }>["code"];
+export type SeatChangeCode = Exclude<
+  Extract<RosterTripActivityEntry, { diver: string }>["code"],
+  "booking_turned_away"
+>;
 
 type OtherTripActivityEntry =
   | {

@@ -2654,11 +2654,13 @@ async function cancelBookingRow(
     // most likely to land while a captain is already walking to the boat —
     // the same reason the push event below exists. No actor: this path is
     // reached by a staffer, by the diver's own link, and by the wait-list
-    // sweep, and none of them hands one down.
+    // sweep, and none of them hands one down. A seat the desk turned away
+    // (H-124) was refused, not given up, and the strip says so; the cancel
+    // keeps `turned_away_at`, so the row still knows.
     await recordDeskEvent(tx, {
       shopId,
       tripId: booking.tripId,
-      kind: "seat_released",
+      kind: booking.turnedAwayAt === null ? "seat_released" : "seat_turned_away",
       bookingId: booking.id,
       subjectPersonId: booking.personId,
     });

@@ -280,4 +280,41 @@ describe("roster changes and incident reports on the departure log", () => {
     expect(line("booking_no_show", { actor: "Rae Owner", diver: "Ben Cho" })).toBeNull();
     expect(line("toString", {})).toBeNull();
   });
+
+  it("reads a turn-away at the desk as a seat line with its reason category", () => {
+    // A seat freed at the desk after the boat was due out changes the head
+    // count like a removal does, and says why by category only (H-124).
+    const turned = rosterChangeFromActivity({
+      code: "booking_turned_away",
+      params: { actor: "Rae Owner", diver: "Ben Cho", reason: "card" },
+      occurredAt: AFTER_START,
+    });
+    expect(turned).toEqual({
+      action: "turned_away",
+      subjectName: "Ben Cho",
+      recordedByName: "Rae Owner",
+      reason: "card",
+      occurredAt: AFTER_START,
+    });
+    // A category the code does not know is not printed as one.
+    expect(
+      rosterChangeFromActivity({
+        code: "booking_turned_away",
+        params: { actor: "Rae Owner", diver: "Ben Cho", reason: "<b>sick</b>" },
+        occurredAt: AFTER_START,
+      }),
+    ).not.toHaveProperty("reason");
+    const doc = buildIncidentExport(baseInput({ rosterChanges: turned ? [turned] : [] }));
+    expect(doc.timeline.filter((entry) => entry.kind === "roster_change")).toEqual([
+      {
+        kind: "roster_change",
+        occurredAt: AFTER_START.toISOString(),
+        checkpoint: null,
+        action: "turned_away",
+        subjectName: "Ben Cho",
+        recordedByName: "Rae Owner",
+        reason: "card",
+      },
+    ]);
+  });
 });

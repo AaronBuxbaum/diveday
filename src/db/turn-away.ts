@@ -86,6 +86,7 @@ export async function turnBookingAway(
         tripId: trips.id,
         tripStatus: trips.status,
         startsAt: trips.startsAt,
+        personId: bookings.personId,
         fullName: people.fullName,
         identityUnconfirmedAt: bookings.identityUnconfirmedAt,
         identityBookedAs: bookings.identityBookedAs,
@@ -138,6 +139,9 @@ export async function turnBookingAway(
       shopId: input.shopId,
       tripId: seat.tripId,
       bookingId: seat.id,
+      // A roster line (`ROSTER_CHANGE_CODES`): the departure log prints it
+      // once the boat was due out, and erasure reaches it by record.
+      subjectPersonId: seat.personId,
       actorPersonId: recorder.id,
       code: "booking_turned_away",
       params: { actor: recorder.name, diver: personName, reason: input.reason },

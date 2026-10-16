@@ -2,12 +2,17 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, expectTypeOf, it } from "vitest";
+import { MINUTE_MS } from "@/lib/clock";
 import type { RosterChangeCode } from "@/lib/incident-export";
+import { turnAwayReasons } from "@/lib/turn-away";
 import { fileScopedShopContext } from "@/test/db";
 import { cancelBooking, restoreBooking } from "./bookings";
+import { getIncidentExport } from "./incident-export";
 import { type RosterTripActivityEntry, recordTripActivity } from "./operations";
+import { getBookingReadiness } from "./readiness";
 import { activityEvents, bookings, people } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
+import { turnBookingAway } from "./turn-away";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
@@ -70,6 +75,36 @@ describe("a seat change on the departure's trail", () => {
     );
     expect(await lines(trip.id, "booking_restored")).toEqual([
       { subject: person.id, params: { actor: owner.fullName, diver: person.fullName } },
+    ]);
+  });
+
+  it("names a seat turned away at the desk by record and booking, and the log prints it", async () => {
+    // A turn-away after the boat was due out frees a seat like a removal
+    // does, so the departure log lists it, with the category and nothing more.
+    const { db, shop, trip, owner, bookingId, person } = await seat();
+    const readiness = await getBookingReadiness(db, shop.id, bookingId);
+    const [reason] = readiness ? turnAwayReasons(readiness) : [];
+    if (!reason) throw new Error("expected a blocked seat");
+    const late = new Date(trip.startsAt.getTime() + 10 * MINUTE_MS);
+    expect(
+      await turnBookingAway(db, {
+        shopId: shop.id,
+        bookingId,
+        reason,
+        recordedByPersonId: owner.id,
+        now: late,
+      }),
+    ).toMatchObject({ ok: true });
+    const [line] = await db
+      .select({ subject: activityEvents.subjectPersonId, booking: activityEvents.bookingId })
+      .from(activityEvents)
+      .where(
+        and(eq(activityEvents.tripId, trip.id), eq(activityEvents.code, "booking_turned_away")),
+      );
+    expect(line).toEqual({ subject: person.id, booking: bookingId });
+    const doc = await getIncidentExport(db, shop.id, trip.id, owner.id, late);
+    expect(doc?.timeline.filter((entry) => entry.kind === "roster_change")).toEqual([
+      expect.objectContaining({ action: "turned_away", subjectName: person.fullName, reason }),
     ]);
   });
 

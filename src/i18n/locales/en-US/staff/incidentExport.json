@@ -100,6 +100,7 @@
   "timelineSeatMovedHere": "Seat moved here from another departure",
   "timelineCrewAdded": "Put on the crew",
   "timelineCrewRemoved": "Taken off the crew",
+  "timelineSeatTurnedAway": "Turned away at the desk: {reason, select, medical {medical} waiver {waiver} card {card} age {age} identity {identity} payment {payment} other {not ready}}",
   "timelineErased": "A line erased at a person’s request",
   "reportsHeading": "Incident reports",
   "reportsDescription": "The reports on this departure and where each stands. What they say stays on each report.",

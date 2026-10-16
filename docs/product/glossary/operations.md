@@ -177,7 +177,8 @@
   recap, tips, dive days) leaves this seat out too. What differs is the statement: seen and refused,
   not "did not come", and every surface that names a released seat says which (the desk's own group
   and line, the manifest pill, the dock copy's badge, the diver's story, `bookings.csv`, the trail's
-  `booking_turned_away`), reading `turned_away_at`. **Any active staff member, on a blocked row
+  `booking_turned_away`, the departure log's seat line, and the crew's catch-up strip when Remove
+  takes the seat off), reading `turned_away_at`. **Any active staff member, on a blocked row
   only**: the reason is one category from that row's own readiness blockers (`turnAwayReasons`,
   `src/lib/turn-away.ts`: medical, waiver, card, age, identity, payment), re-read under the seat's
   lock, and never the evidence: no medical answer or card detail is stored. The desk's door and the
@@ -775,7 +776,7 @@
   and crew counts, and generation metadata. Its timeline also carries:
   - each **seat or crew change** made once the boat was due out (the scheduled start, or the first
     departure roll-call mark if earlier), named by the trail and only when it names its subject by
-    record;
+    record, a **turned away** seat among them, with its category;
   - a line erased at a person's request, which names nobody.
 
   It ends with the departure's **incident reports**, as a list (kind, severity, filed or draft, by

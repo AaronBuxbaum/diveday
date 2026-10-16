@@ -12,6 +12,7 @@ import {
 } from "./manifests";
 import { countParticipants, type ParticipantCounts } from "./participant-types";
 import { isUnsightedSelfDeclaration } from "./readiness";
+import { isTurnAwayReason, type TurnAwayReason } from "./turn-away";
 import { type WaiverState, type WaiverStateFields, waiverState } from "./waivers";
 
 /**
@@ -350,6 +351,8 @@ export type IncidentTimelineEntry =
       subjectName: string;
       /** Who made the change; the diver themselves for a self-cancel. */
       recordedByName: string;
+      /** A `turned_away` line's category (H-124), never the evidence behind it. */
+      reason?: TurnAwayReason;
     };
 
 /** What happened to a seat, in the timeline's words (`roster_change`). */
@@ -358,6 +361,8 @@ export type IncidentRosterChangeAction =
   | "removed"
   | "moved_away"
   | "moved_here"
+  /** Seen at the desk and turned away, the seat freed (H-124). */
+  | "turned_away"
   | "crew_added"
   | "crew_removed"
   /**
@@ -482,6 +487,8 @@ export type IncidentRosterChangeInput = {
   action: IncidentRosterChangeAction;
   subjectName: string;
   recordedByName: string;
+  /** Set only on a `turned_away` line whose category the code knows. */
+  reason?: TurnAwayReason;
   occurredAt: Date;
 };
 
@@ -503,6 +510,8 @@ const ROSTER_CHANGE_BY_CODE = {
   party_seat_self_refunded: "removed",
   seat_moved_away: "moved_away",
   seat_moved_here: "moved_here",
+  // Turned away at the desk once the boat was due out frees a seat too.
+  booking_turned_away: "turned_away",
   // A crew member put on or taken off the boat once it was due out: the head
   // count is crew as well as divers (domain review 2026-10-16).
   crew_assigned: "crew_added",
@@ -533,10 +542,12 @@ export function rosterChangeFromActivity(row: {
   const action = ROSTER_CHANGE_BY_CODE[row.code as keyof typeof ROSTER_CHANGE_BY_CODE];
   const params = activityParams(row.params);
   const recordedByName = params.actor ?? "";
+  const reason = action === "turned_away" ? params.reason : undefined;
   return {
     action,
     subjectName: params.diver ?? params.crew ?? recordedByName,
     recordedByName,
+    ...(reason !== undefined && isTurnAwayReason(reason) ? { reason } : {}),
     occurredAt: row.occurredAt,
   };
 }
@@ -944,6 +955,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
           action: change.action,
           subjectName: change.subjectName,
           recordedByName: change.recordedByName,
+          ...(change.reason === undefined ? {} : { reason: change.reason }),
         } satisfies IncidentTimelineEntry,
         occurredAt: change.occurredAt,
         createdAt: change.occurredAt,

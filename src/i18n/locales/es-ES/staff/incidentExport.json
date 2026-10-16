@@ -100,6 +100,7 @@
   "timelineSeatMovedHere": "Plaza pasada a esta salida desde otra",
   "timelineCrewAdded": "Pasa a la tripulación",
   "timelineCrewRemoved": "Sale de la tripulación",
+  "timelineSeatTurnedAway": "No se le permitió embarcar en el mostrador: {reason, select, medical {médico} waiver {exención} card {certificación} age {edad} identity {identidad} payment {pago} other {no está listo}}",
   "timelineErased": "Una línea borrada a petición de una persona",
   "reportsHeading": "Informes de incidente",
   "reportsDescription": "Los informes de esta salida y en qué estado está cada uno. Lo que dicen queda en cada informe.",
