@@ -17,6 +17,10 @@ export const BUILDER_NOTICE_KEYS: Record<
   added: { tone: "success", key: "schedule.notices.added" },
   moved: { tone: "success", key: "schedule.notices.moved" },
   copied: { tone: "success", key: "schedule.notices.copied" },
+  // Last year's week, copied onto an empty one (fifth loop, item 30).
+  "week-copied": { tone: "success", key: "schedule.notices.weekCopied" },
+  "week-not-empty": { tone: "warning", key: "schedule.notices.weekNotEmpty" },
+  "nothing-to-copy": { tone: "warning", key: "schedule.notices.nothingToCopy" },
   removed: { tone: "success", key: "schedule.notices.removed" },
   invalid: { tone: "danger", key: "schedule.notices.invalid" },
   "end-before-start": { tone: "danger", key: "schedule.notices.endBeforeStart" },
@@ -49,6 +53,9 @@ export function builderNoticeMessage(
   key: StaffMessageKey,
   count: string | undefined,
 ): string {
+  if (key === "schedule.notices.weekCopied") {
+    return st(key, { count: count && /^\d{1,4}$/.test(count) ? Number.parseInt(count, 10) : 0 });
+  }
   if (key === "schedule.notices.capacityAboveCertificate" && count && /^\d{1,4}$/.test(count)) {
     return st("schedule.notices.capacityAboveCertificateCount", {
       count: Number.parseInt(count, 10),

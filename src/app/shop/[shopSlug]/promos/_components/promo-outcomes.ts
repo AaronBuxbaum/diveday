@@ -18,14 +18,22 @@ import type { TripDealRow } from "./PromoLedger";
 export async function readPromoOutcomes(
   db: DbExecutor,
   shopId: string,
-  codeIds: readonly string[],
-  dealIds: readonly string[],
+  codes: readonly { id: string }[],
+  deals: readonly { id: string }[],
 ): Promise<{ codes: Map<string, CodeOutcome>; deals: Map<string, DealOutcome> }> {
-  const [codes, deals] = await Promise.all([
-    shopPromoOutcomes(db, shopId, codeIds),
-    lastMinuteDealOutcomes(db, shopId, dealIds),
+  const [codeOutcomes, dealOutcomes] = await Promise.all([
+    shopPromoOutcomes(
+      db,
+      shopId,
+      codes.map((code) => code.id),
+    ),
+    lastMinuteDealOutcomes(
+      db,
+      shopId,
+      deals.map((deal) => deal.id),
+    ),
   ]);
-  return { codes, deals };
+  return { codes: codeOutcomes, deals: dealOutcomes };
 }
 
 /** A code's outcome line, or nothing before its first redemption. */

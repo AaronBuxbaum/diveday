@@ -202,12 +202,7 @@ export default async function PromosPage({
     }),
   ]);
   const { promos } = promoPage;
-  const outcomes = await readPromoOutcomes(
-    db,
-    session.user.shopId,
-    promos.map((promo) => promo.id),
-    dealPage.deals.map((deal) => deal.id),
-  );
+  const outcomes = await readPromoOutcomes(db, session.user.shopId, promos, dealPage.deals);
   const base = shopPath(shopSlug, "promos");
   // The two lists page independently, so moving one must carry the other's
   // page along rather than resetting it back to its own first page.

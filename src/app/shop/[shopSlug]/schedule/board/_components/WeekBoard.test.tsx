@@ -601,3 +601,27 @@ describe("days gone by with no boats (UX review 2026-10-10, item 24)", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Day 25" })).toBeInTheDocument();
   });
 });
+
+/** Fifth loop, item 30: last year's week beside this one, and its copy. */
+describe("WeekBoard last year", () => {
+  const copyLastYear = {
+    line: "Last year this week: 6 departures.",
+    label: "Copy them here",
+    pending: "Copying…",
+    weekStart: "2026-08-24",
+  };
+
+  it("says last year's tally beside this week's", () => {
+    board(week({ lastYearTally: "Same week last year: 54 of 80" }));
+    expect(screen.getByText("Same week last year: 54 of 80")).toBeInTheDocument();
+  });
+
+  it("offers the copy to someone who builds the board, and not to anyone else", () => {
+    const { unmount } = board(week({ copyLastYear }));
+    expect(screen.getByText("Last year this week: 6 departures.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy them here" })).toBeInTheDocument();
+    unmount();
+    board(week({ copyLastYear }), false);
+    expect(screen.queryByRole("button", { name: "Copy them here" })).toBeNull();
+  });
+});

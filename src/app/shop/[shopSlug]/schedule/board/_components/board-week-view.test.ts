@@ -109,6 +109,30 @@ describe("boardWeekView", () => {
     expect(week?.nextDeparture?.href).toBe("/shop/blue-mantis/schedule/board?week=2026-08-04");
   });
 
+  /** Fifth loop, item 30: last year's week beside this one, and its copy. */
+  it("sets the same week last year beside this one, quiet without that history", () => {
+    const lastYear = { taken: 54, total: 80, departures: 6 };
+    expect(boardWeekView(input({ lastYear }))?.lastYearTally).toBe("Same week last year: 54 of 80");
+    expect(
+      boardWeekView(input({ lastYear: { taken: 0, total: 0, departures: 0 } }))?.lastYearTally,
+    ).toBeNull();
+    // A week with boats on it is not offered last year's.
+    expect(boardWeekView(input({ lastYear }))?.copyLastYear).toBeNull();
+  });
+
+  it("offers last year's departures to an empty week still to come, and not to one gone by", () => {
+    const empty = { days: {}, spans: [] } as unknown as Input["weekRows"];
+    const lastYear = { taken: 54, total: 80, departures: 6 };
+    const ahead = boardWeekView(input({ weekRows: empty, lastYear, weekStartIso: "2026-07-27" }));
+    expect(ahead?.copyLastYear).toMatchObject({
+      line: "Last year this week: 6 departures.",
+      label: "Copy them here",
+      weekStart: "2026-07-27",
+    });
+    const gone = boardWeekView(input({ weekRows: empty, lastYear, weekStartIso: "2026-07-06" }));
+    expect(gone?.copyLastYear).toBeNull();
+  });
+
   it("clamps a course that started before the week to its first column", () => {
     const week = boardWeekView(
       input({

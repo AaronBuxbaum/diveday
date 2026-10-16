@@ -25,7 +25,7 @@ import { resolveWeekStart, weekDates } from "@/lib/week-board";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { RescheduleNotice } from "../../_components/RescheduleNotice";
 import { ScheduleViews } from "../_components/ScheduleViews";
-import { requestedCourseAndSite, weekCrewRead } from "./_components/board-reads";
+import { requestedCourseAndSite, weekAroundRead } from "./_components/board-reads";
 import type { BoardSearchParams } from "./_components/board-search-params";
 import { boardWeekView } from "./_components/board-week-view";
 import {
@@ -128,7 +128,7 @@ export default async function ScheduleBoardPage({
     weekRows,
     weekAsks,
     boatsEverOwned,
-    crewByTrip,
+    weekAround,
     { requestedCourse, requestedSite },
     requestRows,
   ] = await Promise.all([
@@ -166,7 +166,7 @@ export default async function ScheduleBoardPage({
     // 20260820-every-delete-is-soft). `shopBoats` stays live: it is the picker and the fleet count,
     // and a deleted hull is not a boat this shop has.
     listBoatsForHistory(db, shop.id),
-    weekCrewRead(db, shop, weekRead),
+    weekAroundRead(db, shop, weekRead, weekStartIso, now),
     requestedCourseAndSite(db, shop.id, { course, site }),
     // Read for whoever can open the board, since 2026-09-16 (issue #1679). This carried the same
     // `canPersonViewShopReports` check as `/requests`, on the written ground that it was "the same
@@ -242,7 +242,7 @@ export default async function ScheduleBoardPage({
     weekRows,
     weekAsks,
     openRollCalls,
-    crewByTrip,
+    ...weekAround,
     boatMap,
     shop,
     boatCount: shopBoats.length,
