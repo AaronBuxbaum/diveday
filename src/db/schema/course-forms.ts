@@ -12,6 +12,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { bookings } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { courses } from "./courses";
 import { trips } from "./trips";
@@ -53,7 +54,7 @@ export const courseForms = pgTable(
     medicalScreening: boolean("medical_screening").notNull().default(false),
     /** Soft delete (ADR 20260820-every-delete-is-soft). A deleted form is required by no course. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("course_forms_shop_live_idx").on(table.shopId).where(sql`${table.deletedAt} is null`),
@@ -82,7 +83,7 @@ export const courseFormVersions = pgTable(
     body: text("body").notNull(),
     /** The staff member who wrote this version. */
     createdByPersonId: uuid("created_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("course_form_versions_form_version_unique").on(table.formId, table.version),
@@ -110,7 +111,7 @@ export const courseFormRequirements = pgTable(
       .references(() => courseForms.id),
     position: integer("position").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("course_form_requirements_live_unique")
@@ -208,7 +209,7 @@ export const courseFormRecords = pgTable(
      */
     integrityHash: text("integrity_hash"),
     integrityVersion: integer("integrity_version"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // A seal is a hash and the field set it is over, never one without the other.

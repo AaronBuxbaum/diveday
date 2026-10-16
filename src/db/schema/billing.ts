@@ -9,6 +9,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { STRIPE_SUBSCRIPTION_STATUSES } from "@/lib/billing/standing";
+import { appNowTimestamp } from "./columns";
 import { shops } from "./core";
 
 /** Stripe's subscription statuses, mirrored as stored (src/lib/billing/standing.ts). */
@@ -63,8 +64,8 @@ export const shopSubscriptions = pgTable(
     stripeCheckoutSessionId: text("stripe_checkout_session_id"),
     freeTermEndsOn: date("free_term_ends_on", { mode: "string" }),
     firstPaidAt: timestamp("first_paid_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("shop_subscriptions_stripe_customer_unique").on(table.stripeCustomerId),

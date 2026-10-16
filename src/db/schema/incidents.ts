@@ -11,6 +11,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { bookings } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { diveSites } from "./dive-sites";
 import { trips } from "./trips";
@@ -105,8 +106,8 @@ export const incidentReports = pgTable(
     createdByPersonId: uuid("created_by_person_id")
       .notNull()
       .references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
     filedAt: timestamp("filed_at", { withTimezone: true }),
     filedByPersonId: uuid("filed_by_person_id").references(() => people.id),
     /**
@@ -188,7 +189,7 @@ export const incidentReportPeople = pgTable(
     personId: uuid("person_id").references(() => people.id),
     outsiderName: text("outsider_name"),
     involvement: incidentInvolvement("involvement").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("incident_report_people_report_idx").on(table.reportId, table.createdAt),
@@ -223,7 +224,7 @@ export const incidentReportAddenda = pgTable(
     authorPersonId: uuid("author_person_id")
       .notNull()
       .references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("incident_report_addenda_report_idx").on(table.reportId, table.createdAt),

@@ -408,7 +408,7 @@
     "src/db/manifests.test.ts": 3725,
     "src/db/no-show.test.ts": 1165,
     "src/db/notifications.test.ts": 1875,
-    "src/db/orders.test.ts": 3163,
+    "src/db/orders.test.ts": 3162,
     "src/db/participant-types.test.ts": 1216,
     "src/db/readiness.test.ts": 1519,
     "src/db/recap.test.ts": 2138,

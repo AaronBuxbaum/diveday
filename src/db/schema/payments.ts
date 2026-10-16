@@ -13,6 +13,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { bookings, tripLastMinutePromos } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { trips } from "./trips";
 
@@ -86,7 +87,7 @@ export const shopPromoCodes = pgTable(
     stripeCouponId: text("stripe_coupon_id"),
     stripePromotionCodeId: text("stripe_promotion_code_id"),
     createdByPersonId: uuid("created_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("shop_promo_codes_shop_created_idx").on(table.shopId, table.createdAt),
@@ -146,7 +147,7 @@ export const shopPromoRedemptions = pgTable(
      * total for.
      */
     amountChargedCents: integer("amount_charged_cents").notNull(),
-    redeemedAt: timestamp("redeemed_at", { withTimezone: true }).notNull().defaultNow(),
+    redeemedAt: appNowTimestamp("redeemed_at").notNull(),
   },
   (table) => [
     uniqueIndex("shop_promo_redemptions_checkout_unique").on(table.checkoutId),
@@ -198,7 +199,7 @@ export const divePackages = pgTable(
      */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdByPersonId: uuid("created_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("dive_packages_shop_idx")
@@ -259,7 +260,7 @@ export const divePackageEntitlements = pgTable(
      * cannot retroactively shorten a package somebody already bought.
      */
     expiresAt: timestamp("expires_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // The hot read: "how many dives does this diver have left?"
@@ -342,8 +343,8 @@ export const bookingPayments = pgTable(
     recordedByPersonId: uuid("recorded_by_person_id").references(() => people.id, {
       onDelete: "set null",
     }),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("booking_payments_booking_unique").on(table.bookingId),
@@ -488,7 +489,7 @@ export const bookingPaymentEvents = pgTable(
       onDelete: "set null",
     }),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     /**
@@ -545,10 +546,10 @@ export const shopStripeAccounts = pgTable(
      * Settings' story, not an alarm.
      */
     paymentsRestrictedAt: timestamp("payments_restricted_at", { withTimezone: true }),
-    connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
+    connectedAt: appNowTimestamp("connected_at").notNull(),
     /** Set on an OAuth deauthorize webhook; a later reconnect clears it. */
     disconnectedAt: timestamp("disconnected_at", { withTimezone: true }),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [uniqueIndex("shop_stripe_accounts_stripe_account_unique").on(table.stripeAccountId)],
 );
@@ -686,8 +687,8 @@ export const orders = pgTable(
     paidAt: timestamp("paid_at", { withTimezone: true }),
     voidedAt: timestamp("voided_at", { withTimezone: true }),
     refundedAt: timestamp("refunded_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     // Leads on the person column so deleting a person (a demo shop's cascade,
@@ -751,7 +752,7 @@ export const stripeWebhookEvents = pgTable(
     /** The connected account the event happened on; null for platform-only events. */
     account: text("account"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
-    receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+    receivedAt: appNowTimestamp("received_at").notNull(),
     /**
      * When this event's handling was claimed. Non-null means "claimed, and
      * treat every redelivery as a duplicate"; null means the delivery was
@@ -764,7 +765,7 @@ export const stripeWebhookEvents = pgTable(
      * existing rows): those events were all handled successfully under the
      * old model, and a migration must not silently re-open them to redelivery.
      */
-    claimedAt: timestamp("claimed_at", { withTimezone: true }).defaultNow(),
+    claimedAt: appNowTimestamp("claimed_at"),
   },
   (table) => [
     index("stripe_webhook_events_account_type_idx").on(table.account, table.type, table.occurredAt),
@@ -966,7 +967,7 @@ export const bookingCheckouts = pgTable(
      */
     paidAfterCloseAt: timestamp("paid_after_close_at", { withTimezone: true }),
     paidAfterCloseCents: integer("paid_after_close_cents"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("booking_checkouts_stripe_session_unique").on(table.stripeSessionId),
@@ -1117,8 +1118,8 @@ export const paymentDisputes = pgTable(
      * late never overwrites a newer one — Stripe does not promise order.
      */
     lastEventAt: timestamp("last_event_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("payment_disputes_stripe_dispute_unique").on(table.stripeDisputeId),
@@ -1177,8 +1178,8 @@ export const stripePayouts = pgTable(
     feeCents: integer("fee_cents"),
     /** The `created` time of the newest event applied; an older one never overwrites it. */
     lastEventAt: timestamp("last_event_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
@@ -1226,7 +1227,7 @@ export const stripeRefundFailures = pgTable(
     failureReason: text("failure_reason"),
     owedUntilRefundedCents: integer("owed_until_refunded_cents").notNull(),
     failedAt: timestamp("failed_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("stripe_refund_failures_refund_unique").on(table.stripeRefundId),
@@ -1287,7 +1288,7 @@ export const tips = pgTable(
     amountCents: integer("amount_cents").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     completedAt: timestamp("completed_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("tips_stripe_session_unique").on(table.stripeSessionId),
@@ -1313,7 +1314,7 @@ export const orderLineItems = pgTable(
     description: text("description").notNull(),
     quantity: integer("quantity").notNull().default(1),
     unitAmountCents: integer("unit_amount_cents").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("order_line_items_order_idx").on(table.orderId),
@@ -1392,7 +1393,7 @@ export const paymentOperationIntents = pgTable(
     /** The Stripe object id once known, even if the local finalize write then failed. */
     stripeObjectId: text("stripe_object_id"),
     errorMessage: text("error_message"),
-    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    startedAt: appNowTimestamp("started_at").notNull(),
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
   },
   (table) => [
@@ -1498,7 +1499,7 @@ export const importedPaymentHistory = pgTable(
     dedupeKey: text("dedupe_key").notNull(),
     /** Always set — this table only receives imports, never hand-created payments. */
     importedAt: timestamp("imported_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("imported_payment_history_shop_person_idx").on(

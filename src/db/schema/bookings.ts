@@ -14,6 +14,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { PARTICIPANT_TYPES } from "@/lib/participant-types";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { courseInquiries } from "./courses";
 import { trips } from "./trips";
@@ -435,7 +436,7 @@ export const bookings = pgTable(
     courseMaterialsDoneByPersonId: uuid("course_materials_done_by_person_id").references(
       () => people.id,
     ),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // Leads on the person column so deleting a person (a demo shop's cascade,
@@ -506,8 +507,8 @@ export const tripHelpRequests = pgTable(
       .references(() => bookings.id, { onDelete: "cascade" }),
     kind: tripHelpRequestKind("kind").notNull(),
     status: tripHelpRequestStatus("status").notNull().default("requested"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
     acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
     handledAt: timestamp("handled_at", { withTimezone: true }),
     resolvedByPersonId: uuid("resolved_by_person_id").references(() => people.id, {
@@ -541,7 +542,7 @@ export const tripWaitlistEntries = pgTable(
     personId: uuid("person_id")
       .notNull()
       .references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     // When staff last invited this diver to grab a freed seat. Null until the
     // first invite; shown as "Invited 2h ago" so two staff don't double-invite.
     invitedAt: timestamp("invited_at", { withTimezone: true }),
@@ -602,7 +603,7 @@ export const tripInvitations = pgTable(
      * does not go, so only mail that went holds the 24-hour window (#2133).
      */
     emailedAt: timestamp("emailed_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("trip_invitations_shop_trip_idx").on(table.shopId, table.tripId, table.createdAt),
@@ -643,7 +644,7 @@ export const lastMinuteListEntries = pgTable(
     availableUntil: date("available_until", { mode: "string" }),
     /** Null while active; set once the diver unsubscribes, so a blast never emails them again. */
     unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("last_minute_list_entries_shop_person_unique").on(table.shopId, table.personId),
@@ -706,7 +707,7 @@ export const tripLastMinutePromos = pgTable(
     /** How many last-minute-list entries the blast email actually went to. */
     recipientCount: integer("recipient_count").notNull().default(0),
     createdByPersonId: uuid("created_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("trip_last_minute_promos_trip_created_idx").on(table.tripId, table.createdAt),
@@ -744,7 +745,7 @@ export const tripLastMinutePromoRecipients = pgTable(
       .notNull()
       .references(() => people.id),
     email: text("email").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("trip_last_minute_promo_recipients_promo_idx").on(table.tripPromoId),
@@ -804,7 +805,7 @@ export const bookingCapabilities = pgTable(
       .references(() => bookings.id),
     purpose: bookingCapabilityPurpose("purpose").notNull(),
     tokenHash: text("token_hash").notNull().unique(),
-    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+    issuedAt: appNowTimestamp("issued_at").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     /**
@@ -813,7 +814,7 @@ export const bookingCapabilities = pgTable(
      * revoked. `token_hash` is still what every lookup matches.
      */
     tokenSealed: text("token_sealed"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // The verify-path lookup: hash the bearer token, find the row.
@@ -872,7 +873,7 @@ export const bookingReferrals = pgTable(
     referredByBookingId: uuid("referred_by_booking_id")
       .notNull()
       .references(() => bookings.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // The month's count on Reports.

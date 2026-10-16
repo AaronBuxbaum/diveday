@@ -15,6 +15,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { PLAN_CHANGE_REASONS } from "@/lib/plan-change";
+import { appNowTimestamp } from "./columns";
 import { certificationLevel, type diveSpecialty, people, shops } from "./core";
 import { courses } from "./courses";
 import { diveSites } from "./dive-sites";
@@ -105,7 +106,7 @@ export const tripSeries = pgTable(
      * (`rollAllSeriesForward`). Written on every attempt, including a failed one.
      */
     lastRolledAt: timestamp("last_rolled_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("trip_series_shop_idx").on(table.shopId),
@@ -141,7 +142,7 @@ export const tripSeriesSkips = pgTable(
       .references(() => tripSeries.id),
     /** Shop-local calendar date, `YYYY-MM-DD` — the cadence slot being closed. */
     occurrenceDate: text("occurrence_date").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("trip_series_skips_slot_idx").on(table.seriesId, table.occurrenceDate),
@@ -197,7 +198,7 @@ export const boats = pgTable(
     inspectionDueOn: date("inspection_due_on"),
     registrationExpiresOn: date("registration_expires_on"),
     insuranceExpiresOn: date("insurance_expires_on"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /**
      * Deleting a hull stamps this and leaves the row (ADR
      * 20260820-every-delete-is-soft). It has to: `trips.boat_id` is
@@ -251,7 +252,7 @@ export const tripLenses = pgTable(
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     /** Also the rail's order: the order the shop wrote its own vocabulary in. */
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /**
      * Deleting a lens stamps this and leaves the row (ADR
      * 20260820-every-delete-is-soft), because `trips.lens_id` points at it and
@@ -580,7 +581,7 @@ export const trips = pgTable(
      * Null until then, and for ever on a shop with no confirmed shore contact.
      */
     rollCallShoreAlertedAt: timestamp("roll_call_shore_alerted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("trips_shop_starts_idx").on(table.shopId, table.startsAt),
@@ -716,7 +717,7 @@ export const tripDives = pgTable(
      * treating it as absent.
      */
     travelMinutes: integer("travel_minutes"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("trip_dives_trip_number_unique").on(table.tripId, table.diveNumber),
@@ -811,8 +812,8 @@ export const executedDives = pgTable(
     recordedByPersonId: uuid("recorded_by_person_id").references(() => people.id),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     // Leads on the person column so deleting a person (a demo shop's cascade,
@@ -869,8 +870,8 @@ export const tripRequirements = pgTable(
     requiresNitrox: boolean("requires_nitrox").notNull().default(false),
     /** Whether a diver must have paid (or a deposit/waiver) to board. */
     requiresPayment: boolean("requires_payment").notNull().default(false),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [index("trip_requirements_shop_idx").on(table.shopId)],
 );
@@ -939,10 +940,10 @@ export const tripSightings = pgTable(
       .notNull()
       .references(() => people.id),
     /** When the first tap landed; `updated_at` moves with every later one. */
-    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
+    recordedAt: appNowTimestamp("recorded_at").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     // The tally's identity: one live row per species per site per departure, so

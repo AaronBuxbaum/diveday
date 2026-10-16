@@ -20,6 +20,7 @@ import { CERTIFICATION_AGENCIES } from "@/lib/certification-options";
 import type { EmergencyReference } from "@/lib/emergency-reference";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 import type { SpokenLanguageTag } from "@/lib/spoken-languages";
+import { appNowTimestamp } from "./columns";
 
 /**
  * The tenant and the person: `shops`, `people` and their roles, the login on
@@ -494,7 +495,7 @@ export const shops = pgTable(
     brandBadges: jsonb("brand_badges").$type<string[]>().notNull().default([]),
     latitude: doublePrecision("latitude"),
     longitude: doublePrecision("longitude"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("shops_inbound_email_token_unique").on(table.inboundEmailToken),
@@ -903,7 +904,7 @@ export const people = pgTable(
     mergedIntoPersonId: uuid("merged_into_person_id").references((): AnyPgColumn => people.id),
     mergedAt: timestamp("merged_at", { withTimezone: true }),
     mergedByPersonId: uuid("merged_by_person_id").references((): AnyPgColumn => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("people_shop_idx").on(table.shopId),
@@ -1155,7 +1156,7 @@ export const userAccounts = pgTable(
      * one email, and a quiet night sends at most one per interval.
      */
     afterHoursPingedAt: timestamp("after_hours_pinged_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /**
      * better-auth's core `user` model requires an `updatedAt`; nothing in
      * this app reads it (our own writers below don't set it, and we never
@@ -1163,7 +1164,7 @@ export const userAccounts = pgTable(
      * as stale as `createdAt` unless a future better-auth-owned write path
      * starts touching it.
      */
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("user_accounts_email_unique").on(table.email),

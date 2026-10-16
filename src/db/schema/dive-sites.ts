@@ -15,6 +15,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import type { DiveSiteTemplateUndo } from "@/lib/dive-site-template-sync";
+import { appNowTimestamp } from "./columns";
 import { certificationLevel, type diveSpecialty, people, shops } from "./core";
 
 /**
@@ -319,7 +320,7 @@ export const diveSites = pgTable(
     planningNote: text("planning_note"),
     planningNoteAt: timestamp("planning_note_at", { withTimezone: true }),
     planningNoteByPersonId: uuid("planning_note_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("dive_sites_shop_name_unique").on(table.shopId, table.name),
@@ -364,7 +365,7 @@ export const globalDiveSites = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     slug: text("slug").notNull().unique(),
     currentVersion: integer("current_version").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [index("global_dive_sites_slug_idx").on(table.slug)],
 );
@@ -426,7 +427,7 @@ export const globalDiveSiteVersions = pgTable(
       .references(() => globalDiveSites.id),
     version: integer("version").notNull(),
     briefing: jsonb("briefing").$type<GlobalDiveSiteBriefing>().notNull(),
-    publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
+    publishedAt: appNowTimestamp("published_at").notNull(),
   },
   (table) => [
     uniqueIndex("global_dive_site_versions_unique").on(table.globalDiveSiteId, table.version),
@@ -511,7 +512,7 @@ export const marineLifeRequests = pgTable(
     query: text("query").notNull(),
     /** Which site they were writing when they hit the wall, for context. */
     diveSiteId: uuid("dive_site_id").references(() => diveSites.id, { onDelete: "set null" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [index("marine_life_requests_created_idx").on(table.createdAt)],
 );
@@ -530,7 +531,7 @@ export const diveSiteMoments = pgTable(
     caption: text("caption").notNull(),
     imageUrl: text("image_url"),
     isPublished: boolean("is_published").notNull().default(false),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("dive_site_moments_site_published_idx").on(table.diveSiteId, table.isPublished),

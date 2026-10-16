@@ -11,6 +11,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 
 /**
@@ -49,10 +50,10 @@ export const shopBackupDestinations = pgTable("shop_backup_destinations", {
    * be enough to use it, and no code path ever returns it to a caller or a UI.
    */
   secretAccessKeySealed: text("secret_access_key_sealed").notNull(),
-  connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
+  connectedAt: appNowTimestamp("connected_at").notNull(),
   /** Set when a delivery has actually landed in the bucket, so staff see proven rather than merely saved. */
   verifiedAt: timestamp("verified_at", { withTimezone: true }),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: appNowTimestamp("updated_at").notNull(),
 });
 
 export const backupDeliveryStatus = pgEnum("backup_delivery_status", [
@@ -91,7 +92,7 @@ export const shopBackupDeliveries = pgTable(
     /** Uploaded bundle size in bytes; bigint because a photo-heavy shop clears 2 GiB. */
     byteCount: bigint("byte_count", { mode: "number" }),
     errorCode: text("error_code"),
-    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    startedAt: appNowTimestamp("started_at").notNull(),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
   },
   (table) => [
@@ -152,8 +153,8 @@ export const shopIntegrations = pgTable(
     settings: jsonb("settings").$type<IntegrationSettings>().notNull().default({}),
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
     lastError: text("last_error"),
-    connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    connectedAt: appNowTimestamp("connected_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
     /**
      * Disconnected, not destroyed (ADR 20260820-every-delete-is-soft). Tapping
      * Disconnect used to `DELETE` this row, and the two `ON DELETE CASCADE`
@@ -188,7 +189,7 @@ export const integrationOauthStates = pgTable(
     provider: integrationProvider("provider").notNull(),
     context: jsonb("context").$type<Record<string, string>>().notNull().default({}),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("integration_oauth_states_hash_unique").on(table.stateHash),
@@ -209,7 +210,7 @@ export const integrationEvents = pgTable(
     entityId: text("entity_id").notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
     payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("integration_events_shop_idempotency_unique").on(
@@ -236,11 +237,11 @@ export const integrationDeliveries = pgTable(
       .references(() => integrationEvents.id, { onDelete: "cascade" }),
     status: integrationDeliveryStatus("status").notNull().default("pending"),
     attemptCount: integer("attempt_count").notNull().default(0),
-    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).notNull().defaultNow(),
+    nextAttemptAt: appNowTimestamp("next_attempt_at").notNull(),
     deliveredAt: timestamp("delivered_at", { withTimezone: true }),
     lastError: text("last_error"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("integration_deliveries_integration_event_unique").on(
@@ -278,10 +279,10 @@ export const integrationSyncRecords = pgTable(
     sourceId: text("source_id").notNull(),
     operation: text("operation").notNull(),
     externalId: text("external_id").notNull(),
-    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }).notNull().defaultNow(),
+    lastSyncedAt: appNowTimestamp("last_synced_at").notNull(),
     lastError: text("last_error"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("integration_sync_records_source_unique").on(
@@ -332,7 +333,7 @@ export const calendarFeeds = pgTable(
       .references(() => people.id),
     scope: calendarFeedScope("scope").notNull(),
     tokenHash: text("token_hash").notNull().unique(),
-    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+    issuedAt: appNowTimestamp("issued_at").notNull(),
     /**
      * Stamped on each successful fetch so staff can tell a subscribed calendar
      * from a URL nobody ever pasted anywhere. Deliberately coarse — calendar
@@ -340,7 +341,7 @@ export const calendarFeeds = pgTable(
      */
     lastAccessedAt: timestamp("last_accessed_at", { withTimezone: true }),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // The verify-path lookup: hash the bearer token, find the row.

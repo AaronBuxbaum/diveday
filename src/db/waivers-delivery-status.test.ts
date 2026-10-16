@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
   getDiverWaiverChannelStates,
@@ -22,6 +23,8 @@ const waiverContext = waiverContextFor(fileCtx);
 
 async function outstandingLink() {
   const { db, shop, booking, person } = await waiverContext();
+  // The link is the newest request: the seed's own pending one carries the frozen instant.
+  advanceClock();
   const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id });
   if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
   return { db, shop, personId: person.id, recordId: issued.recordId };

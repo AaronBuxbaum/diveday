@@ -13,6 +13,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { bookings } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { orders } from "./payments";
 import { boats } from "./trips";
@@ -239,8 +240,8 @@ export const rentalFitProfiles = pgTable(
     fitConfirmedBy: uuid("fit_confirmed_by").references(() => people.id),
     /** Which piece they kept, so the sentence can name it beside the size on file. */
     fitConfirmedItem: rentalFitItem("fit_confirmed_item"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("rental_fit_profiles_shop_person_unique").on(table.shopId, table.personId),
@@ -421,8 +422,8 @@ export const gearItems = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /** Staff member who deleted it, so the act is not anonymous. */
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     // Partial on the live rows, so deleting "BCD #14" frees that tag for the
@@ -500,7 +501,7 @@ export const gearServiceEvents = pgTable(
      * Attribution only; nulled if the person is ever erased.
      */
     recordedByPersonId: uuid("recorded_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("gear_service_events_item_idx").on(table.gearItemId, table.servicedOn),
@@ -606,7 +607,7 @@ export const gearReservations = pgTable(
      * moved onto dates the unit is taken for. Attribution only.
      */
     releasedByPersonId: uuid("released_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("gear_reservations_item_idx").on(table.gearItemId),
@@ -654,7 +655,7 @@ export const priorGearAssignments = pgTable(
     note: text("note"),
     dedupeKey: text("dedupe_key").notNull(),
     importedAt: timestamp("imported_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("prior_gear_assignments_shop_gear_idx").on(
