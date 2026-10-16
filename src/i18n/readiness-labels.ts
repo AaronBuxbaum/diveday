@@ -457,6 +457,13 @@ export function readinessBlockerText(t: StaffTranslator, blocker: ReadinessBlock
   const params = blocker.params;
   // The form's own title, as the shop wrote it: "which form" is the whole fix.
   if (blocker.code === "course_form_unsigned" || blocker.code === "course_form_guardian_missing") {
+    // Asked only because no birthday is on file: the birthday is a fix too.
+    if (params?.formMaxAge !== undefined) {
+      return t("shared.readiness.blockers.courseFormAgeUnknown", {
+        form: params.formTitle ?? "",
+        maxAge: params.formMaxAge,
+      });
+    }
     return t(key, { form: params?.formTitle ?? "" });
   }
   // Naming the card the diver does hold is what makes "not certified" a fact a

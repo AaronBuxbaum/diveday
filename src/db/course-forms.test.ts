@@ -430,6 +430,44 @@ describe("course forms — a form bound to an age (in-memory PGlite)", () => {
     ).toEqual([form.id]);
   });
 
+  it("names the missing birthday, and takes a youth form only with a guardian beside it", async () => {
+    const ctx = await courseContext();
+    const form = await requireOneForm(ctx);
+    await setCourseFormRequirements(ctx.db, {
+      mayNarrow: true,
+      shopId: ctx.shop.id,
+      courseId: ctx.seat.courseId,
+      formIds: [form.id],
+      maxAgeYears: new Map([[form.id, 11]]),
+    });
+    await ctx.db
+      .update(people)
+      .set({ dateOfBirth: null })
+      .where(eq(people.id, ctx.seat.personId));
+    const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.seat.bookingId);
+    expect(readiness?.blockers).toContainEqual({
+      code: "course_form_unsigned",
+      params: { formTitle: form.title, formMaxAge: 11 },
+    });
+    const [owed] = (await getCourseFormsForBooking(ctx.db, ctx.shop.id, ctx.seat.bookingId))
+      ?.outstanding ?? [];
+    if (!owed) throw new Error("youth form not owed");
+    const base = {
+      shopId: ctx.shop.id,
+      bookingId: ctx.seat.bookingId,
+      formVersionId: owed.versionId,
+      signerName: ctx.seat.fullName,
+      agreed: true,
+    };
+    expect(await signCourseForm(ctx.db, base)).toEqual({ ok: false, reason: "guardian_required" });
+    expect(
+      await signCourseForm(ctx.db, {
+        ...base,
+        guardian: { name: "Rosa Guardian", relationship: "parent", agreed: true },
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
   it("refuses an age out of range, changing nothing, and a blank asks everyone again", async () => {
     const ctx = await courseContext();
     const form = await requireOneForm(ctx);

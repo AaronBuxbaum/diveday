@@ -5,7 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import { ChoiceRow, controlClass, DateField, Field, FieldGrid } from "@/components/ui/form";
 import { guardianRelationshipText } from "@/i18n/guardian-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { RequiredCourseForm } from "@/lib/course-forms";
+import { isYouthForm, type RequiredCourseForm } from "@/lib/course-forms";
 import { GUARDIAN_RELATIONSHIPS } from "@/lib/guardian";
 
 /**
@@ -45,6 +45,9 @@ export function CourseFormsRowControl({
   t: StaffTranslator;
 }) {
   if (owed.length === 0) return null;
+  // A youth form is co-signed whatever the record holds (H6); a guardian
+  // typed beside another form is ignored by the writer.
+  const guardianAsked = requiresGuardian || owed.some(isYouthForm);
   const warned = warnOnly ? owed.filter((form) => !form.medicalScreening) : [];
   return (
     <div className="mt-3 flex flex-col gap-2" data-course-forms-owed={bookingId}>
@@ -100,7 +103,7 @@ export function CourseFormsRowControl({
               >
                 <DateField id={`paper-form-signed-on-${bookingId}`} name="signedOn" />
               </Field>
-              {requiresGuardian ? (
+              {guardianAsked ? (
                 <>
                   <Field
                     label={t("trips.roster.courseForms.guardianName")}
@@ -140,7 +143,7 @@ export function CourseFormsRowControl({
                 </>
               ) : null}
             </FieldGrid>
-            {requiresGuardian ? (
+            {guardianAsked ? (
               <ChoiceRow type="checkbox" name="guardianNamesake" value="on" className="text-sm">
                 {t("trips.roster.courseForms.guardianNamesake")}
               </ChoiceRow>

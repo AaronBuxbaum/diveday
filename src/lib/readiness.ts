@@ -257,6 +257,12 @@ export type ReadinessBlockerParams = {
   /** The shop's own title for an unsigned course form — the shop's words, not DiveDay's. */
   formTitle?: string;
   /**
+   * Beside a course form asked only because the shop holds no date of birth:
+   * the age the form is bounded at, so the line names the birthday as the fix
+   * (dive-domain review H6).
+   */
+  formMaxAge?: number;
+  /**
    * The course session that should have certified this level and has ended
    * without a card (issue #2058), beside a certification blocker the card
    * would clear. Staff surfaces point at that session's roster with it.
@@ -1081,7 +1087,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // switch until the owner rules on block-or-warn (ADR 20261008-course-forms);
   // a form marked medical screening blocks whatever the switch says (#2337).
   if (input.courseForms && student) {
-    for (const { form, gap } of courseFormGaps({
+    for (const { form, gap, ageUnknown } of courseFormGaps({
       ...input.courseForms,
       signer: {
         dateOfBirth: input.dateOfBirth,
@@ -1092,7 +1098,10 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
       if (!COURSE_FORMS_BLOCK_BOARDING && !form.medicalScreening) continue;
       blockers.push({
         code: gap === "guardian_missing" ? "course_form_guardian_missing" : "course_form_unsigned",
-        params: { formTitle: form.title },
+        params:
+          ageUnknown && form.maxAgeYears !== undefined
+            ? { formTitle: form.title, formMaxAge: form.maxAgeYears }
+            : { formTitle: form.title },
       });
     }
   }

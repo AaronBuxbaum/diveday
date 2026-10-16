@@ -147,7 +147,13 @@ students is taking a form off, so putting a bound on a form everyone was asked, 
 the owner's or manager's call like dropping a form (`canPersonManageWaiverTemplates`), refused in
 the action and in `setCourseFormRequirements`; raising or clearing a bound is open. A
 medical-screening form takes no bound, and one written anyway is ignored: every student answers it. It is not the
-guardian rule (18, or the local age of majority), which still governs who co-signs. A template's
+guardian rule (18, or the local age of majority), which still governs who co-signs any other form;
+a form bounded at 17 or under is a minor's paper and always takes a guardian beside the student
+(`isYouthForm`, dive-domain review H6). A form asked only because no date of birth is on file says
+so on its blocker line (`formMaxAge`), so the dock reads the birthday as a fix. A student whose
+adulthood a staffer attested without a date (H-100) is still asked a youth form: it fails closed,
+and the date of birth is how the desk clears it (agency review G7; a product call noted for Aaron,
+who may rule that the attestation answers it). A template's
 standard form may carry the bound; Open Water's carries PADI's Youth Diving: Responsibility and
 Risks Acknowledgment (10615) at 11.
 

@@ -229,6 +229,7 @@
       "paymentRefunded": "Payment was refunded; collect payment before boarding.",
       "readinessUnavailable": "Readiness evidence is unavailable. Do not board this diver until it is checked.",
       "courseFormUnsigned": "Course form not signed: {form}.",
+      "courseFormAgeUnknown": "{form} is for students {maxAge} and under, and there’s no date of birth on file. Add it, or have it signed with a parent or guardian.",
       "courseFormGuardianMissing": "{form} needs a parent or guardian’s signature."
     }
   },

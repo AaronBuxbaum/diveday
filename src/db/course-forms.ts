@@ -20,6 +20,7 @@ import {
   courseFormGaps,
   courseFormTextChanged,
   fillCourseFormText,
+  isYouthForm,
   normalizeCourseFormText,
   type RequiredCourseForm,
 } from "@/lib/course-forms";
@@ -1076,6 +1077,8 @@ async function guardianOwedFor(
   form: RequiredCourseForm,
   signedOn: CalendarDate,
 ): Promise<boolean> {
+  // A youth form is co-signed whatever the record holds (H6).
+  if (isYouthForm(form)) return true;
   if (guardianSignatureRequired(enrollment.dateOfBirth, signedOn, enrollment.minorDeclared)) {
     return true;
   }

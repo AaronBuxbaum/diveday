@@ -229,6 +229,7 @@
       "paymentRefunded": "El pago fue reembolsado; cobra antes de embarcar.",
       "readinessUnavailable": "La información de preparación no está disponible. No embarques a este buceador hasta verificarlo.",
       "courseFormUnsigned": "Formulario del curso sin firmar: {form}.",
+      "courseFormAgeUnknown": "{form} es para alumnos de {maxAge} años o menos, y no consta su fecha de nacimiento. Añádela, o que lo firme con su madre, padre o tutor.",
       "courseFormGuardianMissing": "{form} necesita la firma de su madre, padre o tutor legal."
     }
   },

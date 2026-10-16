@@ -10,6 +10,8 @@ import {
   outstandingCourseForms,
   type RequiredCourseForm,
 } from "./course-forms";
+import { readinessBlockerText } from "@/i18n/readiness-labels";
+import { staffTranslator } from "@/i18n/staff-messages";
 import type { GuardianSigner } from "./guardian";
 import { aboardBlockerKind, BLOCKER_CATEGORY, calculateReadiness } from "./readiness";
 import { buildDiverChecklist } from "./readiness-summary";
@@ -179,6 +181,76 @@ describe("outstandingCourseForms — a form bound to an age", () => {
 
   it("asks everyone a form with no bound", () => {
     expect(owed([], adult, [release])).toEqual([release.formId]);
+  });
+
+  // Dive-domain review H6: a youth form is a minor's paper, so a guardian
+  // signs beside it whatever the record holds, and an unknown birthday is
+  // the fix the desk is told about.
+  it("asks a guardian beside a youth form, even with no birthday on file", () => {
+    expect(owed([signed({ formVersionId: youth.versionId })], born(null), [youth])).toEqual([
+      youth.formId,
+    ]);
+    expect(
+      owed([signed({ formVersionId: youth.versionId, guardianSignedAt: now })], born(null), [youth]),
+    ).toEqual([]);
+  });
+
+  it("names an unknown birthday as why a bounded form is asked", () => {
+    const gaps = (signer: GuardianSigner) =>
+      courseFormGaps({
+        shopId: SHOP,
+        bookingId: BOOKING,
+        personId: PERSON,
+        required: [youth, release],
+        signatures: [],
+        signer,
+      }).map(({ form, ageUnknown }) => [form.formId, ageUnknown]);
+    expect(gaps(born(null))).toEqual([
+      [release.formId, false],
+      [youth.formId, true],
+    ]);
+    expect(gaps(born("2016-01-01"))).toEqual([
+      [release.formId, false],
+      [youth.formId, false],
+    ]);
+    expect(gaps({ ...born(null), minorDeclared: true })).toEqual([
+      [release.formId, false],
+      [youth.formId, false],
+    ]);
+  });
+
+  it("tells the dock a birthday is missing beside the form it asks", () => {
+    const result = calculateReadiness({
+      requirement: { requiresWaiver: false, requiredSpecialties: [] } as unknown as TripRequirement,
+      waiver: null,
+      certifications: [],
+      now,
+      timezone: "America/New_York",
+      dateOfBirth: null,
+      courseForms: {
+        shopId: SHOP,
+        bookingId: BOOKING,
+        personId: PERSON,
+        required: [youth],
+        signatures: [],
+        timezone: "America/New_York",
+      },
+    });
+    expect(result.blockers).toContainEqual({
+      code: "course_form_unsigned",
+      params: { formTitle: youth.title, formMaxAge: 11 },
+    });
+  });
+
+  it("says the birthday is the fix, in every staff language", () => {
+    const blocker = {
+      code: "course_form_unsigned" as const,
+      params: { formTitle: "Youth form", formMaxAge: 11 },
+    };
+    expect(readinessBlockerText(staffTranslator("en-US"), blocker)).toBe(
+      "Youth form is for students 11 and under, and there’s no date of birth on file. Add it, or have it signed with a parent or guardian.",
+    );
+    expect(readinessBlockerText(staffTranslator("es-ES"), blocker)).toContain("fecha de nacimiento");
   });
 });
 
