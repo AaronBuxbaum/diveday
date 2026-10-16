@@ -98,6 +98,8 @@
   "timelineSeatRemoved": "Plaza quitada",
   "timelineSeatMovedAway": "Plaza pasada a otra salida",
   "timelineSeatMovedHere": "Plaza pasada a esta salida desde otra",
+  "timelineCrewAdded": "Pasa a la tripulación",
+  "timelineCrewRemoved": "Sale de la tripulación",
   "reportsHeading": "Informes de incidente",
   "reportsDescription": "Los informes de esta salida y en qué estado está cada uno. Lo que dicen queda en cada informe.",
   "reportsEmpty": "No se ha empezado ningún informe de incidente para esta salida.",

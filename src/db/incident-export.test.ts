@@ -327,6 +327,7 @@ describe("the departure log's roster changes and incident reports", () => {
         shopId: shop.id,
         tripId: reef.id,
         actorPersonId: staff.id,
+        subjectPersonId: staff.id,
         code: "seat_added",
         params: { actor: staff.fullName, diver: "Early Bird" },
         occurredAt: minutes(-90),
@@ -335,9 +336,21 @@ describe("the departure log's roster changes and incident reports", () => {
         shopId: shop.id,
         tripId: reef.id,
         actorPersonId: staff.id,
+        subjectPersonId: staff.id,
         code: "booking_removed",
         params: { actor: staff.fullName, diver: "Late Leaver" },
         occurredAt: minutes(20),
+      },
+      // A line written before every roster line named its subject by record
+      // carries a name erasure cannot reach, so it is not printed (security
+      // review 2026-10-16, F1).
+      {
+        shopId: shop.id,
+        tripId: reef.id,
+        actorPersonId: staff.id,
+        code: "booking_removed",
+        params: { actor: staff.fullName, diver: "Unlinked Name" },
+        occurredAt: minutes(22),
       },
       // A no-show changes no seat, and an erased line names nobody.
       {

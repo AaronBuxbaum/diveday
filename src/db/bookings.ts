@@ -50,7 +50,7 @@ import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./
 import { releaseUnclaimedGearReservations } from "./gear";
 import { boundLockWaits } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
-import { recordDiverActivity, recordTripActivity } from "./operations";
+import { recordDiverActivity, recordSeatChange, recordTripActivity } from "./operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
@@ -553,6 +553,7 @@ export async function addPartySeat(
       shopId: input.shopId,
       tripId: lead.tripId,
       actorPersonId: lead.personId,
+      subjectPersonId: outcome.personId,
       entry: { code: "seat_added_from_trip_link", diver: input.seatName },
     });
     return { ok: true, bookingId: outcome.bookingId };
@@ -1586,7 +1587,7 @@ export async function getBookingForTrip(
  * opposite case, so this is its own narrow read rather than a loosened filter
  * on that one.
  */
-export async function bookingDiverName(db: AppDb, shopId: string, bookingId: string) {
+async function bookingDiverName(db: AppDb, shopId: string, bookingId: string) {
   const [row] = await db
     .select({ fullName: people.fullName })
     .from(bookings)
@@ -1650,6 +1651,8 @@ export async function restoreBooking(
   db: AppDb,
   shopId: string,
   bookingId: string,
+  /** The staffer who put the seat back, for the trail line written with it. */
+  trail?: { actorPersonId: string },
 ): Promise<RestoreBookingOutcome> {
   return db.transaction(async (tx) => {
     const [booking] = await tx
@@ -1716,6 +1719,15 @@ export async function restoreBooking(
       trip,
       participantType: booking.participantType,
     });
+    if (trail) {
+      await recordSeatChange(tx, {
+        shopId,
+        tripId: trip.id,
+        actorPersonId: trail.actorPersonId,
+        bookingId,
+        code: "booking_restored",
+      });
+    }
     return "restored";
   });
 }
@@ -1841,7 +1853,15 @@ async function courseGateRefusal(
 
 export async function moveBooking(
   db: AppDb,
-  input: { shopId: string; fromTripId: string; toTripId: string; bookingId: string; now?: Date },
+  input: {
+    shopId: string;
+    fromTripId: string;
+    toTripId: string;
+    bookingId: string;
+    now?: Date;
+    /** Who moved it: both departures' trail lines are written with the move. */
+    actorPersonId?: string;
+  },
 ): Promise<MoveBookingOutcome> {
   const { shopId, fromTripId, toTripId, bookingId } = input;
   const now = input.now ?? nowDate();
@@ -2082,6 +2102,22 @@ export async function moveBooking(
       bookingId: booking.id,
       subjectPersonId: booking.personId,
     });
+    // Each departure's trail says what happened to its own roster, committed
+    // with the move so neither line can be missing from the log.
+    if (input.actorPersonId) {
+      for (const [tripId, code] of [
+        [source.id, "seat_moved_away"],
+        [target.id, "seat_moved_here"],
+      ] as const) {
+        await recordSeatChange(tx, {
+          shopId,
+          tripId,
+          actorPersonId: input.actorPersonId,
+          bookingId: booking.id,
+          code,
+        });
+      }
+    }
     return {
       ok: true,
       personId: booking.personId,
@@ -2486,8 +2522,18 @@ async function changeParticipantType(
   });
 }
 
-export async function cancelBooking(db: AppDb, shopId: string, bookingId: string) {
-  const booking = await cancelBookingRow(db, shopId, bookingId);
+export async function cancelBooking(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  /**
+   * The staffer who took the seat off, when one did: the departure's trail
+   * line is written in the same transaction (`recordSeatChange`). A diver's
+   * own cancel and the wait-list sweep write their own line, or none.
+   */
+  trail?: { actorPersonId: string },
+) {
+  const booking = await cancelBookingRow(db, shopId, bookingId, trail);
   // A diver just left the roster, which is a manifest change like any other —
   // and one that lands on shore while a captain may already be walking to the
   // boat (ADR 20260804-manifest-web-push). Published *after* the transaction
@@ -2498,7 +2544,12 @@ export async function cancelBooking(db: AppDb, shopId: string, bookingId: string
   return booking;
 }
 
-async function cancelBookingRow(db: AppDb, shopId: string, bookingId: string) {
+async function cancelBookingRow(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  trail?: { actorPersonId: string },
+) {
   return db.transaction(async (tx) => {
     // What the seat was before this, read under the row's lock: only a seat
     // that was `booked` becomes a diver's "your booking is canceled" email, and
@@ -2546,6 +2597,16 @@ async function cancelBookingRow(db: AppDb, shopId: string, bookingId: string) {
       bookingId: booking.id,
       subjectPersonId: booking.personId,
     });
+    // A seat that was already off the roster was not removed again.
+    if (trail && prior.status !== "cancelled") {
+      await recordSeatChange(tx, {
+        shopId,
+        tripId: booking.tripId,
+        actorPersonId: trail.actorPersonId,
+        bookingId,
+        code: "booking_removed",
+      });
+    }
     return booking;
   });
 }

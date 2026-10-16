@@ -56,11 +56,17 @@ describe("addPartySeat", () => {
       leadBookingId,
       seatName: "Milo Quinn",
     });
-    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) throw new Error("expected a seat");
     const [latest] = await listTripActivity(db, shop.id, open.id);
+    const [seat] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, outcome.bookingId));
     expect(latest).toMatchObject({
       code: "seat_added_from_trip_link",
       params: { actor: "Nora Quinn", diver: "Milo Quinn" },
+      // Whose seat, by record (security review 2026-10-16, F1).
+      subjectPersonId: seat?.personId,
     });
   });
 

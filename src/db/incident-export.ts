@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
 import {
@@ -221,6 +221,9 @@ export async function getIncidentExport(
             eq(activityEvents.shopId, shopId),
             eq(activityEvents.tripId, tripId),
             inArray(activityEvents.code, ROSTER_CHANGE_CODES),
+            // A line that names nobody by record is a name erasure could not
+            // reach (security review 2026-10-16, F1): not printed.
+            isNotNull(activityEvents.subjectPersonId),
             gte(activityEvents.occurredAt, departure.trip.startsAt),
           ),
         )

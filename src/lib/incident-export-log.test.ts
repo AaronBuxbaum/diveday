@@ -144,6 +144,15 @@ describe("roster changes and incident reports on the departure log", () => {
       subjectName: "Ben Cho",
       recordedByName: "Ben Cho",
     });
+    // A crew member put on or taken off the boat changes the head count too
+    // (domain review 2026-10-16).
+    expect(line("crew_assigned", { actor: "Rae Owner", crew: "Ana Ruiz" })).toMatchObject({
+      action: "crew_added",
+      subjectName: "Ana Ruiz",
+    });
+    expect(line("crew_removed", { actor: "Rae Owner", crew: "Ana Ruiz" })?.action).toBe(
+      "crew_removed",
+    );
     // A no-show changes no seat; an erased line and a note are not seats.
     expect(line("booking_no_show", { actor: "Rae Owner", diver: "Ben Cho" })).toBeNull();
     expect(line("redacted", {})).toBeNull();

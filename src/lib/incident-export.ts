@@ -351,7 +351,13 @@ export type IncidentTimelineEntry =
     };
 
 /** What happened to a seat, in the timeline's words (`roster_change`). */
-export type IncidentRosterChangeAction = "added" | "removed" | "moved_away" | "moved_here";
+export type IncidentRosterChangeAction =
+  | "added"
+  | "removed"
+  | "moved_away"
+  | "moved_here"
+  | "crew_added"
+  | "crew_removed";
 
 /**
  * One incident report on the departure, as the log lists it (safety sheet
@@ -489,7 +495,14 @@ const ROSTER_CHANGE_BY_CODE = {
   party_seat_self_refunded: "removed",
   seat_moved_away: "moved_away",
   seat_moved_here: "moved_here",
+  // A crew member put on or taken off the boat once it was due out: the head
+  // count is crew as well as divers (domain review 2026-10-16).
+  crew_assigned: "crew_added",
+  crew_removed: "crew_removed",
 } as const satisfies Partial<Record<ActivityCode, IncidentRosterChangeAction>>;
+
+/** A code that changes who is aboard, which the trail must write with its subject. */
+export type RosterChangeCode = keyof typeof ROSTER_CHANGE_BY_CODE;
 
 /** Every code {@link rosterChangeFromActivity} reads, for the query that loads them. */
 export const ROSTER_CHANGE_CODES = Object.keys(ROSTER_CHANGE_BY_CODE) as ActivityCode[];
@@ -510,7 +523,7 @@ export function rosterChangeFromActivity(row: {
   const recordedByName = params.actor ?? "";
   return {
     action,
-    subjectName: params.diver ?? recordedByName,
+    subjectName: params.diver ?? params.crew ?? recordedByName,
     recordedByName,
     occurredAt: row.occurredAt,
   };

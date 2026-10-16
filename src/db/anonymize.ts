@@ -265,8 +265,9 @@ const REGEX_METACHARACTERS = /[\\^$.|?*+()[\]{}]/g;
  * The same rendering also *escapes* — a quote becomes `\"`, a backslash `\\` —
  * while the pattern is built from the name as stored, so `Bea "Bee" Ochoa`
  * would have slipped past it. That is not a near-miss: a `recordTripActivity`
- * row carries no booking and no subject, so this pass is the **only** handle on
- * it, and her name would have stood in the trail after her own erasure.
+ * row other than a roster change (which names its subject, security review
+ * 2026-10-16) carries no booking and no subject, so this pass is the **only**
+ * handle on it, and her name would have stood in the trail after her own erasure.
  *
  * `jsonb_each_text` answers both at once. It hands back each value **decoded**,
  * so keys are out of scope and JSON escaping never enters the comparison

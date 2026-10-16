@@ -11,7 +11,6 @@ import {
 } from "@/db/authz";
 import { sendBookingCancelledNotice } from "@/db/booking-cancelled-notice";
 import {
-  bookingDiverName,
   cancelBooking,
   confirmBookingIdentity,
   restoreBooking,
@@ -20,7 +19,6 @@ import {
   splitBookingIdentity,
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
-import { recordTripActivity } from "@/db/operations";
 import { paymentMarkFactsForTrip } from "@/db/payment-marks";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
@@ -293,23 +291,14 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   if (!uuidParam(bookingId)) redirect(back);
   const dbi = await getDb();
   await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, back);
-  const cancelled = await cancelBooking(dbi, s.user.shopId, bookingId);
+  // The trail's "who took this diver off the manifest?" line is written in
+  // the removal's own transaction, named by record (security review
+  // 2026-10-16, F1).
+  const cancelled = await cancelBooking(dbi, s.user.shopId, bookingId, {
+    actorPersonId: s.user.personId,
+  });
   const from = cancelled?.previousStatus ?? "cancelled";
   await trackEvent({ name: "booking_cancelled", source: "staff" });
-  // Same activity line an add writes (addBookingAction), for the same reason:
-  // the trip's log, read from the Trip surface, is the record of who touched
-  // the roster and when. A removal is the entry that matters most of the two
-  // — "who took this diver off the manifest?" is a question asked at the
-  // dock, and until now the log could not answer it.
-  const removedName = await bookingDiverName(dbi, s.user.shopId, bookingId);
-  if (removedName) {
-    await recordTripActivity(dbi, {
-      shopId: s.user.shopId,
-      tripId,
-      actorPersonId: s.user.personId,
-      entry: { code: "booking_removed", diver: removedName },
-    });
-  }
   // Freeing the seat is roster work any staff member does, but moving money is
   // owner/manager work (H-14, ADR 20260724-role-authorization). A crew member
   // can cancel the booking; the auto-refund below only fires when the actor may
@@ -541,7 +530,12 @@ export async function undoRemoveBookingAction(
   if (!uuidParam(bookingId)) redirect(back);
   const dbi = await getDb();
   await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, back);
-  const outcome = await restoreBooking(dbi, s.user.shopId, bookingId);
+  // Only a real restore writes its trail line, inside the restore: a refused
+  // undo changed nothing, and a line for it would read like the diver went
+  // back on the boat.
+  const outcome = await restoreBooking(dbi, s.user.shopId, bookingId, {
+    actorPersonId: s.user.personId,
+  });
   if (outcome === "not_found") redirect(back);
   // The undo can be refused three ways, and they need different things done
   // about them: the boat's capacity, a course session's instructor-to-student
@@ -559,19 +553,6 @@ export async function undoRemoveBookingAction(
           : outcome === "trip_cancelled"
             ? "booking-restore-cancelled"
             : "booking-restored";
-  if (outcome === "restored") {
-    // Only a real restore is logged: a refused undo changed nothing, and an
-    // activity line for it would read like the diver went back on the boat.
-    const restoredName = await bookingDiverName(dbi, s.user.shopId, bookingId);
-    if (restoredName) {
-      await recordTripActivity(dbi, {
-        shopId: s.user.shopId,
-        tripId,
-        actorPersonId: s.user.personId,
-        entry: { code: "booking_restored", diver: restoredName },
-      });
-    }
-  }
   revalidateAndRedirect(back, noticeUrl(back, restoreNotice));
 }
 

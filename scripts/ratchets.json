@@ -383,7 +383,7 @@
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.test.tsx": 1040,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": 1050,
     "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1180,
-    "src/app/shop/[shopSlug]/trips/[id]/actions.ts": 1062,
+    "src/app/shop/[shopSlug]/trips/[id]/actions.ts": 1043,
     "src/components/MarketingFeatureScreens.tsx": 1064,
     "src/components/search/CommandPalette.tsx": 1016,
     "src/components/ui/button.test.ts": 971,

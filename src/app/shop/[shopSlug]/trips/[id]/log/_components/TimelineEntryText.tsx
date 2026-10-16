@@ -18,12 +18,14 @@ const BUDDY_TEAM_ACTION_KEYS: Record<
   member_removed: "incidentExport.timelineBuddyMemberRemoved",
 };
 
-/** What a seat change after the start reads as (safety sheet 2026-10-15, item 7). */
+/** What a seat or crew change after the start reads as (safety sheet 2026-10-15, item 7). */
 const ROSTER_CHANGE_KEYS: Record<IncidentRosterChangeAction, StaffMessageKey> = {
   added: "incidentExport.timelineSeatAdded",
   removed: "incidentExport.timelineSeatRemoved",
   moved_away: "incidentExport.timelineSeatMovedAway",
   moved_here: "incidentExport.timelineSeatMovedHere",
+  crew_added: "incidentExport.timelineCrewAdded",
+  crew_removed: "incidentExport.timelineCrewRemoved",
 };
 
 /**
@@ -88,8 +90,13 @@ function actText(entry: IncidentTimelineEntry, t: StaffTranslator): string {
           : t("incidentExport.buddyTeamUnnumbered");
       return `${team} — ${t(BUDDY_TEAM_ACTION_KEYS[entry.action])}`;
     }
-    case "roster_change":
-      return `${entry.subjectName} — ${t(ROSTER_CHANGE_KEYS[entry.action])}`;
+    case "roster_change": {
+      const crew = entry.action === "crew_added" || entry.action === "crew_removed";
+      const who = crew
+        ? `${entry.subjectName} (${t("incidentExport.crewTag")})`
+        : entry.subjectName;
+      return `${who} — ${t(ROSTER_CHANGE_KEYS[entry.action])}`;
+    }
     default: {
       const who =
         entry.kind === "crew"
