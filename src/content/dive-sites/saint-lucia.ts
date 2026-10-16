@@ -843,4 +843,91 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       creatureSlugs: ["spiny-lobster", "french-grunt", "sergeant-major", "bluehead-wrasse"],
     },
   },
+  // Denominator row: Daini Koyomaru
+  {
+    slug: "daini-koyomaru-wreck",
+    version: 1,
+    area: "saint-lucia",
+    sources: [
+      "https://smmainc.com/dive-sites/",
+      "https://www.easterncaribbeandivingstlucia.com/dive-sites-list",
+      "https://www.moorings.com/blog/best-diving-st-lucia",
+    ],
+    briefing: {
+      name: "Daini Koyomaru",
+      locationName: "Anse Cochon, Anse La Raye, Saint Lucia",
+
+      // Approximate pin: the south end of Anse Cochon Bay. The Soufrière Marine Management Association says the dredger was sunk in the south end of Anse Cochon and the Moorings guide puts it close to Anse Cochon; no source publishes coordinates. OpenStreetMap maps the bay at 13.9273, -61.0590 and its southern neighbor Anse la Verdure at 13.9204, -61.0608. Placed in the water 426 m offshore of the mapped coast, 390 m from the Vicky B pin and 530 m from the SK2 pin. Good to about 2 km. Depth: the management association gives 108 ft, the operator list 110 ft and the Moorings guide 10 m to 33 m; the deepest is used. No source names a mooring, so the plan does not.
+      forecastLatitude: 13.9235,
+      forecastLongitude: -61.064,
+      description:
+        "A Japanese dredger 75 m long, put down in 1996 to make a reef. She came to rest on her side, so the dive is a wreck and a wall in one. Eels, barracuda and jacks live around her.",
+      marineLife: "Green moray · barracuda · horse-eye jack · angelfish · turtles",
+      marineLifeDescription:
+        "Morays sit in the plating and barracuda and jacks hold along the hull.",
+      difficultyLevel: "advanced",
+      depthRange: "10–33 m (33–110 ft)",
+      maxDepthMeters: 33,
+      currentNote:
+        "Strong currents are reported in the area of the wreck. Open water: carry an SMB and ascend on its line.",
+      divePlan:
+        "Descend as the crew briefs to the upper side of the hull at about 10 m, work along the outside of the wreck, and come back up with reserve gas and a safety stop on an SMB line. Stay outside the hull. Staff confirm the diver's log before boarding.",
+      fitTone: "demanding",
+      fitNote:
+        "A big wreck down to 33 m in a strong current. For divers with deep training who read their gauge.",
+      // Gate: the deepest point is 33 m, so maxDepthMeters is 33 and the Deep specialty joins
+      // Advanced Open Water. The management association recommends the wreck for experienced divers
+      // because of depth and current.
+      minimumCertificationLevel: "advanced_open_water",
+      requiredSpecialties: ["deep"],
+      creatureSlugs: ["green-moray", "great-barracuda", "horse-eye-jack", "green-sea-turtle"],
+    },
+  },
+  // Denominator row: Jalousie
+  {
+    slug: "jalousie-gros-piton",
+    version: 1,
+    area: "saint-lucia",
+    sources: [
+      "https://smmainc.com/dive-sites/",
+      "https://scubastlucia.com/diving/",
+      "https://www.viceroyhotelsandresorts.com/sugar-beach/activities/sea-adventures",
+    ],
+    briefing: {
+      name: "Jalousie",
+      locationName: "Gros Piton, Soufrière, Saint Lucia",
+
+      // Approximate pin: the base of Gros Piton, just south of Jalousie Bay (OpenStreetMap: Anse des Pitons 13.8268, -61.0650; Gros Piton peak 13.8101, -61.0657). The Soufrière Marine Management Association places the site there, and two dive operations (Anse Chastanet, Sugar Beach, the latter about five minutes by boat away) say it lies at the base of Gros Piton; no source publishes coordinates. Placed in the water 129 m offshore of the mapped coast, 1.2 km from the Coral Gardens pin and 1.1 km from the Piton Wall pin. Good to about 2 km.
+      // Depth: no source gives a depth. The management association says the mountain slope continues to vast depth, which is the only depth fact, so the 30 m is the plan's floor on a slope that falls far past it (the walls rule). The two operator pages repeat the association's description, so only the host differs; the depth rests on the association alone.
+      forecastLatitude: 13.8195,
+      forecastLongitude: -61.0672,
+      description:
+        "A reef on the lower flank of Gros Piton, where the slope of the mountain runs on into deep water. Creole wrasse and bar jack school over corals and sponges, and morays, crabs and lobsters hide in the crevices.",
+      marineLife: "Creole wrasse · bar jack · morays · lobsters · crabs",
+      marineLifeDescription:
+        "Fish school over the reef, and the crevices hold the shy animals. Look into the cracks.",
+      conservationNote:
+        "One of the dive sites the Soufrière Marine Management Association lists. Confirm the park's rules and any fee with the crew, and touch and take nothing.",
+      difficultyLevel: "advanced",
+      depthRange: "Up to 30 m (100 ft)",
+      maxDepthMeters: 30,
+      currentNote:
+        "Current not documented; ask the crew on the day. Deep water below the reef: carry an SMB.",
+      divePlan:
+        "Descend as the crew briefs to the reef on the slope, follow it no deeper than 30 m, and finish with a safety stop on an SMB line. The slope falls to great depth below the plan. Staff confirm the diver's log before boarding.",
+      fitTone: "demanding",
+      fitNote: "A reef on a slope that keeps falling. Hold the 30 m floor and watch your gauge.",
+      // Gate: the slope continues to great depth (the management association), the plan's 30 m
+      // floor is ours, and no source says operators run it as an Open Water terrace dive, so it is
+      // Advanced Open Water.
+      minimumCertificationLevel: "advanced_open_water",
+      creatureSlugs: [
+        "creole-wrasse",
+        "bar-jack",
+        "southern-sennet",
+        "green-moray",
+        "spiny-lobster",
+      ],
+    },
+  },
 ];

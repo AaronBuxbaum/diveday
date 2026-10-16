@@ -612,4 +612,56 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       ],
     },
   },
+  // Denominator row: Moon Hole
+  {
+    slug: "moon-hole-utila",
+    version: 1,
+    area: "honduras-utila",
+    sources: [
+      "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
+      "https://www.wediveutila.com/utila-dive-sites",
+      "https://www.padi.com/dive-site/honduras/moon-hole/",
+      "https://lenaonthemove.com/dive-guide-utila/",
+      "https://www.mydivingworld.com/sites/country/hnd/dive/7030",
+    ],
+    briefing: {
+      name: "Moon Hole",
+      locationName: "Utila",
+      // Pin: the BICA buoy position (16.08415, -86.89323). PADI's site page gives 16.08499, -86.89334
+      // (about 95 m away) and mydivingworld 16.0849, -86.8902 (about 330 m away); all three are in the
+      // water off the south-east coast.
+      forecastLatitude: 16.0842,
+      forecastLongitude: -86.8932,
+      description:
+        "A round sand crater ringed by shallow reef, close to the south shore. Staghorn and elkhorn coral grow on the rim, and seahorses and octopus turn up around the sand.",
+      marineLife: "Longsnout seahorses · octopus · nurse sharks · green moray eels · stingrays",
+      marineLifeDescription:
+        "Look low over the sand and into the coral on the rim. The reef top is bright, with the light reaching the coral.",
+      difficultyLevel: "beginner",
+      depthRange: "4–18 m (13–59 ft)",
+      maxDepthMeters: 18,
+      currentNote:
+        "Current not documented; ask the crew on the day, and carry an SMB. The wall beside the crater has caverns and crevices. They are overhead; stay out.",
+      divePlan:
+        "Drop to the reef top at 4 to 7 m, circle the sand crater at its 11 m floor, and follow the rim no deeper than 18 m. The wall beyond is not in the plan. Stay out of the caverns and keep the safety stop on the mooring line or an SMB.",
+      fitTone: "welcoming",
+      fitNote:
+        "A bowl of light and sand that is easy to read, and a common first dive for training.",
+      // Ungated: PADI and a second guide rate it for entry-level divers, the reef top is 4 to 7 m and
+      // the deepest figures are 18 m (mydivingworld's site maximum; Lena on the Move puts Ron's Wreck,
+      // across the western wall, at 18 m), 12 m (PADI) and 10.7 to 11.4 m for the sand. No source gives
+      // the wall's own foot, so the plan holds 18 m and leaves the wall.
+      // Caverns: mydivingworld names large caverns and crevices along the wall (6 to 12 m); the prose
+      // says to stay out and the plan never enters them.
+      creatureSlugs: [
+        "longsnout-seahorse",
+        "caribbean-reef-octopus",
+        "nurse-shark",
+        "green-moray",
+        "southern-stingray",
+        "staghorn-coral",
+        "elkhorn-coral",
+      ],
+    },
+  },
 ];

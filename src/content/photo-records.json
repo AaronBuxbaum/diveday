@@ -4581,6 +4581,10 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:daini-koyomaru-wreck": {
+      "reason": "No Commons image of the Daini Koyomaru wreck off Utila cleared the rules; searches returned nothing.",
+      "checked": "2026-10-15"
+    },
     "site:dan-barge": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -5317,6 +5321,10 @@
       "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
       "checked": "2026-10-15"
     },
+    "site:jalousie-gros-piton": {
+      "reason": "No Commons image of the Gros Piton or Jalousie dive site cleared the rules; searches returned nothing.",
+      "checked": "2026-10-15"
+    },
     "site:james-bond-wrecks-nassau": {
       "reason": "Searches for the Bond film wrecks (Vulcan bomber, Tears of Allah) and Nassau wreck diving return no Commons photo of the site.",
       "checked": "2026-10-15"
@@ -5517,6 +5525,10 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:la-caye-malendure": {
+      "reason": "Only a Malendure beach view and a turtle in gorgonians surfaced; neither recognisably shows La Caye as a diver meets it.",
+      "checked": "2026-10-15"
+    },
     "site:la-danias-leap-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
@@ -5539,6 +5551,10 @@
     },
     "site:la-parguera-wall": {
       "reason": "Commons hits for La Parguera were mangroves, houses and salt works, no wall dive photo.",
+      "checked": "2026-10-15"
+    },
+    "site:la-piscine-pigeon": {
+      "reason": "No Commons image of La Piscine at Pigeon Island, Guadeloupe cleared the rules; searches returned nothing.",
       "checked": "2026-10-15"
     },
     "site:la-playita-bayahibe": {
@@ -5580,6 +5596,10 @@
     "site:lady-luck-shipwreck-park": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:laquarium-pigeon": {
+      "reason": "No Commons image of L'Aquarium at Pigeon Island, Guadeloupe cleared the rules; searches returned nothing.",
+      "checked": "2026-10-15"
     },
     "site:larimar-sosua": {
       "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
@@ -5911,6 +5931,10 @@
     },
     "site:montes-divi-bonaire": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
+      "checked": "2026-10-15"
+    },
+    "site:moon-hole-utila": {
+      "reason": "No Commons image of the Moon Hole on Utila cleared the rules after two searches.",
       "checked": "2026-10-15"
     },
     "site:moonlight-roatan": {

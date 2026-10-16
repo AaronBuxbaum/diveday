@@ -15,7 +15,7 @@
     "https://www.lesilesdeguadeloupe.com/en/experiences/diving-in-guadeloupe/diving-spots-in-guadeloupe/"
   ],
   "counted": "2026-10-14",
-  "promised": false,
+  "promised": true,
   "sites": [
     {
       "name": "Jardin de Corail",
@@ -36,7 +36,7 @@
     },
     {
       "name": "La Piscine",
-      "template": null,
+      "template": "la-piscine-pigeon",
       "listedBy": [
         "https://www.plongee-guadeloupe.fr/les-plongees/",
         "https://www.heures-saines.com/spots-de-plongee/reserve-cousteau/"
@@ -44,7 +44,7 @@
     },
     {
       "name": "L'Aquarium",
-      "template": null,
+      "template": "laquarium-pigeon",
       "listedBy": [
         "https://www.plongee-guadeloupe.fr/les-plongees/",
         "https://www.heures-saines.com/spots-de-plongee/reserve-cousteau/"
@@ -142,7 +142,7 @@
     },
     {
       "name": "La Kaye",
-      "template": null,
+      "template": "la-caye-malendure",
       "listedBy": [
         "https://www.plongee-guadeloupe.fr/les-plongees/",
         "https://www.heures-saines.com/spots-de-plongee/reserve-cousteau/"

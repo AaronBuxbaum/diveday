@@ -10,7 +10,7 @@
     "http://www.easterncaribbeandivingstlucia.com/dive-sites-list"
   ],
   "counted": "2026-10-14",
-  "promised": false,
+  "promised": true,
   "sites": [
     {
       "name": "Anse Chastanet Reef",
@@ -149,7 +149,7 @@
     },
     {
       "name": "Daini Koyomaru",
-      "template": null,
+      "template": "daini-koyomaru-wreck",
       "listedBy": [
         "https://stlucia.org/en_uk/things-to-do/diving/",
         "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",
@@ -266,7 +266,7 @@
     },
     {
       "name": "Jalousie",
-      "template": null,
+      "template": "jalousie-gros-piton",
       "listedBy": [
         "https://scubastlucia.com/diving/",
         "https://www.oasismarigot.com/st-lucia-island/things-to-do/diving/",

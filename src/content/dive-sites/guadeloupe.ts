@@ -6,8 +6,9 @@ import type { DiveSiteTemplate } from "./types";
  * PADI Travel's Franjack and Jardin de Corail pins, so the rest are approximate pins placed in the
  * water from the islets, points and beaches the clubs name (OpenStreetMap maps the islets and the
  * points); each says so in a comment. Where sources run past recreational depth on a plateau or
- * slope clubs dive as an Open Water outing, the plan is held at a stated floor. La Piscine and
- * L'Aquarium are left out: no source states a depth for the dive itself.
+ * slope clubs dive as an Open Water outing, the plan is held at a stated floor. La Piscine,
+ * L'Aquarium, Anse Négresse and La Caye (La Kaye) take their depths from the Heures Saines site
+ * map, with an SSI center page and a second club as the cross-check.
  */
 const HS_RESERVE = "https://www.heures-saines.com/spots-de-plongee/reserve-cousteau/";
 const HS_WRECKS = "https://www.heures-saines.com/spots-de-plongee/exploration-epaves/";
@@ -19,6 +20,10 @@ const ULTRAMARINA =
   "https://ultramarina.com/voyage-plongee-caraibes/guadeloupe/basse-terre-et-la-reserve-cousteau/la-reserve-cousteau";
 const ATLANTIS =
   "https://www.atlantisformation-guadeloupe.com/Ou-plonger-en-Guadeloupe-les-spots-qu-il-ne-faut-surtout-pas-rater_a26.amp.html";
+const HS_MAP = "https://www.heures-saines.com/spots-de-plongee/carte-des-spots/";
+const PPK_SSI = "https://www.divessi.com/en/divecenter/ppk-plongee-guadeloupe-bouillante-716177";
+const VVANAT = "https://vvanat.fr/blog/plongee-guadeloupe-reserve-cousteau/";
+const DIVECHAMP = "https://divechamp.com/divesite/anse-negresse";
 const PARK = "In or beside the reserve; confirm the zone.";
 
 export const GUADELOUPE: DiveSiteTemplate[] = [
@@ -409,6 +414,129 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
       // RULE 2 terrace exception: the clubs run the 12 m ridge as a level 1 dive, so it stays ungated
       // with an 18 m floor; the wall (40 m to 50 m) lies beyond the plan and the prose says so.
       creatureSlugs: ["green-sea-turtle", "lionfish", "cero", "common-sea-fan"],
+    },
+  },
+  {
+    slug: "la-piscine-pigeon",
+    version: 1,
+    area: "guadeloupe",
+    sources: [HS_MAP, ANSE_CARAIBE, ULTRAMARINA, VVANAT, PPK_SSI],
+    briefing: {
+      name: "La Piscine",
+      locationName: "Pigeon Islets, Bouillante, Guadeloupe",
+      // Approximate pin: the clubs place the site in the water between the two Pigeon Islets
+      // (OpenStreetMap maps the islets' shores about 100 m apart at this longitude, and maps the
+      // site's own point at 16.1672, -61.7896); placed in the channel between them, 35 m from the
+      // nearest mapped shore, good to about 2 km.
+      // RULE 1: the Heures Saines site map and a travel guide put the wall's end at 40 m, so
+      // maxDepthMeters is 40 and the Deep specialty joins the Advanced Open Water gate. The sand
+      // and coral blocks by the mooring are the plan, with a 20 m floor. The club map calls the
+      // site open to every level and marks a no-navigation zone; the gate is the wall's depth.
+      // The cero is left out: the guide's "thazard franc" is not a certain match.
+      forecastLatitude: 16.1672,
+      forecastLongitude: -61.7894,
+      description:
+        "The water between the two islets: pale sand, scattered coral blocks and small valleys of coral, with cavities where morays rest. A wall below the blocks falls to 40 m, covered in sponges and coral.",
+      marineLife: "Turtles · morays · lionfish · seahorses · French angelfish",
+      marineLifeDescription:
+        "Turtles are often here, and the coral blocks hide morays, lionfish and the odd seahorse.",
+      conservationNote: PARK,
+      difficultyLevel: "advanced",
+      depthRange: "Up to 40 m (131 ft)",
+      maxDepthMeters: 40,
+      currentNote:
+        "A no-navigation zone covers the swimming area by the mooring, but carry an SMB for the ascent. Current not documented; ask the crew on the day.",
+      divePlan:
+        "Down the mooring to the sand, along the coral blocks and valleys no deeper than 20 m as the plan's floor, and back up the mooring line with a safety stop. The wall continues to 40 m below the plan. Staff confirm the diver's log before boarding.",
+      fitTone: "demanding",
+      fitNote:
+        "A bright, sheltered patch of coral on sand, with a wall to 40 m below it that asks for deep training.",
+      minimumCertificationLevel: "advanced_open_water",
+      requiredSpecialties: ["deep"],
+      creatureSlugs: [
+        "green-sea-turtle",
+        "spotted-moray",
+        "lionfish",
+        "longsnout-seahorse",
+        "french-angelfish",
+      ],
+    },
+  },
+  {
+    slug: "laquarium-pigeon",
+    version: 1,
+    area: "guadeloupe",
+    sources: [HS_MAP, ANSE_CARAIBE, ULTRAMARINA, VVANAT],
+    briefing: {
+      name: "L'Aquarium",
+      locationName: "Pigeon Islets, Bouillante, Guadeloupe",
+      // Approximate pin: Anse Caraïbe puts the site in the recess on the north side of the big
+      // islet (the Grand Ilet), and a travel guide starts its plateau at the Anticyclonic buoy
+      // (OpenStreetMap maps the buoy at 16.1697, -61.7895). Placed in the water 75 m north of the
+      // buoy, 85 m from the nearest mapped coast and 380 m from the Jardin de Corail pin, good to
+      // about 2 km.
+      // RULE 2 terrace exception: the Heures Saines site map and Ultramarina run the gently sloping
+      // plateau as a dive for every level, from the first dive, so it stays ungated with an 18 m
+      // floor. The sources put the wall below it at 50 m to 60 m, so the prose says it lies past the
+      // plan.
+      forecastLatitude: 16.1703,
+      forecastLongitude: -61.7895,
+      description:
+        "A broad, gently sloping coral plateau in the recess on the north side of the big islet, bright with sponges and tropical fish. A wall below it runs to 50 m and more, far past the plan.",
+      marineLife: "Reef fish · lobsters · rope sponges · tube sponges",
+      marineLifeDescription:
+        "Sponges and coral crowd the plateau, with large lobsters under the ledges of the reef.",
+      conservationNote: PARK,
+      difficultyLevel: "beginner",
+      depthRange: "Up to 18 m (60 ft)",
+      maxDepthMeters: 18,
+      currentNote:
+        "Glass-bottom boats come to this recess; carry an SMB and listen for engines. Current not documented; ask the crew on the day.",
+      divePlan:
+        "Swim over the plateau no deeper than 18 m and come back the same way, ending with a safety stop on an SMB line. The wall below falls far past the plan; stay above its edge.",
+      fitTone: "welcoming",
+      fitNote: "An easy, colorful plateau for a slow look. The wall below is not part of the dive.",
+      creatureSlugs: [
+        "spiny-lobster",
+        "lavender-rope-sponge",
+        "branching-tube-sponge",
+        "common-sea-fan",
+      ],
+    },
+  },
+  {
+    slug: "la-caye-malendure",
+    version: 1,
+    area: "guadeloupe",
+    sources: [HS_MAP, PPK_SSI, HS_RESERVE],
+    briefing: {
+      name: "La Caye",
+      locationName: "Malendure, Bouillante, Guadeloupe",
+      // Approximate pin: the club says the site lies at its foot and the SSI center page says the
+      // Malendure rock collapsed into the sea here; the club sits on Plage de Malendure
+      // (OpenStreetMap: the club at 16.1697, -61.7771, the beach at 16.1721, -61.7767). Placed in
+      // the water 144 m from the mapped coast and about 300 m from the club, 256 m from the Pointe
+      // Malendure pin, good to about 2 km. The club writes it La Kaye on one page. Depth: the club
+      // gives a 14 m maximum on its map and 0 m to 15 m on its reserve page, the SSI page 4 m to
+      // 18 m; the deeper figure is used.
+      forecastLatitude: 16.1722,
+      forecastLongitude: -61.7785,
+      description:
+        "A shallow site of rock formations and coral canyons just off Malendure beach, where the rock fell into the sea. It is a nursery for small fish and a sleeping place for turtles, and the club dives it at night twice a week.",
+      marineLife: "Turtles · reef fish · coral",
+      marineLifeDescription:
+        "Turtles rest among the rocks at night, and young fish shelter in the canyons.",
+      conservationNote: PARK,
+      difficultyLevel: "beginner",
+      depthRange: "4–18 m (13–60 ft)",
+      maxDepthMeters: 18,
+      currentNote:
+        "Just off the club's beach, where boats come and go; carry an SMB and listen for engines. Current not documented; ask the crew on the day.",
+      divePlan:
+        "Wander the rocks and canyons at an easy pace and return the same way. A night dive follows the same route; carry a primary and a backup light, and staff confirm the diver's log before the dive.",
+      fitTone: "welcoming",
+      fitNote: "Shallow enough for a long, slow dive, by day or by torchlight.",
+      creatureSlugs: ["green-sea-turtle", "hawksbill-turtle", "french-grunt", "blue-tang"],
     },
   },
 ];
