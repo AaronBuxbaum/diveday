@@ -290,9 +290,9 @@ describe("a departure the diver already holds a seat on", () => {
       identityBookedAs: "N. Q.",
     });
 
-    expect(
-      await bookedDepartures(db, { shopId: shop.id, personId: diverId, now: NOW }),
-    ).toEqual([]);
+    expect(await bookedDepartures(db, { shopId: shop.id, personId: diverId, now: NOW })).toEqual(
+      [],
+    );
   });
 });
 

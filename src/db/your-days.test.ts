@@ -8,12 +8,7 @@ import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { bookings, people, priorVisits } from "./schema";
 import { createTrip } from "./trips";
-import {
-  latestDiveDayBooking,
-  listYourDays,
-  planYourDayLink,
-  sendYourDayLink,
-} from "./your-days";
+import { latestDiveDayBooking, listYourDays, planYourDayLink, sendYourDayLink } from "./your-days";
 
 /**
  * **A regular's other days, from one booking's page** (H-132, ADR

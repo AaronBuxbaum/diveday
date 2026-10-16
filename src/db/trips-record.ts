@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, isNotNull, isNull, ne, notInArray, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNotNull, isNull, notInArray, sql } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { sellableSeats } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";

@@ -148,7 +148,7 @@ describe("which parties one tap leaves for the divemaster", () => {
         });
       }
       const type = member.type ?? "diver";
-      const [seat] = await db
+      const [seat]: { id: string }[] = await db
         .insert(bookings)
         .values({
           shopId,
@@ -258,7 +258,12 @@ describe("which parties one tap leaves for the divemaster", () => {
     const { db, shop } = ctx;
     const [course] = await db
       .insert(courses)
-      .values({ shopId: shop.id, title: "Party Open Water", slug: "party-open-water", isIntroCourse: false })
+      .values({
+        shopId: shop.id,
+        title: "Party Open Water",
+        slug: "party-open-water",
+        isIntroCourse: false,
+      })
       .returning({ id: courses.id });
     if (!course) throw new Error("course not created");
     const trip = await departure(db, shop.id, course.id);

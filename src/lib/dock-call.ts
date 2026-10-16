@@ -49,6 +49,7 @@ export function crewCallAt(
     const near = startsAt.getTime() - shift.startsAt.getTime() <= CREW_CALL_SHIFT_LEAD_MS;
     if (covers && near) shiftStart = earliest(shiftStart, shift.startsAt);
   }
-  if (shiftStart) return { at: divers ? earliest(shiftStart, divers) : shiftStart, source: "shift" };
+  if (shiftStart)
+    return { at: divers ? earliest(shiftStart, divers) : shiftStart, source: "shift" };
   return divers ? { at: divers, source: "divers" } : null;
 }

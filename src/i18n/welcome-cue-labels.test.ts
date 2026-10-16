@@ -44,7 +44,9 @@ describe("welcomeCueText", () => {
   });
 
   it("says a regular's milestone dive day as a count in both locales (H-128)", () => {
-    expect(welcomeCueText(en, { kind: "milestone", count: 25 }, "en-US")).toBe("25th dive day with us");
+    expect(welcomeCueText(en, { kind: "milestone", count: 25 }, "en-US")).toBe(
+      "25th dive day with us",
+    );
     expect(welcomeCueText(es, { kind: "milestone", count: 25 }, "es-ES")).toBe(
       "25.º día de buceo con nosotros",
     );

@@ -39,9 +39,7 @@ describe("partyLeftReason", () => {
 
   describe("a course departure", () => {
     it("leaves every party on an intro (DSD, Try Scuba) departure", () => {
-      expect(partyLeftReason({ course: { intro: true } }, [adult(), adult()])).toBe(
-        "intro_course",
-      );
+      expect(partyLeftReason({ course: { intro: true } }, [adult(), adult()])).toBe("intro_course");
     });
 
     it("leaves every party of training seats on a course departure", () => {

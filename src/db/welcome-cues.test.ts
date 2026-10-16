@@ -151,7 +151,8 @@ describe("welcomeCueInputsByBooking", () => {
     const earlier = rows[0];
     // A day apart, so the two seats are two dive days, not one.
     const later = rows.find(
-      (row) => earlier && row.startsAt.getTime() >= earlier.startsAt.getTime() + 24 * 60 * 60 * 1000,
+      (row) =>
+        earlier && row.startsAt.getTime() >= earlier.startsAt.getTime() + 24 * 60 * 60 * 1000,
     );
     if (!earlier || !later) throw new Error("welcome fixture needs two departures");
     const [person] = await db
@@ -244,14 +245,16 @@ describe("welcomeCueInputsByBooking", () => {
     await seat(earlier.id, "diver", "no_show");
     const now = await seat(later.id, "diver");
     expect(
-      (await welcomeCueInputsByBooking(db, shop.id, later.id, later.startsAt)).get(now)?.diveDayCount,
+      (await welcomeCueInputsByBooking(db, shop.id, later.id, later.startsAt)).get(now)
+        ?.diveDayCount,
     ).toBe(1);
     await db
       .update(bookings)
       .set({ participantType: "snorkeler", bookedAs: "snorkeler" })
       .where(eq(bookings.id, now));
     expect(
-      (await welcomeCueInputsByBooking(db, shop.id, later.id, later.startsAt)).get(now)?.diveDayCount,
+      (await welcomeCueInputsByBooking(db, shop.id, later.id, later.startsAt)).get(now)
+        ?.diveDayCount,
     ).toBeNull();
   });
 
