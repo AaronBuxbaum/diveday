@@ -1523,7 +1523,7 @@ const rollCallStaleShoreSchema = z.object({
   shopName: z.string().trim().min(1).max(120),
   /** The shop's own phone, when it has one on file: who to call first. */
   shopPhone: z.string().trim().min(1).max(60).nullable(),
-  tripTitle: z.string().trim().min(1).max(NOTIFICATION_TRIP_TITLE_MAX),
+  tripTitle: tripTitleSchema,
   diveNumber: z.number().int().min(1).max(4),
   notBackAboard: z.number().int().min(0).max(10_000),
   awaiting: z.number().int().min(0).max(10_000),
