@@ -199,7 +199,7 @@ export const ANTIGUA_BARBUDA: DiveSiteTemplate[] = [
     ],
     briefing: {
       name: "Nanton Point",
-      locationName: "English Harbor, Antigua",
+      locationName: "Nanton Point, Antigua",
       // Approximate pin: the US National Geospatial-Intelligence Agency's GeoNames record puts
       // Nanton Point, a headland on Antigua's south coast east of English Harbor, at 16.9982,
       // -61.7547; both operators name the dive for that point and describe boulders at the foot of
@@ -209,17 +209,17 @@ export const ANTIGUA_BARBUDA: DiveSiteTemplate[] = [
       forecastLatitude: 16.997,
       forecastLongitude: -61.755,
       description:
-        "Big boulders pile against a cliff on the south coast, and rocky ridges reach out from the face like short walls. Corals and sponges crust the stone, and reef sharks are often seen along the outer edge.",
-      marineLife: "Caribbean reef sharks · spotted eagle rays · green turtles · morays",
+        "Big boulders pile against a cliff on the south coast, and rocky ridges reach out from the face like short walls. Corals and sponges crust the stone, and reef sharks are sometimes reported along the outer edge.",
+      marineLife: "Spotted eagle rays · green turtles · morays",
       marineLifeDescription:
-        "Reef sharks and eagle rays patrol the outer ridges, and turtles are a regular sight. Morays and small reef life tuck into the gaps between the boulders.",
-      difficultyLevel: "intermediate",
+        "Eagle rays patrol the outer ridges, and turtles are a regular sight. Reef sharks are sometimes reported, not promised. Morays and small reef life tuck into the gaps between the boulders.",
+      difficultyLevel: "advanced",
       depthRange: "4–23 m (13–75 ft)",
       maxDepthMeters: 23,
       currentNote:
-        "Close to a cliff and open to the Atlantic, with a current whose direction is unpredictable, so local operators usually run it as a drift from the boat. The water off the headland is often rough and the site is not always diveable. Carry an SMB.",
+        "Yachts use the water off English Harbor: carry an SMB, listen for engines, and surface only after the SMB is up. Close to a cliff and open to the Atlantic, with a current whose direction is unpredictable, so local operators usually run it as a drift from the boat. Keep a few meters clear of the cliff foot; surge can move you into the boulders. The water off the headland is often rough and the site is not always diveable.",
       divePlan:
-        "Drift with the current along the boulders and ridges, hold no deeper than 23 m, and ascend on an SMB in open water, away from the cliff. If reef sharks come by: stay put, keep nothing dangling, do not chase or touch, stay together and follow the crew's briefing. Sightings are not promised. Staff confirm the diver's log before boarding.",
+        "Drift with the current along the boulders and ridges, hold no deeper than 23 m, and make the safety stop on an SMB in open water, away from the cliff. If reef sharks come by: stay with the group, keep nothing dangling, do not chase or touch, and follow the crew's briefing. Sightings are not promised. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote:
         "A boat drift beside a cliff on the exposed coast. For divers who are at ease with current and an SMB.",
@@ -227,10 +227,10 @@ export const ANTIGUA_BARBUDA: DiveSiteTemplate[] = [
       // and the site is exposed to the Atlantic with an unpredictable current, so Advanced Open Water.
       minimumCertificationLevel: "advanced_open_water",
       creatureSlugs: [
-        "caribbean-reef-shark",
         "spotted-eagle-ray",
         "green-sea-turtle",
         "green-moray",
+        "caribbean-reef-shark",
       ],
     },
   },

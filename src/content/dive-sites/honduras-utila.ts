@@ -626,7 +626,7 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
     ],
     briefing: {
       name: "Moon Hole",
-      locationName: "Utila",
+      locationName: "Moon Hole, Utila",
       // Pin: the BICA buoy position (16.08415, -86.89323). PADI's site page gives 16.08499, -86.89334
       // (about 95 m away); both are in the water off the south-east coast, 346 m from the nearest
       // mapped shore. The Oceanatik page (a peninsula dive off the south-east coast) gives no coordinates.
@@ -636,14 +636,14 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
         "A round sand crater ringed by shallow reef, close to the south shore. Staghorn and elkhorn coral grow on the rim, and seahorses and octopus turn up around the sand.",
       marineLife: "Longsnout seahorses · octopus · nurse sharks · green moray eels · stingrays",
       marineLifeDescription:
-        "Look low over the sand and into the coral on the rim. The reef top is shallow and bright, with the light reaching the coral.",
+        "Look low over the sand and into the coral on the rim. The reef top is shallow and bright, with the light reaching the coral. Keep hands clear of the coral and look, don't reach. Nurse sharks are not promised; if one is near, stay with the group, keep nothing dangling, do not chase or touch, and follow the crew's briefing.",
       difficultyLevel: "beginner",
       depthRange: "4–18 m (13–59 ft)",
       maxDepthMeters: 18,
       currentNote:
         "Current not documented; ask the crew on the day, and carry an SMB. The wall beside the crater has caverns, crevices and swim-throughs. They are overhead; stay out.",
       divePlan:
-        "Drop to the reef top at 4 to 7 m, circle the sand crater at its 11 m floor, and follow the rim no deeper than 18 m. The wall beyond is not in the plan. Stay out of the caverns and keep the safety stop on the mooring line or an SMB.",
+        "Drop to the reef top at 4 to 7 m, circle the sand crater at its 11 m floor, and follow the rim no deeper than 18 m (60 ft). Turn on your gauge, not the wall: its depth is not documented and it falls away from the rim. The caverns, crevices and swim-throughs along the wall (6 to 12 m) are overheads; stay out. Keep the safety stop on the mooring line or an SMB.",
       fitTone: "welcoming",
       fitNote:
         "A bowl of light and sand that is easy to read, rated for entry-level divers and skills practice.",

@@ -430,34 +430,33 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
       // (OpenStreetMap maps the islets' shores about 100 m apart at this longitude, and maps the
       // site's own point at 16.1672, -61.7896); placed in the channel between them, 35 m from the
       // nearest mapped shore, good to about 2 km.
-      // RULE 1, capped at 40 m: the Heures Saines site map says the wall goes down to 40 m, a travel
-      // guide says rocks with lionfish at about 60 m and a directory lists 5 m to 50 m, so the wall
-      // does not stop at 40 m. maxDepthMeters is 40 (the recreational limit) and the Deep specialty
-      // joins the Advanced Open Water gate. The sand and coral blocks by the mooring are the plan,
-      // with a 20 m floor. The club map calls the site open to every level and marks a no-navigation
-      // zone; the gate is the wall's depth. Anse Caraïbe's "cavités" where morays hide are written
-      // as overhead, to stay out of. The cero is left out: the guide's "thazard franc" is not a
-      // certain match.
+      // Walls rule: the Heures Saines site map says the wall goes down to 40 m, a travel guide says
+      // rocks with lionfish at about 60 m and a directory lists 5 m to 50 m, so the wall falls past
+      // 40 m and keeps falling. The plan's floor is 20 m (sand and coral blocks by the mooring) and
+      // maxDepthMeters is that floor; the gate is Advanced Open Water without Deep, and the floor
+      // is the plan's, not the wall's. The club map calls the site open to every level and marks a
+      // no-navigation zone; the gate is the wall. Anse Caraïbe's "cavités" where morays hide are
+      // written as morays under the ledges. The cero is left out: the guide's "thazard franc" is
+      // not a certain match.
       forecastLatitude: 16.1672,
       forecastLongitude: -61.7894,
       description:
-        "The water between the two islets: pale sand, scattered coral blocks and small valleys of coral, with cavities where morays rest. A wall below the blocks falls past 40 m, covered in sponges and coral.",
+        "The water between the two islets: pale sand, scattered coral blocks and small valleys of coral, with morays under the ledges. A wall below the blocks falls past 40 m, covered in sponges and coral.",
       marineLife: "Turtles · morays · lionfish · seahorses · French angelfish",
       marineLifeDescription:
-        "Turtles are often here, and the coral blocks hide morays, lionfish and the odd seahorse.",
+        "Turtles are often here, and the coral blocks hide morays, lionfish and the odd seahorse. Keep hands and gear off the coral and out from under the ledges.",
       conservationNote: PARK,
       difficultyLevel: "advanced",
-      depthRange: "Up to 40 m (131 ft)",
-      maxDepthMeters: 40,
+      depthRange: "Up to 20 m (66 ft)",
+      maxDepthMeters: 20,
       currentNote:
-        "Dive boats come to the islets, though a no-navigation zone covers the swimming area by the mooring; carry an SMB for the ascent. The cavities among the coral are overhead; stay out. Current not documented; ask the crew on the day.",
+        "Dive boats come to the islets, and a no-navigation zone covers the swimming area by the mooring; carry an SMB for the ascent and do not surface in the zone. Current not documented; ask the crew on the day.",
       divePlan:
-        "Down the mooring to the sand, along the coral blocks and valleys no deeper than 20 m as the plan's floor, and back up the mooring line with a safety stop. The wall below the plan runs to 40 m and on; stay above its edge. Staff confirm the diver's log before boarding.",
+        "Down the mooring to the sand, along the coral blocks and valleys, and turn at 20 m on your gauge. Back up the mooring line for a safety stop, and surface where the crew briefs, outside the no-navigation zone. The wall below the plan falls past 40 m; stay above its edge. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote:
-        "A bright, sheltered patch of coral on sand, with a wall to 40 m below it that asks for deep training.",
+        "A bright patch of coral on sand, kept to 20 m or shallower, with a wall that falls past 40 m below the plan.",
       minimumCertificationLevel: "advanced_open_water",
-      requiredSpecialties: ["deep"],
       creatureSlugs: [
         "green-sea-turtle",
         "spotted-moray",
@@ -481,10 +480,10 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
       // buoy, 85 m from the nearest mapped coast and 380 m from the Jardin de Corail pin, good to
       // about 2 km.
       // RULE 2 terrace exception: the Heures Saines site map and Ultramarina run the gently sloping
-      // plateau as a dive for every level, from the first dive, so it stays ungated with an 18 m
-      // floor. A travel agency lists the plateau dive at 0 m to 20 m and a club map says profiles
-      // reach 60 m; the wall below is put at 50 m (a travel guide, a club) to 60 m, so the prose
-      // says it lies past the plan. A listing of tunnels and boulders under this name is another
+      // plateau as a dive for every level, from the first dive, so it stays ungated. A travel agency
+      // lists the plateau dive at 0 m to 20 m, so maxDepthMeters is 20 and the plan turns at 18 m on
+      // the gauge. A club map says profiles reach 60 m; the wall below is put at 50 m (a travel
+      // guide, a club) to 60 m, so the prose says it lies past the plan. A listing of tunnels and boulders under this name is another
       // L'Aquarium, in Les Saintes, and is not used.
       forecastLatitude: 16.1703,
       forecastLongitude: -61.7895,
@@ -492,15 +491,15 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
         "A broad, gently sloping coral plateau in the recess on the north side of the big islet, bright with sponges and tropical fish. A wall below it runs to 50 m and more, far past the plan.",
       marineLife: "Reef fish · lobsters · rope sponges · tube sponges",
       marineLifeDescription:
-        "Sponges and coral crowd the plateau, with large lobsters under the ledges of the reef.",
+        "Sponges and coral crowd the plateau, with large lobsters under the ledges of the reef. Look, don't reach: this is a marine reserve, nothing is taken, and hands stay off the coral and out from under the ledges.",
       conservationNote: PARK,
       difficultyLevel: "beginner",
-      depthRange: "Up to 18 m (60 ft)",
-      maxDepthMeters: 18,
+      depthRange: "Up to 20 m (66 ft)",
+      maxDepthMeters: 20,
       currentNote:
-        "Glass-bottom boats come to this recess; carry an SMB and listen for engines. Current not documented; ask the crew on the day.",
+        "Glass-bottom boats come to this recess; carry an SMB, listen for engines, and surface only after the SMB is up and engines are clear. Current not documented; ask the crew on the day.",
       divePlan:
-        "Swim over the plateau no deeper than 18 m and come back the same way, ending with a safety stop on an SMB line. The wall below falls far past the plan; stay above its edge.",
+        "Swim over the plateau and turn at 18 m (60 ft) on your gauge, not at the edge: the slope is gentle and the wall below it falls far past the plan. Come back the same way and end with a safety stop on an SMB line.",
       fitTone: "welcoming",
       fitNote: "An easy, colorful plateau for a slow look. The wall below is not part of the dive.",
       creatureSlugs: [
@@ -529,20 +528,21 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
       forecastLatitude: 16.1722,
       forecastLongitude: -61.7785,
       description:
-        "A shallow site of rock formations and coral canyons just off Malendure beach, where the rock fell into the sea. It is a nursery for small fish and a sleeping place for turtles, and it is dived at night as well as by day.",
+        "A shallow site of rock formations and coral canyons just off Malendure beach, where the rock fell into the sea. It is a nursery for small fish and a sleeping place for turtles. Night dives run here too.",
       marineLife: "Turtles · morays · reef fish · coral",
       marineLifeDescription:
-        "Turtles rest among the rocks at night, morays show on the night dive, and young fish shelter in the canyons.",
+        "Turtles rest among the rocks; give them room and keep lights off their heads. Morays show on night dives, and young fish shelter in the canyons. Keep your distance, touch nothing, feed nothing.",
       conservationNote: PARK,
       difficultyLevel: "beginner",
       depthRange: "4–18 m (13–60 ft)",
       maxDepthMeters: 18,
       currentNote:
-        "Just off Malendure beach, where boats come and go; carry an SMB and listen for engines. Current not documented; ask the crew on the day.",
+        "Just off Malendure beach, where boats come and go; carry an SMB, listen for engines, and surface only after it is up. Entry and exit as the crew briefs; stay clear of boats. Current not documented; ask the crew on the day.",
       divePlan:
-        "Wander the rocks and canyons at an easy pace and return the same way. A night dive follows the same route; carry a primary and a backup light, and staff confirm the diver's log before the dive.",
+        "Wander the rocks and canyons at an easy pace, no deeper than 18 m (60 ft), and return the same way, with a safety stop on an SMB line. The canyons are open, not overheads; anything with a roof is overhead, so stay out. Night dives need staff approval, a guide and a briefed plan; carry a primary and a backup light and a surface light for the SMB, and keep the primary light on while you surface. Staff confirm the diver's log before the dive.",
       fitTone: "welcoming",
-      fitNote: "Shallow enough for a long, slow dive, by day or by torchlight.",
+      fitNote:
+        "Shallow, with room for a slow dive by day. Night dives need staff approval and a guide.",
       creatureSlugs: ["green-sea-turtle", "spotted-moray", "french-grunt", "blue-tang"],
     },
   },

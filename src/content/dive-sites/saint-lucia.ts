@@ -869,22 +869,24 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       // Depth: the management association, Saint Lucia's tourist board and Divingaway give 33 m (108
       // ft), the operator list 110 ft and the Moorings guide 10 m to 33 m; the deepest is used. How she
       // lies is reported two ways (on her side per the association and the tourist board, inverted per
-      // one diver's account), so the text says no more than that she is on her side. No source names a
-      // mooring, so the plan does not.
+      // one diver's account), so the text says no more than that she is on her side, on a slope that
+      // runs from about 10 m to 33 m (the Moorings guide). No source names a mooring or a line, so the
+      // plan has the crew set one. No source gives the seabed past her, so the plan stays with the
+      // wreck. No source mentions boat traffic at Anse Cochon, so there is no traffic line.
       forecastLatitude: 13.9235,
       forecastLongitude: -61.064,
       description:
-        "A Japanese dredger 75 m long, put down in 1996 to make a reef. She came to rest on her side, so the dive is a wreck and a wall in one. Eels, barracuda and jacks live around her.",
+        "A Japanese dredger 75 m long, put down in 1996 to make a reef. She is a wreck lying on her side on a slope, with eels, barracuda and jacks around her.",
       marineLife: "Green moray · barracuda · horse-eye jack · angelfish · turtles",
       marineLifeDescription:
-        "Morays sit in the plating and barracuda and jacks hold along the hull.",
+        "Morays sit in the plating, so do not reach into it. Barracuda and jacks hold along the hull.",
       difficultyLevel: "advanced",
       depthRange: "10–33 m (33–110 ft)",
       maxDepthMeters: 33,
       currentNote:
-        "Strong currents are reported in the area of the wreck. Open water: carry an SMB and ascend on its line.",
+        "Strong currents are reported in the area of the wreck. If the current is running at the surface, the crew may call the dive. Open water: carry an SMB.",
       divePlan:
-        "Descend as the crew briefs, work along the outside of the wreck from her shallowest part near 10 m, keep the gauge in view as she falls toward 33 m, and come back up with reserve gas and a safety stop on an SMB line. Stay outside the hull. Staff confirm the diver's log before boarding.",
+        "Descend together on a line the crew sets; do not free-descend in current. Work along the outside of the wreck from her shallowest part near 10 m, keep the gauge in view as she falls toward 33 m (108 ft), the limit, and ascend together on one SMB line, deployed at the stop and not at depth, with reserve gas. The seabed past her is not documented; stay with the wreck. Stay outside the hull. Staff confirm the diver's log before boarding.",
       fitTone: "demanding",
       fitNote:
         "A big wreck down to 33 m in a strong current. For divers with deep training who read their gauge.",
