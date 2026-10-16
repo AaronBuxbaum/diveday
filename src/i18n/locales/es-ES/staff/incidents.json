@@ -173,7 +173,7 @@
     "incidents": "Informes de incidentes",
     "noCrew": "Zarparon sin tripulación registrada",
     "noCrewNone": "No hay tripulación registrada en ninguna salida este mes",
-    "noCrewDetail": "de {back}, en la lista de abajo",
+    "noCrewDetail": "de {back, plural, one {# barco} other {# barcos}} de vuelta, en la lista de abajo",
     "noCrewTitle": "Salidas que zarparon sin tripulación registrada",
     "boardingNote": "El recuento del muelle rechaza a un buceador que la verificación de preparación no ha aprobado. Un buceador contado por primera vez en un recuento posterior no está en esta cifra.",
     "incidentsTitle": "Informes de incidentes",
@@ -195,8 +195,19 @@
       "noDepartures": "Ninguna salida volvió este año.",
       "noCrewNone": "No hay tripulación registrada en ninguna salida este año",
       "activityLink": "La actividad de seguridad del año",
-      "noCrewDetail": "de {back}, en la lista de cada mes"
-    }
+      "noCrewDetail": "de {back, plural, one {# barco} other {# barcos}} de vuelta, en la lista de cada mes",
+      "noCrewMonths": "Sin tripulación registrada en {none} de {months, plural, one {# mes} other {# meses}}",
+      "rollCallsOpen": "{count, plural, one {# sin cerrar, en la lista de su mes} other {# sin cerrar, en la lista de cada mes}}",
+      "boardedDetail": "{count, plural, =0 {Todas las plazas marcadas en el muelle} one {# plaza sin marcar en el muelle, en un recuento sin cerrar de su mes} other {# plazas sin marcar en el muelle, en recuentos sin cerrar de cada mes}}",
+      "printedFor": "{shopName} · del {start} al {end} de {year} · {zone}",
+      "printedOn": "Impreso el {date}",
+      "chooseYear": "Elegir un año",
+      "previous": "Año anterior",
+      "next": "Año siguiente",
+      "earliestTitle": "Este es tu primer año con salidas",
+      "currentTitle": "Estás viendo el año actual"
+    },
+    "incidentsValue": "{filed, plural, one {# presentado} other {# presentados}}{drafts, plural, =0 {} one { · # borrador} other { · # borradores}}"
   },
   "discard": {
     "title": "Eliminar este borrador",

@@ -1,4 +1,15 @@
-import { and, asc, count, countDistinct, desc, eq, gt, inArray, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  countDistinct,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  sql,
+} from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   filterEligibleLastMinuteRecipients,
@@ -488,6 +499,36 @@ export async function tripIdsNeverSentLastMinuteDeal(
     );
   const alreadySent = new Set(sent.map((row) => row.tripId));
   return new Set(tripIds.filter((id) => !alreadySent.has(id)));
+}
+
+/**
+ * **The departures a last-minute deal suits** (dive-domain review N7): of
+ * `tripIds`, the scheduled public boat departures that are not a course
+ * session. A half-empty Open Water session, a pool day or a private charter
+ * is not an offer a shop makes to its last-minute list, so the Monday email
+ * never suggests one.
+ */
+export async function tripIdsSuitedToADeal(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: string[],
+): Promise<Set<string>> {
+  if (tripIds.length === 0) return new Set();
+  const rows = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        inArray(trips.id, tripIds),
+        eq(trips.status, "scheduled"),
+        eq(trips.diveMode, "boat"),
+        eq(trips.isPrivate, false),
+        isNull(trips.courseId),
+        liveTrip(),
+      ),
+    );
+  return new Set(rows.map((row) => row.id));
 }
 
 /** What a last-minute deal sold (fifth loop, item 28). */

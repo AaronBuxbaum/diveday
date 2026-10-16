@@ -9,7 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { listShopIncidentReports } from "@/db/incident-reports";
 import { canPersonViewShopReports, earliestReportedTripStart } from "@/db/reporting";
-import { getSafetyMonth } from "@/db/safety-report";
+import { getSafetyMonth, getSafetyYear } from "@/db/safety-report";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
@@ -23,6 +23,8 @@ import {
   parseMonthKey,
 } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
+import { formatDateWithYear, formatMonthDay, formatTimeZoneName } from "@/lib/format";
+import type { SafetyMonth, SafetyYear } from "@/lib/safety-report";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { shopMonthBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -99,10 +101,15 @@ export default async function SafetyReportPage({
       : `month=${monthKey(addMonths(current, 1))}`;
 
   const { from, to } = year ? year.bounds(tz) : shopMonthBounds(current, tz);
-  const [safety, incidents] = await Promise.all([
-    getSafetyMonth(db, shop.id, from, to, tz, now),
-    listShopIncidentReports(db, shop.id, session.user.personId, from, to),
-  ]);
+  // The year is the sum of its months, each read by its own rules (review F1).
+  const yearMonths: SafetyYear | null = year
+    ? await getSafetyYear(db, shop.id, year.number, tz, now)
+    : null;
+  const safety: SafetyMonth = yearMonths ?? (await getSafetyMonth(db, shop.id, from, to, tz, now));
+  const incidents = await listShopIncidentReports(db, shop.id, session.user.personId, from, to);
+  // A draft is unfinished and can still be discarded, so the figure counts
+  // filed reports and names the drafts beside them (review F4).
+  const draftReports = incidents.filter((report) => report.status === "draft").length;
 
   const lastDay = new Date(Date.UTC(current.year, current.month, 0)).getUTCDate();
   const activityHref = year
@@ -116,14 +123,23 @@ export default async function SafetyReportPage({
         closed: safety.rollCallsClosed,
         back: safety.departuresBack,
       }),
-      detail: t("incidents.safety.rollCallsDetail", { back: safety.departuresBack }),
+      // The year lists nothing, so it says where the open ones are (review N8).
+      detail:
+        year && safety.openRollCalls.length > 0
+          ? `${t("incidents.safety.rollCallsDetail", { back: safety.departuresBack })} · ${t(
+              "incidents.safety.year.rollCallsOpen",
+              { count: safety.openRollCalls.length },
+            )}`
+          : t("incidents.safety.rollCallsDetail", { back: safety.departuresBack }),
       detailTone: safety.openRollCalls.length > 0 ? "attention" : "quiet",
     },
     {
       key: "boarded",
       label: t("incidents.safety.boarded"),
       value: String(safety.boardedAtDock),
-      detail: t("incidents.safety.boardedDetail", { count: safety.unmarkedAtDock }),
+      detail: t(year ? "incidents.safety.year.boardedDetail" : "incidents.safety.boardedDetail", {
+        count: safety.unmarkedAtDock,
+      }),
       detailTone: safety.unmarkedAtDock > 0 ? "attention" : "quiet",
     },
     {
@@ -166,7 +182,9 @@ export default async function SafetyReportPage({
     // so the tile beside it read "0 of 0" for the emptiest record.
     // A month with no crew recorded anywhere is a shop that does not roster
     // crew here, not a fleet that sailed unmanned: one quiet line and no
-    // figure, rather than every boat in attention (review F1).
+    // figure, rather than every boat in attention (review F1). The year sums
+    // its months by that rule and says how many had none (dive-domain F1);
+    // the denominator is boats, as the figure is (N5).
     safety.noCrewOnRecord
       ? {
           key: "noCrew",
@@ -179,24 +197,52 @@ export default async function SafetyReportPage({
           key: "noCrew",
           label: t("incidents.safety.noCrew"),
           value: String(safety.noCrewDepartures.length),
-          ...(safety.noCrewDepartures.length > 0
-            ? {
-                detail: t(
-                  year ? "incidents.safety.year.noCrewDetail" : "incidents.safety.noCrewDetail",
-                  {
-                    back: safety.departuresBack,
-                  },
-                ),
-                detailTone: "attention" as const,
-              }
-            : {}),
+          ...noCrewDetail(),
         },
     {
       key: "incidents",
       label: t("incidents.safety.incidents"),
-      value: String(incidents.length),
+      value: t("incidents.safety.incidentsValue", {
+        filed: incidents.length - draftReports,
+        drafts: draftReports,
+      }),
     },
   ];
+
+  function noCrewDetail(): Pick<MonthFigure, "detail" | "detailTone"> {
+    const parts = [
+      safety.noCrewDepartures.length > 0
+        ? t(year ? "incidents.safety.year.noCrewDetail" : "incidents.safety.noCrewDetail", {
+            back: safety.boatsBack,
+          })
+        : null,
+      yearMonths && yearMonths.monthsWithoutCrew > 0
+        ? t("incidents.safety.year.noCrewMonths", {
+            none: yearMonths.monthsWithoutCrew,
+            months: yearMonths.monthsBack,
+          })
+        : null,
+    ].filter((part): part is string => part !== null);
+    if (parts.length === 0) return {};
+    return {
+      detail: parts.join(" · "),
+      detailTone: safety.noCrewDepartures.length > 0 ? "attention" : "quiet",
+    };
+  }
+
+  // On paper the year must say whose record it is, over which days, in which
+  // zone, and when it was printed (review F3): a broker's file holds many.
+  const printedFor = year
+    ? t("incidents.safety.year.printedFor", {
+        shopName: shop.name,
+        start: formatMonthDay(1, 1, locale),
+        end: year.isThisYear
+          ? formatMonthDay(todayWall.month, todayWall.day, locale)
+          : formatMonthDay(12, 31, locale),
+        year: String(year.number),
+        zone: formatTimeZoneName(locale, tz, now),
+      })
+    : null;
 
   const navClass = buttonClass({ variant: "secondary", size: "icon" });
   const navDisabledClass = `${navClass} pointer-events-none opacity-40`;
@@ -219,6 +265,16 @@ export default async function SafetyReportPage({
           )
         }
       />
+      {printedFor ? (
+        <div className="mb-4 hidden text-sm print:block">
+          <p className="font-medium">{printedFor}</p>
+          <p>
+            {t("incidents.safety.year.printedOn", {
+              date: formatDateWithYear(now, locale, tz),
+            })}
+          </p>
+        </div>
+      ) : null}
       <p className="mb-6 max-w-prose text-muted">
         {t(year ? "incidents.safety.year.intro" : "incidents.safety.intro")}
       </p>
@@ -230,11 +286,14 @@ export default async function SafetyReportPage({
             <span className="ms-2 text-sm font-normal text-muted">{t("reports.soFar")}</span>
           ) : null}
         </h2>
-        <nav aria-label={t("reports.chooseMonth")} className="flex flex-wrap items-center gap-2">
+        <nav
+          aria-label={t(year ? "incidents.safety.year.chooseYear" : "reports.chooseMonth")}
+          className="flex flex-wrap items-center gap-2 print:hidden"
+        >
           {prevKey ? (
             <Link
               href={`${safetyPath}?${prevKey}`}
-              aria-label={t("reports.previousMonth")}
+              aria-label={t(year ? "incidents.safety.year.previous" : "reports.previousMonth")}
               className={navClass}
               scroll={false}
             >
@@ -243,7 +302,7 @@ export default async function SafetyReportPage({
           ) : (
             <span
               aria-hidden="true"
-              title={t("reports.earliestMonthTitle")}
+              title={t(year ? "incidents.safety.year.earliestTitle" : "reports.earliestMonthTitle")}
               className={navDisabledClass}
             >
               <DiveDayIcon name="arrow-left" className="size-4" />
@@ -252,7 +311,7 @@ export default async function SafetyReportPage({
           {nextKey ? (
             <Link
               href={`${safetyPath}?${nextKey}`}
-              aria-label={t("reports.nextMonth")}
+              aria-label={t(year ? "incidents.safety.year.next" : "reports.nextMonth")}
               className={navClass}
               scroll={false}
             >
@@ -261,7 +320,7 @@ export default async function SafetyReportPage({
           ) : (
             <span
               aria-hidden="true"
-              title={t("reports.currentMonthTitle")}
+              title={t(year ? "incidents.safety.year.currentTitle" : "reports.currentMonthTitle")}
               className={navDisabledClass}
             >
               <DiveDayIcon name="arrow-right" className="size-4" />
@@ -275,8 +334,15 @@ export default async function SafetyReportPage({
           title={t(year ? "incidents.safety.year.noDepartures" : "incidents.safety.noDepartures")}
         />
       ) : year ? (
-        // The year is the figures alone: the lists behind them stay on each month.
-        <MonthFigures label={t("incidents.safety.year.figuresLabel")} figures={figures} />
+        // The year is the figures alone: the lists behind them stay on each
+        // month. The boarding caveat goes with them (review F5): this is the
+        // page printed for a third party.
+        <div>
+          <MonthFigures label={t("incidents.safety.year.figuresLabel")} figures={figures} />
+          <p className="mt-3 max-w-prose text-sm text-muted">
+            {t("incidents.safety.boardingNote")}
+          </p>
+        </div>
       ) : (
         <div className="space-y-10">
           <div>

@@ -1,4 +1,5 @@
 import type { DbExecutor } from "@/db/client";
+import { queryAll } from "@/db/query-helpers";
 import { getMonthMoneyDetail } from "@/db/report-lines";
 import { crewCountsByTrip, getMonthlyReport } from "@/db/reporting";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -32,9 +33,9 @@ export async function monthReportFile(
   const currency = toShopCurrency(shop.currency);
   const { from: monthStart, to: monthEnd } = shopMonthBounds(month, shop.timezone);
   const options = { currency, timeZone: shop.timezone };
-  const [input, detail] = await Promise.all([
-    getMonthlyReport(db, shop.id, monthStart, monthEnd, options),
-    getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now, options),
+  const [input, detail] = await queryAll(db, [
+    () => getMonthlyReport(db, shop.id, monthStart, monthEnd, options),
+    () => getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now, options),
   ]);
   const report = summarizeMonth(input);
   const crewCounts = await crewCountsByTrip(

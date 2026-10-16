@@ -1198,8 +1198,10 @@ export type WeekdayLeadTime = {
  * `[startUtc, endUtc)`, its booking time joined to its departure time,
  * grouped by the departure's weekday in the shop's zone.
  *
- * Seats that held only (`booked`, `checked_in`): a cancelled booking is not a
- * sale. The shop's own rehearsals and deleted departures stay out, as every
+ * Boat departures only, never a shore day, a pool session or a course
+ * session (dive-domain review F6), and whole calendar days in the shop's zone
+ * (N2). Seats that held only (`booked`, `checked_in`): a cancelled booking is
+ * not a sale. The shop's own rehearsals and deleted departures stay out, as every
  * other Reports figure keeps them out. The caller decides how much history is
  * enough to say anything (`src/lib/lead-time.ts`).
  */
@@ -1208,13 +1210,15 @@ export async function bookingLeadTimes(
   shopId: string,
   window: { startUtc: Date; endUtc: Date; timeZone: string },
 ): Promise<WeekdayLeadTime[]> {
-  const leadDays = sql<number>`greatest(floor(extract(epoch from (${trips.startsAt} - ${bookings.createdAt})) / 86400), 0)`;
+  // Calendar days in the shop's zone (dive-domain review N2): booked at 6 pm
+  // for the 8 am boat is the night before, a day ahead, not "on the day".
+  const leadDays = sql<number>`greatest((${trips.startsAt} at time zone ${window.timeZone}::text)::date - (${bookings.createdAt} at time zone ${window.timeZone}::text)::date, 0)`;
   const rows = await db
     .select({
       isoWeekday: sql<number>`extract(isodow from ${trips.startsAt} at time zone ${window.timeZone}::text)`,
       seats: count(bookings.id),
       medianDays: sql<number>`percentile_disc(0.5) within group (order by ${leadDays})`,
-      lastThree: sql<number>`count(*) filter (where ${trips.startsAt} - ${bookings.createdAt} <= interval '3 days')`,
+      lastThree: sql<number>`count(*) filter (where ${leadDays} < 3)`,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -1224,6 +1228,10 @@ export async function bookingLeadTimes(
         eq(trips.shopId, shopId),
         inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
         ne(trips.status, "cancelled"),
+        // Boats, as the words say (dive-domain review F6): a course session
+        // sells with its course weeks ahead and would pull the boats' figure.
+        eq(trips.diveMode, "boat"),
+        isNull(trips.courseId),
         gte(trips.startsAt, window.startUtc),
         lt(trips.startsAt, window.endUtc),
         liveTrip(),
@@ -1251,7 +1259,7 @@ export type CertifiedHere = {
 };
 
 /**
- * **"Certified here"** (fifth loop, item 32): the cards this shop's own
+ * **"Certifications issued here"** (fifth loop, item 32): the cards this shop's own
  * instructors issued (`issued_by_shop_at`, ADR
  * 20260824-shop-issued-certification-is-verified) in `[startUtc, endUtc)`,
  * anchored to the tap that issued them. A card since deleted is not counted:
@@ -1281,7 +1289,7 @@ export async function certifiedHere(
   return { total: byLevel.reduce((sum, row) => sum + row.count, 0), byLevel };
 }
 
-/** One crew member's year: students certified and days at sea. */
+/** One crew member's year: certifications issued and boat days at sea. */
 export type CrewYear = { certified: number; daysAtSea: number };
 
 /**
@@ -1325,6 +1333,8 @@ export async function crewYearFacts(
         .where(
           and(
             ne(trips.status, "cancelled"),
+            // At sea: boats only, never a shore day or a pool session (review N1).
+            eq(trips.diveMode, "boat"),
             gte(trips.startsAt, from),
             lt(trips.startsAt, to),
             lte(trips.startsAt, sailedBy),

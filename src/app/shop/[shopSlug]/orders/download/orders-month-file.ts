@@ -1,4 +1,5 @@
 import type { DbExecutor } from "@/db/client";
+import { queryAll } from "@/db/query-helpers";
 import { listOrderLinesForExport, ORDER_EXPORT_MAX_LINES } from "@/db/order-export";
 import { listSeatPaymentsForExport } from "@/db/seat-payments";
 import { type MonthRef, monthKey } from "@/lib/calendar";
@@ -19,9 +20,9 @@ export async function ordersMonthFile(
 ): Promise<{ fileName: string; csv: string }> {
   const { from, to } = shopMonthBounds(month, shop.timezone);
   const filter = { from, to };
-  const [lines, seats] = await Promise.all([
-    listOrderLinesForExport(db, shop.id, filter),
-    listSeatPaymentsForExport(db, shop.id, filter, ORDER_EXPORT_MAX_LINES),
+  const [lines, seats] = await queryAll(db, [
+    () => listOrderLinesForExport(db, shop.id, filter),
+    () => listSeatPaymentsForExport(db, shop.id, filter, ORDER_EXPORT_MAX_LINES),
   ]);
   return {
     fileName: `diveday-orders-${shop.slug}-${monthKey(month)}.csv`,

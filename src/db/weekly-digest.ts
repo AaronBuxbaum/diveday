@@ -49,7 +49,7 @@ import {
   weeklyDigestSends,
 } from "./schema";
 import { getTodayWork } from "./today";
-import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
+import { tripIdsNeverSentLastMinuteDeal, tripIdsSuitedToADeal } from "./trip-promos";
 import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
@@ -330,6 +330,7 @@ export async function readWeeklyDigestFacts(
     owed,
     incidents,
     neverSentDeal,
+    suitedToADeal,
   ] = await Promise.all([
     countBookingsMade(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
     countReviewsReceived(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
@@ -342,7 +343,14 @@ export async function readWeeklyDigestFacts(
       shop.id,
       thisWeekTrips.map((trip) => trip.id),
     ),
+    tripIdsSuitedToADeal(
+      db,
+      shop.id,
+      thisWeekTrips.map((trip) => trip.id),
+    ),
   ]);
+  // Only a scheduled public boat departure is worth a deal (review N7).
+  const dealCandidates = new Set([...neverSentDeal].filter((id) => suitedToADeal.has(id)));
   // Today's own rows, counted rather than detected twice (item 24).
   const countKinds = (kinds: ReadonlySet<TodayActionKind>) =>
     reportsToday.actions.filter((action) => kinds.has(action.kind)).length;
@@ -366,7 +374,7 @@ export async function readWeeklyDigestFacts(
         // The boat worth a deal is a money call, so it is the Reports grade's.
         thisWeek: {
           ...shared.thisWeek,
-          weakest: weakestDeparture(thisWeekTrips, neverSentDeal, now),
+          weakest: weakestDeparture(thisWeekTrips, dealCandidates, now),
         },
         lastWeek: {
           bookingsMade,

@@ -1,7 +1,14 @@
 import { and, asc, count, eq, gte, inArray, isNull, lt, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { type SafetyCrewMember, type SafetyMonth, summarizeSafetyMonth } from "@/lib/safety-report";
+import {
+  type SafetyCrewMember,
+  type SafetyMonth,
+  type SafetyYear,
+  summarizeSafetyMonth,
+  summarizeSafetyYear,
+} from "@/lib/safety-report";
 import { hasReturned } from "@/lib/trips";
+import { shopMonthBounds } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import {
@@ -226,4 +233,28 @@ export async function getSafetyMonth(
     personNames: new Map(names.map((row) => [row.id, row.fullName])),
     certOverrides,
   });
+}
+
+/**
+ * **The Safety year** (fifth loop, item 33; dive-domain review F1): each month
+ * of `year` read as its own month view reads it, folded by
+ * `summarizeSafetyYear`, so the year is the sum of the twelve pages it
+ * stands for. Months after `now` have nothing back and are not read. One
+ * month at a time: twelve reads of one shop, never concurrent on one
+ * executor.
+ */
+export async function getSafetyYear(
+  db: DbExecutor,
+  shopId: string,
+  year: number,
+  timeZone: string,
+  now: Date = nowDate(),
+): Promise<SafetyYear> {
+  const months: SafetyMonth[] = [];
+  for (let month = 1; month <= 12; month++) {
+    const { from, to } = shopMonthBounds({ year, month }, timeZone);
+    if (from >= now) break;
+    months.push(await getSafetyMonth(db, shopId, from, to, timeZone, now));
+  }
+  return summarizeSafetyYear(months);
 }

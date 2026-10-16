@@ -19,6 +19,7 @@ import {
   bookingPayments,
   bookings,
   certifications,
+  courses,
   diveSites,
   people,
   shops,
@@ -232,6 +233,54 @@ describe("bookingLeadTimes (item 34)", () => {
 
     expect(rows).toEqual([{ isoWeekday: 6, seats: 5, medianDays: 10, lastThreeDaysShare: 0.4 }]);
   });
+
+  it("reads boats only, never a shore day, a pool session or a course session (dive-domain review F6)", async () => {
+    const db = await unseededTestDb();
+    const shopId = await shopRow(db, "lead-time-boats");
+    const [course] = await db
+      .insert(courses)
+      .values({ shopId, title: "Open Water", slug: "open-water" })
+      .returning();
+    if (!course) throw new Error("course insert failed");
+    const saturday = "2026-06-13T13:00:00Z";
+    const boat = await trip(db, shopId, saturday);
+    const others = [
+      await trip(db, shopId, saturday, { diveMode: "shore" }),
+      await trip(db, shopId, saturday, { diveMode: "pool" }),
+      await trip(db, shopId, saturday, { courseId: course.id }),
+    ];
+    for (const tripId of [boat, ...others]) {
+      const bookingId = await booking(db, shopId, tripId);
+      await db
+        .update(bookings)
+        .set({ createdAt: new Date("2026-05-13T12:00:00Z") })
+        .where(eq(bookings.id, bookingId));
+    }
+    const rows = await bookingLeadTimes(db, shopId, {
+      startUtc: new Date("2026-06-01T00:00:00Z"),
+      endUtc: new Date("2026-07-01T00:00:00Z"),
+      timeZone: TZ,
+    });
+    expect(rows).toEqual([{ isoWeekday: 6, seats: 1, medianDays: 31, lastThreeDaysShare: 0 }]);
+  });
+
+  it("counts calendar days in the shop's zone, so the night before is a day ahead (review N2)", async () => {
+    const db = await unseededTestDb();
+    const shopId = await shopRow(db, "lead-time-night");
+    // Sunday 2026-06-14, 08:00 New York; booked Saturday at 18:00 New York.
+    const sunday = await trip(db, shopId, "2026-06-14T12:00:00Z");
+    const bookingId = await booking(db, shopId, sunday);
+    await db
+      .update(bookings)
+      .set({ createdAt: new Date("2026-06-13T22:00:00Z") })
+      .where(eq(bookings.id, bookingId));
+    const rows = await bookingLeadTimes(db, shopId, {
+      startUtc: new Date("2026-06-01T00:00:00Z"),
+      endUtc: new Date("2026-07-01T00:00:00Z"),
+      timeZone: TZ,
+    });
+    expect(rows).toEqual([{ isoWeekday: 7, seats: 1, medianDays: 1, lastThreeDaysShare: 1 }]);
+  });
 });
 
 describe("certifiedHere and crewYearFacts (item 32)", () => {
@@ -287,11 +336,14 @@ describe("certifiedHere and crewYearFacts (item 32)", () => {
     const night = await trip(db, shopId, "2026-06-01T23:00:00Z");
     const later = await trip(db, shopId, "2026-06-03T13:00:00Z");
     const cancelled = await trip(db, shopId, "2026-06-05T13:00:00Z", { status: "cancelled" });
+    // A pool session is a day on the schedule, not at sea (dive-domain review N1).
+    const pool = await trip(db, shopId, "2026-06-07T13:00:00Z", { diveMode: "pool" });
     await db.insert(tripAssignments).values([
       { tripId: morning, personId: marcus },
       { tripId: night, personId: marcus },
       { tripId: later, personId: marcus },
       { tripId: cancelled, personId: marcus },
+      { tripId: pool, personId: marcus },
     ]);
 
     const facts = await crewYearFacts(db, shopId, {
@@ -388,5 +440,92 @@ describe("weatherCallsInWindow (item 27)", () => {
         timeZone: TZ,
       }),
     ).toMatchObject({ departures: 0, divers: 0, refundedCents: 0 });
+  });
+
+  it("leaves out a departure reinstated after the call, which sailed (dive-domain review F2)", async () => {
+    const db = await unseededTestDb();
+    const shopId = await shopRow(db, "weather-reinstated");
+    const owner = await person(db, shopId, "Dana Reyes");
+    // The morning call was no-go, the swell dropped, the shop ran it.
+    const sailed = await trip(db, shopId, "2026-06-10T13:00:00Z");
+    const calledAt = new Date("2026-06-10T10:00:00Z");
+    const [call] = await db
+      .insert(tripBlowouts)
+      .values({ shopId, tripId: sailed, calledByPersonId: owner, calledAt, cause: "weather" })
+      .returning();
+    if (!call) throw new Error("blowout insert failed");
+    const seat = await booking(db, shopId, sailed);
+    const [held] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, seat));
+    if (!held) throw new Error("seat missing");
+    await db
+      .insert(tripBlowoutDivers)
+      .values({ shopId, blowoutId: call.id, bookingId: seat, personId: held.personId });
+    expect(
+      await weatherCallsInWindow(db, shopId, {
+        startUtc: new Date("2026-06-01T04:00:00Z"),
+        endUtc: new Date("2026-07-01T04:00:00Z"),
+        timeZone: TZ,
+      }),
+    ).toEqual({ departures: 0, days: 0, divers: 0, refundedCents: 0, moved: 0 });
+  });
+
+  it("counts as moved only a live seat booked within 30 days of the call (review N3)", async () => {
+    const db = await unseededTestDb();
+    const shopId = await shopRow(db, "weather-moved");
+    const owner = await person(db, shopId, "Dana Reyes");
+    const blown = await trip(db, shopId, "2026-06-10T13:00:00Z", { status: "cancelled" });
+    const nextSeason = await trip(db, shopId, "2027-03-10T13:00:00Z");
+    const soon = await trip(db, shopId, "2026-06-20T13:00:00Z");
+    const calledAt = new Date("2026-06-09T22:00:00Z");
+    const [call] = await db
+      .insert(tripBlowouts)
+      .values({ shopId, tripId: blown, calledByPersonId: owner, calledAt, cause: "weather" })
+      .returning();
+    if (!call) throw new Error("blowout insert failed");
+    const seats = [
+      await booking(db, shopId, blown, "cancelled"),
+      await booking(db, shopId, blown, "cancelled"),
+    ];
+    const snapshot = await db
+      .select({ id: bookings.id, personId: bookings.personId })
+      .from(bookings)
+      .where(inArray(bookings.id, seats));
+    await db.insert(tripBlowoutDivers).values(
+      snapshot.map((row) => ({
+        shopId,
+        blowoutId: call.id,
+        bookingId: row.id,
+        personId: row.personId,
+      })),
+    );
+    const [first, second] = snapshot;
+    if (!first || !second) throw new Error("snapshot missing");
+    // One books next season, months after the call; the other books soon but cancels.
+    await db.insert(bookings).values([
+      {
+        shopId,
+        tripId: nextSeason,
+        personId: first.personId,
+        bookedAs: "diver",
+        createdAt: new Date("2026-12-01T12:00:00Z"),
+      },
+      {
+        shopId,
+        tripId: soon,
+        personId: second.personId,
+        bookedAs: "diver",
+        status: "cancelled",
+        createdAt: new Date("2026-06-10T12:00:00Z"),
+      },
+    ]);
+    const counted = await weatherCallsInWindow(db, shopId, {
+      startUtc: new Date("2026-06-01T04:00:00Z"),
+      endUtc: new Date("2026-07-01T04:00:00Z"),
+      timeZone: TZ,
+    });
+    expect(counted).toMatchObject({ departures: 1, divers: 2, moved: 0 });
   });
 });

@@ -91,7 +91,7 @@ describe("last year and the year's lines", () => {
       <YearReport
         year={YEAR}
         lastYear={{ divers: "291 by this date in 2025", boats: "39 by this date in 2025" }}
-        lines={["4 weather days, 6 departures called off", "Certified here: 34 · 22 Open Water"]}
+        lines={["4 days with a weather call, 6 departures called off", "Certifications issued here: 34 · 22 Open Water"]}
         locale="en-US"
         shopSlug="blue-mantis"
         t={t}
@@ -100,7 +100,7 @@ describe("last year and the year's lines", () => {
     const figures = screen.getByRole("region", { name: t("reports.year.numbersLabel") });
     expect(figures).toHaveTextContent("291 by this date in 2025");
     expect(figures).toHaveTextContent("39 by this date in 2025");
-    expect(screen.getByText("Certified here: 34 · 22 Open Water")).toBeTruthy();
-    expect(screen.getByText("4 weather days, 6 departures called off")).toBeTruthy();
+    expect(screen.getByText("Certifications issued here: 34 · 22 Open Water")).toBeTruthy();
+    expect(screen.getByText("4 days with a weather call, 6 departures called off")).toBeTruthy();
   });
 });

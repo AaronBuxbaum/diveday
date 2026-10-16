@@ -658,7 +658,7 @@
     },
     "publicNameSeen": "Los buceadores ven “{name}”, aceptado el {date}",
     "year": {
-      "certified": "{count, plural, one {# alumno certificado este año} other {# alumnos certificados este año}}",
+      "certified": "{count, plural, one {# certificación emitida este año} other {# certificaciones emitidas este año}}",
       "daysAtSea": "{count, plural, one {# día en el mar} other {# días en el mar}}"
     }
   },

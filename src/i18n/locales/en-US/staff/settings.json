@@ -658,7 +658,7 @@
     },
     "publicNameSeen": "Divers see “{name}”, agreed on {date}",
     "year": {
-      "certified": "{count, plural, one {# student certified this year} other {# students certified this year}}",
+      "certified": "{count, plural, one {# certification issued this year} other {# certifications issued this year}}",
       "daysAtSea": "{count, plural, one {# day at sea} other {# days at sea}}"
     }
   },

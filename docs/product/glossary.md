@@ -23,6 +23,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - C-card
 - Card sighting
 - Certification summary
+- Certifications issued here
 - Check all (agency)
 - Claimed certification
 - Clearing a declared-uncertified stamp
@@ -165,6 +166,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Crew schedule
 - Crew warning
 - DAN
+- Days at sea
 - Default course page
 - Delivery receipt
 - Demo mode
@@ -292,6 +294,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Waiver / release
 - Waiver activity
 - Waiver completion
+- Weather day
 - WhatsApp sender
 - Working shift
 - Your week
@@ -311,6 +314,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Material generation
 - Observed species
 - Photo ledger
+- Safety year
 - Sailed with no crew on record
 - Sighting
 - Staff credential

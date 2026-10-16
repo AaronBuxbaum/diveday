@@ -91,8 +91,8 @@
     "rangeWhole": "{year} · January 1 to December 31 · {zone}",
     "lastYearToDate": "{value, number} by this date in {year}",
     "lastYearWhole": "{value, number} in {year}",
-    "weatherDays": "{days, plural, one {# weather day} other {# weather days}}, {departures, plural, one {# departure called off} other {# departures called off}}",
-    "certifiedHere": "Certified here: {count, number}",
+    "weatherDays": "{days, plural, one {# day with a weather call} other {# days with a weather call}}, {departures, plural, one {# departure called off} other {# departures called off}}",
+    "certifiedHere": "Certifications issued here: {count, number}",
     "certifiedLevel": "{count, number} {level}"
   },
   "buddySeats": "{count, plural, one {# seat} other {# seats}} arrived on a buddy’s link",
@@ -157,5 +157,6 @@
     "setByGone": "Set {date} by someone no longer on the team.",
     "waiting": "Waiting for {email} to confirm; nothing is sent until then.",
     "setterLapsed": "They can no longer export the shop’s data, so nothing is sent. Save the address again to keep it, or change it."
-  }
+  },
+  "tipsSplit": "Equal shares: {shares}"
 }

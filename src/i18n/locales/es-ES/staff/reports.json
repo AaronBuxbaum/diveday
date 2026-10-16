@@ -91,8 +91,8 @@
     "rangeWhole": "{year} · del 1 de enero al 31 de diciembre · {zone}",
     "lastYearToDate": "{value, number} a esta fecha en {year}",
     "lastYearWhole": "{value, number} en {year}",
-    "weatherDays": "{days, plural, one {# día de mal clima} other {# días de mal clima}}, {departures, plural, one {# salida cancelada} other {# salidas canceladas}}",
-    "certifiedHere": "Certificados aquí: {count, number}",
+    "weatherDays": "{days, plural, one {# día con una cancelación por clima} other {# días con una cancelación por clima}}, {departures, plural, one {# salida cancelada} other {# salidas canceladas}}",
+    "certifiedHere": "Certificaciones emitidas aquí: {count, number}",
     "certifiedLevel": "{count, number} {level}"
   },
   "buddySeats": "{count, plural, one {# plaza llegó} other {# plazas llegaron}} desde el enlace de un buceador",
@@ -157,5 +157,6 @@
     "setByGone": "Puesto el {date} por alguien que ya no está en el equipo.",
     "waiting": "Esperando a que {email} confirme; no se envía nada hasta entonces.",
     "setterLapsed": "Esa persona ya no puede exportar los datos del centro, así que no se envía nada. Guarda la dirección de nuevo para mantenerla, o cámbiala."
-  }
+  },
+  "tipsSplit": "A partes iguales: {shares}"
 }

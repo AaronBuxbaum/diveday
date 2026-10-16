@@ -986,10 +986,17 @@ export type WeatherCalls = {
  * a weather day) on a departure that was due to leave in `[startUtc, endUtc)`,
  * anchored like every other Reports figure to the departure, not to the call.
  *
+ * Only departures still called off count: one reinstated and sailed is not
+ * the weather's (dive-domain review F2). `days` is shop-local days with at
+ * least one weather call, not days the whole fleet stayed in (N4: the words
+ * say "days with a weather call").
+ *
  * Divers are the cascade's own snapshot (`trip_blowout_divers`), so a booking
  * cancelled by the call still counts. "Refunded" is the money now standing as
- * refunded on those seats; "moved" is a diver who holds a later seat with the
- * shop, booked at or after the call, whatever its status since.
+ * refunded on those seats; "moved" is a diver who holds a live seat on
+ * another departure with the shop, booked within 30 days of the call (N3), so
+ * next season's booking is not this call's make-up dive. A walk-up who comes
+ * back gets a fresh person row and is not counted: an undercount.
  */
 export async function weatherCallsInWindow(
   db: DbExecutor,
@@ -1000,6 +1007,9 @@ export async function weatherCallsInWindow(
     eq(tripBlowouts.shopId, shopId),
     eq(tripBlowouts.cause, "weather"),
     eq(trips.shopId, shopId),
+    // A call the shop took back and sailed keeps its blow-out row; it was not
+    // a departure the weather took (dive-domain review F2).
+    eq(trips.status, "cancelled"),
     gte(trips.startsAt, window.startUtc),
     lt(trips.startsAt, window.endUtc),
   );
@@ -1047,7 +1057,9 @@ export async function weatherCallsInWindow(
             eq(bookings.personId, tripBlowoutDivers.personId),
             eq(bookings.shopId, shopId),
             ne(bookings.tripId, tripBlowouts.tripId),
+            ne(bookings.status, "cancelled"),
             gte(bookings.createdAt, tripBlowouts.calledAt),
+            lt(bookings.createdAt, sql`${tripBlowouts.calledAt} + interval '30 days'`),
           ),
         )
         .where(and(called, liveTrip(), eq(tripBlowoutDivers.shopId, shopId))),

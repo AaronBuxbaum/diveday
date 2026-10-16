@@ -2,8 +2,13 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
-import { readBookkeeper, setBookkeeper } from "./bookkeeper";
-import { people, personRoles } from "./schema";
+import {
+  consumeBookkeeperConfirmation,
+  issueBookkeeperConfirmation,
+  readBookkeeper,
+  setBookkeeper,
+} from "./bookkeeper";
+import { people, personRoles, shops } from "./schema";
 
 /**
  * Erasure reaches the bookkeeper's address (fifth loop, item 35), as it does
@@ -26,22 +31,33 @@ describe("anonymizeDiver — the bookkeeper's address", () => {
       .values({ shopId: shop.id, fullName: "Bea Books", email: "Bea@Example.com" })
       .returning();
     if (!diver) throw new Error("diver insert failed");
+    const now = new Date("2026-10-15T12:00:00Z");
     await setBookkeeper(db, {
       shopId: shop.id,
       timeZone: shop.timezone,
       email: bookkeeper,
       personId: owner.id,
-      now: new Date("2026-10-15T12:00:00Z"),
+      now,
     });
+    const issued = await issueBookkeeperConfirmation(db, { shopId: shop.id, email: bookkeeper, now });
+    await consumeBookkeeperConfirmation(db, { token: issued?.token ?? "", now });
     const erase = () =>
       anonymizeDiver(db, { shopId: shop.id, personId: diver.id, actorPersonId: owner.id });
-    return { erase, read: () => readBookkeeper(db, shop.id) };
+    const row = async () => (await db.select().from(shops).where(eq(shops.id, shop.id)))[0];
+    return { erase, read: () => readBookkeeper(db, shop.id), row };
   }
 
-  it("clears the address when it is the erased diver's", async () => {
-    const { erase, read } = await setup("bea@example.com");
+  it("clears the address, its confirmation and its link's hash when it is the erased diver's", async () => {
+    const { erase, read, row } = await setup("bea@example.com");
+    expect((await row())?.bookkeeperConfirmTokenHash).not.toBeNull();
     expect((await erase()).ok).toBe(true);
     expect(await read()).toBeNull();
+    expect(await row()).toMatchObject({
+      bookkeeperSentMonth: null,
+      bookkeeperConfirmedAt: null,
+      bookkeeperConfirmTokenHash: null,
+      bookkeeperConfirmExpiresAt: null,
+    });
   });
 
   it("leaves somebody else's address alone", async () => {

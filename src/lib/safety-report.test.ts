@@ -6,6 +6,7 @@ import {
   type SafetyMonthInput,
   type SafetyRollCallEvent,
   summarizeSafetyMonth,
+  summarizeSafetyYear,
 } from "./safety-report";
 
 /** A crew member with no named job and no standing role: any credential answers. */
@@ -472,5 +473,69 @@ describe("summarizeSafetyMonth: departures with no crew on record (fourth review
     expect(summary.noCrewDepartures).toEqual([]);
     // Nothing came back, so there is no month of crew to speak of either.
     expect(summary.noCrewOnRecord).toBe(false);
+  });
+});
+
+describe("summarizeSafetyYear (dive-domain review F1)", () => {
+  const crewedBoat = { ...departure, tripId: "t2", bookingIds: ["b3"] };
+  const crewedBack = [...everyoneBack, diver("b3", "departure"), diver("b3", "return")];
+  // Before the shop rostered crew: two boats back, nobody on either list.
+  const unrostered = summarizeSafetyMonth(
+    month({
+      departures: [
+        { ...departure, crew: [] },
+        { ...crewedBoat, crew: [] },
+      ],
+      diverEvents: crewedBack,
+    }),
+  );
+  // After: one boat crewed, one not.
+  const rostered = summarizeSafetyMonth(
+    month({ departures: [{ ...departure, crew: [] }, crewedBoat], diverEvents: crewedBack }),
+  );
+  const quiet = summarizeSafetyMonth(month({ departures: [] }));
+
+  it("sums each month as that month reads it, so a month with no crew rostered adds no boats", () => {
+    const year = summarizeSafetyYear([unrostered, unrostered, quiet, rostered]);
+    expect(year.noCrewDepartures.map((row) => row.tripId)).toEqual(["t1"]);
+    expect(year.noCrewOnRecord).toBe(false);
+    expect(year.monthsBack).toBe(3);
+    expect(year.monthsWithoutCrew).toBe(2);
+    expect(year.departuresBack).toBe(6);
+    expect(year.boatsBack).toBe(6);
+    expect(year.crewSailings).toBe(rostered.crewSailings);
+    expect(year.rollCallsClosed).toBe(
+      unrostered.rollCallsClosed * 2 + rostered.rollCallsClosed,
+    );
+  });
+
+  it("is one quiet line when no month had crew on record", () => {
+    const year = summarizeSafetyYear([unrostered, quiet]);
+    expect(year.noCrewOnRecord).toBe(true);
+    expect(year.monthsWithoutCrew).toBe(1);
+    expect(year.noCrewDepartures).toEqual([]);
+  });
+
+  it("names each crew member without a credential once, summing their sailings", () => {
+    const unrecorded = summarizeSafetyMonth(month({ diverEvents: everyoneBack }));
+    expect(unrecorded.unrecordedCrew).toEqual([
+      { personId: "c1", name: "Keiko Tanaka", sailings: 1 },
+    ]);
+    expect(summarizeSafetyYear([unrecorded, unrecorded]).unrecordedCrew).toEqual([
+      { personId: "c1", name: "Keiko Tanaka", sailings: 2 },
+    ]);
+  });
+});
+
+describe("summarizeSafetyMonth: boats back (dive-domain review N5)", () => {
+  it("counts only boat departures as the no-crew figure's denominator", () => {
+    const summary = summarizeSafetyMonth(
+      month({
+        departures: [departure, { ...departure, tripId: "shore", diveMode: "shore" }],
+        diverEvents: [...everyoneBack, { ...diver("b1", "departure"), tripId: "shore" }],
+      }),
+    );
+    expect(summary.departuresBack).toBe(2);
+    expect(summary.boatsBack).toBe(1);
   });
 });

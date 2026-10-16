@@ -81,3 +81,70 @@ describe("the bookkeeper_month_end notification", () => {
     );
   });
 });
+
+/** The confirm link and the owners' notices (security review B1 and F1). */
+describe("the bookkeeper_confirmation notification", () => {
+  const LINK = {
+    kind: "bookkeeper_confirmation",
+    shopId: "11111111-1111-4111-8111-111111111111",
+    to: "books@ledger.example",
+    locale: "en-US",
+    shopName: "Blue Mantis",
+    confirmUrl: "https://diveday.example/confirm-contact/abc",
+    expiresAt: new Date("2026-10-27T15:00:00Z"),
+    timezone: "America/New_York",
+  } satisfies Notification;
+
+  it("carries the link and no files, and says ignoring it sends nothing", () => {
+    expect(notificationSchema.safeParse(LINK).success).toBe(true);
+    const { subject, text } = messageFor(LINK);
+    expect(subject).toBe("Blue Mantis wants to send you its month-end files");
+    expect(text).toContain("https://diveday.example/confirm-contact/abc");
+    expect(text).toContain("ignore this email and nothing will be sent");
+    expect(notificationIsQueueable(LINK)).toBe(false);
+  });
+});
+
+describe("the bookkeeper_notice notification", () => {
+  const NOTICE = {
+    kind: "bookkeeper_notice",
+    shopId: "11111111-1111-4111-8111-111111111111",
+    personId: "22222222-2222-4222-8222-222222222222",
+    to: "dana@shop.example",
+    locale: "en-US",
+    recipientName: "Dana Reyes",
+    shopName: "Blue Mantis",
+    reportsUrl: "https://diveday.example/shop/blue-mantis/reports#bookkeeper",
+    event: "set",
+    email: "books@ledger.example",
+    actorName: "Sal <Moretti>",
+    at: new Date("2026-10-20T15:00:00Z"),
+  } satisfies Notification;
+
+  it("names who set which address, escaped, with the way to Reports", () => {
+    const { subject, text, html } = messageFor(NOTICE);
+    expect(subject).toBe("Blue Mantis: month-end files will go to books@ledger.example");
+    expect(text).toContain("Sal <Moretti> set books@ledger.example as the bookkeeper’s email.");
+    expect(html).toContain("Sal &lt;Moretti&gt;");
+    expect(notificationIsQueueable(NOTICE)).toBe(false);
+  });
+
+  it("says where each month went, in one line", () => {
+    const { subject, text } = messageFor({
+      ...NOTICE,
+      event: "sent",
+      actorName: undefined,
+      month: "2026-09",
+    });
+    expect(subject).toBe("Blue Mantis: September 2026 files sent to books@ledger.example");
+    expect(text).toContain("Month-end files for September 2026 sent to books@ledger.example.");
+  });
+
+  it("says when it was turned off, in Spanish too", () => {
+    const off = { ...NOTICE, event: "cleared" as const, email: undefined };
+    expect(messageFor(off).text).toContain("removed the bookkeeper’s email");
+    expect(messageFor({ ...off, locale: "es-ES" }).subject).toBe(
+      "Blue Mantis: archivos de fin de mes desactivados",
+    );
+  });
+});

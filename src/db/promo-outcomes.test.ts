@@ -10,10 +10,11 @@ import {
   shopPromoRedemptions,
   shops,
   tripLastMinutePromos,
+  courses,
   trips,
 } from "./schema";
 import { shopPromoOutcomes } from "./shop-promos";
-import { lastMinuteDealOutcomes } from "./trip-promos";
+import { lastMinuteDealOutcomes, tripIdsSuitedToADeal } from "./trip-promos";
 
 /**
  * What a deal and a code sold (fifth loop, item 28), over an unseeded
@@ -188,5 +189,40 @@ describe("shopPromoOutcomes", () => {
     expect(outcomes.get(code.id)).toEqual({ offCents: 3_000, ofCents: 30_000 });
     expect(outcomes.get(unused.id)).toBeUndefined();
     expect((await shopPromoOutcomes(db, shopId, [])).size).toBe(0);
+  });
+});
+
+describe("tripIdsSuitedToADeal (dive-domain review N7)", () => {
+  it("keeps scheduled public boat departures, never a course session, a pool day or a charter", async () => {
+    const db = await unseededTestDb();
+    const { shopId, tripId: boat } = await fixture(db, "deal-suited");
+    const [course] = await db
+      .insert(courses)
+      .values({ shopId, title: "Open Water", slug: "open-water" })
+      .returning();
+    if (!course) throw new Error("course insert failed");
+    const start = new Date("2026-06-11T13:00:00Z");
+    const departure = async (values: Partial<typeof trips.$inferInsert>) => {
+      const [row] = await db
+        .insert(trips)
+        .values({
+          shopId,
+          title: "Other",
+          startsAt: start,
+          endsAt: new Date(start.getTime() + 3 * 3_600_000),
+          capacity: 10,
+          ...values,
+        })
+        .returning();
+      if (!row) throw new Error("trip insert failed");
+      return row.id;
+    };
+    const others = [
+      await departure({ courseId: course.id }),
+      await departure({ diveMode: "pool" }),
+      await departure({ isPrivate: true }),
+      await departure({ status: "cancelled" }),
+    ];
+    expect(await tripIdsSuitedToADeal(db, shopId, [boat, ...others])).toEqual(new Set([boat]));
   });
 });

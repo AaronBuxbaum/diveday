@@ -32,7 +32,7 @@ export async function readMonthOwner(
 }
 
 /**
- * **The Tips figure's split** (item 31): "Keiko $180 · Sal $160 · Yusra $100",
+ * **The Tips figure's split** (item 31): "Equal shares: Keiko $180 · Sal $160",
  * the crew sheet's own equal shares, so the payday conversation reads off the
  * tile instead of a download in Settings. Tips on a departure nobody crewed
  * stay on the shop's line, as the sheet keeps them.
@@ -51,7 +51,9 @@ export function tipsSplitLine(
         amount: money(row.tipsCents),
       }),
     );
-  return shares.length > 0 ? joinFacts(shares) : undefined;
+  // The sheet splits equally; many shops split by role, so the line says
+  // which rule it shows rather than reading as the shop's own (review N6).
+  return shares.length > 0 ? t("reports.tipsSplit", { shares: joinFacts(shares) }) : undefined;
 }
 
 /**

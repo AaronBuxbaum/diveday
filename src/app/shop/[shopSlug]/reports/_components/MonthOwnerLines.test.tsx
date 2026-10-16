@@ -45,7 +45,7 @@ describe("tipsSplitLine (item 31)", () => {
       t,
       money,
     );
-    expect(line?.replace(/ /g, " ")).toBe("Keiko $180 · Sal $160");
+    expect(line?.replace(/ /g, " ")).toBe("Equal shares: Keiko $180 · Sal $160");
   });
 
   it("says nothing in a month with no tips", () => {

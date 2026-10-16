@@ -21,7 +21,7 @@ export function readStaffYears(
 }
 
 /**
- * "4 students certified this year · 38 days at sea": the line under a
+ * "4 certifications issued this year · 38 days at sea": the line under a
  * teammate's name. Each half only when it is more than none, and nothing at
  * all for somebody who has neither yet.
  */

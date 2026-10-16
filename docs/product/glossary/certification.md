@@ -695,3 +695,10 @@
   See `src/lib/divemaster-ratio.ts` and
   [20260820-shop-divemaster-ratio](../../architecture/decisions/20260820-shop-divemaster-ratio.md).
 - **Refresher / ReActivate** — short course for certified divers returning after inactivity.
+- **Certifications issued here** — the certification cards the shop's own instructors issued in a
+  window (`issued_by_shop_at`; `certifiedHere` and `crewYearFacts`, `src/db/reporting.ts`; fifth
+  loop, item 32), on the Reports year ("Certifications issued here: 34 · 22 Open Water") and each
+  instructor's Team card ("4 certifications issued this year"). It counts cards, not people: a diver
+  who does Open Water and Advanced Open Water here counts twice, as agencies count (dive-domain
+  review F7). Level cards only; a specialty such as Nitrox is not in it, and a card captured from
+  another shop never is.
