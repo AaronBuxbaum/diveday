@@ -1044,7 +1044,7 @@ const passwordChangedSchema = z.object({
  *
  * Both optional, and resolved from the shop row at send time by
  * `src/db/notifications.ts` rather than threaded through every composer:
- * every DiveDay email leaves as `noreply@ses.dive.day` but greets as the
+ * every DiveDay email leaves as `notifications@ses.dive.day` but greets as the
  * shop, so a diver who hits reply should reach the shop's front desk
  * (`shops.contact_email`), and a commercial send — one carrying an
  * `unsubscribeUrl` — has to name the sender's postal address (CAN-SPAM

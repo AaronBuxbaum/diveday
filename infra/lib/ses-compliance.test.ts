@@ -45,7 +45,7 @@ describe("SES recipient protection", () => {
   /**
    * Every bounce and complaint reaches the app through the SNS event
    * destination; the identity must not also forward each one as an email to
-   * noreply@ses.dive.day, a mailbox nobody reads. The event destination is the
+   * notifications@ses.dive.day, a mailbox nobody reads. The event destination is the
    * other half of that claim, so it is pinned here too.
    */
   it("takes bounce and complaint feedback through SNS, never forwarded as mail to the sender", () => {

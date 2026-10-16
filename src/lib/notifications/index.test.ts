@@ -15,7 +15,7 @@ import {
 
 const sesConfig = {
   region: "us-east-1",
-  from: "DiveDay <noreply@ses.dive.day>",
+  from: "DiveDay <notifications@ses.dive.day>",
   accessKeyId: "AKIA_TEST",
   secretAccessKey: "test-secret",
 };
@@ -387,7 +387,7 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
       // Sent as the shop, on DiveDay's own verified address (ux review
       // 2026-10-11, item 3): only the display name moves, so DMARC still
       // aligns on the DiveDay domain.
-      FromEmailAddress: '"Blue Mantis via DiveDay" <noreply@ses.dive.day>',
+      FromEmailAddress: '"Blue Mantis via DiveDay" <notifications@ses.dive.day>',
       Destination: { ToAddresses: ["delivered+booking@dive.day"] },
       Content: {
         Simple: {

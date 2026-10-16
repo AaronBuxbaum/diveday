@@ -11,7 +11,7 @@ import { fromAddressFor } from "./shop-voice";
  * open anything is the sender and the subject, and those are pinned here, in
  * the diver's language and in the shop's voice.
  */
-const FROM = "DiveDay <noreply@ses.dive.day>";
+const FROM = "DiveDay <notifications@ses.dive.day>";
 const ids = {
   shopId: "00000000-0000-4000-8000-000000000010",
   bookingId: "00000000-0000-4000-8000-000000000001",
@@ -77,14 +77,14 @@ function sentAs(notification: Notification) {
 describe("the sender and subject of layer 5's emails", () => {
   it("sends the booking confirmation as the shop, via DiveDay", () => {
     expect(sentAs(confirmation)).toEqual({
-      from: '"Blue Mantis via DiveDay" <noreply@ses.dive.day>',
+      from: '"Blue Mantis via DiveDay" <notifications@ses.dive.day>',
       subject: "You’re on the boat — Two-Tank Reef",
     });
   });
 
   it("sends the reschedule notice as the shop, and names the new time in the subject", () => {
     expect(sentAs(rescheduled)).toEqual({
-      from: '"Blue Mantis via DiveDay" <noreply@ses.dive.day>',
+      from: '"Blue Mantis via DiveDay" <notifications@ses.dive.day>',
       subject: "New time for Two-Tank Reef",
     });
   });
@@ -97,14 +97,14 @@ describe("the sender and subject of layer 5's emails", () => {
 
   it("names the place, not a time, when only the meeting point moved", () => {
     expect(sentAs(placeOnly)).toEqual({
-      from: '"Blue Mantis via DiveDay" <noreply@ses.dive.day>',
+      from: '"Blue Mantis via DiveDay" <notifications@ses.dive.day>',
       subject: "New meeting point for Two-Tank Reef",
     });
   });
 
   it("sends the Monday digest as DiveDay, since it is DiveDay writing to the shop", () => {
     expect(sentAs(monday)).toEqual({
-      from: "DiveDay <noreply@ses.dive.day>",
+      from: "DiveDay <notifications@ses.dive.day>",
       subject: "Your week at Blue Mantis",
     });
   });

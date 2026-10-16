@@ -11,8 +11,8 @@ import { dotenvMap, formatEnvValue, parseDotenv, unquoteEnvValue } from "./doten
 
 describe("unquoteEnvValue", () => {
   it("strips one matching pair of surrounding quotes", () => {
-    expect(unquoteEnvValue('"DiveDay <noreply@ses.dive.day>"')).toBe(
-      "DiveDay <noreply@ses.dive.day>",
+    expect(unquoteEnvValue('"DiveDay <notifications@ses.dive.day>"')).toBe(
+      "DiveDay <notifications@ses.dive.day>",
     );
     expect(unquoteEnvValue("'single'")).toBe("single");
   });
@@ -37,9 +37,10 @@ describe("unquoteEnvValue", () => {
 
 describe("parseDotenv", () => {
   it("unquotes a value that had to be written quoted", () => {
-    const document = 'SES_FROM_EMAIL="DiveDay <noreply@ses.dive.day>"\nAPP_HOST=https://dive.day\n';
+    const document =
+      'SES_FROM_EMAIL="DiveDay <notifications@ses.dive.day>"\nAPP_HOST=https://dive.day\n';
     expect(parseDotenv(document)).toEqual({
-      SES_FROM_EMAIL: "DiveDay <noreply@ses.dive.day>",
+      SES_FROM_EMAIL: "DiveDay <notifications@ses.dive.day>",
       APP_HOST: "https://dive.day",
     });
   });
@@ -65,8 +66,8 @@ describe("parseDotenv", () => {
 
 describe("formatEnvValue", () => {
   it("quotes only what would not survive being read back", () => {
-    expect(formatEnvValue("DiveDay <noreply@ses.dive.day>")).toBe(
-      '"DiveDay <noreply@ses.dive.day>"',
+    expect(formatEnvValue("DiveDay <notifications@ses.dive.day>")).toBe(
+      '"DiveDay <notifications@ses.dive.day>"',
     );
     expect(formatEnvValue("https://dive.day")).toBe("https://dive.day");
     expect(formatEnvValue("")).toBe("");
@@ -85,7 +86,7 @@ describe("formatEnvValue", () => {
 
 describe("the write/read round trip", () => {
   const values = [
-    "DiveDay <noreply@ses.dive.day>",
+    "DiveDay <notifications@ses.dive.day>",
     "https://dive.day",
     "postgres://user:pass@host/db?sslmode=verify-full",
     "MzQ2MAICY1ND/ZTMstSUxEp9QxNLS1NzI0tTfcfEovw8p9KKpMTSXAA=",

@@ -5,6 +5,10 @@ addresses (`aaron@`, `legal@`) work. Decision and rationale:
 [20260726-hosted-mailboxes-for-platform-mail](../architecture/decisions/20260726-hosted-mailboxes-for-platform-mail.md)
 and [20260803-ses-sole-email-provider](../architecture/decisions/20260803-ses-sole-email-provider.md).
 
+Shop mail sends as `"{Shop} via DiveDay" <notifications@ses.dive.day>` (`DEFAULT_SENDER` in
+`src/lib/notifications/ses.ts`); the SES identity is the whole `ses.dive.day` domain, so no
+per-address verification is needed. Replies go to the shop through `Reply-To`.
+
 AWS SES is the only email provider (Resend has been removed entirely). Two AWS-side steps are still
 outstanding and both are genuinely manual: the production-access request and the DKIM/MAIL FROM DNS
 records. Credential minting is not among them any more — `cdk deploy` mints the sender key and
@@ -255,7 +259,7 @@ link, a reminder) carries the `Reply-To` and nothing else.
 
 Bounce and complaint feedback reaches the app **only** through the SNS event destination below: the
 identity's email feedback forwarding is off (`feedbackForwarding: false` in the stack), so SES does
-not also mail each bounce to `noreply@ses.dive.day`, a mailbox nobody reads. The configuration set
+not also mail each bounce to `notifications@ses.dive.day`, a mailbox nobody reads. The configuration set
 publishes its own reputation metrics beside the account-level ones the two alarms read, so when the
 account rate moves the graph says whether it was DiveDay's mail.
 
@@ -385,7 +389,7 @@ Who we are
 DiveDay is built and operated by Aaron Buxbaum (aaron@dive.day), a US sole proprietor. The whole product already runs on this AWS account (S3, Lambda, CloudWatch, SNS, deployed with CDK); SES is the last piece. Privacy policy: https://dive.day/privacy (names AWS as our email processor and how long delivery records are kept). Terms: https://dive.day/terms.
 
 What we send, and when
-All mail is branded as the dive shop and sent from noreply@ses.dive.day. Every message is to one person about one event.
+All mail is branded as the dive shop and sent from notifications@ses.dive.day. Every message is to one person about one event.
 1. About a booking the diver has (the large majority of volume): booking confirmation when the seat is booked; waiver link when the shop requests a waiver; reminders 7 days and 24 hours before departure; weather hold or cancellation, and cancellation for not reaching the minimum number of divers, only to divers booked on that trip; a copy of the signed release to a parent who co-signed a minor's waiver.
 2. Links a person asked for: a replacement trip-prep link when theirs expired; a booking link with their saved details when they type their address into a shop's booking form; their own diver page when shop staff send it from the diver's record.
 3. Account mail to shop staff: welcome, email verification, password reset, password-changed notice, staff invitation; and to the shop itself, a course inquiry from its public page and a confirmation of its front-desk address.
