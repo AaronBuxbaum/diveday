@@ -506,6 +506,11 @@
       "left": "Las demás certificaciones de {agency} quedan para ti: verifícalas en su página."
     },
     "certifyConfirm": "Confirmar certificación",
+    "processedMark": "Tramitado con {agency}",
+    "processedLine": "Tramitado con {agency} · {date}",
+    "processedUndo": "Deshacer",
+    "processedSaving": "Guardando…",
+    "processedAgencyUnnamed": "la agencia",
     "certifyDiver": "Certificar",
     "certifyLevel": "Nivel",
     "certifyChoose": "Elige…",

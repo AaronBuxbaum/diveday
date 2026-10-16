@@ -59,6 +59,7 @@ export type TripRosterActions = {
   sendNewWaiverAction?: FormAction;
   certifyDiverAction?: FormAction;
   saveCourseNextStepAction?: FormAction;
+  markCardProcessedAction?: FormAction;
   setCourseMaterialsDoneAction?: FormAction;
   elearningCheckAction?: RosterActions["elearningCheckAction"];
   agencyCheckAction?: RosterActions["agencyCheckAction"];
@@ -270,6 +271,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           elearningQueryByBooking: guests.elearningQueryByBooking,
           elearningChecksOff: guests.elearningChecksOff,
           agencyCheckCardsByPerson: guests.agencyCheckCardsByPerson,
+          issuedCardByPerson: guests.issuedCardByPerson,
           courseMaterialsDoneByPerson: guests.courseMaterialsDoneByPerson,
           sameNameHeldSeats: guests.sameNameHeldSeats,
           heldSeatLastDiveDay: guests.heldSeatLastDiveDay,
@@ -297,6 +299,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           saveEmergencyContactAction: actions.saveRosterEmergencyContactAction,
           certifyDiverAction: guests.certifies ? actions.certifyDiverAction : undefined,
           saveCourseNextStepAction: actions.saveCourseNextStepAction,
+          markCardProcessedAction: actions.markCardProcessedAction,
           setCourseMaterialsDoneAction: guests.courseHasMaterials
             ? actions.setCourseMaterialsDoneAction
             : undefined,

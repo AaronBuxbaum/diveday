@@ -13,6 +13,7 @@ import { combineCertRequirements } from "@/lib/readiness";
 import { isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { listAgencyCheckableCards } from "./agency-check";
+import { type IssuedCard, issuedCardsForTrip } from "./agency-processing";
 import { sameNameHeldSeats as findSameNameHeldSeats } from "./bookings";
 import type { AppDb } from "./client";
 import { type CourseMaterialsDone, courseMaterialsDoneByPerson } from "./course-materials";
@@ -149,6 +150,7 @@ export async function getTripGuests(
     certificationSummaries,
     courseMaterialsDone,
     agencyCheckCardsByPerson,
+    issuedCardByPerson,
   ] = await Promise.all([
     // What "Different person" on a held seat can offer to move along with it:
     // other held seats under the same name on the same matched diver, on other
@@ -212,6 +214,9 @@ export async function getTripGuests(
         .filter(({ booking }) => !booking.identityUnconfirmedAt)
         .map(({ person }) => person.id),
     }),
+    // The cards this session issued, so each one can carry "Processed with
+    // PADI" (fifth-loop ideas, item 46). Only a course session issues any.
+    trip.courseId ? issuedCardsForTrip(db, shop.id, tripId) : new Map<string, IssuedCard>(),
   ]);
 
   const heldSeatLastDiveDay = new Map<string, Date | null>(
@@ -368,6 +373,8 @@ export async function getTripGuests(
      * their agencies from this tab (H-105). Held seats are never in it.
      */
     agencyCheckCardsByPerson,
+    /** Per student, the card this session issued and whether the agency has it yet. */
+    issuedCardByPerson,
     /** Done, who and when, by person: the roster's capsule and done line read here. */
     courseMaterialsDoneByPerson: courseMaterialsDone,
     /**

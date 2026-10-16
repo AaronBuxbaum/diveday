@@ -197,6 +197,12 @@
     "max": "Un curso admite hasta {max, plural, one {# material} other {# materiales}}.",
     "empty": "Aún no hay nada. Añade el eLearning o la lectura que los alumnos terminan antes del día 1."
   },
+  "processing": {
+    "heading": "Certificaciones por tramitar",
+    "agencyLine": "{count, plural, one {# certificación por tramitar con {agency}} other {# certificaciones por tramitar con {agency}}}",
+    "certifiedOn": "certificado el {date}",
+    "mark": "Tramitada"
+  },
   "ladder": {
     "heading": "Siguientes pasos",
     "taster": "{count, plural, one {# hizo {course} en los últimos 12 meses} other {# hicieron {course} en los últimos 12 meses}} · {wentOn} siguieron con {next}",

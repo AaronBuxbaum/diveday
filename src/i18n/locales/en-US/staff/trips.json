@@ -506,6 +506,11 @@
       "left": "Left {agency}’s other certifications for you: check them on its page."
     },
     "certifyConfirm": "Confirm certification",
+    "processedMark": "Processed with {agency}",
+    "processedLine": "Processed with {agency} · {date}",
+    "processedUndo": "Undo",
+    "processedSaving": "Saving…",
+    "processedAgencyUnnamed": "the agency",
     "certifyDiver": "Certify",
     "certifyLevel": "Level",
     "certifyChoose": "Choose…",

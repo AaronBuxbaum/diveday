@@ -21,6 +21,8 @@ export function SeatCourseControls({
   setCourseMaterialsDoneAction,
   materialsDoneLine,
   certifyMaterialsNote = null,
+  markCardProcessedAction,
+  processedCard = null,
 }: {
   bookingId: string;
   personId: string;
@@ -38,6 +40,10 @@ export function SeatCourseControls({
    * evidence, and the instructor reads it there.
    */
   certifyMaterialsNote?: string | null;
+  /** Tick the card this session issued processed with its agency (ideas item 46). */
+  markCardProcessedAction?: (formData: FormData) => void;
+  /** The card Certify issued here: its agency's name, and "Processed with PADI · Oct 25" once ticked. */
+  processedCard?: { certificationId: string; agency: string; doneLine: string | null } | null;
 }) {
   return (
     <>
@@ -137,6 +143,35 @@ export function SeatCourseControls({
             </SubmitButton>
           </FieldGrid>
         </details>
+      ) : null}
+
+      {/* **"Processed with PADI"** (fifth-loop ideas, item 46): after Certify,
+          the instructor ticks that the agency has the student's details. It
+          records the shop's act and issues nothing; the same tap takes it
+          back. */}
+      {markCardProcessedAction && processedCard ? (
+        <form
+          action={markCardProcessedAction}
+          className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1"
+        >
+          <input type="hidden" name="certificationId" value={processedCard.certificationId} />
+          <input type="hidden" name="done" value={processedCard.doneLine ? "false" : "true"} />
+          {processedCard.doneLine ? (
+            <span className="text-sm text-muted">{processedCard.doneLine}</span>
+          ) : null}
+          <SubmitButton
+            pendingLabel={t("trips.roster.processedSaving")}
+            className={
+              processedCard.doneLine
+                ? buttonClass({ variant: "link", size: "sm", flush: true })
+                : buttonClass({ variant: "secondary", size: "sm" })
+            }
+          >
+            {processedCard.doneLine
+              ? t("trips.roster.processedUndo")
+              : t("trips.roster.processedMark", { agency: processedCard.agency })}
+          </SubmitButton>
+        </form>
       ) : null}
 
       {/* What this student does next, written once and read on their recap

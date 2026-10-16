@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { setCardProcessed } from "@/db/agency-processing";
 import { getDb } from "@/db/client";
 import { invitedWithinCooldown } from "@/db/invite-suggestions";
 import {
@@ -68,4 +69,28 @@ export async function inviteToCourseSessionAction(shopSlug: string, formData: Fo
           : "invite-failed",
     ),
   );
+}
+
+const processedSchema = z.object({ certificationId: z.uuid() });
+
+/**
+ * **"Processed" on the course page's list of cards to process** (fifth-loop
+ * ideas, item 46): the same stamp as the session roster's tick. Scoped to this
+ * shop's own issued cards by the writer.
+ */
+export async function markCardProcessedFromCoursesAction(shopSlug: string, formData: FormData) {
+  const { session } = await requireShopSurface(shopSlug);
+  const back = shopPath(shopSlug, "courses");
+  const parsed = processedSchema.safeParse({ certificationId: formData.get("certificationId") });
+  if (!parsed.success) redirect(back);
+  const db = await getDb();
+  await setCardProcessed(db, {
+    shopId: session.user.shopId,
+    certificationId: parsed.data.certificationId,
+    actorPersonId: session.user.personId,
+    processed: true,
+    now: nowDate(),
+  });
+  revalidatePath(back);
+  redirect(back);
 }

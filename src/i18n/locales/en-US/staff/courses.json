@@ -197,6 +197,12 @@
     "max": "A course holds up to {max, plural, one {# material} other {# materials}}.",
     "empty": "Nothing yet. Add the eLearning or reading students finish before day 1."
   },
+  "processing": {
+    "heading": "Cards to process",
+    "agencyLine": "{count, plural, one {# card to process with {agency}} other {# cards to process with {agency}}}",
+    "certifiedOn": "certified {date}",
+    "mark": "Processed"
+  },
   "ladder": {
     "heading": "Next steps",
     "taster": "{count, plural, one {# did {course} in the last 12 months} other {# did {course} in the last 12 months}} · {wentOn} went on to {next}",
