@@ -45,7 +45,6 @@ import {
 } from "@/lib/today";
 import { ClosingStation } from "./ClosingStation";
 import { DayStation } from "./DayStation";
-import { DayTakings } from "./DayTakings";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
 import { RentalFitKeepControl } from "./RentalFitKeepControl";
 import {
@@ -53,6 +52,7 @@ import {
   type ResendConfirmationCopy,
 } from "./ResendConfirmationControl";
 import { spineClearUnlessWindy, spineEntries, spineMoment } from "./spine-reading";
+import { EveningReadings } from "./TomorrowFromTonight";
 import { WaiverSendControl } from "./WaiverSendControl";
 import { WeekHorizon } from "./WeekHorizon";
 
@@ -1203,17 +1203,16 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
         </UnlessWindy>
       ) : null}
 
-      {/* **What today made** (issue #1930). While one boat is out there is no
-          day to have made anything yet. */}
-      {closing && evening?.takings ? (
-        <DayTakings
-          takings={evening.takings}
-          currency={currency}
-          locale={locale}
-          timeZone={timeZone}
-          t={t}
-        />
-      ) : null}
+      {/* **What today made** (issue #1930), and what tomorrow needs from
+          tonight (fifth-loop ideas, item 2). Neither while a boat is out. */}
+      <EveningReadings
+        evening={evening}
+        currency={currency}
+        locale={locale}
+        timeZone={timeZone}
+        shopSlug={shopSlug}
+        t={t}
+      />
 
       {/* The two horizons, collapsed. Tomorrow expands in place through the
           app's one disclosure spelling (`LedgerGroup`'s `folded`); the week is

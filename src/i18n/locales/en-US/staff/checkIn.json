@@ -32,6 +32,12 @@
     "money": "Marking someone not here does not charge or refund anything.",
     "moneyDoor": "Open their orders"
   },
+  "sailedRebook": {
+    "booked": "Booked {when}",
+    "open": "Nothing else booked · {when} has {seats, plural, one {# seat} other {# seats}}",
+    "add": "Add them",
+    "addAriaLabel": "Add {name} to {title}, {when}"
+  },
   "settledAllBoarded": "All boarded",
   "settledSomeBoarded": "{count} boarded",
   "checkInButton": "Check in",

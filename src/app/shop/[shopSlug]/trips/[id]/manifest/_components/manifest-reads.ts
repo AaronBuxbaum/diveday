@@ -1,4 +1,5 @@
 import { departureKitRecord } from "@/db/boat-safety";
+import { openSnagsForTrip } from "@/db/boat-snags";
 import { departureVessels } from "@/db/boats";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
 import type { AppDb } from "@/db/client";
@@ -10,9 +11,11 @@ import { getTripManifests } from "@/db/manifests";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
+import { lastAtSites } from "@/db/site-history";
 import { listShopPickedSpecies, listTripSightings } from "@/db/trip-sightings";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripMeetingPointFields, listTripDives } from "@/db/trips";
+import type { SiteHistory } from "@/lib/site-history";
 
 /**
  * **Everything the boat manifest reads, in the waves the page awaits them**:
@@ -46,6 +49,7 @@ export async function readManifestPage(
     meetingPoint,
     vessels,
     kitRecord,
+    snags,
   ] = await Promise.all([
     getTripManifests(db, shopId, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
@@ -84,6 +88,9 @@ export async function readManifestPage(
     // The oxygen and first aid kit the register holds aboard that boat, for
     // the printed kit lines (fourth review, item 17).
     departureKitRecord(db, shopId, tripId),
+    // What earlier crews on this boat said is wrong with it, and what this
+    // crew wrote (fifth-loop ideas, item 1).
+    openSnagsForTrip(db, shopId, tripId),
   ]);
   // Each live site's field guide, for the dive log's "one thing you saw"
   // picker (issue #1190). Read after the sites resolve because it is keyed by
@@ -98,9 +105,20 @@ export async function readManifestPage(
   // picked anywhere — the two rungs under a site's own field guide in
   // `seenChipSlugs`. Both are shop-wide reads with no dependency on which
   // checkpoint is open, so they resolve together beside the guides.
-  const [loggedSightings, shopPickedSpecies] = await Promise.all([
+  // What each planned site was like the last time a boat went (fifth-loop
+  // ideas, item 6), keyed by the plan's own site ids and this departure's start.
+  const departureStartsAt = completeManifests?.[0]?.trip.startsAt;
+  const [loggedSightings, shopPickedSpecies, siteHistory] = await Promise.all([
     listTripSightings(db, shopId, tripId),
     listShopPickedSpecies(db, shopId),
+    departureStartsAt
+      ? lastAtSites(db, {
+          shopId,
+          siteIds: plannedDives.flatMap(({ diveSite }) => (diveSite ? [diveSite.id] : [])),
+          before: departureStartsAt,
+          excludeTripId: tripId,
+        })
+      : new Map<string, SiteHistory>(),
   ]);
   // A multi-day run's real windows, for the stage strip's tap (issue #2406).
   const dockTrip = completeManifests?.[0]?.trip;
@@ -112,8 +130,8 @@ export async function readManifestPage(
     buddyTeamsList,
     bookingNotes,
     diverNotes,
-    checklistItems,
-    checklistChecks,
+    // The boat check, and what earlier crews on this boat said is wrong with it.
+    boatCheck: { checklistItems, checklistChecks, snags },
     plannedDives,
     executedDives,
     liveDiveSites,
@@ -124,6 +142,7 @@ export async function readManifestPage(
     meetingPoint,
     vessel: vessels.get(tripId) ?? null,
     kitRecord,
+    siteHistory,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,

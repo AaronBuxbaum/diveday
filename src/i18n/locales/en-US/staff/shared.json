@@ -18,7 +18,7 @@
   "imageInput": {
     "tooMany": "{count, plural, one {Choose up to # photo at a time.} other {Choose up to # photos at a time.}}",
     "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
-    "tooBigSuffix": ": that’s over {maxMb} MB, so try a smaller photo.",
+    "tooBigSuffix": ": that’s over {maxMb}\u00a0MB, so try a smaller photo.",
     "choose": "Choose a photo",
     "chooseAnother": "Choose a different photo",
     "chooseOthers": "Choose different photos"
@@ -137,9 +137,12 @@
     "meetingPoint": "Meeting point: {label}",
     "conditionsHeading": "Conditions",
     "dayTitle": "Day packet",
+    "dayTitleTomorrow": "Tomorrow’s packet",
     "daySubtitle": "{count, plural, one {# departure} other {# departures}} · {date}",
     "dayEmpty": "No departures today.",
-    "dayDoor": "Print the day"
+    "dayEmptyTomorrow": "No departures tomorrow.",
+    "dayDoor": "Print the day",
+    "dayDoorTomorrow": "Print tomorrow"
   },
   "commandPalette": {
     "search": "Search",

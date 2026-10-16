@@ -76,5 +76,13 @@
     "tipsOnBoat": "And {amount} in tips on {boat}.",
     "imported": "{count, plural, one {Includes # imported record Stripe has not confirmed.} other {Includes # imported records Stripe has not confirmed.}}",
     "boatTips": "{time} {boat}: {amount}"
+  },
+  "loadOut": {
+    "heading": "Tomorrow from tonight",
+    "tanks": "{total, plural, one {# tank} other {# tanks}} to fill ({air} air, {nitrox} nitrox)",
+    "tanksAir": "{total, plural, one {# tank} other {# tanks}} to fill",
+    "pieces": "{count, plural, one {# rental piece} other {# rental pieces}} to pick",
+    "departures": "{count, plural, one {# departure} other {# departures}}",
+    "print": "Print tomorrow"
   }
 }

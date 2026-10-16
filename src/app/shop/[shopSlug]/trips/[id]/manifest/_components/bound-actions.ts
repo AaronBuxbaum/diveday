@@ -1,11 +1,13 @@
 import {
   addBuddyTeamMemberAction,
   addManifestPrivateNoteAction,
+  answerSnagAction,
   crewRollCallAction,
   dissolveBuddyTeamAction,
   formBuddyTeamAction,
   type ManifestActionContext,
   markTripCaughtUpAction,
+  noteSnagAction,
   preDepartureCheckAction,
   removeBuddyTeamMemberAction,
   rollCallAction,
@@ -40,6 +42,9 @@ export function bindManifestActions(actionContext: ManifestActionContext) {
     // Same narrower context as the note above: the checklist is checkpoint-
     // independent, so its action re-proves nothing about which one was open.
     preDepartureCheck: preDepartureCheckAction.bind(null, { shopSlug, tripId }),
+    // A snag is about the boat, not the checkpoint: the same narrower context.
+    noteSnag: noteSnagAction.bind(null, { shopSlug, tripId }),
+    answerSnag: answerSnagAction.bind(null, { shopSlug, tripId }),
     setTripStage: setTripStageAction.bind(null, { shopSlug, tripId }),
     // Named as `BuddyTeamsPanel` takes them, so the page hands them on whole.
     buddyTeams: {

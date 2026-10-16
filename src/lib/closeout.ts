@@ -6,7 +6,7 @@ import type { MonthlyReport } from "./reporting";
 import { rollCallCheckpoints } from "./roll-call";
 import type { RollCallGapReason } from "./today";
 import { liveStageOf, type TripStageReading } from "./trip-stages";
-import { toDateInputValue, utcToWallTime } from "./zoned";
+import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "./zoned";
 
 /**
  * **The day's closing state — the evening half of the shop home's spine.**
@@ -350,6 +350,12 @@ export type DayCloseoutState = {
   shopDay: string;
   /** Today's departures, loudest first. */
   departures: CloseoutDeparture[];
+  /**
+   * Tomorrow's tanks and rental pieces (`dayLoadOut`), read only once every
+   * departure today has settled; absent or null otherwise (fifth-loop ideas,
+   * item 2).
+   */
+  tomorrow?: DayLoadOut | null;
 };
 
 /**
@@ -643,6 +649,12 @@ export type EveningClose = {
    * own predicate — before it spends the accent.
    */
   allHome: boolean;
+  /**
+   * **Tomorrow from tonight** (fifth-loop ideas, item 2): tomorrow's tanks and
+   * rental pieces across its departures, said once `loadOutDue`. Null before
+   * today's last scheduled return, or for a tomorrow with no departure.
+   */
+  tomorrow: DayLoadOut | null;
 };
 
 /**
@@ -658,6 +670,8 @@ export type EveningClose = {
 export function assembleEveningClose(
   departures: readonly CloseoutDeparture[],
   now: Date = nowDate(),
+  /** `DayCloseoutState.tomorrow`; said once `loadOutDue`. */
+  tomorrow: DayLoadOut | null = null,
 ): EveningClose {
   const stations: StationClose[] = departures
     .map((departure) => {
@@ -720,7 +734,27 @@ export function assembleEveningClose(
     out === back &&
     stations.every((station) => station.status === "all_home") &&
     stations.every((station) => station.crewAccountedFor);
-  return { stations, closing, out, back, divers, crew, allHome };
+  return {
+    stations,
+    closing,
+    out,
+    back,
+    divers,
+    crew,
+    allHome,
+    tomorrow: loadOutDue(departures, now) ? tomorrow : null,
+  };
+}
+
+/**
+ * **When tomorrow's load-out is worth saying** (dive-domain review FIX 3):
+ * once the clock is past the last scheduled return of today's boats, or on a
+ * day with none. Not "every boat settled", the takings' rule: a Monday with no
+ * boats before a full Tuesday is the evening the fill station most needs the
+ * count, and a night boat's roll call is no reason to wait for it.
+ */
+export function loadOutDue(departures: readonly { endsAt: Date }[], now: Date): boolean {
+  return departures.every((departure) => now.getTime() >= departure.endsAt.getTime());
 }
 
 /**
@@ -794,3 +828,69 @@ export type DayTakings = {
    */
   importedRecordCount: number;
 };
+
+/**
+ * Noon on the shop's *next* calendar day, in its own zone: the instant a
+ * reader of "tomorrow's departures" (`listShopDayDepartures`,
+ * `getShopDayDepartures`) brackets the day from.
+ *
+ * Noon rather than midnight so a daylight-saving jump cannot land it on the
+ * wrong side of the boundary it is naming, and the shop's zone rather than the
+ * server's because "tomorrow" is a fact about where the boat sails from.
+ */
+export function tomorrowNoon(now: Date, timeZone: string): Date {
+  const wall = utcToWallTime(now, timeZone);
+  const next = new Date(Date.UTC(wall.year, wall.month - 1, wall.day + 1));
+  return wallTimeToUtc(
+    {
+      year: next.getUTCFullYear(),
+      month: next.getUTCMonth() + 1,
+      day: next.getUTCDate(),
+      hour: 12,
+      minute: 0,
+    },
+    timeZone,
+  );
+}
+
+/** One departure's share of a day's load-out, as its own Gear tab counts it. */
+export type DepartureLoadOut = {
+  /** `buildDivePrepChecklist`'s tanks: (divers + diving crew) × dives, split air and nitrox. */
+  tanks: { total: number; air: number; nitrox: number };
+  /** The packing list's lines, each a count of one piece in one size. */
+  lines: readonly { count: number; notOffered: boolean }[];
+};
+
+/**
+ * **Tomorrow from tonight** (fifth-loop ideas, item 2): a day's departures
+ * added together, which is what the fill station and the gear room do every
+ * evening on a whiteboard. Null for a day with no departure, so nothing is
+ * said about it.
+ *
+ * **A count, never a fill log** (H-11). The nitrox figure is seats that asked
+ * and hold a verified card, the same number each Gear tab's Nitrox tile shows;
+ * every cylinder is still analyzed and signed for at the fill station, and
+ * nothing here records that it was.
+ *
+ * Rental pieces are the packing list's own lines, less any piece the shop no
+ * longer offers (`notOffered`), which the list says to ask about rather than
+ * to pull.
+ */
+export function dayLoadOut(departures: readonly DepartureLoadOut[]): {
+  departures: number;
+  tanks: { total: number; air: number; nitrox: number };
+  rentalPieces: number;
+} | null {
+  if (departures.length === 0) return null;
+  const tanks = { total: 0, air: 0, nitrox: 0 };
+  let rentalPieces = 0;
+  for (const departure of departures) {
+    tanks.total += departure.tanks.total;
+    tanks.air += departure.tanks.air;
+    tanks.nitrox += departure.tanks.nitrox;
+    for (const line of departure.lines) if (!line.notOffered) rentalPieces += line.count;
+  }
+  return { departures: departures.length, tanks, rentalPieces };
+}
+
+export type DayLoadOut = NonNullable<ReturnType<typeof dayLoadOut>>;

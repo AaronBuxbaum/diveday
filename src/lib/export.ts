@@ -138,6 +138,8 @@ export const EXPORT_FILE_NOTES = {
     "The shop's own pre-departure safety line, in the shop's own reading order (sort_order) — DiveDay authors none of it. A deleted item is here too, carrying its deleted_at stamp; its history in pre_departure_check_events.csv stays readable regardless.",
   "pre_departure_check_events.csv":
     "Append-only history of every tap against a checklist item, oldest first: status 'checked' or 'cleared' (an explicit undo of a mis-tap), who recorded it and when, and whether it was recorded live or synced from an offline device. The newest event per item is that item's current answer for the departure. Informs only — nothing here ever gated a departure from sailing.",
+  "boat_snags.csv":
+    "Problems a crew wrote against a checklist line on one boat (a snag), oldest first, each carried to that boat's next departures until somebody marked it fixed. still_there_* is the newest crew who looked and found it still there; fixed_* closes it for good. Informs only: an open snag never stopped a departure.",
   "prior_visits.csv":
     "Visit history carried in from the shop's previous system when its divers were imported — one row per booking that system held, never a DiveDay trip. status_label and amount_label are that system's own words and figures, kept verbatim and never normalized: a row can say canceled or no-show, so these are booking records, not evidence of a dive. amount_label is display text with no currency column and was never summed into any DiveDay total. Nothing here was ever read by boarding, capacity, or reporting.",
   "imported_payment_history.csv":

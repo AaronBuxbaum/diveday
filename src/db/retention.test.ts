@@ -1033,6 +1033,9 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "trip_dives",
   "trip_change_events",
   "executed_dives",
+  // A boat's open problem is current state until somebody says it is fixed,
+  // and a fixed one is part of that boat's history, read like a logged dive.
+  "boat_snags",
   "trip_sightings",
   "trip_assignments",
   "trip_help_requests",

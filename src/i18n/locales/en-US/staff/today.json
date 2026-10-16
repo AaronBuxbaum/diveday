@@ -98,6 +98,7 @@
     "boatSafetyKit": "Safety kit",
     "boatPapersDue": "Papers due",
     "boatSafetyExpired": "Safety expired",
+    "boatSnag": "Boat snag",
     "workOrderLate": "Late repair",
     "workOrderUncollected": "Repair not collected",
     "staffCredentialDue": "Credential",
@@ -195,7 +196,8 @@
     "crewAway": "{name} is away {dates}.",
     "rollCallAlerted": "Owners alerted: {time}.",
     "rollCallAlertedWithShore": "Owners and shore contact alerted: {time}.",
-    "rollCallShoreAlerted": "Shore contact alerted: {time}."
+    "rollCallShoreAlerted": "Shore contact alerted: {time}.",
+    "boatSnag": "{item}: {note}. Noted by {name}{count, plural, =0 {.} one {, # departure ago.} other {, # departures ago.}}"
   },
   "actionLabel": {
     "openRollCall": "Open roll call",

@@ -94,5 +94,7 @@
   "waiverMedicalReview": "Revisión médica marcada como necesaria. Solo el estado; las respuestas del cuestionario no forman parte de este documento.",
   "waiverNotSigned": "Sin exención firmada vigente en los registros.",
   "waiverPaperMarkedBy": "Marcado en papel por {name}.",
-  "waiverPending": "Se emitió un enlace de exención y no se ha firmado."
+  "waiverPending": "Se emitió un enlace de exención y no se ha firmado.",
+  "sailedWithSnag": "{item}: {note}. Anotado por {name}\u00a0· {date}",
+  "sailedWithSnagsHeading": "Pendiente en el barco al zarpar"
 }

@@ -283,6 +283,17 @@ export type IncidentPreDepartureCheckEntry = {
   recordedByName: string | null;
 };
 
+/**
+ * A boat snag open when the departure sailed: not fixed before its start, and
+ * written by this crew or carried from before it (`snagsOpenWhenSailed`).
+ */
+export type IncidentSailedSnagEntry = {
+  itemLabel: string;
+  note: string;
+  notedByName: string;
+  notedAt: string;
+};
+
 export type IncidentTimelineEntry =
   | {
       kind: "diver" | "crew";
@@ -369,6 +380,13 @@ export type IncidentExportDocument = {
    * the section outright — the two read differently to an investigator.
    */
   preDepartureCheck: IncidentPreDepartureCheckEntry[];
+  /**
+   * The boat's snags open when it sailed, oldest first (dive-domain review of
+   * fifth-loop item 1): the record says the crew left knowing them. Empty for
+   * a boat with none, and then outside the hash, so a log printed before the
+   * field existed still matches a fresh export of the same records.
+   */
+  sailedWithSnags: IncidentSailedSnagEntry[];
   /** Every stored roll-call event and crew count, oldest first. Empty is stated by the UI. */
   timeline: IncidentTimelineEntry[];
   /**
@@ -444,6 +462,13 @@ export type IncidentExportInput = {
   preDepartureCheck?: ReadonlyArray<{
     label: string;
     check?: { occurredAt: Date; recordedByName: string };
+  }>;
+  /** `snagsOpenWhenSailed`; absent or empty, the boat sailed with none. */
+  sailedWithSnags?: ReadonlyArray<{
+    itemLabel: string;
+    note: string;
+    notedByName: string;
+    notedAt: Date;
   }>;
   generatedAt: Date;
   generatedByName: string;
@@ -822,6 +847,12 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
       occurredAt: item.check ? item.check.occurredAt.toISOString() : null,
       recordedByName: item.check?.recordedByName ?? null,
     })),
+    sailedWithSnags: (input.sailedWithSnags ?? []).map((snag) => ({
+      itemLabel: snag.itemLabel,
+      note: snag.note,
+      notedByName: snag.notedByName,
+      notedAt: snag.notedAt.toISOString(),
+    })),
     timeline,
   };
 
@@ -856,6 +887,8 @@ export function incidentExportContentHash(
     crew: body.crew.map(({ currentRatings: _currentRatings, ...entry }) => entry),
     executedDives: body.executedDives,
     preDepartureCheck: body.preDepartureCheck,
+    // Only when there is one: an empty list leaves every earlier hash as it was.
+    ...(body.sailedWithSnags.length > 0 ? { sailedWithSnags: body.sailedWithSnags } : {}),
     timeline: body.timeline,
   };
   return createHash("sha256").update(JSON.stringify(facts)).digest("hex");

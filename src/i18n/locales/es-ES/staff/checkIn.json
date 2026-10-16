@@ -32,6 +32,12 @@
     "money": "Marcar que alguien no vino no cobra ni reembolsa nada.",
     "moneyDoor": "Abrir sus pedidos"
   },
+  "sailedRebook": {
+    "booked": "Ya reservó: {when}",
+    "open": "Nada más reservado · {when} tiene {seats, plural, one {# plaza} other {# plazas}}",
+    "add": "Añadirlo",
+    "addAriaLabel": "Añadir a {name} a {title}, {when}"
+  },
   "settledAllBoarded": "Todos embarcados",
   "settledSomeBoarded": "{count, plural, one {# embarcado} other {# embarcados}}",
   "checkInButton": "Registrar",

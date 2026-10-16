@@ -2,8 +2,9 @@
  * Gear: what is due back, overdue, or came home fit-adjusted. Imported
  * through the `./gear` barrel.
  */
-import { and, asc, eq, gte, isNotNull, lt, type SQL } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNotNull, lt, type SQL } from "drizzle-orm";
 import type { CalendarDate } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import type { GearItemKind } from "@/lib/gear";
 import {
   SIZED_RENTAL_FIT_COLUMN,
@@ -11,8 +12,10 @@ import {
   sizedRentalKindOfGearKind,
 } from "@/lib/rentals";
 import type { AppDb } from "./client";
-import { liveGearItem, openGearReservation, reservationHolder } from "./gear-shared";
+import { type GearSetReturnOutcome, pullReturnedUnitsForService } from "./gear-reservations";
+import { liveGearItem, openGearReservation, optional, reservationHolder } from "./gear-shared";
 import { bookings, gearItems, gearReservations, people, rentalFitProfiles, trips } from "./schema";
+import { liveTrip } from "./trips-live";
 
 export type GearReturnRow = {
   reservationId: string;
@@ -253,4 +256,131 @@ async function listReturnRows(
       )
       .orderBy(asc(gearReservations.reservedUntil), asc(gearItems.label))
   );
+}
+
+/** One unit that went out on a departure and has not come home yet. */
+export type TripUnitToCheckIn = {
+  reservationId: string;
+  gearItemId: string;
+  kind: GearItemKind;
+  label: string;
+  size: string | null;
+  bookingId: string;
+  personName: string;
+};
+
+/**
+ * **Kit comes back by boat, not by date** (fifth-loop ideas, item 5).
+ *
+ * Every unit handed over for a seat on this departure that is still out: the
+ * Gear tab's "Back from the boat" list once the boat is home. The register's
+ * due-back panel reads by date, and a unit on a two-day reservation would not
+ * reach it until tomorrow, by which time the next diver has it.
+ *
+ * Only units that left (`checked_out_at`): a unit still on the wall never went
+ * to sea, and "Back" on it would record a return that never happened; its row
+ * on the packing list keeps "Release". A cancelled seat's unit is listed too,
+ * since it is out whatever happened to the booking.
+ */
+export async function listTripUnitsToCheckIn(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+): Promise<TripUnitToCheckIn[]> {
+  return db
+    .select({
+      reservationId: gearReservations.id,
+      gearItemId: gearReservations.gearItemId,
+      kind: gearItems.kind,
+      label: gearItems.label,
+      size: gearItems.size,
+      bookingId: bookings.id,
+      personName: people.fullName,
+    })
+    .from(gearReservations)
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, gearReservations.bookingId), eq(bookings.shopId, shopId)),
+    )
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
+    .innerJoin(
+      gearItems,
+      and(eq(gearItems.id, gearReservations.gearItemId), eq(gearItems.shopId, shopId)),
+    )
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
+    .where(
+      and(
+        eq(gearReservations.shopId, shopId),
+        eq(bookings.tripId, tripId),
+        isNotNull(gearReservations.checkedOutAt),
+        openGearReservation(),
+        liveGearItem(),
+        liveTrip(),
+      ),
+    )
+    .orderBy(asc(people.fullName), asc(gearItems.kind), asc(gearItems.label));
+}
+
+/** The two answers a unit coming off the boat takes, one at a time. */
+export const TRIP_UNIT_RETURN_OUTCOMES = ["all_good", "service_concern"] as const;
+export type TripUnitReturnOutcome = (typeof TRIP_UNIT_RETURN_OUTCOMES)[number];
+
+/**
+ * **One unit back from the boat** (fifth-loop ideas, item 5): "Back", or "Back
+ * with a problem" and the words, which is a `service_concern` return, the
+ * flag `serviceConcernStillOpen` keeps on the unit until a technician answers
+ * it. With the problem, the unit moves to Needs service in the same
+ * transaction when its "Pull for service" box is ticked
+ * (`pullReturnedUnitsForService`; the box starts ticked for a regulator, BCD
+ * or cylinder, `pullStartsTicked`), so it is off tomorrow's picker as well as
+ * flagged.
+ *
+ * Scoped by the departure as well as the shop: the reservation must hold a
+ * seat on `tripId` and have gone out, so a replayed or forged id from another
+ * departure, a counter rental, or a unit never handed over closes nothing.
+ */
+export async function returnTripGearUnit(
+  db: AppDb,
+  input: {
+    shopId: string;
+    tripId: string;
+    reservationId: string;
+    outcome: TripUnitReturnOutcome;
+    note?: string;
+    /** The ticked "Pull for service" box: this unit's gear item id, or nothing. */
+    pullGearItemIds?: readonly string[];
+  },
+): Promise<GearSetReturnOutcome> {
+  const note = optional(input.note);
+  if (input.outcome === "service_concern" && !note) {
+    return { ok: false, reason: "concern_needs_words" };
+  }
+  return db.transaction(async (tx): Promise<GearSetReturnOutcome> => {
+    const onThisDeparture = tx
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, input.shopId), eq(bookings.tripId, input.tripId)));
+    const [returned] = await tx
+      .update(gearReservations)
+      .set({ returnedAt: nowDate(), returnNote: note, returnOutcome: input.outcome })
+      .where(
+        and(
+          eq(gearReservations.id, input.reservationId),
+          eq(gearReservations.shopId, input.shopId),
+          inArray(gearReservations.bookingId, onThisDeparture),
+          isNotNull(gearReservations.checkedOutAt),
+          openGearReservation(),
+        ),
+      )
+      .returning({ id: gearReservations.id, gearItemId: gearReservations.gearItemId });
+    if (!returned) return { ok: false, reason: "not_found" };
+    const pulled = await pullReturnedUnitsForService(tx, {
+      shopId: input.shopId,
+      outcome: input.outcome,
+      note,
+      returnedGearItemIds: [returned.gearItemId],
+      pullGearItemIds: input.pullGearItemIds,
+    });
+    return { ok: true, pulled };
+  });
 }

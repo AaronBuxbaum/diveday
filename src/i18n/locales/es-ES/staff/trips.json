@@ -732,12 +732,36 @@
     "checkedLabel": "Verificado — presiona dos veces para quitar la marca",
     "confirmClear": "Presiona otra vez para quitar la marca",
     "uncheckedLabel": "Sin verificar — presiona para marcarlo",
-    "summary": "Antes de salir del muelle: {checked} de {total, plural, one {# verificado} other {# verificados}}"
+    "summary": "Antes de salir del muelle: {checked} de {total, plural, one {# verificado} other {# verificados}}",
+    "summaryWithSnags": "{summary}\u00a0· {count, plural, one {# problema abierto} other {# problemas abiertos}}",
+    "snagsHeading": "Pendiente en este barco",
+    "snagLine": "{item}: {note}",
+    "snagNotedBy": "Anotado por {name}, {date}",
+    "snagStillThereBy": "{name} vio que sigue igual, {date}",
+    "snagFixed": "Arreglado",
+    "snagStillThere": "Sigue igual",
+    "snagSaving": "Guardando…",
+    "noteProblem": "Anotar un problema",
+    "noteLabel": "¿Qué pasa?",
+    "noteSave": "Guardar nota",
+    "noteRefused": "Escribe qué pasa, hasta 280 caracteres.",
+    "printSnag": "Pendiente: {item}: {note} ({noted})"
   },
   "rehearsal": {
     "label": "Ensayo",
     "title": "Salida de práctica para el día de formación",
     "body": "Nada de esta salida se envía, se cobra, se muestra en público ni cuenta en los informes. Se elimina {days, plural, one {# día} other {# días}} después de volver, cuando ninguna salida posterior cuenta sus inmersiones para la espera antes de volar.",
     "kept": "Este ensayo tiene un pase de lista, una inmersión registrada o un informe de incidente, así que no se elimina solo."
+  },
+  "siteHistory": {
+    "label": "La última vez",
+    "dived": "{site}: última inmersión el {date} ({name}).",
+    "divedNoName": "{site}: última inmersión el {date}.",
+    "divedWith": "{site}: última inmersión el {date} ({name}): {conditions}.",
+    "divedWithNoName": "{site}: última inmersión el {date}: {conditions}.",
+    "moved": "{site}: la última vez se cambió a {actual} ({date}).",
+    "both": "visibilidad {visibility}, corriente {current}",
+    "visibility": "visibilidad {visibility}",
+    "current": "corriente {current}"
   }
 }

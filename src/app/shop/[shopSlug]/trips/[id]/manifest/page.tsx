@@ -124,8 +124,7 @@ export default async function TripManifestPage({
     buddyTeamsList,
     bookingNotes,
     diverNotes,
-    checklistItems,
-    checklistChecks,
+    boatCheck,
     plannedDives,
     executedDives,
     liveDiveSites,
@@ -135,6 +134,7 @@ export default async function TripManifestPage({
     meetingPoint,
     vessel,
     kitRecord,
+    siteHistory,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
@@ -173,8 +173,8 @@ export default async function TripManifestPage({
   });
   const catchUpStrip = catchUpStripView(catchUp, locale, shop.timezone, t);
   const checklist = preDepartureCheckView({
-    checklistItems,
-    checklistChecks,
+    ...boatCheck,
+    snagActions: vessel ? { note: actions.noteSnag, answer: actions.answerSnag } : undefined,
     locale,
     timeZone: shop.timezone,
     t,
@@ -313,9 +313,8 @@ export default async function TripManifestPage({
         <PreDepartureCheckList
           idPrefix={idPrefix}
           action={actions.preDepartureCheck}
-          items={checklist.items}
           atDeparture={isDeparture}
-          copy={checklist.copy}
+          {...checklist}
         />
         {/* The page's job, as high as it can go: the divers, immediately under
             the panel that counts them. It used to be the *last* section, below
@@ -382,7 +381,7 @@ export default async function TripManifestPage({
           <TripPlanSection
             idPrefix={idPrefix}
             heading={t("manifest.planChange.heading")}
-            {...tripPlanRows(t, shop, plannedDives, meetingPoint)}
+            {...tripPlanRows(t, shop, plannedDives, meetingPoint, siteHistory, locale)}
           />
         ) : null}
 
@@ -444,13 +443,11 @@ export default async function TripManifestPage({
             20260827-the-departure-is-two-working-surfaces puts device settings in
             the "ashore, not here" tier.
 
-            The disclosure belongs to `OfflineManifestManager` rather than to a
-            wrapper here, and that is load-bearing: the summary line keeps the
-            connectivity chip and the freshness pill on screen, because a stale
-            copy that looks current is the failure mode this whole mechanism
-            exists to prevent — and the component that computes that state is the
-            only thing that can render it. The rest of the group rides in as its
-            children. */}
+            The disclosure belongs to `OfflineManifestManager` rather than to a wrapper here, and
+            that is load-bearing: the summary line keeps the connectivity chip and the freshness
+            pill on screen, because a stale copy that looks current is the failure mode this whole
+            mechanism exists to prevent — and the component that computes that state is the only
+            thing that can render it. The rest of the group rides in as its children. */}
         <OfflineManifestManager
           idPrefix={idPrefix}
           locale={locale}
@@ -458,9 +455,9 @@ export default async function TripManifestPage({
             completeManifests,
             shop: { ...shop, emergencyReference },
             shopSlug,
-            checklistItems,
-            checklistChecks,
+            ...boatCheck,
             boatSafety,
+            locale,
             t,
           })}
           copy={offlineManifestManagerCopy(t)}

@@ -25,7 +25,7 @@ import { WantedPiece } from "./WantedPiece";
 
 /** Which tagged unit each renting diver takes, and the set going out and coming home. */
 export function PrepAssignments({ view }: { view: PrepView }) {
-  const { prep, t, locale, shopSlug, tripId, idPrefix, cancelled, sailed } = view;
+  const { prep, t, locale, shopSlug, tripId, idPrefix, cancelled, sailed, home } = view;
   const { assignmentRows, loadOut, proposals } = prep;
   /**
    * The unit proposed for each piece still to pick, in roster order (UX audit
@@ -224,7 +224,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                           there is something still on the wall to hand across:
                           a set already out has nothing to give, and a set with
                           nothing assigned is not a set. */}
-                  {assigned.length > 0 && !handedOver ? (
+                  {assigned.length > 0 && !handedOver && !home ? (
                     <form action={checkOutTripGearSetAction} className="print:hidden">
                       <input type="hidden" name="tripId" value={tripId} />
                       <input type="hidden" name="bookingId" value={diver.bookingId} />
@@ -237,12 +237,14 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                     </form>
                   ) : null}
                   {/* **The set comes home in one act** (issue #1186, D26).
+                          Until the boat is home: after that "Back from the
+                          boat" asks per unit (fifth-loop ideas, item 5).
                           Only when something is actually out: a diver whose
                           units are still on the wall has nothing to return, and
                           a pane offering to close a set that never left would
                           be the paperwork this replaces rather than the removal
                           of it. */}
-                  {assigned.some((assignment) => assignment.checkedOutAt !== null) ? (
+                  {!home && assigned.some((assignment) => assignment.checkedOutAt !== null) ? (
                     <GearReturnPane
                       fields={{ tripId, bookingId: diver.bookingId }}
                       action={returnTripGearSetAction}

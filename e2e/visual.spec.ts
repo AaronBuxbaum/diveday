@@ -25,6 +25,7 @@ import {
   e2eNow,
   manifestRow,
   offlineCopySaved,
+  openBoatCheck,
   openCounterFor,
   openDiverFileGroup,
   openFirstRosterRowWith,
@@ -6243,6 +6244,31 @@ for (const scheme of ["light", "dark"] as const) {
         // of that group's state on the summary line, and it is what this shot
         // must not race.
         await capture(page, "manifest", scheme);
+      });
+
+      /**
+       * **A snag carried to the boat's next crew** (fifth-loop ideas, item 1):
+       * the reef boat's crew notes a problem against an item, and the night
+       * dive, that hull's next departure, opens with it above the boat check,
+       * with Fixed and Still there.
+       */
+      test(`a manifest carries an earlier crew's snag (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await openBoatCheck(page);
+        const radio = page
+          .getByRole("listitem")
+          .filter({ has: page.getByRole("button", { name: "VHF radio checked" }) });
+        await radio.getByText("Note a problem").click();
+        await radio.getByLabel("What’s wrong?").fill("VHF crackles on 16");
+        await radio.getByRole("button", { name: "Save note" }).click();
+        await radio.getByText("VHF crackles on 16").waitFor();
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await openTripFromBoard(page, "Night Dive — City of Washington");
+        await openTripTab(page, "Manifest");
+        await page.getByRole("region", { name: "Open on this boat" }).waitFor();
+        await offlineCopySaved(page);
+        await capture(page, "manifest-snag-carried", scheme);
       });
 
       /**

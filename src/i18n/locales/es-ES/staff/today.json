@@ -98,6 +98,7 @@
     "boatSafetyKit": "Equipo de seguridad",
     "boatPapersDue": "Documentos por vencer",
     "boatSafetyExpired": "Seguridad vencida",
+    "boatSnag": "Problema en el barco",
     "workOrderLate": "Reparación atrasada",
     "workOrderUncollected": "Reparación sin recoger",
     "staffCredentialDue": "Credencial",
@@ -195,7 +196,8 @@
     "crewAway": "{name} está ausente {dates}.",
     "rollCallAlerted": "Propietarios avisados: {time}.",
     "rollCallAlertedWithShore": "Propietarios y contacto en tierra avisados: {time}.",
-    "rollCallShoreAlerted": "Contacto en tierra avisado: {time}."
+    "rollCallShoreAlerted": "Contacto en tierra avisado: {time}.",
+    "boatSnag": "{item}: {note}. Anotado por {name}{count, plural, =0 {.} one {, hace # salida.} other {, hace # salidas.}}"
   },
   "actionLabel": {
     "openRollCall": "Abrir recuento",

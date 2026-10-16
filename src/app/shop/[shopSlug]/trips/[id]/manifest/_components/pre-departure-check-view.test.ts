@@ -26,4 +26,69 @@ describe("preDepartureCheckView", () => {
     );
     expect(view.copy.summary).toBe(t("trips.preDepartureCheck.summary", { checked: 1, total: 2 }));
   });
+
+  it("hands an earlier crew's snag on above the list and keeps this crew's under its line", () => {
+    const snag = (id: string, notedHere: boolean, checklistItemId: string) => ({
+      id,
+      checklistItemId,
+      itemLabel: checklistItemId === "radio" ? "Radio check" : "Oxygen kit",
+      note: notedHere ? "Spare cylinder low" : "VHF crackles on 16",
+      notedByName: "Sal Moretti",
+      notedAt: new Date("2026-09-11T09:16:00.000Z"),
+      notedHere,
+      stillThere: null,
+    });
+    const snagActions = { note: async () => null, answer: async () => null };
+    const view = preDepartureCheckView({
+      checklistItems: [
+        { id: "radio", label: "Radio check" },
+        { id: "o2", label: "Oxygen kit" },
+      ] as never,
+      checklistChecks: new Map() as never,
+      snags: [snag("a", false, "radio"), snag("b", true, "o2")],
+      snagActions,
+      locale: "en-US",
+      timeZone: "America/New_York",
+      t,
+    });
+    expect(view.carried.map((carried) => carried.line)).toEqual([
+      t("trips.preDepartureCheck.snagLine", { item: "Radio check", note: "VHF crackles on 16" }),
+    ]);
+    expect(view.carried[0]?.notedBy).toContain("Sal Moretti");
+    expect(view.items[0]?.snags).toEqual([]);
+    expect(view.items[1]?.snags.map((here) => here.note)).toEqual(["Spare cylinder low"]);
+    expect(view.snagActions).toBe(snagActions);
+  });
+
+  it("keeps this crew's own open snag on the folded summary line", () => {
+    const base = {
+      checklistItems: [{ id: "radio", label: "Radio check" }] as never,
+      checklistChecks: new Map([
+        [
+          "radio",
+          { recordedByName: "Keiko Tanaka", occurredAt: new Date("2026-09-11T11:40:00.000Z") },
+        ],
+      ]) as never,
+      locale: "en-US",
+      timeZone: "America/New_York",
+      t,
+    };
+    const snag = (id: string, notedHere: boolean) => ({
+      id,
+      checklistItemId: "radio",
+      itemLabel: "Radio check",
+      note: "VHF crackles on 16",
+      notedByName: "Sal Moretti",
+      notedAt: new Date("2026-09-11T09:16:00.000Z"),
+      notedHere,
+      stillThere: null,
+    });
+    expect(preDepartureCheckView({ ...base, snags: [snag("s1", true)] }).copy.summary).toBe(
+      "Before you leave the dock: 1 of 1 checked\u00a0· 1 open snag",
+    );
+    // A carried snag stands outside the fold, so the summary need not repeat it.
+    expect(preDepartureCheckView({ ...base, snags: [snag("s2", false)] }).copy.summary).toBe(
+      "Before you leave the dock: 1 of 1 checked",
+    );
+  });
 });

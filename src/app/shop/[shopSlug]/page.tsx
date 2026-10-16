@@ -11,6 +11,7 @@ import {
 } from "@/app/shop/[shopSlug]/_components/today/DaySpine";
 import { FirstRunChecklist } from "@/app/shop/[shopSlug]/_components/today/FirstRunChecklist";
 import { firstRunChecklistCopy } from "@/app/shop/[shopSlug]/_components/today/first-run-copy";
+import { QuietDay } from "@/app/shop/[shopSlug]/_components/today/QuietDay";
 import { ReleaseStillSample } from "@/app/shop/[shopSlug]/_components/today/ReleaseStillSample";
 import { recapEditorsFor } from "@/app/shop/[shopSlug]/_components/today/recap-editors";
 import { TodayFirstBookable } from "@/app/shop/[shopSlug]/_components/today/TodayFirstBookable";
@@ -18,7 +19,6 @@ import { TodayHeaderNotes } from "@/app/shop/[shopSlug]/_components/today/TodayH
 import { TodayNoticeStack } from "@/app/shop/[shopSlug]/_components/today/TodayNoticeStack";
 import { TodayOrientation } from "@/app/shop/[shopSlug]/_components/today/TodayOrientation";
 import { TodayPrintDoor } from "@/app/shop/[shopSlug]/_components/today/TodayPrintDoor";
-import { TodayQuietDay } from "@/app/shop/[shopSlug]/_components/today/TodayQuietDay";
 import {
   readTodayFirstWave,
   readTodaySecondWave,
@@ -275,7 +275,7 @@ async function TodayBody({
   // and badges the boat they crew; an instructor's leads with their sessions. It never re-orders
   // the spine — clock order wins.
   const lens = roleLensFor(session.user.roles);
-  const eveningClose = assembleEveningClose(closeout.departures, now);
+  const eveningClose = assembleEveningClose(closeout.departures, now, closeout.tomorrow);
   // **The shop's own calendar day**, as the two UTC instants that bracket it. Four readers below
   // want it — the first-boat-ever question, the day strip's window and ticks, and the day's takings
   // — and it is the host's day for none of them, so it is computed once here rather than per
@@ -551,9 +551,10 @@ async function TodayBody({
         t={t}
       />
       {quietDay ? (
-        <TodayQuietDay
+        <QuietDay
           shopSlug={shopSlug}
           nextDeparture={nextDeparture}
+          loadOut={eveningClose.tomorrow}
           locale={locale}
           timeZone={shop.timezone}
           t={t}

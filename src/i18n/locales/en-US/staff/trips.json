@@ -732,12 +732,36 @@
     "checkedLabel": "Checked — press twice to clear",
     "confirmClear": "Tap again to clear",
     "uncheckedLabel": "Not checked — press to mark checked",
-    "summary": "Before you leave the dock: {checked} of {total} checked"
+    "summary": "Before you leave the dock: {checked} of {total} checked",
+    "summaryWithSnags": "{summary}\u00a0· {count, plural, one {# open snag} other {# open snags}}",
+    "snagsHeading": "Open on this boat",
+    "snagLine": "{item}: {note}",
+    "snagNotedBy": "Noted by {name}, {date}",
+    "snagStillThereBy": "{name} found it still there, {date}",
+    "snagFixed": "Fixed",
+    "snagStillThere": "Still there",
+    "snagSaving": "Saving…",
+    "noteProblem": "Note a problem",
+    "noteLabel": "What’s wrong?",
+    "noteSave": "Save note",
+    "noteRefused": "Write what’s wrong, up to 280 characters.",
+    "printSnag": "Open: {item}: {note} ({noted})"
   },
   "rehearsal": {
     "label": "Rehearsal",
     "title": "Practice departure for training day",
     "body": "Nothing about it is sent, charged, shown publicly or counted in reports. It is deleted {days, plural, one {# day} other {# days}} after it comes home, once no later boat counts its dives toward the wait before flying.",
     "kept": "This rehearsal has a roll call, a logged dive or an incident report, so it is not deleted on its own."
+  },
+  "siteHistory": {
+    "label": "Last time",
+    "dived": "{site}: last dived {date} ({name}).",
+    "divedNoName": "{site}: last dived {date}.",
+    "divedWith": "{site}: last dived {date} ({name}): {conditions}.",
+    "divedWithNoName": "{site}: last dived {date}: {conditions}.",
+    "moved": "{site}: moved to {actual} last time ({date}).",
+    "both": "visibility {visibility}, current {current}",
+    "visibility": "visibility {visibility}",
+    "current": "current {current}"
   }
 }

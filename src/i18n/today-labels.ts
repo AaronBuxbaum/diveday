@@ -55,6 +55,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   boat_safety_kit: "today.actionKind.boatSafetyKit",
   boat_papers_due: "today.actionKind.boatPapersDue",
   boat_safety_expired: "today.actionKind.boatSafetyExpired",
+  boat_snag: "today.actionKind.boatSnag",
   work_order_late: "today.actionKind.workOrderLate",
   work_order_uncollected: "today.actionKind.workOrderUncollected",
   staff_credential_due: "today.actionKind.staffCredentialDue",
@@ -987,6 +988,23 @@ export function openGearUnitActionText(t: StaffTranslator): string {
 }
 
 /** A departure's Boat tab, where the pre-departure check names the kit aboard. */
+/**
+ * A snag's row (fifth-loop ideas, item 1): the line and what is wrong, then
+ * who wrote it and how many departures have sailed with it since.
+ */
+export function boatSnagDetailText(
+  t: StaffTranslator,
+  snag: { itemLabel: string; note: string; notedByName: string; departuresSince: number },
+): string {
+  return t("today.detail.boatSnag", {
+    item: snag.itemLabel,
+    // The sentence closes the note itself; a crew's own full stop would double it.
+    note: snag.note.replace(/[.\s]+$/u, ""),
+    name: snag.notedByName,
+    count: snag.departuresSince,
+  });
+}
+
 export function openBoatCheckActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openBoatCheck");
 }

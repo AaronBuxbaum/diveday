@@ -1,22 +1,35 @@
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
-import type { getTodayWork } from "@/db/today";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import type { DayLoadOut } from "@/lib/closeout";
 import { formatShortDate, formatTime } from "@/lib/format";
+import { TomorrowFromTonight } from "./TomorrowFromTonight";
 
-type NextDeparture = NonNullable<Awaited<ReturnType<typeof getTodayWork>>["nextDeparture"]>;
-
-/** A day with nothing on it: the one act available, and the next boat if there is one. */
-export function TodayQuietDay({
+/**
+ * **The quiet day** (`spineIsQuiet`): the home collapsed to the one act
+ * available, the next departure, and, when tomorrow sails, what it needs from
+ * tonight. A no-boat Monday before a full, ready Tuesday is still the evening
+ * the fill station and the printed day are for (dive-domain review FIX 2).
+ */
+export function QuietDay({
   shopSlug,
   nextDeparture,
+  loadOut,
   locale,
   timeZone,
   t,
 }: {
   shopSlug: string;
-  nextDeparture: NextDeparture | null;
+  nextDeparture: {
+    tripId: string;
+    title: string;
+    startsAt: Date;
+    booked: number;
+    sellableCapacity: number;
+  } | null;
+  /** `assembleEveningClose(...).tomorrow`; null says nothing. */
+  loadOut: DayLoadOut | null;
   locale: string;
   timeZone: string;
   t: StaffTranslator;
@@ -51,6 +64,7 @@ export function TodayQuietDay({
           </LedgerRow>
         </ul>
       ) : null}
+      {loadOut ? <TomorrowFromTonight loadOut={loadOut} shopSlug={shopSlug} t={t} /> : null}
     </div>
   );
 }

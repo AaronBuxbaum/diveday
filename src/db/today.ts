@@ -48,6 +48,7 @@ import {
   sharedInHorizonReadiness,
 } from "./blockers";
 import { todayBoatSafety } from "./boat-safety";
+import { openSnagsForShop } from "./boat-snags";
 import { readBoatWork } from "./boat-work";
 import type { AppDb } from "./client";
 import { courseCrewCountsByTrip } from "./course-crew-counts";
@@ -101,6 +102,7 @@ import type { TodayRowsContext } from "./today-rows-context";
 import { at, shopDay } from "./today-shared";
 import { pushShopRows } from "./today-shop-rows";
 import { meetingWindowsByTrip } from "./trip-meeting-windows";
+import { pushBoatSnagRows } from "./today-snag-rows";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { latestTripStagesByTrip } from "./trip-stages";
 import { countShopTrips, crewClashesByTrip, listStaff } from "./trips";
@@ -1622,6 +1624,7 @@ async function readTodayWave(
     crewedAssignments,
     openOrders,
     crewAway,
+    boatSnags,
   ] = await Promise.all([
     // Each booking's latest departure result, not just a head count. The card
     // needs to tell "already aboard" from "still ashore" from "never left the
@@ -1781,6 +1784,9 @@ async function readTodayWave(
       inWindow.map((trip) => trip.id),
       timeZone,
     ),
+    // Problems a crew wrote against a boat's checklist, still open (fifth-loop
+    // ideas, item 1): the `boat_snag` rows.
+    openSnagsForShop(db, shopId, now),
   ]);
   return {
     departureRollCall,
@@ -1817,6 +1823,7 @@ async function readTodayWave(
     crewedAssignments,
     openOrders,
     crewAway,
+    boatSnags,
   };
 }
 
@@ -2004,6 +2011,8 @@ export async function getTodayWork(
   pushRollCallRows(actions, rows);
 
   pushCrewAwayRows(actions, rows);
+
+  pushBoatSnagRows(actions, rows);
 
   pushDepartureRows(actions, rows);
 

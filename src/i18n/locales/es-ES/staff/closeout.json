@@ -76,5 +76,13 @@
     "tipsOnBoat": "Y {amount} en propinas en {boat}.",
     "imported": "{count, plural, one {Incluye # registro importado que Stripe no ha confirmado.} other {Incluye # registros importados que Stripe no ha confirmado.}}",
     "boatTips": "{time} {boat}: {amount}"
+  },
+  "loadOut": {
+    "heading": "Para mañana, desde esta noche",
+    "tanks": "{total, plural, one {# tanque} other {# tanques}} por llenar ({air} de aire, {nitrox} de nitrox)",
+    "tanksAir": "{total, plural, one {# tanque} other {# tanques}} por llenar",
+    "pieces": "{count, plural, one {# pieza de alquiler} other {# piezas de alquiler}} por preparar",
+    "departures": "{count, plural, one {# salida} other {# salidas}}",
+    "print": "Imprimir mañana"
   }
 }

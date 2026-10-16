@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { AgencyCheckRow } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckRow";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
@@ -38,6 +39,8 @@ export type RosterRowContext = {
   record: boolean;
   /** The record's seats counted aboard while blocked (`RosterRecord`). */
   countedAboardBlocked?: ReadonlyMap<string, CountedAboardBlocked>;
+  /** Under a seat on that record, the diver's next dive (fifth-loop ideas, item 4). */
+  recordBelow?: ReadonlyMap<string, ReactNode>;
   /** Depth sentences much of the boat shares, said once in the group band. */
   sharedAdvisoryTexts: ReadonlySet<string>;
   waiverControls: WaiverControls;
