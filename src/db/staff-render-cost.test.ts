@@ -445,7 +445,11 @@ const CHROME_CEILING = 20;
 // 65 → 66: a "certification pending" row offers the agency check (H-105), so
 // Today reads which of the blocked divers' cards the extension could look up
 // (`listAgencyCheckableCards`), one statement beside the wave, not after it.
-const TODAY_CEILING = 66;
+// 66 → 69 (fourth review, items 12 and 14): Today names rostered crew who are
+// away (`crewAwayByTrip`, the departures' crew, schedule days and days away)
+// and keeps every crew assignment on "Your week" (`readerCrewedTrips`), three
+// statements in the queue's one wave.
+const TODAY_CEILING = 69;
 // 49 → 50: the roster reads each diver's unspent package dives for the payment
 // control (`spendableDivesForTrip`, H-79, issue #1697). The held seat's
 // last-dive-day read beside it (`lastDiveDaysHere`, #1789) skips itself when no
@@ -490,7 +494,12 @@ const TRIP_PHASE_CEILING = 6;
  * four more steps of `getReadyPageData` and five single awaits in the thread.
  */
 const PUBLIC_TRIP_CEILING = 18;
-const READY_CEILING = 36;
+// 36 → 38: the seat measured is the seeded board's first upcoming one, and on
+// this seed it is a paid seat with no cancellation policy rather than an
+// unpaid one. Its page offers "Ask to move" (H-126) and reads whether one
+// stands (`hasMoveAsk`); measured, it costs two statements more than the
+// unpaid seat this replay used to land on.
+const READY_CEILING = 38;
 // 10 → 3: the shop, then `readTripPage`'s one wave (issue #2353; code review
 // 2026-10-11, item 2), whose chained reads — the briefings off the dives, the
 // Stripe account and the other boats off the trip — are its third round trip.
@@ -501,4 +510,7 @@ const PUBLIC_TRIP_PHASE_CEILING = 3;
 // 12 → 5 (item 3): the capability; the readiness detail beside the booking
 // row and its fan-out (`getReadyPageData`); the readiness pass's one wave; and
 // the thread's one wave.
-const READY_PHASE_CEILING = 5;
+// 5 → 7: the paid seat above. Whether an Ask to move stands is read after the
+// payment answers (`moveAsk` needs the cancel preview), so a paid seat waits
+// on two more round trips than an unpaid one; measured on this seed.
+const READY_PHASE_CEILING = 7;
