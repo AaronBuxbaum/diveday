@@ -150,6 +150,15 @@ export const diveSites = pgTable(
     /** How demanding the site is; the briefing prints a translated label for it. */
     difficultyLevel: diveSiteDifficulty("difficulty_level"),
     /**
+     * **Whether a snorkeler gets anything out of this site** (issue #2214): a
+     * shallow reef garden yes, a 30 m wall in a current no. Null is "the shop
+     * has not said", which is most sites and is never read as no. It only ever
+     * raises a warning on a departure that opens snorkeler seats; it never
+     * refuses one, because the captain picks the site on the day. Not inferred
+     * from depth: a shallow site can still be wrong for a surface swimmer.
+     */
+    snorkelSuitable: boolean("snorkel_suitable"),
+    /**
      * Free-text prose for the briefing ("6–12 m", "shallow ledge to 18"). Kept
      * alongside `max_depth_meters` rather than replaced by it: it carries shape
      * and nuance a single number can't, and it is what the diver-facing site
@@ -400,6 +409,8 @@ export type GlobalDiveSiteBriefing = {
   difficulty?: string;
   /** How demanding the site is, as a `dive_site_difficulty` code. */
   difficultyLevel?: (typeof diveSiteDifficulty.enumValues)[number];
+  /** Whether snorkelers get anything out of the site; absent when the template does not know. */
+  snorkelSuitable?: boolean;
   depthRange?: string;
   maxDepthMeters?: number;
   expectedBottomTimeMinutes?: number;

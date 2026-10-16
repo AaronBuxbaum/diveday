@@ -24,6 +24,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Look along the coral heads for schooling grunts and curious damselfish; rays often cruise the sandy channels between the spurs.",
       difficultyLevel: "beginner",
+      snorkelSuitable: true,
       depthRange: "5–18 m (15–60 ft)",
       maxDepthMeters: 18,
       currentNote: "Usually gentle, but reef-line current can run.",
@@ -135,6 +136,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sergeant majors guard purple egg patches on the statue's base all summer, and the coral heads around it are as good as anything deeper.",
       difficultyLevel: "beginner",
+      snorkelSuitable: true,
       depthRange: "5–8 m (15–25 ft)",
       maxDepthMeters: 8,
       currentNote:
@@ -238,6 +240,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Expect big silhouettes, moving schools, and changing light along the exterior decks. The superstructure is thick with coral and sponge now.",
       difficultyLevel: "advanced",
+      snorkelSuitable: false,
       depthRange: "18–40 m (60–130 ft)",
       maxDepthMeters: 40,
       currentNote: "Open-water current can run hard, and it is a long ship.",
@@ -296,6 +299,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A resident goliath grouper often holds near the wheelhouse. Look out into the blue for jacks working the current off the bow.",
       difficultyLevel: "advanced",
+      snorkelSuitable: false,
       depthRange: "18–37 m (60–120 ft)",
       maxDepthMeters: 37,
       currentNote: "Can run strong on the surface and at depth.",
@@ -354,6 +358,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The crest is so shallow it breaks the surface at low tide. Small reef fish crowd the coral heads, and conch work the sand behind.",
       difficultyLevel: "beginner",
+      snorkelSuitable: true,
       depthRange: "3–10 m (10–35 ft)",
       maxDepthMeters: 10,
       currentNote:

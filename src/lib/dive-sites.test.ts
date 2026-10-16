@@ -30,6 +30,24 @@ function formEntries(overrides: Record<string, string> = {}): Record<string, unk
 }
 
 describe("parseDiveSiteForm", () => {
+  // Issue #2214: the select beside difficulty posts yes, no or nothing.
+  it.each([
+    ["yes", true],
+    ["no", false],
+    ["", null],
+    ["n", null],
+  ] as const)("reads snorkel answer %j as %s", (posted, expected) => {
+    const result = parseDiveSiteForm(formEntries({ snorkelSuitable: posted }), "meters");
+    expect(result).toMatchObject({ ok: true, snorkelSuitable: expected });
+  });
+
+  it("reads a form that never carried the snorkel select as not said", () => {
+    expect(parseDiveSiteForm(formEntries(), "meters")).toMatchObject({
+      ok: true,
+      snorkelSuitable: null,
+    });
+  });
+
   it("allows a briefing with no coordinates yet", () => {
     const result = parseDiveSiteForm(
       formEntries({ forecastLatitude: "", forecastLongitude: "" }),

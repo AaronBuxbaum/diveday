@@ -334,7 +334,15 @@ export function tripAboutRows(context: TripAboutRowsContext) {
         />
       ) : undefined,
     },
-    ...participantTermsRows({ trip, shop, locale, tripNotice, canConfigure, shopSlug }),
+    ...participantTermsRows({
+      trip,
+      shop,
+      locale,
+      tripNotice,
+      canConfigure,
+      shopSlug,
+      plannedSites: tripDiveList.flatMap(({ diveSite }) => (diveSite ? [diveSite] : [])),
+    }),
     // **On every departure, whatever the crew schedule says**: who
     // is aboard is manifest data (the crew roll call, the souls-on-
     // board count), not planning (ADR 20261005-crew-schedule-is-a-setting).

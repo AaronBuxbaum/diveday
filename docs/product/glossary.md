@@ -253,6 +253,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Sign once
 - Skipped occurrence
 - SMS channel
+- Snorkel-suitable
 - Snorkeler
 - Souls on board
 - Staff invite

@@ -56,6 +56,7 @@ export type SiteFieldValues = {
   marineLife: string | null;
   marineLifeDescription: string | null;
   difficultyLevel: DiveSiteDifficulty | null;
+  snorkelSuitable: boolean | null;
   depthRange: string | null;
   maxDepthMeters: number | null;
   expectedBottomTimeMinutes: number | null;

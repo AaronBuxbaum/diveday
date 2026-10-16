@@ -59,3 +59,35 @@ export function parseDiveSiteDifficulty(value: unknown): DiveSiteDifficulty | nu
     ? (code as DiveSiteDifficulty)
     : null;
 }
+
+/**
+ * **Whether a site is any good for a snorkeler** (issue #2214), as the form
+ * posts it: `"yes"`, `"no"`, or anything else for "not said". Null is the
+ * ordinary case and is never read as no.
+ */
+export function parseSnorkelSuitable(value: unknown): boolean | null {
+  if (value === "yes") return true;
+  if (value === "no") return false;
+  return null;
+}
+
+/**
+ * **Snorkeler seats are open on a departure whose planned sites the shop has
+ * marked unsuitable for snorkelers** (issue #2214; Aaron 2026-10-13).
+ *
+ * True only when seats are open and *every* planned site says no. One site
+ * that is suitable, or one the shop has not rated, keeps it quiet: the captain
+ * picks the site on the day, and a site nobody rated is not evidence of
+ * anything. A departure with no site planned is quiet too, for the same
+ * reason; a dive with no site chosen is not a planned site.
+ *
+ * It advises, it never gates: a warning line on the departure, never a
+ * refusal of a snorkeler's seat.
+ */
+export function snorkelersOnUnsuitableSites(input: {
+  snorkelerSeatsOpen: boolean;
+  plannedSites: readonly { snorkelSuitable: boolean | null }[];
+}): boolean {
+  if (!input.snorkelerSeatsOpen || input.plannedSites.length === 0) return false;
+  return input.plannedSites.every((site) => site.snorkelSuitable === false);
+}

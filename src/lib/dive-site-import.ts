@@ -50,6 +50,8 @@ export type PreparedDiveSiteImportRow = {
   description: string | null;
   locationName: string | null;
   difficultyLevel: DiveSiteDifficulty | null;
+  /** Empty cell is "not said", never false (issue #2214). */
+  snorkelSuitable: boolean | null;
   depthRange: string | null;
   maxDepthMeters: number | null;
   expectedBottomTimeMinutes: number | null;
@@ -132,6 +134,7 @@ export const DIVE_SITE_IMPORT_COLUMNS = [
   "location_name",
   "description",
   "difficulty_level",
+  "snorkel_suitable",
   "depth_range",
   "max_depth_meters",
   "expected_bottom_time_minutes",
@@ -462,6 +465,8 @@ export function prepareDiveSiteImport(
       description: read(cells, "description"),
       locationName: read(cells, "location_name"),
       difficultyLevel,
+      snorkelSuitable:
+        read(cells, "snorkel_suitable") === null ? null : flag(read(cells, "snorkel_suitable")),
       depthRange: read(cells, "depth_range"),
       maxDepthMeters,
       expectedBottomTimeMinutes,

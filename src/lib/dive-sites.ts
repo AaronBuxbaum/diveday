@@ -5,6 +5,7 @@ import { type DepthUnit, depthToMeters, MAX_ENTERED_DEPTH_METERS } from "./depth
 import {
   type DiveSiteDifficulty,
   parseDiveSiteDifficulty,
+  parseSnorkelSuitable,
   type SiteLibraryGroupLabel,
 } from "./dive-site-difficulty";
 import { parseFieldGuideSelection } from "./dive-site-field-guide";
@@ -116,6 +117,9 @@ export const diveSiteFormSchema = z.object({
   marineLife: z.string().trim().max(400),
   marineLifeDescription: z.string().trim().max(1_200),
   difficulty: z.string().trim().max(120),
+  // "yes", "no" or "" from the select beside difficulty (issue #2214); absent
+  // from an older form reads as "not said".
+  snorkelSuitable: z.string().trim().max(3).optional().default(""),
   depthRange: z.string().trim().max(120),
   // Typed in the shop's own unit (metres or feet), so the real bound can only
   // be applied once the unit is known — this is the loose outer guard, and
@@ -205,6 +209,8 @@ export type DiveSiteFormParse =
       expectedBottomTimeMinutes: number | null;
       /** The chosen difficulty code, or null — see `./dive-site-difficulty.ts`. */
       difficultyLevel: DiveSiteDifficulty | null;
+      /** Whether snorkelers get anything out of the site, or null for not said. */
+      snorkelSuitable: boolean | null;
       route: DiveSiteFormRoute;
       landmarks: DiveSiteLandmark[];
       creatures: MarineLifeSlug[];
@@ -261,6 +267,7 @@ export function parseDiveSiteForm(
     expectedBottomTimeMinutes:
       parsed.data.expectedBottomTime === "" ? null : parsed.data.expectedBottomTime,
     difficultyLevel: parseDiveSiteDifficulty(parsed.data.difficulty),
+    snorkelSuitable: parseSnorkelSuitable(parsed.data.snorkelSuitable),
     landmarks: parseDiveSiteLandmarks(parsed.data.landmarks),
     creatures: parseFieldGuideSelection(parsed.data.creatures),
     route: {

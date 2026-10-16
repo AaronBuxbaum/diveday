@@ -1757,6 +1757,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "location_name",
       "description",
       "difficulty_level",
+      // true, false, or empty for "the shop has not said" (issue #2214).
+      "snorkel_suitable",
       "depth_range",
       "max_depth_meters",
       "expected_bottom_time_minutes",
@@ -1808,6 +1810,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         // 20260813-dive-site-difficulty-is-a-code). The column keeps its
         // three stable values, so a destination system can map them.
         row.difficultyLevel,
+        row.snorkelSuitable,
         row.depthRange,
         row.maxDepthMeters,
         row.expectedBottomTimeMinutes,

@@ -6,7 +6,7 @@ import { DOCK_DAY_LIMITS } from "@/lib/diver-planning";
 import type { SiteFieldValues } from "./SiteFields";
 
 /**
- * The dive section: difficulty, depth, bottom time, current and the plan — the
+ * The dive section: difficulty, snorkeling, depth, bottom time, current and the plan — the
  * facts a briefing states and a planner reads, depth entered in the shop's
  * own unit and stored in metres.
  */
@@ -40,6 +40,26 @@ export function SiteDiveFields({
                 {t(`diveSites.form.difficultyLevels.${level}`)}
               </option>
             ))}
+          </select>
+        </Field>
+        {/* Beside difficulty because it is the same kind of fact about the
+            place, for the people who stay at the surface (issue #2214). Not
+            said is its own answer: it never reads as no. */}
+        <Field label={t("diveSites.form.snorkelLabel")} hint={t("diveSites.form.optionalHint")}>
+          <select
+            name="snorkelSuitable"
+            defaultValue={
+              values?.snorkelSuitable === true
+                ? "yes"
+                : values?.snorkelSuitable === false
+                  ? "no"
+                  : ""
+            }
+            className={controlClass}
+          >
+            <option value="">{t("diveSites.form.snorkelUnset")}</option>
+            <option value="yes">{t("diveSites.form.snorkelYes")}</option>
+            <option value="no">{t("diveSites.form.snorkelNo")}</option>
           </select>
         </Field>
         <Field label={t("diveSites.form.depthRangeLabel")} hint={t("diveSites.form.optionalHint")}>

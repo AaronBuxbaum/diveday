@@ -42,6 +42,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "Look along the coral heads for schooling grunts and curious damselfish; rays often cruise the sandy channels.",
         difficultyLevel: "beginner",
+        snorkelSuitable: true,
         depthRange: "20–40 ft",
         maxDepthMeters: 12,
         currentNote: "Usually gentle.",
@@ -123,6 +124,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "Expect big silhouettes, moving schools, and changing light along the exterior decks.",
         difficultyLevel: "advanced",
+        snorkelSuitable: false,
         depthRange: "60–130 ft",
         maxDepthMeters: 40,
         currentNote: "Open-water current can be strong.",
@@ -170,6 +172,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "A gentle route with lots to notice near the reef and plenty of light for photos.",
         difficultyLevel: "beginner",
+        snorkelSuitable: true,
         depthRange: "15–25 ft",
         maxDepthMeters: 8,
         currentNote: "Usually gentle.",

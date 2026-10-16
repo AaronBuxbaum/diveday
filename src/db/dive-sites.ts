@@ -83,6 +83,8 @@ export type DiveSiteInput = {
   marineLifeDescription?: string;
   /** How demanding the site is, as a code (`src/lib/dive-site-difficulty.ts`). */
   difficultyLevel?: DiveSiteDifficulty | null;
+  /** Whether snorkelers get anything out of the site; null/undefined is "not said". */
+  snorkelSuitable?: boolean | null;
   depthRange?: string;
   /** Canonical metres, whatever unit the shop typed it in (src/lib/depth-units.ts). */
   maxDepthMeters?: number | null;
@@ -483,6 +485,7 @@ export async function createDiveSite(db: DbExecutor, input: DiveSiteInput) {
       marineLife: input.marineLife || null,
       marineLifeDescription: input.marineLifeDescription || null,
       difficultyLevel: input.difficultyLevel ?? null,
+      snorkelSuitable: input.snorkelSuitable ?? null,
       depthRange: input.depthRange || null,
       expectedBottomTimeMinutes: input.expectedBottomTimeMinutes ?? null,
       currentNote: input.currentNote || null,
@@ -585,6 +588,7 @@ export async function updateDiveSite(
       marineLife: input.marineLife || null,
       marineLifeDescription: input.marineLifeDescription || null,
       difficultyLevel: input.difficultyLevel ?? null,
+      snorkelSuitable: input.snorkelSuitable ?? null,
       depthRange: input.depthRange || null,
       // `?? null` rather than `|| null`: 0 is not a real site depth, but the
       // distinction still matters — an omitted field clears the column, which
@@ -736,6 +740,7 @@ export async function copyDiveSite(db: AppDb, shopId: string, siteId: string, na
     marineLife: source.marineLife ?? undefined,
     marineLifeDescription: source.marineLifeDescription ?? undefined,
     difficultyLevel: source.difficultyLevel,
+    snorkelSuitable: source.snorkelSuitable,
     depthRange: source.depthRange ?? undefined,
     maxDepthMeters: source.maxDepthMeters,
     expectedBottomTimeMinutes: source.expectedBottomTimeMinutes,
@@ -1154,6 +1159,7 @@ export async function pullDiveSiteTemplateUpdates(
         marineLife: merged.marineLife,
         marineLifeDescription: merged.marineLifeDescription,
         difficultyLevel: merged.difficultyLevel,
+        snorkelSuitable: merged.snorkelSuitable,
         depthRange: merged.depthRange,
         maxDepthMeters: merged.maxDepthMeters,
         expectedBottomTimeMinutes: merged.expectedBottomTimeMinutes,
@@ -1208,6 +1214,7 @@ export async function undoDiveSiteTemplateUpdate(db: AppDb, shopId: string, site
         marineLife: undo.snapshot.marineLife,
         marineLifeDescription: undo.snapshot.marineLifeDescription,
         difficultyLevel: undo.snapshot.difficultyLevel,
+        snorkelSuitable: undo.snapshot.snorkelSuitable,
         depthRange: undo.snapshot.depthRange,
         maxDepthMeters: undo.snapshot.maxDepthMeters,
         expectedBottomTimeMinutes: undo.snapshot.expectedBottomTimeMinutes,
