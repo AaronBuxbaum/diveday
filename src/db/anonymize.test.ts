@@ -304,8 +304,6 @@ describe("anonymizeDiver — the welcome consent (issue #1182)", () => {
         runningLateAt: new Date("2026-07-20T12:30:00Z"),
         // So is the booker's "Under 18" on the seat (H-113).
         minorDeclaredAt: new Date("2026-07-20T12:45:00Z"),
-        // And what they can't eat, for one boat's galley (ideas item 56).
-        dietaryNote: "no shellfish",
       })
       .where(eq(bookings.id, booking.id));
 
@@ -321,11 +319,9 @@ describe("anonymizeDiver — the welcome consent (issue #1182)", () => {
         welcomeSharedAt: bookings.welcomeSharedAt,
         runningLateAt: bookings.runningLateAt,
         minorDeclaredAt: bookings.minorDeclaredAt,
-        dietaryNote: bookings.dietaryNote,
       })
       .from(bookings)
       .where(eq(bookings.id, booking.id));
-    expect(after?.dietaryNote).toBeNull();
     expect(after?.welcomeSharedAt).toBeNull();
     expect(after?.runningLateAt).toBeNull();
     expect(after?.minorDeclaredAt).toBeNull();

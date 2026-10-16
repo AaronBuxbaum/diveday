@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
-import type { AppDb } from "@/db/client";
+import { getDb } from "@/db/client";
+import { getShopBySlug } from "@/db/shops";
 import { listThinBoats } from "@/db/thin-boats";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime, formatWeekdayShortTime } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
 
@@ -14,23 +16,22 @@ import { shopPath } from "@/lib/staff-notices";
  * (item 44, H-130). Renders nothing when every boat is filling.
  */
 export async function QuietDayThinBoats({
-  db,
-  shopId,
   shopSlug,
-  now,
   locale,
   timeZone,
   t,
 }: {
-  db: AppDb;
-  shopId: string;
   shopSlug: string;
-  now: Date;
   locale: string;
   timeZone: string;
   t: StaffTranslator;
 }) {
-  const { shown, total } = await listThinBoats(db, shopId, now);
+  // Read here rather than handed down, so Today's page mounts nothing new: the
+  // page has already proved this slug is the session's own shop.
+  const db = await getDb();
+  const shop = await getShopBySlug(db, shopSlug);
+  if (!shop) return null;
+  const { shown, total } = await listThinBoats(db, shop.id, nowDate());
   if (shown.length === 0) return null;
   const door = buttonClass({ variant: "link", size: "sm", flush: true });
   return (

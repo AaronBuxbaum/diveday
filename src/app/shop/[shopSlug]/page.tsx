@@ -11,7 +11,6 @@ import {
 } from "@/app/shop/[shopSlug]/_components/today/DaySpine";
 import { FirstRunChecklist } from "@/app/shop/[shopSlug]/_components/today/FirstRunChecklist";
 import { firstRunChecklistCopy } from "@/app/shop/[shopSlug]/_components/today/first-run-copy";
-import { QuietDayThinBoats } from "@/app/shop/[shopSlug]/_components/today/QuietDayThinBoats";
 import { ReleaseStillSample } from "@/app/shop/[shopSlug]/_components/today/ReleaseStillSample";
 import { recapEditorsFor } from "@/app/shop/[shopSlug]/_components/today/recap-editors";
 import { TodayFirstBookable } from "@/app/shop/[shopSlug]/_components/today/TodayFirstBookable";
@@ -35,8 +34,8 @@ import { shopByIdCached } from "@/db/shops";
 import { canAcceptPayments } from "@/db/stripe-accounts";
 import { orientationRoleFor } from "@/i18n/orientation-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffWords, sendLimitWords } from "@/i18n/shared-sentences";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { sendLimitWords } from "@/i18n/shared-sentences";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { daySpineSummaryText } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
@@ -70,9 +69,8 @@ import { updateHelpRequestAction } from "./actions";
 // 20260804-instant-navigation.
 export const instant = true;
 
-// A notice query param maps to a message key, never to a sentence — the words
-// come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
-type EveningNotice = StaffWords & { tone: NoticeTone };
+// A notice param maps to a message key, never a sentence (ADR 20260730-staff-copy-localization).
+type EveningNotice = { key: StaffMessageKey; values?: Record<string, string>; tone: NoticeTone };
 
 /**
  * The fit-keep's refusals, in the spelling `noticeUrl` gives them. The tap
@@ -86,14 +84,13 @@ type FitKeepRefusalCode = NoticeCodeOf<Exclude<ConfirmRentalFitOutcome, "saved">
 type EveningNoticeMap = Record<string, EveningNotice> & Record<FitKeepRefusalCode, EveningNotice>;
 
 /**
- * The evening's own `?notice=` codes, re-homed here when `/close-out` folded
- * into this page (H-62). Every code is unchanged — a bookmark carrying one
- * still lands on the right words, because the 308 keeps the query and this
- * page answers it. The refusals are why this is a tone table rather than a
- * bare key map: `invalid` is a recap send that failed, a crew photo this
- * departure cannot take, or a fit-keep whose reservation the desk could not
- * re-prove, and `unknown-person` is a fit-keep aimed at a person id that is
- * not this shop's — each has an entry, so no refusal renders as silence.
+ * The evening's own `?notice=` codes, re-homed here when `/close-out` folded into this page
+ * (H-62). Every code is unchanged — a bookmark carrying one still lands on the right words,
+ * because the 308 keeps the query and this page answers it. The refusals are why this is a tone
+ * table rather than a bare key map: `invalid` is a recap send that failed, a crew photo this
+ * departure cannot take, or a fit-keep whose reservation the desk could not re-prove, and
+ * `unknown-person` is a fit-keep aimed at a person id that is not this shop's — each has an entry,
+ * so no refusal renders as silence.
  */
 const EVENING_NOTICES: EveningNoticeMap = {
   "recap-sent": { key: "closeout.notice.recapSent", tone: "success" },
@@ -557,17 +554,6 @@ async function TodayBody({
         <TodayQuietDay
           shopSlug={shopSlug}
           nextDeparture={nextDeparture}
-          thinBoats={
-            <QuietDayThinBoats
-              db={db}
-              shopId={shop.id}
-              shopSlug={shopSlug}
-              now={now}
-              locale={locale}
-              timeZone={shop.timezone}
-              t={t}
-            />
-          }
           locale={locale}
           timeZone={shop.timezone}
           t={t}

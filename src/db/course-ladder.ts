@@ -17,6 +17,7 @@ import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import type { DbExecutor } from "./client";
 import { listCatalogInProgressionOrder } from "./courses";
 import { recentlyInvitedPeople } from "./invite-suggestions";
+import { queryAll } from "./query-helpers";
 import { bookings, certifications, people, trips } from "./schema";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 import { liveBookingJoin, tripBoatCertifiedPassengers } from "./trips-queries";
@@ -71,8 +72,9 @@ export async function getCourseLadder(
   const since = courseLadderSince(now);
   const sailedBefore = new Date(now.getTime() - DEPARTURE_BUFFER_MS);
 
-  const steps = await Promise.all(
-    pairs.map(async ({ course, next }) => {
+  const steps = await queryAll(
+    db,
+    pairs.map(({ course, next }) => async () => {
       const cohort = course.isIntroCourse
         ? await db
             .selectDistinct({ personId: people.id, fullName: people.fullName })
@@ -140,28 +142,31 @@ export async function getCourseLadder(
       ),
     ),
   ];
-  const [reachable, recent, sessions] = await Promise.all([
-    stalledIds.length
-      ? db
-          .select({ id: people.id })
-          .from(people)
-          .where(
-            and(
-              eq(people.shopId, shopId),
-              inArray(people.id, stalledIds),
-              isNotNull(people.email),
-              isNull(people.courtesyEmailOptOutAt),
-              isNull(people.anonymizedAt),
-            ),
-          )
-      : [],
-    recentlyInvitedPeople(db, shopId, now),
-    nextSessionsFor(
-      db,
-      shopId,
-      live.map((step) => step.next.id),
-      now,
-    ),
+  const [reachable, recent, sessions] = await queryAll(db, [
+    async () =>
+      stalledIds.length
+        ? db
+            .select({ id: people.id })
+            .from(people)
+            .where(
+              and(
+                eq(people.shopId, shopId),
+                inArray(people.id, stalledIds),
+                isNotNull(people.email),
+                isNull(people.courtesyEmailOptOutAt),
+                isNull(people.anonymizedAt),
+                livePerson(),
+              ),
+            )
+        : [],
+    () => recentlyInvitedPeople(db, shopId, now),
+    () =>
+      nextSessionsFor(
+        db,
+        shopId,
+        live.map((step) => step.next.id),
+        now,
+      ),
   ]);
   const canReach = new Set(reachable.map((row) => row.id));
 
@@ -213,7 +218,7 @@ async function nextSessionsFor(
       ),
     )
     .groupBy(trips.id)
-    .orderBy(asc(trips.startsAt), asc(trips.id));
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
   const soonest = new Map<string, NonNullable<LadderStep["nextSession"]>>();
   for (const row of rows) {
     if (!row.courseId || soonest.has(row.courseId)) continue;

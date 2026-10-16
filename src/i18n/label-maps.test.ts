@@ -784,10 +784,7 @@ const CASES: readonly LabelMapCase[] = [
     module: "order-labels.ts",
     map: "ORDER_PAID_AT_COUNTER_KEYS",
     rows: codeRows(keysOf(ORDER_PAID_AT_COUNTER_KEYS), (locale, collection) =>
-      staffTranslator(locale)(ORDER_PAID_AT_COUNTER_KEYS[collection], {
-        date: "Fri, Oct 9",
-        room: "412",
-      }),
+      staffTranslator(locale)(ORDER_PAID_AT_COUNTER_KEYS[collection], { date: "Fri, Oct 9" }),
     ),
   },
   {

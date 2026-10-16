@@ -1,8 +1,32 @@
+import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import type { LadderStep } from "@/db/course-ladder";
-import type { StaffTranslator } from "@/i18n/staff-messages";
+import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
+import { noticeFromParam } from "@/lib/staff-notices";
+
+/** What an invite from the course ladder did (`inviteToCourseSessionAction`). */
+const LADDER_NOTICES: Record<
+  string,
+  { key: StaffMessageKey; tone: "success" | "warning" | "danger" }
+> = {
+  "invite-sent": { key: "courses.ladder.notice.invite-sent", tone: "success" },
+  "invite-opted-out": { key: "courses.ladder.notice.invite-opted-out", tone: "warning" },
+  "invite-cooldown": { key: "courses.ladder.notice.invite-cooldown", tone: "warning" },
+  "invite-failed": { key: "courses.ladder.notice.invite-failed", tone: "danger" },
+};
+
+/** The `?notice=` an invite from the ladder came back with, above the roster. */
+export function LadderNotice({ notice, t }: { notice?: string; t: StaffTranslator }) {
+  const said = noticeFromParam(notice, LADDER_NOTICES);
+  if (!said) return null;
+  return (
+    <ShopNotice tone={said.tone} className="mt-6">
+      {t(said.key)}
+    </ShopNotice>
+  );
+}
 
 /**
  * **Who finished here and never took the next step** (fifth-loop ideas, item

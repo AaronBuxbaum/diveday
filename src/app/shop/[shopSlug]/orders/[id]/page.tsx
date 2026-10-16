@@ -82,11 +82,10 @@ export default async function OrderDetailPage({
     // The departure a deposit or a trip fee was raised for (`OrderBookingLine`).
     order.order.bookingId ? getOrderBookingContext(db, shop.id, order.order.bookingId) : null,
   ]);
-  // Money taken at the counter, in cash or on the shop's own card machine (ADR
-  // 20261009-counter-payments). It has no Stripe invoice, so none of the
-  // Stripe controls below apply; an owner or manager can void it instead,
-  // unless it was an invoice settled at the counter, which Stripe holds paid
-  // and cannot un-pay.
+  // Money taken at the counter, or charged to a room (ADR 20261009-counter-payments). It has no
+  // Stripe invoice, so none of the Stripe controls below apply; an owner or manager can void it
+  // instead, unless it was an invoice settled at the counter, which Stripe holds paid and cannot
+  // un-pay.
   const counterCollection =
     order.order.collection === "stripe_invoice" ? null : order.order.collection;
   const canVoidCounter =
@@ -188,8 +187,7 @@ export default async function OrderDetailPage({
           <PaidAtCounterLine
             collection={counterCollection}
             paidAt={order.order.paidAt}
-            roomNumber={order.order.roomNumber}
-            roomHotel={order.order.roomHotel}
+            room={order.order}
             locale={locale}
             timezone={timezone}
             t={t}

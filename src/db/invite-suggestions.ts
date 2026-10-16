@@ -2,6 +2,7 @@ import { and, desc, eq, gte, isNotNull, isNull, lt, max, ne, notInArray, or } fr
 import { INVITE_SUGGESTIONS_SHOWN, inviteCooldownStart } from "@/lib/invite-suggestions";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import type { DbExecutor } from "./client";
+import { queryAll } from "./query-helpers";
 import { bookings, diveSites, people, personRoles, tripInvitations, trips } from "./schema";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 
@@ -130,24 +131,26 @@ export async function listInviteSuggestions(
     .limit(1);
   if (!trip?.diveSiteId) return null;
 
-  const [aboard, invitedHere, recent] = await Promise.all([
-    db
-      .select({ personId: bookings.personId })
-      .from(bookings)
-      .where(
-        and(
-          eq(bookings.shopId, input.shopId),
-          eq(bookings.tripId, input.tripId),
-          ne(bookings.status, "cancelled"),
+  const [aboard, invitedHere, recent] = await queryAll(db, [
+    () =>
+      db
+        .select({ personId: bookings.personId })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.shopId, input.shopId),
+            eq(bookings.tripId, input.tripId),
+            ne(bookings.status, "cancelled"),
+          ),
         ),
-      ),
-    db
-      .select({ personId: tripInvitations.personId })
-      .from(tripInvitations)
-      .where(
-        and(eq(tripInvitations.shopId, input.shopId), eq(tripInvitations.tripId, input.tripId)),
-      ),
-    recentlyInvitedPeople(db, input.shopId, input.now),
+    () =>
+      db
+        .select({ personId: tripInvitations.personId })
+        .from(tripInvitations)
+        .where(
+          and(eq(tripInvitations.shopId, input.shopId), eq(tripInvitations.tripId, input.tripId)),
+        ),
+    () => recentlyInvitedPeople(db, input.shopId, input.now),
   ]);
   const exclude = new Set<string>(recent);
   for (const row of [...aboard, ...invitedHere]) if (row.personId) exclude.add(row.personId);

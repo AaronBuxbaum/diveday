@@ -56,12 +56,20 @@ const CHOSEN_AT_RUNTIME = [
   "unknown-person",
 ] as const;
 
+/** The shared sentences an entry can spread instead of naming a key (`src/i18n/shared-sentences.ts`). */
+const SHARED_WORDS: Record<string, string> = {
+  sendLimitWords: "shared.limits.sendLimit",
+  ownerOnlyWords: "shared.limits.ownerOnly",
+};
+
 /** The `StaffMessageKey` this page's maps give a code, from either map. */
 function messageKeyFor(code: string): string | undefined {
   const entry = new RegExp(`(?:"${code}"|${code})\\s*:\\s*(?:\\{[^}]*key:\\s*)?"([\\w.]+)"`).exec(
     PAGE,
   );
-  return entry?.[1];
+  if (entry) return entry[1];
+  const shared = new RegExp(`(?:"${code}"|${code})\\s*:\\s*\\{\\s*\\.\\.\\.(\\w+)\\(`).exec(PAGE);
+  return shared ? SHARED_WORDS[shared[1]] : undefined;
 }
 
 describe("the shop home's notice maps", () => {
@@ -86,9 +94,9 @@ describe("the shop home's notice maps", () => {
       if (!key) throw new Error(`no notice entry for ?notice=${code}`);
       // A missing key translates to the key itself, which renders a dotted
       // path where a sentence belongs.
-      expect(t(key as Parameters<typeof t>[0]), `${key} is untranslated in ${locale}`).not.toBe(
-        key,
-      );
+      // The shared sentences take the one value their spread supplies.
+      const said = t(key as Parameters<typeof t>[0], { thing: "recaps", act: "other" });
+      expect(said, `${key} is untranslated in ${locale}`).not.toBe(key);
     }
   });
 });

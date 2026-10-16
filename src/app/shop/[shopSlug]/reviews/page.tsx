@@ -7,7 +7,6 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/group-label";
 import { canPersonManageShopSettings, canPersonReadPrivateRecapPulse } from "@/db/authz";
 import { listOpenRecapPulses, type OpenRecapPulse } from "@/db/recap-pulses";
@@ -32,7 +31,6 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
-import { saveReviewUrlAction } from "../settings/messages-actions";
 import {
   type BulkPublishCopy,
   PublishAllButton,
@@ -40,6 +38,7 @@ import {
   PublishAllStatus,
 } from "./_components/ReviewBulkPublish";
 import { type ReviewGroup, ReviewLedgerRow } from "./_components/ReviewLedgerRow";
+import { ReviewLinkEmptyForm } from "./_components/ReviewLinkEmptyForm";
 import { ReviewNarrowChips, reviewsPageHref } from "./_components/ReviewNarrowChips";
 import { type ReviewRowCopy, ReviewRowProvider } from "./_components/ReviewRowActions";
 import { ReviewsAggregateLine } from "./_components/ReviewsAggregateLine";
@@ -382,41 +381,9 @@ export default async function ReviewsPage({
           <EmptyState
             title={t("reviews.emptyHeading")}
             body={t("reviews.emptyDetail")}
-            /* A review arrives when a diver opens the recap after a trip
-               sails, and no setting turns that on. What *is* the shop's to set
-               is where a diver goes next, so the empty state offers that one
-               field in place (fifth-loop ideas, item 59) rather than a
-               paragraph explaining the product. Owner and manager only, as on
-               Settings; anyone else reads the line alone. */
+            /* The one field the shop can set here (fifth-loop ideas, item 59). */
             action={
-              canManageSettings ? (
-                <form
-                  action={saveReviewUrlAction}
-                  className="flex w-full max-w-md flex-col gap-2 text-left"
-                >
-                  <input type="hidden" name="from" value="reviews" />
-                  <label htmlFor="empty-review-url" className="text-sm font-medium">
-                    {t("reviews.emptyReviewLinkLabel")}
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    <input
-                      id="empty-review-url"
-                      name="reviewUrl"
-                      type="url"
-                      maxLength={500}
-                      defaultValue={shop.reviewUrl ?? ""}
-                      placeholder="https://g.page/r/your-shop/review"
-                      className={`${controlClass} min-w-0 flex-1`}
-                    />
-                    <SubmitButton
-                      pendingLabel={t("reviews.saving")}
-                      className={buttonClass({ variant: "secondary" })}
-                    >
-                      {t("reviews.emptyReviewLinkSave")}
-                    </SubmitButton>
-                  </div>
-                </form>
-              ) : null
+              canManageSettings ? <ReviewLinkEmptyForm reviewUrl={shop.reviewUrl} t={t} /> : null
             }
           />
         ) : (

@@ -89,10 +89,13 @@ export const ORDER_COLLECTION_KEYS: Record<CounterCollection, StaffMessageKey> =
   room_charge: "orders.collection.room_charge",
 };
 
-export const ORDER_PAID_AT_COUNTER_KEYS: Record<CounterCollection, StaffMessageKey> = {
+/** A room charge's line names its room, so it is said by `paidAtCounterLine` alone. */
+export const ORDER_PAID_AT_COUNTER_KEYS: Record<
+  Exclude<CounterCollection, "room_charge">,
+  StaffMessageKey
+> = {
   cash: "orders.detail.paidAtCounter.cash",
   card_machine: "orders.detail.paidAtCounter.card_machine",
-  room_charge: "orders.detail.paidAtCounter.room_charge",
 };
 
 /**

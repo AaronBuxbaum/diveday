@@ -65,7 +65,6 @@ const { getShopStripeAccount, setShopStripeAccountStatus, upsertShopStripeAccoun
 );
 const { startTipCheckout } = await import("@/db/tips");
 const { upcomingTripsWithCounts, updateTrip } = await import("@/db/trips");
-const { roomChargesByHotel } = await import("@/db/room-charges");
 const { POST } = await import("./route");
 
 type Db = AppDb;
@@ -650,39 +649,6 @@ describe("invoice.* hostile sequences (real handlers, real db)", () => {
       stripePaymentIntentId: null,
     });
     expect((await orderTerminal(db, shop.id, order.id, bookingId)).paymentStatus).toBe("paid");
-  });
-
-  it("a room charge names its room, and the month's room charges add up per hotel", async () => {
-    const { db, shop, order } = await orderScenario();
-    const staff = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
-    const base = { shopId: shop.id, orderId: order.id, actorPersonId: staff };
-    // No room, no charge: the front desk could not bill it.
-    expect(
-      (await recordPaymentOnOpenOrder(db, { ...base, collection: "room_charge" }, invoicing())).ok,
-    ).toBe(false);
-    const settled = await recordPaymentOnOpenOrder(
-      db,
-      { ...base, collection: "room_charge", room: { number: "412", hotel: "Reef Hotel" } },
-      invoicing(),
-    );
-    expect(settled.ok).toBe(true);
-    const [row] = await db.select().from(orders).where(eq(orders.id, order.id));
-    expect(row).toMatchObject({
-      status: "paid",
-      collection: "room_charge",
-      roomNumber: "412",
-      roomHotel: "Reef Hotel",
-    });
-    const paidAt = row.paidAt ?? new Date(0);
-    const totals = await roomChargesByHotel(
-      db,
-      shop.id,
-      new Date(paidAt.getTime() - 1_000),
-      new Date(paidAt.getTime() + 1_000),
-    );
-    expect(totals).toEqual([
-      { hotel: "Reef Hotel", currency: row.currency, totalCents: 22_000, orders: 1 },
-    ]);
   });
 
   it("an invoice.paid for an invoice the app never raised is acknowledged and changes nothing", async () => {

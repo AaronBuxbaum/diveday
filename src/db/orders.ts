@@ -722,7 +722,7 @@ export async function recordPaymentOnOpenOrder(
   if (!OPEN_ORDER_COLLECTIONS.has(input.collection)) return invalid;
   const room = input.collection === "room_charge" ? (input.room ?? null) : null;
   if (input.collection === "room_charge") {
-    if (!room || !room.number || room.number.length > ROOM_NUMBER_MAX) return invalid;
+    if (!room?.number || room.number.length > ROOM_NUMBER_MAX) return invalid;
     if ((room.hotel?.length ?? 0) > ROOM_HOTEL_MAX) return invalid;
   }
   const roles = await loadActiveStaffRoles(db, input.shopId, input.actorPersonId);

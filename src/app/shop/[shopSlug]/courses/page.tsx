@@ -10,10 +10,8 @@ import { buttonClass } from "@/components/ui/button";
 import { type FilterChip, FilterChips } from "@/components/ui/FilterChips";
 import { SearchField } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
-import { listCardsToProcess } from "@/db/agency-processing";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { getCourseLadder } from "@/db/course-ladder";
 import {
   COURSE_LIST_VIEWS,
   type CourseListView,
@@ -27,17 +25,13 @@ import { nextSessionStartByCourse } from "@/db/trips";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { nowDate } from "@/lib/clock";
 import { courseTotalCents } from "@/lib/courses";
 import { formatMoneyScanned, formatShortDate, joinFacts } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursesPath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
-import { noticeFromParam } from "@/lib/staff-notices";
-import { CardsToProcess } from "./_components/CardsToProcess";
-import { CourseLadder } from "./_components/CourseLadder";
+import { CourseFollowUps, LadderNotice } from "./_components/CourseFollowUps";
 import { CourseRoster, type CourseRosterRow } from "./_components/CourseRoster";
-import { inviteToCourseSessionAction, markCardProcessedFromCoursesAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -66,18 +60,7 @@ const COURSE_VIEW_KEYS: Record<CourseListView, StaffMessageKey> = {
  * catalog. Hiding a course from that catalog lives on the course's own editor,
  * beside Save: it is a rare act, and 55 standing Hide buttons were 55 controls
  * nobody was reaching for. Staff-only, like everything else under
- * `/shop/** What an invite from the course ladder did (`inviteToCourseSessionAction`). */
-const LADDER_NOTICES: Record<
-  string,
-  { key: StaffMessageKey; tone: "success" | "warning" | "danger" }
-> = {
-  "invite-sent": { key: "courses.ladder.notice.invite-sent", tone: "success" },
-  "invite-opted-out": { key: "courses.ladder.notice.invite-opted-out", tone: "warning" },
-  "invite-cooldown": { key: "courses.ladder.notice.invite-cooldown", tone: "warning" },
-  "invite-failed": { key: "courses.ladder.notice.invite-failed", tone: "danger" },
-};
-
-/**` — that catalog is `/s/[shopSlug]/courses`, which this page used
+ * `/shop/**` — that catalog is `/s/[shopSlug]/courses`, which this page used
  * to render as its other half behind a session check (ADR
  * 20260803-public-shop-namespace).
  *
@@ -117,7 +100,6 @@ export default async function CoursesPage({
 
   const locale = await requestLocale(shop.defaultLocale);
   const st = staffTranslator(locale);
-  const ladderNotice = noticeFromParam(notice, LADDER_NOTICES);
 
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
   // range so a bookmarked page past the end lands on the last real one. The
@@ -132,43 +114,38 @@ export default async function CoursesPage({
   // Together rather than in sequence: only the second needs the page of
   // courses, and the permission read does not, so awaiting them one after the
   // other would buy a serial round trip for nothing.
-  const [canSchedule, nextSessions, formsAwaitingText, everOnBoard, ladder, cardsToProcess] =
-    await Promise.all([
-      // Scheduling is owner/manager/instructor work, so the button is absent —
-      // not disabled — for anyone else (AGENTS.md: gate by not rendering). The
-      // new-trip page re-checks against live roles either way.
-      canPersonConfigureTrips(db, shop.id, session.user.personId),
-      // **The one live fact on a page of standing ones** (ADR 20260919-one-idea,
-      // decision I · Tide, slice 23g — "a course is sessions on days"). Until
-      // this, a diver reading `/s/<shop>/courses/<slug>` could see when a course
-      // next ran and the shop teaching it could not: the roster said what is
-      // taught, never when. One query for the whole page rather than one per row.
-      //
-      // `"shop"` and not `"storefront"`: a course booked out to one family is
-      // scheduled, and the staffer who scheduled it must not read "Not scheduled"
-      // on the morning it runs. The storefront's own call stays public-scoped,
-      // because a diver cannot turn up to a private session.
-      nextSessionStartByCourse(
-        db,
-        shop.id,
-        courseList.map((course) => course.id),
-        "shop",
-      ),
-      // The agency's forms a template set up with no text yet: nobody signs
-      // them until the shop pastes the wording in. Said once above the list,
-      // shop-wide, with a door to the first (UX review 2026-10-10, item 16);
-      // under every row it was the same amber sentence nearly twenty times.
-      coursesAwaitingFormText(db, shop.id),
-      courseIdsEverOnBoard(
-        db,
-        shop.id,
-        courseList.map((course) => course.id),
-      ),
-      // Who finished a course here and never took the next step (item 45).
-      getCourseLadder(db, shop.id, nowDate()),
-      // Cards issued here that nobody has sent to the agency yet (item 46).
-      listCardsToProcess(db, shop.id, nowDate()),
-    ]);
+  const [canSchedule, nextSessions, formsAwaitingText, everOnBoard] = await Promise.all([
+    // Scheduling is owner/manager/instructor work, so the button is absent —
+    // not disabled — for anyone else (AGENTS.md: gate by not rendering). The
+    // new-trip page re-checks against live roles either way.
+    canPersonConfigureTrips(db, shop.id, session.user.personId),
+    // **The one live fact on a page of standing ones** (ADR 20260919-one-idea,
+    // decision I · Tide, slice 23g — "a course is sessions on days"). Until
+    // this, a diver reading `/s/<shop>/courses/<slug>` could see when a course
+    // next ran and the shop teaching it could not: the roster said what is
+    // taught, never when. One query for the whole page rather than one per row.
+    //
+    // `"shop"` and not `"storefront"`: a course booked out to one family is
+    // scheduled, and the staffer who scheduled it must not read "Not scheduled"
+    // on the morning it runs. The storefront's own call stays public-scoped,
+    // because a diver cannot turn up to a private session.
+    nextSessionStartByCourse(
+      db,
+      shop.id,
+      courseList.map((course) => course.id),
+      "shop",
+    ),
+    // The agency's forms a template set up with no text yet: nobody signs
+    // them until the shop pastes the wording in. Said once above the list,
+    // shop-wide, with a door to the first (UX review 2026-10-10, item 16);
+    // under every row it was the same amber sentence nearly twenty times.
+    coursesAwaitingFormText(db, shop.id),
+    courseIdsEverOnBoard(
+      db,
+      shop.id,
+      courseList.map((course) => course.id),
+    ),
+  ]);
   const base = `/shop/${shopSlug}/courses`;
   // The search and the view travel with every page turn and chip.
   const listHref = ({
@@ -332,12 +309,7 @@ export default async function CoursesPage({
         }
       />
 
-      {ladderNotice ? (
-        <ShopNotice tone={ladderNotice.tone} className="mt-6">
-          {st(ladderNotice.key)}
-        </ShopNotice>
-      ) : null}
-
+      <LadderNotice notice={notice} t={st} />
       {formsAwaitingText[0] ? (
         <ShopNotice tone="warning" className="mt-6">
           {st("courses.list.formsAwaitingTextSummary", { count: formsAwaitingText.length })}
@@ -415,20 +387,7 @@ export default async function CoursesPage({
       ) : (
         <CourseRoster rows={rows} className="mt-8" />
       )}
-      <CardsToProcess
-        cards={cardsToProcess}
-        markProcessed={markCardProcessedFromCoursesAction.bind(null, shop.slug)}
-        locale={locale}
-        timeZone={shop.timezone}
-        t={st}
-      />
-      <CourseLadder
-        steps={ladder}
-        invite={inviteToCourseSessionAction.bind(null, shop.slug)}
-        locale={locale}
-        timeZone={shop.timezone}
-        t={st}
-      />
+      <CourseFollowUps db={db} shop={shop} locale={locale} t={st} />
       <Pager
         page={coursePage.page}
         pageCount={coursePage.pageCount}

@@ -18,16 +18,15 @@ type CounterCollection = Exclude<OrderCollection, "stripe_invoice">;
 export function PaidAtCounterLine({
   collection,
   paidAt,
-  roomNumber = null,
-  roomHotel = null,
+  room,
   locale,
   timezone,
   t,
 }: {
   collection: CounterCollection;
   paidAt: Date;
-  roomNumber?: string | null;
-  roomHotel?: string | null;
+  /** The room a room charge went to (`orders.room_number`, `room_hotel`). */
+  room?: { roomNumber: string | null; roomHotel: string | null };
   locale: string;
   timezone: string;
   t: StaffTranslator;
@@ -37,8 +36,8 @@ export function PaidAtCounterLine({
       {paidAtCounterLine(t, {
         collection,
         date: formatShortDate(paidAt, locale, timezone),
-        roomNumber,
-        roomHotel,
+        roomNumber: room?.roomNumber,
+        roomHotel: room?.roomHotel,
       })}
     </p>
   );

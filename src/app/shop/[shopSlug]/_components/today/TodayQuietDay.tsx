@@ -1,10 +1,10 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import type { getTodayWork } from "@/db/today";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTime } from "@/lib/format";
+import { QuietDayThinBoats } from "./QuietDayThinBoats";
 
 type NextDeparture = NonNullable<Awaited<ReturnType<typeof getTodayWork>>["nextDeparture"]>;
 
@@ -15,14 +15,11 @@ type NextDeparture = NonNullable<Awaited<ReturnType<typeof getTodayWork>>["nextD
 export function TodayQuietDay({
   shopSlug,
   nextDeparture,
-  thinBoats = null,
   locale,
   timeZone,
   t,
 }: {
   shopSlug: string;
-  /** The next two weeks' boats that could use divers (`QuietDayThinBoats`). */
-  thinBoats?: ReactNode;
   nextDeparture: NextDeparture | null;
   locale: string;
   timeZone: string;
@@ -30,7 +27,7 @@ export function TodayQuietDay({
 }) {
   return (
     <div className="mt-8 flex flex-col gap-4">
-      {thinBoats}
+      <QuietDayThinBoats shopSlug={shopSlug} locale={locale} timeZone={timeZone} t={t} />
       <Link
         href={`/shop/${shopSlug}/schedule/board?add=1`}
         className={buttonClass({ className: "w-full justify-center sm:w-auto" })}
