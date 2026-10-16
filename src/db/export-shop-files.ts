@@ -1897,29 +1897,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       }),
     note: EXPORT_FILE_NOTES["dive_site_creatures.csv"],
   },
-  {
-    file: "dive_site_moments.csv",
-    header: [
-      "id",
-      "dive_site_id",
-      "dive_site_name",
-      "caption",
-      "is_published",
-      "image_url",
-      "created_at",
-    ],
-    rows: ({ siteName, momentRows }) =>
-      momentRows.map((row) => [
-        row.id,
-        row.diveSiteId,
-        siteName.get(row.diveSiteId),
-        row.caption,
-        row.isPublished,
-        row.imageUrl,
-        row.createdAt,
-      ]),
-    note: EXPORT_FILE_NOTES["dive_site_moments.csv"],
-  },
   shopFile(RECAP_PHOTOS_CSV),
   {
     file: "trip_recap_photos.csv",

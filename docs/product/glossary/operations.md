@@ -448,13 +448,6 @@
   temperature, visibility, surface state) belong to the charter that sailed, not to the reef.
   A shop's library is at Dive sites; DiveDay's published starting points are the **common-site
   catalog**, and importing one makes an independent copy the shop then owns.
-- **Diver moment** — a caption, usually with a photo, that an earlier diver brought back from one
-  **dive site** (`dive_site_moments`). The caption is the diver's own line. Moments are
-  **staff-moderated and opt-in**: a row shows nowhere until the shop publishes it
-  (`is_published`). No surface writes one yet: today only the demo seed does, and the shop export
-  carries them. Published moments with a photo show as one strip on a public trip page, deduplicated
-  by site and capped at four (`dayMomentsFor`), and on the site's own public page. Marketing copy
-  calls them "moments from divers".
 - **Dive briefing** — what a diver reads (and the crew says) about **one tank on one dated trip**:
   the `trip_dives` row, rendered from the site's saved notes plus whatever the crew wrote for that
   particular dive. There is one briefing per *planned dive*, so a two-tank trip always has two —

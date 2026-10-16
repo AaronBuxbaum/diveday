@@ -167,8 +167,6 @@ export const EXPORT_FILE_NOTES = {
     "The shop's dive-site library, archived sites included. Image links stay readable while the DiveDay account is active. This is one of the files DiveDay can read back: Settings \u2192 Restore dive sites takes this file and puts the library back, matching each site by id and then by name. Choose dive_site_creatures.csv beside it to restore the field guides too.",
   "dive_site_creatures.csv":
     "Which species each dive site's field guide shows, in order. catalog_slug is the record; the name, category, description and tip are DiveDay's own words, rendered here in your shop's default language. DiveDay can read this file back alongside dive_sites.csv in the same import: each site in that file gets this guide back, and a species DiveDay no longer lists is left out and counted.",
-  "dive_site_moments.csv":
-    "Staff-moderated diver moments attached to dive sites, published and unpublished.",
   "recap_photos.csv":
     "Photos divers attached to their post-trip recap pages, by booking and trip. Image links stay readable while the DiveDay account is active.",
   "trip_recap_photos.csv":

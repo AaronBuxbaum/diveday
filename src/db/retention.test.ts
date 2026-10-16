@@ -977,7 +977,6 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "courses",
   "dive_sites",
   "dive_site_creatures",
-  "dive_site_moments",
   "waiver_templates",
   "shop_promo_codes",
   "dive_packages",

@@ -10,12 +10,10 @@ import { capturePhoto } from "@/lib/marine-life-tiles";
 
 import { TripCrewLine } from "./TripCrewLine";
 import {
-  dayMomentsFor,
   fieldGuideCardsFor,
   routeSitesFor,
   siteNotePassagesFor,
   TripLookFor,
-  TripMoments,
   TripRoutes,
   TripSiteNotes,
 } from "./TripDayPlan";
@@ -51,8 +49,8 @@ const EMBED_TILE_PX = [117, 413] as const;
  * to open the door rather than add a fourth section — which is the deliberate
  * act the ADR asks for.
  *
- * **Nothing is deleted.** The five beats that used to run down the page —
- * `TripRoutes`, the rest of `TripLookFor`, `TripMoments`, `TripSiteNotes` and
+ * **Nothing is deleted.** The beats that used to run down the page —
+ * `TripRoutes`, the rest of `TripLookFor`, `TripSiteNotes` and
  * `TripCrewLine` — are all still on this page, in this order, one tap away
  * inside the door. The door is a native `<details>` through `LedgerGroup`,
  * which is the app's one disclosure spelling precisely because "a JS failure
@@ -60,8 +58,8 @@ const EMBED_TILE_PX = [117, 413] as const;
  * JavaScript off the door still opens, and every word behind it is in the DOM
  * for a screen reader and a crawler either way.
  *
- * Renders nothing at all when the day has no species, no prose, no route, no
- * published moment and no consenting crew — a bare course session gains no
+ * Renders nothing at all when the day has no species, no prose, no route and
+ * no consenting crew — a bare course session gains no
  * empty frame.
  */
 export function TripPitch({
@@ -175,7 +173,6 @@ export function TripPitch({
           <div data-pitch-door-body className="pb-6">
             <TripLookFor briefings={briefings} locale={locale} />
             <TripRoutes briefings={briefings} locale={locale} />
-            <TripMoments briefings={briefings} locale={locale} />
             <TripSiteNotes briefings={briefings} locale={locale} />
             <TripCrewLine crew={crew} locale={locale} className="mt-6" />
             {logEntry ? (
@@ -219,7 +216,6 @@ export function pitchHasDoor(
     fieldGuideCardsFor(briefings).length > 0 ||
     crew.length > 0 ||
     routeSitesFor(briefings).length > 0 ||
-    dayMomentsFor(briefings).length > 0 ||
     siteNotePassagesFor(briefings).length > 0
   );
 }

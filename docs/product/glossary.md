@@ -170,7 +170,6 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Dive day (north star)
 - Dive record
 - Dive site
-- Diver moment
 - Diver seats
 - Dock call time
 - Emergency contact

@@ -44,7 +44,6 @@ import {
   type DiveSiteFitTone,
   type DiveSpecialty,
   diveSiteCreatures,
-  diveSiteMoments,
   diveSites,
   globalDiveSites,
   globalDiveSiteVersions,
@@ -803,34 +802,8 @@ export async function replaceDiveSiteCreatures(
   );
 }
 
-export async function listPublishedDiveSiteMoments(db: AppDb, shopId: string, siteId: string) {
-  return db
-    .select()
-    .from(diveSiteMoments)
-    .where(
-      and(
-        eq(diveSiteMoments.shopId, shopId),
-        eq(diveSiteMoments.diveSiteId, siteId),
-        eq(diveSiteMoments.isPublished, true),
-      ),
-    )
-    .orderBy(asc(diveSiteMoments.createdAt));
-}
-
-/**
- * Creatures and published moments for several sites at once, grouped by site.
- *
- * The public trip page renders a briefing per dive, and asking per site cost it
- * two round trips per dive — six on a three-tank day, on the page a diver hits
- * straight from a marketing link. Two queries cover any number of dives.
- */
 /**
  * Each site's stored field guide, for several sites at once.
- *
- * Split out of {@link listDiveSiteBriefingExtras} when the after-state needed
- * the guides without the moments (issue #1192): that helper answers the public
- * briefing, which wants both, and a caller that wants one should not pay for
- * the other on a page a diver opens from a text message.
  *
  * Rows come back in their saved order, grouped by site. A site with no guide is
  * simply absent from the map rather than present and empty — "this site has
@@ -852,37 +825,19 @@ export async function listSiteFieldGuides(db: AppDb, shopId: string, siteIds: st
   return bySite;
 }
 
+/**
+ * The field guide for several sites at once, grouped by site: what the public
+ * briefing reads for every dive on a day, in one query rather than one per
+ * dive, on the page a diver hits straight from a marketing link.
+ */
 export async function listDiveSiteBriefingExtras(
   db: AppDb,
   shopId: string,
   siteIds: string[],
 ): Promise<{
   creatures: Map<string, Awaited<ReturnType<typeof listDiveSiteCreatures>>>;
-  moments: Map<string, Awaited<ReturnType<typeof listPublishedDiveSiteMoments>>>;
 }> {
-  const unique = [...new Set(siteIds)];
-  if (unique.length === 0) return { creatures: new Map(), moments: new Map() };
-
-  const [creatures, momentRows] = await Promise.all([
-    listSiteFieldGuides(db, shopId, unique),
-    db
-      .select()
-      .from(diveSiteMoments)
-      .where(
-        and(
-          eq(diveSiteMoments.shopId, shopId),
-          inArray(diveSiteMoments.diveSiteId, unique),
-          eq(diveSiteMoments.isPublished, true),
-        ),
-      )
-      .orderBy(asc(diveSiteMoments.createdAt)),
-  ]);
-
-  const moments = new Map<string, typeof momentRows>();
-  for (const row of momentRows) {
-    moments.set(row.diveSiteId, [...(moments.get(row.diveSiteId) ?? []), row]);
-  }
-  return { creatures, moments };
+  return { creatures: await listSiteFieldGuides(db, shopId, siteIds) };
 }
 
 /** How many published site templates the "Common dive sites" catalog shows per page. */

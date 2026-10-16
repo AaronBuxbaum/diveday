@@ -516,25 +516,4 @@ export const marineLifeRequests = pgTable(
   (table) => [index("marine_life_requests_created_idx").on(table.createdAt)],
 );
 
-/** Staff-moderated, opt-in moments from prior divers. */
-export const diveSiteMoments = pgTable(
-  "dive_site_moments",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    diveSiteId: uuid("dive_site_id")
-      .notNull()
-      .references(() => diveSites.id),
-    caption: text("caption").notNull(),
-    imageUrl: text("image_url"),
-    isPublished: boolean("is_published").notNull().default(false),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    index("dive_site_moments_site_published_idx").on(table.diveSiteId, table.isPublished),
-  ],
-);
-
 export type DiveSiteFitTone = (typeof diveSiteFitTone.enumValues)[number];

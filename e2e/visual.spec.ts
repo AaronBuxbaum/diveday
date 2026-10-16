@@ -2661,9 +2661,9 @@ for (const scheme of ["light", "dark"] as const) {
        * **The same departure with the pitch's door open** (ADR
        * 20260904-reef-all-the-way-down, decision 1).
        *
-       * Five beats moved behind one `<details>` — the route, the rest of the
-       * field guide, the moments strip, the shop's own site prose and the crew
-       * — and a capture of the closed page alone would leave all five as pixels
+       * Four beats moved behind one `<details>` — the route, the rest of the
+       * field guide, the shop's own site prose and the crew — and a capture
+       * of the closed page alone would leave all four as pixels
        * nothing ever looks at again. Nothing is deleted by that slice; this is
        * the baseline that proves it.
        */

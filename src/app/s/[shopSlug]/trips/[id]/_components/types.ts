@@ -1,5 +1,4 @@
 import type { getBookingForTrip } from "@/db/bookings";
-import type { listPublishedDiveSiteMoments } from "@/db/dive-sites";
 import type { getBookingReadiness, getTripRequirements } from "@/db/readiness";
 import type { DiverRentalFit } from "@/db/rental-fit";
 import type { shopBySlugCached } from "@/db/shops-cached";
@@ -28,12 +27,11 @@ export type DiveBriefing = TripDive & {
    * where the locale is known rather than handing raw rows down.
    */
   creatures: (MarineLifeCard & { id: string })[];
-  moments: Awaited<ReturnType<typeof listPublishedDiveSiteMoments>>;
 };
 
 /**
- * What the four briefing beats actually read: the place, its field guide and
- * its published moments — everything about *where* the day dives and nothing
+ * What the briefing beats actually read: the place and its field guide —
+ * everything about *where* the day dives and nothing
  * about the tank it is dived on.
  *
  * The beats take this rather than a whole {@link DiveBriefing} so the public
@@ -41,7 +39,7 @@ export type DiveBriefing = TripDive & {
  * without inventing a `trip_dives` row it has no trip for. A `DiveBriefing`
  * satisfies it, so the departure page passes its own list unchanged.
  */
-export type SiteBriefing = Pick<DiveBriefing, "diveSite" | "creatures" | "moments">;
+export type SiteBriefing = Pick<DiveBriefing, "diveSite" | "creatures">;
 
 /**
  * Every refusal this page's booking/waitlist/rental-fit/payment actions can
