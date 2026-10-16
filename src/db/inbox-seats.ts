@@ -11,7 +11,13 @@ export type InboxSeat = MessageSeat & {
   lateWindow: boolean;
 };
 
-type Message = { id: string; personId: string | null; receivedAt: Date };
+type Message = {
+  id: string;
+  personId: string | null;
+  receivedAt: Date;
+  /** Set on an "Ask to move" from the booking page (H-126): the seat it is about. */
+  bookingId?: string | null;
+};
 
 /**
  * **The seats each Inbox message is about** (fourth UX review, item 32). Inside
@@ -22,6 +28,7 @@ type Message = { id: string; personId: string | null; receivedAt: Date };
  * desk can tell which, so the row names both rather than guessing the soonest
  * (dive-domain review r4-4, F1). A seat booked after the message, a canceled
  * one and one whose boat has sailed are never named, and a stranger has none.
+ * An Ask to move from the booking page names its own seat and nothing else.
  */
 export async function inboxSeats(
   db: AppDb,
@@ -30,11 +37,17 @@ export async function inboxSeats(
   now: Date,
 ): Promise<Map<string, InboxSeat[]>> {
   const found = new Map<string, InboxSeat[]>();
+  // A message that names its booking (an Ask to move, H-126) is about that
+  // seat alone, whenever it departs, and never offers the late mark; any other
+  // answer here is the late-window seat.
   const late = await messageSeats(db, shopId, messages, now);
-  for (const [id, seat] of late) found.set(id, [{ ...seat, lateWindow: true }]);
+  for (const message of messages) {
+    const seat = late.get(message.id);
+    if (seat) found.set(message.id, [{ ...seat, lateWindow: !message.bookingId }]);
+  }
   const rest = messages.filter(
     (message): message is Message & { personId: string } =>
-      message.personId !== null && !found.has(message.id),
+      message.personId !== null && !message.bookingId && !found.has(message.id),
   );
   if (rest.length === 0) return found;
   const held = await db
