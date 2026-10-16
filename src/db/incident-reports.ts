@@ -504,6 +504,11 @@ export type IncidentReportView = {
   legalHold: boolean;
   /** Whether this viewer may discard the draft or set or release the hold: owners. */
   mayDecide: boolean;
+  /**
+   * For a filed report of a missing diver only (H-126): when every owner's
+   * email was sent, or `null` while they are not all told yet.
+   */
+  ownersAlert: { sentAt: Date | null } | null;
 };
 
 /**
@@ -631,6 +636,10 @@ export async function getIncidentReport(
     mayWrite: mayWriteIncidentReport(viewer, report),
     legalHold: report.legalHoldAt !== null,
     mayDecide: mayDecideIncidentRecord(viewer),
+    ownersAlert:
+      report.status === "filed" && report.kind === "missing_diver"
+        ? { sentAt: report.missingAlertSentAt }
+        : null,
   };
 }
 

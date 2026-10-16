@@ -53,7 +53,9 @@ export async function GET(request: Request) {
     await sentry.captureCheckIn({
       checkInId,
       monitorSlug: CRON_MONITOR_SLUG,
-      status: rollCall && missingDiver ? "ok" : "error",
+      // A filed report of a missing diver whose owners are still untold is
+      // this monitor's error, so someone is paged to call them.
+      status: rollCall && missingDiver && missingDiver.overdue === 0 ? "ok" : "error",
     });
     return NextResponse.json({ ...summary, rollCall, missingDiver });
   } catch (error) {
@@ -81,8 +83,9 @@ async function staleRollCallPass(db: Awaited<ReturnType<typeof getDb>>) {
 
 /**
  * The missing-diver alert's retry (H-126), held apart like the pass above: filing a
- * report sends at once, and this finds a filed report whose send reached
- * nobody. A throw is reported and answered as `null`.
+ * report sends at once, and this finds a filed report whose owners were not
+ * all told. A throw is reported and answered as `null`; a report still untold
+ * half an hour after filing (`overdue`) turns the monitor's check-in to error.
  */
 async function missingDiverPass(db: Awaited<ReturnType<typeof getDb>>) {
   try {

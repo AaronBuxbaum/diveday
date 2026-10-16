@@ -125,13 +125,21 @@ export const incidentReports = pgTable(
      */
     legalHoldAt: timestamp("legal_hold_at", { withTimezone: true }),
     /**
-     * **The missing-diver alert's claim** (H-126, decided 2026-10-16): stamped
-     * when the owners were told a report of kind "missing diver" was filed, so
-     * a report alerts once. A send that reached nobody gives it back and the
-     * hourly crew-notices pass tries again (`sendMissingDiverAlerts`). Null on
-     * every other kind, and on a report not yet filed.
+     * **The missing-diver alert's lease** (H-126, decided 2026-10-16): stamped
+     * when a pass took the report to tell the owners, so two passes never send
+     * at once. It is a lease, not the proof of a send: a pass that crashed
+     * leaves it stamped, and once it is older than the lease the next pass
+     * takes the report again. A send that did not reach every owner gives it
+     * back at once. `missing_alert_sent_at` is what says the owners were told
+     * (`sendMissingDiverAlerts`). Null on every other kind, and on a report not
+     * yet filed.
      */
     missingAlertedAt: timestamp("missing_alerted_at", { withTimezone: true }),
+    /**
+     * When every active owner's email for a filed missing-diver report was
+     * sent. Null until then; the report page says "Not reached yet" while it is.
+     */
+    missingAlertSentAt: timestamp("missing_alert_sent_at", { withTimezone: true }),
   },
   (table) => [
     index("incident_reports_shop_trip_idx")

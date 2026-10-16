@@ -51,6 +51,17 @@ export function IncidentRecord({
   return (
     <SectionCard>
       <dl className="-my-3 divide-y divide-border">
+        {report.ownersAlert ? (
+          <Row label={t("incidents.read.ownersAlerted")}>
+            {report.ownersAlert.sentAt ? (
+              at(report.ownersAlert.sentAt)
+            ) : (
+              <span className="font-semibold text-warning-strong">
+                {t("incidents.read.ownersNotReached")}
+              </span>
+            )}
+          </Row>
+        ) : null}
         <Row label={t("incidents.read.when")}>
           {fields.occurredAt ? at(fields.occurredAt) : notWritten}
         </Row>
@@ -92,17 +103,25 @@ export function IncidentRecord({
 /** Filing: what is still missing, and the one button. */
 export function IncidentFiling({
   gaps,
+  missingDiver,
   action,
   notice,
   t,
 }: {
   gaps: readonly IncidentFilingGap[];
+  /** The draft says a diver is missing: filing tells the owners at once. */
+  missingDiver: boolean;
   action: () => Promise<void>;
   notice: FormNotice | undefined;
   t: StaffTranslator;
 }) {
   return (
     <SectionCard title={t("incidents.file.title")} description={t("incidents.file.description")}>
+      {missingDiver ? (
+        <p className="mb-4 text-sm font-semibold text-warning-strong">
+          {t("incidents.file.missingDiverWarning")}
+        </p>
+      ) : null}
       {gaps.length > 0 ? (
         <div className="mb-4">
           <p className="text-sm font-medium">{t("incidents.file.needs")}</p>

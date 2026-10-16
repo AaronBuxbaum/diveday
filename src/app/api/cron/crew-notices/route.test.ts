@@ -22,7 +22,7 @@ const Sentry = await import("@sentry/nextjs");
 const { GET } = await import("./route");
 
 const secret = "cron-test-secret";
-const missingDiver = { checked: 1, alerted: 1, emails: 1, pushes: 0, released: 0 };
+const missingDiver = { checked: 1, alerted: 1, emails: 1, pushes: 0, released: 0, overdue: 0 };
 const rollCall = { checked: 1, alerted: 1, emails: 1, shoreEmails: 0, pushes: 2, released: 0 };
 
 function cronRequest(authorization?: string) {
@@ -100,6 +100,27 @@ describe("GET /api/cron/crew-notices", () => {
     expect(await response.json()).toMatchObject({ rollCall, missingDiver: null });
     expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
       expect.objectContaining({ status: "error" }),
+    );
+  });
+
+  it("checks in as an error when a filed missing-diver report is still untold past the overdue wait", async () => {
+    vi.mocked(sendMissingDiverAlerts).mockResolvedValueOnce({
+      ...missingDiver,
+      alerted: 0,
+      released: 1,
+      overdue: 1,
+    });
+    const response = await GET(cronRequest(`Bearer ${secret}`));
+    expect(response.status).toBe(200);
+    expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: "error" }),
+    );
+  });
+
+  it("checks in as ok when every pass is clean", async () => {
+    await GET(cronRequest(`Bearer ${secret}`));
+    expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: "ok" }),
     );
   });
 

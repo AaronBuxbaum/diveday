@@ -5569,8 +5569,9 @@
     },
     "incidentMissingDiver": {
       "subject": "{shopName}: missing diver reported on {tripTitle}",
-      "body": "Your crew filed a report of a missing diver on {tripTitle}, {when}. The report has the details.",
-      "open": "Open the report"
+      "body": "Missing diver on {tripTitle}. Reported {when}. Call the boat first.",
+      "open": "Open the report",
+      "emergency": "Open the emergency reference"
     },
     "shoreAlertStopped": {
       "subject": "{shopName}: the shore contact stopped roll-call alerts",

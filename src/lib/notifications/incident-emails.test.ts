@@ -11,6 +11,7 @@ const input = {
   reportedAt: new Date("2026-10-01T15:20:00Z"),
   timezone: "America/New_York",
   reportUrl: "https://dive.day/shop/blue-mantis/trips/t/incidents/r",
+  emergencyUrl: "https://dive.day/shop/blue-mantis/settings/emergency-reference",
 };
 
 const notification = {
@@ -34,10 +35,21 @@ describe("incidentMissingDiverEmail", () => {
     expect(email.html).toContain(input.reportUrl);
   });
 
+  it("leads with the fact and the first call, and links the emergency reference", () => {
+    const email = incidentMissingDiverEmail(input);
+    expect(email.text).toMatch(
+      /Missing diver on Two-Tank Reef\. Reported Oct\s1,\s11:20\sAM\sEDT\. Call the boat first\./,
+    );
+    expect(email.text).toContain(input.emergencyUrl);
+    expect(email.html).toContain(input.emergencyUrl);
+  });
+
   it("says it in Spanish for a Spanish-speaking owner", () => {
     const email = incidentMissingDiverEmail({ ...input, locale: "es-ES" });
     expect(email.subject).toContain("buceador desaparecido");
     expect(email.text).toContain(input.reportUrl);
+    expect(email.text).toContain("Llama primero al barco.");
+    expect(email.text).toContain(input.emergencyUrl);
   });
 
   it("escapes a trip title in the html body", () => {

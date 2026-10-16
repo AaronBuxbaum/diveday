@@ -1579,10 +1579,12 @@ const incidentMissingDiverSchema = z.object({
   recipientName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   tripTitle: tripTitleSchema,
-  /** When the report was filed: said in the shop's zone. */
+  /** When it happened, per the report: said in the shop's zone. */
   reportedAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   reportUrl: z.url().max(2_000),
+  /** The shop's emergency reference, behind the same sign-in. */
+  emergencyUrl: z.url().max(2_000),
 });
 
 /**
