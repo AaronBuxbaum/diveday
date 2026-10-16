@@ -351,7 +351,8 @@ export async function seatParty(
   // Before the release goes out, so the waiver reads the age the counter asked.
   for (const [index, booking] of outcome.bookings.entries()) {
     const dateOfBirth = input.members[index]?.dateOfBirth;
-    if (!dateOfBirth) continue;
+    // A record the name match left in doubt may be someone else; nothing typed lands on it.
+    if (!dateOfBirth || booking.identityUnconfirmed) continue;
     await db
       .update(people)
       .set({ dateOfBirth })

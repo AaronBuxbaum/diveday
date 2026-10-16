@@ -229,6 +229,38 @@ describe("seatParty", () => {
     expect(ids.map((id) => byId.get(id))).toEqual(["2010-05-06", "2014-07-08", "2011-03-04"]);
   });
 
+  it("never writes a counter-typed date of birth onto a record the name match left unconfirmed", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const stamp = crypto.randomUUID().slice(0, 8);
+    const [other] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: `Dob Other ${stamp}` })
+      .returning({ id: people.id });
+    if (!other) throw new Error("fixture insert failed");
+    const result = await seatParty(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      entry: "walk_in",
+      refusals: "specific",
+      members: [
+        {
+          personId: other.id,
+          typedName: `Someone Else ${stamp}`,
+          minor: true,
+          dateOfBirth: "2012-01-01",
+        },
+      ],
+    });
+    if (!result.ok) throw new Error(`expected a seated party, got ${result.reason}`);
+    expect(result.seats[0]?.identityUnconfirmed).toBe(true);
+    const [row] = await db
+      .select({ dateOfBirth: people.dateOfBirth })
+      .from(people)
+      .where(eq(people.id, other.id));
+    expect(row?.dateOfBirth).toBeNull();
+  });
+
   it("seats a member on the record picked from the on-file prompt rather than making a namesake", async () => {
     const { db, shop, open, actorPersonId } = await context();
     const stamp = crypto.randomUUID().slice(0, 8);

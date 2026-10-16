@@ -39,7 +39,11 @@ export function readRecents(storageKey: string): StoredRecent[] {
     const raw = window.localStorage.getItem(storageKey);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(isStored).slice(0, MAX_RECENTS) : [];
+    if (!Array.isArray(parsed)) return [];
+    const kept = parsed.filter(isStored);
+    // An older row that carried a name or contact line leaves the device now, not at the next visit.
+    if (kept.length !== parsed.length) writeRecents(storageKey, kept.slice(0, MAX_RECENTS));
+    return kept.slice(0, MAX_RECENTS);
   } catch {
     return [];
   }

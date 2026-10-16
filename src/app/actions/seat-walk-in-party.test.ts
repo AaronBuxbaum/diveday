@@ -84,12 +84,28 @@ describe("seatWalkInPartyAction", () => {
         [walkInMemberField(2, "match"), LEO_ON_FILE],
       ]),
     );
-    expect(findSimilarDivers).not.toHaveBeenCalled();
     expect(vi.mocked(seatParty).mock.calls[0]?.[1].members).toEqual([
       expect.objectContaining({ fullName: "Ana Lopez", minor: false, participantType: "diver" }),
       expect.objectContaining({ fullName: "Mia Lopez", minor: true, participantType: "snorkeler" }),
       expect.objectContaining({ personId: LEO_ON_FILE, typedName: "Leo Lopez", minor: false }),
     ]);
+  });
+
+  it("refuses a chosen record that is not one of that row's candidates", async () => {
+    vi.mocked(findSimilarDivers).mockResolvedValue([{ id: LEO_ON_FILE }] as never);
+    const stranger = "55555555-5555-4555-8555-555555555555";
+    const to = new URL(
+      await landing(
+        form([
+          [walkInMemberField(0, "match"), "new"],
+          [walkInMemberField(1, "match"), "new"],
+          [walkInMemberField(2, "match"), stranger],
+        ]),
+      ),
+      "http://x",
+    );
+    expect(to.searchParams.get("notice")).toBe("diver-invalid");
+    expect(seatParty).not.toHaveBeenCalled();
   });
 
   it("still asks about a row the staffer has not settled", async () => {

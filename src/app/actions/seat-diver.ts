@@ -413,6 +413,18 @@ export async function seatWalkInPartyAction(shopSlug: string, formData: FormData
     );
   }
 
+  // A chosen record must be one the row's own name reads like: a posted id is
+  // never trusted to name somebody the staffer was not shown.
+  const chosen = everyone.filter(
+    (member) => member.match !== undefined && member.match !== WALK_IN_NEW_PERSON,
+  );
+  const shown = await Promise.all(
+    chosen.map((member) => findSimilarDivers(db, session.user.shopId, member.fullName)),
+  );
+  if (chosen.some((member, index) => !shown[index]?.some((diver) => diver.id === member.match))) {
+    back("diver-invalid");
+  }
+
   const members: SeatPartyMember[] = everyone.map((member) => {
     const facts = {
       minor: member.minor,

@@ -34,6 +34,21 @@ describe("readRecents", () => {
     );
     expect(readRecents(key)).toEqual([{ key: "diver:b", kind: "diver", id: "b" }]);
   });
+
+  it("rewrites the stored value without the rows it dropped", () => {
+    const key = recentsStorageKey("blue-mantis", "p-2");
+    window.localStorage.setItem(
+      key,
+      JSON.stringify([
+        { key: "diver:a", kind: "diver", label: "Ana", detail: "ana@x.example", href: "/shop/x" },
+        { key: "diver:b", kind: "diver", id: "b" },
+      ]),
+    );
+    readRecents(key);
+    expect(window.localStorage.getItem(key)).toBe(
+      JSON.stringify([{ key: "diver:b", kind: "diver", id: "b" }]),
+    );
+  });
 });
 
 describe("recentsStorageKey", () => {
