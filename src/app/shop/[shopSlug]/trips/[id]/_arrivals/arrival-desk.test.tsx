@@ -141,7 +141,7 @@ describe("the paper pass on an arrived row (fourth review, item 48)", () => {
    * The pass now sits under the name; the row's end holds "Checked in" alone.
    */
   it("puts Print a pass under a cleared, checked-in diver's name, not beside Checked in", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const now = nowDate();
     const queue = await listCheckInQueue(db, shop.id, { now });
     const row = queue.find((r) => r.bookingStatus === "booked" && r.readiness.status === "ready");
