@@ -158,6 +158,7 @@ export function PhotoDoor({
   tripTitle,
   photos,
   maxPhotos,
+  canShareWithBoat,
   notice,
   action,
 }: {
@@ -166,6 +167,8 @@ export function PhotoDoor({
   tripTitle: string;
   photos: AfterStateProps["photos"];
   maxPhotos: number;
+  /** The share tick, from the readiness link only (`AfterStateProps.canShareWithBoat`). */
+  canShareWithBoat: boolean;
   notice: { tone: "success" | "danger"; key: DiverMessageKey } | undefined;
   action: (formData: FormData) => void | Promise<void>;
 }) {
@@ -238,7 +241,7 @@ export function PhotoDoor({
               placeholder={t("recap.captionLabel")}
               className={controlClass}
             />
-            <ShareWithBoatTick label={t("recap.shareWithBoat")} />
+            {canShareWithBoat ? <ShareWithBoatTick label={t("recap.shareWithBoat")} /> : null}
             <div>
               <SubmitButton
                 pendingLabel={t("recap.addingPhoto")}

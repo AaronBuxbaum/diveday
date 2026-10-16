@@ -149,6 +149,7 @@ export async function sendFindMyBookingLinks(
           bookingId: row.bookingId,
           purpose: "readiness",
           now,
+          delivered: true,
         });
       });
       // A live link already exists (nothing to send — the diver already has

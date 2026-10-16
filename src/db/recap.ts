@@ -36,7 +36,7 @@ import {
 } from "@/lib/notifications/sms";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { firstNameOf } from "@/lib/person-name";
-import { mergeShopHistory, priorVisitStanding } from "@/lib/prior-visits";
+import { diveDayOrdinal } from "@/lib/prior-visits";
 import { recapLinkPath } from "@/lib/recap-links";
 import { RECAP_AUTOMATIC_DELAY_HOURS, unpauseRecapAutoSendAt } from "@/lib/recap-schedule";
 import { maySendNow } from "@/lib/send-window";
@@ -881,16 +881,14 @@ async function loadRecapPageData(
     hours: DEFAULT_FLY_SAFE_HOURS,
   });
 
-  const tripLocalDay = calendarDateInTimezone(trip.startsAt, row.timezone);
-  const effectivePriorVisits = priorVisitRows.filter(
-    (v) => priorVisitStanding(v.statusLabel) !== "did_not_happen" && v.visitedOn <= tripLocalDay,
-  );
-  const mergedHistory = mergeShopHistory(nativeBookings, effectivePriorVisits, {
-    bookingStartsAt: (b) => b.startsAt,
-    visitedOn: (v) => v.visitedOn,
+  // One calendar day is one dive day (glossary **Dive day**): the count every
+  // reader says, the milestone and "Your days" included (`diveDayOrdinal`).
+  const visitCount = diveDayOrdinal({
+    diveDayStarts: nativeBookings.map((booking) => booking.startsAt),
+    visits: priorVisitRows,
     timezone: row.timezone,
+    throughDay: calendarDateInTimezone(trip.startsAt, row.timezone),
   });
-  const visitCount = Math.max(1, mergedHistory.length);
   const crew = (crewMap.get(row.tripId) ?? []).map((c) => c.name);
 
   const sessionCertification = sessionCertifications[0] ?? null;
@@ -1020,6 +1018,11 @@ async function listRecapPhotosForBooking(
 /**
  * The photos other divers on this departure shared with the boat, each with
  * the sharer's first name. Never this booking's own (those are read above).
+ *
+ * Only from a seat a recap would show (ADR 20261016-shared-boat-photos §3;
+ * security review of layer r5-4, F2): not cancelled or a no-show, not held
+ * (its holder may not be the person whose name it would carry), not left at
+ * the dock, and not a removed or erased diver's.
  */
 async function listBoatSharedPhotos(
   db: AppDb,
@@ -1034,6 +1037,7 @@ async function listBoatSharedPhotos(
       caption: recapPhotos.caption,
       createdAt: recapPhotos.createdAt,
       sharerName: people.fullName,
+      sharerBookingId: recapPhotos.bookingId,
     })
     .from(recapPhotos)
     .innerJoin(
@@ -1049,14 +1053,27 @@ async function listBoatSharedPhotos(
         ne(recapPhotos.bookingId, bookingId),
         isNotNull(recapPhotos.sharedWithBoatAt),
         notInArray(bookings.status, ["cancelled", "no_show"]),
+        isNull(bookings.identityUnconfirmedAt),
+        isNull(people.deletedAt),
         isNull(people.anonymizedAt),
       ),
     )
     .orderBy(desc(recapPhotos.createdAt));
-  return rows.map(({ sharerName, ...photo }) => ({
-    ...photo,
-    sharedBy: firstNameOf(sharerName, sharerName),
-  }));
+  if (rows.length === 0) return [];
+  const ashore = await bookingsLeftAtTheDock(
+    db,
+    [...new Set(rows.map((row) => row.sharerBookingId))].map((id) => ({
+      booking: { id },
+      shop: { id: shopId },
+      trip: { id: tripId },
+    })),
+  );
+  return rows
+    .filter((row) => !ashore.has(row.sharerBookingId))
+    .map(({ sharerName, sharerBookingId: _sharer, ...photo }) => ({
+      ...photo,
+      sharedBy: firstNameOf(sharerName, sharerName),
+    }));
 }
 
 export type RecapPhotoEligibility =

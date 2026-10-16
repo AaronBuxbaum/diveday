@@ -44,7 +44,7 @@ describe("welcomeCueText", () => {
   });
 
   it("says a regular's milestone boat as a count in both locales (H-128)", () => {
-    expect(welcomeCueText(en, { kind: "milestone", count: 25 }, "en-US")).toBe("25th boat with us");
+    expect(welcomeCueText(en, { kind: "milestone", count: 25 }, "en-US")).toBe("25th dive day with us");
     expect(welcomeCueText(es, { kind: "milestone", count: 25 }, "es-ES")).toBe(
       "25.º barco con nosotros",
     );
@@ -101,7 +101,7 @@ describe("sayHelloSentences", () => {
       sayHelloSentences(en, "en-US", [
         { name: "Bjorn Aasen", cue: { kind: "milestone", count: 25 } },
       ]),
-    ).toEqual(["Bjorn Aasen: 25th boat with us."]);
+    ).toEqual(["Bjorn Aasen: 25th dive day with us."]);
     expect(
       sayHelloSentences(es, "es-ES", [
         { name: "Bjorn Aasen", cue: { kind: "milestone", count: 50 } },

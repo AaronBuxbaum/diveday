@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { fileScopedShopContext } from "@/test/db";
@@ -8,7 +8,12 @@ import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { bookings, people, priorVisits } from "./schema";
 import { createTrip } from "./trips";
-import { listYourDays, planYourDayLink, sendYourDayLink } from "./your-days";
+import {
+  latestDiveDayBooking,
+  listYourDays,
+  planYourDayLink,
+  sendYourDayLink,
+} from "./your-days";
 
 /**
  * **A regular's other days, from one booking's page** (H-132, ADR
@@ -115,6 +120,47 @@ describe("listYourDays", () => {
     expect(days.upcoming.map((d) => d.bookingId)).toEqual([later]);
   });
 
+  it("numbers a day with the recap's own count: two boats on one date are one day", async () => {
+    const { db, shop, here, first, second, email } = await regular();
+    // An afternoon boat on the second past day's date.
+    const secondStart = new Date(NOW.getTime() - 10 * DAY);
+    const afternoon = await createTrip(db, {
+      shopId: shop.id,
+      title: "Spiegel Grove PM",
+      startsAt: new Date(secondStart.getTime() + 3 * 60 * 60 * 1000),
+      endsAt: new Date(secondStart.getTime() + 5 * 60 * 60 * 1000),
+      capacity: 6,
+      plannedDives: 1,
+    });
+    if (!afternoon) throw new Error("trip not created");
+    const pm = await seat(db, shop.id, afternoon.id, email);
+    const days = await listYourDays(db, { shopId: shop.id, bookingId: here, now: NOW });
+    expect(days.past.map((d) => [d.bookingId, d.dayNumber])).toEqual([
+      [pm, 2],
+      [second, 2],
+      [first, 1],
+    ]);
+  });
+
+  it("leaves out a held seat matched to this person, ahead or behind (security review r5-4, N2)", async () => {
+    const { db, shop, here, sooner, later, first, second } = await regular();
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: NOW, identityBookedAs: "S. M." })
+      .where(inArray(bookings.id, [sooner, first]));
+    const days = await listYourDays(db, { shopId: shop.id, bookingId: here, now: NOW });
+    expect(days.upcoming.map((d) => d.bookingId)).toEqual([later]);
+    expect(days.past.map((d) => d.bookingId)).toEqual([second]);
+    expect(
+      await planYourDayLink(db, {
+        shopId: shop.id,
+        fromBookingId: here,
+        targetBookingId: sooner,
+        now: NOW,
+      }),
+    ).toEqual({ ok: false, reason: "unavailable" });
+  });
+
   it("lists nothing for a person with no email on file", async () => {
     const { db, shop, here, personId } = await regular();
     await db.update(people).set({ email: null }).where(eq(people.id, personId));
@@ -184,5 +230,21 @@ describe("planYourDayLink and sendYourDayLink", () => {
     expect(mail.purpose).toBe("log_entry");
     const token = new URL(mail.readinessUrl).pathname.split("/").at(-1) ?? "";
     expect(verifyRecapToken(token)).toBe(first);
+  });
+});
+
+describe("latestDiveDayBooking", () => {
+  it("never answers with a held seat (security review r5-4, N2)", async () => {
+    const { db, shop, personId, second, first } = await regular();
+    expect(
+      (await latestDiveDayBooking(db, { shopId: shop.id, personId, now: NOW }))?.bookingId,
+    ).toBe(second);
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: NOW, identityBookedAs: "S. M." })
+      .where(eq(bookings.id, second));
+    expect(
+      (await latestDiveDayBooking(db, { shopId: shop.id, personId, now: NOW }))?.bookingId,
+    ).toBe(first);
   });
 });

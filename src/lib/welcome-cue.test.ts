@@ -15,7 +15,7 @@ describe("welcomeCueFor", () => {
   it("says nothing without consent, however long the gap", () => {
     expect(
       welcomeCueFor({
-        boatCount: null,
+        diveDayCount: null,
         sharedAt: null,
         lastDivedAt: yearsAgo(5),
         tripEndsAt: TRIP_ENDS,
@@ -27,7 +27,7 @@ describe("welcomeCueFor", () => {
   it("reads a diver with no earlier departure as a first trip", () => {
     expect(
       welcomeCueFor({
-        boatCount: null,
+        diveDayCount: null,
         sharedAt: NOW,
         lastDivedAt: null,
         tripEndsAt: TRIP_ENDS,
@@ -39,7 +39,7 @@ describe("welcomeCueFor", () => {
   it("marks a first seat that is not a dive, so its words can say so", () => {
     expect(
       welcomeCueFor({
-        boatCount: null,
+        diveDayCount: null,
         sharedAt: NOW,
         lastDivedAt: null,
         nonDiver: true,
@@ -52,7 +52,7 @@ describe("welcomeCueFor", () => {
   it("counts the whole years a returning diver has been away", () => {
     expect(
       welcomeCueFor({
-        boatCount: null,
+        diveDayCount: null,
         sharedAt: NOW,
         lastDivedAt: yearsAgo(3),
         tripEndsAt: TRIP_ENDS,
@@ -64,7 +64,7 @@ describe("welcomeCueFor", () => {
   it("says nothing about a diver who was here six months ago", () => {
     expect(
       welcomeCueFor({
-        boatCount: null,
+        diveDayCount: null,
         sharedAt: NOW,
         lastDivedAt: yearsAgo(0.5),
         tripEndsAt: TRIP_ENDS,
@@ -75,14 +75,14 @@ describe("welcomeCueFor", () => {
 
   it("says nothing one year short of the gap, and speaks at it", () => {
     const short = welcomeCueFor({
-      boatCount: null,
+      diveDayCount: null,
       sharedAt: NOW,
       lastDivedAt: yearsAgo(WELCOME_GAP_YEARS - 1),
       tripEndsAt: TRIP_ENDS,
       now: NOW,
     });
     const met = welcomeCueFor({
-      boatCount: null,
+      diveDayCount: null,
       sharedAt: NOW,
       lastDivedAt: yearsAgo(WELCOME_GAP_YEARS),
       tripEndsAt: TRIP_ENDS,
@@ -97,7 +97,7 @@ describe("welcomeCueFor", () => {
     const pastBuffer = new Date(TRIP_ENDS.getTime() + DEPARTURE_BUFFER_MS + 60_000);
     expect(
       welcomeCueFor({
-        boatCount: null,
+        diveDayCount: null,
         sharedAt: NOW,
         lastDivedAt: null,
         tripEndsAt: TRIP_ENDS,
@@ -106,7 +106,7 @@ describe("welcomeCueFor", () => {
     ).toEqual({ kind: "first_trip" });
     expect(
       welcomeCueFor({
-        boatCount: null,
+        diveDayCount: null,
         sharedAt: NOW,
         lastDivedAt: null,
         tripEndsAt: TRIP_ENDS,
@@ -116,35 +116,35 @@ describe("welcomeCueFor", () => {
   });
 });
 
-describe("a regular's milestone boat (H-128)", () => {
+describe("a regular's milestone dive day (H-128)", () => {
   const consented = { sharedAt: NOW, lastDivedAt: yearsAgo(0), tripEndsAt: TRIP_ENDS, now: NOW };
 
-  it("is said on the 10th, 25th, 50th and 100th boat and on no other", () => {
+  it("is said on the 10th, 25th, 50th and 100th dive day and on no other", () => {
     for (const count of [10, 25, 50, 100]) {
-      expect(welcomeCueFor({ ...consented, boatCount: count })).toEqual({
+      expect(welcomeCueFor({ ...consented, diveDayCount: count })).toEqual({
         kind: "milestone",
         count,
       });
     }
     for (const count of [1, 2, 9, 11, 24, 26, 99, 101]) {
-      expect(welcomeCueFor({ ...consented, boatCount: count })?.kind).not.toBe("milestone");
+      expect(welcomeCueFor({ ...consented, diveDayCount: count })?.kind).not.toBe("milestone");
     }
   });
 
   it("is never said without consent, nor on a seat that is not a dive", () => {
-    expect(welcomeCueFor({ ...consented, sharedAt: null, boatCount: 25 })).toBeNull();
-    expect(welcomeCueFor({ ...consented, nonDiver: true, boatCount: 25 })?.kind).not.toBe(
+    expect(welcomeCueFor({ ...consented, sharedAt: null, diveDayCount: 25 })).toBeNull();
+    expect(welcomeCueFor({ ...consented, nonDiver: true, diveDayCount: 25 })?.kind).not.toBe(
       "milestone",
     );
   });
 
   it("outranks a long gap, and stops when the boat is home", () => {
-    expect(welcomeCueFor({ ...consented, lastDivedAt: yearsAgo(3), boatCount: 50 })).toEqual({
+    expect(welcomeCueFor({ ...consented, lastDivedAt: yearsAgo(3), diveDayCount: 50 })).toEqual({
       kind: "milestone",
       count: 50,
     });
     const home = new Date(TRIP_ENDS.getTime() + DEPARTURE_BUFFER_MS + 60_000);
-    expect(welcomeCueFor({ ...consented, now: home, boatCount: 25 })).toBeNull();
+    expect(welcomeCueFor({ ...consented, now: home, diveDayCount: 25 })).toBeNull();
   });
 });
 

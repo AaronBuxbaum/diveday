@@ -43,6 +43,7 @@ function withPage(data: Record<string, unknown>) {
     db: {} as never,
     bookingId: BOOKING_ID,
     ownLocale: null,
+    delivered: true,
     data: { identityHeld: false, shop: { id: "shop-1" }, ...data } as never,
   });
 }

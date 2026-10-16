@@ -327,6 +327,7 @@ async function mintReminderLinks(
       bookingIds,
       purpose: "readiness",
       now,
+      delivered: true,
     });
     for (const [bookingId, { token }] of issued) {
       links.set(bookingId, new URL(readinessLinkPath(token), `${origin}/`).toString());

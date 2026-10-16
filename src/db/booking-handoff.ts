@@ -165,6 +165,9 @@ export async function lastGearFor(
         eq(bookings.shopId, input.shopId),
         eq(bookings.personId, input.personId),
         eq(bookings.participantType, "diver"),
+        // A held seat's gear was chosen by whoever booked it, who may not be
+        // this person (#2082; security review r5-4, N3).
+        isNull(bookings.identityUnconfirmedAt),
         diveDay(),
         lte(trips.startsAt, input.now),
       ),

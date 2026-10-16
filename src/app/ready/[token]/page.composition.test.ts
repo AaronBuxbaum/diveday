@@ -204,6 +204,13 @@ describe("after the dive", () => {
       expect(SOURCE).not.toContain(`${action}.bind(null, token)`);
     }
   });
+
+  it("uploads a recap photo through this page's own token, the one door that may share it", () => {
+    // Security review of layer r5-4, F3: the forwardable recap link never
+    // publishes to the boat; the readiness link's upload verifies its token.
+    expect(SOURCE).toContain("uploadPhoto: uploadRecapPhotoFromReadyAction.bind(null, token)");
+    expect(SOURCE).not.toContain("uploadRecapPhotoAction");
+  });
 });
 
 /**

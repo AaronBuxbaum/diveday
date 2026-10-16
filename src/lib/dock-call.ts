@@ -14,25 +14,41 @@ export function dockCallAt(startsAt: Date, dockCallMinutes: number): Date | null
 }
 
 /**
- * **When a crew member should be at the dock** (fifth-loop ideas, item 47):
- * the earlier of the divers' dock call and the start of the crew member's own
- * shift that covers the departure. Crew are never asked later than the divers
- * they meet, and a shift the owner set earlier (tanks, the boat check) wins.
+ * How long before a departure a covering shift may start and still be read as
+ * that boat's crew call. A day-long shift from 06:00 says when the day
+ * starts, not when the 13:00 boat's crew should be on the dock.
+ */
+export const CREW_CALL_SHIFT_LEAD_MS = 3 * 60 * 60 * 1000;
+
+/** When to be at the dock, and whose time it is. */
+export type CrewCall = { at: Date; source: "shift" | "divers" };
+
+/**
+ * **When a crew member should be at the dock** (fifth-loop ideas, item 47).
  *
- * `null` when neither says anything before the departure itself: no lead time
- * and no covering shift, so the departure time is the only time to say.
+ * - **Their own shift covers the departure** and starts no more than
+ *   {@link CREW_CALL_SHIFT_LEAD_MS} before it: the earlier of the shift's
+ *   start and the divers' dock call, as `shift`. Crew are never asked later
+ *   than the divers they meet.
+ * - **Otherwise** the divers' dock call, as `divers`, so the line says it is
+ *   the divers' time (dive-domain review of layer r5-4, fix 4): crew who
+ *   arrive with the customers leave tanks unloaded and the O2 unchecked.
+ *
+ * `null` when neither says anything before the departure itself.
  */
 export function crewCallAt(
   startsAt: Date,
   dockCallMinutes: number,
   shifts: readonly { startsAt: Date; endsAt: Date }[],
-): Date | null {
-  const candidates = [dockCallAt(startsAt, dockCallMinutes)];
+): CrewCall | null {
+  const divers = dockCallAt(startsAt, dockCallMinutes);
+  const earliest = (a: Date | null, b: Date) => (a === null || b < a ? b : a);
+  let shiftStart: Date | null = null;
   for (const shift of shifts) {
-    if (shift.startsAt < startsAt && shift.endsAt > startsAt) candidates.push(shift.startsAt);
+    const covers = shift.startsAt < startsAt && shift.endsAt > startsAt;
+    const near = startsAt.getTime() - shift.startsAt.getTime() <= CREW_CALL_SHIFT_LEAD_MS;
+    if (covers && near) shiftStart = earliest(shiftStart, shift.startsAt);
   }
-  const earliest = candidates
-    .filter((at): at is Date => at !== null)
-    .reduce<Date | null>((min, at) => (min === null || at < min ? at : min), null);
-  return earliest;
+  if (shiftStart) return { at: divers ? earliest(shiftStart, divers) : shiftStart, source: "shift" };
+  return divers ? { at: divers, source: "divers" } : null;
 }

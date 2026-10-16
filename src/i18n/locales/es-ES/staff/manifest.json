@@ -139,6 +139,15 @@
   "buddyCameTogether": "Llegaron juntos: {parties}",
   "buddyCameAlone": "Llegaron solos: {names}",
   "buddyTeamUpParties": "Formar una pareja por grupo",
+  "buddyPartyLeft": "Para que los emparejes tú: {names} ({reason})",
+  "buddyPartyLeftReason": {
+    "intro_course": "bautismo",
+    "training_course": "inmersión de curso",
+    "too_large": "más de tres",
+    "young_child": "un buceador menor de 12",
+    "minor_age_unknown": "un menor sin fecha de nacimiento",
+    "junior_without_adult": "un junior sin adulto certificado"
+  },
   "buddyTeamLabel": "Pareja {number, number, ::00}",
   "buddyCancelledName": "{name} (plaza cancelada)",
   "buddyCrewName": "{name} (tripulación)",

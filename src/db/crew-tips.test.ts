@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { randomUUID } from "node:crypto";
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
@@ -13,6 +14,7 @@ import {
   tips,
   tripAssignments,
   tripDives,
+  tripScheduleDays,
   trips,
 } from "./schema";
 
@@ -216,6 +218,101 @@ describe("crewMonth (fifth-loop ideas, item 51)", () => {
       dives: 4,
       minutes: 8 * 60,
     });
+  });
+
+  /**
+   * Dive-domain review of layer r5-4, fix 3 and note 10: the month line is a
+   * working record pros copy from, so a departure that never ran is not a
+   * boat, a deleted log is not a dive, and a liveaboard counts the hours its
+   * days ran rather than the nights between them.
+   */
+  it("counts a called-off departure only when the crew logged a live dive on it", async () => {
+    const db = await unseededTestDb();
+    const shop = await bareShop(db);
+    const keiko = await person(db, shop.id, "Keiko Tanaka");
+    const blownOut = await departure(db, shop.id, {
+      title: "Blown out",
+      startsAt: "2026-10-03T13:00:00Z",
+    });
+    const calledAfterOne = await departure(db, shop.id, {
+      title: "Called after one",
+      startsAt: "2026-10-04T13:00:00Z",
+    });
+    const deletedLogOnly = await departure(db, shop.id, {
+      title: "Deleted log",
+      startsAt: "2026-10-05T13:00:00Z",
+    });
+    for (const trip of [blownOut, calledAfterOne, deletedLogOnly]) {
+      await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, trip.id));
+      await db.insert(tripAssignments).values({ tripId: trip.id, personId: keiko.id });
+      await db.insert(tripDives).values([
+        { tripId: trip.id, diveNumber: 1 },
+        { tripId: trip.id, diveNumber: 2 },
+      ]);
+    }
+    await db.insert(executedDives).values([
+      { shopId: shop.id, tripId: calledAfterOne.id, diveNumber: 1 },
+      {
+        shopId: shop.id,
+        tripId: deletedLogOnly.id,
+        diveNumber: 1,
+        deletedAt: new Date("2026-10-06T00:00:00Z"),
+      },
+    ]);
+
+    expect(await crewMonth(db, shop.id, keiko.id, MONTH)).toEqual({
+      boats: 1,
+      dives: 1,
+      minutes: 4 * 60,
+    });
+  });
+
+  it("counts no deleted log as a dive, falling back to the plan", async () => {
+    const db = await unseededTestDb();
+    const shop = await bareShop(db);
+    const keiko = await person(db, shop.id, "Keiko Tanaka");
+    const reef = await departure(db, shop.id, { title: "Reef", startsAt: "2026-10-03T13:00:00Z" });
+    await db.insert(tripAssignments).values({ tripId: reef.id, personId: keiko.id });
+    await db.insert(tripDives).values([
+      { tripId: reef.id, diveNumber: 1 },
+      { tripId: reef.id, diveNumber: 2 },
+    ]);
+    await db.insert(executedDives).values({
+      shopId: shop.id,
+      tripId: reef.id,
+      diveNumber: 1,
+      deletedAt: new Date("2026-10-04T00:00:00Z"),
+    });
+
+    expect((await crewMonth(db, shop.id, keiko.id, MONTH)).dives).toBe(2);
+  });
+
+  it("counts a multi-day departure's scheduled days, not the nights between them", async () => {
+    const db = await unseededTestDb();
+    const shop = await bareShop(db);
+    const keiko = await person(db, shop.id, "Keiko Tanaka");
+    const [trip] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "Liveaboard",
+        startsAt: new Date("2026-10-07T12:00:00Z"),
+        endsAt: new Date("2026-10-09T20:00:00Z"),
+        capacity: 8,
+      })
+      .returning();
+    if (!trip) throw new Error("trip insert failed");
+    await db.insert(tripAssignments).values({ tripId: trip.id, personId: keiko.id });
+    await db.insert(tripScheduleDays).values(
+      [7, 8, 9].map((day, index) => ({
+        tripId: trip.id,
+        dayNumber: index + 1,
+        startsAt: new Date(`2026-10-0${day}T12:00:00Z`),
+        endsAt: new Date(`2026-10-0${day}T20:00:00Z`),
+      })),
+    );
+
+    expect((await crewMonth(db, shop.id, keiko.id, MONTH)).minutes).toBe(3 * 8 * 60);
   });
 
   it("is all zeros for someone who has not crewed this month", async () => {

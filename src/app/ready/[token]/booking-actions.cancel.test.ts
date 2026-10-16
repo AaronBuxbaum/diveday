@@ -54,6 +54,7 @@ beforeEach(() => {
     db: {} as never,
     bookingId: LEAD,
     ownLocale: null,
+    delivered: true,
     data: { shop: { id: "shop-1" } } as never,
   });
   vi.mocked(refundBookingOnCancellation).mockResolvedValue({ status: "refunded" } as never);

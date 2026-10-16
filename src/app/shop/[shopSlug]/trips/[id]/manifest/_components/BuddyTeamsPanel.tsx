@@ -92,7 +92,13 @@ export function BuddyTeamsPanel({
    * many parties one tap would team (fifth-loop ideas, item 50). Null when no
    * two of them booked together.
    */
-  partyLines?: { together: string; alone: string | null; teamable: number } | null;
+  partyLines?: {
+    together: string;
+    alone: string | null;
+    /** One line per party the tap leaves for the divemaster, with why. */
+    left: string[];
+    teamable: number;
+  } | null;
   teamUpPartiesAction?: (formData: FormData) => Promise<void>;
   formBuddyTeamAction: (formData: FormData) => Promise<void>;
   addBuddyTeamMemberAction: (formData: FormData) => Promise<void>;
@@ -164,6 +170,9 @@ export function BuddyTeamsPanel({
           <div className="mt-2 text-sm text-muted">
             <p>{partyLines.together}</p>
             {partyLines.alone ? <p>{partyLines.alone}</p> : null}
+            {partyLines.left.map((line) => (
+              <p key={line}>{line}</p>
+            ))}
             {partyLines.teamable > 0 && teamUpPartiesAction ? (
               <form action={teamUpPartiesAction} className="mt-2">
                 <SubmitButton

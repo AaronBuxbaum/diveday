@@ -135,7 +135,7 @@ describe("ReadyBookedHeader", () => {
         />,
       ),
     );
-    expect(screen.getByText("Your 25th day with Blue Mantis Divers.")).toBeTruthy();
+    expect(screen.getByText("Your 25th dive day with Blue Mantis Divers.")).toBeTruthy();
   });
 
   /**

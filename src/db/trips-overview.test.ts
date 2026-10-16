@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { nowMs } from "@/lib/clock";
+import { nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
-import { people, trips } from "./schema";
+import { bookings, people, trips } from "./schema";
 import { setStaffLanguages } from "./staff-accounts";
 import { upcomingTripsWithCounts } from "./trips";
 import { listStaff, setTripCrew } from "./trips-crew";
@@ -238,6 +238,33 @@ describe("getTripOverview", () => {
       expect(crew.languageBriefings.uncovered).toEqual([
         { language: "es", divers: ["Freya Lindqvist"], crew: [] },
       ]);
+    });
+
+    it("names no one from a no-show or a held seat (dive-domain review r5-4, note 9)", async () => {
+      const ctx = await context();
+      const seats = [];
+      for (const name of ["Freya Lindqvist", "Hana Novak"]) {
+        const outcome = await createBooking(ctx.db, {
+          actor: "staff",
+          shopId: ctx.shop.id,
+          tripId: ctx.tripId,
+          fullName: name,
+          email: `${name.split(" ")[0]?.toLowerCase()}-${nowMs()}@example.com`,
+        });
+        if (!outcome.ok) throw new Error("expected booking to succeed");
+        await ctx.db.update(people).set({ locale: "es-ES" }).where(eq(people.id, outcome.personId));
+        seats.push(outcome.bookingId);
+      }
+      const [noShow, held] = seats;
+      if (!noShow || !held) throw new Error("expected two seats");
+      await ctx.db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, noShow));
+      await ctx.db
+        .update(bookings)
+        .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "H. N." })
+        .where(eq(bookings.id, held));
+
+      const { crew } = await overviewFor(ctx);
+      expect(crew.languageBriefings).toEqual({ uncovered: [], covered: [] });
     });
 
     it("names who can brief them once an assigned crew member records the language a booked diver signaled", async () => {

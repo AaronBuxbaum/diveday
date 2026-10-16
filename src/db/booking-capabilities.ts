@@ -69,6 +69,12 @@ export async function issueBookingCapability(
      * longer: the trip-anchored expiry stays the ceiling.
      */
     expiresAt?: Date;
+    /**
+     * The token goes only into a message to the contact on file, never back
+     * to the browser that asked (`booking_capabilities.delivered`). Leave it
+     * off for a link a redirect or a page hands over.
+     */
+    delivered?: boolean;
   },
 ): Promise<IssuedCapability | null> {
   const now = input.now ?? nowDate();
@@ -97,6 +103,7 @@ export async function issueBookingCapability(
     purpose: input.purpose,
     tokenHash: hashCapabilityToken(token),
     tokenSealed: input.sealingKey ? sealSecret(token, input.sealingKey) : null,
+    delivered: input.delivered ?? false,
     issuedAt: now,
     expiresAt,
   });
@@ -114,7 +121,14 @@ export async function issueBookingCapability(
  */
 export async function issueBookingCapabilities(
   db: DbExecutor,
-  input: { shopId: string; bookingIds: string[]; purpose: CapabilityPurpose; now?: Date },
+  input: {
+    shopId: string;
+    bookingIds: string[];
+    purpose: CapabilityPurpose;
+    now?: Date;
+    /** As {@link issueBookingCapability}'s: every token goes only into a message. */
+    delivered?: boolean;
+  },
 ): Promise<Map<string, IssuedCapability>> {
   const now = input.now ?? nowDate();
   const issued = new Map<string, IssuedCapability>();
@@ -151,6 +165,7 @@ export async function issueBookingCapabilities(
       purpose: input.purpose,
       tokenHash: hashCapabilityToken(token),
       tokenSealed: null,
+      delivered: input.delivered ?? false,
       issuedAt: now,
       expiresAt,
     };
@@ -283,6 +298,8 @@ export type BookingCapabilityContext = {
   shopId: string;
   personId: string;
   tripId: string;
+  /** The token reached the bearer only through the contact on file. */
+  delivered: boolean;
 };
 
 /**
@@ -308,6 +325,7 @@ export async function verifyBookingCapability(
       tripId: bookings.tripId,
       bookingStatus: bookings.status,
       tripStatus: trips.status,
+      delivered: bookingCapabilities.delivered,
     })
     .from(bookingCapabilities)
     .innerJoin(bookings, eq(bookings.id, bookingCapabilities.bookingId))
@@ -341,6 +359,7 @@ export async function verifyBookingCapability(
     shopId: row.capabilityShopId,
     personId: row.personId,
     tripId: row.tripId,
+    delivered: row.delivered,
   };
 }
 

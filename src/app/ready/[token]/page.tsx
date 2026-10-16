@@ -30,11 +30,11 @@ import {
   readyThreadFacts,
 } from "@/app/ready/[token]/_components/thread-facts";
 import { YourDays } from "@/app/ready/[token]/_components/YourDays";
+import { uploadRecapPhotoFromReadyAction } from "@/app/ready/[token]/recap-photo-actions";
 import {
   startTipAction,
   submitRecapPulseAction,
   submitReviewAction,
-  uploadRecapPhotoAction,
 } from "@/app/recap/[token]/actions";
 import { FlashParams } from "@/components/FlashParams";
 import { RecapWaitingCard } from "@/components/RecapWaitingCard";
@@ -157,6 +157,7 @@ export default async function ReadyTokenPage({
       db={db}
       token={token}
       bookingId={bookingId}
+      delivered={capability.delivered}
       search={{ saved, error, pay, justBooked }}
       anonT={anonT}
       underBookedHeader={card !== null}
@@ -183,6 +184,7 @@ async function DiverReadinessPage({
   db,
   token,
   bookingId,
+  delivered,
   search: { saved, error, pay, justBooked },
   anonT,
   underBookedHeader,
@@ -190,6 +192,7 @@ async function DiverReadinessPage({
   db: AppDb;
   token: string;
   bookingId: string;
+  delivered: boolean;
   search: { saved?: string; error?: string; pay?: string; justBooked: boolean };
   anonT: DiverTranslator;
   underBookedHeader: boolean;
@@ -200,7 +203,9 @@ async function DiverReadinessPage({
   const { detail, shop, person } = data;
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
-  const yourDays = <YourDays ready={{ db, token, bookingId, data }} locale={locale} t={t} />;
+  const yourDays = (
+    <YourDays ready={{ db, token, bookingId, data, delivered }} locale={locale} t={t} />
+  );
 
   if (detail.cancelled) {
     // The shop took this seat off the boat and this diver still holds a live
@@ -273,7 +278,9 @@ async function DiverReadinessPage({
       params: {},
       actions: {
         submitReview: submitReviewAction.bind(null, recapToken),
-        uploadPhoto: uploadRecapPhotoAction.bind(null, recapToken),
+        // The one door that may share a photo with the boat: it verifies this
+        // page's own readiness token (security review r5-4, F3).
+        uploadPhoto: uploadRecapPhotoFromReadyAction.bind(null, token),
         startTip: startTipAction.bind(null, recapToken),
         submitPulse: submitRecapPulseAction.bind(null, recapToken),
       },

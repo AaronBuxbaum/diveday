@@ -694,6 +694,13 @@ export const RATE_LIMITS = {
    */
   readinessLinkResendByBooking: perHour(5),
   /**
+   * "Your days" sends, per *person* (security review of layer r5-4, N1). The
+   * per-target bucket above is one booking's; a regular holds a dozen rows, so
+   * without this one inbox could be sent five mails an hour per row. Every row
+   * mails the same person, so the person is the budget.
+   */
+  yourDayLinkByPerson: perHour(5),
+  /**
    * Core Web Vitals beacons to `/api/vitals`, per IP.
    *
    * Public and unauthenticated by necessity — the report comes from a diver's

@@ -2,7 +2,9 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { fileScopedShopContext } from "@/test/db";
+import type { AppDb } from "./client";
 import { bookings, people, priorVisits, trips } from "./schema";
+import { createTrip } from "./trips";
 import { setWelcomeConsent, welcomeCueInputsByBooking } from "./welcome-cues";
 
 /**
@@ -231,7 +233,7 @@ describe("welcomeCueInputsByBooking", () => {
     ]);
     const now = await seat(later.id, "diver");
     const inputs = await welcomeCueInputsByBooking(db, shop.id, later.id, later.startsAt);
-    expect(inputs.get(now)?.boatCount).toBe(10);
+    expect(inputs.get(now)?.diveDayCount).toBe(10);
   });
 
   it("counts no no-show toward the number, and gives a non-diver none", async () => {
@@ -239,15 +241,110 @@ describe("welcomeCueInputsByBooking", () => {
     await seat(earlier.id, "diver", "no_show");
     const now = await seat(later.id, "diver");
     expect(
-      (await welcomeCueInputsByBooking(db, shop.id, later.id, later.startsAt)).get(now)?.boatCount,
+      (await welcomeCueInputsByBooking(db, shop.id, later.id, later.startsAt)).get(now)?.diveDayCount,
     ).toBe(1);
     await db
       .update(bookings)
       .set({ participantType: "snorkeler", bookedAs: "snorkeler" })
       .where(eq(bookings.id, now));
     expect(
-      (await welcomeCueInputsByBooking(db, shop.id, later.id, later.startsAt)).get(now)?.boatCount,
+      (await welcomeCueInputsByBooking(db, shop.id, later.id, later.startsAt)).get(now)?.diveDayCount,
     ).toBeNull();
+  });
+
+  /**
+   * **One dive day per calendar day** (glossary **Dive day**; dive-domain
+   * review of layer r5-4, fix 2): a morning boat and an afternoon boat are one
+   * day, an imported visit on a booked day is that same day, and the count
+   * runs to this departure's own day rather than to now, so two boats ahead
+   * never carry one number.
+   */
+  describe("which dive day this one is", () => {
+    const HOUR = 60 * 60 * 1000;
+    // Noon UTC on a fixed date, far ahead of the demo board: the same calendar
+    // day in every zone the seed uses, morning and afternoon both.
+    const DAY_ONE = new Date("2031-03-04T12:00:00Z");
+
+    async function regular() {
+      const { db, shop } = ctx;
+      const [person] = await db
+        .insert(people)
+        .values({ shopId: shop.id, fullName: "Ines Ortega" })
+        .returning({ id: people.id });
+      if (!person) throw new Error("fixture insert failed");
+      const departure = async (startsAt: Date) => {
+        const trip = await createTrip(db, {
+          shopId: shop.id,
+          title: "Reef",
+          startsAt,
+          endsAt: new Date(startsAt.getTime() + 2 * HOUR),
+          capacity: 8,
+          plannedDives: 1,
+        });
+        if (!trip) throw new Error("fixture trip failed");
+        const [row] = await db
+          .insert(bookings)
+          .values({
+            shopId: shop.id,
+            tripId: trip.id,
+            personId: person.id,
+            participantType: "diver",
+            bookedAs: "diver",
+          })
+          .returning({ id: bookings.id });
+        if (!row) throw new Error("fixture insert failed");
+        return { tripId: trip.id, bookingId: row.id, startsAt };
+      };
+      return { db, shop, personId: person.id, departure };
+    }
+
+    const countOf = async (
+      db: AppDb,
+      shopId: string,
+      seat: { tripId: string; bookingId: string; startsAt: Date },
+      now: Date,
+    ) => (await welcomeCueInputsByBooking(db, shopId, seat.tripId, now)).get(seat.bookingId);
+
+    it("counts a morning boat and an afternoon boat on one date as one day", async () => {
+      const { db, shop, departure } = await regular();
+      const morning = await departure(new Date(DAY_ONE.getTime() - 3 * HOUR));
+      const afternoon = await departure(new Date(DAY_ONE.getTime() + 2 * HOUR));
+      const next = await departure(new Date(DAY_ONE.getTime() + 7 * 24 * HOUR));
+      const after = new Date(next.startsAt.getTime() - HOUR);
+
+      expect((await countOf(db, shop.id, morning, after))?.diveDayCount).toBe(1);
+      expect((await countOf(db, shop.id, afternoon, after))?.diveDayCount).toBe(1);
+      expect((await countOf(db, shop.id, next, after))?.diveDayCount).toBe(2);
+    });
+
+    it("counts an imported visit on a booked day once", async () => {
+      const { db, shop, personId, departure } = await regular();
+      const booked = await departure(DAY_ONE);
+      const next = await departure(new Date(DAY_ONE.getTime() + 7 * 24 * HOUR));
+      await db.insert(priorVisits).values({
+        shopId: shop.id,
+        personId,
+        visitedOn: "2031-03-04",
+        sourceLabel: "Old system",
+        dedupeKey: "same-day-visit",
+        importedAt: DAY_ONE,
+      });
+
+      const count = await countOf(db, shop.id, next, new Date(next.startsAt.getTime() - HOUR));
+      expect(count?.diveDayCount).toBe(2);
+      expect((await countOf(db, shop.id, booked, DAY_ONE))?.diveDayCount).toBe(1);
+    });
+
+    it("counts to this departure's day, so two boats ahead carry two numbers", async () => {
+      const { db, shop, departure } = await regular();
+      const first = await departure(DAY_ONE);
+      const second = await departure(new Date(DAY_ONE.getTime() + 7 * 24 * HOUR));
+      // Both still ahead of the clock.
+      const before = new Date(DAY_ONE.getTime() - 24 * HOUR);
+
+      expect((await countOf(db, shop.id, first, before))?.diveDayCount).toBe(1);
+      expect((await countOf(db, shop.id, second, before))?.diveDayCount).toBe(2);
+    });
   });
 
   it("says nothing about a departure that is off the board", async () => {

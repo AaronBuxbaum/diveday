@@ -98,7 +98,7 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
         sharedAt: seat.sharedAt,
         lastDivedAt: seat.lastDivedAt,
         nonDiver: seat.nonDiver,
-        boatCount: seat.boatCount,
+        diveDayCount: seat.diveDayCount,
         tripEndsAt: trip.endsAt,
         now,
       });

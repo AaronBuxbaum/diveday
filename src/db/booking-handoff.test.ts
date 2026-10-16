@@ -237,4 +237,25 @@ describe("lastGearFor", () => {
       await lastGearFor(db, { shopId: shop.id, personId: seat.personId, now: after }),
     ).toBeNull();
   });
+
+  it("reads nothing from a held seat, whose gear was chosen by whoever booked it (security review r5-4, N3)", async () => {
+    const { db, shop, trip, bookingId } = await fixture();
+    await db
+      .update(bookings)
+      .set({
+        paidRentalKinds: ["bcd"],
+        identityUnconfirmedAt: NOW,
+        identityBookedAs: "S. M.",
+      })
+      .where(eq(bookings.id, bookingId));
+    const [seat] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    if (!seat) throw new Error("seat missing");
+    const after = new Date(trip.endsAt.getTime() + 24 * 60 * 60 * 1000);
+    expect(
+      await lastGearFor(db, { shopId: shop.id, personId: seat.personId, now: after }),
+    ).toBeNull();
+  });
 });

@@ -300,7 +300,7 @@
     "underTarget": "{divers, plural, one {# diver} other {# divers}} with {divemasters, plural, =0 {no supervisor} one {# supervisor} other {# supervisors}}. Your {ratio}:1 target wants {needed, plural, one {# divemaster} other {# divemasters}}.",
     "languageGap": "{divers} booked in {language}. No one on this crew has recorded {language}.",
     "languageCovered": "{crew} can brief {divers} in {language}.",
-    "languageDivers": "{count, plural, one {# diver} other {# divers}}",
+    "languageDivers": "{count, plural, one {# person} other {# people}}",
     "noCrew": "No crew to assign yet. Your instructors and divemasters show up here once they’re on the team.",
     "notAssignedYet": "Not yet assigned.",
     "manageShifts": "Manage shifts",

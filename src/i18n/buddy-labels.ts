@@ -1,4 +1,5 @@
 import type { BuddyAlert } from "@/lib/manifests";
+import type { PartyLeftReason } from "@/lib/party-teams";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 /**
@@ -31,4 +32,23 @@ const BUDDY_ALERT_KEYS: Record<BuddyAlert, StaffMessageKey> = {
 /** The one sentence a buddy alert renders as, in the staff bundle's language. */
 export function buddyAlertText(t: StaffTranslator, alert: BuddyAlert): string {
   return t(BUDDY_ALERT_KEYS[alert]);
+}
+
+/**
+ * Why "Team up each party" left a party for the divemaster (dive-domain review
+ * of layer r5-4, BLOCK 1): the panel says it beside the names, so a skipped
+ * party never reads as a button that did nothing.
+ */
+const PARTY_LEFT_KEYS: Record<PartyLeftReason, StaffMessageKey> = {
+  intro_course: "manifest.buddyPartyLeftReason.intro_course",
+  training_course: "manifest.buddyPartyLeftReason.training_course",
+  too_large: "manifest.buddyPartyLeftReason.too_large",
+  young_child: "manifest.buddyPartyLeftReason.young_child",
+  minor_age_unknown: "manifest.buddyPartyLeftReason.minor_age_unknown",
+  junior_without_adult: "manifest.buddyPartyLeftReason.junior_without_adult",
+};
+
+/** The reason a party was left, in the staff bundle's language. */
+export function partyLeftReasonText(t: StaffTranslator, reason: PartyLeftReason): string {
+  return t(PARTY_LEFT_KEYS[reason]);
 }

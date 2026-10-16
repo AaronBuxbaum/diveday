@@ -5,7 +5,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { recipientLocale } from "@/lib/notifications/kinds";
-import { priorVisitStanding } from "@/lib/prior-visits";
+import { diveDayOrdinal } from "@/lib/prior-visits";
 import { RECAP_TOKEN_MAX_AGE_MS, recapLinkPath } from "@/lib/recap-links";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { issueBookingCapability } from "./booking-capabilities";
@@ -81,15 +81,24 @@ export async function listYourDays(
           mine,
           ne(bookings.id, input.bookingId),
           ne(bookings.status, "cancelled"),
+          // A held seat matched this person on a guess (#2082): it is not one
+          // of their days to list or mail (security review r5-4, N2).
+          isNull(bookings.identityUnconfirmedAt),
           eq(trips.status, "scheduled"),
           liveTrip(),
           gt(trips.startsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
         ),
       )
       .orderBy(asc(trips.startsAt), asc(trips.title), asc(bookings.id)),
-    // Every dive day, this booking's included: the numbering counts them all.
+    // Every dive day, this booking's included: the numbering counts them all,
+    // as the recap's own count does; a held one is numbered but never listed.
     db
-      .select({ bookingId: bookings.id, startsAt: trips.startsAt, title: trips.title })
+      .select({
+        bookingId: bookings.id,
+        startsAt: trips.startsAt,
+        title: trips.title,
+        heldAt: bookings.identityUnconfirmedAt,
+      })
       .from(bookings)
       .innerJoin(trips, eq(trips.id, bookings.tripId))
       .where(and(mine, diveDay(), liveTrip(), lte(trips.startsAt, now)))
@@ -100,18 +109,21 @@ export async function listYourDays(
       .where(and(eq(priorVisits.shopId, input.shopId), eq(priorVisits.personId, own.personId))),
   ]);
 
-  // The recap's own count (`getRecapPageData`): dive days up to and including
-  // this one, plus imported visits that happened on or before its local day.
-  const importedDays = imported
-    .filter((visit) => priorVisitStanding(visit.statusLabel) !== "did_not_happen")
-    .map((visit) => visit.visitedOn);
+  // The recap's own count (`diveDayOrdinal`, as `getRecapPageData` says it):
+  // one calendar day is one dive day, imported visits included, through each
+  // row's own local day, so a row and the recap it mails agree.
+  const diveDayStarts = divedDays.map((day) => day.startsAt);
   const past = divedDays
-    .map((day, index) => {
-      const localDay = calendarDateInTimezone(day.startsAt, own.timezone);
-      const before = importedDays.filter((visitedOn) => visitedOn <= localDay).length;
-      return { ...day, dayNumber: index + 1 + before };
-    })
-    .filter((day) => day.bookingId !== input.bookingId)
+    .filter((day) => day.bookingId !== input.bookingId && day.heldAt === null)
+    .map(({ heldAt: _heldAt, ...day }) => ({
+      ...day,
+      dayNumber: diveDayOrdinal({
+        diveDayStarts,
+        visits: imported,
+        timezone: own.timezone,
+        throughDay: calendarDateInTimezone(day.startsAt, own.timezone),
+      }),
+    }))
     .reverse()
     .slice(0, YOUR_DAYS_PAST_LIMIT);
 
@@ -231,6 +243,7 @@ export async function sendYourDayLink(
       bookingId: plan.bookingId,
       purpose: "readiness",
       now,
+      delivered: true,
     });
     if (!issued) return "unavailable";
     url = readinessLinkPath(issued.token);
@@ -272,6 +285,7 @@ export async function latestDiveDayBooking(
       and(
         eq(bookings.shopId, input.shopId),
         eq(bookings.personId, input.personId),
+        isNull(bookings.identityUnconfirmedAt),
         diveDay(),
         liveTrip(),
         lte(trips.startsAt, input.now),

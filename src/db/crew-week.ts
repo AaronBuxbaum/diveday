@@ -1,5 +1,5 @@
 import { and, asc, eq, gte, lt, notInArray } from "drizzle-orm";
-import { crewCallAt } from "@/lib/dock-call";
+import { type CrewCall, crewCallAt } from "@/lib/dock-call";
 import type { StaffGapCode } from "@/lib/staffing-week";
 import type { AppDb } from "./client";
 import { boats, shops, staffShifts, tripAssignments, trips } from "./schema";
@@ -24,11 +24,11 @@ export type CrewWeekLine = {
    */
   gap: StaffGapCode | null;
   /**
-   * When to be at the dock (item 47): the earlier of the shop's dock call and
-   * this person's own shift covering the departure (`crewCallAt`), or null
-   * when neither leads the departure.
+   * When to be at the dock (item 47), and whose time it is: this person's own
+   * shift covering the departure, else the divers' dock call (`crewCallAt`);
+   * null when neither leads the departure.
    */
-  crewCallAt: Date | null;
+  crewCall: CrewCall | null;
 };
 
 /** How far before a departure a covering shift may start and still be read. */
@@ -113,6 +113,6 @@ export async function crewWeekFor(
   return rows.map((row) => ({
     ...row,
     gap: gaps.get(row.tripId) ?? null,
-    crewCallAt: crewCallAt(row.startsAt, shop?.dockCallMinutes ?? 0, shifts),
+    crewCall: crewCallAt(row.startsAt, shop?.dockCallMinutes ?? 0, shifts),
   }));
 }

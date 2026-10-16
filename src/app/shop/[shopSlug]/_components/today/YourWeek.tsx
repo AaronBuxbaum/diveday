@@ -99,11 +99,16 @@ export function YourWeekList({
               </p>
               <p className="mt-0.5 text-sm text-muted tabular-nums">
                 {formatShortDate(line.startsAt, locale, timeZone)} ·{" "}
-                {line.crewCallAt
-                  ? t("today.yourWeek.atTheDock", {
-                      dock: formatTime(line.crewCallAt, locale, timeZone),
-                      leaves: formatTime(line.startsAt, locale, timeZone),
-                    })
+                {line.crewCall
+                  ? t(
+                      line.crewCall.source === "shift"
+                        ? "today.yourWeek.atTheDock"
+                        : "today.yourWeek.diversAtTheDock",
+                      {
+                        dock: formatTime(line.crewCall.at, locale, timeZone),
+                        leaves: formatTime(line.startsAt, locale, timeZone),
+                      },
+                    )
                   : formatTime(line.startsAt, locale, timeZone)}{" "}
                 · {line.tripRole ? staffRoleLabel(t, line.tripRole) : t("today.yourWeek.roleUnset")}
               </p>

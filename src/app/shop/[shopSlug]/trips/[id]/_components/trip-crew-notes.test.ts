@@ -46,7 +46,7 @@ describe("tripCrewNotes", () => {
     );
   });
 
-  it("counts the divers instead of naming them past three", () => {
+  it("counts the people instead of naming them past three, never calling them all divers", () => {
     const notes = tripCrewNotes({
       crew: crew({
         languageBriefings: {
@@ -61,7 +61,7 @@ describe("tripCrewNotes", () => {
       t,
     });
     expect(notes.languageGapNote).toBe(
-      "4 divers booked in Spanish. No one on this crew has recorded Spanish.",
+      "4 people booked in Spanish. No one on this crew has recorded Spanish.",
     );
   });
 

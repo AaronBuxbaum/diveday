@@ -21,8 +21,8 @@ export type YourDayLinkState = {
  * booking's own list (same shop, same person). The link goes to the address on
  * file and only a code comes back, so nothing here opens another booking.
  *
- * Two budgets, as the expired-link rescue spends: the per-IP one inside
- * `contextFor`, and one per *target* booking, spent only once the plan says a
+ * Three budgets: the per-IP one inside `contextFor`, one per *target*
+ * booking, and one per person, the last two spent only once the plan says a
  * send will happen, so a refused post costs the diver nothing.
  */
 export async function sendYourDayLinkAction(
@@ -42,8 +42,12 @@ export async function sendYourDayLinkAction(
     };
   }
   // A held seat's link holder may not be the person the seat was matched to
-  // (#2082), so it reaches none of that person's other days.
-  if (context.data.identityHeld) return { bookingId: targetBookingId, outcome: "unavailable" };
+  // (#2082), and the link a booking or a claim redirects to proves only a
+  // typed name and address (security review r5-4, F1): neither reaches that
+  // person's other days. The page draws no row for either; this is a hand-made post.
+  if (context.data.identityHeld || !context.delivered) {
+    return { bookingId: targetBookingId, outcome: "unavailable" };
+  }
 
   const plan = await planYourDayLink(context.db, {
     shopId: context.data.shop.id,
@@ -54,6 +58,11 @@ export async function sendYourDayLinkAction(
 
   const inboxKey = rateLimitKey("your-day-link", "booking", plan.bookingId);
   if (!(await checkRateLimit(inboxKey, RATE_LIMITS.readinessLinkResendByBooking)).allowed) {
+    return { bookingId: targetBookingId, outcome: "rate_limited" };
+  }
+  // Every row mails the same person, so the person is a budget too (N1).
+  const personKey = rateLimitKey("your-day-link", "person", context.data.person.id);
+  if (!(await checkRateLimit(personKey, RATE_LIMITS.yourDayLinkByPerson)).allowed) {
     return { bookingId: targetBookingId, outcome: "rate_limited" };
   }
 

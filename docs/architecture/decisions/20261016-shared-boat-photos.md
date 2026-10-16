@@ -16,13 +16,15 @@ default, with staff able to delete (H-129).
 
 1. **One nullable column, `recap_photos.shared_with_boat_at`.** It is set at upload from the
    sharer's own tick, "Share with everyone on this boat", which starts unticked on every pick.
-   Nothing else writes it, and no staff surface can share a diver's photo.
+   Nothing else writes it, and no staff surface can share a diver's photo. **The tick is offered
+   and honored only through the diver's readiness link** (`uploadRecapPhotoFromReadyAction`,
+   security review r5-4 F3); an upload through a forwardable `/recap` link never shares.
 2. **A shared photo shows on the recap of every other seat on the same departure**, under "From the
    boat", with the sharer's first name and nothing else about them. The read is the recap's own
    departure, so it never reaches another departure or another shop.
 3. **It leaves when the sharer leaves the boat.** The read requires the sharer's seat to be one a
-   recap would show (not cancelled, not a no-show) and the person not erased. Erasure already
-   deletes the photo rows (`src/db/anonymize.ts`).
+   recap would show (not cancelled, not a no-show, not left at the dock, not held) and the person
+   neither deleted nor erased. Erasure already deletes the photo rows (`src/db/anonymize.ts`).
 4. **Moderation is the delete staff already have.** The close-out gallery marks a shared photo, and
    its delete asks whether to remove it from every recap on this boat. No approval queue.
 5. **The cap counts the sharer's own photos.** Photos shared by others never use up a diver's room.

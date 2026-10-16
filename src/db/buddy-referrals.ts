@@ -133,6 +133,12 @@ export async function friendsBroughtBy(
       and(
         liveTrip(),
         eq(bookingReferrals.shopId, shopId),
+        // Every joined row this shop's too, not only the referral's: the
+        // write side scopes the referrer, and the read does not lean on it
+        // (security review r5-4, N4).
+        eq(referrer.shopId, shopId),
+        eq(bookings.shopId, shopId),
+        eq(trips.shopId, shopId),
         eq(referrer.personId, personId),
         ne(bookings.personId, personId),
         ne(bookings.status, "cancelled"),
@@ -170,6 +176,10 @@ export async function buddyReferrersForWindow(
       and(
         liveTrip(),
         eq(bookingReferrals.shopId, shopId),
+        eq(referrer.shopId, shopId),
+        eq(people.shopId, shopId),
+        eq(bookings.shopId, shopId),
+        eq(trips.shopId, shopId),
         sql`${trips.startsAt} >= ${windowStart} and ${trips.startsAt} < ${windowEnd}`,
         ne(bookings.status, "cancelled"),
         ne(bookings.personId, referrer.personId),

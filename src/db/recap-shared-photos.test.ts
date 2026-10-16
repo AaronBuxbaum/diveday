@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import { addRecapPhoto, getRecapPageData, listRecapPhotosForTrips } from "./recap";
-import { bookings } from "./schema";
+import { bookings, people } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test.
@@ -76,6 +77,49 @@ describe("a photo shared with the boat (H-129)", () => {
     expect((await getRecapPageData(db, samBooking))?.photos.some((p) => p.sharedBy)).toBe(true);
 
     await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, bookingId));
+    expect((await getRecapPageData(db, samBooking))?.photos.some((p) => p.sharedBy)).toBe(false);
+  });
+
+  /**
+   * **Only a seat a recap would show can publish to the boat** (ADR
+   * 20261016-shared-boat-photos §3; security review of layer r5-4, F2). A held
+   * seat's holder may not be the person it matched, so their first name would
+   * misattribute the photo; a removed diver's name stops publishing with them.
+   */
+  it("leaves every recap when the sharer's seat becomes held", async () => {
+    const { db, bookingId } = await recapContext();
+    const { bookingId: samBooking } = await recapContext(SAM);
+    const shared = await addRecapPhoto(db, {
+      bookingId,
+      imageUrl: "https://img/shared.jpg",
+      shareWithBoat: true,
+    });
+    if (!shared.ok) throw new Error("photo not added");
+    expect((await getRecapPageData(db, samBooking))?.photos.some((p) => p.sharedBy)).toBe(true);
+
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate() })
+      .where(eq(bookings.id, bookingId));
+    expect((await getRecapPageData(db, samBooking))?.photos.some((p) => p.sharedBy)).toBe(false);
+  });
+
+  it("leaves every recap when the sharer is removed", async () => {
+    const { db, bookingId } = await recapContext();
+    const { bookingId: samBooking } = await recapContext(SAM);
+    const shared = await addRecapPhoto(db, {
+      bookingId,
+      imageUrl: "https://img/shared.jpg",
+      shareWithBoat: true,
+    });
+    if (!shared.ok) throw new Error("photo not added");
+    const [seat] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    if (!seat) throw new Error("seat missing");
+
+    await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, seat.personId));
     expect((await getRecapPageData(db, samBooking))?.photos.some((p) => p.sharedBy)).toBe(false);
   });
 

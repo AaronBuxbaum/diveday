@@ -17,8 +17,10 @@ export type LanguageBriefing = { language: string; divers: string[]; crew: strin
  * English.
  *
  * `uncovered` is every language nobody on the crew has recorded; `covered`
- * names the crew who speak it, and leaves out the shop's own language, which
- * every briefing is already in.
+ * names the crew who speak it. Neither says the shop's own language, which
+ * every briefing is already in and every crew member is taken to speak,
+ * recorded or not: crew record their extra languages, not the one the shop
+ * runs in (dive-domain review of layer r5-4, note 9).
  */
 export function crewLanguageBriefings(input: {
   crew: readonly { name: string; languages: readonly string[] }[];
@@ -34,11 +36,12 @@ export function crewLanguageBriefings(input: {
   const uncovered: LanguageBriefing[] = [];
   const covered: LanguageBriefing[] = [];
   for (const [language, divers] of byLanguage) {
+    if (language === input.shopLanguage) continue;
     const crew = input.crew
       .filter((member) => member.languages.includes(language))
       .map((member) => member.name);
     if (crew.length === 0) uncovered.push({ language, divers, crew });
-    else if (language !== input.shopLanguage) covered.push({ language, divers, crew });
+    else covered.push({ language, divers, crew });
   }
   return { uncovered, covered };
 }

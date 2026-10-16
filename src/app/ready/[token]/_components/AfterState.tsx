@@ -124,9 +124,10 @@ export function AfterState({
     nextDive,
     nextDiveWorded,
     nextDiveHref = null,
-    heldNext = null,
+    bookedNext = null,
     yourDays = null,
     buddyLinkUrl = null,
+    canShareWithBoat,
     actions,
     siteMark,
   } = context;
@@ -297,6 +298,7 @@ export function AfterState({
           tripTitle={trip.title}
           photos={photos}
           maxPhotos={maxPhotos}
+          canShareWithBoat={canShareWithBoat}
           notice={photoNotice}
           action={actions.uploadPhoto}
         />
@@ -361,9 +363,9 @@ export function AfterState({
       {/* ——— **The seat they already hold, in the pick's place** (fifth-loop
           ideas, item 37). A regular booked on Dec 5 is told so rather than
           sold another seat; `/recap` never carries it. */}
-      {heldNext ? (
+      {bookedNext ? (
         <SectionCard padding="lg" className="mt-10 print:hidden" title={t("recap.nextDiveHeading")}>
-          <p className="text-base">{t("recap.heldNext", heldNext)}</p>
+          <p className="text-base">{t("recap.bookedNext", bookedNext)}</p>
         </SectionCard>
       ) : null}
 
@@ -405,7 +407,7 @@ export function AfterState({
           departures, is the page arguing with itself — so the card wins and
           the footer keeps the link it always had. */}
       <footer className="mt-10 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-6 print:hidden">
-        {nextDeparture && !nextDive && !heldNext ? (
+        {nextDeparture && !nextDive && !bookedNext ? (
           <p className="min-w-0 flex-1 text-base text-muted">
             {nextDeparture.title} · {nextDeparture.when}
           </p>

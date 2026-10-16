@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { issueBookingHandoff } from "@/db/booking-handoff";
 import type { AppDb } from "@/db/client";
-import { heldDepartures, nextDiveForBooking } from "@/db/next-dive";
+import { bookedDepartures, nextDiveForBooking } from "@/db/next-dive";
 import {
   MAX_RECAP_PHOTOS_PER_BOOKING,
   type RecapPageData,
@@ -179,7 +179,7 @@ export type AfterStateProps = {
    * new boat. Null on `/recap`, which is written to be forwarded, so a stranger
    * holding it is never told where the diver will be.
    */
-  heldNext?: { date: string; title: string; time: string } | null;
+  bookedNext?: { date: string; title: string; time: string } | null;
   /**
    * The diver's other days with the shop, as rows that each send a fresh link
    * (H-132). Rendered only on `/ready`; `/recap` passes nothing.
@@ -197,6 +197,13 @@ export type AfterStateProps = {
    * rather than before one.
    */
   buddyLinkUrl?: string | null;
+  /**
+   * Whether the photo door offers "Share with everyone on this boat". True
+   * only from `/ready/<token>`, whose upload verifies the readiness token; the
+   * recap link is forwardable for 180 days, so its photos stay on this recap
+   * (security review of layer r5-4, F3).
+   */
+  canShareWithBoat: boolean;
   /** The four recap actions, already bound to a signed recap token. */
   actions: {
     submitReview: (formData: FormData) => void | Promise<void>;
@@ -258,7 +265,7 @@ export async function buildAfterStateProps(input: {
   // Read before the pick: a diver who already holds a later seat is offered
   // nothing new (item 37). `/recap` reads it too, so the card stays away there
   // as well, and only `/ready` (`mintHandoff`) says which seat it is.
-  const held = await heldDepartures(db, {
+  const booked = await bookedDepartures(db, {
     shopId: shop.id,
     personId: data.personId,
     now: nowDate(),
@@ -274,7 +281,7 @@ export async function buildAfterStateProps(input: {
     // note in src/db/recap.ts). They never reach `AfterStateProps`: this props
     // object names every field explicitly rather than spreading `data`, which
     // is what keeps a person uuid off a client-visible bearer-token page.
-    held.length > 0
+    booked.length > 0
       ? null
       : nextDiveForBooking(db, {
           shopId: shop.id,
@@ -286,7 +293,7 @@ export async function buildAfterStateProps(input: {
           dayLensId: trip.lensId,
         }),
   ]);
-  const [firstHeld] = held;
+  const [firstBooked] = booked;
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
 
   return {
@@ -374,14 +381,17 @@ export async function buildAfterStateProps(input: {
       nextDive && mintHandoff
         ? await nextDiveHandoffHref(db, shop, bookingId, nextDive.tripId)
         : null,
-    heldNext:
-      firstHeld && mintHandoff
+    bookedNext:
+      firstBooked && mintHandoff
         ? {
-            date: formatShortDate(firstHeld.startsAt, locale, shop.timezone),
-            title: firstHeld.title,
-            time: formatTime(firstHeld.startsAt, locale, shop.timezone),
+            date: formatShortDate(firstBooked.startsAt, locale, shop.timezone),
+            title: firstBooked.title,
+            time: formatTime(firstBooked.startsAt, locale, shop.timezone),
           }
         : null,
+    // The readiness link's upload is the one that verifies a revocable token
+    // (`mintHandoff` is true from `/ready` alone).
+    canShareWithBoat: mintHandoff,
     actions,
   };
 }

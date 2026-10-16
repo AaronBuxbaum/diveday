@@ -13,8 +13,8 @@ import {
   resolveBuddyReferral,
 } from "./buddy-referrals";
 import type { AppDb } from "./client";
-import { bookingReferrals, bookings, people } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { bookingReferrals, bookings, people, shops } from "./schema";
+import { createTrip, upcomingTripsWithCounts } from "./trips";
 
 /**
  * **The buddy seat, at the database** (ADR 20260908-one-hand, decision 6,
@@ -265,5 +265,39 @@ describe("the divers who bring friends", () => {
 
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, friend.bookingId));
     expect(await friendsBroughtBy(db, shop.id, priyaId)).toBe(0);
+  });
+
+  it("names no referrer whose seat is another shop's, even from a row that says otherwise (security review r5-4, N4)", async () => {
+    const { db, shop, open } = await context();
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Reef Co", slug: "other-reef-co-referrals", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!other) throw new Error("shop not created");
+    const elsewhere = await createTrip(db, {
+      shopId: other.id,
+      title: "Elsewhere",
+      startsAt: open.startsAt,
+      endsAt: new Date(open.startsAt.getTime() + 3 * 60 * 60 * 1000),
+      capacity: 6,
+      plannedDives: 1,
+    });
+    if (!elsewhere) throw new Error("trip not created");
+    const outsider = await book(db, other.id, elsewhere.id, "Outside Referrer");
+    const friend = await book(db, shop.id, open.id, "Ines Costa");
+    // The write side refuses this (`resolveBuddyReferral` is shop-scoped);
+    // the row is planted to prove the read does not lean on that alone.
+    await db.insert(bookingReferrals).values({
+      shopId: shop.id,
+      bookingId: friend.bookingId,
+      referredByBookingId: outsider.bookingId,
+    });
+    const window = [
+      new Date(open.startsAt.getTime() - 1),
+      new Date(open.startsAt.getTime() + 1),
+    ] as const;
+
+    expect(await buddyReferrersForWindow(db, shop.id, ...window)).toEqual([]);
+    expect(await friendsBroughtBy(db, shop.id, await personOf(db, outsider.bookingId))).toBe(0);
   });
 });

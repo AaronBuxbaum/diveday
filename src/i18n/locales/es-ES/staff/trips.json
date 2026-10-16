@@ -300,7 +300,7 @@
     "underTarget": "{divers, plural, one {# buceador} other {# buceadores}} con {divemasters, plural, =0 {ningún supervisor} one {# supervisor} other {# supervisores}}. Tu objetivo de {ratio}:1 pide {needed, plural, one {# divemaster} other {# divemasters}}.",
     "languageGap": "Reservaron en {language}: {divers}. Nadie de esta tripulación tiene registrado {language}.",
     "languageCovered": "Charla en {language} para {divers}: {crew}.",
-    "languageDivers": "{count, plural, one {# buceador} other {# buceadores}}",
+    "languageDivers": "{count, plural, one {# persona} other {# personas}}",
     "noCrew": "Todavía no hay tripulación que asignar. Tus instructores y divemasters aparecerán aquí en cuanto se unan al equipo.",
     "notAssignedYet": "Todavía no asignado.",
     "manageShifts": "Gestionar turnos",

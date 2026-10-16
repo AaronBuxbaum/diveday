@@ -48,4 +48,15 @@ describe("crewLanguageBriefings", () => {
       }).uncovered,
     ).toEqual([{ language: "es", divers: ["Ines Costa"], crew: [] }]);
   });
+
+  it("never says the shop's own language is missing, though no crew recorded it", () => {
+    // Crew record their extra languages; the shop's own is every briefing's.
+    expect(
+      crewLanguageBriefings({
+        crew: [crew("Yusra Idrissi", "es")],
+        divers: [diver("Mara Quint", "en")],
+        shopLanguage: "en",
+      }),
+    ).toEqual({ uncovered: [], covered: [] });
+  });
 });

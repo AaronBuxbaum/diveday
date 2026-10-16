@@ -316,6 +316,7 @@ export async function sendRescheduleNotices(
           .map(({ booking }) => booking.id),
         purpose: "readiness",
         now,
+        delivered: true,
       })
     : new Map<string, IssuedCapability>();
   for (const { booking, person } of seats) {
@@ -420,6 +421,7 @@ async function tellSeat(
             bookingId: booking.id,
             purpose: "readiness",
             now,
+            delivered: true,
           })
         : null;
   const readinessUrl = capability

@@ -1,6 +1,6 @@
 import { nowDate } from "@/lib/clock";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
-import { type BoatMilestone, boatMilestone } from "@/lib/visit-milestones";
+import { type DiveDayMilestone, diveDayMilestone } from "@/lib/visit-milestones";
 
 /**
  * **The welcome word under a diver's name** (issue #1182, delight report D22;
@@ -18,10 +18,10 @@ export type WelcomeCue =
   | { kind: "first_trip"; nonDiver?: true }
   | { kind: "returning"; years: number }
   /**
-   * A regular's 10th, 25th, 50th or 100th boat with the shop (H-128): a count,
+   * A regular's 10th, 25th, 50th or 100th dive day with the shop (H-128): a count,
    * never a badge. Staff-side only, behind the same consent as every cue.
    */
-  | { kind: "milestone"; count: BoatMilestone };
+  | { kind: "milestone"; count: DiveDayMilestone };
 
 /** What the diver's own `/ready` may offer: never a milestone, which is the crew's line. */
 export type OfferableWelcomeCue = Exclude<WelcomeCue, { kind: "milestone" }>;
@@ -50,11 +50,11 @@ type CueInput = {
   /** This seat is a snorkeler's or a rider's, so its first time is not a first dive. */
   nonDiver?: boolean;
   /**
-   * Which boat with the shop this one is, for a diver: their earlier dive days
-   * (the one rule, `src/db/dive-days.ts`) and imported visits, plus this one.
+   * Which dive day with the shop this departure's day is, for a diver
+   * (`diveDayOrdinal`: one calendar day is one day, imported visits included).
    * Absent for a snorkeler's or a rider's seat, which counts no milestone.
    */
-  boatCount?: number | null;
+  diveDayCount?: number | null;
   tripEndsAt: Date;
   now?: Date;
 };
@@ -105,27 +105,27 @@ export function welcomeCueFor({
    * Required here, though optional on the diver's own offer: a staff caller
    * that forgot it would silently never say a milestone (H-128).
    */
-  boatCount: number | null;
+  diveDayCount: number | null;
 }): WelcomeCue | null {
   if (!sharedAt) return null;
   return milestoneCue(input) ?? offerableWelcomeCue(input);
 }
 
 /**
- * **A regular's milestone boat** (H-128, fifth-loop ideas item 39): said on
+ * **A regular's milestone dive day** (H-128, fifth-loop ideas item 39): said on
  * the 10th, 25th, 50th and 100th and on no other, with the cue's own expiry an
  * hour after the boat is home. It outranks "back after N years" on the rare
  * day both are true: the count is the news, and one line under a name says one
  * thing. Never on a non-diver's seat, whose count is not of dives.
  */
 function milestoneCue({
-  boatCount,
+  diveDayCount,
   nonDiver = false,
   tripEndsAt,
   now = nowDate(),
 }: CueInput): WelcomeCue | null {
   if (nonDiver) return null;
   if (now.getTime() > tripEndsAt.getTime() + DEPARTURE_BUFFER_MS) return null;
-  const count = boatMilestone(boatCount);
+  const count = diveDayMilestone(diveDayCount);
   return count ? { kind: "milestone", count } : null;
 }

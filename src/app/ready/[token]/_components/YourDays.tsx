@@ -16,16 +16,18 @@ import { YourDayRow, type YourDayRowWords } from "./YourDayRow";
  * Every row is a send, never a link: it mails that day's own page to the
  * address on file, so this page still opens exactly one booking. Reads its own
  * rows, so the page mounts it in one line; renders nothing when there is no
- * other day, or on a held seat, whose holder may not be the person on file.
+ * other day, on a held seat, whose holder may not be the person on file, or on
+ * a link that was not delivered: the one a booking or a seat claim redirects
+ * to proves only a typed name and address (security review r5-4, F1).
  */
 export async function YourDays({
-  ready: { db, token, bookingId, data },
+  ready: { db, token, bookingId, data, delivered },
   locale,
   t,
   className = "mt-10",
 }: {
   /** This page's own reads: the booking it opened and what was read for it. */
-  ready: { db: AppDb; token: string; bookingId: string; data: ReadyPageData };
+  ready: { db: AppDb; token: string; bookingId: string; data: ReadyPageData; delivered: boolean };
   locale: DiverLocale;
   t: DiverTranslator;
   className?: string;
@@ -33,7 +35,7 @@ export async function YourDays({
   const shopId = data.shop.id;
   const shopName = data.detail.shop.name;
   const timezone = data.detail.shop.timezone;
-  if (data.identityHeld) return null;
+  if (data.identityHeld || !delivered) return null;
   const { upcoming, past } = await listYourDays(db, { shopId, bookingId });
   if (upcoming.length === 0 && past.length === 0) return null;
 

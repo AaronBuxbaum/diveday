@@ -93,7 +93,7 @@ describe("crewWeekFor", () => {
     expect(lines.map((line) => line.title)).toEqual(["Rostered 0", "Rostered 1", "Rostered 2"]);
   });
 
-  it("says when to be at the dock: the earlier of the dock call and their own covering shift", async () => {
+  it("says when to be at the dock: their own covering shift, else the divers' call named as theirs", async () => {
     const { db, shop } = ctx;
     const staff = await listStaff(db, shop.id);
     const captain = staff.find((entry) => entry.roles.includes("captain"));
@@ -103,9 +103,12 @@ describe("crewWeekFor", () => {
     await setTripCrew(db, shop.id, reef.id, [{ personId: captain.person.id, tripRole: "captain" }]);
     const read = async () =>
       (await crewWeekFor(db, { shopId: shop.id, personId: captain.person.id, ...window() }))[0]
-        ?.crewCallAt;
+        ?.crewCall;
 
-    expect(await read()).toEqual(new Date(reef.startsAt.getTime() - 30 * 60 * 1000));
+    expect(await read()).toEqual({
+      at: new Date(reef.startsAt.getTime() - 30 * 60 * 1000),
+      source: "divers",
+    });
 
     await db.insert(staffShifts).values({
       shopId: shop.id,
@@ -113,7 +116,10 @@ describe("crewWeekFor", () => {
       startsAt: new Date(reef.startsAt.getTime() - 45 * 60 * 1000),
       endsAt: new Date(reef.startsAt.getTime() + 6 * HOUR_MS),
     });
-    expect(await read()).toEqual(new Date(reef.startsAt.getTime() - 45 * 60 * 1000));
+    expect(await read()).toEqual({
+      at: new Date(reef.startsAt.getTime() - 45 * 60 * 1000),
+      source: "shift",
+    });
   });
 
   it("reads nothing for somebody rostered on nothing", async () => {

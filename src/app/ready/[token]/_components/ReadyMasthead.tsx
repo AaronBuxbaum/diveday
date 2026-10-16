@@ -18,7 +18,7 @@ import {
 import { publicAppUrl } from "@/lib/notifications";
 import { publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
 import { isDiveDay } from "@/lib/thread-steps";
-import type { BoatMilestone } from "@/lib/visit-milestones";
+import type { DiveDayMilestone } from "@/lib/visit-milestones";
 
 /**
  * **The facts the top of `/ready` states**, and the only ones: whose shop,
@@ -168,7 +168,7 @@ export function ReadyBookedHeader({
    * This seat is the diver's 10th, 25th, 50th or 100th boat with the shop
    * (H-128): said once, as a count, under the arrival line. Null otherwise.
    */
-  milestone?: BoatMilestone | null;
+  milestone?: DiveDayMilestone | null;
   locale: string;
   now: Date;
   t: DiverTranslator;
@@ -258,7 +258,7 @@ export function ReadyBookedPage({
   locale,
   children,
 }: {
-  card: MastheadFacts & { greetingName: string; milestone?: BoatMilestone | null };
+  card: MastheadFacts & { greetingName: string; milestone?: DiveDayMilestone | null };
   locale: DiverLocale;
   children: ReactNode;
 }) {

@@ -14,7 +14,7 @@ import { noCertificationStands } from "@/lib/readiness";
 import type { RentalPricing } from "@/lib/rentals";
 import { canSayRunningLate, runningLateShown } from "@/lib/running-late";
 import { hasSailed } from "@/lib/trips";
-import { type BoatMilestone, boatMilestone } from "@/lib/visit-milestones";
+import { type DiveDayMilestone, diveDayMilestone } from "@/lib/visit-milestones";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { type OfferableWelcomeCue, offerableWelcomeCue } from "@/lib/welcome-cue";
 import type { AppDb } from "./client";
@@ -36,7 +36,7 @@ import { bookings, certifications, people, shops, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getTripWithBooked } from "./trips";
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
-import { boatCountForSeat, welcomeCueInputsByBooking } from "./welcome-cues";
+import { diveDayCountForSeat, welcomeCueInputsByBooking } from "./welcome-cues";
 
 /**
  * **What `/ready` says in the first paint after a booking**, and nothing else
@@ -80,7 +80,7 @@ export type BookedCard = {
   bookingCancelled: boolean;
   departureCancelled: boolean;
   /** This seat is the diver's 10th, 25th, 50th or 100th boat with the shop (H-128), or null. */
-  milestone: BoatMilestone | null;
+  milestone: DiveDayMilestone | null;
 };
 
 export async function getBookedCard(
@@ -118,7 +118,7 @@ export async function getBookedCard(
   // (#2082), so it is told no count of that record's days.
   const milestone = identityHeld
     ? null
-    : boatMilestone(await boatCountForSeat(db, shopId, bookingId));
+    : diveDayMilestone(await diveDayCountForSeat(db, shopId, bookingId));
   return {
     shop: {
       name: row.shopName,

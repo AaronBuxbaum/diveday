@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, ne } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { NextDiveCandidate, NextDivePick } from "@/lib/next-dive";
 import { pickNextDive } from "@/lib/next-dive";
@@ -13,19 +13,19 @@ import { pagedUpcomingTripsWithCounts } from "./trips";
 import { liveTrip } from "./trips-live";
 
 /** A departure this diver already holds a seat on, soonest first. */
-export type HeldDeparture = { tripId: string; title: string; startsAt: Date };
+export type BookedDeparture = { tripId: string; title: string; startsAt: Date };
 
 /**
- * **The departures this diver already holds**, still to sail, soonest first:
- * a live, scheduled departure with a seat of theirs that is not cancelled
- * (fifth-loop ideas, item 37). The recap never offers one of these as "your
+ * **The departures this diver is already booked on**, still to sail, soonest
+ * first: a live, scheduled departure with a seat of theirs that is not
+ * cancelled and not held (fifth-loop ideas, item 37). The recap never offers one of these as "your
  * next dive", and a diver who holds one is told so instead of being sold
  * another seat.
  */
-export async function heldDepartures(
+export async function bookedDepartures(
   db: AppDb,
   input: { shopId: string; personId: string; now: Date; excludeTripId?: string },
-): Promise<HeldDeparture[]> {
+): Promise<BookedDeparture[]> {
   return db
     .select({ tripId: tripTable.id, title: tripTable.title, startsAt: tripTable.startsAt })
     .from(bookings)
@@ -38,6 +38,9 @@ export async function heldDepartures(
         eq(bookings.shopId, input.shopId),
         eq(bookings.personId, input.personId),
         ne(bookings.status, "cancelled"),
+        // A held seat matched this person on a guess (glossary **Held seat**):
+        // it is neither announced to them nor allowed to suppress their offer.
+        isNull(bookings.identityUnconfirmedAt),
         eq(tripTable.status, "scheduled"),
         liveTrip(),
         // Not yet sailed, the late-arrival buffer included: the same window
@@ -116,7 +119,7 @@ export async function nextDiveForBooking(
       limit: NEXT_DIVE_CANDIDATE_WINDOW,
       now,
     }),
-    heldDepartures(db, { shopId: input.shopId, personId: input.personId, now }),
+    bookedDepartures(db, { shopId: input.shopId, personId: input.personId, now }),
   ]);
   // **Never a seat they already hold** (fifth-loop ideas, item 37): offering
   // Sana "Back to Molasses Reef" on a departure she is booked on reads as the

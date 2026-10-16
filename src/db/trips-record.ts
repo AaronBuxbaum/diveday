@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNotNull, isNull, ne, notInArray, sql } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { sellableSeats } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
@@ -161,7 +161,10 @@ export async function bookedDiverLanguages(
       and(
         eq(bookings.tripId, tripId),
         eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
+        notInArray(bookings.status, ["cancelled", "no_show"]),
+        // A held seat's language is the matched record's, who may not be the
+        // person aboard (#2082; dive-domain review of layer r5-4, note 9).
+        isNull(bookings.identityUnconfirmedAt),
       ),
     )
     .orderBy(asc(people.fullName));

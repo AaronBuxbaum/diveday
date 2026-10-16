@@ -757,17 +757,17 @@ describe("a diver already booked on a later boat", () => {
     render(
       <AfterState
         context={props({
-          heldNext: held,
+          bookedNext: held,
           nextDeparture: { title: "Night dive", when: "Fri, Oct 23" } as never,
         })}
       />,
     );
-    expect(screen.getByText("recap.heldNext(Sat, Oct 24,Two-Tank Reef,7:00 AM)")).toBeTruthy();
+    expect(screen.getByText("recap.bookedNext(Sat, Oct 24,Two-Tank Reef,7:00 AM)")).toBeTruthy();
     expect(screen.queryByText(/Night dive/)).toBeNull();
   });
 
   it("says nothing about other seats without one", () => {
     render(<AfterState context={props()} />);
-    expect(screen.queryByText(/recap\.heldNext/)).toBeNull();
+    expect(screen.queryByText(/recap\.bookedNext/)).toBeNull();
   });
 });

@@ -122,7 +122,7 @@ export default async function TripManifestPage({
   const {
     completeManifests,
     buddyTeamsList,
-    parties,
+    partyPlan,
     bookingNotes,
     diverNotes,
     checklistItems,
@@ -180,7 +180,7 @@ export default async function TripManifestPage({
     timeZone: shop.timezone,
     t,
   });
-  const buddy = buddyBuilderView({ manifest, buddyTeamsList, buddyError, parties, locale, t });
+  const buddy = buddyBuilderView({ manifest, buddyTeamsList, buddyError, partyPlan, locale, t });
   const notesByBooking = manifestNoteThreads(bookingNotes, diverNotes);
   const { crewRollCallButtonCopy, rollCallButtonCopy } = rollCallCopies(t, shopSlug, tripId);
   const emergencyCopy = emergencyReferenceCopy(t);

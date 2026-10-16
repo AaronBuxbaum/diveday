@@ -69,6 +69,23 @@ describe("buildAfterStateProps", () => {
     expect(props).not.toHaveProperty("personId");
   });
 
+  it("offers the share-with-the-boat tick from the readiness link only (security review r5-4, F3)", async () => {
+    const { data, bookingId } = await recapData();
+    const build = (mintHandoff: boolean) =>
+      buildAfterStateProps({
+        db: ctx.db,
+        data,
+        bookingId,
+        locale: "en-US",
+        t: diverTranslator("en-US"),
+        params: {},
+        actions,
+        mintHandoff,
+      });
+    expect((await build(true)).canShareWithBoat).toBe(true);
+    expect((await build(false)).canShareWithBoat).toBe(false);
+  });
+
   it("puts no URL, token, slug or id on the saved postcard", async () => {
     const { data, bookingId } = await recapData();
     const props = await buildAfterStateProps({
@@ -172,11 +189,11 @@ describe("buildAfterStateProps", () => {
     };
 
     const ready = await buildAfterStateProps({ ...base, mintHandoff: true });
-    expect(ready.heldNext?.title).toBe(ahead.title);
+    expect(ready.bookedNext?.title).toBe(ahead.title);
     expect(ready.nextDive).toBeNull();
 
     const recap = await buildAfterStateProps({ ...base, mintHandoff: false });
-    expect(recap.heldNext ?? null).toBeNull();
+    expect(recap.bookedNext ?? null).toBeNull();
     expect(serialized(recap)).not.toContain(ahead.title);
   });
 

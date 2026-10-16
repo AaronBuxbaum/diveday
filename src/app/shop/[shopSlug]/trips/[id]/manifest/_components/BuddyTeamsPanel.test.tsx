@@ -29,7 +29,12 @@ function team(names: string[]): TripBuddyTeam {
 
 function renderPanel(
   teams: TripBuddyTeam[],
-  partyLines: { together: string; alone: string | null; teamable: number } | null = null,
+  partyLines: {
+    together: string;
+    alone: string | null;
+    left: string[];
+    teamable: number;
+  } | null = null,
 ) {
   render(
     <BuddyTeamsPanel
@@ -155,6 +160,7 @@ describe("who came together (item 50)", () => {
     renderPanel([], {
       together: "Came together: Ana and Ben",
       alone: "Came alone: Cleo",
+      left: [],
       teamable: 1,
     });
     expect(screen.getByText("Came together: Ana and Ben")).toBeInTheDocument();
@@ -163,7 +169,15 @@ describe("who came together (item 50)", () => {
   });
 
   it("offers no tap when every party is too big to team whole", () => {
-    renderPanel([], { together: "Came together: a family of four", alone: null, teamable: 0 });
+    renderPanel([], {
+      together: "Came together: a family of four",
+      alone: null,
+      left: ["Left for you: a family of four (more than three)"],
+      teamable: 0,
+    });
     expect(screen.queryByRole("button", { name: "manifest.buddyTeamUpParties" })).toBeNull();
+    expect(
+      screen.getByText("Left for you: a family of four (more than three)"),
+    ).toBeInTheDocument();
   });
 });

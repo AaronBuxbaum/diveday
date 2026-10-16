@@ -1,4 +1,9 @@
-import { type listTripBuddyTeams, MIN_BUDDY_TEAM_SIZE, PARTY_TEAM_MAX } from "@/db/buddy-pairs";
+import {
+  type listTripBuddyTeams,
+  MIN_BUDDY_TEAM_SIZE,
+  type PartyTeamPlan,
+} from "@/db/buddy-pairs";
+import { partyLeftReasonText } from "@/i18n/buddy-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { ManifestBuddyTeam, TripManifest } from "@/lib/manifests";
@@ -13,14 +18,17 @@ export function buddyBuilderView({
   manifest,
   buddyTeamsList,
   buddyError,
-  parties,
+  partyPlan,
   locale,
   t,
 }: {
   /** This checkpoint's manifest, held seats already withheld. */
   manifest: TripManifest;
-  /** Each seat's party key (`listTripParties`): who came together (item 50). */
-  parties: ReadonlyMap<string, string>;
+  /**
+   * Who came together, which parties one tap may team, and which it leaves
+   * and why (`planPartyTeams`, item 50): the button and the action read one plan.
+   */
+  partyPlan: PartyTeamPlan;
   buddyTeamsList: Awaited<ReturnType<typeof listTripBuddyTeams>>;
   /** The refusal code the last buddy action redirected with, if any. */
   buddyError: string | undefined;
@@ -85,13 +93,14 @@ export function buddyBuilderView({
   // build from, never a pairing made for anyone.
   const byParty = new Map<string, string[]>();
   for (const diver of unteamedDivers) {
-    const key = parties.get(diver.bookingId) ?? diver.bookingId;
+    const key = partyPlan.parties.get(diver.bookingId) ?? diver.bookingId;
     byParty.set(key, [...(byParty.get(key) ?? []), diver.fullName]);
   }
   const groups = [...byParty.values()];
   const together = groups.filter((names) => names.length >= MIN_BUDDY_TEAM_SIZE);
   const alone = groups.filter((names) => names.length === 1).map(([name]) => name ?? "");
   const groupList = cachedListFormat(locale, { type: "unit", style: "short" });
+  const nameOf = new Map(manifest.divers.map((diver) => [diver.bookingId, diver.fullName]));
   const partyLines =
     together.length === 0
       ? null
@@ -103,8 +112,16 @@ export function buddyBuilderView({
             alone.length === 0
               ? null
               : t("manifest.buddyCameAlone", { names: groupList.format(alone) }),
-          /** Parties "Team up each party" would make a team of. */
-          teamable: together.filter((names) => names.length <= PARTY_TEAM_MAX).length,
+          // Each party the tap leaves, said with its reason (dive-domain
+          // review of layer r5-4, BLOCK 1): a junior, an intro dive, a family.
+          left: partyPlan.left.map(({ bookingIds, reason }) =>
+            t("manifest.buddyPartyLeft", {
+              names: teamNameList.format(bookingIds.map((id) => nameOf.get(id) ?? "")),
+              reason: partyLeftReasonText(t, reason),
+            }),
+          ),
+          /** Parties "Team up each party" would make a team of: the action's own plan. */
+          teamable: partyPlan.teamable.length,
         };
   return {
     buddyTeamLabel,

@@ -1,7 +1,8 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { verifyBookingCapability } from "@/db/booking-capabilities";
 import type { AppDb } from "@/db/client";
-import { bookings, certifications, people } from "@/db/schema";
+import { bookingCapabilities, bookings, certifications, people } from "@/db/schema";
 import { createTrip } from "@/db/trips-create";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -64,6 +65,7 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
+const { redirect } = await import("next/navigation");
 const { createBookingParty } = await import("@/db/bookings");
 const { checkRateLimit, RATE_LIMITS } = await import("@/lib/rate-limit");
 const { bookSpot } = await import("./actions");
@@ -297,5 +299,41 @@ describe("the already-booked refusal", () => {
 
     expect(state?.error).toBeTruthy();
     expect(state?.alreadyBookedEmail).toBeUndefined();
+  });
+});
+
+/**
+ * **The page a booking lands on is not the page the email carries** (security
+ * review of layer r5-4, F1). Whoever submits the form proved only that they
+ * know a name and an address, so the link handed to their browser is minted
+ * undelivered, and "Your days" (every other seat that person holds) waits for
+ * the confirmation email's own link, which only the inbox on file receives.
+ */
+describe("the readiness link after booking", () => {
+  it("redirects on an undelivered link and mails a delivered one", async () => {
+    const { db, shop } = ctx;
+    const tripId = await freeDeparture(db, shop.id);
+
+    await post(shop.slug, tripId, submission([{ email: "regular@example.com" }]));
+
+    const landing = vi
+      .mocked(redirect)
+      .mock.calls.map(([path]) => String(path))
+      .find((path) => path.startsWith("/ready/"));
+    const token = landing?.slice("/ready/".length).split("?")[0];
+    if (!token) throw new Error("the booking did not land on /ready");
+    const opened = await verifyBookingCapability(db, { token, purpose: "readiness" });
+    expect(opened?.delivered).toBe(false);
+
+    const links = await db
+      .select({ delivered: bookingCapabilities.delivered })
+      .from(bookingCapabilities)
+      .where(
+        and(
+          eq(bookingCapabilities.bookingId, opened?.bookingId ?? ""),
+          eq(bookingCapabilities.purpose, "readiness"),
+        ),
+      );
+    expect(links.map((link) => link.delivered).sort()).toEqual([false, true]);
   });
 });

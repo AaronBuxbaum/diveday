@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { readCertificationEvidence } from "./certification-evidence";
-import { heldDepartures, nextDiveForBooking } from "./next-dive";
+import { bookedDepartures, nextDiveForBooking } from "./next-dive";
 import { createCertification, upsertTripRequirements } from "./readiness";
 import { bookings, people, trips } from "./schema";
 import { createTripLens } from "./trip-lenses";
@@ -269,13 +269,30 @@ describe("a departure the diver already holds a seat on", () => {
     await seat(db, shop.id, past.id, diverId);
     await seat(db, shop.id, today.id, diverId);
 
-    const held = await heldDepartures(db, {
+    const held = await bookedDepartures(db, {
       shopId: shop.id,
       personId: diverId,
       now: NOW,
       excludeTripId: today.id,
     });
     expect(held.map((row) => row.title)).toEqual(["Sooner", "Later"]);
+  });
+
+  it("leaves out a held seat, which may be someone else's (dive-domain review r5-4, fix 5)", async () => {
+    const { db, shop, diverId } = await boardContext();
+    const guessed = await departure(db, shop.id, { title: "Guessed", startsAt: AT(24) });
+    await db.insert(bookings).values({
+      shopId: shop.id,
+      tripId: guessed.id,
+      personId: diverId,
+      bookedAs: "diver",
+      identityUnconfirmedAt: NOW,
+      identityBookedAs: "N. Q.",
+    });
+
+    expect(
+      await bookedDepartures(db, { shopId: shop.id, personId: diverId, now: NOW }),
+    ).toEqual([]);
   });
 });
 

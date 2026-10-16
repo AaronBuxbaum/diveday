@@ -1,7 +1,16 @@
-import { and, asc, count, eq, gte, inArray, lt, lte, sum } from "drizzle-orm";
+import { and, asc, count, eq, gte, inArray, isNull, lt, lte, or, sql, sum } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
-import { boats, bookings, executedDives, tips, tripAssignments, tripDives, trips } from "./schema";
+import {
+  boats,
+  bookings,
+  executedDives,
+  tips,
+  tripAssignments,
+  tripDives,
+  tripScheduleDays,
+  trips,
+} from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -104,10 +113,16 @@ export type CrewMonth = { boats: number; dives: number; minutes: number };
  * **A crew member's own season, the month line** (fifth-loop ideas, item 51):
  * "October: 14 boats · 26 dives · 31 hours on the water." Departures this
  * person crewed (`trip_assignments`) that came back inside the window, so a
- * boat still out is not counted yet. A departure's dives are the ones the crew
- * logged (`executed_dives`) and, where nobody logged any, the ones it planned;
- * its time is the departure's own span, dock to dock. The crew's working
- * record, not a diver logbook (loop 6, DB14 stays declined).
+ * boat still out is not counted yet. A departure counts only if it ran: still
+ * `scheduled`, or called off after the crew logged a live dive on it (the
+ * desk's half of the dive-day rule, `deskCountsDiveDay`). Its dives are the
+ * live ones the crew logged (`executed_dives`) and, where nobody logged any,
+ * the ones it planned: dives the boat *ran*, which the copy says, never dives
+ * this person made, since a captain stays dry. Its time is the departure's
+ * scheduled days where it has them (`trip_schedule_days`, so a liveaboard is
+ * not its nights), else its own span, dock to dock (dive-domain review of
+ * layer r5-4, fix 3 and note 10). The crew's working record, not a diver
+ * logbook (loop 6, DB14 stays declined).
  */
 export async function crewMonth(
   db: DbExecutor,
@@ -128,16 +143,26 @@ export async function crewMonth(
         eq(trips.shopId, shopId),
         gte(trips.startsAt, window.from),
         lte(trips.endsAt, window.now),
+        or(
+          eq(trips.status, "scheduled"),
+          sql`exists (select 1 from ${executedDives} where ${executedDives.tripId} = ${trips.id} and ${executedDives.shopId} = ${trips.shopId} and ${executedDives.deletedAt} is null)`,
+        ),
       ),
     );
   if (crewed.length === 0) return { boats: 0, dives: 0, minutes: 0 };
   const ids = crewed.map((trip) => trip.id);
-  const [logged, planned] = await queryAll(db, [
+  const [logged, planned, scheduleDays] = await queryAll(db, [
     () =>
       db
         .select({ tripId: executedDives.tripId, dives: count() })
         .from(executedDives)
-        .where(and(eq(executedDives.shopId, shopId), inArray(executedDives.tripId, ids)))
+        .where(
+          and(
+            eq(executedDives.shopId, shopId),
+            inArray(executedDives.tripId, ids),
+            isNull(executedDives.deletedAt),
+          ),
+        )
         .groupBy(executedDives.tripId),
     () =>
       db
@@ -145,14 +170,26 @@ export async function crewMonth(
         .from(tripDives)
         .where(inArray(tripDives.tripId, ids))
         .groupBy(tripDives.tripId),
+    () =>
+      db
+        .select({
+          tripId: tripScheduleDays.tripId,
+          minutes: sql<number>`sum(extract(epoch from (${tripScheduleDays.endsAt} - ${tripScheduleDays.startsAt})) / 60)`,
+        })
+        .from(tripScheduleDays)
+        .where(inArray(tripScheduleDays.tripId, ids))
+        .groupBy(tripScheduleDays.tripId),
   ]);
   const loggedBy = new Map(logged.map((row) => [row.tripId, Number(row.dives)]));
   const plannedBy = new Map(planned.map((row) => [row.tripId, Number(row.dives)]));
+  const scheduledBy = new Map(scheduleDays.map((row) => [row.tripId, Number(row.minutes)]));
   let dives = 0;
   let minutes = 0;
   for (const trip of crewed) {
     dives += loggedBy.get(trip.id) || plannedBy.get(trip.id) || 0;
-    minutes += Math.round((trip.endsAt.getTime() - trip.startsAt.getTime()) / 60_000);
+    minutes += Math.round(
+      scheduledBy.get(trip.id) ?? (trip.endsAt.getTime() - trip.startsAt.getTime()) / 60_000,
+    );
   }
   return { boats: crewed.length, dives, minutes };
 }

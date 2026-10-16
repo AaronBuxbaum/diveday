@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { PartyTeamPlan } from "@/db/buddy-pairs";
 import { buddyBuilderView } from "./buddy-builder-view";
 import { diver, t } from "./diver-roll-call-test-fixtures";
 import { crewMember, tripManifest } from "./manifest-page-test-fixtures";
@@ -15,7 +16,7 @@ const manifest = tripManifest({
 function view(
   buddyError?: string,
   teamed: string[] = [],
-  parties: ReadonlyMap<string, string> = new Map(),
+  partyPlan: PartyTeamPlan = { parties: new Map(), teamable: [], left: [] },
 ) {
   return buddyBuilderView({
     manifest,
@@ -25,7 +26,7 @@ function view(
         ] as never)
       : [],
     buddyError,
-    parties,
+    partyPlan,
     locale: "en-US",
     t,
   });
@@ -57,13 +58,38 @@ describe("buddyBuilderView", () => {
     expect(label).toBe(t("shared.buddyTeam.with", { names: "Ana Ruiz and Ben Okafor" }));
   });
 
-  it("says who came together and who came alone, and counts the parties one tap would team", () => {
+  it("says who came together and who came alone, and counts the parties the action would team", () => {
     expect(view().panel.partyLines).toBeNull();
-    const { panel } = view(undefined, [], new Map([["b-2", "b-1"]]));
+    const { panel } = view(undefined, [], {
+      parties: new Map([["b-2", "b-1"]]),
+      teamable: [["b-1", "b-2"]],
+      left: [],
+    });
     expect(panel.partyLines).toEqual({
       together: t("manifest.buddyCameTogether", { parties: "Ana Ruiz and Ben Okafor" }),
       alone: null,
+      left: [],
       teamable: 1,
     });
+  });
+
+  /**
+   * Dive-domain review of layer r5-4, BLOCK 1 and note 8: the count is the
+   * action's own plan, never a second reading of the manifest, and a party the
+   * tap leaves is named with the reason.
+   */
+  it("counts no party the plan leaves, and says why it was left", () => {
+    const { panel } = view(undefined, [], {
+      parties: new Map([["b-2", "b-1"]]),
+      teamable: [],
+      left: [{ bookingIds: ["b-1", "b-2"], reason: "young_child" }],
+    });
+    expect(panel.partyLines?.teamable).toBe(0);
+    expect(panel.partyLines?.left).toEqual([
+      t("manifest.buddyPartyLeft", {
+        names: "Ana Ruiz and Ben Okafor",
+        reason: t("manifest.buddyPartyLeftReason.young_child"),
+      }),
+    ]);
   });
 });
