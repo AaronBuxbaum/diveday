@@ -1,4 +1,5 @@
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { personWeekTotals, type StaffWeek } from "@/lib/staffing-week";
 
 /**
  * The staffing week's words, resolved on the server and handed to
@@ -45,4 +46,23 @@ export function staffingWeekWords(t: StaffTranslator) {
     requestWontClose: t("staffing.week.requestWontClose"),
     ratingLapsed: t("staffing.week.ratingLapsed"),
   };
+}
+
+/**
+ * **"6 days · 8 boats · 34 h" under each name** (fifth-loop ideas, item 52),
+ * keyed by person. Formatted here, where plurals resolve; a row with nothing
+ * all week gets no line, because the empty row is already the fact.
+ */
+export function personTotalsWords(week: StaffWeek, t: StaffTranslator): Record<string, string> {
+  const lines: Record<string, string> = {};
+  for (const person of week.people) {
+    const totals = personWeekTotals(person);
+    if (totals.days === 0) continue;
+    lines[person.personId] = t("staffing.week.personTotals", {
+      days: totals.days,
+      boats: totals.boats,
+      hours: Math.round(totals.minutes / 60),
+    });
+  }
+  return lines;
 }

@@ -654,6 +654,7 @@ export function StaffingWeek({
   deleteShiftAction,
   requestAction,
   decideRequestAction,
+  personTotals = {},
 }: {
   week: StaffWeek;
   gapWords: GapWords;
@@ -668,6 +669,8 @@ export function StaffingWeek({
   deleteShiftAction: (formData: FormData) => void;
   requestAction: (formData: FormData) => void;
   decideRequestAction: (formData: FormData) => void;
+  /** Each person's week in one figure, by person id (`personTotalsWords`, item 52). */
+  personTotals?: Readonly<Record<string, string>>;
 }) {
   // A calendar date has no instant in it, so every day label is formatted
   // through a UTC-midnight reference rather than converted from the shop's
@@ -773,6 +776,9 @@ export function StaffingWeek({
               <p className="text-sm font-semibold">{person.name}</p>
               {person.roles.length > 0 ? (
                 <p className="text-xs text-muted">{person.roles.join(" · ")}</p>
+              ) : null}
+              {personTotals[person.personId] ? (
+                <p className="text-xs text-muted tabular-nums">{personTotals[person.personId]}</p>
               ) : null}
             </div>
             {person.days.map((cell, index) => {
