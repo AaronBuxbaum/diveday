@@ -3,6 +3,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
+import type { AboardHold } from "@/db/aboard-at-sea";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { SeatMove } from "./roster-model";
 import type { RosterEntry } from "./types";
@@ -15,7 +16,7 @@ export function SeatFootActions({
   shopSlug,
   offersCreateOrder,
   removeBookingAction,
-  aboardAtSea = false,
+  aboardAtSea = null,
   moveSeat,
 }: {
   booking: RosterEntry["booking"];
@@ -25,11 +26,11 @@ export function SeatFootActions({
   offersCreateOrder: boolean;
   removeBookingAction: (formData: FormData) => void;
   /**
-   * The boat carried this seat or may be carrying it (H-122): Remove opens on
-   * why it will not, and there is nothing to confirm. `cancelBooking` refuses
-   * the same seat under its locks, so a stale page is refused there too.
+   * The boat carried this seat or may be carrying it (H-122), and why: Remove
+   * opens on why it will not, and there is nothing to confirm. `cancelBooking`
+   * refuses the same seat under its locks, so a stale page is refused there too.
    */
-  aboardAtSea?: boolean;
+  aboardAtSea?: AboardHold | null;
   /** Absent when the seat cannot move, or there is no other departure. */
   moveSeat?: SeatMove;
 }) {
@@ -55,7 +56,12 @@ export function SeatFootActions({
           <MoveSeatControl booking={booking} t={t} moveSeat={moveSeat} />
         ) : null}
         {aboardAtSea ? (
-          <RemoveRefusedAboard t={t} name={person.fullName} flush={!offersCreateOrder} />
+          <RemoveRefusedAboard
+            t={t}
+            name={person.fullName}
+            hold={aboardAtSea}
+            flush={!offersCreateOrder}
+          />
         ) : (
           <form action={removeBookingAction}>
             <input type="hidden" name="bookingId" value={booking.id} />
@@ -93,10 +99,12 @@ export function SeatFootActions({
 function RemoveRefusedAboard({
   t,
   name,
+  hold,
   flush,
 }: {
   t: StaffTranslator;
   name: string;
+  hold: AboardHold;
   flush: boolean;
 }) {
   return (
@@ -112,7 +120,9 @@ function RemoveRefusedAboard({
         {t("trips.roster.removeBooking")}
       </summary>
       <p role="status" className="mt-2 text-sm font-medium text-danger">
-        {t("trips.roster.removeAboard", { name })}
+        {t(hold === "uncounted" ? "trips.roster.removeUncounted" : "trips.roster.removeAboard", {
+          name,
+        })}
       </p>
     </details>
   );

@@ -577,6 +577,7 @@
     "refundEligibleUntil": "Refund-eligible until {date}",
     "removeBooking": "Remove booking",
     "removeAboard": "{name} sailed on this departure, so the booking stays. To give money back, refund their order.",
+    "removeUncounted": "Nobody counted {name} at the dock, so the boat may have carried them. If they didn’t come, mark them Not boarded on the manifest, then remove the booking.",
     "moveSeat": "Move to another departure",
     "moveSeatTo": "Departure",
     "moveSeatSubmit": "Move",

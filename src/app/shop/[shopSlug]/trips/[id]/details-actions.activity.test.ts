@@ -135,9 +135,9 @@ describe("the details form in the activity log", () => {
 });
 
 describe("Cancel trip on a boat that may be on the water", () => {
-  it("refuses from the scheduled time and leaves the departure scheduled", async () => {
+  it("refuses a departure that sailed with seats nobody counted, and leaves it scheduled", async () => {
     const { db, shop, trip } = await context();
-    const startsAt = new Date(nowDate().getTime() - 10 * 60 * 1000);
+    const startsAt = new Date(nowDate().getTime() - 2 * 60 * 60 * 1000);
     await db
       .update(trips)
       .set({ startsAt, endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000) })

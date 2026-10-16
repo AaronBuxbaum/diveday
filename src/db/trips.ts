@@ -120,7 +120,6 @@ export {
 } from "./trips-queries";
 export {
   bookedDiverLanguages,
-  cancelDeparture,
   getShopTripTitle,
   getTripDiveSitesPeek,
   getTripMeetingPointFields,

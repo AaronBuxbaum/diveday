@@ -95,7 +95,7 @@ describe("Remove on a diver marked aboard at sea", () => {
     renderRoster({
       ...fixtures,
       roster: [ready],
-      aboardAtSea: new Set([ready.booking.id]),
+      aboardAtSea: new Map([[ready.booking.id, "on_the_water"]]),
     });
 
     const remove = screen.getByText("Remove booking");
@@ -110,8 +110,30 @@ describe("Remove on a diver marked aboard at sea", () => {
     expect(remove.closest("form")).toBeNull();
   });
 
+  it("tells a seat nobody counted at the dock how to let it go, never that it sailed", () => {
+    renderRoster({
+      ...fixtures,
+      roster: [ready],
+      aboardAtSea: new Map([[ready.booking.id, "uncounted"]]),
+    });
+
+    const remove = screen.getByText("Remove booking");
+    fireEvent.click(remove);
+    expect(
+      screen.getByText(
+        "Nobody counted Rene Marsh at the dock, so the boat may have carried them. If they didn’t come, mark them Not boarded on the manifest, then remove the booking.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/sailed/)).toBeNull();
+    expect(remove.closest("form")).toBeNull();
+  });
+
   it("leaves another diver's Remove as it was", () => {
-    renderRoster({ ...fixtures, roster: [ready], aboardAtSea: new Set(["someone-else"]) });
+    renderRoster({
+      ...fixtures,
+      roster: [ready],
+      aboardAtSea: new Map([["someone-else", "on_the_water"]]),
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Remove booking" }));
     expect(screen.getByRole("button", { name: "Yes, remove booking" })).toBeInTheDocument();

@@ -10,6 +10,7 @@
  */
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { cancelDeparture } from "@/db/aboard-at-sea";
 import { getBoatById } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { flushUrgentCrewNotices } from "@/db/crew-notices";
@@ -19,7 +20,6 @@ import { getShopById } from "@/db/shops";
 import { getTripLens } from "@/db/trip-lenses";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import {
-  cancelDeparture,
   getTripWithBooked,
   reinstateTripClearingMinimum,
   type UpdateTripOutcome,

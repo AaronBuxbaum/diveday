@@ -577,6 +577,7 @@
     "refundEligibleUntil": "Reembolsable hasta {date}",
     "removeBooking": "Eliminar reserva",
     "removeAboard": "{name} zarpó en esta salida, así que la reserva se mantiene. Para devolver el dinero, reembolsa su pedido.",
+    "removeUncounted": "Nadie registró a {name} en el muelle, así que puede que haya ido en el barco. Si no vino, marca No embarcado en el manifiesto y luego elimina la reserva.",
     "moveSeat": "Mover a otra salida",
     "moveSeatTo": "Salida",
     "moveSeatSubmit": "Mover",

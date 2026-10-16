@@ -154,4 +154,15 @@ describe("resolveTripNotice", () => {
     expect(resolve("booking-remove-aboard", { bid: "seat-2", roster })).toBeUndefined();
     expect(resolve("booking-remove-aboard")).toBeUndefined();
   });
+
+  it("tells a seat nobody counted at the dock how to let it go, never that it sailed", () => {
+    const roster = [{ booking: { id: "seat-1" }, person: { fullName: "Hugo Marsh" } }];
+
+    expect(resolve("booking-remove-uncounted", { bid: "seat-1", roster })).toEqual({
+      form: "roster",
+      tone: "danger",
+      text: "Nobody counted Hugo Marsh at the dock, so the boat may have carried them. If they didn’t come, mark them Not boarded on the manifest, then remove the booking.",
+    });
+    expect(resolve("booking-remove-uncounted", { bid: "seat-2", roster })).toBeUndefined();
+  });
 });

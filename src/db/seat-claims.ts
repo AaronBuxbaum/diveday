@@ -8,7 +8,7 @@ import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
-import { heldAtTheDoor } from "./aboard-at-sea";
+import { type AboardHold, heldAtTheDoor } from "./aboard-at-sea";
 import {
   type IssuedCapability,
   issueBookingCapability,
@@ -628,7 +628,7 @@ export async function issuePartySeatClaims(
         now,
         bookingIds: onLeadTrip.map((row) => row.booking.id),
       })
-    : new Set<string>();
+    : new Map<string, AboardHold>();
   const seats: PartySeatClaim[] = [];
   for (const row of rows) {
     const claimable = claimableNow(row.booking, row.trip, now);

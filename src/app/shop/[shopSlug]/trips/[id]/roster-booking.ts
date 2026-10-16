@@ -51,14 +51,17 @@ export async function requireRosterBooking(
 /**
  * **Take a seat off the roster, or say why not.** A diver marked aboard a boat
  * that has left is refused (H-122): back to the row with
- * `booking-remove-aboard` and nothing changed — no email, no refund, no trail
+ * `booking-remove-aboard`, or `booking-remove-uncounted` for a seat nobody
+ * counted at the dock, and nothing changed — no email, no refund, no trail
  * line. Otherwise the seat is cancelled and this returns what it was before,
  * which decides whether the diver is told.
  */
 export async function removeSeat(db: AppDb, shopId: string, bookingId: string, back: string) {
   const cancelled = await cancelBooking(db, shopId, bookingId);
   if (!cancelled.ok && cancelled.reason === "aboard_at_sea") {
-    revalidateAndRedirect(back, noticeUrl(back, "booking-remove-aboard", { bid: bookingId }));
+    const notice =
+      cancelled.hold === "uncounted" ? "booking-remove-uncounted" : "booking-remove-aboard";
+    revalidateAndRedirect(back, noticeUrl(back, notice, { bid: bookingId }));
   }
   return cancelled.ok ? cancelled.booking.previousStatus : "cancelled";
 }

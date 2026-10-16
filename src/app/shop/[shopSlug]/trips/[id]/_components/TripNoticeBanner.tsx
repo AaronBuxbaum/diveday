@@ -97,6 +97,14 @@ const NOTICE_KEYS: Record<
     key: "trips.roster.removeAboard",
     named: true,
   },
+  // Refused the same way for a seat nobody counted at the dock of a sailed
+  // departure: never "sailed", and the way through is the dock's Not boarded.
+  "booking-remove-uncounted": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.roster.removeUncounted",
+    named: true,
+  },
   // A seat moved to another departure, or why it stayed (ADR 20261013-staff-move-a-seat).
   "seat-moved": { form: "roster", tone: "success", key: "trips.notices.seatMoved" },
   "seat-moved-untold": { form: "roster", tone: "warning", key: "trips.notices.seatMovedUntold" },

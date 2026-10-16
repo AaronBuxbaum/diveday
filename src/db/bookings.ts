@@ -41,7 +41,7 @@ import {
   type TripAdmissionRefusal,
 } from "@/lib/trip-admission";
 import { hasReturned, hasSailed, MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
-import { aboardAtSeaBookingIds } from "./aboard-at-sea";
+import { type AboardHold, aboardAtSeaBookingIds } from "./aboard-at-sea";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { inTrainingBefore, listCourseSeatsInTraining } from "./certifications-in-training";
@@ -2489,12 +2489,11 @@ async function changeParticipantType(
 }
 
 /**
- * Why a staff removal did not cancel the seat. `aboard_at_sea`: the boat
- * carried this seat or may be carrying it (H-122, `aboardAtSeaBookingIds`),
- * at sea or home; money goes back through the order's refund instead.
+ * A staff removal's outcome. `aboard_at_sea`: the boat carried this seat or
+ * may be carrying it (H-122, `aboardAtSeaBookingIds`), at sea or home, and
+ * `hold` says which: on the water by the roll call, or never counted at the
+ * dock of a sailed departure.
  */
-export type CancelBookingRefusal = "not_found" | "aboard_at_sea";
-
 export type CancelBookingOutcome =
   | {
       ok: true;
@@ -2502,7 +2501,8 @@ export type CancelBookingOutcome =
         previousStatus: (typeof bookings.$inferSelect)["status"];
       };
     }
-  | { ok: false; reason: CancelBookingRefusal };
+  | { ok: false; reason: "not_found" }
+  | { ok: false; reason: "aboard_at_sea"; hold: AboardHold };
 
 /**
  * **A staff member takes a seat off the roster.** Refused for a seat the boat
@@ -2553,7 +2553,8 @@ async function cancelBookingRow(
       .for("update");
     if (!prior) return { ok: false, reason: "not_found" };
     const atSea = await aboardAtSeaBookingIds(tx, { shopId, tripId, now, bookingIds: [bookingId] });
-    if (atSea.has(bookingId)) return { ok: false, reason: "aboard_at_sea" };
+    const hold = atSea.get(bookingId);
+    if (hold) return { ok: false, reason: "aboard_at_sea", hold };
     const [updated] = await tx
       .update(bookings)
       .set({ status: "cancelled" })

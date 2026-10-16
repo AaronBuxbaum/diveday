@@ -15,7 +15,6 @@ import { STAFF_ROLES } from "@/lib/authz";
 import { sellableSeats } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
 import type { TripCrewRole } from "@/lib/crew-roles";
-import { departureUnderway } from "@/lib/day-blowout";
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
 import type { ParticipantTermsPatch } from "@/lib/participant-terms";
@@ -909,45 +908,6 @@ export function rollCallStartedOn(tripId: SQLWrapper | string): SQL<boolean> {
   return sql<boolean>`(exists (select 1 from ${rollCallEvents} where ${rollCallEvents.tripId} = ${tripId}) or exists (select 1 from ${rollCallCrewEvents} where ${rollCallCrewEvents.tripId} = ${tripId}))`.mapWith(
     Boolean,
   );
-}
-
-/**
- * **One departure called off from its own page**, refused while the boat may
- * be on the water: from its scheduled time, or from the first roll-call or
- * boarding event (`departureUnderway`, the blow-out's own rule). Cancelling
- * then would hand roll call a cancelled trip, and Today's roll-call gaps and
- * the shore alert read scheduled departures only, so a missing diver would
- * vanish from both. Asked under the trip's row lock, the one the blow-out
- * takes.
- */
-export async function cancelDeparture(
-  db: AppDb,
-  shopId: string,
-  tripId: string,
-  now: Date = nowDate(),
-  options: { actorPersonId?: string | null } = {},
-): Promise<{ ok: true } | { ok: false; reason: "not_found" | "trip_departed" }> {
-  return db.transaction(async (tx) => {
-    const [trip] = await tx
-      .select({ startsAt: trips.startsAt })
-      .from(trips)
-      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
-      .limit(1)
-      .for("update");
-    if (!trip) return { ok: false as const, reason: "not_found" as const };
-    // The id as a value, not the column: in a single-table select the column
-    // renders unqualified and would bind inside the subquery.
-    const [started] = await tx
-      .select({ started: rollCallStartedOn(tripId) })
-      .from(trips)
-      .where(and(eq(trips.id, tripId), liveTrip()));
-    const rollCallStarted = Boolean(started?.started);
-    if (departureUnderway({ startsAt: trip.startsAt, rollCallStarted }, now)) {
-      return { ok: false as const, reason: "trip_departed" as const };
-    }
-    await setTripStatus(tx, shopId, tripId, "cancelled", now, options);
-    return { ok: true as const };
-  });
 }
 
 export async function setTripStatus(

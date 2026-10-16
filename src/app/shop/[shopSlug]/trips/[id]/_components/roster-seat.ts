@@ -304,7 +304,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     // Only a booked seat moves: checked in or absent is the day's own record.
     moveSeat: booking.status === "booked" ? moveSeat : undefined,
     // Marked aboard a boat that has left: Remove says so and changes nothing (H-122).
-    removeRefusedAboard: aboardAtSea?.has(booking.id) ?? false,
+    removeRefusedAboard: aboardAtSea?.get(booking.id) ?? null,
     materialsDone,
     materialsPending,
     readiness,

@@ -13,7 +13,7 @@ import {
 import { combineCertRequirements } from "@/lib/readiness";
 import { isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
-import { aboardAtSeaBookingIds } from "./aboard-at-sea";
+import { type AboardHold, aboardAtSeaBookingIds } from "./aboard-at-sea";
 import { listAgencyCheckableCards } from "./agency-check";
 import { sameNameHeldSeats as findSameNameHeldSeats } from "./bookings";
 import type { AppDb } from "./client";
@@ -132,7 +132,7 @@ export async function getTripGuests(
     // `cancelBooking` itself, and the row's notice says why.
     departureUnderway({ startsAt: trip.startsAt, rollCallStarted: false }, nowDate())
       ? aboardAtSeaBookingIds(db, { shopId: shop.id, tripId, now: nowDate() })
-      : new Set<string>(),
+      : new Map<string, AboardHold>(),
   ]);
 
   // The last-minute pipeline: who said they are around on this date, who among

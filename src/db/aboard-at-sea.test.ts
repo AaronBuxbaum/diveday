@@ -10,8 +10,10 @@ import type { AppDb } from "./client";
 import {
   bookingCapabilities,
   bookings,
+  rollCallCrewEvents,
   rollCallEvents,
   shops,
+  tripAssignments,
   tripDeskEvents,
   tripStageEvents,
   trips,
@@ -138,6 +140,7 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-122)", () => {
     expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toEqual({
       ok: false,
       reason: "aboard_at_sea",
+      hold: "on_the_water",
     });
     await untouched(db, seat.bookingId);
     expect(await rollCallOf(db, seat.bookingId)).toEqual(before);
@@ -163,6 +166,7 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-122)", () => {
     expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toEqual({
       ok: false,
       reason: "aboard_at_sea",
+      hold: "on_the_water",
     });
     await untouched(db, seat.bookingId);
   });
@@ -176,6 +180,7 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-122)", () => {
     expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toEqual({
       ok: false,
       reason: "aboard_at_sea",
+      hold: "on_the_water",
     });
     await untouched(db, seat.bookingId);
     expect(open.id).toBe(seat.tripId);
@@ -190,6 +195,7 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-122)", () => {
     expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toEqual({
       ok: false,
       reason: "aboard_at_sea",
+      hold: "on_the_water",
     });
     await untouched(db, seat.bookingId);
   });
@@ -247,6 +253,7 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-122)", () => {
     expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toEqual({
       ok: false,
       reason: "aboard_at_sea",
+      hold: "on_the_water",
     });
     await untouched(db, seat.bookingId);
   });
@@ -259,6 +266,7 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-122)", () => {
     expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toEqual({
       ok: false,
       reason: "aboard_at_sea",
+      hold: "on_the_water",
     });
     await untouched(db, seat.bookingId);
   });
@@ -273,6 +281,7 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-122)", () => {
     expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toEqual({
       ok: false,
       reason: "aboard_at_sea",
+      hold: "on_the_water",
     });
     await untouched(db, seat.bookingId);
   });
@@ -284,6 +293,7 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-122)", () => {
     expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toEqual({
       ok: false,
       reason: "aboard_at_sea",
+      hold: "uncounted",
     });
     await untouched(db, seat.bookingId);
   });
@@ -298,10 +308,12 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-122)", () => {
     expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toEqual({
       ok: false,
       reason: "aboard_at_sea",
+      hold: "on_the_water",
     });
     expect(await cancelBooking(db, seat.shopId, other.bookingId)).toEqual({
       ok: false,
       reason: "aboard_at_sea",
+      hold: "uncounted",
     });
     await untouched(db, seat.bookingId);
   });
@@ -335,7 +347,7 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-122)", () => {
     expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toMatchObject({ ok: true });
   });
 
-  it("removes a diver once the crew mark them ashore, and once they undo the tap", async () => {
+  it("removes a diver once the crew mark them ashore, but not once they merely undo the tap", async () => {
     const { db, open, seat } = await aboardSeat();
     const other = await bookAnother(db, seat.shopId, open.id);
     await sail(db, open.id);
@@ -348,7 +360,8 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-122)", () => {
     const otherSeat = { ...seat, bookingId: other.bookingId };
     await mark(db, otherSeat, "boarded", 90);
     await mark(db, otherSeat, "cleared", 5);
-    expect(await cancelBooking(db, seat.shopId, other.bookingId)).toMatchObject({ ok: true });
+    // Undone is silence, and a silent seat on a sailed departure was carried.
+    expect(await cancelBooking(db, seat.shopId, other.bookingId)).toMatchObject({ ok: false });
   });
 
   it("still removes a diver boarded at the dock of a boat that has not left", async () => {
@@ -422,5 +435,204 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-122)", () => {
       });
       expect(foreign.size).toBe(0);
     }
+  });
+
+  // ── Second review (dde-3) ────────────────────────────────────────────────
+
+  async function crewSeat(db: AppDb, shopId: string, tripId: string, assigned = true) {
+    const [staffer] = await listStaff(db, shopId);
+    if (!staffer) throw new Error("seeded staff missing");
+    if (assigned) {
+      await db
+        .insert(tripAssignments)
+        .values({ tripId, personId: staffer.person.id })
+        .onConflictDoNothing();
+    }
+    const [seat] = await db
+      .insert(bookings)
+      .values({ bookedAs: "diver", shopId, tripId, personId: staffer.person.id, status: "booked" })
+      .returning({ id: bookings.id });
+    if (!seat) throw new Error("setup crew seat failed");
+    return { personId: staffer.person.id, bookingId: seat.id };
+  }
+
+  async function markCrew(
+    db: AppDb,
+    crew: { shopId: string; tripId: string; personId: string },
+    status: "boarded" | "not_boarded" | "cleared",
+    minutesAgo: number,
+    checkpoint = "departure",
+  ) {
+    await db.insert(rollCallCrewEvents).values({
+      ...crew,
+      recordedByPersonId: crew.personId,
+      status,
+      checkpoint,
+      occurredAt: new Date(nowMs() - minutesAgo * 60 * 1000),
+    });
+  }
+
+  it("refuses a dock-boarded diver marked not back aboard on a boat taken out early, no stage tapped", async () => {
+    // The boat left before its time; the crew counted the dock and then the
+    // first dive. An after-dive checkpoint is never taken at the dock.
+    const { db, seat } = await aboardSeat();
+    await mark(db, seat, "boarded", 120);
+    await mark(db, seat, "not_boarded", 10, "after_dive_1");
+
+    expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toEqual({
+      ok: false,
+      reason: "aboard_at_sea",
+      hold: "on_the_water",
+    });
+    await untouched(db, seat.bookingId);
+  });
+
+  it("refuses a dock-boarded diver on an early boat once anyone, crew included, has an after-dive result", async () => {
+    const { db, open, seat } = await aboardSeat();
+    await mark(db, seat, "boarded", 60);
+    const crew = await crewSeat(db, seat.shopId, open.id);
+    await markCrew(
+      db,
+      { shopId: seat.shopId, tripId: open.id, personId: crew.personId },
+      "boarded",
+      5,
+      "after_dive_1",
+    );
+
+    expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toMatchObject({
+      ok: false,
+      hold: "on_the_water",
+    });
+  });
+
+  it("fails closed on an after-dive tap the crew undid: the boat still left", async () => {
+    const { db, open, seat } = await aboardSeat();
+    const other = await bookAnother(db, seat.shopId, open.id);
+    await mark(db, seat, "boarded", 60);
+    const otherSeat = { ...seat, bookingId: other.bookingId };
+    await mark(db, otherSeat, "boarded", 20, "after_dive_1");
+    await mark(db, otherSeat, "cleared", 15, "after_dive_1");
+
+    expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toMatchObject({
+      ok: false,
+      hold: "on_the_water",
+    });
+  });
+
+  it("says why each seat is held: on the water, or never counted at the dock", async () => {
+    const { db, open, seat } = await aboardSeat();
+    const other = await bookAnother(db, seat.shopId, open.id);
+    await sail(db, open.id);
+    await mark(db, seat, "boarded", 90);
+
+    const held = await aboardAtSeaBookingIds(db, {
+      shopId: seat.shopId,
+      tripId: open.id,
+      now: nowDate(),
+    });
+    expect(held.get(seat.bookingId)).toBe("on_the_water");
+    expect(held.get(other.bookingId)).toBe("uncounted");
+    expect(await cancelBooking(db, seat.shopId, other.bookingId)).toEqual({
+      ok: false,
+      reason: "aboard_at_sea",
+      hold: "uncounted",
+    });
+  });
+
+  it("holds a seat whose dock tap was undone: cleared is silence, not ashore", async () => {
+    const { db, open, seat } = await aboardSeat();
+    await sail(db, open.id);
+    await mark(db, seat, "boarded", 90);
+    await mark(db, seat, "cleared", 80);
+
+    expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toEqual({
+      ok: false,
+      reason: "aboard_at_sea",
+      hold: "uncounted",
+    });
+    await untouched(db, seat.bookingId);
+
+    // The dock's own "not boarded" after the undo lets it go.
+    await mark(db, seat, "not_boarded", 5);
+    expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toMatchObject({ ok: true });
+  });
+
+  it("lets go a staffer's seat the crew list marked ashore at the dock", async () => {
+    const { db, open } = await seededContext();
+    await sail(db, open.id);
+    const crew = await crewSeat(db, ctx.shop.id, open.id);
+    await markCrew(
+      db,
+      { shopId: ctx.shop.id, tripId: open.id, personId: crew.personId },
+      "not_boarded",
+      90,
+    );
+
+    expect(await cancelBooking(db, ctx.shop.id, crew.bookingId)).toMatchObject({ ok: true });
+  });
+
+  it("holds a staffer's seat when the crew list's ashore tap was undone, or they are off the crew", async () => {
+    const { db, open } = await seededContext();
+    await sail(db, open.id);
+    const undone = await crewSeat(db, ctx.shop.id, open.id);
+    const crewOf = { shopId: ctx.shop.id, tripId: open.id, personId: undone.personId };
+    await markCrew(db, crewOf, "not_boarded", 90);
+    await markCrew(db, crewOf, "cleared", 80);
+    expect(await cancelBooking(db, ctx.shop.id, undone.bookingId)).toMatchObject({
+      ok: false,
+      hold: "uncounted",
+    });
+
+    // Taken off the crew: their crew-list word no longer speaks for the seat.
+    await markCrew(db, crewOf, "not_boarded", 70);
+    await db
+      .delete(tripAssignments)
+      .where(
+        and(eq(tripAssignments.tripId, open.id), eq(tripAssignments.personId, undone.personId)),
+      );
+    expect(await cancelBooking(db, ctx.shop.id, undone.bookingId)).toMatchObject({
+      ok: false,
+      hold: "uncounted",
+    });
+  });
+
+  it("holds a staffer's seat the crew list counted aboard, as on the water", async () => {
+    const { db, open } = await seededContext();
+    await sail(db, open.id);
+    const crew = await crewSeat(db, ctx.shop.id, open.id);
+    await markCrew(
+      db,
+      { shopId: ctx.shop.id, tripId: open.id, personId: crew.personId },
+      "boarded",
+      90,
+    );
+
+    expect(await cancelBooking(db, ctx.shop.id, crew.bookingId)).toMatchObject({
+      ok: false,
+      hold: "on_the_water",
+    });
+  });
+
+  it("the diver table's dock word wins over the crew list's ashore", async () => {
+    const { db, open } = await seededContext();
+    await sail(db, open.id);
+    const crew = await crewSeat(db, ctx.shop.id, open.id);
+    await markCrew(
+      db,
+      { shopId: ctx.shop.id, tripId: open.id, personId: crew.personId },
+      "not_boarded",
+      90,
+    );
+    await mark(
+      db,
+      { shopId: ctx.shop.id, tripId: open.id, bookingId: crew.bookingId },
+      "boarded",
+      80,
+    );
+
+    expect(await cancelBooking(db, ctx.shop.id, crew.bookingId)).toMatchObject({
+      ok: false,
+      hold: "on_the_water",
+    });
   });
 });
