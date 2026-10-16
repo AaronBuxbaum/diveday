@@ -2489,9 +2489,9 @@ async function changeParticipantType(
 }
 
 /**
- * Why a staff removal did not cancel the seat. `aboard_at_sea`: the diver is
- * marked aboard a boat that has left (H-122, `aboardAtSeaBookingIds`), and
- * the crew marks them ashore first.
+ * Why a staff removal did not cancel the seat. `aboard_at_sea`: the boat
+ * carried this seat or may be carrying it (H-122, `aboardAtSeaBookingIds`),
+ * at sea or home; money goes back through the order's refund instead.
  */
 export type CancelBookingRefusal = "not_found" | "aboard_at_sea";
 
@@ -2505,14 +2505,15 @@ export type CancelBookingOutcome =
   | { ok: false; reason: CancelBookingRefusal };
 
 /**
- * **A staff member takes a seat off the roster.** Refused for a diver marked
- * aboard a boat that has left (H-122): a cancelled booking is nobody to every
+ * **A staff member takes a seat off the roster.** Refused for a seat the boat
+ * carried or may be carrying (H-122): a cancelled booking is nobody to every
  * roll-call reader, so the removal would drop a person on the water from the
- * count. Asked inside the transaction, under the trip and the seat locks the
- * crew's roll-call write takes in the same order (`lockSeatDeparture`), so a
- * tap at the rail and a removal at the desk cannot both decide against the
- * same pre-state. No override: "mark ashore" is the correction, recorded with
- * a name and a time.
+ * count, and after the boat is home it would erase that they sailed. Asked
+ * inside the transaction, under the trip and the seat locks the crew's
+ * roll-call write takes in the same order (`lockSeatDeparture`), so a tap at
+ * the rail and a removal at the desk cannot both decide against the same
+ * pre-state. No override: roll-call marks correct a mistaken tap, and money
+ * goes back through the order's refund.
  */
 export async function cancelBooking(
   db: AppDb,
@@ -2681,8 +2682,8 @@ export async function selfCancelBooking(
     if (trip && hasSailed(trip.startsAt, now)) {
       return { ok: false, reason: "trip_departed" };
     }
-    // Within the hour `hasSailed` allows, a boat the crew have taken out with
-    // this diver counted aboard has left all the same (H-122).
+    // Within the hour `hasSailed` allows, a boat past its time or taken out by
+    // the crew with this diver counted aboard has left all the same (H-122).
     const atSea = await aboardAtSeaBookingIds(tx, {
       shopId: input.shopId,
       tripId: row.tripId,

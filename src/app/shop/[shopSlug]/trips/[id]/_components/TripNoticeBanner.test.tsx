@@ -149,7 +149,7 @@ describe("resolveTripNotice", () => {
     expect(refused).toEqual({
       form: "roster",
       tone: "danger",
-      text: "Hugo Marsh is marked aboard. Mark them ashore first, or call the captain.",
+      text: "Hugo Marsh sailed on this departure, so the booking stays. To give money back, refund their order.",
     });
     expect(resolve("booking-remove-aboard", { bid: "seat-2", roster })).toBeUndefined();
     expect(resolve("booking-remove-aboard")).toBeUndefined();

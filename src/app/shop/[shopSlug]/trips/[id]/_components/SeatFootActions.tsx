@@ -25,7 +25,7 @@ export function SeatFootActions({
   offersCreateOrder: boolean;
   removeBookingAction: (formData: FormData) => void;
   /**
-   * The diver is marked aboard a boat that has left (H-122): Remove opens on
+   * The boat carried this seat or may be carrying it (H-122): Remove opens on
    * why it will not, and there is nothing to confirm. `cancelBooking` refuses
    * the same seat under its locks, so a stale page is refused there too.
    */

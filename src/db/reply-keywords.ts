@@ -14,6 +14,7 @@ import {
   parseReplyKeyword,
 } from "@/lib/reply-keywords";
 import { hasSailed } from "@/lib/trips";
+import { heldAtTheDoor } from "./aboard-at-sea";
 import {
   type CancellationRefundSeen,
   sendBookingCancelledNotice,
@@ -164,7 +165,20 @@ async function cancellableBookings(
     )
     .orderBy(asc(trips.startsAt))
     .limit(MAX_CANDIDATE_BOOKINGS);
-  return rows.filter((row) => !hasSailed(row.startsAt, now));
+  const open: CandidateBooking[] = [];
+  for (const row of rows) {
+    if (hasSailed(row.startsAt, now)) continue;
+    // Counted aboard a boat past its time: `selfCancelBooking` refuses it (H-122).
+    const held = await heldAtTheDoor(db, {
+      shopId,
+      tripId: row.tripId,
+      startsAt: row.startsAt,
+      now,
+      bookingIds: [row.bookingId],
+    });
+    if (!held.has(row.bookingId)) open.push(row);
+  }
+  return open;
 }
 
 /**

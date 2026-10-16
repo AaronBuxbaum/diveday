@@ -40,18 +40,24 @@ const KIT_KEYS: Record<GearServiceKind, { due: StaffMessageKey; expired: StaffMe
   o2_clean: { due: "boatSafety.kit.o2Clean.due", expired: "boatSafety.kit.o2Clean.expired" },
 };
 
-const PAPER_KEYS: Record<BoatPaper, { due: StaffMessageKey; expired: StaffMessageKey }> = {
+const PAPER_KEYS: Record<
+  BoatPaper,
+  { due: StaffMessageKey; expired: StaffMessageKey; beforeDeparture: StaffMessageKey }
+> = {
   inspection: {
     due: "boatSafety.paper.inspection.due",
     expired: "boatSafety.paper.inspection.expired",
+    beforeDeparture: "boatSafety.paper.inspection.beforeDeparture",
   },
   registration: {
     due: "boatSafety.paper.registration.due",
     expired: "boatSafety.paper.registration.expired",
+    beforeDeparture: "boatSafety.paper.registration.beforeDeparture",
   },
   insurance: {
     due: "boatSafety.paper.insurance.due",
     expired: "boatSafety.paper.insurance.expired",
+    beforeDeparture: "boatSafety.paper.insurance.beforeDeparture",
   },
 };
 
@@ -84,9 +90,9 @@ export function boatSafetyNoticeText(
       return t(MISSING_KEYS[notice.kind]);
     case "paper": {
       const keys = PAPER_KEYS[notice.paper];
-      return notice.expired
-        ? t(keys.expired, { date: formatCalendarDate(notice.dueOn, locale) })
-        : t(keys.due, { days: notice.days });
+      if (!notice.expired) return t(keys.due, { days: notice.days });
+      const date = formatCalendarDate(notice.dueOn, locale);
+      return t(notice.beforeDeparture ? keys.beforeDeparture : keys.expired, { date });
     }
     case "kit_clock": {
       const keys = KIT_KEYS[notice.clock];

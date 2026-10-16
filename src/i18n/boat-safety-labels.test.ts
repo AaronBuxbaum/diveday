@@ -136,6 +136,29 @@ describe("a lapsed paper", () => {
     );
   });
 
+  it("says a paper still good today ends before a later departure, never that it ended", () => {
+    const ahead = (paper: "inspection" | "registration" | "insurance"): BoatSafetyNotice => ({
+      code: "paper",
+      paper,
+      dueOn: "2026-11-01",
+      expired: true,
+      days: 19,
+      beforeDeparture: true,
+    });
+    expect(boatSafetyNoticeText(en, "en-US", ahead("insurance"))).toMatch(
+      /^Hull insurance ends Nov\s1,\s2026, before this departure$/,
+    );
+    expect(boatSafetyNoticeText(en, "en-US", ahead("registration"))).toMatch(
+      /^Registration ends Nov\s1,\s2026, before this departure$/,
+    );
+    expect(boatSafetyNoticeText(en, "en-US", ahead("inspection"))).toMatch(
+      /^Safety inspection due Nov\s1,\s2026, before this departure$/,
+    );
+    expect(boatSafetyNoticeText(es, "es-ES", ahead("insurance"))).toMatch(
+      /^Seguro del casco: vence el 1\snov\.?\s2026, antes de esta salida$/,
+    );
+  });
+
   it("is a danger line in the boat's section", () => {
     expect(
       boatSafetySection(en, "en-US", { boatName: "Mantis I", notices: [lapsed("insurance")] }),

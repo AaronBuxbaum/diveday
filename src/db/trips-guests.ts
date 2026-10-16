@@ -1,6 +1,7 @@
 import { agencyCheckOffered } from "@/lib/agency-check";
 import { nowDate } from "@/lib/clock";
 import { courseCertifiesStudents, readLearningMaterials } from "@/lib/courses";
+import { departureUnderway } from "@/lib/day-blowout";
 import { demandRecommendation } from "@/lib/demand";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
 import { type ElearningQuery, elearningCheckQuery } from "@/lib/elearning-check";
@@ -124,9 +125,14 @@ export async function getTripGuests(
     // What each student on a course session has already been told to do next
     // (issues #1196, #1205), so the roster's box opens holding it.
     courseNextStepsByBooking(db, shop.id, tripId),
-    // Who Remove refuses on this roster: marked aboard a boat that has left
-    // (H-122), the rule `cancelBooking` applies under its locks.
-    aboardAtSeaBookingIds(db, { shopId: shop.id, tripId, now: nowDate() }),
+    // Who Remove refuses on this roster: seats the boat carried or may be
+    // carrying (H-122), the rule `cancelBooking` applies under its locks.
+    // Asked from the scheduled time on, so a boat still to sail pays nothing;
+    // a crew who take it out early with someone counted aboard are refused by
+    // `cancelBooking` itself, and the row's notice says why.
+    departureUnderway({ startsAt: trip.startsAt, rollCallStarted: false }, nowDate())
+      ? aboardAtSeaBookingIds(db, { shopId: shop.id, tripId, now: nowDate() })
+      : new Set<string>(),
   ]);
 
   // The last-minute pipeline: who said they are around on this date, who among
@@ -316,7 +322,7 @@ export async function getTripGuests(
     notesByBooking,
     courseNextStepByBooking,
     sameNameHeldSeats,
-    /** Seats whose diver is marked aboard a boat that has left: Remove refuses them (H-122). */
+    /** Seats the boat carried or may be carrying: Remove refuses them (H-122). */
     aboardAtSea,
     /**
      * Per held seat, the matched diver's last dive day at this shop, or null

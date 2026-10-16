@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -11,10 +11,12 @@ import {
   rollCallCrewEvents,
   rollCallEvents,
   shops,
+  trips,
   userAccounts,
 } from "./schema";
 import { listTripChangeEvents } from "./trip-change-events";
 import {
+  cancelDeparture,
   createTrip,
   getShopTripTitle,
   getTripRoster,
@@ -745,5 +747,88 @@ describe("updateTrip and the calendar revision", () => {
     await updateTripConditions(db, shop.id, trip.id, { conditionsHold: true });
 
     expect(await revisionOf(db, shop.id, trip.id)).toBe(0);
+  });
+});
+
+/**
+ * **A boat that may be on the water is never called off** (src/lib/day-blowout.ts
+ * `departureUnderway`): the whole-trip Cancel asks the blow-out's own rule.
+ * Cancelling then would drop a missing diver off Today and the shore alert,
+ * which read scheduled departures only.
+ */
+describe("cancelDeparture refuses a boat that may be on the water", () => {
+  async function departure() {
+    const { db, shop } = ctx;
+    const reef = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (trip) => trip.title === "Two-Tank Reef — Molasses & French",
+    );
+    if (!reef) throw new Error("expected seeded reef trip missing");
+    return { db, shop, reef };
+  }
+
+  async function statusOf(db: AppDb, tripId: string) {
+    const [row] = await db.select({ status: trips.status }).from(trips).where(eq(trips.id, tripId));
+    return row?.status;
+  }
+
+  it("refuses from the scheduled time, before the late-arrival hour has passed", async () => {
+    const { db, shop, reef } = await departure();
+    const startsAt = new Date(nowDate().getTime() - 10 * 60 * 1000);
+    await db
+      .update(trips)
+      .set({ startsAt, endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000) })
+      .where(eq(trips.id, reef.id));
+
+    expect(await cancelDeparture(db, shop.id, reef.id, nowDate())).toEqual({
+      ok: false,
+      reason: "trip_departed",
+    });
+    expect(await statusOf(db, reef.id)).toBe("scheduled");
+  });
+
+  it("refuses once anybody has a roll-call event, even before the scheduled time", async () => {
+    const { db, shop, reef } = await departure();
+    const [entry] = await getTripRoster(db, shop.id, reef.id);
+    if (!entry) throw new Error("expected a booking to record a roll call against");
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("expected seeded staff missing");
+    await db.insert(rollCallEvents).values({
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: entry.booking.id,
+      recordedByPersonId: staff.person.id,
+      status: "boarded",
+      checkpoint: "departure",
+      occurredAt: nowDate(),
+    });
+
+    expect(await cancelDeparture(db, shop.id, reef.id, nowDate())).toEqual({
+      ok: false,
+      reason: "trip_departed",
+    });
+    expect(await statusOf(db, reef.id)).toBe("scheduled");
+  });
+
+  it("cancels a departure still to sail that nobody has counted", async () => {
+    const { db, shop, reef } = await departure();
+
+    expect(await cancelDeparture(db, shop.id, reef.id, nowDate())).toEqual({ ok: true });
+    expect(await statusOf(db, reef.id)).toBe("cancelled");
+  });
+
+  it("answers not_found for another shop's departure", async () => {
+    const { db, shop, reef } = await departure();
+    const [elsewhere] = await db
+      .select({ id: shops.id })
+      .from(shops)
+      .where(ne(shops.id, shop.id))
+      .limit(1);
+    if (!elsewhere) return;
+
+    expect(await cancelDeparture(db, elsewhere.id, reef.id, nowDate())).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+    expect(await statusOf(db, reef.id)).toBe("scheduled");
   });
 });

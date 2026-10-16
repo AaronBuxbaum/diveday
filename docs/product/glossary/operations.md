@@ -640,7 +640,12 @@
   so the paper itself is the history. Each has its own window — 90 days for the inspection, 60 for
   registration and insurance (`BOAT_PAPER_HORIZON_DAYS`) — inside which a departure on that boat
   names the paper above its pre-departure checklist and Today carries a quiet owner errand
-  (`boat_papers_due`), escalating once it lapses (`boat_safety_expired`).
+  (`boat_papers_due`). Once a paper lapses it reads in danger ink with the boat and the date
+  ("Hull insurance ended Oct 8."), and Today shows it as its own danger row, `boat_papers_lapsed`,
+  labelled "Papers lapsed", to owners and managers only. Hull insurance lapses on its expiry date
+  itself, since the policy's cover ends that day. A paper still good today that lapses before a
+  later departure reads "ends {date}, before this departure" on that departure. A lapsed paper
+  never blocks a departure (H-125). `boat_safety_expired` is the safety kit's row, not the papers'.
 - **Safety kit** — the boat's own emergency equipment kept on the **gear register** as units:
   `o2_kit`, `aed`, `first_aid_kit` and `flares` (roadmap N-08). Each may be assigned **aboard** one
   boat (`gear_items.aboard_boat_id`; any other kind is never aboard), and runs **service clocks**

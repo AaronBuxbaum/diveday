@@ -11,15 +11,18 @@
   "paper": {
     "inspection": {
       "due": "Next safety inspection due {days, plural, =0 {today} one {in # day} other {in # days}}",
-      "expired": "Safety inspection was due {date}"
+      "expired": "Safety inspection was due {date}",
+      "beforeDeparture": "Safety inspection due {date}, before this departure"
     },
     "registration": {
       "due": "Registration expires {days, plural, =0 {today} one {in # day} other {in # days}}",
-      "expired": "Registration ended {date}"
+      "expired": "Registration ended {date}",
+      "beforeDeparture": "Registration ends {date}, before this departure"
     },
     "insurance": {
       "due": "Insurance expires {days, plural, =0 {today} one {in # day} other {in # days}}",
-      "expired": "Hull insurance ended {date}"
+      "expired": "Hull insurance ended {date}",
+      "beforeDeparture": "Hull insurance ends {date}, before this departure"
     }
   },
   "kit": {

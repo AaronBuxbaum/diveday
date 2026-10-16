@@ -4198,7 +4198,7 @@ for (const scheme of ["light", "dark"] as const) {
           .first();
         await openRosterDetails(row);
         await row.locator("summary", { hasText: /^\s*Remove booking\s*$/ }).click();
-        await row.getByRole("status").filter({ hasText: "is marked aboard." }).waitFor();
+        await row.getByRole("status").filter({ hasText: "sailed on this departure" }).waitFor();
         await expect(row.getByRole("button", { name: "Yes, remove booking" })).toHaveCount(0);
         await capture(page, "trip-remove-aboard-refused", scheme);
       });

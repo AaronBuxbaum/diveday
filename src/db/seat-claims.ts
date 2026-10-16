@@ -8,6 +8,7 @@ import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
+import { heldAtTheDoor } from "./aboard-at-sea";
 import {
   type IssuedCapability,
   issueBookingCapability,
@@ -615,6 +616,19 @@ export async function issuePartySeatClaims(
       ),
     )
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
+  // A seat counted aboard a boat past its time stays with the crew, as
+  // `cancelUnclaimedPartySeats` keeps it (H-122).
+  const onLeadTrip = rows.filter((row) => row.booking.tripId === row.leadTripId);
+  const leadTrip = onLeadTrip[0]?.trip;
+  const held = leadTrip
+    ? await heldAtTheDoor(db, {
+        shopId: input.shopId,
+        tripId: leadTrip.id,
+        startsAt: leadTrip.startsAt,
+        now,
+        bookingIds: onLeadTrip.map((row) => row.booking.id),
+      })
+    : new Set<string>();
   const seats: PartySeatClaim[] = [];
   for (const row of rows) {
     const claimable = claimableNow(row.booking, row.trip, now);
@@ -637,7 +651,8 @@ export async function issuePartySeatClaims(
       cancelsWithLead:
         row.booking.status === "booked" &&
         row.booking.claimedAt === null &&
-        row.booking.tripId === row.leadTripId,
+        row.booking.tripId === row.leadTripId &&
+        !held.has(row.booking.id),
       claim: claimable
         ? await issueBookingCapability(db, {
             shopId: input.shopId,

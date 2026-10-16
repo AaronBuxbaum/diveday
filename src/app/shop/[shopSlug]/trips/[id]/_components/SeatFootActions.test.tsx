@@ -101,7 +101,9 @@ describe("Remove on a diver marked aboard at sea", () => {
     const remove = screen.getByText("Remove booking");
     fireEvent.click(remove);
     expect(
-      screen.getByText("Rene Marsh is marked aboard. Mark them ashore first, or call the captain."),
+      screen.getByText(
+        "Rene Marsh sailed on this departure, so the booking stays. To give money back, refund their order.",
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Yes, remove booking" })).toBeNull();
     // Not a form's control: nothing behind this Remove can post the removal.

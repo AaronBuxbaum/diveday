@@ -238,9 +238,78 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-122)", () => {
     expect(row?.status).toBe("booked");
   });
 
-  it("still removes a diver nobody marked aboard, at sea", async () => {
+  it("refuses inside the first hour on the dock's word alone, with no stage tapped", async () => {
+    const { db, open, seat } = await aboardSeat();
+    // Left 20 minutes ago: `hasSailed` still says no, and nobody tapped a stage.
+    await sail(db, open.id, 1 / 3);
+    await mark(db, seat, "boarded", 25);
+
+    expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toEqual({
+      ok: false,
+      reason: "aboard_at_sea",
+    });
+    await untouched(db, seat.bookingId);
+  });
+
+  it("refuses a diver marked not back aboard whom the dock never counted", async () => {
     const { db, open, seat } = await aboardSeat();
     await sail(db, open.id);
+    await mark(db, seat, "not_boarded", 10, "after_dive_1");
+
+    expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toEqual({
+      ok: false,
+      reason: "aboard_at_sea",
+    });
+    await untouched(db, seat.bookingId);
+  });
+
+  it("refuses a diver marked not back aboard after the dock's tap was cleared", async () => {
+    const { db, open, seat } = await aboardSeat();
+    await sail(db, open.id);
+    await mark(db, seat, "boarded", 90);
+    await mark(db, seat, "cleared", 80);
+    await mark(db, seat, "not_boarded", 10, "after_dive_1");
+
+    expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toEqual({
+      ok: false,
+      reason: "aboard_at_sea",
+    });
+    await untouched(db, seat.bookingId);
+  });
+
+  it("refuses a seat nobody spoke for once the boat has sailed: it counts as carried", async () => {
+    const { db, open, seat } = await aboardSeat();
+    await sail(db, open.id);
+
+    expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toEqual({
+      ok: false,
+      reason: "aboard_at_sea",
+    });
+    await untouched(db, seat.bookingId);
+  });
+
+  it("keeps refusing after the boat is home: the seat sailed", async () => {
+    const { db, open, seat } = await aboardSeat();
+    const other = await bookAnother(db, seat.shopId, open.id);
+    // Left three days ago and home the same afternoon.
+    await sail(db, open.id, 72);
+    await mark(db, seat, "boarded", 72 * 60);
+
+    expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toEqual({
+      ok: false,
+      reason: "aboard_at_sea",
+    });
+    expect(await cancelBooking(db, seat.shopId, other.bookingId)).toEqual({
+      ok: false,
+      reason: "aboard_at_sea",
+    });
+    await untouched(db, seat.bookingId);
+  });
+
+  it("still removes a seat nobody spoke for before the boat has sailed", async () => {
+    const { db, open, seat } = await aboardSeat();
+    // Past its time by 20 minutes, still inside the late-arrival hour.
+    await sail(db, open.id, 1 / 3);
 
     expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toMatchObject({
       ok: true,
@@ -248,6 +317,14 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-122)", () => {
     });
     const [row] = await db.select().from(bookings).where(eq(bookings.id, seat.bookingId));
     expect(row?.status).toBe("cancelled");
+  });
+
+  it("still removes a seat the desk marked a no-show once the boat has sailed", async () => {
+    const { db, open, seat } = await aboardSeat();
+    await sail(db, open.id);
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, seat.bookingId));
+
+    expect(await cancelBooking(db, seat.shopId, seat.bookingId)).toMatchObject({ ok: true });
   });
 
   it("still removes a diver the crew marked as never leaving the dock", async () => {
@@ -310,6 +387,14 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-122)", () => {
   it("answers the roster's question with the same rule, for the whole departure", async () => {
     const { db, open, seat } = await aboardSeat();
     const other = await bookAnother(db, seat.shopId, open.id);
+    const third = await createBooking(db, {
+      actor: "staff",
+      shopId: seat.shopId,
+      tripId: open.id,
+      fullName: "Uma Unspoken",
+      email: "uma-unspoken@example.com",
+    });
+    if (!third.ok) throw new Error("setup booking failed");
     await sail(db, open.id);
     await mark(db, seat, "boarded", 90);
     await mark(db, { ...seat, bookingId: other.bookingId }, "not_boarded", 90);
@@ -319,7 +404,10 @@ describe("cancelBooking refuses a diver marked aboard at sea (H-122)", () => {
       tripId: open.id,
       now: nowDate(),
     });
-    expect([...aboard]).toEqual([seat.bookingId]);
+    // The unspoken-for seat counts as carried; the one the dock left ashore does not.
+    expect(aboard.has(seat.bookingId)).toBe(true);
+    expect(aboard.has(third.bookingId)).toBe(true);
+    expect(aboard.has(other.bookingId)).toBe(false);
     // Another shop asking about this departure hears nothing.
     const [elsewhere] = await db
       .select({ id: shops.id })

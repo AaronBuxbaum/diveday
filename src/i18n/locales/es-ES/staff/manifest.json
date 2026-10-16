@@ -258,6 +258,8 @@
     "lineDivers": "{divers, plural, one {# persona sin marcar} other {# personas sin marcar}} después de la inmersión {dive}.",
     "lineCrew": "{crew, plural, one {# tripulante sin marcar} other {# tripulantes sin marcar}} después de la inmersión {dive}.",
     "lineBoth": "{divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}} sin marcar después de la inmersión {dive}.",
+    "lineMissing": "{missing, plural, one {# persona no ha vuelto} other {# personas no han vuelto}} a bordo después de la inmersión {dive}.",
+    "lineMissingToo": "{missing, plural, one {# persona más no ha vuelto} other {# personas más no han vuelto}} a bordo.",
     "notCounted": "La inmersión {dive} no se ha contado. Si se canceló, deja el plan en {plan, plural, one {# inmersión} other {# inmersiones}}.",
     "setPlan": "Cambiar el plan",
     "openAnyway": "Abrir igualmente",

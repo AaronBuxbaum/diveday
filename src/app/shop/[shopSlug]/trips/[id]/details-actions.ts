@@ -19,9 +19,9 @@ import { getShopById } from "@/db/shops";
 import { getTripLens } from "@/db/trip-lenses";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import {
+  cancelDeparture,
   getTripWithBooked,
   reinstateTripClearingMinimum,
-  setTripStatus,
   type UpdateTripOutcome,
   updateTrip,
 } from "@/db/trips";
@@ -399,9 +399,18 @@ export async function cancelTripAction(shopSlug: string, tripId: string) {
   // schedule management (reinstate, whole-series cancel, create) stays config.
   const s = (await requireShopSurface(shopSlug)).session;
   const db = await getDb();
-  await setTripStatus(db, s.user.shopId, tripId, "cancelled", nowDate(), {
+  // Never while the boat may be on the water (`cancelDeparture`): a missing
+  // diver would drop off Today and the shore alert.
+  const outcome = await cancelDeparture(db, s.user.shopId, tripId, nowDate(), {
     actorPersonId: s.user.personId,
   });
+  if (!outcome.ok) {
+    redirect(
+      outcome.reason === "trip_departed"
+        ? noticeUrl(back, "cancel-underway")
+        : noticeUrl(back, "invalid", { form: "lifecycle" }),
+    );
+  }
   // Its crew hear it is off now, not on the hour (ADR 20261009-crew-hear-about-their-boats).
   await flushUrgentCrewNotices(db, { shopId: s.user.shopId, tripIds: [tripId] });
   revalidateAndRedirect(back, noticeUrl(back, "cancelled"));

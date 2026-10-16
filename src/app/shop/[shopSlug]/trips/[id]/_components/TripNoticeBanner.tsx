@@ -38,6 +38,8 @@ const NOTICE_KEYS: Record<
 > = {
   saved: { form: "details", tone: "success", key: "trips.notices.saved" },
   cancelled: { form: "lifecycle", tone: "danger", key: "trips.notices.cancelled" },
+  // Refused: the boat may be on the water (`cancelDeparture`). Nothing changed.
+  "cancel-underway": { form: "lifecycle", tone: "danger", key: "trips.notices.cancelUnderway" },
   reinstated: { form: "lifecycle", tone: "success", key: "trips.notices.reinstated" },
   crew: { form: "crew", tone: "success", key: "trips.notices.crew" },
   "crew-conflict": { form: "crew", tone: "danger", key: "trips.notices.crewConflict" },
@@ -87,7 +89,7 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.bookingRemovedRefundOwner",
   },
   "booking-restored": { form: "roster", tone: "success", key: "trips.notices.bookingRestored" },
-  // Refused: the diver is marked aboard a boat that has left (H-122). Nothing
+  // Refused: the boat carried this seat or may be carrying it (H-122). Nothing
   // changed, and the row stays open on the Remove that was tapped.
   "booking-remove-aboard": {
     form: "roster",

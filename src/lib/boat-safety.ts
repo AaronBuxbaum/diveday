@@ -155,7 +155,18 @@ export type BoatSafetyNotice =
   | { code: "over_certificate"; passengers: number; limit: number; counted: boolean }
   /** No in-service unit of a must-carry kind aboard, on a shop that keeps one. */
   | { code: "kit_missing"; kind: MustCarryKitKind }
-  | { code: "paper"; paper: BoatPaper; dueOn: CalendarDate; expired: boolean; days: number }
+  | {
+      code: "paper";
+      paper: BoatPaper;
+      dueOn: CalendarDate;
+      expired: boolean;
+      days: number;
+      /**
+       * Lapsed on the date it is judged on, a later departure's, while still
+       * good today: it *ends* before the boat sails, it has not *ended*.
+       */
+      beforeDeparture?: true;
+    }
   | {
       code: "kit_clock";
       gearItemId: string;
@@ -243,14 +254,41 @@ export function kitMissingNotices(
   ).map((kind) => ({ code: "kit_missing", kind }));
 }
 
-/** The boat's papers that have run out or will inside each paper's own horizon. */
-export function boatPaperNotices(papers: BoatPaperDates, onDate: CalendarDate): BoatSafetyNotice[] {
+/**
+ * A paper's reading on `onDate`. Hull insurance lapses **on** its expiry date,
+ * because a marine policy's cover ends that day; registration and the
+ * inspection are good through theirs, like the kit's printed dates.
+ */
+function paperLapsed(paper: BoatPaper, dueOn: CalendarDate, onDate: CalendarDate) {
+  const days = calendarDaysBetween(onDate, dueOn);
+  if (paper === "insurance" && days === 0) return { expired: true, days: 0 };
+  return dated(dueOn, onDate, BOAT_PAPER_HORIZON_DAYS[paper]);
+}
+
+/**
+ * The boat's papers that have run out or will inside each paper's own horizon,
+ * judged on `onDate`. `today` is the shop's own date when that is a later
+ * departure's, so a paper still good today is said to end before it sails.
+ */
+export function boatPaperNotices(
+  papers: BoatPaperDates,
+  onDate: CalendarDate,
+  today: CalendarDate = onDate,
+): BoatSafetyNotice[] {
   const notices: BoatSafetyNotice[] = [];
   for (const paper of BOAT_PAPERS) {
     const dueOn = papers[PAPER_DATES[paper]];
     if (!dueOn) continue;
-    const reading = dated(dueOn, onDate, BOAT_PAPER_HORIZON_DAYS[paper]);
-    if (reading) notices.push({ code: "paper", paper, dueOn, ...reading });
+    const reading = paperLapsed(paper, dueOn, onDate);
+    if (!reading) continue;
+    const goodToday = !paperLapsed(paper, dueOn, today)?.expired;
+    notices.push({
+      code: "paper",
+      paper,
+      dueOn,
+      ...reading,
+      ...(reading.expired && goodToday ? { beforeDeparture: true as const } : {}),
+    });
   }
   return notices.sort(byUrgency);
 }
@@ -401,10 +439,12 @@ export function boatSafetyNotices(input: {
    */
   passengers: { booked: number; boarded: number };
   onDate: CalendarDate;
+  /** The shop's own date, when `onDate` is a later departure's (`boatPaperNotices`). */
+  today?: CalendarDate;
 }): BoatSafetyNotice[] {
   const notices: BoatSafetyNotice[] = [
     ...kitMissingNotices(input.kit, input.kindsOnRegister),
-    ...boatPaperNotices(input.boat, input.onDate),
+    ...boatPaperNotices(input.boat, input.onDate, input.today),
     ...safetyKitNotices(input.kit, input.onDate),
   ];
   const limit = input.boat.certifiedPassengers;

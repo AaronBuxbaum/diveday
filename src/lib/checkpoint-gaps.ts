@@ -26,19 +26,24 @@ import { inAfterDivePopulation, type RollCallState } from "./roll-call-populatio
  * 20261014). The panel itself still holds the checkpoint open for them.
  *
  * The two halves stay apart, so the words can say "11 passengers and 3
- * crew" rather than a sum that hides which list to look at.
+ * crew" rather than a sum that hides which list to look at. People recorded
+ * not back aboard are counted apart from both: they have been marked, and
+ * they are the missing-diver row, which is a different next step from a tap
+ * nobody has made yet (dive-domain review, 2026-10-16).
  */
 export type CheckpointGap =
   | {
       kind: "unmarked";
       checkpoint: RollCallCheckpoint;
       /**
-       * Passengers (divers, snorkelers and riders alike) with no result here,
-       * plus those recorded not back aboard. The name is older than the count.
+       * Passengers (divers, snorkelers and riders alike) with no result here.
+       * The name is older than the count.
        */
       divers: number;
-      /** Crew in the after-dive count not accounted for here. */
+      /** Crew in the after-dive count with no result here. */
       crew: number;
+      /** Passengers and crew recorded not back aboard here. */
+      missing: number;
     }
   | {
       /**
@@ -80,14 +85,14 @@ function crewInAfterDiveCount(manifests: readonly GapManifest[]): Set<string> {
 }
 
 function unmarkedAt(manifest: GapManifest, counted: ReadonlySet<string>): CheckpointGap | null {
-  const divers = manifest.summary.awaiting + manifest.summary.notBackAboard;
-  const crew = manifest.crew.filter((member) =>
-    member.rollCall
-      ? isNotBackAboard(manifest.checkpoint, member.rollCall)
-      : counted.has(member.id),
+  const divers = manifest.summary.awaiting;
+  const crew = manifest.crew.filter((member) => !member.rollCall && counted.has(member.id)).length;
+  const crewMissing = manifest.crew.filter(
+    (member) => member.rollCall && isNotBackAboard(manifest.checkpoint, member.rollCall),
   ).length;
-  return divers + crew > 0
-    ? { kind: "unmarked", checkpoint: manifest.checkpoint, divers, crew }
+  const missing = manifest.summary.notBackAboard + crewMissing;
+  return divers + crew + missing > 0
+    ? { kind: "unmarked", checkpoint: manifest.checkpoint, divers, crew, missing }
     : null;
 }
 

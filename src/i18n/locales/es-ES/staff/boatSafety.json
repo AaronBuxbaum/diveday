@@ -11,15 +11,18 @@
   "paper": {
     "inspection": {
       "due": "Próxima inspección de seguridad: {days, plural, =0 {hoy} one {en # día} other {en # días}}",
-      "expired": "Inspección de seguridad: vencía el {date}"
+      "expired": "Inspección de seguridad: vencía el {date}",
+      "beforeDeparture": "Inspección de seguridad: vence el {date}, antes de esta salida"
     },
     "registration": {
       "due": "Matrícula: vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
-      "expired": "Matrícula: venció el {date}"
+      "expired": "Matrícula: venció el {date}",
+      "beforeDeparture": "Matrícula: vence el {date}, antes de esta salida"
     },
     "insurance": {
       "due": "Seguro: vence {days, plural, =0 {hoy} one {en # día} other {en # días}}",
-      "expired": "Seguro del casco: venció el {date}"
+      "expired": "Seguro del casco: venció el {date}",
+      "beforeDeparture": "Seguro del casco: vence el {date}, antes de esta salida"
     }
   },
   "kit": {

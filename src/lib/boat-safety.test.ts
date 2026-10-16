@@ -470,11 +470,54 @@ describe("a lapsed boat paper (H-125)", () => {
     }
   });
 
-  it("stays neutral on its last good day, which is not yet lapsed", () => {
+  it("lapses insurance on its expiry date: marine cover ends that day", () => {
     const [notice] = boatPaperNotices(papers({ insuranceExpiresOn: TODAY }), TODAY);
-    expect(notice).toMatchObject({ code: "paper", expired: false, days: 0 });
+    expect(notice).toEqual({
+      code: "paper",
+      paper: "insurance",
+      dueOn: TODAY,
+      expired: true,
+      days: 0,
+    });
     if (!notice) throw new Error("expected the insurance notice");
-    expect(boatSafetyNoticeTone(notice)).toBe("neutral");
+    expect(boatSafetyNoticeTone(notice)).toBe("danger");
+  });
+
+  it("keeps registration and inspection neutral on their last good day", () => {
+    const notices = boatPaperNotices(
+      papers({ registrationExpiresOn: TODAY, inspectionDueOn: TODAY }),
+      TODAY,
+    );
+    expect(notices.map((notice) => notice.code === "paper" && notice.expired)).toEqual([
+      false,
+      false,
+    ]);
+    for (const notice of notices) expect(boatSafetyNoticeTone(notice)).toBe("neutral");
+  });
+
+  it("marks a paper good today that lapses before a later departure, and only that one", () => {
+    // Judged on a departure of Nov 20, read on Oct 9.
+    const notices = boatPaperNotices(
+      papers({
+        insuranceExpiresOn: "2026-11-01",
+        registrationExpiresOn: TODAY,
+        inspectionDueOn: "2026-10-01",
+      }),
+      "2026-11-20",
+      TODAY,
+    );
+    const byPaper = Object.fromEntries(
+      notices.flatMap((notice) => (notice.code === "paper" ? [[notice.paper, notice]] : [])),
+    );
+    expect(byPaper.insurance).toMatchObject({ expired: true, beforeDeparture: true });
+    // Registration's last good day is today, so it too lapses before the boat sails.
+    expect(byPaper.registration).toMatchObject({ expired: true, beforeDeparture: true });
+    // The inspection was already overdue today: it has lapsed, not "will".
+    expect(byPaper.inspection).toMatchObject({ expired: true });
+    expect(byPaper.inspection).not.toHaveProperty("beforeDeparture");
+    // Insurance that ends today has ended today, whatever the departure date.
+    const [today] = boatPaperNotices(papers({ insuranceExpiresOn: TODAY }), "2026-11-20", TODAY);
+    expect(today).not.toHaveProperty("beforeDeparture");
   });
 
   it("leads the boat's lines after missing kit and the certificate, and refuses nothing", () => {
