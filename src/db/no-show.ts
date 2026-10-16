@@ -9,7 +9,7 @@ import {
   SEAT_HELD_STATUSES,
   salvageOffer,
 } from "@/lib/no-show";
-import { seatRefusal } from "@/lib/participant-types";
+import { isDiver, seatRefusal } from "@/lib/participant-types";
 import { type SimilarDeparture, similarDepartures } from "@/lib/similar-departures";
 import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
@@ -310,7 +310,6 @@ export async function undoBookingNoShow(
     // Both limits (ADR 20261007-participant-types): every held seat against the
     // boat, and divers against the divers-only limit when this seat is one.
     const held = await heldSeatCounts(tx, input.shopId, trip.id);
-    const booked = held.aboard;
     /**
      * **The two refusals that get a line of their own.**
      *
@@ -346,7 +345,10 @@ export async function undoBookingNoShow(
     const full = seatRefusal(seat.participantType, { ...trip, capacity }, held);
     if (full) return await refuse(full);
 
-    if (trip.courseId) {
+    // A course session's ratio counts its students, its divers (G5 of
+    // #2226): a priced rider beside the class is a passenger, and a
+    // passenger's seat coming back asks no ratio at all.
+    if (trip.courseId && isDiver(seat.participantType)) {
       const [course] = await tx
         .select()
         .from(courses)
@@ -358,7 +360,7 @@ export async function undoBookingNoShow(
       // refuses too: a seat cannot be handed back to a session that could not
       // sell it in the first place.
       const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
-      if (seatCap !== null && booked >= seatCap) return await refuse("course_ratio_full");
+      if (seatCap !== null && held.divers >= seatCap) return await refuse("course_ratio_full");
     }
 
     // The status the standing arrival supports, never an assumed one. Not a new

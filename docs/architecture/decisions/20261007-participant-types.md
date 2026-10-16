@@ -49,8 +49,9 @@ trip-row lock, never as a pre-check.
   falsify the record the crew reads at the rail. Amended 2026-10-13 (issue #2226): a course
   session also sells snorkeler and rider seats where the shop names a price for them, from either
   door (an unpriced one is refused even to staff, `participant_type_unavailable`). Such a seat is a
-  passenger: it is asked none of the course's card, age, ratio or form gates, is never counted as
-  in training, gets no Certify, materials or next-step controls, and is sent no course words. A
+  passenger: it is asked none of the course's card, age, ratio or form gates, counts against the
+  boat but never against the students' ratio (every reader of it: the sale, a move, an undo, a
+  no-show's undo, an offer, the wait list, and the crew-gap rows), is never counted as in training, gets no Certify, materials or next-step controls, and is sent no course words. A
   type change on a course session never takes a student out of diving and never puts a passenger
   into it; snorkeler and rider swap only at a priced type.
 - **Gear by type.** A rider gets no rental step, packing line or tank. A snorkeler is offered and

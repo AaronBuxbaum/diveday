@@ -125,9 +125,10 @@ function seatedOn(tripId: string) {
  * a diver's seat, so the divers-only limit binds. Every invitation already out
  * to someone who has not taken a seat holds one of those seats, so it is taken
  * off. Advice for whom to invite, never a gate: the seat is still measured
- * under the trip's lock when the diver books.
+ * under the trip's lock when the diver books. Exported for its test (agency
+ * review G5 of #2226).
  */
-async function invitableSeats(db: AppDb, trip: typeof trips.$inferSelect): Promise<number> {
+export async function invitableSeats(db: AppDb, trip: typeof trips.$inferSelect): Promise<number> {
   const held = await heldSeatCounts(db, trip.shopId, trip.id);
   let room = (await sellableCapacity(db, trip)) - held.aboard;
   const diverLimit = diverSeatLimit(trip);
@@ -141,7 +142,8 @@ async function invitableSeats(db: AppDb, trip: typeof trips.$inferSelect): Promi
     const { instructorCount, assistantCount } = await tripCourseCrewCounts(db, trip.id);
     if (instructorCount === 0) return 0;
     const ratioCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
-    if (ratioCap !== null) room = Math.min(room, ratioCap - held.aboard);
+    // The students, its divers: a priced rider is a passenger (G5 of #2226).
+    if (ratioCap !== null) room = Math.min(room, ratioCap - held.divers);
   }
   const [outstanding] = await db
     .select({ invited: count(tripWaitlistEntries.id) })

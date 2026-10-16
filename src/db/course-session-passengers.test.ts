@@ -1,20 +1,25 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { nowMs } from "@/lib/clock";
+import { nowDate, nowMs } from "@/lib/clock";
 import type { ParticipantType } from "@/lib/participant-types";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking, setBookingParticipantType } from "./bookings";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb } from "./client";
+import { tripRatioGapNeedsInstructor } from "./crew-requests";
+import { markBookingNoShow, undoBookingNoShow } from "./no-show";
 import {
   issueShopCertification,
   issueShopNitroxCertification,
   issueShopSpecialtyCertification,
   studentOnSeat,
 } from "./readiness";
-import { bookings, courses } from "./schema";
+import { bookings, courses, people, shops, trips } from "./schema";
+import { departureOpenToDiver } from "./trip-invitations";
 import { createTrip, listStaff, setTripCrew, setTripParticipantTerms } from "./trips";
+import { getTripOverview } from "./trips-overview";
+import { invitableSeats } from "./waitlist-roll";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
@@ -263,7 +268,7 @@ describe("a shop-issued card on a course session", () => {
     if (!student.ok) throw new Error("setup failed");
     await db
       .update(bookings)
-      .set({ identityUnconfirmedAt: new Date(), identityBookedAs: "Someone Else" })
+      .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "Someone Else" })
       .where(eq(bookings.id, student.bookingId));
     const [row] = await db
       .select({ personId: bookings.personId })
@@ -280,5 +285,96 @@ describe("a shop-issued card on a course session", () => {
         level: "open_water",
       }),
     ).toBeNull();
+  });
+});
+
+/**
+ * **A priced passenger never fills the students' ratio** (agency review G5 of
+ * #2226): every reader of a course session's ratio counts its divers, so a
+ * rider beside a full class neither shuts the class's last place nor reads
+ * as a session over its ratio.
+ */
+describe("the ratio beside priced passengers", () => {
+  /** An intro session with one instructor, its class full, one student cancelled, riders aboard. */
+  async function classWithRiders() {
+    const { db, shop } = ctx;
+    const { trip, staff } = await session(db, shop.id, "Discover Scuba Diving");
+    await priceRiders(db, shop.id, trip.id);
+    const students: string[] = [];
+    for (;;) {
+      const outcome = await seat(db, shop.id, trip.id, "diver");
+      if (!outcome.ok) break;
+      students.push(outcome.bookingId);
+      if (students.length > 12) throw new Error("ratio never bound");
+    }
+    const [freed] = students;
+    if (!freed) throw new Error("no student seated");
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, freed));
+    for (const _ of [1, 2]) {
+      const rider = await seat(db, shop.id, trip.id, "rider");
+      if (!rider.ok) throw new Error("rider refused");
+    }
+    return { db, shop, trip, staff, students };
+  }
+
+  it("keeps the class's free place open to a diver from a link", async () => {
+    const { db, shop, trip } = await classWithRiders();
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Walk In", email: "ratio-walk-in@example.com" })
+      .returning({ id: people.id });
+    if (!person) throw new Error("person insert failed");
+    expect(
+      await departureOpenToDiver(db, { shopId: shop.id, tripId: trip.id, personId: person.id }),
+    ).toBe(true);
+  });
+
+  it("counts the free place for the wait list", async () => {
+    const { db, trip } = await classWithRiders();
+    const [row] = await db.select().from(trips).where(eq(trips.id, trip.id));
+    if (!row) throw new Error("trip missing");
+    expect(await invitableSeats(db, row)).toBe(1);
+  });
+
+  it("reads as inside its ratio on the trip page and the crew request", async () => {
+    const { db, shop, trip, staff, students } = await classWithRiders();
+    // Back to a full class: at its ratio, not over it, riders or none.
+    await db
+      .update(bookings)
+      .set({ status: "booked" })
+      .where(eq(bookings.id, students[0] ?? ""));
+    expect(await tripRatioGapNeedsInstructor(db, shop.id, trip.id)).toBe(false);
+    const [shopRow] = await db.select().from(shops).where(eq(shops.id, shop.id));
+    if (!shopRow) throw new Error("shop missing");
+    const overview = await getTripOverview(db, shopRow, trip.id, staff.id);
+    expect(overview?.crew.crewGap).toEqual({ code: "none" });
+  });
+
+  it("gives a released student's place back beside riders", async () => {
+    const { db, shop, trip, staff, students } = await classWithRiders();
+    const [, absent] = students;
+    if (!absent) throw new Error("second student missing");
+    // Re-fill the cancelled place, then release one student and seat a rider in the space.
+    await db
+      .update(bookings)
+      .set({ status: "booked" })
+      .where(eq(bookings.id, students[0] ?? ""));
+    const after = new Date(trip.startsAt.getTime() + 60 * 60 * 1000);
+    expect(
+      await markBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: absent,
+        recordedByPersonId: staff.id,
+        now: after,
+      }),
+    ).toMatchObject({ ok: true });
+    expect(
+      await undoBookingNoShow(db, {
+        shopId: shop.id,
+        bookingId: absent,
+        recordedByPersonId: staff.id,
+        now: after,
+      }),
+    ).toMatchObject({ ok: true });
   });
 });
