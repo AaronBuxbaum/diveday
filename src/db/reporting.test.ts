@@ -15,6 +15,7 @@ import {
   getMonthlyReport,
   getShopYear,
   getYearMonthInputs,
+  bookingLeadTimes,
   getYearToDate,
   pagedMonthlyReportTrips,
 } from "./reporting";
@@ -284,6 +285,8 @@ describe("getMonthlyReport", () => {
 
     const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
     expect(report).toMatchObject({ revenueCents: 18_000, taxCents: 1_800 });
+    // The departure's own net is on the same basis: after tax.
+    expect(report.trips[0]?.netCents).toBe(18_000);
     expect(summarizeMonth(report).taxCents).toBe(1_800);
   });
 
@@ -354,6 +357,10 @@ describe("getMonthlyReport", () => {
     // Stripe collected 6300 against — not the 6000 pre-discount list deposit;
     // May and cancelled excluded.
     expect(report.revenueCents).toBe(61_300);
+    // Each departure carries its own share, and the shares are the month
+    // (fifth loop, item 26): Reef 18000 + 12000 + 5000 + 6300, Wreck 20000.
+    expect(report.trips.find((t) => t.title === "Reef")?.netCents).toBe(41_300);
+    expect(report.trips.find((t) => t.title === "Wreck")?.netCents).toBe(20_000);
 
     const summary = summarizeMonth(report);
     expect(summary.tripCount).toBe(2);
@@ -1447,6 +1454,35 @@ describe("getShopYear", () => {
     expect(year.sites[1]?.share).toBe(0.5);
   });
 
+  it("falls back to the departure's own site when its plan names none (fifth loop, section 6)", async () => {
+    const db = await unseededTestDb();
+    const shopId = await yearShop(db, "year-departure-sites");
+    const [benwood, duane] = await db
+      .insert(diveSites)
+      .values([
+        { shopId, name: "Benwood", slug: diveSiteSlugFrom("Benwood") },
+        { shopId, name: "Duane", slug: diveSiteSlugFrom("Duane") },
+      ])
+      .returning();
+    if (!benwood || !duane) throw new Error("site insert failed");
+    const bare = await sailedTrip(db, shopId, "2026-05-01", 10, 4);
+    const bareAgain = await sailedTrip(db, shopId, "2026-05-08", 10, 4);
+    const planned = await sailedTrip(db, shopId, "2026-05-09", 10, 4);
+    await db
+      .update(trips)
+      .set({ diveSiteId: benwood.id })
+      .where(inArray(trips.id, [bare, bareAgain, planned]));
+    // This one's plan names its own site, so its departure site is not counted again.
+    await db.insert(tripDives).values({ tripId: planned, diveNumber: 1, diveSiteId: duane.id });
+
+    const year = summarizeShopYear(await getShopYear(db, shopId, { timeZone: TZ, now: NOW }));
+
+    expect(year.sites.map((site) => [site.name, site.times])).toEqual([
+      ["Benwood", 2],
+      ["Duane", 1],
+    ]);
+  });
+
   it("leaves a departure that has not sailed, and a canceled one, out of the year", async () => {
     const db = await unseededTestDb();
     const shopId = await yearShop(db, "year-unsailed");
@@ -1629,5 +1665,38 @@ describe("a day is the month's own derivation, over narrower bounds", () => {
     expect(await titlesBetween("2026-05-31T04:00:00Z", "2026-06-01T04:00:00Z")).not.toContain(
       "Dawn of the 1st",
     );
+  });
+});
+
+describe("bookingLeadTimes (fifth loop, item 34)", () => {
+  it("joins each held seat's booking time to its departure, by the departure's weekday", async () => {
+    const db = await unseededTestDb();
+    const [shop] = await db
+      .insert(shops)
+      .values({ name: "Lead Shop", slug: "lead-time", timezone: "America/New_York" })
+      .returning();
+    if (!shop) throw new Error("shop insert failed");
+    // Saturday 2026-06-13, 09:00 New York.
+    const saturday = await makeTrip(db, shop.id, new Date("2026-06-13T13:00:00Z"), 10, "Sat");
+    const days = [12, 12, 10, 1, 0];
+    for (const [index, daysAhead] of days.entries()) {
+      const personId = await makePerson(db, shop.id, `Lead ${index}`);
+      const bookingId = await makeBooking(db, shop.id, saturday, personId);
+      await db
+        .update(bookings)
+        .set({ createdAt: new Date(Date.parse("2026-06-13T12:00:00Z") - daysAhead * 86_400_000) })
+        .where(eq(bookings.id, bookingId));
+    }
+    // A cancelled seat is not a sale.
+    const gone = await makePerson(db, shop.id, "Lead gone");
+    await makeBooking(db, shop.id, saturday, gone, "cancelled");
+
+    const rows = await bookingLeadTimes(db, shop.id, {
+      startUtc: new Date("2026-06-01T00:00:00Z"),
+      endUtc: new Date("2026-07-01T00:00:00Z"),
+      timeZone: "America/New_York",
+    });
+
+    expect(rows).toEqual([{ isoWeekday: 6, seats: 5, medianDays: 10, lastThreeDaysShare: 0.4 }]);
   });
 });

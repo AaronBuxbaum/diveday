@@ -11,13 +11,20 @@ import {
   listDayBlowoutDepartures,
   resumeTripBlowout,
   tripBlowoutCause,
+  weatherCallsInWindow,
 } from "./blowouts";
 import { createBookingParty } from "./bookings";
 import { recordRollCall } from "./manifests";
 import { drainNotificationRetries } from "./notifications";
 import { setBookingPayment } from "./payments";
 import { listOwedShopCancellationRefunds, refundBookingsForShopCancelledTrip } from "./refunds";
-import { crewNotices, notificationSendQueue, people, trips as tripsTable } from "./schema";
+import {
+  bookings as bookingsTable,
+  crewNotices,
+  notificationSendQueue,
+  people,
+  trips as tripsTable,
+} from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { createTrip, upcomingTripsWithCounts } from "./trips";
 import { changeTripCrew, listStaff } from "./trips-crew";
@@ -860,5 +867,74 @@ describe("listDayBlowoutDepartures", () => {
     expect(crewed?.rollCallStarted).toBe(false);
     const counted = (await around(ctx.trip.startsAt)).find((row) => row.id === ctx.trip.id);
     expect(counted?.rollCallStarted).toBe(true);
+  });
+});
+
+describe("weatherCallsInWindow — the month's weather line (fifth loop, item 27)", () => {
+  it("counts the called-off departures, their divers, the money back and who moved", async () => {
+    const ctx = await context([
+      { fullName: "Ada Storm", email: "ada.storm@example.com" },
+      { fullName: "Ben Gale", email: "ben.gale@example.com" },
+    ]);
+    const window = {
+      startUtc: new Date(ctx.now.getTime() - 24 * HOUR),
+      endUtc: new Date(ctx.now.getTime() + 48 * HOUR),
+      timeZone: ctx.shop.timezone,
+    };
+    expect(await weatherCallsInWindow(ctx.db, ctx.shop.id, window)).toEqual({
+      departures: 0,
+      days: 0,
+      divers: 0,
+      refundedCents: 0,
+      moved: 0,
+    });
+
+    const email = fakeEmail();
+    await callTripBlowout(ctx.db, callInput(ctx, email.provider));
+    const [first, second] = ctx.bookingIds;
+    if (!first || !second) throw new Error("roster missing");
+    await setBookingPayment(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: first,
+      status: "refunded",
+      amountCents: 9_500,
+      currency: "usd",
+    });
+    // Ben books the next boat after the call.
+    const [ben] = await ctx.db
+      .select({ personId: bookingsTable.personId })
+      .from(bookingsTable)
+      .where(eq(bookingsTable.id, second));
+    const later = await createTrip(ctx.db, {
+      shopId: ctx.shop.id,
+      title: "Storm-Test Make-up",
+      startsAt: new Date(ctx.now.getTime() + 72 * HOUR),
+      endsAt: new Date(ctx.now.getTime() + 76 * HOUR),
+      capacity: 12,
+      plannedDives: 2,
+    });
+    if (!later || !ben) throw new Error("make-up trip missing");
+    await ctx.db.insert(bookingsTable).values({
+      shopId: ctx.shop.id,
+      tripId: later.id,
+      personId: ben.personId,
+      bookedAs: "diver",
+    });
+
+    expect(await weatherCallsInWindow(ctx.db, ctx.shop.id, window)).toEqual({
+      departures: 1,
+      days: 1,
+      divers: 2,
+      refundedCents: 9_500,
+      moved: 1,
+    });
+    // Anchored to the departure: a window that misses it counts nothing.
+    expect(
+      await weatherCallsInWindow(ctx.db, ctx.shop.id, {
+        ...window,
+        startUtc: new Date(ctx.now.getTime() + 48 * HOUR),
+        endUtc: new Date(ctx.now.getTime() + 96 * HOUR),
+      }),
+    ).toMatchObject({ departures: 0, divers: 0 });
   });
 });
