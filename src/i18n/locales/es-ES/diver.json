@@ -5386,7 +5386,7 @@
         "heading": "Esta semana, {range}",
         "board": "{departures, plural, one {# salida} other {# salidas}} en la agenda, {filled} de {seats} plazas reservadas ({percent} %).",
         "link": "Abrir la agenda",
-        "weakest": "{when}: {title} tiene {booked} de {capacity} plazas reservadas.",
+        "weakest": "{when}: {title} tiene {booked} de {capacity, plural, one {# plaza reservada} other {# plazas reservadas}}.",
         "dealLink": "Enviar una oferta de última hora"
       },
       "waivers": {

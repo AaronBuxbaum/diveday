@@ -23,6 +23,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { issueLastMinuteListUnsubscribeToken, listLastMinuteList } from "./last-minute-list";
 import { notificationProviderForDb, sendNotificationBatch } from "./notifications";
 import { offsetPage, PAGE_SIZE } from "./paging";
+import { queryAll } from "./query-helpers";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
   bookingCheckoutBookings,
@@ -506,42 +507,44 @@ export async function lastMinuteDealOutcomes(
   dealIds: readonly string[],
 ): Promise<Map<string, DealOutcome>> {
   if (dealIds.length === 0) return new Map();
-  const [seatRows, moneyRows] = await Promise.all([
-    db
-      .select({
-        dealId: bookingCheckouts.tripPromoId,
-        seats: countDistinct(bookingCheckoutBookings.bookingId),
-      })
-      .from(bookingCheckouts)
-      .innerJoin(
-        bookingCheckoutBookings,
-        and(
-          eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
-          eq(bookingCheckoutBookings.shopId, shopId),
-        ),
-      )
-      .where(
-        and(
-          eq(bookingCheckouts.shopId, shopId),
-          eq(bookingCheckouts.status, "completed"),
-          inArray(bookingCheckouts.tripPromoId, [...dealIds]),
-        ),
-      )
-      .groupBy(bookingCheckouts.tripPromoId),
-    db
-      .select({
-        dealId: bookingCheckouts.tripPromoId,
-        cents: sql<string>`coalesce(sum(greatest(coalesce(${bookingCheckouts.settledTotalCents}, ${bookingCheckouts.totalCents}) - coalesce(${bookingCheckouts.taxCents}, 0), 0)), 0)`,
-      })
-      .from(bookingCheckouts)
-      .where(
-        and(
-          eq(bookingCheckouts.shopId, shopId),
-          eq(bookingCheckouts.status, "completed"),
-          inArray(bookingCheckouts.tripPromoId, [...dealIds]),
-        ),
-      )
-      .groupBy(bookingCheckouts.tripPromoId),
+  const [seatRows, moneyRows] = await queryAll(db, [
+    () =>
+      db
+        .select({
+          dealId: bookingCheckouts.tripPromoId,
+          seats: countDistinct(bookingCheckoutBookings.bookingId),
+        })
+        .from(bookingCheckouts)
+        .innerJoin(
+          bookingCheckoutBookings,
+          and(
+            eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
+            eq(bookingCheckoutBookings.shopId, shopId),
+          ),
+        )
+        .where(
+          and(
+            eq(bookingCheckouts.shopId, shopId),
+            eq(bookingCheckouts.status, "completed"),
+            inArray(bookingCheckouts.tripPromoId, [...dealIds]),
+          ),
+        )
+        .groupBy(bookingCheckouts.tripPromoId),
+    () =>
+      db
+        .select({
+          dealId: bookingCheckouts.tripPromoId,
+          cents: sql<string>`coalesce(sum(greatest(coalesce(${bookingCheckouts.settledTotalCents}, ${bookingCheckouts.totalCents}) - coalesce(${bookingCheckouts.taxCents}, 0), 0)), 0)`,
+        })
+        .from(bookingCheckouts)
+        .where(
+          and(
+            eq(bookingCheckouts.shopId, shopId),
+            eq(bookingCheckouts.status, "completed"),
+            inArray(bookingCheckouts.tripPromoId, [...dealIds]),
+          ),
+        )
+        .groupBy(bookingCheckouts.tripPromoId),
   ]);
   const outcomes = new Map<string, DealOutcome>();
   for (const row of seatRows) {

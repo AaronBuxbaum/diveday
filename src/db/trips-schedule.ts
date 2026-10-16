@@ -490,7 +490,7 @@ export async function departuresWeekBefore(
         lt(trips.startsAt, to),
       ),
     )
-    .orderBy(asc(trips.startsAt), asc(trips.id));
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
 }
 
 export type CopyWeekOutcome =
@@ -519,7 +519,7 @@ export async function copyWeekFromYearBefore(
   return db.transaction(async (tx) => {
     // The shop row, locked, so two taps at once queue behind one another and
     // the second finds the week no longer empty.
-    await tx.select({ id: shops.id }).from(shops).where(eq(shops.id, shopId)).for("update");
+    await tx.select({ id: shops.id }).from(shops).where(eq(shops.id, shopId)).for("no key update");
     const [present] = await tx
       .select({ n: count() })
       .from(trips)

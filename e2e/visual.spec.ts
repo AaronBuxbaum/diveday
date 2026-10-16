@@ -6504,6 +6504,17 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "reports-safety", scheme);
       });
 
+      // The year the insurer renews on (fifth loop, item 33): the same figures
+      // over the whole year, one printable page for the broker.
+      test(`the Safety year renders true to the design (${scheme})`, async ({ page }) => {
+        // Reached by its own link, so the year is the server clock's, not the runner's.
+        await page.goto("/shop/blue-mantis/safety");
+        await page.getByRole("link", { name: "The year" }).click();
+        await page.waitForURL(/\?year=\d{4}$/);
+        await page.getByRole("button", { name: "Print the year" }).waitFor();
+        await capture(page, "reports-safety-year", scheme);
+      });
+
       // The same document at its widest. The roster and crew tables are three
       // columns plus one per roll-call checkpoint, and a checkpoint is a dive,
       // so the reef trip's two dives photograph six columns and nothing in this
