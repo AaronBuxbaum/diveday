@@ -187,7 +187,8 @@
     "deskFoldLabel": "{count, plural, one {# more for other boats and the desk} other {# more for other boats and the desk}}",
     "needsYouLabel": "Needs you",
     "deskGroupLabel": "The desk",
-    "crewTips": "Your share of tips this week: {amount}."
+    "crewTips": "Your share of tips this week: {amount}.",
+    "crewMonth": "{month}: {boats, plural, one {# boat} other {# boats}} · {dives, plural, one {# dive run} other {# dives run}} · {hours, plural, one {# hour} other {# hours}} on the water."
   },
   "quietAddDeparture": "Add a departure",
   "quietNextDepartureLabel": "Next departure",

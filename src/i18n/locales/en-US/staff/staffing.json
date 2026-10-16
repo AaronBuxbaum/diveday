@@ -109,6 +109,7 @@
     "person": "Person",
     "previous": "Previous week",
     "ratingLapsed": "A crew rating isn’t current",
+    "personTotals": "{days, plural, one {# day} other {# days}} · {boats, plural, one {# boat} other {# boats}} · {hours} h",
     "request": "Ask for this one",
     "requestApproved": "Approved",
     "requestAria": "Ask to work {trip}",

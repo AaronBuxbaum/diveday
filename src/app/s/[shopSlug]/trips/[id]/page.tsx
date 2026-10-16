@@ -41,7 +41,7 @@ import { ConditionsLine } from "./_components/ConditionsLine";
 import { bookingCourseFees } from "./_components/course-fees";
 import { crewLanguagesSentence } from "./_components/crew-languages";
 import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
-import { knownDiverFactLines } from "./_components/known-diver-lines";
+import { knownDiverPanelFor } from "./_components/known-diver-lines";
 import { fullTripAlternatives, worthALookList } from "./_components/other-boats";
 import { StaffPreviewBar } from "./_components/StaffPreviewBar";
 import { TripAlternatives } from "./_components/TripAlternatives";
@@ -242,15 +242,12 @@ export default async function TripDetailPage({
   const automatedForecast = crewPrediction
     ? Promise.resolve(null)
     : automatedForecastForDeparture(trip.diveSite, trip.startsAt);
-  const knownDiverPanel = knownDiver
-    ? {
-        name: knownDiver.fullName,
-        handoff: handoffToken ?? "",
-        blankHref: `${publicTripPath(shopSlug, tripId)}#book`,
-        lead: { fullName: knownDiver.fullName, email: knownDiver.email, phone: knownDiver.phone },
-        lines: knownDiverFactLines(knownDiver.facts, t, { locale, timeZone: shop.timezone }),
-      }
-    : null;
+  const knownDiverPanel = knownDiverPanelFor(knownDiver, t, {
+    handoff: handoffToken,
+    blankHref: `${publicTripPath(shopSlug, tripId)}#book`,
+    locale,
+    timeZone: shop.timezone,
+  });
   const diveBriefings = dayBriefings(tripDives, briefing.extras, t);
   const coverPhoto = dayCoverPhoto(diveBriefings);
   // The dock-day rhythm's full run stays on the thread the diver reaches after

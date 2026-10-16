@@ -976,6 +976,22 @@
   Buddy teams are **divers only**: a snorkeler or a rider on a departure can be on no team, and a
   booking that is on one cannot be changed away from diving until it leaves the team.
   See [ADR 20260804-buddy-teams](../../architecture/decisions/20260804-buddy-teams.md).
+- **Party / Came together** — the diver seats that booked together, one of them leading
+  (`bookings.party_lead_booking_id`). On the manifest's buddy panel the divers not yet teamed read
+  "Came together: …" and "Came alone: …", and "Team up each party" makes each party of two or
+  three a **buddy team** in one tap (`planPartyTeams`, `formPartyTeams` in
+  `src/db/buddy-pairs.ts`). **One tap never guesses about who may dive with whom** (dive-domain
+  review of layer r5-4): it leaves for the divemaster, saying why on a "Left for you" line, every
+  party on an intro or a course departure, one with a diver under 12, one whose "Under 18" box
+  disagrees with a date of birth, one with a minor whose date of birth is not on file, one with a
+  diver under 15 and no diver of 18 or more by a date of birth on file holding a verified card the
+  shop has not deleted in the same party, and a party of more than three. Every age reason is said
+  before the size one, so whoever splits a family of four by hand is told there is a child in it.
+  Ages are taken on the departure's own local date; the bands are PADI's and SSI's, kept once in
+  `src/lib/age.ts` (`partyLeftReason` in `src/lib/party-teams.ts`, read against **Junior
+  certification**). Only booked and checked-in diver seats that are not held count, and every line
+  on the panel and the button's number are drawn from that one plan. A team built by hand has no
+  such check.
 - **Participant type** — what a booked person is doing on a departure: a **diver**, a
   **snorkeler**, or a **rider** (`bookings.participant_type`, codes in
   `src/lib/participant-types.ts`). Every booking has exactly one, and it defaults to diver. All
@@ -1460,8 +1476,10 @@
   Blue Mantis" counts, and what a **milestone stamp** is awarded for. One calendar day in the shop's
   own zone, merged across the diver's own DiveDay bookings and the **prior visit** rows a shop imported
   from wherever it kept them before (`mergeShopHistory`, `src/lib/prior-visits.ts`) — so a two-tank
-  morning and an afternoon single on one date are one day, not two. **A day nobody dived is never
-  one**: a cancelled booking, a no-show, an imported visit standing `did_not_happen`, and a
+  morning and an afternoon single on one date are one day, not two. A diver's numbered days (the
+  recap's count, the **milestone** and **Your days**) count only their **diver** seats that are not
+  held (`numberedDiveDay`): a day they rode along is not one of theirs.
+  **A day nobody dived is never one**: a cancelled booking, a no-show, an imported visit standing `did_not_happen`, and a
   cancelled departure are all excluded, the last of those because a blow-out leaves its bookings
   active by design and the count read them as days until a review caught it (2026-08-28). **A
   `no_show` has no escape in any of the three readers** (issue #1558, settled the other way by a
@@ -1494,6 +1512,39 @@
   equality, not "at least", so a miscounted day does not blur a milestone — it skips it permanently.
   Primary ink, never coral (the thread spends its accent three times and this is not one of them),
   and on every other visit the plain ordinal line renders in its place.
+- **Milestone** — a regular's 10th, 25th, 50th or 100th **dive day** with the shop, said once on
+  each side as a count with no badge (H-128): "25th dive day with us" under the name on the roster
+  and the manifest, and "Say hello to Bjorn: 25th dive day with us." on Today, for a diver who
+  said the crew may know (the welcome cue's consent); "Your 25th dive day with Blue Mantis
+  Divers." on the diver's booked moment, and only on a link mailed to the contact on file, never a
+  booking redirect. One number for every reader: the distinct days in the shop's zone, merged
+  across the diver's own diver seats that are not held (`numberedDiveDay` in
+  `src/db/dive-days.ts`) and imported visits (`mergeShopHistory`), up to and including this
+  departure's own local day (`diveDayOrdinal` in `src/lib/prior-visits.ts`), so an afternoon boat
+  after a morning one is the same day, two future boats on different dates are two different
+  counts, and a day they rode along or snorkeled is not counted. The recap's ordinal and the rows
+  of **Your days** count the same days. Silent on every other count, and on a snorkeler's or a
+  rider's seat. Not the **Milestone stamp**, which is the recap's roundel and also marks the first
+  day.
+- **Standing line** — the one line under a diver's name on their record that says what they are to
+  the shop: "23 visits since Mar 2024 · last out Sep 30 · $2,140 spent · brought 2 friends"
+  (`diverStanding` in `src/lib/diver-standing.ts`). Visits are the record's own count, every seat
+  not cancelled and no longer ahead plus every imported visit; it is a count of visits, not of
+  **dive days**, which is the milestone's and the recap's unit. Since and last out are the first
+  and last of those on the shop's calendar. Spent is drawn only for a reader who may manage
+  orders, in the shop's currency, net of refunds; friends brought counts the distinct other people
+  whose live seats name one of this diver's seats as the one that brought them
+  (`booking_referrals`), at this shop only (`friendsBroughtBy`, `src/db/buddy-referrals.ts`).
+- **Shared photo** — a recap photo its diver ticked "Share with everyone on this boat" for at
+  upload (`recap_photos.shared_with_boat_at`, H-129, ADR 20261016-shared-boat-photos). Off by
+  default and per photo. The tick is offered, and honored, only on an upload made through the
+  diver's own readiness link (`uploadRecapPhotoFromReadyAction`); a photo added through a bare
+  `/recap` link stays on that recap alone, because a recap link proves less than a mailed
+  readiness link does. It shows under "From the boat" on the recap of every other seat on the same
+  departure, with the sharer's first name, and leaves when the sharer's seat is cancelled, marked
+  a no-show, left at the dock, held (**Held seat**), or its person deleted. Staff take it down
+  with the gallery's ordinary delete. Not a crew photo (`trip_recap_photos`), which staff add and
+  which reaches every diver without a name.
 - **Rehearsal** — a departure staff add from the schedule builder for training day, to seat test
   divers and practice the boat side: check-in, roll call, close-out. Set when it is created and
   never changed (`trips.is_rehearsal`). It is always private, never priced, never part of a series,
@@ -1622,15 +1673,42 @@
   their own password, which flips the account to **active**. A shop may never end up with zero
   people holding the `owner` role: removing, disabling, or demoting the shop's last owner is
   refused. See [20260726-staff-invite-accounts](../../architecture/decisions/20260726-staff-invite-accounts.md).
+- **Your days** — a diver's other bookings with the shop, listed on one booking's page as "Your
+  days with {shop}": upcoming seats, and the six newest past dive days numbered as the recap
+  stamps them (`diveDayOrdinal`, so two boats on one date carry one number). A row is a send,
+  never a door: "Email me the link" mails that day's own page (a fresh readiness link, or a recap
+  link for a past day) to the address on file, so one link still opens one booking (H-132).
+  **Drawn only on a delivered link** (security review of layer r5-4, F1): a readiness link DiveDay
+  mailed to the contact on file (`booking_capabilities.delivered`), never the one a booking or a
+  seat claim redirects its browser to, because that browser proved only that it typed a name and
+  an address. Never on a held seat; a held seat is never one of its rows and never counted in
+  their numbers. Read in `src/db/your-days.ts`; see
+  [20261016-fresh-link-per-booking-row](../../architecture/decisions/20261016-fresh-link-per-booking-row.md).
 - **Your week** — a crew member's next three departures, on their Today below the day: the boat
-  and departure, when, their job on it (`trip_assignments.trip_role`, "On the crew" when the roster
-  did not say), and the one crew gap the staffing week would draw on it, from the same pass
-  (`getStaffingView`'s `gapTrips`). The window is tomorrow and the six days after it in the shop's
-  zone; today's boat is already badged on the spine, including one that has already sailed. Shown
-  to any reader with a crew assignment, whatever their role, at a shop that plans its crew
+  and departure, when, their job on it (`trip_assignments.trip_role`, "On the crew" when the
+  roster did not say), and the one crew gap the staffing week would draw on it, from the same pass
+  (`getStaffingView`'s `gapTrips`). When reads "At the dock 6:15 AM · leaves 7:00 AM" from their
+  own shift that covers the departure and starts no more than three hours before it, taken with
+  the shop's dock call if that is earlier; with no such shift it reads "Divers at the dock 6:30 AM
+  · leaves 7:00 AM", because the divers' call is not the crew's (`crewCallAt` in
+  `src/lib/dock-call.ts`). The window is tomorrow and the six days after it in the shop's zone;
+  today's boat is already badged on the spine, including one that has already sailed. Shown to any
+  reader with a crew assignment, whatever their role, at a shop that plans its crew
   (`shops.crew_schedule_enabled`), less the sessions "Your sessions" already lists (fourth review
   item 14); absent for a reader rostered on nothing. Read in `src/db/crew-week.ts`, drawn by
   `_components/today/YourWeek.tsx`.
+- **Crew month line** — a crew member's month on their Today, under the tips line: "October: 14
+  boats · 26 dives run · 31 hours on the water" (`crewMonth`, `src/db/crew-tips.ts`). It counts
+  the departures they crewed that are back within this shop month and that ran: scheduled, or with
+  a live logged dive, never a departure called off with nothing logged. Dives are the departure's
+  live logged dives, else its planned ones, and they are dives *run*, not dives this person made:
+  a captain who stayed aboard is credited with the boat, not the water. Hours are the departure's
+  scheduled days (`trip_schedule_days`) when it has them, else its span.
+- **Week totals** — "6 days · 8 boats · 34 h" under each name on the Crew schedule grid
+  (`personWeekTotals`, `src/lib/staffing-week.ts`). Days are the week's columns with a shift or a
+  crewed departure; boats are distinct departures; hours are the union of shifts and crewed
+  meeting windows, each a departure's own scheduled day, so a shift covering the boat it works
+  counts once and a liveaboard counts its days, not its nights.
 - **Crew warning** — a line above the staffing week that informs and never blocks. Four checks: a
   departure whose rostered crew holds no current oxygen-provider credential; separately, one whose
   crew holds no current first aid / CPR credential; a person whose **crewed departures** run past

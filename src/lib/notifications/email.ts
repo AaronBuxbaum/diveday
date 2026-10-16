@@ -123,7 +123,7 @@ type ReadinessLinkEmailInput = {
   readinessUrl: string;
   expiresAt: Date;
   timezone: string;
-  purpose?: "course_forms";
+  purpose?: "course_forms" | "other_day" | "log_entry";
 };
 
 type WaitlistInviteEmailInput = {
@@ -2005,6 +2005,29 @@ export function guardianReleaseCopyEmail(input: GuardianReleaseCopyEmailInput): 
  * page's job, one tap away — restating it here would be a second surface to
  * keep in step with readiness and it would go stale in the diver's inbox.
  */
+const READINESS_LINK_WORDS = {
+  rescue: {
+    subject: "notifications.readinessLink.subject",
+    body: "notifications.readinessLink.body",
+    openLink: "notifications.readinessLink.openLink",
+  },
+  course_forms: {
+    subject: "notifications.courseFormsLink.subject",
+    body: "notifications.courseFormsLink.body",
+    openLink: "notifications.courseFormsLink.openLink",
+  },
+  other_day: {
+    subject: "notifications.otherDayLink.subject",
+    body: "notifications.otherDayLink.body",
+    openLink: "notifications.otherDayLink.openLink",
+  },
+  log_entry: {
+    subject: "notifications.logEntryLink.subject",
+    body: "notifications.logEntryLink.body",
+    openLink: "notifications.logEntryLink.openLink",
+  },
+} as const;
+
 export function readinessLinkEmail(input: ReadinessLinkEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
@@ -2012,18 +2035,9 @@ export function readinessLinkEmail(input: ReadinessLinkEmailInput): Notification
   // The course-forms send is the same link for a different reason: the release
   // is signed and the course's forms are not (ADR 20261008-course-forms), so it
   // must not tell the diver a link of theirs expired.
-  const words =
-    input.purpose === "course_forms"
-      ? ({
-          subject: "notifications.courseFormsLink.subject",
-          body: "notifications.courseFormsLink.body",
-          openLink: "notifications.courseFormsLink.openLink",
-        } as const)
-      : ({
-          subject: "notifications.readinessLink.subject",
-          body: "notifications.readinessLink.body",
-          openLink: "notifications.readinessLink.openLink",
-        } as const);
+  // `other_day` and `log_entry` are the diver asking for another of their days
+  // from one booking's page (H-132), so neither says anything expired either.
+  const words = READINESS_LINK_WORDS[input.purpose ?? "rescue"];
   const body = t(words.body, {
     shopName: input.shopName,
     tripTitle: input.tripTitle,

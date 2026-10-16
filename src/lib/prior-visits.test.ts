@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { mergeShopHistory, priorVisitStanding } from "./prior-visits";
+import { diveDayOrdinal, mergeShopHistory, priorVisitStanding } from "./prior-visits";
 
 /** Minimal stand-ins: the merge only ever reads the two accessors it is handed. */
 type Booking = { id: string; startsAt: Date };
@@ -56,6 +56,65 @@ describe("mergeShopHistory", () => {
       "b:only",
     ]);
     expect(merge([], [])).toEqual([]);
+  });
+});
+
+/**
+ * **One dive day per calendar day** (glossary **Dive day**; dive-domain review
+ * of layer r5-4, fix 2): the count the recap, the milestone and "Your days"
+ * all say.
+ */
+describe("diveDayOrdinal", () => {
+  const timezone = "America/New_York";
+  const at = (iso: string) => new Date(iso);
+
+  it("counts a morning and an afternoon boat on one date once", () => {
+    expect(
+      diveDayOrdinal({
+        diveDayStarts: [at("2026-07-01T11:00:00Z"), at("2026-07-01T18:00:00Z")],
+        visits: [],
+        timezone,
+        throughDay: "2026-07-01",
+      }),
+    ).toBe(1);
+  });
+
+  it("counts an imported visit on a booked day once, and one that did not happen never", () => {
+    expect(
+      diveDayOrdinal({
+        diveDayStarts: [at("2026-07-01T11:00:00Z")],
+        visits: [
+          { visitedOn: "2026-07-01", statusLabel: null },
+          { visitedOn: "2025-05-10", statusLabel: "Completed" },
+          { visitedOn: "2025-06-10", statusLabel: "Cancelled" },
+        ],
+        timezone,
+        throughDay: "2026-07-08",
+      }),
+    ).toBe(3);
+  });
+
+  it("reads a booking on the shop's own calendar, not UTC's", () => {
+    // 01:00 UTC on the 2nd is the evening of the 1st in New York.
+    expect(
+      diveDayOrdinal({
+        diveDayStarts: [at("2026-07-02T01:00:00Z")],
+        visits: [{ visitedOn: "2026-07-01", statusLabel: null }],
+        timezone,
+        throughDay: "2026-07-01",
+      }),
+    ).toBe(1);
+  });
+
+  it("stops at the day asked about, and counts that day", () => {
+    expect(
+      diveDayOrdinal({
+        diveDayStarts: [at("2026-07-01T11:00:00Z"), at("2026-07-20T11:00:00Z")],
+        visits: [{ visitedOn: "2026-08-01", statusLabel: null }],
+        timezone,
+        throughDay: "2026-07-10",
+      }),
+    ).toBe(2);
   });
 });
 

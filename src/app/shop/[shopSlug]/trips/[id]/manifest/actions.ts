@@ -11,6 +11,7 @@ import {
   type BuddyTeamRefusal,
   dissolveBuddyTeam,
   formBuddyTeam,
+  formPartyTeams,
   removeBuddyTeamMember,
 } from "@/db/buddy-pairs";
 import { getDb } from "@/db/client";
@@ -770,6 +771,21 @@ export async function formBuddyTeamAction(ctx: ManifestActionContext, formData: 
   });
   if (!outcome.ok) redirect(`${back}&buddyError=${buddyErrorCode(outcome.reason)}`);
   revalidateAndRedirect(manifestPath(ctx), back);
+}
+
+/**
+ * **"Team up each party"** (fifth-loop ideas, item 50): one team per party of
+ * two or three divers not yet on a team, each through `formBuddyTeam`. The
+ * panel comes back open with the teams on it to check.
+ */
+export async function teamUpPartiesAction(ctx: ManifestActionContext) {
+  const staff = await manifestStaff(ctx);
+  await formPartyTeams(await getDb(), {
+    shopId: staff.user.shopId,
+    tripId: ctx.tripId,
+    recordedByPersonId: staff.user.personId,
+  });
+  revalidateAndRedirect(manifestPath(ctx), manifestBack(ctx));
 }
 
 /** Add one more person to a team that already stands. */

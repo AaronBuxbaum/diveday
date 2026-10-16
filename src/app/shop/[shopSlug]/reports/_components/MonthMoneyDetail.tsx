@@ -1,9 +1,12 @@
+import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
+import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { MonthMoneyDetail as Detail } from "@/db/report-lines";
 import { payoutSentence } from "@/i18n/payout-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { RevenueLine } from "@/lib/report-lines";
+import { shopPath } from "@/lib/staff-notices";
 
 /** Each revenue line's name in the staff bundle. */
 export const BY_LINE_KEYS = {
@@ -78,6 +81,38 @@ export function MonthDetailLines({
         </p>
       ) : null}
     </>
+  );
+}
+
+/**
+ * **Who brought the month's buddy seats** (fifth-loop ideas, item 41):
+ * "Priya Sharma brought 2 friends". The referring diver is the shop's own, so
+ * unlike a partner slug the name is safe to show, and each name is the door to
+ * their record, where the owner thanks them. Nothing in a month with none.
+ */
+export function BuddyReferrerLines({
+  detail,
+  t,
+  shopSlug,
+}: {
+  detail: Detail;
+  t: StaffTranslator;
+  shopSlug: string;
+}) {
+  if (detail.buddyReferrers.length === 0) return null;
+  return (
+    <ul className="mt-1 flex flex-wrap justify-end gap-x-4 text-sm text-muted tabular-nums">
+      {detail.buddyReferrers.map((referrer) => (
+        <li key={referrer.personId}>
+          <Link
+            href={shopPath(shopSlug, "divers", referrer.personId)}
+            className={buttonClass({ variant: "link", size: "sm", flush: true })}
+          >
+            {t("reports.buddyReferrer", { name: referrer.fullName, count: referrer.friends })}
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }
 

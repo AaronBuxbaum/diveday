@@ -717,6 +717,13 @@ export const RATE_LIMITS = {
    */
   readinessLinkResendByBooking: perHour(5),
   /**
+   * "Your days" sends, per *person* (security review of layer r5-4, N1). The
+   * per-target bucket above is one booking's; a regular holds a dozen rows, so
+   * without this one inbox could be sent five mails an hour per row. Every row
+   * mails the same person, so the person is the budget.
+   */
+  yourDayLinkByPerson: perHour(5),
+  /**
    * Unlocking the answers on the doctor's page (`/waivers/[token]/doctor`) by
    * typing the diver's date of birth, per **diver** (the held release's
    * person) rather than per IP or per record, so neither rotating addresses

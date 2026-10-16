@@ -35,9 +35,12 @@ export function PaperSheet({
   band,
   foldLeft,
   foldRight,
+  lang,
   children,
 }: {
   paper: PrintSheetPaper;
+  /** The sheet's own language when it is not the page's: the paper pass prints in the diver's (item 49). */
+  lang?: string;
   tone: SheetTone;
   /** What sits in the coloured band across the head of the sheet. */
   band: ReactNode;
@@ -51,6 +54,7 @@ export function PaperSheet({
   return (
     <section
       className="paper-sheet"
+      lang={lang}
       style={
         {
           width: `${box.width}mm`,

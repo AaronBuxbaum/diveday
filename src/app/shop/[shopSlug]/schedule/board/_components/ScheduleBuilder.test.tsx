@@ -503,6 +503,8 @@ describe("ScheduleBuilder week board", () => {
     );
     await user.click(screen.getByRole("button", { name: /^Copy Open Water Diver/ }));
     expect(screen.getByLabelText("Copy to")).toHaveValue("2026-09-04");
+    // The crew comes along unless unticked (fifth-loop ideas, item 53).
+    expect(screen.getByRole("checkbox", { name: "Same crew" })).toBeChecked();
 
     await user.click(
       within(grid()).getByRole("button", { name: /^Move, copy, or remove Open Water Diver/ }),

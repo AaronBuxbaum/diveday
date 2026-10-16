@@ -29,6 +29,13 @@ export type RentableItemKind =
   | "torch"
   | "smb";
 
+/**
+ * The gear a diver's last trip with the shop carried, to start their next
+ * booking's gear step from (fifth-loop ideas, item 40). Read by
+ * `lastGearFor` (`src/db/booking-handoff.ts`).
+ */
+export type LastGear = { nitrox: boolean; rentedKinds: RentableItemKind[] };
+
 /** Everything a shop's catalog can hold: the rental-fit gear plus nitrox fills. */
 export type ShopCatalogKind = RentableItemKind | "nitrox";
 

@@ -185,6 +185,8 @@ export type BuilderCopy = {
   impactBlockedNotScheduled: string;
   copyTo: string;
   copyDescription: string;
+  /** "Same crew", the copy panel's ticked box (item 53). */
+  copySameCrew: string;
   departureTime: string;
   copying: string;
   copyIt: string;

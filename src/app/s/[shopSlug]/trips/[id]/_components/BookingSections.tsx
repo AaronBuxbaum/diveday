@@ -21,7 +21,7 @@ import type { ShopCurrency } from "@/lib/money";
 import { type ParticipantType, rentsGear } from "@/lib/participant-types";
 import type { PassThroughFee } from "@/lib/pass-through-fee";
 import { publicSchedulePath } from "@/lib/public-routes";
-import { hasAnyRentalPricing, type RentalPricing } from "@/lib/rentals";
+import { hasAnyRentalPricing, type LastGear, type RentalPricing } from "@/lib/rentals";
 import { capacityLabel } from "@/lib/trips";
 import type { BookingFormTrip } from "../_lib/booking-form-trip";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
@@ -423,6 +423,8 @@ export type BookSpotSectionContext = {
   knownDiver?:
     | (KnownDiverPanelProps & {
         lead: { fullName: string; email: string | null; phone: string | null };
+        /** Their last trip's gear, to start their own (the first) gear step from (item 40). */
+        lastGear?: LastGear | null;
       })
     | null;
   /**
@@ -630,6 +632,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
                   plannedDives={trip.plannedDives}
                   currency={currency}
                   onSubtotalChange={onGearSubtotalChange}
+                  asLastTime={index === 0 ? (knownDiver?.lastGear ?? null) : null}
                 />
               ))
           : null}

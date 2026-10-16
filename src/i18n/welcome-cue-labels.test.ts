@@ -15,25 +15,42 @@ const es = staffTranslator("es-ES");
 describe("welcomeCueText", () => {
   it("names both cue kinds in both locales", () => {
     for (const t of [en, es]) {
-      expect(welcomeCueText(t, { kind: "first_trip" })).toBeTruthy();
-      expect(welcomeCueText(t, { kind: "returning", years: 3 })).toBeTruthy();
+      expect(welcomeCueText(t, { kind: "first_trip" }, "en-US")).toBeTruthy();
+      expect(welcomeCueText(t, { kind: "returning", years: 3 }, "en-US")).toBeTruthy();
     }
-    expect(welcomeCueText(en, { kind: "first_trip" })).toBe("First dive with us");
-    expect(welcomeCueText(es, { kind: "first_trip" })).toBe("Primera inmersión con nosotros");
+    expect(welcomeCueText(en, { kind: "first_trip" }, "en-US")).toBe("First dive with us");
+    expect(welcomeCueText(es, { kind: "first_trip" }, "es-ES")).toBe(
+      "Primera inmersión con nosotros",
+    );
   });
 
   it("never calls a snorkeler's or a rider's first seat a dive", () => {
-    expect(welcomeCueText(en, { kind: "first_trip", nonDiver: true })).toBe("First time with us");
-    expect(welcomeCueText(es, { kind: "first_trip", nonDiver: true })).toBe(
+    expect(welcomeCueText(en, { kind: "first_trip", nonDiver: true }, "en-US")).toBe(
+      "First time with us",
+    );
+    expect(welcomeCueText(es, { kind: "first_trip", nonDiver: true }, "es-ES")).toBe(
       "Primera vez con nosotros",
     );
   });
 
   it("agrees with the number of years, at one and at two, in both locales", () => {
-    expect(welcomeCueText(en, { kind: "returning", years: 1 })).toBe("Back after 1 year");
-    expect(welcomeCueText(en, { kind: "returning", years: 2 })).toBe("Back after 2 years");
-    expect(welcomeCueText(es, { kind: "returning", years: 1 })).toBe("De vuelta tras 1 año");
-    expect(welcomeCueText(es, { kind: "returning", years: 2 })).toBe("De vuelta tras 2 años");
+    expect(welcomeCueText(en, { kind: "returning", years: 1 }, "en-US")).toBe("Back after 1 year");
+    expect(welcomeCueText(en, { kind: "returning", years: 2 }, "en-US")).toBe("Back after 2 years");
+    expect(welcomeCueText(es, { kind: "returning", years: 1 }, "es-ES")).toBe(
+      "De vuelta tras 1 año",
+    );
+    expect(welcomeCueText(es, { kind: "returning", years: 2 }, "es-ES")).toBe(
+      "De vuelta tras 2 años",
+    );
+  });
+
+  it("says a regular's milestone dive day as a count in both locales (H-128)", () => {
+    expect(welcomeCueText(en, { kind: "milestone", count: 25 }, "en-US")).toBe(
+      "25th dive day with us",
+    );
+    expect(welcomeCueText(es, { kind: "milestone", count: 25 }, "es-ES")).toBe(
+      "25.º día de buceo con nosotros",
+    );
   });
 
   it("is its own line under the name: sentence case, no full stop, never a badge", () => {
@@ -41,8 +58,8 @@ describe("welcomeCueText", () => {
     // first-timer three ways. One phrase, capitalized like every line under a
     // name, and still not Title Case or a sentence about a record.
     for (const text of [
-      welcomeCueText(en, { kind: "first_trip" }),
-      welcomeCueText(en, { kind: "returning", years: 4 }),
+      welcomeCueText(en, { kind: "first_trip" }, "en-US"),
+      welcomeCueText(en, { kind: "returning", years: 4 }, "en-US"),
     ]) {
       expect(text[0]).toBe(text[0]?.toUpperCase());
       expect(text.slice(1)).toBe(text.slice(1).toLowerCase());
@@ -80,6 +97,19 @@ describe("sayHelloSentences", () => {
       { name: "Lina Costa", cue: { kind: "first_trip" } },
     ]);
     expect(sentences[0]).toContain("Ben Okafor y Lina Costa");
+  });
+
+  it("gives a regular on a milestone dive day their own sentence, in each language (H-128)", () => {
+    expect(
+      sayHelloSentences(en, "en-US", [
+        { name: "Bjorn Aasen", cue: { kind: "milestone", count: 25 } },
+      ]),
+    ).toEqual(["Bjorn Aasen: 25th dive day with us."]);
+    expect(
+      sayHelloSentences(es, "es-ES", [
+        { name: "Bjorn Aasen", cue: { kind: "milestone", count: 50 } },
+      ]),
+    ).toEqual(["Bjorn Aasen: 50.º día de buceo con nosotros."]);
   });
 
   it("gives each returning diver their own sentence, with their own number", () => {

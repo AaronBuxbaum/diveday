@@ -55,7 +55,9 @@
   "yourWeek": {
     "heading": "Your week",
     "openTrip": "Open {title}",
-    "roleUnset": "On the crew"
+    "roleUnset": "On the crew",
+    "atTheDock": "At the dock {dock} · leaves {leaves}",
+    "diversAtTheDock": "Divers at the dock {dock} · leaves {leaves}"
   },
   "actionKind": {
     "rollCallMissingDiver": "Missing diver",
@@ -299,7 +301,8 @@
   "sayHello": {
     "firstTrip": "{names}: first dive with us.",
     "firstTime": "{names}: first time with us.",
-    "returning": "{name} is back after {years, plural, one {# year} other {# years}}."
+    "returning": "{name} is back after {years, plural, one {# year} other {# years}}.",
+    "milestone": "{name}: {ordinal} dive day with us."
   },
   "unfinished": {
     "label": "Unfinished",

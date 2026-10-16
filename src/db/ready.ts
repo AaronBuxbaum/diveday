@@ -15,8 +15,9 @@ import { noCertificationStands } from "@/lib/readiness";
 import type { RentalPricing } from "@/lib/rentals";
 import { canSayRunningLate, runningLateShown } from "@/lib/running-late";
 import { hasSailed } from "@/lib/trips";
+import { type DiveDayMilestone, diveDayMilestone } from "@/lib/visit-milestones";
 import { shopWaiverStatus } from "@/lib/waivers";
-import { offerableWelcomeCue, type WelcomeCue, type WelcomeHello } from "@/lib/welcome-cue";
+import { type OfferableWelcomeCue, offerableWelcomeCue, type WelcomeHello } from "@/lib/welcome-cue";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
 import { firstActiveIntroCourse, hasActiveRefresherCourse } from "./courses";
@@ -36,7 +37,7 @@ import { bookings, certifications, people, shops, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getTripWithBookedOnce } from "./trips";
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
-import { welcomeCueInputsByBooking } from "./welcome-cues";
+import { diveDayCountForSeat, welcomeCueInputsByBooking } from "./welcome-cues";
 
 /**
  * **What `/ready` says in the first paint after a booking**, and nothing else
@@ -79,11 +80,22 @@ export type BookedCard = {
   pickup: { time: string | null; location: string | null };
   bookingCancelled: boolean;
   departureCancelled: boolean;
+  /** This seat is the diver's 10th, 25th, 50th or 100th boat with the shop (H-128), or null. */
+  milestone: DiveDayMilestone | null;
 };
 
 export async function getBookedCard(
   db: AppDb,
-  { shopId, bookingId }: { shopId: string; bookingId: string },
+  {
+    shopId,
+    bookingId,
+    delivered,
+  }: {
+    shopId: string;
+    bookingId: string;
+    /** The link was mailed to the contact on file; only then is a count said. */
+    delivered: boolean;
+  },
 ): Promise<BookedCard | null> {
   const [row] = await db
     .select({
@@ -112,6 +124,13 @@ export async function getBookedCard(
     .limit(1);
   if (!row) return null;
   const identityHeld = row.identityUnconfirmedAt !== null;
+  // A held seat speaks for a record staff have not matched to whoever booked
+  // (#2082), and a booking redirect proved only a typed name and address
+  // (security review r5-4, second pass, N-c): neither is told a count.
+  const milestone =
+    identityHeld || !delivered
+      ? null
+      : diveDayMilestone(await diveDayCountForSeat(db, shopId, bookingId));
   return {
     shop: {
       name: row.shopName,
@@ -125,6 +144,7 @@ export async function getBookedCard(
     pickup: { time: row.pickupTime, location: row.hotelPickupLocation },
     bookingCancelled: row.status === "cancelled",
     departureCancelled: row.tripStatus !== "scheduled",
+    milestone,
   };
 }
 
@@ -377,7 +397,7 @@ export type ReadyPageData = {
    * gap — regardless of whether they have said yes. Null means there is nothing
    * to offer and the question is not asked at all.
    */
-  welcomeOffer: WelcomeCue | null;
+  welcomeOffer: OfferableWelcomeCue | null;
   /** Whether they have said yes. Their own answer, on their own link. */
   welcomeShared: boolean;
   /** What they chose to add to the hello (#2425); null without a yes. */
@@ -508,7 +528,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     // The same reader the manifest uses, so "First dive with us" means the
     // same thing on the diver's own page as it does under their name at the
     // rail (issue #1182).
-    welcomeCueInputsByBooking(db, row.shopId, row.tripId, now),
+    welcomeCueInputsByBooking(db, row.shopId, row.tripId, now, { diveDayCounts: false }),
     // Recall, not inference: who kept this diver's fit after a previous trip.
     // Read here rather than folded into `getRentalFit`'s row, because the
     // staffer's name comes from a join this page is the only caller of.

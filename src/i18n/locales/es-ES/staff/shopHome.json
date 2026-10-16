@@ -187,7 +187,8 @@
     "deskFoldLabel": "{count, plural, one {# más para otras salidas y el mostrador} other {# más para otras salidas y el mostrador}}",
     "needsYouLabel": "Pendiente",
     "deskGroupLabel": "El mostrador",
-    "crewTips": "Tu parte de las propinas esta semana: {amount}."
+    "crewTips": "Tu parte de las propinas esta semana: {amount}.",
+    "crewMonth": "En {month}: {boats, plural, one {# salida} other {# salidas}} · {dives, plural, one {# inmersión realizada} other {# inmersiones realizadas}} · {hours, plural, one {# hora} other {# horas}} en el agua."
   },
   "quietAddDeparture": "Añadir una salida",
   "quietNextDepartureLabel": "Próxima salida",

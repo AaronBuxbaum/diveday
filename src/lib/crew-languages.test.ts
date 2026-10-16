@@ -1,55 +1,62 @@
 import { describe, expect, it } from "vitest";
-import { crewLanguageGap } from "./crew-languages";
+import { crewLanguageBriefings } from "./crew-languages";
 
-describe("crewLanguageGap", () => {
-  it("reports none when a crew member covers every diver language", () => {
+const crew = (name: string, ...languages: string[]) => ({ name, languages });
+const diver = (name: string, language: string) => ({ name, language });
+
+/** "Yusra Idrissi can brief Ines Costa and Diego Alvarez in Spanish." (item 48) */
+describe("crewLanguageBriefings", () => {
+  it("names the divers of a language nobody on the crew has recorded", () => {
     expect(
-      crewLanguageGap({
-        crewSpokenLanguages: [["en"], ["es", "fr"]],
-        diverLanguages: ["es"],
+      crewLanguageBriefings({
+        crew: [crew("Keiko Tanaka", "en")],
+        divers: [diver("Ines Costa", "es"), diver("Diego Alvarez", "es")],
+        shopLanguage: "en",
       }),
-    ).toEqual({ code: "none" });
-  });
-
-  it("reports the uncovered language when nobody on the crew speaks it", () => {
-    expect(
-      crewLanguageGap({
-        crewSpokenLanguages: [["en"]],
-        diverLanguages: ["de"],
-      }),
-    ).toEqual({ code: "uncovered", missing: ["de"] });
-  });
-
-  it("reports every uncovered language, deduplicated, never a repeat per diver", () => {
-    expect(
-      crewLanguageGap({
-        crewSpokenLanguages: [["en"]],
-        diverLanguages: ["de", "de", "ja"],
-      }),
-    ).toEqual({ code: "uncovered", missing: ["de", "ja"] });
-  });
-
-  it("reports none for an empty crew with no diver languages to cover", () => {
-    expect(crewLanguageGap({ crewSpokenLanguages: [], diverLanguages: [] })).toEqual({
-      code: "none",
+    ).toEqual({
+      uncovered: [{ language: "es", divers: ["Ines Costa", "Diego Alvarez"], crew: [] }],
+      covered: [],
     });
   });
 
-  it("reports none when nobody on the crew has recorded any language at all, but no diver signaled one either", () => {
+  it("names who on the crew can brief them, and never the shop's own language", () => {
     expect(
-      crewLanguageGap({
-        crewSpokenLanguages: [[], []],
-        diverLanguages: [],
+      crewLanguageBriefings({
+        crew: [crew("Yusra Idrissi", "en", "es"), crew("Keiko Tanaka", "en")],
+        divers: [diver("Ines Costa", "es"), diver("Mara Quint", "en")],
+        shopLanguage: "en",
       }),
-    ).toEqual({ code: "none" });
+    ).toEqual({
+      uncovered: [],
+      covered: [{ language: "es", divers: ["Ines Costa"], crew: ["Yusra Idrissi"] }],
+    });
   });
 
-  it("still reports a gap when the crew has recorded no languages and a diver signaled one", () => {
+  it("says nothing for divers who stated no language, or an empty boat", () => {
+    expect(crewLanguageBriefings({ crew: [], divers: [], shopLanguage: "en" })).toEqual({
+      uncovered: [],
+      covered: [],
+    });
+  });
+
+  it("names a diver once, however many seats they hold", () => {
     expect(
-      crewLanguageGap({
-        crewSpokenLanguages: [[], []],
-        diverLanguages: ["ja"],
+      crewLanguageBriefings({
+        crew: [],
+        divers: [diver("Ines Costa", "es"), diver("Ines Costa", "es")],
+        shopLanguage: "en",
+      }).uncovered,
+    ).toEqual([{ language: "es", divers: ["Ines Costa"], crew: [] }]);
+  });
+
+  it("never says the shop's own language is missing, though no crew recorded it", () => {
+    // Crew record their extra languages; the shop's own is every briefing's.
+    expect(
+      crewLanguageBriefings({
+        crew: [crew("Yusra Idrissi", "es")],
+        divers: [diver("Mara Quint", "en")],
+        shopLanguage: "en",
       }),
-    ).toEqual({ code: "uncovered", missing: ["ja"] });
+    ).toEqual({ uncovered: [], covered: [] });
   });
 });

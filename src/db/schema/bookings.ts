@@ -819,6 +819,15 @@ export const bookingCapabilities = pgTable(
      * revoked. `token_hash` is still what every lookup matches.
      */
     tokenSealed: text("token_sealed"),
+    /**
+     * True when the token left only inside a message to the contact on file
+     * (an email or a text), never handed to the browser that asked for it.
+     * A link the booking form or a seat claim redirects to proves only that
+     * someone typed a name and an address, so what the page shows about the
+     * person's *other* bookings ("Your days") waits for a delivered link
+     * (security review of layer r5-4, F1). False unless the minter says so.
+     */
+    delivered: boolean("delivered").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

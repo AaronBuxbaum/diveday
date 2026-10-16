@@ -8,7 +8,13 @@ import { Door, FieldGuideDoor, PhotoDoor, TipDoor } from "./RecapDoors";
 afterEach(cleanup);
 
 /** The photo door as `AfterState` renders it, inside the doors' list. */
-function PhotoDoorOf({ context }: { context: AfterStateProps }) {
+function PhotoDoorOf({
+  context,
+  canShareWithBoat = true,
+}: {
+  context: AfterStateProps;
+  canShareWithBoat?: boolean;
+}) {
   return (
     <ul>
       <PhotoDoor
@@ -17,6 +23,7 @@ function PhotoDoorOf({ context }: { context: AfterStateProps }) {
         tripTitle={context.trip.title}
         photos={context.photos}
         maxPhotos={context.maxPhotos}
+        canShareWithBoat={canShareWithBoat}
         notice={undefined}
         action={noop}
       />
@@ -79,6 +86,24 @@ describe("the photo door's second and third controls", () => {
   });
 });
 
+/**
+ * **The share tick is drawn on the readiness link only** (security review of
+ * layer r5-4, F3): `/recap` is forwardable for 180 days, so a photo added there
+ * stays on that diver's own recap.
+ */
+describe("the photo door's share tick", () => {
+  it("is offered from the diver's readiness link", () => {
+    const { container } = render(<PhotoDoorOf context={props()} canShareWithBoat />);
+    expect(container.querySelector('input[name="shareWithBoat"]')).toBeTruthy();
+  });
+
+  it("is not offered from the recap link", () => {
+    const { container } = render(<PhotoDoorOf context={props()} canShareWithBoat={false} />);
+    expect(container.querySelector('input[name="shareWithBoat"]')).toBeNull();
+    expect(container.querySelector('input[name="caption"]')).toBeTruthy();
+  });
+});
+
 describe("a quiet door", () => {
   it("is a native disclosure, shut unless told otherwise", () => {
     render(
@@ -106,6 +131,7 @@ describe("the photo door's limit", () => {
           tripTitle="Two-Tank"
           photos={photos}
           maxPhotos={1}
+          canShareWithBoat
           notice={undefined}
           action={noop}
         />

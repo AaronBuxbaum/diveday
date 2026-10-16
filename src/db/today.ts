@@ -2129,6 +2129,7 @@ export async function getTodayWork(
         sharedAt: seat.sharedAt,
         lastDivedAt: seat.lastDivedAt,
         nonDiver: seat.nonDiver,
+        diveDayCount: seat.diveDayCount,
         tripEndsAt: departure.endsAt,
         now,
       });

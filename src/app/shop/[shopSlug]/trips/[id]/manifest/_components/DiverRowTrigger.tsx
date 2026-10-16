@@ -155,7 +155,9 @@ function UnderName({
   return (
     <>
       {welcomeCue ? (
-        <span className="mt-0.5 block text-base text-muted">{welcomeCueText(t, welcomeCue)}</span>
+        <span className="mt-0.5 block text-base text-muted">
+          {welcomeCueText(t, welcomeCue, locale)}
+        </span>
       ) : null}
       {lateAt ? (
         <span className="mt-0.5 block text-base text-muted">

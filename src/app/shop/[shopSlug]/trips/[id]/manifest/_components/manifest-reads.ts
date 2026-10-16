@@ -1,7 +1,7 @@
 import { departureKitRecord } from "@/db/boat-safety";
 import { openSnagsForTrip } from "@/db/boat-snags";
 import { departureVessels } from "@/db/boats";
-import { listTripBuddyTeams } from "@/db/buddy-pairs";
+import { listTripBuddyTeams, planPartyTeams } from "@/db/buddy-pairs";
 import type { AppDb } from "@/db/client";
 import { listDeskEventsSince } from "@/db/desk-events";
 import { diveIntentTallyForTrip } from "@/db/dive-intent";
@@ -50,6 +50,7 @@ export async function readManifestPage(
     vessels,
     kitRecord,
     snags,
+    partyPlan,
   ] = await Promise.all([
     getTripManifests(db, shopId, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
@@ -91,6 +92,8 @@ export async function readManifestPage(
     // What earlier crews on this boat said is wrong with it, and what this
     // crew wrote (fifth-loop ideas, item 1).
     openSnagsForTrip(db, shopId, tripId),
+    // Who booked together, and which parties one tap may team (item 50).
+    planPartyTeams(db, shopId, tripId),
   ]);
   // Each live site's field guide, for the dive log's "one thing you saw"
   // picker (issue #1190). Read after the sites resolve because it is keyed by
@@ -143,6 +146,7 @@ export async function readManifestPage(
     vessel: vessels.get(tripId) ?? null,
     kitRecord,
     siteHistory,
+    partyPlan,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,

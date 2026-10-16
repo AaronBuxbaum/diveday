@@ -534,6 +534,7 @@
     "firstTrip": "First dive with us",
     "firstTime": "First time with us",
     "returning": "Back after {years, plural, one {# year} other {# years}}",
+    "milestone": "{ordinal} dive day with us",
     "dockLine": "Say hello to {name}: {card}.",
     "dockLineNoCard": "Say hello to {name}.",
     "dockLineSays": "Say hello to {name}: says {level}.",

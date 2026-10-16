@@ -7,7 +7,7 @@ import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
 import { formatDateWithYear, formatTime } from "@/lib/format";
 import { meetingPointOfRows } from "@/lib/meeting-point";
-import { publicAppUrl } from "@/lib/notifications";
+import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { PAPER_PASS_PAPER, passCodePayload, storefrontAddress } from "@/lib/print-sheets";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
@@ -56,7 +56,12 @@ export default async function PaperPassPage({
   const booking = await getPassBooking(db, shop.id, bookingId);
   if (!booking) notFound();
 
-  const locale = await requestLocale(shop.defaultLocale);
+  // **Two languages on one page** (fifth-loop ideas, item 49): the paper is
+  // the diver's, so it speaks the language they read, or the shop's when they
+  // never said; the screen around it (back, print) is the staffer's.
+  const readerLocale = await requestLocale(shop.defaultLocale);
+  const readerT = staffTranslator(readerLocale);
+  const locale = recipientLocale(booking.diverLocale, shop.defaultLocale);
   const t = staffTranslator(locale);
   const theme = deriveBrandTheme(shop.brandColor ?? DIVEDAY_BRAND_COLOR);
   // The shop's own dock call, which is when a diver should *be there* — not
@@ -72,11 +77,12 @@ export default async function PaperPassPage({
       backHref={shopPath(shopSlug, "trips", booking.tripId)}
       paper={PAPER_PASS_PAPER}
       brandDisplayFont={shop.brandDisplayFont}
-      backLabel={t("trips.tabs.divers")}
-      printLabel={t("print.sheet.door")}
+      backLabel={readerT("trips.tabs.divers")}
+      printLabel={readerT("print.sheet.door")}
     >
       <PaperSheet
         paper={PAPER_PASS_PAPER}
+        lang={locale === readerLocale ? undefined : locale}
         tone={{ band: theme.primary, bandInk: theme.primaryForeground }}
         band={
           <>

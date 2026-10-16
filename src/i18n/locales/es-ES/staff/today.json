@@ -55,7 +55,9 @@
   "yourWeek": {
     "heading": "Tu semana",
     "openTrip": "Abrir {title}",
-    "roleUnset": "En la tripulación"
+    "roleUnset": "En la tripulación",
+    "atTheDock": "En el muelle a las {dock} · sale a las {leaves}",
+    "diversAtTheDock": "Buceadores en el muelle a las {dock} · sale a las {leaves}"
   },
   "actionKind": {
     "rollCallMissingDiver": "Buceador sin localizar",
@@ -299,7 +301,8 @@
   "sayHello": {
     "firstTrip": "{names}: primera inmersión con nosotros.",
     "firstTime": "{names}: primera vez con nosotros.",
-    "returning": "{name} vuelve tras {years, plural, one {# año} other {# años}}."
+    "returning": "{name} vuelve tras {years, plural, one {# año} other {# años}}.",
+    "milestone": "{name}: {ordinal} día de buceo con nosotros."
   },
   "unfinished": {
     "label": "Sin terminar",

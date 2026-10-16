@@ -50,6 +50,7 @@ import { DepartureLedger, departureLedgerRows } from "./_components/DepartureLed
 import { EmptySeats } from "./_components/EmptySeats";
 import { type MonthFigure, MonthFigures } from "./_components/MonthFigures";
 import {
+  BuddyReferrerLines,
   MoneyByLine,
   MonthDetailLines,
   MonthFootnotes,
@@ -245,10 +246,7 @@ export default async function ReportsPage({
       page: Number.parseInt(page ?? "", 10),
     }),
     baselineWindow
-      ? getMonthlyReport(db, shop.id, baselineWindow.start, baselineWindow.end, {
-          currency,
-          timeZone: tz,
-        })
+      ? getMonthlyReport(db, shop.id, baselineWindow.start, baselineWindow.end, shopMoney)
       : Promise.resolve(null),
     // The money by line, the package dives still owed, and the returning
     // divers (owner decision 2026-10-09) — `src/lib/report-lines.ts`.
@@ -580,6 +578,7 @@ export default async function ReportsPage({
           ) : null}
 
           <MonthDetailLines report={report} detail={moneyDetail} t={t} money={money} />
+          <BuddyReferrerLines detail={moneyDetail} t={t} shopSlug={shopSlug} />
           <MoneyByLine detail={moneyDetail} t={t} money={money} />
           <MonthPayouts detail={moneyDetail} t={t} locale={locale} timeZone={tz} />
           <EmptySeats

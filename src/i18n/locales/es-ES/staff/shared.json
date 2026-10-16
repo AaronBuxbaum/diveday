@@ -534,6 +534,7 @@
     "firstTrip": "Primera inmersión con nosotros",
     "firstTime": "Primera vez con nosotros",
     "returning": "De vuelta tras {years, plural, one {# año} other {# años}}",
+    "milestone": "{ordinal} día de buceo con nosotros",
     "dockLine": "Saluda a {name}: {card}.",
     "dockLineNoCard": "Saluda a {name}.",
     "dockLineSays": "Saluda a {name}: dice {level}.",

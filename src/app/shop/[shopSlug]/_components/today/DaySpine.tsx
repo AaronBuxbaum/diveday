@@ -7,6 +7,7 @@ import {
 } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckHost";
 import { AgencyCheckRow } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckRow";
 import { agencyCheckCopies } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
+import { CrewLines, type CrewReading } from "@/app/shop/[shopSlug]/_components/today/CrewLines";
 import {
   addAgencyListedCardsAction,
   agencyCheckAction,
@@ -795,31 +796,6 @@ function DeskPaymentsRow({ shopSlug, t }: { shopSlug: string; t: StaffTranslator
   );
 }
 
-/**
- * The reader's share of the week's paid tips on boats they crewed (`crewTipShare`;
- * UX review 2026-10-11, item 18; issue #2468): the crew seeing the shop pass
- * tips on. A plain line, never coral. The only shop money shown below the
- * money gate, and not precedent for more (H-125). Zero renders nothing.
- */
-function CrewTipsLine({
-  cents,
-  currency,
-  locale,
-  t,
-}: {
-  cents: number;
-  currency: string;
-  locale: string;
-  t: StaffTranslator;
-}) {
-  if (cents <= 0) return null;
-  return (
-    <p className="text-sm text-muted tabular-nums">
-      {t("shopHome.spine.crewTips", { amount: formatMoneyScanned(cents, currency, locale) })}
-    </p>
-  );
-}
-
 /** Everything `DaySpine` draws, assembled once by its caller and handed over as one object. */
 export type DaySpineContext = {
   spine: DaySpineData;
@@ -869,8 +845,8 @@ export type DaySpineContext = {
    * renders, and on most days it is null.
    */
   factOfScale?: FactOfScale | null;
-  /** Paid tips on the reader's boats this week (`CrewTipsLine`). */
-  crewTipsCents?: number;
+  /** The reader's own crew lines: this week's tips, this month's boats (`CrewLines`). */
+  crew?: CrewReading;
   /** The instructor lens's own labeled group, above the first station. */
   sessions?: React.ReactNode;
   /** The day's closing state. Omitted, the spine renders its morning reading alone. */
@@ -930,7 +906,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
     firstRun,
     firstBooking,
     factOfScale,
-    crewTipsCents = 0,
+    crew = { tipsCents: 0, month: null },
     sessions,
     evening,
     highWind,
@@ -1040,7 +1016,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
         </EarnedMomentLine>
       ) : null}
 
-      <CrewTipsLine cents={crewTipsCents} currency={currency} locale={locale} t={t} />
+      <CrewLines crew={crew} currency={currency} locale={locale} t={t} />
 
       {/* **The first booking ever, and then never again.** The word, the coral
           dot, and the seat itself — one row, because the moment *is* that

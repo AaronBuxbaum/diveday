@@ -19,6 +19,8 @@ import { routeSource } from "@/test/route-source";
 const SOURCE = component("page.tsx");
 /** The after-dive reads the page asks first (code review 2026-10-13, item 29). */
 const AFTER_DIVE_READS = component("after-dive-reads.ts");
+/** The after-state's doors, bound (security review r5-4, F3). */
+const AFTER_STATE_ACTIONS = component("after-state-actions.ts");
 
 /**
  * The source of a file the page composes, read by name: under the route's
@@ -237,10 +239,21 @@ describe("after the dive", () => {
     // move its refund; the recap actions verify a *recap* token, and the two
     // are domain-separated on purpose (src/lib/recap-links.ts). Widening
     // either side would hand a review form the power to release a seat.
-    expect(SOURCE).toContain("signRecapToken(bookingId)");
+    expect(SOURCE).toContain("readyAfterStateProps({");
+    expect(AFTER_STATE_ACTIONS).toContain("actions: afterStateActions(token, input.bookingId)");
+    expect(AFTER_STATE_ACTIONS).toContain("signRecapToken(bookingId)");
     for (const action of ["submitReviewAction", "uploadRecapPhotoAction", "startTipAction"]) {
-      expect(SOURCE).not.toContain(`${action}.bind(null, token)`);
+      expect(AFTER_STATE_ACTIONS).not.toContain(`${action}.bind(null, token)`);
     }
+  });
+
+  it("uploads a recap photo through this page's own token, the one door that may share it", () => {
+    // Security review of layer r5-4, F3: the forwardable recap link never
+    // publishes to the boat; the readiness link's upload verifies its token.
+    expect(AFTER_STATE_ACTIONS).toContain(
+      "uploadPhoto: uploadRecapPhotoFromReadyAction.bind(null, token)",
+    );
+    expect(AFTER_STATE_ACTIONS).not.toContain("uploadRecapPhotoAction");
   });
 });
 

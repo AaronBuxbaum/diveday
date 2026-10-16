@@ -88,6 +88,7 @@
     }
   },
   "buddySeats": "{count, plural, one {# plaza llegó} other {# plazas llegaron}} desde el enlace de un buceador",
+  "buddyReferrer": "{name} trajo {count, plural, one {# amigo} other {# amigos}}",
   "byLine": {
     "heading": "Ingresos por línea",
     "caption": "Cobrado este mes, sea cual sea la salida, sin impuestos ni reembolsos",

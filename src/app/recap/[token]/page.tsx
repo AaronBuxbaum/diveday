@@ -219,8 +219,10 @@ export default async function DiveRecapPage({
     bookingId,
     locale,
     t,
-    // A recap link is shareable and lives 180 days; it never mints a handoff.
+    // A recap link is shareable and lives 180 days: it never mints a handoff
+    // and never reads the person's other bookings.
     mintHandoff: false,
+    delivered: false,
     params: { review, photo, tip, pulse },
     actions: {
       submitReview: submitReviewAction.bind(null, token),

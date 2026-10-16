@@ -580,7 +580,7 @@ async function TodayBody({
             showPaymentsRow,
             firstBooking,
             factOfScale,
-            crewTipsCents: dayMoney.crewTipsCents,
+            crew: dayMoney.crew,
             evening,
             needsYou,
             now,

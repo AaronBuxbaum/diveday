@@ -163,6 +163,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Courtesy message
 - Crew clash
 - Crew gap
+- Crew month line
 - Crew news
 - Crew roll-call event
 - Crew schedule
@@ -211,6 +212,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Medical hold
 - Medical questionnaire
 - Meeting point
+- Milestone
 - Milestone stamp
 - Minor unit
 - Monday email
@@ -229,6 +231,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Paper / in-person signature
 - Paper pass
 - Participant type
+- Party / Came together
 - Payment event
 - Per-trip crew role
 - Physician clearance
@@ -265,6 +268,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Set-up request
 - Settled total
 - Setup link
+- Shared photo
 - Shop currency
 - Shop day scan
 - Shore alert contact
@@ -276,6 +280,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Staff invite
 - Stale roll call
 - Standing crew
+- Standing line
 - Station acknowledgement
 - Station echo
 - STOP list
@@ -297,8 +302,10 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Waiver / release
 - Waiver activity
 - Waiver completion
+- Week totals
 - WhatsApp sender
 - Working shift
+- Your days
 - Your week
 
 ## Records and evidence

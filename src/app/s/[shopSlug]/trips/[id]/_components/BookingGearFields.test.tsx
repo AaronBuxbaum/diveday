@@ -322,3 +322,47 @@ describe("BookingGearFields", () => {
     }
   });
 });
+
+/**
+ * **"As on your last trip"** (fifth-loop ideas, item 40): a known diver's own
+ * slot starts from what their last trip carried, said so, and every box stays
+ * theirs to untick. Only kinds this departure offers come across.
+ */
+describe("BookingGearFields as on the last trip", () => {
+  it("starts open with last trip's gear and nitrox ticked, and says why", () => {
+    renderDiver(
+      <BookingGearFields
+        index={0}
+        showDiverLabel={false}
+        rentalItems={rentalItems}
+        course={null}
+        pricing={pricing}
+        plannedDives={2}
+        currency="usd"
+        asLastTime={{ nitrox: true, rentedKinds: ["bcd", "drysuit"] }}
+      />,
+    );
+    expect(screen.getByLabelText("Need rental gear?")).toBeChecked();
+    expect(screen.getByLabelText(/^BCD/)).toBeChecked();
+    expect(screen.getByLabelText(/^Regulator/)).not.toBeChecked();
+    expect(screen.getByLabelText(/I.d like nitrox/)).toBeChecked();
+    expect(screen.getByText("Ticked as on your last trip.")).toBeInTheDocument();
+  });
+
+  it("starts closed and says nothing about a last trip without one", () => {
+    renderDiver(
+      <BookingGearFields
+        index={0}
+        showDiverLabel={false}
+        rentalItems={rentalItems}
+        course={null}
+        pricing={pricing}
+        plannedDives={2}
+        currency="usd"
+        asLastTime={null}
+      />,
+    );
+    expect(screen.getByLabelText("Need rental gear?")).not.toBeChecked();
+    expect(screen.queryByText("Ticked as on your last trip.")).not.toBeInTheDocument();
+  });
+});

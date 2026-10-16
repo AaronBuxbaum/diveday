@@ -744,3 +744,30 @@ describe("the next dive", () => {
     expect(container.innerHTML).not.toMatch(/score|confidence|match strength/i);
   });
 });
+
+/**
+ * **Never a seat they already hold** (fifth-loop ideas, item 37). The held
+ * seat stands where the next-dive card would, and the footer's "next on the
+ * board" fact stands down so the page names one departure, not two.
+ */
+describe("a diver already booked on a later boat", () => {
+  const held = { date: "Sat, Oct 24", title: "Two-Tank Reef", time: "7:00 AM" };
+
+  it("says the held seat and drops the footer's next-departure fact", () => {
+    render(
+      <AfterState
+        context={props({
+          bookedNext: held,
+          nextDeparture: { title: "Night dive", when: "Fri, Oct 23" } as never,
+        })}
+      />,
+    );
+    expect(screen.getByText("recap.bookedNext(Sat, Oct 24,Two-Tank Reef,7:00 AM)")).toBeTruthy();
+    expect(screen.queryByText(/Night dive/)).toBeNull();
+  });
+
+  it("says nothing about other seats without one", () => {
+    render(<AfterState context={props()} />);
+    expect(screen.queryByText(/recap\.bookedNext/)).toBeNull();
+  });
+});

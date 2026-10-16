@@ -1333,6 +1333,7 @@ async function sendStoredBookingConfirmation(
         shopId,
         bookingId: row.booking.id,
         purpose: "readiness",
+        delivered: true,
       })
     : null;
   return sendAndRecordNotification(

@@ -9,6 +9,7 @@ import {
   type SpineDeparture,
   type TodayAction,
 } from "@/lib/today";
+import type { CrewReading } from "./CrewLines";
 import { DaySpine, type EveningReading, type SpineDraft } from "./DaySpine";
 
 /**
@@ -133,7 +134,7 @@ export function renderSpine({
   firstRun?: React.ReactNode;
   firstBooking?: FirstBooking | null;
   factOfScale?: FactOfScale | null;
-  crewTipsCents?: number;
+  crew?: CrewReading;
   evening?: EveningReading;
   blocked?: number;
 } = {}) {
