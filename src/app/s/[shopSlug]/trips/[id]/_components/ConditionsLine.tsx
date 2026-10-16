@@ -5,6 +5,7 @@ import { depthText, seaStateText, temperatureText, windText } from "@/i18n/unit-
 import { formatDateTimeTz } from "@/lib/format";
 import { seaStateReading, windReading } from "@/lib/marine-forecast";
 import { temperatureUnitFor } from "@/lib/temperature-units";
+import type { ReaderUnits } from "@/i18n/reader-units";
 import type { AutomatedForecast, Shop, Trip } from "./types";
 
 /**
@@ -83,6 +84,8 @@ type ConditionsLineProps = {
    */
   crewLanguages: string | null;
   locale: string;
+  /** The reader's own units, added after the shop's when they differ (ideas item 22). */
+  readerUnits?: ReaderUnits;
 };
 
 function ConditionsLineView({
@@ -92,6 +95,7 @@ function ConditionsLineView({
   automatedForecast,
   crewLanguages,
   locale,
+  readerUnits,
 }: ConditionsLineProps) {
   const t = diverTranslator(locale);
   // Stored metric, displayed in the shop's own units (src/lib/depth-units.ts,
@@ -129,11 +133,18 @@ function ConditionsLineView({
   const parts = [
     waterTemperatureC !== null
       ? t("trip.conditionsWater", {
-          value: temperatureText(t, waterTemperatureC, temperatureUnit),
+          value: temperatureText(
+            t,
+            waterTemperatureC,
+            temperatureUnit,
+            readerUnits?.temperature,
+          ),
         })
       : null,
     visibilityMeters !== null
-      ? t("trip.conditionsVisibility", { value: depthText(t, visibilityMeters, depthUnit) })
+      ? t("trip.conditionsVisibility", {
+          value: depthText(t, visibilityMeters, depthUnit, readerUnits?.depth),
+        })
       : null,
     surfaceText ?? null,
     wind?.label ?? null,

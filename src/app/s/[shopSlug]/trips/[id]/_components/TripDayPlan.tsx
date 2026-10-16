@@ -13,7 +13,7 @@ import { isMarineLifeSlug } from "@/db/marine-life-catalog";
 import type { SiteReview } from "@/db/reviews";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
-import { depthText } from "@/i18n/unit-labels";
+import { depthRangeText, depthText } from "@/i18n/unit-labels";
 import { dayProfileRows } from "@/lib/day-profile";
 import type { DepthUnit } from "@/lib/depth-units";
 import { type DiveSiteLandmarkKind, parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
@@ -51,6 +51,8 @@ export type DayProfileFacts = {
    * days the line could not say in one breath.
    */
   day?: { startsAt: Date; endsAt: Date; plannedDives: number };
+  /** The reader's depth unit, added after the shop's when it differs (ideas item 22). */
+  readerDepthUnit?: DepthUnit | null;
 };
 
 /**
@@ -321,11 +323,11 @@ export function TripDayPlan({
           // maximum where it did not.
           // The crew's month for this site, once — decided above, in plan order.
           const seen = seenByDive.get(dive.id) ?? null;
-          const depth =
-            diveSite?.depthRange ??
-            (profile && diveSite?.maxDepthMeters
-              ? depthText(t, diveSite.maxDepthMeters, profile.depthUnit)
-              : null);
+          const depth = diveSite?.depthRange
+            ? depthRangeText(t, diveSite.depthRange, profile?.readerDepthUnit)
+            : profile && diveSite?.maxDepthMeters
+              ? depthText(t, diveSite.maxDepthMeters, profile.depthUnit, profile.readerDepthUnit)
+              : null;
           // **The site's name is the door to its own page** (N-48). The whole
           // of what the shop wrote about a place — the prose, the drawn route,
           // the field guide, the diver photos, and every other departure going

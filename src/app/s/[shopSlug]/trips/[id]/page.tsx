@@ -11,7 +11,7 @@ import { shopBySlugCached } from "@/db/shops-cached";
 import { checkoutMode } from "@/db/stripe-accounts";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { diverTranslator } from "@/i18n/messages";
-import { requestLocale } from "@/i18n/request";
+import { requestLocale, requestReaderUnits } from "@/i18n/request";
 import { auth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
@@ -174,6 +174,8 @@ export default async function TripDetailPage({
   // What this visitor's device asked for, falling back to the shop's own
   // default — DiveDay never asks (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
+  // The units this visitor thinks in, after the shop's (fifth-loop ideas, item 22).
+  const readerUnits = await requestReaderUnits(locale);
   // Every list price on this page is in the shop's own currency — a Cozumel
   // shop quotes pesos. Amounts a diver has already *paid* keep the currency
   // stored on their payment row instead (docs ADR 20260731-shop-currency).
@@ -381,6 +383,7 @@ export default async function TripDetailPage({
                 depthUnit: shop.depthUnit,
                 diveMode: trip.diveMode,
                 dayCount: meetingDays.length,
+                readerDepthUnit: readerUnits.depth,
                 // The day's two ends, in one line (fifth-loop ideas, item 19):
                 // a one-day boat only; a course says its own day.
                 day:
@@ -415,6 +418,7 @@ export default async function TripDetailPage({
                 automatedForecast={automatedForecast}
                 crewLanguages={crewLanguagesLine}
                 locale={locale}
+                readerUnits={readerUnits}
               />
             </div>
             <TripChangeLedger

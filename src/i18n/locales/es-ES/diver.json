@@ -48,6 +48,7 @@
       "nitrox": "Tengo certificación de nitrox (aire enriquecido)"
     },
     "units": {
+      "withReaderUnit": "{first} ({second})",
       "meters": "{value} m",
       "feet": "{value} ft",
       "celsius": "{value} °C",
