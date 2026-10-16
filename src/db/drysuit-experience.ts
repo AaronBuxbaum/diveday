@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   canClearDrysuitExperience,
@@ -55,8 +55,15 @@ async function lockDiver(tx: DbExecutor, shopId: string, personId: string) {
       seenBy: people.drysuitExperienceSeenByPersonId,
     })
     .from(people)
-    .where(and(eq(people.id, personId), eq(people.shopId, shopId), livePerson()))
-    .for("update");
+    .where(
+      and(
+        eq(people.id, personId),
+        eq(people.shopId, shopId),
+        livePerson(),
+        isNull(people.anonymizedAt),
+      ),
+    )
+    .for("no key update");
   return row ?? null;
 }
 

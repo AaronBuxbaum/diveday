@@ -4,6 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { checkDrysuitCard } from "@/lib/drysuit-card";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
+import { mergeDiverRecords } from "./diver-merge";
 import { createDiver, getDiverProfile } from "./divers";
 import { clearDrysuitExperienceSeen, recordDrysuitExperienceSeen } from "./drysuit-experience";
 import {
@@ -262,5 +263,40 @@ describe("drysuit experience seen (#2136)", () => {
       .from(people)
       .where(eq(people.id, diver.id));
     expect(row).toEqual({ at: null, by: null, note: null });
+  });
+
+  /** Security review X4: a merged-away record is not a diver to record against. */
+  it("refuses a merged-away record and erases the merged shell's stamp with the survivor", async () => {
+    const { db, shop } = ctx;
+    const by = await ownerId();
+    const source = await dryDiver("Shell Sam");
+    const survivor = await dryDiver("Kept Kim");
+    await record(source.id, by);
+    await mergeDiverRecords({
+      db,
+      shopId: shop.id,
+      personId: source.id,
+      survivorId: survivor.id,
+      actorPersonId: by,
+    });
+    expect(await record(source.id, by)).toEqual({ ok: false, reason: "not_found" });
+    expect(
+      await clearDrysuitExperienceSeen(db, {
+        shopId: shop.id,
+        personId: source.id,
+        byPersonId: by,
+      }),
+    ).toEqual({ ok: false, reason: "not_found" });
+
+    await anonymizeDiver(db, { shopId: shop.id, personId: survivor.id, actorPersonId: by });
+    const rows = await db
+      .select({
+        at: people.drysuitExperienceSeenAt,
+        by: people.drysuitExperienceSeenByPersonId,
+        note: people.drysuitExperienceSeenNote,
+      })
+      .from(people)
+      .where(eq(people.id, source.id));
+    expect(rows).toEqual([{ at: null, by: null, note: null }]);
   });
 });
