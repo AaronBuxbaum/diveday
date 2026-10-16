@@ -74,6 +74,24 @@ describe("the diver roll call of a cancelled departure nobody counted on", () =>
     });
   }
 
+  // Dive-domain review D8: a closed row is not a diver held at the dock.
+  for (const checkpoint of ["departure", "after_dive_1"] as const) {
+    it(`draws a ready diver's closed row as uncalled, never held (${checkpoint})`, () => {
+      render(
+        <DiverRollCall
+          context={diverContext({
+            divers: [diver()],
+            checkpoint,
+            isDeparture: checkpoint === "departure",
+            rollCallClosed: true,
+          })}
+        />,
+      );
+      expect(document.querySelector('[data-mark-state="held"]')).toBeNull();
+      expect(document.querySelector('[data-mark-state="toCall"]')).not.toBeNull();
+    });
+  }
+
   it("keeps every control while the count is open", () => {
     render(<DiverRollCall context={diverContext({ divers: [diver()], rollCallClosed: false })} />);
     expect(screen.getByRole("button", { name: "Mark boarded" })).toBeInTheDocument();
