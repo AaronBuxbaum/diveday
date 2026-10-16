@@ -1,20 +1,32 @@
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { anonymizeDiver } from "./anonymize";
-import {
+
+vi.mock("./bookkeeper", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./bookkeeper")>();
+  return { ...actual, tellOwnersAboutBookkeeper: vi.fn(async () => 1) };
+});
+
+const { anonymizeDiver } = await import("./anonymize");
+const {
   consumeBookkeeperConfirmation,
   issueBookkeeperConfirmation,
   readBookkeeper,
   setBookkeeper,
-} from "./bookkeeper";
-import { people, personRoles, shops } from "./schema";
+  tellOwnersAboutBookkeeper,
+} = await import("./bookkeeper");
+const { people, personRoles, shops } = await import("./schema");
+
+beforeEach(() => {
+  vi.mocked(tellOwnersAboutBookkeeper).mockClear();
+});
 
 /**
  * Erasure reaches the bookkeeper's address (fifth loop, item 35), as it does
  * the shore contact's: a diver whose address a shop also set as its month-end
- * recipient asks to be forgotten, and the month stops leaving for it. An
- * address that is not theirs is left alone.
+ * recipient asks to be forgotten, and the month stops leaving for it, and
+ * the owners are told why without the address (second-pass N3). An address
+ * that is not theirs is left alone.
  */
 describe("anonymizeDiver — the bookkeeper's address", () => {
   async function setup(bookkeeper: string) {
@@ -44,7 +56,8 @@ describe("anonymizeDiver — the bookkeeper's address", () => {
       email: bookkeeper,
       now,
     });
-    await consumeBookkeeperConfirmation(db, { token: issued?.token ?? "", now });
+    await consumeBookkeeperConfirmation(db, { token: issued?.token ?? "", now, origin: null });
+    vi.mocked(tellOwnersAboutBookkeeper).mockClear();
     const erase = () =>
       anonymizeDiver(db, { shopId: shop.id, personId: diver.id, actorPersonId: owner.id });
     const row = async () => (await db.select().from(shops).where(eq(shops.id, shop.id)))[0];
@@ -61,6 +74,11 @@ describe("anonymizeDiver — the bookkeeper's address", () => {
       bookkeeperConfirmedAt: null,
       bookkeeperConfirmTokenHash: null,
       bookkeeperConfirmExpiresAt: null,
+      bookkeeperStopTokenHash: null,
+    });
+    expect(tellOwnersAboutBookkeeper).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(tellOwnersAboutBookkeeper).mock.calls[0]?.[1]).toMatchObject({
+      what: { event: "cleared", by: "erasure" },
     });
   });
 
@@ -68,5 +86,6 @@ describe("anonymizeDiver — the bookkeeper's address", () => {
     const { erase, read } = await setup("books@ledger.example");
     expect((await erase()).ok).toBe(true);
     expect((await read())?.email).toBe("books@ledger.example");
+    expect(tellOwnersAboutBookkeeper).not.toHaveBeenCalled();
   });
 });

@@ -5,7 +5,9 @@ ALTER TABLE "shops" ADD COLUMN "bookkeeper_sent_month" text;--> statement-breakp
 ALTER TABLE "shops" ADD COLUMN "bookkeeper_confirmed_at" timestamp with time zone;--> statement-breakpoint
 ALTER TABLE "shops" ADD COLUMN "bookkeeper_confirm_token_hash" text;--> statement-breakpoint
 ALTER TABLE "shops" ADD COLUMN "bookkeeper_confirm_expires_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "shops" ADD COLUMN "bookkeeper_stop_token_hash" text;--> statement-breakpoint
 CREATE UNIQUE INDEX "shops_bookkeeper_confirm_token_hash_unique" ON "shops" ("bookkeeper_confirm_token_hash");--> statement-breakpoint
+CREATE UNIQUE INDEX "shops_bookkeeper_stop_token_hash_unique" ON "shops" ("bookkeeper_stop_token_hash");--> statement-breakpoint
 ALTER TABLE "shops" ADD CONSTRAINT "shops_bookkeeper_email_provenance" CHECK (("bookkeeper_email" is null and "bookkeeper_email_set_at" is null
         and "bookkeeper_email_set_by_person_id" is null)
         or ("bookkeeper_email" is not null and "bookkeeper_email_set_at" is not null

@@ -10,7 +10,7 @@ import { sendNotification } from "@/db/notifications";
 import { bookkeeperMonthDue } from "@/lib/bookkeeper";
 import { monthKey } from "@/lib/calendar";
 import { log } from "@/lib/log";
-import { type NotificationProvider, recipientLocale } from "@/lib/notifications";
+import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { monthEndFiles } from "../../../shop/[shopSlug]/reports/download/month-end-files";
 
 export type MonthEndPassSummary = {
@@ -31,8 +31,11 @@ export type MonthEndPassSummary = {
  * Only a confirmed address is a candidate (security review B1), and only
  * while the person who set it still passes `canPersonExportShopData` (F1): an
  * address a departed manager left behind sends nothing until an owner or
- * manager saves it again, which Reports asks for. Every send also tells every
- * owner where the files went.
+ * manager saves it again, which Reports asks for; the claim requires the same
+ * setter the check passed (second-pass N4). Every email carries the
+ * bookkeeper's own stop link, minted with the claim (N1), and every send
+ * tells the owners where the files went. With no public origin to build that
+ * link from, nothing is sent.
  *
  * The claim comes first, so a second pass at once sends nothing; a send that
  * fails, or files that could not be built, give the claim back so the next
@@ -52,6 +55,7 @@ export async function sendDueMonthEndEmails(
     failed: 0,
     setterLapsed: 0,
   };
+  const origin = options.origin === undefined ? publicAppUrl() : options.origin;
   for (const shop of await listBookkeeperShops(db)) {
     if (!shop.email || !shop.setByPersonId) continue;
     const due = bookkeeperMonthDue(options.now, shop.timezone, shop.sentMonth);
@@ -63,12 +67,28 @@ export async function sendDueMonthEndEmails(
       log("bookkeeper.setter_lapsed", "warn", { shopId: shop.id, month });
       continue;
     }
-    if (!(await claimBookkeeperMonth(db, { shopId: shop.id, email: shop.email, month }))) {
+    if (!origin) {
+      summary.failed += 1;
+      log("bookkeeper.no_origin", "warn", { shopId: shop.id, month });
+      continue;
+    }
+    const claim = await claimBookkeeperMonth(db, {
+      shopId: shop.id,
+      email: shop.email,
+      setByPersonId: shop.setByPersonId,
+      month,
+    });
+    if (!claim) {
       summary.alreadySent += 1;
       continue;
     }
     const release = () =>
-      releaseBookkeeperMonth(db, { shopId: shop.id, month, previous: shop.sentMonth });
+      releaseBookkeeperMonth(db, {
+        shopId: shop.id,
+        month,
+        previous: shop.sentMonth,
+        previousStopTokenHash: shop.stopTokenHash,
+      });
     try {
       const locale = recipientLocale(null, shop.defaultLocale);
       const files = await monthEndFiles(db, shop, due, options.now, locale);
@@ -81,6 +101,7 @@ export async function sendDueMonthEndEmails(
           locale,
           shopName: shop.name,
           month,
+          stopUrl: `${origin}/unsubscribe/${claim.stopToken}`,
           attachments: files.map((file) => ({ fileName: file.fileName, content: file.csv })),
         },
         options.provider,
@@ -88,10 +109,10 @@ export async function sendDueMonthEndEmails(
       if (delivery.status === "sent") {
         summary.sent += 1;
         await tellOwnersAboutBookkeeper(db, {
-          shop,
+          shopId: shop.id,
           what: { event: "sent", email: shop.email, month },
           at: options.now,
-          ...(options.origin === undefined ? {} : { origin: options.origin }),
+          origin,
           ...(options.provider ? { provider: options.provider } : {}),
         });
       } else {

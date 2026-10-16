@@ -400,12 +400,11 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // The inbound reply address's routing token (ADR 20260907-two-way-inbox):
     // a credential in all but name, so a restored shop is minted a fresh one.
     "inbound_email_token",
-    // H-118: a consent and its confirmation, recorded here; a CSV cannot vouch for them.
+    // H-118 and item 35: an address, its consent, confirmation and send state; a restore asks afresh.
     "shore_alert_email",
     "shore_alert_consent_at",
     "shore_alert_consent_by_person_id",
     "shore_alert_confirmed_at",
-    // Item 35 and review B1: an address, its confirmation and send state; a restore asks afresh.
     "bookkeeper_email",
     "bookkeeper_email_set_at",
     "bookkeeper_email_set_by_person_id",
@@ -413,6 +412,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "bookkeeper_confirmed_at",
     "bookkeeper_confirm_token_hash",
     "bookkeeper_confirm_expires_at",
+    "bookkeeper_stop_token_hash",
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
   trip_lenses: ["shop_id"],

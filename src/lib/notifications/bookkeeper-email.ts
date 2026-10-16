@@ -17,14 +17,15 @@ export type BookkeeperMonthEndInput = {
   shopName: string;
   /** `YYYY-MM`. */
   month: string;
+  stopUrl: string;
   attachments: readonly { fileName: string }[];
 };
 
 /**
  * "October 2026 at Blue Mantis Divers: the month's report, orders and crew
  * sheet are attached." The files are the message; the body names them and
- * says how the address got here and how to stop it, since the reader is not
- * the shop's customer and holds no account.
+ * says how the address got here and gives the reader's own stop link, since
+ * they are not the shop's customer and hold no account.
  */
 export function bookkeeperMonthEndEmail(input: BookkeeperMonthEndInput): NotificationEmail {
   const t = diverTranslator(input.locale);
@@ -36,15 +37,16 @@ export function bookkeeperMonthEndEmail(input: BookkeeperMonthEndInput): Notific
   const hello = t("notifications.bookkeeper.hello");
   const intro = t("notifications.bookkeeper.intro", values);
   const why = t("notifications.bookkeeper.why", values);
+  const stop = t("notifications.bookkeeper.stop");
   const files = input.attachments.map((file) => file.fileName);
   return {
     subject: t("notifications.bookkeeper.subject", values),
-    text: `${hello}\n\n${intro}\n\n${files.map((name) => `- ${name}`).join("\n")}\n\n${why}\n`,
+    text: `${hello}\n\n${intro}\n\n${files.map((name) => `- ${name}`).join("\n")}\n\n${why}\n${stop}:\n${input.stopUrl}\n`,
     html: `<p>${escapeHtml(hello)}</p><p>${escapeHtml(intro)}</p><ul>${files
       .map((name) => `<li>${escapeHtml(name)}</li>`)
       .join(
         "",
-      )}</ul><p style="margin-top: 32px; font-size: 13px; line-height: 1.5; opacity: 0.75;">${escapeHtml(why)}</p>`,
+      )}</ul><p style="margin-top: 32px; font-size: 13px; line-height: 1.5; opacity: 0.75;">${escapeHtml(why)} <a href="${escapeHtml(input.stopUrl)}">${escapeHtml(stop)}</a></p>`,
   };
 }
 
@@ -78,10 +80,11 @@ export function bookkeeperConfirmationEmail(input: BookkeeperConfirmationInput):
 
 export type BookkeeperNoticeInput = {
   locale: DiverLocale;
-  recipientName: string;
+  recipientName: string | null;
   shopName: string;
   reportsUrl: string;
-  event: "set" | "changed" | "cleared" | "sent";
+  event: "set" | "changed" | "vouched" | "cleared" | "confirmed" | "sent";
+  by?: "recipient" | "erasure" | undefined;
   email?: string | undefined;
   actorName?: string | undefined;
   month?: string | undefined;
@@ -90,11 +93,12 @@ export type BookkeeperNoticeInput = {
 /**
  * To each owner (security review B1 and F1): one line on what happened to the
  * bookkeeper's address, or where this month's files went, and the way to
- * Reports to change it.
+ * Reports to change it. A stop by the bookkeeper and an erasure each say so.
  */
 export function bookkeeperNoticeEmail(input: BookkeeperNoticeInput): NotificationEmail {
   const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.recipientName, t("notifications.common.genericName"));
+  const generic = t("notifications.common.genericName");
+  const firstName = input.recipientName ? firstNameOf(input.recipientName, generic) : generic;
   const greetingText = t("notifications.common.greeting", { firstName });
   const greetingHtml = t("notifications.common.greeting", { firstName: escapeHtml(firstName) });
   const ref = input.month ? parseMonthKey(input.month) : null;
@@ -104,7 +108,13 @@ export function bookkeeperNoticeEmail(input: BookkeeperNoticeInput): Notificatio
     actor: input.actorName ?? t("notifications.common.genericName"),
     month: ref ? monthLabel(ref, input.locale) : (input.month ?? ""),
   };
-  const body = t(`notifications.bookkeeperNotice.${input.event}`, values);
+  const line =
+    input.event === "cleared" && input.by === "recipient"
+      ? "clearedByRecipient"
+      : input.event === "cleared" && input.by === "erasure"
+        ? "clearedByErasure"
+        : input.event;
+  const body = t(`notifications.bookkeeperNotice.${line}`, values);
   const open = t("notifications.bookkeeperNotice.open");
   return {
     subject: t(`notifications.bookkeeperNotice.subject.${input.event}`, values),

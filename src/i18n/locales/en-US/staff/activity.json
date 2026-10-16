@@ -92,7 +92,9 @@
     "demo_own_computer_confirmed": "{actor} confirmed {diver} is bringing their own computer",
     "demo_paper_card_reminded": "{actor} reminded {diver} to bring the paper card to the dock",
     "participant_type_changed": "{actor} changed {diver} from {from, select, snorkeler {snorkeling} rider {riding along} other {diving}} to {type, select, snorkeler {snorkeling} rider {riding along} other {diving}}{certCheck, select, cleared {, which cleared a card check} overridden {, past a missing card} other {}}",
-    "course_form_medical_changed": "{actor} {marked, select, yes {marked} other {took the medical mark off}} the course form {form}{marked, select, yes { as a medical statement} other {}}"
+    "course_form_medical_changed": "{actor} {marked, select, yes {marked} other {took the medical mark off}} the course form {form}{marked, select, yes { as a medical statement} other {}}",
+    "bookkeeper_email_vouched": "{actor} re-confirmed the bookkeeper’s email for month-end files",
+    "bookkeeper_email_stopped": "The bookkeeper stopped month-end files with the link in one"
   },
   "unknown": "An earlier entry",
   "review": {

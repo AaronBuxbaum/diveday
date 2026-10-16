@@ -50,7 +50,9 @@ type SurfaceShop = Awaited<ReturnType<typeof requireShopSurface>>["shop"];
  * every owner (security review F1), and a new address gets a confirm link
  * before anything is sent to it (B1). Saving an unconfirmed address again
  * sends the link again; saving any address again records the saver as the
- * person who stands behind it.
+ * person who stands behind it, and when that is someone new it is logged and
+ * emailed too (`vouched`, second pass), since it can restart files held
+ * because the old setter lost access.
  */
 export async function saveBookkeeperAction(
   shopSlug: string,
@@ -84,7 +86,7 @@ export async function saveBookkeeperAction(
   return { status: sent ? "confirmation-sent" : "confirmation-not-sent" };
 }
 
-/** The log line and the owners' email for a save that changed the address. */
+/** The log line and the owners' email for a save that changed the address or who stands behind it. */
 async function reportChange(
   db: AppDb,
   input: {
@@ -104,12 +106,13 @@ async function reportChange(
   });
   const actorName = actor.name?.trim() || shop.name;
   await tellOwnersAboutBookkeeper(db, {
-    shop,
+    shopId: shop.id,
     what:
       change === "cleared" || email === null
         ? { event: "cleared", actorName }
         : { event: change, email, actorName },
     at: now,
+    actorPersonId: actor.personId,
   });
 }
 

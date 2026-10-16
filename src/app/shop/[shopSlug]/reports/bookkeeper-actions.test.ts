@@ -1,8 +1,13 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { readBookkeeper } from "@/db/bookkeeper";
+import {
+  consumeBookkeeperConfirmation,
+  issueBookkeeperConfirmation,
+  readBookkeeper,
+  setBookkeeper,
+} from "@/db/bookkeeper";
 import { canPersonExportShopData } from "@/db/export";
-import { activityEvents, shops } from "@/db/schema";
+import { activityEvents, people, shops } from "@/db/schema";
 import type { Notification } from "@/lib/notifications";
 import { rateLimitKey } from "@/lib/rate-limit";
 import { fileScopedShopContext } from "@/test/db";
@@ -173,6 +178,46 @@ describe("saveBookkeeperAction", () => {
         "bookkeeper_email_cleared",
       ]),
     );
+  });
+
+  // Second-pass F1: a manager set and confirmed the address, then lost access,
+  // which held the files; someone else saving it again restarts them, so it is
+  // a line in Records and an email to the owners, never silent.
+  it("logs and tells the owners when someone re-arms an address whose setter lapsed", async () => {
+    const { db, shop, personId } = await asOwner();
+    const [gone] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Former Manager", email: "former@shop.example" })
+      .returning();
+    if (!gone) throw new Error("person insert failed");
+    const at = new Date("2026-10-01T15:00:00Z");
+    const email = "books@ledger.example";
+    await setBookkeeper(db, {
+      shopId: shop.id,
+      timeZone: shop.timezone,
+      email,
+      personId: gone.id,
+      now: at,
+    });
+    const issued = await issueBookkeeperConfirmation(db, { shopId: shop.id, email, now: at });
+    await consumeBookkeeperConfirmation(db, { token: issued?.token ?? "", now: at, origin: null });
+    expect(await canPersonExportShopData(db, shop.id, gone.id)).toBe(false);
+
+    await expect(saveBookkeeperAction(shop.slug, idle, form(email))).resolves.toEqual({
+      status: "saved",
+    });
+    expect(await readBookkeeper(db, shop.id)).toMatchObject({ setByPersonId: personId });
+    expect(await activityCodes(db, shop.id)).toEqual(["bookkeeper_email_vouched"]);
+    expect(sent.list.filter((n) => n.kind === "bookkeeper_notice")).toEqual([
+      expect.objectContaining({ event: "vouched", email, actorName: "Dana Reyes" }),
+    ]);
+    expect(kinds()).not.toContain("bookkeeper_confirmation");
+
+    // The same person saving it again is not news.
+    sent.list = [];
+    await saveBookkeeperAction(shop.slug, idle, form(email));
+    expect(sent.list).toEqual([]);
+    expect(await activityCodes(db, shop.id)).toEqual(["bookkeeper_email_vouched"]);
   });
 
   it("says the link could not go when the rate limit refuses it, and the address stays unconfirmed", async () => {

@@ -5697,7 +5697,8 @@
       "subject": "{month} at {shopName}: month-end files",
       "hello": "Hello,",
       "intro": "{month} at {shopName}: the month’s report, orders and crew sheet are attached.",
-      "why": "{shopName} asked DiveDay to send these to this address on the 2nd of each month. To stop them, ask {shopName} to remove the address."
+      "why": "{shopName} asked DiveDay to send these to this address on the 2nd of each month.",
+      "stop": "Stop these emails"
     },
     "bookkeeperConfirmation": {
       "subject": "{shopName} wants to send you its month-end files",
@@ -5710,13 +5711,19 @@
         "set": "{shopName}: month-end files will go to {email}",
         "changed": "{shopName}: the bookkeeper’s email changed",
         "cleared": "{shopName}: month-end files turned off",
-        "sent": "{shopName}: {month} files sent to {email}"
+        "sent": "{shopName}: {month} files sent to {email}",
+        "vouched": "{shopName}: {actor} re-confirmed the bookkeeper’s email",
+        "confirmed": "{shopName}: {email} confirmed the month-end files"
       },
       "set": "{actor} set {email} as the bookkeeper’s email. Once that inbox confirms, last month’s report, orders and crew sheet go there on the 2nd of each month.",
       "changed": "{actor} changed the bookkeeper’s email to {email}. Nothing goes to it until that inbox confirms.",
       "cleared": "{actor} removed the bookkeeper’s email. No month-end files will be sent.",
       "sent": "Month-end files for {month} sent to {email}.",
-      "open": "Open Reports"
+      "open": "Open Reports",
+      "vouched": "{actor} re-confirmed {email} as the bookkeeper’s email. Month-end files resume going there on the 2nd of each month.",
+      "confirmed": "{email} confirmed it wants the month-end files. The first ones go there on the next 2nd of the month.",
+      "clearedByRecipient": "{email} used the link in a month-end email to stop them. No month-end files will be sent until you set an address again and it confirms.",
+      "clearedByErasure": "The bookkeeper’s email was removed when that person’s data was erased at their request. No month-end files will be sent until you set an address again."
     }
   },
   "brand": {
@@ -5803,5 +5810,13 @@
     "confirmedText": "{shopName}’s month-end files will come here on the 2nd of each month.",
     "unavailableTitle": "This link isn’t available",
     "unavailableText": "It may have expired or been replaced by a newer one, or the shop has changed the address since. Ask the shop to send a fresh one."
+  },
+  "bookkeeperStop": {
+    "title": "Stop {shopName}’s month-end files?",
+    "description": "{shopName} emails this address last month’s report, orders and crew sheet on the 2nd of each month. Stopping takes your address off {shopName}’s settings and tells its owners.",
+    "submit": "Stop these emails",
+    "submitting": "Stopping…",
+    "confirmedTitle": "Month-end files stopped",
+    "confirmedText": "{shopName} won’t send you month-end files anymore. If the shop adds you again, you’ll be asked to confirm first."
   }
 }

@@ -95,6 +95,8 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   bookkeeper_email_set: "records",
   bookkeeper_email_changed: "records",
   bookkeeper_email_cleared: "records",
+  bookkeeper_email_vouched: "records",
+  bookkeeper_email_stopped: "records",
   order_refunded: "money",
   order_paid_cash: "money",
   order_paid_card_machine: "money",

@@ -121,6 +121,8 @@ function unsubscribeUrlOf(notification: Notification): string | undefined {
   if (notification.kind === "weekly_digest") return notification.turnOffUrl;
   // Nor is the shore contact's roll-call alert (H-118): its stop link earns it too.
   if (notification.kind === "roll_call_stale_shore") return notification.stopUrl;
+  // And the bookkeeper's month-end files (second-pass N1).
+  if (notification.kind === "bookkeeper_month_end") return notification.stopUrl;
   return "unsubscribeUrl" in notification ? notification.unsubscribeUrl : undefined;
 }
 

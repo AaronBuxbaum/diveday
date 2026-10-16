@@ -5697,7 +5697,8 @@
       "subject": "{month} en {shopName}: archivos de fin de mes",
       "hello": "Hola:",
       "intro": "{month} en {shopName}: van adjuntos el informe del mes, los pedidos y la hoja de tripulación.",
-      "why": "{shopName} le pidió a DiveDay que envíe estos archivos a esta dirección el día 2 de cada mes. Para dejar de recibirlos, pídele a {shopName} que quite la dirección."
+      "why": "{shopName} le pidió a DiveDay que envíe estos archivos a esta dirección el día 2 de cada mes.",
+      "stop": "Dejar de recibir estos correos"
     },
     "bookkeeperConfirmation": {
       "subject": "{shopName} quiere enviarte sus archivos de fin de mes",
@@ -5710,13 +5711,19 @@
         "set": "{shopName}: los archivos de fin de mes irán a {email}",
         "changed": "{shopName}: cambió el correo del contador",
         "cleared": "{shopName}: archivos de fin de mes desactivados",
-        "sent": "{shopName}: archivos de {month} enviados a {email}"
+        "sent": "{shopName}: archivos de {month} enviados a {email}",
+        "vouched": "{shopName}: {actor} volvió a confirmar el correo del contador",
+        "confirmed": "{shopName}: {email} confirmó los archivos de fin de mes"
       },
       "set": "{actor} puso {email} como correo del contador. Cuando esa bandeja lo confirme, el informe, los pedidos y la hoja de tripulación del mes anterior se enviarán allí el día 2 de cada mes.",
       "changed": "{actor} cambió el correo del contador a {email}. No se envía nada hasta que esa bandeja lo confirme.",
       "cleared": "{actor} quitó el correo del contador. No se enviarán archivos de fin de mes.",
       "sent": "Archivos de fin de mes de {month} enviados a {email}.",
-      "open": "Abrir Informes"
+      "open": "Abrir Informes",
+      "vouched": "{actor} volvió a confirmar {email} como correo del contador. Los archivos de fin de mes vuelven a enviarse allí el día 2 de cada mes.",
+      "confirmed": "{email} confirmó que quiere recibir los archivos de fin de mes. Los primeros llegarán allí el próximo día 2 del mes.",
+      "clearedByRecipient": "{email} usó el enlace de un correo de fin de mes para dejar de recibirlos. No se enviarán archivos de fin de mes hasta que vuelvas a poner una dirección y se confirme.",
+      "clearedByErasure": "Se quitó el correo del contador al borrar los datos de esa persona a petición suya. No se enviarán archivos de fin de mes hasta que vuelvas a poner una dirección."
     }
   },
   "brand": {
@@ -5803,5 +5810,13 @@
     "confirmedText": "Los archivos de fin de mes de {shopName} llegarán aquí el día 2 de cada mes.",
     "unavailableTitle": "Este enlace no está disponible",
     "unavailableText": "Puede haber caducado o haber sido sustituido por uno más reciente, o el centro cambió la dirección desde entonces. Pide al centro que te envíe uno nuevo."
+  },
+  "bookkeeperStop": {
+    "title": "¿Dejar de recibir los archivos de fin de mes de {shopName}?",
+    "description": "{shopName} envía a esta dirección el informe, los pedidos y la hoja de tripulación del mes anterior el día 2 de cada mes. Al dejarlos, tu dirección sale de los ajustes de {shopName} y se avisa a sus dueños.",
+    "submit": "Dejar de recibir estos correos",
+    "submitting": "Guardando…",
+    "confirmedTitle": "Archivos de fin de mes desactivados",
+    "confirmedText": "{shopName} ya no te enviará archivos de fin de mes. Si el centro vuelve a añadirte, se te pedirá que lo confirmes antes."
   }
 }

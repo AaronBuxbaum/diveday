@@ -45,7 +45,7 @@ async function shopWithBookkeeper({ confirm = true } = {}) {
       email: BOOKS,
       now: at,
     });
-    await consumeBookkeeperConfirmation(db, { token: issued?.token ?? "", now: at });
+    await consumeBookkeeperConfirmation(db, { token: issued?.token ?? "", now: at, origin: null });
   }
   return { db, shopId: shop.id, owner };
 }
@@ -92,6 +92,8 @@ describe("sendDueMonthEndEmails", () => {
       expect.stringMatching(/^crew-sheet-.*-2026-10\.csv$/),
     ]);
     expect(messageFor(email).subject).toBe("October 2026 at Blue Mantis Divers: month-end files");
+    // Its own stop link, from this month's claim (second-pass N1).
+    expect(email.stopUrl).toMatch(new RegExp(`^${ORIGIN}/unsubscribe/[A-Za-z0-9_-]{40,}$`));
 
     // Each owner hears where the files went, in one line.
     const notices = ofKind(sent, "bookkeeper_notice");
@@ -119,7 +121,9 @@ describe("sendDueMonthEndEmails", () => {
     const { db, owner } = await shopWithBookkeeper();
     await db.delete(personRoles).where(eq(personRoles.personId, owner));
     const { sent, provider } = capturing();
-    expect(await sendDueMonthEndEmails(db, { now: SECOND, provider })).toMatchObject({
+    expect(
+      await sendDueMonthEndEmails(db, { now: SECOND, provider, origin: ORIGIN }),
+    ).toMatchObject({
       due: 1,
       sent: 0,
       setterLapsed: 1,
@@ -131,7 +135,7 @@ describe("sendDueMonthEndEmails", () => {
     const { db, shopId } = await shopWithBookkeeper();
     const failing = capturing("failed");
     expect(
-      await sendDueMonthEndEmails(db, { now: SECOND, provider: failing.provider }),
+      await sendDueMonthEndEmails(db, { now: SECOND, provider: failing.provider, origin: ORIGIN }),
     ).toMatchObject({ due: 1, sent: 0, failed: 1 });
     const [row] = await db.select().from(shops).where(eq(shops.id, shopId));
     expect(row?.bookkeeperSentMonth).toBe("2026-09");
@@ -140,7 +144,21 @@ describe("sendDueMonthEndEmails", () => {
     const retry = await sendDueMonthEndEmails(db, {
       now: new Date("2026-11-03T15:00:00Z"),
       provider: working.provider,
+      origin: ORIGIN,
     });
     expect(retry.sent).toBe(1);
+  });
+
+  it("sends nothing, and claims nothing, without an origin to build the stop link from", async () => {
+    const { db, shopId } = await shopWithBookkeeper();
+    const { sent, provider } = capturing();
+    expect(await sendDueMonthEndEmails(db, { now: SECOND, provider, origin: null })).toMatchObject({
+      due: 1,
+      sent: 0,
+      failed: 1,
+    });
+    expect(sent).toEqual([]);
+    const [row] = await db.select().from(shops).where(eq(shops.id, shopId));
+    expect(row?.bookkeeperSentMonth).toBe("2026-09");
   });
 });

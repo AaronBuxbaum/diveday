@@ -1383,6 +1383,11 @@ const bookkeeperMonthEndSchema = z.object({
   shopName: z.string().trim().min(1).max(120),
   /** The month the files are for, `YYYY-MM`. */
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+  /**
+   * `/unsubscribe/<token>`: the bookkeeper's own stop (second-pass N1), and
+   * the `List-Unsubscribe` target. Minted with this month's claim.
+   */
+  stopUrl: z.url().max(2_000),
   attachments: z
     .array(
       z.object({
@@ -1682,23 +1687,27 @@ const bookkeeperConfirmationSchema = z.object({
 
 /**
  * **What every owner hears about the bookkeeper's address** (security review
- * B1 and F1): that it was set, changed or removed, and by whom, and one line
- * on each month-end send naming where the files went. Staff operational
- * mail, from DiveDay.
+ * B1 and F1, second pass): that it was set, changed, vouched for, confirmed
+ * or removed, and by whom, and one line on each month-end send naming where
+ * the files went. Staff operational mail, from DiveDay. A shop with no owner
+ * login sends it to its managers or its confirmed contact address (N5): the
+ * last has no person and no name.
  */
 const bookkeeperNoticeSchema = z.object({
   kind: z.literal("bookkeeper_notice"),
   shopId: z.uuid(),
-  personId: z.uuid(),
+  personId: z.uuid().nullable(),
   to: emailAddressSchema,
   locale: localeSchema,
-  recipientName: z.string().trim().min(1).max(120),
+  recipientName: z.string().trim().min(1).max(120).nullable(),
   shopName: z.string().trim().min(1).max(120),
   reportsUrl: z.url().max(2_000),
-  event: z.enum(["set", "changed", "cleared", "sent"]),
-  /** The bookkeeper's address: absent only on `cleared`. */
+  event: z.enum(["set", "changed", "vouched", "cleared", "confirmed", "sent"]),
+  /** On `cleared`: the bookkeeper's own stop link, or an erasure; absent when staff removed it. */
+  by: z.enum(["recipient", "erasure"]).optional(),
+  /** The bookkeeper's address: absent on a `cleared` by staff or by erasure. */
   email: emailAddressSchema.optional(),
-  /** Who saved it: on `set`, `changed` and `cleared`. */
+  /** Who saved it: on `set`, `changed`, `vouched` and a staff `cleared`. */
   actorName: z.string().trim().min(1).max(120).optional(),
   /** `YYYY-MM`, on `sent`. */
   month: z
@@ -2072,7 +2081,7 @@ export function notificationIdempotencyKey(notification: Notification): string {
     case "bookkeeper_confirmation":
       return `bookkeeper-confirmation/${notification.shopId}/${notification.expiresAt.toISOString()}`;
     case "bookkeeper_notice":
-      return `bookkeeper-notice/${notification.personId}/${notification.event}/${notification.at.toISOString()}`;
+      return `bookkeeper-notice/${notification.personId ?? "shop-contact"}/${notification.event}/${notification.at.toISOString()}`;
     // One Monday email per person per shop-local week — the same pair
     // `weekly_digest_sends` holds unique, so a queued retry and the claim
     // agree on what "this week's email" means.

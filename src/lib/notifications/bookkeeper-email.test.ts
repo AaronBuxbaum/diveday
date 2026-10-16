@@ -18,6 +18,7 @@ const BASE = {
   locale: "en-US",
   shopName: "Blue Mantis <Scuba>",
   month: "2026-09",
+  stopUrl: "https://diveday.example/unsubscribe/stop-abc",
   attachments: [
     { fileName: "blue-mantis-2026-09-report.csv", content: "Trip,Revenue\nReef,100.00\n" },
     { fileName: "blue-mantis-2026-09-orders.csv", content: "Order,Total\n" },
@@ -25,11 +26,12 @@ const BASE = {
 } satisfies Notification;
 
 describe("the bookkeeper_month_end notification", () => {
-  it("names the month, the shop and each attached file, and says how to stop it", () => {
+  it("names the month, the shop and each attached file, and carries the reader's own stop link", () => {
     const { subject, text, html } = messageFor(BASE);
     expect(subject).toBe("September 2026 at Blue Mantis <Scuba>: month-end files");
     expect(text).toContain("- blue-mantis-2026-09-report.csv");
-    expect(text).toContain("To stop them, ask Blue Mantis <Scuba> to remove the address.");
+    expect(text).toContain("Stop these emails:\nhttps://diveday.example/unsubscribe/stop-abc");
+    expect(html).toContain('href="https://diveday.example/unsubscribe/stop-abc"');
     expect(html).toContain("Blue Mantis &lt;Scuba&gt;");
     expect(html).not.toContain("<Scuba>");
   });
@@ -76,6 +78,16 @@ describe("the bookkeeper_month_end notification", () => {
       "blue-mantis-2026-09-orders.csv",
     ]);
     expect(attachments[0]?.ContentType).toBe("text/csv; charset=utf-8");
+    // The stop link is the one-click unsubscribe too (second-pass N1).
+    const headers = command.input.Content?.Simple?.Headers ?? [];
+    expect(headers).toEqual(
+      expect.arrayContaining([
+        {
+          Name: "List-Unsubscribe",
+          Value: "<https://diveday.example/unsubscribe/stop-abc/one-click>",
+        },
+      ]),
+    );
     expect(new TextDecoder().decode(attachments[0]?.RawContent)).toBe(
       "Trip,Revenue\nReef,100.00\n",
     );
@@ -138,6 +150,43 @@ describe("the bookkeeper_notice notification", () => {
     });
     expect(subject).toBe("Blue Mantis: September 2026 files sent to books@ledger.example");
     expect(text).toContain("Month-end files for September 2026 sent to books@ledger.example.");
+  });
+
+  it("says who re-confirmed the address, and when the inbox confirmed it", () => {
+    expect(messageFor({ ...NOTICE, event: "vouched" }).text).toContain(
+      "Sal <Moretti> re-confirmed books@ledger.example as the bookkeeper’s email. Month-end files resume",
+    );
+    const yes = messageFor({ ...NOTICE, event: "confirmed", actorName: undefined });
+    expect(yes.subject).toBe("Blue Mantis: books@ledger.example confirmed the month-end files");
+    expect(messageFor({ ...NOTICE, event: "vouched", locale: "es-ES" }).text).toContain(
+      "volvió a confirmar books@ledger.example",
+    );
+  });
+
+  it("says the bookkeeper stopped the files, or that an erasure did, never naming the erased address", () => {
+    const stopped = messageFor({
+      ...NOTICE,
+      event: "cleared",
+      by: "recipient",
+      actorName: undefined,
+    });
+    expect(stopped.text).toContain("books@ledger.example used the link in a month-end email");
+    const erased = messageFor({
+      ...NOTICE,
+      event: "cleared",
+      by: "erasure",
+      email: undefined,
+      actorName: undefined,
+    });
+    expect(erased.text).toContain("erased at their request");
+    expect(erased.text).not.toContain("ledger.example");
+  });
+
+  it("greets the shop's contact address, which has no name, generically", () => {
+    const desk = { ...NOTICE, personId: null, recipientName: null };
+    expect(notificationSchema.safeParse(desk).success).toBe(true);
+    expect(messageFor(desk).text.startsWith("Hi there")).toBe(true);
+    expect(notificationIdempotencyKey(desk)).toContain("bookkeeper-notice/shop-contact/set/");
   });
 
   it("says when it was turned off, in Spanish too", () => {

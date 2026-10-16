@@ -380,6 +380,13 @@ export const shops = pgTable(
       withTimezone: true,
     }),
     /**
+     * **The stop link in the latest month-end email** (security review N1),
+     * as a hash: minted with each month's claim, so only the newest email's
+     * link works, and it stops only the address it went to, since any change
+     * of address clears it. Kept after a stop so the page can say "stopped".
+     */
+    bookkeeperStopTokenHash: text("bookkeeper_stop_token_hash"),
+    /**
      * How many minutes before departure divers are asked to be at the dock. The
      * shop's real muster time varies (gear setup, cert check, briefing), so it is
      * configurable rather than a hardcoded "30 minutes" in every confirmation and
@@ -525,6 +532,7 @@ export const shops = pgTable(
   (table) => [
     uniqueIndex("shops_inbound_email_token_unique").on(table.inboundEmailToken),
     uniqueIndex("shops_bookkeeper_confirm_token_hash_unique").on(table.bookkeeperConfirmTokenHash),
+    uniqueIndex("shops_bookkeeper_stop_token_hash_unique").on(table.bookkeeperStopTokenHash),
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
     // H-118: an address DiveDay sends to exists only with its recorded consent.
     check(

@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "eae74921-c62e-4670-bdeb-212e6209213c",
+  "id": "72711259-846f-4d02-8c0a-b4671b0201e0",
   "prevIds": [
     "3d7fc55a-3967-4f48-90a3-b52a48da3569",
     "44c0586d-ddc3-4af2-9187-992a8cd1a59b",
@@ -7153,6 +7153,19 @@
       "generated": null,
       "identity": null,
       "name": "bookkeeper_confirm_expires_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "bookkeeper_stop_token_hash",
       "entityType": "columns",
       "schema": "public",
       "table": "shops"
@@ -27428,6 +27441,27 @@
       "method": "btree",
       "concurrently": false,
       "name": "shops_bookkeeper_confirm_token_hash_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "bookkeeper_stop_token_hash",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "shops_bookkeeper_stop_token_hash_unique",
       "entityType": "indexes",
       "schema": "public",
       "table": "shops"

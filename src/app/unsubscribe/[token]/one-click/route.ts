@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { stopBookkeeperByToken } from "@/db/bookkeeper";
 import { getDb } from "@/db/client";
 import { optOutPersonFromCourtesyEmailByToken } from "@/db/courtesy-email";
 import { unsubscribeLastMinuteListEntryByToken } from "@/db/last-minute-list";
@@ -27,8 +28,9 @@ import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
  * would have sent the raw, non-expiring unsubscribe token to Sentry on any
  * server error (security review finding on this task).
  *
- * One route serves both token kinds, same as the page: a last-minute-list
- * entry's opt-out and a person's courtesy-email opt-out.
+ * One route serves every token kind, in the page's order: a last-minute-list
+ * entry, a person's courtesy email, a staffer's Monday email, a shore
+ * contact's roll-call alerts and a bookkeeper's month-end files.
  */
 export async function POST(
   _request: Request,
@@ -45,10 +47,12 @@ export async function POST(
   const lastMinute = await unsubscribeLastMinuteListEntryByToken(db, { token });
   if (!lastMinute) {
     const courtesy = await optOutPersonFromCourtesyEmailByToken(db, { token });
-    // The third kind: a staffer's own Monday email. The fourth, tried last:
-    // a shop's shore contact stopping its roll-call alerts (H-118).
+    // The third kind: a staffer's own Monday email. The fourth: a shop's
+    // shore contact stopping its roll-call alerts (H-118). The fifth, tried
+    // last: a shop's bookkeeper stopping the month-end files (item 35, N1).
     const digest = courtesy ? null : await turnOffWeeklyDigestByToken(db, { token });
-    if (!courtesy && !digest) await stopShoreAlertsByToken(db, { token });
+    const shore = courtesy || digest ? null : await stopShoreAlertsByToken(db, { token });
+    if (!courtesy && !digest && !shore) await stopBookkeeperByToken(db, { token });
   }
   // A mail client acts on the status code alone and never renders a body.
   return new NextResponse(null, { status: 200 });
