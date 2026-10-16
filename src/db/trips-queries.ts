@@ -291,6 +291,12 @@ export const tripBoatCertifiedPassengers = () =>
     number | null
   >`(select ${boats.certifiedPassengers} from ${boats} where ${boats.id} = ${trips.boatId} and ${boats.shopId} = ${trips.shopId})`;
 
+/** The same subquery for total persons, crew included (#2302): never a seat ceiling. */
+export const tripBoatCertifiedTotalPersons = () =>
+  sql<
+    number | null
+  >`(select ${boats.certifiedTotalPersons} from ${boats} where ${boats.id} = ${trips.boatId} and ${boats.shopId} = ${trips.shopId})`;
+
 /**
  * `sellableSeats` spelled in SQL, for the one place the number has to be
  * compared inside the query: `hasSpace`'s `having`, which a page of results

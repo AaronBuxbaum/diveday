@@ -323,6 +323,20 @@ export function passengersAboveCertificateAboard(
 }
 
 /**
+ * **Everyone counted aboard against the certificate's total persons** (#2302,
+ * dive-domain review D2): passengers and crew the roll call recorded aboard at
+ * this checkpoint. Null with no total recorded. Informs only: nothing on the
+ * boarding path refuses on it, and no seat on sale is capped by it.
+ */
+export function personsAboveTotalPersonsAboard(
+  aboard: number,
+  certifiedTotalPersons: number | null | undefined,
+): { aboard: number; limit: number } | null {
+  if (certifiedTotalPersons == null) return null;
+  return aboard > certifiedTotalPersons ? { aboard, limit: certifiedTotalPersons } : null;
+}
+
+/**
  * The crew half of the total-persons count (#2302), off the departure
  * checkpoint's crew list: everyone named for the boat, and those the crew roll
  * call has recorded aboard. A crew member recorded ashore still counts as
@@ -362,6 +376,11 @@ export type BoatSeatsRefusal =
    * some of the persons aboard, so this is a typo in one of the two boxes.
    */
   | { code: "passengers_above_total_persons"; passengers: number; limit: number }
+  /**
+   * More seats than persons on the certificate (dive-domain review D2): a typo
+   * at save, refused like the one above. Caps no sale.
+   */
+  | { code: "seats_above_total_persons"; capacity: number; limit: number }
   | { code: "seats_above_certificate"; capacity: number; limit: number }
   | {
       code: "departures_above_certificate";
@@ -389,8 +408,11 @@ export function boatSeatsRefusal(input: {
   upcomingDepartures?: readonly { capacity: number; on: string }[];
 }): BoatSeatsRefusal | null {
   const limit = input.certifiedPassengers;
-  if (limit === null) return null;
   const totalPersons = input.certifiedTotalPersons ?? null;
+  if (totalPersons !== null && input.capacity > totalPersons) {
+    return { code: "seats_above_total_persons", capacity: input.capacity, limit: totalPersons };
+  }
+  if (limit === null) return null;
   if (totalPersons !== null && limit > totalPersons) {
     return { code: "passengers_above_total_persons", passengers: limit, limit: totalPersons };
   }

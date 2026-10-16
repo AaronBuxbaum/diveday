@@ -39,6 +39,7 @@
   "headCountBlocked": "{count, plural, one {# bloqueado} other {# bloqueados}}",
   "headCountBlockedAboard": "{count, plural, one {# persona bloqueada a bordo} other {# personas bloqueadas a bordo}}",
   "headCountOverCertificate": "{limit, plural, one {El certificado permite # pasajero} other {El certificado permite # pasajeros}}",
+  "headCountOverTotalPersons": "{limit, plural, one {El certificado permite # persona, tripulación incluida} other {El certificado permite # personas, tripulación incluida}}",
   "progressAriaLabel": "Progreso del pase de lista",
   "ofTotalAboard": "de {total, plural, one {# buceador} other {# buceadores}} a bordo",
   "allAccountedFor": "Todos contabilizados, buceadores y tripulación. Listo para el siguiente control.",

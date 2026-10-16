@@ -647,8 +647,9 @@
   and a certificate with only a passenger figure is never asked for it. Checked at the manifest
   beside the passenger line and never at the point of sale: when the people booked plus the crew
   named for the departure pass it, the Boat tab says so in danger ink, and once the crew roll call
-  has counted more people and crew aboard than it allows, the line counts them instead. Passengers
-  above persons is refused at save as a typo (`passengers_above_total_persons`). The booking
+  has counted more people and crew aboard than it allows, the line counts them instead, and the
+  head count goes danger. Passengers or seats above persons is refused at save as a typo
+  (`passengers_above_total_persons`, `seats_above_total_persons`). The booking
   transaction counts seats exactly as before (Aaron, 2026-10-13).
 - **Boat papers** — a boat's four dated documents: when its certificate itself expires (a
   Certificate of Inspection runs for years, apart from the annual inspection, issue 2302), when its

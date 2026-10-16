@@ -50,6 +50,7 @@ export function SummaryPanel({
   notBackAboardCrew,
   blockedAtDock = { undecided: 0, aboard: 0 },
   overCertificate = null,
+  overTotalPersons = null,
   t,
 }: {
   /** Scopes this section's element ids to one departure — see `scopedId`. */
@@ -102,6 +103,8 @@ export function SummaryPanel({
    * because the certificate is the lower of the two numbers and the graver.
    */
   overCertificate?: { aboard: number; limit: number } | null;
+  /** Everyone aboard, crew included, past total persons (dive-domain review D2). */
+  overTotalPersons?: { aboard: number; limit: number } | null;
   t: StaffTranslator;
 }) {
   // Who among the named crew is still unaccounted for at this checkpoint. Read
@@ -294,6 +297,7 @@ export function SummaryPanel({
             t={t}
             people={summary.byType ? hasNonDivers(summary.byType) : false}
             overCertificate={overCertificate}
+            overTotalPersons={overTotalPersons}
           />
         </div>
         {/* Who the people are, when they are not all divers (ADR

@@ -39,6 +39,7 @@
   "headCountBlocked": "{count} blocked",
   "headCountBlockedAboard": "{count, plural, one {# blocked person aboard} other {# blocked people aboard}}",
   "headCountOverCertificate": "{limit, plural, one {Certificate allows # passenger} other {Certificate allows # passengers}}",
+  "headCountOverTotalPersons": "{limit, plural, one {Certificate allows # person, crew included} other {Certificate allows # persons, crew included}}",
   "progressAriaLabel": "Roll-call progress",
   "ofTotalAboard": "of {total, plural, one {# diver} other {# divers}} aboard",
   "allAccountedFor": "Everyone’s accounted for, divers and crew. Ready for the next check.",

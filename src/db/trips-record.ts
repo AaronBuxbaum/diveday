@@ -52,6 +52,7 @@ import {
   heldSeatCounts,
   seatHeld,
   tripBoatCertifiedPassengers,
+  tripBoatCertifiedTotalPersons,
 } from "./trips-queries";
 
 /**
@@ -119,6 +120,7 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
       booked: count(bookings.id),
       bookedDivers: bookedDiversCount(),
       certifiedPassengers: tripBoatCertifiedPassengers(),
+      certifiedTotalPersons: tripBoatCertifiedTotalPersons(),
     })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
@@ -134,6 +136,8 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
         sellableCapacity: sellableSeats(row.trip.capacity, row.certifiedPassengers),
         // The certificate itself, for the manifest's head count (batch 6, item 2).
         certifiedPassengers: row.certifiedPassengers,
+        // Total persons, crew included, for the same head count (#2302).
+        certifiedTotalPersons: row.certifiedTotalPersons,
         course: row.course,
         diveSite: row.diveSite,
         booked: row.booked,

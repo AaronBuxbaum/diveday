@@ -675,11 +675,14 @@ describe("boatSeatsRefusal and total persons (#2302)", () => {
     ).toBeNull();
   });
 
-  it("never caps the seats on sale at total persons: the booking count is unchanged", () => {
-    // Aaron, 2026-10-13: the total-persons check is the manifest's, and the
-    // seat counting of the booking transaction does not change.
+  // Dive-domain review D2: more seats than persons is a typo at save, like
+  // passengers above persons. The sale itself is untouched (Aaron, 2026-10-13).
+  it("refuses saving more seats than persons, and still caps no sale at it", () => {
     expect(
       boatSeatsRefusal({ capacity: 20, certifiedPassengers: null, certifiedTotalPersons: 12 }),
+    ).toEqual({ code: "seats_above_total_persons", capacity: 20, limit: 12 });
+    expect(
+      boatSeatsRefusal({ capacity: 12, certifiedPassengers: null, certifiedTotalPersons: 12 }),
     ).toBeNull();
     expect(sellableSeats(20, null)).toBe(20);
   });
