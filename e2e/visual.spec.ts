@@ -4650,7 +4650,7 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ has: page.getByRole("link", { name: "Odile Marchand", exact: true }) });
         const door = row
           .locator("details")
-          .filter({ has: page.getByText("Turned away", { exact: true }) });
+          .filter({ has: page.getByText("Turn away…", { exact: true }) });
         await door.locator("> summary").click();
         await disclosureSettled(door);
         await capture(page, "trip-desk-turn-away", scheme);
