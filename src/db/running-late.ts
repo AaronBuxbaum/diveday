@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { canSayRunningLate, RUNNING_LATE_LEAD_MS } from "@/lib/running-late";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { recordDiverActivity } from "./operations";
 import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -38,7 +38,7 @@ export type RunningLateOutcome =
  * message a staffer marks later); the window is always checked at `now`.
  */
 async function stamp(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   bookingId: string,
   now: Date,
@@ -175,16 +175,18 @@ export async function clearBookingRunningLate(
  * same family the same way.
  */
 async function stampWithParty(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   bookingId: string,
   now: Date,
   saidAt: Date = now,
+  /** Collects the people of the party seats this call newly stamped. */
+  stampedPeople?: string[],
 ): Promise<RunningLateOutcome> {
   const own = await stamp(db, shopId, bookingId, now, saidAt);
   if (own.status !== "marked") return own;
   const party = await db
-    .select({ id: bookings.id })
+    .select({ id: bookings.id, personId: bookings.personId })
     .from(bookings)
     .where(
       and(
@@ -193,7 +195,10 @@ async function stampWithParty(
         eq(bookings.status, "booked"),
       ),
     );
-  for (const seat of party) await stamp(db, shopId, seat.id, now, saidAt);
+  for (const seat of party) {
+    const stamped = await stamp(db, shopId, seat.id, now, saidAt);
+    if (stamped.status === "marked") stampedPeople?.push(seat.personId);
+  }
   return own;
 }
 
@@ -422,7 +427,9 @@ export async function messageSeats(
  *
  * A fresh mark files a line on the diver's record naming the staffer
  * (`running_late_from_message`), because the roster's "said {time}" reads as
- * the diver's own tap otherwise. A repeat changes nothing and files nothing.
+ * the diver's own tap otherwise; each party seat the mark stamped gets its own
+ * line, in the same transaction as the stamps. A repeat changes nothing and
+ * files nothing.
  */
 export async function markMessageRunningLate(
   db: AppDb,
@@ -441,20 +448,28 @@ export async function markMessageRunningLate(
     (candidate) => candidate.bookingId === input.bookingId,
   );
   if (!seat) return { status: "closed" };
-  const outcome = await stampWithParty(
-    db,
-    input.shopId,
-    seat.bookingId,
-    input.now,
-    input.receivedAt,
-  );
-  if (outcome.status === "marked") {
-    await recordDiverActivity(db, {
-      shopId: input.shopId,
-      personId: input.personId,
-      actorPersonId: input.actorPersonId,
-      code: "running_late_from_message",
-    });
-  }
-  return outcome;
+  // The stamps and the staffer's lines commit together: a mark with no line
+  // would read as the diver's own tap, and a line with no mark would lie.
+  return db.transaction(async (tx) => {
+    const partyPeople: string[] = [];
+    const outcome = await stampWithParty(
+      tx,
+      input.shopId,
+      seat.bookingId,
+      input.now,
+      input.receivedAt,
+      partyPeople,
+    );
+    if (outcome.status === "marked") {
+      for (const personId of new Set([input.personId, ...partyPeople])) {
+        await recordDiverActivity(tx, {
+          shopId: input.shopId,
+          personId,
+          actorPersonId: input.actorPersonId,
+          code: "running_late_from_message",
+        });
+      }
+    }
+    return outcome;
+  });
 }
