@@ -175,6 +175,15 @@ describe("next.config.ts outputFileTracingExcludes", () => {
     // a function that cannot decode a JPEG.
     expect(globs.some((glob) => glob.includes("linux"))).toBe(false);
   });
+
+  it("drops the linux native from the cron functions and from nothing else (#2486)", async () => {
+    const config = await loadConfig(CONFIGURED);
+    const excludes = config.outputFileTracingExcludes ?? {};
+    const keysDroppingSharp = Object.entries(excludes)
+      .filter(([, globs]) => globs.some((glob) => glob.includes("sharp-libvips-linux")))
+      .map(([key]) => key);
+    expect(keysDroppingSharp).toEqual(["/api/cron/**"]);
+  });
 });
 
 /**

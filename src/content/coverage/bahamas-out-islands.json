@@ -1,0 +1,386 @@
+{
+  "area": "bahamas-out-islands",
+  "method": "Long Island (with Conception Island and Dean's Blue Hole), Rum Cay, San Salvador, Cat Island, Great Inagua, and Crooked and Acklins Islands. No official site list exists; Bahamas National Trust pages for Conception Island and Inagua name no dive sites. Lists used: the tourism list (Bahamas Ministry of Tourism dive page and island pages together with the My Out Islands pages for Long Island, San Salvador, Cat Island and the other islands, counted as one list); Stella Maris Resort (Long Island; read from the 2011 Wayback snapshot of its dive-locations page, as the current page lists only Comberbach, Conception and Dean's); Cape Santa Maria Beach Resort (Long Island); Riding Rock Resort and Marina (San Salvador); Only Blue Diving, the Club Med Columbus Isle dive center (San Salvador, a separate operator); and Hawk's Nest Resort (Cat Island, 2018 Wayback snapshot; its current site no longer offers diving). Greenwood Beach Resort and Fernandez Bay Village (Cat Island) publish no site names, and no operator list exists for Rum Cay, Great Inagua, Crooked Island or Acklins, so those islands contribute nothing to the count beyond HMS Conqueror. Cat Island has two lists with no site in common, so every Cat Island site is excluded as one list only. A site counts when named, recreationally divable on scuba and on at least two lists. Dean's Blue Hole is counted because two Long Island resorts sell it as a scuba trip, though it is mainly a freediving venue. Counted 2026-10-14.",
+  "sources": [
+    "https://www.myoutislands.com/bahamas-islands/long-island/diving",
+    "https://www.myoutislands.com/bahamas-islands/san-salvador/diving",
+    "https://www.myoutislands.com/bahamas-islands/cat-island/diving",
+    "https://www.bahamas.com/plan-your-trip/diving",
+    "https://www.bahamas.com/islands/long-island",
+    "https://www.bahamas.com/islands/san-salvador",
+    "https://www.bahamas.com/islands/rum-cay",
+    "https://web.archive.org/web/20110105055304/http://www.stellamarisresort.com/bahamas-diving-locations.asp",
+    "https://www.capesantamaria.com/activities",
+    "https://ridingrock.com/san-salvador-dive-sites/",
+    "https://www.onlyblue-diving.com/san-salvador-diving-guide/",
+    "https://web.archive.org/web/20180817130036/http://hawks-nest.com/activities/diving/"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Cat Island: Dry Heads",
+      "template": null,
+      "excluded": "on one list only (tourism list); shallow snorkel reef"
+    },
+    {
+      "name": "Cat Island: The Oceanic Whitetips (seasonal open-water shark dive)",
+      "template": null,
+      "excluded": "not a fixed site; on the tourism list only"
+    },
+    {
+      "name": "Hole in the Wall (Cat Island)",
+      "template": null,
+      "excluded": "on one list only (Hawk's Nest)"
+    },
+    {
+      "name": "Anchor",
+      "template": null,
+      "excluded": "on one list only (Hawk's Nest)"
+    },
+    {
+      "name": "The Oz",
+      "template": null,
+      "excluded": "on one list only (Hawk's Nest)"
+    },
+    {
+      "name": "The Playground",
+      "template": null,
+      "excluded": "on one list only (Hawk's Nest)"
+    },
+    {
+      "name": "Twilight Zone",
+      "template": null,
+      "excluded": "on one list only (Hawk's Nest)"
+    },
+    {
+      "name": "Sailboat",
+      "template": null,
+      "excluded": "on one list only (Hawk's Nest)"
+    },
+    {
+      "name": "Tartar Bank",
+      "template": null,
+      "excluded": "on one list only (Hawk's Nest)"
+    },
+    {
+      "name": "Trench",
+      "template": null,
+      "excluded": "on one list only (Hawk's Nest)"
+    },
+    {
+      "name": "Jagged Edge",
+      "template": null,
+      "excluded": "on one list only (Hawk's Nest)"
+    },
+    {
+      "name": "Circles",
+      "template": null,
+      "excluded": "on one list only (Hawk's Nest)"
+    },
+    {
+      "name": "Rum Reef (Cat Island)",
+      "template": null,
+      "excluded": "on one list only (Hawk's Nest)"
+    },
+    {
+      "name": "Fish Bowls (Cat Island)",
+      "template": null,
+      "excluded": "on one list only (Hawk's Nest)"
+    },
+    {
+      "name": "First Basin Wall",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Blue Hole (Cat Island)",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "White Hole Reef",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "The Tunnels (Cat Island)",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Third Basin Reef Wall",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Santa Maria Teresa (wreck)",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Grand Canyon (Rum Cay)",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "HMS Conqueror (Rum Cay)",
+      "template": null,
+      "listedBy": [
+        "https://www.bahamas.com/islands/rum-cay",
+        "https://web.archive.org/web/20110105055304/http://www.stellamarisresort.com/bahamas-diving-locations.asp"
+      ]
+    },
+    {
+      "name": "North Point (San Salvador)",
+      "template": null,
+      "excluded": "on one list only (Only Blue)"
+    },
+    {
+      "name": "La Crevasse",
+      "template": null,
+      "excluded": "on one list only (Riding Rock)"
+    },
+    {
+      "name": "Double Caves",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/san-salvador/diving",
+        "https://ridingrock.com/san-salvador-dive-sites/",
+        "https://www.onlyblue-diving.com/san-salvador-diving-guide/"
+      ]
+    },
+    {
+      "name": "Black Forest",
+      "template": null,
+      "excluded": "on one list only (Riding Rock)"
+    },
+    {
+      "name": "Dolittle's Grotto",
+      "template": null,
+      "excluded": "on one list only (Riding Rock)"
+    },
+    {
+      "name": "Sandy Point Cave",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/san-salvador/diving",
+        "https://ridingrock.com/san-salvador-dive-sites/"
+      ]
+    },
+    {
+      "name": "Orbit's Canyon",
+      "template": null,
+      "excluded": "on one list only (Riding Rock)"
+    },
+    {
+      "name": "Great Cut",
+      "template": null,
+      "excluded": "on one list only (Riding Rock)"
+    },
+    {
+      "name": "North Pole Cave",
+      "template": null,
+      "excluded": "on one list only (Riding Rock)"
+    },
+    {
+      "name": "Hole in the Wall (San Salvador)",
+      "template": "hole-in-the-wall-san-salvador",
+      "listedBy": [
+        "https://www.bahamas.com/plan-your-trip/diving",
+        "https://www.myoutislands.com/bahamas-islands/san-salvador/diving",
+        "https://ridingrock.com/san-salvador-dive-sites/"
+      ]
+    },
+    {
+      "name": "Shark Alley",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/san-salvador/diving",
+        "https://ridingrock.com/san-salvador-dive-sites/"
+      ]
+    },
+    {
+      "name": "Devil's Claw",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/san-salvador/diving",
+        "https://ridingrock.com/san-salvador-dive-sites/",
+        "https://www.onlyblue-diving.com/san-salvador-diving-guide/"
+      ]
+    },
+    {
+      "name": "Snapshot",
+      "template": null,
+      "listedBy": [
+        "https://ridingrock.com/san-salvador-dive-sites/",
+        "https://www.onlyblue-diving.com/san-salvador-diving-guide/"
+      ]
+    },
+    {
+      "name": "Shangrila",
+      "template": null,
+      "excluded": "on one list only (Riding Rock)"
+    },
+    {
+      "name": "Vicky's Reef",
+      "template": "vickys-reef-san-salvador",
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/san-salvador/diving",
+        "https://ridingrock.com/san-salvador-dive-sites/",
+        "https://www.onlyblue-diving.com/san-salvador-diving-guide/"
+      ]
+    },
+    {
+      "name": "Grouper Gully (Grouper Gulley)",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/san-salvador/diving",
+        "https://ridingrock.com/san-salvador-dive-sites/"
+      ]
+    },
+    {
+      "name": "Telephone Pole",
+      "template": "telephone-pole-san-salvador",
+      "listedBy": [
+        "https://ridingrock.com/san-salvador-dive-sites/",
+        "https://www.onlyblue-diving.com/san-salvador-diving-guide/"
+      ]
+    },
+    {
+      "name": "Riding Rock Wall (RRI Wall)",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/san-salvador/diving",
+        "https://ridingrock.com/san-salvador-dive-sites/"
+      ]
+    },
+    {
+      "name": "Runway 10 (The Runway)",
+      "template": "runway-10-san-salvador",
+      "listedBy": [
+        "https://www.bahamas.com/islands/san-salvador",
+        "https://ridingrock.com/san-salvador-dive-sites/",
+        "https://www.onlyblue-diving.com/san-salvador-diving-guide/"
+      ]
+    },
+    {
+      "name": "Stewpot",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Pillar Reef",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Sponge World",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Cockburn Town Wall",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Movie Caves",
+      "template": null,
+      "excluded": "cave; on one list only (tourism list)"
+    },
+    {
+      "name": "Brig Enterprise Wreck",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Columbian Wreck",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Frascate Wreck",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Hinchinbrook Wreck",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Schooner Wreck, Unknown Wreck and Yacht Wreck (San Salvador)",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Shark Reef (Stella Maris)",
+      "template": "shark-reef-stella-maris",
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/long-island/diving",
+        "https://web.archive.org/web/20110105055304/http://www.stellamarisresort.com/bahamas-diving-locations.asp"
+      ]
+    },
+    {
+      "name": "Comberbach (wreck)",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/long-island/diving",
+        "https://web.archive.org/web/20110105055304/http://www.stellamarisresort.com/bahamas-diving-locations.asp",
+        "https://www.capesantamaria.com/activities"
+      ]
+    },
+    {
+      "name": "Sunseeker (wreck)",
+      "template": null,
+      "excluded": "on one list only (Stella Maris)"
+    },
+    {
+      "name": "Flamingo Tongue Reef",
+      "template": null,
+      "excluded": "on one list only (Cape Santa Maria)"
+    },
+    {
+      "name": "Angelfish Reef (Long Island)",
+      "template": null,
+      "excluded": "on one list only (Cape Santa Maria)"
+    },
+    {
+      "name": "Turtle Heads",
+      "template": null,
+      "excluded": "on one list only (Cape Santa Maria)"
+    },
+    {
+      "name": "Barracuda Heads",
+      "template": null,
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/long-island/diving",
+        "https://www.capesantamaria.com/activities"
+      ]
+    },
+    {
+      "name": "Grouper Valley",
+      "template": null,
+      "excluded": "on one list only (tourism list)"
+    },
+    {
+      "name": "Conception Island Wall",
+      "template": "conception-island-wall",
+      "listedBy": [
+        "https://www.myoutislands.com/bahamas-islands/long-island/diving",
+        "https://web.archive.org/web/20110105055304/http://www.stellamarisresort.com/bahamas-diving-locations.asp",
+        "https://www.capesantamaria.com/activities"
+      ]
+    },
+    {
+      "name": "Dean's Blue Hole",
+      "template": "deans-blue-hole",
+      "listedBy": [
+        "https://www.bahamas.com/plan-your-trip/diving",
+        "https://web.archive.org/web/20110105055304/http://www.stellamarisresort.com/bahamas-diving-locations.asp",
+        "https://www.capesantamaria.com/activities"
+      ]
+    }
+  ]
+}

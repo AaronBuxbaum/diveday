@@ -1,8 +1,17 @@
-import { readFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { createTracker, lastLabelledAt, repoSlug, TrackerError, toIssue } from "./tracker.mjs";
+import {
+  createTracker,
+  ghApi,
+  lastLabelledAt,
+  repoSlug,
+  TrackerError,
+  toIssue,
+} from "./tracker.mjs";
 
 // Responses recorded from GitHub's REST API (see `_recorded` in the file).
 const RECORDED = JSON.parse(readFileSync(new URL("./tracker.fixtures.json", import.meta.url)));
@@ -74,6 +83,27 @@ describe("reading issues", () => {
     expect(pulls[0]).toMatchObject({ number: 2367, headRefName: "claude/project-thread-vidbfn-5" });
   });
 
+  it("leaves out pull requests whose head is in another repository", () => {
+    const own = {
+      number: 1,
+      head: { ref: "a", repo: { full_name: "o/r" } },
+      base: { ref: "main", repo: { full_name: "o/r" } },
+    };
+    const fork = {
+      number: 2,
+      head: { ref: "b", repo: { full_name: "x/r" } },
+      base: { ref: "main", repo: { full_name: "o/r" } },
+    };
+    const gone = {
+      number: 3,
+      head: { ref: "c", repo: null },
+      base: { ref: "main", repo: { full_name: "o/r" } },
+    };
+    const { run } = fakeGh({ [`${BASE}/pulls?`]: [own, fork, gone] });
+    const pulls = createTracker({ repo: REPO, run }).listPulls();
+    expect(pulls.map((pull) => pull.number)).toEqual([1]);
+  });
+
   it("finds when a label was last added from the issue's events", () => {
     expect(lastLabelledAt(RECORDED.events, "in-progress")).toBe("2026-10-10T09:46:09Z");
     expect(lastLabelledAt(RECORDED.events, "wontfix")).toBeNull();
@@ -83,6 +113,23 @@ describe("reading issues", () => {
     const { run } = fakeGh({});
     expect(() => createTracker({ repo: REPO, run }).getIssue(1)).toThrow(TrackerError);
     expect(() => createTracker({ repo: REPO, run }).getIssue(1)).toThrow(/gh api .*issues\/1/);
+  });
+
+  it("names the spawn error when gh fails with nothing on stderr", () => {
+    const run = () => ({
+      status: null,
+      stdout: "",
+      stderr: "",
+      error: Object.assign(new Error("spawnSync gh ENOBUFS"), { code: "ENOBUFS" }),
+    });
+    expect(() => createTracker({ repo: REPO, run }).getIssue(1)).toThrow(/failed: ENOBUFS/);
+  });
+
+  it("asks gh for only the fields a pull request is read for", () => {
+    const { run, calls } = fakeGh({ [`${BASE}/pulls?`]: [] });
+    createTracker({ repo: REPO, run }).listPulls({ state: "closed" });
+    expect(calls[0].args).toContain("--jq");
+    expect(calls[0].args.at(-1)).not.toMatch(/body/);
   });
 
   it("refuses something that is not an issue number before calling gh", () => {
@@ -145,10 +192,63 @@ describe("writing issues", () => {
   });
 });
 
+describe("the real gh runner", () => {
+  let dir;
+  const savedPath = process.env.PATH;
+  afterEach(() => {
+    process.env.PATH = savedPath;
+    if (dir) rmSync(dir, { recursive: true, force: true });
+  });
+
+  /** A stand-in `gh` on PATH that prints `bytes` of JSON: 100 pull requests with long bodies. */
+  function fakeGhBinary(bytes) {
+    dir = mkdtempSync(path.join(tmpdir(), "tracker-gh-"));
+    const script = path.join(dir, "gh");
+    writeFileSync(
+      script,
+      `#!/usr/bin/env node
+const body = "x".repeat(Math.ceil(${bytes} / 100));
+const pulls = Array.from({ length: 100 }, (_, i) => ({
+  number: i + 1, state: "closed", body, html_url: "https://x/" + (i + 1),
+  merged_at: "2026-10-13T00:00:00Z", head: { ref: "claude/b-" + i },
+}));
+process.stdout.write(JSON.stringify(pulls));
+`,
+    );
+    chmodSync(script, 0o755);
+    process.env.PATH = `${dir}${path.delimiter}${savedPath}`;
+  }
+
+  // 2026-10-13: one page of 100 closed pull requests was 2,279,829 bytes, spawnSync's 1 MiB
+  // default answered ENOBUFS, and `expire-claims` exited 2 with an empty "failed:".
+  it("reads a page larger than the 1 MiB default pipe", () => {
+    fakeGhBinary(2.5 * 1024 * 1024);
+    const pulls = createTracker({ repo: REPO, run: ghApi }).listPulls({
+      state: "closed",
+      limit: 100,
+    });
+    expect(pulls).toHaveLength(100);
+    expect(pulls[99]).toMatchObject({ number: 100, headRefName: "claude/b-99" });
+  });
+});
+
 describe("repoSlug", () => {
   it("takes GITHUB_REPOSITORY in Actions and this repository otherwise", () => {
     expect(repoSlug({ GITHUB_REPOSITORY: "a/b" })).toBe("a/b");
     expect(repoSlug({})).toBe(REPO);
     expect(repoSlug({ GITHUB_REPOSITORY: "not a slug" })).toBe(REPO);
+  });
+});
+
+describe("the gh runner", () => {
+  it("holds a full page of closed pull requests, which overflowed spawnSync's 1 MB (2026-10-15)", () => {
+    // One page of 100 closed PRs was 2.3 MB; the default buffer cut gh off with an empty stderr
+    // and the nightly expire-claims run failed with "…failed: " and nothing after it.
+    let options;
+    ghApi(["repos/o/r/pulls?state=closed&per_page=100"], undefined, (_cmd, _args, opts) => {
+      options = opts;
+      return { status: 0, stdout: "[]" };
+    });
+    expect(options.maxBuffer).toBeGreaterThanOrEqual(32 * 1024 * 1024);
   });
 });

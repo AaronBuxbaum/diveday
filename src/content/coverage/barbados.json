@@ -1,0 +1,425 @@
+{
+  "area": "barbados",
+  "method": "Barbados, the whole island: the west-coast barrier reefs and Folkestone Marine Park, the Carlisle Bay Marine Park wrecks, the south-coast reefs and the wrecks off the north and west coasts. No official site or mooring list is published online (the Coastal Zone Management Unit and Folkestone park pages give no dive-site list, and the Barbados Tourism Marketing Inc page names only four sites), so the denominator rests on operator lists plus the tourism board as one list. Lists read: Barbados Blue Watersports, Dive Hightide, Reefers and Wreckers, Dive West Side Scuba (also trading as Eco Dive), Seahorse Divers, The Scuba Guy Barbados, and the Visit Barbados diving page (tourism board, one list). Roger's Scuba Shack publishes no site list and BarbadoScuba has no readable site of its own, so neither is counted. A site is counted when named on at least two independent lists; same-site alternate names are merged (Eilon / Eillon, Needle Point / Finger Reef, Sandy Lane / Little Sandy Lane, Friars Craig / Friars Crag). A group heading such as \"Carlisle Bay\" is not a site; the wrecks under it are counted individually where a list names them. The Stavronikita (stern near 140 ft, bow and mast shallower) and Shark Bank (reef to 145 ft, dived at 80-90 ft) are counted because operators run them as recreational dives with an advanced certification. No coordinates are published on any of these lists, so no positions are given. Counted 2026-10-14.",
+  "sources": [
+    "https://divebarbadosblue.com/about-us/dive-sites",
+    "https://www.divehightide.com/dive-sites",
+    "https://scubadiving.bb/dive/",
+    "https://divewestsidescuba.com/diving/dive-sites/",
+    "https://www.seahorsediversbb.com/",
+    "https://www.scubaguybarbados.com/divesites",
+    "https://www.visitbarbados.org/diving-and-snorkeling"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "SS Stavronikita",
+      "template": "stavronikita",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://www.divehightide.com/dive-sites",
+        "https://scubadiving.bb/dive/",
+        "https://divewestsidescuba.com/diving/dive-sites/",
+        "https://www.scubaguybarbados.com/divesites"
+      ]
+    },
+    {
+      "name": "Berwyn",
+      "template": "berwyn",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://www.divehightide.com/dive-sites",
+        "https://www.seahorsediversbb.com/",
+        "https://www.scubaguybarbados.com/divesites"
+      ]
+    },
+    {
+      "name": "Ce-Trek",
+      "template": "ce-trek",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://www.divehightide.com/dive-sites",
+        "https://www.seahorsediversbb.com/",
+        "https://www.scubaguybarbados.com/divesites"
+      ]
+    },
+    {
+      "name": "Eilon (Eillon)",
+      "template": "eillon",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://www.divehightide.com/dive-sites",
+        "https://www.seahorsediversbb.com/",
+        "https://www.scubaguybarbados.com/divesites"
+      ]
+    },
+    {
+      "name": "Bajan Queen",
+      "template": "bajan-queen",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://www.divehightide.com/dive-sites",
+        "https://www.seahorsediversbb.com/",
+        "https://www.scubaguybarbados.com/divesites"
+      ]
+    },
+    {
+      "name": "Cornwallis",
+      "template": "cornwallis",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://www.divehightide.com/dive-sites",
+        "https://www.seahorsediversbb.com/",
+        "https://www.scubaguybarbados.com/divesites"
+      ]
+    },
+    {
+      "name": "Barge",
+      "template": "barge",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://www.divehightide.com/dive-sites",
+        "https://www.seahorsediversbb.com/",
+        "https://www.scubaguybarbados.com/divesites"
+      ]
+    },
+    {
+      "name": "Old Fort",
+      "template": "old-fort",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://divewestsidescuba.com/diving/dive-sites/",
+        "https://www.seahorsediversbb.com/"
+      ]
+    },
+    {
+      "name": "The Deep",
+      "template": null,
+      "listedBy": ["https://divebarbadosblue.com/about-us/dive-sites"],
+      "excluded": "on one list only (blue)"
+    },
+    {
+      "name": "Lobster Reef",
+      "template": "lobster-reef",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://www.seahorsediversbb.com/"
+      ]
+    },
+    {
+      "name": "Castle Bank",
+      "template": "castle-bank",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://divewestsidescuba.com/diving/dive-sites/",
+        "https://www.seahorsediversbb.com/"
+      ]
+    },
+    {
+      "name": "Fork Reef",
+      "template": "fork-reef",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://www.seahorsediversbb.com/"
+      ]
+    },
+    {
+      "name": "Pieces of Eight",
+      "template": "pieces-of-eight",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://divewestsidescuba.com/diving/dive-sites/",
+        "https://www.seahorsediversbb.com/"
+      ]
+    },
+    {
+      "name": "Accra",
+      "template": "accra",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://divewestsidescuba.com/diving/dive-sites/",
+        "https://www.seahorsediversbb.com/"
+      ]
+    },
+    {
+      "name": "Caribbee Reef",
+      "template": null,
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://www.seahorsediversbb.com/"
+      ]
+    },
+    {
+      "name": "Boot",
+      "template": "boot",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://divewestsidescuba.com/diving/dive-sites/",
+        "https://www.seahorsediversbb.com/"
+      ]
+    },
+    {
+      "name": "The Muff",
+      "template": "the-muff",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://divewestsidescuba.com/diving/dive-sites/",
+        "https://www.seahorsediversbb.com/"
+      ]
+    },
+    {
+      "name": "Mount Charlie",
+      "template": "mount-charlie",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://www.seahorsediversbb.com/"
+      ]
+    },
+    {
+      "name": "High Wire",
+      "template": "high-wire",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://www.seahorsediversbb.com/"
+      ]
+    },
+    {
+      "name": "Close Encounters",
+      "template": "close-encounters",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://divewestsidescuba.com/diving/dive-sites/",
+        "https://www.seahorsediversbb.com/"
+      ]
+    },
+    {
+      "name": "Bottle Ground",
+      "template": "bottle-ground",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://www.divehightide.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Clarkes Bank",
+      "template": "clarkes-bank",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://www.divehightide.com/dive-sites",
+        "https://divewestsidescuba.com/diving/dive-sites/"
+      ]
+    },
+    {
+      "name": "Paynes Bay",
+      "template": null,
+      "listedBy": ["https://divebarbadosblue.com/about-us/dive-sites"],
+      "excluded": "on one list only (blue)"
+    },
+    {
+      "name": "Victors",
+      "template": null,
+      "listedBy": ["https://divebarbadosblue.com/about-us/dive-sites"],
+      "excluded": "on one list only (blue)"
+    },
+    {
+      "name": "Dottins",
+      "template": "dottins",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://www.divehightide.com/dive-sites",
+        "https://scubadiving.bb/dive/",
+        "https://www.scubaguybarbados.com/divesites",
+        "https://www.visitbarbados.org/diving-and-snorkeling"
+      ]
+    },
+    {
+      "name": "Little Sandy Lane (Sandy Lane)",
+      "template": "little-sandy-lane",
+      "listedBy": [
+        "https://divebarbadosblue.com/about-us/dive-sites",
+        "https://scubadiving.bb/dive/"
+      ]
+    },
+    {
+      "name": "Johnsons",
+      "template": null,
+      "listedBy": ["https://divebarbadosblue.com/about-us/dive-sites"],
+      "excluded": "on one list only (blue)"
+    },
+    {
+      "name": "Maycocks Bay",
+      "template": "maycocks-bay",
+      "listedBy": [
+        "https://www.divehightide.com/dive-sites",
+        "https://scubadiving.bb/dive/",
+        "https://www.scubaguybarbados.com/divesites",
+        "https://www.visitbarbados.org/diving-and-snorkeling"
+      ]
+    },
+    {
+      "name": "Pamir",
+      "template": "pamir",
+      "listedBy": [
+        "https://www.divehightide.com/dive-sites",
+        "https://scubadiving.bb/dive/",
+        "https://www.scubaguybarbados.com/divesites"
+      ]
+    },
+    {
+      "name": "Silver Bank",
+      "template": null,
+      "listedBy": ["https://www.divehightide.com/dive-sites"],
+      "excluded": "on one list only (hightide)"
+    },
+    {
+      "name": "Bell Buoy",
+      "template": "bell-buoy",
+      "listedBy": [
+        "https://www.divehightide.com/dive-sites",
+        "https://divewestsidescuba.com/diving/dive-sites/",
+        "https://www.scubaguybarbados.com/divesites",
+        "https://www.visitbarbados.org/diving-and-snorkeling"
+      ]
+    },
+    {
+      "name": "Cement Factory",
+      "template": null,
+      "listedBy": ["https://www.divehightide.com/dive-sites"],
+      "excluded": "on one list only (hightide)"
+    },
+    {
+      "name": "Brightledge",
+      "template": "brightledge",
+      "listedBy": ["https://www.divehightide.com/dive-sites", "https://scubadiving.bb/dive/"]
+    },
+    {
+      "name": "Greatledge",
+      "template": null,
+      "listedBy": ["https://www.divehightide.com/dive-sites"],
+      "excluded": "on one list only (hightide)"
+    },
+    {
+      "name": "Spawnee",
+      "template": null,
+      "listedBy": ["https://www.divehightide.com/dive-sites", "https://scubadiving.bb/dive/"]
+    },
+    {
+      "name": "Tropicana",
+      "template": null,
+      "listedBy": ["https://www.divehightide.com/dive-sites", "https://scubadiving.bb/dive/"]
+    },
+    {
+      "name": "Whitegates",
+      "template": null,
+      "listedBy": ["https://www.divehightide.com/dive-sites", "https://scubadiving.bb/dive/"]
+    },
+    {
+      "name": "Lord Combermere",
+      "template": null,
+      "listedBy": [
+        "https://www.divehightide.com/dive-sites",
+        "https://scubadiving.bb/dive/",
+        "https://divewestsidescuba.com/diving/dive-sites/"
+      ]
+    },
+    {
+      "name": "Shark Bank",
+      "template": "shark-bank",
+      "listedBy": [
+        "https://www.divehightide.com/dive-sites",
+        "https://www.scubaguybarbados.com/divesites",
+        "https://www.visitbarbados.org/diving-and-snorkeling"
+      ]
+    },
+    {
+      "name": "Barracuda Reef",
+      "template": null,
+      "listedBy": ["https://www.divehightide.com/dive-sites"],
+      "excluded": "on one list only (hightide)"
+    },
+    {
+      "name": "Marion Wolf",
+      "template": null,
+      "listedBy": ["https://www.divehightide.com/dive-sites"],
+      "excluded": "on one list only (hightide)"
+    },
+    {
+      "name": "Friar's Craig (Friars Crag)",
+      "template": null,
+      "listedBy": [
+        "https://www.divehightide.com/dive-sites",
+        "https://divewestsidescuba.com/diving/dive-sites/",
+        "https://www.seahorsediversbb.com/",
+        "https://www.scubaguybarbados.com/divesites"
+      ]
+    },
+    {
+      "name": "Asta Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.divehightide.com/dive-sites",
+        "https://divewestsidescuba.com/diving/dive-sites/",
+        "https://www.seahorsediversbb.com/"
+      ]
+    },
+    {
+      "name": "Fisherman's",
+      "template": null,
+      "listedBy": ["https://scubadiving.bb/dive/"],
+      "excluded": "on one list only (reefers)"
+    },
+    {
+      "name": "Barracuda Junction",
+      "template": null,
+      "listedBy": ["https://scubadiving.bb/dive/"],
+      "excluded": "on one list only (reefers)"
+    },
+    {
+      "name": "Trident",
+      "template": "trident-wreck",
+      "listedBy": [
+        "https://divewestsidescuba.com/diving/dive-sites/",
+        "https://www.scubaguybarbados.com/divesites"
+      ]
+    },
+    {
+      "name": "Round Bar Reef",
+      "template": "round-bar-reef",
+      "listedBy": [
+        "https://divewestsidescuba.com/diving/dive-sites/",
+        "https://www.seahorsediversbb.com/"
+      ]
+    },
+    {
+      "name": "Middle Reef",
+      "template": null,
+      "listedBy": ["https://divewestsidescuba.com/diving/dive-sites/"],
+      "excluded": "on one list only (westside)"
+    },
+    {
+      "name": "Brianna H",
+      "template": null,
+      "listedBy": ["https://divewestsidescuba.com/diving/dive-sites/"],
+      "excluded": "on one list only (westside)"
+    },
+    {
+      "name": "Carlenes",
+      "template": null,
+      "listedBy": ["https://www.seahorsediversbb.com/"],
+      "excluded": "on one list only (seahorse)"
+    },
+    {
+      "name": "Needle Point (Finger Reef)",
+      "template": null,
+      "listedBy": ["https://www.seahorsediversbb.com/"],
+      "excluded": "on one list only (seahorse)"
+    },
+    {
+      "name": "Neptune Goddess",
+      "template": null,
+      "listedBy": ["https://www.scubaguybarbados.com/divesites"],
+      "excluded": "on one list only (scubaguy)"
+    }
+  ]
+}

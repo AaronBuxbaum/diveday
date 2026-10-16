@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   pgEnum,
@@ -110,6 +111,50 @@ export const shopContactEmailConfirmationTokens = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("shop_contact_email_confirmation_tokens_shop_idx").on(table.shopId)],
+);
+
+/**
+ * **The shore contact's two links** (H-118 review): `confirm`, the one-time
+ * link a saved address receives before any alert goes to it, and `stop`, the
+ * link every alert carries that takes the address off the shop.
+ *
+ * A confirm link has the same lifecycle as the front-desk address's
+ * (`shopContactEmailConfirmationTokens`): a fresh mint supersedes the
+ * outstanding one, consuming is one-time, it expires, and it confirms only
+ * while the shop still names the address it was minted for. A stop link is
+ * minted per alert and never expires (an expired opt-out leaves somebody
+ * unable to stop the mail, the reasoning the unsubscribe tokens above give);
+ * using it clears the shop's shore contact only while the shop still names
+ * the address it was sent to, and doing so twice is the same as once. Rows
+ * age out with H-02's retention prune.
+ *
+ * `email` is lower-cased: the address the link vouches for, and the handle an
+ * erasure sweeps it by.
+ */
+export const shopShoreAlertTokens = pgTable(
+  "shop_shore_alert_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    purpose: text("purpose").$type<"confirm" | "stop">().notNull(),
+    email: text("email").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    /** A confirm link's deadline; a stop link has none. */
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    supersededAt: timestamp("superseded_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("shop_shore_alert_tokens_shop_idx").on(table.shopId),
+    check("shop_shore_alert_tokens_purpose", sql`${table.purpose} in ('confirm', 'stop')`),
+    check(
+      "shop_shore_alert_tokens_expiry",
+      sql`(${table.purpose} = 'confirm') = (${table.expiresAt} is not null)`,
+    ),
+  ],
 );
 
 /** Latest outbound-email state per booking and notification purpose. */

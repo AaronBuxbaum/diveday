@@ -6,6 +6,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  forkRefusal,
   gitAnswers,
   OVERRIDE,
   overrideReason,
@@ -232,5 +233,48 @@ describe("a push from a real worktree", () => {
       JSON.stringify({ sha }),
     );
     expect(pushViolation(`cd ${wt} && git push`, read, repo)).toBeNull();
+  });
+});
+
+describe("a push that would fork a stack (#2587)", () => {
+  const pull = (number, headRefName, baseRefName) => ({ number, headRefName, baseRefName });
+  const open = [pull(2581, "s9", "main"), pull(2582, "dn", "s9"), pull(2585, "tw", "dn")];
+
+  it("names the current top and the rebase that moves the branch onto it", () => {
+    const reason = forkRefusal({ branch: "tw8", parent: "s9", pulls: open });
+    expect(reason).toMatch(/#2582 already stack on/);
+    expect(reason).toMatch(/current top is #2585 \(`tw`\)/);
+    expect(reason).toContain("git rebase --onto origin/tw origin/s9 tw8");
+  });
+
+  it("prints a number, not a branch name, when the name is not plainly one", () => {
+    const hostile = [
+      pull(2581, "s9", "main"),
+      pull(2582, "dn", "s9"),
+      pull(2585, "x$(touch /tmp/pwn)", "dn"),
+    ];
+    const reason = forkRefusal({ branch: "tw8", parent: "s9", pulls: hostile });
+    expect(reason).not.toContain("touch");
+    expect(reason).toContain("current top is #2585 (#2585)");
+    expect(reason).not.toContain("git fetch origin && git rebase");
+  });
+
+  it("leaves a branch alone when its parent has no other layer on it", () => {
+    expect(forkRefusal({ branch: "next", parent: "tw", pulls: open })).toBeNull();
+  });
+
+  it("leaves a branch that already has its own pull request, and one with no open parent", () => {
+    expect(forkRefusal({ branch: "dn", parent: "s9", pulls: open })).toBeNull();
+    expect(forkRefusal({ branch: "fresh", parent: undefined, pulls: open })).toBeNull();
+  });
+
+  it("stops a push before the verify:push check, even for a verified commit", () => {
+    const read = answers({ stamp: () => "aaa111", fork: () => "would fork" });
+    expect(pushViolation("git push -u origin claude/layer", read)).toBe("would fork");
+  });
+
+  it("does not look when the push is of some other branch", () => {
+    const read = answers({ stamp: () => "bbb222", fork: () => "would fork" });
+    expect(pushViolation("git push origin claude/other", read)).toBeNull();
   });
 });

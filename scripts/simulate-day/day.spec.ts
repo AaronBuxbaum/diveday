@@ -402,12 +402,22 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
     case "evening": {
       await advanceClock(at(id));
       await staff.goto(shopPath());
-      // A freshly minted shop has never sailed before, so its first all-home evening is
-      // celebrated as its first boat home (`shopHome.spine.firstBoatHome`).
-      await expect(
-        staff.getByText(/^(?:All boats are home|Your first boat is home):/),
-      ).toBeVisible();
-      return { screenshots: [await snap(staff, index, id)] };
+      // Every departure station on the spine reads "All home". Not the
+      // shop-wide "All boats are home" line: the minted shop's seeded dawn
+      // boat closed its divers' count but never counted its crew, and the
+      // spine withholds that line over a boat whose crew nobody counted
+      // (#1346). The simulation drives one boat, so the stations are the
+      // claim it can make. (When the shop-wide line does show on a fresh
+      // shop, it reads "Your first boat is home", `shopHome.spine.firstBoatHome`.)
+      const stations = staff
+        .getByRole("listitem")
+        .filter({ has: staff.getByRole("link", { name: "Departure log" }) });
+      await expect(stations.filter({ hasText: /All home/ }).first()).toBeVisible();
+      await expect(stations.filter({ hasNotText: /All home/ })).toHaveCount(0);
+      return {
+        note: `${await stations.count()} departure station(s), every one "All home"`,
+        screenshots: [await snap(staff, index, id)],
+      };
     }
 
     case "recap-sent": {

@@ -86,6 +86,8 @@ export function scheduleBuilderCopy(st: StaffTranslator): BuilderCopy {
     impactBoatClash: st.raw("schedule.builder.impactBoatClash"),
     impactCrewClash: st.raw("schedule.builder.impactCrewClash"),
     impactCrewAway: st.raw("schedule.builder.impactCrewAway"),
+    impactTurnaroundBoat: st.raw("schedule.builder.impactTurnaroundBoat"),
+    impactTurnaroundCrew: st.raw("schedule.builder.impactTurnaroundCrew"),
     impactToldOne: st.raw("schedule.builder.impactToldOne"),
     impactToldOther: st.raw("schedule.builder.impactToldOther"),
     impactGearOne: st.raw("schedule.builder.impactGearOne"),

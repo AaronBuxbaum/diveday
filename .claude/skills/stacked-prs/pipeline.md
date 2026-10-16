@@ -26,7 +26,11 @@ Three things to know, and none of them is a step:
   fork, a cycle, two open pull requests sharing a head branch, or layers spread across two stacks
   are each named in the job log and left alone, because a stack is an *ordered* list that merges
   bottom-up and atomically, so a guessed order is first noticed as the wrong pull request having
-  landed. If a chain of yours has not become a stack, that log says why.
+  landed. If a chain of yours has not become a stack, that log says why. A **fork** is the one
+  refusal that also speaks: the registrar posts a single comment on the refused layer naming both
+  tips, so the owning thread's PR-activity subscription wakes it, and `scripts/guard-push.mjs`
+  refuses the push that would make the fork, naming the current top and the `git rebase --onto`
+  that moves the branch onto it (#2587).
 - **Nothing here dissolves one.** `POST /repos/{owner}/{repo}/stacks/{n}/unstack` is a human's call
   and leaves ordinary chained-base pull requests behind.
 
@@ -63,9 +67,11 @@ to its own change.
      against it and the sticky comment says so; otherwise it falls back to the stack's fork point
      from `main`, and the diff is **cumulative** (ADR [20261012-visual-baseline-layer-below](../../../docs/architecture/decisions/20261012-visual-baseline-layer-below.md)).
   2. **One PR's CI at a time, bottom first, driven by the thread that owns the stack.** Push a
-     layer, let its run finish, then push the next. Concurrent runs cancel each other: on
-     2026-10-12, 15 to 19 layers pushed together cost 126 cancelled runs and 90 failed jobs as each
-     break rode up the stack. Each layer is a ~25-job run against the account's 20-concurrent-job
+     layer, let its run finish, then push the next. Runs on different branches do not cancel each
+     other (a push cancels only its own branch's previous run, and each main push has its own
+     group); they queue. On 2026-10-12, 15 to 19 layers pushed together cost 126 cancelled runs
+     and 90 failed jobs as each restack force-pushed every layer and each break rode up the stack.
+     Never cancel a main push run: `guard-bash.mjs` refuses it. Each layer is a ~25-job run against the account's 20-concurrent-job
      cap, so even two overlapping runs queue (runs 4558 to 4563 on 2026-10-10 took 23 to 28 min
      each against 14 to 17 alone). The per-prompt context line counts the account's open pull
      requests, so a second run in flight is visible before you push.

@@ -47,6 +47,7 @@
  * `--kill` is for a human or an explicitly-asked-for cleanup, never the hook.
  */
 
+import { readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
@@ -277,6 +278,62 @@ export function summarizeCommand(command) {
   return text.length > 160 ? `${text.slice(0, 157)}...` : text;
 }
 
+/**
+ * Files (not directories, not dotfiles) in `entries` modified at or after `sinceMs`, newest
+ * first. `entries` is `[{ name, isFile, mtimeMs }]` for the directory the checkouts sit in.
+ * On 2026-10-13 that directory held 199 loose files, 37 MB, 196 written that day: logs and
+ * `*-orig.ts` copies of source files that a later session could grep or diff by mistake.
+ */
+export function looseFilesSince(entries, sinceMs) {
+  if (!Number.isFinite(sinceMs)) return [];
+  return entries
+    .filter((entry) => entry.isFile && !entry.name.startsWith(".") && entry.mtimeMs >= sinceMs)
+    .sort((a, b) => b.mtimeMs - a.mtimeMs)
+    .map((entry) => entry.name);
+}
+
+/**
+ * When this session started, in ms: its `--session-id` process's age where the process table
+ * shows one, else the birth time of the transcript the hook payload names (cloud containers run
+ * the session outside this process table), else null.
+ */
+export function sessionStartMs(
+  rows,
+  sessionPid,
+  transcriptPath,
+  { now = Date.now(), stat = statSync } = {},
+) {
+  const session = rows.find((row) => row.pid === sessionPid);
+  if (session) return now - session.elapsedSeconds * 1000;
+  if (!transcriptPath) return null;
+  try {
+    const born = stat(transcriptPath).birthtimeMs;
+    return born > 0 ? born : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The loose files this session wrote beside `$CLAUDE_PROJECT_DIR`, or [] when unreadable. */
+function sessionLooseFiles(sinceMs) {
+  const project = process.env.CLAUDE_PROJECT_DIR;
+  if (!project || sinceMs === null) return { dir: null, files: [] };
+  const dir = path.dirname(path.resolve(project));
+  try {
+    const entries = readdirSync(dir, { withFileTypes: true }).map((entry) => {
+      const isFile = entry.isFile();
+      return {
+        name: entry.name,
+        isFile,
+        mtimeMs: isFile ? statSync(path.join(dir, entry.name)).mtimeMs : 0,
+      };
+    });
+    return { dir, files: looseFilesSince(entries, sinceMs) };
+  } catch {
+    return { dir, files: [] };
+  }
+}
+
 function main(payload = {}) {
   const args = new Set(process.argv.slice(2));
   const listOnly = args.has("--list");
@@ -294,10 +351,24 @@ function main(payload = {}) {
   const sessionPid = currentSessionPid(rows, exclude);
   const shells = staleSessionShells(rows, exclude, sessionPid);
   const orphans = orphanedDevProcesses(rows, exclude);
-  if (shells.length === 0 && orphans.length === 0) return 0;
+  // Reported, never deleted: the kill path below touches processes only.
+  const loose = kill
+    ? { files: [] }
+    : sessionLooseFiles(sessionStartMs(rows, sessionPid, payload.transcript_path));
+  if (shells.length === 0 && orphans.length === 0 && loose.files.length === 0) return 0;
 
   const lines = [];
+  if (loose.files.length > 0) {
+    const shown = loose.files.slice(0, 8).join(", ");
+    const more = loose.files.length > 8 ? `, and ${loose.files.length - 8} more` : "";
+    lines.push(
+      `${loose.files.length} file(s) this session wrote in ${loose.dir}, beside the checkouts: ${shown}${more}.`,
+      "  Scratch output belongs in the session's scratchpad directory (or $TMPDIR), not next to the",
+      "  repositories, where a later session can grep or diff a stale copy by mistake. Move or delete them.",
+    );
+  }
   if (shells.length > 0) {
+    if (lines.length > 0) lines.push("");
     lines.push(
       `${shells.length} background shell(s) from a Claude session still running after ${STALE_MINUTES}m:`,
     );
@@ -328,7 +399,7 @@ function main(payload = {}) {
       );
     }
   }
-  if (!kill) {
+  if (!kill && (shells.length > 0 || orphans.length > 0)) {
     lines.push("", `Clean up with: node ${path.relative(process.cwd(), process.argv[1])} --kill`);
   }
 

@@ -27,6 +27,9 @@
 // that a closing message is not a queue — is exactly what a summary compresses into "continued
 // working". The reminders are short because they are paid for on every compaction.
 //
+// When the checkout is the shared one the hooks load from — the primary worktree, detached and
+// clean — and `origin/main` has moved past it, it fast-forwards it first (`fastForwardShared`).
+//
 // **UserPromptSubmit** prints one line: branch, uncommitted count, unpushed count. AGENTS.md's
 // Parallel-work section asks for a `git status` before anything that touches the shared tree;
 // this makes that free and current on every prompt instead of a snapshot from session start.
@@ -671,7 +674,16 @@ function main() {
     fastForwarded,
     mergeDrivers,
     // After the fetch above, so origin/main's row reads this session's refs.
-    doctor: summaryLines(gatherFacts(cwd, { fetched })),
+    // `scheduled`: a nightly red twice running is said here, because nothing else tells a
+    // session (scripts/scheduled-runs.mjs).
+    doctor: summaryLines(
+      gatherFacts(cwd, {
+        fetched,
+        scheduled: process.env.DIVEDAY_SCHEDULED_RUNS !== "0",
+        mergeDriversInstall: mergeDrivers,
+        projectDir: cwd,
+      }),
+    ),
   });
   if (block) process.stdout.write(`${block}\n`);
 }

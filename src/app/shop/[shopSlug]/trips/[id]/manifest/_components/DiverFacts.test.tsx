@@ -66,10 +66,10 @@ describe("an unanswered referral's warning", () => {
     const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
     expect(printed).toHaveTextContent(/A physician did not clear this person/);
     expect(within(printed as HTMLElement).queryAllByRole("link")).toHaveLength(0);
-    expect(screen.queryByRole("link", { name: "View the refusal" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "View the physician’s decision" })).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
-    const links = screen.getAllByRole("link", { name: "View the refusal" });
+    const links = screen.getAllByRole("link", { name: "View the physician’s decision" });
     expect(links).toHaveLength(1);
     expect(links[0]).toHaveAttribute(
       "href",
@@ -98,7 +98,7 @@ describe("an unanswered referral's warning", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Open details for Maria" }));
     expect(screen.queryByRole("link", { name: "View the referral" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "View the refusal" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "View the physician’s decision" })).toBeNull();
     expect(screen.getByRole("dialog")).not.toHaveTextContent(/physician/);
   });
 

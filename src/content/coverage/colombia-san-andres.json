@@ -1,0 +1,687 @@
+{
+  "area": "colombia-san-andres",
+  "method": "San Andrés island and its fringing reef, plus Providencia and Santa Catalina in the Seaflower Biosphere Reserve. No official dive-site list exists: CORALINA and the Secretaría de Turismo publish no mooring or dive-site list, and the Old Providence McBean Lagoon plan names only its own zones (White Shoal for scuba, Crab Cay for snorkeling). Lists, one each: Karibik Diver's 21-site page (read through the Wayback Machine, 2019 snapshot; the live karibik-diver.com is gone), Divers Team's dive-point map of San Andrés (about 45 named points, a PDF read as an image through the Wayback Machine because the live site blocks fetching), Sea Pride Scuba's dive-points page, Gaia Scuba's article, and for Providencia Felipe Diving's site list (felipedivingshop.com) and The Dive Shop Old Providence's site list (23 sites). ProColombia and colombia.travel (the same national tourism board) count as one list: colombia.travel's adventure feature names San Andrés and Providencia sites, ProColombia's dive articles repeat and extend the San Andrés names. Read with no named sites: Banda Dive, Blue Life, Sirius Dive Shop, Anda di Wata, Karibik Diver today, and the Providencia shop Sonny (site is empty); Scuba San Andrés, San Andrés Divers, Sea Garden and Buzos del Caribe could not be read (dead, blocked or non-dive pages). PADI, DivePlannerPro, dive.site, Scuba Diving, Agenda del Mar and Colombian travel blogs, including blog.sanandresisla.travel, were leads only and never counted. A site is counted when it is on at least two independent lists and is a recreational scuba dive. Name matches judged by hand: Bajo Bonito is Karibik's Bajo Bonito and Divers Team's Plaza de Toros (PADI gives the alias); Diamond Cantil is Karibik's name for Divers Team's Cantil del Barco Hundido; Blue Diamond, Wreck Diamond and Barco Hundido are one wreck; Turtle Rock is Felipe's Piedra de La Tortuga and the shop's Turtle Rock; ProColombia's Trampa Tortuga is Divers Team's Trampa. Providencia's Canal Derecho and Canal Izquierdo may be Channel White and Blue but are kept as one-list rows. Most San Andrés rows rest on only the Divers Team map and Karibik; Banda, Blue Life, Sirius and Sonny publish no sites online. Counted 2026-10-14.",
+  "sources": [
+    "https://colombia.travel/en/blog/travel-magazine/nature-and-adventure-experiences-colombia",
+    "https://en.escueladebuceoseapride.com/buceo",
+    "https://felipedivingshop.com/es/sitios-de-buceo/",
+    "https://gaiascuba.com/por-que-bucear-en-san-andres/",
+    "https://procolombia.co/sala-de-prensa/noticias/procolombia-presenta-guia-especializada-de-buceo-en-el-pais",
+    "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+    "https://www.coralina.gov.co/publicaciones/30/parque-nacional-natural-old-providence-mcbean-lagoon/",
+    "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf",
+    "https://www.parquesnacionales.gov.co/wp-content/uploads/2020/10/plan-de-manejo-pnn-old-providence-mc-bean-lagoon.pdf",
+    "https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "La Pirámide (The Pyramids)",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ]
+    },
+    {
+      "name": "Big Channel",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ]
+    },
+    {
+      "name": "Bajo Bonito (La Plaza de Toros)",
+      "template": "bajo-bonito-san-andres",
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ]
+    },
+    {
+      "name": "Cantil Bajo Bonito",
+      "template": "cantil-bajo-bonito-san-andres",
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ]
+    },
+    {
+      "name": "Bajo del Bajo",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "La Montañita",
+      "template": "la-montanita-san-andres",
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ]
+    },
+    {
+      "name": "La Rocosa (La Rocasa)",
+      "template": "la-rocosa-san-andres",
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf",
+        "https://colombia.travel/en/blog/travel-magazine/nature-and-adventure-experiences-colombia"
+      ]
+    },
+    {
+      "name": "Los Recuerdos",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "Cantil de los Recuerdos",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "Cantil del Aeropuerto",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "Punta Evans",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "El Avión",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://colombia.travel/en/blog/travel-magazine/nature-and-adventure-experiences-colombia"
+      ]
+    },
+    {
+      "name": "Reggae Nest",
+      "template": "reggae-nest-san-andres",
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ]
+    },
+    {
+      "name": "Cantil Reggae Nest",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "Las Esponjas",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ]
+    },
+    {
+      "name": "Las Cuerdas",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html"
+      ],
+      "excluded": "on one list only (Karibik Diver)"
+    },
+    {
+      "name": "Dedos de Morgan",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ]
+    },
+    {
+      "name": "Blue Diamond wreck (Wreck Diamond, Barco Hundido)",
+      "template": "blue-diamond-wreck-san-andres",
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf",
+        "https://en.escueladebuceoseapride.com/buceo"
+      ]
+    },
+    {
+      "name": "Diamond Cantil (Cantil del Barco Hundido)",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ]
+    },
+    {
+      "name": "Villa Rosa",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "El Padi Cantil (Cantil PADI)",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ]
+    },
+    {
+      "name": "Punta PADI",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "West View",
+      "template": "west-view-san-andres",
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf",
+        "https://en.escueladebuceoseapride.com/buceo"
+      ]
+    },
+    {
+      "name": "Las Cuevas",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "El Faro",
+      "template": "el-faro-san-andres",
+      "listedBy": [
+        "https://en.escueladebuceoseapride.com/buceo",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ]
+    },
+    {
+      "name": "Wild Life",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf",
+        "https://colombia.travel/en/blog/travel-magazine/nature-and-adventure-experiences-colombia"
+      ]
+    },
+    {
+      "name": "La Piscinita",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf",
+        "https://procolombia.co/sala-de-prensa/noticias/procolombia-presenta-guia-especializada-de-buceo-en-el-pais"
+      ]
+    },
+    {
+      "name": "El Cantil de la Piscinita",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "Villa Erika",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf",
+        "https://procolombia.co/sala-de-prensa/noticias/procolombia-presenta-guia-especializada-de-buceo-en-el-pais"
+      ]
+    },
+    {
+      "name": "Coquitos",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "El Velerito",
+      "template": "el-velerito-san-andres",
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ]
+    },
+    {
+      "name": "Nirvana",
+      "template": "nirvana-san-andres",
+      "listedBy": [
+        "https://en.escueladebuceoseapride.com/buceo",
+        "https://gaiascuba.com/por-que-bucear-en-san-andres/",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf",
+        "https://colombia.travel/en/blog/travel-magazine/nature-and-adventure-experiences-colombia"
+      ]
+    },
+    {
+      "name": "Cantil Nirvana",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "Pared Nirvana",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "West Point",
+      "template": "west-point-san-andres",
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf",
+        "https://en.escueladebuceoseapride.com/buceo"
+      ]
+    },
+    {
+      "name": "Sea Pride (Sea Pride Point; also listed as Poseidon)",
+      "template": null,
+      "listedBy": ["https://en.escueladebuceoseapride.com/buceo"],
+      "excluded": "on one list only (Sea Pride Scuba)"
+    },
+    {
+      "name": "High Rock",
+      "template": null,
+      "listedBy": ["https://en.escueladebuceoseapride.com/buceo"],
+      "excluded": "on one list only (Sea Pride Scuba)"
+    },
+    {
+      "name": "Cantil de Sea Pride",
+      "template": null,
+      "listedBy": ["https://en.escueladebuceoseapride.com/buceo"],
+      "excluded": "on one list only (Sea Pride Scuba)"
+    },
+    {
+      "name": "La Caleta de José",
+      "template": null,
+      "listedBy": [
+        "https://colombia.travel/en/blog/travel-magazine/nature-and-adventure-experiences-colombia"
+      ],
+      "excluded": "on one list only (ProColombia / colombia.travel)"
+    },
+    {
+      "name": "La Calera",
+      "template": null,
+      "listedBy": [
+        "https://colombia.travel/en/blog/travel-magazine/nature-and-adventure-experiences-colombia"
+      ],
+      "excluded": "on one list only (ProColombia / colombia.travel)"
+    },
+    {
+      "name": "Las Piedras de la Langosta",
+      "template": null,
+      "listedBy": [
+        "https://colombia.travel/en/blog/travel-magazine/nature-and-adventure-experiences-colombia"
+      ],
+      "excluded": "on one list only (ProColombia / colombia.travel)"
+    },
+    {
+      "name": "Bajo Carmelo",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "Palacio Rayas",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "Trampa Tortuga",
+      "template": "trampa-tortuga-san-andres",
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf",
+        "https://colombia.travel/en/blog/travel-magazine/nature-and-adventure-experiences-colombia"
+      ]
+    },
+    {
+      "name": "Los Cables",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ]
+    },
+    {
+      "name": "Blue Wall",
+      "template": "blue-wall-san-andres",
+      "listedBy": [
+        "https://web.archive.org/web/20190921130709/https://www.karibik-diver.com/divesites.html",
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ]
+    },
+    {
+      "name": "Coral View",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "Palacio",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "Blacknet Coral",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "La Parguera",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "Piedras de Carlitos",
+      "template": null,
+      "listedBy": [
+        "https://www.diversteam.net/wp-content/uploads/2018/09/mapa-buceo-sai-trilogia-alta-resolucion.pdf"
+      ],
+      "excluded": "on one list only (Divers Team)"
+    },
+    {
+      "name": "El Acuario (Haynes Cay)",
+      "template": null,
+      "listedBy": [
+        "https://gaiascuba.com/por-que-bucear-en-san-andres/",
+        "https://colombia.travel/en/blog/travel-magazine/nature-and-adventure-experiences-colombia"
+      ],
+      "excluded": "snorkel-only (named by Gaia Scuba as a snorkel and beginner spot; shallow cay)"
+    },
+    {
+      "name": "Table Rock",
+      "template": null,
+      "listedBy": [
+        "https://felipedivingshop.com/es/sitios-de-buceo/",
+        "https://colombia.travel/en/blog/travel-magazine/nature-and-adventure-experiences-colombia"
+      ]
+    },
+    {
+      "name": "The Bight",
+      "template": null,
+      "listedBy": ["https://felipedivingshop.com/es/sitios-de-buceo/"],
+      "excluded": "on one list only (Felipe Diving)"
+    },
+    {
+      "name": "Blue Hole",
+      "template": null,
+      "listedBy": ["https://felipedivingshop.com/es/sitios-de-buceo/"],
+      "excluded": "on one list only (Felipe Diving)"
+    },
+    {
+      "name": "Bite",
+      "template": null,
+      "listedBy": ["https://felipedivingshop.com/es/sitios-de-buceo/"],
+      "excluded": "on one list only (Felipe Diving)"
+    },
+    {
+      "name": "Cantil de Santa Catalina",
+      "template": "cantil-de-santa-catalina-providencia",
+      "listedBy": [
+        "https://felipedivingshop.com/es/sitios-de-buceo/",
+        "https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"
+      ]
+    },
+    {
+      "name": "Canal Derecho",
+      "template": null,
+      "listedBy": ["https://felipedivingshop.com/es/sitios-de-buceo/"],
+      "excluded": "on one list only (Felipe Diving)"
+    },
+    {
+      "name": "Canal Izquierdo",
+      "template": null,
+      "listedBy": ["https://felipedivingshop.com/es/sitios-de-buceo/"],
+      "excluded": "on one list only (Felipe Diving)"
+    },
+    {
+      "name": "Felipe's Place",
+      "template": "felipes-place-providencia",
+      "listedBy": [
+        "https://felipedivingshop.com/es/sitios-de-buceo/",
+        "https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/",
+        "https://colombia.travel/en/blog/travel-magazine/nature-and-adventure-experiences-colombia"
+      ]
+    },
+    {
+      "name": "Chromis (Cromis)",
+      "template": "chromis-providencia",
+      "listedBy": [
+        "https://felipedivingshop.com/es/sitios-de-buceo/",
+        "https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"
+      ]
+    },
+    {
+      "name": "Confusion",
+      "template": null,
+      "listedBy": [
+        "https://felipedivingshop.com/es/sitios-de-buceo/",
+        "https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"
+      ]
+    },
+    {
+      "name": "Conolly",
+      "template": null,
+      "listedBy": [
+        "https://felipedivingshop.com/es/sitios-de-buceo/",
+        "https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"
+      ]
+    },
+    {
+      "name": "Contour (Contur)",
+      "template": null,
+      "listedBy": [
+        "https://felipedivingshop.com/es/sitios-de-buceo/",
+        "https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"
+      ]
+    },
+    {
+      "name": "Stairway to Heaven",
+      "template": null,
+      "listedBy": ["https://felipedivingshop.com/es/sitios-de-buceo/"],
+      "excluded": "on one list only (Felipe Diving)"
+    },
+    {
+      "name": "NX",
+      "template": null,
+      "listedBy": [
+        "https://felipedivingshop.com/es/sitios-de-buceo/",
+        "https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"
+      ],
+      "excluded": "technical depth (80 to 180 ft; The Dive Shop Old Providence does not offer it recreationally)"
+    },
+    {
+      "name": "Turtle Rock (Piedra de La Tortuga; Cantil y Gruta)",
+      "template": null,
+      "listedBy": [
+        "https://felipedivingshop.com/es/sitios-de-buceo/",
+        "https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/",
+        "https://colombia.travel/en/blog/travel-magazine/nature-and-adventure-experiences-colombia"
+      ]
+    },
+    {
+      "name": "Espiral",
+      "template": null,
+      "listedBy": [
+        "https://felipedivingshop.com/es/sitios-de-buceo/",
+        "https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"
+      ]
+    },
+    {
+      "name": "Valle de Las Esponjas",
+      "template": null,
+      "listedBy": [
+        "https://felipedivingshop.com/es/sitios-de-buceo/",
+        "https://colombia.travel/en/blog/travel-magazine/nature-and-adventure-experiences-colombia"
+      ]
+    },
+    {
+      "name": "Nick's Place",
+      "template": "nicks-place-providencia",
+      "listedBy": [
+        "https://felipedivingshop.com/es/sitios-de-buceo/",
+        "https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"
+      ]
+    },
+    {
+      "name": "The Cave (La Cueva)",
+      "template": "the-cave-providencia",
+      "listedBy": [
+        "https://felipedivingshop.com/es/sitios-de-buceo/",
+        "https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"
+      ]
+    },
+    {
+      "name": "Convento",
+      "template": "convento-providencia",
+      "listedBy": [
+        "https://felipedivingshop.com/es/sitios-de-buceo/",
+        "https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"
+      ]
+    },
+    {
+      "name": "Tete's Place",
+      "template": "tetes-place-providencia",
+      "listedBy": [
+        "https://felipedivingshop.com/es/sitios-de-buceo/",
+        "https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/",
+        "https://colombia.travel/en/blog/travel-magazine/nature-and-adventure-experiences-colombia"
+      ]
+    },
+    {
+      "name": "Manta's City (Manta's Place)",
+      "template": "mantas-city-providencia",
+      "listedBy": [
+        "https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/",
+        "https://colombia.travel/en/blog/travel-magazine/nature-and-adventure-experiences-colombia"
+      ]
+    },
+    {
+      "name": "El Planchón (tanker wreck)",
+      "template": "el-planchon-providencia",
+      "listedBy": [
+        "https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/",
+        "https://colombia.travel/en/blog/travel-magazine/nature-and-adventure-experiences-colombia"
+      ]
+    },
+    {
+      "name": "One Hook",
+      "template": null,
+      "listedBy": ["https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"],
+      "excluded": "on one list only (The Dive Shop Old Providence)"
+    },
+    {
+      "name": "Channel White and Blue",
+      "template": null,
+      "listedBy": ["https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"],
+      "excluded": "on one list only (The Dive Shop Old Providence)"
+    },
+    {
+      "name": "Bajo de San Felipe",
+      "template": null,
+      "listedBy": ["https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"],
+      "excluded": "on one list only (The Dive Shop Old Providence)"
+    },
+    {
+      "name": "Tres Casitas",
+      "template": null,
+      "listedBy": ["https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"],
+      "excluded": "on one list only (The Dive Shop Old Providence)"
+    },
+    {
+      "name": "Snapper Shoal",
+      "template": null,
+      "listedBy": ["https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"],
+      "excluded": "on one list only (The Dive Shop Old Providence)"
+    },
+    {
+      "name": "Bajos de Manzanillo",
+      "template": null,
+      "listedBy": ["https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"],
+      "excluded": "on one list only (The Dive Shop Old Providence)"
+    },
+    {
+      "name": "Only One",
+      "template": null,
+      "listedBy": ["https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"],
+      "excluded": "on one list only (The Dive Shop Old Providence)"
+    },
+    {
+      "name": "Loro Town",
+      "template": null,
+      "listedBy": ["https://www.thediveshopoldprovidence.com/en/sitios-de-buceo/"],
+      "excluded": "on one list only (The Dive Shop Old Providence)"
+    },
+    {
+      "name": "La Chimenea",
+      "template": null,
+      "listedBy": [
+        "https://colombia.travel/en/blog/travel-magazine/nature-and-adventure-experiences-colombia"
+      ],
+      "excluded": "on one list only (ProColombia / colombia.travel)"
+    },
+    {
+      "name": "White Shoal",
+      "template": null,
+      "listedBy": [
+        "https://www.parquesnacionales.gov.co/wp-content/uploads/2020/10/plan-de-manejo-pnn-old-providence-mc-bean-lagoon.pdf"
+      ],
+      "excluded": "on the park management plan only (the one SCUBA zone inside Old Providence McBean Lagoon); no operator list read names it"
+    },
+    {
+      "name": "Crab Cay",
+      "template": null,
+      "listedBy": [
+        "https://www.coralina.gov.co/publicaciones/30/parque-nacional-natural-old-providence-mcbean-lagoon/",
+        "https://www.parquesnacionales.gov.co/wp-content/uploads/2020/10/plan-de-manejo-pnn-old-providence-mc-bean-lagoon.pdf"
+      ],
+      "excluded": "snorkel-only (CORALINA and the park plan allow careteo only at Crab Cay); closed 2026-09-18 to 2026-12-17 for works"
+    }
+  ]
+}

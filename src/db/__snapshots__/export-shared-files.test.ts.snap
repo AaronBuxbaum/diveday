@@ -165,6 +165,7 @@ exports[`the diver bundle's headers > are exactly the columns decided for the di
     "review_note",
     "reviewed_at",
     "reviewed_by_name",
+    "agency_checked_at",
     "imported_at",
     "imported_from_label",
     "self_declared_at",
@@ -274,6 +275,8 @@ exports[`the diver bundle's headers > are exactly the columns decided for the di
     "status",
     "checkpoint",
     "recorded_by_name",
+    "readiness_status",
+    "readiness_blockers",
     "occurred_at",
   ],
   "specialty_certifications.csv": [
@@ -285,6 +288,7 @@ exports[`the diver bundle's headers > are exactly the columns decided for the di
     "review_note",
     "reviewed_at",
     "reviewed_by_name",
+    "agency_checked_at",
     "deleted_at",
     "created_at",
   ],
@@ -303,6 +307,7 @@ exports[`the diver bundle's headers > are exactly the columns decided for the di
     "trip_starts_at",
     "source",
     "invited_at",
+    "emailed_at",
     "created_at",
   ],
   "trip_last_minute_promo_recipients.csv": [

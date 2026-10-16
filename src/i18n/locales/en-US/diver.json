@@ -516,6 +516,14 @@
     "confirmedTitle": "The Monday email is off",
     "confirmedText": "You won’t get the weekly summary from {shopName} anymore. Turn it back on from your email settings."
   },
+  "shoreAlertStop": {
+    "title": "Stop {shopName}’s roll-call alerts?",
+    "description": "You’re {shopName}’s shore contact: it emails you when a boat’s roll call is still open after the boat was due back. Stopping takes your address off {shopName}’s settings.",
+    "submit": "Stop these alerts",
+    "submitting": "Stopping…",
+    "confirmedTitle": "Roll-call alerts stopped",
+    "confirmedText": "{shopName} won’t send you roll-call alerts anymore. If the shop adds you again, you’ll be asked to confirm first."
+  },
   "contactConfirm": {
     "title": "Confirm this address for {shopName}?",
     "description": "Divers who reply to {shopName}’s emails will reach {email}.",
@@ -525,6 +533,16 @@
     "confirmedText": "Replies from {shopName}’s divers now come here.",
     "unavailableTitle": "This confirmation link isn’t available",
     "unavailableText": "It may have expired, been replaced by a newer one, or the address in settings has changed since. Save the address again in settings to get a fresh link."
+  },
+  "shoreConfirm": {
+    "title": "Be {shopName}’s shore contact?",
+    "description": "{shopName} will email {email} when a boat’s roll call is still open after the boat was due back. Each alert has a link to stop them.",
+    "confirming": "Confirming…",
+    "submit": "Yes, send me these alerts",
+    "confirmedTitle": "You’re {shopName}’s shore contact",
+    "confirmedText": "If a roll call is still open after a boat was due back, {shopName} will email you. Each alert has a link to stop them.",
+    "unavailableTitle": "This link isn’t available",
+    "unavailableText": "It may have expired or been replaced by a newer one, or the shop has changed the address since. Ask the shop to send a fresh one."
   },
   "course": {
     "hidden": "Hidden: divers cannot see this page.",
@@ -981,6 +999,11 @@
     "welcomeAudience": "Only the crew on this boat, only today, and you can take it back.",
     "welcomeShareLabel": "Yes, tell the crew",
     "welcomeShared": "Your crew will know.",
+    "welcomeHelloLegend": "Anything to add for the crew? You can skip this.",
+    "welcomeHelloNone": "Nothing to add",
+    "welcomeHelloFirstOceanDive": "It is my first ocean dive",
+    "welcomeHelloCelebrating": "I am celebrating something",
+    "welcomeHelloNervous": "I am a little nervous",
     "intentHeading": "What’s this dive for?",
     "intentChoose": "Rather not say",
     "signCourseForms": "Sign course forms",
@@ -1168,7 +1191,12 @@
     "minorNoteParentSigns": "If you booked this seat, you can sign it from your own booking page.",
     "minorSendLink": "Send {name} their link; a parent or guardian signs with them.",
     "minorPhysician": "{name}’s medical answers need a physician’s sign-off. The shop will say what it needs.",
-    "claimedNeedsWaiver": "Ask them to finish their waiver from their own link."
+    "claimedNeedsWaiver": "Ask them to finish their waiver from their own link.",
+    "payForSeat": "Pay for this seat",
+    "payingSeat": "Opening payment…",
+    "payForSeatNote": "Pay online now. The seat stays theirs to claim.",
+    "seatPaidNotice": "Payment received for their seat. We’re confirming it with your shop. Nothing more to do.",
+    "payUnavailable": "We couldn’t open the payment page for that seat. It’s still held. Try again, or pay at the shop."
   },
   "rental": {
     "ownGear": "Bringing own gear, so no rental needed.",
@@ -1464,6 +1492,16 @@
         "description": "A finger-length violet fish with a black band running from its snout back along the top of the dorsal fin.",
         "tip": "Look deeper than the royal grammas, usually past 20 meters, hanging belly-to-rock under overhangs on the wall."
       },
+      "blacknose-shark": {
+        "name": "Blacknose shark",
+        "description": "A small, slim gray shark with a short, rounded snout marked by a dark smudge at the tip, and no other bold marks on the fins.",
+        "tip": "Usually met over sand and shallow reef, mostly in warm months. On a provisioned dive, follow the crew’s briefing to the letter; anywhere else, treat it as an unplanned encounter: stay calm, keep your hands in and let it pass."
+      },
+      "blacktip-shark": {
+        "name": "Blacktip shark",
+        "description": "A slim, fast gray-bronze shark with black tips on most fins, notably the second dorsal and the tail.",
+        "tip": "Met in shallow water, more in winter and spring around the Bahamas and Florida. Stay calm, keep your hands in and let it pass."
+      },
       "blade-fire-coral": {
         "name": "Blade fire coral",
         "description": "Flat mustard-tan blades with pale edges, standing in rows on the shallow reef crest where the surge runs.",
@@ -1519,10 +1557,20 @@
         "description": "Yellow flanks ruled with electric blue lines, in loose crowds under ledges.",
         "tip": "Look into the shade under overhangs. A whole school can sit out the day there."
       },
+      "bluethroat-pikeblenny": {
+        "name": "Bluethroat pikeblenny",
+        "description": "A pencil-thin blenny with a long, pike-like jaw that sits in a hole in the sand or rubble with only its head showing. Males flare a blue throat and a dark-spotted fin.",
+        "tip": "Look for a small head in a hole in the bottom, then wait. It ducks back out of sight if you lean in, so shoot from a little way off."
+      },
       "boga": {
         "name": "Boga",
         "description": "A slim, fork-tailed fish, blue-green above and silver below with thin gold lines, streaming in schools in midwater over the reef.",
         "tip": "Look up from the reef top. The schools turn as one and come close if you hang still in the water column."
+      },
+      "bonefish": {
+        "name": "Bonefish",
+        "description": "A slim, silver, torpedo-shaped fish with a blunt snout and a forked tail, tailing over sand and seagrass flats.",
+        "tip": "Look on shallow flats and mangrove edges, often in small groups. Stay back and move slowly; they spook at a splash."
       },
       "bottlenose-dolphin": {
         "name": "Bottlenose dolphin",
@@ -1583,6 +1631,11 @@
         "name": "Brown tube sponge",
         "description": "Clusters of tan to brown tubes, the outer wall studded with small cone-shaped bumps and round openings.",
         "tip": "Look into the tops of the tubes for gobies and small shrimp. Keep your gauges from swinging into them."
+      },
+      "bull-shark": {
+        "name": "Bull shark",
+        "description": "A stocky gray shark with a short, blunt snout, small eyes and no markings on its fins.",
+        "tip": "On a provisioned shark dive, follow the operator’s briefing exactly; anywhere else, treat it as an unplanned encounter: stay calm, keep it in view and end the dive."
       },
       "butter-hamlet": {
         "name": "Butter hamlet",
@@ -1794,6 +1847,11 @@
         "description": "Stubby blunt fingers in low thickets, tan to pale purple, in shallow water.",
         "tip": "A nursery: look between the fingers for the smallest fish on the reef."
       },
+      "fingerprint-cyphoma": {
+        "name": "Fingerprint cyphoma",
+        "description": "A thumbnail snail with a pale, smooth shell and a mantle patterned in fine, close-set lines like a fingerprint, grazing on sea fans.",
+        "tip": "Search the sea fans and gorgonians, on the same branches where flamingo tongues feed. Look without touching; the pattern is living tissue."
+      },
       "fire-coral": {
         "name": "Branching fire coral",
         "description": "Mustard-tan blades with pale tips, growing over anything that stops moving.",
@@ -1823,6 +1881,11 @@
         "name": "Florida horse conch",
         "description": "A huge, spindle-shaped shell up to 60 cm long, with a brick-orange animal inside, on sand and seagrass.",
         "tip": "Watch it hunt other snails, and leave every live shell where it lies."
+      },
+      "flying-gurnard": {
+        "name": "Flying gurnard",
+        "description": "A bottom fish with a blunt, armored head and broad pectoral fins, spotted with blue, that fan open like wings when it is startled.",
+        "tip": "Scan sand and rubble near the reef edge, where it walks along the bottom. Stay back; a close approach makes it flare its fins and flee."
       },
       "foureye-butterflyfish": {
         "name": "Foureye butterflyfish",
@@ -1869,6 +1932,11 @@
         "description": "A big red hermit with heavy, bumpy claws, living in a large conch shell on sand and seagrass.",
         "tip": "Watch for a big shell that moves on the sand, then settle and wait for the eyes to come out."
       },
+      "giant-manta-ray": {
+        "name": "Giant manta ray",
+        "description": "A very broad, dark-backed ray with a white belly, wide cephalic fins at the mouth and a pale shoulder patch.",
+        "tip": "Seen on Caribbean seamounts and cleaning stations, mostly in the cooler months. Keep your distance, never touch or chase it, and let it choose to circle."
+      },
       "glasseye-snapper": {
         "name": "Glasseye snapper",
         "description": "Red and silver with an enormous eye, hanging head-down in a shaded hollow.",
@@ -1899,6 +1967,11 @@
         "description": "A speckled sand-colored goby with a dark bar down through the eye and a small gold spot above the pectoral fin.",
         "tip": "It rests on sand beside the reef and darts a short way when you come close. Stop a body length off and let it settle."
       },
+      "goldspotted-eel": {
+        "name": "Goldspotted eel",
+        "description": "A tan snake eel with a row of dark spots ringed in gold along each side, often seen with its head out of the sand or sliding across it.",
+        "tip": "Look over sand and rubble at dusk and on night dives. Keep your hands and fins off the bottom around it; it retreats into the sand if crowded."
+      },
       "goliath-grouper": {
         "name": "Goliath grouper",
         "description": "Enormous and unbothered, usually parked under a ledge or in a wreck’s shadow.",
@@ -1928,6 +2001,11 @@
         "name": "Great barracuda",
         "description": "A long silver bar with an underslung jaw, hanging motionless in the current.",
         "tip": "It is curious, not interested in you. Leave shiny gear tucked away and carry on."
+      },
+      "great-hammerhead": {
+        "name": "Great hammerhead",
+        "description": "A large, solitary shark with a tall first dorsal fin and a wide head with an almost straight front edge.",
+        "tip": "Meet it on open-water edges and flats, mostly in winter. Keep your distance, don’t chase it, and let it pass."
       },
       "great-star-coral": {
         "name": "Great star coral",
@@ -1979,6 +2057,11 @@
         "description": "A big, mottled brown-green blenny with tufts of cirri over the eyes and a dark eyespot on the gill cover, in rocky shallows.",
         "tip": "Check holes and crevices in rocky shallows and jetties. It rests head-out and will hold still if you approach slowly."
       },
+      "hardhead-silverside": {
+        "name": "Hardhead silverside",
+        "description": "A small, slim fish with a bright silver stripe along each side, packed into dense schools.",
+        "tip": "Watch the school from outside the opening. They gather in overhead spaces, so stay out of caverns and swim-throughs."
+      },
       "harlequin-bass": {
         "name": "Harlequin bass",
         "description": "A finger-length bass with a pointed snout, white with bold black bars and spots, perched on rubble near the reef.",
@@ -2024,6 +2107,11 @@
         "description": "Deep blue banded with white, and one of the harder Caribbean fish to find.",
         "tip": "Worth the whole dive if you get one. Try the deeper coral heads, not the shallows."
       },
+      "jackknife-fish": {
+        "name": "Jackknife-fish",
+        "description": "A black-and-white fish with a tall, curved dorsal fin like an open blade, and a long dark stripe along the body. Juveniles trail a streaming dorsal fin.",
+        "tip": "Look under ledges and in caves and crevices, often in a pair. It hangs in shadow, so approach slowly and let it settle."
+      },
       "knobby-brain-coral": {
         "name": "Knobby brain coral",
         "description": "Low crusts and mounds raised into lumpy knobs, covered in short, narrow winding valleys.",
@@ -2033,6 +2121,11 @@
         "name": "Lamarck’s sheet coral",
         "description": "Broad plates stacked down a wall, with curving ridges and small white star-shaped polyps scattered across the surface.",
         "tip": "A wall coral, mostly below 15 meters. Hold your depth off the plates; they snap under a fin."
+      },
+      "lancer-dragonet": {
+        "name": "Lancer dragonet",
+        "description": "A small, flat-headed fish, mottled brown and gray to blend with the bottom, with a tall, striped dorsal fin it raises to display, resting on sand and rubble.",
+        "tip": "Scan open sand near the reef, especially in shallow water. It sits so still it is easy to miss, so look for the fin and the eyes."
       },
       "lane-snapper": {
         "name": "Lane snapper",
@@ -2103,6 +2196,11 @@
         "name": "Longlure frogfish",
         "description": "A lumpy sponge that turns out to have a mouth, fishing with a lure on its head.",
         "tip": "Guides find these and divers do not. If your guide stops at bare sponge, look harder."
+      },
+      "longnose-batfish": {
+        "name": "Longnose batfish",
+        "description": "A flattened, warty, orange-brown fish with a short horn on its snout, red lips and arm-like pectoral fins, that walks on the bottom instead of swimming.",
+        "tip": "Look on sand and rubble and on night dives, where it looks like a bit of debris until it moves. Watch from a distance; it will not swim off, but it is not a fish to poke."
       },
       "longsnout-butterflyfish": {
         "name": "Longsnout butterflyfish",
@@ -2219,6 +2317,11 @@
         "description": "A tall gray diamond with a dark blotch at the pectoral, out in the blue off a wall.",
         "tip": "Look off the wall rather than along it. This one hangs in open water, not on the reef."
       },
+      "oceanic-whitetip-shark": {
+        "name": "Oceanic whitetip shark",
+        "description": "A slow, stocky open-ocean shark with long rounded fins tipped in white and a blunt snout.",
+        "tip": "Keep it in view, stay close to the group and the line, don’t turn your back, and end the dive if it stays. Never leave the line to follow it."
+      },
       "orange-cup-coral": {
         "name": "Orange cup coral",
         "description": "Clusters of round orange to reddish cups in shade under ledges, in caves and on wrecks and rigs, opening bright yellow-orange tentacles after dark. An Indo-Pacific coral, not from this ocean.",
@@ -2233,6 +2336,11 @@
         "name": "Orangeclaw hermit crab",
         "description": "A small hermit with bright orange claws and red-brown, white-tipped legs, in a borrowed snail shell.",
         "tip": "Watch shallow rubble and rock in calm water; it wanders in the open by day."
+      },
+      "orangesided-goby": {
+        "name": "Orangesided goby",
+        "description": "A tiny goby with a pale body crossed by red-orange blotches along the side and a bright, speckled red-orange head, perched on corals and sponges.",
+        "tip": "Look low on coral heads and sponges in shallow reef, and watch for the orange flash. It is small and shy, so settle in a hand’s width away and keep still."
       },
       "orangespotted-filefish": {
         "name": "Orangespotted filefish",
@@ -2344,6 +2452,11 @@
         "description": "The biggest parrotfish in the Atlantic: bronze-green, and over a meter grown.",
         "tip": "It grows up in the mangroves, so a reef beside one is where you have the best chance."
       },
+      "rainbow-runner": {
+        "name": "Rainbow runner",
+        "description": "A sleek, olive-blue fish with two pale blue stripes edged in yellow along the flank, and a deeply forked tail.",
+        "tip": "Watch the blue water near walls and offshore pinnacles, often in small groups. They pass in a hurry, so hold your position and let them come."
+      },
       "red-boring-sponge": {
         "name": "Red boring sponge",
         "description": "Bright red-orange patches set into coral heads, with raised round openings, eating into the coral from inside.",
@@ -2434,6 +2547,11 @@
         "description": "A tiny blenny that lives in an old worm hole in coral, showing only its head, crowned with branched tufts.",
         "tip": "Scan the dead tops of coral heads for holes the size of a pencil, then hold still. Shadows send it back inside."
       },
+      "roughtail-stingray": {
+        "name": "Roughtail stingray",
+        "description": "A very large, dark gray-brown diamond with a long tail that is rough with small thorns, gliding or resting on sand in cooler or deeper water.",
+        "tip": "Look along sand edges and channels deeper than the usual ray dive. Give it a wide berth and watch from the side, never from above or behind the tail."
+      },
       "round-scad": {
         "name": "Round scad",
         "description": "A slim, silvery baitfish with a row of small dark spots along the lateral line, moving in tight, fast schools.",
@@ -2488,6 +2606,11 @@
         "name": "Saucereye porgy",
         "description": "A tall, silvery porgy with a steep forehead, a large eye and a short blue line under it, cruising alone near the reef.",
         "tip": "Watch the sand edge of the reef. It picks along the bottom for crabs and shells and keeps a steady distance from divers."
+      },
+      "scalloped-hammerhead": {
+        "name": "Scalloped hammerhead",
+        "description": "A gray-brown shark with a wide, flat head whose front edge is notched in the middle. Rare in the Caribbean.",
+        "tip": "If you see one, hold your position, breathe slowly and let it pass."
       },
       "scamp": {
         "name": "Scamp",
@@ -2564,6 +2687,11 @@
         "description": "Bright yellow with a dark blue-black patch across the upper back, and blue-edged black marks around the eye and snout.",
         "tip": "True to the name it ducks into the coral when you close in. Stop a body length off and it comes back out."
       },
+      "silky-shark": {
+        "name": "Silky shark",
+        "description": "A sleek, open-ocean shark, dark bronze-gray above and pale below, with a small ridge along the back and long, curved pectoral fins with dark tips.",
+        "tip": "Mostly a blue-water species, met off steep walls and on drifting-rope or bluewater dives. On a provisioned dive, follow the crew’s briefing to the letter; anywhere else, treat it as an unplanned encounter: stay calm, keep it in view and end the dive."
+      },
       "silver-porgy": {
         "name": "Silver porgy",
         "description": "A deep-bodied silver porgy with a bold black saddle on the base of the tail, in small groups over rocky shallows.",
@@ -2603,6 +2731,11 @@
         "name": "Social feather duster",
         "description": "Clusters of small feather dusters, each crown a soft brown, purple or white fan, crowded together on reef rock.",
         "tip": "Hang still beside a cluster; if they pull in, wait and they reopen one by one."
+      },
+      "southern-sennet": {
+        "name": "Southern sennet",
+        "description": "A slim, silver barracuda, much smaller than the great barracuda, with a long jaw and a faint dark bar or two on the upper flank, hanging in loose schools.",
+        "tip": "Look for schools hanging in the water over sand flats, grass and shallow reef. They drift away together if you swim straight at them, so approach slowly."
       },
       "southern-stingray": {
         "name": "Southern stingray",
@@ -2699,6 +2832,11 @@
         "description": "A soft, olive to tan slug with black rings scattered over its body, grazing algae in the shallows.",
         "tip": "Disturbed, it squirts purple ink, so keep your hands back and let it graze."
       },
+      "spotted-snake-eel": {
+        "name": "Spotted snake eel",
+        "description": "A long, thick eel with a pointed snout and rows of dark spots along a cream-colored body, usually seen as a head and neck poking from the sand, or crawling across it.",
+        "tip": "Look over sand and seagrass at dusk and on night dives. Keep your distance and your hands to yourself; if crowded it backs into the sand."
+      },
       "spotted-spiny-lobster": {
         "name": "Spotted spiny lobster",
         "description": "A dark, purple-brown lobster covered in white spots, with striped legs, deep inside reef holes.",
@@ -2784,6 +2922,11 @@
         "description": "Slanted tiger bars over a long body, very often parked at a cleaning station.",
         "tip": "Find the cleaning station and you find the grouper, mouth open and holding still."
       },
+      "tiger-shark": {
+        "name": "Tiger shark",
+        "description": "A big, blunt-snouted shark with dark vertical bars along its flanks that fade with age.",
+        "tip": "On a provisioned shark dive, follow the operator’s briefing exactly; anywhere else, treat it as an unplanned encounter: stay calm, keep it in view and end the dive."
+      },
       "tobaccofish": {
         "name": "Tobaccofish",
         "description": "A slim little sea bass with a broad orange-brown stripe low on its side and dark saddles across a pale back, hunting low over sand and rubble.",
@@ -2833,6 +2976,11 @@
         "name": "Vermilion snapper",
         "description": "A slim rose-red snapper with a forked tail, fine blue lines along the upper back and short yellow streaks below, schooling over deep reefs and wrecks.",
         "tip": "Expect them on deeper ledges and wrecks, often past 25 meters. Watch the open water above the structure, where the school hangs."
+      },
+      "wahoo": {
+        "name": "Wahoo",
+        "description": "A long, slim, steel-blue fish with faint vertical bars on the flank, a pointed snout and a mouth full of sharp, flat teeth.",
+        "tip": "Look in open water beside walls and drop-offs. It is fast and wary, so do not chase it. A still diver at the edge of the blue sees the most."
       },
       "west-indian-sea-egg": {
         "name": "West Indian sea egg",
@@ -3416,7 +3564,6 @@
     "today": "Today",
     "todayStart": "7:30 AM",
     "todayEnds": "– 11:00 AM",
-    "phaseCheckin": "Check-in",
     "readyCount": "7 of 9 ready",
     "blockedCount": "2 blocked",
     "spotsOpen": "3 seats open",
@@ -5048,6 +5195,7 @@
     "replyKeyword": {
       "offer": "Reply C to cancel your seat, or M to ask about moving it.",
       "confirmCancel": "{tripTitle}, {date} at {time}. Reply {code} in the next half hour to give up your seat. Nothing has changed yet.",
+      "confirmCancelParty": "{tripTitle}, {date} at {time}. Reply {code} in the next half hour to give up your seat. This also cancels {count, plural, one {# party seat} other {# party seats}}. Nothing has changed yet.",
       "cancelled": "Your seat on {tripTitle}, {date}, is canceled.",
       "refundOnItsWay": "Your refund is on its way.",
       "cancelRefused": "That seat could not be released. We’ll pick this up.",
@@ -5090,6 +5238,8 @@
       "moneyRefunded": "{amount} is on its way back to the card you paid with, and can take a few days to land.",
       "moneyForfeit": "It was canceled after our free-cancellation window closed, so under our policy nothing is refunded.",
       "moneyFollowUp": "We’ll be in touch about what you paid.",
+      "partyCancelled": "{count, plural, one {The # party seat you booked is canceled with yours.} other {The # party seats you booked are canceled with yours.}}",
+      "partyStayed": "{count, plural, one {# party seat stays booked: its diver has already claimed it or checked in.} other {# party seats stay booked: their divers have already claimed them or checked in.}}",
       "findAnother": "See what else is running"
     },
     "tripBlowout": {
@@ -5421,9 +5571,28 @@
     },
     "rollCallStale": {
       "subject": "{shopName}: roll call still open on {tripTitle}",
-      "body": "The roll call after dive {dive} on {tripTitle} is still open after the boat was due back at {time}. {count, plural, one {# person is} other {# people are}} not marked aboard.",
-      "bodyMissing": "On {tripTitle}, {count, plural, one {# person is} other {# people are}} recorded not back aboard after dive {dive}, after the boat was due back at {time}.",
-      "open": "Open the roll call"
+      "body": "The roll call after dive {dive} on {tripTitle} is still open after the boat was due back at {time}.",
+      "bodyDated": "The roll call after dive {dive} on {tripTitle} is still open after the boat was due back on {date} at {time}.",
+      "countsMissing": "{missing, plural, one {# person is} other {# people are}} recorded not back aboard.",
+      "countsAwaiting": "{awaiting, plural, one {# person has} other {# people have}} no result yet: nobody has recorded them missing or back aboard.",
+      "countsBoth": "{missing, plural, one {# person is} other {# people are}} recorded not back aboard; {awaiting, plural, one {# more has} other {# more have}} no result yet: nobody has recorded them missing or back aboard.",
+      "open": "Open the roll call",
+      "shoreCall": "Call {shopName} first.",
+      "shoreCallPhone": "Call {shopName} first, on {phone}.",
+      "shoreSent": "Sent {when}. This is the only message you will get about this departure. DiveDay sends no all-clear; ask {shopName}.",
+      "shoreWhy": "You’re getting this because {shopName} lists you as its shore contact for roll-call alerts, and you confirmed it.",
+      "shoreStop": "Stop these alerts"
+    },
+    "shoreAlertStopped": {
+      "subject": "{shopName}: the shore contact stopped roll-call alerts",
+      "body": "Your shore contact used the link in a roll-call alert to stop them. DiveDay won’t email them again unless you save their address and they confirm it again.",
+      "open": "Open the emergency reference"
+    },
+    "shoreAlertConfirmation": {
+      "subject": "{shopName} asks you to be its shore contact",
+      "body": "{shopName} wants to email you when a boat’s roll call is still open after the boat was due back, because someone may not be back aboard. Confirm to get these alerts. Each one has a link to stop them.",
+      "confirm": "Yes, send me these alerts",
+      "expiry": "This link expires {expiresAt}. If you didn’t agree to this, ignore this email and nothing will be sent to you."
     },
     "smsWorkOrder": {
       "ready": "{shopName}: your gear on ticket #{number} is ready to collect ({pieces}).",

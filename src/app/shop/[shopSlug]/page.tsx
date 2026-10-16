@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { Suspense } from "react";
@@ -10,73 +9,42 @@ import {
   type EveningReading,
   type SpineDraft,
 } from "@/app/shop/[shopSlug]/_components/today/DaySpine";
-import { readDayMoney } from "@/app/shop/[shopSlug]/_components/today/day-money";
-import { FirstBookableCard } from "@/app/shop/[shopSlug]/_components/today/FirstBookableCard";
 import { FirstRunChecklist } from "@/app/shop/[shopSlug]/_components/today/FirstRunChecklist";
 import { firstRunChecklistCopy } from "@/app/shop/[shopSlug]/_components/today/first-run-copy";
-import { RecapNoteEditor } from "@/app/shop/[shopSlug]/_components/today/RecapNoteEditor";
+import { recapEditorsFor } from "@/app/shop/[shopSlug]/_components/today/recap-editors";
+import { TodayFirstBookable } from "@/app/shop/[shopSlug]/_components/today/TodayFirstBookable";
+import { TodayHeaderNotes } from "@/app/shop/[shopSlug]/_components/today/TodayHeaderNotes";
+import { TodayNoticeStack } from "@/app/shop/[shopSlug]/_components/today/TodayNoticeStack";
+import { TodayOrientation } from "@/app/shop/[shopSlug]/_components/today/TodayOrientation";
+import { TodayPrintDoor } from "@/app/shop/[shopSlug]/_components/today/TodayPrintDoor";
+import { TodayQuietDay } from "@/app/shop/[shopSlug]/_components/today/TodayQuietDay";
 import {
-  RoleOrientationCard,
-  RoleOrientationLine,
-} from "@/app/shop/[shopSlug]/_components/today/RoleOrientationCard";
-import { recapStatusLine } from "@/app/shop/[shopSlug]/_components/today/recap-status";
+  readTodayFirstWave,
+  readTodaySecondWave,
+} from "@/app/shop/[shopSlug]/_components/today/today-reads";
 import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessions";
 import { YourWeek } from "@/app/shop/[shopSlug]/_components/today/YourWeek";
-import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { FlashParams } from "@/components/FlashParams";
-import { ShopNotice } from "@/components/ShopPageHeader";
-import { buttonClass } from "@/components/ui/button";
-import { LedgerRow } from "@/components/ui/ledger";
-import { canPersonExportIncidentRecord } from "@/db/authz";
-import { daySummaryBlocked, sharedInHorizonReadiness } from "@/db/blockers";
-import { hasArrivals, listCheckInQueue } from "@/db/check-in";
+import { daySummaryBlocked } from "@/db/blockers";
 import { getDb } from "@/db/client";
-import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "@/db/closeout";
-import { shopFirstBooking } from "@/db/first-booking";
 import { loadFirstRunFacts } from "@/db/first-run";
-import { listFreshFormDrafts } from "@/db/form-drafts";
-import { shopHasEverTakenAnOrder } from "@/db/orders";
 import type { ConfirmRentalFitOutcome } from "@/db/rental-fit";
-import { canPersonViewShopReports } from "@/db/reporting";
-import { seasonScale } from "@/db/season-scale";
 import { shopByIdCached } from "@/db/shops";
-import { canAcceptPayments, shopStripeAccountForRender } from "@/db/stripe-accounts";
-import { getShopDayDepartures, getTodayWork } from "@/db/today";
-import { countShopTrips } from "@/db/trips";
-import { isOrientationDismissed } from "@/db/user-accounts";
-import {
-  orientationRoleFor,
-  orientationTourHref,
-  orientationTourText,
-} from "@/i18n/orientation-labels";
+import { canAcceptPayments } from "@/db/stripe-accounts";
+import { orientationRoleFor } from "@/i18n/orientation-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { daySpineSummaryText } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { assembleEveningClose } from "@/lib/closeout";
-import { shopCrewTarget } from "@/lib/crew-schedule";
 import { FORM_DRAFT_RESUME_SUFFIX } from "@/lib/form-drafts";
-import {
-  formatDateTimeTz,
-  formatMonthDay,
-  formatShortDate,
-  formatTime,
-  formatWeekday,
-} from "@/lib/format";
+import { formatMonthDay, formatTime, formatWeekday } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { publicSchedulePath } from "@/lib/public-routes";
-import { recapAutoSendAt } from "@/lib/recap-schedule";
-import { seasonStartInstant } from "@/lib/season";
 import { requireStaffSession } from "@/lib/session";
-import {
-  type NoticeCodeOf,
-  type NoticeTone,
-  noticeFromParam,
-  noticeRole,
-  shopPath,
-} from "@/lib/staff-notices";
+import { type NoticeCodeOf, type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import {
   assembleDaySpine,
   factOfScaleFor,
@@ -85,18 +53,9 @@ import {
   spineIsQuiet,
   spineJobCount,
 } from "@/lib/today";
-import { shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { shopDayBounds, utcToWallTime } from "@/lib/zoned";
 import { AUTH_NOTICES } from "./_components/auth-notices";
-import {
-  deleteCrewRecapPhotoAction,
-  deleteRecapPhotoAction,
-  dismissOrientationAction,
-  saveRecapNoteAction,
-  sendRecapAction,
-  toggleRecapAutoSendPauseAction,
-  updateHelpRequestAction,
-  uploadCrewRecapPhotoAction,
-} from "./actions";
+import { updateHelpRequestAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -220,29 +179,6 @@ export default async function ShopPage({
   );
 }
 
-/**
- * Noon on the shop's *next* calendar day, in its own zone — the instant the
- * second bounded `getTodayWork` call reads tomorrow's shop-day from.
- *
- * Noon rather than midnight so a daylight-saving jump cannot land it on the
- * wrong side of the boundary it is naming, and the shop's zone rather than the
- * server's because "tomorrow" is a fact about where the boat sails from.
- */
-function tomorrowNoon(now: Date, timeZone: string): Date {
-  const wall = utcToWallTime(now, timeZone);
-  const next = new Date(Date.UTC(wall.year, wall.month - 1, wall.day + 1));
-  return wallTimeToUtc(
-    {
-      year: next.getUTCFullYear(),
-      month: next.getUTCMonth() + 1,
-      day: next.getUTCDate(),
-      hour: 12,
-      minute: 0,
-    },
-    timeZone,
-  );
-}
-
 async function TodayBody({
   session,
   shopSlug,
@@ -305,11 +241,12 @@ async function TodayBody({
   // **Two waves, not thirteen phases** (code review 2026-10-10, item 2): this wave needs only the
   // shop, the reader and the clock; the next needs its answers. A read a later branch may discard
   // is still started here — each is bounded, and that branch is mostly a first run with no rows.
-  const [
+  const {
     freshDrafts,
     canReadShopMoney,
     evidence,
-    [arrivalRows, counterOpen],
+    arrivalRows,
+    counterOpen,
     closeout,
     shopTripCount,
     stripeAccount,
@@ -317,45 +254,15 @@ async function TodayBody({
     firstBookingRead,
     scale,
     orientationDismissed,
-  ] = await Promise.all([
-    // The reader's own unfinished forms (ADR 20260906-before-you-ask, decision 3).
-    listFreshFormDrafts(db, shop.id, session.user.personId, now),
-    // **Who on this page may read the shop's money**, asked once, of the database (issue #1930,
-    // security review F1).
-    //
-    // Three things here are gated on it: the owed-refund and stuck-payment rows in the Today queue,
-    // the same rows inside the close-out, and the day's takings below. All three read
-    // `canPersonViewShopReports` now; two of them read `canViewShopReports(session.user.roles)`
-    // until this change, and that is the **JWT's** roles — snapshotted once at sign-in and never
-    // re-derived (`src/lib/auth.ts`, `input: false`). A manager demoted to captain this morning
-    // still passes `requireStaffSession` as staff, so the stale claim kept handing them owed-refund
-    // rows naming a diver and an amount for the life of the session. The live read closes that
-    // window, the way export and import already close theirs.
-    //
-    // One extra bounded read — three indexed selects — on every shop-home render, which is the
-    // price of a money gate that revokes.
-    canPersonViewShopReports(db, shop.id, session.user.personId),
-    // One readiness pass for the whole horizon, shared by both shop-day reads below. It costs about
-    // ten queries; running it twice would double the page's entire database bill for one collapsed
-    // disclosure.
-    sharedInHorizonReadiness(db, shop.id, now),
-    Promise.all([
-      arrivalQuery ? listCheckInQueue(db, shop.id, { query: arrivalQuery, now }) : [],
-      arrivalQuery ? true : hasArrivals(db, shop.id, now),
-    ]),
-    // **The day's closing state** (ADR 20260827-clearwater-surface-language, decision 4): how each
-    // of today's boats settled, for the evening stations.
-    getDayCloseout(db, shop.id, shop.timezone, now),
-    // Whether this shop has ever had a departure: the first-run checklist's gate and the
-    // first-bookable moment's count, below. A demo shop sits out of both, so it is never asked.
-    shop.isDemo ? null : countShopTrips(db, shop.id),
-    // The setup ledger's Stripe step and the desk's payments row; a demo shop shows neither.
-    shop.isDemo ? null : shopStripeAccountForRender(db, shop.id),
-    shop.isDemo ? true : shopHasEverTakenAnOrder(db, shop.id),
-    shop.isDemo ? null : shopFirstBooking(db, shop.id, now),
-    seasonScale(db, shop.id, shop.timezone, seasonStartInstant(now, shop.timezone, season), now),
-    orientationRole === null ? true : isOrientationDismissed(db, session.user.personId),
-  ]);
+  } = await readTodayFirstWave({
+    db,
+    shop,
+    personId: session.user.personId,
+    now,
+    arrivalQuery,
+    orientationRole,
+    season,
+  });
   const spineDrafts: SpineDraft[] = freshDrafts.map((draft) => ({
     form: draft.form,
     // Exhaustive by type rather than a ternary: a fourth draft kind added without a door here used
@@ -387,44 +294,22 @@ async function TodayBody({
   //
   // **The day's money** (`readDayMoney`): what today made, gated on `canReadShopMoney` (the live
   // role read of the first wave) and the day closing; and the tips on the reader's own boats.
-  const [work, tomorrowDepartures, [headCountCloses, canOpenLog], sailedBefore, dayMoney] =
-    await Promise.all([
-      getTodayWork(
-        db,
-        shop.id,
-        shopSlug,
-        shop.timezone,
-        now,
-        lens ? session.user.personId : undefined,
-        t,
-        locale,
-        // Stuck Stripe operations and failed photo deletions are owner/manager chores — same gate
-        // as Reports (task 157), read live above.
-        canReadShopMoney,
-        evidence,
-        shopCrewTarget(shop),
-        session.user.roles,
-      ),
-      getShopDayDepartures(db, shop.id, shop.timezone, tomorrowNoon(now, shop.timezone), evidence),
-      eveningClose.stations.length > 0
-        ? Promise.all([
-            listHeadCountCloses(
-              db,
-              shop.id,
-              eveningClose.stations
-                .filter((station) => station.status === "all_home")
-                .map(({ tripId, crewAccountedFor }) => ({ tripId, crewClosed: crewAccountedFor })),
-            ),
-            canPersonExportIncidentRecord(db, shop.id, session.user.personId),
-          ])
-        : ([new Map(), false] as [Map<string, { closedAt: Date; closedBy: string }>, boolean]),
-      // The once-ever wording, asked for only in the moment it could apply.
-      eveningClose.allHome ? shopHasSailedBefore(db, shop.id, dayBounds.from) : true,
-      readDayMoney(db, shop, dayBounds, {
-        personId: session.user.personId,
-        withTakings: eveningClose.closing && canReadShopMoney,
-      }),
-    ]);
+  const { work, tomorrowDepartures, headCountCloses, canOpenLog, sailedBefore, dayMoney } =
+    await readTodaySecondWave({
+      db,
+      shop,
+      shopSlug,
+      personId: session.user.personId,
+      roles: session.user.roles,
+      now,
+      lens,
+      t,
+      locale,
+      canReadShopMoney,
+      evidence,
+      eveningClose,
+      dayBounds,
+    });
   const { actions, nextDeparture, crewedTripIds, crewedSessions } = work;
   const spine = assembleDaySpine(work, { departures: tomorrowDepartures, actions: [] });
   // The day's whole board, clock order — the strip's marks and the count under the date both read
@@ -547,47 +432,14 @@ async function TodayBody({
     showFirstRunChecklist,
   );
 
-  // Each returned departure's recap, written where the crew is standing when
-  // they still remember the day. It rides its own station rather than a
-  // page-level section, because the note is about one boat and the hourly scan
-  // mails it four hours after that boat came in.
-  const recapEditors = new Map<string, React.ReactNode>();
-  for (const departure of closeout.departures) {
-    // Only a returned boat: a trip still out has no day to write about yet,
-    // and one that never left has no recap coming.
-    if (!departure.ended) continue;
-    const autoSendAt = recapAutoSendAt(departure.endsAt, departure.recapAutoSendAt);
-    const recapStatusSummary = recapStatusLine(t, departure, autoSendAt, now);
-    recapEditors.set(
-      departure.tripId,
-      <RecapNoteEditor
-        context={{
-          action: saveRecapNoteAction.bind(null, departure.tripId),
-          shoutout: departure.recapShoutout,
-          saved: noted === departure.tripId,
-          t,
-          photos: departure.photos,
-          deletePhotoAction: deleteRecapPhotoAction.bind(null, departure.tripId),
-          crewPhotos: departure.crewPhotos,
-          crewPhotoInputId: `crew-recap-photo-${departure.tripId}`,
-          uploadCrewPhotoAction: uploadCrewRecapPhotoAction.bind(null, departure.tripId),
-          deleteCrewPhotoAction: deleteCrewRecapPhotoAction.bind(null, departure.tripId),
-          tripId: departure.tripId,
-          recapSendAction: sendRecapAction.bind(null, departure.tripId),
-          toggleRecapAutoSendPauseAction,
-          recapAutoSendAt: autoSendAt,
-          recapAutoSendAtLabel: autoSendAt
-            ? formatDateTimeTz(autoSendAt, locale, shop.timezone)
-            : undefined,
-          recapAutoSendPaused: departure.recapAutoSendPaused,
-          recapFailed: departure.recapFailed,
-          recapNowMs: now.getTime(),
-          recapSentAt: departure.recapSentAt,
-          recapStatusSummary,
-        }}
-      />,
-    );
-  }
+  const recapEditors = recapEditorsFor({
+    departures: closeout.departures,
+    noted,
+    now,
+    locale,
+    timeZone: shop.timezone,
+    t,
+  });
   const evening: EveningReading = {
     close: eveningClose,
     takings: dayTakingsReading,
@@ -641,171 +493,52 @@ async function TodayBody({
         // touches, so there is no refusal here to explain.
         action={
           spine.stations.length > 0 || eveningClose.stations.length > 0 ? (
-            <Link
-              // `shopPath`, not a template literal: it escapes each segment, so
-              // nobody reading this line has to re-derive that `shopSlug` was
-              // already narrowed by `requireShopSurface` upstream.
-              href={shopPath(shopSlug, "print")}
-              target="_blank"
-              rel="noreferrer"
-              // The band's own chip, as the trip masthead draws it: a 44px
-              // target on the control rung. It was typed out by hand as a
-              // 32px pill in a heavier weight (K-152).
-              className={buttonClass({
-                variant: "secondary",
-                size: "sm",
-                className: "print:hidden",
-              })}
-            >
-              {t("shared.printPacket.dayDoor")}
-            </Link>
+            <TodayPrintDoor shopSlug={shopSlug} t={t} />
           ) : null
         }
       >
-        {/* First run says nothing here (UX review 2026-10-10, item 29): the
-            checklist below counts what is left, and its share row carries the
-            address as a copy control rather than a URL printed in prose. */}
-        {/* A day with no boats answers its follow-up question right here. */}
-        {!quietDay && spine.stations.length === 0 && nextDeparture ? (
-          <p className="mt-1 max-w-2xl text-muted">
-            {t.rich("shopHome.nextDeparture", {
-              link: (chunks) => (
-                <Link
-                  href={`/shop/${shopSlug}/trips/${nextDeparture.tripId}`}
-                  className="font-medium text-primary hover:underline"
-                >
-                  {chunks}
-                </Link>
-              ),
-              title: nextDeparture.title,
-              date: formatShortDate(nextDeparture.startsAt, locale, shop.timezone),
-              time: formatTime(nextDeparture.startsAt, locale, shop.timezone),
-            })}
-          </p>
-        ) : null}
-        {/* Nothing on the books at all (and past first-run, whose ledger
-                owns "schedule your first trip"): one teaching sentence and the
-                door, not a boxed section. */}
-        {!quietDay && spine.stations.length === 0 && !nextDeparture && !showFirstRunChecklist ? (
-          <p className="mt-1 max-w-2xl text-muted">
-            {t("shopHome.noDeparturesEmpty")}{" "}
-            <Link
-              href={`/shop/${shopSlug}/schedule/board?add=1`}
-              className="font-medium text-primary hover:underline"
-            >
-              {t("shopHome.scheduleTrip")}
-            </Link>
-          </p>
-        ) : null}
-        {/* **Live-only, and it should say so.** This board is read straight
-                from the server every render — the boat has an encrypted device
-                copy, this does not — so a dropped signal means the counts, the
-                crew line and the blocked names are whatever they were when the
-                signal went (issue #819). */}
-        <ConnectivityStatus
-          offlineLabel={t("shopHome.offlineLabel")}
-          onlyWhenOffline
-          className="mt-2"
-          copy={{
-            online: t("shared.connectivity.online"),
-            onlineTitle: t("shared.connectivity.onlineTitle"),
-            offlineTitle: t("shared.connectivity.offlineTitle"),
-          }}
+        <TodayHeaderNotes
+          shopSlug={shopSlug}
+          quietDay={quietDay}
+          hasStations={spine.stations.length > 0}
+          nextDeparture={nextDeparture}
+          showFirstRunChecklist={showFirstRunChecklist}
+          locale={locale}
+          timeZone={shop.timezone}
+          t={t}
         />
       </DayHeader>
 
       {created && firstBookableMoment ? (
-        <FirstBookableCard
-          scheduleUrl={publicScheduleUrl}
-          scheduleHref={publicSchedulePath(shopSlug)}
-          copy={{
-            heading: t("shopHome.firstBookable.heading"),
-            body:
-              seriesCount > 1
-                ? t("shopHome.firstBookable.bodySeries", {
-                    title: created,
-                    count: seriesCount,
-                  })
-                : t("shopHome.firstBookable.body", { title: created }),
-            linkLabel: t("shopHome.firstBookable.linkLabel"),
-            copy: t("shopHome.firstRun.scheduleCopy"),
-            copied: t("shopHome.firstRun.scheduleCopied"),
-            copyFailed: t("shopHome.firstRun.scheduleCopyFailed"),
-            viewAsDiver: t("shopHome.firstBookable.viewAsDiver"),
-          }}
+        <TodayFirstBookable
+          shopSlug={shopSlug}
+          created={created}
+          seriesCount={seriesCount}
+          publicScheduleUrl={publicScheduleUrl}
+          t={t}
         />
       ) : null}
 
-      {/* One notice surface. A visit rarely carries more than one of these;
-          when it does, they read as one stack of arrivals rather than four
-          competing banners. `mb-10` is the spine's own `gap-10`: the stack is
-          one more block in that column, not closer to it (K-316). */}
-      {(created && !firstBookableMoment) || reset || email || authNoticeKey || eveningNotice ? (
-        <div className="mb-10 flex flex-col gap-2">
-          {created && !firstBookableMoment ? (
-            <ShopNotice>
-              {seriesCount > 1
-                ? t("shopHome.createdNotice.series", { title: created, count: seriesCount })
-                : t("shopHome.createdNotice.single", { title: created })}
-            </ShopNotice>
-          ) : null}
-          {reset ? <ShopNotice tone="neutral">{t("shopHome.demoReset")}</ShopNotice> : null}
-          {email ? (
-            // A failed send must announce itself (noticeRole: danger → alert);
-            // without a role this read as ambient status to screen readers.
-            <ShopNotice
-              tone={email === "sent" ? "success" : "danger"}
-              role={noticeRole(email === "sent" ? "success" : "danger")}
-            >
-              {email === "sent" ? t("shopHome.emailResent") : t("shopHome.emailFailed")}
-            </ShopNotice>
-          ) : null}
-          {authNoticeKey ? (
-            <ShopNotice tone="warning" role="status">
-              {t(authNoticeKey)}
-            </ShopNotice>
-          ) : null}
-          {eveningNotice ? (
-            <ShopNotice tone={eveningNotice.tone} role={noticeRole(eveningNotice.tone)}>
-              {t(eveningNotice.key)}
-            </ShopNotice>
-          ) : null}
-        </div>
-      ) : null}
+      <TodayNoticeStack
+        created={created}
+        seriesCount={seriesCount}
+        firstBookableMoment={firstBookableMoment}
+        reset={reset}
+        email={email}
+        authNoticeKey={authNoticeKey}
+        eveningNotice={eveningNotice}
+        t={t}
+      />
 
-      {/* Orientation earns its size from the day. On a Today with nothing to
-          show it is the full card; the moment there is real work or a boat on
-          the spine, it compresses to one quiet line. */}
-      {showOrientation && orientationRole
-        ? (() => {
-            // One href rule and one dismissal for both forms — only the words
-            // and the chrome differ between the card and the line.
-            const tourHref = orientationTourHref(shopSlug, orientationRole, nextDeparture?.tripId);
-            const tourText = orientationTourText(t, orientationRole);
-            return hasWorkToShow ? (
-              <RoleOrientationLine
-                tourHref={tourHref}
-                dismissAction={dismissOrientationAction}
-                copy={{
-                  heading: t("shopHome.orientation.lineHeading"),
-                  dismiss: t("shopHome.orientation.dismiss"),
-                  tryThis: tourText.tryThis,
-                }}
-              />
-            ) : (
-              <RoleOrientationCard
-                tourHref={tourHref}
-                dismissAction={dismissOrientationAction}
-                copy={{
-                  heading: t("shopHome.orientation.heading"),
-                  tryLabel: t("shopHome.orientation.tryLabel"),
-                  dismiss: t("shopHome.orientation.dismiss"),
-                  ...tourText,
-                }}
-              />
-            );
-          })()
-        : null}
+      {showOrientation && orientationRole ? (
+        <TodayOrientation
+          shopSlug={shopSlug}
+          orientationRole={orientationRole}
+          nextDepartureTripId={nextDeparture?.tripId}
+          hasWorkToShow={hasWorkToShow}
+          t={t}
+        />
+      ) : null}
 
       {/* The desk's first question when a diver walks up — which boat? —
           over every departure the counter is open for. Only while some boat
@@ -822,36 +555,13 @@ async function TodayBody({
       ) : null}
 
       {quietDay ? (
-        <div className="mt-8 flex flex-col gap-4">
-          <Link
-            href={`/shop/${shopSlug}/schedule/board?add=1`}
-            className={buttonClass({ className: "w-full justify-center sm:w-auto" })}
-          >
-            {t("shopHome.quietAddDeparture")}
-          </Link>
-          {nextDeparture ? (
-            <ul>
-              <LedgerRow
-                href={`/shop/${shopSlug}/trips/${nextDeparture.tripId}`}
-                linkLabel={nextDeparture.title}
-              >
-                <div className="min-w-0">
-                  <p className="font-medium break-words">{nextDeparture.title}</p>
-                  <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 text-sm text-muted tabular-nums">
-                    <span>{t("shopHome.quietNextDepartureLabel")}</span>
-                    <span>
-                      {formatShortDate(nextDeparture.startsAt, locale, shop.timezone)} ·{" "}
-                      {formatTime(nextDeparture.startsAt, locale, shop.timezone)}
-                    </span>
-                    <span>
-                      {nextDeparture.booked}/{nextDeparture.sellableCapacity}
-                    </span>
-                  </p>
-                </div>
-              </LedgerRow>
-            </ul>
-          ) : null}
-        </div>
+        <TodayQuietDay
+          shopSlug={shopSlug}
+          nextDeparture={nextDeparture}
+          locale={locale}
+          timeZone={shop.timezone}
+          t={t}
+        />
       ) : (
         <DaySpine
           context={{

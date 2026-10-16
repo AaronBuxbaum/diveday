@@ -6,11 +6,13 @@ import { nextHeadersStub } from "@/test/next-headers";
  * The sign-in form's one action. The credentials check, the rate limit and the
  * second factor all live behind `signInDiveDayCredentials` (src/lib/auth.ts);
  * what this file owns is the answer: every refusal is the same `?error=1`
- * except the two second-factor ones, and success always lands on `/shop`.
+ * except the two second-factor ones, and success lands on the staffer's own shop.
  */
 
 const hoisted = vi.hoisted(() => ({
-  signInDiveDayCredentials: vi.fn(async (_input: unknown) => ({})),
+  signInDiveDayCredentials: vi.fn(async (_input: unknown) => ({
+    shopSlug: "blue-mantis" as string | null,
+  })),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -45,19 +47,37 @@ async function landing(data: FormData): Promise<string> {
 }
 
 beforeEach(() => {
-  hoisted.signInDiveDayCredentials.mockReset().mockResolvedValue({});
+  hoisted.signInDiveDayCredentials.mockReset().mockResolvedValue({ shopSlug: "blue-mantis" });
 });
 
 describe("authenticate", () => {
-  it("signs in with the typed credentials and lands on /shop, never a callback", async () => {
+  it("signs in with the typed credentials and lands on the staffer's own shop", async () => {
     expect(
       await landing(form({ email: "owner@example.com", password: "pw", totpCode: " 123456 " })),
-    ).toBe("/shop");
+    ).toBe("/shop/blue-mantis");
     expect(hoisted.signInDiveDayCredentials).toHaveBeenCalledWith(
       expect.objectContaining({
         body: { email: "owner@example.com", password: "pw", totpCode: "123456" },
       }),
     );
+  });
+
+  it("falls back to /shop when the session names no shop", async () => {
+    hoisted.signInDiveDayCredentials.mockResolvedValueOnce({ shopSlug: null });
+    expect(await landing(form({ email: "owner@example.com", password: "pw" }))).toBe("/shop");
+  });
+
+  it("honors no request-supplied target: a callbackUrl field changes nothing", async () => {
+    expect(
+      await landing(
+        form({
+          email: "owner@example.com",
+          password: "pw",
+          callbackUrl: "https://evil.example/phish",
+          redirect: "/shop/other-shop",
+        }),
+      ),
+    ).toBe("/shop/blue-mantis");
   });
 
   it("sends a blank second factor as absent", async () => {

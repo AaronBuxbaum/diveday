@@ -813,6 +813,7 @@ async function sendJoinMail(
     },
   );
   let confirmationSent = false;
+  let confirmationMessageId: string | undefined;
   if (lead?.person.email && trip) {
     try {
       const delivery = await sendAndRecordNotification(
@@ -830,6 +831,7 @@ async function sendJoinMail(
         }),
       );
       confirmationSent = delivery.status === "sent";
+      if (delivery.status === "sent") confirmationMessageId = delivery.providerMessageId;
       if (delivery.status === "failed") {
         log("booking.confirmation_send_failed", "error", { bookingId: primaryBookingId });
       }
@@ -841,12 +843,9 @@ async function sendJoinMail(
       });
     }
   }
-  // Send each diver their waiver the moment they join, when the trip needs one
-  // and they aren't already covered (issueWaiverOnJoin makes that call). The
-  // lead's already rode in the confirmation; settling it records that, or
-  // mails it on its own when the confirmation did not go. The seats are
-  // already committed, so a delivery failure is logged and dropped — it must
-  // never turn a completed booking into an error.
+  // Send each diver their waiver on joining, when the trip needs one and they
+  // aren't covered (issueWaiverOnJoin). The lead's rode in the confirmation;
+  // settling records that, or mails it alone. A failure is logged, never thrown.
   await Promise.all(
     bookings.map(async ({ bookingId }) => {
       try {
@@ -856,6 +855,7 @@ async function sendJoinMail(
             bookingId,
             link: leadWaiver,
             confirmationSent,
+            confirmationProviderMessageId: confirmationMessageId,
           });
           return;
         }

@@ -34,13 +34,17 @@ export async function loadTripSharedReads(
   shopId: string,
   tripId: string,
 ): Promise<TripSharedReads | null> {
-  const trip = await getTripWithBooked(db, shopId, tripId);
-  if (!trip) return null;
-  const [requirement, siteRequirement, readiness, prepDivers] = await Promise.all([
+  // One wave: none of the four reads waits on the departure row (each takes
+  // the shop and the id), so they go out beside it and are dropped with it if
+  // the departure does not exist. A missing trip is the 404 path, where a few
+  // wasted reads cost less than a round trip on every real render (#2487).
+  const [trip, requirement, siteRequirement, readiness, prepDivers] = await Promise.all([
+    getTripWithBooked(db, shopId, tripId),
     getTripRequirements(db, shopId, tripId),
     getTripSiteRequirement(db, shopId, tripId),
     listTripReadiness(db, shopId, tripId),
     listTripPrepDivers(db, shopId, tripId),
   ]);
+  if (!trip) return null;
   return { trip, requirement, siteRequirement, readiness, prepDivers };
 }

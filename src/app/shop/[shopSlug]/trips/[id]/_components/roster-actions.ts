@@ -2,24 +2,26 @@ import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-
 import {
   addAgencyListedCardsAction,
   agencyCheckAction,
-} from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
+} from "@/app/shop/[shopSlug]/divers/[personId]/agency-check-actions";
 import type { AppDb } from "@/db/client";
+import { markPartyPaidAction, previewPartyPaymentAction } from "../party-payment-actions";
+import {
+  confirmDiverIdentityAction,
+  saveRosterEmergencyContactAction,
+  splitDiverIdentityAction,
+} from "../roster-identity-actions";
+import { markPaymentAction } from "../roster-payment-actions";
 import {
   addToWaitlistAction,
   carryWaitlistAction,
-  confirmDiverIdentityAction,
   createDirectTripInvitationAction,
-  markPaymentAction,
-  markRosterWaiverInPersonAction,
   recordTripInvitationAction,
   removeBookingAction,
-  saveRosterEmergencyContactAction,
-  sendNewWaiverAction,
   setParticipantTypeAction,
-  splitDiverIdentityAction,
   undoRemoveBookingAction,
   updateBookingPickupAction,
-} from "../actions";
+} from "../roster-seating-actions";
+import { markRosterWaiverInPersonAction, sendNewWaiverAction } from "../roster-waiver-actions";
 import { courseRosterActions } from "./course-roster-actions";
 import { noteRosterActions } from "./note-roster-actions";
 import { seatMoveFor } from "./seat-move";
@@ -56,6 +58,8 @@ export async function tripRosterActions({
     createDirectTripInvitationAction: createDirectTripInvitationAction.bind(null, shopSlug, tripId),
     markRosterWaiverInPersonAction: markRosterWaiverInPersonAction.bind(null, shopSlug, tripId),
     markPaymentAction: markPaymentAction.bind(null, shopSlug, tripId),
+    previewPartyPaymentAction: previewPartyPaymentAction.bind(null, shopSlug, tripId),
+    markPartyPaidAction: markPartyPaidAction.bind(null, shopSlug, tripId),
     removeBookingAction: removeBookingAction.bind(null, shopSlug, tripId),
     setParticipantTypeAction: setParticipantTypeAction.bind(null, shopSlug, tripId),
     // One door on this tab, desk or not: the arrivals window opens 36 hours

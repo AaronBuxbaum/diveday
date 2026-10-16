@@ -6,7 +6,7 @@ Part of the **stacked-prs** skill ([SKILL.md](SKILL.md)). Read it when deciding 
 
 **Stack everything, across threads, and run one PR's CI at a time: cut every branch from the
 newest open one, any thread's, related or not, as a draft with `base` on it; the thread that owns
-the stack pushes one layer at a time, because concurrent runs cancel each other** (AGENTS.md's
+the stack pushes one layer at a time, because overlapping runs queue on a 20-job cap** (AGENTS.md's
 *Parallel work*). Related or unrelated, a schema migration or a padding change, one file or forty —
 the shape is the same, and it is the default rather than a special case for dependent chains (ADR
 [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md),
@@ -33,9 +33,10 @@ written**. The ratchets are the sharpest version: a baseline written on layer 4 
 previous branch.
 
 **Merging a layer up never stops on a generated file.** `.gitattributes` gives
-`scripts/ratchets.json`, the export-bundle snapshot and the glossary and ADR indexes merge drivers
-(`scripts/merge-drivers.mjs`, installed by the `SessionStart` hook; a human runs
-`node scripts/merge-drivers.mjs install` once). The merge prints a line naming each file it settled
+`scripts/ratchets.json`, `scripts/test-durations.json`, the export-bundle snapshot and the glossary
+and ADR indexes merge drivers (`scripts/merge-drivers.mjs`, installed by the `SessionStart` hook; a
+human runs `node scripts/merge-drivers.mjs install` once; `pnpm agent:doctor` warns when they are
+missing). The merge prints a line naming each file it settled
 mechanically; then run **`pnpm regen`**, which rewrites all of them from their sources, and commit
 what it changed before you push (`--no-snapshot` skips the slow one when no seed, schema or export file moved).
 

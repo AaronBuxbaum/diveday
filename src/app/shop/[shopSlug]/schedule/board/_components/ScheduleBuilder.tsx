@@ -285,6 +285,22 @@ function impactLines(section: MovePreflightSection, copy: BuilderCopy): string[]
       );
     case "crewAway":
       return section.names.map((name) => fill(copy.impactCrewAway, { name }));
+    // Advice, never a gate (issue #2141): muted with the costs, under every
+    // clash line, naming the other departure and the minutes between them.
+    case "turnaround":
+      return section.items.map((item) =>
+        item.kind === "boat"
+          ? fill(copy.impactTurnaroundBoat, {
+              boat: item.name,
+              minutes: item.minutes,
+              departure: item.departure,
+            })
+          : fill(copy.impactTurnaroundCrew, {
+              name: item.name,
+              minutes: item.minutes,
+              departure: item.departure,
+            }),
+      );
     case "told":
       return [
         fill(

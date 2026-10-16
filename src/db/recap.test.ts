@@ -929,16 +929,16 @@ describe("a departure with somebody not back aboard", () => {
     expect(recapsTo(email, missing)).toHaveLength(1);
   });
 
-  it("keeps waiting while an earlier dive's not-back word stands under a later boarding", async () => {
-    // Counted back after dive two does not retract dive one's word: Today
-    // still raises the row about it until somebody corrects that checkpoint.
+  it("stops waiting once a later dive's boarding settles an earlier not-back word", async () => {
+    // The latest checkpoint speaks (#2404): counted back after dive two settles
+    // dive one's word, as Today's row and the manifest already read it.
     const { db, missing, record, afterTrip } = await missingContext();
     await record(missing, "not_boarded", "after_dive_1");
     await record(missing, "boarded", "after_dive_2");
     const email = fakeEmail();
     await sendDueRecaps(db, sendOptions(afterTrip, email));
-    expect(recapsTo(email, missing)).toHaveLength(0);
-    expect(await getRecapPageData(db, missing, undefined, afterTrip)).toBeNull();
+    expect(recapsTo(email, missing)).toHaveLength(1);
+    expect(await getRecapPageData(db, missing, undefined, afterTrip)).not.toBeNull();
   });
 
   it("ignores the word on a booking cancelled since", async () => {

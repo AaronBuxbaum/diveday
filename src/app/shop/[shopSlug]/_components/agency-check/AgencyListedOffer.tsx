@@ -5,7 +5,7 @@ import { type ReactNode, useId, useState } from "react";
 import type {
   AgencyCheckOffer,
   AgencyListedAddResult,
-} from "@/app/shop/[shopSlug]/divers/[personId]/card-actions";
+} from "@/app/shop/[shopSlug]/divers/[personId]/agency-check-actions";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { ChoiceRow, FormStatus } from "@/components/ui/form";

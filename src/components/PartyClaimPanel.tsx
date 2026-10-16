@@ -25,6 +25,8 @@ export type PartyClaimSeat = {
    * link, or a physician's sign-off is needed. Absent says nothing.
    */
   minorNote?: "send_link" | "physician" | null;
+  /** The lead may pay for this seat now (`PartySeatClaim.payable`); absent where the surface offers no payment. */
+  payable?: boolean;
 };
 
 /**
@@ -42,6 +44,7 @@ export function PartyClaimPanel({
   locale,
   seats,
   signWaiverAction,
+  payAction = null,
 }: {
   /** The negotiated request locale, not the shop's stored default. */
   locale: string;
@@ -51,6 +54,11 @@ export function PartyClaimPanel({
    * (H-124), bound to the organizer's own link. Without it no seat offers to.
    */
   signWaiverAction?: (formData: FormData) => Promise<void>;
+  /**
+   * Bound to the page's token where the lead may pay for a seat they added
+   * (issue #2474); null draws no pay form. It takes `seatBookingId`.
+   */
+  payAction?: ((formData: FormData) => Promise<void>) | null;
 }) {
   if (seats.length === 0) return null;
   const t = diverTranslator(locale);
@@ -142,6 +150,18 @@ export function PartyClaimPanel({
               <p className="mt-2 text-sm text-muted">
                 {t("seatClaim.minorPhysician", { name: seat.seatName })}
               </p>
+            ) : null}
+            {payAction && seat.payable && !seat.claimed ? (
+              <form action={payAction} className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+                <input type="hidden" name="seatBookingId" value={seat.bookingId} />
+                <SubmitButton
+                  pendingLabel={t("seatClaim.payingSeat")}
+                  className={buttonClass({ variant: "secondary" })}
+                >
+                  {t("seatClaim.payForSeat")}
+                </SubmitButton>
+                <span className="text-sm text-muted">{t("seatClaim.payForSeatNote")}</span>
+              </form>
             ) : null}
             {seat.claimed && !seat.waiverSigned ? (
               <p className="mt-2 text-sm text-muted">{t("seatClaim.claimedNeedsWaiver")}</p>

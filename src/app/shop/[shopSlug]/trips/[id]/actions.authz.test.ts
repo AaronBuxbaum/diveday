@@ -62,9 +62,8 @@ vi.mock("@/db/refunds", async (importOriginal) => {
 const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("@/lib/session");
 const { refundBookingOnCancellation } = await import("@/db/refunds");
-const { markPaymentAction, removeBookingAction, setParticipantTypeAction } = await import(
-  "./actions"
-);
+const { markPaymentAction } = await import("./roster-payment-actions");
+const { removeBookingAction, setParticipantTypeAction } = await import("./roster-seating-actions");
 const { reinstateTripAction } = await import("./details-actions");
 const { saveRequirementsAction } = await import("./terms-actions");
 const { certifyDiverFromRosterAction } = await import("./course-actions");
@@ -663,15 +662,16 @@ describe("who may run each action on the trip page", () => {
 
   /**
    * Every exported action's source, sliced from its `export` to its closing brace, across the
-   * departure's action files, one per tab or concern (the About and Details tab split by what
-   * each changes: `details-actions.ts`, `conditions-actions.ts`, `terms-actions.ts`,
-   * `series-actions.ts`, `crew-actions.ts`, `print-actions.ts`; `notes-actions.ts` the internal notes, `course-actions.ts` the course roster's doors; the
-   * desk's three — the note, the dock rider, lost and found — have their own files).
+   * departure's action files, one per tab or concern: the roster's four by what each changes
+   * (seating, payments, waivers, identity), the Details tab's, the course roster, the notes, the desk's.
    */
   function actionBodies(): Map<string, string> {
     const bodies = new Map<string, string>();
     for (const file of [
-      "./actions.ts",
+      "./roster-seating-actions.ts",
+      "./roster-payment-actions.ts",
+      "./roster-waiver-actions.ts",
+      "./roster-identity-actions.ts",
       "./details-actions.ts",
       "./conditions-actions.ts",
       "./terms-actions.ts",

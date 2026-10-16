@@ -1,12 +1,17 @@
 import { and, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { inHorizonReadiness } from "@/db/blockers";
+import { getGearItemDetail } from "@/db/gear-register";
+import { listGearRentals } from "@/db/gear-rentals";
 import { getTripManifest } from "@/db/manifests";
 import { listTripReadiness } from "@/db/readiness";
 import { listOwedShopCancellationRefunds } from "@/db/refunds";
 import { bookings, people, trips } from "@/db/schema";
 import { getShopDayDepartures } from "@/db/today";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import { counterRentalWaiverFlag } from "@/lib/counter-rentals";
+import { benchReturnConcerns } from "@/lib/gear";
 import { seededShopContext } from "@/test/db";
 
 /**
@@ -93,6 +98,67 @@ describe("POST /api/test/seed-trouble-states", () => {
     );
     expect(row?.booking.status).toBe("checked_in");
     expect(row?.readiness.status).toBe("blocked");
+  }, 60_000);
+
+  /**
+   * **A concern returned onto the unit already on the bench** (#2570): the
+   * status card's "Returned … with a concern" line needs a unit off the wall
+   * and a return whose words are not the unit's own note.
+   */
+  it("returns the benched regulator with a concern when asked, and not otherwise", async () => {
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+
+    const calm = (await (await POST(seedRequest("?boatSafety=1"))).json()) as {
+      gearConcern?: unknown;
+    };
+    expect(calm.gearConcern).toBeUndefined();
+
+    const body = (await (await POST(seedRequest("?gearConcern=1"))).json()) as {
+      gearConcern?: { gearItemId: string; label: string };
+    };
+    if (!body.gearConcern) throw new Error("no concern was returned");
+    const detail = await getGearItemDetail(db, shop.id, body.gearConcern.gearItemId);
+    if (!detail) throw new Error("the benched unit is missing");
+    expect(detail.item.status).toBe("needs_service");
+    const concerns = benchReturnConcerns(
+      detail.item,
+      detail.reservations,
+      detail.history,
+      shop.timezone,
+    );
+    expect(concerns).toHaveLength(1);
+    expect(concerns[0]?.note).toMatch(/Mouthpiece split/);
+
+    // Idempotent: a second ask does not stack a second return.
+    await POST(seedRequest("?gearConcern=1"));
+    const again = await getGearItemDetail(db, shop.id, body.gearConcern.gearItemId);
+    expect(
+      benchReturnConcerns(again?.item ?? detail.item, again?.reservations ?? [], [], shop.timezone),
+    ).toHaveLength(1);
+  }, 60_000);
+
+  /**
+   * **A counter rental out to someone with no waiver** (#2570): the Rentals
+   * list's waiver word only shows for a holder the shop has no signature for.
+   */
+  it("lends a mask to someone with no waiver when asked", async () => {
+    const { db, shop } = await seededShopContext();
+    vi.mocked(getDb).mockResolvedValue(db);
+
+    const body = (await (await POST(seedRequest("?rentalWaiverWarning=1"))).json()) as {
+      rentalWaiverWarning?: { personId: string; label: string };
+    };
+    if (!body.rentalWaiverWarning) throw new Error("no rental was made");
+    const page = await listGearRentals(db, shop.id, {
+      todayLocal: calendarDateInTimezone(nowDate(), shop.timezone),
+      timezone: shop.timezone,
+    });
+    const standing = page.counterWaivers?.get(body.rentalWaiverWarning.personId);
+    expect(standing && counterRentalWaiverFlag(standing.state)).toBeTruthy();
+    expect(page.rows.some((holder) => holder.personId === body.rentalWaiverWarning?.personId)).toBe(
+      true,
+    );
   }, 60_000);
 
   /**

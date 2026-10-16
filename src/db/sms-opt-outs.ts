@@ -1,4 +1,4 @@
-import { and, eq, lt } from "drizzle-orm";
+import { and, eq, inArray, lt } from "drizzle-orm";
 import type { PlainTextProvider } from "@/lib/notifications/courtesy";
 import type { AppDb } from "./client";
 import { smsOptOuts } from "./schema";
@@ -35,6 +35,19 @@ export async function isSmsOptedOut(db: AppDb, phone: string): Promise<boolean> 
     .where(and(eq(smsOptOuts.phone, phone), eq(smsOptOuts.optedOut, true)))
     .limit(1);
   return rows.length > 0;
+}
+
+/**
+ * Which of these numbers are on the STOP list, in one read. For a caller that
+ * would otherwise mint something for a text the wrapper below will refuse.
+ */
+export async function optedOutPhones(db: AppDb, phones: readonly string[]): Promise<Set<string>> {
+  if (phones.length === 0) return new Set();
+  const rows = await db
+    .select({ phone: smsOptOuts.phone })
+    .from(smsOptOuts)
+    .where(and(inArray(smsOptOuts.phone, [...new Set(phones)]), eq(smsOptOuts.optedOut, true)));
+  return new Set(rows.map((row) => row.phone));
 }
 
 /**

@@ -527,6 +527,8 @@ export type BookingCancelledEmailInput = {
   money:
     | { story: "none" | "forfeit" | "shop_will_follow_up" }
     | { story: "refunded"; amountCents: number; currency: string };
+  /** A party lead's cancel: seats that went with it and seats that stayed booked. */
+  party?: { cancelled: number; stayed: number };
   scheduleUrl: string;
 };
 
@@ -561,11 +563,21 @@ export function bookingCancelledEmail(input: BookingCancelledEmailInput): Notifi
         : input.money.story === "shop_will_follow_up"
           ? t("notifications.bookingCancelled.moneyFollowUp", { shopName: input.shopName })
           : null;
+  // A lead's party, said in counts: the seats that went with theirs, and,
+  // separately, the ones that stay booked because their own diver has them.
+  const partyLines = [
+    input.party && input.party.cancelled > 0
+      ? t("notifications.bookingCancelled.partyCancelled", { count: input.party.cancelled })
+      : null,
+    input.party && input.party.stayed > 0
+      ? t("notifications.bookingCancelled.partyStayed", { count: input.party.stayed })
+      : null,
+  ].filter((line): line is string => line !== null);
   const findAnother = t("notifications.bookingCancelled.findAnother");
   return {
     subject: t("notifications.bookingCancelled.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n${money ? `\n${money}\n` : ""}\n${findAnother}:\n${input.scheduleUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${money ? `<p>${escapeHtml(money)}</p>` : ""}${emailButton(input.scheduleUrl, findAnother)}`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n${partyLines.map((line) => `\n${line}\n`).join("")}${money ? `\n${money}\n` : ""}\n${findAnother}:\n${input.scheduleUrl}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${partyLines.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}${money ? `<p>${escapeHtml(money)}</p>` : ""}${emailButton(input.scheduleUrl, findAnother)}`,
   };
 }
 

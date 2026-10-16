@@ -391,6 +391,10 @@ script again.
 | 20261014-checkouts-reach-integrations | Online checkouts, tips and their… |
 | 20261014-incident-kind-severity | An incident report files with… |
 | 20261014-parent-signs-minor-release | A parent signs a child's… |
+| 20261014-phone-line-type-metadata | Use libphonenumber-js's mobile metadata to… |
 | 20261014-starting-content-is-measured-and-vetted | Starting content is measured by… |
+| 20261015-coverage-and-mutation-testing | Measure the safety files with… |
+| 20261015-incident-draft-discard-and-hold | An owner may delete an… |
+| 20261015-roll-call-records-readiness | A count aboard keeps what… |
 
 <!-- adr-index:end -->

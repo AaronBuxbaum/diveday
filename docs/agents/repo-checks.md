@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 58 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 61 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
@@ -16,13 +16,15 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, form-control, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, seat-word, live-trip-read, live-people-read, event-scope, slug-action, env-reads, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, sentry-imports, infra-ASCII, CI-change-detection, Node-version, tenant-gate, instant-navigation, storefront shop-read, redirect-slug, capability-refusal and intl-provider safeguards. The last six were Vitest scans until the 2026-10-14 test review moved them here; each script's header carries its incident.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, form-control, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, seat-word, live-trip-read, live-people-read, event-scope, slug-action, env-reads, action-pins, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, critical-journeys, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, sentry-imports, infra-ASCII, CI-change-detection, runner-image, Node-version, tenant-gate, instant-navigation, storefront shop-read, redirect-slug, capability-refusal and intl-provider safeguards. The last six were Vitest scans until the 2026-10-14 test review moved them here; each script's header carries its incident.
 
 ## The guards worth reading about
 
 ### Node-version
 
 The Node-version one (`scripts/check-node-version.mjs`) holds the three numbers that say which Node this project runs on — `NODE_MAJOR`, `NODE_FLOOR`, `LAMBDA_NODE_MAJOR` — and refuses any of the ten declarations that drifts from them: `engines.node`, `.nvmrc`, the CI setup action's `node-version:` **and its own description prose**, the README's Quickstart line, the `@types/node` major, every `lambda.Runtime.NODEJS_*_X` in the stack, the esbuild bundling target beside them, the one test that asserts a synthesized runtime, and — the one rule here not about Node — the pnpm version, which the README also claims is pinned and which follows `packageManager` rather than a constant. Change the numbers here first; the guard then names every file still to follow. It exists because six declarations disagreed and only one was enforced (issue #1326, ADR 20260903-node-24-is-the-floor), and because the consequence of the drift was not cosmetic: `engines` is warn-only, pnpm writes that warning to **stdout** as the first line of `pnpm install` and every `pnpm <script>`, and that is how two MCP servers launched through `pnpm` had their JSON-RPC handshake corrupted and cost every session a 30-second connect timeout each (fixed in #1324; `check:agents`' check 8 keeps `.mcp.json` off package managers). Two details worth knowing before editing it. The floor is `24.15.0` rather than `24.0.0` because `jsdom@30` declares `^22.22.2 || ^24.15.0 || >=26.0.0`, so a `>=24.0.0` field admits versions the tree cannot install on — a floor rounded down to `.0` is the same false declaration one level down, and it is derived by a test from every installed manifest that declares an `engines.node`, rather than asserted here. And the Lambda major is a *separate* constant from the toolchain major, deliberately: AWS publishes and retires runtimes on its own schedule, so the two can legitimately diverge, and the guard's job is to make that a decision rather than an accident. A missing declaration file fails rather than passes — a guard that reads a deleted `.nvmrc` as "nothing to check" goes green exactly when the pin it protects is gone.
+
+The runner-image one (`scripts/check-runner-image.mjs`) holds `RUNNER_IMAGE` (`ubuntu-24.04`) and refuses any `runs-on:` in `.github/workflows/` that says something else (the one exception is `RUNNER_PICK`, the Mac-or-GitHub pick that falls back to the same image), `ubuntu-latest` above all, and a Playwright cache key in `.github/actions/playwright-shell/action.yml` that does not name the image through `ImageOS`. `ubuntu-latest` is a moving label: from 2026-10-19 GitHub moves it to Ubuntu 26 gradually, so one run's visual shards could land on two images while every baseline is rendered on 24.04, and `runner.os` says only "Linux", so a browser downloaded on one image would be restored onto the next. Moving images is one pull request that changes the constant and rebaselines on purpose (ADR 20260730-linux-ci-runners, amendment 2026-10-13).
 
 ### CI-change-detection
 
@@ -320,6 +322,10 @@ The slug-action one (`scripts/check-slug-actions.mjs`) fails a `"use server"` mo
 
 The env-reads one (`scripts/check-env-reads.mjs`, also `pnpm check:env-reads`) fails an upper-case environment key read in `src/` (`process.env.KEY`, `process.env["KEY"]`, or `env.KEY` on a parameter defaulted to `process.env`) that `config/env-registry.mjs` does not hold and its `NOT_REGISTERED` list does not excuse with a reason. `pnpm check:env` compares `.env.example` and a deployment against the registry but never looked at the code, and the 2026-10-13 review found six keys read and unregistered, three of them signing secrets (`RECAP_LINK_SECRET`, `BUDDY_LINK_SECRET`, `WAIVER_INTEGRITY_SECRET`) that fall back to `AUTH_SECRET`: rotating `AUTH_SECRET` silently broke every recap and buddy link and made every sealed waiver verify as invalid, and nothing a human reads said so. Writing the guard found the VAPID keypair too. The excused keys are the platform's (`NODE_ENV`, `VERCEL_ENV`), the test and dev harness's (`DIVEDAY_CLOCK`, `PGLITE_DATA_DIR`), the Sentry cron monitor names, and the overrides of a value compiled into the code (`src/lib/configured.ts`: `APP_HOST`, `SES_FROM_EMAIL`, `STRIPE_CONNECT_CLIENT_ID`, `NEXT_PUBLIC_SENTRY_DSN`), which the registry's header says do not belong in it. An excuse nothing reads any more fails too.
 
+
+### action-pins
+
+The action-pins one (`scripts/check-action-pins.mjs`, also `pnpm check:action-pins`) fails any `uses:` under `.github/` that is not a local action and not pinned to a full 40-character commit SHA with a `# vX.Y.Z` comment beside it (a `docker://` image needs a digest). A tag is a pointer its owner can move: `corymhall/cdk-diff-action@v2` ran in the infra diff job after `configure-aws-credentials` had exported a role that can write the CDK staging bucket a later deploy reads, so a moved tag would have run someone else's code with those credentials (the tj-actions class of incident; 2026-10-13 review, row 14). The comment is what tells a reader, and Dependabot's `github-actions` updates, which version the SHA is; Dependabot bumps the SHA and the comment together. To pin a new action, `git ls-remote --tags https://github.com/<owner>/<repo>` gives the commit each tag points at.
 ### trip-revision
 
 The trip-revision one (`scripts/check-trip-revision.mjs`) fails any `.update(trips)` whose `.set()` literal writes `startsAt` without also writing `revision`. `trips.revision` is published as the RFC 5545 `SEQUENCE` on both calendar surfaces (`src/lib/trip-calendar.ts`), and a client that re-fetches an event whose `SEQUENCE` has not moved treats it as the event it already holds — so a departure that slides an hour with a flat revision leaves every subscribed calendar on the old `DTSTART`, and a diver on the dock at the old time. That is issue #1165, which was fixed at the two writers that existed then; nothing made the third one carry it.
@@ -407,6 +413,18 @@ It is not built, and the reason is a count rather than an opinion. The rule was 
 So the decision is the owner's and it is open on #1403, which carries the four options: build it and pay the sweep, take the issue's own narrower fallback and pay 56, narrow past both to the one shape that actually rotted (the last row of the table — a name nothing queries positively in a file that never queries that role either, which is the `e2e/schedule-embed.spec.ts:24` case that stood alone), or decline and close since the three lines that prompted it are fixed. Nothing is blocked on it: the pairing that saved the visual capture is written into `.claude/rules/e2e.md` as a convention either way.
 
 Re-measure before re-proposing this; the number is what the argument turns on and it is cheap to get, while re-deriving it from scratch is a day. The sweep's definitions and script are in #1403's own comment thread. If a variant is ever built, it needs a statement-scope hook rather than a per-line `pattern` — five of the 98 have their locator on a preceding line — and it should be built on the `statementStart` helper already in the script rather than re-deriving a walker that will drift from it.
+
+### quarantine and long literals (both in e2e-hygiene)
+
+Two policy rules from the 2026-10-14 test review ride in `scripts/check-e2e-hygiene.mjs`, outside its per-line `rules` list.
+
+**Quarantine (decision 4).** "Fix any flake you meet" stalled unrelated pull requests on someone else's flake, and agents worked around it with in-place deflakes one spec at a time. A proven flake may now leave the PR path, but only owned and only briefly: a test tagged `@quarantine` needs `// diveday:quarantine #<issue> until <YYYY-MM-DD>: <what flakes>` on its line or the four above, the date no more than 7 days out, and no more than 3 tests quarantined at once. The day after the date the guard fails on every branch, so a lapsed quarantine is a red CI rather than a permanent skip; the answer is the fix, never a later date. `playwright.config.ts`'s `grepInvert` keeps tagged tests out of every run except `.github/workflows/e2e-nightly.yml`, which sets `DIVEDAY_RUN_QUARANTINE=1`. The guard cannot tell whether the issue is still open: check:repo reads no network.
+
+**Long literals (decision 8).** A spec that finds an element by a whole sentence breaks on every rewording, and only a run that happens to include that spec notices: "47 Playwright specs a change broke that nobody ran" was this mechanism, 242 literals of 30+ characters on 2026-10-14. `getByText`/`toContainText` string literals of 40+ characters (interpolations not counted) are counted per file under `e2e-long-literals` in `scripts/ratchets.json`; a count may only fall (`--write` banks a fall and refuses a rise, `--absorb "<why>"` records a merged-in one). There is no acknowledgement marker: the fix is a role and name, or the bundle key (`diverTranslator`/`staffTranslator`, as `e2e/reviews.spec.ts` does).
+
+### critical-journeys
+
+`scripts/check-critical-journeys.mjs` reads the "Critical journeys" table in [docs/engineering/testing.md](../engineering/testing.md#critical-journeys) and fails when a row's spec is gone, or no `test(…)` in it carries the row's title, or that test is `.skip`/`.fixme`. The table replaced the AGENTS.md rule "every important flow gets an `e2e/` spec, every important surface a capture" (test review decision 2, 2026-10-14): that rule grew ten-plus "add captures" issues by rule while naming no walk that mattered more than another. A `test.describe` of the same name does not count. Renaming a journey's test renames its row in the same change.
 
 ### pre-hydration-click
 
@@ -517,7 +535,7 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
   public destination there, never as a per-page cross-link; the whole header is dropped in
   `?embed=1`.
 - **Where staff can go**: derive from `src/lib/staff-destinations.ts`, a registry of
-  destinations each filed under one **section** — Today, Schedule, Divers, Inbox, Money, Courses,
+  destinations each filed under one **section** — Today, Schedule, Divers, Inbox, Money, Safety, Courses,
   Gear, Settings (ADR 20261001-logbook). It has **two** consumers:
   `src/components/ShopSectionNav.tsx` (the labelled sidebar from `lg` up, the phone tab bar below
   it — Today, Schedule, Divers, Inbox and More) and `src/components/search/CommandPalette.tsx`, the
@@ -740,8 +758,8 @@ worker owns its own database and resets it before every test (`e2e/servers.ts`).
 
 A user-facing change is verified by looking at it — `node scripts/screenshot.mjs <path…>` against a
 running `pnpm dev`, phone and desktop, light only unless the work is colour (then `--both`) — and by
-the **design-review** skill for a significant surface. Every important flow gets an `e2e/` spec and
-every important surface a capture in `e2e/visual.spec.ts` (the **e2e-and-visual** skill).
+the **design-review** skill for a significant surface. Its tests are testing.md's six-step list, and a
+critical journey keeps its spec (the **e2e-and-visual** skill).
 Safety-critical surfaces get a `dive-domain-expert` review.
 
 ### The db rules
@@ -1053,9 +1071,13 @@ For `e2e/`; the rules themselves are in `.claude/rules/e2e.md`.
   matches anything. It is a convention, not a guard: the rule was written and swept, and it flags
   98 lines across 46 of the 112 files here, so it is not live (#1403, counts in
   [docs/agents/repo-checks.md](repo-checks.md)).
-- **A failing or flaky test is part of the work, even when unrelated to your change.** Never skip
-  it, widen a timeout, or leave it red. Search open PRs first for a fix already in flight on the same
+- **A failing or flaky test is part of the work, even when unrelated to your change.** Fix it, or,
+  for a proven flake, quarantine it with an open issue and an expiry at most 7 days out
+  (`@quarantine`, [above](#quarantine-and-long-literals-both-in-e2e-hygiene)); never skip it,
+  widen a timeout, or leave it red. Search open PRs first for a fix already in flight on the same
   spec.
+- **Find by role and message key, not a sentence.** A new `getByText`/`toContainText` literal of
+  40+ characters is refused by `check:e2e-hygiene`'s long-literal ratchet.
 - **Screenshots are full-size and unfiltered; bound the *page*, not the capture.** A surface that
   screenshots enormous is telling you the page is unbounded, and the fix is pagination (or a default
   range) in the product — never a `?filter=` in the spec that shrinks the picture. Narrowing a
@@ -1079,8 +1101,8 @@ For `e2e/`; the rules themselves are in `.claude/rules/e2e.md`.
   20260729-reg-suit-visual-regression) — nothing to regenerate locally. "Approving" an intentional
   change means saying in the PR *why* the pixels moved and merging. Baselines are rendered on CI's
   Linux runners; on macOS nearly everything reads as changed — triage from the CI report.
-- **Every important flow gets a spec, every important surface a capture** — if unsure whether
-  something qualifies, it does.
+- **The critical journeys keep their test** (`pnpm check:critical-journeys`); every other flow
+  and surface takes what testing.md's six-step list gives it.
 
 ### The scripts rules
 

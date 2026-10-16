@@ -1,0 +1,264 @@
+{
+  "area": "bahamas-andros",
+  "method": "Andros: the Andros barrier reef and the Tongue of the Ocean wall off the east coast, plus ocean blue holes run as recreational dives; inland blue-hole caves excluded. No Bahamas National Trust dive-site list exists (the North and South Andros marine parks protect the reef without naming sites). Lists: Small Hope Bay Lodge's dive-site, wall, wreck, cavern, blue-hole and shark-dive pages; the tourism list, meaning the Bahamas Ministry of Tourism plan-your-trip dive page and Andros island page together with the My Out Islands Andros diving page, counted as one list; and Kamalame Cay's 2003 Wayback scuba page (three sites, none shared with Small Hope). Andros Beach Club and Andros Diving name no sites on any readable or archived page; Aqua Cat, Aggressor, Blackbeard's and Dolphin Dream publish no readable site list. A site counts when named, recreationally divable and on at least two independent lists, so a Small Hope site counts only when a tourism page also names it. Inland blue holes (The Crater) are excluded. Counted 2026-10-14.",
+  "sources": [
+    "https://www.smallhope.com/diving/dive-sites",
+    "https://www.smallhope.com/diving/walls",
+    "https://www.smallhope.com/diving/wrecks",
+    "https://www.smallhope.com/diving/caverns",
+    "https://www.smallhope.com/diving/blue-hole",
+    "https://www.smallhope.com/diving/shark-dive",
+    "https://www.smallhope.com/?p=15",
+    "https://www.myoutislands.com/bahamas-islands/andros/diving",
+    "https://www.bahamas.com/island/andros",
+    "https://www.bahamas.com/plan-your-trip/diving",
+    "https://web.archive.org/web/20030417133040/http://www.kamalame.com/2001/main_frames/scuba.html"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Over the Wall",
+      "template": null,
+      "listedBy": [
+        "https://www.smallhope.com/diving/walls",
+        "https://www.myoutislands.com/bahamas-islands/andros/diving"
+      ]
+    },
+    {
+      "name": "Giant Staircase",
+      "template": null,
+      "listedBy": [
+        "https://www.smallhope.com/diving/walls",
+        "https://www.myoutislands.com/bahamas-islands/andros/diving"
+      ]
+    },
+    {
+      "name": "The Marion (Marion wreck, AUTEC crane barge)",
+      "template": null,
+      "listedBy": [
+        "https://www.smallhope.com/diving/wrecks",
+        "https://www.myoutislands.com/bahamas-islands/andros/diving"
+      ]
+    },
+    {
+      "name": "Edge of the Wall",
+      "template": null,
+      "listedBy": ["https://www.myoutislands.com/bahamas-islands/andros/diving"],
+      "excluded": "named on one list only (tourism list)"
+    },
+    {
+      "name": "Gardens Dense",
+      "template": null,
+      "listedBy": ["https://www.myoutislands.com/bahamas-islands/andros/diving"],
+      "excluded": "named on one list only (tourism list)"
+    },
+    {
+      "name": "Andros Wall",
+      "template": null,
+      "listedBy": ["https://www.bahamas.com/plan-your-trip/diving"],
+      "excluded": "named on one list only (tourism list)"
+    },
+    {
+      "name": "The Crater",
+      "template": null,
+      "listedBy": ["https://www.bahamas.com/plan-your-trip/diving"],
+      "excluded": "inland blue hole"
+    },
+    {
+      "name": "Whip Wire Wall",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/walls"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Turnbull's Gut",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/walls"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "The Coliseum",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/walls"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "The Barge",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/walls"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Ocean Blue Hole",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/blue-hole", "https://www.smallhope.com/?p=15"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Dianna's Dungeons",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/caverns"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Alec's Caverns",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/caverns"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Cara's Caverns",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/caverns"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Coral Caverns",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/caverns"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Shark Emporium",
+      "template": null,
+      "listedBy": [
+        "https://www.smallhope.com/diving/shark-dive",
+        "https://www.smallhope.com/?p=15"
+      ],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Jeff's Ladder",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/?p=15"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Brian's Last Hoorah",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/?p=15"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Basslet Bay",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030417133040/http://www.kamalame.com/2001/main_frames/scuba.html"
+      ],
+      "excluded": "named on one list only (Kamalame Cay, 2003)"
+    },
+    {
+      "name": "The Shallows",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030417133040/http://www.kamalame.com/2001/main_frames/scuba.html"
+      ],
+      "excluded": "named on one list only (Kamalame Cay, 2003)"
+    },
+    {
+      "name": "The Buoy",
+      "template": null,
+      "listedBy": [
+        "https://web.archive.org/web/20030417133040/http://www.kamalame.com/2001/main_frames/scuba.html"
+      ],
+      "excluded": "named on one list only (Kamalame Cay, 2003)"
+    },
+    {
+      "name": "Sea Turtle Ridge",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/dive-sites"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Margo's Place",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/dive-sites"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Three Sisters False Wall",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/dive-sites"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Black Forest Coral Formations",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/dive-sites"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Queen Angel Ridge",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/dive-sites"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Brad's Mountain Caverns",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/dive-sites"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "South Peters Place",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/dive-sites"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Peters Mystery Special",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/dive-sites"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Jean's Dream",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/dive-sites"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Trumpet Reef",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/dive-sites"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "End of the Reef",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/dive-sites"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "The Aquarium",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/dive-sites"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Central Park Reef",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/dive-sites"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Love Hill Coral Gardens",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/dive-sites"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Leiben's Point Barrier Reef",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/dive-sites"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    },
+    {
+      "name": "Red Shoal Reef",
+      "template": null,
+      "listedBy": ["https://www.smallhope.com/diving/dive-sites"],
+      "excluded": "named on one list only (Small Hope Bay Lodge)"
+    }
+  ]
+}

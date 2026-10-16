@@ -40,6 +40,7 @@ import {
   OPEN_TRIP_LINK,
 } from "./_components/notice-rows";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
+import { OrdersSeatLines } from "./_components/OrdersSeatLines";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
 import {
   FailedRefundsQueue,
@@ -48,7 +49,7 @@ import {
 } from "./_components/OwedMoneyQueues";
 import { PaymentsSetupCard } from "./_components/PaymentsSetupCard";
 import { PayoutLines, readBackOffice } from "./_components/PayoutLines";
-import { orderIndexFilter } from "./order-index-filter";
+import { type OrdersHrefOverrides, orderIndexFilter, ordersIndexHref } from "./order-index-filter";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -166,6 +167,7 @@ export default async function OrdersIndexPage({
     q?: string;
     /** One departure's orders — the trip pulse's awaiting-payment fact links here. */
     tripId?: string;
+    seats?: string;
     from?: string;
     to?: string;
     range?: string;
@@ -175,7 +177,7 @@ export default async function OrdersIndexPage({
   }>;
 }) {
   const { shopSlug } = await params;
-  const { status, personId, q, tripId, from, to, range, page, importedPage, notice } =
+  const { status, personId, q, tripId, seats, from, to, range, page, importedPage, notice } =
     await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
@@ -231,7 +233,12 @@ export default async function OrdersIndexPage({
     query: trimmedQuery,
     tripId: tripFilter,
     personId: personFilter,
-  } = orderIndexFilter({ status, personId, q, tripId, from, to, range }, shop.timezone, nowDate());
+    seats: seatsFilter,
+  } = orderIndexFilter(
+    { status, personId, q, tripId, seats, from, to, range },
+    shop.timezone,
+    nowDate(),
+  );
   const showAll = selectedRange === "all";
   const customRange = selectedRange === "custom";
 
@@ -269,38 +276,22 @@ export default async function OrdersIndexPage({
       );
   const hasImportedHistory = Boolean(importedHistoryPage && importedHistoryPage.total > 0);
 
-  /** This page's URL with the filters kept and only the given params swapped. */
-  const hrefWith = (
-    overrides: { page?: number; importedPage?: number; range?: string | null },
-    path = "orders",
-  ) => {
-    const query = new URLSearchParams();
-    if (status) query.set("status", status);
-    if (personFilter) query.set("personId", personFilter);
-    if (trimmedQuery) query.set("q", trimmedQuery);
-    if (tripFilter) query.set("tripId", tripFilter);
-    if (from) query.set("from", from);
-    if (to) query.set("to", to);
-    const nextRange =
-      overrides.range === undefined
-        ? range === "all"
-          ? "all"
-          : range === "recent"
-            ? "recent"
-            : range === "custom"
-              ? "custom"
-              : null
-        : overrides.range;
-    if (nextRange) query.set("range", nextRange);
-    if (overrides.page !== undefined && overrides.page > 1) {
-      query.set("page", String(overrides.page));
-    }
-    if (overrides.importedPage !== undefined && overrides.importedPage > 1) {
-      query.set("importedPage", String(overrides.importedPage));
-    }
-    const search = query.toString();
-    return search ? `/shop/${shopSlug}/${path}?${search}` : `/shop/${shopSlug}/${path}`;
-  };
+  const hrefWith = (overrides: OrdersHrefOverrides, path = "orders") =>
+    ordersIndexHref(
+      shopSlug,
+      {
+        status,
+        personId: personFilter,
+        q: trimmedQuery,
+        tripId: tripFilter,
+        seats: seatsFilter,
+        from,
+        to,
+        range,
+      },
+      overrides,
+      path,
+    );
 
   // Looked up rather than read off the first row — a filter that matches
   // nothing still has to say whose orders it was looking for, and the
@@ -555,6 +546,15 @@ export default async function OrdersIndexPage({
           </Link>
         </p>
       ) : null}
+
+      <OrdersSeatLines
+        db={db}
+        shopId={shop.id}
+        filter={orderFilter}
+        seats={seatsFilter}
+        hrefFor={(seats) => hrefWith({ seats })}
+        t={t}
+      />
 
       {days.length === 0 && (hasFilters || !hasImportedHistory) ? (
         // The same fork the header makes (Loop 3): with no orders on file the

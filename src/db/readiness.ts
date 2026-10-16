@@ -9,6 +9,7 @@ import type { CardUnreviewRefusal, CertificationLevel, SiteCertRequirement } fro
 import {
   BLOCKER_CATEGORY,
   calculateReadiness,
+  cardUndoRefusal,
   combineCertRequirements,
   combineSiteRequirements,
   isUnsightedSelfDeclaration,
@@ -34,6 +35,7 @@ import {
 } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import { courseFormSignaturesForBookings, requiredCourseFormsForTrips } from "./course-forms";
+import { publishManifestEventsForPerson } from "./manifest-events";
 import { paymentsByBooking } from "./payments";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import type { Certification, CertificationAgency, DiveSpecialty } from "./schema";
@@ -692,7 +694,10 @@ export async function reviewCertification(
         ),
       )
       .returning();
-    return certification ? { ok: true, certification } : { ok: false, reason: "not_found" };
+    if (!certification) return { ok: false, reason: "not_found" };
+    // Open and primed manifests re-read (issue #2613).
+    await publishManifestEventsForPerson(db, input.shopId, certification.personId);
+    return { ok: true, certification };
   } catch (error) {
     // The sighted number collides with a live card this shop already holds —
     // the same partial unique index `createCertification` refuses on (CR-009).
@@ -713,13 +718,39 @@ export async function reviewCertification(
  * neither reach another shop's evidence nor resurrect a deleted card.
  */
 export async function unreviewCertification(
-  db: DbExecutor,
-  input: { shopId: string; certificationId: string },
+  db: AppDb,
+  input: { shopId: string; certificationId: string; reviewedAt: Date },
 ): Promise<{ ok: true } | { ok: false; reason: CardUnreviewRefusal }> {
+  const undone = await reverseCertificationReview(db, input);
+  if (!undone.ok) return undone;
+  // Open and primed manifests re-read, so a clearance taken back is not shown
+  // on the dock (issue #2613).
+  await publishManifestEventsForPerson(db, input.shopId, undone.personId);
+  return { ok: true };
+}
+
+/**
+ * The write behind {@link unreviewCertification}, with no manifest event, for a
+ * caller inside a transaction (`undoAgencyCheck`): the event goes out after the
+ * commit, never before it, or a device could re-read the old evidence.
+ */
+export async function reverseCertificationReview(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    certificationId: string;
+    /** The `reviewedAt` the Undo was offered for: a later review is `stale` (issue #2612). */
+    reviewedAt: Date;
+    /** Only the agency check's own Undo (`undoAgencyCheck`) reverses an agency-checked review. */
+    reversingAgencyCheck?: boolean;
+  },
+): Promise<{ ok: true; personId: string } | { ok: false; reason: CardUnreviewRefusal }> {
   const [existing] = await db
     .select({
+      personId: certifications.personId,
       status: certifications.status,
       reviewedAt: certifications.reviewedAt,
+      agencyCheckedAt: certifications.agencyCheckedAt,
       selfDeclaredAt: certifications.selfDeclaredAt,
       issuedByShopAt: certifications.issuedByShopAt,
       importedAt: certifications.importedAt,
@@ -736,6 +767,10 @@ export async function unreviewCertification(
   if (!existing) return { ok: false, reason: "not_found" };
   const target = unreviewedCardState(existing);
   if (!target.ok) return target;
+  const refusal = cardUndoRefusal(existing, input.reviewedAt, {
+    reversingAgencyCheck: input.reversingAgencyCheck,
+  });
+  if (refusal) return { ok: false, reason: refusal };
   const [row] = await db
     .update(certifications)
     .set({
@@ -750,21 +785,47 @@ export async function unreviewCertification(
         eq(certifications.id, input.certificationId),
         eq(certifications.shopId, input.shopId),
         isNull(certifications.deletedAt),
+        // The review that was offered, still: a review landing between the read
+        // above and this write matches no row (issue #2612).
+        eq(certifications.reviewedAt, input.reviewedAt),
+        ...(input.reversingAgencyCheck ? [] : [isNull(certifications.agencyCheckedAt)]),
       ),
     )
     .returning({ id: certifications.id });
-  return row ? { ok: true } : { ok: false, reason: "not_found" };
+  return row ? { ok: true, personId: existing.personId } : { ok: false, reason: "stale" };
 }
 
 /** The specialty twin of {@link unreviewCertification}; same decision, same guards. */
 export async function unreviewSpecialtyCertification(
   db: AppDb,
-  input: { shopId: string; certificationId: string },
+  input: { shopId: string; certificationId: string; reviewedAt: Date },
 ): Promise<{ ok: true } | { ok: false; reason: CardUnreviewRefusal }> {
+  const undone = await reverseSpecialtyReview(db, input);
+  if (!undone.ok) return undone;
+  await publishManifestEventsForPerson(db, input.shopId, undone.personId);
+  return { ok: true };
+}
+
+/**
+ * The write behind {@link unreviewSpecialtyCertification}, with no manifest
+ * event, for a caller inside a transaction (`undoAgencyCheck`). See
+ * {@link reverseCertificationReview}, whose guards it keeps.
+ */
+export async function reverseSpecialtyReview(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    certificationId: string;
+    reviewedAt: Date;
+    reversingAgencyCheck?: boolean;
+  },
+): Promise<{ ok: true; personId: string } | { ok: false; reason: CardUnreviewRefusal }> {
   const [existing] = await db
     .select({
+      personId: specialtyCertifications.personId,
       status: specialtyCertifications.status,
       reviewedAt: specialtyCertifications.reviewedAt,
+      agencyCheckedAt: specialtyCertifications.agencyCheckedAt,
       selfDeclaredAt: specialtyCertifications.selfDeclaredAt,
       issuedByShopAt: specialtyCertifications.issuedByShopAt,
       importedAt: specialtyCertifications.importedAt,
@@ -785,8 +846,16 @@ export async function unreviewSpecialtyCertification(
     )
     .limit(1);
   if (!existing) return { ok: false, reason: "not_found" };
-  const target = unreviewedCardState(existing);
+  // See `reverseNitroxReview`: an agency check never certifies a card that
+  // needed a sighting, so its Undo puts back the number it was checked by.
+  const target = unreviewedCardState(
+    input.reversingAgencyCheck ? { ...existing, listedFromCertificationId: null } : existing,
+  );
   if (!target.ok) return target;
+  const refusal = cardUndoRefusal(existing, input.reviewedAt, {
+    reversingAgencyCheck: input.reversingAgencyCheck,
+  });
+  if (refusal) return { ok: false, reason: refusal };
   const [row] = await db
     .update(specialtyCertifications)
     .set({
@@ -794,16 +863,18 @@ export async function unreviewSpecialtyCertification(
       reviewNote: existing.listedFromCertificationId ? existing.reviewNote : null,
       reviewedAt: null,
       reviewedByPersonId: null,
+      agencyCheckedAt: null,
     })
     .where(
       and(
         eq(specialtyCertifications.id, input.certificationId),
         eq(specialtyCertifications.shopId, input.shopId),
         isNull(specialtyCertifications.deletedAt),
+        eq(specialtyCertifications.reviewedAt, input.reviewedAt),
       ),
     )
     .returning({ id: specialtyCertifications.id });
-  return row ? { ok: true } : { ok: false, reason: "not_found" };
+  return row ? { ok: true, personId: existing.personId } : { ok: false, reason: "stale" };
 }
 
 /**
@@ -1181,6 +1252,13 @@ export async function reviewSpecialtyCertification(
      * depth gate past 18 m, and a diver's typing is not a card sighting.
      */
     sighting?: CardSighting;
+    /**
+     * The review is the agency's own lookup page listing this specialty for
+     * this diver (H-105, issue #2592), read by `judgeAgencyListedCard`. Stamps
+     * `agencyCheckedAt`; a card that needs a sighting is never certified this
+     * way, as for the level and nitrox reviews.
+     */
+    agencyChecked?: boolean;
   },
 ): Promise<
   | { ok: true; certification: typeof specialtyCertifications.$inferSelect }
@@ -1227,7 +1305,7 @@ export async function reviewSpecialtyCertification(
   // review beside it, and for a stronger reason: this one opens a depth gate
   // past 18 m.
   const sighting = needsCardSighting(existing) ? input.sighting : undefined;
-  if (needsCardSighting(existing) && !sighting?.identifier.trim()) {
+  if (needsCardSighting(existing) && (input.agencyChecked || !sighting?.identifier.trim())) {
     return { ok: false, reason: "card_sighting_required" };
   }
 
@@ -1237,6 +1315,7 @@ export async function reviewSpecialtyCertification(
       status: input.status,
       reviewNote: reviewNoteFor(input.reviewNote) ?? existing.reviewNote,
       reviewedAt: nowDate(),
+      agencyCheckedAt: input.agencyChecked ? nowDate() : null,
       ...(reviewedByPersonId ? { reviewedByPersonId } : undefined),
       ...(sighting
         ? { agency: sighting.agency, identifier: sighting.identifier.trim() }
@@ -1253,7 +1332,9 @@ export async function reviewSpecialtyCertification(
       ),
     )
     .returning();
-  return certification ? { ok: true, certification } : { ok: false, reason: "not_found" };
+  if (!certification) return { ok: false, reason: "not_found" };
+  await publishManifestEventsForPerson(db, input.shopId, certification.personId);
+  return { ok: true, certification };
 }
 
 /**

@@ -2030,7 +2030,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
   // DuPont Bridge Span #1
   {
     slug: "dupont-bridge-span-1",
-    version: 1,
+    version: 2,
     area: "florida-panhandle",
     sources: [
       "https://pcdivecenter.com/popular-dive-sites",
@@ -2046,8 +2046,8 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 55 m section of the old DuPont Bridge, sunk intact in October 2008 as the first of three spans on the offshore run. It stands about 11 m off the sand.",
       marineLife: "Amberjack · snapper · spadefish · grouper",
       difficultyLevel: "advanced",
-      depthRange: "17–27 m (55–90 ft)",
-      maxDepthMeters: 28,
+      depthRange: "17–30 m (55–100 ft)",
+      maxDepthMeters: 30,
       currentNote:
         "Open Gulf, about 11 nautical miles from the pass. Current, visibility and a summer thermocline vary by the day.",
       fitTone: "demanding",
@@ -2067,7 +2067,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
   // DuPont Bridge Span #3
   {
     slug: "dupont-bridge-span-3",
-    version: 1,
+    version: 2,
     area: "florida-panhandle",
     sources: [
       "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Dupont%20Bridge%20Span%20%233%27&outFields=Name,Depth,Relief,Lat_DD,Long_DD,DeployDate&returnGeometry=false&f=json",
@@ -2083,8 +2083,8 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "The last of three 55 m DuPont Bridge spans sunk intact in December 2008. It stands about 11 m tall on the sand, close to where the El Dorado was later placed.",
       marineLife: "Amberjack · snapper · spadefish · grouper",
       difficultyLevel: "advanced",
-      depthRange: "17–27 m (55–90 ft)",
-      maxDepthMeters: 28,
+      depthRange: "17–30 m (55–100 ft)",
+      maxDepthMeters: 30,
       currentNote:
         "Open Gulf, about 11 nautical miles from the pass. Current, visibility and a summer thermocline vary by the day.",
       fitTone: "demanding",

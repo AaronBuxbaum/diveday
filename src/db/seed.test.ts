@@ -24,6 +24,7 @@ import {
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
   shopPromoRedemptions,
+  shopShoreAlertTokens,
   shopStripeAccounts,
   shops,
   tips,
@@ -195,8 +196,20 @@ describe("resetDemoSchedule", () => {
     const { db, shop } = ctx;
     await db
       .update(shops)
-      .set({ reviewUrl: "https://g.page/r/leaked/review" })
+      .set({
+        reviewUrl: "https://g.page/r/leaked/review",
+        shoreAlertEmail: "leaked@example.com",
+        shoreAlertConsentAt: new Date("2026-10-15T12:00:00Z"),
+        shoreAlertConsentByPersonId: shop.id,
+        shoreAlertConfirmedAt: new Date("2026-10-15T12:00:00Z"),
+      })
       .where(eq(shops.id, shop.id));
+    await db.insert(shopShoreAlertTokens).values({
+      shopId: shop.id,
+      purpose: "stop",
+      email: "leaked@example.com",
+      tokenHash: "leaked-shore-token-hash",
+    });
     const account = await upsertShopStripeAccount(db, shop.id, "acct_leaked_test");
     await setShopStripeAccountStatus(db, account.stripeAccountId, {
       chargesEnabled: true,
@@ -208,6 +221,16 @@ describe("resetDemoSchedule", () => {
 
     const [resetShop] = await db.select().from(shops).where(eq(shops.id, shop.id));
     expect(resetShop?.reviewUrl).toBeNull();
+    // H-118: a spec's shore contact address leaves with the reset, links and all.
+    expect(resetShop).toMatchObject({
+      shoreAlertEmail: null,
+      shoreAlertConsentAt: null,
+      shoreAlertConsentByPersonId: null,
+      shoreAlertConfirmedAt: null,
+    });
+    expect(
+      await db.select().from(shopShoreAlertTokens).where(eq(shopShoreAlertTokens.shopId, shop.id)),
+    ).toHaveLength(0);
     const [stripeRow] = await db
       .select()
       .from(shopStripeAccounts)

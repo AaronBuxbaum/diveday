@@ -1,11 +1,11 @@
+import { checkpointGapLine } from "@/components/checkpoint-gap-words";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { homewardCheckpointGap } from "@/lib/checkpoint-gaps";
 import { formatTime } from "@/lib/format";
 import type { TripManifest } from "@/lib/manifests";
 import { shopPath } from "@/lib/staff-notices";
-import { boatStageOf } from "@/lib/trip-phase";
+import { boatStageOf, type MeetingWindow } from "@/lib/trip-phase";
 import { STAGE_WORD_KEYS, TRIP_STAGES, type TripStageReading } from "@/lib/trip-stages";
-import { checkpointGapLine } from "./checkpoint-gap-words";
 import type { StageStripCopy } from "./StageStrip";
 
 type GapManifest = Pick<TripManifest, "trip" | "checkpoint" | "summary" | "crew">;
@@ -40,6 +40,8 @@ export function stageStripProps(
     now: Date;
     timeZone: string;
     locale: string;
+    /** The run's real meeting windows, when it is a multi-day one (`meetingWindowsByTrip`). */
+    meetingWindows?: readonly MeetingWindow[];
   },
 ): { current: TripStageReading["stage"] | null; copy: StageStripCopy } {
   const trip = "trip" in input ? input.trip : input.manifests[0]?.trip;
@@ -59,6 +61,7 @@ export function stageStripProps(
     timeZone: input.timeZone,
     stage: input.stage,
     cancelled: false,
+    meetingWindows: input.meetingWindows,
   });
   return {
     current: shown?.stage ?? null,

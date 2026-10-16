@@ -5,6 +5,7 @@ import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach, onTestFinished } from "vitest";
 import { type AppDb, createTestDb } from "@/db/client";
+import { closePglite } from "@/db/close-pglite";
 import { seedDemo } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
 import { type TemplateVariant, templateBytes } from "./db-template";
@@ -23,7 +24,7 @@ import { type TemplateVariant, templateBytes } from "./db-template";
  */
 function closeWhenTestFinishes(client: PGlite): void {
   onTestFinished(async () => {
-    await client.close();
+    await closePglite(client);
   });
 }
 
@@ -222,7 +223,7 @@ export function fileScopedShopContext(options: { history?: boolean } = {}) {
   });
 
   afterAll(async () => {
-    await (base?.$client as PGlite | undefined)?.close();
+    if (base) await closePglite(base.$client as PGlite);
     base = undefined;
   });
 

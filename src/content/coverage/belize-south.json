@@ -1,0 +1,252 @@
+{
+  "area": "belize-south",
+  "method": "Southern Belize's barrier reef from the Tobacco Range off Dangriga through South Water Caye, Hopkins and Placencia (Pompion Caye, Silk Cayes, Gladden Spit, Laughing Bird Caye) to the Sapodilla Cayes; Glover's Reef is counted in belize-atolls. No official named list exists: the South Water Caye Marine Reserve management plan 2019-2023 and the Gladden Spit and Silk Cayes Marine Reserve plan 2018-2023 were read and name no dive sites. Operator lists, one each: Splash Dive Center (Placencia), Seahorse Dive Shop (belizescuba.com, Placencia), The Placencia Resort, Hamanasi (Hopkins; its South Water page and its site blog are one list) and Thatch Caye Resort (Dangriga). The Belize Tourism Board's diving articles count as one list. Avadon Divers' domain did not resolve, Seemore Adventures and Pelican Beach publish no site names, Blue Marlin Lodge's site is a contact page and no Punta Gorda operator publishes a Sapodilla list; Island Expeditions, Belize Adventure (a blog), cursosdebuceo and Undercurrent were read for leads only. A site is counted when it is named, recreationally divable on scuba and on at least two lists. The Gladden Spit whale-shark dive is counted as Splash and Seahorse sell it as a two-tank scuba trip; Shark Hole is a guided cavern-zone dive for open-water divers. One-list names, and slope sites that cannot be matched across operators, stay as excluded rows. Counted 2026-10-14.",
+  "sources": [
+    "https://splashbelize.com/scuba-diving-sites/south-water-caye/",
+    "https://splashbelize.com/scuba-diving-sites/grand-channel/",
+    "https://splashbelize.com/scuba-diving-sites/silk-cayes/",
+    "https://splashbelize.com/scuba-diving-sites/pompion-caye/",
+    "https://splashbelize.com/scuba-diving-sites/laughing-bird-caye/",
+    "https://splashbelize.com/scuba-diving-sites/whale-sharks-at-gladden-spit/",
+    "https://splashbelize.com/scuba-diving-sites/shark-hole/",
+    "https://belizescuba.com/diving-snorkeling/local-reef/",
+    "https://belizescuba.com/diving-snorkeling/south-water-caye/",
+    "https://belizescuba.com/diving-snorkeling/whale-sharks/",
+    "https://belizescuba.com/diving-snorkeling/shark-hole/",
+    "https://theplacencia.com/scuba-snorkel",
+    "https://www.hamanasi.com/belize-vacation/barrier-reef-diving/",
+    "https://www.hamanasi.com/belize/tours/diving/best-dive-sites-in-belize-youve-never-heard-of/",
+    "https://www.thatchcayebelize.com/belize-barrier-reef",
+    "https://www.travelbelize.org/blog/best-diving-spots-belize/",
+    "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/SWCMR%20Management%20Plan%202019-2023.pdf",
+    "https://africa-knowledge-platform.ec.europa.eu/sites/default/files/2021-02/Gladden%20Split%20and%20Spit%20Cayes_MR_MP_2018-2023.pdf"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Shark Hole (Shark Pit)",
+      "template": null,
+      "listedBy": [
+        "https://splashbelize.com/scuba-diving-sites/shark-hole/",
+        "https://belizescuba.com/diving-snorkeling/shark-hole/",
+        "https://theplacencia.com/scuba-snorkel"
+      ]
+    },
+    {
+      "name": "Tobacco Cut",
+      "template": null,
+      "listedBy": [
+        "https://www.hamanasi.com/belize/tours/diving/best-dive-sites-in-belize-youve-never-heard-of/"
+      ],
+      "excluded": "on one operator list only (Hamanasi)"
+    },
+    {
+      "name": "Tobacco Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.hamanasi.com/belize/tours/diving/best-dive-sites-in-belize-youve-never-heard-of/"
+      ],
+      "excluded": "on one operator list only (Hamanasi)"
+    },
+    {
+      "name": "Tobacco Caye Wall",
+      "template": null,
+      "listedBy": [
+        "https://www.hamanasi.com/belize/tours/diving/best-dive-sites-in-belize-youve-never-heard-of/"
+      ],
+      "excluded": "on one operator list only (Hamanasi)"
+    },
+    {
+      "name": "Long Reef",
+      "template": "long-reef-south-water-caye",
+      "listedBy": [
+        "https://splashbelize.com/scuba-diving-sites/south-water-caye/",
+        "https://www.thatchcayebelize.com/belize-barrier-reef"
+      ]
+    },
+    {
+      "name": "Jason's Wall",
+      "template": null,
+      "listedBy": ["https://www.hamanasi.com/belize-vacation/barrier-reef-diving/"],
+      "excluded": "on one operator list only (Hamanasi)"
+    },
+    {
+      "name": "Elsie's Aquarium",
+      "template": null,
+      "listedBy": ["https://www.hamanasi.com/belize-vacation/barrier-reef-diving/"],
+      "excluded": "on one operator list only (Hamanasi)"
+    },
+    {
+      "name": "South Water Wall",
+      "template": null,
+      "listedBy": ["https://www.hamanasi.com/belize-vacation/barrier-reef-diving/"],
+      "excluded": "on one operator list only (Hamanasi)"
+    },
+    {
+      "name": "Carrie Bow",
+      "template": null,
+      "listedBy": ["https://www.hamanasi.com/belize-vacation/barrier-reef-diving/"],
+      "excluded": "on one operator list only (Hamanasi)"
+    },
+    {
+      "name": "Trick Ridge (Eagle Ray City)",
+      "template": null,
+      "listedBy": [
+        "https://www.hamanasi.com/belize-vacation/barrier-reef-diving/",
+        "https://splashbelize.com/scuba-diving-sites/south-water-caye/",
+        "https://belizescuba.com/diving-snorkeling/south-water-caye/",
+        "https://www.travelbelize.org/blog/best-diving-spots-belize/"
+      ]
+    },
+    {
+      "name": "Discovery",
+      "template": null,
+      "listedBy": [
+        "https://www.hamanasi.com/belize/tours/diving/best-dive-sites-in-belize-youve-never-heard-of/",
+        "https://www.thatchcayebelize.com/belize-barrier-reef"
+      ]
+    },
+    {
+      "name": "The Abyss",
+      "template": "the-abyss-south-water-caye",
+      "listedBy": [
+        "https://www.hamanasi.com/belize-vacation/barrier-reef-diving/",
+        "https://splashbelize.com/scuba-diving-sites/south-water-caye/",
+        "https://belizescuba.com/diving-snorkeling/south-water-caye/"
+      ]
+    },
+    {
+      "name": "Rosella's Garden",
+      "template": "rosellas-garden",
+      "listedBy": [
+        "https://splashbelize.com/scuba-diving-sites/south-water-caye/",
+        "https://belizescuba.com/diving-snorkeling/south-water-caye/"
+      ]
+    },
+    {
+      "name": "Hell Hole",
+      "template": null,
+      "listedBy": ["https://www.hamanasi.com/belize-vacation/barrier-reef-diving/"],
+      "excluded": "on one operator list only (Hamanasi)"
+    },
+    {
+      "name": "Third Cut",
+      "template": null,
+      "listedBy": ["https://splashbelize.com/scuba-diving-sites/grand-channel/"],
+      "excluded": "on one operator list only (Splash Dive Center)"
+    },
+    {
+      "name": "Fourth Cut",
+      "template": null,
+      "listedBy": ["https://splashbelize.com/scuba-diving-sites/grand-channel/"],
+      "excluded": "on one operator list only (Splash Dive Center)"
+    },
+    {
+      "name": "Grand Channel",
+      "template": null,
+      "listedBy": ["https://splashbelize.com/scuba-diving-sites/grand-channel/"],
+      "excluded": "on one operator list only (Splash Dive Center)"
+    },
+    {
+      "name": "Pompion Wall",
+      "template": null,
+      "listedBy": [
+        "https://splashbelize.com/scuba-diving-sites/pompion-caye/",
+        "https://belizescuba.com/diving-snorkeling/local-reef/"
+      ]
+    },
+    {
+      "name": "Pompion Canyons (Pompion Canyon)",
+      "template": null,
+      "listedBy": [
+        "https://splashbelize.com/scuba-diving-sites/pompion-caye/",
+        "https://belizescuba.com/diving-snorkeling/local-reef/"
+      ]
+    },
+    {
+      "name": "North Wall (Silk Cayes)",
+      "template": "north-wall-silk-cayes",
+      "listedBy": [
+        "https://splashbelize.com/scuba-diving-sites/silk-cayes/",
+        "https://belizescuba.com/diving-snorkeling/local-reef/"
+      ]
+    },
+    {
+      "name": "Turtle Canyons",
+      "template": "turtle-canyons-silk-cayes",
+      "listedBy": [
+        "https://splashbelize.com/scuba-diving-sites/silk-cayes/",
+        "https://belizescuba.com/diving-snorkeling/local-reef/"
+      ]
+    },
+    {
+      "name": "White Hole",
+      "template": "white-hole-silk-cayes",
+      "listedBy": [
+        "https://splashbelize.com/scuba-diving-sites/silk-cayes/",
+        "https://belizescuba.com/diving-snorkeling/local-reef/"
+      ]
+    },
+    {
+      "name": "Gladden Spit (whale shark dive)",
+      "template": "gladden-spit",
+      "listedBy": [
+        "https://splashbelize.com/scuba-diving-sites/whale-sharks-at-gladden-spit/",
+        "https://belizescuba.com/diving-snorkeling/whale-sharks/",
+        "https://www.travelbelize.org/blog/best-diving-spots-belize/"
+      ]
+    },
+    {
+      "name": "Laughing Bird North",
+      "template": null,
+      "listedBy": ["https://splashbelize.com/scuba-diving-sites/laughing-bird-caye/"],
+      "excluded": "on one operator list only (Splash Dive Center); Seahorse's 'Laughing Bird Caye Slope' could be this or Laughing Bird Drop Off"
+    },
+    {
+      "name": "Laughing Bird Drop Off",
+      "template": null,
+      "listedBy": ["https://splashbelize.com/scuba-diving-sites/laughing-bird-caye/"],
+      "excluded": "on one operator list only (Splash Dive Center)"
+    },
+    {
+      "name": "Laughing Bird Caye Slope",
+      "template": null,
+      "listedBy": ["https://belizescuba.com/diving-snorkeling/local-reef/"],
+      "excluded": "on one operator list only (Seahorse Dive Shop); cannot be matched to either Splash slope site"
+    },
+    {
+      "name": "Coral Garden (Laughing Bird Caye)",
+      "template": "coral-garden-laughing-bird-caye",
+      "listedBy": [
+        "https://splashbelize.com/scuba-diving-sites/laughing-bird-caye/",
+        "https://belizescuba.com/diving-snorkeling/local-reef/"
+      ]
+    },
+    {
+      "name": "Laughing Bird South (Laughing Bird Caye South)",
+      "template": "laughing-bird-south",
+      "listedBy": [
+        "https://splashbelize.com/scuba-diving-sites/laughing-bird-caye/",
+        "https://belizescuba.com/diving-snorkeling/local-reef/"
+      ]
+    },
+    {
+      "name": "Miss Pamela (The Wreck)",
+      "template": null,
+      "listedBy": ["https://splashbelize.com/scuba-diving-sites/laughing-bird-caye/"],
+      "excluded": "on one operator list only (Splash Dive Center)"
+    },
+    {
+      "name": "Long Coco Split",
+      "template": null,
+      "listedBy": ["https://splashbelize.com/scuba-diving-sites/laughing-bird-caye/"],
+      "excluded": "on one operator list only (Splash Dive Center)"
+    },
+    {
+      "name": "Fisherman's Delight (Sapodilla Cayes)",
+      "template": null,
+      "excluded": "named only by a photo-community page (underwaterphotography.com); no operator or official list names a Sapodilla Cayes site"
+    }
+  ]
+}

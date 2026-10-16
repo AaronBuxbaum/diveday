@@ -93,6 +93,17 @@ export function mayWriteIncidentReport(
   return mayReadIncidentReport(viewer, report);
 }
 
+/**
+ * Who may discard an unfiled draft, and who may set or release a legal hold: an
+ * owner, and nobody else (Aaron, 2026-10-13, issue #2391). Both take a report
+ * off the ordinary path (a draft out of sight, a report kept past its window),
+ * so they are the shop's accountable person's call, not the crew's or a
+ * manager's.
+ */
+export function mayDecideIncidentRecord(viewer: IncidentViewer): boolean {
+  return viewer.roles?.includes("owner") === true;
+}
+
 /** The fields a draft holds, as the database stores them. */
 export type IncidentDraftFields = {
   occurredAt: Date | null;

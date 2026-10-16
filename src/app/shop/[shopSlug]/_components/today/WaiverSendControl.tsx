@@ -317,7 +317,7 @@ export function WaiverSendControl({
           hold={holdSendAction}
           undo={undoHeldSendAction}
           release={releaseHeldSendAction}
-          onOutcome={(outcome) => setState(waiverSendStateFromOutcome(outcome))}
+          onOutcome={(outcome) => setState(waiverSendStateFromOutcome(outcome, copy.unnamedDiver))}
           copy={copy.hold}
           // The one clause a reissue keeps: the old link stops working, which
           // the row cannot show on its own.

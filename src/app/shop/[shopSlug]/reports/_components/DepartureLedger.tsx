@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { GroupLabel } from "@/components/ui/group-label";
 import { LedgerRow } from "@/components/ui/ledger";
+import type { StaffTranslator } from "@/i18n/staff-messages";
+import { formatShortDate } from "@/lib/format";
 
 /**
  * **The month's departures as a ledger** — ADR 20260827-the-shops-shelves,
@@ -122,4 +124,56 @@ export function DepartureLedger({
       {pager}
     </section>
   );
+}
+
+/**
+ * The ledger's rows from a page of the month's trips. Every fact carries its
+ * own noun: a ledger row has no column header above it to borrow one from,
+ * which is also what lets the phone keep all three facts instead of hiding
+ * two behind a breakpoint.
+ */
+export function departureLedgerRows({
+  trips,
+  crewCounts,
+  shopSlug,
+  locale,
+  timeZone,
+  t,
+}: {
+  trips: readonly {
+    tripId: string;
+    title: string;
+    startsAt: Date;
+    capacity: number;
+    activeBookings: number;
+    waiverComplete: number;
+  }[];
+  crewCounts: ReadonlyMap<string, number>;
+  shopSlug: string;
+  locale: string;
+  timeZone: string;
+  t: StaffTranslator;
+}): DepartureRow[] {
+  return trips.map((trip) => ({
+    tripId: trip.tripId,
+    href: `/shop/${shopSlug}/trips/${trip.tripId}`,
+    title: trip.title,
+    date: formatShortDate(trip.startsAt, locale, timeZone),
+    seats: t("reports.row.seats", { booked: trip.activeBookings, capacity: trip.capacity }),
+    crew: t("reports.row.crew", { count: crewCounts.get(trip.tripId) ?? 0 }),
+    // A departure nobody booked has no waivers to collect, so it says nothing
+    // about them. Otherwise the row says the one thing a staffer acts on: how
+    // many are still out, or that none are.
+    waivers:
+      trip.activeBookings > 0
+        ? trip.waiverComplete >= trip.activeBookings
+          ? { fact: t("reports.row.waiversAllIn"), outstanding: false }
+          : {
+              fact: t("reports.row.waiversToCollect", {
+                count: trip.activeBookings - trip.waiverComplete,
+              }),
+              outstanding: true,
+            }
+        : null,
+  }));
 }

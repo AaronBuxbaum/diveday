@@ -17,7 +17,12 @@ import { claimLinkPath } from "@/lib/booking-capabilities";
 import { formatShortDate } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicTripArrivalCardPath } from "@/lib/public-routes";
-import { addSeatFromReady, askToMoveAction, cancelMyBookingAction } from "../booking-actions";
+import {
+  addSeatFromReady,
+  askToMoveAction,
+  cancelMyBookingAction,
+  payForPartySeatFromReady,
+} from "../booking-actions";
 import { signMinorWaiverAction } from "../party-actions";
 import { CourseMaterials } from "./CourseMaterials";
 import { CANCEL_PREVIEW_KEY } from "./cancel-notices";
@@ -71,6 +76,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
     waiverSigned: seat.waiverSigned,
     signForMinor: seat.signForMinor,
     minorNote: seat.minorNote,
+    payable: seat.payable,
     claimUrl: seat.claim
       ? claimOrigin
         ? new URL(claimLinkPath(seat.claim.token), `${claimOrigin}/`).toString()
@@ -148,6 +154,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
           allSet={partyAllSet}
           addSeatAction={data.canAddSeat ? addSeatFromReady.bind(null, token) : null}
           signWaiverAction={data.identityHeld ? undefined : signMinorWaiverAction.bind(null, token)}
+          payAction={data.canPayPartySeats ? payForPartySeatFromReady.bind(null, token) : null}
           t={t}
         />
         {/* What to put in the bag. Below the spine — which carries the gear

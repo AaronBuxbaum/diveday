@@ -693,7 +693,7 @@ export default async function TeamSettingsPage({
                   member={member}
                   credentials={credentialRows
                     .filter((row) => row.personId === member.personId)
-                    .map(({ id, name, renewalWord }) => ({ id, name, renewalWord }))}
+                    .map(({ id, name, kind, renewalWord }) => ({ id, name, kind, renewalWord }))}
                   notice={pageNotice}
                   priorRoles={rolesFor === member.personId ? undoRolesFor : []}
                   locale={locale}

@@ -679,7 +679,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
   // Denominator row: Belzona Three
   {
     slug: "belzona-three",
-    version: 1,
+    version: 2,
     area: "florida-miami",
     sources: [
       "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Belzona%20Three%27&outFields=Name,Depth,Relief,Lat_DD,Long_DD,DeployDate&returnGeometry=false&f=json",
@@ -695,8 +695,8 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 100-foot tug built in 1953 as the Carinthia, which worked for decades before her engine failed. Sunk in 1991, she is the largest and most intact of the three Belzona tugs.",
       marineLife: "Barracuda · snapper · grunts · goliath grouper",
       difficultyLevel: "advanced",
-      depthRange: "21–26 m (70–85 ft)",
-      maxDepthMeters: 26,
+      depthRange: "21–30 m (70–100 ft)",
+      maxDepthMeters: 30,
       currentNote:
         "The deepest stop on the Belcher Wreck Trek. The current usually sets north and can be strong at this depth, and fishing line collects on the wreck. Stay outside the hull.",
       fitTone: "demanding",
@@ -918,7 +918,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
   // Denominator row: Princess Britney
   {
     slug: "princess-britney",
-    version: 1,
+    version: 2,
     area: "florida-miami",
     sources: [
       "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12/query?where=Name%3D%27Princess%20Britney%27&outFields=Name,Depth,Relief,Lat_DD,Long_DD,DeployDate&returnGeometry=false&f=json",
@@ -937,8 +937,8 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools of barracuda and jacks hang over the deck, and basket stars open on the structure at night.",
       difficultyLevel: "advanced",
-      depthRange: "18–27 m (60–90 ft)",
-      maxDepthMeters: 27,
+      depthRange: "18–30 m (60–100 ft)",
+      maxDepthMeters: 30,
       currentNote:
         "Among the deeper wrecks of the Key Biscayne field, where the current usually sets north and boats often drift from wreck to wreck. Fishing line is common. Stay outside.",
       fitTone: "demanding",

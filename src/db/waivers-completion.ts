@@ -19,6 +19,7 @@ import { computeWaiverIntegrityHash } from "@/lib/waiver-integrity";
 import { hashWaiverToken } from "@/lib/waiver-tokens";
 import { needsMedicalReview } from "@/lib/waivers";
 import type { AppDb, DbExecutor } from "./client";
+import { publishManifestEventsForPerson } from "./manifest-events";
 import type { DraftGuardian, MedicalAnswers } from "./schema";
 import { bookings, people, waiverRecords } from "./schema";
 import { seatMinorDeclared } from "./waiver-signing";
@@ -534,6 +535,9 @@ export async function completeWaiver(
         });
       }
     }
+    // The release changes who the boat will board: open and primed manifests
+    // re-read (issue #2613).
+    await publishManifestEventsForPerson(db, state.record.shopId, state.record.personId);
     return { ok: true, status: completedStatus(saved.status), idempotent: false };
   }
 

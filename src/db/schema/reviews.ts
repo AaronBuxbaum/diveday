@@ -126,6 +126,8 @@ export const tripReviews = pgTable(
       .where(sql`${table.isPublished}`),
     // The staff moderation queue: everything for the shop, newest first.
     index("trip_reviews_shop_created_idx").on(table.shopId, table.createdAt),
+    // One diver's reviews: the export and the erasure both read them this way.
+    index("trip_reviews_shop_person_idx").on(table.shopId, table.personId),
     check("trip_reviews_rating_range", sql`${table.rating} between 1 and 5`),
   ],
 );

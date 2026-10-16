@@ -280,6 +280,9 @@ export async function readWeeklyDigestFacts(
       includeOpsAlerts,
       evidence,
       shop.diversPerDivemaster,
+      undefined,
+      // The email never reads the streamed wind rows; no forecast request.
+      false,
     );
   const [reportsToday, staffToday] = await Promise.all([todayQueue(true), todayQueue(false)]);
 
