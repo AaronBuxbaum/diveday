@@ -13,7 +13,7 @@ import {
   ORDER_STATUS_TONES,
   paidAtCounterLine,
 } from "@/i18n/order-labels";
-import { ownerOnlyWords, type StaffWords, sayWords } from "@/i18n/shared-sentences";
+import { ownerOrManagerWords, type StaffWords, sayWords } from "@/i18n/shared-sentences";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
@@ -54,7 +54,7 @@ const NOTICES: Record<string, CardNotice> = {
     tone: "danger",
     key: "benchFollowUp.notice.billNotConnected",
   },
-  "bill-not-authorized": { form: "bill", tone: "danger", ...ownerOnlyWords("bill") },
+  "bill-not-authorized": { form: "bill", tone: "danger", ...ownerOrManagerWords("bill") },
   "bill-invalid": { form: "bill", tone: "danger", key: "benchFollowUp.notice.billInvalid" },
   "bill-tax-location": {
     form: "bill",

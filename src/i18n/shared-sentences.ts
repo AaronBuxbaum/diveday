@@ -12,8 +12,14 @@ import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 /** What a staffer sent too much of this hour; the bundle's select names each. */
 export type SendLimitThing = "replies" | "recaps" | "invites";
 
-/** What only an owner or manager may do; the bundle's select names each. */
-export type OwnerOnlyAct =
+/**
+ * What only an owner or manager may do; the bundle's select names each.
+ * **Owner-only acts never join this list** (security review N8): the sentence
+ * says "an owner or manager", and an owner-only refusal (billing, integration
+ * backfill, a departure's log) says "an owner" in its own words. Every act here
+ * is gated by an `isOwnerOrManager` check in `src/lib/authz.ts`.
+ */
+export type OwnerOrManagerAct =
   | "whatsapp"
   | "integrations"
   | "backup"
@@ -29,8 +35,8 @@ export function sendLimitWords(thing: SendLimitThing): StaffWords {
   return { key: "shared.limits.sendLimit", values: { thing } };
 }
 
-export function ownerOnlyWords(act: OwnerOnlyAct): StaffWords {
-  return { key: "shared.limits.ownerOnly", values: { act } };
+export function ownerOrManagerWords(act: OwnerOrManagerAct): StaffWords {
+  return { key: "shared.limits.ownerOrManager", values: { act } };
 }
 
 /** Say a notice table's entry: a bare key, or a key with its values. */

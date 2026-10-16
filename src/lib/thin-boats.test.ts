@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { HOUR_MS } from "@/lib/clock";
-import { thinBoatNeed } from "./thin-boats";
+import { thinBoatDealOpen, thinBoatNeed } from "./thin-boats";
 
 const NOW = new Date("2026-10-16T12:00:00Z");
 const startsAt = new Date(NOW.getTime() + 5 * 24 * HOUR_MS);
@@ -34,5 +34,13 @@ describe("thinBoatNeed", () => {
     expect(thinBoatNeed({ ...base, startsAt: due, booked: 1, minimumBookings: 6 }, NOW)).toBeNull();
     expect(thinBoatNeed({ ...base, booked: 12 }, NOW)).toBeNull();
     expect(thinBoatNeed({ ...base, capacity: 0, booked: 0 }, NOW)).toBeNull();
+  });
+});
+
+describe("thinBoatDealOpen", () => {
+  it("offers a last-minute deal inside three days, and not before", () => {
+    expect(thinBoatDealOpen(new Date(NOW.getTime() + 3 * 24 * HOUR_MS), NOW)).toBe(true);
+    expect(thinBoatDealOpen(new Date(NOW.getTime() + 3 * 24 * HOUR_MS + 1), NOW)).toBe(false);
+    expect(thinBoatDealOpen(startsAt, NOW)).toBe(false);
   });
 });

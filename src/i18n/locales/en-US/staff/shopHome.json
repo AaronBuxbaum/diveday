@@ -182,9 +182,11 @@
   "thinBoats": {
     "heading": "{count, plural, one {One boat in the next two weeks could use divers.} other {# boats in the next two weeks could use divers.}}",
     "seats": "{booked} of {capacity}",
-    "needsBy": "{count, plural, one {needs # more by {when}} other {needs # more by {when}}}",
+    "needsBy": "{count, plural, one {needs # more by {when}, or it cancels itself} other {needs # more by {when}, or it cancels itself}}",
     "deal": "Send a last-minute deal",
-    "invite": "Invite past divers"
+    "invite": "Invite past divers",
+    "ladder": "See who could take it",
+    "minimum": "Change the minimum"
   },
   "quietAddDeparture": "Add a departure",
   "quietNextDepartureLabel": "Next departure",

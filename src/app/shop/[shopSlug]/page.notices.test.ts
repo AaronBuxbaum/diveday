@@ -59,7 +59,7 @@ const CHOSEN_AT_RUNTIME = [
 /** The shared sentences an entry can spread instead of naming a key (`src/i18n/shared-sentences.ts`). */
 const SHARED_WORDS: Record<string, string> = {
   sendLimitWords: "shared.limits.sendLimit",
-  ownerOnlyWords: "shared.limits.ownerOnly",
+  ownerOrManagerWords: "shared.limits.ownerOrManager",
 };
 
 /** The `StaffMessageKey` this page's maps give a code, from either map. */

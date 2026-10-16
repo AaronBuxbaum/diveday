@@ -21,6 +21,18 @@ export const THIN_BOATS_HORIZON_MS = THIN_BOATS_HORIZON_DAYS * DAY_MS;
 /** The most thin boats a quiet day lists. */
 export const THIN_BOATS_SHOWN = 5;
 
+/**
+ * A thin boat offers "Send a last-minute deal" only this close to sailing
+ * (dive-domain review N5): discounting two weeks ahead teaches regulars to
+ * wait, and it stretches what "last-minute" means.
+ */
+export const THIN_BOAT_DEAL_DAYS = 3;
+
+/** Whether a departure at `startsAt` is close enough for a last-minute deal. */
+export function thinBoatDealOpen(startsAt: Date, now: Date): boolean {
+  return startsAt.getTime() - now.getTime() <= THIN_BOAT_DEAL_DAYS * DAY_MS;
+}
+
 export type ThinBoatInput = MinimumSeatsPolicy & {
   startsAt: Date;
   /** The seats actually on sale. */

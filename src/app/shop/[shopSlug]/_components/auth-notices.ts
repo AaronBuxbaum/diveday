@@ -1,4 +1,4 @@
-import { ownerOnlyWords, type StaffWords } from "@/i18n/shared-sentences";
+import { ownerOrManagerWords, type StaffWords } from "@/i18n/shared-sentences";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 
 // These are the explanatory landings for authorization refusals elsewhere in
@@ -19,10 +19,10 @@ export const AUTH_NOTICES: Record<string, StaffMessageKey | StaffWords> = {
   "import-not-authorized": "shopHome.notice.importNotAuthorized",
   "gear-import-not-authorized": "shopHome.notice.gearImportNotAuthorized",
   "dive-site-import-not-authorized": "shopHome.notice.diveSiteImportNotAuthorized",
-  "backup-not-authorized": ownerOnlyWords("backup"),
-  "whatsapp-not-authorized": ownerOnlyWords("whatsapp"),
+  "backup-not-authorized": ownerOrManagerWords("backup"),
+  "whatsapp-not-authorized": ownerOrManagerWords("whatsapp"),
   "promos-not-authorized": "shopHome.notice.promosNotAuthorized",
-  "integrations-not-authorized": ownerOnlyWords("integrations"),
+  "integrations-not-authorized": ownerOrManagerWords("integrations"),
   "billing-not-authorized": "shopHome.notice.billingNotAuthorized",
   "day-blowout-not-authorized": "shopHome.notice.dayBlowoutNotAuthorized",
   "activity-not-authorized": "shopHome.notice.activityNotAuthorized",

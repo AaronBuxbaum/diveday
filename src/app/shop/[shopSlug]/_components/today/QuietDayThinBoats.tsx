@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
+import { tripTabHref } from "@/app/shop/[shopSlug]/trips/[id]/_components/TripTabs";
 import { getDb } from "@/db/client";
-import { getShopBySlug } from "@/db/shops";
 import { listThinBoats } from "@/db/thin-boats";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -11,27 +11,28 @@ import { shopPath } from "@/lib/staff-notices";
 /**
  * **A quiet day's list of boats that could use divers** (fifth-loop ideas,
  * item 43). With no boats today and nothing waiting, the next two weeks'
- * thin departures (`listThinBoats`), each with two doors: the departure's
- * last-minute deal, and its suggested past divers to invite one at a time
- * (item 44, H-130). Renders nothing when every boat is filling.
+ * thin departures (`listThinBoats`), each with its doors: a last-minute deal
+ * inside three days of sailing, its suggested past divers to invite one at a
+ * time (item 44, H-130) on a fun dive, the course ladder on a course session,
+ * and the trip's minimum when the boat cancels itself short of it. Renders
+ * nothing when every boat is filling.
  */
 export async function QuietDayThinBoats({
+  shopId,
   shopSlug,
   locale,
   timeZone,
   t,
 }: {
+  /** From the page's `requireShopSurface`, never re-read from the slug (security review N7). */
+  shopId: string;
   shopSlug: string;
   locale: string;
   timeZone: string;
   t: StaffTranslator;
 }) {
-  // Read here rather than handed down, so Today's page mounts nothing new: the
-  // page has already proved this slug is the session's own shop.
   const db = await getDb();
-  const shop = await getShopBySlug(db, shopSlug);
-  if (!shop) return null;
-  const { shown, total } = await listThinBoats(db, shop.id, nowDate());
+  const { shown, total } = await listThinBoats(db, shopId, nowDate());
   if (shown.length === 0) return null;
   const door = buttonClass({ variant: "link", size: "sm", flush: true });
   return (
@@ -67,12 +68,24 @@ export async function QuietDayThinBoats({
                 ) : null}
               </p>
               <p className="flex flex-wrap gap-x-4">
-                <Link href={`${trip}#last-minute-deal`} className={door}>
-                  {t("shopHome.thinBoats.deal")}
-                </Link>
-                {boat.hasSite ? (
+                {boat.dealOpen ? (
+                  <Link href={`${trip}#last-minute-deal`} className={door}>
+                    {t("shopHome.thinBoats.deal")}
+                  </Link>
+                ) : null}
+                {boat.invitesPastDivers ? (
                   <Link href={`${trip}#invite-suggestions`} className={door}>
                     {t("shopHome.thinBoats.invite")}
+                  </Link>
+                ) : null}
+                {boat.isCourseSession ? (
+                  <Link href={shopPath(shopSlug, "courses")} className={door}>
+                    {t("shopHome.thinBoats.ladder")}
+                  </Link>
+                ) : null}
+                {boat.need.kind === "minimum" ? (
+                  <Link href={tripTabHref(shopSlug, boat.tripId, "details")} className={door}>
+                    {t("shopHome.thinBoats.minimum")}
                   </Link>
                 ) : null}
               </p>

@@ -4,6 +4,7 @@ import {
   THIN_BOATS_HORIZON_MS,
   THIN_BOATS_SHOWN,
   type ThinBoatNeed,
+  thinBoatDealOpen,
   thinBoatNeed,
 } from "@/lib/thin-boats";
 import type { DbExecutor } from "./client";
@@ -18,8 +19,16 @@ export type ThinBoat = {
   booked: number;
   capacity: number;
   need: ThinBoatNeed;
-  /** It has a site, so "Invite past divers" has someone to suggest. */
-  hasSite: boolean;
+  /**
+   * "Invite past divers" has someone to suggest: a fun dive with a site. A
+   * course session never offers it (dive-domain review F2): the people who
+   * dived its site are certified divers, the least likely to want the course.
+   */
+  invitesPastDivers: boolean;
+  /** A course session: its door points at the course ladder instead. */
+  isCourseSession: boolean;
+  /** Close enough to sailing for "Send a last-minute deal" (`thinBoatDealOpen`). */
+  dealOpen: boolean;
 };
 
 /**
@@ -43,6 +52,7 @@ export async function listThinBoats(
       minimumBookings: trips.minimumBookings,
       minimumDecisionHours: trips.minimumDecisionHours,
       diveSiteId: trips.diveSiteId,
+      courseId: trips.courseId,
       certifiedPassengers: tripBoatCertifiedPassengers(),
       booked: count(bookings.id),
     })
@@ -74,7 +84,9 @@ export async function listThinBoats(
             booked: row.booked,
             capacity,
             need,
-            hasSite: row.diveSiteId !== null,
+            invitesPastDivers: row.diveSiteId !== null && row.courseId === null,
+            isCourseSession: row.courseId !== null,
+            dealOpen: thinBoatDealOpen(row.startsAt, now),
           },
         ]
       : [];

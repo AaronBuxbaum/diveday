@@ -182,9 +182,11 @@
   "thinBoats": {
     "heading": "{count, plural, one {Una salida de las próximas dos semanas necesita buceadores.} other {# salidas de las próximas dos semanas necesitan buceadores.}}",
     "seats": "{booked} de {capacity}",
-    "needsBy": "{count, plural, one {falta # más; se decide el {when}} other {faltan # más; se decide el {when}}}",
+    "needsBy": "{count, plural, one {falta # más antes del {when}, o se cancela sola} other {faltan # más antes del {when}, o se cancela sola}}",
     "deal": "Enviar una oferta de último minuto",
-    "invite": "Invitar a buceadores anteriores"
+    "invite": "Invitar a buceadores anteriores",
+    "ladder": "Ver quién podría tomarlo",
+    "minimum": "Cambiar el mínimo"
   },
   "quietAddDeparture": "Añadir una salida",
   "quietNextDepartureLabel": "Próxima salida",

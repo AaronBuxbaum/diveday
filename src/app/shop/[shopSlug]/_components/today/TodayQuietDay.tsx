@@ -13,12 +13,14 @@ type NextDeparture = NonNullable<Awaited<ReturnType<typeof getTodayWork>>["nextD
  * available, and the next boat if there is one.
  */
 export function TodayQuietDay({
+  shopId,
   shopSlug,
   nextDeparture,
   locale,
   timeZone,
   t,
 }: {
+  shopId: string;
   shopSlug: string;
   nextDeparture: NextDeparture | null;
   locale: string;
@@ -27,7 +29,10 @@ export function TodayQuietDay({
 }) {
   return (
     <div className="mt-8 flex flex-col gap-4">
-      <QuietDayThinBoats shopSlug={shopSlug} locale={locale} timeZone={timeZone} t={t} />
+      <QuietDayThinBoats
+        shopId={shopId}
+        shopSlug={shopSlug}
+        locale={locale} timeZone={timeZone} t={t} />
       <Link
         href={`/shop/${shopSlug}/schedule/board?add=1`}
         className={buttonClass({ className: "w-full justify-center sm:w-auto" })}

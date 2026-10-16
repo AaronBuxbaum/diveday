@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { bookings, people, trips } from "./schema";
+import { bookings, courses, diveSites, people, trips } from "./schema";
 import { listThinBoats } from "./thin-boats";
 
 const ctx = fileScopedShopContext();
@@ -65,5 +66,52 @@ describe("listThinBoats", () => {
       need: { kind: "minimum", shortfall: 3 },
     });
     expect(shown.find((boat) => boat.tripId === far.id)?.need).toEqual({ kind: "seats" });
+  });
+
+  it("never offers past-site divers on a course session, and the deal only inside three days", async () => {
+    const { db, shop } = ctx;
+    const now = nowDate();
+    const [site] = await db.select().from(diveSites).where(eq(diveSites.shopId, shop.id)).limit(1);
+    if (!site) throw new Error("the demo shop needs a dive site");
+    const [course] = await db
+      .insert(courses)
+      .values({
+        shopId: shop.id,
+        title: "Open Water",
+        slug: `thin-ow-${now.getTime()}`,
+        agency: "PADI",
+        certifiesLevel: "open_water",
+      })
+      .returning();
+    const insert = async (title: string, days: number, extra: Partial<typeof trips.$inferInsert>) => {
+      const startsAt = new Date(now.getTime() + days * DAY_MS);
+      const [row] = await db
+        .insert(trips)
+        .values({
+          shopId: shop.id,
+          title,
+          startsAt,
+          endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
+          capacity: 4,
+          diveSiteId: site.id,
+          ...extra,
+        })
+        .returning();
+      return row;
+    };
+    const session = await insert("Thin OW session", 2, { courseId: course.id });
+    const funDive = await insert("Thin fun dive", 6, {});
+
+    const { shown } = await listThinBoats(db, shop.id, now, 1000);
+    expect(shown.find((boat) => boat.tripId === session.id)).toMatchObject({
+      isCourseSession: true,
+      invitesPastDivers: false,
+      dealOpen: true,
+    });
+    expect(shown.find((boat) => boat.tripId === funDive.id)).toMatchObject({
+      isCourseSession: false,
+      invitesPastDivers: true,
+      dealOpen: false,
+    });
   });
 });

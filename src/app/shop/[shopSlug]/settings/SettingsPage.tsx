@@ -9,7 +9,7 @@ import { countBoatsWithoutRadioIdentity } from "@/db/boats";
 import { shopHasPricedRecords } from "@/db/shops";
 import { getShopStripeAccount, stripeCurrencyMismatch } from "@/db/stripe-accounts";
 import { requestLocale } from "@/i18n/request";
-import { ownerOnlyWords, sayWords } from "@/i18n/shared-sentences";
+import { ownerOrManagerWords, sayWords } from "@/i18n/shared-sentences";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { isAddressLookupConfigured } from "@/lib/address-lookup";
 import {
@@ -120,7 +120,7 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
     // Same shape and the same reason: the WhatsApp page's own gate bounces a
     // non-owner/manager here, and the payment-settings wording above would
     // explain the wrong surface.
-    "whatsapp-not-authorized": { tone: "danger", text: sayWords(t, ownerOnlyWords("whatsapp")) },
+    "whatsapp-not-authorized": { tone: "danger", text: sayWords(t, ownerOrManagerWords("whatsapp")) },
     // Team and Import are the last two Settings sub-pages whose gate used to
     // teleport a refused staffer to Today saying nothing at all. Same rule as
     // the four above: bounce to the nearest parent surface with a code it
@@ -130,7 +130,7 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
     // Backups hold the same bar as the export download — the destination
     // receives the whole shop, medical evidence included — and the same
     // bounce-with-an-explanation rule as every gate above.
-    "backup-not-authorized": { tone: "danger", text: sayWords(t, ownerOnlyWords("backup")) },
+    "backup-not-authorized": { tone: "danger", text: sayWords(t, ownerOrManagerWords("backup")) },
     "diving-options-saved": { tone: "success", text: t("boats.divingOptionsSaved") },
     "diving-options-invalid": { tone: "danger", text: t("boats.divingOptionsInvalid") },
     "diving-options-none": { tone: "danger", text: t("boats.divingOptionsNone") },

@@ -552,6 +552,7 @@ async function TodayBody({
       />
       {quietDay ? (
         <TodayQuietDay
+          shopId={shop.id}
           shopSlug={shopSlug}
           nextDeparture={nextDeparture}
           locale={locale}
