@@ -533,6 +533,7 @@ describe("issueAndDeliverWaiver", () => {
         actorPersonId: staff.person.id,
       });
       await setCourseFormRequirements(db, {
+        mayNarrow: true,
         shopId: shop.id,
         courseId: trip.courseId,
         formIds: [form.id],

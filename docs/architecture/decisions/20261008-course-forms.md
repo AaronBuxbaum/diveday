@@ -142,7 +142,11 @@ forms are releases and safe-practices statements, and DiveDay ships no medical w
 `course_form_requirements.max_age_years`, nullable, set beside each ticked form in the course
 editor. A bounded form is asked only of a student at or under the age on the session's first day,
 in the shop's zone (`courseFormAskedOf`), and of a student whose date of birth is not on file,
-because a missed youth acknowledgment is the failure nobody catches at the dock. It is not the
+because a missed youth acknowledgment is the failure nobody catches at the dock. Asking fewer
+students is taking a form off, so putting a bound on a form everyone was asked, or lowering one, is
+the owner's or manager's call like dropping a form (`canPersonManageWaiverTemplates`), refused in
+the action and in `setCourseFormRequirements`; raising or clearing a bound is open. A
+medical-screening form takes no bound, and one written anyway is ignored: every student answers it. It is not the
 guardian rule (18, or the local age of majority), which still governs who co-signs. A template's
 standard form may carry the bound; Open Water's carries PADI's Youth Diving: Responsibility and
 Risks Acknowledgment (10615) at 11.

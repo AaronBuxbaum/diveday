@@ -126,3 +126,24 @@ describe("medical-screening course forms (#2337)", () => {
     expect(result.blockers).toHaveLength(1);
   });
 });
+
+/**
+ * **A medical statement is asked of everyone** (agency review G3 of #2265): an
+ * age bound on a medical-screening form is never honoured, whoever wrote it.
+ */
+describe("a medical-screening form with an age bound", () => {
+  it("is still asked of an adult", async () => {
+    const { outstandingCourseForms } = await import("./course-forms");
+    const bounded = { ...medical, maxAgeYears: 11, sessionFirstDay: "2026-10-20" };
+    expect(
+      outstandingCourseForms({
+        shopId: SHOP,
+        bookingId: BOOKING,
+        personId: PERSON,
+        required: [bounded],
+        signatures: [],
+        signer: { dateOfBirth: "1990-01-01", minorDeclared: false, timezone: "UTC" },
+      }).map((form) => form.formId),
+    ).toEqual([medical.formId]);
+  });
+});

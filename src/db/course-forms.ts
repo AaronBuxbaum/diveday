@@ -363,7 +363,14 @@ export const COURSE_FORM_MAX_AGE_MAX = 120;
  * `maxAgeYears`, when given, is the whole answer for every listed form: a
  * form it names is asked only of students at or under that age (issue
  * #2265), and one it leaves out asks everyone. Absent, each kept row keeps
- * its bound and a new one has none. A bound out of range is refused whole.
+ * its bound and a new one has none. A bound out of range is refused whole,
+ * and so is one on a medical-screening form, which every student answers.
+ *
+ * **Asking fewer students is taking a form off** (reviews of #2265, G1):
+ * dropping a form, putting a bound on a form everyone was asked, or lowering
+ * a bound. A writer without `mayNarrow` (an owner's or manager's call,
+ * `canPersonManageWaiverTemplates`) is refused all three; adding a form,
+ * raising a bound or clearing one asks more students, and stays open.
  */
 export async function setCourseFormRequirements(
   db: AppDb,
@@ -372,9 +379,17 @@ export async function setCourseFormRequirements(
     courseId: string;
     formIds: readonly string[];
     maxAgeYears?: ReadonlyMap<string, number>;
+    /** Whether this writer may ask fewer students (drop a form, add or lower a bound). */
+    mayNarrow: boolean;
     now?: Date;
   },
-): Promise<{ ok: true } | { ok: false; reason: "not_found" | "unknown_form" | "invalid_age" }> {
+): Promise<
+  | { ok: true }
+  | {
+      ok: false;
+      reason: "not_found" | "unknown_form" | "invalid_age" | "medical_bound" | "not_authorized";
+    }
+> {
   const now = input.now ?? nowDate();
   const formIds = [...new Set(input.formIds)];
   const bounds = input.maxAgeYears;
@@ -397,7 +412,7 @@ export async function setCourseFormRequirements(
     if (!course) return { ok: false, reason: "not_found" } as const;
     if (formIds.length > 0) {
       const live = await tx
-        .select({ id: courseForms.id })
+        .select({ id: courseForms.id, medicalScreening: courseForms.medicalScreening })
         .from(courseForms)
         .where(
           and(
@@ -407,9 +422,16 @@ export async function setCourseFormRequirements(
           ),
         );
       if (live.length !== formIds.length) return { ok: false, reason: "unknown_form" } as const;
+      if (live.some((form) => form.medicalScreening && bounds?.has(form.id))) {
+        return { ok: false, reason: "medical_bound" } as const;
+      }
     }
     const existing = await tx
-      .select({ id: courseFormRequirements.id, formId: courseFormRequirements.formId })
+      .select({
+        id: courseFormRequirements.id,
+        formId: courseFormRequirements.formId,
+        maxAgeYears: courseFormRequirements.maxAgeYears,
+      })
       .from(courseFormRequirements)
       .where(
         and(
@@ -420,6 +442,15 @@ export async function setCourseFormRequirements(
       );
     const keep = new Set(formIds);
     const dropped = existing.filter((row) => !keep.has(row.formId)).map((row) => row.id);
+    if (!input.mayNarrow) {
+      const narrows = existing.some((row) => {
+        if (!keep.has(row.formId)) return true;
+        if (!bounds) return false;
+        const next = bounds.get(row.formId);
+        return next !== undefined && (row.maxAgeYears === null || next < row.maxAgeYears);
+      });
+      if (narrows) return { ok: false, reason: "not_authorized" } as const;
+    }
     if (dropped.length > 0) {
       await tx
         .update(courseFormRequirements)
@@ -512,8 +543,11 @@ export async function attachStandardCourseForms(
     .where(and(eq(courses.id, input.courseId), eq(courses.shopId, input.shopId)));
   if (!shop || !course) return { created: 0, attached: 0 };
 
-  const formByTitle = new Map(
-    (await listCourseForms(db, input.shopId)).map((form) => [titleKey(form.title), form.id]),
+  const shopForms = await listCourseForms(db, input.shopId);
+  const formByTitle = new Map(shopForms.map((form) => [titleKey(form.title), form.id]));
+  // A medical statement is everyone's: no template bound lands on one (G3).
+  const medicalForms = new Set(
+    shopForms.filter((form) => form.medicalScreening).map((form) => form.id),
   );
   const current = await db
     .select({
@@ -584,7 +618,7 @@ export async function attachStandardCourseForms(
       courseId: course.id,
       formId,
       position,
-      maxAgeYears: boundByTitle.get(titleKey(title)) ?? null,
+      maxAgeYears: medicalForms.has(formId) ? null : (boundByTitle.get(titleKey(title)) ?? null),
     });
     required.add(formId);
     position += 1;
@@ -734,7 +768,8 @@ export async function requiredCourseFormsForTrips(
       position: current.position,
       ...(current.medicalScreening ? { medicalScreening: true } : {}),
       // Measured on the session's first day in the shop's zone (issue #2265).
-      ...(current.maxAgeYears !== null
+      // A medical statement is everyone's, whatever a row says (G3).
+      ...(current.maxAgeYears !== null && !current.medicalScreening
         ? {
             maxAgeYears: current.maxAgeYears,
             sessionFirstDay: calendarDateInTimezone(current.startsAt, current.timezone),

@@ -40,6 +40,7 @@ import {
   bookings,
   courseFormRecords,
   courseFormRequirements,
+  courseForms,
   courseFormVersions,
   courses,
   people,
@@ -101,6 +102,7 @@ async function requireOneForm(ctx: Awaited<ReturnType<typeof courseContext>>) {
     actorPersonId: ctx.staff.id,
   });
   const set = await setCourseFormRequirements(ctx.db, {
+    mayNarrow: true,
     shopId: ctx.shop.id,
     courseId: ctx.seat.courseId,
     formIds: [form.id],
@@ -154,6 +156,7 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
     const ctx = await courseContext();
     // The seat's course asks for this one form only, made the template's way.
     await setCourseFormRequirements(ctx.db, {
+      mayNarrow: true,
       shopId: ctx.shop.id,
       courseId: ctx.seat.courseId,
       formIds: [],
@@ -291,7 +294,12 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
   it("never puts back a form the shop took off, when a sync keeps the shop's edits", async () => {
     const titles = (getCourseTemplate("open-water-diver")?.standardForms ?? []).map((f) => f.title);
     const { db, shop, openWater } = await openWaterBehindItsTemplate(titles);
-    await setCourseFormRequirements(db, { shopId: shop.id, courseId: openWater.id, formIds: [] });
+    await setCourseFormRequirements(db, {
+      mayNarrow: true,
+      shopId: shop.id,
+      courseId: openWater.id,
+      formIds: [],
+    });
 
     const pulled = await pullCourseTemplateUpdates(
       db,
@@ -317,6 +325,7 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
     const secondId = forms.find((form) => form.title === second)?.id;
     // The shop keeps the first and took the second off before the sync.
     await setCourseFormRequirements(db, {
+      mayNarrow: true,
       shopId: shop.id,
       courseId: openWater.id,
       formIds: before.filter((id) => id !== secondId),
@@ -384,6 +393,7 @@ describe("course forms — a form bound to an age (in-memory PGlite)", () => {
     const form = await requireOneForm(ctx);
     expect(
       await setCourseFormRequirements(ctx.db, {
+        mayNarrow: true,
         shopId: ctx.shop.id,
         courseId: ctx.seat.courseId,
         formIds: [form.id],
@@ -425,6 +435,7 @@ describe("course forms — a form bound to an age (in-memory PGlite)", () => {
     for (const age of [0, 121, 10.5]) {
       expect(
         await setCourseFormRequirements(ctx.db, {
+          mayNarrow: true,
           shopId: ctx.shop.id,
           courseId: ctx.seat.courseId,
           formIds: [form.id],
@@ -435,12 +446,14 @@ describe("course forms — a form bound to an age (in-memory PGlite)", () => {
     expect((await listCourseFormAgeBounds(ctx.db, ctx.shop.id, ctx.seat.courseId)).size).toBe(0);
 
     await setCourseFormRequirements(ctx.db, {
+      mayNarrow: true,
       shopId: ctx.shop.id,
       courseId: ctx.seat.courseId,
       formIds: [form.id],
       maxAgeYears: new Map([[form.id, 11]]),
     });
     await setCourseFormRequirements(ctx.db, {
+      mayNarrow: true,
       shopId: ctx.shop.id,
       courseId: ctx.seat.courseId,
       formIds: [form.id],
@@ -452,6 +465,57 @@ describe("course forms — a form bound to an age (in-memory PGlite)", () => {
         (row) => row.formId,
       ),
     ).toEqual([form.id]);
+  });
+
+  it("refuses an age on a medical-screening form (G3)", async () => {
+    const ctx = await courseContext();
+    const form = await requireOneForm(ctx);
+    await ctx.db
+      .update(courseForms)
+      .set({ medicalScreening: true })
+      .where(eq(courseForms.id, form.id));
+    expect(
+      await setCourseFormRequirements(ctx.db, {
+        shopId: ctx.shop.id,
+        courseId: ctx.seat.courseId,
+        formIds: [form.id],
+        maxAgeYears: new Map([[form.id, 11]]),
+        mayNarrow: true,
+      }),
+    ).toEqual({ ok: false, reason: "medical_bound" });
+    expect((await listCourseFormAgeBounds(ctx.db, ctx.shop.id, ctx.seat.courseId)).size).toBe(0);
+  });
+
+  it("refuses a bound that asks fewer students, or a dropped form, from a writer who may not (G1)", async () => {
+    const ctx = await courseContext();
+    const form = await requireOneForm(ctx);
+    const write = (bound: number | null, formIds = [form.id]) =>
+      setCourseFormRequirements(ctx.db, {
+        shopId: ctx.shop.id,
+        courseId: ctx.seat.courseId,
+        formIds,
+        maxAgeYears: new Map(bound === null ? [] : [[form.id, bound]]),
+        mayNarrow: false,
+      });
+    // A bound on a form everyone was asked: fewer students sign it.
+    expect(await write(11)).toEqual({ ok: false, reason: "not_authorized" });
+    expect((await listCourseFormAgeBounds(ctx.db, ctx.shop.id, ctx.seat.courseId)).size).toBe(0);
+    // Taking the form off.
+    expect(await write(null, [])).toEqual({ ok: false, reason: "not_authorized" });
+    expect(await listCourseFormRequirements(ctx.db, ctx.shop.id, ctx.seat.courseId)).toEqual([
+      form.id,
+    ]);
+    // A manager narrows; then raising or clearing the bound asks more, and is anyone's.
+    await setCourseFormRequirements(ctx.db, {
+      shopId: ctx.shop.id,
+      courseId: ctx.seat.courseId,
+      formIds: [form.id],
+      maxAgeYears: new Map([[form.id, 11]]),
+      mayNarrow: true,
+    });
+    expect(await write(10)).toEqual({ ok: false, reason: "not_authorized" });
+    expect(await write(14)).toEqual({ ok: true });
+    expect(await write(null)).toEqual({ ok: true });
   });
 
   it("refuses an age at the column, whatever the writer", async () => {
@@ -522,6 +586,7 @@ describe("course forms — authoring (in-memory PGlite)", () => {
     });
     expect(
       await setCourseFormRequirements(ctx.db, {
+        mayNarrow: true,
         shopId: ctx.shop.id,
         courseId: ctx.seat.courseId,
         formIds: [form.id, foreign.id],
@@ -530,6 +595,7 @@ describe("course forms — authoring (in-memory PGlite)", () => {
     // A course id from this shop is not one the other shop can write to.
     expect(
       await setCourseFormRequirements(ctx.db, {
+        mayNarrow: true,
         shopId: other.id,
         courseId: ctx.seat.courseId,
         formIds: [foreign.id],
@@ -550,6 +616,7 @@ describe("course forms — authoring (in-memory PGlite)", () => {
       actorPersonId: ctx.staff.id,
     });
     await setCourseFormRequirements(ctx.db, {
+      mayNarrow: true,
       shopId: ctx.shop.id,
       courseId: ctx.seat.courseId,
       formIds: [second.id, first.id],
@@ -1337,6 +1404,7 @@ describe("course forms — placeholders, filled at signing (in-memory PGlite)", 
       actorPersonId: ctx.staff.id,
     });
     await setCourseFormRequirements(ctx.db, {
+      mayNarrow: true,
       shopId: ctx.shop.id,
       courseId: ctx.seat.courseId,
       formIds: [created.id],

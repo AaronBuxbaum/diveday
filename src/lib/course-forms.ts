@@ -162,9 +162,11 @@ export function courseFormGaps(input: {
  * dock, so an unknown birthday asks rather than skips.
  */
 export function courseFormAskedOf(
-  form: Pick<RequiredCourseForm, "maxAgeYears" | "sessionFirstDay">,
+  form: Pick<RequiredCourseForm, "maxAgeYears" | "sessionFirstDay" | "medicalScreening">,
   dateOfBirth: CalendarDate | null | undefined,
 ): boolean {
+  // A medical statement is asked of every student, bound or none (G3).
+  if (form.medicalScreening) return true;
   if (form.maxAgeYears === undefined) return true;
   if (!dateOfBirth || !form.sessionFirstDay) return true;
   return ageOnDate(dateOfBirth, form.sessionFirstDay) <= form.maxAgeYears;

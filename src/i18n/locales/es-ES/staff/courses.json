@@ -147,6 +147,7 @@
       "maxAgeLabel": "Solo alumnos de hasta",
       "maxAgeAria": "Edad máxima a la que se pide {form}",
       "invalidAge": "No se guardó. La edad tiene que ser un número entero de 1 a 120, o en blanco para todos.",
+      "medicalAge": "No se guardó. Una declaración médica se pide a todos los alumnos, así que no puede tener edad.",
       "save": "Guardar formularios",
       "saved": "Guardado. Los estudiantes de este curso firman ahora estos formularios.",
       "invalid": "No se guardó. Uno de esos formularios se eliminó; recarga y vuelve a elegir.",

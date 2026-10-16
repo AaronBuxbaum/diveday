@@ -61,6 +61,9 @@ function courseFormsNotice(
   if (notice === "forms-invalid-age") {
     return { tone: "danger", text: t("courses.edit.forms.invalidAge") };
   }
+  if (notice === "forms-medical-age") {
+    return { tone: "danger", text: t("courses.edit.forms.medicalAge") };
+  }
   if (notice === "forms-not-authorized") {
     return { tone: "danger", text: t("courses.edit.forms.notAuthorized") };
   }
@@ -179,20 +182,23 @@ export function CourseFormsRequirement({
                         {t("courses.edit.forms.awaitingText")}
                       </p>
                     ) : null}
-                    <label className="mt-2 flex items-center gap-2 text-sm text-muted">
-                      {t("courses.edit.forms.maxAgeLabel")}
-                      <span className="w-20 shrink-0">
-                        <input
-                          type="number"
-                          name={`maxAge-${form.id}`}
-                          min={COURSE_FORM_MAX_AGE_MIN}
-                          max={COURSE_FORM_MAX_AGE_MAX}
-                          defaultValue={ageBounds?.get(form.id) ?? ""}
-                          aria-label={t("courses.edit.forms.maxAgeAria", { form: form.title })}
-                          className={controlClass}
-                        />
-                      </span>
-                    </label>
+                    {/* A medical statement is every student's: no age (G3). */}
+                    {form.medicalScreening ? null : (
+                      <label className="mt-2 flex items-center gap-2 text-sm text-muted">
+                        {t("courses.edit.forms.maxAgeLabel")}
+                        <span className="w-20 shrink-0">
+                          <input
+                            type="number"
+                            name={`maxAge-${form.id}`}
+                            min={COURSE_FORM_MAX_AGE_MIN}
+                            max={COURSE_FORM_MAX_AGE_MAX}
+                            defaultValue={ageBounds?.get(form.id) ?? ""}
+                            aria-label={t("courses.edit.forms.maxAgeAria", { form: form.title })}
+                            className={controlClass}
+                          />
+                        </span>
+                      </label>
+                    )}
                   </div>
                   {/* Sized by its wrapper: `controlClass` is full width. */}
                   <div className="w-20 shrink-0">

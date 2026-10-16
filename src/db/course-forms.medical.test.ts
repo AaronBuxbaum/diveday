@@ -63,6 +63,7 @@ async function formOn(ctx: Awaited<ReturnType<typeof courseContext>>, medicalScr
     ...(medicalScreening === undefined ? {} : { medicalScreening }),
   });
   await setCourseFormRequirements(ctx.db, {
+    mayNarrow: true,
     shopId: ctx.shop.id,
     courseId: ctx.seat.courseId,
     formIds: [form.id],
