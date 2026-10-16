@@ -1596,7 +1596,8 @@
   one booking (H-132). Read in `src/db/your-days.ts`; see
   [20261016-fresh-link-per-booking-row](../../architecture/decisions/20261016-fresh-link-per-booking-row.md).
 - **Your week** — a crew member's next three departures, on their Today below the day: the boat
-  and departure, when, their job on it (`trip_assignments.trip_role`, "On the crew" when the roster
+  and departure, when (with "At the dock 6:15 AM · leaves 7:00 AM", the earlier of the shop's dock
+  call and their own covering shift, `crewCallAt` in `src/lib/dock-call.ts`), their job on it (`trip_assignments.trip_role`, "On the crew" when the roster
   did not say), and the one crew gap the staffing week would draw on it, from the same pass
   (`getStaffingView`'s `gapTrips`). The window is tomorrow and the six days after it in the shop's
   zone; today's boat is already badged on the spine, including one that has already sailed. Shown

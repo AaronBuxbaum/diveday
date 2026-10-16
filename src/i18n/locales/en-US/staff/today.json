@@ -55,7 +55,8 @@
   "yourWeek": {
     "heading": "Your week",
     "openTrip": "Open {title}",
-    "roleUnset": "On the crew"
+    "roleUnset": "On the crew",
+    "atTheDock": "At the dock {dock} · leaves {leaves}"
   },
   "actionKind": {
     "rollCallMissingDiver": "Missing diver",

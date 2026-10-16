@@ -1,7 +1,8 @@
 import { and, asc, eq, gte, lt, notInArray } from "drizzle-orm";
+import { crewCallAt } from "@/lib/dock-call";
 import type { StaffGapCode } from "@/lib/staffing-week";
 import type { AppDb } from "./client";
-import { boats, tripAssignments, trips } from "./schema";
+import { boats, shops, staffShifts, tripAssignments, trips } from "./schema";
 import { getStaffingView } from "./staffing";
 import { liveTrip } from "./trips-live";
 
@@ -22,7 +23,16 @@ export type CrewWeekLine = {
    * shares (`getStaffingView`'s `gapTrips`), or null when nothing is short.
    */
   gap: StaffGapCode | null;
+  /**
+   * When to be at the dock (item 47): the earlier of the shop's dock call and
+   * this person's own shift covering the departure (`crewCallAt`), or null
+   * when neither leads the departure.
+   */
+  crewCallAt: Date | null;
 };
+
+/** How far before a departure a covering shift may start and still be read. */
+const SHIFT_LOOKBACK_MS = 12 * 60 * 60 * 1000;
 
 /**
  * **A crew member's next few departures** (the "Your week" strip on Today):
@@ -75,10 +85,34 @@ export async function crewWeekFor(
     .limit(CREW_WEEK_LINES);
   if (rows.length === 0) return [];
 
-  const { gapTrips } = await getStaffingView(db, input.shopId, input.from, input.to, {
-    diversPerDivemaster: input.diversPerDivemaster,
-    now: input.now,
-  });
+  const [{ gapTrips }, [shop], shifts] = await Promise.all([
+    getStaffingView(db, input.shopId, input.from, input.to, {
+      diversPerDivemaster: input.diversPerDivemaster,
+      now: input.now,
+    }),
+    db
+      .select({ dockCallMinutes: shops.dockCallMinutes })
+      .from(shops)
+      .where(eq(shops.id, input.shopId))
+      .limit(1),
+    // This person's own shifts around these departures: the Crew grid's word
+    // for when their day starts.
+    db
+      .select({ startsAt: staffShifts.startsAt, endsAt: staffShifts.endsAt })
+      .from(staffShifts)
+      .where(
+        and(
+          eq(staffShifts.shopId, input.shopId),
+          eq(staffShifts.personId, input.personId),
+          gte(staffShifts.startsAt, new Date(input.from.getTime() - SHIFT_LOOKBACK_MS)),
+          lt(staffShifts.startsAt, input.to),
+        ),
+      ),
+  ]);
   const gaps = new Map(gapTrips.map((trip) => [trip.tripId, trip.gap]));
-  return rows.map((row) => ({ ...row, gap: gaps.get(row.tripId) ?? null }));
+  return rows.map((row) => ({
+    ...row,
+    gap: gaps.get(row.tripId) ?? null,
+    crewCallAt: crewCallAt(row.startsAt, shop?.dockCallMinutes ?? 0, shifts),
+  }));
 }

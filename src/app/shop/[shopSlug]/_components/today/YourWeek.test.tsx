@@ -21,6 +21,7 @@ describe("YourWeekList", () => {
             boatName: "Reef Runner",
             tripRole: "captain",
             gap: "uncrewed_departure",
+            crewCallAt: null,
           },
           {
             tripId: "t-2",
@@ -29,6 +30,7 @@ describe("YourWeekList", () => {
             boatName: null,
             tripRole: null,
             gap: null,
+            crewCallAt: null,
           },
         ]}
         shopSlug="blue-mantis"
@@ -61,6 +63,7 @@ describe("YourWeekList", () => {
             boatName: null,
             tripRole: "divemaster",
             gap: "crew_below_target",
+            crewCallAt: null,
           },
           {
             tripId: "t-2",
@@ -69,6 +72,7 @@ describe("YourWeekList", () => {
             boatName: null,
             tripRole: "captain",
             gap: "no_instructor",
+            crewCallAt: null,
           },
         ]}
         shopSlug="blue-mantis"
@@ -80,5 +84,33 @@ describe("YourWeekList", () => {
     expect(screen.getByText(words.crew_below_target)).toHaveClass("text-muted");
     expect(screen.getByText(words.crew_below_target)).not.toHaveClass("text-warning-strong");
     expect(screen.getByText(words.no_instructor)).toHaveClass("text-warning-strong");
+  });
+});
+
+/** "At the dock 6:15 AM · leaves 7:00 AM" (fifth-loop ideas, item 47). */
+describe("YourWeekList's dock time", () => {
+  it("says when to be at the dock and when the boat leaves", () => {
+    render(
+      <YourWeekList
+        lines={[
+          {
+            tripId: "t-1",
+            title: "Morning reef",
+            startsAt: new Date("2026-10-15T11:00:00.000Z"),
+            boatName: null,
+            tripRole: "divemaster",
+            gap: null,
+            crewCallAt: new Date("2026-10-15T10:15:00.000Z"),
+          },
+        ]}
+        shopSlug="blue-mantis"
+        timeZone="America/New_York"
+        locale="en-US"
+        t={t}
+      />,
+    );
+    expect(
+      screen.getByText(/At the dock 6:15\sAM · leaves 7:00\sAM · Divemaster/),
+    ).toBeInTheDocument();
   });
 });

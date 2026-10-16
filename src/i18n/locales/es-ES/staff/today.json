@@ -55,7 +55,8 @@
   "yourWeek": {
     "heading": "Tu semana",
     "openTrip": "Abrir {title}",
-    "roleUnset": "En la tripulación"
+    "roleUnset": "En la tripulación",
+    "atTheDock": "En el muelle a las {dock} · sale a las {leaves}"
   },
   "actionKind": {
     "rollCallMissingDiver": "Buceador sin localizar",

@@ -99,8 +99,13 @@ export function YourWeekList({
               </p>
               <p className="mt-0.5 text-sm text-muted tabular-nums">
                 {formatShortDate(line.startsAt, locale, timeZone)} ·{" "}
-                {formatTime(line.startsAt, locale, timeZone)} ·{" "}
-                {line.tripRole ? staffRoleLabel(t, line.tripRole) : t("today.yourWeek.roleUnset")}
+                {line.crewCallAt
+                  ? t("today.yourWeek.atTheDock", {
+                      dock: formatTime(line.crewCallAt, locale, timeZone),
+                      leaves: formatTime(line.startsAt, locale, timeZone),
+                    })
+                  : formatTime(line.startsAt, locale, timeZone)}{" "}
+                · {line.tripRole ? staffRoleLabel(t, line.tripRole) : t("today.yourWeek.roleUnset")}
               </p>
               {line.gap ? (
                 <p
