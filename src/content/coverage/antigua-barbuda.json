@@ -1,6 +1,6 @@
 {
   "area": "antigua-barbuda",
-  "method": "Antigua and Barbuda, with Barbuda's barrier reefs considered. No government mooring list or marine-park site list is published (the Cades Reef marine park and the old tourism-board pages name Cades Reef and the Andes wreck only), and the visitantiguabarbuda.com operator pages name no sites other than Cades Reef. Operators read: DiveCarib (English Harbour) and Dockyard Divers (English Harbour) published site lists; Indigo Divers (Jolly Harbour) names only Cades Reef, which with the old tourism-board page (antigua-barbuda.org) makes Cades Reef count; Soul Immersions (English Harbour), Antigua Scuba School (Jolly Harbour) and Mamora Bay Dive Centre publish no site names, Jolly Dive is closed with its domain gone, and Octopus Divers and Anchorage Dive have parked domains, so none could be counted. Barbuda has no dive centre, and no operator list names a Barbuda site, so none enters the denominator. A site is counted when named on two independent lists (the two operator lists above, or Indigo plus the tourism page for Cades Reef); sites on one list are kept as excluded, which makes this a thin and conservative denominator that should be rechecked when more operators publish lists. Dockyard Divers states its list is a selection, not the whole book. The Andes wreck (Deep Bay, under 30 ft) appears on the tourism-board page only and is excluded as one list. Counted 2026-10-14.",
+  "method": "Antigua and Barbuda, with Barbuda's barrier reefs considered. No government mooring list or marine-park site list is published (the Cades Reef marine park and the old tourism-board pages name Cades Reef and the Andes wreck only), and the visitantiguabarbuda.com operator pages name no sites other than Cades Reef. Operators read: DiveCarib (English Harbour) and Dockyard Divers (English Harbour) published site lists; Indigo Divers (Jolly Harbour) names only Cades Reef, which with the old tourism-board page (antigua-barbuda.org) makes Cades Reef count; Soul Immersions (English Harbour), Antigua Scuba School (Jolly Harbour) and Mamora Bay Dive Centre publish no site names, Jolly Dive is closed with its domain gone, and Octopus Divers and Anchorage Dive have parked domains, so none could be counted. Barbuda has no dive centre, and no operator list names a Barbuda site, so none enters the denominator. A site is counted when named on two independent lists (the two operator lists above, or Indigo plus the tourism page for Cades Reef); sites on one list are kept as excluded, which makes this a thin and conservative denominator that should be rechecked when more operators publish lists. Dockyard Divers states its list is a selection, not the whole book. The Andes wreck (Deep Bay, under 30 ft) appears on the tourism-board page only and is excluded as one list. Nanton Point was given a template on 2026-10-15 from the two operator lists plus a guide page, with an approximate pin off the headland the NGA GeoNames file names. Carpenters Rock was drafted and dropped: its only position is DiveCarib's \"between Nanton Point and Stoney Cove\", one source, so no pin meets the bar. Counted 2026-10-14.",
   "sources": [
     "https://www.divecarib.com/dive-sites/",
     "http://www.dockyard-divers.com/divesites.html",
@@ -8,7 +8,7 @@
     "http://antigua-barbuda.org/Agdive01.htm"
   ],
   "counted": "2026-10-14",
-  "promised": false,
+  "promised": true,
   "sites": [
     {
       "name": "Black's Point",
@@ -56,7 +56,7 @@
     },
     {
       "name": "Nanton Point",
-      "template": null,
+      "template": "nanton-point-antigua",
       "listedBy": [
         "https://www.divecarib.com/dive-sites/",
         "http://www.dockyard-divers.com/divesites.html"
