@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { canPersonAddDiver } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { createDiver, findLiveDiverIdByEmail } from "@/db/divers";
 import { parseForm } from "@/lib/form-parse";
@@ -17,6 +18,11 @@ export async function createDiverFromSearchAction(formData: FormData) {
   const staff = await requireStaffSession();
   const db = await getDb();
   const roster = shopPath(staff.user.shopSlug, "divers");
+  // Every staff role holds this permission (`canAddDiver`), but the door names it
+  // and reads it live, like every other staff write.
+  if (!(await canPersonAddDiver(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(roster, noticeUrl(roster, "not-authorized"));
+  }
   const parsed = parseForm(searchForm, formData);
   const query = parsed.ok ? parsed.data.query.trim() : "";
   const prefill = diverSearchPrefill(query);

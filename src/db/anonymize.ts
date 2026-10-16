@@ -123,6 +123,8 @@ import {
   reviewReplies,
   rollCallCrewEvents,
   rollCallEvents,
+  shopShoreAlertTokens,
+  shops,
   specialtyCertifications,
   staffCredentials,
   staffReplies,
@@ -1097,6 +1099,7 @@ async function scrubBookingRows(
         lastDivedBand: null,
         reEntryAsk: null,
         welcomeSharedAt: null,
+        welcomeHello: null,
         // "Running late" (J3) is the diver's own statement on the seat.
         runningLateAt: null,
         // The booker's "Under 18" is an age fact about this person, cleared
@@ -1142,6 +1145,22 @@ async function scrubBookingRows(
           eq(rollCallEvents.shopId, shopId),
           inArray(rollCallEvents.bookingId, bookingIds),
           isNotNull(rollCallEvents.note),
+        ),
+      );
+
+    // The blockers a `boarded` event kept (ADR 20261015-roll-call-records-
+    // readiness, issue #2414) are the reasons one person could not board: a
+    // physician's review, a missing card. They are about the person, so they go
+    // with the note; `readiness_status` stays, saying only that this count was
+    // made while blocked. The shape check allows a `blocked` status with no list.
+    await tx
+      .update(rollCallEvents)
+      .set({ readinessBlockers: null })
+      .where(
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          inArray(rollCallEvents.bookingId, bookingIds),
+          isNotNull(rollCallEvents.readinessBlockers),
         ),
       );
 
@@ -2015,6 +2034,30 @@ async function scrubPiiBlob(
       )
       .returning({ id: notificationSendQueue.id });
     logFuzzyMatch(ctx, "send_queue_address", dropped.length);
+  }
+  // **The shop's shore contact** (H-118 security review). A shop can name
+  // somebody it also has as a diver as the address its stale roll-call alerts
+  // go to. That address is the diver's, held in the shop's settings with the
+  // consent and confirmation that vouch for it, and in the links minted for
+  // it; erasing the diver takes all of it, and the shop has no shore contact
+  // until it saves one again. By address only, case-insensitively, the same
+  // handle every other address sweep here uses.
+  if (ctx.email) {
+    const address = ctx.email.toLowerCase();
+    const cleared = await tx
+      .update(shops)
+      .set({
+        shoreAlertEmail: null,
+        shoreAlertConsentAt: null,
+        shoreAlertConsentByPersonId: null,
+        shoreAlertConfirmedAt: null,
+      })
+      .where(and(eq(shops.id, shopId), sql`lower(${shops.shoreAlertEmail}) = ${address}`))
+      .returning({ id: shops.id });
+    logFuzzyMatch(ctx, "shore_alert_email", cleared.length);
+    await tx
+      .delete(shopShoreAlertTokens)
+      .where(and(eq(shopShoreAlertTokens.shopId, shopId), eq(shopShoreAlertTokens.email, address)));
   }
   // The number, for the lead that gave one and no address. Runs after the
   // address sweep so the count is the rows the number reached that the address

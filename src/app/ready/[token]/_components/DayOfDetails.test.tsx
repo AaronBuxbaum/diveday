@@ -24,6 +24,7 @@ function data(participantType: ReadyPageData["participantType"]): ReadyPageData 
     rentalFit: null,
     welcomeOffer: null,
     welcomeShared: false,
+    welcomeHello: null,
   } as unknown as ReadyPageData;
 }
 
@@ -65,6 +66,36 @@ describe("the day-of step saves as one", () => {
     expect(screen.getByRole("button", { name: "Save day-of details" })).toBeInTheDocument();
     // The welcome word is a box in the same form now, not a button of its own.
     expect(screen.getByRole("checkbox", { name: "Yes, tell the crew" })).not.toBeChecked();
+  });
+
+  it("offers the three hello choices to a first trip only, as radios and never free text", () => {
+    const { container, rerender } = render(
+      <DayOfDetails
+        token="tok"
+        data={{ ...data("diver"), welcomeOffer: { kind: "first_trip" } } as ReadyPageData}
+        saved={false}
+        t={t}
+      />,
+    );
+    const radios = container.querySelectorAll('input[name="welcomeHello"]');
+    expect([...radios].map((input) => (input as HTMLInputElement).value)).toEqual([
+      "",
+      "first_ocean_dive",
+      "celebrating",
+      "nervous",
+    ]);
+    expect(screen.getByRole("radio", { name: "Nothing to add" })).toBeChecked();
+    expect(container.querySelector("textarea[name='welcomeHello']")).toBeNull();
+
+    rerender(
+      <DayOfDetails
+        token="tok"
+        data={{ ...data("diver"), welcomeOffer: { kind: "returning", years: 3 } } as ReadyPageData}
+        saved={false}
+        t={t}
+      />,
+    );
+    expect(container.querySelectorAll('input[name="welcomeHello"]')).toHaveLength(0);
   });
 
   it("says Saved. in the step itself after a save", () => {

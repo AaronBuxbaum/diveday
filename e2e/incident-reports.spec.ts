@@ -87,12 +87,12 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   // The month's Safety tab lists it, beside the money.
   await page.goto("/shop/blue-mantis/reports");
   await page.getByRole("link", { name: "Safety" }).click();
-  await page.waitForURL(/\/reports\/safety/);
+  await page.waitForURL(/\/shop\/blue-mantis\/safety/);
   // The demo crew have no credential on file, and the tab says so rather than
   // reading a clean zero (third review, item 2).
-  await expect(page.getByText(/No credential on file for \d+ of/)).toBeVisible();
+  await expect(page.getByText(/Nothing on file for their role on \d+ of/)).toBeVisible();
   await expect(
-    page.getByRole("region", { name: "Crew who sailed with no credential on file" }),
+    page.getByRole("region", { name: "Crew who sailed with no credential for their role on file" }),
   ).toBeVisible();
   const listed = page
     .getByRole("region", { name: "Incident reports" })
@@ -103,14 +103,15 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   await listed.click();
   await expect(page.getByText("Diver called at 18:00: discharged, feeling fine.")).toBeVisible();
 
-  // A draft started by mistake is deleted (ADR 20261016-incident-drafts): it
-  // leaves the departure's list, and the log still says it existed.
+  // A draft started by mistake is deleted by the owner (ADR
+  // 20261015-incident-draft-discard-and-hold): it leaves the departure's list,
+  // and the log still says it existed, and who deleted it.
   const tripPath = reportPath.replace(/\/incidents\/[0-9a-f-]+$/, "");
   await page.goto(`${tripPath}?view=details`);
   await section.getByRole("button", { name: "Report an incident" }).click();
   await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
   await page.getByRole("button", { name: "Delete draft" }).click();
-  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.getByRole("button", { name: "Yes, delete the draft" }).click();
   await page.waitForURL((url) => url.pathname === tripPath);
   await expect(section.getByText("Draft", { exact: true })).toHaveCount(0);
   await page.goto(`${tripPath}/log`);

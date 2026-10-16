@@ -11,6 +11,7 @@ import {
   type SQLWrapper,
   sql,
 } from "drizzle-orm";
+import { cache } from "react";
 import { STAFF_ROLES } from "@/lib/authz";
 import { sellableSeats } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
@@ -154,6 +155,15 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
       }
     : null;
 }
+
+/**
+ * {@link getTripWithBooked}, read once per request (#2487): `/ready` reads the
+ * departure for its readiness data and again for the thread's trip card, two
+ * statements for one fact. Keyed on the executor, shop and trip, and outside a
+ * render (an action, a route handler, a test) `cache()` calls straight
+ * through, so every call there reads live. Pages only; a writer reads fresh.
+ */
+export const getTripWithBookedOnce = cache(getTripWithBooked);
 
 /**
  * Primary-subtag languages this trip's current bookings actually signalled —

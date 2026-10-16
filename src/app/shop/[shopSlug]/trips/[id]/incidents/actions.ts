@@ -5,13 +5,14 @@ import { getDb } from "@/db/client";
 import {
   addIncidentAddendum,
   addIncidentPerson,
-  deleteIncidentDraft,
+  discardIncidentDraft,
   fileIncidentReport,
   type IncidentSubject,
   type IncidentWriteRefusal,
   type MissingSubject,
   removeIncidentPerson,
   saveIncidentDraft,
+  setIncidentLegalHold,
   startIncidentReport,
   startMissingDiverReport,
 } from "@/db/incident-reports";
@@ -52,6 +53,7 @@ const REFUSAL_NOTICE: Record<
   subject_not_found: "subject-not-found",
   already_listed: "already-listed",
   blank: "blank-note",
+  held: "held",
 };
 
 const FIELD_NOTICE: Record<IncidentFieldRefusal, string> = {
@@ -315,26 +317,48 @@ export async function removeIncidentPersonAction(
 }
 
 /**
- * Delete an unfiled draft (ADR 20261016-incident-drafts): back to the
- * departure's reports, where it is gone from the list. Soft; the departure
- * log still lists it as a deleted draft.
+ * Delete an unfiled draft (an owner only; a filed report has no such door).
+ * Lands on the departure's incident list, where the draft is no longer.
  */
-export async function deleteIncidentDraftAction(
+export async function discardIncidentDraftAction(
   shopSlug: string,
   tripId: string,
   reportId: string,
 ) {
   const { session, shop } = await requireShopSurface(shopSlug);
   requireIds(tripId, reportId);
-  const result = await deleteIncidentDraft(await getDb(), {
+  const back = reportPath(shopSlug, tripId, reportId);
+  const result = await discardIncidentDraft(await getDb(), {
     shopId: shop.id,
     reportId,
     tripId,
     actorPersonId: session.user.personId,
   });
-  if (!result.ok) settle(reportPath(shopSlug, tripId, reportId), result, "", "file");
-  revalidateAndRedirect(
-    shopPath(shopSlug, "trips", tripId),
-    `${shopPath(shopSlug, "trips", tripId)}?view=details#incidents`,
-  );
+  if (result.ok) {
+    revalidateAndRedirect(
+      shopPath(shopSlug, "trips", tripId),
+      `${shopPath(shopSlug, "trips", tripId)}?view=details#incidents`,
+    );
+  }
+  settle(back, result, "saved", "discard");
+}
+
+/** Put a legal hold on a report, or release it (an owner only). */
+export async function setIncidentLegalHoldAction(
+  shopSlug: string,
+  tripId: string,
+  reportId: string,
+  held: boolean,
+) {
+  const { session, shop } = await requireShopSurface(shopSlug);
+  requireIds(tripId, reportId);
+  const back = reportPath(shopSlug, tripId, reportId);
+  const result = await setIncidentLegalHold(await getDb(), {
+    shopId: shop.id,
+    reportId,
+    tripId,
+    actorPersonId: session.user.personId,
+    held,
+  });
+  settle(back, result, held ? "hold-set" : "hold-released", "hold");
 }

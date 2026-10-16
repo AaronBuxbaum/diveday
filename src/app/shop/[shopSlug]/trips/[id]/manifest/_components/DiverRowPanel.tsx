@@ -50,7 +50,7 @@ export function DiverRowPanel({
     rollCallButtonCopy,
     t,
   } = context;
-  const { rc, rowState, blockedAtDock, capsuleKind } = state;
+  const { rc, rowState, blockedAtDock, capsuleKind, medicalHoldInPanel } = state;
   return (
     <div className={ROW_DISCLOSURE_PANEL_CLASS}>
       {/* Blockers, and their one fix, at the dock only. After a
@@ -92,6 +92,26 @@ export function DiverRowPanel({
             the rule's margin is below only. */}
           <hr className="mt-0 mb-3 border-border" />
         </>
+      ) : null}
+      {/* **A medical hold the capsule lost** (#2380): after a dive, a
+        diver boarded over a medical blocker whose row went to a
+        louder fact keeps the blocker's sentence here. Warning tone
+        like the capsule it would have worn — the red is the dock's
+        and the alarm's, and after a dive readiness gates nothing. */}
+      {medicalHoldInPanel ? (
+        <ul className="mb-3 flex flex-col gap-1 rounded-lg bg-warning-tint px-3 py-2 text-base text-warning-strong">
+          {diver.readiness.blockers
+            .filter((blocker) => blocker.code === medicalHoldInPanel)
+            .map((blocker) => {
+              const text = diverBlockerText(t, diver, blocker);
+              return (
+                <li key={text} className="flex gap-2">
+                  <StatusMark variant="warning" size="md" />
+                  <span>{text}</span>
+                </li>
+              );
+            })}
+        </ul>
       ) : null}
       {/* A diver whose advisory the strip above does not already
         state by name keeps the full sentence — here, where the

@@ -37,6 +37,32 @@ describe("EarnedMomentLine", () => {
     expect(line.className).toContain("bg-accent/10");
   });
 
+  /**
+   * **A line that must not read as a warning** (issue #2400). The coral wash
+   * read as the amber of a warning on a phone in the sun, so Today's good-news
+   * lines wear coral as ink on a neutral surface: the ADR's coral stays, the
+   * large amber-looking fill goes.
+   */
+  it("draws the accent variant as coral ink on a neutral surface, with no coral fill", () => {
+    render(<EarnedMomentLine tone="ink">All home</EarnedMomentLine>);
+    const line = screen.getByRole("status");
+    expect(line.className).toContain("bg-surface");
+    expect(line.className).toContain("text-accent-deep");
+    expect(line.className).not.toContain("bg-accent");
+    expect(line.className).not.toContain("border-accent");
+    // Same contract as the wash: announced, entering, and quiet on arrival.
+    expect(line.className).toContain("rise-in");
+  });
+
+  it("keeps the accent variant's entrance switch", () => {
+    render(
+      <EarnedMomentLine tone="ink" animate={false}>
+        All home
+      </EarnedMomentLine>,
+    );
+    expect(screen.getByRole("status").className).not.toContain("rise-in");
+  });
+
   it("merges a caller's className rather than replacing the line's own", () => {
     render(<EarnedMomentLine className="mt-4">All home</EarnedMomentLine>);
     expect(screen.getByRole("status").className).toContain("mt-4");

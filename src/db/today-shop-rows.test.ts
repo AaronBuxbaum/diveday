@@ -549,6 +549,7 @@ describe("unfiled incident reports on Today (safety sheet 2026-10-15, item 3)", 
       undefined,
       undefined,
       undefined,
+      true,
       viewer,
     );
   }

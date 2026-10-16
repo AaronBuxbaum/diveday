@@ -104,7 +104,13 @@ test.describe("a diver whose release already stands", () => {
     // route to the diver's own private link.
     await page.goto(`/shop/${DEMO_SHOP_SLUG}/divers`);
     await page.getByRole("searchbox", { name: "Search divers" }).fill(name);
-    await page.getByRole("link", { name, exact: true }).click();
+    const diverLink = page.getByRole("link", { name, exact: true });
+    // Kept for the check at the end, which opens this file directly rather
+    // than loading and searching the roster a second time: that list and its
+    // search cost a loaded machine the last of this test's 15s.
+    const diverFile = await diverLink.getAttribute("href");
+    if (!diverFile) throw new Error(`no diver link for ${name}`);
+    await diverLink.click();
     await openDiverFileGroup(page, "Waiver");
     const waiverGroup = page.getByRole("region", { name: "Waiver" });
     await waiverGroup.getByRole("button", { name: "Copy link" }).click();
@@ -130,9 +136,7 @@ test.describe("a diver whose release already stands", () => {
     await expect(page.getByText("has your details")).toHaveText(body ?? "");
 
     // And sign-once held: one release on this diver's record, still signed.
-    await page.goto(`/shop/${DEMO_SHOP_SLUG}/divers`);
-    await page.getByRole("searchbox", { name: "Search divers" }).fill(name);
-    await page.getByRole("link", { name, exact: true }).click();
+    await page.goto(diverFile);
     await expect(page.getByRole("region", { name: "Waiver" }).getByText("Signed")).toBeVisible();
   });
 });

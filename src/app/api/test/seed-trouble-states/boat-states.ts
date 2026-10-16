@@ -7,6 +7,7 @@ import { DEMO_COMPLETED_TRIP_TITLE } from "@/db/seed-more-trips";
 import { livePerson, liveTrip } from "@/db/trips-live";
 import { STAFF_ROLES } from "@/lib/authz";
 import { HOUR_MS } from "@/lib/clock";
+import { gearSliceStates } from "./gear-states";
 
 /**
  * The boat states `seed-trouble-states` writes on request, kept beside the
@@ -33,6 +34,7 @@ export async function boatSliceStates(request: Request, db: AppDb, shopId: strin
   return {
     ...(checkedInBlocked ? { checkedInBlocked } : {}),
     ...(uncountedSeat ? { uncountedSeat } : {}),
+    ...(await gearSliceStates(request, db, shopId, now)),
   };
 }
 

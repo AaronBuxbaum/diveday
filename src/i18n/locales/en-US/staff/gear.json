@@ -243,6 +243,7 @@
     "cartServiceFlagged": "{count, plural, one {# unit needs service} other {# units need service}}",
     "handOver": "Hand over",
     "handingOver": "Handing over…",
+    "allAssigned": "{count, plural, one {# assigned} other {All # assigned}}",
     "outLabel": "out",
     "kindWithSize": "{kindLabel} · {size}",
     "noneFree": "No {kindLabel} free for these dates.",

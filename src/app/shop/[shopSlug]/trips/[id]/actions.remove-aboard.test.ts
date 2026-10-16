@@ -48,7 +48,7 @@ vi.mock("@/db/refunds", async (importOriginal) => {
 const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("@/lib/session");
 const { refundBookingOnCancellation } = await import("@/db/refunds");
-const { removeBookingAction } = await import("./actions");
+const { removeBookingAction } = await import("./roster-seating-actions");
 
 /** A paid, booked seat on a departure that left two hours ago, boarded at the dock. */
 async function paidSeatAboardAtSea(db: AppDb, shopId: string, recorder: string) {

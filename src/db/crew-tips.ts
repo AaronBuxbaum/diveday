@@ -1,4 +1,5 @@
-import { and, asc, eq, gte, lt, sum } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lt, sum } from "drizzle-orm";
+import { splitTipsEqually } from "@/lib/crew-sheet";
 import type { DbExecutor } from "./client";
 import { boats, bookings, tips, tripAssignments, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -12,19 +13,27 @@ import { liveTrip } from "./trips-live";
  */
 
 /**
- * Paid tips on the departures this person crewed that left inside the window:
- * a crew member's "Your boats earned $140 in tips this week". The boat's
- * whole tip total, not a share of it: how the shop splits it is the shop's
- * (the crew sheet carries one way to split it, and says it is not payroll).
+ * **The reader's own share** of the paid tips on the departures they crewed
+ * that left inside the window: a crew member's "Your share of tips this
+ * week" (issue #2468). Each departure's tips are split equally across its
+ * whole crew by `splitTipsEqually`, the rule the crew sheet prints, and the
+ * reader's piece of each is added up. Two crew on one boat each read half, so
+ * neither mistakes the boat's total for their own. How the shop actually
+ * divides tips is the shop's; this is the same estimate the crew sheet makes,
+ * and it is not payroll.
+ *
+ * Only departures the reader crewed are read, and nothing else about money
+ * leaves this function (decision H-125: crew see tips on their own boats and
+ * no other shop money).
  */
-export async function crewTipsOnBoats(
+export async function crewTipShare(
   db: DbExecutor,
   shopId: string,
   personId: string,
   window: { from: Date; to: Date },
 ): Promise<number> {
-  const [row] = await db
-    .select({ total: sum(tips.amountCents) })
+  const mine = await db
+    .select({ tripId: trips.id, total: sum(tips.amountCents) })
     .from(tips)
     .innerJoin(bookings, and(eq(bookings.id, tips.bookingId), eq(bookings.shopId, shopId)))
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
@@ -40,8 +49,30 @@ export async function crewTipsOnBoats(
         gte(trips.startsAt, window.from),
         lt(trips.startsAt, window.to),
       ),
+    )
+    .groupBy(trips.id);
+  if (mine.length === 0) return 0;
+  const crew = await db
+    .select({ tripId: tripAssignments.tripId, personId: tripAssignments.personId })
+    .from(tripAssignments)
+    .where(
+      inArray(
+        tripAssignments.tripId,
+        mine.map((row) => row.tripId),
+      ),
     );
-  return Number(row?.total ?? 0);
+  const crewByTrip = new Map<string, string[]>();
+  for (const member of crew) {
+    const members = crewByTrip.get(member.tripId);
+    if (members) members.push(member.personId);
+    else crewByTrip.set(member.tripId, [member.personId]);
+  }
+  let share = 0;
+  for (const row of mine) {
+    const split = splitTipsEqually(Number(row.total ?? 0), crewByTrip.get(row.tripId) ?? []);
+    share += split.get(personId) ?? 0;
+  }
+  return share;
 }
 
 /** One departure's paid tips, for the evening's takings. */

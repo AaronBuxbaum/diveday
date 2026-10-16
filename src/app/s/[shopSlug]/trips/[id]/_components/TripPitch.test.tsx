@@ -87,6 +87,7 @@ function fullDay() {
       briefings={[briefing({ creatures: CREATURES.map(creature) })]}
       crew={CREW}
       locale={DEFAULT_DIVER_LOCALE}
+      timeZone="UTC"
     />,
   );
 }
@@ -177,6 +178,7 @@ describe("TripPitch", () => {
         briefings={[briefing({ creatures: CREATURES.slice(0, 2).map(creature) })]}
         crew={[]}
         locale={DEFAULT_DIVER_LOCALE}
+        timeZone="UTC"
       />,
     );
     expect(short.container.textContent).not.toContain("more species");
@@ -208,6 +210,7 @@ describe("TripPitch", () => {
         ]}
         crew={[]}
         locale={DEFAULT_DIVER_LOCALE}
+        timeZone="UTC"
       />,
     );
     expect(container.querySelectorAll("details")).toHaveLength(0);
@@ -224,7 +227,7 @@ describe("TripPitch", () => {
   it("says whether it ends in a door, exactly as it renders one", () => {
     const full = [briefing({ creatures: CREATURES.map(creature) })];
     const { container } = render(
-      <TripPitch briefings={full} crew={CREW} locale={DEFAULT_DIVER_LOCALE} />,
+      <TripPitch briefings={full} crew={CREW} locale={DEFAULT_DIVER_LOCALE} timeZone="UTC" />,
     );
     expect(pitchHasDoor(full, CREW)).toBe(true);
     expect(container.querySelector("section")?.lastElementChild?.tagName).toBe("DETAILS");
@@ -243,7 +246,12 @@ describe("TripPitch", () => {
   it("says whether it opens on its door, exactly as it renders", () => {
     const opensOn = (briefings: DiveBriefing[], crew: readonly PublicCrewMember[]) => {
       const { container } = render(
-        <TripPitch briefings={briefings} crew={crew} locale={DEFAULT_DIVER_LOCALE} />,
+        <TripPitch
+          briefings={briefings}
+          crew={crew}
+          locale={DEFAULT_DIVER_LOCALE}
+          timeZone="UTC"
+        />,
       );
       const first = container.querySelector("section")?.firstElementChild?.tagName ?? null;
       cleanup();
@@ -271,6 +279,7 @@ describe("TripPitch", () => {
         briefings={[briefing({ diveSite: null } as unknown as Partial<DiveBriefing>)]}
         crew={[]}
         locale={DEFAULT_DIVER_LOCALE}
+        timeZone="UTC"
       />,
     );
     expect(container).toBeEmptyDOMElement();
@@ -305,11 +314,68 @@ describe("TripPitch", () => {
         ]}
         crew={[]}
         locale={DEFAULT_DIVER_LOCALE}
+        timeZone="UTC"
       />,
     );
     // The chip is the block's first child; each site keeps its own word inside
     // the door, which is where the shop's prose about it is.
     const chip = container.firstElementChild?.firstElementChild;
     expect(chip?.textContent).toBe("Best with recent experience");
+  });
+});
+
+describe("the log entry behind the door (issue #2430)", () => {
+  const faces = [briefing({ creatures: CREATURES.map(creature) })];
+  const logEntry = { startsAt: new Date("2026-07-21T18:30:00Z"), isCourse: false };
+
+  it("sits at the end of the door's body, and the block keeps its three children", () => {
+    const { container } = render(
+      <TripPitch
+        briefings={faces}
+        crew={CREW}
+        locale={DEFAULT_DIVER_LOCALE}
+        timeZone="UTC"
+        logEntry={logEntry}
+      />,
+    );
+    const door = container.querySelector("[data-pitch-door-body]");
+    if (!door) throw new Error("expected the door");
+    const preview = within(door as HTMLElement).getByTestId("log-entry-preview");
+    expect(preview).toHaveAttribute("aria-hidden", "true");
+    expect(within(preview).getByText("French Reef")).toBeInTheDocument();
+    expect(
+      within(door as HTMLElement).getByText("After you dive, your log entry is waiting for you."),
+    ).toBeInTheDocument();
+    // Nobody has recorded anything yet: no shop signature on the promise of a card.
+    expect(within(preview).queryByText(/Recorded by/)).not.toBeInTheDocument();
+    expect(container.firstElementChild?.children).toHaveLength(3);
+  });
+
+  it("is the only thing a door holds for a day with nothing else to open", () => {
+    const bare = [briefing({ diveSite: null } as unknown as Partial<DiveBriefing>)];
+    expect(pitchHasDoor(bare, [])).toBe(false);
+    expect(pitchHasDoor(bare, [], true)).toBe(true);
+    expect(pitchOpensOnDoor(bare, [], true)).toBe(true);
+    const { container } = render(
+      <TripPitch
+        briefings={bare}
+        crew={[]}
+        locale={DEFAULT_DIVER_LOCALE}
+        timeZone="UTC"
+        logEntry={logEntry}
+      />,
+    );
+    expect(
+      container.querySelector("[data-pitch-door-body] [data-testid='log-entry-preview']"),
+    ).not.toBeNull();
+  });
+
+  it("says nothing on a day that has sailed, and a day with no dives has no door", () => {
+    const { container } = render(
+      <TripPitch briefings={faces} crew={CREW} locale={DEFAULT_DIVER_LOCALE} timeZone="UTC" />,
+    );
+    expect(container.querySelector("[data-testid='log-entry-preview']")).toBeNull();
+    cleanup();
+    expect(pitchHasDoor([], [], true)).toBe(false);
   });
 });

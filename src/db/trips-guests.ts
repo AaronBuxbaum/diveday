@@ -212,6 +212,8 @@ export async function getTripGuests(
     // date and card number are not this seat's to send to an agency.
     listAgencyCheckableCards(db, {
       shopId: shop.id,
+      // The nitrox and specialty cards too (issue #2592).
+      includeListedCards: true,
       personIds: roster
         .filter(({ booking }) => !booking.identityUnconfirmedAt)
         .map(({ person }) => person.id),

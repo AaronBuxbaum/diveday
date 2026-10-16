@@ -20,7 +20,9 @@ vi.mock("@/app/actions/seat-diver", () => ({
   seatExistingDiverAction: vi.fn(),
   seatNewDiverAction: vi.fn(),
 }));
-vi.mock("@/app/shop/[shopSlug]/trips/[id]/actions", () => ({ addToWaitlistAction: vi.fn() }));
+vi.mock("@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions", () => ({
+  addToWaitlistAction: vi.fn(),
+}));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
 vi.mock("@/db/divers", () => ({ createDiver: vi.fn(), findSimilarDivers: vi.fn() }));
 vi.mock("@/db/form-drafts", () => ({

@@ -1,6 +1,5 @@
 import { Fragment } from "react";
 import { canDrawRoute, DiveSiteMap } from "@/components/DiveSiteMap";
-import { LogEntryPreview } from "@/components/LogEntryPreview";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { GroupLabel } from "@/components/ui/group-label";
 import {
@@ -137,7 +136,6 @@ export function TripDayPlan({
   profile,
   sightings,
   nextOpensOnRule = false,
-  logEntry,
 }: {
   briefings: DiveBriefing[];
   /**
@@ -161,20 +159,9 @@ export function TripDayPlan({
   /**
    * Whether the block under this section opens on a rule of its own — the
    * public trip's pitch when it opens on its door (`pitchOpensOnDoor`). The
-   * run then leaves its close to that rule, but only when the run is the last
-   * thing here: under it may come the log-entry line, which is not a rule,
-   * and the run closes over it.
+   * run then leaves its close to that rule.
    */
   nextOpensOnRule?: boolean;
-  /**
-   * **Where the day ends up** (UX review 2026-10-10, item 35): the recap's log
-   * entry, which a booked diver's link turns into once the boat is home. One
-   * line and a miniature under the run, the day's last beat rather than a
-   * section of its own, so the page's bound above the form is unchanged
-   * (ADR 20260904-reef-all-the-way-down, decision 1). Absent on a day that
-   * has already sailed.
-   */
-  logEntry?: { startsAt: Date; isCourse: boolean };
 }) {
   const t = diverTranslator(locale);
   if (briefings.length === 0) return null;
@@ -238,11 +225,10 @@ export function TripDayPlan({
   // **The run closes itself unless a rule follows it directly** (pixel-craft
   // class 6). With a pitch opening on its door, the run's closing rule sat
   // 32px over the door's own, two parallel hairlines with nothing between
-  // them. Anywhere else the rule is the list's only close: over the log-entry
-  // line, or over a pitch that opens on its fit word and faces, leaving it
-  // open left the last dive unclosed above body text. Every line, hand-set or
-  // not, takes one box.
-  const runCloses = !nextOpensOnRule || Boolean(logEntry);
+  // them. Anywhere else the rule is the list's only close: over a pitch that
+  // opens on its fit word and faces, leaving it open left the last dive
+  // unclosed above body text. Every line, hand-set or not, takes one box.
+  const runCloses = !nextOpensOnRule;
   const handSetBox = runCloses ? ledgerRowBoxClass : ledgerRowOpenBoxClass;
   return (
     <section>
@@ -338,23 +324,6 @@ export function TripDayPlan({
           );
         })}
       </ul>
-      {logEntry ? (
-        <div className="mt-6">
-          <LogEntryPreview
-            line={t("trip.logEntryWaiting")}
-            date={formatShortDate(logEntry.startsAt, locale, shop.timezone)}
-            siteNames={[
-              ...new Set(
-                briefings
-                  .map(({ diveSite }) => diveSite?.name)
-                  .filter((name): name is string => Boolean(name)),
-              ),
-            ]}
-            isCourse={logEntry.isCourse}
-            t={t}
-          />
-        </div>
-      ) : null}
     </section>
   );
 }

@@ -32,7 +32,11 @@ export function CourseFormsRowControl({
   tripId: string;
   bookingId: string;
   owed: readonly RequiredCourseForm[];
-  /** Forms do not block: say what is owed, since no blocker line will. */
+  /**
+   * Forms do not block: say what is owed, since no blocker line will. A form
+   * marked medical screening still blocks, so its own blocker line speaks and
+   * it is left out of this one (#2337).
+   */
   warnOnly: boolean;
   /** The release is signed, so the row's waiver send is not drawn and this one is. */
   offerSend: boolean;
@@ -41,13 +45,14 @@ export function CourseFormsRowControl({
   t: StaffTranslator;
 }) {
   if (owed.length === 0) return null;
+  const warned = warnOnly ? owed.filter((form) => !form.medicalScreening) : [];
   return (
     <div className="mt-3 flex flex-col gap-2" data-course-forms-owed={bookingId}>
-      {warnOnly ? (
+      {warned.length > 0 ? (
         <p className="text-sm text-warning-strong">
           {t("trips.roster.courseForms.owed", {
-            count: owed.length,
-            forms: owed.map((form) => form.title).join(", "),
+            count: warned.length,
+            forms: warned.map((form) => form.title).join(", "),
           })}
         </p>
       ) : null}

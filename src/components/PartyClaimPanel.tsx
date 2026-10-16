@@ -1,4 +1,6 @@
 import { Copyable } from "@/components/Copyable";
+import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { diverTranslator } from "@/i18n/messages";
@@ -13,6 +15,8 @@ export type PartyClaimSeat = {
   waiverSigned: boolean;
   /** A shareable claim URL for a still-unclaimed seat; null once claimed (or unmintable). */
   claimUrl: string | null;
+  /** The lead may pay for this seat now (`PartySeatClaim.payable`); absent where the surface offers no payment. */
+  payable?: boolean;
 };
 
 /**
@@ -29,10 +33,16 @@ export type PartyClaimSeat = {
 export function PartyClaimPanel({
   locale,
   seats,
+  payAction = null,
 }: {
   /** The negotiated request locale, not the shop's stored default. */
   locale: string;
   seats: PartyClaimSeat[];
+  /**
+   * Bound to the page's token where the lead may pay for a seat they added
+   * (issue #2474); null draws no pay form. It takes `seatBookingId`.
+   */
+  payAction?: ((formData: FormData) => Promise<void>) | null;
 }) {
   if (seats.length === 0) return null;
   const t = diverTranslator(locale);
@@ -98,6 +108,18 @@ export function PartyClaimPanel({
                   </p>
                 </details>
               </div>
+            ) : null}
+            {payAction && seat.payable && !seat.claimed ? (
+              <form action={payAction} className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+                <input type="hidden" name="seatBookingId" value={seat.bookingId} />
+                <SubmitButton
+                  pendingLabel={t("seatClaim.payingSeat")}
+                  className={buttonClass({ variant: "secondary" })}
+                >
+                  {t("seatClaim.payForSeat")}
+                </SubmitButton>
+                <span className="text-sm text-muted">{t("seatClaim.payForSeatNote")}</span>
+              </form>
             ) : null}
             {seat.claimed && !seat.waiverSigned ? (
               <p className="mt-2 text-sm text-muted">{t("seatClaim.claimedNeedsWaiver")}</p>

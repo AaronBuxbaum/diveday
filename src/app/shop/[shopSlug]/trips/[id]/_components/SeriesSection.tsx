@@ -73,14 +73,23 @@ export function recurrenceSummaryText(
  */
 export function cancelConfirmText(
   t: StaffTranslator,
-  reach: { dates: number; booked: number; paid: number },
+  reach: { dates: number; booked: number; paid: number; refundsHeld?: boolean },
 ): string {
   const parts = [t("tripSeries.panel.cancelDescription", { count: reach.dates })];
   if (reach.booked === 0) {
     parts.push(t("tripSeries.panel.cancelReachNone"));
   } else {
     parts.push(t("tripSeries.panel.cancelReach", { count: reach.booked }));
-    if (reach.paid > 0) parts.push(t("tripSeries.panel.cancelReachPaid", { count: reach.paid }));
+    if (reach.paid > 0) {
+      parts.push(
+        t(
+          reach.refundsHeld
+            ? "tripSeries.panel.cancelReachPaidHeld"
+            : "tripSeries.panel.cancelReachPaid",
+          { count: reach.paid },
+        ),
+      );
+    }
   }
   return parts.join(" ");
 }
@@ -113,6 +122,7 @@ export function SeriesCadenceEditor({
   status,
   cadenceAction,
   cancelOffCadenceAction,
+  refundsHeld = false,
   locale,
 }: {
   intervalWeeks: number;
@@ -136,6 +146,8 @@ export function SeriesCadenceEditor({
   status?: FormNotice;
   cadenceAction: (formData: FormData) => void;
   cancelOffCadenceAction: () => void;
+  /** True when this staffer may not refund; the card refunds wait for an owner or manager (H-123). */
+  refundsHeld?: boolean;
   locale: string;
 }) {
   const t = staffTranslator(locale);
@@ -176,7 +188,12 @@ export function SeriesCadenceEditor({
           </SubmitButton>
           <p className="text-sm text-muted">
             {bookedOffCadence > 0
-              ? t("tripSeries.panel.offCadenceDescriptionBooked", { count: bookedOffCadence })
+              ? t(
+                  refundsHeld
+                    ? "tripSeries.panel.offCadenceDescriptionBookedHeld"
+                    : "tripSeries.panel.offCadenceDescriptionBooked",
+                  { count: bookedOffCadence },
+                )
               : t("tripSeries.panel.offCadenceDescription")}
           </p>
         </form>
@@ -240,6 +257,7 @@ export function SeriesMoreActions({
   applyAction,
   cancelAction,
   repeatAction,
+  refundsHeld = false,
   locale,
 }: {
   /**
@@ -260,6 +278,8 @@ export function SeriesMoreActions({
   applyAction: (formData: FormData) => void;
   cancelAction: () => void;
   repeatAction: (formData: FormData) => void;
+  /** True when this staffer may not refund; the card refunds wait for an owner or manager (H-123). */
+  refundsHeld?: boolean;
   locale: string;
 }) {
   const t = staffTranslator(locale);
@@ -320,6 +340,7 @@ export function SeriesMoreActions({
               dates: futureScheduledCount,
               booked: futureBookedCount,
               paid: futurePaidCount,
+              refundsHeld,
             })}
             confirmLabel={t("tripSeries.panel.cancelAllConfirm")}
             cancelLabel={t("tripSeries.panel.neverMind")}
