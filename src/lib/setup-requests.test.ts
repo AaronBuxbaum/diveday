@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  setupSentAdvice,
   parseSetupRequest,
   SETUP_CURRENT_SYSTEM_KEYS,
   SETUP_CURRENT_SYSTEMS,
   SETUP_TEXT_MAX,
+  setupSentAdvice,
   trippedHoneypot,
 } from "./setup-requests";
 

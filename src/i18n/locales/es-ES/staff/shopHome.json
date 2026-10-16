@@ -182,6 +182,13 @@
     "needsYouLabel": "Pendiente",
     "crewTips": "Tu parte de las propinas esta semana: {amount}."
   },
+  "thinBoats": {
+    "heading": "{count, plural, one {Una salida de las próximas dos semanas necesita buceadores.} other {# salidas de las próximas dos semanas necesitan buceadores.}}",
+    "seats": "{booked} de {capacity}",
+    "needsBy": "{count, plural, one {falta # más; se decide el {when}} other {faltan # más; se decide el {when}}}",
+    "deal": "Enviar una oferta de último minuto",
+    "invite": "Invitar a buceadores anteriores"
+  },
   "quietAddDeparture": "Añadir una salida",
   "quietNextDepartureLabel": "Próxima salida",
   "arrivals": {

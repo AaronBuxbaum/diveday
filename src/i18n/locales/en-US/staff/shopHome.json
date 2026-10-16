@@ -182,6 +182,13 @@
     "needsYouLabel": "Needs you",
     "crewTips": "Your share of tips this week: {amount}."
   },
+  "thinBoats": {
+    "heading": "{count, plural, one {One boat in the next two weeks could use divers.} other {# boats in the next two weeks could use divers.}}",
+    "seats": "{booked} of {capacity}",
+    "needsBy": "{count, plural, one {needs # more by {when}} other {needs # more by {when}}}",
+    "deal": "Send a last-minute deal",
+    "invite": "Invite past divers"
+  },
   "quietAddDeparture": "Add a departure",
   "quietNextDepartureLabel": "Next departure",
   "arrivals": {

@@ -183,7 +183,10 @@ export function setupSentAdvice(uses: unknown): SetupSentAdvice | null {
     case "spreadsheet":
       return {
         key: "marketing.setUp.sent.spreadsheet",
-        link: { destination: "/switching/spreadsheet", key: "marketing.setUp.sent.spreadsheetLink" },
+        link: {
+          destination: "/switching/spreadsheet",
+          key: "marketing.setUp.sent.spreadsheetLink",
+        },
       };
     case "booking_system":
     case "shop_software":

@@ -26,10 +26,10 @@ import { recordPaperCourseFormAction } from "../course-actions";
 import { AddDiverSection } from "./AddDiverSection";
 import { carryTargetLabel } from "./carry-target-label";
 import { DepartureNoteSection } from "./DepartureNoteSection";
+import { InviteSuggestionsGroup } from "./InviteSuggestionsGroup";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
 import type { PartyPreview, RosterActions, RosterRecord, SeatMove } from "./roster-model";
-import { InviteSuggestionsGroup } from "./InviteSuggestionsGroup";
 import { TripInvitationGroup } from "./TripInvitationSection";
 import { TripNoticeBanner } from "./TripNoticeBanner";
 import { WaitlistGroup } from "./WaitlistSection";
@@ -353,18 +353,18 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
             invitations.length > 0 || (acceptsDivers && guests.inviteSuggestions) ? (
               <>
                 {invitations.length > 0 ? (
-              <TripInvitationGroup
-                invitations={invitations}
-                shopSlug={shopSlug}
-                tripId={trip.id}
-                shopName={shopName}
-                tripTitle={trip.title}
-                tripStartsAt={trip.startsAt}
-                timezone={timezone}
-                inviteAction={actions.recordTripInvitationAction}
-                locale={locale}
-                canInvite={acceptsDivers}
-              />
+                  <TripInvitationGroup
+                    invitations={invitations}
+                    shopSlug={shopSlug}
+                    tripId={trip.id}
+                    shopName={shopName}
+                    tripTitle={trip.title}
+                    tripStartsAt={trip.startsAt}
+                    timezone={timezone}
+                    inviteAction={actions.recordTripInvitationAction}
+                    locale={locale}
+                    canInvite={acceptsDivers}
+                  />
                 ) : null}
                 {acceptsDivers && guests.inviteSuggestions ? (
                   <InviteSuggestionsGroup

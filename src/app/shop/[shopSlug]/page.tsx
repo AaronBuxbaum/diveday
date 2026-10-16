@@ -11,6 +11,7 @@ import {
 } from "@/app/shop/[shopSlug]/_components/today/DaySpine";
 import { FirstRunChecklist } from "@/app/shop/[shopSlug]/_components/today/FirstRunChecklist";
 import { firstRunChecklistCopy } from "@/app/shop/[shopSlug]/_components/today/first-run-copy";
+import { QuietDayThinBoats } from "@/app/shop/[shopSlug]/_components/today/QuietDayThinBoats";
 import { ReleaseStillSample } from "@/app/shop/[shopSlug]/_components/today/ReleaseStillSample";
 import { recapEditorsFor } from "@/app/shop/[shopSlug]/_components/today/recap-editors";
 import { TodayFirstBookable } from "@/app/shop/[shopSlug]/_components/today/TodayFirstBookable";
@@ -555,6 +556,17 @@ async function TodayBody({
         <TodayQuietDay
           shopSlug={shopSlug}
           nextDeparture={nextDeparture}
+          thinBoats={
+            <QuietDayThinBoats
+              db={db}
+              shopId={shop.id}
+              shopSlug={shopSlug}
+              now={now}
+              locale={locale}
+              timeZone={shop.timezone}
+              t={t}
+            />
+          }
           locale={locale}
           timeZone={shop.timezone}
           t={t}

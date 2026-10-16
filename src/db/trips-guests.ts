@@ -19,6 +19,7 @@ import { type CourseMaterialsDone, courseMaterialsDoneByPerson } from "./course-
 import { courseNextStepsByBooking } from "./course-next-step";
 import { spendableDivesForTrip } from "./dive-packages";
 import { findSimilarDivers, lastDiveDaysHere, listBookableDivers } from "./divers";
+import { listInviteSuggestions } from "./invite-suggestions";
 import { listLastMinuteList } from "./last-minute-list";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "./operations";
 import { getTripRosterWithPaymentMarks } from "./payment-marks";
@@ -26,7 +27,6 @@ import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "
 import { listTripPrepDivers } from "./rental-fit";
 import { listCertificationSummaries } from "./self-declared-cards";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
-import { listInviteSuggestions } from "./invite-suggestions";
 import { listTripInvitations } from "./trip-invitations";
 import { listTripLastMinutePromoRecipients, listTripLastMinutePromos } from "./trip-promos";
 import { getTripWithBooked } from "./trips-record";

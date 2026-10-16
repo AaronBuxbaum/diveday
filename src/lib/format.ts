@@ -585,12 +585,7 @@ export function formatOrdinal(count: number, locale = "en-US"): string {
  * "Mar 2025" before it. For a line like "dived here before: Nadia Petrov
  * (Mar)", where the day is noise and last year's March is not this one.
  */
-export function formatPastMonth(
-  date: Date,
-  locale = "en-US",
-  timeZone: string,
-  now: Date,
-): string {
+export function formatPastMonth(date: Date, locale = "en-US", timeZone: string, now: Date): string {
   const year = (d: Date) =>
     cachedFormatter("dt", Intl.DateTimeFormat, locale, { year: "numeric", timeZone }).format(d);
   const sameYear = year(date) === year(now);
@@ -598,6 +593,21 @@ export function formatPastMonth(
     cachedFormatter("dt", Intl.DateTimeFormat, locale, {
       month: "short",
       ...(sameYear ? {} : { year: "numeric" }),
+      timeZone,
+    }).formatToParts(date),
+  );
+}
+
+/**
+ * "Mon, 11:30 AM" — a near deadline, for a line that already names its week
+ * (a boat in the next two weeks needing divers by its call).
+ */
+export function formatWeekdayShortTime(date: Date, locale = "en-US", timeZone: string): string {
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      weekday: "short",
+      hour: "numeric",
+      minute: "2-digit",
       timeZone,
     }).formatToParts(date),
   );

@@ -11,7 +11,6 @@ import { SkipLink } from "@/components/SkipLink";
 import { getDb } from "@/db/client";
 import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
-import { staffShopName } from "./staff-shop-name";
 import { countGearItems } from "@/db/gear";
 import { listShopRolesPresent } from "@/db/shop-roles";
 import { shopBySlugCached } from "@/db/shops-cached";
@@ -27,6 +26,7 @@ import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { settingsShortcutsFor } from "../settings/settings-groups";
+import { staffShopName } from "./staff-shop-name";
 
 /**
  * **Everything above a staff page that has to be asked of this request** — the

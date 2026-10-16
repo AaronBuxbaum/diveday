@@ -4,8 +4,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field } from "@/components/ui/form";
 import type { DiverTranslator } from "@/i18n/messages";
-import type { FunnelSource } from "@/lib/funnel";
 import { VISITOR_SHOP_NAME_MAX } from "@/lib/demo-identity";
+import type { FunnelSource } from "@/lib/funnel";
 
 /**
  * The demo, offered on the thank-you page to a reader waiting on a reply. It

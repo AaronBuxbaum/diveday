@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { DAY_MS } from "@/lib/clock";
 import { cleanVisitorShopName, VISITOR_SHOP_NAME_MAX } from "./demo-identity";
-import { DEMO_SHOP_NAME_MAX_AGE_SECONDS, demoShopNameFor, signDemoShopName } from "./demo-shop-name";
+import {
+  DEMO_SHOP_NAME_MAX_AGE_SECONDS,
+  demoShopNameFor,
+  signDemoShopName,
+} from "./demo-shop-name";
 
 const SHOP = "11111111-1111-4111-8111-111111111111";
 const OTHER = "22222222-2222-4222-8222-222222222222";

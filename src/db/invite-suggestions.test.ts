@@ -48,8 +48,11 @@ async function fixture() {
     await db.insert(personRoles).values({ personId: row.id, role: "diver" });
     return row;
   };
-  const seat = (tripId: string, personId: string, status: "booked" | "cancelled" | "no_show" = "booked") =>
-    db.insert(bookings).values({ bookedAs: "diver", shopId: shop.id, tripId, personId, status });
+  const seat = (
+    tripId: string,
+    personId: string,
+    status: "booked" | "cancelled" | "no_show" = "booked",
+  ) => db.insert(bookings).values({ bookedAs: "diver", shopId: shop.id, tripId, personId, status });
 
   return { db, shop, now, site, target, march, july, rehearsal, diver, seat };
 }
@@ -75,10 +78,17 @@ describe("listInviteSuggestions", () => {
     const invitedHere = await diver("Invited Here");
     const invitedRecently = await diver("Invited Recently");
     const invitedLongAgo = await diver("Invited Long Ago");
-    for (const p of [aboard, invitedHere, invitedRecently, invitedLongAgo]) await seat(march.id, p.id);
+    for (const p of [aboard, invitedHere, invitedRecently, invitedLongAgo])
+      await seat(march.id, p.id);
     await seat(target.id, aboard.id);
     await db.insert(tripInvitations).values([
-      { shopId: shop.id, tripId: target.id, source: "direct", personId: invitedHere.id, createdByPersonId: aboard.id },
+      {
+        shopId: shop.id,
+        tripId: target.id,
+        source: "direct",
+        personId: invitedHere.id,
+        createdByPersonId: aboard.id,
+      },
       {
         shopId: shop.id,
         tripId: march.id,

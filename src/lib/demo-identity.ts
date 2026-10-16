@@ -272,7 +272,11 @@ const UNSAFE_NAME_CHARACTER = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu;
  */
 export function cleanVisitorShopName(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
-  const cleaned = raw.replace(/\s+/g, " ").replace(UNSAFE_NAME_CHARACTER, "").replace(/ {2,}/g, " ").trim();
+  const cleaned = raw
+    .replace(/\s+/g, " ")
+    .replace(UNSAFE_NAME_CHARACTER, "")
+    .replace(/ {2,}/g, " ")
+    .trim();
   if (!cleaned) return null;
   return Array.from(cleaned).slice(0, VISITOR_SHOP_NAME_MAX).join("").trim();
 }

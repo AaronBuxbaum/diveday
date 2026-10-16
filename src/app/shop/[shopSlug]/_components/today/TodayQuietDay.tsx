@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import type { getTodayWork } from "@/db/today";
@@ -7,15 +8,21 @@ import { formatShortDate, formatTime } from "@/lib/format";
 
 type NextDeparture = NonNullable<Awaited<ReturnType<typeof getTodayWork>>["nextDeparture"]>;
 
-/** A day with nothing on it: the one act available, and the next boat if there is one. */
+/**
+ * A day with nothing on it: the boats that could use divers, the one act
+ * available, and the next boat if there is one.
+ */
 export function TodayQuietDay({
   shopSlug,
   nextDeparture,
+  thinBoats = null,
   locale,
   timeZone,
   t,
 }: {
   shopSlug: string;
+  /** The next two weeks' boats that could use divers (`QuietDayThinBoats`). */
+  thinBoats?: ReactNode;
   nextDeparture: NextDeparture | null;
   locale: string;
   timeZone: string;
@@ -23,6 +30,7 @@ export function TodayQuietDay({
 }) {
   return (
     <div className="mt-8 flex flex-col gap-4">
+      {thinBoats}
       <Link
         href={`/shop/${shopSlug}/schedule/board?add=1`}
         className={buttonClass({ className: "w-full justify-center sm:w-auto" })}

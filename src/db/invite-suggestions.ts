@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, isNotNull, isNull, lt, max, ne, notInArray, or } from "drizzle-orm";
-import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { INVITE_SUGGESTIONS_SHOWN, inviteCooldownStart } from "@/lib/invite-suggestions";
+import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import type { DbExecutor } from "./client";
 import { bookings, diveSites, people, personRoles, tripInvitations, trips } from "./schema";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
