@@ -20,6 +20,7 @@ import {
 import { canViewShopReports, type Role } from "@/lib/authz";
 import type { MonthRef } from "@/lib/calendar";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
+import type { CertificationLevel } from "@/lib/certification-levels";
 import { nowDate } from "@/lib/clock";
 import { emptyParticipantCounts } from "@/lib/participant-types";
 import type { MonthlyReportInput, ReportTrip } from "@/lib/reporting";
@@ -36,6 +37,7 @@ import {
   bookingCheckouts,
   bookingPayments,
   bookings,
+  certifications,
   diveSites,
   importedPaymentHistory,
   orders,
@@ -111,6 +113,47 @@ const ACTIVE_BOOKING_STATUSES = ["booked", "checked_in"] as const;
  * (issue #699).
  */
 const COLLECTED_PAYMENT_STATUSES = ["paid", "deposit_paid", "partly_refunded"] as const;
+
+type DepartureMoney = { gross: number; tax: number; passThrough: number };
+type MoneyRow = { tripId: string; total: unknown; tax?: unknown; passThrough?: unknown };
+
+/**
+ * **Each departure's own net** (fifth loop, item 26): `getMonthlyReport`'s six
+ * booking-borne money reads, each grouped by departure, tallied per departure
+ * and in total. The month is the departures' sum plus the money no departure
+ * names (counter orders, imported history), so a ledger row's net and the
+ * month's figure cannot disagree.
+ */
+function tallyByDeparture(reads: {
+  baseRevenue: readonly MoneyRow[];
+  recoveredDeposits: readonly MoneyRow[];
+  currentCheckoutTax: readonly MoneyRow[];
+  currentPassThrough: readonly MoneyRow[];
+  invoiceRevenue: readonly MoneyRow[];
+  invoiceBookingAmounts: readonly MoneyRow[];
+}): { tripMoney: Map<string, DepartureMoney>; bookedMoney: DepartureMoney } {
+  const tripMoney = new Map<string, DepartureMoney>();
+  const add = (tripId: string, gross: unknown, tax: unknown, passThrough: unknown) => {
+    const money = tripMoney.get(tripId) ?? { gross: 0, tax: 0, passThrough: 0 };
+    money.gross += Number(gross ?? 0);
+    money.tax += Number(tax ?? 0);
+    money.passThrough += Number(passThrough ?? 0);
+    tripMoney.set(tripId, money);
+  };
+  for (const row of reads.baseRevenue) add(row.tripId, row.total, 0, 0);
+  for (const row of reads.recoveredDeposits) add(row.tripId, row.total, row.tax, row.passThrough);
+  for (const row of reads.currentCheckoutTax) add(row.tripId, 0, row.total, 0);
+  for (const row of reads.currentPassThrough) add(row.tripId, 0, 0, row.total);
+  for (const row of reads.invoiceRevenue) add(row.tripId, row.total, row.tax, row.passThrough);
+  for (const row of reads.invoiceBookingAmounts) add(row.tripId, 0, row.total, row.passThrough);
+  const bookedMoney = { gross: 0, tax: 0, passThrough: 0 };
+  for (const money of tripMoney.values()) {
+    bookedMoney.gross += money.gross;
+    bookedMoney.tax += money.tax;
+    bookedMoney.passThrough += money.passThrough;
+  }
+  return { tripMoney, bookedMoney };
+}
 
 /**
  * The month's numbers, anchored to trips that *departed* in `[startUtc, endUtc)`.
@@ -619,30 +662,15 @@ export async function getMonthlyReport(
 
   // **Each departure's own net** (fifth loop, item 26): the six booking-borne
   // money reads above are grouped by departure, so a row's net and the month's
-  // total are one arithmetic: the month is the departures' sum plus the money
-  // no departure names (counter orders, imported history).
-  const tripMoney = new Map<string, { gross: number; tax: number; passThrough: number }>();
-  const addMoney = (tripId: string, gross: unknown, tax: unknown, passThrough: unknown) => {
-    const money = tripMoney.get(tripId) ?? { gross: 0, tax: 0, passThrough: 0 };
-    money.gross += Number(gross ?? 0);
-    money.tax += Number(tax ?? 0);
-    money.passThrough += Number(passThrough ?? 0);
-    tripMoney.set(tripId, money);
-  };
-  for (const row of baseRevenue) addMoney(row.tripId, row.total, 0, 0);
-  for (const row of recoveredDeposits) addMoney(row.tripId, row.total, row.tax, row.passThrough);
-  for (const row of currentCheckoutTax) addMoney(row.tripId, 0, row.total, 0);
-  for (const row of currentPassThrough) addMoney(row.tripId, 0, 0, row.total);
-  for (const row of invoiceRevenue) addMoney(row.tripId, row.total, row.tax, row.passThrough);
-  for (const row of invoiceBookingAmounts) addMoney(row.tripId, 0, row.total, row.passThrough);
-  const bookedMoney = [...tripMoney.values()].reduce(
-    (total, money) => ({
-      gross: total.gross + money.gross,
-      tax: total.tax + money.tax,
-      passThrough: total.passThrough + money.passThrough,
-    }),
-    { gross: 0, tax: 0, passThrough: 0 },
-  );
+  // total are one arithmetic (`tallyByDeparture`).
+  const { tripMoney, bookedMoney } = tallyByDeparture({
+    baseRevenue,
+    recoveredDeposits,
+    currentCheckoutTax,
+    currentPassThrough,
+    invoiceRevenue,
+    invoiceBookingAmounts,
+  });
 
   const reportTrips: ReportTrip[] = tripRows.map((row) => {
     const money = tripMoney.get(row.tripId);
@@ -1208,4 +1236,106 @@ export async function bookingLeadTimes(
       };
     })
     .sort((left, right) => left.isoWeekday - right.isoWeekday);
+}
+
+/** The cards this shop issued in a window, by level (fifth loop, item 32). */
+export type CertifiedHere = {
+  total: number;
+  byLevel: { level: CertificationLevel; count: number }[];
+};
+
+/**
+ * **"Certified here"** (fifth loop, item 32): the cards this shop's own
+ * instructors issued (`issued_by_shop_at`, ADR
+ * 20260824-shop-issued-certification-is-verified) in `[startUtc, endUtc)`,
+ * anchored to the tap that issued them. A card since deleted is not counted:
+ * the shop took it back. Levels in the order the most were issued.
+ */
+export async function certifiedHere(
+  db: DbExecutor,
+  shopId: string,
+  window: { startUtc: Date; endUtc: Date },
+): Promise<CertifiedHere> {
+  const rows = await db
+    .select({ level: certifications.level, count: count() })
+    .from(certifications)
+    .where(
+      and(
+        eq(certifications.shopId, shopId),
+        isNotNull(certifications.issuedByShopAt),
+        isNull(certifications.deletedAt),
+        gte(certifications.issuedByShopAt, window.startUtc),
+        lt(certifications.issuedByShopAt, window.endUtc),
+      ),
+    )
+    .groupBy(certifications.level);
+  const byLevel = rows
+    .map((row) => ({ level: row.level, count: Number(row.count) }))
+    .sort((left, right) => right.count - left.count || left.level.localeCompare(right.level));
+  return { total: byLevel.reduce((sum, row) => sum + row.count, 0), byLevel };
+}
+
+/** One crew member's year: students certified and days at sea. */
+export type CrewYear = { certified: number; daysAtSea: number };
+
+/**
+ * **Each team member's year** (fifth loop, item 32): the cards they issued
+ * and the shop-local days they were on a departure that sailed, for the Team
+ * cards. Days, not departures, the year view's own rule; a departure counts
+ * once it has sailed (`DEPARTURE_BUFFER_MS`), and never a cancelled one.
+ */
+export async function crewYearFacts(
+  db: DbExecutor,
+  shopId: string,
+  options: { timeZone: string; year: number; now: Date },
+): Promise<Map<string, CrewYear>> {
+  const { timeZone, year, now } = options;
+  const from = wallTimeToUtc({ year, month: 1, day: 1, hour: 0, minute: 0 }, timeZone);
+  const to = wallTimeToUtc({ year: year + 1, month: 1, day: 1, hour: 0, minute: 0 }, timeZone);
+  const sailedBy = new Date(now.getTime() - DEPARTURE_BUFFER_MS);
+  const [issued, days] = await queryAll(db, [
+    () =>
+      db
+        .select({ personId: certifications.issuedByPersonId, certified: count() })
+        .from(certifications)
+        .where(
+          and(
+            eq(certifications.shopId, shopId),
+            isNotNull(certifications.issuedByPersonId),
+            isNull(certifications.deletedAt),
+            gte(certifications.issuedByShopAt, from),
+            lt(certifications.issuedByShopAt, to),
+          ),
+        )
+        .groupBy(certifications.issuedByPersonId),
+    () =>
+      db
+        .select({
+          personId: tripAssignments.personId,
+          days: sql<number>`count(distinct to_char(${trips.startsAt} at time zone ${timeZone}::text, 'YYYY-MM-DD'))`,
+        })
+        .from(tripAssignments)
+        .innerJoin(trips, and(eq(trips.id, tripAssignments.tripId), eq(trips.shopId, shopId)))
+        .where(
+          and(
+            ne(trips.status, "cancelled"),
+            gte(trips.startsAt, from),
+            lt(trips.startsAt, to),
+            lte(trips.startsAt, sailedBy),
+            liveTrip(),
+            notRehearsal(),
+          ),
+        )
+        .groupBy(tripAssignments.personId),
+  ]);
+  const facts = new Map<string, CrewYear>();
+  for (const row of issued) {
+    if (!row.personId) continue;
+    facts.set(row.personId, { certified: Number(row.certified), daysAtSea: 0 });
+  }
+  for (const row of days) {
+    const seen = facts.get(row.personId) ?? { certified: 0, daysAtSea: 0 };
+    facts.set(row.personId, { ...seen, daysAtSea: Number(row.days) });
+  }
+  return facts;
 }
