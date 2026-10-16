@@ -469,12 +469,13 @@ describe("who reads what", () => {
     });
     if (!started.ok) throw new Error("expected a draft");
     const forOwner = await listDepartureLogIncidentReports(db, shop.id, f.trip.id, f.owner.id);
-    expect(forOwner.map((row) => row.reportId)).toContain(started.reportId);
-    // The writer reads their own report, but not the departure's list of them.
-    expect(await listDepartureLogIncidentReports(db, shop.id, f.trip.id, f.crew.id)).toEqual([]);
-    expect(await listDepartureLogIncidentReports(db, OTHER_SHOP, f.trip.id, f.owner.id)).toEqual(
-      [],
-    );
+    expect(forOwner?.map((row) => row.reportId)).toContain(started.reportId);
+    // The writer reads their own report, but not the departure's list of them,
+    // and a refusal is null rather than an empty list, so a log built for them
+    // fails closed instead of saying the departure has no reports (auditor
+    // review 2026-10-16, item 12).
+    expect(await listDepartureLogIncidentReports(db, shop.id, f.trip.id, f.crew.id)).toBeNull();
+    expect(await listDepartureLogIncidentReports(db, OTHER_SHOP, f.trip.id, f.owner.id)).toBeNull();
   });
 
   it("lists the shop's unfiled drafts, oldest first, to owners and managers only", async () => {

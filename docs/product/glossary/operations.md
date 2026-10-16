@@ -732,13 +732,21 @@
   and who recorded the pairing when, since a pairing decided at the dock and one typed in that
   night are different facts (the live manifest's split-team alert is deliberately not restated: it
   is a *reading* of the roll call at one moment, and this document reports recorded facts) — crew
-  and crew counts, and generation metadata. It reports
-  recorded facts with timestamps and
+  and crew counts, and generation metadata. Its timeline also carries:
+  - each **seat or crew change** made once the boat was due out (the scheduled start, or the first
+    departure roll-call mark if earlier), named by the trail and only when it names its subject by
+    record;
+  - a line erased at a person's request, which names nobody.
+
+  It ends with the departure's **incident reports**, as a list (kind, severity, filed or draft, by
+  whom, deleted drafts too), never their contents. It reports recorded facts with timestamps and
   computes no safety judgment; every absence is stated ("Awaiting", "No certification evidence on
   file") rather than left blank. A SHA-256 **integrity code** over the printed facts sits in the
-  footer — tamper-evidence, not a signature: regenerating the export from unchanged records
-  reproduces the code, so two copies can be checked against each other. Staff-only, one tap from
-  the manifest (`/shop/<slug>/trips/<id>/incident-export`).
+  footer with its **version**. It is tamper-evidence, not a signature: regenerating the export from
+  unchanged records reproduces the code, so two copies can be checked against each other. Version 2
+  prints, but does not seal, when the log was made and for whom; version 1 is only for logs made
+  before 2026-10-16 (ADR 20261016-departure-log-code-v2). Owner only, one tap from
+  the manifest (`/shop/<slug>/trips/<id>/log`).
 - **Incident report** — the shop's own written account of something that went wrong on a
   departure, for an insurer or an authority: when (in the shop's zone) and where, what happened,
   first aid, oxygen (and for how many minutes), whether emergency services were called, the

@@ -392,6 +392,7 @@ script again.
 | 20261014-incident-kind-severity | An incident report files with… |
 | 20261014-starting-content-is-measured-and-vetted | Starting content is measured by… |
 | 20261015-coverage-and-mutation-testing | Measure the safety files with… |
+| 20261016-departure-log-code-v2 | The departure log's integrity code,… |
 | 20261016-incident-drafts | Reuse an incident draft only… |
 
 <!-- adr-index:end -->

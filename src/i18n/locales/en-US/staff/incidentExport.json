@@ -100,6 +100,7 @@
   "timelineSeatMovedHere": "Seat moved here from another departure",
   "timelineCrewAdded": "Put on the crew",
   "timelineCrewRemoved": "Taken off the crew",
+  "timelineErased": "A line erased at a person’s request",
   "reportsHeading": "Incident reports",
   "reportsDescription": "The reports on this departure and where each stands. What they say stays on each report.",
   "reportsEmpty": "No incident report has been started for this departure.",

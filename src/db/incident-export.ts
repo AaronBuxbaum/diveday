@@ -1,5 +1,6 @@
-import { and, asc, eq, gte, inArray, isNotNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { nowDate } from "@/lib/clock";
 import {
   buildIncidentExport,
@@ -206,9 +207,13 @@ export async function getIncidentExport(
       listTripBuddyTeamEvents(db, shopId, tripId),
       listChecklistItemsForTrip(db, shopId, tripId),
       latestPreDepartureChecksForTrip(db, shopId, tripId),
-      // Seats changed once the boat was due out (safety sheet 2026-10-15,
-      // item 7), as the shop's trail recorded them. `seq` breaks a tie on the
-      // instant: this document is hashed, so its order cannot be a coin toss.
+      // Seats and crew places changed on this departure, as the shop's trail
+      // recorded them (safety sheet 2026-10-15, item 7); the builder keeps
+      // those from the boat being due out (`rosterCutoff`), which can be
+      // before the scheduled start. An erased line that named someone by
+      // record comes too, as a line naming nobody (auditor review 2026-10-16,
+      // item 12). `seq` breaks a tie on the instant: this document is hashed,
+      // so its order cannot be a coin toss.
       db
         .select({
           code: activityEvents.code,
@@ -220,16 +225,19 @@ export async function getIncidentExport(
           and(
             eq(activityEvents.shopId, shopId),
             eq(activityEvents.tripId, tripId),
-            inArray(activityEvents.code, ROSTER_CHANGE_CODES),
+            inArray(activityEvents.code, [...ROSTER_CHANGE_CODES, ACTIVITY_REDACTED.code]),
             // A line that names nobody by record is a name erasure could not
             // reach (security review 2026-10-16, F1): not printed.
             isNotNull(activityEvents.subjectPersonId),
-            gte(activityEvents.occurredAt, departure.trip.startsAt),
           ),
         )
         .orderBy(asc(activityEvents.occurredAt), asc(activityEvents.seq)),
       listDepartureLogIncidentReports(db, shopId, tripId, generatedByPersonId),
     ]);
+  // Everyone the export gate above admits may read this list; this is a second
+  // lock, so a gate that drifted wider fails closed rather than printing "no
+  // reports" (auditor review 2026-10-16, item 12).
+  if (reportRows === null) return null;
   const rosterChanges = rosterRows.flatMap((row): IncidentRosterChangeInput[] => {
     const change = rosterChangeFromActivity(row);
     return change ? [change] : [];

@@ -1043,7 +1043,7 @@ export type DepartureLogIncidentReport = {
  * oldest first: kind, severity, when filed and by whom, how many addenda, and
  * who started an unfiled draft. Never what happened, nor who was involved.
  * Only for a reader who may already read every report (owners and managers),
- * re-read live here; anyone else gets nothing, so the log widens nobody's
+ * re-read live here; anyone else gets null, so the log widens nobody's
  * view. Reads the departure without `liveTrip()`: a report outlives it.
  */
 export async function listDepartureLogIncidentReports(
@@ -1051,7 +1051,7 @@ export async function listDepartureLogIncidentReports(
   shopId: string,
   tripId: string,
   viewerPersonId: string,
-): Promise<DepartureLogIncidentReport[]> {
+): Promise<DepartureLogIncidentReport[] | null> {
   const roles = await loadActiveStaffRoles(db, shopId, viewerPersonId);
   if (
     !mayReadIncidentReport(
@@ -1059,7 +1059,9 @@ export async function listDepartureLogIncidentReports(
       { createdByPersonId: "" },
     )
   ) {
-    return [];
+    // Null, never an empty list: a log built for someone who may not read the
+    // list must fail, not say the departure has no reports.
+    return null;
   }
   return db
     .select({

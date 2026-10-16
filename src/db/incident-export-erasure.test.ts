@@ -67,6 +67,11 @@ describe("an erased diver's seat change on the departure log", () => {
   it("leaves no name when the diver was renamed after the change", async () => {
     const after = await lateRemoval({ renameTo: "Josephine Okafor" });
     expect(JSON.stringify(after)).not.toContain("Jo Smith");
+    // The head count still learns a seat changed then, naming nobody
+    // (auditor review 2026-10-16, item 12).
+    expect(after?.timeline).toContainEqual(
+      expect.objectContaining({ kind: "roster_change", action: "erased", subjectName: "" }),
+    );
   });
 
   it("leaves no name when the held seat was booked under another name", async () => {

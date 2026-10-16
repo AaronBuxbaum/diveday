@@ -1,6 +1,10 @@
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
-import type { IncidentRosterChangeAction, IncidentTimelineEntry } from "@/lib/incident-export";
+import {
+  hasRollCallEntries,
+  type IncidentRosterChangeAction,
+  type IncidentTimelineEntry,
+} from "@/lib/incident-export";
 import type { RollCallCheckpoint } from "@/lib/manifests";
 
 /**
@@ -19,7 +23,7 @@ const BUDDY_TEAM_ACTION_KEYS: Record<
 };
 
 /** What a seat or crew change after the start reads as (safety sheet 2026-10-15, item 7). */
-const ROSTER_CHANGE_KEYS: Record<IncidentRosterChangeAction, StaffMessageKey> = {
+const ROSTER_CHANGE_KEYS: Record<Exclude<IncidentRosterChangeAction, "erased">, StaffMessageKey> = {
   added: "incidentExport.timelineSeatAdded",
   removed: "incidentExport.timelineSeatRemoved",
   moved_away: "incidentExport.timelineSeatMovedAway",
@@ -51,9 +55,12 @@ export function TimelineEntryText({
         </span>
       )}
       <span className="font-semibold">{actText(entry, t)}</span>
-      <span className="text-muted">
-        {t("incidentExport.recordedByName", { name: entry.recordedByName })}
-      </span>
+      {/* An erased line names nobody, its recorder included. */}
+      {entry.kind === "roster_change" && entry.action === "erased" ? null : (
+        <span className="text-muted">
+          {t("incidentExport.recordedByName", { name: entry.recordedByName })}
+        </span>
+      )}
       {entry.kind === "buddy_team" ? (
         <span className="text-muted">
           {t("incidentExport.timelineBuddyMembers", {
@@ -80,6 +87,22 @@ export function TimelineEntryText({
   );
 }
 
+/**
+ * "No roll-call entries", said whenever the timeline holds no diver or crew
+ * mark, though seat, crew or buddy lines stand on it (auditor review
+ * 2026-10-16, item 9).
+ */
+export function NoRollCallNote({
+  timeline,
+  t,
+}: {
+  timeline: readonly IncidentTimelineEntry[];
+  t: StaffTranslator;
+}) {
+  if (hasRollCallEntries(timeline)) return null;
+  return <p className="mt-3 text-sm font-semibold">{t("incidentExport.timelineEmpty")}</p>;
+}
+
 /** The bold half of a line: who or what, then what happened. */
 function actText(entry: IncidentTimelineEntry, t: StaffTranslator): string {
   switch (entry.kind) {
@@ -91,6 +114,7 @@ function actText(entry: IncidentTimelineEntry, t: StaffTranslator): string {
       return `${team} — ${t(BUDDY_TEAM_ACTION_KEYS[entry.action])}`;
     }
     case "roster_change": {
+      if (entry.action === "erased") return t("incidentExport.timelineErased");
       const crew = entry.action === "crew_added" || entry.action === "crew_removed";
       const who = crew
         ? `${entry.subjectName} (${t("incidentExport.crewTag")})`

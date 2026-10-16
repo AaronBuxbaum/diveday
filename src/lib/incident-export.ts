@@ -331,12 +331,14 @@ export type IncidentTimelineEntry =
       recordedByName: string;
     }
   /**
-   * A seat added, removed or moved **after the departure's scheduled start**
-   * (safety sheet 2026-10-15, item 7): the roster section prints who is on the
-   * boat now, and a seat taken off after the boat left would otherwise vanish
-   * from the one document an investigator compares the head count against.
-   * Before the start, the roster is still being made and is not this log's
-   * business. Names as the shop's activity trail recorded them at the time.
+   * A seat or crew place added, removed or moved **once the boat was due out**
+   * (safety sheet 2026-10-15, item 7): from the scheduled start, or from the
+   * first departure roll-call mark if that came first (`rosterCutoff`). The
+   * roster section prints who is on the boat now, and a seat taken off after
+   * the boat left would otherwise vanish from the one document an
+   * investigator compares the head count against. Before then, the roster is
+   * still being made and is not this log's business. Names as the shop's
+   * activity trail recorded them at the time.
    */
   | {
       kind: "roster_change";
@@ -357,7 +359,13 @@ export type IncidentRosterChangeAction =
   | "moved_away"
   | "moved_here"
   | "crew_added"
-  | "crew_removed";
+  | "crew_removed"
+  /**
+   * A late line about a person since erased at their request: the trail kept
+   * that something happened then, and nothing about whom (auditor review
+   * 2026-10-16, item 12). Its names are empty.
+   */
+  | "erased";
 
 /**
  * One incident report on the departure, as the log lists it (safety sheet
@@ -394,6 +402,14 @@ export type IncidentLogReport = {
  */
 export const INCIDENT_EXPORT_HASH_VERSION = 2;
 export type IncidentExportHashVersion = 1 | 2;
+
+/**
+ * **The instant version 2 took over** (ADR 20261016-departure-log-code-v2).
+ * Every log made from here on is sealed with version 2, so a version-1 code
+ * for one would seal a document missing its late seat changes and reports.
+ * `incidentExportContentHash` refuses that request rather than answer it.
+ */
+export const INCIDENT_EXPORT_V2_CUTOVER = new Date("2026-10-16T00:00:00.000Z");
 
 export type IncidentExportDocument = {
   meta: {
@@ -517,6 +533,10 @@ export function rosterChangeFromActivity(row: {
   params: unknown;
   occurredAt: Date;
 }): IncidentRosterChangeInput | null {
+  // The query hands this only an erased line that named someone by record.
+  if (row.code === "redacted") {
+    return { action: "erased", subjectName: "", recordedByName: "", occurredAt: row.occurredAt };
+  }
   if (!Object.hasOwn(ROSTER_CHANGE_BY_CODE, row.code)) return null;
   const action = ROSTER_CHANGE_BY_CODE[row.code as keyof typeof ROSTER_CHANGE_BY_CODE];
   const params = activityParams(row.params);
@@ -576,8 +596,8 @@ export type IncidentExportInput = {
     check?: { occurredAt: Date; recordedByName: string };
   }>;
   /**
-   * Seat adds, removals and moves on this departure, oldest first, whenever
-   * made: the builder keeps those at or after the scheduled start.
+   * Seat and crew adds, removals and moves on this departure, oldest first,
+   * whenever made: the builder keeps those from `rosterCutoff` on.
    */
   rosterChanges?: readonly IncidentRosterChangeInput[];
   /** The departure's reports, oldest first (`listDepartureLogIncidentReports`). */
@@ -744,6 +764,33 @@ function timelineOrder(
   );
 }
 
+/**
+ * Whether the timeline holds a roll-call mark, diver or crew. "No roll-call
+ * entries" is said whenever it does not, though seat, crew or buddy lines are
+ * listed (auditor review 2026-10-16, item 9): those are not a head count.
+ */
+export function hasRollCallEntries(timeline: readonly IncidentTimelineEntry[]): boolean {
+  return timeline.some((entry) => entry.kind === "diver" || entry.kind === "crew");
+}
+
+/**
+ * **From when a seat change is this log's business**: the scheduled start, or
+ * the first departure roll-call mark if the boat began loading before it
+ * (domain reviews 2026-10-16). A seat taken off between a diver's boarding and
+ * the start would otherwise leave a boarding on the log and no seat.
+ */
+export function rosterCutoff(
+  trip: { startsAt: Date },
+  events: readonly { checkpoint: string; occurredAt: Date }[],
+): number {
+  return events
+    .filter((event) => event.checkpoint === "departure")
+    .reduce(
+      (earliest, event) => Math.min(earliest, event.occurredAt.getTime()),
+      trip.startsAt.getTime(),
+    );
+}
+
 export function buildIncidentExport(input: IncidentExportInput): IncidentExportDocument {
   const departure = input.manifests[0];
   if (!departure) throw new Error("buildIncidentExport: no departure manifest");
@@ -891,7 +938,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
     // A seat changed once the boat was due out. The input arrives in the
     // trail's own order, and the sort is stable, so a tie keeps it.
     ...(input.rosterChanges ?? [])
-      .filter((change) => change.occurredAt.getTime() >= departure.trip.startsAt.getTime())
+      .filter((change) => change.occurredAt.getTime() >= rosterCutoff(departure.trip, input.events))
       .map((change) => ({
         entry: {
           kind: "roster_change" as const,
@@ -983,6 +1030,14 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
   return { ...body, contentHash: incidentExportContentHash(body, body.hashVersion) };
 }
 
+/** The document's header without the two facts version 2 prints and does not seal. */
+function unsealedMeta<T extends { generatedAt: string; generatedByName: string }>(
+  meta: T,
+): Omit<T, "generatedAt" | "generatedByName"> {
+  const { generatedAt: _at, generatedByName: _by, ...rest } = meta;
+  return rest;
+}
+
 /**
  * SHA-256 over the document's canonical JSON — the facts, not the rendered
  * words, so the same records hash identically in every locale. Field order is
@@ -1003,9 +1058,14 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
  * **Versioned** ({@link INCIDENT_EXPORT_HASH_VERSION}). Version 1 is the recipe
  * every log printed before 2026-10-16 was sealed with: no roster changes, no
  * incident reports, no version. Asked for version 1, this drops exactly those,
- * so an old printout still checks against a fresh export of the same records.
- * Version 2 adds both, and the version number itself, so no version-2 code can
- * pass for a version-1 one.
+ * so an old printout still checks against a fresh export of the same records,
+ * and it refuses a log made from {@link INCIDENT_EXPORT_V2_CUTOVER} on, which
+ * no version-1 code can honestly seal. Version 2 adds both, and the version
+ * number itself, so no version-2 code can pass for a version-1 one.
+ *
+ * Version 2 also leaves out **when the log was made and for whom**: the page
+ * builds it as it is read, by whoever reads it, so sealing either made every
+ * code unrepeatable. Both are still printed (ADR 20261016-departure-log-code-v2).
  */
 export function incidentExportContentHash(
   body: Omit<IncidentExportDocument, "contentHash" | "incidentReports" | "hashVersion"> &
@@ -1014,7 +1074,7 @@ export function incidentExportContentHash(
 ): string {
   const { tripId: _tripId, shopSlug: _shopSlug, ...meta } = body.meta;
   const facts = {
-    meta,
+    meta: version === 1 ? meta : unsealedMeta(meta),
     departureSummary: body.departureSummary,
     roster: body.roster.map(({ bookingId: _bookingId, ...entry }) => entry),
     crew: body.crew.map(({ currentRatings: _currentRatings, ...entry }) => entry),
@@ -1022,6 +1082,9 @@ export function incidentExportContentHash(
     preDepartureCheck: body.preDepartureCheck,
   };
   if (version === 1) {
+    if (Date.parse(body.meta.generatedAt) >= INCIDENT_EXPORT_V2_CUTOVER.getTime()) {
+      throw new Error("A log made after the version 2 cutover has no version 1 code.");
+    }
     const timeline = body.timeline.filter((entry) => entry.kind !== "roster_change");
     return createHash("sha256")
       .update(JSON.stringify({ ...facts, timeline }))
