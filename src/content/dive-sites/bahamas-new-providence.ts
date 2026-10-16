@@ -29,7 +29,7 @@ export const BAHAMAS_NEW_PROVIDENCE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Fish school around the frames all year. In summer and fall silversides pack the hull, which is best seen from the outside.",
       difficultyLevel: "beginner",
-      depthRange: "12–14 m (40–45 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 15,
       currentNote:
         "No diving while a ship is alongside the pier. The wrecks lie south of Clifton Point, a working shoreline with a commercial pier, so treat it as busy water: carry an SMB and listen for engines on the way up. Current is reported as low, under 1 knot.",
@@ -86,7 +86,7 @@ export const BAHAMAS_NEW_PROVIDENCE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Lobsters and porkfish work the hull and the reef around it, and loggerhead turtles are among the sightings.",
       difficultyLevel: "intermediate",
-      depthRange: "15–21 m (50–69 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 22,
       currentNote:
         "The wreck lies near Clifton Pier, a commercial pier, so treat it as busy water: carry an SMB and listen for engines on the way up. Usually light; it can change, so carry an SMB.",
@@ -140,7 +140,7 @@ export const BAHAMAS_NEW_PROVIDENCE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Snappers school in the elkhorn, and a large stingray turns up on the sand now and then.",
       difficultyLevel: "beginner",
-      depthRange: "3–9 m (10–30 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 9,
       currentNote:
         "Usually light; it can change, so carry an SMB. Snorkelers share this reef, and the elkhorn grows to within reach of your fins, so stay off the bottom.",

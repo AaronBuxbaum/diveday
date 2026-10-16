@@ -38,7 +38,7 @@ export const DOMINICA: DiveSiteTemplate[] = [
       difficultyLevel: "beginner",
       // The spring sits in about 4.5 m; the shore reef slopes to a wall at about 10 m and the
       // source holds the dive well above 18 m.
-      depthRange: "3–18 m (10–60 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 18,
       currentNote:
         "Usually light. The shore entry is over loose stones, baseball-sized at the edge and larger below, with urchins among them, so step carefully. Volcanic gas vents here and the water near the bubbles can be hot to the touch, so keep hands and gear clear. A fireworm may sit on a warm rock. Vent gas is volcanic; never breathe from it. Snorkelers share the entry; exit where you entered.",
@@ -83,7 +83,7 @@ export const DOMINICA: DiveSiteTemplate[] = [
         "Soldierfish and grunts pack the rocks of Swiss Cheese, and deep-water sea fans and gorgonians cover the wall behind the pinnacle.",
       conservationNote: RESERVE_FEE,
       difficultyLevel: "advanced",
-      depthRange: "11–30 m (35–100 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 30,
       currentNote:
         "Where the Atlantic and Caribbean meet, current can be strong; carry an SMB and stay on the mooring. Swim-throughs at Swiss Cheese and through the pinnacle at about 11 m are overhead; stay out of them.",
@@ -131,7 +131,6 @@ export const DOMINICA: DiveSiteTemplate[] = [
         "Predators chase baitfish out in the blue, while Creole wrasse and chromis stream past the wall.",
       conservationNote: RESERVE_FEE,
       difficultyLevel: "advanced",
-      depthRange: "Up to 30 m (100 ft)",
       maxDepthMeters: 30,
       currentNote:
         "Calm Caribbean water meets the Atlantic here and the current can be strong, so operators dive it only when conditions allow. Open water: carry an SMB and stay with the mooring or your guide.",
@@ -178,7 +177,7 @@ export const DOMINICA: DiveSiteTemplate[] = [
         "Small life lives in the nooks of the wall. Look for frogfish and shrimp rather than across the blue.",
       conservationNote: RESERVE_FEE,
       difficultyLevel: "advanced",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "One listing notes boat traffic, so carry an SMB and listen for engines. The bay is sheltered and waves and current are rare.",
@@ -224,7 +223,7 @@ export const DOMINICA: DiveSiteTemplate[] = [
         "Seahorses and scorpionfish sit in the quiet corners of the shelf, and turtles pass along the wall.",
       conservationNote: RESERVE_FEE,
       difficultyLevel: "advanced",
-      depthRange: "8–30 m (25–100 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 30,
       currentNote:
         "Current varies, from none to 1 to 2 knots; carry an SMB. The wall plunges far past the plan.",
@@ -272,7 +271,7 @@ export const DOMINICA: DiveSiteTemplate[] = [
         "Jacks gather over the reef when the current suits, and yellowhead jawfish tend burrows in the sand at the end of the dive.",
       conservationNote: RESERVE_FEE,
       difficultyLevel: "intermediate",
-      depthRange: "12–16 m (40–52 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 16,
       currentNote:
         "The current can run strong on some days and be flat on others, so carry an SMB and let the crew call it on the day.",
@@ -320,7 +319,7 @@ export const DOMINICA: DiveSiteTemplate[] = [
       // 15 m. The headland sits beside Coral Gardens, where current can run strong, and no source
       // settles whether that reaches this point, so the conservative reading gates Advanced Open
       // Water; the plan holds an 18 m floor and asks for a log check.
-      depthRange: "0–26 m (0–85 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 26,
       currentNote:
         "One listing gives a low current, but the neighboring reef can run strong, so carry an SMB. A narrow cave at about 15 m silts up quickly and is overhead. Stay out of the cave.",

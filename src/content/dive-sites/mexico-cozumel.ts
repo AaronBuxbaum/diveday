@@ -26,7 +26,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barracuda and jacks hold over the reef edge while eagle rays pass along the wall.",
       difficultyLevel: "advanced",
-      depthRange: "21–30 m (70–100 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 30,
       currentNote:
         "Strong to very strong, running straight out to sea and hard to predict. A diver who loses the group is carried past the island. Carry an SMB, stay with the guide and expect surface chop when the wind is up.",
@@ -69,7 +69,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Grunts and snapper stack up over the ledges, with nurse sharks resting under the overhangs.",
       difficultyLevel: "advanced",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "Strong to very strong, running out to sea and unpredictable, so a diver who loses the group can be carried past the island. Carry an SMB, stay with the guide and expect surface chop when the wind is up.",
@@ -113,7 +113,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The sponges and fans are the show, with schooling fish over the slope.",
       difficultyLevel: "intermediate",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "Ship traffic first: the wall lies off the main port, the cruise-ship berths and the mainland ferry route. Do not dive while a ship is alongside or maneuvering, carry an SMB and listen for engines. Reports of the current range from mild to strong, so plan it as a drift. The wall starts about 400 m offshore, so a shore entry means a swim of roughly 15 minutes; go by boat.",
@@ -165,7 +165,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "beginner",
-      depthRange: "9–14 m (30–45 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 14,
       currentNote:
         "Ship traffic first: the north end lies by the cruise terminal. Do not dive while a ship is maneuvering or alongside, carry an SMB on a drift and listen for engines. Current is light to moderate, usually south to north.",
@@ -209,7 +209,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "intermediate",
-      depthRange: "15–24 m (50–80 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 24,
       currentNote:
         "Mild to swift, and it can strengthen during the dive. A tourist submarine also visits the wreck, so expect a second vessel: carry an SMB, listen for engines and leave the ascent line clear.",
@@ -261,7 +261,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "beginner",
-      depthRange: "9–17 m (30–55 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 17,
       currentNote:
         "Mild, running south to north. Snorkelers crowd the reef by day, so carry an SMB on a boat dive and look up on the way to the surface. Run-off from the lagoon dulls visibility after rain.",
@@ -306,7 +306,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "intermediate",
-      depthRange: "12–21 m (40–70 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 21,
       currentNote:
         "Mild to swift, and strong at times. The coral heads shelter divers from the flow, but plan it as a drift and carry an SMB.",
@@ -352,7 +352,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "intermediate",
-      depthRange: "12–20 m (40–65 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 20,
       currentNote:
         "Reports run from mild to strong, usually south to north and often swift. Carry an SMB and plan it as a drift.",
@@ -397,7 +397,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "advanced",
-      depthRange: "15–30 m (50–100 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 30,
       currentNote:
         "Moderate to strong, south to north, and a fast drift. Carry an SMB and keep a pre-planned drift path, since the pinnacles need precise buoyancy.",
@@ -442,7 +442,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "beginner",
-      depthRange: "6–15 m (20–50 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 15,
       currentNote:
         "Mild to moderate. Carry an SMB on a boat dive, since the boat follows the drift.",
@@ -485,7 +485,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "intermediate",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "Mild to moderate in some reports and unpredictable or strong in others, usually south to north. Carry an SMB and plan it as a drift.",
@@ -531,7 +531,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "advanced",
-      depthRange: "15–30 m (50–100 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 30,
       currentNote:
         "Mild in some reports and strong in others, running south to north and carrying divers along the wall. Carry an SMB, watch the depth gauge, and stay out of the tunnels. Overhead; stay out of every swim-through, whoever offers it.",
@@ -577,7 +577,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "intermediate",
-      depthRange: "12–18 m (40–60 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 18,
       currentNote:
         "Moderate to strong, running south to north. Carry an SMB and plan it as a drift.",
@@ -621,7 +621,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "beginner",
-      depthRange: "9–21 m (30–70 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 21,
       currentNote:
         "Gentle to moderate, running south to north, and it can pick up at times. Carry an SMB on a boat dive.",
@@ -665,7 +665,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "beginner",
-      depthRange: "9–24 m (30–80 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 24,
       currentNote: "Mild to moderate, flowing south to north. Carry an SMB on a boat dive.",
       divePlan:
@@ -706,7 +706,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "intermediate",
-      depthRange: "9–24 m (30–80 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 24,
       currentNote:
         "Mild to moderate, running south to north, and stronger on other days. Carry an SMB and plan it as a drift. Overhead; stay out of every swim-through, whoever offers it.",
@@ -751,7 +751,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "intermediate",
-      depthRange: "8–27 m (25–90 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 27,
       currentNote:
         "Mild to moderate in some reports and strong in others, running south to north. Carry an SMB and plan it as a drift.",
@@ -796,7 +796,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "advanced",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "Mild to moderate in some reports and moderate to strong in others, usually south to north. Carry an SMB and plan it as a drift. Overhead; stay out of every swim-through, whoever offers it.",
@@ -841,7 +841,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "intermediate",
-      depthRange: "15–27 m (50–90 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 27,
       currentNote: "Mild to moderate, south to north. Carry an SMB and plan it as a drift.",
       divePlan:
@@ -885,7 +885,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "beginner",
-      depthRange: "5–12 m (15–40 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 12,
       currentNote: "Light and mild in the reports. Carry an SMB on a boat dive.",
       divePlan:
@@ -928,7 +928,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "advanced",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       currentNote:
         "Unpredictable, from mild to strong, drifting along the wall. Carry an SMB, and slow yourself by dropping lower or using the outcrops. Overhead; stay out of every swim-through, whoever offers it.",
@@ -973,7 +973,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "advanced",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       currentNote:
         "Unpredictable, from mild to strong, with fast midwater flow that can carry a group past the site. Carry an SMB, expect rough water on the surface in the trade winds, and manage gas, since a drift leaves little time.",
@@ -1018,7 +1018,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "advanced",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       currentNote:
         "Strong and unpredictable, with open-ocean swell on the surface that can cancel the trip. Carry an SMB, stay with the guide, and keep bottom time short.",
@@ -1060,7 +1060,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Eagle rays pass along the wall from mid-January to early March, and can number around twenty at once.",
       difficultyLevel: "advanced",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "Strong to very strong and unpredictable, a high-speed drift. Carry an SMB, stay with the guide and expect surface chop when the wind is up.",
@@ -1099,7 +1099,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "intermediate",
-      depthRange: "12–22 m (40–70 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 22,
       currentNote:
         "Ship traffic first: the reef lies between the cruise terminal and Chankanaab. Do not dive while a ship is maneuvering or alongside, carry an SMB and listen for engines. Current is light to moderate, and known to change direction, with stronger flow reported on some days. Carry an SMB and plan it as a drift.",
@@ -1142,7 +1142,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "beginner",
-      depthRange: "9–21 m (30–70 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 21,
       currentNote:
         "Light to moderate. A tourist submarine can be seen here, so carry an SMB and listen for engines on the ascent.",
@@ -1178,7 +1178,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "beginner",
-      depthRange: "8–18 m (26–60 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 18,
       currentNote:
         "Mild to moderate. Carry an SMB on a boat dive; the flow is stronger over the wall next door.",
@@ -1215,7 +1215,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "advanced",
-      depthRange: "15–30 m (50–100 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 30,
       currentNote: "Swift to strong, south to north. Carry an SMB and plan it as a drift.",
       divePlan:
@@ -1260,7 +1260,7 @@ export const MEXICO_COZUMEL: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Cozumel Reefs National Park: the park fee is paid before the dive, no gloves, and nothing is touched or taken.",
       difficultyLevel: "advanced",
-      depthRange: "18–36 m (60–118 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 36,
       currentNote:
         "Expect current like Punta Sur and Maracaibo, its neighbors; ask the crew on the day. The site is remote and weather-dependent, so carry an SMB.",

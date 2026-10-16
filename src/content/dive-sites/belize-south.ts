@@ -28,7 +28,6 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
       conservationNote:
         "Time slots are allocated to licensed operators, guides are trained by the Southern Environmental Association, and groups are capped at 12 divers with their guides. Keep the distance the guide sets and never touch or chase an animal.",
       difficultyLevel: "advanced",
-      depthRange: "Up to 24 m (80 ft)",
       maxDepthMeters: 24,
       currentNote:
         "Carry an SMB and surface with it deployed, because the boat picks divers up in open water. This is a blue-water drift outside the reef with no visual reference to the reef or bottom. Current is not documented; ask the crew on the day.",
@@ -72,7 +71,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Spotted drums, big lobsters, cleaner shrimp and arrow crabs live among the mounds, with plenty of smaller reef fish.",
       difficultyLevel: "intermediate",
-      depthRange: "10–21 m (30–70 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 21,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -114,7 +113,6 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Lobsters tuck into the canyon walls in groups, and stingrays and nurse sharks rest on the sand between them.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 15 m (50 ft)",
       maxDepthMeters: 15,
       currentNote:
         "The southern end of the canyon catches some current. Listen to the briefing about which way to go.",
@@ -149,7 +147,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big black groupers, hawksbills, eagle rays and schools of jacks and schoolmasters work the wall. Reef sharks and mantas are occasional in the blue.",
       difficultyLevel: "advanced",
-      depthRange: "12–24 m (40–80 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 24,
       currentNote: "Current not documented; ask the crew on the day, and carry an SMB.",
       divePlan:
@@ -191,7 +189,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Turtles rest in the canyons, and juvenile spotted drums, cleaner shrimp and arrow crabs give macro photographers plenty to do.",
       difficultyLevel: "intermediate",
-      depthRange: "15–18 m (50–60 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       fitTone: "welcoming",
@@ -229,7 +227,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Stingrays and nurse sharks rest on the sand between the structures, with eagle rays, turtles and schools of tarpon passing through.",
       difficultyLevel: "intermediate",
-      depthRange: "14–18 m (45–60 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       fitTone: "welcoming",
@@ -269,7 +267,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Lobsters and big crabs sit in the crevices, with eels, eagle rays and turtles along the face.",
       difficultyLevel: "advanced",
-      depthRange: "12–30 m (45–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day, and carry an SMB.",
       divePlan:
@@ -313,7 +311,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Lobsters hide in the overhangs, nurse sharks and turtles cruise past, and eagle rays patrol the face while blue wrasse school in open water.",
       difficultyLevel: "advanced",
-      depthRange: "12–24 m (40–80 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 24,
       currentNote: "Current not documented; ask the crew on the day, and carry an SMB.",
       divePlan:
@@ -358,7 +356,7 @@ export const BELIZE_SOUTH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Stingrays, morays and nurse sharks rest in the sand and coral patches, with snappers and groupers over the reef and eagle rays sometimes in the blue.",
       difficultyLevel: "intermediate",
-      depthRange: "10–21 m (30–70 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 21,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:

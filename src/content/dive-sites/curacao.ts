@@ -29,7 +29,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Blue tang, goatfish and trumpetfish live on the wreck. Seahorses and frogfish turn up with some luck.",
       difficultyLevel: "beginner",
-      depthRange: "1–5 m (3–15 ft)",
+      depthMinMeters: 1,
       maxDepthMeters: 5,
       currentNote: "Sheltered water, but boats work this coast. Tow an inflated surface marker.",
       divePlan: "A short surface swim from the beach to the tug, then circle it in the shallows.",
@@ -66,7 +66,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "East along the wall, the rubble and fence hold the small animals. Look slowly, not far.",
       difficultyLevel: "advanced",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote:
         "Plan gas and the way back before heading west toward the Tugboat. Boats work this coast, so tow an inflated surface marker. The wall continues to about 45 m, past the plan's floor.",
@@ -111,7 +111,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Coral and sponge on the wall edge, deep-water fish out over the drop, seahorses on the plateau.",
       difficultyLevel: "intermediate",
-      depthRange: "8–40 m (25–130 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 40,
       currentNote:
         "Can run as a drift toward Jan Thiel Bay, and the current can increase and change direction. The wall falls to about 40 m, well beyond the plan. Tow an inflated surface marker.",
@@ -154,7 +154,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Parrotfish and snapper along the wall, trunkfish and butterflyfish on the shallow top. A turtle passes now and then.",
       difficultyLevel: "intermediate",
-      depthRange: "10–15 m (35–50 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 18,
       currentNote:
         "The wall plunges far beyond recreational depth, which is the technical divers' dive, not this plan. Sweet Bottom is also a coral restoration site, so keep clear of the nurseries. Tow an inflated surface marker.",
@@ -196,7 +196,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Tarpon and jacks hold over the decks, with sponge and whip coral on the steel.",
       difficultyLevel: "advanced",
-      depthRange: "17–34 m (55–110 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 34,
       currentNote:
         "Current can be very strong at the harbor mouth. The wreck lies in the Mega Pier berth, so no diving while a cruise ship is alongside. Check the berthing schedule first, and tow an inflated surface marker.",
@@ -231,7 +231,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Large brain corals and anemones with cleaner shrimp in them. Look in the sand between the two reefs for the small animals.",
       difficultyLevel: "intermediate",
-      depthRange: "14–18 m (45–60 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 18,
       currentNote:
         "From shore, check the current before you enter and do not go if it runs hard west toward the Water Factory. The entry and exit are the harder part. Stay shallow when it runs, and tow an inflated surface marker.",
@@ -273,7 +273,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Morays shelter under the beams and tarpon watch from a distance. Lionfish hide in the scrap.",
       difficultyLevel: "advanced",
-      depthRange: "15–30 m (50–100 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 30,
       currentNote: "Boats work this coast, so tow an inflated surface marker.",
       divePlan:
@@ -307,7 +307,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Brain corals and anemones among the heads, with turtles and trunkfish moving through the gaps.",
       difficultyLevel: "intermediate",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "Usually calm. The heads make it easy to lose your bearings, so carry a compass. The slope continues beyond 18 m, past the plan. Tow an inflated surface marker.",
@@ -348,7 +348,6 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Garden eels on the sand, and brain coral and sponge growing on the steel.",
       difficultyLevel: "beginner",
-      depthRange: "6 m (20 ft)",
       maxDepthMeters: 6,
       currentNote: "Boats work this coast, so tow an inflated surface marker.",
       divePlan: "Circle the wreck, then cross the sandy plateau beyond it to finish.",
@@ -380,7 +379,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Blue chromis and rock beauties over the wreck, with doctorfish and parrotfish on the wall beside it.",
       difficultyLevel: "intermediate",
-      depthRange: "5–12 m (15–40 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 12,
       minimumCertificationLevel: "advanced_open_water",
       currentNote:
@@ -421,7 +420,6 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Silversides · nurse shark",
       marineLifeDescription: "Silversides in the light, and now and then a sleeping nurse shark.",
       difficultyLevel: "advanced",
-      depthRange: "5 m (15 ft)",
       maxDepthMeters: 5,
       currentNote:
         "Reached by boat with a guide, and only with the guide. Swell along this coast can change the entrance. Do not remove your regulator or breathe the air in the chamber, and keep away from the bats' roost.",
@@ -458,7 +456,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Black coral grows on the deeper metal. The wrecks are deep and the swim out is long.",
       difficultyLevel: "advanced",
-      depthRange: "20–40 m (65–130 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 40,
       currentNote:
         "A long surface swim and a deep dive, for divers in good shape. Boats work this coast, so tow an inflated surface marker. The wrecks continue to 50 m, which is past the plan.",
@@ -492,7 +490,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Large sea fans and soft coral at 10–15 m on the way back, turtles and barracuda on the reef.",
       difficultyLevel: "advanced",
-      depthRange: "10–30 m (35–100 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 30,
       currentNote:
         "Go right if the current allows. The current is sometimes strong and can change direction, so stay close to the wall. Move at a brisk pace at a moderate depth to reach the wall sooner. Boats work this coast, so tow an inflated surface marker. The wall continues below 30 m, past the plan.",
@@ -532,7 +530,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Coral and sponge on the shoulder. Look out over the blue for rays and dolphins.",
       difficultyLevel: "advanced",
-      depthRange: "13–25 m (45–80 ft)",
+      depthMinMeters: 13,
       maxDepthMeters: 25,
       currentNote: "Boats work this coast, so tow an inflated surface marker.",
       divePlan:
@@ -569,7 +567,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Hard coral and sponge on the slope, and small animals on the sand plateau to the west.",
       difficultyLevel: "intermediate",
-      depthRange: "10–15 m (35–50 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 18,
       currentNote:
         "Choose your direction by the current. In heavy waves, cross the plateau underwater rather than at the surface. The slope continues deeper, past the plan. Tow an inflated surface marker.",
@@ -607,7 +605,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Trumpetfish · turtles",
       marineLifeDescription: "Trumpetfish on the slope, turtles in the shallows.",
       difficultyLevel: "advanced",
-      depthRange: "9–36 m (30–120 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 36,
       currentNote:
         "Choose your direction by the current. Boats use the cove, and swimmers jump from the cliffs, so stay clear of the rocks. The slope continues to about 36 m, past the plan's floor.",
@@ -644,7 +642,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Morays, lobster and sea slugs under the pier and along the rope. Turtles and the odd eagle ray over the reef.",
       difficultyLevel: "beginner",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Calm water is usual. The slope runs below 30 m, which is past the plan. Tow an inflated surface marker.",
@@ -687,7 +685,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Dense coral with schools of triggerfish and grunts. Turtles and eagle rays pass along the edge.",
       difficultyLevel: "advanced",
-      depthRange: "6–36 m (20–120 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 36,
       currentNote:
         "Currents can be unpredictable and strong, and the dive is only run in calm weather with a local guide. Shore access is not recommended. Expect a drift. Carry an SMB. The route can run deeper than 30 m, past the plan's floor.",
@@ -731,7 +729,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Eagle rays · seahorses · turtles · barracuda · porcupinefish",
       marineLifeDescription: "Eagle rays and seahorses are regulars, with frogfish in the sponges.",
       difficultyLevel: "advanced",
-      depthRange: "11–26 m (35–85 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 26,
       currentNote:
         "Deep-water current flushes the site, and it is dived as a drift. Carry an SMB. Drop-offs fall beyond the 26 m best-viewing range.",
@@ -772,7 +770,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sponges of every size on the wall, with fish moving through them. Good for wide-angle.",
       difficultyLevel: "advanced",
-      depthRange: "11–26 m (35–85 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 26,
       currentNote:
         "Boat only. Current not documented; ask the crew on the day. Tow an inflated surface marker.",
@@ -810,7 +808,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Walls of coral, sponge and sea fan with schools along them. Nurse sharks are reported.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Currents can run, and operators recommend Advanced Open Water. Boat only, so tow an inflated surface marker. The wall drops past the plan's floor.",
@@ -853,7 +851,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Dense coral overhangs along the wall, with rays and turtles in the open water beside it.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Run as a drift dive, and the current is sometimes hard and changes direction. High waves are common. Carry an SMB and keep the boat in mind. The reef slopes to 30 m and then to sand, which is the plan's floor.",
@@ -893,7 +891,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barrel sponges and gorgonians on the slope, eagle rays and turtles over it.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Boat only, with exposure on the open coast. Tow an inflated surface marker. The wall drops past the plan's floor.",
@@ -936,7 +934,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sponges of many kinds on the slope, with juvenile fish among the boulder corals.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Boat only. Current not documented; ask the crew on the day. Tow an inflated surface marker.",
@@ -980,7 +978,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Southern stingrays · garden eels · coral heads",
       marineLifeDescription: "Rays and garden eels on the plateau, small animals among the heads.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Boat only. Current not documented; ask the crew on the day. Tow an inflated surface marker.",
@@ -1016,7 +1014,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Barracuda · green turtles · horse-eye jacks · parrotfish",
       marineLifeDescription: "Turtles, jacks and barracuda over the coral fields.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Boats and shipping work the channel nearby, so listen for engines. Often run as a drift. Carry an SMB. The reef steepens below 15 m and falls past the plan's floor.",
@@ -1057,7 +1055,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Seahorses · gorgonians · sea fans",
       marineLifeDescription: "Gorgonian garden on the wall, seahorses on the plateau at the end.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Inside the Curaçao Marine Park, with boats nearby. Current not documented; ask the crew on the day. Tow an inflated surface marker.",
@@ -1094,7 +1092,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Pillar coral on the plateau and big fish out on the edge of the blue.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "A boat dive in current, usually run as a drift. Carry an SMB. The wall drops about 30 m, to the plan's floor.",
@@ -1131,7 +1129,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Black coral and sea fans on the wall. Black coral takes a century to regrow, so keep clear of it.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Sources disagree on the current: one reports little to none, others report mild to strong. The wall falls away, so watch your depth and time. Tow an inflated surface marker.",
@@ -1168,7 +1166,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Soft coral shallows and a hard coral face, with rays and morays in the reef.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Currents can be strong, and the entry is rough in waves. Sources call it a dive for experienced divers. Carry an SMB.",
@@ -1210,7 +1208,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Gorgonians and brain coral on the wall with schools of jacks along it.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Strong current at the point, and high waves. It is dived in calm weather, as a drift. Carry an SMB. The wall falls past the plan's floor.",
@@ -1253,7 +1251,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Angelfish · octopus · eagle rays · arrow crabs",
       marineLifeDescription: "Angelfish in numbers, with octopus and eagle rays in the reef folds.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote: "A slight current, run as a drift. Carry an SMB.",
       divePlan:
@@ -1295,7 +1293,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Mountainous star coral · seahorses · frogfish",
       marineLifeDescription: "Star coral on the wall, with small animals tucked into it.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Boat only. Current not documented; ask the crew on the day. Tow an inflated surface marker. The wall falls past the plan's floor.",
@@ -1334,7 +1332,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Coral · sponges · reef fish",
       marineLifeDescription: "Coral and sponge on a sheer wall, for experienced drift divers.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Bullenbaai is a tanker terminal, so tankers berth and maneuver here. Keep clear of the terminal and its restricted water, listen for engines and carry an SMB. Strong current is reported, and the dive is for calm weather only.",
@@ -1376,7 +1374,6 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A school of tarpon at the bridge, with rays and barracuda around the reef.",
       difficultyLevel: "advanced",
-      depthRange: "Up to 20 m (65 ft)",
       maxDepthMeters: 20,
       currentNote:
         "Strong currents and surge, and the site is not always accessible. Carry an SMB.",
@@ -1417,7 +1414,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Turtles · ocean triggerfish · grouper",
       marineLifeDescription: "Turtles on the leeward flats, big fish along the windward wall.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Current is a regular feature, often enough to dive it as a drift, and the surface is choppier than at the mainland. Carry an SMB and have topside support.",
@@ -1452,7 +1449,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Moray eels · cleaner shrimp · lobster",
       marineLifeDescription: "Crevices along the wall are full of small animals.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote:
         "Inside the Curaçao Marine Park, with boats nearby. The drop-off beyond the wall is past the plan's floor. Tow an inflated surface marker.",
@@ -1490,7 +1487,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Turtles · reef squid · donkey dung sea cucumbers · long-spined urchins",
       marineLifeDescription: "Turtles and squid over the slope, small animals on the sand.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote:
         "Boats and swimmers share the bay. Tow an inflated surface marker. Walls lie beyond the plateau and past the plan.",
@@ -1528,7 +1525,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Spiny lobster · crabs · gorgonians · barrel sponges",
       marineLifeDescription: "Lobster under the overhangs and crabs in the sponges.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote:
         "Boat only. The wall past the plateau falls beyond the plan's floor. Tow an inflated surface marker.",
@@ -1567,7 +1564,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big coral colonies, and seahorses among the gorgonians along the wall.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote: "Boat only, and boats work this coast. Tow an inflated surface marker.",
       divePlan:
@@ -1600,7 +1597,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barracuda over the coral, with morays and lobster among the colonies.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote:
         "Boat only. The shoreline cave is an overhead space, so leave it alone. Tow an inflated surface marker.",
@@ -1639,7 +1636,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Sponges · hard coral · soft coral · turtles",
       marineLifeDescription: "Sponges, hard and soft coral on the slope.",
       difficultyLevel: "advanced",
-      depthRange: "9–15 m (30–50 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       currentNote:
         "Often a strong current toward Playa Piskado, so a boat dive is the better choice. From shore, do not enter if it is running. Tow an inflated surface marker.",
@@ -1679,7 +1676,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barracuda along the wall, with sea fans and stony coral on the plateau.",
       difficultyLevel: "intermediate",
-      depthRange: "6–40 m (20–130 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 40,
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -1714,7 +1711,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Hard coral · sponges · turtles",
       marineLifeDescription: "Healthy coral and sponge along the slope.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote:
         "A long swim over the shallow bay, with tankers mooring outside it. Tow an inflated surface marker.",
@@ -1752,7 +1749,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Parrotfish · angelfish · nudibranchs · turtles",
       marineLifeDescription: "Coral outcrops on sand, and turtles and rays on the deeper reef.",
       difficultyLevel: "intermediate",
-      depthRange: "5–36 m (15–120 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 36,
       currentNote:
         "Boats work this coast. Tow an inflated surface marker. Deeper reef lies beyond the plan's floor.",
@@ -1795,7 +1792,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Fish moving around the coral heads, with deep-water visitors now and then.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote: "The entry is from a pier. Tow an inflated surface marker.",
       divePlan:
@@ -1833,7 +1830,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Soft coral · elephant-ear sponges · brain coral",
       marineLifeDescription: "Healthy coral and sponge beyond the plateau.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote:
         "A long surface swim to the drop-off, so watch the current on the way. Tow an inflated surface marker.",
@@ -1868,7 +1865,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Blue tangs and trunkfish in the shallows, and eagle rays over the valley floor.",
       difficultyLevel: "intermediate",
-      depthRange: "9–18 m (30–60 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       currentNote: "Little current. Tow an inflated surface marker.",
       divePlan:
@@ -1908,7 +1905,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A fringing reef with rays and turtles over it, and small animals in it.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote: "Tow an inflated surface marker.",
       divePlan: "Enter from the beach, work the fringing reef at 5–18 m, and turn at 18 m.",
@@ -1947,7 +1944,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Elephant-ear sponges · barrel sponges · rope sponges · soft coral",
       marineLifeDescription: "Sponges of many kinds on the slope and soft coral on the shoulders.",
       difficultyLevel: "intermediate",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Choose your direction by the current. The slope continues past the plan's floor. Tow an inflated surface marker.",
@@ -1985,7 +1982,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Turtles · moray eels · parrotfish",
       marineLifeDescription: "Fish in the shallow channel and turtles through it.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote: "Calm in the bay. Tow an inflated surface marker.",
       divePlan: "Enter in the bay, follow the channel out, and turn at 18 m.",
@@ -2016,7 +2013,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Squid · yellowhead jawfish · rays · cornetfish",
       marineLifeDescription: "Squid in the shallows and jawfish on the sand.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote: "Steps to the water are uneven. Tow an inflated surface marker.",
       divePlan: "Go down the rock steps, work the reef wall, and turn at 18 m.",
@@ -2052,7 +2049,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Gorgonians · orange cup coral · fingerlings · turtles",
       marineLifeDescription: "Gorgonians and cup coral, with turtles and squid.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote: "Tow an inflated surface marker.",
       divePlan: "Enter from the beach, follow the drop-off along the cliffs, and turn at 18 m.",
@@ -2087,7 +2084,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Gorgonians · stovepipe sponges · elephant-ear sponges",
       marineLifeDescription: "Sponge and gorgonian groups mark the entry point.",
       difficultyLevel: "advanced",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote:
         "A remote site with no facilities. Sources report limited to strong current, and rocks and the odd wave at the entry. Tow an inflated surface marker.",
@@ -2128,7 +2125,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Turtles are guaranteed in the shallows. Give them room and do not feed them.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote:
         "Fishermen use the beach and the current is variable, so tow an inflated surface marker. Do not touch, feed or chase the turtles.",
@@ -2162,7 +2159,7 @@ export const CURACAO: DiveSiteTemplate[] = [
       marineLife: "Turtles · barracuda · reef fish",
       marineLifeDescription: "Coral gardens close to the beach.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote: "Tow an inflated surface marker.",
       divePlan:

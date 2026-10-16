@@ -131,7 +131,13 @@ import {
   seasonalBriefingText,
   stuckOperationKindText,
 } from "./today-labels";
-import { depthText, seaStateText, temperatureText, windText } from "./unit-labels";
+import {
+  depthText,
+  diveSiteDepthText,
+  seaStateText,
+  temperatureText,
+  windText,
+} from "./unit-labels";
 import { type WaiverRowState, waiverRowStateText } from "./waiver-labels";
 import {
   workOrderLineKindLabel,
@@ -1040,6 +1046,13 @@ const CASES: readonly LabelMapCase[] = [
   },
   {
     module: "unit-labels.ts",
+    map: "DEPTH_RANGE_KEYS",
+    rows: codeRows(DEPTH_UNITS, (locale, unit) =>
+      diveSiteDepthText(diverTranslator(locale), { depthMinMeters: 6, maxDepthMeters: 18 }, unit),
+    ),
+  },
+  {
+    module: "unit-labels.ts",
     map: "TEMPERATURE_UNIT_KEYS",
     rows: codeRows(TEMPERATURE_UNITS, (locale, unit) =>
       temperatureText(diverTranslator(locale), 24, unit),
@@ -1193,6 +1206,8 @@ const SAME_IN_BOTH_LOCALES = new Map<string, string>([
   // translate. The spelled-out forms (`course.depthUnits.*`) do, and differ.
   ["DEPTH_UNIT_KEYS.meters", "the unit’s abbreviation, and the template is nothing else"],
   ["DEPTH_UNIT_KEYS.feet", "the unit’s abbreviation, and the template is nothing else"],
+  ["DEPTH_RANGE_KEYS.meters", "two numbers and the unit’s abbreviation, nothing else"],
+  ["DEPTH_RANGE_KEYS.feet", "two numbers and the unit’s abbreviation, nothing else"],
 ]);
 
 /** A rendered label that is nothing but a dotted key — what a missing key renders as. */

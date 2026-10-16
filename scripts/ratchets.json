@@ -370,6 +370,13 @@
           "src/db/export.test.ts": "1670 -> 1673",
           "src/i18n/label-maps.test.ts": "1327 -> 1334"
         }
+      },
+      {
+        "why": "label-maps table rows for DEPTH_RANGE_KEYS (#2426): a list that cannot live in a sibling",
+        "files": {
+          "src/db/readiness.test.ts": "1519 -> 1522",
+          "src/i18n/label-maps.test.ts": "1334 -> 1349"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -398,7 +405,7 @@
     "src/db/closeout.test.ts": 903,
     "src/db/course-forms.test.ts": 1274,
     "src/db/courses.test.ts": 1719,
-    "src/db/dive-sites.test.ts": 1174,
+    "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1285,
     "src/db/divers.test.ts": 3077,
     "src/db/erasure-coverage.test.ts": 1178,
@@ -410,7 +417,7 @@
     "src/db/notifications.test.ts": 1875,
     "src/db/orders.test.ts": 3162,
     "src/db/participant-types.test.ts": 1216,
-    "src/db/readiness.test.ts": 1519,
+    "src/db/readiness.test.ts": 1522,
     "src/db/recap.test.ts": 2138,
     "src/db/refunds.test.ts": 1154,
     "src/db/reminders.test.ts": 1078,
@@ -427,7 +434,7 @@
     "src/db/waiver-issue.test.ts": 1178,
     "src/db/waivers-medical.test.ts": 1004,
     "src/db/work-orders.test.ts": 1408,
-    "src/i18n/label-maps.test.ts": 1334,
+    "src/i18n/label-maps.test.ts": 1349,
     "src/lib/agency-check.test.ts": 930,
     "src/lib/dive-prep.test.ts": 1983,
     "src/lib/import.test.ts": 1459,
@@ -563,7 +570,7 @@
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 524,
     "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
     "src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx": 406,
-    "src/app/shop/[shopSlug]/dive-sites/page.tsx": 618,
+    "src/app/shop/[shopSlug]/dive-sites/page.tsx": 405,
     "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 506,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 779,
     "src/app/shop/[shopSlug]/gear/page.tsx": 479,

@@ -395,10 +395,16 @@ export function dockDayTimeline(
   return beats;
 }
 
+/** Deep enough that a site reads demanding on depth alone: the Advanced Open Water ceiling. */
+const DEMANDING_DEPTH_METERS = 30;
+
 export type SitePlanningFacts = {
   /** A `dive_site_difficulty` code, or null when the shop has not said. */
   difficultyLevel: DiveSiteDifficulty | null;
+  /** The shop's free-text depth note; the numbers below speak first. */
   depthRange: string | null;
+  /** The site's deepest point in metres; 30 m is where an Open Water ceiling ends. */
+  maxDepthMeters?: number | null;
   currentNote: string | null;
   /**
    * The shop's own answer, when it has given one. Null means "read it off the
@@ -433,6 +439,9 @@ export function siteFit(facts: SitePlanningFacts): { tone: SiteFitTone } {
   // longer the same quality of signal and are no longer treated alike.
   if (facts.difficultyLevel === "advanced") return { tone: "demanding" };
   if (facts.difficultyLevel === "beginner") return { tone: "welcoming" };
+  if (facts.maxDepthMeters != null && facts.maxDepthMeters >= DEMANDING_DEPTH_METERS) {
+    return { tone: "demanding" };
+  }
   const evidence = [facts.depthRange, facts.currentNote]
     .map((value) => value?.trim())
     .filter((value): value is string => Boolean(value));

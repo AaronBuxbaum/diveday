@@ -26,7 +26,7 @@ export const TURKS_CAICOS_GRAND_TURK: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Clouds of blue chromis hang over the reef, and a field of garden eels sits on a sandy clearing near the anchor.",
       difficultyLevel: "intermediate",
-      depthRange: "9–18 m (30–60 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       currentNote:
         "Little to no current is typical, most of all in summer; it can change, so carry an SMB.",
@@ -69,7 +69,7 @@ export const TURKS_CAICOS_GRAND_TURK: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Go slowly along the shelf; orange cup corals, nudibranchs and orange ball corallimorphs reward a close look.",
       difficultyLevel: "beginner",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       currentNote:
         "Do not dive while a ship is alongside or maneuvering. Tour and snorkel boats use this site, and cruise-ship days bring more traffic: listen for engines and surface with an SMB. Little to no current is typical, most of all in summer.",
@@ -108,7 +108,7 @@ export const TURKS_CAICOS_GRAND_TURK: DiveSiteTemplate[] = [
       marineLifeDescription:
         "View the black coral from the open side of the wall; nurse sharks rest on the sand patches and tiger groupers watch from ledges.",
       difficultyLevel: "intermediate",
-      depthRange: "11–30 m (35–100 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 30,
       currentNote:
         "Little to no current is typical, most of all in summer; it can change, so carry an SMB.",
@@ -141,7 +141,7 @@ export const TURKS_CAICOS_GRAND_TURK: DiveSiteTemplate[] = [
       marineLife: "Queen angelfish · ocean triggerfish · jacks · black coral",
       marineLifeDescription: "Angelfish and triggerfish work the wall edge.",
       difficultyLevel: "intermediate",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote:
         "Little to no current is typical, most of all in summer; it can change, so carry an SMB.",
@@ -175,7 +175,7 @@ export const TURKS_CAICOS_GRAND_TURK: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Ledges and wire coral hold groupers; the back reef near the boat is worth the slow return.",
       difficultyLevel: "intermediate",
-      depthRange: "11–30 m (35–100 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 30,
       currentNote:
         "Little to no current is typical, most of all in summer; it can change, so carry an SMB.",
@@ -210,7 +210,7 @@ export const TURKS_CAICOS_GRAND_TURK: DiveSiteTemplate[] = [
       marineLife: "Nassau grouper · blue tang · queen angelfish",
       marineLifeDescription: "The arch is the landmark; the reef around it is busy with fish.",
       difficultyLevel: "intermediate",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote:
         "Little to no current is typical, most of all in summer; it can change, so carry an SMB.",
@@ -250,7 +250,7 @@ export const TURKS_CAICOS_GRAND_TURK: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Hard coral covers the canyon walls; look under the big coral heads of the back reef for sleeping nurse sharks.",
       difficultyLevel: "intermediate",
-      depthRange: "12–26 m (40–85 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 26,
       currentNote:
         "Ships dock at the Grand Turk Cruise Center to the south, so do not dive while a ship is alongside or maneuvering, carry an SMB, and listen for engines. Little to no current is typical, most of all in summer.",

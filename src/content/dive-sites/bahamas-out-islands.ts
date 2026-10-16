@@ -27,7 +27,7 @@ export const BAHAMAS_OUT_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Groupers come in close and stingrays work the sand flat. Goatfish hover over the edge of the reef and turtles are common.",
       difficultyLevel: "advanced",
-      depthRange: "11–30 m (35–100 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 30,
       currentNote:
         "Current not documented; ask the crew on the day. The boat anchors on a sand flat close to the lip of the wall, so keep track of the wall edge and your depth.",
@@ -80,7 +80,7 @@ export const BAHAMAS_OUT_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Turtles are a common sight here. Stingrays rest on the sand and groupers stay close to the reef.",
       difficultyLevel: "advanced",
-      depthRange: "11–30 m (35–100 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 30,
       currentNote:
         "Current not documented; ask the crew on the day. The wall drops vertically from the reef top.",
@@ -127,7 +127,7 @@ export const BAHAMAS_OUT_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Grunts hang over the reef top and groupers and snappers come close. Sand patches hold conch and yellowhead jawfish.",
       difficultyLevel: "intermediate",
-      depthRange: "12–18 m (40–60 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 18,
       currentNote:
         "Current not documented; ask the crew on the day. The mooring is a fixed line with a float ball to pick up, beside the edge of the wall.",
@@ -172,7 +172,7 @@ export const BAHAMAS_OUT_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schoolmasters crowd the north end of the ridge. The outer face of the ridge is thick with sponges and soft corals.",
       difficultyLevel: "advanced",
-      depthRange: "11–30 m (35–100 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 30,
       currentNote:
         "Current is frequent, from the tide running over nearby Gardeners Reef, so carry an SMB and ask the crew how it is running before you enter. The boat may sit over the shallow reef or over the site as the wind shifts. In a strong flow stay on the mooring line and end the dive there; do not enter the notch to escape current.",
@@ -218,7 +218,7 @@ export const BAHAMAS_OUT_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The shallow rim and sand around it hold young reef fish, stingrays and the odd turtle. Look along the limestone walls for sponges and small corals.",
       difficultyLevel: "advanced",
-      depthRange: "5–40 m (15–130 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 40,
       currentNote:
         "The bay is sheltered and calm, and no current is documented. Entry is from a sand beach, and the bottom drops away within a few kicks of the shore. The halocline is reported between 15 and 20 m and its depth varies with rain; the water below it holds little oxygen. Do not dive while a freediving event or training session is running; ask the guide first.",
@@ -260,7 +260,7 @@ export const BAHAMAS_OUT_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Reef sharks circle the arena at close range. Groupers, jacks, barracuda and stingrays share the sand around the coral heads.",
       difficultyLevel: "intermediate",
-      depthRange: "6–9 m (20–30 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 9,
       currentNote:
         "Current not documented; ask the crew on the day. The site is on the lee side and the sand bottom can cloud when the sharks stir it up. Shark numbers vary with the season and the day, and the west-facing site can turn choppy during strong fronts.",
@@ -300,7 +300,7 @@ export const BAHAMAS_OUT_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Reef sharks and turtles patrol the wall. Look for angelfish and stingrays on the top of the reef.",
       difficultyLevel: "advanced",
-      depthRange: "14–30 m (45–100 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 30,
       currentNote:
         "Current is generally mild by one account, but the wall faces open water, so carry an SMB and ask the crew how it is running. One mooring sits by a cave system and tunnel: overhead; stay out.",

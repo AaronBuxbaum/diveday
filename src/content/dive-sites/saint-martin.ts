@@ -28,7 +28,7 @@ export const SAINT_MARTIN: DiveSiteTemplate[] = [
       conservationNote:
         "Creole Rock lies inside the Saint-Martin nature reserve. Boats use the reserve’s moorings only, with white buoys marked for diving clubs. Landing on the islet or the beach and climbing the rock are forbidden, because seabirds nest on it, and so is any motorized underwater device within 30 m of the beach.",
       difficultyLevel: "beginner",
-      depthRange: "1–6 m (4–20 ft)",
+      depthMinMeters: 1,
       maxDepthMeters: 6,
       currentNote:
         "Shallow and protected. Boats gather on the reserve’s moorings around the rock, so listen for engines and come up the mooring line. Current is not documented; ask the crew on the day.",
@@ -70,7 +70,7 @@ export const SAINT_MARTIN: DiveSiteTemplate[] = [
       conservationNote:
         "Tintamarre lies inside the Saint-Martin nature reserve. Dive boats use the reserve’s white club moorings, never an anchor on the reef.",
       difficultyLevel: "intermediate",
-      depthRange: "15–25 m (50–82 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 25,
       currentNote:
         "Open water off Tintamarre. Current is not documented; carry an SMB and ask the crew on the day.",

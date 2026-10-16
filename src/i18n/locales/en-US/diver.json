@@ -50,6 +50,8 @@
     "units": {
       "meters": "{value} m",
       "feet": "{value} ft",
+      "metersRange": "{min}–{max} m",
+      "feetRange": "{min}–{max} ft",
       "celsius": "{value}°C",
       "fahrenheit": "{value}°F"
     }

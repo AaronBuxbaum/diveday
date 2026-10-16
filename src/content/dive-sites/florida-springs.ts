@@ -23,7 +23,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Nothing swims here to speak of. The dive is the light, the rock, and the fossil beds in the walls.",
       difficultyLevel: "beginner",
-      depthRange: "5–16 m (15–54 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 16,
       currentNote: "No current. Confined and calm; the only variable is how many divers are in it.",
       divePlan:
@@ -66,7 +66,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Softshell turtles, bream, and Virgil, the resident softshell turtle, who has been here longer than most of the instructors.",
       difficultyLevel: "intermediate",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote: "No current at all. Depth and the overhead are what the plan is about.",
       divePlan:
@@ -109,7 +109,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Longnose gar hang at the line where the clear spring meets the dark river water. Worth the wait.",
       difficultyLevel: "beginner",
-      depthRange: "4–16 m (12–54 ft)",
+      depthMinMeters: 4,
       maxDepthMeters: 16,
       currentNote:
         "Spring outflow pushes against you on the way in and carries you out. After heavy rain the river backs into the basin and the visibility goes; the park closes the springs when that happens, so call first.",
@@ -152,7 +152,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Largemouth bass hang at the edge of the clear water where it meets the swamp.",
       difficultyLevel: "beginner",
-      depthRange: "3–15 m (10–50 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 15,
       currentNote:
         "Gentle outflow. Visibility drops fast after heavy rain when the swamp pushes back in.",
@@ -190,7 +190,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The dive is the water and the vents. Manatees crowd in during winter, when scuba is not allowed here.",
       difficultyLevel: "beginner",
-      depthRange: "1–5 m (3–16 ft)",
+      depthMinMeters: 1,
       maxDepthMeters: 5,
       currentNote:
         "Gentle spring flow. Refuge rules change with the season, so check them before the dive.",
@@ -231,7 +231,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Softshell turtles work the grass beds, and the sand boils where the spring vents push up through the bottom.",
       difficultyLevel: "beginner",
-      depthRange: "2–8 m (5–26 ft)",
+      depthMinMeters: 2,
       maxDepthMeters: 8,
       currentNote:
         "A steady downstream drift, so this is a one-way dive. The river is busy with boats, kayaks and tubers all day: every group tows a dive flag and surfaces beside it, never in the channel.",
@@ -276,7 +276,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Turtles ride the run, and where the tannic river slides over the clear water the light turns to stained glass.",
       difficultyLevel: "intermediate",
-      depthRange: "3–15 m (10–50 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 15,
       currentNote:
         "Strong outflow from the cave opening at the bottom of the Ear, and a layer of dark tannic river water often sits over the basin. After heavy rain the Santa Fe floods the springs and the park closes them, so call first.",
@@ -327,7 +327,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Little fish dart over the sand, and native grasses wave in the outflow near the vent.",
       difficultyLevel: "beginner",
-      depthRange: "1–8 m (3–27 ft)",
+      depthMinMeters: 1,
       maxDepthMeters: 8,
       currentNote:
         "Strong flow straight out of the vent; the rest of the pool is calm. It is also the forest's favorite swimming hole, so expect swimmers overhead on a warm day.",
@@ -365,7 +365,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
         "The largest spring on the St. Johns River and a winter refuge for manatees. From spring to autumn the run is open to divers, with the deep blue vent at its head.",
       marineLife: "Freshwater fish · turtles",
       difficultyLevel: "intermediate",
-      depthRange: "3–18 m (10–60 ft)",
+      depthMinMeters: 3,
       // Capped at the park's 60 ft limit for Open Water divers; the vent drops far deeper, into cave.
       maxDepthMeters: 18,
       currentNote:
@@ -402,7 +402,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       marineLife: "Freshwater fish · turtles",
       marineLifeDescription: "Fish and turtles gather in the run between the spring and the river.",
       difficultyLevel: "intermediate",
-      depthRange: "1–21 m (3–70 ft)",
+      depthMinMeters: 1,
       maxDepthMeters: 21,
       currentNote:
         "Calm in the bowl. When the Suwannee runs high, dark river water backs into the spring and the visibility can vanish, so call the park first. Past the end of the run you are on the river, with boats on it: tow a dive flag.",
@@ -441,7 +441,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
         "A first-magnitude spring that boils up blue among the cypress and runs a short way into the Suwannee. In winter manatees come up the run for the warm water, which is how the park got its name.",
       marineLife: "Manatees in winter · fish · turtles",
       difficultyLevel: "intermediate",
-      depthRange: "2–12 m (5–40 ft)",
+      depthMinMeters: 2,
       maxDepthMeters: 12,
       currentNote:
         "Very strong outflow at the vent, and divers' bubbles stir up the iron bacteria that cut the visibility. In winter the park closes the run to boats and can keep divers out of the headspring while manatees are in it. The run opens onto the Suwannee: tow a flag past the swimming area.",
@@ -479,7 +479,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
         "A duckweed-covered sinkhole a few steps from the Manatee Springs headspring, and a window into the cave system beneath the park. Under the green mat the water opens into a clear basin, lit from above as divers' bubbles part the weed.",
       marineLife: "Freshwater fish · turtles",
       difficultyLevel: "intermediate",
-      depthRange: "3–18 m (10–60 ft)",
+      depthMinMeters: 3,
       // The cavern zone runs to about 21 m; that part is for cavern-certified divers.
       maxDepthMeters: 21,
       currentNote:
@@ -521,7 +521,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Turtles work the limestone and fallen cypress logs, and in the cold months manatees come up from the river.",
       difficultyLevel: "beginner",
-      depthRange: "1–6 m (3–21 ft)",
+      depthMinMeters: 1,
       maxDepthMeters: 7,
       currentNote:
         "Gentle except right at the boil. Diving is in the designated swimming area only. When the Suwannee runs high, call ahead about the visibility.",
@@ -558,7 +558,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
         "A duckweed-covered sinkhole in Peacock Springs State Park, and the only basin in the park Open Water divers may use. Below the green mat, beams of light fall into a clear basin over the doorway to one of Florida's great underwater caves.",
       marineLife: "Freshwater fish · turtles",
       difficultyLevel: "intermediate",
-      depthRange: "3–18 m (10–60 ft)",
+      depthMinMeters: 3,
       // Capped at the open basin's floor; the cavern zone below, to 30 m, is gated by card.
       maxDepthMeters: 21,
       currentNote:
@@ -598,7 +598,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
         "The only first-magnitude spring in Ichetucknee Springs State Park: a deep blue pool where a limestone shaft drops about 12 m to the mouth of a cave. 22 °C all year.",
       marineLife: "Turtles · freshwater fish",
       difficultyLevel: "intermediate",
-      depthRange: "2–12 m (7–40 ft)",
+      depthMinMeters: 2,
       maxDepthMeters: 12,
       currentNote:
         "A powerful outflow: about 67 million gallons a day push up the shaft, more than most swimmers can make headway against. Scuba is allowed here only, never in the river or the other springs.",
@@ -637,7 +637,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
         "A sinkhole lake about 75 m across and 23 m deep in the woods of Wakulla Springs State Park, for decades the local swimming hole. Restored since the park took it in, it is now a quiet, green-water window into the aquifer.",
       marineLife: "Turtles · freshwater fish",
       difficultyLevel: "intermediate",
-      depthRange: "3–23 m (10–77 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 23,
       currentNote:
         "Still water, no current. The sink sits at the end of a trail of about 2 km from the trailhead on Highway 61, so plan how the gear gets there.",
@@ -668,7 +668,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       marineLife: "Freshwater · fossils in the walls",
       marineLifeDescription: "Little lives here. The dive is the rock and the fossils in it.",
       difficultyLevel: "advanced",
-      depthRange: "6–32 m (20–105 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 32,
       currentNote:
         "No current, but this is an overhead dive in the dark: a primary and a backup light are required. The passage continues past the cavern as cave, for cave-trained divers only.",
@@ -701,7 +701,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
         "A private dive park in the Panhandle built around a clear spring basin that bottoms out at 15 m at the mouth of a cavern. 20 °C all year, cooler than the springs further south.",
       marineLife: "Freshwater fish",
       difficultyLevel: "beginner",
-      depthRange: "2–15 m (5–50 ft)",
+      depthMinMeters: 2,
       maxDepthMeters: 15,
       currentNote:
         "Gentle flow out of the cavern. The water is cool for a spring, so most divers wear a 5–7 mm suit. Bring proof of certification.",
@@ -740,7 +740,7 @@ export const FLORIDA_SPRINGS: DiveSiteTemplate[] = [
       marineLife: "Manatees · fish",
       marineLifeDescription: "Manatees come to the warm water here, most of all in winter.",
       difficultyLevel: "intermediate",
-      depthRange: "2–20 m (6–65 ft)",
+      depthMinMeters: 2,
       maxDepthMeters: 20,
       currentNote:
         "Strong flow at the vent, and bay water sometimes clouds the visibility. Kings Bay is busy with boats: tow a dive flag and surface beside it.",

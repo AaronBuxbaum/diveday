@@ -29,7 +29,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Hard and soft corals and whip corals crowd the wall, and cleaner shrimp work the cracks.",
       difficultyLevel: "intermediate",
-      depthRange: "5–30 m (16–98 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "The wall is exposed to open ocean. Operators dive it in the morning, when wind and waves are lowest. Current is not documented; ask the crew on the day.",
@@ -73,7 +73,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       conservationNote:
         "Staghorn coral nurseries grow close by. Look, but keep hands and fins away from them.",
       difficultyLevel: "beginner",
-      depthRange: "3–12 m (10–39 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 12,
       currentNote:
         "Boats leave from the beach; listen for engines, surface with an SMB. Current is rare here, according to a local operator.",
@@ -116,7 +116,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Garden eels dot the sand as you leave Three Rocks, and a sand snake eel lies low with only its eyes showing.",
       difficultyLevel: "intermediate",
-      depthRange: "9–24 m (30–79 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 24,
       currentNote:
         "Boats leave from the beach; listen for engines, surface with an SMB. Current not documented; ask the crew on the day.",
@@ -162,7 +162,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools of grunts circle the pinnacle, and big barrel sponges line the slope.",
       difficultyLevel: "intermediate",
-      depthRange: "9–30 m (30–98 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote:
         "Boats leave from the beach; listen for engines, surface with an SMB. Current is rare, according to a local operator.",
@@ -211,7 +211,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Frogfish and seahorses hide in the coral, and barracuda and rays like the rocky ground close to the wall.",
       difficultyLevel: "intermediate",
-      depthRange: "5–20 m (16–66 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 20,
       currentNote:
         "Boats leave from the beach; listen for engines, surface with an SMB. Surge pushes in close to the wall and between the fallen rocks.",
@@ -254,7 +254,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Fish stack up at the top of the wall, and more hide beneath the ledges when you drop over the edge.",
       difficultyLevel: "intermediate",
-      depthRange: "5–20 m (16–66 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 20,
       currentNote:
         "Boats leave from the beach; listen for engines, surface with an SMB. Surge is reported close to the wall at neighboring La Puntilla and can reach here. Current not documented; ask the crew on the day.",
@@ -299,7 +299,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Angelfish live on the slope, and a large turtle may make an appearance.",
       difficultyLevel: "intermediate",
-      depthRange: "3–30 m (10–98 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 30,
       currentNote:
         "Current is rare on the shallow Larimar I, according to local operators. It is not documented for the deeper reef, so ask the crew on the day.",
@@ -339,7 +339,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLife: "Spotted eagle ray · yellow stingray · French grunts · sea fans",
       marineLifeDescription: "Stingrays rest on the ledges, and eagle rays pass out in the blue.",
       difficultyLevel: "advanced",
-      depthRange: "20–30 m (66–98 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 30,
       currentNote:
         "Current not documented. The wall faces open water, so carry an SMB and ask the crew on the day.",
@@ -377,7 +377,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A green moray and a large barracuda live on the wreck, and stingrays rest on the sand near the stern.",
       difficultyLevel: "advanced",
-      depthRange: "35–38 m (115–125 ft)",
+      depthMinMeters: 35,
       maxDepthMeters: 38,
       currentNote:
         "Open ocean: current and heavy winter swell touch the wreck. Carry an SMB, and plan the ascent on the mooring line or the SMB.",
@@ -428,7 +428,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Turtles and shoals of jacks and wrasse pass the rock, and sponges and gorgonians cover its sides.",
       difficultyLevel: "advanced",
-      depthRange: "7–40 m (23–131 ft)",
+      depthMinMeters: 7,
       maxDepthMeters: 40,
       currentNote:
         "Strong currents push divers around the rock, and the dive needs a calm sea. Carry an SMB and stay close to the rock.",
@@ -471,7 +471,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLife: "Hawksbill turtle · porcupinefish · coral reef fish",
       marineLifeDescription: "Turtles and porcupinefish pass along the slopes, in clear water.",
       difficultyLevel: "intermediate",
-      depthRange: "5–30 m (16–98 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Usually calm in this protected area, according to a local operator, though it can change. Carry an SMB.",
@@ -509,7 +509,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLife: "French angelfish · yellowtail snapper · French grunts",
       marineLifeDescription: "Reef fish and coral cover the wreckage.",
       difficultyLevel: "beginner",
-      depthRange: "12–15 m (39–49 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 15,
       currentNote:
         "Low, according to local operators. The bow breaks the surface: check the sea state before boarding; surge can reach the stern.",
@@ -544,7 +544,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLife: "Spiny lobster · tropical reef fish · hard coral",
       marineLifeDescription: "Lobster and fish hide in the gaps between the wreck and the reef.",
       difficultyLevel: "intermediate",
-      depthRange: "5–15 m (16–49 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 15,
       currentNote:
         "Medium to strong, according to local operators. Carry an SMB and stay close to the group.",
@@ -588,7 +588,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Turtles, lobster and squid are often seen between and over the ridges.",
       difficultyLevel: "beginner",
-      depthRange: "10–12 m (33–39 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 12,
       currentNote: "Low, according to local operators.",
       divePlan:
@@ -621,7 +621,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLife: "Spiny lobster · cleaner shrimp · coral fish",
       marineLifeDescription: "Lobster and cleaner shrimp tuck into the rock along the reef.",
       difficultyLevel: "beginner",
-      depthRange: "5–10 m (16–33 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 10,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -653,7 +653,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Ask the crew what the reef is showing that week; sightings are not documented.",
       difficultyLevel: "beginner",
-      depthRange: "10–12 m (33–39 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 12,
       currentNote: "Low, according to local operators.",
       divePlan:
@@ -686,7 +686,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Ask the crew what the reef is showing that week; sightings are not documented.",
       difficultyLevel: "beginner",
-      depthRange: "5–12 m (16–39 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 12,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -721,7 +721,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Silvery fish gather along her sides and in the cracks, and rays and garden eels settle in the sand channels.",
       difficultyLevel: "beginner",
-      depthRange: "7–12 m (23–39 ft)",
+      depthMinMeters: 7,
       maxDepthMeters: 12,
       currentNote:
         "Minimal on a recent visit. The wreck lies off the Bayahibe waterfront, so surface with an SMB and listen for engines. Storms damage the shallow wreck, so check the sea state before boarding.",
@@ -765,7 +765,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barracuda and schools of fish circle the structure, and eagle rays visit.",
       difficultyLevel: "advanced",
-      depthRange: "15–40 m (49–131 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 40,
       currentNote:
         "Surface current is common, and a strong current can cross the deck at depth, so carry an SMB. The wreck lies half a mile off Dominicus, so listen for engines.",
@@ -804,7 +804,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Look in the sponges for seahorses and in the coral holes for morays and lobster, and over the sand for rays.",
       difficultyLevel: "beginner",
-      depthRange: "5–12 m (16–39 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 12,
       currentNote: "Low, according to local operators.",
       divePlan:
@@ -852,7 +852,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Lobster and porcupinefish sit under the coral, and younger fish stay in the reef fingers.",
       difficultyLevel: "intermediate",
-      depthRange: "12–18 m (39–59 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 18,
       currentNote: "Occasionally strong, and the crew may run it as a drift. Carry an SMB.",
       divePlan:
@@ -891,7 +891,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       conservationNote:
         "The reef lies inside Cotubanamá National Park (Parque Nacional del Este): no fishing, no anchoring. Ask the shop whether a park fee applies to the trip.",
       difficultyLevel: "beginner",
-      depthRange: "8–18 m (26–59 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 18,
       currentNote:
         "Minimal, according to local operators, with a light current at times that helps the return along the reef. Carry an SMB.",
@@ -942,7 +942,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       conservationNote:
         "The reef lies at the west end of Cotubanamá National Park (Parque Nacional del Este). Ask the shop whether a park fee applies to the trip.",
       difficultyLevel: "beginner",
-      depthRange: "12–16 m (39–52 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 16,
       currentNote: "Light to medium, according to local operators. Carry an SMB.",
       divePlan:
@@ -986,7 +986,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       conservationNote:
         "A coral restoration site run with FUNDEMAR. Keep hands and fins off the ropes, tables and sculptures.",
       difficultyLevel: "beginner",
-      depthRange: "10–14 m (33–46 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 14,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -1030,7 +1030,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       marineLife: "Yellow stingray · reef fish · coral",
       marineLifeDescription: "Rays rest on the sand side, and the coral side holds reef fish.",
       difficultyLevel: "beginner",
-      depthRange: "6–9 m (20–30 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 9,
       currentNote:
         "Current not documented; ask the crew on the day. Boats work off the Bayahibe waterfront, so listen for engines.",
@@ -1069,7 +1069,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       conservationNote:
         "Catalina Island is a natural park with limited access. Ask the shop whether a park fee applies to the trip.",
       difficultyLevel: "intermediate",
-      depthRange: "2–18 m (7–59 ft)",
+      depthMinMeters: 2,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -1118,7 +1118,7 @@ export const DOMINICAN_REPUBLIC: DiveSiteTemplate[] = [
       conservationNote:
         "Catalina Island is a natural park with limited access. Ask the shop whether a park fee applies to the trip.",
       difficultyLevel: "beginner",
-      depthRange: "8–12 m (26–39 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 12,
       currentNote: "Usually light; it can change, so carry an SMB.",
       divePlan:

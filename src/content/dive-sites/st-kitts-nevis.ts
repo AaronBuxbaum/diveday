@@ -34,7 +34,7 @@ export const ST_KITTS_NEVIS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools of snapper hang over the wreck, rays work the sand around it, and turtles and octopus use the gaps in the plating.",
       difficultyLevel: "beginner",
-      depthRange: "8–14 m (25–45 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 14,
       currentNote:
         "Basseterre harbor is close, so ships move nearby: no diving while a ship is under way, carry an SMB and listen for engines. Operators report no current. Stay outside the hull.",
@@ -76,7 +76,7 @@ export const ST_KITTS_NEVIS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Morays look out from the plating everywhere, and squirrelfish crowd the shadows.",
       difficultyLevel: "beginner",
-      depthRange: "11–18 m (35–60 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 18,
       currentNote:
         "The wreck lies near the harbor anchorage, so ships move nearby: no diving while a ship is under way, carry an SMB and listen for engines. Current is minimal. Stay outside the hull; the plating is broken and sharp.",
@@ -119,7 +119,7 @@ export const ST_KITTS_NEVIS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Reef sharks are often seen; sightings vary. Wrasse and barracuda fill the water above the reef.",
       difficultyLevel: "advanced",
-      depthRange: "15–40 m (50–130 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 40,
       currentNote:
         "Open water about 3 km out, with mild current reported. Carry an SMB. Medical care is far; confirm the boat's oxygen and plan.",
@@ -168,7 +168,7 @@ export const ST_KITTS_NEVIS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools of jacks and wrasse cover the reef top. Reef sharks are often seen on the slope below; sightings vary.",
       difficultyLevel: "advanced",
-      depthRange: "15–40 m (50–130 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 40,
       currentNote:
         "Open water about 3 km out, with mild current reported. Carry an SMB. Medical care is far; confirm the boat's oxygen and plan.",
@@ -214,7 +214,7 @@ export const ST_KITTS_NEVIS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Rays lie buried at the edge of the reef and turtles are common. The reef rewards a slow pass.",
       difficultyLevel: "beginner",
-      depthRange: "11–18 m (35–60 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 18,
       currentNote: "Usually light; it can change, so carry an SMB.",
       divePlan:
@@ -248,7 +248,7 @@ export const ST_KITTS_NEVIS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The sand strip is the place to look for garden eels, and the reef edges hold turtles and lobster.",
       difficultyLevel: "intermediate",
-      depthRange: "11–21 m (35–70 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 21,
       currentNote: "Usually light; it can change, so carry an SMB.",
       divePlan: "Work along one reef, cross the sand strip, and return along the other.",
@@ -285,7 +285,7 @@ export const ST_KITTS_NEVIS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Lobsters fill the cracks and rays glide through clear water. There is little hard coral, so the fans and sponges do the work.",
       difficultyLevel: "intermediate",
-      depthRange: "6–25 m (20–80 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 25,
       currentNote: "Usually light; it can change, so carry an SMB.",
       divePlan:

@@ -10,7 +10,7 @@ export const TEMPLATE_FIELD_KEYS: Record<DiveSiteTemplateField, StaffMessageKey>
   marineLife: "diveSites.edit.templateUpdates.fields.marineLife",
   marineLifeDescription: "diveSites.edit.templateUpdates.fields.marineLifeDescription",
   difficultyLevel: "diveSites.edit.templateUpdates.fields.difficultyLevel",
-  depthRange: "diveSites.edit.templateUpdates.fields.depthRange",
+  depthMinMeters: "diveSites.edit.templateUpdates.fields.depthRange",
   maxDepthMeters: "diveSites.edit.templateUpdates.fields.maxDepthMeters",
   expectedBottomTimeMinutes: "diveSites.edit.templateUpdates.fields.expectedBottomTimeMinutes",
   currentNote: "diveSites.edit.templateUpdates.fields.currentNote",

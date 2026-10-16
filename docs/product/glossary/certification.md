@@ -508,10 +508,14 @@
   one is a diver with a booking, a card and a place on the manifest, and nothing about them is
   recorded on `waiver_records`.
 - **Site maximum depth** — `dive_sites.max_depth_meters`, the site's deepest point, stored in
-  **metres always** whatever unit the shop reads. Distinct from `depth_range`, the free-text
-  briefing prose that lives beside it: the number exists solely to be comparable to a
-  certification's depth ceiling. A trip's depth is the deepest site it visits, across the primary
-  site *and* every ordered dive.
+  **metres always** whatever unit the shop reads: the number a certification's depth ceiling is
+  compared against. The **site depth range** is that number plus `dive_sites.depth_min_meters`, the
+  shallow end, also in metres; a shallow end needs the maximum beside it and cannot sit below it.
+  Every briefing prints the range through the shop's depth unit ("15–28 m", "49–92 ft"), so one
+  unit shows on a page and a shop that flips its setting moves every site with it. `depth_range`
+  survives as a free-text **depth note** (the migration cleared it where it could read a range out
+  of it); it is shown only where a site records no depth, so it never names a second unit. A trip's
+  depth is the deepest site it visits, across the primary site *and* every ordered dive.
 - **Depth ceiling** — how deep a certification trains a diver to go: Open Water 18 m/60 ft,
   Advanced Open Water 30 m/100 ft, Rescue 30 m (a skills course, not a deeper one), Divemaster and
   Instructor 40 m — the recreational limit. A verified **Deep** specialty lifts an Open Water diver

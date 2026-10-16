@@ -29,7 +29,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Snapper and grunts pack the cleft called the Mixing Bowl. Rays and yellowhead jawfish work the sand beside the coral fingers.",
       difficultyLevel: "advanced",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -76,7 +76,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A grouper sometimes slips inside a big barrel sponge, and the cleaning stations reward a slow look.",
       difficultyLevel: "advanced",
-      depthRange: "11–30 m (35–100 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -125,7 +125,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The top of the wall is a small-animal site: seahorses, feather stars, cleaner shrimp and morays turn up if you look slowly.",
       difficultyLevel: "advanced",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -180,7 +180,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Grunts and snapper school over the hard pan. The wall carries basket stars and sea goddess slugs, and morays live in the canyon.",
       difficultyLevel: "advanced",
-      depthRange: "10–30 m (35–100 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 30,
       currentNote:
         "Nutrient-rich current runs along the canyons at times. Carry an SMB and agree the pickup with the crew.",
@@ -217,7 +217,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Resident groupers keep divers company, and seahorses and lettuce-leaf slugs reward a close look.",
       difficultyLevel: "advanced",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -259,7 +259,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Neck crabs and decorator crabs live on the wall, and flamingo tongue shells are common. Bring a macro lens.",
       difficultyLevel: "advanced",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -296,7 +296,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Rays come and go in the open water over the sand; nurse sharks patrol among the surgeonfish and groupers.",
       difficultyLevel: "advanced",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -339,7 +339,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The sand plain is the stage; the eels pull back as you approach, so keep still and let them come out again.",
       difficultyLevel: "advanced",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -375,7 +375,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Groupers, turtles and rays are the animals to look for on the spurs and sand.",
       difficultyLevel: "advanced",
-      depthRange: "9–24 m (30–80 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 24,
       currentNote:
         "Current not documented; ask the crew on the day. The south side offers diving whichever way the wind blows.",
@@ -409,7 +409,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Watch the sand floor for rays and the spurs for groupers and turtles.",
       difficultyLevel: "advanced",
-      depthRange: "9–24 m (30–80 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 24,
       currentNote:
         "Current not documented; ask the crew on the day. The south side offers diving whichever way the wind blows.",
@@ -443,7 +443,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Turtles and angelfish work the spurs, with trumpetfish and jacks passing.",
       difficultyLevel: "advanced",
-      depthRange: "11–24 m (35–80 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 24,
       currentNote:
         "Current not documented; ask the crew on the day. The south side offers diving whichever way the wind blows.",
@@ -478,7 +478,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLife: "Grouper · turtles · rays · jacks",
       marineLifeDescription: "Groupers and jacks hold near the mooring, and rays cross the sand.",
       difficultyLevel: "advanced",
-      depthRange: "20–24 m (65–80 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 24,
       currentNote:
         "Current not documented; ask the crew on the day. The south side offers diving whichever way the wind blows.",
@@ -514,7 +514,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The wall carries a thick covering of sponges and corals with plenty of fish.",
       difficultyLevel: "advanced",
-      depthRange: "23–30 m (75–100 ft)",
+      depthMinMeters: 23,
       maxDepthMeters: 30,
       currentNote:
         "Current not documented; ask the crew on the day. The south side is usually the sheltered side in north wind.",
@@ -564,7 +564,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Larger animals pass along the corridor from deeper water, and stingrays and turtles may swim close.",
       difficultyLevel: "advanced",
-      depthRange: "14–30 m (45–100 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 30,
       currentNote:
         "There may be more current at the east end of the island than the west. Carry an SMB and agree the pickup with the crew.",
@@ -615,7 +615,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sponges, including orange elephant ear, dress the wall, and small animals live around the wreck remains.",
       difficultyLevel: "advanced",
-      depthRange: "14–30 m (45–100 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 30,
       currentNote: "Little current is reported on Cayman Brac's north side.",
       divePlan:
@@ -664,7 +664,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLife: "Pillar coral · hawksbill turtles · barrel sponges",
       marineLifeDescription: "Hawksbills graze the barrel sponges on the buttresses.",
       difficultyLevel: "advanced",
-      depthRange: "15–30 m (50–100 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -706,7 +706,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Cleaning stations along the channels are good places to watch fish queue up.",
       difficultyLevel: "advanced",
-      depthRange: "15–30 m (50–100 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -743,7 +743,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLife: "Barrel sponges · schooling fish · turtles",
       marineLifeDescription: "Fish gather around the sponges and corals on the face.",
       difficultyLevel: "advanced",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -780,7 +780,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The pillar coral is the landmark. Check the base for small residents.",
       difficultyLevel: "beginner",
-      depthRange: "9–15 m (30–50 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 15,
       currentNote: "Current not documented; ask the crew on the day.",
       fitTone: "welcoming",
@@ -815,7 +815,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Reef fish gather over the outer and inner reef, and sand lies between them.",
       difficultyLevel: "intermediate",
-      depthRange: "6–15 m (20–50 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 15,
       currentNote:
         "Close to the West End dock, so listen for boat traffic and carry an SMB. Check the entry and the sea first, as the shore here is ironshore. Current not documented; ask the crew on the day.",
@@ -852,7 +852,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barracuda and a goliath grouper live around the wreck, and the stern deck and guns are the features to look for.",
       difficultyLevel: "advanced",
-      depthRange: "14–34 m (45–110 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 34,
       currentNote:
         "Storms and surge have twisted and broken the ship, and she has largely collapsed amidships. Stay clear of the collapsed sections and out of the hull. Current not documented; ask the crew on the day.",
@@ -903,7 +903,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The schools move together over the heads, and lobster hide in the reef beneath.",
       difficultyLevel: "beginner",
-      depthRange: "8–11 m (25–35 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 11,
       currentNote: "Current not documented; ask the crew on the day.",
       fitTone: "welcoming",
@@ -932,7 +932,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLife: "Pillar coral · elkhorn coral · Nassau grouper",
       marineLifeDescription: "Nassau grouper show up among the corals.",
       difficultyLevel: "intermediate",
-      depthRange: "9–18 m (30–60 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -962,7 +962,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLife: "Large sponges · sand chutes",
       marineLifeDescription: "Sponges dominate the wall.",
       difficultyLevel: "advanced",
-      depthRange: "15–30 m (50–100 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day. Carry an SMB.",
       divePlan:
@@ -1001,7 +1001,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLife: "Wall sponges · reef fish",
       marineLifeDescription: "The wall is the show; look out into the blue as you drift along it.",
       difficultyLevel: "advanced",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       currentNote:
         "There may be more current here than on the west side of the island. Drift the wall, carry an SMB and agree the pickup with the crew.",
@@ -1041,7 +1041,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLife: "Wall sponges · reef fish",
       marineLifeDescription: "The wall is the show; look out into the blue as you drift along it.",
       difficultyLevel: "advanced",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       currentNote:
         "There may be more current here than on the west side of the island. Drift the wall, carry an SMB and agree the pickup with the crew.",
@@ -1082,7 +1082,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLife: "Wall sponges · reef fish",
       marineLifeDescription: "The wall is the show; look out into the blue as you drift along it.",
       difficultyLevel: "advanced",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       currentNote:
         "There may be more current here than on the west side of the island. Drift the wall, carry an SMB and agree the pickup with the crew.",
@@ -1123,7 +1123,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sailfin blennies and juvenile fish fill the shallows, and morays either hide in the overhangs or swim free.",
       difficultyLevel: "advanced",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -1163,7 +1163,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Check the vase sponges for goby cleaners, crinoids and arrow crabs. Eagle rays, turtles and sharks pass in the blue.",
       difficultyLevel: "advanced",
-      depthRange: "11–30 m (35–100 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -1203,7 +1203,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Squirrelfish and lobsters sit in the deep crevices, and garden eels retreat into the sand as you approach.",
       difficultyLevel: "advanced",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -1243,7 +1243,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Gray, queen and French angelfish and parrotfish work the mini wall. Reef sharks cruise off the main wall.",
       difficultyLevel: "advanced",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -1286,7 +1286,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Conch sit on the sand, and the coral heads suit wide-angle photographs.",
       difficultyLevel: "advanced",
-      depthRange: "17–30 m (55–100 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 30,
       currentNote:
         "The deeper wall is often paired with a current. Carry an SMB and agree the pickup with the crew.",
@@ -1327,7 +1327,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Friendly queen triggerfish and French angelfish keep company, and groupers show up too.",
       difficultyLevel: "advanced",
-      depthRange: "8–30 m (25–100 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -1374,7 +1374,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Jawfish and sand tilefish live in the rubble, and sharks, rays and turtles pass from time to time.",
       difficultyLevel: "advanced",
-      depthRange: "8–30 m (25–100 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -1416,7 +1416,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Jawfish and sand tilefish live in the rubble, and garden eels sink into the sand as you approach.",
       difficultyLevel: "advanced",
-      depthRange: "8–30 m (25–100 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -1459,7 +1459,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Spiny, rock and slipper lobsters hide here, and yellowtail snapper and bluestriped grunts school over the fingers.",
       difficultyLevel: "advanced",
-      depthRange: "8–30 m (25–100 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -1500,7 +1500,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sand tilefish, octopus and yellowhead jawfish live in the rubble around the anchors.",
       difficultyLevel: "advanced",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -1547,7 +1547,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Tarpon, eagle rays and sometimes sharks pass the wall, with moray eels, jawfish and, at night, octopus around the rubble.",
       difficultyLevel: "advanced",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -1589,7 +1589,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Move toward the tarpon slowly and they stay put. Nurse sharks sometimes sit in the undercuts, and a barracuda may pass.",
       difficultyLevel: "beginner",
-      depthRange: "6–15 m (20–50 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 15,
       currentNote: "Current not documented; ask the crew on the day.",
       fitTone: "welcoming",
@@ -1623,7 +1623,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLife: "Rainbow parrotfish · sponges · gorgonians",
       marineLifeDescription: "The reef north of the mooring is a calmer alternative to the wall.",
       difficultyLevel: "advanced",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       currentNote:
         "There may be more current at the east end of the island than the west. Carry an SMB and agree the pickup with the crew.",
@@ -1663,7 +1663,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Ledges hold groupers, eels and nurse sharks. A green moray swims free and can be bold with divers.",
       difficultyLevel: "beginner",
-      depthRange: "5–10 m (15–35 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 10,
       currentNote: "Current not documented; ask the crew on the day.",
       fitTone: "welcoming",
@@ -1692,7 +1692,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Juvenile spotted drums hide in the coral, and squid school over the reef.",
       difficultyLevel: "beginner",
-      depthRange: "8–18 m (25–60 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       fitTone: "welcoming",
@@ -1725,7 +1725,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The sand plain is the show. Keep a respectful distance from the eels.",
       difficultyLevel: "beginner",
-      depthRange: "8–11 m (25–35 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 11,
       currentNote: "Current not documented; ask the crew on the day.",
       fitTone: "welcoming",
@@ -1759,7 +1759,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Blue and midnight parrotfish favor the mini wall, and the outer coral heads hold Nassau groupers.",
       difficultyLevel: "intermediate",
-      depthRange: "9–21 m (30–70 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 21,
       currentNote:
         "There is often current here. Carry an SMB and ask the boat crew about it on the day.",
@@ -1793,7 +1793,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Flamingo tongues sit on the sea fans in the shallows. Flying gurnards turn up near 5.5 m (18 ft), and jewfish in the ridges and gullies.",
       difficultyLevel: "intermediate",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       currentNote:
         "Check the entry and the sea first; the east end is exposed to surf and may carry more current than the west. Carry an SMB.",
@@ -1833,7 +1833,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Flamingo tongues sit on purple sea fans at 6 to 9 m (20 to 30 ft). Schooling squid hover near the mooring, and schoolmaster snapper sit under the ledges.",
       difficultyLevel: "beginner",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       fitTone: "welcoming",
@@ -1868,7 +1868,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A cable along the sand carries small animals, and rays and squid feed in the sand at night.",
       difficultyLevel: "intermediate",
-      depthRange: "8–20 m (25–65 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 20,
       currentNote: "Current not documented; ask the crew on the day.",
       fitTone: "welcoming",
@@ -1912,7 +1912,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Nassau grouper and eagle rays work the reef, with juveniles in the coral.",
       difficultyLevel: "beginner",
-      depthRange: "8–18 m (25–60 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -1944,7 +1944,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLife: "Reef fish · wall sponges",
       marineLifeDescription: "Wide sand channels lead out to the edge of the wall.",
       difficultyLevel: "advanced",
-      depthRange: "15–30 m (50–100 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 30,
       currentNote:
         "Shore entry near the jetty: check the sea and the ironshore before you enter. Current not documented; ask the crew on the day.",
@@ -1985,7 +1985,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Eagle rays and turtles pass around the wreck, and cleaning stations hold small animals.",
       difficultyLevel: "intermediate",
-      depthRange: "12–18 m (40–60 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -2022,7 +2022,7 @@ export const CAYMAN_SISTER_ISLANDS: DiveSiteTemplate[] = [
       marineLife: "Juvenile fish · lobsters · eels · stingrays",
       marineLifeDescription: "A good place for juveniles, lobsters, crabs, eels and stingrays.",
       difficultyLevel: "beginner",
-      depthRange: "3–30 m (10–100 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 30,
       currentNote:
         "Shore entry through a cut across the surf zone: check the sea first and plan to exit at the same cut. Current not documented; ask the crew on the day.",

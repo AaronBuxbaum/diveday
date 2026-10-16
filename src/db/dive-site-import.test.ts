@@ -139,6 +139,7 @@ describe("the dive-site importer", () => {
       expect(restored?.slug).toBe(site.slug);
       expect(restored?.description).toBe(site.description);
       expect(restored?.maxDepthMeters).toBe(site.maxDepthMeters);
+      expect(restored?.depthMinMeters).toBe(site.depthMinMeters);
       expect(restored?.difficultyLevel).toBe(site.difficultyLevel);
       expect(restored?.requiredSpecialties).toEqual(site.requiredSpecialties);
       expect(restored?.routePoints).toEqual(site.routePoints);
@@ -267,6 +268,37 @@ describe("the dive-site importer", () => {
     ).rows[0];
     expect(row?.issues).toContain("invalid_route_points");
     expect(row?.routePoints ?? []).toHaveLength(MAX_ROUTE_POINTS);
+  });
+
+  /**
+   * The shallow end is half of a range: the row's CHECK needs the deep end
+   * beside it and refuses one below zero or deeper than it, so the importer
+   * names the row instead of failing the whole file at the database.
+   */
+  it("refuses a shallow end without a deeper maximum, or deeper than it", () => {
+    const depthRow = (min: string | null, max: string | null) =>
+      prepareDiveSiteImport(
+        buildCsv(
+          [...DIVE_SITE_IMPORT_COLUMNS],
+          [
+            DIVE_SITE_IMPORT_COLUMNS.map((column) =>
+              column === "name"
+                ? "Depth Row"
+                : column === "depth_min_meters"
+                  ? min
+                  : column === "max_depth_meters"
+                    ? max
+                    : null,
+            ),
+          ],
+        ),
+      ).rows[0];
+    expect(depthRow("6", "18")?.issues).toEqual([]);
+    expect(depthRow("6", "18")?.depthMinMeters).toBe(6);
+    expect(depthRow("18", "18")?.issues).toEqual([]);
+    expect(depthRow("20", "18")?.issues).toContain("invalid_min_depth");
+    expect(depthRow("6", null)?.issues).toContain("invalid_min_depth");
+    expect(depthRow("-1", "18")?.issues).toContain("invalid_min_depth");
   });
 
   /**

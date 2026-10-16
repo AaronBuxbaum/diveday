@@ -295,7 +295,7 @@ test.describe("staff", () => {
       .getByRole("textbox", { name: "Location" })
       .fill("Key Largo National Marine Sanctuary");
     await expect(page.getByText("Unsaved changes in The site")).toBeVisible();
-    await page.getByLabel("Depth range").fill("20-45 ft");
+    await page.getByLabel("Depth note").fill("Shallow ledge, then the wall");
     await expect(page.getByText("Unsaved changes in 2 sections")).toBeVisible();
   });
 

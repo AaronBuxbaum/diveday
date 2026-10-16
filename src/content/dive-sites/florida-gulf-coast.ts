@@ -25,7 +25,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Bait and mackerel hang over the hull, and the big grouper keep to the shade beneath it.",
       difficultyLevel: "advanced",
-      depthRange: "12–24 m (40–80 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 25,
       currentNote:
         "Open Gulf, a long boat ride out, so current and visibility change from day to day. A heavily fished reef: watch for line and tackle on the hull. Stay outside the hull.",
@@ -77,7 +77,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools of mackerel and spadefish often cover the wreck, and whale sharks have passed through.",
       difficultyLevel: "advanced",
-      depthRange: "15–24 m (50–80 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 25,
       currentNote:
         "Open Gulf about 20 miles out: current and visibility vary. The hull is broken and silted, so it is a dive around the outside, and line from the reef's anglers is common.",
@@ -118,7 +118,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Every pile is its own small reef. Look into the culverts for the fish that live in them.",
       difficultyLevel: "beginner",
-      depthRange: "8–14 m (25–45 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 14,
       currentNote:
         "Usually mild, but Gulf visibility changes with wind and runoff. The reef is a popular fishing spot, so expect boats overhead and line on the rubble.",
@@ -165,7 +165,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
         "Two World War II Navy landing ships, each more than 60 m long, filled with scrap cable and sunk with explosives by a Navy bomb disposal team. One lies at the south end of Indian Shores Reef and the other near its center.",
       marineLife: "Goliath grouper · barracuda · blacktip sharks · snapper",
       difficultyLevel: "beginner",
-      depthRange: "8–14 m (25–45 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 14,
       currentNote:
         "Usually mild, with visibility that follows the weather. The hulls are old, broken and full of cable: stay outside them, and watch for fishing line.",
@@ -198,7 +198,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
         "A shallow reef built from bridge concrete in 1976, with a 60 m steel barge added in 1984 and a row of M-60 Army tanks in 1995. A short ride and an easy depth make it an easy first Gulf dive.",
       marineLife: "Goliath grouper · snapper · spadefish · grunts",
       difficultyLevel: "beginner",
-      depthRange: "7–10 m (22–32 ft)",
+      depthMinMeters: 7,
       maxDepthMeters: 10,
       currentNote:
         "Shallow and close to shore, so wind and runoff decide the visibility more than current does. Boats fish here often; fly a flag and watch for line.",
@@ -239,7 +239,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
       marineLife: "Goliath grouper · barracuda · spadefish · snapper",
       marineLifeDescription: "Pelagic fish and the odd shark come through over the wreck.",
       difficultyLevel: "beginner",
-      depthRange: "8–15 m (25–50 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 15,
       currentNote:
         "A shorter ride than the offshore wrecks, with visibility that follows the weather. Stay outside the hull, and watch for fishing line.",
@@ -272,7 +272,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
         "A reef of steel barges and concrete about 10 miles off Dunedin, and home since 2019 to the Circle of Heroes: a ring of life-size concrete statues of service members, billed as the first underwater veterans memorial.",
       marineLife: "Goliath grouper · snapper · spadefish · barracuda",
       difficultyLevel: "beginner",
-      depthRange: "12–14 m (40–45 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 14,
       currentNote:
         "Open Gulf, so current and visibility vary with the day. A memorial: look, photograph, and leave the statues as you found them. A fished reef: fly a flag and watch for line on the barges.",
@@ -314,7 +314,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Beach and seagrass life: small fish on the plates, crabs underneath, and the odd manatee.",
       difficultyLevel: "beginner",
-      depthRange: "3–6 m (10–20 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 6,
       currentNote:
         "A shore dive or snorkel from the beach. Surf and stirred sand set the visibility, and the bottom shifts as the beach is renourished. It is outside the swim zone, so tow a dive flag. Longshore and rip currents run along this beach; check the flags before you wade in. Jet skis and boats work just outside the swim zone, so stay on the flag and surface beside it.",
@@ -342,7 +342,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
         "A World War II Coast Guard cutter, 50 m long, sunk on 2 July 2012 about 28 nautical miles off Sanibel as a memorial reef to all American veterans. She sits upright on the sand with her bow to the east.",
       marineLife: "Goliath grouper · amberjack · barracuda · cobia",
       difficultyLevel: "advanced",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote:
         "A long open-Gulf run with no shelter, so current, visibility and sea state all decide the day. Moored at bow and stern. Stay outside the hull.",
@@ -390,7 +390,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
         "A 34 m steel tug sunk in 1999 on Charlie's Reef, about 28 miles west of Redfish Pass, beside railroad hopper cars laid down a few years earlier. The USS Mohawk joined her on the same reef in 2012.",
       marineLife: "Barracuda · cobia · nurse sharks · grouper · amberjack · moray eels",
       difficultyLevel: "advanced",
-      depthRange: "15–26 m (50–85 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 26,
       currentNote:
         "Open Gulf a long way out, so current and visibility vary with the day. Stay outside the hull.",
@@ -426,7 +426,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
         "Spans and rubble from the old Edison Bridge in Fort Myers, sunk in 1993 to make one of the largest reefs off Sanibel. The pieces stand up to about 5 m off the sand and spread across a wide area.",
       marineLife: "Grouper · snapper · spadefish · barracuda",
       difficultyLevel: "beginner",
-      depthRange: "9–14 m (30–45 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 14,
       currentNote:
         "Gulf visibility changes with the wind and the outflow from the Caloosahatchee. A popular fishing reef, so watch for line.",
@@ -460,7 +460,7 @@ export const FLORIDA_GULF_COAST: DiveSiteTemplate[] = [
         "A reef of concrete culverts, slabs and stacked pilings about 5 nautical miles off Bowman's Beach, built in 1996 and 1997 and named for a well-known local fishing guide. The closest of Sanibel's reefs and one of the shallowest.",
       marineLife: "Snapper · grouper · spadefish",
       difficultyLevel: "beginner",
-      depthRange: "6–10 m (20–32 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 10,
       currentNote:
         "Shallow and close in, so the weather sets the visibility. A yellow and white marker shows the reef, and anglers use it too.",

@@ -26,7 +26,7 @@ export const HONDURAS_GUANAJA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Morays, groupers and yellowtail snapper are reported around the hull.",
       difficultyLevel: "advanced",
-      depthRange: "24–33 m (80–110 ft)",
+      depthMinMeters: 24,
       maxDepthMeters: 33,
       currentNote:
         "Current not documented; ask the crew on the day. Stay off the wall edge and carry an SMB.",
@@ -62,7 +62,7 @@ export const HONDURAS_GUANAJA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Black coral grows on the pinnacle, and the channel wall carries bluebell tunicates and crinoids in the shallows.",
       difficultyLevel: "advanced",
-      depthRange: "3–40 m (10–130 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 40,
       currentNote: "Current not documented; ask the crew on the day. Carry an SMB.",
       divePlan:
@@ -98,7 +98,7 @@ export const HONDURAS_GUANAJA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The wall is hung with crinoids and sponges, and the dive is as much about the edge as about what lives on it.",
       difficultyLevel: "advanced",
-      depthRange: "11–40 m (35–130 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 40,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -133,7 +133,6 @@ export const HONDURAS_GUANAJA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Groupers, yellowtails and a green moray are reported along the wall and the sandy ground beside it.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 30 m (100 ft)",
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:

@@ -23,7 +23,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Late summer is the aggregation. The rest of the year it is a big-animal drift: sharks, jacks, and turtles on the wrecks.",
       difficultyLevel: "advanced",
-      depthRange: "17–27 m (55–90 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 27,
       currentNote: "Strong Gulf Stream drift, always. Negative entries and a fast group-up.",
       divePlan:
@@ -70,7 +70,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sand, rubble, pilings and snorkel trail. The find of the dive is usually two centimeters long and pretending to be a leaf.",
       difficultyLevel: "beginner",
-      depthRange: "1–6 m (4–20 ft)",
+      depthMinMeters: 1,
       maxDepthMeters: 6,
       currentNote:
         "Dive it within about half an hour of slack high tide. Outside that window the current is unswimmable and the visibility goes. Tow a dive flag, which Florida law requires, and stay in the swim area west of the channel markers: the Intracoastal next to it is a boat lane.",
@@ -123,7 +123,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The ledges hold turtles and grouper; eagle rays and big pelagics come through the blue side.",
       difficultyLevel: "intermediate",
-      depthRange: "12–20 m (40–65 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 20,
       currentNote:
         "Always a drift — the Gulf Stream runs one to two knots here and the boat follows the bubbles.",
@@ -170,7 +170,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Turtles and the big morays keep to the foot of the ledge; the hamlets and angelfish are on top.",
       difficultyLevel: "intermediate",
-      depthRange: "18–24 m (60–80 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 24,
       // Below 30 m, but a 23–24 m negative-entry Gulf Stream drift, past the Open Water ceiling; Jupiter boats run their ledges for Advanced divers.
       minimumCertificationLevel: "advanced_open_water",
@@ -212,7 +212,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Turtles on top and napping underneath, nurse sharks tucked under the ledge, and pairs of butterflyfish the whole way along.",
       difficultyLevel: "intermediate",
-      depthRange: "18–23 m (58–75 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 23,
       // Below 30 m, but a 23–24 m negative-entry Gulf Stream drift, past the Open Water ceiling; Jupiter boats run their ledges for Advanced divers.
       minimumCertificationLevel: "advanced_open_water",
@@ -258,7 +258,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "In nesting season, female loggerheads rest here by day before going up the beach at night.",
       difficultyLevel: "intermediate",
-      depthRange: "19–23 m (61–75 ft)",
+      depthMinMeters: 19,
       maxDepthMeters: 23,
       // Below 30 m, but a 23–24 m negative-entry Gulf Stream drift, past the Open Water ceiling; Jupiter boats run their ledges for Advanced divers.
       minimumCertificationLevel: "advanced_open_water",
@@ -301,7 +301,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Turtles are the point, most of all from March to October. Look in the sand patches for rays and jawfish hovering over their burrows.",
       difficultyLevel: "intermediate",
-      depthRange: "18–23 m (60–76 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 23,
       // Below 30 m, but a 23–24 m negative-entry Gulf Stream drift, past the Open Water ceiling; Jupiter boats run their ledges for Advanced divers.
       minimumCertificationLevel: "advanced_open_water",
@@ -346,7 +346,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Lemon sharks in winter, eagle rays and reef sharks most of the year, and now and then a hammerhead or tiger shark from the blue.",
       difficultyLevel: "advanced",
-      depthRange: "21–28 m (68–92 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 28,
       currentNote:
         "A Gulf Stream drift that can run fast, at a depth where air goes quickly. Send up your own SMB before the ascent; the boat may be some way off following other groups.",
@@ -397,7 +397,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "From late August into October goliath grouper gather here to spawn, sometimes in very large numbers. Look small too: shrimp and nudibranchs live in the beams.",
       difficultyLevel: "intermediate",
-      depthRange: "16–20 m (52–65 ft)",
+      depthMinMeters: 16,
       maxDepthMeters: 20,
       currentNote:
         "A Gulf Stream drift from the barge onto the columns. The wreck is low and open; stay outside the beams and give the grouper room. Carry your own SMB, close to Jupiter Inlet's boat traffic.",
@@ -448,7 +448,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Nurse sharks rest under the ledges and turtles pass through; guitarfish and the odd manta ray have been seen.",
       difficultyLevel: "beginner",
-      depthRange: "5–8 m (16–25 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 8,
       currentNote:
         "Usually only a moderate current, but swell and surge reach the bottom at this depth. Fly a dive flag: Florida law expects divers to stay within 300 ft (90 m) of it and boats to keep that far off.",
@@ -492,7 +492,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Huge schools of reef fish move through the soft coral; lobster sit in the cracks.",
       difficultyLevel: "intermediate",
-      depthRange: "13–16 m (42–54 ft)",
+      depthMinMeters: 13,
       maxDepthMeters: 16,
       currentNote:
         "A Gulf Stream drift, usually north at one to two knots. Carry an SMB and ascend on it; dive boats and fishing boats work this whole reef line.",
@@ -529,7 +529,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Check the sand on the trench floor for jawfish hovering over their burrows.",
       difficultyLevel: "intermediate",
-      depthRange: "14–18 m (47–58 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 18,
       currentNote:
         "A Gulf Stream drift, usually north, so the current runs across the trench. Divers can drop into it and work east out of the flow. Ascend on an SMB.",
@@ -579,7 +579,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big sponges and sea fans everywhere, with the odd guitarfish on the sand. A favorite with photographers.",
       difficultyLevel: "intermediate",
-      depthRange: "13–17 m (42–56 ft)",
+      depthMinMeters: 13,
       maxDepthMeters: 17,
       currentNote:
         "A drift, with the start set by the current. The Gulf Stream usually runs north here, but some days it turns south. Ascend on an SMB.",
@@ -630,7 +630,6 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sharks first, in the amphitheatre; now and then a bull, tiger or hammerhead. Gamefish and big tropicals along the ledges after.",
       difficultyLevel: "advanced",
-      depthRange: "Sand at 27 m (87 ft)",
       maxDepthMeters: 27,
       currentNote:
         "A deep Gulf Stream drift, often strong. Watch your no-stop time, and carry your own SMB to send up before the ascent.",
@@ -676,7 +675,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLife: "Spiny lobster · amberjack · angelfish · hogfish",
       marineLifeDescription: "Big tropicals along both ledges, with gamefish cruising past.",
       difficultyLevel: "advanced",
-      depthRange: "21–27 m (68–87 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 27,
       currentNote:
         "A deep Gulf Stream drift, a few minutes from Palm Beach Inlet and its boat traffic. Carry your own SMB and send it up before the ascent.",
@@ -720,7 +719,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLife: "Sea turtles · moray eels · stingrays · angelfish",
       marineLifeDescription: "The undercuts hold turtles and morays; tropicals crowd the top.",
       difficultyLevel: "advanced",
-      depthRange: "21–25 m (70–82 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 25,
       currentNote:
         "A Gulf Stream drift, usually north, at a depth where no-stop time runs short. Carry your own SMB and send it up before the ascent.",
@@ -759,7 +758,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLife: "Hawksbill and loggerhead turtles · green morays · grouper",
       marineLifeDescription: "Turtles and green morays along the ledges and around the barge.",
       difficultyLevel: "advanced",
-      depthRange: "21–27 m (70–90 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 27,
       currentNote:
         "A Gulf Stream drift next to Palm Beach Inlet, one of the busiest boat channels on the coast. Carry your own SMB and ascend on it, well clear of the inlet. Stay outside the barge.",
@@ -799,7 +798,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Goliath grouper crowd the Mizpah's decks, most of all in late summer; a reef shark often patrols just off the line.",
       difficultyLevel: "advanced",
-      depthRange: "17–27 m (55–90 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 28,
       currentNote:
         "A Gulf Stream drift of about 500 m along the line, right beside the inlet's heavy boat traffic. Carry your own SMB and send it up before you leave the bottom. Stay outside the wrecks; the Amaryllis is only a hull and bottom deck.",
@@ -859,7 +858,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barracuda and runners hang over the wheelhouse, and the goliaths gather on her from August into October.",
       difficultyLevel: "advanced",
-      depthRange: "17–26 m (55–85 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 27,
       currentNote:
         "Dived as a Gulf Stream drift, so expect a negative entry and an SMB up before you leave the bottom. Close to the Lake Worth Inlet's boat traffic: surface under your dive flag or SMB, and stay outside the hull.",
@@ -907,7 +906,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools of jacks and spadefish hang over the hull, and bull sharks pass through in some seasons.",
       difficultyLevel: "advanced",
-      depthRange: "22–34 m (72–110 ft)",
+      depthMinMeters: 22,
       maxDepthMeters: 34,
       currentNote:
         "The Gulf Stream usually runs hard here, so it is a drift with a negative entry and an SMB. The hull is broken and unstable; stay outside it. Inlet boat traffic is heavy, so surface under your dive flag or SMB.",
@@ -958,7 +957,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Twenty years of growth have covered the hulls, and the fish and turtles move along the rock piles between them.",
       difficultyLevel: "advanced",
-      depthRange: "17–30 m (55–100 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 30,
       currentNote:
         "A Gulf Stream drift: negative entry, stay with the group from wreck to wreck, and shoot an SMB before the ascent. Stay outside the hulls, and watch for boats near the inlet when you surface.",
@@ -1011,7 +1010,6 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Goliath grouper live on the freighter, and several kinds of shark pass through.",
       difficultyLevel: "intermediate",
-      depthRange: "about 24 m (80 ft) on the sand",
       maxDepthMeters: 25,
       currentNote:
         "Best on a low-current day, when you can move between the freighter, the barge and the car; in a strong Gulf Stream run it becomes a one-way drift. Inlet boat traffic is close, so surface under your dive flag or SMB.",
@@ -1057,7 +1055,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         "An ice-class steel tug, once the Pocahontas, sunk north of the Lake Worth Inlet in February 2013 in memory of a local teenager, Danny McCauley. She sits upright, and the sponges have been filling her in ever since.",
       marineLife: "Goliath grouper · tropical fish · new sponge growth",
       difficultyLevel: "intermediate",
-      depthRange: "15–26 m (50–85 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 26,
       // Below 30 m, but a 26 m negative-entry Gulf Stream drift beside the inlet, sold as an Advanced dive like the Ana Cecilia nearby.
       minimumCertificationLevel: "advanced_open_water",
@@ -1095,7 +1093,6 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Hawksbills and loggerheads visit often, and morays and lobster fill every crack in the plating.",
       difficultyLevel: "intermediate",
-      depthRange: "to 21 m (70 ft)",
       maxDepthMeters: 21,
       currentNote:
         "Usually a drift in the Gulf Stream, so group up fast after a negative entry and carry an SMB. Boats run in and out of the inlet nearby; surface under your dive flag or SMB.",
@@ -1130,7 +1127,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLife: "Spadefish · angelfish · grunts · sea turtles",
       marineLifeDescription: "Schools of spadefish are a regular sight along the ledge.",
       difficultyLevel: "beginner",
-      depthRange: "12–17 m (40–55 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 17,
       currentNote:
         "A Gulf Stream drift dive: group up on the bottom, follow the ledge with the current, and send up an SMB before you ascend so the boat can find you. Stay near your dive flag or SMB when you surface; boats run this stretch of coast.",
@@ -1174,7 +1171,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A big lemon shark the locals call Mellow Yellow turns up now and then.",
       difficultyLevel: "beginner",
-      depthRange: "14–18 m (45–60 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 18,
       currentNote:
         "A Gulf Stream drift dive. Stay with the group along the ledge and put up an SMB before the ascent; boats run this coast, so surface near your dive flag or SMB.",
@@ -1225,7 +1222,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         "A stretch of the outer reef named for the seaside community directly inshore. It runs parallel to the beach, which makes it a natural drift, and turtles are often on it.",
       marineLife: "Sea turtles · angelfish · grunts · snapper",
       difficultyLevel: "beginner",
-      depthRange: "14–18 m (45–60 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 18,
       currentNote:
         "A Gulf Stream drift dive. Follow the western ledge with the current and send up an SMB before the ascent; surface near your dive flag or SMB, because boats run this coast.",
@@ -1259,7 +1256,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         "The section of outer reef that picks up where Briny Breezes ends, with a double ledge and rock formations jutting west at the north end. Big schools of fish make it a photographer's reef.",
       marineLife: "Schooling grunts and snapper · angelfish · turtles",
       difficultyLevel: "beginner",
-      depthRange: "14–18 m (45–60 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 18,
       currentNote:
         "A Gulf Stream drift dive. Stay with the group along the two ledges and put up an SMB before the ascent; surface near your dive flag or SMB, because boats run this coast.",
@@ -1306,7 +1303,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLife: "Grouper · turtles · nurse sharks · angelfish",
       marineLifeDescription: "The south end's Grouper Hole lives up to its name.",
       difficultyLevel: "beginner",
-      depthRange: "14–18 m (45–60 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 18,
       currentNote:
         "A Gulf Stream drift, sometimes a brisk one. Follow the main ledge and put up an SMB before the ascent; surface near your dive flag or SMB, because boats run this coast. The deeper ridge farther east is a separate, deeper dive.",
@@ -1354,7 +1351,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sharks are often seen, the north end is good for lobster, and snook sometimes school on the east side of the main ledge.",
       difficultyLevel: "beginner",
-      depthRange: "14–18 m (45–60 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 18,
       currentNote:
         "A Gulf Stream drift dive. The high ledges and the hook at each end make it easy to follow; put up an SMB before the ascent and surface near your dive flag or SMB.",
@@ -1388,7 +1385,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         "A near-shore reef of big limestone boulders and two concrete modules, laid north of the Boynton Inlet in August 2013. It stands up to about 2.5 m off the sand and is already full of fish, crabs and lobster.",
       marineLife: "Tropical fish · lobster · crabs · juvenile reef fish",
       difficultyLevel: "beginner",
-      depthRange: "8–11 m (25–35 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 11,
       currentNote:
         "Current is usually light here, so it is dived in circles rather than as a drift. It is close to the inlet and its boats: fly a dive flag and surface beside it.",
@@ -1435,7 +1432,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Goliaths live here all year, and from late July their spawning gathering can reach a hundred fish, with clouds of scad and the jacks and barracuda that hunt them.",
       difficultyLevel: "advanced",
-      depthRange: "24–34 m (80–110 ft)",
+      depthMinMeters: 24,
       maxDepthMeters: 34,
       currentNote:
         "Dived on a line or as a Gulf Stream drift; the sand lies past 30 m, so plan the gas and no-stop time carefully, and carry an SMB. The stern section has rolled onto its side; stay outside the structure. Surface near your dive flag or SMB.",
@@ -1483,7 +1480,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         "A German-built coastal freighter, once the Olive M, sunk off Boynton in the 1980s with a brewery's help, which is how she got her name. Still partly upright, she is covered in sponges, and her propeller is easy to find.",
       marineLife: "Sponges · grouper · snapper · schooling fish",
       difficultyLevel: "advanced",
-      depthRange: "22–29 m (72–95 ft)",
+      depthMinMeters: 22,
       maxDepthMeters: 29,
       currentNote:
         "Dived on a line or as a Gulf Stream drift, often linked to the Captain Tony. The stern has broken away to the north-east; stay outside the hull, carry an SMB, and surface near your dive flag or SMB.",
@@ -1534,7 +1531,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLife: "Schooling fish · goliath grouper · barracuda",
       marineLifeDescription: "Look up: big schools of fish circle over the wreck.",
       difficultyLevel: "advanced",
-      depthRange: "15–25 m (49–82 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 25,
       currentNote:
         "Dived on a line or as a Gulf Stream drift, often from the Bud Bar along the rubble trail. Stay outside the hull, carry an SMB, and surface near your dive flag or SMB.",
@@ -1576,7 +1573,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         "A stretch of the outer reef off the Boca Raton Inlet, named for a resident moray. The west-facing main ledge stands up to 6 m tall in places and carries most of the coral and fish.",
       marineLife: "Moray eels · goliath grouper · lobster · reef fish",
       difficultyLevel: "intermediate",
-      depthRange: "14–21 m (45–70 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 21,
       currentNote:
         "A Gulf Stream drift along the ledge; carry an SMB. It is a short run from the inlet, which is why boats choose it on rough days, and why there is boat traffic overhead: surface near your dive flag or SMB.",
@@ -1617,7 +1614,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         "A section of the outer reef about 1 km off the coast south of the Boca Raton Inlet, with an undercut west ledge over 3 m tall. Its name comes from a small pile of concrete Erojacks set in a sand hollow beside it, some of them scattered by hurricanes since.",
       marineLife: "Angelfish · Bermuda chub · barracuda · lobster",
       difficultyLevel: "intermediate",
-      depthRange: "12–21 m (40–70 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 21,
       currentNote:
         "A Gulf Stream drift along the ledge; carry an SMB. Close to the Boca Raton Inlet and its boat traffic, so surface near your dive flag or SMB.",
@@ -1661,7 +1658,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big stingrays on the sand and goliaths in the culverts gave the site its nickname.",
       difficultyLevel: "intermediate",
-      depthRange: "15–21 m (50–70 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 22,
       currentNote:
         "Usually an anchor dive, or a drift linking it to the United Caribbean. About 1 km from the Boca Raton Inlet, so expect boat traffic: surface near your dive flag or SMB. Stay outside the overturned hull.",
@@ -1709,7 +1706,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         "A 45 m steel freighter that, as the Golden Venture, ran aground off New York in 1993 carrying 286 smuggled migrants, ten of whom drowned. Renamed and later retired, she was sunk off Boca Raton in August 2000 and filled with life fast, with two other wrecks and a reef close by.",
       marineLife: "Goliath grouper · stingrays · nurse sharks · reef fish",
       difficultyLevel: "intermediate",
-      depthRange: "15–21 m (50–70 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 22,
       currentNote:
         "Usually an anchor dive, or a drift linking it to the Sea Emperor. Close to the Boca Raton Inlet and its boat traffic, so surface near your dive flag or SMB. Hurricane Wilma shifted and damaged her; stay outside the hull.",
@@ -1751,7 +1748,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         "A 35 m Danish freighter built in 1939, seized in a drug case and sunk by the Palm Beach and Broward reef programs. Hurricane Andrew broke off her bow and flattened her cargo hold, and a small smugglers' submarine now lies in the wreckage.",
       marineLife: "Filefish · barracuda · tropical fish",
       difficultyLevel: "intermediate",
-      depthRange: "17–24 m (55–78 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 24,
       currentNote:
         "An anchor dive or a drift, sometimes linked to the Sea Emperor and United Caribbean about 90 m to the west. Close to the Boca Raton Inlet's boat traffic, so surface near your dive flag or SMB, and stay outside the broken hull.",
@@ -1798,7 +1795,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Lobster hide under the deck plates, and anemones and sponges live inside the hollow masts.",
       difficultyLevel: "beginner",
-      depthRange: "5–6 m (15–20 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 6,
       currentNote:
         "About 160 m off the beach and 1.2 km north of the Boynton Inlet, so expect inlet boat traffic: tow a dive flag on a float and stay within 300 ft (90 m) of it, as Florida law requires. Shifting sand buries and uncovers the wreck from season to season, and visibility drops after storms.",
@@ -1847,7 +1844,6 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLife: "Snook · moray eels · lobster · stingrays · sea turtles",
       marineLifeDescription: "What lives on the wreck changes with the season.",
       difficultyLevel: "beginner",
-      depthRange: "to 7 m (22 ft)",
       maxDepthMeters: 7,
       currentNote:
         "A shore dive about 90 m out from the rocks south of the House of Refuge. Surf and surge decide the day, and the rock entry is slippery. Tow a dive flag on a float and stay close to it, as Florida law requires; boats use this water too.",
@@ -1890,7 +1886,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
         "A Dutch-built storeship of the 1715 Spanish treasure fleet, driven aground off Fort Pierce by a hurricane days out of Havana. Her ballast mound still covers the hull timbers, and concrete replica cannons and an anchor mark it as one of Florida's Underwater Archaeological Preserves.",
       marineLife: "Wrasse · sailor's choice · porkfish · lobster · damselfish",
       difficultyLevel: "beginner",
-      depthRange: "3–5 m (10–15 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 5,
       currentNote:
         "About 180 m off the beach on the first reef, reached by swimming from shore or by boat on the mooring buoy, never by anchoring. Surf and surge set the visibility. Tow a dive flag on a float, as Florida law requires, and watch for rock-boring urchins in the rock.",
@@ -1940,7 +1936,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barracuda hang above the hull and amberjack work the water column; sharks and turtles pass now and then.",
       difficultyLevel: "advanced",
-      depthRange: "18–40 m (60–130 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 40,
       currentNote:
         "Well offshore and open to the Gulf Stream, so current, visibility and seas change by the day. The upper side starts at about 18 m and the main deck is near 29 m; the sand at 40 m or a little deeper is past most recreational plans. Carry an SMB and stay outside the hull.",
@@ -1976,7 +1972,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Spadefish at the bend, morays in the cracks, and turtles and nurse sharks resting at the foot of the ledge.",
       difficultyLevel: "intermediate",
-      depthRange: "18–26 m (60–85 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 26,
       // Below 30 m, but a 26 m negative-entry Gulf Stream drift, past the Open Water ceiling; Jupiter boats run their ledges for Advanced divers.
       minimumCertificationLevel: "advanced_open_water",
@@ -2027,7 +2023,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sharks early, turtles and big green morays along the ledge, and jacks and barracuda working the current above it.",
       difficultyLevel: "advanced",
-      depthRange: "21–27 m (70–90 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 28,
       currentNote:
         "A Gulf Stream drift, moderate to strong and usually north, at a depth where no-stop time runs short. Carry your own SMB and send it up before the ascent: Jupiter Inlet boat traffic is heavy, and the boat is looking for your marker.",
@@ -2071,7 +2067,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Tropicals in the bowls on top; turtles, nurse sharks and big morays under the ledge.",
       difficultyLevel: "intermediate",
-      depthRange: "20–26 m (65–85 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 26,
       // Below 30 m, but a 26 m negative-entry Gulf Stream drift, past the Open Water ceiling; Jupiter boats run their ledges for Advanced divers.
       minimumCertificationLevel: "advanced_open_water",
@@ -2114,7 +2110,7 @@ export const FLORIDA_PALM_BEACH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Reef sharks meet the group at the first tunnel, goliaths hang under the big undercut, and cobia shadow the stingrays in the sand.",
       difficultyLevel: "advanced",
-      depthRange: "20–27 m (65–90 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 27,
       // Below 30 m, but a 26 m negative-entry Gulf Stream drift, past the Open Water ceiling; Jupiter boats run their ledges for Advanced divers.
       minimumCertificationLevel: "advanced_open_water",

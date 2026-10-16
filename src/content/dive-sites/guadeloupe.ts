@@ -54,7 +54,7 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
         "The reef is busy at every depth, and turtles are often on the way to the bust.",
       conservationNote: PARK,
       difficultyLevel: "beginner",
-      depthRange: "3–18 m (10–60 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 18,
       currentNote:
         "Busy with dive boats and snorkelers; carry an SMB and listen for engines. Current is light; check with the crew on the day.",
@@ -100,7 +100,7 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
         "A big school of jacks is the picture. The cracks along the slope hold the smaller animals.",
       conservationNote: PARK,
       difficultyLevel: "advanced",
-      depthRange: "8–40 m (25–130 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 40,
       currentNote: "The point is often swept by current. Carry an SMB.",
       divePlan:
@@ -141,7 +141,7 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
         "The wall fish are the show, with barracuda along the top and turtles on the coral.",
       conservationNote: PARK,
       difficultyLevel: "advanced",
-      depthRange: "13–25 m (43–80 ft)",
+      depthMinMeters: 13,
       maxDepthMeters: 25,
       currentNote:
         "Current not documented; ask the crew on the day. The wall continues deeper than the plan, so the floor is the diver's to hold.",
@@ -182,7 +182,6 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
         "Gorgonians sway over the pinnacles, and turtles are often among them.",
       conservationNote: PARK,
       difficultyLevel: "beginner",
-      depthRange: "Up to 18 m (60 ft)",
       maxDepthMeters: 18,
       currentNote:
         "Busy with dive boats and snorkelers; carry an SMB and listen for engines. Current not documented; ask the crew on the day.",
@@ -215,7 +214,7 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
       difficultyLevel: "intermediate",
       // The pinnacle drops to about 25 m; the plan holds an 18 m floor and the lower part lies
       // beyond it.
-      depthRange: "2–25 m (7–80 ft)",
+      depthMinMeters: 2,
       maxDepthMeters: 25,
       currentNote:
         "Busy with dive boats and snorkelers; carry an SMB and listen for engines. Current not documented; ask the crew on the day. A natural arch on the pinnacle is overhead; stay out of it.",
@@ -251,7 +250,6 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
         "Barracuda and jacks hold above the deck, and morays and shrimp live in the encrusted frames.",
       conservationNote: PARK,
       difficultyLevel: "advanced",
-      depthRange: "Up to 24 m (79 ft)",
       maxDepthMeters: 24,
       currentNote:
         "Open water; current not documented. Ascend on the line or an SMB. Stay outside the hull.",
@@ -287,7 +285,6 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
         "Barracuda gather around the wreck, with a pair of French angelfish patrolling the hull.",
       conservationNote: PARK,
       difficultyLevel: "advanced",
-      depthRange: "Up to 40 m (131 ft)",
       maxDepthMeters: 40,
       currentNote:
         "Open water; current not documented. Ascend on the line or an SMB. Stay outside the hull. The sand is at the limit of recreational depth, so the crew sets the turn pressure at the briefing.",
@@ -325,7 +322,6 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
       marineLife: "Barracuda · jacks · morays · lobster · soft coral",
       marineLifeDescription: "Fish hold over the deck and lobsters and morays use the structure.",
       difficultyLevel: "advanced",
-      depthRange: "Up to 35 m (115 ft)",
       maxDepthMeters: 35,
       currentNote:
         "Open water outside the park, reached by a longer boat ride. One listing reports a medium current of 1 to 2 knots; ascend on the line or an SMB. Stay outside the hull.",
@@ -365,7 +361,7 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
       difficultyLevel: "advanced",
       // The pinnacle tops lie at 15 m to 17 m and the base at 200 m to 400 m; the club has divers
       // between 20 m and 40 m, so the plan's floor is 40 m.
-      depthRange: "17–40 m (56–131 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 40,
       currentNote:
         "Open sea in the channel, about three hours of boat travel to reach it. Current not documented; carry an SMB. Some pinnacles have cavities you can swim through: overhead; stay out. Medical care is far; confirm the boat's oxygen and plan.",
@@ -405,7 +401,7 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
       marineLifeDescription: "A calm place to find turtles, with big gorgonians on the wall.",
       conservationNote: PARK,
       difficultyLevel: "intermediate",
-      depthRange: "10–18 m (33–60 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 18,
       currentNote:
         "Usually light; it can change, so carry an SMB. Hot water rises through some cracks; keep hands and gear clear.",
@@ -447,7 +443,6 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
         "Turtles are often here, and the coral blocks hide morays, lionfish and the odd seahorse. Keep hands and gear off the coral and out from under the ledges.",
       conservationNote: PARK,
       difficultyLevel: "advanced",
-      depthRange: "Up to 20 m (66 ft)",
       maxDepthMeters: 20,
       currentNote:
         "Dive boats come to the islets, and a no-navigation zone covers the swimming area by the mooring; carry an SMB for the ascent and do not surface in the zone. Current not documented; ask the crew on the day.",
@@ -494,7 +489,6 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
         "Sponges and coral crowd the plateau, with large lobsters under the ledges of the reef. Look, don't reach: this is a marine reserve, nothing is taken, and hands stay off the coral and out from under the ledges.",
       conservationNote: PARK,
       difficultyLevel: "beginner",
-      depthRange: "Up to 20 m (66 ft)",
       maxDepthMeters: 20,
       currentNote:
         "Glass-bottom boats come to this recess; carry an SMB, listen for engines, and surface only after the SMB is up and engines are clear. Current not documented; ask the crew on the day.",
@@ -534,7 +528,7 @@ export const GUADELOUPE: DiveSiteTemplate[] = [
         "Turtles rest among the rocks; give them room and keep lights off their heads. Morays show on night dives, and young fish shelter in the canyons. Keep your distance, touch nothing, feed nothing.",
       conservationNote: PARK,
       difficultyLevel: "beginner",
-      depthRange: "4–18 m (13–60 ft)",
+      depthMinMeters: 4,
       maxDepthMeters: 18,
       currentNote:
         "Just off Malendure beach, where boats come and go; carry an SMB, listen for engines, and surface only after it is up. Entry and exit as the crew briefs; stay clear of boats. Current not documented; ask the crew on the day.",

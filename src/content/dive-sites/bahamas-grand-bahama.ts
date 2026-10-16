@@ -33,7 +33,7 @@ export const BAHAMAS_GRAND_BAHAMA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Grunts and squirrelfish fill the hull’s shadows, with shoals of jacks around her. A very large grouper is sometimes seen on the deeper side.",
       difficultyLevel: "advanced",
-      depthRange: "21–32 m (70–105 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 32,
       currentNote:
         "Currents vary with the tide. Two permanent buoys mark the bow and stern; use them for the ascent. The shelf edge is open water, so carry an SMB. The sand lies at about 32 m.",

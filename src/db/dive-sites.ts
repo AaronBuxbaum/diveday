@@ -84,7 +84,10 @@ export type DiveSiteInput = {
   marineLifeDescription?: string;
   /** How demanding the site is, as a code (`src/lib/dive-site-difficulty.ts`). */
   difficultyLevel?: DiveSiteDifficulty | null;
+  /** The shop's own words about depth; the two numbers below carry the range. */
   depthRange?: string;
+  /** The shallow end in metres; needs `maxDepthMeters`, never above it (src/lib/dive-site-depth.ts). */
+  depthMinMeters?: number | null;
   /** Canonical metres, whatever unit the shop typed it in (src/lib/depth-units.ts). */
   maxDepthMeters?: number | null;
   /** This site's own time in the water; null/undefined leaves the shop's figure standing. */
@@ -591,6 +594,7 @@ export async function updateDiveSite(
       // distinction still matters — an omitted field clears the column, which
       // is how a shop takes a depth back off a site.
       maxDepthMeters: input.maxDepthMeters ?? null,
+      depthMinMeters: input.depthMinMeters ?? null,
       expectedBottomTimeMinutes: input.expectedBottomTimeMinutes ?? null,
       currentNote: input.currentNote || null,
       divePlan: input.divePlan || null,
@@ -739,6 +743,7 @@ export async function copyDiveSite(db: AppDb, shopId: string, siteId: string, na
     difficultyLevel: source.difficultyLevel,
     depthRange: source.depthRange ?? undefined,
     maxDepthMeters: source.maxDepthMeters,
+    depthMinMeters: source.depthMinMeters,
     expectedBottomTimeMinutes: source.expectedBottomTimeMinutes,
     currentNote: source.currentNote ?? undefined,
     divePlan: source.divePlan ?? undefined,
@@ -1199,7 +1204,7 @@ export async function pullDiveSiteTemplateUpdates(
         marineLife: merged.marineLife,
         marineLifeDescription: merged.marineLifeDescription,
         difficultyLevel: merged.difficultyLevel,
-        depthRange: merged.depthRange,
+        depthMinMeters: merged.depthMinMeters,
         maxDepthMeters: merged.maxDepthMeters,
         expectedBottomTimeMinutes: merged.expectedBottomTimeMinutes,
         currentNote: merged.currentNote,
@@ -1253,7 +1258,7 @@ export async function undoDiveSiteTemplateUpdate(db: AppDb, shopId: string, site
         marineLife: undo.snapshot.marineLife,
         marineLifeDescription: undo.snapshot.marineLifeDescription,
         difficultyLevel: undo.snapshot.difficultyLevel,
-        depthRange: undo.snapshot.depthRange,
+        depthMinMeters: undo.snapshot.depthMinMeters ?? null,
         maxDepthMeters: undo.snapshot.maxDepthMeters,
         expectedBottomTimeMinutes: undo.snapshot.expectedBottomTimeMinutes,
         currentNote: undo.snapshot.currentNote,

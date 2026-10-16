@@ -151,12 +151,22 @@ export const diveSites = pgTable(
     /** How demanding the site is; the briefing prints a translated label for it. */
     difficultyLevel: diveSiteDifficulty("difficulty_level"),
     /**
-     * Free-text prose for the briefing ("6–12 m", "shallow ledge to 18"). Kept
-     * alongside `max_depth_meters` rather than replaced by it: it carries shape
-     * and nuance a single number can't, and it is what the diver-facing site
-     * card has always shown.
+     * The shop's own words about depth, shown only where a site has no recorded
+     * depth ("shallow ledge to 18"). The numbers are `depth_min_meters` and
+     * `max_depth_meters`, which every briefing renders in the shop's unit; this
+     * is the note the migration could not read a range out of, and what the
+     * shop adds that a number cannot carry.
      */
     depthRange: text("depth_range"),
+    /**
+     * The shallow end of the site's depth range, in metres, beside
+     * `max_depth_meters` as the deep end. Null means the shop recorded only a
+     * deepest point (or nothing). Metres whatever the shop's `depth_unit`, and
+     * floating-point for the same reason: 20 ft is 6.096 m and must read 20 back.
+     * It advises like the maximum and never gates. A range needs its deep end,
+     * and the shallow end cannot sit below it (CHECK below).
+     */
+    depthMinMeters: doublePrecision("depth_min_meters"),
     /**
      * The site's deepest point, in metres — the one number a certification
      * ceiling can actually be compared against (H-08). Null means the shop
@@ -189,7 +199,7 @@ export const diveSites = pgTable(
     /**
      * Which fit reading the briefing shows above the facts table — "Welcoming
      * dive" or "Best with recent experience". Null means *derive it* from
-     * `difficulty_level`/`depth_range`/`current_note` (`siteFit`, src/lib/diver-planning.ts),
+     * `difficulty_level`/`max_depth_meters`/`depth_range`/`current_note` (`siteFit`, src/lib/diver-planning.ts),
      * which is what every site did before this column existed and is still the
      * ordinary case.
      *
@@ -346,6 +356,13 @@ export const diveSites = pgTable(
     // Null (the shop's own number applies) or a real duration — never zero,
     // for the same reason `shops_bottom_time_minutes_positive` exists.
     check(
+      "dive_sites_depth_range_ordered",
+      sql`${table.depthMinMeters} is null
+        or (${table.depthMinMeters} >= 0
+          and ${table.maxDepthMeters} is not null
+          and ${table.depthMinMeters} <= ${table.maxDepthMeters})`,
+    ),
+    check(
       "dive_sites_expected_bottom_time_positive",
       sql`${table.expectedBottomTimeMinutes} is null or ${table.expectedBottomTimeMinutes} > 0`,
     ),
@@ -401,7 +418,10 @@ export type GlobalDiveSiteBriefing = {
   difficulty?: string;
   /** How demanding the site is, as a `dive_site_difficulty` code. */
   difficultyLevel?: (typeof diveSiteDifficulty.enumValues)[number];
+  /** The shop's note; the numbers below carry the range. Absent on versions published since 2026-10-16. */
   depthRange?: string;
+  /** The shallow end in metres, beside `maxDepthMeters`. */
+  depthMinMeters?: number;
   maxDepthMeters?: number;
   expectedBottomTimeMinutes?: number;
   currentNote?: string;

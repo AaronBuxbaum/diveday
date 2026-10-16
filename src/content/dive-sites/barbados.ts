@@ -25,7 +25,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barracuda and jacks patrol the hull, and the upper structure is crusted with coral and sponge.",
       difficultyLevel: "advanced",
-      depthRange: "6–40 m (20–130 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 40,
       currentNote:
         "Open water off the west coast. Current not documented; ask the crew on the day, and carry an SMB for the ascent.",
@@ -75,7 +75,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Small animals live in the wreck's growth, so slow down and look closely.",
       difficultyLevel: "beginner",
-      depthRange: "3–8 m (10–25 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 8,
       currentNote:
         "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines and surface on the line. No current is documented here.",
@@ -115,7 +115,6 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sponges and soft corals have settled on the concrete, and small fish shelter under it.",
       difficultyLevel: "beginner",
-      depthRange: "14 m (45 ft)",
       maxDepthMeters: 14,
       currentNote:
         "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines and surface on the line. No current is documented here.",
@@ -155,7 +154,6 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The hull gives shelter to schools of small fish, and rays work the sand around it.",
       difficultyLevel: "beginner",
-      depthRange: "17 m (55 ft)",
       maxDepthMeters: 17,
       currentNote:
         "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines and surface on the line. No current is documented here.",
@@ -193,7 +191,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Reef fish · coral · seahorses",
       marineLifeDescription: "Young coral and schooling fish are settling on the steel.",
       difficultyLevel: "beginner",
-      depthRange: "9–12 m (30–40 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 12,
       currentNote:
         "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines and surface on the line. No current is documented here.",
@@ -231,7 +229,6 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Reef fish · porcupinefish · coral",
       marineLifeDescription: "Shallow wrecks like this give small fish plenty of cover.",
       difficultyLevel: "beginner",
-      depthRange: "5 m (15 ft)",
       maxDepthMeters: 5,
       currentNote:
         "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines and surface on the line. No current is documented here.",
@@ -264,7 +261,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Porcupinefish · reef fish",
       marineLifeDescription: "Porcupinefish tuck in around the flat deck.",
       difficultyLevel: "beginner",
-      depthRange: "3–5 m (10–15 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 5,
       currentNote:
         "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines and surface on the line. No current is documented here.",
@@ -295,7 +292,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Reef fish · coral",
       marineLifeDescription: "She is still young, and growth is building on her.",
       difficultyLevel: "intermediate",
-      depthRange: "6–24 m (20–80 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 24,
       currentNote:
         "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines and surface on the line. No current is documented here.",
@@ -327,7 +324,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Reef fish · rays · eels",
       marineLifeDescription: "Sand and rubble hold rays and small bottom dwellers, so look low.",
       difficultyLevel: "intermediate",
-      depthRange: "14–30 m (45–100 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 30,
       currentNote:
         "Carlisle Bay is a working harbor beside Bridgetown's port, with cruise ship, cargo and small boat traffic. No diving while a ship is moving or alongside, carry an SMB, listen for engines and surface on the line. No current is documented here.",
@@ -361,7 +358,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Look in the cracks and sand pockets for historic debris and small fish.",
       difficultyLevel: "intermediate",
-      depthRange: "9–27 m (30–90 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 27,
       currentNote:
         "The reef lies off the mouth of Carlisle Bay, next to Bridgetown's port and its cruise ship and cargo traffic. No diving while a ship is moving or alongside, carry an SMB and listen for engines. Sources describe a drift dive, with the odd stronger current.",
@@ -394,7 +391,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Stingrays · lobster · reef fish",
       marineLifeDescription: "Rays rest on the sand between the reef heads.",
       difficultyLevel: "intermediate",
-      depthRange: "9–24 m (30–80 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 24,
       currentNote:
         "The reef lies just south of Carlisle Bay and Bridgetown's port, where cruise ship, cargo and small boat traffic is busy. No diving while a ship is moving or alongside, carry an SMB and listen for engines. Sources describe a drift dive.",
@@ -426,7 +423,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Barracuda · reef fish · coral",
       marineLifeDescription: "Barracuda hang along the edges of the reef.",
       difficultyLevel: "intermediate",
-      depthRange: "15–37 m (50–120 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 37,
       currentNote:
         "Outer reef off the south coast. Sources describe slow drop-offs on both sides, and the sea can be rougher in bad weather. Carry an SMB.",
@@ -460,7 +457,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Barracuda · snapper · jacks",
       marineLifeDescription: "Schools gather along the edge of the reef.",
       difficultyLevel: "intermediate",
-      depthRange: "18–37 m (60–120 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 37,
       currentNote:
         "Outer reef off the south coast, with drop-offs on both sides. Current not documented; ask the crew on the day. Carry an SMB.",
@@ -498,7 +495,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Reef fish · coral",
       marineLifeDescription: "Reef fish are plentiful, which is why photographers like the site.",
       difficultyLevel: "intermediate",
-      depthRange: "12–18 m (40–60 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 18,
       currentNote:
         "Sources describe a drift dive; its strength is not documented, so ask the crew on the day. Carry an SMB. Deploy the SMB at the start of the ascent and keep it up through the stop.",
@@ -529,7 +526,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Bermuda chub · reef fish",
       marineLifeDescription: "Chub gather in large schools over the reef.",
       difficultyLevel: "beginner",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan: "Drop onto the reef, circle at your own pace, and ascend with a safety stop.",
@@ -559,7 +556,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Turtles · eagle rays · reef fish",
       marineLifeDescription: "Turtles and rays pass over the reef.",
       difficultyLevel: "intermediate",
-      depthRange: "12–24 m (40–80 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 24,
       currentNote:
         "Sources describe a drift dive. Run as a drift; carry an SMB. Deploy the SMB at the start of the ascent and keep it up through the stop.",
@@ -603,7 +600,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Horse-eye jacks · barracuda · sponges",
       marineLifeDescription: "Jacks and barracuda patrol the outer reef.",
       difficultyLevel: "intermediate",
-      depthRange: "18–40 m (60–130 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 40,
       currentNote:
         "Sources describe a drift dive. Run as a drift; carry an SMB. Deploy the SMB at the start of the ascent and keep it up through the stop.",
@@ -635,7 +632,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Turtles · snapper · barracuda",
       marineLifeDescription: "Turtles and big fish cruise the outer reef.",
       difficultyLevel: "intermediate",
-      depthRange: "21–37 m (70–120 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 37,
       currentNote:
         "Sources describe a drift dive. Run as a drift; carry an SMB. Deploy the SMB at the start of the ascent and keep it up through the stop.",
@@ -674,7 +671,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Reef fish · queen angelfish · snapper",
       marineLifeDescription: "Angelfish and snapper work the reef under the cables.",
       difficultyLevel: "intermediate",
-      depthRange: "21–37 m (70–120 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 37,
       currentNote:
         "Sources describe a drift dive, and one lists the water here as choppy. Underwater cables cross the reef, so keep clear of them. Carry an SMB.",
@@ -714,7 +711,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Stingrays · reef fish",
       marineLifeDescription: "Rays and reef fish gather on the sandy edges.",
       difficultyLevel: "intermediate",
-      depthRange: "12–24 m (40–80 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 24,
       currentNote:
         "Underwater cables pass over the reef, so keep clear of them. Sources describe a drift dive. Carry an SMB.",
@@ -753,7 +750,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Reef fish · coral",
       marineLifeDescription: "The shallow top is a typical south-coast reef.",
       difficultyLevel: "advanced",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day. Carry an SMB.",
       divePlan:
@@ -785,7 +782,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Horse-eye jacks · eels · barracuda · yellowtail snapper",
       marineLifeDescription: "Jacks and barracuda hold along the reef.",
       difficultyLevel: "advanced",
-      depthRange: "9–40 m (30–130 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 40,
       currentNote:
         "The bank lies close to Bridgetown's port, with cruise ship and cargo traffic, and a tourist submarine works the site and may circle divers. No diving while a ship is moving or alongside, carry an SMB, listen for engines and stay clear of the submarine. Current not documented; ask the crew on the day.",
@@ -828,7 +825,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
         "Turtles and barracuda patrol the reef, and eels rest in the sand patches.",
       conservationNote: "The reef lies inside the Folkestone Marine Park.",
       difficultyLevel: "intermediate",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "Sources describe a reef and drift dive. Boat traffic is not documented; this is a popular marine-park site, so ascend on an SMB.",
@@ -867,7 +864,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barracuda cruise above the reef while lobsters tuck into the crevices.",
       difficultyLevel: "advanced",
-      depthRange: "21–40 m (70–130 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 40,
       currentNote: "Current not documented; ask the crew on the day. Carry an SMB.",
       divePlan:
@@ -903,7 +900,6 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The wreck is a home for small fish and a good place for slow close-ups.",
       difficultyLevel: "beginner",
-      depthRange: "18 m (60 ft)",
       maxDepthMeters: 18,
       currentNote: "Sheltered water close to shore. No current is documented here.",
       divePlan:
@@ -940,7 +936,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Chromis · parrotfish · reef fish",
       marineLifeDescription: "Fish school over the brown coral.",
       difficultyLevel: "intermediate",
-      depthRange: "6–21 m (20–70 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 21,
       currentNote:
         "The reef lies off the mouth of Carlisle Bay, next to Bridgetown's port and its cruise ship and cargo traffic. No diving while a ship is moving or alongside, carry an SMB and listen for engines. Currents on the west-coast reefs vary.",
@@ -971,7 +967,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Turtles · parrotfish · reef fish",
       marineLifeDescription: "Turtles and parrotfish graze along the reef.",
       difficultyLevel: "advanced",
-      depthRange: "18–40 m (60–130 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 40,
       currentNote:
         "Open water off Bridgetown's port, with cruise ship, cargo and small boat traffic. No diving while a ship is moving or alongside, carry an SMB and listen for engines. Current not documented; ask the crew on the day.",
@@ -1011,7 +1007,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Hawksbill turtles · barracuda · squirrelfish · parrotfish",
       marineLifeDescription: "Turtles and barracuda patrol the reef.",
       difficultyLevel: "advanced",
-      depthRange: "18–37 m (60–120 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 37,
       currentNote: "Sources describe a drift dive. Carry an SMB.",
       divePlan:
@@ -1044,7 +1040,7 @@ export const BARBADOS: DiveSiteTemplate[] = [
       marineLife: "Rays · barracuda · hogfish · Bermuda chub",
       marineLifeDescription: "Rays rest in the sand channels between the reefs.",
       difficultyLevel: "advanced",
-      depthRange: "15–40 m (50–130 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 40,
       currentNote:
         "Run as a drift through sand channels that can carry a current. Carry an SMB. The north of the island is exposed to swell.",

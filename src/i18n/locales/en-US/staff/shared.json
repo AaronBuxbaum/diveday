@@ -112,6 +112,8 @@
     "meters": "m",
     "feet": "ft"
   },
+  "depthRange": "{min}–{max} {unit}",
+  "depthSingle": "{max} {unit}",
   "temperature": {
     "celsius": "°C",
     "fahrenheit": "°F"

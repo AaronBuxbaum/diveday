@@ -51,6 +51,7 @@ export type PreparedDiveSiteImportRow = {
   locationName: string | null;
   difficultyLevel: DiveSiteDifficulty | null;
   depthRange: string | null;
+  depthMinMeters: number | null;
   maxDepthMeters: number | null;
   expectedBottomTimeMinutes: number | null;
   currentNote: string | null;
@@ -133,6 +134,7 @@ export const DIVE_SITE_IMPORT_COLUMNS = [
   "description",
   "difficulty_level",
   "depth_range",
+  "depth_min_meters",
   "max_depth_meters",
   "expected_bottom_time_minutes",
   "current_note",
@@ -391,6 +393,14 @@ export function prepareDiveSiteImport(
       (maxDepthMeters <= 0 || maxDepthMeters > MAX_ENTERED_DEPTH_METERS)
     )
       issues.push("invalid_max_depth");
+    // The shallow end of a range needs the deep end and cannot sit below it, the
+    // pair the table's CHECK holds; a row breaking it would fail the whole import.
+    const depthMinMeters = finiteNumber(read(cells, "depth_min_meters"));
+    if (
+      depthMinMeters !== null &&
+      (depthMinMeters < 0 || maxDepthMeters === null || depthMinMeters > maxDepthMeters)
+    )
+      issues.push("invalid_min_depth");
     const bottomTimeRaw = read(cells, "expected_bottom_time_minutes");
     const expectedBottomTimeMinutes = finiteNumber(bottomTimeRaw);
     if (
@@ -463,6 +473,7 @@ export function prepareDiveSiteImport(
       locationName: read(cells, "location_name"),
       difficultyLevel,
       depthRange: read(cells, "depth_range"),
+      depthMinMeters,
       maxDepthMeters,
       expectedBottomTimeMinutes,
       currentNote: read(cells, "current_note"),
