@@ -1,6 +1,6 @@
 import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
-import { crewLanguageGap } from "@/lib/crew-languages";
+import { crewLanguageBriefings } from "@/lib/crew-languages";
 import {
   countInWaterCrew,
   lapsedRungs,
@@ -59,6 +59,8 @@ export type TripOverviewShop = {
   diversPerDivemaster: number;
   /** Whether the shop plans its crew here (`src/lib/crew-schedule.ts`). */
   crewScheduleEnabled: boolean;
+  /** The shop's own language, which every briefing is already in (item 48). */
+  defaultLocale: string;
 };
 
 export type TripOverview = Awaited<ReturnType<typeof getTripOverview>>;
@@ -271,12 +273,18 @@ export async function getTripOverview(
   // English.
   // A shop that keeps no roster is not told nobody aboard speaks German: its
   // crew list is not where it records who sails.
-  const languageGap = shop.crewScheduleEnabled
-    ? crewLanguageGap({
-        crewSpokenLanguages: assignedCrew.map((entry) => entry.person.spokenLanguages),
-        diverLanguages,
+  // Which divers read each language, and who on this crew speaks it
+  // (fifth-loop ideas, item 48).
+  const languageBriefings = shop.crewScheduleEnabled
+    ? crewLanguageBriefings({
+        crew: assignedCrew.map((entry) => ({
+          name: entry.person.fullName,
+          languages: entry.person.spokenLanguages,
+        })),
+        divers: diverLanguages,
+        shopLanguage: (shop.defaultLocale ?? "").split("-")[0] ?? "",
       })
-    : ({ code: "none" } as const);
+    : { uncovered: [], covered: [] };
 
   // The other half of the shift <-> crew cross-link: whether each assigned crew
   // member actually has a working shift covering this sailing. `null` — the shop
@@ -321,7 +329,7 @@ export async function getTripOverview(
       lapsedCrew,
       crewGap,
       ratioGap,
-      languageGap,
+      languageBriefings,
       onShiftIds: shiftCoverage === null ? null : [...shiftCoverage],
       clashes,
     },

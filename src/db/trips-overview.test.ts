@@ -215,11 +215,11 @@ describe("getTripOverview", () => {
    * booked diver's stated language isn't covered by the assigned crew's
    * recorded languages.
    */
-  describe("crew.languageGap", () => {
+  describe("crew.languageBriefings", () => {
     it("reports none when no booked diver has signaled a language preference", async () => {
       const ctx = await context();
       const { crew } = await overviewFor(ctx);
-      expect(crew.languageGap).toEqual({ code: "none" });
+      expect(crew.languageBriefings).toEqual({ uncovered: [], covered: [] });
     });
 
     it("reports the uncovered language once a booked diver signals one nobody on the crew speaks", async () => {
@@ -235,10 +235,12 @@ describe("getTripOverview", () => {
       await ctx.db.update(people).set({ locale: "es-ES" }).where(eq(people.id, outcome.personId));
 
       const { crew } = await overviewFor(ctx);
-      expect(crew.languageGap).toEqual({ code: "uncovered", missing: ["es"] });
+      expect(crew.languageBriefings.uncovered).toEqual([
+        { language: "es", divers: ["Freya Lindqvist"], crew: [] },
+      ]);
     });
 
-    it("reports none once an assigned crew member records the language a booked diver signaled", async () => {
+    it("names who can brief them once an assigned crew member records the language a booked diver signaled", async () => {
       const ctx = await context();
       const outcome = await createBooking(ctx.db, {
         actor: "staff",
@@ -259,7 +261,10 @@ describe("getTripOverview", () => {
       await setTripCrew(ctx.db, ctx.shop.id, ctx.tripId, [divemasterId]);
 
       const { crew } = await overviewFor(ctx);
-      expect(crew.languageGap).toEqual({ code: "none" });
+      expect(crew.languageBriefings.uncovered).toEqual([]);
+      expect(crew.languageBriefings.covered).toEqual([
+        { language: "es", divers: ["Freya Lindqvist"], crew: [expect.any(String)] },
+      ]);
     });
 
     it("is unaffected by a crew member's recorded languages if they are not actually assigned", async () => {
@@ -287,7 +292,7 @@ describe("getTripOverview", () => {
 
       const { crew } = await overviewFor(ctx);
       expect(crew.crewIds).not.toContain(divemasterId);
-      expect(crew.languageGap).toEqual({ code: "uncovered", missing: ["es"] });
+      expect(crew.languageBriefings.uncovered.map((briefing) => briefing.language)).toEqual(["es"]);
     });
   });
 });

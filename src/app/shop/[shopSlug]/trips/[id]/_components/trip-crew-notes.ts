@@ -15,6 +15,9 @@ import { cachedListFormat } from "@/lib/intl-cache";
 
 type TripOverview = NonNullable<Awaited<ReturnType<typeof getTripOverview>>>;
 
+/** Past this many divers in one language, the note counts them instead of naming them. */
+const LANGUAGE_NOTE_NAMES = 3;
+
 /** "This hull is on another departure at these hours" — the pulse's door and the crew row's line. */
 export function boatClashText(t: StaffTranslator, clash: TripOverview["boatClashes"][number]) {
   return t("trips.pulse.boatClash", { boat: clash.boatName, departure: clash.otherTitle });
@@ -36,23 +39,40 @@ export function tripCrewNotes({
   locale: string;
   t: StaffTranslator;
 }) {
-  const { crewGap, ratioGap, languageGap, lapsedCrew } = crew;
+  const { crewGap, ratioGap, lapsedCrew } = crew;
   // Who a lapsed rating took down a rung (issue #1853), in Today's own
   // sentence: one fact, one set of words wherever a staffer meets it.
   const ratingLapsedNote =
     lapsedCrew.length > 0 ? ratingLapsedDetailText(t, locale, lapsedCrew) : null;
   // Same tone as underTargetNote below: informs, refuses nothing (issue
-  // #708). Each missing language is named in the reader's own locale
-  // (`languageNameIn`), matching the team settings form's convention —
-  // unlike the diver-facing badge, which uses each language's own endonym.
-  const languageGapNote =
-    languageGap.code === "none"
-      ? null
-      : t("trips.crew.languageGap", {
-          languages: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(
-            languageGap.missing.map((code) => languageNameIn(code, locale) ?? code),
-          ),
-        });
+  // #708). Each language is named in the reader's own locale
+  // (`languageNameIn`), matching the team settings form's convention. The
+  // divers are named, and so is who on the crew can brief them (fifth-loop
+  // ideas, item 48): a missing language first, then each covered one.
+  const list = (names: readonly string[]) =>
+    cachedListFormat(locale, { style: "long", type: "conjunction" }).format(names);
+  const languageName = (code: string) => languageNameIn(code, locale) ?? code;
+  const diversWords = (divers: readonly string[]) =>
+    divers.length > LANGUAGE_NOTE_NAMES
+      ? t("trips.crew.languageDivers", { count: divers.length })
+      : list(divers);
+  const languageSentences = [
+    ...crew.languageBriefings.uncovered.map((briefing) =>
+      t("trips.crew.languageGap", {
+        divers: diversWords(briefing.divers),
+        language: languageName(briefing.language),
+      }),
+    ),
+    ...crew.languageBriefings.covered.map((briefing) =>
+      t("trips.crew.languageCovered", {
+        crew: list(briefing.crew),
+        crewCount: briefing.crew.length,
+        divers: diversWords(briefing.divers),
+        language: languageName(briefing.language),
+      }),
+    ),
+  ];
+  const languageGapNote = languageSentences.length > 0 ? languageSentences.join(" ") : null;
   const underTargetNote =
     ratioGap.code === "none"
       ? null
