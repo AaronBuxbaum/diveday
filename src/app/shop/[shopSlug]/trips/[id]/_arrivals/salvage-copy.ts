@@ -34,14 +34,33 @@ export function noShowSalvageCopy(input: {
   formatWhen: (startsAt: Date) => string;
   /**
    * The desk turned this diver away (H-124) rather than marking them not
-   * here: the money sentence names moving or refunding the booking, which is
-   * the next act for somebody who came and could not board.
+   * here. Their next day is **their own booking moved** (`moveBooking` takes a
+   * turned-away seat), so the panel names that door, on their row, and offers
+   * no new booking: a second seat would charge them twice or spend a package
+   * dive twice, and their orders hold no refund for a seat paid at checkout
+   * (layer 3 review, dde-2 #3).
    */
   turnedAway?: boolean;
 }): NoShowSalvageCopy {
   const { t, offer, shopSlug, tripId, diver } = input;
+  if (input.turnedAway) {
+    const money = { line: t("checkIn.turnAway.money") };
+    if (offer.kind === "waitlist") {
+      return {
+        line: t("checkIn.noShow.waiting", { count: offer.count }),
+        links: [
+          {
+            href: `/shop/${shopSlug}/trips/${tripId}#waitlist`,
+            label: t("checkIn.noShow.waitingDoor"),
+          },
+        ],
+        money,
+      };
+    }
+    return { line: t("checkIn.turnAway.noWaitlist"), links: [], money };
+  }
   const money = {
-    line: input.turnedAway ? t("checkIn.turnAway.money") : t("checkIn.noShow.money"),
+    line: t("checkIn.noShow.money"),
     href: `/shop/${shopSlug}/orders?personId=${encodeURIComponent(diver.id)}`,
     label: t("checkIn.noShow.moneyDoor"),
   };

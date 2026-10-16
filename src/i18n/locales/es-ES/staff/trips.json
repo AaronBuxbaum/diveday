@@ -80,6 +80,7 @@
     "bookingRemovedForfeit": "Reserva cancelada. La plaza vuelve a estar disponible. Fue después del plazo de cancelación, así que no era reembolsable.",
     "bookingRemovedRefundManual": "Reserva cancelada. Se debe un reembolso, pero hay que emitirlo a mano (pago en mostrador, o Stripe no está conectado). Reembolsa desde los pagos del buceador.",
     "bookingRemovedRefundFailed": "Reserva cancelada, pero el reembolso automático no se completó. Emítelo desde los pagos del buceador.",
+    "bookingRemovedTurnedAway": "Reserva cancelada. No embarcó por decisión del mostrador, así que no se reembolsó nada. Si el centro se lo debe, reembólsalo a mano.",
     "bookingRemovedRefundReview": "Reserva cancelada. El registro de pago y Stripe no coinciden en lo que se cobró, así que revisa los pagos del buceador antes de emitir cualquier reembolso.",
     "bookingRemovedRefundInProgress": "Reserva cancelada. Ya hay un reembolso en curso para esta plaza.",
     "bookingRemovedRefundReconcile": "Reserva cancelada. Un reembolso anterior llegó a Stripe pero no quedó registrado aquí. Concílialo en Stripe antes de emitir otro.",

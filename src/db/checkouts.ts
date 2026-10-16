@@ -1,7 +1,8 @@
-import { and, asc, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { checkoutCharge, seatCheckoutCharge } from "@/lib/deposits";
 import { log } from "@/lib/log";
+import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { isDiver, type ParticipantType } from "@/lib/participant-types";
 import { parsePassThroughFee, passThroughTotalCents } from "@/lib/pass-through-fee";
 import { capturedPaymentStatuses } from "@/lib/payment-source";
@@ -190,7 +191,9 @@ export async function startBookingCheckout(
         inArray(bookings.id, input.bookingIds),
         eq(bookings.shopId, input.shopId),
         eq(bookings.tripId, input.tripId),
-        ne(bookings.status, "cancelled"),
+        // Only a seat the diver still holds is charged: a released one (turned
+        // away, not here) may already be resold (layer 3 review, dde-2 #1).
+        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
       ),
     );
   if (bookingRows.length !== input.bookingIds.length) return { ok: false, reason: "invalid" };

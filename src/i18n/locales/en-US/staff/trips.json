@@ -80,6 +80,7 @@
     "waitlistCarryUnavailable": "That departure is not taking seats.",
     "bookingRemovedRefundManual": "Booking canceled. A refund is owed but must be issued by hand (counter payment, or Stripe isn’t connected). Refund from the diver’s payments.",
     "bookingRemovedRefundFailed": "Booking canceled, but the automatic refund didn’t go through. Issue it from the diver’s payments.",
+    "bookingRemovedTurnedAway": "Booking canceled. They were turned away at the desk, so nothing was refunded. If the shop owes them, refund it by hand.",
     "bookingRemovedRefundReview": "Booking canceled. The payment record and Stripe disagree on what was captured, so review the diver’s payments before issuing any refund.",
     "bookingRemovedRefundInProgress": "Booking canceled. A refund for this seat is already going through.",
     "bookingRemovedRefundReconcile": "Booking canceled. An earlier refund reached Stripe but wasn’t recorded here. Reconcile it in Stripe before issuing another.",

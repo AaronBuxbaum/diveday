@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "1dce941a-72ea-4bb6-b0b5-c169d976d849",
+  "id": "3fe8477d-40fe-4639-a8ff-7c1dccfb4fa8",
   "prevIds": [
     "44c0586d-ddc3-4af2-9187-992a8cd1a59b",
     "509176c4-f2d6-4cc8-ad4c-0c463824ae90"
@@ -4207,6 +4207,19 @@
       "generated": null,
       "identity": null,
       "name": "turned_away_reason",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "bookings"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "turned_away_at",
       "entityType": "columns",
       "schema": "public",
       "table": "bookings"
@@ -42450,8 +42463,15 @@
       "table": "bookings"
     },
     {
-      "value": "\"turned_away_reason\" is null or \"status\" in ('no_show', 'cancelled')",
+      "value": "\"turned_away_at\" is null or \"status\" in ('no_show', 'cancelled')",
       "name": "bookings_turned_away_is_released",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "bookings"
+    },
+    {
+      "value": "\"turned_away_reason\" is null or \"turned_away_at\" is not null",
+      "name": "bookings_turned_away_reason_has_time",
       "entityType": "checks",
       "schema": "public",
       "table": "bookings"

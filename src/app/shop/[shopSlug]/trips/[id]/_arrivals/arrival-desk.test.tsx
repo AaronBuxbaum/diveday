@@ -8,7 +8,7 @@ import { createCertification } from "@/db/readiness";
 import { bookings, certifications, nitroxCertifications, trips } from "@/db/schema";
 import { welcomeCueInputsByBooking } from "@/db/welcome-cues";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { nowDate } from "@/lib/clock";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import { turnAwayReasons } from "@/lib/turn-away";
 import { fileScopedShopContext } from "@/test/db";
 
@@ -158,21 +158,54 @@ describe("the counter's turned-away door (H-124)", () => {
     expect(expected).toContain("identity");
     const below = await belowFor(seat);
     expect(below).toHaveTextContent("Turned away");
-    const offered = [...below.querySelectorAll<HTMLInputElement>('input[name="reason"]')].map(
-      (input) => input.value,
-    );
+    const offered = reasonsOffered(below);
     expect(offered).toEqual(expected);
+    // Security F1: the matched person's blockers are not this seat's reasons.
+    expect(offered.every((reason) => reason === "identity" || reason === "payment")).toBe(true);
+  });
+
+  /** dde-1 F1: the boat left with an arrived diver; the desk has no door left. */
+  it("draws no door on an arrived diver once the boat has sailed, and keeps it on a booked one", async () => {
+    const seat = await firstTimerAtTheCounter();
+    // Blocked on something the seat itself owns, whatever is on file.
+    await seat.db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: seat.now })
+      .where(eq(bookings.id, seat.bookingId));
+    const sailed = { ...seat, now: new Date(seat.trip.startsAt.getTime() + 2 * HOUR_MS) };
+    const [row] = (await listCheckInQueue(seat.db, seat.shop.id, { now: sailed.now })).filter(
+      (candidate) => candidate.bookingId === seat.bookingId,
+    );
+    if (!row) throw new Error("the seat left the queue");
+    expect(row.readiness.status).toBe("blocked");
+    expect(reasonsOffered(await belowFor(sailed)).length).toBeGreaterThan(0);
+    await seat.db
+      .update(bookings)
+      .set({ status: "checked_in" })
+      .where(eq(bookings.id, seat.bookingId));
+    expect(reasonsOffered(await belowFor(sailed))).toEqual([]);
   });
 
   it("says a turned-away seat was seen at the desk, with its reason", async () => {
     const seat = await firstTimerAtTheCounter();
     await seat.db
       .update(bookings)
-      .set({ status: "no_show", turnedAwayReason: "card" })
+      .set({ status: "no_show", turnedAwayReason: "card", turnedAwayAt: seat.now })
       .where(eq(bookings.id, seat.bookingId));
     const below = await belowFor(seat);
     expect(below).toHaveTextContent("Seen at the desk, turned away: card");
-    expect(below).toHaveTextContent("Turning someone away does not charge or refund anything.");
+    // dde-2 #3: the one money door that works is the move on their row.
+    expect(below).toHaveTextContent(
+      "Nothing was charged or refunded. Open their row to move the booking to another day.",
+    );
     expect(below).not.toHaveTextContent("Marking someone not here");
+    expect(below).not.toHaveTextContent("Open their orders");
+    expect(below.querySelector('a[href*="/bookings/new/"]')).toBeNull();
   });
 });
+
+function reasonsOffered(below: HTMLElement) {
+  return [...below.querySelectorAll<HTMLInputElement>('input[name="reason"]')].map(
+    (input) => input.value,
+  );
+}

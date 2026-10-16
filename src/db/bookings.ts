@@ -1090,8 +1090,9 @@ async function writeSeat(
       .update(bookings)
       .set({
         status: "booked",
-        // A new booking, so no turned-away reason from the row's last life.
+        // A new booking, so no turn-away from the row's last life.
         turnedAwayReason: null,
+        turnedAwayAt: null,
         // A reactivated row is a new booking and takes this booking's type.
         // An old nitrox request rides along only for a diver: enriched air is
         // something a diver breathes, and the column's check refuses it on
@@ -1710,7 +1711,7 @@ export async function restoreBooking(
       .update(bookings)
       // A seat back on the boat carries no turned-away reason from its last
       // life (`bookings_turned_away_is_released`).
-      .set({ status: "booked", turnedAwayReason: null })
+      .set({ status: "booked", turnedAwayReason: null, turnedAwayAt: null })
       .where(and(eq(bookings.id, bookingId), eq(bookings.status, "cancelled")));
     await settlePackageCoverage(tx, {
       shopId,
@@ -1887,8 +1888,14 @@ export async function moveBooking(
     if (!source || !booking || booking.status === "cancelled") {
       return { ok: false, reason: "not_found" };
     }
-    if (booking.status !== "booked") return { ok: false, reason: "not_movable" };
-    if (hasSailed(source.startsAt, now)) return { ok: false, reason: "departed" };
+    // **A seat the desk turned away moves too** (layer 3 review, dde-2 #3):
+    // the desk's money line sends staff here, and the diver never boarded,
+    // so the source having sailed says nothing about them. It lands booked on
+    // the new departure; the turn-away was about the old one and stays on its
+    // trail. A plain no-show does not move: that is the day's own record.
+    const turnedAway = booking.status === "no_show" && booking.turnedAwayAt !== null;
+    if (booking.status !== "booked" && !turnedAway) return { ok: false, reason: "not_movable" };
+    if (!turnedAway && hasSailed(source.startsAt, now)) return { ok: false, reason: "departed" };
     if (!tripTakesSeatFrom(target, "staff") || target.isRehearsal || source.isRehearsal) {
       return { ok: false, reason: "target_unavailable" };
     }
@@ -2004,12 +2011,16 @@ export async function moveBooking(
         conditionsBriefedAt: null,
         carriedFactsConfirmedAt: null,
         pickupTime: null,
+        // A turned-away seat is a booked seat on the new departure.
+        status: "booked",
+        turnedAwayReason: null,
+        turnedAwayAt: null,
       })
       .where(
         and(
           eq(bookings.id, booking.id),
           eq(bookings.shopId, shopId),
-          eq(bookings.status, "booked"),
+          eq(bookings.status, booking.status),
         ),
       );
     // The diver's one open ask follows them: it is about their day, and the
@@ -2071,14 +2082,17 @@ export async function moveBooking(
       .where(and(eq(people.id, booking.personId), eq(people.shopId, shopId)))
       .limit(1);
     // The crew of each boat reads it on the catch-up strip: one fewer here,
-    // one more there.
-    await recordDeskEvent(tx, {
-      shopId,
-      tripId: source.id,
-      kind: "seat_released",
-      bookingId: booking.id,
-      subjectPersonId: booking.personId,
-    });
+    // one more there. A turned-away seat left the old boat when the desk
+    // turned them away, so only the new one hears of it.
+    if (!turnedAway) {
+      await recordDeskEvent(tx, {
+        shopId,
+        tripId: source.id,
+        kind: "seat_released",
+        bookingId: booking.id,
+        subjectPersonId: booking.personId,
+      });
+    }
     await recordDeskEvent(tx, {
       shopId,
       tripId: target.id,
@@ -3522,6 +3536,11 @@ export async function splitBookingIdentity(
           identityUnconfirmedAt: null,
           identityBookedAs: null,
           identityMatchedBy: null,
+          // A reason the desk gave while the seat was held was chosen about the
+          // guess (security review 2026-10-16, F1), so it does not travel to
+          // the new record. That the desk turned somebody away does
+          // (`turnedAwayAt` stays).
+          turnedAwayReason: null,
         })
         .where(and(inArray(bookings.id, seatIds), eq(bookings.shopId, input.shopId)));
 

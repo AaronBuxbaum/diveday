@@ -801,6 +801,8 @@
     "materialsHeadingStarted": "Course materials",
     "openingPayment": "Opening payment…",
     "cancelledHeading": "This booking was canceled",
+    "seatReleasedHeading": "The shop released your seat on this departure",
+    "seatReleasedBody": "Talk to the desk.",
     "unavailableHeading": "This readiness link isn’t available",
     "unavailableBody": "Ask your dive shop for a fresh link.",
     "expiredBody": "Trip-prep links don’t stay open for long, and this one has run out. We can email you a fresh one.",

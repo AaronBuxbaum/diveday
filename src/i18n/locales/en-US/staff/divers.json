@@ -541,7 +541,8 @@
     "canceled": "canceled",
     "tripCalledOff": "trip called off",
     "noShow": "no-show",
-    "turnedAway": "seen at the desk, turned away: {reason, select, medical {medical} waiver {waiver} card {card} age {age} identity {identity} payment {payment} other {not ready}}",
+    "turnedAway": "seen at the desk, turned away{reason, select, medical {: medical} waiver {: waiver} card {: card} age {: age} identity {: identity} payment {: payment} other {}}",
+    "turnedAwayRemoved": "seen at the desk, turned away{reason, select, medical {: medical} waiver {: waiver} card {: card} age {: age} identity {: identity} payment {: payment} other {}}, then removed",
     "notCountedBack": "not counted back aboard",
     "showAll": "Show all {count}",
     "newInvoice": "New invoice"

@@ -541,7 +541,8 @@
     "canceled": "cancelada",
     "tripCalledOff": "salida suspendida",
     "noShow": "no se presentó",
-    "turnedAway": "atendido en el mostrador, no embarcó: {reason, select, medical {médico} waiver {exención} card {certificación} age {edad} identity {identidad} payment {pago} other {no está listo}}",
+    "turnedAway": "atendido en el mostrador, no embarcó{reason, select, medical {: médico} waiver {: exención} card {: certificación} age {: edad} identity {: identidad} payment {: pago} other {}}",
+    "turnedAwayRemoved": "atendido en el mostrador, no embarcó{reason, select, medical {: médico} waiver {: exención} card {: certificación} age {: edad} identity {: identidad} payment {: pago} other {}}; después se quitó la reserva",
     "notCountedBack": "no se contó de vuelta a bordo",
     "showAll": "Ver las {count}",
     "newInvoice": "Nueva factura"

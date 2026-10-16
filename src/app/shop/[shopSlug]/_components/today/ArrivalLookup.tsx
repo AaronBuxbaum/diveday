@@ -67,9 +67,7 @@ export function ArrivalLookup({
                       <Badge tone="success">{t("checkIn.row.arrived")}</Badge>
                     ) : row.bookingStatus === "no_show" ? (
                       <Badge tone="neutral">
-                        {row.turnedAwayReason
-                          ? t("checkIn.turnAway.badge")
-                          : t("checkIn.noShow.badge")}
+                        {row.turnedAwayAt ? t("checkIn.turnAway.badge") : t("checkIn.noShow.badge")}
                       </Badge>
                     ) : (
                       <Badge tone={readinessStatusTone(row.readiness.status)}>

@@ -62,6 +62,12 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "trips.notices.bookingRemovedRefundFailed",
   },
+  // Warning: a turned-away seat's money is a person's call, not the window's.
+  "booking-removed-turned-away": {
+    form: "roster",
+    tone: "warning",
+    key: "trips.notices.bookingRemovedTurnedAway",
+  },
   "booking-removed-refund-review": {
     form: "roster",
     tone: "danger",

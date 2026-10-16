@@ -219,7 +219,9 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           >
             {t("trips.guests.scheduleAnotherDeparture")}
           </Link>
-          {actions.carryWaitlistAction && actions.moveSeat?.targets.length ? (
+          {actions.carryWaitlistAction &&
+          actions.moveSeat?.targets.length &&
+          !actions.moveSeat.departed ? (
             <CarryWaitlistForm
               action={actions.carryWaitlistAction}
               targets={actions.moveSeat.targets}

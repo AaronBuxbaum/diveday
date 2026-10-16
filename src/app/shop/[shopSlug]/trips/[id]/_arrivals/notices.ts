@@ -97,6 +97,8 @@ export const DESK_NOTICES: DeskNoticeMap = {
     key: "checkIn.notice.noShowAlreadyMissingAfterDive",
   },
   "turn-away-already-marked": { tone: "neutral", key: "checkIn.notice.turnAwayAlreadyMarked" },
+  // The boat left with this diver checked in (layer 3 review, dde-1 F1).
+  "turn-away-sailed": { tone: "danger", key: "checkIn.notice.turnAwaySailed" },
   "turn-away-not-booked": { tone: "neutral", key: "checkIn.notice.noShowNotBooked" },
   "turn-away-trip-cancelled": { tone: "neutral", key: "checkIn.notice.noShowTripCancelled" },
   "turn-away-outside-window": { tone: "warning", key: "checkIn.notice.turnAwayOutsideWindow" },

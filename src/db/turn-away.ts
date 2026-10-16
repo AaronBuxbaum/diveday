@@ -1,5 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { seatName } from "@/lib/held-seat";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { type TurnAwayGate, type TurnAwayReason, turnAwayGate } from "@/lib/turn-away";
 import type { AppDb, DbExecutor } from "./client";
@@ -43,7 +44,19 @@ export type TurnAwayOutcome =
  * The gate runs against rows read under the seat's lock, and readiness is
  * re-read inside the same transaction: a door drawn on a blocked row ten
  * seconds ago is not evidence that the row is still blocked, or blocked for
- * that reason. A stale reason is refused, never rewritten.
+ * that reason. A reason the re-read no longer shows is refused, never
+ * rewritten.
+ *
+ * **What that does not promise** (security review 2026-10-16, F2): the waiver,
+ * card and payment writers take no lock on the booking, so a signature
+ * committing between the readiness re-read and this commit can leave a reason
+ * that was true when read and is stale a moment later ("waiver" on a seat
+ * whose release just landed). It fails closed: the diver is off the list and
+ * "Put back on the list" restores them. Locking every one of those writers for
+ * this is not worth what it would cost them.
+ *
+ * The trail and the outcome name the **seat** (`seatName`): on a held seat,
+ * the name it was booked under, never the matched person's.
  */
 export async function turnBookingAway(
   db: AppDb,
@@ -72,7 +85,9 @@ export async function turnBookingAway(
         tripId: trips.id,
         tripStatus: trips.status,
         startsAt: trips.startsAt,
-        personName: people.fullName,
+        fullName: people.fullName,
+        identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+        identityBookedAs: bookings.identityBookedAs,
       })
       .from(bookings)
       .innerJoin(trips, and(eq(trips.id, bookings.tripId), liveTrip()))
@@ -89,6 +104,7 @@ export async function turnBookingAway(
     // Another shop's booking is simply not found: a staff surface must never
     // learn that a row it may not see exists.
     if (!seat) return { ok: false, reason: "not_found" };
+    const personName = seatName(seat.fullName, seat);
 
     const readiness = await getBookingReadiness(tx as DbExecutor, input.shopId, seat.id);
     const gate = turnAwayGate({
@@ -109,7 +125,7 @@ export async function turnBookingAway(
     // no-show landing first, update nothing.
     const [updated] = await tx
       .update(bookings)
-      .set({ status: "no_show", turnedAwayReason: input.reason })
+      .set({ status: "no_show", turnedAwayReason: input.reason, turnedAwayAt: now })
       .where(and(eq(bookings.id, seat.id), inArray(bookings.status, [...SEAT_HELD_STATUSES])))
       .returning({ id: bookings.id });
     if (!updated) return { ok: false, reason: "already_marked" };
@@ -120,14 +136,14 @@ export async function turnBookingAway(
       bookingId: seat.id,
       actorPersonId: recorder.id,
       code: "booking_turned_away",
-      params: { actor: recorder.name, diver: seat.personName, reason: input.reason },
+      params: { actor: recorder.name, diver: personName, reason: input.reason },
       occurredAt: now,
     });
     return {
       ok: true,
       bookingId: seat.id,
       tripId: seat.tripId,
-      personName: seat.personName,
+      personName,
       reason: input.reason,
     };
   });

@@ -170,6 +170,7 @@ describe("turned away at the desk", () => {
     bookingStatus: "no_show",
     readiness: { status: "blocked" },
     turnedAwayReason: "card",
+    turnedAwayAt: new Date("2026-10-16T07:00:00.000Z"),
   };
 
   /**
@@ -188,7 +189,13 @@ describe("turned away at the desk", () => {
     });
   });
 
-  it("is a released seat, finished at the counter, and only with a reason", () => {
+  /** Erasure clears the category and keeps the fact (layer 3 review, dde-2 #4). */
+  it("stays turned away when erasure has cleared the category", () => {
+    expect(isTurnedAwayAtCounter({ ...turnedAway, turnedAwayReason: null })).toBe(true);
+    expect(isTurnedAwayAtCounter({ ...turnedAway, turnedAwayAt: null })).toBe(false);
+  });
+
+  it("is a released seat, finished at the counter, and only with a turn-away", () => {
     expect(isTurnedAwayAtCounter(turnedAway)).toBe(true);
     expect(isNoShowAtCounter(turnedAway)).toBe(true);
     expect(counterIsDone(turnedAway)).toBe(true);

@@ -1,5 +1,7 @@
+import { heldSeatBlockers } from "./identity-match";
 import { arrivalsWindow } from "./operational-window";
 import type { ReadinessBlocker, ReadinessBlockerCode, ReadinessResult } from "./readiness";
+import { hasSailed } from "./trips";
 
 /**
  * **"Turned away" at the desk** (safety sheet 2026-10-15, item 6; H-124).
@@ -88,6 +90,14 @@ const REASON_FOR_BLOCKER: Record<ReadinessBlockerCode, TurnAwayReason | null> = 
  * The reasons this row's own blockers allow, in `TURN_AWAY_REASONS` order and
  * without repeats. Empty for a ready row, and for a row blocked only by shop
  * setup or a failed lookup.
+ *
+ * **A held seat says only what belongs to the seat** (security review
+ * 2026-10-16, F1): while `identity_unconfirmed` stands, every other blocker is
+ * measured against the matched person's record, so it is filtered through
+ * `heldSeatBlockers`, the same allow-list the held row's own copy reads. The
+ * desk is offered "identity" (and "payment" when the seat owes), and the writer
+ * refuses anything else, so no stranger's medical hold can become this seat's
+ * recorded reason.
  */
 export function turnAwayReasons(readiness: {
   status: ReadinessResult["status"];
@@ -95,7 +105,9 @@ export function turnAwayReasons(readiness: {
 }): TurnAwayReason[] {
   if (readiness.status === "ready") return [];
   const allowed = new Set(
-    readiness.blockers.map((blocker) => REASON_FOR_BLOCKER[blocker.code]).filter(Boolean),
+    heldSeatBlockers(readiness.blockers)
+      .map((blocker) => REASON_FOR_BLOCKER[blocker.code])
+      .filter(Boolean),
   );
   return TURN_AWAY_REASONS.filter((reason) => allowed.has(reason));
 }
@@ -110,6 +122,11 @@ export function turnAwayReasons(readiness: {
  *   a person the manifest is holding off the expected list.
  * - `already_marked` — the seat is already released (turned away, or marked
  *   not here). The seat is freed once.
+ * - `sailed` — the diver checked in and the boat has left (layer 3 review,
+ *   dde-1 F1). As far as anyone ashore knows they are aboard; a blocker that
+ *   lands afterwards (a refund at 09:30) does not bring them back to the desk,
+ *   and turning them away would take a person off the head count. A *booked*
+ *   row after sailing keeps the door: the desk never saw that diver go.
  * - `not_booked` — the seat was given up.
  * - `trip_cancelled` — the boat is not going.
  * - `outside_window` — the departure is outside the counter's own reach
@@ -127,6 +144,7 @@ export type TurnAwayGate =
   | "already_boarded"
   | "already_missing_after_dive"
   | "already_marked"
+  | "sailed"
   | "not_booked"
   | "trip_cancelled"
   | "outside_window"
@@ -146,6 +164,21 @@ export type TurnAwayGateInput = {
 };
 
 export function turnAwayGate(input: TurnAwayGateInput): TurnAwayGate {
+  const door = turnAwayDoor(input);
+  if (door !== "eligible") return door;
+  if (!turnAwayReasons(input.readiness).includes(input.reason)) return "reason_not_blocking";
+  return "eligible";
+}
+
+/**
+ * Everything `turnAwayGate` asks except which reason was posted: whether the
+ * door may exist on this row at all. The writer runs it inside the gate, and
+ * the desk runs it (through {@link turnAwayOffer}) to decide what to draw, so
+ * the two cannot disagree about a row.
+ */
+function turnAwayDoor(
+  input: Omit<TurnAwayGateInput, "reason">,
+): Exclude<TurnAwayGate, "reason_not_blocking"> {
   // Safety first, ahead of every other condition so none of them can mask it.
   if (input.onTheWater === "boarded") return "already_boarded";
   if (input.onTheWater === "missing_after_dive") return "already_missing_after_dive";
@@ -153,10 +186,21 @@ export function turnAwayGate(input: TurnAwayGateInput): TurnAwayGate {
   if (input.bookingStatus !== "booked" && input.bookingStatus !== "checked_in") {
     return "not_booked";
   }
+  if (input.bookingStatus === "checked_in" && hasSailed(input.startsAt, input.now)) {
+    return "sailed";
+  }
   if (input.tripStatus === "cancelled") return "trip_cancelled";
   const window = arrivalsWindow(input.now);
   if (input.startsAt < window.from || input.startsAt > window.to) return "outside_window";
   if (input.readiness.status === "ready") return "not_blocked";
-  if (!turnAwayReasons(input.readiness).includes(input.reason)) return "reason_not_blocking";
   return "eligible";
+}
+
+/**
+ * **The reasons the desk may offer on this row**, each one the writer would
+ * accept: empty wherever {@link turnAwayGate} would refuse the row whatever the
+ * reason. The counter draws the door from this and nothing else.
+ */
+export function turnAwayOffer(input: Omit<TurnAwayGateInput, "reason">): TurnAwayReason[] {
+  return turnAwayDoor(input) === "eligible" ? turnAwayReasons(input.readiness) : [];
 }

@@ -298,6 +298,9 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
     // plain no-show, which is the other statement `no_show` makes. The
     // diver's own export carries it too: it is a record about them.
     { header: "turned_away_reason", in: "both", value: (row) => row.turnedAwayReason },
+    // When the desk turned them away: the fact, which erasure keeps while it
+    // clears the category (layer 3 review, dde-2 #4).
+    { header: "turned_away_at", in: "both", value: (row) => row.turnedAwayAt },
     // Diver, snorkeler or rider (ADR 20261007-participant-types): what
     // this seat was for, and which gates it was asked to clear; and
     // what it was sold as, which differs when staff changed it.

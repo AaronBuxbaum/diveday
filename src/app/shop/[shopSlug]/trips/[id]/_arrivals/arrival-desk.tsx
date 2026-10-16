@@ -25,7 +25,7 @@ import { type NoShowClaim, noShowClaim, noShowGate } from "@/lib/no-show";
 import { arrivalsWindow } from "@/lib/operational-window";
 import { paperPassPath } from "@/lib/print-sheets";
 import { hasSailed } from "@/lib/trips";
-import { turnAwayReasons } from "@/lib/turn-away";
+import { turnAwayOffer } from "@/lib/turn-away";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import type { RosterArrival } from "../_components/RosterSection";
 import { ArrivalTap } from "./ArrivalTap";
@@ -114,35 +114,7 @@ export async function buildArrivalDesk({
   const offerAnotherDay = offerAnotherDayAction.bind(null, shopSlug, tripId);
   const turnAway = turnAwayAction.bind(null, shopSlug, tripId);
 
-  // **"Turned away" on a blocked row, before the boat leaves too** (H-124: any
-  // active staff, blocked rows only). The reasons offered are this row's own
-  // blocker categories; `turnBookingAway` re-reads readiness under the seat's
-  // lock and refuses any other, so this decides only what is drawn.
-  const turnAwayFor = (row: CheckInQueueRow): ReactNode => {
-    if (row.onTheWater) return null;
-    const reasons = turnAwayReasons(row.readiness);
-    if (reasons.length === 0) return null;
-    return (
-      <TurnAwayScript
-        key="turn-away"
-        action={turnAway}
-        bookingId={row.bookingId}
-        reasons={reasons.map((reason) => ({
-          value: reason,
-          label: t(`checkIn.turnAway.reason.${reason}`),
-        }))}
-        copy={{
-          door: t("checkIn.turnAway.door"),
-          legend: t("checkIn.turnAway.legend"),
-          consequence: t("checkIn.turnAway.consequence"),
-          confirm: t("checkIn.turnAway.confirm"),
-          confirming: t("checkIn.turnAway.confirming"),
-          confirmAriaLabel: t("checkIn.turnAway.confirmAriaLabel", { name: row.personName }),
-          sendFailed: t("checkIn.sendFailedButton"),
-        }}
-      />
-    );
-  };
+  const turnAwayFor = (row: CheckInQueueRow) => turnAwayDoor({ row, now, t, action: turnAway });
 
   // **"Not here" opens when the boat leaves without them**, and says something
   // different once it is gone. `markBookingNoShow` runs the same gate again
@@ -193,12 +165,11 @@ export async function buildArrivalDesk({
       // **Turned away says so, in its own words** (H-124): the desk saw this
       // diver and refused them, which is not "did not arrive". The reason is
       // the category alone.
-      const turnedAway =
-        isTurnedAwayAtCounter(row) && row.turnedAwayReason ? (
-          <p key="turned-away" className="mt-1 text-sm font-medium text-foreground">
-            {t("checkIn.turnAway.line", { reason: row.turnedAwayReason })}
-          </p>
-        ) : null;
+      const turnedAway = isTurnedAwayAtCounter(row) ? (
+        <p key="turned-away" className="mt-1 text-sm font-medium text-foreground">
+          {t("checkIn.turnAway.line", { reason: row.turnedAwayReason ?? "unstated" })}
+        </p>
+      ) : null;
       const salvage = salvageFor.get(row.personId);
       const panel = salvage ? (
         <NoShowSalvage
@@ -256,7 +227,8 @@ export async function buildArrivalDesk({
           />
         </span>,
       );
-      // A diver who arrived and has since gone blocked can still be sent home.
+      // A diver who arrived and has since gone blocked can still be sent home,
+      // until the boat leaves with them.
       if (!ready) {
         const door = turnAwayFor(row);
         if (door) below.set(row.bookingId, door);
@@ -451,4 +423,54 @@ export async function buildArrivalDesk({
   const walkInOpen = !hasSailed(trip.startsAt, now);
 
   return { arrival: { instrument, controls, below, boarded }, walkInOpen };
+}
+
+/**
+ * **"Turned away" on a blocked row, before the boat leaves too** (H-124: any
+ * active staff, blocked rows only). The door and the writer share one
+ * predicate (`turnAwayOffer`, the gate `turnBookingAway` runs again under the
+ * seat's lock), so the desk never draws a door the writer refuses: none on the
+ * water, none on an arrived diver once the boat has sailed, and on a held seat
+ * only the seat's own reasons (layer 3 review, 2026-10-16).
+ */
+function turnAwayDoor({
+  row,
+  now,
+  t,
+  action,
+}: {
+  row: CheckInQueueRow;
+  now: Date;
+  t: StaffTranslator;
+  action: (formData: FormData) => Promise<void>;
+}): ReactNode {
+  const reasons = turnAwayOffer({
+    bookingStatus: row.bookingStatus,
+    onTheWater: row.onTheWater,
+    tripStatus: "scheduled",
+    startsAt: row.startsAt,
+    now,
+    readiness: row.readiness,
+  });
+  if (reasons.length === 0) return null;
+  return (
+    <TurnAwayScript
+      key="turn-away"
+      action={action}
+      bookingId={row.bookingId}
+      reasons={reasons.map((reason) => ({
+        value: reason,
+        label: t(`checkIn.turnAway.reason.${reason}`),
+      }))}
+      copy={{
+        door: t("checkIn.turnAway.door"),
+        legend: t("checkIn.turnAway.legend"),
+        consequence: t("checkIn.turnAway.consequence"),
+        confirm: t("checkIn.turnAway.confirm"),
+        confirming: t("checkIn.turnAway.confirming"),
+        confirmAriaLabel: t("checkIn.turnAway.confirmAriaLabel", { name: row.personName }),
+        sendFailed: t("checkIn.sendFailedButton"),
+      }}
+    />
+  );
 }

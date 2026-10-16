@@ -23,9 +23,14 @@ export type StoryNoteBooking = {
     paidRentalKinds?: readonly string[] | null;
     /**
      * Set when the desk turned this diver away (H-124). Required, so the story
-     * can never say "no-show" over somebody the desk saw and refused.
+     * can never say "no-show" over somebody the desk saw and refused. The
+     * category may be null on a turned-away seat (erasure clears it and keeps
+     * `turnedAwayAt`).
      */
     turnedAwayReason: string | null;
+    turnedAwayAt: Date | null;
+    /** A held seat (H-13) sits on this story on a guess. */
+    identityUnconfirmedAt?: Date | null;
   };
   trip: { status: string; diveMode?: "boat" | "shore" | "pool" | null };
   reviewRating?: number | null;
@@ -104,9 +109,18 @@ export function storyNotes(
 ): string[] {
   // **Seen at the desk, turned away** (H-124): a past fact even on a boat that
   // has not left yet, so it is said ahead as well as behind. The crew's own
-  // word outranks it: a seat they counted aboard has no reason left on it.
-  if (entry.booking.status === "no_show" && entry.booking.turnedAwayReason) {
-    return [t("divers.story.turnedAway", { reason: entry.booking.turnedAwayReason })];
+  // word outranks it: a seat they counted aboard has no turn-away left on it.
+  // A seat removed afterwards was not the diver cancelling: "then removed"
+  // (layer 3 review, dde-2 #2).
+  if (entry.booking.turnedAwayAt) {
+    // **A held seat says nothing here** (security review 2026-10-16, F1):
+    // this story is the matched person's, and the seat sits on it on a guess.
+    if (entry.booking.identityUnconfirmedAt) return [];
+    const reason = entry.booking.turnedAwayReason ?? "unstated";
+    if (entry.booking.status === "no_show") return [t("divers.story.turnedAway", { reason })];
+    if (entry.booking.status === "cancelled") {
+      return [t("divers.story.turnedAwayRemoved", { reason })];
+    }
   }
   if (ahead) return [];
   switch (seatOutcome(entry)) {

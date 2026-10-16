@@ -70,6 +70,11 @@ export type CheckInQueueRow = {
    */
   turnedAwayReason: TurnAwayReason | null;
   /**
+   * When the desk turned the diver away: the fact itself, which erasure keeps
+   * when it clears the category. Null on a plain "Not here".
+   */
+  turnedAwayAt: Date | null;
+  /**
    * When the diver said they are running late (J3), on a seat still to
    * arrive; null otherwise. Already filtered through `runningLateShown`, so a
    * reader never shows it on an arrived or released seat.
@@ -194,6 +199,7 @@ export async function listCheckInQueue(
       endsAt: trips.endsAt,
       bookingStatus: bookings.status,
       turnedAwayReason: bookings.turnedAwayReason,
+      turnedAwayAt: bookings.turnedAwayAt,
       runningLateAt: bookings.runningLateAt,
       emergencyContactName: people.emergencyContactName,
       emergencyContactPhone: people.emergencyContactPhone,

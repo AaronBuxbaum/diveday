@@ -66,3 +66,26 @@ export function HeldAfterDiveCard({ shop, t }: { shop: ShopContact; t: DiverTran
     />
   );
 }
+
+/**
+ * **A seat the desk released, before the day is over** (layer 3 review, dde-1
+ * F2 and dde-2 #1): turned away at the counter, or marked not here once the
+ * boat left. Everything the page draws after this point (the spine, the
+ * checklist, the Pay step, "running late") is about a seat the diver still
+ * holds: a diver turned away at 07:00 who signs and pays at 07:10 has paid for
+ * a seat the shop may have sold, and walks to a boat expecting a place. So the
+ * page answers here, after the after-dive branch that owns the finished day:
+ * the shop released the seat, talk to the desk. Never the reason: a bearer
+ * link is no place to print a medical or card category.
+ */
+export function ReleasedSeatCard({ shop, t }: { shop: ShopContact; t: DiverTranslator }) {
+  return (
+    <ExpiredLinkCard
+      glyph="quiet"
+      title={t("ready.seatReleasedHeading")}
+      text={t("ready.seatReleasedBody")}
+      shop={shop}
+      t={t}
+    />
+  );
+}

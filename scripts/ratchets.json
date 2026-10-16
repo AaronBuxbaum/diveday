@@ -383,7 +383,7 @@
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.test.tsx": 1040,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": 1050,
     "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1180,
-    "src/app/shop/[shopSlug]/trips/[id]/actions.ts": 1062,
+    "src/app/shop/[shopSlug]/trips/[id]/actions.ts": 1029,
     "src/components/MarketingFeatureScreens.tsx": 1064,
     "src/components/search/CommandPalette.tsx": 1016,
     "src/components/ui/button.test.ts": 971,
@@ -483,7 +483,7 @@
         }
       }
     ],
-    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 310,
+    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 308,
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 429,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx#RentalFitForm": 383,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 332,
@@ -568,7 +568,7 @@
     "src/app/onboard/page.tsx": 479,
     "src/app/page.tsx": 592,
     "src/app/pricing/page.tsx": 468,
-    "src/app/ready/[token]/page.tsx": 673,
+    "src/app/ready/[token]/page.tsx": 671,
     "src/app/s/[shopSlug]/page.tsx": 882,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 529,
     "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,

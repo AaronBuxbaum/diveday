@@ -201,6 +201,19 @@ describe("OfflineManifestView — the counter", () => {
    * reads it in both sections takes the crew's tap away too, and a crew member
    * looking at a body is the strongest evidence this product has.
    */
+  /** Layer 3 review (dde-1 F3): turned away is not "not here", on the counter half too. */
+  it("badges a seat the desk turned away as turned away", async () => {
+    vi.mocked(loadOfflineManifest).mockResolvedValue(
+      richEnvelope("trip-1", { notHere: true, turnedAway: true }),
+    );
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    const counter = screen.getByRole("region", { name: "At the counter" });
+    expect(within(counter).getByText("Turned away when saved")).toBeInTheDocument();
+    expect(within(counter).queryByText("Not here when saved")).toBeNull();
+    expect(within(counter).queryByRole("button", { name: /Priya Shah/ })).not.toBeInTheDocument();
+  });
+
   it("gives a released seat no check-in, and still lets the crew board them", async () => {
     vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1", { notHere: true }));
     render(<OfflineManifestView />);

@@ -48,9 +48,10 @@
     "confirm": "Registrar que no embarca",
     "confirming": "Registrando…",
     "confirmAriaLabel": "Registrar que {name} no embarca",
-    "line": "Atendido en el mostrador, no embarcó: {reason, select, medical {médico} waiver {exención} card {certificación} age {edad} identity {identidad} payment {pago} other {no está listo}}",
+    "line": "Atendido en el mostrador, no embarcó{reason, select, medical {: médico} waiver {: exención} card {: certificación} age {: edad} identity {: identidad} payment {: pago} other {}}",
     "badge": "No embarcó",
-    "money": "Registrar que alguien no embarca no cobra ni reembolsa nada. Cambia su reserva o reembólsala desde sus pedidos."
+    "money": "No se cobró ni se reembolsó nada. Abre su fila para mover la reserva a otra salida.",
+    "noWaitlist": "No hay nadie esperando esta plaza."
   },
   "settledAllBoarded": "Todos embarcados",
   "settledSomeBoarded": "{count, plural, one {# embarcado} other {# embarcados}}",
@@ -103,6 +104,7 @@
     "noShowBeforeDeparture": "Ese barco todavía no ha salido, así que nadie lo ha perdido. Inténtalo de nuevo cuando salga.",
     "turnAwayAlreadyBoarded": "La tripulación embarcó a ese buceador. Abre el manifiesto de la salida.",
     "turnAwayAlreadyMarked": "Esa plaza ya está liberada.",
+    "turnAwaySailed": "El barco salió con ese buceador registrado. Abre el manifiesto de la salida.",
     "turnAwayOutsideWindow": "Esa salida está fuera del horario del mostrador. Cambia la reserva desde su fila.",
     "turnAwayNotBlocked": "Ya nada le impide embarcar. Regístralo en su lugar.",
     "turnAwayReasonNotBlocking": "Su fila cambió. Elige un motivo que aparezca ahora.",

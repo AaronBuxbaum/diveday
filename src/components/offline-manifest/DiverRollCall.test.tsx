@@ -81,4 +81,26 @@ describe("OfflineDiverRollCall", () => {
     expect(row).not.toContain("physician");
     expect(row).not.toContain("Physician said no before");
   });
+
+  /**
+   * Layer 3 review (dde-1 F3): the desk saw this diver and turned them away.
+   * The dock copy said "Not here", the opposite statement, to the one surface
+   * at the rail with no signal.
+   */
+  it("says a seat the desk turned away was turned away, not not here", () => {
+    const copy = savedCopy();
+    const [first, second] = copy.snapshot.manifests[0]?.divers ?? [];
+    if (!first || !second) throw new Error("fixture divers missing");
+    first.notHere = true;
+    first.turnedAway = true;
+    second.notHere = true;
+    const trip = offlineTripView(copy, "departure");
+    if (!trip) throw new Error("the fixture carries a manifest");
+    const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+    const turnedAway = container.querySelector("#offline-roll-call-b-priya")?.textContent ?? "";
+    expect(turnedAway).toContain("Turned away when saved");
+    expect(turnedAway).not.toContain("Not here when saved");
+    const notHere = container.querySelector("#offline-roll-call-b-marcus")?.textContent ?? "";
+    expect(notHere).toContain("Not here when saved");
+  });
 });

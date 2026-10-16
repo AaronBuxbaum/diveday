@@ -2,6 +2,7 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
+import { seatName } from "@/lib/held-seat";
 import {
   type NoShowGate,
   noShowGate,
@@ -142,7 +143,9 @@ export async function markBookingNoShow(
         tripId: trips.id,
         tripStatus: trips.status,
         startsAt: trips.startsAt,
-        personName: people.fullName,
+        fullName: people.fullName,
+        identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+        identityBookedAs: bookings.identityBookedAs,
       })
       .from(bookings)
       .innerJoin(trips, and(eq(trips.id, bookings.tripId), liveTrip()))
@@ -160,6 +163,9 @@ export async function markBookingNoShow(
     // board, is simply not found — a staff surface must never learn that a row
     // it may not see exists.
     if (!seat) return { ok: false, reason: "not_found" };
+    // The seat's name: on a held seat the one it was booked under, never the
+    // matched person's (security review 2026-10-16, F1).
+    const personName = seatName(seat.fullName, seat);
 
     const gate = noShowGate({
       bookingStatus: seat.status,
@@ -199,10 +205,10 @@ export async function markBookingNoShow(
       bookingId: seat.id,
       actorPersonId: recorder.id,
       code: "booking_no_show",
-      params: { actor: recorder.name, diver: seat.personName },
+      params: { actor: recorder.name, diver: personName },
       occurredAt: now,
     });
-    return { ok: true, bookingId: seat.id, tripId: seat.tripId, personName: seat.personName };
+    return { ok: true, bookingId: seat.id, tripId: seat.tripId, personName };
   });
   if (result.ok) await publishManifestEvent(db, input.shopId, result.tripId);
   return result;
@@ -372,7 +378,11 @@ export async function undoBookingNoShow(
       .update(bookings)
       // Back on the list, so no longer turned away either: the reason only
       // ever sits on a released seat (`bookings_turned_away_is_released`).
-      .set({ status: standing === "arrived" ? "checked_in" : "booked", turnedAwayReason: null })
+      .set({
+        status: standing === "arrived" ? "checked_in" : "booked",
+        turnedAwayReason: null,
+        turnedAwayAt: null,
+      })
       .where(and(eq(bookings.id, seat.id), eq(bookings.status, "no_show")))
       .returning({ id: bookings.id });
     if (!updated) return { ok: false, reason: "not_marked" };

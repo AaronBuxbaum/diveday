@@ -801,6 +801,8 @@
     "materialsHeadingStarted": "Materiales del curso",
     "openingPayment": "Abriendo el pago…",
     "cancelledHeading": "Esta reserva se canceló",
+    "seatReleasedHeading": "El centro liberó tu plaza en esta salida",
+    "seatReleasedBody": "Habla con el mostrador.",
     "unavailableHeading": "Este enlace de preparación no está disponible",
     "unavailableBody": "Pide a tu centro un enlace nuevo.",
     "expiredBody": "Los enlaces de preparación no duran mucho, y este ha caducado. Podemos enviarte uno nuevo por correo.",

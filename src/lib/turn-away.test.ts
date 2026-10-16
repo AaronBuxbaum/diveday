@@ -6,6 +6,7 @@ import {
   TURN_AWAY_REASONS,
   type TurnAwayGateInput,
   turnAwayGate,
+  turnAwayOffer,
   turnAwayReasons,
 } from "./turn-away";
 
@@ -58,6 +59,23 @@ describe("turnAwayReasons", () => {
     expect(turnAwayReasons(blocked("readiness_unavailable"))).toEqual([]);
   });
 
+  /**
+   * A held seat (security review 2026-10-16, F1): every blocker but the
+   * identity question and the seat's payment is measured against the matched
+   * person's record, so offering "medical" would print a stranger's hold on
+   * this seat. One allow-list with `heldSeatBlockers`.
+   */
+  it("offers only identity and payment on a held seat", () => {
+    expect(
+      turnAwayReasons(
+        blocked("identity_unconfirmed", "medical_review", "certification_missing", "payment_due"),
+      ),
+    ).toEqual(["identity", "payment"]);
+    expect(turnAwayReasons(blocked("identity_unconfirmed", "medical_review"))).toEqual([
+      "identity",
+    ]);
+  });
+
   it("accepts only the enum's own words", () => {
     for (const reason of TURN_AWAY_REASONS) expect(isTurnAwayReason(reason)).toBe(true);
     expect(isTurnAwayReason("diabetes")).toBe(false);
@@ -107,7 +125,72 @@ describe("turnAwayGate", () => {
     expect(gate({ tripStatus: "cancelled" })).toBe("trip_cancelled");
   });
 
-  it("takes a diver who checked in and then went blocked", () => {
+  it("takes a diver who checked in and then went blocked, while the boat is in", () => {
     expect(gate({ bookingStatus: "checked_in" })).toBe("eligible");
+  });
+
+  /**
+   * Layer 3 review (dde-1 F1): a diver the desk checked in and the boat then
+   * left with is, as far as anyone ashore knows, aboard. A refund landing at
+   * 09:30 makes the row blocked; it does not bring the diver back to the desk.
+   */
+  it("refuses an arrived diver once the boat has sailed", () => {
+    const sailed = new Date(DEPARTURE.getTime() + 2 * HOUR_MS);
+    expect(gate({ bookingStatus: "checked_in", now: sailed })).toBe("sailed");
+    expect(
+      gate({
+        bookingStatus: "checked_in",
+        now: sailed,
+        readiness: blocked("payment_refunded"),
+        reason: "payment",
+      }),
+    ).toBe("sailed");
+  });
+
+  /** A booked row after sailing keeps today's behavior (product call, noted). */
+  it("still takes a booked row after the boat has sailed", () => {
+    expect(gate({ now: new Date(DEPARTURE.getTime() + 2 * HOUR_MS) })).toBe("eligible");
+  });
+
+  it("refuses a reason the held seat's own blockers do not show", () => {
+    const held = blocked("identity_unconfirmed", "medical_review");
+    expect(gate({ readiness: held, reason: "medical" })).toBe("reason_not_blocking");
+    expect(gate({ readiness: held, reason: "identity" })).toBe("eligible");
+  });
+});
+
+/** The desk draws the door from the same predicate the writer runs. */
+describe("turnAwayOffer", () => {
+  const offer = (overrides: Partial<Omit<TurnAwayGateInput, "reason">> = {}) =>
+    turnAwayOffer({
+      bookingStatus: "booked",
+      onTheWater: null,
+      tripStatus: "scheduled",
+      startsAt: DEPARTURE,
+      now: new Date(DEPARTURE.getTime() - HOUR_MS),
+      readiness: blocked("certification_missing", "payment_due"),
+      ...overrides,
+    });
+
+  it("offers the row's own reasons where the writer would accept each", () => {
+    expect(offer()).toEqual(["card", "payment"]);
+  });
+
+  it("offers nothing to an arrived diver once the boat has sailed", () => {
+    expect(
+      offer({ bookingStatus: "checked_in", now: new Date(DEPARTURE.getTime() + 2 * HOUR_MS) }),
+    ).toEqual([]);
+  });
+
+  it("offers nothing on the water, on a released seat, or on a ready row", () => {
+    expect(offer({ onTheWater: "boarded" })).toEqual([]);
+    expect(offer({ bookingStatus: "no_show" })).toEqual([]);
+    expect(offer({ readiness: { status: "ready", blockers: [] } })).toEqual([]);
+  });
+
+  it("offers only identity and payment on a held seat", () => {
+    expect(
+      offer({ readiness: blocked("identity_unconfirmed", "medical_review", "payment_due") }),
+    ).toEqual(["identity", "payment"]);
   });
 });

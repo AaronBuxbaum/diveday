@@ -48,9 +48,10 @@
     "confirm": "Turn away",
     "confirming": "Recording…",
     "confirmAriaLabel": "Turn {name} away",
-    "line": "Seen at the desk, turned away: {reason, select, medical {medical} waiver {waiver} card {card} age {age} identity {identity} payment {payment} other {not ready}}",
+    "line": "Seen at the desk, turned away{reason, select, medical {: medical} waiver {: waiver} card {: card} age {: age} identity {: identity} payment {: payment} other {}}",
     "badge": "Turned away",
-    "money": "Turning someone away does not charge or refund anything. Move their booking or refund it from their orders."
+    "money": "Nothing was charged or refunded. Open their row to move the booking to another day.",
+    "noWaitlist": "Nobody is waiting for this seat."
   },
   "settledAllBoarded": "All boarded",
   "settledSomeBoarded": "{count} boarded",
@@ -106,6 +107,7 @@
     "noShowTripFull": "The freed seat has already been taken, so that diver cannot go back on this boat.",
     "turnAwayAlreadyBoarded": "The crew boarded that diver. Open the trip’s manifest.",
     "turnAwayAlreadyMarked": "That seat is already released.",
+    "turnAwaySailed": "The boat left with that diver checked in. Open the trip’s manifest.",
     "turnAwayOutsideWindow": "That departure is outside the desk’s hours. Change the booking from their row instead.",
     "turnAwayNotBlocked": "Nothing stops them boarding now. Check them in instead.",
     "turnAwayReasonNotBlocking": "Their row changed. Choose a reason it shows now.",

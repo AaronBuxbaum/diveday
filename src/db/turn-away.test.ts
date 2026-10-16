@@ -5,8 +5,9 @@ import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { turnAwayReasons } from "@/lib/turn-away";
 import { fileScopedShopContext } from "@/test/db";
+import { moveBooking, splitBookingIdentity } from "./bookings";
 import { listCheckInQueue } from "./check-in";
-import { recordRollCall } from "./manifests";
+import { getTripManifest, recordRollCall } from "./manifests";
 import { markBookingNoShow, undoBookingNoShow } from "./no-show";
 import { getBookingReadiness } from "./readiness";
 import {
@@ -65,6 +66,26 @@ async function seatRow(db: Ctx["db"], bookingId: string) {
     .from(bookings)
     .where(eq(bookings.id, bookingId));
   return row;
+}
+
+async function turnedAwayAt(db: Ctx["db"], bookingId: string) {
+  const [row] = await db
+    .select({ at: bookings.turnedAwayAt, tripId: bookings.tripId })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId));
+  return row;
+}
+
+/** The seat attached to its diver on a guess, booked under another name (H-13). */
+async function holdSeat(ctx: Ctx, bookedAs = "Sam Stranger") {
+  await ctx.db
+    .update(bookings)
+    .set({
+      identityUnconfirmedAt: ctx.now,
+      identityBookedAs: bookedAs,
+      identityMatchedBy: "shared_email",
+    })
+    .where(eq(bookings.id, ctx.bookingId));
 }
 
 async function heldSeats(db: Ctx["db"], tripId: string) {
@@ -386,6 +407,230 @@ describe("turnBookingAway", () => {
       }),
     ).rejects.toThrow();
     expect(await seatRow(db, bookingId)).toEqual({ status: "booked", reason: null });
+  });
+});
+
+/** Layer 3 review fixes (dde-1, dde-2, security; 2026-10-16). */
+describe("turnBookingAway, after review", () => {
+  it("records when the desk turned the diver away, beside the reason", async () => {
+    const { db, shop, staffId, bookingId, now } = await context();
+    await turnBookingAway(db, {
+      shopId: shop.id,
+      bookingId,
+      reason: "waiver",
+      recordedByPersonId: staffId,
+      now,
+    });
+    expect((await turnedAwayAt(db, bookingId))?.at).toEqual(now);
+  });
+
+  /** dde-1 F1: once the boat has left with an arrived diver, the desk has no door. */
+  it("refuses an arrived diver once the boat has sailed, and frees nothing", async () => {
+    const { db, shop, trip, staffId, bookingId } = await context();
+    await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));
+    const before = await heldSeats(db, trip.id);
+    expect(
+      await turnBookingAway(db, {
+        shopId: shop.id,
+        bookingId,
+        reason: "waiver",
+        recordedByPersonId: staffId,
+        now: new Date(trip.startsAt.getTime() + 2 * HOUR_MS),
+      }),
+    ).toEqual({ ok: false, reason: "sailed" });
+    expect(await seatRow(db, bookingId)).toEqual({ status: "checked_in", reason: null });
+    expect(await heldSeats(db, trip.id)).toBe(before);
+  });
+
+  /**
+   * Security F1: a held seat's other blockers are the matched person's. Only
+   * the identity question (and the seat's payment) may be the reason, and the
+   * trail names the person the seat was booked as, never the matched diver.
+   */
+  it("takes only the seat's own reason on a held seat, and names the booked-as name", async () => {
+    const ctx = await context();
+    await holdSeat(ctx);
+    const input = {
+      shopId: ctx.shop.id,
+      bookingId: ctx.bookingId,
+      recordedByPersonId: ctx.staffId,
+      now: ctx.now,
+    };
+    // The matched person's missing release is not this seat's to give.
+    expect(await turnBookingAway(ctx.db, { ...input, reason: "waiver" })).toEqual({
+      ok: false,
+      reason: "reason_not_blocking",
+    });
+    expect(await turnBookingAway(ctx.db, { ...input, reason: "identity" })).toMatchObject({
+      ok: true,
+      personName: "Sam Stranger",
+      reason: "identity",
+    });
+    const [line] = await trailCodes(ctx.db, ctx.bookingId);
+    expect(line?.params).toMatchObject({ diver: "Sam Stranger", reason: "identity" });
+    expect(JSON.stringify(line?.params)).not.toContain(ctx.personName);
+  });
+
+  /** Security F1, the same one-line fix on "Not here". */
+  it("names the booked-as name when a held seat is marked not here", async () => {
+    const ctx = await context();
+    await holdSeat(ctx);
+    expect(
+      await markBookingNoShow(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId: ctx.bookingId,
+        recordedByPersonId: ctx.staffId,
+        now: new Date(ctx.trip.startsAt.getTime() + 10 * MINUTE_MS),
+      }),
+    ).toMatchObject({ ok: true, personName: "Sam Stranger" });
+    const [line] = await trailCodes(ctx.db, ctx.bookingId);
+    expect(line?.params).toMatchObject({ diver: "Sam Stranger" });
+  });
+
+  /**
+   * Security F1: a split hands the seat to the person who was really there.
+   * The category was chosen about the guess, so it goes; the fact that the
+   * desk turned somebody away stays.
+   */
+  it("clears the reason on a split and keeps the turn-away", async () => {
+    const ctx = await context();
+    await holdSeat(ctx);
+    await turnBookingAway(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.bookingId,
+      reason: "identity",
+      recordedByPersonId: ctx.staffId,
+      now: ctx.now,
+    });
+    expect(
+      await splitBookingIdentity(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId: ctx.bookingId,
+        actorPersonId: ctx.staffId,
+        fullName: "Sam Stranger",
+        adultAttested: true,
+      }),
+    ).toMatchObject({ ok: true });
+    expect(await seatRow(ctx.db, ctx.bookingId)).toEqual({ status: "no_show", reason: null });
+    expect((await turnedAwayAt(ctx.db, ctx.bookingId))?.at).toEqual(ctx.now);
+  });
+
+  /**
+   * dde-2 #3: "Move their booking" is a door that works. The seat is booked
+   * on the new departure, the turn-away goes with the old one, and the money
+   * and any package dive ride on the booking row as on any move.
+   */
+  it("moves a turned-away seat to another departure as a booked seat", async () => {
+    const { db, shop, trip, staffId, bookingId, now } = await context();
+    await turnBookingAway(db, {
+      shopId: shop.id,
+      bookingId,
+      reason: "waiver",
+      recordedByPersonId: staffId,
+      now,
+    });
+    const [target] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "Another Reef Run",
+        startsAt: new Date(trip.startsAt.getTime() + 48 * HOUR_MS),
+        endsAt: new Date(trip.startsAt.getTime() + 52 * HOUR_MS),
+        capacity: 6,
+      })
+      .returning();
+    if (!target) throw new Error("target trip insert failed");
+    expect(
+      await moveBooking(db, {
+        shopId: shop.id,
+        fromTripId: trip.id,
+        toTripId: target.id,
+        bookingId,
+        now,
+      }),
+    ).toMatchObject({ ok: true });
+    expect(await seatRow(db, bookingId)).toEqual({ status: "booked", reason: null });
+    expect(await turnedAwayAt(db, bookingId)).toEqual({ at: null, tripId: target.id });
+  });
+
+  it("still refuses to move a plain no-show", async () => {
+    const { db, shop, trip, staffId, bookingId } = await context();
+    await markBookingNoShow(db, {
+      shopId: shop.id,
+      bookingId,
+      recordedByPersonId: staffId,
+      now: new Date(trip.startsAt.getTime() + 10 * MINUTE_MS),
+    });
+    const [target] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "Another Reef Run",
+        startsAt: new Date(trip.startsAt.getTime() + 48 * HOUR_MS),
+        endsAt: new Date(trip.startsAt.getTime() + 52 * HOUR_MS),
+        capacity: 6,
+      })
+      .returning();
+    if (!target) throw new Error("target trip insert failed");
+    expect(
+      await moveBooking(db, {
+        shopId: shop.id,
+        fromTripId: trip.id,
+        toTripId: target.id,
+        bookingId,
+        now: new Date(trip.startsAt.getTime() - HOUR_MS),
+      }),
+    ).toEqual({ ok: false, reason: "not_movable" });
+  });
+
+  /**
+   * dde-1 F2: the diver signs on the dock and walks aboard after the desk
+   * sold their seat. The rail never refuses a body it can see (the reclaim
+   * has no capacity check, by design); the boat being over is *said*, on the
+   * manifest's over-capacity count. Flagged, not refused: refusing would leave
+   * a person aboard whom the manifest does not carry.
+   */
+  it("takes a turned-away seat back at the rail on a sold boat, and the manifest says over", async () => {
+    const ctx = await context();
+    const { db, shop, trip, staffId, bookingId, now } = ctx;
+    await turnBookingAway(db, {
+      shopId: shop.id,
+      bookingId,
+      reason: "waiver",
+      recordedByPersonId: staffId,
+      now,
+    });
+    await signWaiver(ctx);
+    expect(
+      await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId,
+        recordedByPersonId: staffId,
+        status: "boarded",
+      }),
+    ).toMatchObject({ ok: true });
+    expect(await seatRow(db, bookingId)).toEqual({ status: "booked", reason: null });
+    expect((await turnedAwayAt(db, bookingId))?.at).toBeNull();
+    let aboard = 1;
+    for (const row of await getTripRoster(db, shop.id, trip.id)) {
+      if (row.booking.id === bookingId) continue;
+      const boarded = await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: row.booking.id,
+        recordedByPersonId: staffId,
+        status: "boarded",
+      });
+      if (boarded.ok) aboard += 1;
+    }
+    // The walk-in holds the seat the desk freed: the boat sells one fewer
+    // than the crew have counted aboard.
+    await db
+      .update(trips)
+      .set({ capacity: aboard - 1 })
+      .where(eq(trips.id, trip.id));
+    expect((await getTripManifest(db, shop.id, trip.id))?.summary.overCapacity).toBe(1);
   });
 });
 

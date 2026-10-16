@@ -1,6 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
+  bookASeatAndOpenThread,
   counterPath,
   createTrip,
   daysFromNow,
@@ -753,8 +754,12 @@ test("the desk turns a blocked diver away before the boat leaves, says why, and 
   await expect(page.getByRole("heading", { name: /^Not here/ })).toHaveCount(0);
   const released = deskRow(page, "Odile Marchand");
   await expect(released.getByText("Seen at the desk, turned away: waiver")).toBeVisible();
-  await expect(released.getByText(/^Turning someone away does not charge/)).toBeVisible();
-  await expect(released.getByRole("link", { name: "Open their orders" })).toBeVisible();
+  // The one money door that works is the move on their own row (layer 3
+  // review, dde-2 #3): no new booking, no orders link that holds no refund.
+  await expect(
+    released.getByText(/^Nothing was charged or refunded\. Open their row/),
+  ).toBeVisible();
+  await expect(released.getByRole("link", { name: "Open their orders" })).toHaveCount(0);
   await expect(released.getByRole("button", { name: /refund|charge/i })).toHaveCount(0);
   await expect(
     released.getByRole("button", { name: "Put Odile Marchand back on this boat’s list" }),
@@ -763,6 +768,51 @@ test("the desk turns a blocked diver away before the boat leaves, says why, and 
   // The seat is free at once.
   await page.goto(`${counter}/walk-in`);
   await expect(page.getByText(/0\/1 booked/)).toBeVisible();
+});
+
+/**
+ * **The diver's own page after the desk turned them away** (layer 3 review,
+ * dde-1 F2 and dde-2 #1). Before the boat leaves, the link that walked them
+ * through the checklist and the Pay step says one thing: the shop released
+ * the seat, talk to the desk. No reason, no Pay, no checklist.
+ */
+test("a diver turned away before the boat leaves is told the seat was released, and offered nothing to pay", async ({
+  page,
+  browser,
+  workerBaseURL,
+}) => {
+  const title = `Released Seat ${e2eNow().getTime()}`;
+  const name = `Rhea ${e2eNow().getTime()}`;
+  // Tomorrow morning: inside the desk's 36-hour reach, and still bookable.
+  await createTrip(page, {
+    title,
+    date: daysFromNow(1),
+    departsAt: "09:00",
+    returnsAt: "12:00",
+    capacity: 4,
+  });
+  const tripId = await seededTripId(page, "blue-mantis", title);
+
+  const diverContext = await browser.newContext({ baseURL: workerBaseURL });
+  const diver = makeActivitySafe(await diverContext.newPage());
+  await diver.goto(`/s/blue-mantis/trips/${tripId}`);
+  await bookASeatAndOpenThread(diver, name);
+  const readyPath = new URL(diver.url()).pathname;
+
+  await page.goto(counterPath("blue-mantis", tripId));
+  const row = deskRow(page, name);
+  await row.getByText("Turned away", { exact: true }).click();
+  await row.getByRole("radio").first().check();
+  await row.getByRole("button", { name: `Turn ${name} away` }).click();
+  await expect(page.getByRole("heading", { name: "Turned away · 1" })).toBeVisible();
+
+  await diver.goto(readyPath);
+  await expect(
+    diver.getByRole("heading", { name: "The shop released your seat on this departure" }),
+  ).toBeVisible();
+  await expect(diver.getByText("Talk to the desk.")).toBeVisible();
+  await expect(diver.getByRole("button", { name: /pay/i })).toHaveCount(0);
+  await diverContext.close();
 });
 
 /**

@@ -122,6 +122,36 @@ describe("getReadyPageData", () => {
   });
 
   /**
+   * Layer 3 review (dde-2 #1, dde-1 F2): a seat the desk released before the
+   * boat left is not the diver's to pay for or prepare. Without this, a diver
+   * turned away for payment at 07:00 pays at 07:10 for a seat the shop has
+   * already sold, and the page walks them through the checklist to the boat.
+   */
+  it("neither charges for nor prepares a seat the desk released", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    await upsertShopStripeAccount(db, shop.id, "acct_ready_released");
+    await setShopStripeAccountStatus(db, "acct_ready_released", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    const held = await getReadyPageData(db, bookingId);
+    expect(held?.canPay).toBe(true);
+    expect(held?.seatReleased).toBe(false);
+    await db
+      .update(bookings)
+      .set({ status: "no_show", turnedAwayAt: nowDate(), turnedAwayReason: "payment" })
+      .where(eq(bookings.id, bookingId));
+    const released = await getReadyPageData(db, bookingId);
+    expect(released?.canPay).toBe(false);
+    expect(released?.seatReleased).toBe(true);
+    expect(released?.turnedAway).toBe(true);
+    // Erasure-shaped: the fact without the category still reads turned away.
+    await db.update(bookings).set({ turnedAwayReason: null }).where(eq(bookings.id, bookingId));
+    expect((await getReadyPageData(db, bookingId))?.turnedAway).toBe(true);
+  });
+
+  /**
    * Security review of layer 8, D3: the link is shared by design, so a lead
    * who has not paid on a page that takes payment cannot fill the boat with
    * unpaid seats. Paying (or a page that takes no payment) opens the door.

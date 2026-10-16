@@ -59,6 +59,7 @@ describe("the move to another departure", () => {
   const moveSeat = {
     action: () => {},
     targets: [{ id: "t-2", label: "Two-Tank Reef · Sat, Oct 24, 8:00 AM EDT" }],
+    departed: false,
   };
 
   it("offers the departures on a booked seat", () => {
@@ -74,6 +75,28 @@ describe("the move to another departure", () => {
   it("is absent when the page found nowhere to go", () => {
     renderRoster({ ...fixtures, roster: [ready] });
 
+    expect(screen.queryByText("Move to another departure")).toBeNull();
+  });
+
+  /**
+   * Layer 3 review (dde-2 #3): the desk's money line sends staff to move a
+   * turned-away seat, so the door is on that row even once the boat has left.
+   */
+  it("moves a turned-away seat after the boat has left, and no booked one", () => {
+    const departed = { ...moveSeat, departed: true };
+    const turnedAway = {
+      ...ready,
+      booking: {
+        ...ready.booking,
+        status: "no_show" as const,
+        turnedAwayAt: new Date("2026-10-16T07:00:00Z"),
+        turnedAwayReason: "card" as const,
+      },
+    };
+    renderRoster({ ...fixtures, roster: [turnedAway], moveSeat: departed });
+    expect(screen.getByText("Move to another departure")).toBeInTheDocument();
+    cleanup();
+    renderRoster({ ...fixtures, roster: [ready], moveSeat: departed });
     expect(screen.queryByText("Move to another departure")).toBeNull();
   });
 

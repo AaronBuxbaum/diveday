@@ -1103,8 +1103,10 @@ async function scrubBookingRows(
         // co-signed, which is the evidence; this only said why it was asked.
         minorDeclaredAt: null,
         // Why the desk turned them away is a category, but "medical" is still a
-        // health fact about this person; it goes with them. The seat stays
-        // released (`no_show`), which is the shop's own record.
+        // health fact about this person; it goes with them. *That* the desk
+        // turned them away stays (`turnedAwayAt`, untouched here), so the
+        // released seat never reads "did not arrive" afterwards (layer 3
+        // review, dde-2 #4); it is the shop's own record, like the status.
         turnedAwayReason: null,
         // The instructor's next step is prose about this named student — "book
         // your deep dive with Marcus before the card arrives" — so it goes

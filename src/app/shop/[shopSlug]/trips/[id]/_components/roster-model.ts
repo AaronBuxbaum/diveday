@@ -242,7 +242,25 @@ export type RosterActions = {
 export type SeatMove = {
   action: (formData: FormData) => void;
   targets: readonly { id: string; label: string }[];
+  /** The departure has left: only a seat the desk turned away still moves. */
+  departed: boolean;
 };
+
+/**
+ * Whether this row offers "Move to another departure". A booked seat, while
+ * the boat is in; checked in or absent is the day's own record. A seat the
+ * desk turned away moves before and after the boat leaves (layer 3 review,
+ * dde-2 #3): the desk's money line sends staff here, and `moveBooking` books
+ * it on the new departure.
+ */
+export function seatMoveForRow(
+  booking: { status: string; turnedAwayAt: Date | null },
+  moveSeat: SeatMove | undefined,
+): SeatMove | undefined {
+  if (!moveSeat) return undefined;
+  if (booking.status === "no_show" && booking.turnedAwayAt !== null) return moveSeat;
+  return booking.status === "booked" && !moveSeat.departed ? moveSeat : undefined;
+}
 
 /**
  * What the desk adds to the roster once arrivals open, already drawn by the
@@ -585,8 +603,8 @@ export function groupRoster({
   // A released seat the desk turned away (H-124) is its own group: seen and
   // refused is not "not here", and the two must never share a heading.
   const released = arrival ? roster.filter(({ booking }) => booking.status === "no_show") : [];
-  const notHere = released.filter(({ booking }) => !booking.turnedAwayReason);
-  const turnedAway = released.filter(({ booking }) => Boolean(booking.turnedAwayReason));
+  const notHere = released.filter(({ booking }) => !booking.turnedAwayAt);
+  const turnedAway = released.filter(({ booking }) => Boolean(booking.turnedAwayAt));
   const working = arrival ? roster.filter(({ booking }) => booking.status !== "no_show") : roster;
   const arrived = (entry: RosterEntry) => Boolean(arrival) && entry.booking.status === "checked_in";
   const here = working.filter((entry) => arrived(entry) && deskTasksClear(entry));
@@ -669,7 +687,7 @@ function recordGroups(roster: RosterEntry[], record: RosterRecord) {
       (record.rollCallTaken ? uncounted : unrecorded).push(entry);
     } else if (seatSailed({ noShow, dockResult, afterDiveResultStands })) {
       sailed.push(entry);
-    } else if (noShow && entry.booking.turnedAwayReason) {
+    } else if (noShow && entry.booking.turnedAwayAt) {
       // Did not sail because the desk refused them (H-124), said apart from
       // the divers who never came.
       turnedAway.push(entry);

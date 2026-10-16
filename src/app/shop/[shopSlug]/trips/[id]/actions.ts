@@ -23,7 +23,7 @@ import { getDb } from "@/db/client";
 import { recordTripActivity } from "@/db/operations";
 import { paymentMarkFactsForTrip } from "@/db/payment-marks";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
-import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
+import { refundBookingOnCancellation } from "@/db/refunds";
 import { applyPaidRentalKindsToFit } from "@/db/rental-fit";
 import type { PaymentStatus } from "@/db/schema";
 import { type MoveSeatRefusal, moveSeat } from "@/db/seat-diver";
@@ -66,6 +66,7 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { uuidParam } from "@/lib/uuid";
+import { refundNotice } from "./refund-notice";
 import { isRosterBooking, requireRosterBooking, tripPath } from "./roster-booking";
 
 const paymentStatusSchema = z.enum(["unpaid", "deposit_paid", "paid", "waived", "refunded"]);
@@ -250,40 +251,6 @@ async function bookingRefundMayBeOwed(
 ): Promise<boolean> {
   const payment = await getBookingPayment(db, shopId, bookingId);
   return isCapturedPaymentStatus(payment?.status);
-}
-
-/**
- * What a removed booking's refund outcome is called in the URL.
- *
- * A table rather than the `switch` with a `default:` this replaces: the default
- * arm answered for `no_policy` and `unpaid` by name in a comment, and would have
- * silently answered for any status added later too. Keyed by the union, so a
- * seventh outcome is a compile error here instead of an unexplained "spot is
- * open" banner on a refund a shop is owed.
- */
-const REFUND_NOTICE: Record<CancellationRefundOutcome["status"], string> = {
-  refunded: "booking-removed-refunded",
-  forfeit: "booking-removed-forfeit",
-  failed: "booking-removed-refund-failed",
-  manual: "booking-removed-refund-manual",
-  // The booking-level refund lock's two refusals. Neither is `failed`: nothing
-  // is wrong at Stripe, and pressing again is precisely what must not happen.
-  in_progress: "booking-removed-refund-in-progress",
-  needs_reconciliation: "booking-removed-refund-reconcile",
-  // Nothing owed either way — today's plain "spot is open" notice.
-  no_policy: "booking-removed",
-  unpaid: "booking-removed",
-};
-
-function refundNotice(refund: CancellationRefundOutcome): string {
-  // `not_refundable` is a data mismatch (local row says paid, Stripe captured
-  // nothing) — a "review", not the "refund owed by hand" claim the
-  // counter/disconnected cases make. The only refusal whose code depends on
-  // more than the status.
-  if (refund.status === "manual" && refund.reason === "not_refundable") {
-    return "booking-removed-refund-review";
-  }
-  return REFUND_NOTICE[refund.status];
 }
 
 export async function removeBookingAction(shopSlug: string, tripId: string, formData: FormData) {

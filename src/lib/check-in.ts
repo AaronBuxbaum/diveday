@@ -20,6 +20,11 @@ export type CounterSeat = {
   readiness: { status: string };
   /** Set on a released seat the desk turned away (H-124); absent or null otherwise. */
   turnedAwayReason?: string | null;
+  /**
+   * When the desk turned this seat away: the fact, which erasure keeps while
+   * it clears the category. What makes a release "turned away".
+   */
+  turnedAwayAt?: Date | null;
 };
 
 /**
@@ -65,7 +70,7 @@ export function isNoShowAtCounter(seat: CounterSeat): boolean {
  * says it in its own words and its own count.
  */
 export function isTurnedAwayAtCounter(seat: CounterSeat): boolean {
-  return isNoShowAtCounter(seat) && Boolean(seat.turnedAwayReason);
+  return isNoShowAtCounter(seat) && Boolean(seat.turnedAwayAt);
 }
 
 /**

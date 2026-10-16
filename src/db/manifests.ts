@@ -1080,7 +1080,7 @@ export async function getTripManifests(
       notHere: booking.status === "no_show",
       // Seen at the desk and refused (H-124), which the row says apart from a
       // diver who never came.
-      turnedAway: booking.status === "no_show" && booking.turnedAwayReason !== null,
+      turnedAway: booking.status === "no_show" && booking.turnedAwayAt !== null,
       buddyTeam: teamByBooking.get(booking.id) ?? null,
     };
   });
@@ -1394,7 +1394,11 @@ async function reclaimReleasedSeat(
   const [updated] = await tx
     .update(bookings)
     // A seat back on the boat is not turned away (`bookings_turned_away_is_released`).
-    .set({ status: standing === "arrived" ? "checked_in" : "booked", turnedAwayReason: null })
+    .set({
+      status: standing === "arrived" ? "checked_in" : "booked",
+      turnedAwayReason: null,
+      turnedAwayAt: null,
+    })
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.status, "no_show")))
     .returning({ id: bookings.id });
   if (!updated) return;

@@ -10,6 +10,7 @@ import { flaggedMedicalPrompts } from "@/lib/medical";
 import { paymentSourceLine } from "@/lib/payment-source";
 import { waiverState } from "@/lib/waivers";
 import type { RosterRowContext } from "./RosterRow";
+import { seatMoveForRow } from "./roster-model";
 import type { RosterEntry } from "./types";
 
 /**
@@ -300,8 +301,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     elearningCheckAction,
     recordPaperCourseFormAction,
     updatePickupAction,
-    // Only a booked seat moves: checked in or absent is the day's own record.
-    moveSeat: booking.status === "booked" ? moveSeat : undefined,
+    moveSeat: seatMoveForRow(booking, moveSeat),
     materialsDone,
     materialsPending,
     readiness,

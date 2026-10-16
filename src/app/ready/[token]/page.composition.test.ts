@@ -282,6 +282,22 @@ describe("a held seat after the dive", () => {
   });
 });
 
+/**
+ * **A released seat before the day is over** (layer 3 review, dde-1 F2 and
+ * dde-2 #1). A diver the desk turned away at 07:00 used to hold a page that
+ * still walked them through the checklist and the Pay step to the boat. The
+ * page says the shop released the seat and to talk to the desk, before any of
+ * the prep page is composed, and after the after-dive branch, which owns the
+ * finished day.
+ */
+describe("a seat the desk released", () => {
+  it("answers with its own card before the prep page, after the finished day", () => {
+    const released = positionOf("if (data.seatReleased) return <ReleasedSeatCard");
+    expect(released).toBeGreaterThan(positionOf("if (afterDive.afterTheDive)"));
+    expect(released).toBeLessThan(positionOf("<ThreadStatus"));
+  });
+});
+
 /** UX review 2026-10-11, item 13: "Add a seat" lives with the group's seats, and only when allowed. */
 describe("adding a seat from the diver's page", () => {
   it("hands the party section the action only when the booking may lead a seat", () => {

@@ -6,6 +6,7 @@ import {
   PAYMENT_STATUSES_RECORDING_ONLY,
   type RosterArrival,
   rosterPaymentStatusCopy,
+  seatMoveForRow,
   waiverControls,
 } from "./roster-model";
 import type { ReadinessByBooking, RosterEntry, WaiverByBooking } from "./types";
@@ -350,5 +351,36 @@ describe("waiverControls on a rehearsal", () => {
     expect(control.label).toBe("Held: rehearsal");
     expect(control.action).toBe("resend");
     expect(waiverControls(t).awaiting_signature.label).toBe("Waiver sent");
+  });
+});
+
+/**
+ * Layer 3 review (dde-2 #3): the desk sends staff to "Move" for a diver it
+ * turned away, so the door is on that row, before and after the boat leaves;
+ * a plain no-show or an arrived seat still has none.
+ */
+describe("seatMoveForRow", () => {
+  const move = (departed: boolean) => ({
+    action: () => {},
+    targets: [{ id: "t", label: "T" }],
+    departed,
+  });
+  const booking = (status: string, turnedAwayAt: Date | null = null) => ({ status, turnedAwayAt });
+
+  it("moves a booked seat only while the boat is in", () => {
+    expect(seatMoveForRow(booking("booked"), move(false))).toBeDefined();
+    expect(seatMoveForRow(booking("booked"), move(true))).toBeUndefined();
+  });
+
+  it("moves a turned-away seat before and after the boat leaves", () => {
+    const turnedAway = booking("no_show", new Date("2026-10-16T07:00:00Z"));
+    expect(seatMoveForRow(turnedAway, move(false))).toBeDefined();
+    expect(seatMoveForRow(turnedAway, move(true))).toBeDefined();
+  });
+
+  it("never moves a plain no-show or an arrived seat", () => {
+    expect(seatMoveForRow(booking("no_show"), move(false))).toBeUndefined();
+    expect(seatMoveForRow(booking("checked_in"), move(false))).toBeUndefined();
+    expect(seatMoveForRow(booking("booked"), undefined)).toBeUndefined();
   });
 });

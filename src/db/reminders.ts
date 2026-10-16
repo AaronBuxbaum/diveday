@@ -8,6 +8,7 @@ import { type CourseLearningMaterial, readLearningMaterials } from "@/lib/course
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { type MeetingPoint, meetingPointForMessage, meetingPointOfRows } from "@/lib/meeting-point";
 import { firstTimerReassuranceText, forecastText } from "@/lib/night-before-brief";
+import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import {
   type Notification,
   type NotificationProvider,
@@ -398,7 +399,9 @@ export async function sendDueReminders(
     .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, trips.shopId)))
     .where(
       and(
-        ne(bookings.status, "cancelled"),
+        // Only a seat the diver still holds: a released one (turned away at
+        // the desk) is not a "see you tomorrow" (layer 3 review, dde-1 F2).
+        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
         and(eq(trips.status, "scheduled"), notRehearsal()),
         gt(trips.startsAt, now),
         lte(trips.startsAt, horizon),
