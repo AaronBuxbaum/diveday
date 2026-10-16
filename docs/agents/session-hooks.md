@@ -191,7 +191,8 @@ done. So `pnpm verify:push` writes a stamp naming the commit it passed, and this
 `diveday-verified.json`), and the hook reads the push in the directory the command names (a
 leading `cd <dir> &&`, or `git -C <dir>`): a thread's session cwd is the shared checkout while it
 builds in a worktree, and until 2026-10-14 the hook read the shared checkout's own stamp and
-refused every push verified in a worktree. Left alone: a
+refused every push verified in a worktree. A `pnpm verify:push --quick` stamp counts (static
+checks and related unit tests; the default since 2026-10-16, [verifying.md](verifying.md#the-quick-run-and-fixing-forward)). Left alone: a
 commit the remote already has, a branch deletion, a tag push. The way past it is
 `DIVEDAY_PUSH_UNVERIFIED="<reason>"` in front of the command, a reason of at least ten characters
 that the PR repeats; the two right uses are in the verify skill.
