@@ -12,7 +12,7 @@
     "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA"
   ],
   "counted": "2026-10-14",
-  "promised": false,
+  "promised": true,
   "sites": [
     {
       "name": "West End",
@@ -222,7 +222,7 @@
     },
     {
       "name": "Moon Hole",
-      "template": null,
+      "template": "moon-hole-utila",
       "position": [16.08415, -86.89323],
       "listedBy": [
         "https://maps.google.com/maps/ms?msid=106329832108210756578.000479374e5829962b13e&msa=0",
