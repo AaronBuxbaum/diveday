@@ -5,6 +5,7 @@ import {
   buildDivePrepChecklist,
   buildHotelPickupList,
   type HotelPickupRun,
+  nitroxTanksApproved,
   rentalFitLine,
   staffFitPieces,
 } from "@/lib/dive-prep";
@@ -16,7 +17,7 @@ import {
   gearServiceState,
   tripReservationWindow,
 } from "@/lib/gear";
-import { proposeRentalUnits } from "@/lib/gear-proposals";
+import { proposalKey, proposeRentalUnits } from "@/lib/gear-proposals";
 import { rentsKind } from "@/lib/participant-types";
 import type { AppDb } from "./client";
 import {
@@ -299,7 +300,8 @@ export async function getTripPrep(
           assignmentRows.map((row) => ({
             bookingId: row.diver.bookingId,
             wanted: row.wanted,
-            wantsNitrox: row.diver.wantsNitrox,
+            // A request with no verified card breathes air (domain review A1).
+            wantsNitrox: nitroxTanksApproved(row.diver),
           })),
           freeByKind,
           { wetsuitThicknessMm: trip.wetsuitThicknessMm },
@@ -412,6 +414,10 @@ export async function screenGearPicks<P extends GearPick>(
         needsCare += 1;
         continue;
       }
+      // **A stale tab's proposal is asked again** (domain review F3): only the
+      // unit the day's rules propose now (thickness, the nitrox set) is
+      // confirmed. Anything else is refused and the row proposes afresh.
+      if (prep.proposals.get(proposalKey(pick.bookingId, kind))?.id !== pick.gearItemId) continue;
     }
     wanted.delete(kind);
     kept.push(pick);

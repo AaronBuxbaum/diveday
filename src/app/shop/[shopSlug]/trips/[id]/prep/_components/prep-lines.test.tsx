@@ -3,7 +3,15 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { PrepPiece } from "@/lib/dive-prep";
-import { careLine, diveRecencyLine, diverNames, pieceSize, sizeCell, unitLine } from "./prep-lines";
+import {
+  careLine,
+  diveRecencyLine,
+  diverNames,
+  pieceSize,
+  sizeCell,
+  suitMismatchLine,
+  unitLine,
+} from "./prep-lines";
 import { t } from "./prep-test-fixtures";
 
 /**
@@ -86,5 +94,21 @@ describe("diveRecencyLine", () => {
     expect(diveRecencyLine(t, null)).toBeNull();
     const { container } = render(diveRecencyLine(t, "over_five_years"));
     expect(container.textContent).not.toBe("");
+  });
+});
+
+/** Domain review F3: an assigned wetsuit that is not the day's thickness says so. */
+describe("suitMismatchLine", () => {
+  const suit = (thicknessMm: number | null) => ({ kind: "wetsuit" as const, thicknessMm });
+
+  it("names the day's thickness on a wetsuit of another one", () => {
+    expect(suitMismatchLine(t, suit(3), 7)).toBe(t("gear.prep.notDaysThickness", { mm: 7 }));
+    expect(suitMismatchLine(t, suit(null), 7)).toBe(t("gear.prep.notDaysThickness", { mm: 7 }));
+  });
+
+  it("says nothing on a match, with no day's thickness, or on another kind", () => {
+    expect(suitMismatchLine(t, suit(7), 7)).toBeNull();
+    expect(suitMismatchLine(t, suit(3), null)).toBeNull();
+    expect(suitMismatchLine(t, { kind: "bcd", thicknessMm: null }, 7)).toBeNull();
   });
 });

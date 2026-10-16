@@ -16,7 +16,7 @@ export function WantedPiece({
 }: {
   view: PrepView;
   bookingId: string;
-  /** The diver asked for enriched air: designated regulators say so (issue #2207). */
+  /** The diver breathes enriched air (`nitroxTanksApproved`): designated regulators say so plainly (issue #2207). */
   wantsNitrox?: boolean;
   item: WantedItem;
 }) {
@@ -45,8 +45,19 @@ export function WantedPiece({
   // ones proposed to the divers above it.
   const proposal = proposals.get(proposalKey(bookingId, item.kind));
   const preselect = "";
+  // On an air diver's row a nitrox-designated regulator sorts after the air
+  // sets (domain review A2/F7); still offered, never refused.
+  const designatedLast = (units: typeof exact) =>
+    wantsNitrox
+      ? units
+      : [...units].sort(
+          (a, b) => Number(a.nitroxDesignated === true) - Number(b.nitroxDesignated === true),
+        );
   const optionsFor = (units: typeof exact) =>
-    units.map((option) => ({ id: option.id, label: unitLine(t, option, wantsNitrox) }));
+    designatedLast(units).map((option) => ({
+      id: option.id,
+      label: unitLine(t, option, wantsNitrox),
+    }));
   // **Nothing falls between the bands.** The first band
   // is headed by the size it matches, so it can only
   // exist where there is a size to name — and a unit

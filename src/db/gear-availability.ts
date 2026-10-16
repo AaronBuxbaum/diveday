@@ -255,6 +255,8 @@ export type TripGearAssignment = {
   status: GearItemStatus;
   /** What the technician wrote when they pulled it, if anything. */
   serviceNote: string | null;
+  /** A wetsuit's whole-mm thickness, to compare with the day's (domain review F3). */
+  thicknessMm: number | null;
 };
 
 /** Open assignments for one departure's roster, keyed by booking. */
@@ -277,6 +279,7 @@ export async function listTripGearAssignments(
       checkedOutAt: gearReservations.checkedOutAt,
       status: gearItems.status,
       serviceNote: gearItems.serviceNote,
+      thicknessMm: gearItems.thicknessMm,
     })
     .from(gearReservations)
     .innerJoin(bookings, eq(bookings.id, gearReservations.bookingId))

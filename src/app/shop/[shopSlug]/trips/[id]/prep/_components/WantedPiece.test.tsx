@@ -61,8 +61,9 @@ describe("WantedPiece", () => {
 
   /**
    * Issue #2207: a regulator the shop keeps for enriched air says so in the
-   * picker on a nitrox diver's row, and only there. Every regulator stays in
-   * the picker either way: the label informs, it never filters.
+   * picker on every row: plainly on a nitrox diver's, as a caution on an air
+   * diver's. Every regulator stays in the picker either way: the label
+   * informs, it never filters.
    */
   describe("a nitrox-designated regulator", () => {
     const reg = (id: string, label: string, nitroxDesignated: boolean | null) => ({
@@ -95,9 +96,14 @@ describe("WantedPiece", () => {
       expect(screen.getByRole("option", { name: "Reg #1" })).toBeTruthy();
     });
 
-    it("is not labelled on an air diver's row", () => {
+    it("is labelled as a caution on an air diver's row, and sorted last", () => {
+      // Domain review A2/F7: the word is never hidden, so a designated set
+      // cannot go out on air unnoticed; on an air row it is a caution, and the
+      // air sets come first. It still never refuses.
       renderReg(false);
-      expect(screen.getByRole("option", { name: "Reg #9" })).toBeTruthy();
+      const options = screen.getAllByRole("option").map((option) => option.textContent);
+      expect(options.at(-1)).toBe(`Reg #9 · ${t("gear.prep.optionNitroxDesignatedOnAir")}`);
+      expect(options).toContain("Reg #1");
     });
   });
 
