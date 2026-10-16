@@ -2,7 +2,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { controlClass, DateField, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import type { AppDb } from "@/db/client";
 import { backfillFloor, previewIntegrationBackfill } from "@/db/integration-backfill";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -87,13 +87,11 @@ export async function EarlierCheckoutsCard({
             label={t("integrations.earlier.sinceLabel")}
             description={t("integrations.earlier.sinceDescription", { timezone })}
           >
-            <input
-              type="date"
+            <DateField
               name="since"
               required
               min={floor}
               max={today}
-              className={controlClass}
               defaultValue={from ? (since ?? "") : ""}
             />
           </Field>
