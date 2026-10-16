@@ -319,6 +319,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Demand signal
 - Diver profile
 - Dives dry
+- Drysuit experience seen
 - Gear proposal
 - Gear register
 - Gear register groups

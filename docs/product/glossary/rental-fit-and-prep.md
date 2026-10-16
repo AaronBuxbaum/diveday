@@ -131,6 +131,13 @@
   suits for the drysuit, the conservative answer for weighting; a post that says nothing about the
   suit changes nothing. It defaults false with no separate "unknown": every fit form opens on the
   stored answer, and a diver nobody has asked is shown no weight check either way.
+- **Drysuit experience seen** — a staffer's recorded "I have seen this diver dive dry", with who
+  and when (`people.drysuit_experience_seen_at` and `_by_person_id`, issue #2136, Aaron
+  2026-10-13). It quiets the roster's drysuit-card advisory for a **Dives dry** diver with no
+  drysuit card, and nothing else: it is staff-observed, **never a card**, has no row in
+  `specialty_certifications`, and no readiness, admission or counter-rental gate reads it, so a trip
+  or site requiring the drysuit specialty still refuses. Recorded and cleared only from the
+  diver record's certifications group; no diver-facing form, `/ready` included, can set it.
 - **Gear register** — the shop's own rental fleet as physical units (`gear_items`), opt-in **by
   presence**: a shop with zero units sees no gear UI anywhere and its prep flow is untouched, and
   adding the first unit is what turns it on — never a settings flag

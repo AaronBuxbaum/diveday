@@ -747,6 +747,22 @@ export const people = pgTable(
      */
     noCertificationClearedByPersonId: uuid("no_certification_cleared_by_person_id"),
     /**
+     * When a staff member recorded that they have seen this diver dive dry
+     * (issue #2136, Aaron 2026-10-13). Clears the roster's drysuit-card
+     * advisory (`checkDrysuitCard`) and nothing else: it is **not a card**,
+     * never reaches `specialty_certifications`, `calculateReadiness` or
+     * admission, and a site or trip that requires the `drysuit` specialty
+     * still refuses without one. Staff-only: no diver-facing writer, and
+     * `/ready` never sets it. Null means nobody has recorded it.
+     */
+    drysuitExperienceSeenAt: timestamp("drysuit_experience_seen_at", { withTimezone: true }),
+    /**
+     * Who recorded `drysuit_experience_seen_at`. Not a typed FK for the same
+     * self-reference reason as `no_certification_cleared_by_person_id`. Set
+     * and cleared together with the column above.
+     */
+    drysuitExperienceSeenByPersonId: uuid("drysuit_experience_seen_by_person_id"),
+    /**
      * The language this diver reads, captured from the `Accept-Language` of a
      * request they made themselves (a public booking, a waiver signature) and
      * preferred over the shop's `default_locale` when DiveDay emails or texts

@@ -16,10 +16,12 @@ vi.mock("../agency-check-actions", () => ({
 }));
 vi.mock("../card-actions", () => ({
   addCardAction: vi.fn(),
+  clearDrysuitExperienceAction: vi.fn(),
   clearNoCertificationAction: vi.fn(),
   deleteCertificationAction: vi.fn(),
   deleteSpecialtyAction: vi.fn(),
   markCertifiedAction: vi.fn(),
+  recordDrysuitExperienceAction: vi.fn(),
   reviewAction: vi.fn(),
   reviewSpecialtyAction: vi.fn(),
 }));
@@ -732,5 +734,76 @@ describe("a card an agency check listed", () => {
     // With the number its own line showed, the ordinary one tap.
     renderGroup(diver({ nitroxCertifications: [listed()] } as unknown as Partial<DiverProfile>));
     expect(screen.queryByText("Verify certification record")).toBeNull();
+  });
+});
+
+/**
+ * **Seen diving dry is staff-observed, never a card** (issue #2136). It sits
+ * in this group beside the cards, says who recorded it, and leaves everything
+ * the cards say untouched.
+ */
+describe("drysuit experience seen", () => {
+  const seen = (overrides: Record<string, unknown> = {}) =>
+    diver({
+      person: {
+        id: "person-1",
+        fullName: "Priya Sharma",
+        noCertificationDeclaredAt: null,
+        noCertificationClearedAt: null,
+        noCertificationClearedByPersonId: null,
+        drysuitExperienceSeenAt: new Date("2026-10-01T15:00:00Z"),
+        drysuitExperienceSeenByPersonId: "staff-1",
+      },
+      drysuitExperienceSeenByName: "Dana Reyes",
+      rentalFit: { divesDry: true },
+      ...overrides,
+    } as unknown as Partial<DiverProfile>);
+
+  it("names who recorded it and labels it staff-observed, not a card", () => {
+    renderGroup(seen());
+    expect(screen.getByText("Seen diving dry")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Recorded by Dana Reyes on .*Staff-observed, not a drysuit card/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Clear" })).toBeInTheDocument();
+  });
+
+  it("never reads as a card: the door and the empty state are unchanged", () => {
+    renderGroup(seen());
+    expect(screen.getByText("No certification records yet.")).toBeInTheDocument();
+    expect(door()).not.toHaveTextContent(/drysuit/i);
+  });
+
+  it("offers the control only where the roster advisory would fire", () => {
+    const unrecorded = (fit: unknown, specialtyCertifications: unknown[] = []) =>
+      diver({ rentalFit: fit, specialtyCertifications } as unknown as Partial<DiverProfile>);
+
+    renderGroup(unrecorded({ divesDry: true }));
+    expect(screen.getByRole("button", { name: "I’ve seen them dive dry" })).toBeInTheDocument();
+    cleanup();
+
+    renderGroup(unrecorded({ divesDry: false }));
+    expect(screen.queryByRole("button", { name: "I’ve seen them dive dry" })).toBeNull();
+    cleanup();
+
+    renderGroup(unrecorded(null));
+    expect(screen.queryByRole("button", { name: "I’ve seen them dive dry" })).toBeNull();
+    cleanup();
+
+    renderGroup(
+      unrecorded({ divesDry: true }, [
+        {
+          id: "s1",
+          specialty: "drysuit",
+          agency: "padi",
+          status: "verified",
+          importedAt: null,
+          reviewedAt: null,
+          selfDeclaredAt: null,
+          identifier: "D1",
+        },
+      ]),
+    );
+    expect(screen.queryByRole("button", { name: "I’ve seen them dive dry" })).toBeNull();
   });
 });

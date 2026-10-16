@@ -43,6 +43,14 @@
     }
   },
   "certifications": {
+    "drysuitSeenTitle": "Seen diving dry",
+    "drysuitSeenNote": "Recorded by {name} on {date}. Staff-observed, not a drysuit card: it quiets the roster’s drysuit reminder and changes nothing a trip requires.",
+    "drysuitSeenByUnknown": "a staff member",
+    "drysuitSeenHint": "Dives dry with no drysuit card. If you have watched them dive dry, record it here and the roster stops reminding you. It is not a card.",
+    "recordDrysuitSeen": "I’ve seen them dive dry",
+    "recordingDrysuitSeen": "Recording…",
+    "clearDrysuitSeen": "Clear",
+    "clearingDrysuitSeen": "Clearing…",
     "heading": "Certification records",
     "addCard": "Add certification",
     "agency": "Agency",
@@ -413,6 +421,9 @@
     "waiverChannelUnavailable": "Not set up"
   },
   "notices": {
+    "drysuitExperienceRecorded": "Recorded. The roster stops reminding you about a drysuit card for this diver. No card was added.",
+    "drysuitExperienceCleared": "Cleared. The roster reminds you about a drysuit card for this diver again.",
+    "drysuitExperienceUnchanged": "Nothing changed. The record already said that.",
     "alreadyBooked": "This diver is already booked on that activity.",
     "booked": "Booked. Review it below, then create and send the invoice.",
     "bookedNoInvoice": "Booked.",

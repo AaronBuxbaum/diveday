@@ -317,6 +317,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "people.merged_into_person_id":
     "the merge pointer itself — structural, and what makes the shell resolve",
   "people.no_certification_cleared_by_person_id": "who cleared the no-card stamp",
+  "people.drysuit_experience_seen_by_person_id": "who saw the diver dive dry (#2136)",
   "people.adult_attested_by_person_id": "who said the diver is 18 or older (H-100)",
   "shops.shore_alert_consent_by_person_id": "who recorded the shore contact's consent (H-118)",
   "pre_departure_check_events.recorded_by_person_id": "who ticked the check",
@@ -572,6 +573,30 @@ function noCertificationStamp(
     noCertificationDeclaredAt: pick.noCertificationDeclaredAt,
     noCertificationClearedAt: pick.noCertificationClearedAt,
     noCertificationClearedByPersonId: pick.noCertificationClearedByPersonId,
+  };
+}
+
+type DrysuitExperienceSeen = {
+  drysuitExperienceSeenAt: Date | null;
+  drysuitExperienceSeenByPersonId: string | null;
+};
+
+/** Whichever record has the earlier "seen diving dry", with that record's author. */
+function drysuitExperienceSeen(
+  survivor: DrysuitExperienceSeen,
+  source: DrysuitExperienceSeen,
+): DrysuitExperienceSeen {
+  const pick =
+    survivor.drysuitExperienceSeenAt &&
+    (!source.drysuitExperienceSeenAt ||
+      survivor.drysuitExperienceSeenAt <= source.drysuitExperienceSeenAt)
+      ? survivor
+      : source;
+  return {
+    drysuitExperienceSeenAt: pick.drysuitExperienceSeenAt,
+    drysuitExperienceSeenByPersonId: pick.drysuitExperienceSeenAt
+      ? pick.drysuitExperienceSeenByPersonId
+      : null,
   };
 }
 
@@ -1267,6 +1292,9 @@ export async function mergeDiverRecords(input: {
           // all: the stamp vanishes from the record, the certification send
           // lists and the export, with nothing saying so.
           ...noCertificationStamp(survivor, source),
+          // A staffer's "seen diving dry" (#2136) travels as a pair with its
+          // author: the earliest record wins, survivor on a tie.
+          ...drysuitExperienceSeen(survivor, source),
           courtesyEmailOptOutAt: oldestDate(
             survivor.courtesyEmailOptOutAt,
             source.courtesyEmailOptOutAt,

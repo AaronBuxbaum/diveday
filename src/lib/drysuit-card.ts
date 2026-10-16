@@ -44,9 +44,17 @@ export type DrysuitCardCheck =
 export function checkDrysuitCard(
   divesDry: boolean,
   specialtyCertifications: readonly SpecialtyCertification[],
+  /**
+   * `people.drysuit_experience_seen_at`: a staffer recorded seeing this diver
+   * dive dry (issue #2136, Aaron 2026-10-13). It clears this advisory and
+   * nothing else. It is not a card, so a site or trip requiring the `drysuit`
+   * specialty still refuses without one. Required, so no caller can forget it.
+   */
+  drysuitExperienceSeenAt: Date | null,
 ): DrysuitCardCheck {
   if (!divesDry) return { status: "ok" };
   if (holdsSpecialtyCard(specialtyCertifications, "drysuit")) return { status: "ok" };
+  if (drysuitExperienceSeenAt !== null) return { status: "ok" };
   // The split is worth two sentences for the same reason `specialtyBlocker`
   // splits its codes: "nothing on file" and "one tap from cleared" are
   // different jobs for the staffer reading the roster.

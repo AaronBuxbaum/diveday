@@ -147,6 +147,24 @@ const NOTICE_KEYS: DiverNoticeMap = {
     tone: "warning",
     key: "divers.notices.noCertificationNothingToClear",
   },
+  // A staffer's "seen diving dry" (#2136). `"page"` because the row that holds
+  // the control swaps between its two states on success.
+  "drysuit-experience-recorded": {
+    form: "page",
+    tone: "success",
+    key: "divers.notices.drysuitExperienceRecorded",
+  },
+  "drysuit-experience-cleared": {
+    form: "page",
+    tone: "success",
+    key: "divers.notices.drysuitExperienceCleared",
+  },
+  // A double tap or replay: the record already says what the staffer wanted.
+  "drysuit-experience-unchanged": {
+    form: "page",
+    tone: "warning",
+    key: "divers.notices.drysuitExperienceUnchanged",
+  },
   // A staff account that has since been demoted, removed or disabled, still
   // holding a valid token. Every mutation on this page re-reads live roles for
   // the same reason.

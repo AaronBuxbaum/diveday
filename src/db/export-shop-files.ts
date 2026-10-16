@@ -473,6 +473,10 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // answer the guardian rule read when no date was on file.
       "adult_attested_at",
       "adult_attested_by_person_id",
+      // A staffer's "seen diving dry", and whose (#2136). Staff-observed,
+      // never a card: it has no row in specialty_certifications.csv.
+      "drysuit_experience_seen_at",
+      "drysuit_experience_seen_by_person_id",
       // **Where this record came from.** Set once, when a diver put
       // themselves on file at the shop's counter QR rather than being
       // typed in by staff (issue #1236). It changes how a destination
@@ -515,6 +519,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.noCertificationClearedByPersonId,
         row.adultAttestedAt,
         row.adultAttestedByPersonId,
+        row.drysuitExperienceSeenAt,
+        row.drysuitExperienceSeenByPersonId,
         row.selfRegisteredAt,
         row.deletedAt,
         row.anonymizedAt,

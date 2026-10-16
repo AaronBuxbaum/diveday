@@ -272,6 +272,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     ? checkDrysuitCard(
         rentalFitByBooking.get(booking.id)?.divesDry ?? false,
         readinessByBooking.get(booking.id)?.specialtyCertifications ?? [],
+        person.drysuitExperienceSeenAt ?? null,
       )
     : ({ status: "ok" } as const);
   // The namesake refusal (issue #1573) holds its row open for the same
