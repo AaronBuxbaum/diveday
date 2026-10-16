@@ -7,11 +7,13 @@ import { and, desc, eq, isNotNull, isNull, or } from "drizzle-orm";
 import { canRetireMedicalRefusal } from "@/lib/authz";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { calculateMedicalResult } from "@/lib/medical";
 import { isUuid } from "@/lib/uuid";
+import { WAIVER_SIGNATURE_VALIDITY_MS } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
-import { waiverRecords } from "./schema";
+import { type WaiverRecord, waiverRecords } from "./schema";
 import { activeStaffAttestorId } from "./waivers-in-person";
 
 /**
@@ -118,6 +120,63 @@ export async function hasUnansweredMedicalHold(
     )
     .limit(1);
   return Boolean(row);
+}
+
+/** When a referral was signed: the signature, else its completion, else its creation. */
+function signatureInstant(record: WaiverRecord): Date {
+  return record.signedAt ?? record.completedAt ?? record.createdAt;
+}
+
+/**
+ * **The earliest earlier referral a physician's letter could have been written
+ * for** (issue #2616), as a UTC calendar date, or null when there is none.
+ *
+ * A diver whose release was referred, and who re-signs the same "yes" before
+ * the shop records the physician's letter, holds two open referrals; the letter
+ * predates the newer. It may still clear the newer one when the physician saw at
+ * least every condition the newer one discloses. So a candidate is an *earlier*
+ * referral of this diver at this shop that nobody has answered (a cleared or
+ * refused one is finished, and a refusal is never an evidence of fitness), whose
+ * flagged prompts include **every** prompt the open record flags. Live or
+ * superseded counts; the caller has already scoped `held` to this shop, this
+ * diver, and not erased.
+ *
+ * Fails closed: the open record must itself be a real physician referral (a
+ * complete questionnaire flagging at least one prompt), an incomplete or
+ * unrecognised questionnaire on either side matches nothing, and a newly flagged
+ * prompt has no candidate, so it still needs its own evaluation. The clearance
+ * is written to the open record only, never to the earlier one.
+ */
+function earliestCoveringReferralOn(
+  held: readonly WaiverRecord[],
+  open: WaiverRecord,
+): string | null {
+  const wanted = physicianFlaggedPrompts(open);
+  if (wanted === null) return null;
+  const openAt = signatureInstant(open).getTime();
+  const days = held
+    .filter(
+      (record) =>
+        record.id !== open.id &&
+        record.medicalClearedAt === null &&
+        record.medicalClearanceDeclinedAt === null &&
+        signatureInstant(record).getTime() <= openAt,
+    )
+    .filter((record) => {
+      const seen = physicianFlaggedPrompts(record);
+      return seen !== null && [...wanted].every((prompt) => seen.has(prompt));
+    })
+    .map((record) => calendarDateInTimezone(signatureInstant(record), "UTC"))
+    .sort();
+  return days[0] ?? null;
+}
+
+/** The prompts a complete questionnaire flagged for a physician, or null when it flagged none. */
+function physicianFlaggedPrompts(record: WaiverRecord): Set<string> | null {
+  if (!record.medicalAnswers) return null;
+  const result = calculateMedicalResult(record.medicalAnswers);
+  if (result.status !== "physician_review" || result.flaggedPrompts.length === 0) return null;
+  return new Set(result.flaggedPrompts);
 }
 
 /**
@@ -245,9 +304,20 @@ export async function recordMedicalEvaluation(
 
     // The evaluation must post-date the answers it clears. Compared as calendar
     // dates in UTC, matching how the column is read back everywhere else.
-    const disclosedOn = open.signedAt ?? open.completedAt ?? open.createdAt;
-    if (input.evaluatedOn < calendarDateInTimezone(disclosedOn, "UTC")) {
-      return { ok: false, reason: "evaluation_predates_disclosure" };
+    const disclosedOn = calendarDateInTimezone(signatureInstant(open), "UTC");
+    if (input.evaluatedOn < disclosedOn) {
+      // A letter older than this record can still be the one that covers it: the
+      // diver re-signed the same "yes" before the shop recorded the letter
+      // (issue #2616). Only when an earlier referral that is still open flagged
+      // everything this one does, and the letter is on or after it, and the
+      // letter is itself inside its own year.
+      const coveredFrom = earliestCoveringReferralOn(held, open);
+      const withinItsYear =
+        Date.parse(`${input.evaluatedOn}T00:00:00.000Z`) + WAIVER_SIGNATURE_VALIDITY_MS >
+        now.getTime();
+      if (coveredFrom === null || input.evaluatedOn < coveredFrom || !withinItsYear) {
+        return { ok: false, reason: "evaluation_predates_disclosure" };
+      }
     }
 
     const cleared = input.outcome === "cleared";

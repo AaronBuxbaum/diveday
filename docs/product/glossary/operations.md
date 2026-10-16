@@ -1184,7 +1184,12 @@
   its own clearance; "cleared for this diver forever" is not a state that exists. It carries the
   **physician's evaluation date**, which is not the day a staffer typed it in: the release then
   stands only while *both* clocks run, a year from the signature and a year from the evaluation,
-  and an evaluation predating the answers it would clear is refused. And it records **evidence** —
+  and an evaluation predating the answers it would clear is refused, with one exception (issue
+  #2616, decided 2026-10-16): when the diver re-signed the same "yes" before the letter was recorded,
+  a letter dated on or after the **earliest earlier referral still unanswered** whose flagged
+  prompts include every prompt the open record flags, and still inside its own year, clears the open
+  record, and only that record. A newly flagged prompt, a letter before that referral, one older than
+  a year, or an earlier referral a physician already answered, each keep the refusal. And it records **evidence** —
   the evaluation itself, or the clinician's name — because without one the row says only that a
   member of the shop's own staff pressed a button. Any live staff member may record one, and the
   row names who did. Issue #1252.
