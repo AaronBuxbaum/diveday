@@ -61,7 +61,7 @@ export function EmergencyReferenceCard({
       <h2 id={headingId} className="text-base font-semibold text-danger-strong">
         {copy.heading}
       </h2>
-      {filled ? (
+      {filled || reference.boat ? (
         <div className="mt-3 flex flex-col gap-2 text-sm">
           {reference.lines.map((line) => (
             <p key={`${line.label}-${line.phone}`} className="flex flex-wrap gap-x-2">
@@ -130,7 +130,8 @@ export function EmergencyReferenceCard({
             </div>
           ) : null}
         </div>
-      ) : (
+      ) : null}
+      {filled ? null : (
         // Never nothing: a silently empty panel is indistinguishable from a shop
         // that has no numbers. It states the absence and asks for nothing —
         // this reader is offshore, with no signal and usually no permission to

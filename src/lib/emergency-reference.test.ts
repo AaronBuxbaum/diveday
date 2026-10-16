@@ -144,11 +144,13 @@ describe("the departure's own boat (fourth review, item 11)", () => {
     expect(reference.vessel).toBe(shop.vessel);
   });
 
-  it("counts a boat alone as something recorded", () => {
-    const boatOnly = { name: "Mantis I", callSign: null, mmsi: null };
+  it("never counts a boat alone as something recorded", () => {
+    // The boat is the departure's, not the shop's reference: a hull name and
+    // call sign are not an emergency number, so the absence is still stated.
+    const boatOnly = { name: "Mantis I", callSign: "WDM2201", mmsi: null };
     expect(
       hasEmergencyReference(emergencyReferenceForDeparture(EMPTY_EMERGENCY_REFERENCE, boatOnly)),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       hasEmergencyReference(emergencyReferenceForDeparture(EMPTY_EMERGENCY_REFERENCE, null)),
     ).toBe(false);

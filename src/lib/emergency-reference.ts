@@ -165,9 +165,10 @@ export function normalizeMmsi(input: string): string | null | "invalid" {
  * boat. Settings' hub row is where the same absence becomes an errand, beside
  * the form that ends it.
  */
-export function hasEmergencyReference(reference: DepartureEmergencyReference): boolean {
+export function hasEmergencyReference(reference: EmergencyReference): boolean {
+  // The departure's boat is not counted: a hull name is not a number to call,
+  // so a card that prints only the boat still states the absence.
   return (
-    Boolean(reference.boat) ||
     reference.lines.length > 0 ||
     reference.vessel.length > 0 ||
     reference.shoreContact.length > 0 ||
