@@ -61,6 +61,7 @@ export type DiverStatusTarget =
   | "verify"
   | "add_card"
   | "open_booking"
+  | "open_course_roster"
   | "send_waiver"
   | "collect"
   | "edit_contact";
@@ -97,6 +98,8 @@ export type DiverStatusRow = {
   tripContext?: { tripId: string; bookingId: string; startsAt: Date };
   /** The order a `collect` fix opens, when one has been raised. */
   orderId?: string;
+  /** The ended course session an `open_course_roster` fix opens (issue #2058). */
+  courseTripId?: string;
   /**
    * Which card a `verify` fix is about, when the row is about one kind. The
    * ledger lands on the first card of that kind waiting for a look
@@ -131,7 +134,7 @@ export function foldsIntoFile(
 ): row is DiverStatusRow & { kind: DiverFileKind } {
   if (row.kind === "payment" || row.kind === "identity") return false;
   const target = row.action?.target;
-  return target !== "open_booking" && target !== "collect";
+  return target !== "open_booking" && target !== "open_course_roster" && target !== "collect";
 }
 
 /** The record's rows, split between the ledger and the file row each gap belongs to. */
@@ -205,6 +208,10 @@ function missingEmergencyContact(diver: DiverProfile): boolean {
  *   starts.
  * - Booked on the course that gets them there: no fix. The card is the
  *   instructor's to issue when the course ends.
+ * - A course that should have got them there and has ended without a card
+ *   (`endedCourseTripId`, issue #2058): **Open the course roster**, where the
+ *   instructor issues the card, or the conversation with a student who did
+ *   not finish starts. Applied over the table below in `certificationFix`.
  */
 const CERTIFICATION_FIX: Record<
   ReadinessBlockerCode,
@@ -251,6 +258,16 @@ const CERTIFICATION_FIX: Record<
     readiness_unavailable: null,
   };
 })();
+
+/** The fix for a certification blocker, the ended course's roster first. */
+function certificationFix(
+  blocker: ReadinessBlocker,
+): { labelKey: StaffMessageKey; target: DiverStatusTarget } | null {
+  if (blocker.params?.endedCourseTripId) {
+    return { labelKey: "divers.status.acts.openCourseRoster", target: "open_course_roster" };
+  }
+  return CERTIFICATION_FIX[blocker.code];
+}
 
 /** The kind of card a certification blocker is about, for the `verify` landing. */
 function blockerCardKind(blocker: ReadinessBlocker): CardAwaitingKind | undefined {
@@ -398,12 +415,15 @@ export function buildDiverStatus(
       tone: certBlocker.code === "certification_in_training" ? "warning" : "danger",
       sentence: { blocker: certBlocker },
       ...(moreCertBlockers.length > 0 ? { alsoBlockers: moreCertBlockers } : {}),
-      action: CERTIFICATION_FIX[certBlocker.code] ?? undefined,
+      action: certificationFix(certBlocker) ?? undefined,
       tripContext: certSource ? contextOf(certSource.entry) : tripContext,
       verifies:
-        CERTIFICATION_FIX[certBlocker.code]?.target === "verify"
+        certificationFix(certBlocker)?.target === "verify"
           ? blockerCardKind(certBlocker)
           : undefined,
+      ...(certBlocker.params?.endedCourseTripId
+        ? { courseTripId: certBlocker.params.endedCourseTripId }
+        : {}),
     });
   } else if (awaiting > 0) {
     rows.push({

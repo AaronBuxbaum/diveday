@@ -256,6 +256,12 @@ export type ReadinessBlockerParams = {
   minimumAge?: number;
   /** The shop's own title for an unsigned course form — the shop's words, not DiveDay's. */
   formTitle?: string;
+  /**
+   * The course session that should have certified this level and has ended
+   * without a card (issue #2058), beside a certification blocker the card
+   * would clear. Staff surfaces point at that session's roster with it.
+   */
+  endedCourseTripId?: string;
 };
 
 export type ReadinessBlocker = { code: ReadinessBlockerCode; params?: ReadinessBlockerParams };
@@ -451,6 +457,13 @@ export type ReadinessInput = {
    * into the softer `certification_in_training`, and nothing here clears.
    */
   certificationsInTraining?: readonly CertificationInTraining[];
+  /**
+   * Course sessions this diver sat that certify a level and have **already
+   * ended** before this trip (`courseEndedBefore`, src/lib/in-training.ts).
+   * Never evidence: they only name, on a blocker that stands anyway, the
+   * session whose result is the fix (issue #2058).
+   */
+  coursesEnded?: readonly (CertificationInTraining & { tripId: string })[];
   /**
    * The diver's own standing "I'm not certified yet" (`people.
    * no_certification_declared_at`, not cleared by staff). Never evidence and
@@ -772,6 +785,37 @@ export function noCertificationStands(person: {
   return person.noCertificationDeclaredAt !== null && person.noCertificationClearedAt === null;
 }
 
+/** The blocker codes an ended course's card would clear, and so may name it. */
+const ENDED_COURSE_CODES: ReadonlySet<ReadinessBlockerCode> = new Set([
+  "certification_missing",
+  "certification_insufficient",
+  "certification_self_declared",
+  "certification_not_yet",
+]);
+
+/**
+ * Names the latest ended course session that certifies at least the level on
+ * a blocker its card would clear (issue #2058). The code is unchanged and the
+ * blocker stands: this only says where the fix is.
+ */
+function withEndedCourse(
+  blocker: ReadinessBlocker,
+  minimumLevel: CertificationLevel,
+  coursesEnded: readonly (CertificationInTraining & { tripId: string })[] | undefined,
+): ReadinessBlocker {
+  if (!ENDED_COURSE_CODES.has(blocker.code)) return blocker;
+  const ended = (coursesEnded ?? [])
+    .filter((course) => levelRank[course.level] >= levelRank[minimumLevel])
+    .reduce<(CertificationInTraining & { tripId: string }) | null>(
+      (latest, course) =>
+        !latest || course.finishesAt.getTime() > latest.finishesAt.getTime() ? course : latest,
+      null,
+    );
+  return ended
+    ? { ...blocker, params: { ...blocker.params, endedCourseTripId: ended.tripId } }
+    : blocker;
+}
+
 function certificationBlocker(
   certifications: readonly Certification[],
   minimumLevel: CertificationLevel,
@@ -1068,7 +1112,11 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
       input.noCertificationDeclared ?? false,
       now,
     );
-    if (certification) blockers.push(certification);
+    if (certification) {
+      blockers.push(
+        withEndedCourse(certification, effective.minimumCertificationLevel, input.coursesEnded),
+      );
+    }
   }
 
   for (const specialty of effective.requiredSpecialties) {

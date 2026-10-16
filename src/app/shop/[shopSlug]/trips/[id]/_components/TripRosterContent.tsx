@@ -271,6 +271,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           courseMaterialsDoneByPerson: guests.courseMaterialsDoneByPerson,
           sameNameHeldSeats: guests.sameNameHeldSeats,
           sameNamePeople: guests.sameNamePeople,
+          dependentCharters: guests.dependentCharters,
           heldSeatLastDiveDay: guests.heldSeatLastDiveDay,
           packageDivesByBooking: guests.packageDivesByBooking,
           paymentMarksByBooking: guests.paymentMarksByBooking,

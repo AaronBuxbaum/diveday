@@ -142,6 +142,12 @@ export type RosterRows = {
    */
   sameNamePeople?: ReadonlyMap<string, ReadonlyArray<SameNamePerson>>;
   /**
+   * Per course seat, the charter seats its student was sold only on this
+   * course (`chartersRelyingOnCourseSeats`, issue #2058): named in the seat's
+   * Remove confirm and its move.
+   */
+  dependentCharters?: ReadonlyMap<string, ReadonlyArray<{ title: string; startsAt: Date }>>;
+  /**
    * Per held seat, the matched diver's last dive day at this shop, or null for
    * none (issue #1789): the evidence line in the armed "Same person" confirm.
    */

@@ -89,9 +89,10 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
   // level the diver typed. The work is getting the card in front of somebody.
   certification_self_declared: "today.blockerAction.askForCard",
   certification_insufficient: "today.blockerAction.reviewCard",
-  // By the day of the dive the course is over, so what is left is the card:
-  // the instructor's tap on the course roster, or a word with the diver.
-  certification_in_training: "today.blockerAction.reviewCard",
+  // There is no card to review yet (issue #2058): the diver is on a course
+  // that ends before this trip, and what is left is its result, the
+  // instructor's tap on the course roster or a word with the diver.
+  certification_in_training: "today.blockerAction.checkCourseResult",
   specialty_missing: "today.blockerAction.addSpecialty",
   specialty_pending: "today.blockerAction.verifySpecialty",
   specialty_import_unconfirmed: "today.blockerAction.confirmSpecialty",
@@ -122,7 +123,7 @@ const BLOCKER_GROUP_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = 
   certification_pending: "today.blockerGroup.verifyCards",
   certification_self_declared: "today.blockerGroup.askForCards",
   certification_insufficient: "today.blockerGroup.reviewCards",
-  certification_in_training: "today.blockerGroup.reviewCards",
+  certification_in_training: "today.blockerGroup.checkCourseResults",
   specialty_missing: "today.blockerGroup.reviewSpecialties",
   specialty_pending: "today.blockerGroup.verifySpecialties",
   specialty_import_unconfirmed: "today.blockerGroup.confirmImportedSpecialties",

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "./staff-messages";
 import {
+  blockerActionLabelText,
   crewClashDetailText,
   crewClashSailedDetailText,
   daySpineSummaryText,
@@ -166,5 +167,20 @@ describe("a missing-person row", () => {
           : "Los resúmenes quedan retenidos hasta que se corrija el pase de lista.",
       );
     }
+  });
+});
+
+describe("the words for a diver still in training", () => {
+  it("send staff to the course result, not to a card that does not exist yet (#2058)", () => {
+    const t = staffTranslator("en-US");
+    expect(blockerActionLabelText(t, "certification_in_training", false)).toBe(
+      "Check the course result",
+    );
+    expect(blockerActionLabelText(t, "certification_in_training", true)).toBe(
+      "Check course results",
+    );
+    expect(blockerActionLabelText(t, "certification_in_training", false)).not.toBe(
+      blockerActionLabelText(t, "certification_insufficient", false),
+    );
   });
 });

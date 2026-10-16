@@ -121,6 +121,7 @@ export type RosterFixtureOptions = {
   record?: RosterRecord;
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
   sameNamePeople?: ReadonlyMap<string, ReadonlyArray<SameNamePerson>>;
+  dependentCharters?: ReadonlyMap<string, ReadonlyArray<{ title: string; startsAt: Date }>>;
   heldSeatLastDiveDay?: ReadonlyMap<string, Date | null>;
   packageDivesByBooking?: ReadonlyMap<string, number>;
   splitAsksDateOfBirth?: boolean;
@@ -143,6 +144,7 @@ function rosterProps({
   record,
   sameNameHeldSeats,
   sameNamePeople,
+  dependentCharters,
   heldSeatLastDiveDay,
   packageDivesByBooking,
   splitAsksDateOfBirth,
@@ -176,6 +178,7 @@ function rosterProps({
       notesByBooking: new Map(),
       sameNameHeldSeats,
       sameNamePeople,
+      dependentCharters,
       heldSeatLastDiveDay,
       packageDivesByBooking,
     },

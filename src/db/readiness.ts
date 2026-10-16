@@ -4,8 +4,14 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { outstandingCourseForms } from "@/lib/course-forms";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
+import { type CourseSeatInTraining, courseEndedBefore, inTrainingBefore } from "@/lib/in-training";
 import { isDiver, isHeldToMedical, participantPriceCents } from "@/lib/participant-types";
-import type { CardUnreviewRefusal, CertificationLevel, SiteCertRequirement } from "@/lib/readiness";
+import type {
+  CardUnreviewRefusal,
+  CertificationLevel,
+  ReadinessResult,
+  SiteCertRequirement,
+} from "@/lib/readiness";
 import {
   BLOCKER_CATEGORY,
   calculateReadiness,
@@ -28,11 +34,7 @@ import {
   riderMedicalHold,
 } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
-import {
-  type CourseSeatInTraining,
-  inTrainingBefore,
-  listCourseSeatsInTraining,
-} from "./certifications-in-training";
+import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import { courseFormSignaturesForBookings, requiredCourseFormsForTrips } from "./course-forms";
 import { publishManifestEventsForPerson } from "./manifest-events";
@@ -1527,6 +1529,30 @@ export async function getBookingReadiness(db: DbExecutor, shopId: string, bookin
   return readiness.find((row) => row.booking.id === bookingId)?.readiness ?? null;
 }
 
+/**
+ * `getBookingReadiness` for several seats at once, in one pass of the batched
+ * pipeline (`listTripsReadiness`) instead of one whole-roster read per seat
+ * (issue #2058: a diver record on a long package). The same `readiness` each
+ * seat's roster row carries, so a page reading this cannot disagree with the
+ * boat. A seat that is not this shop's, or not on a live roster, is absent.
+ */
+export async function getBookingsReadiness(
+  db: DbExecutor,
+  shopId: string,
+  bookingIds: readonly string[],
+): Promise<Map<string, ReadinessResult>> {
+  if (bookingIds.length === 0) return new Map();
+  const seats = await db
+    .select({ id: bookings.id, tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(inArray(bookings.id, [...bookingIds]), eq(bookings.shopId, shopId)));
+  const wanted = new Set(seats.map((seat) => seat.id));
+  const rows = await listTripsReadiness(db, shopId, [...new Set(seats.map((seat) => seat.tripId))]);
+  return new Map(
+    rows.flatMap((row) => (wanted.has(row.booking.id) ? [[row.booking.id, row.readiness]] : [])),
+  );
+}
+
 export type BookingReadinessDetail = {
   shop: { name: string; timezone: string };
   trip: { id: string; title: string; startsAt: Date; endsAt: Date };
@@ -1891,6 +1917,15 @@ export async function listTripsReadiness(
                 id: tripId,
                 startsAt: courseRow.startsAt,
               },
+              now,
+            )
+          : [],
+        // Sessions already over without a card: named on the blocker so the
+        // record points at that roster (issue #2058). Clears nothing.
+        coursesEnded: courseRow
+          ? courseEndedBefore(
+              courseSeatsByPerson.get(row.person.id) ?? [],
+              { id: tripId, startsAt: courseRow.startsAt },
               now,
             )
           : [],

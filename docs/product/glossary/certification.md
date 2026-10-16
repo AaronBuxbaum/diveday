@@ -211,7 +211,12 @@
   problem, and only the card the instructor certifies clears it (**Shop-issued certification**).
   Both gates share one window (`inTrainingBefore`): once the course session has ended without a
   card, the diver is read as uncertified again, because a diver who did not finish and an
-  instructor who has not tapped both need somebody to act.
+  instructor who has not tapped both need somebody to act; the blocker then names that session
+  (`endedCourseTripId`, `courseEndedBefore`) and the diver record's fix opens its roster. Every door
+  that asks admission (booking, seat claims, blow-out offers, the next-dive card) reads the same
+  window (`src/lib/in-training.ts`), and Today says "Check the course result". A charter seat sold
+  only on a course seat is named in that course seat's Remove confirm and its move
+  (`chartersRelyingOnCourseSeats`, issue #2058); it stays booked, a warning and never a gate.
 - **Self-declared certification** — a level (or a nitrox tick) a **diver typed about themselves** on
   one of the three public forms that ask: the shop-wide last-minute-deal list, a full trip's wait
   list, or — since 2026-08-20 — the trip booking form itself. It lands on the person as a `pending`

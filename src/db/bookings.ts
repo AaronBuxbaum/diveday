@@ -16,6 +16,7 @@ import { typeChangedDeskEventKind } from "@/lib/desk-events";
 import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { seatName } from "@/lib/held-seat";
+import { inTrainingBefore } from "@/lib/in-training";
 import { normalizeEmailAddress } from "@/lib/inbox";
 import { rowCanBeReactivated } from "@/lib/no-show";
 import {
@@ -44,7 +45,7 @@ import {
 import { hasReturned, hasSailed, MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
-import { inTrainingBefore, listCourseSeatsInTraining } from "./certifications-in-training";
+import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./dive-packages";

@@ -15,6 +15,7 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { listAgencyCheckableCards } from "./agency-check";
 import { sameNameHeldSeats as findSameNameHeldSeats } from "./bookings";
 import type { AppDb } from "./client";
+import { chartersRelyingOnCourseSeats, type DependentCharter } from "./course-dependent-seats";
 import { type CourseMaterialsDone, courseMaterialsDoneByPerson } from "./course-materials";
 import { courseNextStepsByBooking } from "./course-next-step";
 import { spendableDivesForTrip } from "./dive-packages";
@@ -146,6 +147,7 @@ export async function getTripGuests(
     certificationSummaries,
     courseMaterialsDone,
     agencyCheckCardsByPerson,
+    dependentCharters,
   ] = await Promise.all([
     // What "Different person" on a held seat can offer to move along with it:
     // other held seats under the same name on the same matched diver, on other
@@ -221,6 +223,20 @@ export async function getTripGuests(
         .filter(({ booking }) => !booking.identityUnconfirmedAt)
         .map(({ person }) => person.id),
     }),
+    // On a course session, the charter seats each student was sold only on
+    // this course, for the warning in its cancel and move confirmations
+    // (issue #2058). Nothing on a charter.
+    trip.courseId
+      ? chartersRelyingOnCourseSeats(
+          db,
+          shop.id,
+          tripId,
+          roster
+            .filter(({ booking }) => booking.status === "booked")
+            .map(({ booking }) => ({ bookingId: booking.id, personId: booking.personId })),
+          nowDate(),
+        )
+      : new Map<string, DependentCharter[]>(),
   ]);
 
   const heldSeatLastDiveDay = new Map<string, Date | null>(
@@ -329,6 +345,8 @@ export async function getTripGuests(
     sameNameHeldSeats,
     /** Per same-name held seat, the shop's other people with that name (issue #2129). */
     sameNamePeople,
+    /** Per course seat, the charter seats sold only on it (issue #2058). */
+    dependentCharters,
     /**
      * Per held seat, the matched diver's last dive day at this shop, or null
      * when there is none (issue #1789). Only held seats have an entry.

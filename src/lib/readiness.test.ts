@@ -705,6 +705,81 @@ describe("calculateReadiness — a course that gets them there", () => {
     ).toEqual([{ code: "certification_missing" }]);
   });
 
+  describe("a course that ended without a card (issue #2058)", () => {
+    const ended = (
+      level: Certification["level"],
+      finishesAt = yesterday,
+      tripId = "aow-session",
+    ) => ({
+      level,
+      finishesAt,
+      tripId,
+    });
+    function endedBlockers(
+      certifications: Certification[],
+      coursesEnded: ReturnType<typeof ended>[],
+    ) {
+      return calculateReadiness({
+        timezone: "UTC",
+        requirement,
+        waiver: signedWaiver,
+        certifications,
+        coursesEnded,
+        now,
+      });
+    }
+
+    it("names the session on the blocker, and the blocker still stands", () => {
+      const result = endedBlockers([], [ended("advanced_open_water")]);
+      expect(result.status).toBe("blocked");
+      expect(result.blockers).toEqual([
+        { code: "certification_missing", params: { endedCourseTripId: "aow-session" } },
+      ]);
+      expect(
+        endedBlockers([certification({ level: "open_water" })], [ended("advanced_open_water")])
+          .blockers,
+      ).toEqual([
+        {
+          code: "certification_insufficient",
+          params: {
+            requiredLevel: "advanced_open_water",
+            heldLevel: "open_water",
+            endedCourseTripId: "aow-session",
+          },
+        },
+      ]);
+    });
+
+    it("never names a course below the trip's level, and names the latest of two", () => {
+      expect(endedBlockers([], [ended("open_water")]).blockers).toEqual([
+        { code: "certification_missing" },
+      ]);
+      const earlier = new Date("2026-07-10T16:00:00.000Z");
+      expect(
+        endedBlockers(
+          [],
+          [ended("advanced_open_water", earlier, "first"), ended("rescue", yesterday, "second")],
+        ).blockers,
+      ).toEqual([{ code: "certification_missing", params: { endedCourseTripId: "second" } }]);
+    });
+
+    it("leaves a card waiting on review alone: that card is the fix", () => {
+      expect(
+        endedBlockers(
+          [certification({ status: "pending", level: "advanced_open_water" })],
+          [ended("advanced_open_water")],
+        ).blockers,
+      ).toEqual([{ code: "certification_pending" }]);
+    });
+
+    it("clears nothing: the issued card is still what boards them", () => {
+      expect(endedBlockers([certification()], [ended("advanced_open_water")])).toEqual({
+        status: "ready",
+        blockers: [],
+      });
+    });
+  });
+
   it("prefers a card on file at the level over the course", () => {
     expect(
       certificationBlockers(
