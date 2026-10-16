@@ -207,6 +207,7 @@ describe("checkout session events", () => {
       ACCOUNT,
       32_400,
       0,
+      { firstCompletion: false },
     );
     expect(markTipPaidBySessionId).not.toHaveBeenCalled();
   });
@@ -238,6 +239,7 @@ describe("checkout session events", () => {
       ACCOUNT,
       undefined,
       0,
+      { firstCompletion: false },
     );
   });
 
@@ -249,6 +251,7 @@ describe("checkout session events", () => {
       ACCOUNT,
       36_000,
       0,
+      { firstCompletion: false },
     );
   });
 

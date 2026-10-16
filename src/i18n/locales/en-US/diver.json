@@ -5221,6 +5221,10 @@
       "partyStayed": "{count, plural, one {# party seat stays booked: its diver has already claimed it or checked in.} other {# party seats stay booked: their divers have already claimed them or checked in.}}",
       "findAnother": "See what else is running"
     },
+    "partyPaymentReceipt": {
+      "subject": "Receipt: {tripTitle}",
+      "body": "Paid by card for {seats} seats on {tripTitle}, {date}: {amount}. Thank you."
+    },
     "tripBlowout": {
       "subject": "Trip canceled — {tripTitle}",
       "body": "We’ve had to cancel {tripTitle} on {date} because of the weather. Your seat is released, and there’s nothing you need to do.",

@@ -1339,6 +1339,31 @@ const courseCertifiedSchema = z.object({
     .optional(),
 });
 
+/**
+ * **What a group's card checkout settled, told to the lead** (#2566). The
+ * booking confirmation goes out before Stripe reports the payment, so it can
+ * never carry the group total; this follows once Stripe says paid. One short
+ * receipt, keyed on the checkout, sent by the webhook on the call that
+ * completes it. The figure is Stripe's own settled total, never the asked
+ * price. Carries no `bookingId` on purpose: the delivery table is per booking
+ * and kind, and this is a receipt for a checkout.
+ */
+const partyPaymentReceiptSchema = z.object({
+  kind: z.literal("party_payment_receipt"),
+  checkoutId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: tripTitleSchema,
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  seats: z.number().int().min(2).max(500),
+  amountCents: z.number().int().min(1).max(100_000_000),
+  currency: z.string().trim().length(3),
+});
+
 const workOrderReadySchema = z.object({
   kind: z.literal("work_order_ready"),
   noticeId: z.uuid(),
@@ -1621,6 +1646,7 @@ export const notificationSchema = z
     tripMinimumNotMetSchema,
     tripBlowoutSchema,
     bookingCancelledSchema,
+    partyPaymentReceiptSchema,
     welcomeSchema,
     emailVerificationSchema,
     contactEmailConfirmationSchema,
@@ -1913,6 +1939,10 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One acknowledgment per submitted request row.
     case "course_inquiry_received":
       return `course-inquiry-received/${notification.courseInquiryId}`;
+    // One receipt per checkout, ever; the webhook sends it only on the call
+    // that completes the checkout.
+    case "party_payment_receipt":
+      return `party-payment-receipt/${notification.checkoutId}`;
     // One send per card written; a level already held writes none.
     case "course_certified":
       return `course-certified/${notification.certificationId}`;

@@ -5221,6 +5221,10 @@
       "partyStayed": "{count, plural, one {# plaza de tu grupo sigue reservada: su buceador ya la reclamó o ya hizo el check-in.} other {# plazas de tu grupo siguen reservadas: sus buceadores ya las reclamaron o ya hicieron el check-in.}}",
       "findAnother": "Ver qué más hay programado"
     },
+    "partyPaymentReceipt": {
+      "subject": "Recibo: {tripTitle}",
+      "body": "Pagado con tarjeta por {seats} plazas en {tripTitle}, {date}: {amount}. Gracias."
+    },
     "tripBlowout": {
       "subject": "Salida cancelada — {tripTitle}",
       "body": "Tuvimos que cancelar {tripTitle} del {date} por el mal tiempo. Tu plaza queda liberada y no necesitas hacer nada.",

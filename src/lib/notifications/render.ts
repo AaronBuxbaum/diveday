@@ -41,6 +41,7 @@ import {
   wrapEmailHtml,
 } from "./email";
 import type { Notification } from "./kinds";
+import { partyPaymentReceiptEmail } from "./party-payment-receipt";
 import {
   rollCallStaleEmail,
   rollCallStaleShoreEmail,
@@ -161,6 +162,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   }
   if (notification.kind === "departure_note") return departureNoteEmail(notification);
   if (notification.kind === "lost_item_found") return lostItemEmail(notification);
+  if (notification.kind === "party_payment_receipt") return partyPaymentReceiptEmail(notification);
   if (notification.kind === "course_certified") return courseCertifiedEmail(notification);
   if (notification.kind === "course_inquiry_received") {
     return courseInquiryReceivedEmail(notification);

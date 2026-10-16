@@ -13,6 +13,7 @@ import {
   markOrderVoidedByInvoiceId,
   recordOrderPaymentIntent,
 } from "@/db/orders";
+import { sendPartyPaymentReceipt } from "@/db/party-payment-receipt";
 import { recordStripeDispute } from "@/db/payment-disputes";
 import { recordStripeRefundFailure } from "@/db/refund-failures";
 import { recordStripeChargeRefund } from "@/db/refunds";
@@ -369,6 +370,30 @@ async function applyAccountUpdate(
  * `account` field). Fails closed on a bad/stale/missing signature before any
  * event is handled (docs ADR 20260719-stripe-connect-orders).
  */
+/**
+ * Stripe says this booking checkout is paid: settle it from Stripe's own
+ * figures, then tell a group's lead the total (#2566). The receipt goes only on
+ * the call that completed the checkout, so a replay or a fresh-id redelivery
+ * sends nothing; it never throws, so a mail failure cannot make Stripe retry.
+ */
+async function settleCheckoutPaid(
+  db: AppDb,
+  session: z.infer<typeof checkoutSessionObjectSchema>,
+  account: string | undefined,
+) {
+  const settlement = { firstCompletion: false };
+  const checkout = await markCheckoutPaidBySessionId(
+    db,
+    session.id,
+    account,
+    session.amount_total,
+    session.total_details?.amount_tax,
+    settlement,
+  );
+  if (checkout && settlement.firstCompletion) await sendPartyPaymentReceipt(db, checkout);
+  return checkout;
+}
+
 export async function POST(request: Request) {
   const payload = await request.text();
   const signature = request.headers.get("stripe-signature");
@@ -570,13 +595,7 @@ export async function POST(request: Request) {
           // live in separate tables (docs ADR 20260726-post-trip-tipping); a
           // session id belongs to at most one, so try the booking-payment path
           // first and only fall back to tips when it finds nothing to mark.
-          const checkout = await markCheckoutPaidBySessionId(
-            db,
-            session.data.id,
-            event.account,
-            session.data.amount_total,
-            session.data.total_details?.amount_tax,
-          );
+          const checkout = await settleCheckoutPaid(db, session.data, event.account);
           if (checkout) {
             logOutcome("checkout_paid");
           } else {
@@ -595,13 +614,7 @@ export async function POST(request: Request) {
         if (session.success) {
           await recordSessionCustomer(db, session.data, event.account, logOutcome);
           await recordSessionPaymentIntent(db, session.data, event.account, logOutcome);
-          const checkout = await markCheckoutPaidBySessionId(
-            db,
-            session.data.id,
-            event.account,
-            session.data.amount_total,
-            session.data.total_details?.amount_tax,
-          );
+          const checkout = await settleCheckoutPaid(db, session.data, event.account);
           if (checkout) {
             logOutcome("checkout_paid");
           } else {

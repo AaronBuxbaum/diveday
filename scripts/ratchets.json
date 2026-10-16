@@ -375,7 +375,7 @@
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
     "src/app/api/test/seed-trouble-states/route.ts": 2040,
     "src/app/api/webhooks/stripe/route.replay.test.ts": 1260,
-    "src/app/api/webhooks/stripe/route.test.ts": 1858,
+    "src/app/api/webhooks/stripe/route.test.ts": 1818,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1110,
     "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1323,
