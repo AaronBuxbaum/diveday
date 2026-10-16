@@ -405,16 +405,11 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "shore_alert_consent_at",
     "shore_alert_consent_by_person_id",
     "shore_alert_confirmed_at",
-    // Item 35 (ADR 20261016-bookkeeper-month-end-email): an address the shop's
-    // month leaves for every month, set by an owner or manager past the export
-    // step-up. A restore must not start that send again on a CSV's say-so, so
-    // the restored shop sets it afresh; the sent month is send state.
+    // Item 35 and review B1: an address, its confirmation and send state; a restore asks afresh.
     "bookkeeper_email",
     "bookkeeper_email_set_at",
     "bookkeeper_email_set_by_person_id",
     "bookkeeper_sent_month",
-    // Its confirmation (security review B1) is DiveDay's proof the inbox said
-    // yes, and the hash is a credential's: a restored shop asks again.
     "bookkeeper_confirmed_at",
     "bookkeeper_confirm_token_hash",
     "bookkeeper_confirm_expires_at",
