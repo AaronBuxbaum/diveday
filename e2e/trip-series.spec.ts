@@ -6,6 +6,7 @@ import {
   daysFromNow,
   e2eNow,
   openTripAbout,
+  openTripAboutRow,
   openTripFromBoard,
   openTripMore,
 } from "./helpers";
@@ -174,16 +175,19 @@ test("applying a series' standing crew reaches later dates, and spares one a cre
   test.setTimeout(60_000);
   const title = `Standing Crew ${e2eNow().getTime()}`;
   const busy = `Busy Charter ${e2eNow().getTime()}`;
-  const first = daysFromNow(4);
-  const second = daysFromNow(11);
-  const third = daysFromNow(18);
+  // Early and a day later than the demo shop's own runs would suggest: its
+  // courses and charters keep Marcus and Dana out from mid-morning, and the
+  // three-day course through Aug 1, so a mid-morning run lands on a clash.
+  const first = daysFromNow(5);
+  const second = daysFromNow(12);
+  const third = daysFromNow(19);
 
   // A weekly run, open-ended: its dates a week apart are already on the board.
   await page.goto("/shop/blue-mantis/schedule/board?add=full");
   await page.getByLabel("What is it").fill(title);
   await page.getByLabel("Date").fill(first);
-  await page.getByLabel("Departs").fill("08:00");
-  await page.getByLabel("Returns").fill("11:00");
+  await page.getByLabel("Departs").fill("05:00");
+  await page.getByLabel("Returns").fill("07:00");
   await page.getByLabel("Seats").fill("6");
   await page.getByLabel("How often").selectOption("1");
   await page.getByRole("button", { name: "Put it on the board" }).click();
@@ -191,7 +195,7 @@ test("applying a series' standing crew reaches later dates, and spares one a cre
 
   // Marcus is already out on another departure the same morning as the run's
   // second date.
-  await createTrip(page, { title: busy, date: second, departsAt: "08:00", returnsAt: "11:00" });
+  await createTrip(page, { title: busy, date: second, departsAt: "05:00", returnsAt: "07:00" });
   await page.goto(await tripPathOn(page, second, busy));
   await openTripAbout(page);
   await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
@@ -224,7 +228,8 @@ test("applying a series' standing crew reaches later dates, and spares one a cre
 
   // A later date carries the same crew.
   await page.goto(await tripPathOn(page, third, title));
-  await openTripAbout(page);
+  // A crewed row is settled, so it is shut: open it to read the names.
+  await openTripAboutRow(page, "Boat & crew");
   await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Unassign Dana Reyes" })).toBeVisible();
 

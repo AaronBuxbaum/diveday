@@ -80,7 +80,7 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   // The month's Safety tab lists it, beside the money.
   await page.goto("/shop/blue-mantis/reports");
   await page.getByRole("link", { name: "Safety" }).click();
-  await page.waitForURL(/\/reports\/safety/);
+  await page.waitForURL(/\/shop\/blue-mantis\/safety/);
   // The demo crew have no credential on file, and the tab says so rather than
   // reading a clean zero (third review, item 2).
   await expect(page.getByText(/Nothing on file for their role on \d+ of/)).toBeVisible();

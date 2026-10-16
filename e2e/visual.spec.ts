@@ -8075,7 +8075,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("dialog")
           .getByRole("button", { name: "Close person details" })
           .click();
-        await expect(tomRow.getByText("Buddy not back aboard")).toBeVisible();
+        await expect(tomRow.getByText("Lena not back aboard")).toBeVisible();
         await page.mouse.move(0, 0);
         await capture(page, "manifest-buddy-divergence", scheme);
       });
@@ -8929,7 +8929,7 @@ for (const scheme of ["light", "dark"] as const) {
             dialog.getByRole("button", { name: "Sin regresar a bordo", exact: true }),
           ).toBeVisible();
           await dialog.getByRole("button", { name: "Cerrar detalles de la persona" }).click();
-          await expect(tomRow.getByText("Compañero sin regresar a bordo")).toBeVisible();
+          await expect(tomRow.getByText("Lena sin regresar a bordo")).toBeVisible();
           await page.mouse.move(0, 0);
           await capture(page, "manifest-buddy-divergence", scheme, { locale: SPANISH });
         });
