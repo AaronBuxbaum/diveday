@@ -31,6 +31,7 @@ import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { departureMayBeAtSea } from "./aboard-at-sea";
 import { releasePackageCoverageForBooking } from "./bookings";
+import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import { flushUrgentCrewNotices } from "./crew-notices";
 import { publishManifestEvent } from "./manifest-events";
@@ -692,7 +693,10 @@ async function sendPendingBlowoutMessages(
             ne(bookings.status, "cancelled"),
           ),
         );
-      const evidence = await certificationEvidence(db, input.shopId, row.diver.personId);
+      const [evidence, courseSeats] = await queryAll(db, [
+        () => certificationEvidence(db, input.shopId, row.diver.personId),
+        () => listCourseSeatsInTraining(db, input.shopId, [row.diver.personId]),
+      ]);
       const offeredTripIds = qualifyingAlternatives({
         cancelledTripId: input.trip.id,
         now: input.now,
@@ -702,6 +706,7 @@ async function sendPendingBlowoutMessages(
           identityUnconfirmed: row.booking.identityUnconfirmedAt !== null,
           bookedTripIds: activeSeats.map((seat) => seat.tripId),
           participantType: row.booking.participantType,
+          courseSeats,
         },
       });
 

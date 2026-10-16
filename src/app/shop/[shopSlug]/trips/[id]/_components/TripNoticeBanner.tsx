@@ -210,6 +210,42 @@ const NOTICE_KEYS: Record<
   },
   "identity-confirmed": { form: "roster", tone: "success", key: "trips.notices.identityConfirmed" },
   "identity-split": { form: "roster", tone: "success", key: "trips.notices.identitySplit" },
+  // Moved to the other same-name record and still held (issue #2129).
+  "identity-repointed": {
+    form: "roster",
+    tone: "success",
+    key: "trips.notices.identityRepointed",
+  },
+  "identity-repoint-unavailable": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityRepointUnavailable",
+  },
+  "identity-repoint-medical-hold": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityRepointMedicalHold",
+  },
+  "identity-split-contact-conflict": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identitySplitContactConflict",
+  },
+  "identity-departure-closed": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityDepartureClosed",
+  },
+  "identity-contact-differs": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityContactDiffers",
+  },
+  "identity-repoint-already-booked": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityRepointAlreadyBooked",
+  },
   // The release a held seat was owed, sent once the desk knew who it is. When
   // it reached nobody the row hands it over (`…-waiver-ready`); when it could
   // not be issued the notice is `new-waiver-failed` (issue #2125).
@@ -356,17 +392,19 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "participants.notices.diversFull",
   },
+  // A type change, unlike an add, has a fix on the row: Remove booking and
+  // seat them again (dive-domain review H9).
   "participant-type-unavailable": {
     form: "roster",
     tone: "danger",
-    key: "participants.notices.typeUnavailable",
+    key: "participants.notices.typeChangeUnavailable",
   },
   "participant-type-on-team": {
     form: "roster",
     tone: "danger",
     key: "participants.notices.onBuddyTeam",
   },
-  // Too late: joining after the departure time, or anything once home.
+  // Too late: the departure is home or cancelled.
   "participant-type-closed": {
     form: "roster",
     tone: "danger",

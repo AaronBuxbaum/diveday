@@ -38,6 +38,7 @@ vi.mock("@/db/authz", () => ({
 }));
 vi.mock("@/db/course-forms", () => ({
   listCourseFormRequirements: vi.fn(async () => []),
+  listCourseFormAgeBounds: vi.fn(async () => new Map()),
   setCourseFormRequirements: vi.fn(),
 }));
 
@@ -47,7 +48,8 @@ const { getCourseBySlug, pullCourseTemplateUpdates, setCourseVisibility } = awai
 );
 const { requireStaffSession } = await import("@/lib/session");
 const { canPersonConfigureTrips, canPersonManageWaiverTemplates } = await import("@/db/authz");
-const { listCourseFormRequirements, setCourseFormRequirements } = await import("@/db/course-forms");
+const { listCourseFormAgeBounds, listCourseFormRequirements, setCourseFormRequirements } =
+  await import("@/db/course-forms");
 const {
   pullCourseTemplateUpdatesAction,
   saveCourseFormRequirementsAction,
@@ -139,8 +141,56 @@ describe("saveCourseFormRequirementsAction", () => {
     expect(to).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-saved#forms");
     expect(setCourseFormRequirements).toHaveBeenCalledWith(
       {},
-      { shopId: SHOP_ID, courseId: COURSE_ID, formIds: [FORM_C, FORM_B, FORM_A] },
+      {
+        shopId: SHOP_ID,
+        courseId: COURSE_ID,
+        formIds: [FORM_C, FORM_B, FORM_A],
+        maxAgeYears: new Map(),
+        mayNarrow: true,
+      },
     );
+  });
+
+  it("saves the age under a ticked form, and refuses one that is not a whole number (#2265)", async () => {
+    vi.mocked(setCourseFormRequirements).mockResolvedValue({ ok: true });
+
+    await posted([
+      ["formId", FORM_A],
+      ["formId", FORM_B],
+      [`maxAge-${FORM_A}`, " 11 "],
+      [`maxAge-${FORM_B}`, ""],
+      // An age under a form that is not ticked asks nothing of anyone.
+      [`maxAge-${FORM_C}`, "9"],
+    ]);
+    expect(setCourseFormRequirements).toHaveBeenCalledWith(
+      {},
+      {
+        shopId: SHOP_ID,
+        courseId: COURSE_ID,
+        formIds: [FORM_A, FORM_B],
+        maxAgeYears: new Map([[FORM_A, 11]]),
+        mayNarrow: true,
+      },
+    );
+    vi.mocked(setCourseFormRequirements).mockClear();
+
+    for (const age of ["eleven", "10.5", "-3"]) {
+      expect(
+        await posted([
+          ["formId", FORM_A],
+          [`maxAge-${FORM_A}`, age],
+        ]),
+      ).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-invalid-age#forms");
+    }
+    expect(setCourseFormRequirements).not.toHaveBeenCalled();
+
+    vi.mocked(setCourseFormRequirements).mockResolvedValue({ ok: false, reason: "invalid_age" });
+    expect(
+      await posted([
+        ["formId", FORM_A],
+        [`maxAge-${FORM_A}`, "0"],
+      ]),
+    ).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-invalid-age#forms");
   });
 
   it("saves an empty list when nothing is ticked: the course asks for no forms", async () => {
@@ -150,7 +200,13 @@ describe("saveCourseFormRequirementsAction", () => {
 
     expect(setCourseFormRequirements).toHaveBeenCalledWith(
       {},
-      { shopId: SHOP_ID, courseId: COURSE_ID, formIds: [] },
+      {
+        shopId: SHOP_ID,
+        courseId: COURSE_ID,
+        formIds: [],
+        maxAgeYears: new Map(),
+        mayNarrow: true,
+      },
     );
   });
 
@@ -191,6 +247,51 @@ describe("saveCourseFormRequirementsAction", () => {
     expect(setCourseFormRequirements).not.toHaveBeenCalled();
     vi.mocked(canPersonManageWaiverTemplates).mockResolvedValue(true);
     vi.mocked(listCourseFormRequirements).mockResolvedValue([]);
+  });
+
+  it("lets an instructor raise or clear an age, never put one on or lower it (G1)", async () => {
+    vi.mocked(setCourseFormRequirements).mockResolvedValue({ ok: true });
+    vi.mocked(canPersonManageWaiverTemplates).mockResolvedValue(false);
+    vi.mocked(listCourseFormRequirements).mockResolvedValue([FORM_A, FORM_B]);
+    vi.mocked(listCourseFormAgeBounds).mockResolvedValue(new Map([[FORM_A, 11]]));
+    const both = (ages: [string, string]) =>
+      posted([
+        ["formId", FORM_A],
+        ["formId", FORM_B],
+        [`maxAge-${FORM_A}`, ages[0]],
+        [`maxAge-${FORM_B}`, ages[1]],
+      ]);
+    const refused =
+      "/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-remove-not-authorized#forms";
+
+    // A bound on B, which asked everyone, and A lowered: each asks fewer students.
+    expect(await both(["11", "12"])).toBe(refused);
+    expect(await both(["10", ""])).toBe(refused);
+    expect(setCourseFormRequirements).not.toHaveBeenCalled();
+    // Raising A, or clearing it, asks more: theirs to do.
+    expect(await both(["14", ""])).toBe(
+      "/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-saved#forms",
+    );
+    expect(setCourseFormRequirements).toHaveBeenLastCalledWith(
+      {},
+      expect.objectContaining({ mayNarrow: false }),
+    );
+    expect(await both(["", ""])).toBe(
+      "/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-saved#forms",
+    );
+    vi.mocked(canPersonManageWaiverTemplates).mockResolvedValue(true);
+    vi.mocked(listCourseFormRequirements).mockResolvedValue([]);
+    vi.mocked(listCourseFormAgeBounds).mockResolvedValue(new Map());
+  });
+
+  it("says so when an age is put on a medical statement (G3)", async () => {
+    vi.mocked(setCourseFormRequirements).mockResolvedValue({ ok: false, reason: "medical_bound" });
+    expect(
+      await posted([
+        ["formId", FORM_A],
+        [`maxAge-${FORM_A}`, "11"],
+      ]),
+    ).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-medical-age#forms");
   });
 
   it("says so when the list names a form that is not this shop's", async () => {

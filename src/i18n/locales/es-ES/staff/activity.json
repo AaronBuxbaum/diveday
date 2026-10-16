@@ -15,6 +15,9 @@
     "identity_confirmed": "{actor} confirmó en el listado de la salida que esta reserva es de {diver}",
     "identity_split": "{actor} creó una ficha propia para {diver}: no era la persona a la que se había asociado la reserva",
     "identity_split_off": "{actor} quitó de la ficha de {diver} una reserva hecha con otro nombre",
+    "identity_repointed": "{actor} pasó la plaza retenida reservada como {diver} a otra ficha con ese nombre, aún sin confirmar",
+    "identity_repointed_off": "{actor} pasó una reserva retenida de la ficha de {diver} a otra con el mismo nombre",
+    "identity_repointed_onto": "{actor} pasó a la ficha de {diver} una reserva retenida de otra con el mismo nombre, aún sin confirmar",
     "diver_merged": "{actor} unió la ficha de {merged} a la de {diver}",
     "crew_assigned": "{actor} asignó a {crew} a la tripulación",
     "crew_removed": "{actor} quitó a {crew} de la tripulación",
@@ -94,7 +97,7 @@
     "demo_nitrox_logged": "{actor} registró la certificación de nitrox de {diver} desde la tarjeta",
     "demo_own_computer_confirmed": "{actor} confirmó que {diver} trae su propia computadora",
     "demo_paper_card_reminded": "{actor} le recordó a {diver} traer la tarjeta física al muelle",
-    "participant_type_changed": "{actor} cambió a {diver} de {from, select, snorkeler {snorkel} rider {acompañante en el barco} other {buceo}} a {type, select, snorkeler {snorkel} rider {acompañante en el barco} other {buceo}}{certCheck, select, cleared {, y eso quitó una verificación de tarjeta} overridden {, aunque falta una tarjeta} other {}}",
+    "participant_type_changed": "{actor} cambió a {diver} de {from, select, snorkeler {snorkel} rider {acompañante en el barco} other {buceo}} a {type, select, snorkeler {snorkel} rider {acompañante en el barco} other {buceo}}{certCheck, select, cleared {, y eso quitó una verificación de tarjeta} overridden {, aunque falta una tarjeta} other {}}{atSea, select, yes {, después de la salida} other {}}",
     "course_form_medical_changed": "{actor} {marked, select, yes {marcó} other {quitó la marca médica de}} el formulario del curso {form}{marked, select, yes { como declaración médica} other {}}"
   },
   "unknown": "Una entrada anterior",

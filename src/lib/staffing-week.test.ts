@@ -1095,6 +1095,16 @@ describe("crewGapFor", () => {
     expect(gap({ course: intro, instructors: 1, booked: 3, target: 20 })).toBe("over_intro_ratio");
   });
 
+  it("counts only the divers on a course session against its ratio (G5 of #2226)", () => {
+    // Eight students and four priced riders: the riders are passengers.
+    expect(
+      gap({ course: entryLevel, instructors: 1, booked: 12, divers: 8, target: 20 }),
+    ).toBeNull();
+    expect(gap({ course: entryLevel, instructors: 1, booked: 12, divers: 9, target: 20 })).toBe(
+      "over_ratio",
+    );
+  });
+
   it("lets the agency's ratio outrank the shop's own target", () => {
     expect(gap({ course: entryLevel, instructors: 1, booked: 9, target: 2 })).toBe("over_ratio");
   });

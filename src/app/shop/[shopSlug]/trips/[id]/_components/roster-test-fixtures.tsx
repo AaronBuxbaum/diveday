@@ -3,6 +3,7 @@ import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { AboardHold } from "@/db/aboard-at-sea";
 import type { SameNameHeldSeat } from "@/db/bookings";
+import type { SameNamePerson } from "@/db/identity-repoint";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -120,6 +121,8 @@ export type RosterFixtureOptions = {
   arrival?: RosterArrival;
   record?: RosterRecord;
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
+  sameNamePeople?: ReadonlyMap<string, ReadonlyArray<SameNamePerson>>;
+  dependentCharters?: ReadonlyMap<string, ReadonlyArray<{ title: string; startsAt: Date }>>;
   heldSeatLastDiveDay?: ReadonlyMap<string, Date | null>;
   packageDivesByBooking?: ReadonlyMap<string, number>;
   splitAsksDateOfBirth?: boolean;
@@ -143,6 +146,8 @@ function rosterProps({
   arrival,
   record,
   sameNameHeldSeats,
+  sameNamePeople,
+  dependentCharters,
   heldSeatLastDiveDay,
   packageDivesByBooking,
   splitAsksDateOfBirth,
@@ -176,6 +181,8 @@ function rosterProps({
       nitroxByBooking: new Map() as NitroxByBooking,
       notesByBooking: new Map(),
       sameNameHeldSeats,
+      sameNamePeople,
+      dependentCharters,
       heldSeatLastDiveDay,
       packageDivesByBooking,
       aboardAtSea,
@@ -188,6 +195,7 @@ function rosterProps({
       removeBookingAction: noop,
       confirmIdentityAction: noop,
       splitIdentityAction: noop,
+      repointIdentityAction: noop,
       addNoteAction: noop,
       deleteNoteAction: noop,
       saveEmergencyContactAction: noop,

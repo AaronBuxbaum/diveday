@@ -1,12 +1,13 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { createBooking } from "./bookings";
 import { readCertificationEvidence } from "./certification-evidence";
 import { nextDiveForBooking } from "./next-dive";
 import { createCertification, upsertTripRequirements } from "./readiness";
-import { people, trips } from "./schema";
+import { certifications, courses, people, tripAssignments, trips } from "./schema";
 import { createTripLens } from "./trip-lenses";
-import { createTrip } from "./trips";
+import { createTrip, listStaff } from "./trips";
 
 // Spied rather than replaced: every case below still needs the real reads, and
 // the one thing being asserted is how many times they happen.
@@ -223,6 +224,101 @@ describe("nextDiveForBooking", () => {
       ...day("00000000-0000-0000-0000-0000000000ff"),
     });
     expect(readCertificationEvidence).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("nextDiveForBooking — a diver in training (issue #2058)", () => {
+  /**
+   * The card points where the booking door would sell: a departure after a
+   * course the diver is booked on, which certifies its level, is offered; one
+   * before the course ends is not. Same `inTrainingBefore` window as the sale.
+   */
+  it("offers a departure after the booked course that reaches its level, and never one before it", async () => {
+    const { db, shop } = ctx;
+    const [course] = await db
+      .select()
+      .from(courses)
+      .where(
+        and(
+          eq(courses.shopId, shop.id),
+          eq(courses.sourceTemplateSlug, "advanced-open-water-diver"),
+        ),
+      )
+      .limit(1);
+    if (!course) throw new Error("seeded Advanced course missing");
+    const instructor = (await listStaff(db, shop.id)).find((entry) =>
+      entry.roles.includes("instructor"),
+    );
+    if (!instructor) throw new Error("seeded instructor missing");
+
+    // An Open Water diver the shop has verified, so admission reads their card.
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Ines Duarte", email: "ines.duarte@example.com" })
+      .returning({ id: people.id });
+    if (!diver) throw new Error("person insert failed");
+    await createCertification(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      agency: "padi",
+      level: "open_water",
+      identifier: "OW-ID",
+    });
+    await db
+      .update(certifications)
+      .set({ status: "verified" })
+      .where(eq(certifications.personId, diver.id));
+
+    // A private session, so the card does not suggest the course itself.
+    const session = await createTrip(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      title: "Advanced session",
+      startsAt: AT(30),
+      endsAt: AT(38),
+      capacity: 6,
+      isPrivate: true,
+    });
+    if (!session) throw new Error("session not created");
+    await db.insert(tripAssignments).values({ tripId: session.id, personId: instructor.person.id });
+    const enrolled = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: session.id,
+      personId: diver.id,
+    });
+    if (!enrolled.ok) throw new Error(`course booking refused: ${enrolled.reason}`);
+
+    const advancedOnly = async (title: string, startsAt: Date) => {
+      const trip = await departure(db, shop.id, { title, startsAt });
+      await upsertTripRequirements(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        requiresWaiver: false,
+        minimumCertificationLevel: "advanced_open_water",
+        requiredSpecialties: [],
+        requiresNitrox: false,
+        requiresPayment: false,
+      });
+      return trip;
+    };
+    // Sails mid-course: the course has not got them there.
+    await advancedOnly("Wall, mid-course", AT(34));
+    const pick = await nextDiveForBooking(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      ...day("00000000-0000-0000-0000-0000000000ff"),
+    });
+    expect(pick).toBeNull();
+
+    const after = await advancedOnly("Wall, after the course", AT(60));
+    expect(
+      await nextDiveForBooking(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        ...day("00000000-0000-0000-0000-0000000000ff"),
+      }),
+    ).toMatchObject({ tripId: after.id });
   });
 });
 

@@ -3,6 +3,7 @@ import {
   COURSE_TEMPLATES,
   type CourseTemplate,
   courseTemplateSnapshot,
+  standardFormAgeBounds,
 } from "@/content/course-templates";
 import { nowDate } from "@/lib/clock";
 import { courseSlug } from "@/lib/courses";
@@ -313,6 +314,7 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
       shopId,
       courseId: course.id,
       titles: (template.standardForms ?? []).map((form) => form.title),
+      maxAgeByTitle: standardFormAgeBounds(template),
     });
   }
   // Stamped from the app's clock rather than left to `defaultNow()`: the

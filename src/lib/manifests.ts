@@ -156,13 +156,31 @@ export type ManifestDiverInput = {
    * (`identityReasonText`) rather than say "might be someone else" with
    * nothing to compare. Absent on a seat that was never held.
    */
-  identityClaim?: { bookedAs: string | null; matchedBy: IdentityMatchKind | null };
+  identityClaim?: {
+    bookedAs: string | null;
+    matchedBy: IdentityMatchKind | null;
+    /**
+     * The emergency contact the desk recorded for the person on this held seat
+     * (`bookings.held_emergency_contact_*`, issue #2145), which
+     * `withholdHeldSeatParticulars` shows in place of the matched record's.
+     * Null when none was recorded; absent on a manifest built by hand.
+     */
+    heldEmergencyContact?: { name: string; phone: string } | null;
+  };
   /**
    * Set only by `withholdHeldSeatParticulars` (`src/lib/held-seat.ts`): this
    * row is a held seat and the matched person's particulars were cleared, so a
    * surface says they wait for confirmation instead of "Not on file".
    */
   identityWithheld?: boolean;
+  /**
+   * Set only by `withholdHeldSeatParticulars`, beside `identityWithheld`: the
+   * contact the desk recorded for the person on this held seat (issue #2145).
+   * Its own field, never `emergencyContact*`, which a withheld row leaves
+   * empty, so no surface can show the matched record's next of kin as the
+   * seat's (dive-domain review H7, security review Y3).
+   */
+  heldEmergencyContact?: { name: string; phone: string } | null;
   /**
    * Set beside `identityWithheld`: withholding dropped at least one blocker
    * measured against the matched person, so the crew line says other holds may

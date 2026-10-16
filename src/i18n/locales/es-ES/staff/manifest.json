@@ -113,6 +113,7 @@
   "age": "{age} años",
   "minorAge": "Menor · {age} años",
   "emergencyContactLabel": "Contacto de emergencia",
+  "heldEmergencyContactLabel": "Contacto de emergencia, dado en el mostrador",
   "crewClashDetail": "También figura en {departures} a estas horas.",
   "crewClashConfirm": "{count, plural, one {# de la tripulación también figura en otro barco a estas horas.} other {# de la tripulación también figuran en otros barcos a estas horas.}} Confirma quién zarpa.",
   "notOnFile": "No registrado",

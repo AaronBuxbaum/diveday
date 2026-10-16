@@ -844,17 +844,13 @@ export async function setTripParticipantTerms(
 ): Promise<SetParticipantTermsOutcome> {
   const outcome = await db.transaction(async (tx): Promise<SetParticipantTermsOutcome> => {
     const [trip] = await tx
-      .select({ id: trips.id, capacity: trips.capacity, courseId: trips.courseId })
+      .select({ id: trips.id, capacity: trips.capacity })
       .from(trips)
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
       .limit(1)
       .for("update");
     if (!trip) return { ok: false, reason: "not_found" };
     if (patch.diverCapacity !== null && patch.diverCapacity > trip.capacity) {
-      return { ok: false, reason: "invalid" };
-    }
-    // A course session seats divers only, so it has no other seat to price.
-    if (trip.courseId && (patch.snorkelerPriceCents !== null || patch.riderPriceCents !== null)) {
       return { ok: false, reason: "invalid" };
     }
     if (patch.diverCapacity !== null) {

@@ -169,3 +169,37 @@ describe("Remove on a diver marked aboard at sea", () => {
     expect(screen.getByRole("button", { name: "Yes, remove booking" })).toBeInTheDocument();
   });
 });
+
+/**
+ * **A course seat that carries a charter seat** (issue #2058, Aaron
+ * 2026-10-13): Remove and the move both say which departure was sold on this
+ * course, before anyone acts, and say nothing on a seat that carries none.
+ */
+describe("a course seat that carries a charter seat", () => {
+  const moveSeat = {
+    action: () => {},
+    targets: [{ id: "t-2", label: "Advanced session · Sat, Oct 24, 8:00 AM EDT", seatsLeft: 3 }],
+    departed: false,
+    started: false,
+  };
+  const dependentCharters = new Map([
+    [ready.booking.id, [{ title: "Deep wall", startsAt: new Date("2026-10-26T12:00:00.000Z") }]],
+  ]);
+
+  it("names the charter in the move, and in the armed Remove", () => {
+    renderRoster({ ...fixtures, roster: [ready], moveSeat, dependentCharters });
+
+    const notes = screen.getAllByText(/is booked on Deep wall · .* because this course gets them/);
+    expect(notes).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Remove booking" }));
+    expect(
+      screen.getAllByText(/is booked on Deep wall · .* because this course gets them/),
+    ).toHaveLength(2);
+  });
+
+  it("says nothing on a seat that carries none", () => {
+    renderRoster({ ...fixtures, roster: [ready], moveSeat });
+    fireEvent.click(screen.getByRole("button", { name: "Remove booking" }));
+    expect(screen.queryByText(/because this course gets them/)).toBeNull();
+  });
+});

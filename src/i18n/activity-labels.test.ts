@@ -69,6 +69,7 @@ describe("activity lines", () => {
           type: "snorkeler",
           certCheck: "cleared",
           cleared: "",
+          atSea: "yes",
           form: "Medical statement",
           marked: "yes",
         },

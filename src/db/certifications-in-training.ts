@@ -1,16 +1,9 @@
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
+import type { CourseSeatInTraining } from "@/lib/in-training";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
-import type { CertificationInTraining } from "@/lib/readiness";
 import type { DbExecutor } from "./client";
 import { bookings, courses, trips } from "./schema";
 import { liveTrip } from "./trips-live";
-
-/** One course session a diver holds a seat on, and the level that course certifies. */
-export type CourseSeatInTraining = CertificationInTraining & {
-  personId: string;
-  /** The course session itself, so a trip is never "in training" for its own card. */
-  tripId: string;
-};
 
 /**
  * **Which levels each diver is booked to be certified at, and when.**
@@ -20,7 +13,7 @@ export type CourseSeatInTraining = CertificationInTraining & {
  * course's template and owned by it, so no editor changes it; a course a shop
  * built without a template issues nothing and never counts). One row per session, so
  * a caller measures each against the trip it is deciding: only a session that
- * ends before that trip starts counts (`inTrainingBefore`).
+ * ends before that trip starts counts (`inTrainingBefore`, src/lib/in-training.ts).
  *
  * Read by both gates, and by neither as evidence. Admission sells the seat on
  * it (`src/lib/trip-admission.ts`); readiness words the blocker more softly
@@ -49,32 +42,13 @@ export async function listCourseSeatsInTraining(
         // A diver marked absent did not sit the course, and a cancelled
         // session runs for nobody.
         inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+        // A snorkeler or a rider on the session is aboard, not enrolled
+        // (issue #2226): only a diver's seat is a student's.
+        eq(bookings.participantType, "diver"),
         eq(trips.status, "scheduled"),
         isNotNull(courses.certifiesLevel),
         liveTrip(),
       ),
     );
   return rows.flatMap(({ level, ...row }) => (level ? [{ ...row, level }] : []));
-}
-
-/**
- * The course seats that finish by the time this trip starts, are not the trip
- * itself, and **have not finished yet**. A course that ended without a card
- * is not training any more: the diver did not finish, or the instructor has a
- * tap to make, and either way it stops counting at the sale and at the rail
- * alike. One window, here, so the two gates cannot drift apart.
- */
-export function inTrainingBefore(
-  seats: readonly CourseSeatInTraining[],
-  trip: { id: string; startsAt: Date },
-  now: Date,
-): CertificationInTraining[] {
-  return seats
-    .filter(
-      (seat) =>
-        seat.tripId !== trip.id &&
-        seat.finishesAt.getTime() <= trip.startsAt.getTime() &&
-        seat.finishesAt.getTime() > now.getTime(),
-    )
-    .map(({ level, finishesAt }) => ({ level, finishesAt }));
 }

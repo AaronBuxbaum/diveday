@@ -95,9 +95,21 @@ export function DiverFacts({
     // Said, on screen and on paper alike, rather than "Not on file": a held
     // seat with no contact reads as a diver who has none, which is a wrong
     // fact. The confirm control is ashore, on the Divers tab (issue #1690).
+    // The one contact a held seat carries is the one the desk recorded for
+    // the person on it (issue #2145), never the matched record's.
     return (
       <div className={`grid gap-2 text-base${columns === 2 ? " sm:grid-cols-2" : ""}`}>
         <p className="text-muted">{t("manifest.identityWithheldDetails")}</p>
+        {/* Its own field, never `emergencyContact*` (H7, Y3). */}
+        {diver.heldEmergencyContact ? (
+          <p>
+            <span className="font-bold">{t("manifest.heldEmergencyContactLabel")}</span>
+            <span className="mt-0.5 block text-muted">
+              {diver.heldEmergencyContact.name} ·{" "}
+              <span className="whitespace-nowrap">{diver.heldEmergencyContact.phone}</span>
+            </span>
+          </p>
+        ) : null}
         {pickup}
       </div>
     );

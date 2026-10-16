@@ -463,6 +463,10 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "reschedule_missed_from", // a notice owed to a held seat (#2445), cleared once sent
     "reschedule_missed_place", // the same: whether the meeting point moved too
     "identity_matched_by", // H-13 review state: why the booking was matched
+    // A held seat's desk-recorded emergency contact (#2145): read only while
+    // the seat is held, and moved onto the new record at a split.
+    "held_emergency_contact_name",
+    "held_emergency_contact_phone",
     "paid_rental_kinds", // held-seat prep state: the order lines already carry what was paid for
     // Seat-claim linkage (ADR 20260804-seat-claim-links): a pointer at another
     // booking row's id, which does not survive a re-import — same class as

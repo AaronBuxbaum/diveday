@@ -17,10 +17,12 @@ import { type AboardHold, aboardAtSeaBookingIds } from "./aboard-at-sea";
 import { listAgencyCheckableCards } from "./agency-check";
 import { sameNameHeldSeats as findSameNameHeldSeats } from "./bookings";
 import type { AppDb } from "./client";
+import { chartersRelyingOnCourseSeats, type DependentCharter } from "./course-dependent-seats";
 import { type CourseMaterialsDone, courseMaterialsDoneByPerson } from "./course-materials";
 import { courseNextStepsByBooking } from "./course-next-step";
 import { spendableDivesForTrip } from "./dive-packages";
 import { findSimilarDivers, lastDiveDaysHere, listBookableDivers } from "./divers";
+import { otherSameNamePeople } from "./identity-repoint";
 import { listLastMinuteList } from "./last-minute-list";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "./operations";
 import { getTripRosterWithPaymentMarks } from "./payment-marks";
@@ -150,11 +152,13 @@ export async function getTripGuests(
   // one after another, most of the trip page's serial phases.
   const [
     sameNameHeldSeats,
+    sameNamePeople,
     heldLastDiveDays,
     packageDivesByPerson,
     certificationSummaries,
     courseMaterialsDone,
     agencyCheckCardsByPerson,
+    dependentCharters,
   ] = await Promise.all([
     // What "Different person" on a held seat can offer to move along with it:
     // other held seats under the same name on the same matched diver, on other
@@ -166,6 +170,18 @@ export async function getTripGuests(
         bookingId: booking.id,
         personId: booking.personId,
         tripId,
+        bookedAs: booking.identityBookedAs,
+      })),
+    ),
+    // "Another diver on file": the shop's other live people with the seat's
+    // name, by name only, for a seat held because two divers share it
+    // (issue #2129).
+    otherSameNamePeople(
+      db,
+      shop.id,
+      heldSeats.map(({ booking }) => ({
+        bookingId: booking.id,
+        personId: booking.personId,
         bookedAs: booking.identityBookedAs,
       })),
     ),
@@ -218,6 +234,20 @@ export async function getTripGuests(
         .filter(({ booking }) => !booking.identityUnconfirmedAt)
         .map(({ person }) => person.id),
     }),
+    // On a course session, the charter seats each student was sold only on
+    // this course, for the warning in its cancel and move confirmations
+    // (issue #2058). Nothing on a charter.
+    trip.courseId
+      ? chartersRelyingOnCourseSeats(
+          db,
+          shop.id,
+          tripId,
+          roster
+            .filter(({ booking }) => booking.status === "booked")
+            .map(({ booking }) => ({ bookingId: booking.id, personId: booking.personId })),
+          nowDate(),
+        )
+      : new Map<string, DependentCharter[]>(),
   ]);
 
   const heldSeatLastDiveDay = new Map<string, Date | null>(
@@ -326,6 +356,10 @@ export async function getTripGuests(
     sameNameHeldSeats,
     /** Seats the boat carried or may be carrying: Remove refuses them (H-133). */
     aboardAtSea,
+    /** Per same-name held seat, the shop's other people with that name (issue #2129). */
+    sameNamePeople,
+    /** Per course seat, the charter seats sold only on it (issue #2058). */
+    dependentCharters,
     /**
      * Per held seat, the matched diver's last dive day at this shop, or null
      * when there is none (issue #1789). Only held seats have an entry.

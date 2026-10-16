@@ -19,6 +19,7 @@ export function SeatFootActions({
   removeBookingAction,
   aboardAtSea = null,
   moveSeat,
+  carriedChartersNote,
 }: {
   booking: RosterEntry["booking"];
   person: RosterEntry["person"];
@@ -34,6 +35,11 @@ export function SeatFootActions({
   aboardAtSea?: AboardHold | null;
   /** Absent when the seat cannot move, or there is no other departure. */
   moveSeat?: SeatMove;
+  /**
+   * On a course seat, the charter seats sold only on this course (issue
+   * #2058), said before Remove and in the move. Absent when there are none.
+   */
+  carriedChartersNote?: string;
 }) {
   return (
     <div className="mt-3 border-t border-border pt-4">
@@ -54,7 +60,12 @@ export function SeatFootActions({
             send of money — so this gets a blocking confirm
             (docs/design/principles.md §7). */}
         {moveSeat && moveSeat.targets.length > 0 ? (
-          <MoveSeatControl booking={booking} t={t} moveSeat={moveSeat} />
+          <MoveSeatControl
+            booking={booking}
+            t={t}
+            moveSeat={moveSeat}
+            carriedChartersNote={carriedChartersNote}
+          />
         ) : null}
         {aboardAtSea ? (
           <RemoveRefusedAboard
@@ -71,6 +82,7 @@ export function SeatFootActions({
               message={t("trips.roster.confirmRemoveBooking", { name: person.fullName })}
               confirmLabel={t("trips.roster.removeBookingConfirmButton")}
               cancelLabel={t("trips.roster.neverMind")}
+              evidence={carriedChartersNote}
               pendingLabel={t("trips.roster.removing")}
               // `danger-ghost`, which is this variant's own stated case: a
               // destructive choice among quiet siblings. On `ghost` the
@@ -140,10 +152,12 @@ function MoveSeatControl({
   booking,
   t,
   moveSeat,
+  carriedChartersNote,
 }: {
   booking: RosterEntry["booking"];
   t: StaffTranslator;
   moveSeat: SeatMove;
+  carriedChartersNote?: string;
 }) {
   const selectId = `move-seat-${booking.id}`;
   return (
@@ -174,6 +188,9 @@ function MoveSeatControl({
             </select>
           </Field>
         </FieldGrid>
+        {carriedChartersNote ? (
+          <p className="text-sm text-warning-strong">{carriedChartersNote}</p>
+        ) : null}
         <div>
           <SubmitButton
             pendingLabel={t("trips.roster.moveSeatPending")}

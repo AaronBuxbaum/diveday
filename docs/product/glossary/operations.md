@@ -1060,10 +1060,14 @@
   the shop's waiver; a diver and a snorkeler are held to its medical, a rider never (H-109). Only a
   diver is asked for a certification, may request
   nitrox, goes on a buddy team, is packed tanks for, uses a dive package, or counts against the
-  departure's **diver seats**. A course session sells divers only. Staff change a booking's type
+  departure's **diver seats**. On a course session the divers are the enrolled students; a
+  snorkeler or rider seat sits beside them only where the shop has priced it, is asked none of the
+  course's gates or forms, and is never in training (issue #2226). Staff change a booking's type
   from the roster ("Coming as"): joining the dive runs the card check and needs "Change anyway" (an
-  owner, manager or instructor) to pass a missing card, nothing changes once the departure is home,
-  and joining is refused from the departure time on. See
+  owner, manager or instructor) to pass a missing card before departure. Out on the water after
+  departure (issue #2225) the seat may join the dive only if it is cleared to board, with no
+  override; nothing changes once the departure is home, and on a course session a student
+  never stops diving and a passenger never starts. See
   [ADR 20261007-participant-types](../../architecture/decisions/20261007-participant-types.md).
 - **Booked as** — the participant type a booking was made with (`bookings.booked_as`), set once by
   every writer and never changed. A seat whose type moved since shows a warning-tone
@@ -1255,7 +1259,10 @@
   `COURSE_FORMS_BLOCK_BOARDING`, turns that into a warning instead, and buying a seat never waits on
   it (ADR 20261008-course-forms). A course template names its agency's **standard forms** by title.
   Creating or syncing the course sets them up empty, and a form with no text is asked of nobody
-  until the shop pastes the agency's wording in. A form the shop ticks as a **medical
+  until the shop pastes the agency's wording in. A course may bound a form to an **age**
+  (`course_form_requirements.max_age_years`, issue #2265): it is then asked only of a student that
+  age or younger on the session's first day in the shop's zone, and of one whose birthday the shop
+  does not know. Open Water's template bounds PADI's Youth Diving acknowledgment (10615) at 11. A form the shop ticks as a **medical
   statement** (signature only; no answers are screened, unlike the **Medical questionnaire**
   below) keeps blocking even with that switch at warn-only.
 - **Sign once** — a diver signs the release once, not every trip. A **completed** signature is held

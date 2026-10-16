@@ -4,8 +4,14 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { outstandingCourseForms } from "@/lib/course-forms";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
+import { type CourseSeatInTraining, courseEndedBefore, inTrainingBefore } from "@/lib/in-training";
 import { isDiver, isHeldToMedical, participantPriceCents } from "@/lib/participant-types";
-import type { CardUnreviewRefusal, CertificationLevel, SiteCertRequirement } from "@/lib/readiness";
+import type {
+  CardUnreviewRefusal,
+  CertificationLevel,
+  ReadinessResult,
+  SiteCertRequirement,
+} from "@/lib/readiness";
 import {
   BLOCKER_CATEGORY,
   calculateReadiness,
@@ -29,11 +35,7 @@ import {
   waiverClockInstant,
 } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
-import {
-  type CourseSeatInTraining,
-  inTrainingBefore,
-  listCourseSeatsInTraining,
-} from "./certifications-in-training";
+import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import { courseFormSignaturesForBookings, requiredCourseFormsForTrips } from "./course-forms";
 import { publishManifestEventsForPerson } from "./manifest-events";
@@ -464,6 +466,37 @@ export async function courseCertifiesOnTrip(
   return row.isIntroCourse ? "not_a_certifying_course" : "certifies";
 }
 
+/**
+ * **The student this seat holds**, or null (issue #2226, reviews G4/Y2): the
+ * person on a live diver's seat of this shop's session, whose identity is not
+ * held (H-13). A snorkeler or a rider on a course session is a passenger, and
+ * the session's roster never certifies one. The roster's Certify reads the
+ * person from here, never from what the form posted.
+ */
+export async function studentOnSeat(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  bookingId: string,
+): Promise<string | null> {
+  if (!isUuid(bookingId) || !isUuid(tripId) || !isUuid(shopId)) return null;
+  const [row] = await db
+    .select({ personId: bookings.personId })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.id, bookingId),
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, tripId),
+        ne(bookings.status, "cancelled"),
+        eq(bookings.participantType, "diver"),
+        isNull(bookings.identityUnconfirmedAt),
+      ),
+    )
+    .limit(1);
+  return row?.personId ?? null;
+}
+
 export async function issueShopCertification(
   db: AppDb,
   input: NewShopIssuedCertification,
@@ -511,6 +544,10 @@ export async function issueShopCertification(
           eq(bookings.personId, input.personId),
           eq(bookings.shopId, input.shopId),
           ne(bookings.status, "cancelled"),
+          // A student's seat: a passenger is never certified, and a seat held
+          // over who is on it certifies nobody (reviews G4/Y2 of #2226).
+          eq(bookings.participantType, "diver"),
+          isNull(bookings.identityUnconfirmedAt),
         ),
       )
       .limit(1);
@@ -1201,6 +1238,8 @@ async function shopIssuedCourseContext(
         eq(bookings.personId, input.personId),
         eq(bookings.shopId, input.shopId),
         ne(bookings.status, "cancelled"),
+        eq(bookings.participantType, "diver"),
+        isNull(bookings.identityUnconfirmedAt),
       ),
     )
     .limit(1);
@@ -1507,6 +1546,30 @@ export async function getBookingReadiness(db: DbExecutor, shopId: string, bookin
   if (!booking) return null;
   const readiness = await listTripReadiness(db, shopId, booking.tripId);
   return readiness.find((row) => row.booking.id === bookingId)?.readiness ?? null;
+}
+
+/**
+ * `getBookingReadiness` for several seats at once, in one pass of the batched
+ * pipeline (`listTripsReadiness`) instead of one whole-roster read per seat
+ * (issue #2058: a diver record on a long package). The same `readiness` each
+ * seat's roster row carries, so a page reading this cannot disagree with the
+ * boat. A seat that is not this shop's, or not on a live roster, is absent.
+ */
+export async function getBookingsReadiness(
+  db: DbExecutor,
+  shopId: string,
+  bookingIds: readonly string[],
+): Promise<Map<string, ReadinessResult>> {
+  if (bookingIds.length === 0) return new Map();
+  const seats = await db
+    .select({ id: bookings.id, tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(inArray(bookings.id, [...bookingIds]), eq(bookings.shopId, shopId)));
+  const wanted = new Set(seats.map((seat) => seat.id));
+  const rows = await listTripsReadiness(db, shopId, [...new Set(seats.map((seat) => seat.tripId))]);
+  return new Map(
+    rows.flatMap((row) => (wanted.has(row.booking.id) ? [[row.booking.id, row.readiness]] : [])),
+  );
 }
 
 export type BookingReadinessDetail = {
@@ -1887,6 +1950,15 @@ export async function listTripsReadiness(
                 id: tripId,
                 startsAt: courseRow.startsAt,
               },
+              now,
+            )
+          : [],
+        // Sessions already over without a card: named on the blocker so the
+        // record points at that roster (issue #2058). Clears nothing.
+        coursesEnded: courseRow
+          ? courseEndedBefore(
+              courseSeatsByPerson.get(row.person.id) ?? [],
+              { id: tripId, startsAt: courseRow.startsAt },
               now,
             )
           : [],

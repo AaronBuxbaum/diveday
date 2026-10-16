@@ -112,7 +112,7 @@ export const EXPORT_FILE_NOTES = {
   "course_form_versions.csv":
     "Every version of every course form's words, full text included. A saved edit is a new version, never an edit in place, so each signed record's form_version names text that is here.",
   "course_form_requirements.csv":
-    "Which forms each course asks its students to sign, in the order they meet them (position). A row with deleted_at set is a form the course stopped asking for.",
+    "Which forms each course asks its students to sign, in the order they meet them (position). max_age_years, when set, means the form is asked only of students that age or younger on the session's first day. A row with deleted_at set is a form the course stopped asking for.",
   "course_form_records.csv":
     "Each course form a student signed, one row per booking and form version: the title, version and full text exactly as signed, the typed name, how it was signed ('typed_consent' online on the student's own link, 'in_person_attested' recorded from paper by the staffer in recorded_by_person_id), and a minor's guardian co-signature. A form counts for the booking it was signed on and only at the course's current version. anonymized_at means the student was erased and the names are blank by decision. integrity_hash and integrity_version are the record's seal over its signed evidence (version 2 is the record after erasure, sealed over what survives it); integrity_check is that seal checked when this file was made: valid, invalid (the record changed after it was sealed) or unsealed.",
   "rental_fit.csv": "Each diver's rental kit and sizes.",

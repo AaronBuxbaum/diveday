@@ -7,6 +7,7 @@ import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import type { AboardHold } from "@/db/aboard-at-sea";
 import type { SameNameHeldSeat } from "@/db/bookings";
 import type { CourseMaterialsDone } from "@/db/course-materials";
+import type { SameNamePerson } from "@/db/identity-repoint";
 import type { listBookingNotes } from "@/db/operations";
 import type { PaymentMarkFacts } from "@/db/payment-marks";
 import { depthWarningText } from "@/i18n/depth-labels";
@@ -139,6 +140,17 @@ export type RosterRows = {
   /** Seats the boat carried or may be carrying: Remove refuses them (H-133). */
   aboardAtSea?: ReadonlyMap<string, AboardHold>;
   /**
+   * Per held seat held for the same-name reason, the shop's other live people
+   * with that name, by name only (`otherSameNamePeople`, issue #2129).
+   */
+  sameNamePeople?: ReadonlyMap<string, ReadonlyArray<SameNamePerson>>;
+  /**
+   * Per course seat, the charter seats its student was sold only on this
+   * course (`chartersRelyingOnCourseSeats`, issue #2058): named in the seat's
+   * Remove confirm and its move.
+   */
+  dependentCharters?: ReadonlyMap<string, ReadonlyArray<{ title: string; startsAt: Date }>>;
+  /**
    * Per held seat, the matched diver's last dive day at this shop, or null for
    * none (issue #1789): the evidence line in the armed "Same person" confirm.
    */
@@ -209,6 +221,8 @@ export type RosterActions = {
   confirmIdentityAction: (formData: FormData) => void;
   /** "Different person": the held seat becomes a new diver (`splitBookingIdentity`). */
   splitIdentityAction: (formData: FormData) => void;
+  /** "Another diver on file": the held seat moves to that namesake, still held (`repointHeldBooking`). */
+  repointIdentityAction: (formData: FormData) => void;
   /**
    * "Send a new waiver" on a seat a physician refused: retires the refusal from
    * the seat and emails a fresh release. Absent for staff who may not

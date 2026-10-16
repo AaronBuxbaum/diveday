@@ -307,6 +307,23 @@ describe("calculateReadiness", () => {
     expect(result.blockers).toContainEqual(expect.objectContaining({ code: "under_minimum_age" }));
   });
 
+  it("asks a course's minimum age of its students only, never a snorkeler or rider beside them (#2226)", () => {
+    for (const participantType of ["snorkeler", "rider"] as const) {
+      const result = calculateReadiness({
+        timezone: "UTC",
+        requirement,
+        waiver: signedWaiver,
+        certifications: [],
+        participantType,
+        courseMinimumAge: 15,
+        dateOfBirth: "2012-03-01",
+        courseDate: "2026-08-15",
+        now,
+      });
+      expect(result.blockers.map((b) => b.code)).not.toContain("under_minimum_age");
+    }
+  });
+
   it("fails open on a missing date of birth or minimum age (H-08, option B)", () => {
     for (const input of [
       { courseMinimumAge: 15, dateOfBirth: undefined, courseDate: "2026-08-15" },
@@ -681,6 +698,98 @@ describe("calculateReadiness — a course that gets them there", () => {
     expect(
       certificationBlockers([], [{ level: "advanced_open_water", finishesAt: yesterday }]),
     ).toEqual([{ code: "certification_missing" }]);
+  });
+
+  describe("a course that ended without a card (issue #2058)", () => {
+    const ended = (
+      level: Certification["level"],
+      finishesAt = yesterday,
+      tripId = "aow-session",
+    ) => ({
+      level,
+      finishesAt,
+      tripId,
+    });
+    function endedBlockers(
+      certifications: Certification[],
+      coursesEnded: ReturnType<typeof ended>[],
+    ) {
+      return calculateReadiness({
+        timezone: "UTC",
+        requirement,
+        waiver: signedWaiver,
+        certifications,
+        coursesEnded,
+        now,
+      });
+    }
+
+    it("names the session on the blocker, and the blocker still stands", () => {
+      const result = endedBlockers([], [ended("advanced_open_water")]);
+      expect(result.status).toBe("blocked");
+      expect(result.blockers).toEqual([
+        { code: "certification_missing", params: { endedCourseTripId: "aow-session" } },
+      ]);
+      expect(
+        endedBlockers([certification({ level: "open_water" })], [ended("advanced_open_water")])
+          .blockers,
+      ).toEqual([
+        {
+          code: "certification_insufficient",
+          params: {
+            requiredLevel: "advanced_open_water",
+            heldLevel: "open_water",
+            endedCourseTripId: "aow-session",
+          },
+        },
+      ]);
+    });
+
+    it("never names a course below the trip's level, and names the latest of two", () => {
+      expect(endedBlockers([], [ended("open_water")]).blockers).toEqual([
+        { code: "certification_missing" },
+      ]);
+      const earlier = new Date("2026-07-10T16:00:00.000Z");
+      expect(
+        endedBlockers(
+          [],
+          [ended("advanced_open_water", earlier, "first"), ended("rescue", yesterday, "second")],
+        ).blockers,
+      ).toEqual([{ code: "certification_missing", params: { endedCourseTripId: "second" } }]);
+    });
+
+    it("leaves a card waiting on review alone: that card is the fix", () => {
+      expect(
+        endedBlockers(
+          [certification({ status: "pending", level: "advanced_open_water" })],
+          [ended("advanced_open_water")],
+        ).blockers,
+      ).toEqual([{ code: "certification_pending" }]);
+    });
+
+    // Agency review G6: the diver's own word about a card is checked against
+    // the card, so the fix is verifying it, not the session's roster.
+    it("leaves a self-declared card alone: verifying it is the fix", () => {
+      const blockers = endedBlockers(
+        [
+          certification({
+            status: "pending",
+            level: "advanced_open_water",
+            selfDeclaredAt: new Date("2026-07-17T00:00:00Z"),
+          }),
+        ],
+        [ended("advanced_open_water")],
+      ).blockers;
+      expect(blockers.map((blocker) => blocker.code)).toEqual(["certification_self_declared"]);
+      expect(blockers[0]?.params?.endedCourseTripId).toBeUndefined();
+    });
+
+    it("clears nothing: the issued card is still what boards them", () => {
+      expect(endedBlockers([certification()], [ended("advanced_open_water")])).toEqual({
+        status: "ready",
+        blockers: [],
+      });
+    });
   });
 
   it("prefers a card on file at the level over the course", () => {

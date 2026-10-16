@@ -1198,7 +1198,19 @@ export async function getTripManifests(
       emergencyContactPhone: person.emergencyContactPhone,
       readiness: readinessByBooking.get(booking.id),
       identityClaim: booking.identityUnconfirmedAt
-        ? { bookedAs: booking.identityBookedAs, matchedBy: booking.identityMatchedBy }
+        ? {
+            bookedAs: booking.identityBookedAs,
+            matchedBy: booking.identityMatchedBy,
+            // The desk's contact for the person on the seat (issue #2145),
+            // shown in place of the matched record's, which is withheld.
+            heldEmergencyContact:
+              booking.heldEmergencyContactName && booking.heldEmergencyContactPhone
+                ? {
+                    name: booking.heldEmergencyContactName,
+                    phone: booking.heldEmergencyContactPhone,
+                  }
+                : null,
+          }
         : undefined,
       // The shop's own catalog. Without it the rail and the offline snapshot
       // read a dropped piece as an ordinary piece to fetch, and size a
