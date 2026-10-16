@@ -1,5 +1,5 @@
 import { NameMatchCandidateFacts } from "@/components/seat-diver/NameMatchCandidateFacts";
-import { choiceClass, legendClass } from "@/components/ui/form";
+import { legendClass, radioClass, radioRingClass } from "@/components/ui/form";
 import type { SimilarDiver } from "@/db/divers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
@@ -37,13 +37,16 @@ export function PartyOnFileChoices({
           <fieldset key={row} className="grid gap-2">
             <legend className={`${legendClass} text-sm font-semibold`}>{typedName}</legend>
             {matches.map((match) => (
-              <label key={match.id} className="flex min-h-11 items-start gap-2 text-sm">
+              <label
+                key={match.id}
+                className={`flex min-h-11 items-start gap-2 rounded-lg text-sm ${radioRingClass}`}
+              >
                 <input
                   type="radio"
                   name={name}
                   value={match.id}
                   required
-                  className={`${choiceClass} mt-1`}
+                  className={`${radioClass} mt-1`}
                 />
                 <span>
                   <span className="font-medium">
@@ -60,13 +63,15 @@ export function PartyOnFileChoices({
                 </span>
               </label>
             ))}
-            <label className="flex min-h-11 items-center gap-2 text-sm">
+            <label
+              className={`flex min-h-11 items-center gap-2 rounded-lg text-sm ${radioRingClass}`}
+            >
               <input
                 type="radio"
                 name={name}
                 value={WALK_IN_NEW_PERSON}
                 required
-                className={choiceClass}
+                className={radioClass}
               />
               <span className="font-medium">{t("divers.page.party.newPerson")}</span>
             </label>

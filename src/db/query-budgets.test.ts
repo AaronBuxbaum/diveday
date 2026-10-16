@@ -127,5 +127,9 @@ describe("what the assembly readers cost", () => {
  * ordinary work never trips it and a loop always does. Raising it is a decision
  * about the first screen of the working day, not a maintenance chore — the test
  * above says what to ask first.
+ *
+ * 60 → 61 (fifth loop, merged): what it added is the crew's open snags against
+ * a boat's checklist (`openSnagsForShop`), one statement in Today's one wave,
+ * on top of the desk layer's count of found items waiting to go home.
  */
-const TODAY_QUERY_CEILING = 60;
+const TODAY_QUERY_CEILING = 61;

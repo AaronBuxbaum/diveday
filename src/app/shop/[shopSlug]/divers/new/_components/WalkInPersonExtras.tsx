@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { choiceClass, controlClass } from "@/components/ui/form";
+import { useId, useState } from "react";
+import { choiceClass, controlClass, DateField } from "@/components/ui/form";
 import { PARTICIPANT_TYPES, type ParticipantType } from "@/lib/participant-types";
 import { walkInMemberField } from "@/lib/walk-in-party";
 
@@ -43,6 +43,7 @@ export function WalkInPersonExtras({
   dobMax: string;
 }) {
   const [minor, setMinor] = useState(false);
+  const dobId = useId();
   return (
     <div className="grid gap-3 sm:grid-cols-2 sm:items-end">
       <label className="grid gap-1 text-sm">
@@ -68,16 +69,20 @@ export function WalkInPersonExtras({
           <span className="block text-xs text-muted">{copy.under18Hint}</span>
         </span>
       </label>
-      <label hidden={!minor} className="grid gap-1 text-sm sm:col-span-2">
-        <span className="font-medium">{copy.dob}</span>
-        <span className="text-xs text-muted">{copy.dobHint}</span>
-        <input
-          type="date"
+      <div hidden={!minor} className="grid gap-1 text-sm sm:col-span-2">
+        <label htmlFor={dobId} className="font-medium">
+          {copy.dob}
+        </label>
+        <span id={`${dobId}-hint`} className="text-xs text-muted">
+          {copy.dobHint}
+        </span>
+        <DateField
+          id={dobId}
+          aria-describedby={`${dobId}-hint`}
           name={walkInMemberField(row, "dob")}
           max={dobMax}
-          className={controlClass}
         />
-      </label>
+      </div>
     </div>
   );
 }

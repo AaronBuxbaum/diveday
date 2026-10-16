@@ -126,6 +126,7 @@ export function SnagNoteForm({
           maxLength={SNAG_NOTE_MAX}
           aria-invalid={refused && result?.reason === "note_invalid" ? true : undefined}
           aria-describedby={refused ? errorId : undefined}
+          rows={2}
           className={textareaClassFor(2)}
         />
         {refused ? (

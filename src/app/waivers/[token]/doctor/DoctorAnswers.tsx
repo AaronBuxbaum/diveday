@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field } from "@/components/ui/form";
+import { DateField, Field } from "@/components/ui/form";
 import { type DoctorAnswersState, revealDoctorAnswersAction } from "./actions";
 
 const LOCKED: DoctorAnswersState = { status: "locked" };
@@ -66,13 +66,7 @@ export function DoctorAnswers({ token, copy }: { token: string; copy: DoctorAnsw
       <p className="mt-3 text-base text-muted">{copy.prompt}</p>
       <form action={formAction} className="mt-4 flex flex-wrap items-end gap-3 print:hidden">
         <Field label={copy.birthdate} error={refusal} className="min-w-56">
-          <input
-            name="birthdate"
-            type="date"
-            required
-            autoComplete="bday"
-            className={controlClass}
-          />
+          <DateField name="birthdate" required autoComplete="bday" />
         </Field>
         <SubmitButton
           pendingLabel={copy.submitting}
