@@ -138,6 +138,51 @@ describe("inboxSeats", () => {
     ]);
   });
 
+  it("names only the seat an Ask to move names, with no late mark, even inside the window", async () => {
+    // The booking page's "Ask to move" (H-126) carries its booking: it is about
+    // that seat whenever it departs, never the sender's soonest boat.
+    const { db, shop, trip, bookedAt, personId } = await context();
+    const later = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (other) =>
+        other.id !== trip.id &&
+        other.courseId === null &&
+        other.startsAt > trip.startsAt &&
+        other.booked < other.capacity,
+    );
+    if (!later) throw new Error("expected a later open trip");
+    const second = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: later.id,
+      ...DIVER,
+    });
+    if (!second.ok) throw new Error(`second booking failed: ${second.reason}`);
+    const now = new Date(trip.startsAt.getTime() - 30 * MINUTE_MS);
+    const receivedAt = new Date(Math.max(now.getTime() - 5 * MINUTE_MS, bookedAt.getTime()));
+    const seats = await inboxSeats(
+      db,
+      shop.id,
+      [{ id: MESSAGE_ID, personId, receivedAt, bookingId: second.bookingId }],
+      now,
+    );
+    expect(seats.get(MESSAGE_ID)).toEqual([
+      expect.objectContaining({ bookingId: second.bookingId, tripId: later.id, lateWindow: false }),
+    ]);
+  });
+
+  it("names nothing for an Ask to move whose booking is not this shop's", async () => {
+    const { db, shop, trip, personId, bookedAt } = await context();
+    const receivedAt = new Date(bookedAt.getTime() + MINUTE_MS);
+    const now = new Date(trip.startsAt.getTime() - 3 * 24 * HOUR_MS);
+    const seats = await inboxSeats(
+      db,
+      shop.id,
+      [{ id: MESSAGE_ID, personId, receivedAt, bookingId: crypto.randomUUID() }],
+      now,
+    );
+    expect(seats.size).toBe(0);
+  });
+
   it("never names a canceled seat", async () => {
     const { db, shop, trip, bookingId, personId, bookedAt } = await context();
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
