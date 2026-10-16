@@ -1,7 +1,8 @@
 ALTER TABLE "dive_sites" ADD COLUMN "depth_min_meters" double precision;--> statement-breakpoint
 -- Read the range out of the prose where it can be read: "6–12 m", "20 to 45 ft", "15–28 m (50–90 ft)".
 -- Only when the upper figure is the site's recorded maximum (or none is recorded), so a range never
--- contradicts the number a certification ceiling is compared against; anything else stays as the note.
+-- contradicts the number a certification ceiling is compared against; anything else stays as the note. A prose bound at or past 30 m over a recorded maximum under 30 m also stays
+-- (20–30 m, max 29.7): the note is what still reads that site as demanding.
 UPDATE "dive_sites" AS d
 SET "depth_min_meters" = p.lo,
     "max_depth_meters" = COALESCE(d."max_depth_meters", p.hi),
@@ -24,6 +25,7 @@ WHERE d."id" = p."id"
   AND p.lo < p.hi
   AND p.hi <= 300
   AND (d."max_depth_meters" IS NULL OR abs(d."max_depth_meters" - p.hi) <= 0.5)
+  AND NOT (p.hi >= 30 AND COALESCE(d."max_depth_meters" < 30, false))
   AND p.lo <= COALESCE(d."max_depth_meters", p.hi);--> statement-breakpoint
 -- "Up to 18 m": a deepest point and nothing else.
 UPDATE "dive_sites" AS d
@@ -44,7 +46,8 @@ FROM (
 WHERE d."id" = p."id"
   AND p.hi > 0
   AND p.hi <= 300
-  AND (d."max_depth_meters" IS NULL OR abs(d."max_depth_meters" - p.hi) <= 0.5);--> statement-breakpoint
+  AND (d."max_depth_meters" IS NULL OR abs(d."max_depth_meters" - p.hi) <= 0.5)
+  AND NOT (p.hi >= 30 AND COALESCE(d."max_depth_meters" < 30, false));--> statement-breakpoint
 -- The catalog's published briefings (DiveDay's own words) carry the same two numbers now, not the prose.
 UPDATE "global_dive_site_versions" AS v
 SET "briefing" = v."briefing" || jsonb_build_object('depthMinMeters', p.lo)

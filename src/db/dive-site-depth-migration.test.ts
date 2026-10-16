@@ -103,6 +103,30 @@ describe("the dive-site depth range migration", () => {
     expect(await read(blank.id)).toMatchObject({ depthMinMeters: null, depthRange: null });
   });
 
+  it("keeps a prose note that crosses 30 m over a recorded maximum just under it, and fills a missing maximum", async () => {
+    // Writing 29.7 over the note would drop the only thing that still reads this site as demanding.
+    const nearThirty = await site("Near Thirty", "20–30 m", 29.7);
+    const upToThirty = await site("Up To Thirty", "Up to 30 m", 29.7);
+    const deep = await site("Deep", "20–40 m");
+
+    await runBackfill();
+
+    expect(await read(nearThirty.id)).toMatchObject({
+      depthMinMeters: null,
+      maxDepthMeters: 29.7,
+      depthRange: "20–30 m",
+    });
+    expect(await read(upToThirty.id)).toMatchObject({
+      maxDepthMeters: 29.7,
+      depthRange: "Up to 30 m",
+    });
+    expect(await read(deep.id)).toMatchObject({
+      depthMinMeters: 20,
+      maxDepthMeters: 40,
+      depthRange: null,
+    });
+  });
+
   it("moves the catalog's published briefings onto the numbers", async () => {
     const [global] = await ctx.db
       .insert(globalDiveSites)

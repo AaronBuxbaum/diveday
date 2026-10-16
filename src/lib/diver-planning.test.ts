@@ -403,6 +403,15 @@ describe("booking delight planning", () => {
         currentNote: "watch the deep channel on the swim back",
       }).tone,
     ).toBe("welcoming");
+    // A site recorded just under 30 m whose kept note crosses it still reads demanding.
+    expect(
+      siteFit({
+        difficultyLevel: null,
+        depthRange: "20–30 m",
+        currentNote: null,
+        maxDepthMeters: 29.7,
+      }).tone,
+    ).toBe("demanding");
     // …and with no level chosen, the sniff still has the last word.
     expect(
       siteFit({
