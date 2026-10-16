@@ -4,7 +4,7 @@ import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { ChoiceRow, controlClass, FormStatus } from "@/components/ui/form";
+import { controlClass, FormStatus } from "@/components/ui/form";
 import type { RecapPageData } from "@/db/recap";
 import type { AfterStateProps } from "@/features/recap-after-state";
 import type { fieldGuideCards } from "@/i18n/marine-life-labels";
@@ -13,6 +13,7 @@ import { cachedFormatter } from "@/lib/intl-cache";
 import { capturePhoto } from "@/lib/marine-life-tiles";
 import { currencySymbol, minorToMajor, type ShopCurrency } from "@/lib/money";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
+import { ShareWithBoatTick } from "./ShareWithBoatTick";
 import { TipAmountPicker } from "./TipAmountPicker";
 
 /**
@@ -237,11 +238,7 @@ export function PhotoDoor({
               placeholder={t("recap.captionLabel")}
               className={controlClass}
             />
-            {/* Off by default, and per pick (H-129): the boat sees a photo only
-                when the person who took it says so. */}
-            <ChoiceRow type="checkbox" name="shareWithBoat" className="text-sm">
-              {t("recap.shareWithBoat")}
-            </ChoiceRow>
+            <ShareWithBoatTick label={t("recap.shareWithBoat")} />
             <div>
               <SubmitButton
                 pendingLabel={t("recap.addingPhoto")}

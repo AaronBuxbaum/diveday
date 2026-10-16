@@ -263,6 +263,7 @@ const SENDERS: Record<string, string> = {
   "src/db/booking-handoff.ts": HELD_AT_CHOKEPOINT,
   "src/db/checkout-recovery.ts": HELD_AT_CHOKEPOINT,
   "src/db/find-my-booking.ts": HELD_AT_CHOKEPOINT,
+  "src/db/your-days.ts": HELD_AT_CHOKEPOINT,
   "src/db/readiness-link-rescue.ts": HELD_AT_CHOKEPOINT,
   "src/db/trip-invitations.ts": HELD_AT_CHOKEPOINT,
   "src/db/waitlist.ts": HELD_AT_CHOKEPOINT,
