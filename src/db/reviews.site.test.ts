@@ -109,4 +109,11 @@ describe("listSiteReviews", () => {
       .where(eq(tripsTable.id, trip.id));
     expect(await listSiteReviews(ctx.db, ctx.shop.id, [reef])).toEqual([]);
   });
+
+  it("leaves out a private charter's review, which would say where that group dived and when", async () => {
+    const reef = await site("Private Charter Reef");
+    const trip = await reviewed(reef, 4, { comment: "Our own boat", published: true });
+    await ctx.db.update(tripsTable).set({ isPrivate: true }).where(eq(tripsTable.id, trip.id));
+    expect(await listSiteReviews(ctx.db, ctx.shop.id, [reef])).toEqual([]);
+  });
 });

@@ -760,7 +760,7 @@ function confirmationMoneyLine(
 }
 
 /**
- * "Your seat: $95.00, due at the shop. Pay at the desk by card or cash."
+ * "Your seat: $95.00, due at the shop. Pay by card or cash when you arrive."
  * (fifth-loop ideas, item 21): how the desk takes money, after a figure owed
  * there, when the shop has said.
  */

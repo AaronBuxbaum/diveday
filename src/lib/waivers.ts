@@ -1,6 +1,6 @@
 import type { MedicalAnswers, WaiverRecord as StoredWaiverRecord } from "@/db/schema";
 import { type CalendarDate, calendarDateInTimezone, isValidCalendarDate } from "./calendar-date";
-import { nowDate } from "./clock";
+import { DAY_MS, nowDate } from "./clock";
 import {
   type GuardianSignature,
   type GuardianSigner,
@@ -129,8 +129,43 @@ function signatureTime(record: WaiverRecord): number {
  * and nothing about who boards. Anything that wants that distinction asks
  * {@link waiverState}, which is presentation; this one is the gate.
  */
-export function isUnresolvedMedicalHold(record: WaiverRecord): boolean {
+export function isUnresolvedMedicalHold(
+  record: Pick<WaiverRecord, "status" | "supersededAt" | "medicalClearedAt">,
+): boolean {
   return record.status === "medical_review" && !record.supersededAt && !record.medicalClearedAt;
+}
+
+/**
+ * **Whether this release still waits on a physician's written answer**: an
+ * {@link isUnresolvedMedicalHold} nobody has answered either way, on a diver
+ * not erased. Built from the hold rather than spelled beside it, so the
+ * doctor's page and the held waiver page can never disagree about a hold
+ * (security review of layer r5-3, N2). A physician's "no" still holds the
+ * diver; it only means there is no form left to take to a doctor.
+ */
+export function awaitsPhysician(
+  record: Pick<
+    WaiverRecord,
+    "status" | "supersededAt" | "medicalClearedAt" | "medicalClearanceDeclinedAt" | "anonymizedAt"
+  >,
+): boolean {
+  return (
+    isUnresolvedMedicalHold(record) && !record.medicalClearanceDeclinedAt && !record.anonymizedAt
+  );
+}
+
+/**
+ * How long after its departure ends the doctor's page still opens. A hold on
+ * a trip that has sailed is rarely resolved by staff, so without a bound the
+ * page, and every copy of its link, would open for ever (security review of
+ * layer r5-3, F3). A day covers a late evening clinic on a multi-day trip's
+ * last night; nothing after that needs the page.
+ */
+export const DOCTOR_PAGE_TRIP_GRACE_MS = DAY_MS;
+
+/** Whether a held seat's departure is still close enough for the doctor's page to open. */
+export function doctorPageWithinTrip(tripEndsAt: Date, now: Date): boolean {
+  return now.getTime() < tripEndsAt.getTime() + DOCTOR_PAGE_TRIP_GRACE_MS;
 }
 
 /**

@@ -290,7 +290,7 @@ export function RentalFitForm({
 }) {
   const t = useTranslations();
   const locale = useLocale();
-  const offered = offeredRentableItems(rentalItems);
+  const offered = offeredRentableItems(rentalItems, course?.gearIncluded === true);
   const offers = new Set(offered.map((item) => item.kind));
   const sizesOffered = SIZED_KINDS.some((kind) => offers.has(kind));
   // The suit is one choice of four rather than two of the ticks (H-78): a
@@ -440,7 +440,8 @@ export function RentalFitForm({
                   checked={suit === choice}
                   onChange={() => setSuit(choice)}
                   aside={
-                    hintKey || (showPricing && priceCents !== undefined) ? (
+                    // The suit is never in a course's included gear: it keeps its price.
+                    hintKey || (hasAnyRentalPricing(pricing) && priceCents !== undefined) ? (
                       <>
                         {hintKey ? (
                           <InfoHint
@@ -452,7 +453,7 @@ export function RentalFitForm({
                             detail={t(hintKey)}
                           />
                         ) : null}
-                        {showPricing && priceCents !== undefined ? (
+                        {hasAnyRentalPricing(pricing) && priceCents !== undefined ? (
                           <ItemPrice
                             price={formatMoneyCents(priceCents, currency, locale)}
                             widest={widestPrice}
@@ -576,7 +577,7 @@ export function RentalFitForm({
               checked={nitroxRequested}
               onChange={(event) => setNitroxRequested(event.target.checked)}
             >
-              {showPricing && pricing.nitroxCents !== null
+              {pricing.nitroxCents !== null
                 ? t("rental.nitroxReserveWithPrice", {
                     price: formatMoneyCents(pricing.nitroxCents, currency, locale),
                   })

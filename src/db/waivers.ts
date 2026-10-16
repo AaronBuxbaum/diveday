@@ -62,6 +62,8 @@ export {
 } from "./waivers-in-person";
 export {
   type DoctorReferral,
+  type DoctorReferralAnswers,
+  doctorPageOpen,
   getDoctorReferral,
   getMedicalClearanceDocument,
   hasUnansweredMedicalHold,
@@ -70,6 +72,7 @@ export {
   type RetireMedicalRefusalResult,
   recordMedicalEvaluation,
   retireMedicalRefusal,
+  revealDoctorReferral,
 } from "./waivers-medical";
 export {
   hasLivePersonWaiverRequest,

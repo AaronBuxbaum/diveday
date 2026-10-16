@@ -7,7 +7,7 @@ import { RentalFitForm } from "./RentalFitForm";
 
 const defaultPricing: RentalPricing = {
   setCents: 5000,
-  perItemCents: { bcd: 1500, regulator: 1500, wetsuit: 1500, mask_fins: 1000, weights: 500 },
+  perItemCents: { bcd: 1500, regulator: 1500, wetsuit: 2000, mask_fins: 1000, weights: 500 },
   nitroxCents: 1000,
 };
 
@@ -40,11 +40,36 @@ describe("RentalFitForm on a course that includes the gear", () => {
       />,
     );
     expect(
-      screen.getByText("Your gear comes with the course. Tell us your sizes so it’s ready."),
+      screen.getByText(
+        "Your scuba unit (BCD, regulator, tank, weights) comes with the course. Tell us your sizes so it’s ready.",
+      ),
     ).toBeInTheDocument();
-    expect(document.body.textContent).not.toMatch(/\$\d/);
+    expect(document.body.textContent).not.toMatch(/\$15\.00/);
     expect(screen.queryByText(/Ask the shop what’s included/)).toBeNull();
     expect(screen.getByRole("checkbox", { name: /^BCD/ })).toBeChecked();
+  });
+
+  it("asks only about the scuba unit, leaves mask and fins to the student, and keeps the extras' prices", () => {
+    renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={null}
+        rentalItems={["bcd", "regulator", "wetsuit", "mask_fins", "weights", "nitrox"]}
+        course={{ nitroxCompatible: true, gearIncluded: true }}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+    expect(screen.getByRole("checkbox", { name: /^BCD/ })).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: /^Mask/ })).toBeNull();
+    expect(document.body.textContent).not.toMatch(/\$15\.00/);
+    // Not part of the scuba unit, so still the shop's price: the suit and nitrox.
+    expect(document.body.textContent).toMatch(/\$20\.00/);
+    expect(screen.getByText("I’d like nitrox ($10.00 per dive)")).toBeInTheDocument();
   });
 
   it("still quotes prices on a course that does not include it", () => {
@@ -63,6 +88,6 @@ describe("RentalFitForm on a course that includes the gear", () => {
       />,
     );
     expect(document.body.textContent).toMatch(/\$15\.00/);
-    expect(screen.queryByText(/Your gear comes with the course/)).toBeNull();
+    expect(screen.queryByText(/comes with the course/)).toBeNull();
   });
 });

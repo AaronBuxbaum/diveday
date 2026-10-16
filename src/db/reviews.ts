@@ -441,7 +441,10 @@ export async function listSiteReviews(
     .innerJoin(people, eq(people.id, tripReviews.personId))
     .innerJoin(trips, and(eq(trips.id, tripReviews.tripId), eq(trips.shopId, tripReviews.shopId)))
     .innerJoin(shops, eq(shops.id, tripReviews.shopId))
-    .where(and(publicWrittenReviewScope(shopId), liveTrip(), wentThere))
+    // Never a private charter's: beside a public departure to the same site,
+    // its date would say where that group dived and when (security review of
+    // layer r5-3, N1). The archive only hides such a trip's title.
+    .where(and(publicWrittenReviewScope(shopId), liveTrip(), eq(trips.isPrivate, false), wentThere))
     .orderBy(...publicReviewOrder())
     .limit(limit);
   return rows.flatMap((row) =>

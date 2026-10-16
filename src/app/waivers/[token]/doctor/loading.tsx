@@ -2,8 +2,8 @@ import { THREAD_MEASURE_CLASS } from "@/components/thread/ThreadShell";
 
 /**
  * Body-shaped skeleton for the doctor's page (design principle 1): the shop
- * name, the title and its two-line lede, the print row, the question chips,
- * then the evaluation form's box.
+ * name, the title and its two-line lede, the print row, the official form's
+ * box, then the answers section's date-of-birth field.
  */
 export default function DoctorReferralLoading() {
   return (
@@ -16,12 +16,10 @@ export default function DoctorReferralLoading() {
           <div className="h-5 w-2/3 rounded bg-surface-sunken" />
         </div>
         <div className="mt-6 h-11 w-40 rounded-lg bg-surface-sunken" />
+        <div className="mt-8 h-48 rounded-lg border border-border" />
         <div className="mt-8 h-7 w-64 max-w-full rounded bg-surface-sunken" />
-        <div className="mt-3 flex gap-2">
-          <div className="h-8 w-28 rounded-md bg-surface-sunken" />
-          <div className="h-8 w-36 rounded-md bg-surface-sunken" />
-        </div>
-        <div className="mt-8 h-96 rounded-lg border border-border" />
+        <div className="mt-3 h-5 w-full rounded bg-surface-sunken" />
+        <div className="mt-4 h-11 w-56 rounded-lg bg-surface-sunken" />
       </div>
     </main>
   );

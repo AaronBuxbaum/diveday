@@ -39,6 +39,17 @@ describe("payStepLines", () => {
     ).toContain("$50");
     expect(payStepLines(t, money, receipt, none).depositBalanceLine).toBeNull();
   });
+
+  it("says how the shop takes the balance, when it has said", () => {
+    const line = payStepLines(
+      t,
+      money,
+      { ...receipt, isDeposit: true, balanceDueCents: 5_000 },
+      none,
+      "card",
+    ).depositBalanceLine;
+    expect(line).toMatch(/\$50.* Pay by card when you arrive\.$/);
+  });
 });
 
 describe("atShopMoneyLine (fourth UX review, item 5)", () => {
@@ -65,10 +76,10 @@ describe("atShopMoneyLine (fourth UX review, item 5)", () => {
   it("says how the desk takes money, when the shop has said (ideas item 21)", () => {
     const desk = { ...owes, shop: { deskPayment: "card_and_cash" as const } };
     expect(atShopMoneyLine(t, "en-US", "usd", desk, trip, [])).toBe(
-      "Your seat: $95.00, due at the shop. Pay at the desk by card or cash.",
+      "Your seat: $95.00, due at the shop. Pay by card or cash when you arrive.",
     );
     expect(atShopMoneyLine(t, "en-US", "usd", desk, trip, [seat(false), seat(true)])).toBe(
-      "2 seats: $190.00, due at the shop. 1 claimed seat is paid from its own page. Pay at the desk by card or cash.",
+      "2 seats: $190.00, due at the shop. 1 claimed seat is paid from its own page. Pay by card or cash when you arrive.",
     );
   });
 

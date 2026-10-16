@@ -3,16 +3,24 @@
  * evaluation, the hold an unanswered one keeps, and retiring a refusal.
  * Imported through the `./waivers` barrel.
  */
-import { and, desc, eq, isNotNull, isNull, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { canRetireMedicalRefusal } from "@/lib/authz";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { awaitsPhysician, type MedicalReferralRef, referralQuestionRefs } from "@/lib/medical";
+import {
+  answeredMedicalForm,
+  calculateMedicalResult,
+  type MedicalReferralItem,
+  type PublishedMedicalForm,
+  referralItems,
+} from "@/lib/medical";
+import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { isUuid } from "@/lib/uuid";
+import { awaitsPhysician, doctorPageWithinTrip } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
-import { people, waiverRecords } from "./schema";
-import { livePerson } from "./trips-live";
+import { bookings, people, trips, waiverRecords } from "./schema";
+import { livePerson, liveTrip } from "./trips-live";
 import { activeStaffAttestorId } from "./waivers-in-person";
 
 /**
@@ -401,36 +409,117 @@ export async function getMedicalClearanceDocument(
   return row?.url ? { url: row.url, personId: row.personId } : null;
 }
 
-/** What the doctor's page prints: who the form is for, and which answers to ask about. */
+type HeldRecord = typeof waiverRecords.$inferSelect;
+
+/**
+ * **What the doctor's page shows before anything is unlocked** (fifth-loop
+ * ideas, item 17; H-127 and ADR 20261016-doctor-referral-page, both amended by
+ * the layer r5-3 reviews). Only the diver's name, and which of three things the
+ * answers section says:
+ *
+ * - `locked`: there are answers to show, behind the diver's date of birth;
+ * - `whole`: nothing to show, so the doctor goes through the whole form (no
+ *   date of birth on file to unlock with, or a paper or status-only hold);
+ * - `unfinished`: the stored form was never finished.
+ *
+ * Neither the date of birth nor any answer reaches the page module.
+ */
 export type DoctorReferral = {
   fullName: string;
-  /** The calendar date on file, or null for a line the diver writes in. */
-  dateOfBirth: string | null;
-  refs: MedicalReferralRef[];
+  answers: "locked" | "whole" | "unfinished";
+};
+
+/** What the answers section shows once the date of birth matches. */
+export type DoctorReferralAnswers = {
+  items: MedicalReferralItem[];
+  form: PublishedMedicalForm | null;
 };
 
 /**
- * **The doctor's page's one read** (fifth-loop ideas, item 17; H-127, ADR
- * 20261016-doctor-referral-page). The caller has already resolved `record`
- * from the diver's own waiver link, so this widens nothing: it adds the
- * person's name and date of birth and turns the stored answers into question
- * numbers here, so the answers themselves never reach the page. Null for a
- * release no longer waiting on a physician, or a diver since removed.
+ * The person behind a release still waiting on a physician, while its seat is
+ * held and its departure has not ended (plus `DOCTOR_PAGE_TRIP_GRACE_MS`).
+ * Anything else is no doctor's page: a hold on a canceled seat or a trip that
+ * has sailed is rarely resolved by staff, so without this the page and every
+ * printed or forwarded copy of its link would open for ever (security review of
+ * layer r5-3, F3).
  */
-export async function getDoctorReferral(
-  db: DbExecutor,
-  record: typeof waiverRecords.$inferSelect,
-): Promise<DoctorReferral | null> {
-  if (!awaitsPhysician(record)) return null;
+async function heldPersonForDoctor(db: DbExecutor, record: HeldRecord, now: Date) {
+  if (!awaitsPhysician(record) || !record.bookingId) return null;
+  const [seat] = await db
+    .select({ tripEndsAt: trips.endsAt })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.id, record.bookingId),
+        eq(bookings.shopId, record.shopId),
+        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+        eq(trips.status, "scheduled"),
+        liveTrip(),
+      ),
+    )
+    .limit(1);
+  if (!seat || !doctorPageWithinTrip(seat.tripEndsAt, now)) return null;
   const [person] = await db
     .select({ fullName: people.fullName, dateOfBirth: people.dateOfBirth })
     .from(people)
     .where(and(eq(people.id, record.personId), eq(people.shopId, record.shopId), livePerson()))
     .limit(1);
+  return person ?? null;
+}
+
+/** Whether the held waiver page offers the doctor's page at all. */
+export async function doctorPageOpen(
+  db: DbExecutor,
+  record: HeldRecord,
+  now: Date = nowDate(),
+): Promise<boolean> {
+  return (await heldPersonForDoctor(db, record, now)) !== null;
+}
+
+/**
+ * **The doctor's page's one read.** The caller has already resolved `record`
+ * from the diver's own waiver link, so this widens nothing. Null for a release
+ * the page does not open for, which the page answers with a redirect.
+ */
+export async function getDoctorReferral(
+  db: DbExecutor,
+  record: HeldRecord,
+  now: Date = nowDate(),
+): Promise<DoctorReferral | null> {
+  const person = await heldPersonForDoctor(db, record, now);
   if (!person) return null;
+  const hasItems = referralItems(record.medicalAnswers).length > 0;
+  const unfinished =
+    record.medicalAnswers !== null &&
+    calculateMedicalResult(record.medicalAnswers).status === "incomplete";
   return {
     fullName: person.fullName,
-    dateOfBirth: person.dateOfBirth,
-    refs: referralQuestionRefs(record.medicalAnswers),
+    answers:
+      hasItems && person.dateOfBirth ? "locked" : unfinished && !hasItems ? "unfinished" : "whole",
+  };
+}
+
+/**
+ * **The answers, for whoever knows the diver's date of birth** (security
+ * review of layer r5-3, F1). A forwarded or printed waiver link alone no
+ * longer tells its reader which conditions the diver disclosed: the published
+ * form's prompts sit behind a date of birth the page never prints. `mismatch`
+ * for a wrong date, and null when the page itself would not open. The caller
+ * rate-limits.
+ */
+export async function revealDoctorReferral(
+  db: DbExecutor,
+  record: HeldRecord,
+  enteredBirthdate: string,
+  now: Date = nowDate(),
+): Promise<DoctorReferralAnswers | "mismatch" | null> {
+  const person = await heldPersonForDoctor(db, record, now);
+  if (!person) return null;
+  if (!person.dateOfBirth || !isValidCalendarDate(enteredBirthdate)) return "mismatch";
+  if (enteredBirthdate !== person.dateOfBirth) return "mismatch";
+  return {
+    items: referralItems(record.medicalAnswers),
+    form: answeredMedicalForm(record.medicalAnswers),
   };
 }

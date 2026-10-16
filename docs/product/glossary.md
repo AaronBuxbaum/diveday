@@ -105,6 +105,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Card dispute
 - Checkout sale / tip sale
 - Dashboard refund
+- Desk payment
 - Dive (package unit)
 - Dives owed on packages
 - Failed refund
@@ -176,6 +177,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Diver moment
 - Diver seats
 - Dock call time
+- Doctor's page
 - Emergency contact
 - Emergency reference
 - Export bundle
@@ -329,6 +331,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Gear register groups
 - Gear reservation
 - Gear unit
+- Gear-included course
 - Gear-request override
 - Late (work order)
 - Needs staff fit

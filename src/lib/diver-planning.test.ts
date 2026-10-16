@@ -422,12 +422,15 @@ describe("booking delight planning", () => {
     expect(packingConfidence([], null, false).provided).toEqual(["tanksAndWeights"]);
   });
 
-  it("names the full set on a course whose fee includes the gear (ideas item 16)", () => {
-    expect(packingConfidence([], null, false, true).provided).toEqual([
-      "fullScubaSet",
-      "tanksAndWeights",
-      "instructorBriefing",
-    ]);
+  it("names the scuba unit on a course whose fee includes the gear, and leaves personal gear to bring (ideas item 16)", () => {
+    const packing = packingConfidence(["Towel"], null, false, true);
+    expect(packing.provided).toEqual(["scubaUnit", "instructorBriefing"]);
+    expect(packing.bringPersonal).toEqual(["mask", "fins", "snorkel", "boots"]);
+    expect(packing.bring).toEqual(["Towel"]);
+  });
+
+  it("asks nobody to bring personal gear on an ordinary departure", () => {
+    expect(packingConfidence(["Towel"], null).bringPersonal).toEqual([]);
   });
 
   it("turns a water temperature into the suit most divers want", () => {

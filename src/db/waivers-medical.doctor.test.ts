@@ -1,10 +1,15 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { people, waiverRecords } from "./schema";
+import { bookings, people, trips, waiverRecords } from "./schema";
 import { listStaff } from "./trips";
 import { completeWaiver, getWaiverForToken } from "./waivers-completion";
-import { getDoctorReferral, recordMedicalEvaluation } from "./waivers-medical";
+import {
+  doctorPageOpen,
+  getDoctorReferral,
+  recordMedicalEvaluation,
+  revealDoctorReferral,
+} from "./waivers-medical";
 import { issueWaiverRequest } from "./waivers-requests";
 import {
   clearAnswers,
@@ -20,15 +25,19 @@ const waiverContext = waiverContextFor(fileCtx);
 
 /**
  * **What the doctor's page reads off a held release** (fifth-loop ideas,
- * item 17; H-127, ADR 20261016-doctor-referral-page): the diver's name, their
- * date of birth and the numbers of the answers that call for a physician, and
- * nothing for a release that is not waiting on one.
+ * item 17; H-127 and ADR 20261016-doctor-referral-page, amended by the layer
+ * r5-3 reviews): the diver's name and whether there are answers to unlock,
+ * the answers themselves only for the diver's date of birth, and nothing for a
+ * release that is not waiting on one or a departure long over.
  */
 describe("getDoctorReferral", () => {
-  async function signed(medicalAnswers: typeof clearAnswers) {
+  async function signed(
+    medicalAnswers: typeof clearAnswers,
+    { dateOfBirth = "1984-03-09" as string | null } = {},
+  ) {
     const context = await waiverContext();
     const { db, shop, booking, person } = context;
-    await db.update(people).set({ dateOfBirth: "1984-03-09" }).where(eq(people.id, person.id));
+    await db.update(people).set({ dateOfBirth }).where(eq(people.id, person.id));
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error("expected a waiver link");
     await completeWaiver(db, issued.token, {
@@ -42,15 +51,72 @@ describe("getDoctorReferral", () => {
     return { ...context, record: state.record };
   }
 
-  it("carries the name, the date of birth and the question numbers, not the answers", async () => {
+  it("carries the name and a locked answers section, never the date of birth or an answer", async () => {
     const { db, person, record } = await signed(medicalReferralAnswers);
     const referral = await getDoctorReferral(db, record);
-    expect(referral).toEqual({
-      fullName: person.fullName,
-      dateOfBirth: "1984-03-09",
-      refs: [{ kind: "question", number: 3 }],
-    });
-    expect(JSON.stringify(referral)).not.toContain("exercise");
+    expect(referral).toEqual({ fullName: person.fullName, answers: "locked" });
+    expect(JSON.stringify(referral)).not.toContain("1984");
+  });
+
+  it("asks for the whole questionnaire when no date of birth is on file to unlock with", async () => {
+    const { db, record } = await signed(medicalReferralAnswers, { dateOfBirth: null });
+    expect(await getDoctorReferral(db, record)).toMatchObject({ answers: "whole" });
+    expect(await revealDoctorReferral(db, record, "1984-03-09")).toBe("mismatch");
+  });
+
+  it("asks for the whole questionnaire on a paper hold, and says unfinished only for an unfinished form", async () => {
+    const { db, record } = await signed(medicalReferralAnswers);
+    const paper = { ...record, medicalAnswers: null };
+    expect(await getDoctorReferral(db, paper)).toMatchObject({ answers: "whole" });
+    const partial: Record<string, boolean> = { ...medicalReferralAnswers.responses };
+    delete partial.q5;
+    const unfinished = {
+      ...record,
+      medicalAnswers: { ...medicalReferralAnswers, responses: partial },
+    };
+    expect(await getDoctorReferral(db, unfinished)).toMatchObject({ answers: "unfinished" });
+  });
+
+  it("shows the published prompts and the form they came from only for the diver's date of birth", async () => {
+    const { db, record } = await signed(medicalReferralAnswers);
+    expect(await revealDoctorReferral(db, record, "1984-03-10")).toBe("mismatch");
+    expect(await revealDoctorReferral(db, record, "not a date")).toBe("mismatch");
+    const shown = await revealDoctorReferral(db, record, "1984-03-09");
+    if (!shown || shown === "mismatch") throw new Error("expected the answers");
+    expect(shown.items).toHaveLength(1);
+    expect(shown.items[0]?.ref).toEqual({ kind: "question", number: 3 });
+    expect(shown.items[0]?.prompt).toContain("exercise");
+    expect(shown.form).toMatchObject({ productNumber: "10346 EN", versionDate: "2026-01-01" });
+  });
+
+  it("closes once the departure has ended and its grace has passed", async () => {
+    const { db, booking, record } = await signed(medicalReferralAnswers);
+    const [trip] = await db
+      .select({ endsAt: trips.endsAt })
+      .from(trips)
+      .where(eq(trips.id, booking.tripId));
+    if (!trip) throw new Error("trip missing");
+    const duringTrip = new Date(trip.endsAt.getTime() - 60_000);
+    const dayAfter = new Date(trip.endsAt.getTime() + 25 * 60 * 60 * 1000);
+    expect(await doctorPageOpen(db, record, duringTrip)).toBe(true);
+    expect(await doctorPageOpen(db, record, dayAfter)).toBe(false);
+    expect(await getDoctorReferral(db, record, dayAfter)).toBeNull();
+    expect(await revealDoctorReferral(db, record, "1984-03-09", dayAfter)).toBeNull();
+  });
+
+  it("closes for a canceled seat or a canceled departure", async () => {
+    const { db, booking, record } = await signed(medicalReferralAnswers);
+    const [trip] = await db
+      .select({ endsAt: trips.endsAt })
+      .from(trips)
+      .where(eq(trips.id, booking.tripId));
+    if (!trip) throw new Error("trip missing");
+    const at = new Date(trip.endsAt.getTime() - 60_000);
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, booking.tripId));
+    expect(await doctorPageOpen(db, record, at)).toBe(false);
+    await db.update(trips).set({ status: "scheduled" }).where(eq(trips.id, booking.tripId));
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
+    expect(await doctorPageOpen(db, record, at)).toBe(false);
   });
 
   it("has nothing for a clean release", async () => {

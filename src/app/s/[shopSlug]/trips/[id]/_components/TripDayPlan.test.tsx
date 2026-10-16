@@ -176,6 +176,28 @@ describe("TripDayPlan's profile", () => {
     expect(within(screen.getByRole("list")).queryByText(/\d{1,2}:\d{2}/)).not.toBeInTheDocument();
   });
 
+  it("says when to meet rather than a dock on a shore or pool day", () => {
+    render(
+      <TripDayPlan
+        briefings={[briefing()]}
+        shop={SHOP}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={{
+          ...profile,
+          diveMode: "shore",
+          day: {
+            startsAt: new Date("2026-10-17T11:00:00.000Z"),
+            endsAt: new Date("2026-10-17T15:00:00.000Z"),
+            plannedDives: 1,
+          },
+        }}
+      />,
+    );
+    expect(screen.getByTestId("trip-day-rhythm").textContent).toMatch(
+      /^Meet at \d{1,2}:\d{2}\s[AP]M · back about 11:00\sAM$/,
+    );
+  });
+
   it("says it in the diver's language", () => {
     render(
       <TripDayPlan

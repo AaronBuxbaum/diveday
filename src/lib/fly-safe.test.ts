@@ -521,7 +521,7 @@ describe("plannedFlySafeFrom", () => {
   });
 
   it("names a margin the copy can say: the buffer is exactly one hour", () => {
-    // The sentence reads "plus an hour in case the boat runs late".
+    // The sentence reads "plus an hour in case we run late".
     expect(DEPARTURE_BUFFER_MS).toBe(HOUR_MS);
   });
 

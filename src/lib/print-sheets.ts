@@ -108,3 +108,19 @@ export function storefrontAddress(shopSlug: string, origin: string | null): stri
 export function paperPassPath(shopSlug: string, bookingId: string): string {
   return shopPath(shopSlug, "print", "pass", bookingId);
 }
+
+/**
+ * **A page opened by a bearer link prints without the link.** Browsers print
+ * the page's URL in the header or footer they draw in the `@page` margin
+ * (Firefox by default, Chrome with "Headers and footers" on), and on a page
+ * like the doctor's that URL is the diver's waiver capability, carried on paper
+ * to a clinic's front desk (security review of layer r5-3, F2). A zero margin
+ * leaves the browser nowhere to draw them; the padding gives the content back
+ * the white border a printer needs, and the app's own page number goes with
+ * the margin it lived in.
+ */
+export const CAPABILITY_PAGE_PRINT_MARGIN_MM = 12;
+
+export function capabilityPagePrintRule(): string {
+  return `@page{margin:0;@bottom-right{content:none}}@media print{body{padding:${CAPABILITY_PAGE_PRINT_MARGIN_MM}mm}}`;
+}

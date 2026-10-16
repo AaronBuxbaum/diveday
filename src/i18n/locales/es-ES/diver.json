@@ -150,6 +150,7 @@
     "sharedDemoNote": "Esta es la demo compartida: cualquiera que la pruebe puede ver lo que escribes aquí.",
     "theDay": "El día",
     "dayRhythmLine": "En el muelle a las {dock} · regreso hacia las {back}",
+    "dayRhythmMeetLine": "Nos vemos a las {dock} · regreso hacia las {back}",
     "siteReviews": {
       "heading": "De quienes ya fueron",
       "quote": "“{words}”",
@@ -221,8 +222,14 @@
       "torch": "Linterna",
       "smb": "Boya de superficie"
     },
+    "personalGear": {
+      "mask": "Máscara",
+      "fins": "Aletas",
+      "snorkel": "Tubo de snorkel",
+      "boots": "Botines"
+    },
     "providedItems": {
-      "fullScubaSet": "Equipo de buceo completo",
+      "scubaUnit": "Equipo de buceo (chaleco, regulador, botella, plomos)",
       "tanksAndWeights": "Botellas y plomos",
       "crewBriefing": "Briefing de la tripulación",
       "instructorBriefing": "Briefing del instructor"
@@ -365,9 +372,9 @@
       "dueNow": "A pagar ahora",
       "dueAtShop": "A pagar en el centro",
       "deskPayment": {
-        "card": "Paga en el mostrador con tarjeta.",
-        "cash": "Paga en el mostrador en efectivo.",
-        "card_and_cash": "Paga en el mostrador con tarjeta o en efectivo."
+        "card": "Paga con tarjeta al llegar.",
+        "cash": "Paga en efectivo al llegar.",
+        "card_and_cash": "Paga con tarjeta o en efectivo al llegar."
       },
       "balanceAtDock": "{balance} en el muelle el {when}",
       "snorkelerFare": "{price} × {count, plural, one {# persona de snorkel} other {# personas de snorkel}}",
@@ -924,9 +931,9 @@
     },
     "gearAndSetup": "Equipo y ajuste",
     "dockCallLine": "Procura estar en el muelle a las {time}, {dock} antes de zarpar.",
-    "flySafePlanned": "¿Vuelas a casa pronto? {shopName} te pide planear tu vuelo no antes del {when}: {count, plural, one {# hora} other {# horas}} después de nuestro regreso previsto, más una hora por si el barco se retrasa, siguiendo las recomendaciones de DAN.",
-    "flySafePlannedDivesPlanned": "¿Vuelas a casa pronto? {shopName} te pide planear tu vuelo no antes del {when}: planificamos más de una inmersión, así que {count, plural, one {# hora} other {# horas}} después de nuestro regreso previsto, más una hora por si el barco se retrasa, siguiendo las recomendaciones de DAN.",
-    "flySafePlannedEarlierDay": "¿Vuelas a casa pronto? {shopName} te pide planear tu vuelo no antes del {when}: tienes otro día de buceo con nosotros en los dos días anteriores, así que {count, plural, one {# hora} other {# horas}} después de nuestro regreso previsto, más una hora por si el barco se retrasa, siguiendo las recomendaciones de DAN.",
+    "flySafePlanned": "¿Vuelas a casa pronto? {shopName} te pide planear tu vuelo no antes de {when}: {count, plural, one {# hora} other {# horas}} después de nuestro regreso previsto, más una hora por si nos retrasamos, siguiendo las recomendaciones de DAN.",
+    "flySafePlannedDivesPlanned": "¿Vuelas a casa pronto? {shopName} te pide planear tu vuelo no antes de {when}: planificamos más de una inmersión, así que {count, plural, one {# hora} other {# horas}} después de nuestro regreso previsto, más una hora por si nos retrasamos, siguiendo las recomendaciones de DAN.",
+    "flySafePlannedEarlierDay": "¿Vuelas a casa pronto? {shopName} te pide planear tu vuelo no antes de {when}: tienes otro día de buceo con nosotros en los dos días anteriores, así que {count, plural, one {# hora} other {# horas}} después de nuestro regreso previsto, más una hora por si nos retrasamos, siguiendo las recomendaciones de DAN.",
     "fitUnavailable": "No hemos podido guardar tu equipo y ajuste ahora mismo. Inténtalo de nuevo en un momento.",
     "fitSaved": "Guardado. La tripulación tendrá tus tallas.",
     "certHeading": "Añade tu certificación",
@@ -1097,18 +1104,31 @@
     "doctor": {
       "title": "Llévale esto a tu médico",
       "open": "Llévale esto a tu médico",
-      "lede": "{shop} necesita que un médico confirme por escrito que estás apto para bucear. Imprime esta página o muéstrala en tu teléfono, y pídele a tu médico que complete y firme el formulario de abajo.",
+      "lede": "Imprime esta página (o pide que la impriman en la clínica) y pídele a tu médico que complete y firme el formulario de abajo.",
       "print": "Imprimir esta página",
       "back": "Volver a tu exención",
-      "answersHeading": "Las preguntas a las que respondiste que sí",
-      "answersNote": "En esta página solo aparecen los números. Tu médico te preguntará por cada una.",
+      "formHeading": "El formulario del médico",
+      "formBody": "Tu médico completa y firma la página {page} del formulario oficial <form>{title}</form> ({product}, versión {version}).",
+      "formLink": "Abrir el formulario oficial e imprimir la página {page}",
+      "nameLabel": "Nombre del participante",
+      "answersHeading": "Tus respuestas para el médico",
+      "answersLocked": "Escribe tu fecha de nacimiento para ver las respuestas que tu médico necesita revisar.",
+      "birthdateLabel": "Fecha de nacimiento",
+      "unlock": "Ver mis respuestas",
+      "unlocking": "Verificando…",
+      "unlockMismatch": "Esa fecha no coincide con la de tu reserva.",
+      "unlockRate": "Demasiados intentos. Espera unos minutos y vuelve a intentarlo.",
+      "unlockClosed": "Esta página ya no está disponible. Vuelve a tu exención.",
+      "answersNote": "Tu médico te preguntará por cada una.",
+      "answersSource": "Del formulario {title} ({product}, versión {version}), el que respondiste.",
+      "answersWhole": "Revisa el cuestionario completo con tu médico.",
       "answersUnfinished": "Tu cuestionario quedó sin terminar, así que revísalo entero con tu médico.",
       "question": "Pregunta {number}",
       "box": "Box {box}, pregunta {number}",
       "dental": "La pregunta dental",
       "returnHeading": "Cuando esté firmado",
-      "returnWithEmail": "Trae la página firmada al muelle o envía una foto a <email>{emailAddress}</email>.",
-      "returnToDock": "Trae la página firmada al muelle."
+      "returnWithEmail": "Envía una foto del formulario firmado a <email>{emailAddress}</email> antes del día de tu buceo, o tráelo al centro antes de bucear.",
+      "returnToShop": "Trae el formulario firmado al centro antes de bucear."
     },
     "signing": "Firmando…",
     "beforeDockTitle": "Un paso rápido antes del muelle",
@@ -1233,7 +1253,7 @@
       "rents_drysuit": "Alquilar traje seco"
     },
     "askWhatsIncluded": "Pregunta al centro qué incluye el precio de la salida.",
-    "courseGearIncluded": "Tu equipo va incluido en el curso. Dinos tus tallas para tenerlo listo.",
+    "courseGearIncluded": "Tu equipo de buceo (chaleco, regulador, botella, plomos) va incluido en el curso. Dinos tus tallas para tenerlo listo.",
     "notSure": "No lo tengo claro: ayúdame a elegir",
     "sizeOnFile": "{size}: registrada por el centro",
     "wetsuitSize": "Talla de neopreno",

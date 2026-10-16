@@ -1176,6 +1176,17 @@
   cleared record keeps its status, so the signed records' **Medical holds** view lists every
   referral, and each row says where it stands: Waiting on physician, Cleared by physician, or Not
   cleared.
+- **Doctor's page** — `/waivers/[token]/doctor`, the page a diver on a **medical hold** takes to
+  their physician, opened from the held waiver page's "Take this to your doctor" (ADR
+  20261016-doctor-referral-page, H-127). It names the official form and the page the examiner
+  signs (page 3 of the UHMS/DMSC participant questionnaire, linked rather than restyled), prints the
+  diver's name, and says to send a photo of the signed form to the shop before the dive day. The
+  answers that called for a physician sit behind the diver's **date of birth**, re-entered on the
+  page and never printed by it: each one's published prompt (never free-text detail) and the form
+  version answered. With no date of birth on file, or nothing to show, it says to go through the
+  whole questionnaire. It opens only while the release waits on a physician (`awaitsPhysician`)
+  on a held seat whose departure has not ended plus a day, and prints without the browser's
+  URL header and footer. DiveDay records nothing from it; staff record the **physician clearance**.
 - **Physician clearance** — the shop recording that a physician evaluated a diver the medical
   questionnaire had **referred**, and cleared them to dive. It is the only thing that clears that
   `medical_review` record itself (a clean later release can stand over it, below), and it is a

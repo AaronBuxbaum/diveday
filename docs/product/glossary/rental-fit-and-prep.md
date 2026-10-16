@@ -69,6 +69,14 @@
   (**Nitrox/EANx** above) and their training dives are conducted on air — the box could only ever
   advertise a fill the course cannot give. It changes what is *offered*, never what a diver already
   requested, and it is not a fill authorization: a verified card still gates that.
+- **Gear-included course** — a course whose fee includes the **scuba unit** (`courses.gear_included`,
+  "The scuba unit is part of the course fee" on the course editor): BCD, regulator, tank and
+  weights (`SCUBA_UNIT_KINDS`, `src/lib/rentals.ts`). It never means *everything*: mask, fins,
+  snorkel and boots are personal gear the student brings, and `/ready` lists them under "Bring";
+  the suit and a nitrox fill keep the shop's price. On a session of such a course the sizes form
+  asks only about the scuba unit and the suit, quotes no price for the unit, and "We provide" reads
+  the scuba unit and an instructor briefing. A yes/no rather than a set of included kinds; the public
+  booking page still quotes rental prices for these courses until the rest of the slice lands.
 - **Rental prices** — the shop's optional price list for rental gear (`shops.rental_pricing`,
   `src/lib/rentals.ts`): a **set price** for the full core kit of five hard-goods pieces (usually
   cheaper than the pieces), a **per-piece** price for any item, and a **per-dive nitrox** surcharge —

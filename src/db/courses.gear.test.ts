@@ -6,7 +6,7 @@ import { getCourseBySlug, updateCourse } from "./courses";
 // (src/test/db.ts, `fileScopedShopContext`).
 const ctx = fileScopedShopContext();
 
-/** **Rental gear is part of the course fee** (fifth-loop ideas, item 16). */
+/** **The scuba unit is part of the course fee** (fifth-loop ideas, item 16). */
 describe("a course's gear-included switch", () => {
   it("keeps a course's gear-included answer, off until the shop says so (ideas item 16)", async () => {
     const { db, shop } = ctx;

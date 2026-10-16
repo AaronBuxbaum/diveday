@@ -131,7 +131,7 @@ describe("ThreadSections", () => {
       />,
     );
     expect(screen.getByTestId("ready-fly-safe-plan").textContent).toMatch(
-      /^Flying home soon\? Blue Mantis Divers asks you to plan your flight no earlier than Friday\s4:30\sAM: we plan more than one dive, so 24 hours after we’re due back, plus an hour in case the boat runs late, following DAN’s guidance\.$/,
+      /^Flying home soon\? Blue Mantis Divers asks you to plan your flight no earlier than Fri, Oct\s16, 4:30\sAM\sEDT: we plan more than one dive, so 24 hours after we’re due back, plus an hour in case we run late, following DAN’s guidance\.$/,
     );
   });
 

@@ -15,7 +15,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { claimLinkPath } from "@/lib/booking-capabilities";
 import { type PlannedFlySafe, plannedFlySafeMessageKey } from "@/lib/fly-safe";
-import { formatShortDate, formatWeekdayTime } from "@/lib/format";
+import { formatPlannedDateTimeTz, formatShortDate } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicTripArrivalCardPath } from "@/lib/public-routes";
 import { addSeatFromReady, askToMoveAction, cancelMyBookingAction } from "../booking-actions";
@@ -182,7 +182,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
           <p data-testid="ready-fly-safe-plan" className="text-base">
             {t(`ready.${plannedFlySafeMessageKey(flySafePlan.reason)}`, {
               shopName: detail.shop.name,
-              when: formatWeekdayTime(flySafePlan.from, locale, detail.shop.timezone),
+              when: formatPlannedDateTimeTz(flySafePlan.from, locale, detail.shop.timezone),
               count: flySafePlan.hours,
             })}
           </p>

@@ -55,7 +55,7 @@ export type MoneyBlockSeatLine = {
  */
 export type MoneyBlockDueNow = "checkout" | "at_shop" | "none";
 
-/** "Pay at the desk by card or cash." under "Due at the shop", by the shop's code. */
+/** "Pay by card or cash when you arrive." under "Due at the shop", by the shop's code. */
 const DESK_PAYMENT_BOOKING_KEYS = {
   card: "money.deskPayment.card",
   cash: "money.deskPayment.cash",
@@ -229,6 +229,9 @@ export function MoneyBlock({
             balance: money(balanceCents),
             when: formatShortDate(balanceDueAt, locale, timeZone),
           })}
+          {/* The balance is paid on arrival too, so how the desk takes it
+              follows it (dive-domain review N4 of layer r5-3). */}
+          {deskPayment ? ` ${t(DESK_PAYMENT_BOOKING_KEYS[deskPayment])}` : null}
         </div>
       ) : null}
     </dl>

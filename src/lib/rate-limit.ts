@@ -694,6 +694,16 @@ export const RATE_LIMITS = {
    */
   readinessLinkResendByBooking: perHour(5),
   /**
+   * Unlocking the answers on the doctor's page (`/waivers/[token]/doctor`) by
+   * typing the diver's date of birth, per held **release** rather than per IP.
+   * A date of birth is a small space, a few tens of thousands of days, so the
+   * per-IP `capabilityAction` bucket alone would let a rotating set of
+   * addresses walk it; five tries a quarter hour is plenty for a diver
+   * mistyping their own birthday and makes the walk take years (security
+   * review of layer r5-3, F1).
+   */
+  doctorAnswersByRecord: per15Min(5),
+  /**
    * Core Web Vitals beacons to `/api/vitals`, per IP.
    *
    * Public and unauthenticated by necessity — the report comes from a diver's

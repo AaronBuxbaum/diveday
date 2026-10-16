@@ -36,6 +36,8 @@ export function payStepLines(
   money: (cents: number, currency: string) => string,
   receipt: Receipt,
   packageDives: { left: number; usedHere: number },
+  /** How the shop takes the balance at the desk, said after it (dive-domain review N4 of layer r5-3). */
+  deskPayment: DeskPayment | null = null,
 ): { paidLine: string; depositBalanceLine: string | null } {
   const paid =
     receipt && receipt.amountCents !== null
@@ -54,9 +56,14 @@ export function payStepLines(
           : paid,
     depositBalanceLine:
       receipt?.isDeposit && receipt.balanceDueCents > 0
-        ? t("booking.paymentDepositBalance", {
-            balance: money(receipt.balanceDueCents, receipt.currency),
-          })
+        ? [
+            t("booking.paymentDepositBalance", {
+              balance: money(receipt.balanceDueCents, receipt.currency),
+            }),
+            deskPaymentSentence(t, deskPayment),
+          ]
+            .filter(Boolean)
+            .join(" ")
         : null,
   };
 }

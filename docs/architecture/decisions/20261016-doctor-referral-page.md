@@ -1,50 +1,52 @@
-# 20261016-doctor-referral-page — Print question numbers, never answers, on the doctor's page
+# 20261016-doctor-referral-page — The doctor's page: the official form by link, the answers behind a date of birth
 
-- **Status:** Accepted
+- **Status:** Accepted (amended 2026-10-16 after the layer r5-3 security and dive-domain reviews)
 - **Date:** 2026-10-16
 
 ## Context
 
-When the questionnaire refers a diver to a physician, the release parks in `medical_review` and
-readiness keeps them off the boat until staff record the physician's answer. The diver used to go
-to the doctor empty-handed. The fifth-loop ideas (item 17) asked for a printable "Take this to your
-doctor" page, and the product owner chose what it carries in
-[H-127](../../product/human-decisions/H-127-physician-form-for-referral.md). This is the first
-diver-facing page to print medical information from a bearer link. That link is the waiver link,
-forwardable by anyone who holds it, so what goes on the page is the security question.
+A diver the questionnaire refers to a physician is held off the boat until staff record the
+answer, and used to go to the doctor empty-handed. Fifth-loop item 17 asked for a "Take this to
+your doctor" page; the owner chose its contents in
+[H-127](../../product/human-decisions/H-127-physician-form-for-referral.md). It is opened by the
+waiver link, which anyone it is forwarded to can open, so what it shows is the security question.
 
 ## Decision
 
-`/waivers/[token]/doctor` renders only when the record behind the link still waits on a physician:
-`medical_review`, neither answer recorded, not superseded, not erased (`awaitsPhysician` in
-`src/lib/medical.ts`), and the diver still on file. Any other state redirects to the waiver page,
-which already words each state; the page never calls `notFound()`. The page carries:
+`/waivers/[token]/doctor` opens only while the release waits on a physician (`awaitsPhysician` in
+`src/lib/waivers.ts`, built on `isUnresolvedMedicalHold`), the diver is on file, and the seat is
+held on a scheduled departure that ended less than a day ago (`DOCTOR_PAGE_TRIP_GRACE_MS`).
+Otherwise it redirects to the waiver page, never `notFound()`; the waiver page offers the door on
+the same gate (`doctorPageOpen`). It carries:
 
-- the examiner's evaluation form (`PHYSICIAN_EVALUATION_FORM`), English like the questionnaire
-  (H-01/H-03), with the diver's **name** and **date of birth** printed in, or a blank line when no
-  date is on file;
-- the **numbers** of the answers that call for evaluation ("Question 3", "Box B, question 2"), and
-  never their prompts or any answer's detail. A primary yes that only opened a Box is left out,
-  because the Box item it led to implies it. An unfinished form names nothing and says so;
-- the shop's name, phone and email, and "Bring the signed page to the dock, or send a photo to
-  <shop email>".
+- the diver's **name** and the official form to print: the UHMS/DMSC *Diver Medical | Participant
+  Questionnaire*, 10346 EN, version 2026-01-01, page 3, named and linked
+  (`RSTC_QUESTIONNAIRE.published`), never a restyled copy;
+- the **referral answers behind the diver's date of birth**: `revealDoctorAnswersAction` compares
+  the entered date with the one on file (rate-limited per IP and per release) and returns each
+  referral item's place and **published prompt**, never free-text detail, with the form version
+  answered. With no date on file or nothing to show, the page says to go through the whole
+  questionnaire;
+- the shop's contacts and "Send a photo of the signed form to <email> before your dive day, or
+  bring it to the shop before you dive".
 
-`getDoctorReferral` (`src/db/waivers-medical.ts`) turns the stored answers into numbers itself,
-so the answers never reach the page module. Staff record the outcome exactly as before.
+It prints with a zero `@page` margin (`capabilityPagePrintRule`), so the browser prints no URL.
 
 ## Alternatives considered
 
-- **Print the flagged prompts** — rejected by H-127. A forwarded link would disclose the condition.
-- **Print nothing medical, only the blank form** — the doctor would then have no idea which
-  answers to ask about.
-- **A separate, shorter-lived doctor token** — a second capability to issue and revoke, for data
-  the waiver link can already open.
+- **Question numbers and a printed date of birth** (as first accepted): withdrawn. The form is
+  public, so a number is the condition to any reader, a doctor cannot evaluate against a number,
+  and the date of birth was a new identifier on a forwardable link.
+- **The blank form only**: the doctor would not know what to ask about.
+- **A separate doctor token**: a second capability to issue and revoke; the date-of-birth gate
+  protects the answers with nothing new to revoke.
+- **A restyled examiner's page** (first shipped): it could not be checked against the PDF from the
+  build container, and an unverified copy of a legal form must not stand in for it.
 
 ## Consequences
 
-Anyone holding a held diver's waiver link can see their name, their date of birth and which
-question numbers they answered yes, for as long as the hold stands. Recording either answer, a
-fresh link or erasure closes the page. A question number reveals which questions to look up, not
-the answer behind it. The form's wording is transcribed and must track the published UHMS/DMSC
-form; when the questionnaire version moves, check this form in the same change. Revisit if a shop
-needs the official PDF itself attached, or if a jurisdiction requires a different examiner form.
+A forwarded link shows the diver's name and that an evaluation is pending, until a day after the
+departure. The conditions need the date of birth too, which the page never prints; the rate limit
+stops guessing, not someone who knows the birthday. The answers gate is a **review-driven
+amendment** to H-127, noted there for the owner to revisit. Revisit if a jurisdiction needs another
+examiner form, or once page 3 is checked and pinned by sha256 like the questionnaire.

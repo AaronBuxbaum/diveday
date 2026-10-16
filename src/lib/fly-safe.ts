@@ -356,7 +356,7 @@ export function flySafeMessageKey(
  *   {@link DEPARTURE_BUFFER_MS}: the latest instant the recap would anchor on
  *   for a boat that comes in on time. A recap with logged exits can only say an
  *   earlier time than this; only a boat later than its buffer says a later one.
- *   The sentence names the margin ("plus an hour in case the boat runs late"),
+ *   The sentence names the margin ("plus an hour in case we run late"),
  *   so the time is never an hour off the arithmetic the diver can do.
  * - **Basis.** Repetitive when the departure plans more than one dive, or when
  *   this diver holds a dive day at this shop inside

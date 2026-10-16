@@ -9,6 +9,7 @@ import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
 import { getBookingTripId, getWaiverSignerOnFile, getWaiverTripHeader } from "@/db/waiver-signing";
 import {
+  doctorPageOpen,
   getEmergencyContactForBearer,
   getEmergencyContactForPerson,
   getWaiverForToken,
@@ -21,12 +22,7 @@ import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz } from "@/lib/format";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
-import {
-  awaitsPhysician,
-  medicalProgress,
-  medicalQuestionField,
-  questionnaireForJurisdiction,
-} from "@/lib/medical";
+import { medicalProgress, medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { completeWaiverAction } from "./actions";
@@ -158,6 +154,8 @@ export default async function WaiverPage({
         })
       : null;
     const readyPath = readyCapability ? readinessLinkPath(readyCapability.token) : null;
+    // The same gate the doctor's page opens on, so the door never leads to a redirect.
+    const doctorDoor = needsReview && (await doctorPageOpen(db, state.record));
     // **The medical step does not tick on a hold**: the record is signed but its
     // medical side is open, and "3 of 3 done" under "a doctor must confirm" would
     // turn the blocking state into a checkbox (glossary, **Waiver / release**).
@@ -174,7 +172,7 @@ export default async function WaiverPage({
         locale={locale}
         needsReview={needsReview}
         readyPath={readyPath}
-        doctorPath={awaitsPhysician(state.record) ? `/waivers/${token}/doctor` : null}
+        doctorPath={doctorDoor ? `/waivers/${encodeURIComponent(token)}/doctor` : null}
         signedRail={signedRail}
         diveSitesList={diveSitesList}
       />

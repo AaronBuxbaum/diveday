@@ -424,14 +424,14 @@ async function DiverReadinessPage({
 
     /** A money figure in the currency it was actually charged in, never today's shop setting. */
     const money = (cents: number, currency: string) => formatMoneyCents(cents, currency, locale);
-    const { paidLine, depositBalanceLine } = payStepLines(t, money, paymentReceipt, packageDives);
+    const paid = payStepLines(t, money, paymentReceipt, packageDives, data.shop.deskPayment);
 
     // What is owed at the shop, said once (fourth UX review, item 5).
     const atShopLine = atShopMoneyLine(t, locale, shop.currency, data, fullTrip, partySeatClaims);
 
     /** One step's fact, and one step's form. The two things the spine cannot derive. */
     const stepLine = (step: ThreadStep): string | null =>
-      readyStepLine(step, { t, facts, lastDivedBand: data.lastDivedBand, paidLine });
+      readyStepLine(step, { t, facts, lastDivedBand: data.lastDivedBand, paidLine: paid.paidLine });
 
     /**
      * The step's form, or nothing.
@@ -495,12 +495,12 @@ async function DiverReadinessPage({
           const payable =
             data.canPay &&
             (step.item?.code === "payment_due" || step.item?.code === "payment_refunded");
-          if (!payable && !depositBalanceLine) return null;
+          if (!payable && !paid.depositBalanceLine) return null;
           return (
             <PayStepBody
               token={token}
               payable={payable}
-              depositBalanceLine={depositBalanceLine}
+              depositBalanceLine={paid.depositBalanceLine}
               actionButton={actionButton}
               fullShop={fullShop}
               fullTrip={fullTrip}

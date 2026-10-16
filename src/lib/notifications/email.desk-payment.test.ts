@@ -23,7 +23,7 @@ describe("how the desk takes money (fifth-loop ideas, item 21)", () => {
           money: { due: "at_shop", amountCents: 12_000, currency: "usd", deskPayment: "card" },
         }).text,
       ),
-    ).toContain("Your seat: $120.00, due at the shop. Pay at the desk by card.");
+    ).toContain("Your seat: $120.00, due at the shop. Pay by card when you arrive.");
   });
 
   it("says it for a party, in Spanish", () => {
@@ -41,7 +41,7 @@ describe("how the desk takes money (fifth-loop ideas, item 21)", () => {
           },
         }).text,
       ),
-    ).toContain("Paga en el mostrador con tarjeta o en efectivo.");
+    ).toContain("Paga con tarjeta o en efectivo al llegar.");
   });
 
   it("says nothing when the shop has not said", () => {
@@ -49,6 +49,6 @@ describe("how the desk takes money (fifth-loop ideas, item 21)", () => {
       ...base,
       money: { due: "at_shop", amountCents: 12_000, currency: "usd" },
     }).text;
-    expect(text).not.toContain("Pay at the desk");
+    expect(text).not.toContain("when you arrive");
   });
 });

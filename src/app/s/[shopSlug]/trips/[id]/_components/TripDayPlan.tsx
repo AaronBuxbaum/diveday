@@ -106,7 +106,8 @@ export function dayRhythmLine(
   const first = beats[0];
   const back = beats.find((beat) => beat.step === "return");
   if (!first || !back) return null;
-  return t("trip.dayRhythmLine", {
+  // A shore or pool day has no dock: the first beat is where the group meets.
+  return t(facts.diveMode === "boat" ? "trip.dayRhythmLine" : "trip.dayRhythmMeetLine", {
     dock: formatTime(first.at, locale, timeZone),
     back: formatTime(back.at, locale, timeZone),
   });
