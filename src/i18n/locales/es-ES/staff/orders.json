@@ -123,7 +123,10 @@
       "paidAfterCloseInProgress": "Ese reembolso ya está en camino.",
       "paidAfterCloseNeedsCheck": "Stripe ya devolvió parte de este pago. Revísalo antes en Pagos que necesitan revisión.",
       "paidAfterCloseNotConnected": "Tu cuenta de Stripe no está aceptando pagos, así que el reembolso no puede salir. Reembólsalo en Stripe.",
-      "paidAfterCloseFailed": "Stripe no aceptó ese reembolso. Inténtalo de nuevo o reembólsalo en Stripe."
+      "paidAfterCloseFailed": "Stripe no aceptó ese reembolso. Inténtalo de nuevo o reembólsalo en Stripe.",
+      "stripeRefundMatched": "Reembolso asignado a la plaza.",
+      "stripeRefundPartlyMatched": "Asignado. El resto de ese reembolso sigue esperando una plaza.",
+      "stripeRefundNotMatched": "Esa plaza no puede llevar este reembolso. Puede que ya esté asignado, o que la plaza no se pagara con ese pago."
     },
     "filters": {
       "searchLabel": "Buscar pedidos",
@@ -218,6 +221,13 @@
       "sectionLabel": "Reembolsos que fallaron",
       "heading": "{count, plural, one {# reembolso no llegó} other {# reembolsos no llegaron}} al buceador. El dinero volvió a tu saldo de Stripe. Vuelve a reembolsarlos.",
       "openOrder": "Abrir pedido",
+      "openTrip": "Abrir salida"
+    },
+    "unattributedRefunds": {
+      "sectionLabel": "Reembolsos hechos en Stripe",
+      "heading": "{count, plural, one {# reembolso hecho en Stripe cubrió} other {# reembolsos hechos en Stripe cubrieron}} el pago de un grupo. Elige la plaza de cada uno.",
+      "seat": "{diver} · {held} pagado",
+      "matching": "Asignando…",
       "openTrip": "Abrir salida"
     }
   }

@@ -32,6 +32,9 @@ vi.mock("@/lib/security-step-up", () => ({
   hasRequiredStepUp: vi.fn(async () => true),
   stepUpChallengeUrl: vi.fn(() => "/step-up"),
 }));
+vi.mock("@/db/unattributed-refunds", () => ({
+  attributeUnattributedRefund: vi.fn(async () => ({ status: "attributed", remainingCents: 0 })),
+}));
 vi.mock("@/db/checkouts-paid-after-close", () => ({
   refundPaidAfterCloseCheckout: vi.fn(async () => ({ status: "refunded", amountCents: 100 })),
 }));
@@ -39,7 +42,8 @@ vi.mock("@/db/checkouts-paid-after-close", () => ({
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
 const { refundPaidAfterCloseCheckout } = await import("@/db/checkouts-paid-after-close");
-const { refundPaidAfterCloseAction } = await import("./actions");
+const { attributeUnattributedRefund } = await import("@/db/unattributed-refunds");
+const { matchStripeRefundAction, refundPaidAfterCloseAction } = await import("./actions");
 
 const CHECKOUT_ID = "00000000-0000-4000-8000-000000000002";
 
@@ -89,5 +93,61 @@ describe("refundPaidAfterCloseAction", () => {
       noticeUrl(back, "paid-after-close-failed"),
     );
     expect(refundPaidAfterCloseCheckout).not.toHaveBeenCalled();
+  });
+});
+
+const INTENT_ID = "00000000-0000-4000-8000-000000000003";
+const BOOKING_ID = "00000000-0000-4000-8000-000000000004";
+
+function matchForm(intentId: string, bookingId: string) {
+  const data = new FormData();
+  data.set("intentId", intentId);
+  data.set("bookingId", bookingId);
+  return data;
+}
+
+/** Issue #2293: staff say which seat a refund made in Stripe on a party's checkout was for. */
+describe("matchStripeRefundAction", () => {
+  it("refuses a captain before anything is matched", async () => {
+    vi.mocked(attributeUnattributedRefund).mockClear();
+    const { back } = await as(SEEDED_CAPTAIN_EMAIL);
+    expect(
+      await redirectedTo(() => matchStripeRefundAction(matchForm(INTENT_ID, BOOKING_ID))),
+    ).toBe(noticeUrl(back, "not-authorized-refund"));
+    expect(attributeUnattributedRefund).not.toHaveBeenCalled();
+  });
+
+  it("matches in the owner's own shop, naming the owner", async () => {
+    vi.mocked(attributeUnattributedRefund).mockClear();
+    const { shopId, personId, back } = await as(SEEDED_OWNER_EMAIL);
+    expect(
+      await redirectedTo(() => matchStripeRefundAction(matchForm(INTENT_ID, BOOKING_ID))),
+    ).toBe(noticeUrl(back, "stripe-refund-matched"));
+    expect(attributeUnattributedRefund).toHaveBeenCalledWith(expect.anything(), {
+      shopId,
+      intentId: INTENT_ID,
+      bookingId: BOOKING_ID,
+      actorPersonId: personId,
+    });
+  });
+
+  it("says when part of the refund still waits for a seat", async () => {
+    vi.mocked(attributeUnattributedRefund).mockResolvedValueOnce({
+      status: "attributed",
+      remainingCents: 500,
+    });
+    const { back } = await as(SEEDED_OWNER_EMAIL);
+    expect(
+      await redirectedTo(() => matchStripeRefundAction(matchForm(INTENT_ID, BOOKING_ID))),
+    ).toBe(noticeUrl(back, "stripe-refund-partly-matched"));
+  });
+
+  it("never sends a malformed id to the database", async () => {
+    vi.mocked(attributeUnattributedRefund).mockClear();
+    const { back } = await as(SEEDED_OWNER_EMAIL);
+    expect(await redirectedTo(() => matchStripeRefundAction(matchForm("nope", BOOKING_ID)))).toBe(
+      noticeUrl(back, "stripe-refund-not-matched"),
+    );
+    expect(attributeUnattributedRefund).not.toHaveBeenCalled();
   });
 });

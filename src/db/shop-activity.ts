@@ -310,7 +310,8 @@ export type ShopActivityWrite =
         | "payment_waived"
         | "payment_marked_refunded"
         | "payment_balance_written_off"
-        | "party_marked_paid";
+        | "party_marked_paid"
+        | "dashboard_refund_matched";
       bookingId: string;
     }
   | {

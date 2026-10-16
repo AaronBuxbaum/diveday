@@ -55,9 +55,6 @@ const authModule = (await import("@/lib/auth")) as unknown as {
 };
 const auth = authModule.auth;
 const OrdersIndexPage = (await import("./page")).default;
-const { FailedRefundsQueue, OwedRefundsQueue, PaidAfterCloseQueue } = await import(
-  "./_components/OwedMoneyQueues"
-);
 
 const SHOP_SLUG = "blue-mantis";
 
@@ -85,7 +82,7 @@ async function sessionFor(role: Role): Promise<{ db: AppDb; session: DiveDaySess
 
 /** The page, rendered for whatever `?…` a test wants to put to it. */
 /** The back-office queues, rendered in place so the tree walkers can read them. */
-const QUEUES = new Set<unknown>([OwedRefundsQueue, PaidAfterCloseQueue, FailedRefundsQueue]);
+const QUEUES = new Set<unknown>(Object.values(await import("./_components/OwedMoneyQueues")));
 
 function expandQueues(node: unknown): unknown {
   if (Array.isArray(node)) return node.map(expandQueues);

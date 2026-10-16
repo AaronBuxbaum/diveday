@@ -1391,6 +1391,14 @@ export const paymentOperationIntents = pgTable(
     tripPromoId: uuid("trip_promo_id").references(() => tripLastMinutePromos.id),
     /** The Stripe object id once known, even if the local finalize write then failed. */
     stripeObjectId: text("stripe_object_id"),
+    /**
+     * Set only on a parked unattributed reversal (`parkStripeReversal`, issue
+     * #2293): the money a dashboard refund on a party checkout took that no
+     * seat carries yet. Staff match it to seats from the Orders index; each
+     * match takes what the seat held off this figure, and the row resolves at
+     * zero. Null on every other intent.
+     */
+    amountCents: integer("amount_cents"),
     errorMessage: text("error_message"),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
@@ -1423,6 +1431,10 @@ export const paymentOperationIntents = pgTable(
     check(
       "payment_operation_intents_single_promo",
       sql`${table.promoCodeId} is null or ${table.tripPromoId} is null`,
+    ),
+    check(
+      "payment_operation_intents_amount_nonnegative",
+      sql`${table.amountCents} is null or ${table.amountCents} >= 0`,
     ),
   ],
 );

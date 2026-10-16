@@ -1,0 +1,2 @@
+ALTER TABLE "payment_operation_intents" ADD COLUMN "amount_cents" integer;--> statement-breakpoint
+ALTER TABLE "payment_operation_intents" ADD CONSTRAINT "payment_operation_intents_amount_nonnegative" CHECK ("amount_cents" is null or "amount_cents" >= 0);
