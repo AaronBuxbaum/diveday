@@ -86,7 +86,7 @@ Other sessions share this checkout ([rules](docs/agents/working-rules.md#paralle
 
 - **A background job you start is yours to end** (`node scripts/stray-processes.mjs --list`, never
   `TaskList`); never pipe a long run through `tail`/`head`.
-- **Verify before commit, `pnpm verify:push --quick` before push, push once per round, fix CI forward** (**verify**); never
+- **Verify before commit, `pnpm verify:push --quick` before push, fix CI forward** (**verify**); never
   report unverified work as done.
 - **File only a bug, safety gap or decision** as a `needs-triage` issue (ten a run); the rest is
   one "Notes" PR comment.
