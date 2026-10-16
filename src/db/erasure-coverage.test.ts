@@ -391,7 +391,6 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
     "the front-desk address's own proof of ownership (issue #1288) — the shop’s address, not a diver’s",
   shop_whatsapp_accounts:
     "the shop’s own WhatsApp sender: a number, a template and sealed credentials",
-  inbox_saved_answers: "the shop’s reply templates; a diver’s name becomes a `{name}` marker",
   shop_stripe_accounts: "the shop’s Connect account and what it is enabled for",
   stripe_payouts:
     "the shop’s own money leaving its Connect account for its bank: one row per Stripe payout, its amount, fees and the days it covers. No diver is named on a payout; the payments it settles are censused on their orders",

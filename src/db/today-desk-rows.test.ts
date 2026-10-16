@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { groupByDeparture } from "@/lib/today";
 import { fileScopedShopContext } from "@/test/db";
 import { countOpenLostItems, openLostItemsByPerson, recordLostItem } from "./lost-items";
-import { shops } from "./schema";
+import { lostItems, shops } from "./schema";
 import { getTodayWork } from "./today";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
@@ -25,11 +26,16 @@ describe("the blank emergency card row (fifth loop, item 3)", () => {
     const now = nowDate();
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
     const row = work.actions.find((action) => action.kind === "emergency_card_blank");
-    expect(row?.subject).toBe("Your emergency card has no numbers");
-    expect(row?.detail).toMatch(/sails without a chamber or coast guard number on it\.$/);
+    expect(row?.subject).toBe("Your emergency reference has no numbers");
+    expect(row?.detail).toMatch(/sails without a chamber or coastguard number on it\.$/);
     expect(row?.href).toBe(`/shop/${shop.slug}/settings/emergency-reference`);
-    // A shop-wide row, so it is in today's list even when the boat is tomorrow's.
-    expect(row?.departure).toBeUndefined();
+    // Filed under the boat it names, so it sits in that boat's group with the
+    // boat's own rows rather than below every boat in the desk's.
+    expect(row?.departure?.tripId).toBeDefined();
+    const group = groupByDeparture(work.actions).find((candidate) =>
+      candidate.rows.some((action) => action.kind === "emergency_card_blank"),
+    );
+    expect(group?.departure?.tripId).toBe(row?.departure?.tripId);
     expect(row?.dueAt?.getTime()).toBeGreaterThan(now.getTime() - 60 * 60 * 1000);
     expect((row?.dueAt?.getTime() ?? 0) - now.getTime()).toBeLessThanOrEqual(48 * 60 * 60 * 1000);
   });
@@ -53,7 +59,7 @@ describe("found items waiting to go home (fifth loop, item 7)", () => {
     if (!trip) throw new Error("demo needs a booked trip");
     const [seat] = await getTripRoster(db, shop.id, trip.id);
     if (!seat) throw new Error("trip has no roster");
-    expect(await countOpenLostItems(db, shop.id)).toBe(0);
+    expect(await countOpenLostItems(db, shop.id, nowDate())).toBe(0);
 
     const recorded = await recordLostItem(db, {
       shopId: shop.id,
@@ -78,5 +84,31 @@ describe("found items waiting to go home (fifth loop, item 7)", () => {
     const byPerson = await openLostItemsByPerson(db, shop.id, [seat.person.id]);
     // The unclaimed fin is nobody's to be told about.
     expect(byPerson.get(seat.person.id)).toEqual(["Blue mask, black strap"]);
+  });
+
+  it("leaves out an unclaimed item older than thirty days, never one somebody owns", async () => {
+    const { db, shop } = ctx;
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const trip = trips.find((row) => row.booked > 0);
+    if (!trip) throw new Error("demo needs a booked trip");
+    const [seat] = await getTripRoster(db, shop.id, trip.id);
+    if (!seat) throw new Error("trip has no roster");
+    const now = nowDate();
+    const longAgo = new Date(now.getTime() - 31 * 24 * 60 * 60 * 1000);
+    await recordLostItem(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      description: "Old towel",
+      actorPersonId: null,
+    });
+    await recordLostItem(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      description: "Old wetsuit",
+      bookingId: seat.booking.id,
+      actorPersonId: null,
+    });
+    await db.update(lostItems).set({ createdAt: longAgo }).where(eq(lostItems.shopId, shop.id));
+    expect(await countOpenLostItems(db, shop.id, now)).toBe(1);
   });
 });

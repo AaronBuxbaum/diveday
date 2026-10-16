@@ -1,7 +1,7 @@
 import { loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { paletteAnswerFacts } from "@/db/palette-answer";
-import { EMPTY_RESULTS, searchShop } from "@/db/search";
+import { EMPTY_RESULTS, resolveRecentRecords, searchShop } from "@/db/search";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -10,6 +10,7 @@ import { isStaff } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { paletteAnswerView, paletteQueryNames } from "@/lib/palette-answer";
+import { parseRecentParam } from "@/lib/recent-refs";
 
 const NO_STORE = { "Cache-Control": "private, no-store" } as const;
 
@@ -77,6 +78,12 @@ export async function GET(request: Request) {
   }
 
   const locale = await requestLocale(shop.defaultLocale);
+  // ⌘K opening on its recents: the device holds ids, the words are read here.
+  if (searchParams.has("recent")) {
+    const refs = parseRecentParam(searchParams.get("recent"));
+    const recent = await resolveRecentRecords(db, shop.id, refs, shop.timezone, locale);
+    return Response.json({ ...recent, answer: null }, { headers: NO_STORE });
+  }
   const results = await searchShop(db, session.user.shopId, query, shop.timezone, locale);
   // **Ask it, and it answers** (ADR 20260906-before-you-ask, decision 3). When
   // the query names one thing — a day, one diver, one departure — the card's

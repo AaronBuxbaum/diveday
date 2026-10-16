@@ -102,7 +102,7 @@
     "workOrderUncollected": "Reparación sin recoger",
     "staffCredentialDue": "Credencial",
     "unitsUnconfirmed": "Configuración",
-    "emergencyCardBlank": "Tarjeta de emergencia",
+    "emergencyCardBlank": "Referencia de emergencia",
     "lostItemsWaiting": "Objetos perdidos",
     "helpRequest": "Solicitud de ayuda",
     "rentalFit": "Equipo",
@@ -268,9 +268,9 @@
     "meters": "metros"
   },
   "emergencyCard": {
-    "subject": "Tu tarjeta de emergencia no tiene números",
+    "subject": "Tu referencia de emergencia no tiene números",
     "detail": "La salida de las {time} de {day} zarpa sin un número de cámara hiperbárica ni de guardacostas.",
-    "action": "Completar la tarjeta"
+    "action": "Añadir los números"
   },
   "lostItems": {
     "subject": "{count, plural, one {# objeto esperando a su dueño} other {# objetos esperando a sus dueños}}",
@@ -292,7 +292,7 @@
     "overdueDetail": "{credential} venció el {dueOn}."
   },
   "sayHello": {
-    "firstTrip": "{names}: primera inmersión contigo.",
+    "firstTrip": "{names}: primera vez con nosotros.",
     "returning": "{name} vuelve tras {years, plural, one {# año} other {# años}}."
   },
   "unfinished": {

@@ -1,27 +1,38 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
+import { MAX_RECENTS } from "@/lib/recent-refs";
 import {
   forgetAllRecents,
-  MAX_RECENTS,
-  type RecentRecord,
+  readRecents,
   recentsStorageKey,
+  type StoredRecent,
   withRecent,
 } from "./palette-recents";
 
-const record = (id: string): RecentRecord => ({
-  key: `diver:${id}`,
-  kind: "diver",
-  label: id,
-  href: `/shop/s/divers/${id}`,
-});
+const record = (id: string): StoredRecent => ({ key: `diver:${id}`, kind: "diver", id });
 
 describe("withRecent", () => {
   it("puts the newest first, once, and keeps five", () => {
-    let recents: RecentRecord[] = [];
+    let recents: StoredRecent[] = [];
     for (const id of ["a", "b", "c", "d", "e", "f"]) recents = withRecent(recents, record(id));
     recents = withRecent(recents, record("c"));
-    expect(recents.map((row) => row.label)).toEqual(["c", "f", "e", "d", "b"]);
+    expect(recents.map((row) => row.id)).toEqual(["c", "f", "e", "d", "b"]);
     expect(recents).toHaveLength(MAX_RECENTS);
+  });
+});
+
+describe("readRecents", () => {
+  it("keeps only a kind and an id, so an older row with a name and contact line is dropped", () => {
+    const key = recentsStorageKey("blue-mantis", "p-1");
+    window.localStorage.setItem(
+      key,
+      JSON.stringify([
+        { key: "diver:a", kind: "diver", label: "Ana", detail: "ana@x.example", href: "/shop/x" },
+        { key: "diver:b", kind: "diver", id: "b" },
+        { key: "diver:c", kind: "person", id: "c" },
+      ]),
+    );
+    expect(readRecents(key)).toEqual([{ key: "diver:b", kind: "diver", id: "b" }]);
   });
 });
 

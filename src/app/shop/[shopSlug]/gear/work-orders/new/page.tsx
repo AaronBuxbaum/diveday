@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
+import { KeepTypedOnRefusal, keptTypedScope } from "@/components/KeepTypedOnRefusal";
 import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { PersonSearchForm } from "@/components/seat-diver/PersonSearchForm";
@@ -63,7 +63,7 @@ export default async function NewWorkOrderPage({
 }) {
   const { shopSlug } = await params;
   const search = await searchParams;
-  const { db, shop } = await requireShopSurface(shopSlug);
+  const { db, shop, session } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const board = shopPath(shopSlug, "gear", "work-orders");
@@ -197,7 +197,11 @@ export default async function NewWorkOrderPage({
           <SectionCard title={t("workOrders.new.jobHeading")} padding="lg">
             <FieldGrid as="form" action={createWorkOrderAction} columns={2}>
               {/* The customer's paragraph survives a refused date. */}
-              <KeepTypedOnRefusal form="work-order-new" restore={refused} />
+              <KeepTypedOnRefusal
+                form="work-order-new"
+                scope={keptTypedScope(shopSlug, session.user.personId)}
+                restore={refused}
+              />
               {personId ? <input type="hidden" name="personId" value={personId} /> : null}
               {chosenUnit ? <input type="hidden" name="gearItemId" value={chosenUnit.id} /> : null}
 

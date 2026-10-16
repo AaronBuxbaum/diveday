@@ -6,7 +6,7 @@ import { SEAT_SURFACES, type SeatSurfaceId } from "@/app/actions/seat-diver-surf
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/actions";
 import { FormDraft } from "@/components/FormDraft";
 import { formDraftCopy } from "@/components/form-draft-copy";
-import { KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
+import { KeepTypedOnRefusal, keptTypedScope } from "@/components/KeepTypedOnRefusal";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { NameMatchCandidateFacts } from "@/components/seat-diver/NameMatchCandidateFacts";
@@ -16,15 +16,20 @@ import { SectionCard } from "@/components/ui/card";
 import { FieldActions } from "@/components/ui/form";
 import { findSimilarDivers } from "@/db/divers";
 import { readFormDraft } from "@/db/form-drafts";
+import { staffParticipantTypeLabel } from "@/i18n/participant-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { maxPlausibleBirthDate } from "@/lib/age";
 import { formatTime } from "@/lib/format";
 import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
+import { PARTICIPANT_TYPES } from "@/lib/participant-types";
 import { diverSearchPrefill } from "@/lib/person-fields";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
-import { WALK_IN_PARTY_FORM } from "@/lib/walk-in-party";
+import { WALK_IN_FIRST_ROW, WALK_IN_PARTY_FORM, WALK_IN_PARTY_MAX } from "@/lib/walk-in-party";
+import { PartyOnFileChoices, type PartyOnFileRow } from "./_components/PartyOnFileChoices";
 import { WalkInPartyRows } from "./_components/WalkInPartyRows";
+import { type WalkInExtrasCopy, WalkInPersonExtras } from "./_components/WalkInPersonExtras";
 import { createDiverFormAction } from "./actions";
 
 export const instant = true;
@@ -46,8 +51,8 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "diver-unavailable": { tone: "danger", key: "trips.notices.diverUnavailable" },
   "diver-invalid": { tone: "danger", key: "divers.page.noticeInvalid" },
   "seat-busy": { tone: "danger", key: "seatDiver.busy" },
-  // A walk-in party with a name that reads like somebody on file (fifth
-  // loop, item 9): seat that person from the search, or say they are all new.
+  // A walk-in party with names that read like somebody on file (fifth loop,
+  // item 9): each such row is settled on its own, below.
   "party-on-file": { tone: "danger", key: "divers.page.partyOnFile" },
 };
 
@@ -69,6 +74,8 @@ export default async function NewDiverPage({
     confirmName?: string;
     confirmEmail?: string;
     confirmPhone?: string;
+    /** `onFile-<row>`: a party row the on-file check stopped on, by the name typed. */
+    [onFile: `onFile-${number}`]: string | undefined;
   }>;
 }) {
   const { shopSlug } = await params;
@@ -85,9 +92,11 @@ export default async function NewDiverPage({
     confirmName,
     confirmEmail,
     confirmPhone,
+    ...rest
   } = await searchParams;
 
   const { db, shop, session } = await requireShopSurface(shopSlug);
+  const keptScope = keptTypedScope(shopSlug, session.user.personId);
 
   const locale = await requestLocale(shop.defaultLocale);
   // What this person had typed here when they were last interrupted (ADR
@@ -151,6 +160,38 @@ export default async function NewDiverPage({
   const noticeText = banner ? t(banner.key) : null;
   const noticeIsError = banner?.tone === "danger";
   const walkInParty = surface === "walk-in" && tripId !== null;
+  // Each party row the on-file check stopped on, with who it reads like.
+  const onFileRows: PartyOnFileRow[] =
+    walkInParty && notice === "party-on-file"
+      ? (
+          await Promise.all(
+            Object.entries(rest)
+              .flatMap(([key, value]) => {
+                const row = /^onFile-(\d{1,4})$/.exec(key)?.[1];
+                return row !== undefined && typeof value === "string" && value.trim()
+                  ? [{ row: Number(row), typedName: value.trim() }]
+                  : [];
+              })
+              .sort((a, b) => a.row - b.row)
+              .slice(0, WALK_IN_PARTY_MAX)
+              .map(async (entry) => ({
+                ...entry,
+                matches: await findSimilarDivers(db, shop.id, entry.typedName),
+              })),
+          )
+        ).filter((entry) => entry.matches.length > 0)
+      : [];
+  const extrasCopy: WalkInExtrasCopy = {
+    comingAs: t("participants.roster.typeLabel"),
+    types: Object.fromEntries(
+      PARTICIPANT_TYPES.map((type) => [type, staffParticipantTypeLabel(t, type)]),
+    ) as WalkInExtrasCopy["types"],
+    under18: t("divers.page.party.under18"),
+    under18Hint: t("divers.page.party.under18Hint"),
+    dob: t("divers.page.party.dob"),
+    dobHint: t("divers.page.party.dobHint"),
+  };
+  const dobMax = maxPlausibleBirthDate();
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -289,15 +330,36 @@ export default async function NewDiverPage({
               the counter, where the party is standing at the desk. */}
           {walkInParty ? (
             <>
-              <KeepTypedOnRefusal form={WALK_IN_PARTY_FORM} restore={noticeIsError} />
-              <WalkInPartyRows
+              <KeepTypedOnRefusal
+                form={WALK_IN_PARTY_FORM}
+                scope={keptScope}
                 restore={noticeIsError}
+              />
+              <div className="col-span-full">
+                <WalkInPersonExtras
+                  row={WALK_IN_FIRST_ROW}
+                  typeField="participantType"
+                  copy={extrasCopy}
+                  dobMax={dobMax}
+                />
+              </div>
+              {onFileRows.length > 0 ? (
+                <PartyOnFileChoices
+                  rows={onFileRows}
+                  t={t}
+                  locale={locale}
+                  timeZone={shop.timezone}
+                />
+              ) : null}
+              <WalkInPartyRows
+                keptScope={keptScope}
+                restore={noticeIsError}
+                dobMax={dobMax}
                 copy={{
                   add: t("divers.page.party.add"),
                   person: t.raw("divers.page.party.person"),
                   name: t("divers.page.fullNameLabel"),
-                  under18: t("divers.page.party.under18"),
-                  under18Hint: t("divers.page.party.under18Hint"),
+                  extras: extrasCopy,
                   remove: t("divers.page.party.remove"),
                   removeFor: t.raw("divers.page.party.removeFor"),
                 }}
@@ -310,16 +372,6 @@ export default async function NewDiverPage({
             <SubmitButton pendingLabel={t("divers.page.adding")} className={buttonClass()}>
               {submitLabel}
             </SubmitButton>
-            {walkInParty && notice === "party-on-file" ? (
-              <SubmitButton
-                name="force"
-                value="true"
-                pendingLabel={t("divers.page.adding")}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {t("divers.page.party.allNew")}
-              </SubmitButton>
-            ) : null}
             <Link href={backLink.href} className={buttonClass({ variant: "secondary" })}>
               {t("divers.page.cancel")}
             </Link>

@@ -1928,7 +1928,7 @@ export async function getTodayWork(
       personIds: agencyCheckCandidates(readinessByTrip),
     }),
     // The found items waiting (fifth loop, item 7), beside the wave.
-    countOpenLostItems(db, shopId),
+    countOpenLostItems(db, shopId, now),
   ]);
   const {
     departureRollCall,

@@ -57,6 +57,18 @@ describe("saveAnswerFromReply", () => {
     expect(saved?.title).toBe("Hi, park behind the shop by the tank…");
   });
 
+  it("remembers whose reply it came from, so erasing that diver can reach it", async () => {
+    const diver = await seededDiver();
+    const replyId = await sentReply("Booties are on the left rack.");
+    const outcome = await saveAnswerFromReply(ctx.db, { shopId: ctx.shop.id, replyId });
+    if (!outcome.ok) throw new Error("expected a saved answer");
+    const [row] = await ctx.db
+      .select({ sourcePersonId: inboxSavedAnswers.sourcePersonId })
+      .from(inboxSavedAnswers)
+      .where(eq(inboxSavedAnswers.id, outcome.id));
+    expect(row?.sourcePersonId).toBe(diver.id);
+  });
+
   it("does not save the same answer twice", async () => {
     const first = await sentReply("We open the gate at 7:15.");
     const second = await sentReply("We open the gate at 7:15.");

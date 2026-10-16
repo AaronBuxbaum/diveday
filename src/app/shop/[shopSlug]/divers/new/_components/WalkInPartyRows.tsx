@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { applyFormFields } from "@/components/apply-form-fields";
 import { readKeptTyped } from "@/components/KeepTypedOnRefusal";
 import { buttonClass } from "@/components/ui/button";
-import { choiceClass, controlClass, legendClass } from "@/components/ui/form";
+import { controlClass, legendClass } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
 import { WALK_IN_PARTY_FORM, WALK_IN_PARTY_MAX, walkInMemberField } from "@/lib/walk-in-party";
+import { type WalkInExtrasCopy, WalkInPersonExtras } from "./WalkInPersonExtras";
 
 export type WalkInPartyCopy = {
   /** "Add another person" */
@@ -15,10 +16,8 @@ export type WalkInPartyCopy = {
   person: string;
   /** "Full name" */
   name: string;
-  /** "Under 18" */
-  under18: string;
-  /** "A parent or guardian signs the release with them." */
-  under18Hint: string;
+  /** Each row's "Coming as", "Under 18" and date of birth. */
+  extras: WalkInExtrasCopy;
   /** "Remove" */
   remove: string;
   /** "Remove person {n}" */
@@ -28,9 +27,10 @@ export type WalkInPartyCopy = {
 /**
  * **The rest of a walk-in family, on the same form** (fifth loop, item 9).
  * The form's own fields are the first person; each "Add another person" row
- * is one more, with the party form's "Under 18" tick, and the whole party is
- * seated together in one transaction (`seatParty`). A row with no name is
- * ignored, so an extra tap costs nothing.
+ * is one more, with what they are coming as and the party form's "Under 18"
+ * tick (`WalkInPersonExtras`), and the whole party is seated together in one
+ * transaction (`seatParty`). A row with no name is ignored, so an extra tap
+ * costs nothing.
  *
  * Rows are numbered by a counter that never reuses a number, so removing the
  * second of three never shifts a tick onto somebody else's name.
@@ -38,8 +38,14 @@ export type WalkInPartyCopy = {
 export function WalkInPartyRows({
   copy,
   restore,
+  keptScope,
+  dobMax,
 }: {
   copy: WalkInPartyCopy;
+  /** The latest plausible date of birth, for each row's date field. */
+  dobMax: string;
+  /** `keptTypedScope`: this shop and this staffer. */
+  keptScope: string;
   /** The page came back with this form's refusal: rebuild the rows that were sent. */
   restore: boolean;
 }) {
@@ -51,7 +57,7 @@ export function WalkInPartyRows({
   // Rebuild the rows a refused submit carried, then fill them once they exist.
   useEffect(() => {
     if (!restore) return;
-    const kept = readKeptTyped(WALK_IN_PARTY_FORM);
+    const kept = readKeptTyped(WALK_IN_PARTY_FORM, keptScope);
     if (!kept) return;
     const numbers = Object.keys(kept)
       .map((name) => /^member-(\d+)-name$/.exec(name)?.[1])
@@ -63,7 +69,7 @@ export function WalkInPartyRows({
     next.current = Math.max(...numbers) + 1;
     pending.current = kept;
     setRows(numbers);
-  }, [restore]);
+  }, [restore, keptScope]);
 
   useEffect(() => {
     const form = anchor.current?.closest("form");
@@ -81,35 +87,20 @@ export function WalkInPartyRows({
   return (
     <div ref={anchor} className="col-span-full grid gap-4" data-testid="walk-in-party">
       {rows.map((number, index) => (
-        <fieldset
-          key={number}
-          className="grid gap-3 rounded-lg border border-border p-4 sm:grid-cols-[1fr_auto] sm:items-end"
-        >
+        <fieldset key={number} className="grid gap-3 rounded-lg border border-border p-4">
           <legend className={`${legendClass} text-sm font-medium`}>
             {fill(copy.person, { n: String(index + 2) })}
           </legend>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">{copy.name}</span>
-            <input
-              name={walkInMemberField(number, "name")}
-              required
-              maxLength={120}
-              autoComplete="off"
-              className={controlClass}
-            />
-          </label>
-          <div className="flex items-center gap-4">
-            <label className="flex min-h-11 items-center gap-2 text-sm">
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium">{copy.name}</span>
               <input
-                type="checkbox"
-                name={walkInMemberField(number, "minor")}
-                value="true"
-                className={choiceClass}
+                name={walkInMemberField(number, "name")}
+                required
+                maxLength={120}
+                autoComplete="off"
+                className={controlClass}
               />
-              <span>
-                {copy.under18}
-                <span className="block text-xs text-muted">{copy.under18Hint}</span>
-              </span>
             </label>
             <button
               type="button"
@@ -120,6 +111,12 @@ export function WalkInPartyRows({
               {copy.remove}
             </button>
           </div>
+          <WalkInPersonExtras
+            row={number}
+            typeField={walkInMemberField(number, "type")}
+            copy={copy.extras}
+            dobMax={dobMax}
+          />
         </fieldset>
       ))}
       {rows.length < WALK_IN_PARTY_MAX - 1 ? (

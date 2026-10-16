@@ -33,10 +33,10 @@ const COPY: FirstRunChecklistCopy = {
   releaseBody: "Divers sign DiveDay’s sample wording until you publish your own.",
   releaseAction: "Read the release",
   releaseDone: "Your own release is live.",
-  emergencyTitle: "Fill in your emergency card",
+  emergencyTitle: "Fill in your emergency reference",
   emergencyBody: "The numbers your crew dials at sea. They ride on every manifest, offline too.",
-  emergencyAction: "Fill in the card",
-  emergencyDone: "Your emergency card has numbers on it.",
+  emergencyAction: "Add the numbers",
+  emergencyDone: "Your emergency reference has numbers on it.",
   tripTitle: "Schedule your first trip",
   tripBody: "Put a departure on the board — divers can’t book until one exists.",
   tripAction: "Add a departure",
@@ -522,13 +522,13 @@ describe("the emergency card step", () => {
   it("takes the primary ahead of the departure while the card is blank", () => {
     const { container } = renderSetUp(false);
     const primary = container.querySelector('[data-first-run-primary="true"]');
-    expect(primary).toHaveTextContent("Fill in the card");
+    expect(primary).toHaveTextContent("Add the numbers");
     expect(primary).toHaveAttribute("href", "/shop/blue-mantis/settings/emergency-reference");
   });
 
   it("settles once the card has a number", () => {
     const { container } = renderSetUp(true);
-    expect(screen.getByText("Your emergency card has numbers on it.")).toBeInTheDocument();
+    expect(screen.getByText("Your emergency reference has numbers on it.")).toBeInTheDocument();
     expect(container.querySelector('[data-first-run-primary="true"]')).toHaveTextContent(
       "Add a departure",
     );

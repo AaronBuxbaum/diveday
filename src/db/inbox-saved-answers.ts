@@ -70,8 +70,9 @@ export type SaveAnswerOutcome =
 /**
  * **"Save this answer"**, from a reply the shop already sent. Only the reply's
  * id is posted: the words are read from the stored reply inside the session's
- * shop, and the diver it went to has their name swapped for `{name}` before
- * anything is written, so the saved answer is about nobody.
+ * shop, and the diver it went to has their name swapped for `{name}` (and any
+ * address or number taken out) before anything is written. The row keeps who
+ * the reply went to, so erasing that diver deletes it.
  */
 export async function saveAnswerFromReply(
   db: DbExecutor,
@@ -112,7 +113,12 @@ export async function saveAnswerFromReply(
     }
     const [row] = await tx
       .insert(inboxSavedAnswers)
-      .values({ shopId: input.shopId, title: savedAnswerTitle(body), body })
+      .values({
+        shopId: input.shopId,
+        sourcePersonId: personId,
+        title: savedAnswerTitle(body),
+        body,
+      })
       .returning({ id: inboxSavedAnswers.id });
     return row
       ? ({ ok: true, id: row.id, personId } as const)

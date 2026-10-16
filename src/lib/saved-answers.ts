@@ -28,16 +28,33 @@ function wholeWord(term: string): RegExp {
   return new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(term)}(?![\\p{L}\\p{N}])`, "giu");
 }
 
+const EMAIL = /[^\s@<>()]+@[^\s@<>()]+\.[\p{L}]{2,}/gu;
+/** A run of digits and phone punctuation; it is a number once it holds seven digits. */
+const PHONE_LIKE = /\+?\(?\d[\d\s().-]{5,}\d/g;
+const PHONE_MIN_DIGITS = 7;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function withoutContactDetails(body: string): string {
+  return body
+    .replace(EMAIL, "")
+    .replace(PHONE_LIKE, (run) =>
+      run.replace(/\D/g, "").length >= PHONE_MIN_DIGITS && !ISO_DATE.test(run.trim()) ? "" : run,
+    )
+    .replace(/[ \t]+([,.;:!?])/g, "$1")
+    .replace(/[ \t]{2,}/g, " ");
+}
+
 /**
- * The sent reply's words with this diver's name taken out: the full name
- * first, then the first name, each swapped for `{name}`. What is written to
- * the shop's saved answers is about nobody.
+ * The sent reply's words with this diver taken out: the full name first, then
+ * the first name, each swapped for `{name}`, and any email address or phone
+ * number dropped, since a number in a reply belongs to somebody.
  */
 export function withNameMarker(body: string, fullName: string): string {
   const name = fullName.trim().replace(/\s+/g, " ");
-  if (!name) return body;
+  let out = withoutContactDetails(body);
+  if (!name) return out;
   const first = name.split(" ")[0] ?? name;
-  let out = body.replace(wholeWord(name), "{name}");
+  out = out.replace(wholeWord(name), "{name}");
   if (first !== name) out = out.replace(wholeWord(first), "{name}");
   return out;
 }

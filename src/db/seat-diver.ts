@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { trackEvent } from "@/lib/analytics";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -19,7 +19,7 @@ import { recordDeskEvent } from "./desk-events";
 import { publishManifestEvent } from "./manifest-events";
 import { sendCourseSeatConfirmation, sendStaffSeatingConfirmation } from "./notifications";
 import { recordTripActivity, type TripActivityEntry } from "./operations";
-import { shops, trips } from "./schema";
+import { people, shops, trips } from "./schema";
 import { type SendRescheduleNoticesOptions, sendSeatMoveNotice } from "./trip-rescheduled";
 import { liveTrip } from "./trips-live";
 import {
@@ -276,14 +276,28 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
   return seatConsequences(db, input, outcome);
 }
 
-/** One person typed on the walk-in form's party rows (fifth loop, item 9). */
-export type SeatPartyMember = {
-  fullName: string;
-  email?: string;
-  phone?: string;
+/** What every party member carries, whoever they are. */
+type SeatPartyMemberFacts = {
   /** The row's "Under 18" tick: a parent or guardian co-signs this seat's release. */
   minor: boolean;
+  /** The row's "Coming as" (ADR 20261007-participant-types); absent is a diver. */
+  participantType?: ParticipantType;
+  /**
+   * A date of birth the counter asked for beside "Under 18", `YYYY-MM-DD`,
+   * already checked by the caller. Written onto the person only where their
+   * record has none: the counter never overwrites a date on file.
+   */
+  dateOfBirth?: string;
 };
+
+/**
+ * One person on the walk-in form's party rows (fifth loop, item 9): a name
+ * typed for somebody new, or the record the staffer picked for that row from
+ * the on-file prompt, with the name they had typed for it (`typedName`, which
+ * the booking compares the way the single walk-in's prompt does, issue #1556).
+ */
+export type SeatPartyMember = SeatPartyMemberFacts &
+  ({ fullName: string; email?: string; phone?: string } | { personId: string; typedName: string });
 
 export type SeatPartyResult =
   | { ok: true; seats: Extract<SeatDiverResult, { ok: true }>[] }
@@ -315,10 +329,10 @@ export async function seatParty(
       actor: "staff" as const,
       shopId: input.shopId,
       tripId: input.tripId,
-      participantType: input.participantType ?? "diver",
-      fullName: member.fullName,
-      email: member.email,
-      phone: member.phone,
+      participantType: member.participantType ?? input.participantType ?? "diver",
+      ...("personId" in member
+        ? { personId: member.personId, fromNameMatch: { typedName: member.typedName } }
+        : { fullName: member.fullName, email: member.email, phone: member.phone }),
       minorDeclared: member.minor || undefined,
     })),
   );
@@ -334,6 +348,21 @@ export async function seatParty(
     source: "staff",
     partySize: outcome.bookings.length,
   });
+  // Before the release goes out, so the waiver reads the age the counter asked.
+  for (const [index, booking] of outcome.bookings.entries()) {
+    const dateOfBirth = input.members[index]?.dateOfBirth;
+    if (!dateOfBirth) continue;
+    await db
+      .update(people)
+      .set({ dateOfBirth })
+      .where(
+        and(
+          eq(people.id, booking.personId),
+          eq(people.shopId, input.shopId),
+          isNull(people.dateOfBirth),
+        ),
+      );
+  }
   const seats: Extract<SeatDiverResult, { ok: true }>[] = [];
   for (const booking of outcome.bookings) {
     seats.push(await seatConsequences(db, input, booking, { publish: false }));

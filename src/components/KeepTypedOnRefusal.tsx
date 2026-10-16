@@ -1,30 +1,47 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { MINUTE_MS, nowMs } from "@/lib/clock";
 import { draftableFields } from "@/lib/form-drafts";
 import { applyFormFields } from "./apply-form-fields";
 
-/** Where a form's last submission waits, per tab, until the answer comes back. */
-export function keptTypedKey(form: string): string {
-  return `diveday.refused-form.${form}`;
+const KEPT_PREFIX = "diveday.refused-form.";
+/** A refusal comes back in a second; anything older is a different visit. */
+const KEPT_FOR_MS = 10 * MINUTE_MS;
+
+/**
+ * Where a form's last submission waits, per tab, until the answer comes back:
+ * one key per form and per `scope` (the shop's slug and the staffer's person
+ * id), so the next staffer on a shared tab never sees the last one's typing.
+ */
+export function keptTypedKey(form: string, scope: string): string {
+  return `${KEPT_PREFIX}${scope}.${form}`;
+}
+
+/** The scope a staff page passes: this shop, this staffer. */
+export function keptTypedScope(shopSlug: string, personId: string): string {
+  return `${shopSlug}.${personId}`;
 }
 
 /**
  * What this tab last submitted from `form`, for a control that holds its own
  * state (a cart's picks) and so cannot be filled the way a keystroke would.
  */
-export function readKeptTyped(form: string): Record<string, string> | null {
-  return readKept(form);
+export function readKeptTyped(form: string, scope: string): Record<string, string> | null {
+  return readKept(form, scope);
 }
 
-function readKept(form: string): Record<string, string> | null {
+function readKept(form: string, scope: string): Record<string, string> | null {
   try {
-    const raw = window.sessionStorage.getItem(keptTypedKey(form));
+    const raw = window.sessionStorage.getItem(keptTypedKey(form, scope));
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     if (parsed == null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const { at, fields: stored } = parsed as { at?: unknown; fields?: unknown };
+    if (typeof at !== "number" || nowMs() - at > KEPT_FOR_MS) return null;
+    if (stored == null || typeof stored !== "object" || Array.isArray(stored)) return null;
     const fields: Record<string, string> = {};
-    for (const [name, value] of Object.entries(parsed)) {
+    for (const [name, value] of Object.entries(stored)) {
       if (typeof value === "string") fields[name] = value;
     }
     return fields;
@@ -33,11 +50,28 @@ function readKept(form: string): Record<string, string> | null {
   }
 }
 
-function forgetKept(form: string) {
+function forgetKept(form: string, scope: string) {
   try {
-    window.sessionStorage.removeItem(keptTypedKey(form));
+    window.sessionStorage.removeItem(keptTypedKey(form, scope));
   } catch {
     // Storage refused (a private window): nothing was kept to forget.
+  }
+}
+
+/**
+ * **Every kept form on this tab, gone**: signing out, and the sign-in page
+ * every ended session lands on, leave the next staffer none of the typing.
+ */
+export function forgetAllKeptTyped(): void {
+  try {
+    const keys: string[] = [];
+    for (let index = 0; index < window.sessionStorage.length; index += 1) {
+      const key = window.sessionStorage.key(index);
+      if (key?.startsWith(KEPT_PREFIX)) keys.push(key);
+    }
+    for (const key of keys) window.sessionStorage.removeItem(key);
+  } catch {
+    // Storage refused: nothing was kept to forget.
   }
 }
 
@@ -56,7 +90,16 @@ function forgetKept(form: string) {
  *
  * Renders nothing; the field-named refusal beside the control says what to fix.
  */
-export function KeepTypedOnRefusal({ form, restore }: { form: string; restore: boolean }) {
+export function KeepTypedOnRefusal({
+  form,
+  scope,
+  restore,
+}: {
+  form: string;
+  /** {@link keptTypedScope}: the shop and the staffer. */
+  scope: string;
+  restore: boolean;
+}) {
   const anchor = useRef<HTMLSpanElement>(null);
   const restoreRef = useRef(restore);
   restoreRef.current = restore;
@@ -65,12 +108,12 @@ export function KeepTypedOnRefusal({ form, restore }: { form: string; restore: b
     const element = anchor.current?.closest("form");
     if (!element) return;
     if (!restore) {
-      forgetKept(form);
+      forgetKept(form, scope);
       return;
     }
-    const kept = readKept(form);
+    const kept = readKept(form, scope);
     if (kept) applyFormFields(element, kept);
-  }, [form, restore]);
+  }, [form, scope, restore]);
 
   useEffect(() => {
     const element = anchor.current?.closest("form");
@@ -82,7 +125,10 @@ export function KeepTypedOnRefusal({ form, restore }: { form: string; restore: b
         ),
       );
       try {
-        window.sessionStorage.setItem(keptTypedKey(form), JSON.stringify(fields));
+        window.sessionStorage.setItem(
+          keptTypedKey(form, scope),
+          JSON.stringify({ at: nowMs(), fields }),
+        );
       } catch {
         // Storage refused: the refusal still names the field, the values are lost as before.
       }
@@ -92,7 +138,7 @@ export function KeepTypedOnRefusal({ form, restore }: { form: string; restore: b
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         if (!restoreRef.current) return;
-        const kept = readKept(form);
+        const kept = readKept(form, scope);
         if (kept) applyFormFields(element, kept);
       });
     };
@@ -103,7 +149,7 @@ export function KeepTypedOnRefusal({ form, restore }: { form: string; restore: b
       element.removeEventListener("submit", onSubmit);
       element.removeEventListener("reset", onReset);
     };
-  }, [form]);
+  }, [form, scope]);
 
   return <span ref={anchor} hidden />;
 }

@@ -100,9 +100,9 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   await expect(page.getByText(`/s/${unique}`).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible();
 
-  // **The emergency card is a step of its own** (fifth loop, item 3): a new
-  // shop's card is blank, and its door lands on the form that fills it.
-  await expect(page.getByRole("link", { name: "Fill in the card" })).toHaveAttribute(
+  // **The emergency reference is a step of its own** (fifth loop, item 3): a
+  // new shop's is blank, and its door lands on the form that fills it.
+  await expect(page.getByRole("link", { name: "Add the numbers" })).toHaveAttribute(
     "href",
     `/shop/${unique}/settings/emergency-reference`,
   );

@@ -24,6 +24,7 @@ import { createGearItemAction } from "../actions";
  */
 export function AddUnitForm({
   t,
+  keptScope,
   refused,
   labelError,
   purchasedOnError,
@@ -31,6 +32,8 @@ export function AddUnitForm({
   focusKey,
 }: {
   t: StaffTranslator;
+  /** `keptTypedScope`: this shop and this staffer. */
+  keptScope: string;
   refused: boolean;
   labelError?: string;
   purchasedOnError?: string;
@@ -40,11 +43,11 @@ export function AddUnitForm({
   focusKey?: string;
 }) {
   return (
-    <>
+    <div className="border-t border-border p-5 sm:p-6">
       <FieldGrid as="form" action={createGearItemAction} columns={2}>
         {/* A refused tag or date comes back with the serial, brand and
             size still typed (fifth loop, item 14). */}
-        <KeepTypedOnRefusal form="gear-add-unit" restore={refused} />
+        <KeepTypedOnRefusal form="gear-add-unit" scope={keptScope} restore={refused} />
         <Field label={t("gear.form.kind")}>
           <select name="kind" className={controlClass} defaultValue="bcd">
             {GEAR_KIND_ORDER.map((option) => (
@@ -101,6 +104,6 @@ export function AddUnitForm({
       </FieldGrid>
       {/* Keyed on the notice so a repeated refusal re-fires the focus. */}
       <FieldErrorFocus key={focusKey} scope="add-unit" />
-    </>
+    </div>
   );
 }

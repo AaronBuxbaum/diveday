@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import type { SearchResults } from "@/db/search";
+import { recentParam } from "@/lib/recent-refs";
+import { keepRecents, readRecents } from "./palette-recents";
+import { NO_RECENTS, type PaletteRecents } from "./palette-start-rows";
 
 /** No results: the palette before a query, and after one the server refused. */
 export const EMPTY: SearchResults = {
@@ -65,4 +68,48 @@ export function useShopSearch(query: string, setResults: (results: SearchResults
       clearTimeout(timer);
     };
   }, [query, setResults]);
+}
+
+/**
+ * **⌘K's recents, read back on opening** (security review F2). The device
+ * holds ids only; each time the palette opens they go to the shop-scoped
+ * search route, which answers with the words it may show this session. A
+ * record that does not come back is forgotten here too. A failed read shows no
+ * recents rather than stale ones.
+ */
+export function usePaletteRecents(open: boolean, storageKey: string): PaletteRecents {
+  const [recents, setRecents] = useState<PaletteRecents>(NO_RECENTS);
+  useEffect(() => {
+    if (!open) {
+      setRecents(NO_RECENTS);
+      return;
+    }
+    const stored = readRecents(storageKey);
+    if (stored.length === 0) return;
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const response = await fetch(
+          `/api/search?recent=${encodeURIComponent(recentParam(stored))}`,
+          {
+            signal: controller.signal,
+          },
+        );
+        if (!response.ok) return;
+        const hits = (await response.json()) as SearchResults;
+        const found = new Set([
+          ...hits.divers.map((hit) => `diver:${hit.id}`),
+          ...hits.trips.map((hit) => `trip:${hit.id}`),
+          ...hits.orders.map((hit) => `order:${hit.id}`),
+          ...hits.gear.map((hit) => `gear:${hit.id}`),
+        ]);
+        keepRecents(storageKey, found);
+        setRecents({ stored: stored.filter((row) => found.has(row.key)), hits });
+      } catch {
+        // Offline or aborted: no recents this time.
+      }
+    })();
+    return () => controller.abort();
+  }, [open, storageKey]);
+  return recents;
 }

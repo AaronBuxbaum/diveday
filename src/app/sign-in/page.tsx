@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { EntryShell } from "@/components/account/EntryShell";
 import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
+import { ForgetThisDevice } from "@/components/ForgetThisDevice";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -46,6 +47,8 @@ export default function SignInPage({
 }) {
   return (
     <div className="flex flex-1 flex-col">
+      {/* Every ended session lands here; the device keeps nothing of it. */}
+      <ForgetThisDevice />
       <Suspense fallback={<MarketingNavFallback />}>
         <MarketingNav />
       </Suspense>

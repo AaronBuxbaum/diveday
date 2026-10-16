@@ -102,7 +102,7 @@
     "workOrderUncollected": "Repair not collected",
     "staffCredentialDue": "Credential",
     "unitsUnconfirmed": "Setup",
-    "emergencyCardBlank": "Emergency card",
+    "emergencyCardBlank": "Emergency reference",
     "lostItemsWaiting": "Lost and found",
     "helpRequest": "Help request",
     "rentalFit": "Gear",
@@ -268,9 +268,9 @@
     "meters": "meters"
   },
   "emergencyCard": {
-    "subject": "Your emergency card has no numbers",
-    "detail": "The {time} boat {day} sails without a chamber or coast guard number on it.",
-    "action": "Fill in the card"
+    "subject": "Your emergency reference has no numbers",
+    "detail": "The {time} boat {day} sails without a chamber or coastguard number on it.",
+    "action": "Add the numbers"
   },
   "lostItems": {
     "subject": "{count, plural, one {# thing waiting to go home} other {# things waiting to go home}}",
@@ -292,7 +292,7 @@
     "overdueDetail": "{credential} expired {dueOn}."
   },
   "sayHello": {
-    "firstTrip": "{names}: first dive with you.",
+    "firstTrip": "{names}: first time with us.",
     "returning": "{name} is back after {years, plural, one {# year} other {# years}}."
   },
   "unfinished": {

@@ -1,7 +1,8 @@
-import { and, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import type { PaletteAnswerView } from "@/lib/palette-answer";
+import type { RecentRef } from "@/lib/recent-refs";
 import type { AppDb } from "./client";
 import { personSearchMatch } from "./person-search";
 import {
@@ -213,6 +214,39 @@ export async function searchShop(
       .limit(PER_GROUP),
   ]);
 
+  return toResults(
+    { diverRows, tripRows, diveSiteRows, courseRows, orderRows, gearRows },
+    locale,
+    timeZone,
+  );
+}
+
+type Rows = {
+  diverRows: { id: string; fullName: string; email: string | null; phone: string | null }[];
+  tripRows: { id: string; title: string; startsAt: Date; siteName: string | null }[];
+  diveSiteRows: DiveSiteHit[];
+  courseRows: CourseHit[];
+  orderRows: {
+    id: string;
+    personName: string;
+    totalCents: number;
+    currency: string;
+    createdAt: Date;
+  }[];
+  gearRows: {
+    id: string;
+    label: string;
+    status: GearItemStatus;
+    brandModel: string | null;
+    serialNumber: string | null;
+  }[];
+};
+
+function toResults(
+  { diverRows, tripRows, diveSiteRows, courseRows, orderRows, gearRows }: Rows,
+  locale: string,
+  timeZone: string,
+): SearchResults {
   return {
     divers: diverRows.map((row) => ({
       id: row.id,
@@ -246,4 +280,90 @@ export async function searchShop(
       detail: row.serialNumber ?? row.brandModel ?? null,
     })),
   };
+}
+
+const idsOf = (refs: readonly RecentRef[], kind: RecentRef["kind"]) =>
+  refs.filter((ref) => ref.kind === kind).map((ref) => ref.id);
+
+/**
+ * **⌘K's recents, read back live** (security review F2). The browser keeps
+ * only `{kind, id}`; the name and detail line come from here each time the
+ * palette opens, scoped to the session's shop, so a record removed or erased
+ * since is simply not returned and the palette drops it.
+ */
+export async function resolveRecentRecords(
+  db: AppDb,
+  shopId: string,
+  refs: readonly RecentRef[],
+  timeZone: string,
+  locale: string,
+): Promise<SearchResults> {
+  const diverIds = idsOf(refs, "diver");
+  const tripIds = idsOf(refs, "trip");
+  const orderIds = idsOf(refs, "order");
+  const gearIds = idsOf(refs, "gear");
+  const none = Promise.resolve([]);
+  const [diverRows, tripRows, orderRows, gearRows] = await Promise.all([
+    diverIds.length === 0
+      ? none
+      : db
+          .select({
+            id: people.id,
+            fullName: people.fullName,
+            email: people.email,
+            phone: people.phone,
+          })
+          .from(people)
+          .where(
+            and(eq(people.shopId, shopId), isNull(people.deletedAt), inArray(people.id, diverIds)),
+          ),
+    tripIds.length === 0
+      ? none
+      : db
+          .select({
+            id: trips.id,
+            title: trips.title,
+            startsAt: trips.startsAt,
+            siteName: diveSites.name,
+          })
+          .from(trips)
+          .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+          .where(and(eq(trips.shopId, shopId), liveTrip(), inArray(trips.id, tripIds))),
+    orderIds.length === 0
+      ? none
+      : db
+          .select({
+            id: orders.id,
+            personName: people.fullName,
+            totalCents: orders.totalCents,
+            currency: orders.currency,
+            createdAt: orders.createdAt,
+          })
+          .from(orders)
+          .innerJoin(people, eq(people.id, orders.personId))
+          .where(and(eq(orders.shopId, shopId), inArray(orders.id, orderIds))),
+    gearIds.length === 0
+      ? none
+      : db
+          .select({
+            id: gearItems.id,
+            label: gearItems.label,
+            status: gearItems.status,
+            brandModel: gearItems.brandModel,
+            serialNumber: gearItems.serialNumber,
+          })
+          .from(gearItems)
+          .where(
+            and(
+              eq(gearItems.shopId, shopId),
+              isNull(gearItems.deletedAt),
+              inArray(gearItems.id, gearIds),
+            ),
+          ),
+  ]);
+  return toResults(
+    { diverRows, tripRows, diveSiteRows: [], courseRows: [], orderRows, gearRows },
+    locale,
+    timeZone,
+  );
 }

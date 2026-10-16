@@ -21,8 +21,11 @@ export type KeptCart = {
  * item 14): the picks still on the register, their typed prices, the set
  * price and the payment. Null when nothing was kept.
  */
-export function readKeptCart(isOnRegister: (id: string) => boolean): KeptCart | null {
-  const kept = readKeptTyped(COUNTER_RENTAL_FORM);
+export function readKeptCart(
+  scope: string,
+  isOnRegister: (id: string) => boolean,
+): KeptCart | null {
+  const kept = readKeptTyped(COUNTER_RENTAL_FORM, scope);
   if (!kept) return null;
   const ids = (kept[UNIT_FIELD] ?? "").split(" ").filter(isOnRegister);
   const prices: Record<string, string> = {};

@@ -4,8 +4,15 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { setDateRequestOutcome } from "@/db/course-inquiries";
 import { findSimilarDivers } from "@/db/divers";
+import { discardFormDraft } from "@/db/form-drafts";
 import { busyOnLockWait } from "@/db/lock-bounds";
-import { type SeatDiverPerson, type SeatDiverRefusal, seatDiver, seatParty } from "@/db/seat-diver";
+import {
+  type SeatDiverPerson,
+  type SeatDiverRefusal,
+  type SeatPartyMember,
+  seatDiver,
+  seatParty,
+} from "@/db/seat-diver";
 import { nowDate } from "@/lib/clock";
 import { blankAsAbsent, formValue, parseForm, single } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -16,7 +23,7 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { uuidParam } from "@/lib/uuid";
-import { readWalkInPartyRows } from "@/lib/walk-in-party";
+import { readWalkInParty, WALK_IN_FIRST_ROW, WALK_IN_NEW_PERSON } from "@/lib/walk-in-party";
 import {
   SEAT_BUSY_NOTICE,
   SEAT_SURFACES,
@@ -350,14 +357,16 @@ const PARTY_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
 /**
  * **A walk-in family, seated in one pass** (fifth loop, item 9): the form's
  * own fields are the first person and each party row one more, booked
- * together on the departure or not at all (`seatParty`).
+ * together on the departure or not at all (`seatParty`). Each row says what
+ * that person is coming as, and an "Under 18" (the first person's too) may
+ * carry a date of birth the counter asked for.
  *
- * **Nobody here is seated on a guess.** A party row is a name and a tick,
- * with nothing to tell a returning diver from a namesake, so when any name in
- * the party reads like somebody already on file the whole form comes back
- * (`party-on-file`, rows kept) and that person is seated from the search,
- * where the record is picked rather than guessed (H-13, issue #1556). `force`
- * is the staffer's "these are all new people".
+ * **Nobody here is seated on a guess.** A name that reads like somebody on
+ * file brings the form back naming that row (`onFile-<row>`), and the page
+ * lists its candidates the way the single walk-in's prompt does (H-13, issue
+ * #1556). The staffer then settles each such row on its own: "Use the record
+ * on file" (that record's id) or "New person". A row settled either way is not
+ * asked about again; one still unsettled is.
  */
 export async function seatWalkInPartyAction(shopSlug: string, formData: FormData) {
   const surface = surfaceFor("walk-in");
@@ -369,30 +378,54 @@ export async function seatWalkInPartyAction(shopSlug: string, formData: FormData
     surface: "walk-in",
     tripId,
   }).toString()}`;
-  function back(notice: string): never {
-    return revalidateAndRedirect(formPath, noticeUrl(formPath, notice));
+  function back(notice: string, extra?: Record<string, string>): never {
+    return revalidateAndRedirect(formPath, noticeUrl(formPath, notice, extra));
   }
   if (!parsed.ok || !uuidParam(tripId)) back("diver-invalid");
 
-  const rows = readWalkInPartyRows(formData.entries());
-  if (rows.some((row) => !diverNameSchema.safeParse(row.fullName).success)) back("diver-invalid");
-  const members = [
+  const party = readWalkInParty(formData.entries());
+  if (party.invalid) back("diver-invalid");
+  if (party.rows.some((row) => !diverNameSchema.safeParse(row.fullName).success)) {
+    back("diver-invalid");
+  }
+  const everyone = [
     {
+      ...party.first,
+      row: WALK_IN_FIRST_ROW,
       fullName: parsed.data.fullName,
       email: parsed.data.email || undefined,
       phone: parsed.data.phone,
-      minor: false,
+      participantType: parsed.data.participantType,
     },
-    ...rows.map((row) => ({ fullName: row.fullName, minor: row.minor })),
+    ...party.rows,
   ];
 
   const db = await getDb();
-  if (raw.force !== "true") {
-    const matched = await Promise.all(
-      members.map((member) => findSimilarDivers(db, session.user.shopId, member.fullName)),
+  const unsettled = everyone.filter((member) => member.match === undefined);
+  const matched = await Promise.all(
+    unsettled.map((member) => findSimilarDivers(db, session.user.shopId, member.fullName)),
+  );
+  const onFile = unsettled.filter((_, index) => (matched[index]?.length ?? 0) > 0);
+  if (onFile.length > 0) {
+    back(
+      "party-on-file",
+      Object.fromEntries(onFile.map((member) => [`onFile-${member.row}`, member.fullName])),
     );
-    if (matched.some((matches) => matches.length > 0)) back("party-on-file");
   }
+
+  const members: SeatPartyMember[] = everyone.map((member) => {
+    const facts = {
+      minor: member.minor,
+      participantType: member.participantType,
+      dateOfBirth: member.dateOfBirth,
+    };
+    if (member.match !== undefined && member.match !== WALK_IN_NEW_PERSON) {
+      return { ...facts, personId: member.match, typedName: member.fullName };
+    }
+    return "email" in member
+      ? { ...facts, fullName: member.fullName, email: member.email, phone: member.phone }
+      : { ...facts, fullName: member.fullName };
+  });
 
   const outcome = await seatParty(db, {
     shopId: session.user.shopId,
@@ -401,10 +434,12 @@ export async function seatWalkInPartyAction(shopSlug: string, formData: FormData
     members,
     entry: surface.entry,
     refusals: surface.refusals,
-    participantType: parsed.data.participantType,
   }).catch(busyOnLockWait);
   if (outcome === "busy") back(SEAT_BUSY_NOTICE);
   if (!outcome.ok) back(PARTY_REFUSAL_NOTICE[outcome.reason]);
+  // The lead's name, email and phone were kept as a draft while typing; the
+  // party is seated, so the draft is finished with (security review N2).
+  await discardFormDraft(db, session.user.shopId, session.user.personId, "new_diver");
 
   const path = surface.seatedPath({ shopSlug, tripId, personId: "" });
   const seats = outcome.seats;

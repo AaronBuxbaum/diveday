@@ -17,20 +17,20 @@ import {
   staffDestinationHref,
   staffPaletteDestinations,
 } from "@/lib/staff-destinations";
+import { forgetThisDevice } from "../forget-device";
 import { PaletteGlyph } from "./PaletteGlyph";
-import { EMPTY, useCommandKey, useShopSearch } from "./palette-hooks";
+import { EMPTY, useCommandKey, usePaletteRecents, useShopSearch } from "./palette-hooks";
+import { recentsStorageKey, rememberRecent, type StoredRecent } from "./palette-recents";
 import {
-  forgetRecents,
-  type RecentRecord,
-  readRecents,
-  recentsStorageKey,
-  rememberRecent,
-} from "./palette-recents";
-import {
+  diverItem,
+  gearItem,
+  NO_RECENTS,
   NO_TODAY_BOATS,
+  orderItem,
+  type PaletteRecents,
   type PaletteTodayBoat,
-  recordItem,
   startGroups,
+  tripItem,
 } from "./palette-start-rows";
 
 /**
@@ -59,7 +59,7 @@ export type PaletteItem = {
    */
   card?: { lines: string[]; act: string };
   /** A record this row opens, kept as one of this staffer's recents once chosen. */
-  recent?: RecentRecord;
+  recent?: StoredRecent;
   /**
    * The row's left rail. Always decorative — every row's accessible name is
    * its `aria-label` — and always present, because a rail that appears on some
@@ -161,7 +161,7 @@ export type CommandPaletteCopy = {
  */
 function paletteGroups({
   results,
-  recents = [],
+  recents = NO_RECENTS,
   todayBoats = NO_TODAY_BOATS,
   query,
   boatBoardingHref,
@@ -178,8 +178,8 @@ function paletteGroups({
   startTransition,
 }: {
   results: SearchResults;
-  /** This staffer's recents on this device, newest first (`palette-recents.ts`). */
-  recents?: readonly RecentRecord[];
+  /** This staffer's recents on this device, as read back on opening (`palette-hooks.ts`). */
+  recents?: PaletteRecents;
   todayBoats?: readonly PaletteTodayBoat[];
   query: string;
   boatBoardingHref: string | undefined;
@@ -235,16 +235,7 @@ function paletteGroups({
     }
     out.push({ id: "answer", items });
   }
-  // A diver opens their record (ADR 20261001-logbook).
-  const diverItems: PaletteItem[] = results.divers.map((diver) =>
-    recordItem(
-      "diver",
-      diver.id,
-      diver.fullName,
-      diver.detail ?? undefined,
-      `${root}/divers/${diver.id}`,
-    ),
-  );
+  const diverItems: PaletteItem[] = results.divers.map((diver) => diverItem(diver, root));
   // "Add a diver called <whatever you typed>" matches *every* query by
   // construction, so it is the one row that can never lose a ranking contest
   // — which is how typing "sign out" used to offer to create a diver named
@@ -278,9 +269,7 @@ function paletteGroups({
     out.push({
       id: "trips",
       heading: copy.groupTrips,
-      items: results.trips.map((trip) =>
-        recordItem("trip", trip.id, trip.title, trip.detail, `${root}/trips/${trip.id}`),
-      ),
+      items: results.trips.map((trip) => tripItem(trip, root)),
     });
   }
   if (results.diveSites.length > 0) {
@@ -316,26 +305,14 @@ function paletteGroups({
     out.push({
       id: "gear",
       heading: copy.groupGear,
-      items: results.gear.map((unit) =>
-        recordItem(
-          "gear",
-          unit.id,
-          unit.label,
-          unit.detail
-            ? `${copy.gearStatuses[unit.status]} · ${unit.detail}`
-            : copy.gearStatuses[unit.status],
-          `${root}/gear/${unit.id}`,
-        ),
-      ),
+      items: results.gear.map((unit) => gearItem(unit, root, copy.gearStatuses)),
     });
   }
   if (results.orders.length > 0) {
     out.push({
       id: "orders",
       heading: copy.groupOrders,
-      items: results.orders.map((order) =>
-        recordItem("order", order.id, order.personName, order.detail, `${root}/orders/${order.id}`),
-      ),
+      items: results.orders.map((order) => orderItem(order, root)),
     });
   }
   // The second door to the language switcher, beside the one behind the
@@ -561,13 +538,12 @@ export function CommandPalette({
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults>(EMPTY);
   const [active, setActive] = useState(0);
-  const [recents, setRecents] = useState<RecentRecord[]>([]);
   const recentsKey = recentsStorageKey(shopSlug, readerId);
   // A shared desk's next staffer does not inherit these.
   const signOutForgetting = useCallback(() => {
-    forgetRecents(recentsKey);
+    forgetThisDevice();
     return signOutAction();
-  }, [recentsKey, signOutAction]);
+  }, [signOutAction]);
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const root = `/shop/${shopSlug}`;
@@ -588,15 +564,15 @@ export function CommandPalette({
   useEffect(() => {
     if (open) {
       inputRef.current?.focus();
-      setRecents(readRecents(recentsKey));
     } else {
       setQuery("");
       setResults(EMPTY);
       setActive(0);
     }
-  }, [open, recentsKey]);
+  }, [open]);
 
   useShopSearch(query, setResults);
+  const recents = usePaletteRecents(open, recentsKey);
 
   const groups = useMemo(
     () =>

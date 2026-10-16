@@ -17,7 +17,7 @@ import {
 } from "@/lib/person-fields";
 import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
-import { readWalkInPartyRows } from "@/lib/walk-in-party";
+import { readWalkInParty } from "@/lib/walk-in-party";
 
 const newDiverContextForm = z.object({
   surface: z.string().optional(),
@@ -74,12 +74,15 @@ export async function createDiverFormAction(formData: FormData) {
     redirect(buildNewDiverUrl(search));
   }
 
-  // **A walk-in family** (fifth loop, item 9): party rows send the whole form
-  // to the party seating, which runs its own on-file check over every name.
+  // **A walk-in family** (fifth loop, item 9): party rows, or a first person
+  // ticked "Under 18" or settled on the party's on-file prompt, send the whole
+  // form to the party seating, which runs its own on-file check over every
+  // name. A malformed party goes there too, to be refused rather than trimmed.
+  const party = readWalkInParty(formData.entries());
   if (
     activeSurface === "walk-in" &&
     activeTripId &&
-    readWalkInPartyRows(formData.entries()).length > 0
+    (party.rows.length > 0 || party.first.minor || party.first.match !== undefined || party.invalid)
   ) {
     await seatWalkInPartyAction(staff.user.shopSlug, formData);
     return;

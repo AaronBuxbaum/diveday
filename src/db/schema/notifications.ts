@@ -631,9 +631,10 @@ export const staffReplies = pgTable(
  *
  * The shop's own words, like a template: a short title for the chip and the
  * body, with `{name}` and `{trip}` markers the composer fills from the diver's
- * record. **No person column, on purpose**: a saved answer is about no diver,
- * and one saved from a sent reply has that diver's first name swapped for the
- * marker before it is written. Deleting is soft, like every delete.
+ * record. One saved from a sent reply has that diver's name, email addresses
+ * and phone numbers taken out before it is written, and keeps
+ * `source_person_id`: the words still came from a reply to them, so erasing
+ * that diver deletes the answer too. Deleting is soft, like every delete.
  */
 export const inboxSavedAnswers = pgTable(
   "inbox_saved_answers",
@@ -642,12 +643,17 @@ export const inboxSavedAnswers = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id),
+    /** The diver whose reply the words were saved from; null for one the shop wrote itself. */
+    sourcePersonId: uuid("source_person_id").references(() => people.id),
     title: text("title").notNull(),
     body: text("body").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("inbox_saved_answers_shop_idx").on(table.shopId, table.createdAt)],
+  (table) => [
+    index("inbox_saved_answers_shop_idx").on(table.shopId, table.createdAt),
+    index("inbox_saved_answers_source_person_idx").on(table.shopId, table.sourcePersonId),
+  ],
 );
 
 /**

@@ -1,26 +1,19 @@
+import { isRecentKind, MAX_RECENTS, type RecentKind } from "@/lib/recent-refs";
+
 /**
  * **What this staffer opened from ⌘K, on this device** (fifth loop, item 13).
  * The desk reopens the same three divers all morning, so the palette opens on
  * them before anything is typed.
  *
  * A per-device convenience and nothing more: kept in this browser's storage
- * under one key per shop and per staffer, never sent anywhere, and never relied
- * on. Storage that is blocked, full or cleared reads as no recents and writes
- * nothing. Only records are kept (a diver, a departure, an order, a unit of
- * gear): the label it was opened by, its detail line and its href, which are
- * all things this staffer could already see in this shop.
+ * under one key per shop and per staffer, and never relied on. Storage that is
+ * blocked, full or cleared reads as no recents and writes nothing. **Only which
+ * record**: its kind and id. The name and detail line are read back through the
+ * shop-scoped search route each time the palette opens (security review F2), so
+ * nobody holding the device without a session can read a diver's contact line
+ * out of it, and a record erased since stops coming back.
  */
-export type RecentKind = "diver" | "trip" | "order" | "gear";
-
-export type RecentRecord = {
-  key: string;
-  kind: RecentKind;
-  label: string;
-  detail?: string;
-  href: string;
-};
-
-export const MAX_RECENTS = 5;
+export type StoredRecent = { key: string; kind: RecentKind; id: string };
 
 const RECENTS_PREFIX = "diveday.palette.recent.";
 
@@ -28,55 +21,53 @@ export function recentsStorageKey(shopSlug: string, readerId: string | undefined
   return `${RECENTS_PREFIX}${shopSlug}.${readerId ?? "anyone"}`;
 }
 
-const KINDS: ReadonlySet<string> = new Set(["diver", "trip", "order", "gear"]);
-
-function isRecent(value: unknown): value is RecentRecord {
+function isStored(value: unknown): value is StoredRecent {
   if (typeof value !== "object" || value === null) return false;
   const row = value as Record<string, unknown>;
+  const keys = Object.keys(row);
   return (
-    typeof row.key === "string" &&
-    typeof row.label === "string" &&
-    typeof row.href === "string" &&
-    // A stored href is only ever a path inside this app.
-    row.href.startsWith("/shop/") &&
-    typeof row.kind === "string" &&
-    KINDS.has(row.kind) &&
-    (row.detail === undefined || typeof row.detail === "string")
+    keys.length === 3 &&
+    isRecentKind(row.kind) &&
+    typeof row.id === "string" &&
+    /^[\w-]+$/.test(row.id) &&
+    row.key === `${row.kind}:${row.id}`
   );
 }
 
-export function readRecents(storageKey: string): RecentRecord[] {
+export function readRecents(storageKey: string): StoredRecent[] {
   try {
     const raw = window.localStorage.getItem(storageKey);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(isRecent).slice(0, MAX_RECENTS) : [];
+    return Array.isArray(parsed) ? parsed.filter(isStored).slice(0, MAX_RECENTS) : [];
   } catch {
     return [];
   }
 }
 
-/** The newest first, one row per record, at most {@link MAX_RECENTS}. */
-export function withRecent(recents: readonly RecentRecord[], record: RecentRecord): RecentRecord[] {
-  return [record, ...recents.filter((row) => row.key !== record.key)].slice(0, MAX_RECENTS);
-}
-
-export function rememberRecent(storageKey: string, record: RecentRecord): void {
+function writeRecents(storageKey: string, recents: readonly StoredRecent[]): void {
   try {
-    const next = withRecent(readRecents(storageKey), record);
-    window.localStorage.setItem(storageKey, JSON.stringify(next));
+    window.localStorage.setItem(storageKey, JSON.stringify(recents));
   } catch {
     // Storage is a convenience: a private window or a full disk keeps nothing.
   }
 }
 
-/** Sign-out on a shared device takes this staffer's recents with it. */
-export function forgetRecents(storageKey: string): void {
-  try {
-    window.localStorage.removeItem(storageKey);
-  } catch {
-    // Nothing kept, nothing to forget.
-  }
+/** The newest first, one row per record, at most {@link MAX_RECENTS}. */
+export function withRecent(recents: readonly StoredRecent[], record: StoredRecent): StoredRecent[] {
+  return [record, ...recents.filter((row) => row.key !== record.key)].slice(0, MAX_RECENTS);
+}
+
+export function rememberRecent(storageKey: string, record: StoredRecent): void {
+  const { key, kind, id } = record;
+  writeRecents(storageKey, withRecent(readRecents(storageKey), { key, kind, id }));
+}
+
+/** After a read-back: keep only the records that still resolved. */
+export function keepRecents(storageKey: string, keys: ReadonlySet<string>): void {
+  const before = readRecents(storageKey);
+  const after = before.filter((row) => keys.has(row.key));
+  if (after.length !== before.length) writeRecents(storageKey, after);
 }
 
 /**

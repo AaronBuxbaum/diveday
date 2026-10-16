@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FlashParams } from "@/components/FlashParams";
-import { KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
+import { KeepTypedOnRefusal, keptTypedScope } from "@/components/KeepTypedOnRefusal";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -91,6 +91,7 @@ export default async function RentOutPage({
   const { shopSlug } = await params;
   const search = await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug);
+  const keptScope = keptTypedScope(shopSlug, session.user.personId);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
@@ -323,7 +324,11 @@ export default async function RentOutPage({
             <input type="hidden" name="personId" value={person.id} />
             <input type="hidden" name="from" value={from} />
             <input type="hidden" name="until" value={until} />
-            <KeepTypedOnRefusal form={COUNTER_RENTAL_FORM} restore={rentRefused} />
+            <KeepTypedOnRefusal
+              form={COUNTER_RENTAL_FORM}
+              scope={keptScope}
+              restore={rentRefused}
+            />
             {fleetSize === 0 || byKind.length === 0 ? (
               <SectionCard title={t("counterRentals.new.gearHeading")}>
                 {fleetSize === 0 ? (
@@ -361,7 +366,7 @@ export default async function RentOutPage({
                   ) : null
                 }
                 notice={<FormStatus tone="danger">{rentNotice}</FormStatus>}
-                restoreKept={rentRefused}
+                restoreKept={rentRefused ? keptScope : null}
                 words={{
                   gearHeading: t("counterRentals.new.gearHeading"),
                   kindsAria: t("counterRentals.new.kindsAria"),

@@ -56,6 +56,18 @@ describe("LiveRefresh", () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
+  it("holds off for a few seconds after a tap, so a row does not move under a thumb", () => {
+    render(<LiveRefresh holdAfterTapMs={5000} />);
+    act(() => vi.advanceTimersByTime(LIVE_REFRESH_INTERVAL_MS - 1000));
+    act(() => {
+      document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    });
+    act(() => vi.advanceTimersByTime(1000));
+    expect(refresh).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(LIVE_REFRESH_INTERVAL_MS));
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
   it("costs nothing in a hidden tab", () => {
     const state = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
     render(<LiveRefresh />);

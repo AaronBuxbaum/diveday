@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
+import { keptTypedScope } from "@/components/KeepTypedOnRefusal";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
@@ -396,18 +397,17 @@ export default async function GearRegisterPage({
               className="size-4 text-muted group-open/add-unit:rotate-90"
             />
           </summary>
-          <div className="border-t border-border p-5 sm:p-6">
-            <AddUnitForm
-              t={t}
-              refused={Boolean(addStatus)}
-              labelError={fieldError("label")}
-              purchasedOnError={fieldError("purchasedOn")}
-              status={
-                addStatus && { tone: addStatus.tone, text: noticeField ? null : t(addStatus.key) }
-              }
-              focusKey={notice}
-            />
-          </div>
+          <AddUnitForm
+            t={t}
+            keptScope={keptTypedScope(shopSlug, session.user.personId)}
+            refused={Boolean(addStatus)}
+            labelError={fieldError("label")}
+            purchasedOnError={fieldError("purchasedOn")}
+            status={
+              addStatus && { tone: addStatus.tone, text: noticeField ? null : t(addStatus.key) }
+            }
+            focusKey={notice}
+          />
         </AddUnitDetails>
       </div>
     </main>

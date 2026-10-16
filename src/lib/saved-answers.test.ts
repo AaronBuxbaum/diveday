@@ -31,6 +31,21 @@ describe("withNameMarker", () => {
     );
   });
 
+  it("takes out an email address and a phone number, which belong to somebody", () => {
+    expect(
+      withNameMarker(
+        "Hi Lena, write to dr.patel@clinic.example or call +1 (305) 555-0177 before 7:15.",
+        "Lena Ortiz",
+      ),
+    ).toBe("Hi {name}, write to or call before 7:15.");
+    expect(withNameMarker("Text 305.555.0177, not 2 tanks at $45.", "Lena Ortiz")).toBe(
+      "Text, not 2 tanks at $45.",
+    );
+    expect(withNameMarker("Your slot is 2026-10-18.", "Lena Ortiz")).toBe(
+      "Your slot is 2026-10-18.",
+    );
+  });
+
   it("does nothing without a name", () => {
     expect(withNameMarker("Park behind the shop.", "  ")).toBe("Park behind the shop.");
   });

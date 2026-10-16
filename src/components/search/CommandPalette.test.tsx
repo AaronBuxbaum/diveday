@@ -343,51 +343,59 @@ describe("CommandPalette recents and today's boats", () => {
     );
   }
 
-  it("remembers a diver opened from it, and opens on them next time", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response(JSON.stringify(results(null)), { status: 200 })),
+  it("remembers a diver opened from it by id only, and opens on them next time", async () => {
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify(results(null)), { status: 200 }),
     );
+    vi.stubGlobal("fetch", fetchMock);
     renderWith();
     await userEvent.click(screen.getByRole("button", { name: /Search/ }));
     await userEvent.type(screen.getByRole("combobox"), "gra");
     await userEvent.click(await screen.findByRole("option", { name: "Grace Mensah" }));
     expect(routerPush).toHaveBeenCalledWith("/shop/blue-mantis/divers/p-grace");
+    // The device keeps which record, never its name or contact line.
+    expect(
+      JSON.parse(window.localStorage.getItem("diveday.palette.recent.blue-mantis.p-desk") ?? ""),
+    ).toEqual([{ key: "diver:p-grace", kind: "diver", id: "p-grace" }]);
 
     await userEvent.click(screen.getByRole("button", { name: /Search/ }));
-    const first = screen.getAllByRole("option")[0];
-    expect(first).toHaveAccessibleName("Grace Mensah");
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `/api/search?recent=${encodeURIComponent("diver:p-grace")}`,
+      expect.anything(),
+    );
+    const first = await screen.findByRole("option", { name: "Grace Mensah" });
+    expect(screen.getAllByRole("option")[0]).toBe(first);
     expect(screen.getByText("Recent")).toBeInTheDocument();
+  });
+
+  it("drops a remembered record that no longer reads back, and forgets it", async () => {
+    window.localStorage.setItem(
+      "diveday.palette.recent.blue-mantis.p-desk",
+      JSON.stringify([{ key: "diver:p-gone", kind: "diver", id: "p-gone" }]),
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ ...results(null), divers: [] }))),
+    );
+    renderWith();
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    await waitFor(() =>
+      expect(window.localStorage.getItem("diveday.palette.recent.blue-mantis.p-desk")).toBe("[]"),
+    );
+    expect(screen.queryByText("Recent")).toBeNull();
   });
 
   it("keeps one staffer's recents from the next one on the same device", async () => {
     window.localStorage.setItem(
       "diveday.palette.recent.blue-mantis.p-owner",
-      JSON.stringify([
-        {
-          key: "diver:p-1",
-          kind: "diver",
-          label: "Owner's diver",
-          href: "/shop/blue-mantis/divers/p-1",
-        },
-      ]),
+      JSON.stringify([{ key: "diver:p-grace", kind: "diver", id: "p-grace" }]),
     );
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(results(null))));
+    vi.stubGlobal("fetch", fetchMock);
     renderWith();
     await userEvent.click(screen.getByRole("button", { name: /Search/ }));
-    expect(screen.queryByText("Owner's diver")).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.queryByText("Recent")).toBeNull();
-  });
-
-  it("refuses a stored row that does not point inside the shop's pages", async () => {
-    window.localStorage.setItem(
-      "diveday.palette.recent.blue-mantis.p-desk",
-      JSON.stringify([
-        { key: "diver:x", kind: "diver", label: "Elsewhere", href: "https://x.example" },
-      ]),
-    );
-    renderWith();
-    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
-    expect(screen.queryByText("Elsewhere")).toBeNull();
   });
 
   it("offers today's boats under Today before anything is typed, and not once a query is", async () => {

@@ -111,7 +111,7 @@ export function CounterRentalCart({
   invoiceExtras,
   words,
   notice,
-  restoreKept = false,
+  restoreKept = null,
 }: {
   groups: { kind: GearItemKind; kindLabel: string; units: PickerUnit[] }[];
   coreKinds: GearItemKind[];
@@ -130,8 +130,9 @@ export function CounterRentalCart({
    * The page came back with this form's refusal: put back the picks, prices
    * and payment this tab just submitted (fifth loop, item 14), so the staffer
    * swaps the one unit that was refused rather than building the bill again.
+   * The kept form's scope (`keptTypedScope`) when it did, else null.
    */
-  restoreKept?: boolean;
+  restoreKept?: string | null;
 }) {
   const billId = useId();
   const [kind, setKind] = useState<GearItemKind | undefined>(groups[0]?.kind);
@@ -143,7 +144,8 @@ export function CounterRentalCart({
   const byId = new Map(groups.flatMap((group) => group.units.map((unit) => [unit.id, unit])));
 
   const restore = useEffectEvent(() => {
-    const kept = readKeptCart((id) => byId.has(id));
+    if (!restoreKept) return;
+    const kept = readKeptCart(restoreKept, (id) => byId.has(id));
     if (!kept) return;
     if (kept.ids.length > 0) setPickedIds(kept.ids);
     setPrices(kept.prices);

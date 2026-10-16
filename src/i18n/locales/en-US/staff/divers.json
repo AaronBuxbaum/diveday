@@ -141,15 +141,18 @@
     "confirmMatchesNoDiveDay": "No dive days here yet",
     "confirmMatchesBorn": "Born {date}",
     "confirmMatchesSubmit": "Create new diver anyway",
-    "partyOnFile": "Someone in this party may already be on file. Add them from the search so their record is used, or seat everyone as new.",
+    "partyOnFile": "Some names here read like people already on file. Choose for each one.",
     "party": {
       "add": "Add another person",
       "person": "Person {n}",
       "under18": "Under 18",
-      "under18Hint": "A parent or guardian signs the release with them.",
+      "under18Hint": "A parent or legal guardian signs the release with them.",
+      "dob": "Date of birth",
+      "dobHint": "Optional. It sets a junior diver’s depth limit.",
       "remove": "Remove",
       "removeFor": "Remove person {n}",
-      "allNew": "Seat everyone as new"
+      "useOnFile": "Use the record on file",
+      "newPerson": "New person"
     }
   },
   "list": {

@@ -27,17 +27,26 @@ export function isTyping(active: Element | null): boolean {
  * It never fires while a field has focus, so a refresh does not land in the
  * middle of a name being typed, and a hidden tab costs nothing. The page's own
  * "Updated" line is the server's clock at render, so it moves with each read.
+ *
+ * `holdAfterTapMs` also holds it off for that long after any tap: on the
+ * check-in queue a refresh that reorders rows under a wet thumb can check in
+ * the wrong person (review fixes, dive-domain N7).
  */
-export function LiveRefresh() {
+export function LiveRefresh({ holdAfterTapMs = 0 }: { holdAfterTapMs?: number } = {}) {
   const router = useRouter();
   const last = useRef(0);
 
   useEffect(() => {
     last.current = performance.now();
+    let lastTap = Number.NEGATIVE_INFINITY;
+    const onTap = () => {
+      lastTap = performance.now();
+    };
     const refresh = (force: boolean) => {
       if (document.visibilityState !== "visible") return;
       if (isTyping(document.activeElement)) return;
       const at = performance.now();
+      if (at - lastTap < holdAfterTapMs) return;
       if (!force && at - last.current < LIVE_REFRESH_MIN_GAP_MS) return;
       last.current = at;
       router.refresh();
@@ -47,12 +56,14 @@ export function LiveRefresh() {
     const interval = setInterval(() => refresh(true), LIVE_REFRESH_INTERVAL_MS);
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onFocus);
+    if (holdAfterTapMs > 0) document.addEventListener("pointerdown", onTap, true);
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onFocus);
+      document.removeEventListener("pointerdown", onTap, true);
       clearInterval(interval);
     };
-  }, [router]);
+  }, [router, holdAfterTapMs]);
 
   return null;
 }

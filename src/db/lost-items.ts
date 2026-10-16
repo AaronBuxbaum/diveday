@@ -1,7 +1,7 @@
-import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { diverTranslator } from "@/i18n/messages";
-import { nowDate } from "@/lib/clock";
+import { DAY_MS, nowDate } from "@/lib/clock";
 import { containsLink } from "@/lib/departure-notes";
 import { type NotificationProvider, recipientLocale } from "@/lib/notifications";
 import { type CourtesyProvider, sendCourtesyMessage } from "@/lib/notifications/courtesy";
@@ -342,12 +342,32 @@ export async function openLostItemsByPerson(
   return byPerson;
 }
 
-/** How many found items are still waiting to go home (Today's row, fifth loop item 7). */
-export async function countOpenLostItems(db: DbExecutor, shopId: string): Promise<number> {
+/** How long an item nobody owns keeps a place in Today's count. */
+export const UNCLAIMED_LOST_ITEM_COUNTED_MS = 30 * DAY_MS;
+
+/**
+ * How many found items are still waiting to go home (Today's row, fifth loop
+ * item 7): every open item the crew tied to a diver, plus an unclaimed one
+ * from the last thirty days. Most boxes never empty, and an unclaimed towel
+ * from March is nobody's job this morning (review fixes, dive-domain N3);
+ * Lost and found itself still lists everything open.
+ */
+export async function countOpenLostItems(
+  db: DbExecutor,
+  shopId: string,
+  now: Date,
+): Promise<number> {
+  const since = new Date(now.getTime() - UNCLAIMED_LOST_ITEM_COUNTED_MS);
   const [row] = await db
     .select({ n: count() })
     .from(lostItems)
     .innerJoin(trips, and(eq(trips.id, lostItems.tripId), liveTrip()))
-    .where(and(eq(lostItems.shopId, shopId), eq(lostItems.status, "open")));
+    .where(
+      and(
+        eq(lostItems.shopId, shopId),
+        eq(lostItems.status, "open"),
+        or(isNotNull(lostItems.personId), gte(lostItems.createdAt, since)),
+      ),
+    );
   return row?.n ?? 0;
 }
