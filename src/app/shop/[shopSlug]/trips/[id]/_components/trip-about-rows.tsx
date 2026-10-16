@@ -24,7 +24,10 @@ import { laterMeetingDates } from "@/lib/trip-days";
 import { clearConditionsAction, saveConditionsAction } from "../conditions-actions";
 import { updateTripCrewAction } from "../crew-actions";
 import { saveDetails } from "../details-actions";
-import { cancelOffCadenceSeriesAction, updateSeriesCadenceAction } from "../series-actions";
+import {
+  cancelOffCadenceSeriesAction as cancelOffCadence,
+  updateSeriesCadenceAction,
+} from "../series-actions";
 import { saveRequirementsAction } from "../terms-actions";
 import { ConditionsOutlookSlot, ConditionsSection } from "./ConditionsSection";
 import { CrewSection } from "./CrewSection";
@@ -58,6 +61,7 @@ export type TripAboutRowsContext = {
   /** A retime's held reschedule notice, on the save that set it going. */
   held?: string;
   tell?: string;
+  refundsHeld?: boolean;
 };
 
 /** The names of the staff assigned to this departure, in the shop's staff order. */
@@ -111,8 +115,6 @@ export function tripAboutRows(context: TripAboutRowsContext) {
   } = overview;
   const { crewIds, tripRoleByPerson, crewGap, onShiftIds, clashes } = crew;
   const { ratingLapsedNote, languageGapNote, underTargetNote, overRatioWarning } = crewNotes;
-  // One notice per About row, resolved once: a refusal that lands inside a
-  // closed row is a form the staffer cannot see failed.
   const detailsStatus = noticeForForm(tripNotice, "details");
   const conditionsStatus = noticeForForm(tripNotice, "conditions");
   const requirementsStatus = noticeForForm(tripNotice, "requirements");
@@ -448,12 +450,8 @@ export function tripAboutRows(context: TripAboutRowsContext) {
             weekdayNames={weekdayNames(locale)}
             status={seriesStatus}
             cadenceAction={updateSeriesCadenceAction.bind(null, shopSlug, tripId, series.id)}
-            cancelOffCadenceAction={cancelOffCadenceSeriesAction.bind(
-              null,
-              shopSlug,
-              tripId,
-              series.id,
-            )}
+            cancelOffCadenceAction={cancelOffCadence.bind(null, shopSlug, tripId, series.id)}
+            refundsHeld={context.refundsHeld}
             locale={locale}
           />
         ) : undefined,

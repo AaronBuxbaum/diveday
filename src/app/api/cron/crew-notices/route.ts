@@ -21,7 +21,7 @@ const CRON_MONITOR_CONFIG = {
  * 20261009-crew-hear-about-their-boats).
  *
  * Every person whose crew has been still for the settle window gets one
- * message netting what changed (`sendDueCrewNotices`). Hourly at `:04`, inside
+ * message netting what changed (`sendDueCrewNotices`). Hourly at `:06` (`vercel.json`), inside
  * the five minutes the other hourly passes share, so it adds no database
  * wake-up of its own (`src/lib/cron-schedule.test.ts`). Hourly rather than
  * gated to fewer hours: news settles within minutes at any hour, and the one
@@ -30,7 +30,8 @@ const CRON_MONITOR_CONFIG = {
  *
  * The same pass raises the **stale roll-call alert** (`sendStaleRollCallAlerts`):
  * an after-dive count still open after the boat was due back reaches the
- * shop's owners once per trip. It runs in its own try so a failure there never
+ * shop's owners once per trip, and the shore contact, once confirmed, under a
+ * claim of its own (`src/db/roll-call-alerts.ts` has the timing). It runs in its own try so a failure there never
  * costs the crew their notices, and theirs never costs the alert.
  */
 export async function GET(request: Request) {

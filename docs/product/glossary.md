@@ -16,6 +16,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Adventure Diver
 - Agency
 - Agency check
+- Agency check of a card
 - Agency-listed certification
 - Assistant Instructor (AI)
 - Bundled nitrox
@@ -111,6 +112,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Free term
 - Paid after close
 - Paid mark
+- Party payment
 - Pass-through fee
 - Payments restricted
 - Payout
@@ -164,6 +166,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Deposit
 - Desk hours
 - Didn't sail
+- Discarded draft
 - Dive briefing
 - Dive day
 - Dive day (north star)
@@ -192,6 +195,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Last-minute deal
 - Last-minute list
 - Learning materials
+- Legal hold
 - Manifest
 - Medical hold
 - Medical questionnaire
@@ -250,6 +254,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Setup link
 - Shop currency
 - Shop day scan
+- Shore alert contact
 - Sign once
 - Skipped occurrence
 - SMS channel
@@ -263,6 +268,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - STOP list
 - The record
 - Tide window
+- Tight turnaround
 - Tip
 - Touch guard
 - Transactional notification
@@ -287,6 +293,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 
 - Coverage denominator
 - Day profile
+- Dispute sheet
 - Dive area
 - Earliest flight
 - Executed dive

@@ -14,7 +14,7 @@ import { rentalItemsNoticeMessages } from "../sub-page-notices";
 export const instant = true;
 
 /** Static metadata resolves before locale negotiation, so it stays English. */
-export const metadata: Metadata = { title: "What we rent — DiveDay" };
+export const metadata: Metadata = { title: "Rentals — DiveDay" };
 
 /**
  * What the shop rents: the catalogue as a grid of pills, one save. Unticked

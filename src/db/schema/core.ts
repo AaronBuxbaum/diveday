@@ -320,6 +320,35 @@ export const shops = pgTable(
       .notNull()
       .default({ lines: [], vessel: "", shoreContact: "", plan: "" }),
     /**
+     * **The shore contact's address for a stale roll call** (H-118, decided
+     * 2026-10-15): the one person outside the shop's accounts who hears when an
+     * after-dive roll call is still open after the boat was due back
+     * (`sendStaleRollCallAlerts`, `src/db/roll-call-alerts.ts`). Email only.
+     *
+     * Beside `emergency_reference.shoreContact`, never instead of it: that is
+     * free text a crew reads in an emergency, and this is an address DiveDay
+     * sends to. An address is stored only with the consent the staff member
+     * recorded for it — when, and who — and the check below holds the pair
+     * together, so clearing the address clears the consent and no address
+     * without one can exist (`nextShoreAlertContact`,
+     * `src/lib/shore-alert-contact.ts`). The person id carries no foreign key,
+     * the same as `people.adult_attested_by_person_id`: it is provenance, and
+     * a `shops -> people` key would turn the demo cascade into a cycle.
+     */
+    shoreAlertEmail: text("shore_alert_email"),
+    shoreAlertConsentAt: timestamp("shore_alert_consent_at", { withTimezone: true }),
+    shoreAlertConsentByPersonId: uuid("shore_alert_consent_by_person_id"),
+    /**
+     * When the shore contact proved the address is theirs and agreed, by the
+     * link DiveDay sent to it (H-118 review; the same proof the front-desk
+     * address takes, issue #1288). Null until then, and cleared with any
+     * change of address: the shop's tick says they agreed, this says the
+     * inbox did. Nothing is sent to the address before it is set
+     * (`shoreAlertRecipient`), and the link in every alert that stops them
+     * clears all four columns.
+     */
+    shoreAlertConfirmedAt: timestamp("shore_alert_confirmed_at", { withTimezone: true }),
+    /**
      * How many minutes before departure divers are asked to be at the dock. The
      * shop's real muster time varies (gear setup, cert check, briefing), so it is
      * configurable rather than a hardcoded "30 minutes" in every confirmation and
@@ -350,6 +379,15 @@ export const shops = pgTable(
     boatRideMinutes: integer("boat_ride_minutes").notNull().default(20),
     bottomTimeMinutes: integer("bottom_time_minutes").notNull().default(45),
     surfaceIntervalMinutes: integer("surface_interval_minutes").notNull().default(60),
+    /**
+     * The shortest gap the shop wants between one departure due back and the
+     * next leaving on the same hull, or with a crew member who leaves from a
+     * different meeting point — the time to unload, rinse, refill, refuel and
+     * board the next group (issue #2141, Aaron's decision (b), 2026-10-13).
+     * The schedule builder's Move panel names a closer departure as advice; it
+     * never refuses a move and never changes H-80's clash. Zero turns it off.
+     */
+    minTurnaroundMinutes: integer("min_turnaround_minutes").notNull().default(30),
     /**
      * Where the shop's season starts — the denominator behind the home's one
      * fact of scale (ADR 20260904-reef-all-the-way-down, decision 2, Budget
@@ -456,6 +494,19 @@ export const shops = pgTable(
   (table) => [
     uniqueIndex("shops_inbound_email_token_unique").on(table.inboundEmailToken),
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
+    // H-118: an address DiveDay sends to exists only with its recorded consent.
+    check(
+      "shops_shore_alert_consent",
+      sql`(${table.shoreAlertEmail} is null and ${table.shoreAlertConsentAt} is null
+        and ${table.shoreAlertConsentByPersonId} is null)
+        or (${table.shoreAlertEmail} is not null and ${table.shoreAlertConsentAt} is not null
+        and ${table.shoreAlertConsentByPersonId} is not null)`,
+    ),
+    // A confirmation vouches for an address; there is none without one.
+    check(
+      "shops_shore_alert_confirmed_has_address",
+      sql`${table.shoreAlertConfirmedAt} is null or ${table.shoreAlertEmail} is not null`,
+    ),
     check(
       "shops_customer_regulator_service_months_choice",
       sql`${table.customerRegulatorServiceMonths} in (12, 24)`,
@@ -503,6 +554,10 @@ export const shops = pgTable(
     check("shops_boat_ride_minutes_nonnegative", sql`${table.boatRideMinutes} >= 0`),
     check("shops_bottom_time_minutes_positive", sql`${table.bottomTimeMinutes} > 0`),
     check("shops_surface_interval_minutes_nonnegative", sql`${table.surfaceIntervalMinutes} >= 0`),
+    check(
+      "shops_min_turnaround_minutes_range",
+      sql`${table.minTurnaroundMinutes} >= 0 and ${table.minTurnaroundMinutes} <= 240`,
+    ),
     // Bounded at both ends, matching `parseDiversPerDivemaster` in the settings
     // action. A DB constraint looser than the action it backs lets any other
     // caller persist a number the surfaces will not honour (`coderabbitai`);

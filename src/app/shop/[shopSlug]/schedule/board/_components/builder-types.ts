@@ -159,6 +159,14 @@ export type BuilderCopy = {
   impactCrewClash: string;
   impactCrewAway: string;
   /**
+   * A tight turnaround (issue #2141): advice, one line per near miss, under the
+   * clash lines. The hull's takes `{boat}`, `{minutes}` and `{departure}`; the
+   * crew member's takes `{name}` in place of `{boat}`. Minutes as "min", so no
+   * plural pair.
+   */
+  impactTurnaroundBoat: string;
+  impactTurnaroundCrew: string;
+  /**
    * The hull already out on another departure at those hours (H-80: one hull,
    * one departure at a time). Takes `{boat}` and `{departure}`; one line per
    * other departure, so no plural pair.

@@ -1,5 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { activityLine } from "@/i18n/activity-labels";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
@@ -637,6 +639,41 @@ describe("a diver's own cancellation on the departure's trail (UX review 2026-10
     expect((await listTripActivity(db, shop.id, trip.id))[0]).toMatchObject({
       code: "seat_self_cancelled",
     });
+  });
+
+  it("does not name a person for a seat whose identity is held for review (#2467)", async () => {
+    const { db, shop } = ctx;
+    const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
+    if (!trip) throw new Error("expected a booked trip");
+    const [entry] = await getTripRoster(db, shop.id, trip.id);
+    if (!entry) throw new Error("expected a seat");
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate() })
+      .where(eq(bookings.id, entry.booking.id));
+
+    await recordDiverSelfCancel(db, {
+      shopId: shop.id,
+      bookingId: entry.booking.id,
+      refunded: false,
+    });
+    expect((await listTripActivity(db, shop.id, trip.id))[0]).toMatchObject({
+      code: "seat_holder_cancelled",
+    });
+    await recordDiverSelfCancel(db, {
+      shopId: shop.id,
+      bookingId: entry.booking.id,
+      refunded: true,
+    });
+    expect((await listTripActivity(db, shop.id, trip.id))[0]).toMatchObject({
+      code: "seat_holder_refunded",
+    });
+    // The words never carry the matched person's name, in either language.
+    const [latest] = await listTripActivity(db, shop.id, trip.id);
+    if (!latest) throw new Error("expected a line");
+    for (const locale of ["en-US", "es-ES"] as const) {
+      expect(activityLine(staffTranslator(locale), latest)).not.toContain(entry.person.fullName);
+    }
   });
 
   it("names the lead and the seat when a party seat went with the lead's cancel (batch 6 item 10)", async () => {

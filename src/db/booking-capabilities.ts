@@ -132,26 +132,59 @@ export async function issueBookingCapabilities(
       ),
     );
   if (found.length === 0) return issued;
+  return mintBookingCapabilities(db, {
+    shopId: input.shopId,
+    seats: found.map((booking) => ({ bookingId: booking.id, tripEndsAt: booking.tripEndsAt })),
+    purpose: input.purpose,
+    now,
+  });
+}
+
+/**
+ * **The minting half of {@link issueBookingCapabilities}, for a caller that has
+ * already read its bookings** (#2488): the organizer's party panel reads every
+ * seat with its departure in one statement, so asking the database again which
+ * of them exist and when their boats return was a round trip spent learning
+ * what the caller held.
+ *
+ * The caller owns the proof that every seat is this shop's and not cancelled,
+ * read in the same request: nothing here re-checks it. The rules after that
+ * are the same as ever: each booking's live set stays within
+ * `MAX_LIVE_CAPABILITIES_PER_PURPOSE`, its oldest retired first, and the
+ * retiring finishes before the new rows go in.
+ */
+export async function mintBookingCapabilities(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    seats: Array<{ bookingId: string; tripEndsAt: Date }>;
+    purpose: CapabilityPurpose;
+    now: Date;
+  },
+): Promise<Map<string, IssuedCapability>> {
+  const issued = new Map<string, IssuedCapability>();
+  const seats = [...new Map(input.seats.map((seat) => [seat.bookingId, seat])).values()];
+  if (seats.length === 0) return issued;
 
   await retireOldestLiveCapabilities(
     db,
     input.shopId,
-    found.map((booking) => booking.id),
+    seats.map((seat) => seat.bookingId),
     input.purpose,
-    now,
+    input.now,
   );
 
-  const rows = found.map((booking) => {
+  const rows = seats.map((seat) => {
     const token = createCapabilityToken();
-    const expiresAt = capabilityExpiryFor(booking.tripEndsAt, now);
-    issued.set(booking.id, { token, expiresAt });
+    const expiresAt = capabilityExpiryFor(seat.tripEndsAt, input.now);
+    issued.set(seat.bookingId, { token, expiresAt });
     return {
       shopId: input.shopId,
-      bookingId: booking.id,
+      bookingId: seat.bookingId,
       purpose: input.purpose,
       tokenHash: hashCapabilityToken(token),
       tokenSealed: null,
-      issuedAt: now,
+      issuedAt: input.now,
       expiresAt,
     };
   });
@@ -561,4 +594,30 @@ export async function revokeBookingCapabilities(
     // A revoked link is dead, so its openable copy has no reason to exist.
     .set({ revokedAt: now, tokenSealed: null })
     .where(and(...conditions));
+}
+
+/**
+ * **Take back links that were minted ahead of a send that did not go** (#2451).
+ * A batch mints every reachable seat's link before the first message leaves,
+ * because the link is part of the body; when the provider then answers
+ * not-sent (a bounce, a stop-listed phone, a refused request), nobody holds
+ * the token, and a live capability for no reader is only surface. This revokes
+ * exactly the tokens it is handed — by hash, never by booking — so an earlier,
+ * delivered link for the same booking stays live.
+ */
+export async function revokeIssuedCapabilities(
+  db: DbExecutor,
+  input: { shopId: string; tokens: readonly string[]; now?: Date },
+): Promise<void> {
+  if (input.tokens.length === 0) return;
+  await db
+    .update(bookingCapabilities)
+    .set({ revokedAt: input.now ?? nowDate(), tokenSealed: null })
+    .where(
+      and(
+        eq(bookingCapabilities.shopId, input.shopId),
+        inArray(bookingCapabilities.tokenHash, input.tokens.map(hashCapabilityToken)),
+        isNull(bookingCapabilities.revokedAt),
+      ),
+    );
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { optOutPersonFromCourtesyEmailByToken } from "@/db/courtesy-email";
 import { unsubscribeLastMinuteListEntryByToken } from "@/db/last-minute-list";
+import { stopShoreAlertsByToken } from "@/db/shore-alert-tokens";
 import { turnOffWeeklyDigestByToken } from "@/db/weekly-digest";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 
@@ -44,8 +45,10 @@ export async function POST(
   const lastMinute = await unsubscribeLastMinuteListEntryByToken(db, { token });
   if (!lastMinute) {
     const courtesy = await optOutPersonFromCourtesyEmailByToken(db, { token });
-    // The third kind, tried last: a staffer's own Monday email.
-    if (!courtesy) await turnOffWeeklyDigestByToken(db, { token });
+    // The third kind: a staffer's own Monday email. The fourth, tried last:
+    // a shop's shore contact stopping its roll-call alerts (H-118).
+    const digest = courtesy ? null : await turnOffWeeklyDigestByToken(db, { token });
+    if (!courtesy && !digest) await stopShoreAlertsByToken(db, { token });
   }
   // A mail client acts on the status code alone and never renders a body.
   return new NextResponse(null, { status: 200 });

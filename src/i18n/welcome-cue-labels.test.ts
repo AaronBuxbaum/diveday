@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { WELCOME_HELLOS } from "@/lib/welcome-cue";
 import { catchUpSentences } from "./desk-event-labels";
 import { staffTranslator } from "./staff-messages";
 import {
@@ -123,6 +124,39 @@ describe("welcomeDockLine", () => {
     expect(welcomeDockLine(es, { personName: "Priya Sharma", certification: card })).toMatch(
       /^Saluda a Priya: .+\.$/,
     );
+  });
+
+  it("ends with the diver's own choice when there is one, in both locales (#2425)", () => {
+    expect(
+      welcomeDockLine(en, { personName: "Priya Sharma", certification: card, hello: "nervous" }),
+    ).toBe("Say hello to Priya: Open Water. A little nervous.");
+    expect(
+      welcomeDockLine(en, {
+        personName: "Priya Sharma",
+        certification: null,
+        hello: "first_ocean_dive",
+      }),
+    ).toBe("Say hello to Priya. First ocean dive.");
+    for (const hello of WELCOME_HELLOS) {
+      const spoken = welcomeDockLine(es, {
+        personName: "Priya Sharma",
+        certification: card,
+        hello,
+      });
+      expect(spoken).toMatch(/^Saluda a Priya: .+\. .+\.$/);
+      expect(spoken).not.toContain("shared.welcomeCue");
+    }
+  });
+
+  it("says nothing extra without a choice, and has no way to take a note", () => {
+    expect(welcomeDockLine(en, { personName: "Priya Sharma", certification: card })).toBe(
+      "Say hello to Priya: Open Water.",
+    );
+    expect(
+      welcomeDockLine(en, { personName: "Priya Sharma", certification: card, hello: null }),
+    ).toBe("Say hello to Priya: Open Water.");
+    // Free text cannot arrive: the line's parameters are a name, a card and a code.
+    expect(welcomeDockLine.length).toBe(2);
   });
 
   it("says when the level is only the diver's word", () => {

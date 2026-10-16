@@ -4,7 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { controlClass, Field, FieldGrid, FormStatus, textareaClassFor } from "@/components/ui/form";
+import {
+  ChoiceRow,
+  controlClass,
+  Field,
+  FieldGrid,
+  FormStatus,
+  textareaClassFor,
+} from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/group-label";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { StatusInView } from "@/components/ui/StatusInView";
@@ -102,6 +109,7 @@ export function CourseFormsSection({
                     idPrefix={form.id}
                     title={form.title}
                     body={form.body}
+                    medicalScreening={form.medicalScreening}
                     bodyDescription={t(
                       courseFormAwaitingText(form.body)
                         ? "waiversStaff.courseForms.needsTextDescription"
@@ -186,12 +194,14 @@ function CourseFormFields({
   idPrefix,
   title,
   body,
+  medicalScreening = false,
   bodyDescription,
   t,
 }: {
   idPrefix: string;
   title: string;
   body: string;
+  medicalScreening?: boolean;
   bodyDescription?: string;
   t: StaffTranslator;
 }) {
@@ -230,6 +240,19 @@ function CourseFormFields({
           className={textareaClassFor(8)}
         />
       </Field>
+      <div className="flex flex-col gap-1">
+        {/* Posted beside the box, so an unticked box reads as "off" and a post without the field leaves the mark alone (#2337). */}
+        <input type="hidden" name="medicalScreening" value="unmarked" />
+        <ChoiceRow
+          type="checkbox"
+          name="medicalScreening"
+          value="on"
+          defaultChecked={medicalScreening}
+        >
+          {t("waiversStaff.courseForms.medicalScreeningLabel")}
+        </ChoiceRow>
+        <p className="text-sm text-muted">{t("waiversStaff.courseForms.medicalScreeningHint")}</p>
+      </div>
     </FieldGrid>
   );
 }

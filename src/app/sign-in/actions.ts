@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getAuth } from "@/lib/auth";
 import { parseForm } from "@/lib/form-parse";
+import { shopPath } from "@/lib/staff-notices";
 
 // Rate limiting lives in the custom credentials plugin's endpoint handler
 // (src/lib/auth.ts), not here — it runs for every credentials attempt
@@ -24,9 +25,10 @@ export async function authenticate(formData: FormData) {
   const parsed = parseForm(signInForm, formData);
   if (!parsed.ok) redirect("/sign-in?error=1");
   const { email, password, totpCode } = parsed.data;
+  let shopSlug: string | null;
   try {
     const auth = await getAuth();
-    await auth.api.signInDiveDayCredentials({
+    const signedIn = await auth.api.signInDiveDayCredentials({
       body: {
         email,
         password,
@@ -34,6 +36,7 @@ export async function authenticate(formData: FormData) {
       },
       headers: await headers(),
     });
+    shopSlug = signedIn.shopSlug;
   } catch (error) {
     if (error instanceof APIError) {
       if (error.message === "two_factor_required" || error.message === "invalid_two_factor") {
@@ -43,8 +46,9 @@ export async function authenticate(formData: FormData) {
     }
     throw error;
   }
-  // Outside the try: this redirect must never be caught as a refusal. Always
-  // /shop, never `callbackUrl` — src/proxy.ts redirects a signed-in staffer
-  // visiting the bare path on to their own shop immediately afterward.
-  redirect("/shop");
+  // Outside the try: this redirect must never be caught as a refusal. Straight
+  // to the shop the sign-in resolved on the server, so the address bar names
+  // it and the edge's `/shop` hop is not paid; `/shop` only when the session
+  // names no shop. Never `callbackUrl`, or any other request-supplied target.
+  redirect(shopSlug ? shopPath(shopSlug) : "/shop");
 }

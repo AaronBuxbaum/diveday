@@ -1,4 +1,9 @@
-import { type CalendarDate, calendarDateInTimezone, isValidCalendarDate } from "./calendar-date";
+import {
+  type CalendarDate,
+  calendarDateInTimezone,
+  isValidCalendarDate,
+  shiftCalendarDateMonths,
+} from "./calendar-date";
 
 /**
  * **The off-season as a designed state** (N-45).
@@ -37,6 +42,18 @@ import { type CalendarDate, calendarDateInTimezone, isValidCalendarDate } from "
 export const OFF_SEASON_QUIET_DAYS = 30;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * How far ahead the typed "Back on the water" date may sit. A typo ("2062")
+ * would otherwise put "We're back out in 2062" on the public schedule; a season
+ * longer than a year and a half is not one a shop can promise anyway.
+ */
+export const REOPENS_ON_MAX_MONTHS = 18;
+
+/** Whether a typed reopening date is further out than {@link REOPENS_ON_MAX_MONTHS}. */
+export function reopensOnTooFar(reopensOn: CalendarDate, today: CalendarDate): boolean {
+  return reopensOn > shiftCalendarDateMonths(today, REOPENS_ON_MAX_MONTHS);
+}
 
 /** What the storefront knows about a quiet board, and nothing it does not. */
 export type OffSeason = {

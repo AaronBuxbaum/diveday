@@ -10,7 +10,7 @@
 //     deleted. `e2e-affected.mjs` names them.
 //   - unit tests that read the source from disk (23 jobs): `form.test.tsx`, `button.test.ts`,
 //     `EntryShell.test.tsx`, the erasure and rehearsal coverage scans. They import nothing they
-//     check, so `vitest --changed` never selects them. All 157 run here, in about two minutes.
+//     check, so `vitest --changed` never selects them. The whole unit suite runs here now.
 //   - the `guards` Vitest project (CI's Repository safeguards job), which no local step ran.
 //   - typecheck after a merge from the layer below, which nobody re-ran because the layer's
 //     own checks had already passed. The stamp is per commit, so a merge is a new HEAD.
@@ -18,23 +18,23 @@
 // Steps, cheapest first; it stops at the first red one, because a later step on a broken tree
 // spends minutes saying the same thing:
 //
-//   base CI → regen → lint → typecheck → check:repo → guards → source scans → vitest related
-//         → the base's red tests → e2e build → affected Playwright specs → stamp
+//   base CI → regen → lint → typecheck → check:repo → guards → unit tests 1/4 … 4/4
+//         → e2e build → affected Playwright specs → stamp
 //
-// Every affected spec runs, with no time budget, and the output and the stamp end with what was
-// not run here (`notRunHere`), so a green gate is never mistaken for a green suite.
+// Every unit test and every affected spec runs, with no time budget (Aaron, 2026-10-15: "run
+// everything"), and the output and the stamp end with what was not run here (`notRunHere`), so a
+// green gate is never mistaken for a green suite.
 //
 //   pnpm verify:push                      run it
 //   pnpm verify:push --plan               print the base, the steps and the selected specs, run nothing
 //   pnpm verify:push --base-red <file…>   also run these, when the base is red on a job that names none
 //
 // "Base CI" reads the layer below's latest CI (`scripts/base-ci.mjs`): a push on a red base is a
-// red run for this layer and every layer above, so the base's failing files run here too, and the
-// stamp means this layer carries their fix.
+// red run for this layer and every layer above, so the base's failing specs run here too (its
+// unit files are in the full suite), and the stamp means this layer carries their fix.
 //
 // The diff is measured against the layer below (`stackBase`), not `origin/main`: on a fifteen-
-// layer stack `vitest --changed origin/main` selects the whole suite, which is why several PR
-// bodies record it as "cut short". Each step's output goes to a log under the git dir; a red
+// layer stack every route would count as reached. Each step's output goes to a log under the git dir; a red
 // step prints only its tail.
 
 import { createHash } from "node:crypto";
@@ -47,11 +47,20 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
+import { availableParallelism, loadavg } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { baseDecision, baseRedArgs, readBaseVerdict, repoSlug } from "./base-ci.mjs";
-import { affectedSpecs, durations, estimateMs, stackBase, withinBudget } from "./e2e-affected.mjs";
+import {
+  affectedSpecs,
+  captureGrep,
+  captureMs,
+  durations,
+  estimateMs,
+  stackBase,
+  withinBudget,
+} from "./e2e-affected.mjs";
 import { verifiedFile } from "./guard-push.mjs";
 import { gitReader } from "./stack-map.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
@@ -60,6 +69,52 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /** Specs per Playwright step: about twenty local minutes at two workers. */
 export const E2E_CHUNK = 25;
+
+/**
+ * Cores one Playwright worker needs locally: its own Next server, its Chromium and its runner.
+ * Measured 2026-10-15 on an idle four-core cloud container: two workers timed out on specs CI
+ * passes (readiness.spec.ts:131, diver-merge.spec.ts:42, at CI's 15-second ceiling), one worker
+ * passed them (readiness alone in 14.9s). The container's older fallback Chromium was ruled out
+ * the same day: a Playwright pinned to that same browser failed identically.
+ */
+export const CORES_PER_E2E_WORKER = 3;
+
+/**
+ * As many Playwright workers as the box has free compute for, and no more (Aaron, 2026-10-15:
+ * "We shouldn't run more than we have compute for, but we also shouldn't be single-threading
+ * the problem"): free cores (cores minus the one-minute load, so another thread's gate counts)
+ * over CORES_PER_E2E_WORKER, at least one, at most CI's own cores/2. Read just before each step,
+ * so the count follows the load. An `E2E_WORKERS` the operator set wins.
+ */
+export function e2eWorkers({ cores, load, override } = {}) {
+  const set = Number(override);
+  if (Number.isFinite(set) && set > 0) {
+    return { workers: Math.floor(set), formula: `E2E_WORKERS=${override} set by the operator` };
+  }
+  const free = Math.max(0, cores - load);
+  const workers = Math.max(
+    1,
+    Math.min(Math.floor(free / CORES_PER_E2E_WORKER), Math.floor(cores / 2)),
+  );
+  return {
+    workers,
+    formula:
+      `max(1, min(floor((${cores} cores - ${load.toFixed(1)} load) / ` +
+      `${CORES_PER_E2E_WORKER}), ${cores}/2))`,
+  };
+}
+
+/** e2eWorkers for this box, now. */
+function e2eWorkersHere() {
+  return e2eWorkers({
+    cores: availableParallelism(),
+    load: loadavg()[0],
+    override: process.env.E2E_WORKERS,
+  });
+}
+
+/** The line e2e/browser.ts prints when the pinned Chromium is missing. */
+const BROWSER_FALLBACK = /^e2e: the Chromium pinned by @playwright\/test is not installed.*$/m;
 
 /** A unit, script or guard test: no page imports one, so no browser spec can move with it. */
 const UNIT_TEST = /\.test\.(?:ts|tsx|mts|mjs|js)$/;
@@ -78,41 +133,19 @@ export function docsOnlyDiff(changed) {
 /** Files whose change can move the export-bundle snapshot; then `regen` reruns it. */
 const SNAPSHOT_INPUTS = /^src\/db\/(?:schema\/|seed|export)/;
 
-/** Files `vitest related` follows imports from. */
-const CODE = /^(?:src|scripts|infra|e2e)\/.*\.(?:ts|tsx|mts|mjs|js)$/;
-
-/** A test that reads files off disk: what `vitest --changed` cannot select by import. */
-const READS_FILES = /\breadFileSync\s*\(|\breadFile\s*\(|\breaddirSync\s*\(|\bglobSync\s*\(/;
-
 /** Name of the stamp file inside the git dir (`git rev-parse --git-path`). */
 export const STAMP = "diveday-verified.json";
 
-/** Every `src/` test that reads the repository from disk. */
-export function sourceScanTests(root = ROOT) {
-  const found = [];
-  const walk = (dir) => {
-    for (const entry of readdirSync(path.join(root, dir), { withFileTypes: true })) {
-      const rel = `${dir}/${entry.name}`;
-      if (entry.isDirectory()) walk(rel);
-      else if (
-        /\.test\.tsx?$/.test(rel) &&
-        READS_FILES.test(readFileSync(path.join(root, rel), "utf8"))
-      ) {
-        found.push(rel);
-      }
-    }
-  };
-  walk("src");
-  return found.sort();
-}
+/** CI's unit shards; each runs here as its own step, so a red one names itself. */
+export const UNIT_SHARDS = 4;
 
 /**
  * The steps for a diff. `changed` is the file list against the base, `specs` the Playwright
- * files to run, `scans` the source-scan tests, `existing` whether a changed path is still there.
+ * files to run, `captures` the titles of the visual captures to run (light mode only, after
+ * the functional specs).
  */
-export function plan({ changed, specs, scans, baseFiles = [], existing = () => true }) {
+export function plan({ changed, specs, captures = [] }) {
   const docsOnly = docsOnlyDiff(changed);
-  const schema = changed.some((file) => file.startsWith("src/db/schema/"));
   const snapshot = changed.some((file) => SNAPSHOT_INPUTS.test(file));
   const steps = [
     {
@@ -131,49 +164,25 @@ export function plan({ changed, specs, scans, baseFiles = [], existing = () => t
     },
   ];
   if (docsOnly) return steps;
-  steps.push({
-    name: "source scans",
-    command: "pnpm",
-    args: ["exec", "vitest", "run", ...scans, "--reporter=dot"],
-  });
-  // A schema module sits in nearly every import chain, so an import-graph selection would be the
-  // whole suite; the coverage guards that answer for a schema edit are named instead
-  // (verifying.md). Otherwise `vitest related` over the changed code: `--changed` would do the
-  // same but for Vitest's forceRerunTriggers, which turn any package.json edit into all 1,490 files.
-  const code = changed.filter((file) => CODE.test(file) && existing(file));
-  if (schema) {
+  // The whole unit suite, sharded exactly as CI's four jobs are (Aaron, 2026-10-15: "run
+  // everything"). It replaced the source scans plus `vitest related`, which left every test that
+  // neither read source nor imported the diff to CI. The base's red files are in it too.
+  for (let shard = 1; shard <= UNIT_SHARDS; shard++) {
     steps.push({
-      name: "schema guards",
+      name: `unit tests ${shard}/${UNIT_SHARDS}`,
       command: "pnpm",
       args: [
         "exec",
         "vitest",
         "run",
-        "src/db/export.test.ts",
-        "src/db/diver-merge.test.ts",
-        "src/db/delete-path-coverage.test.ts",
-        "src/db/retention.test.ts",
-        "src/db/export-bundle.snapshot.test.ts",
+        "--project",
+        "!guards",
         "--reporter=dot",
+        `--shard=${shard}/${UNIT_SHARDS}`,
       ],
     });
-  } else if (code.length > 0) {
-    steps.push({
-      name: "related tests",
-      command: "pnpm",
-      args: ["exec", "vitest", "related", ...code, "--run", "--passWithNoTests", "--reporter=dot"],
-    });
   }
-  // The files the layer below is red on (base-ci.mjs): passing here is the fix this layer carries.
-  const baseRed = baseFiles.filter(existing);
-  if (baseRed.length > 0) {
-    steps.push({
-      name: "base red tests",
-      command: "pnpm",
-      args: ["exec", "vitest", "run", ...baseRed, "--reporter=dot"],
-    });
-  }
-  if (specs.length > 0) {
+  if (specs.length > 0 || captures.length > 0) {
     steps.push({ name: "e2e build", command: "pnpm", args: ["e2e:build"], build: true });
     // Chunked so a hub-route change, which selects most of the suite, stays inside each step's
     // hour (SUBPROCESS_TIMEOUTS.verifyPushStep) and prints progress between chunks.
@@ -185,8 +194,18 @@ export function plan({ changed, specs, scans, baseFiles = [], existing = () => t
         name: chunks.length === 1 ? "e2e specs" : `e2e specs ${i + 1}/${chunks.length}`,
         command: "pnpm",
         args: ["e2e:run", ...chunk, "--reporter=line"],
+        workers: true,
       });
     });
+    const grep = captureGrep(captures);
+    if (grep) {
+      steps.push({
+        name: "visual captures",
+        command: "pnpm",
+        args: ["e2e:run", "e2e/visual.spec.ts", "-g", grep, "--reporter=line"],
+        workers: true,
+      });
+    }
   }
   return steps;
 }
@@ -213,13 +232,8 @@ export function browserSpecs({ changed, strong, reach, rank, record }) {
  * What this run did not run, said plainly in the output and the stamp, so "verify:push is
  * green" is never read as "every test passed here". CI runs all of it.
  */
-export function notRunHere({ docsOnly, testsOnly, specs, allSpecs }) {
+export function notRunHere({ docsOnly, testsOnly, specs, allSpecs, captures = [] }) {
   const lines = [];
-  if (!docsOnly) {
-    lines.push(
-      "unit tests that neither read source from disk nor import the changed code (CI's unit shards run all of them)",
-    );
-  }
   const visual = (spec) => /(?:^|\/)visual[^/]*\.spec\.ts$/.test(spec);
   // A smoke pick is `file:line`; its file counts as run, though only that test of it ran.
   const ran = new Set(specs.map((spec) => spec.replace(/:\d+$/, "")));
@@ -231,7 +245,11 @@ export function notRunHere({ docsOnly, testsOnly, specs, allSpecs }) {
         : `${skipped.length} Playwright specs the diff neither names nor reaches`,
     );
   }
-  lines.push("visual captures (reg-suit): CI only, and a difference never fails the build");
+  lines.push(
+    captures.length > 0
+      ? `visual captures (reg-suit): the ${captures.length} the diff names ran here in light mode; the rest, dark mode and the comparison are CI's, and a difference never fails the build`
+      : "visual captures (reg-suit): CI only, and a difference never fails the build",
+  );
   return lines;
 }
 
@@ -303,6 +321,23 @@ function tail(file) {
   }
 }
 
+/**
+ * Runs one step in a process group of its own and kills the whole group when it returns.
+ * `runBounded` kills only the child it spawned at the ceiling, so an `e2e:run` that hit it left
+ * Playwright and both e2e servers running (issue #2623: about 70 minutes on 2026-10-15, holding
+ * the checkout's ports so the next run in it timed out across dozens of specs). After a clean
+ * exit the group is already empty and the kill finds nothing.
+ */
+export function runStep(command, args, { run = runBounded, kill = process.kill, ...options }) {
+  const result = run(command, args, { ...options, detached: true });
+  if (result.pid) {
+    try {
+      kill(-result.pid, "SIGKILL");
+    } catch {}
+  }
+  return result;
+}
+
 /** Every Playwright spec in the repository, as `e2e/<name>.spec.ts`. */
 function allSpecFiles() {
   return readdirSync(path.join(ROOT, "e2e"), { recursive: true })
@@ -371,12 +406,11 @@ function main() {
     ? []
     : decision.specs.filter((spec) => existing(spec) && !specs.includes(spec));
   specs.push(...baseSpecs);
+  const captures = docsOnly || testsOnly ? [] : [...selection.captures.keys()].sort();
   const steps = plan({
     changed: selection.changed,
-    existing,
     specs,
-    scans: sourceScanTests(ROOT),
-    baseFiles: decision.files,
+    captures,
   });
 
   console.log(
@@ -388,14 +422,22 @@ function main() {
     console.log(`  ${spec}  — ${[...selection.strong.get(spec)].slice(0, 2).join("; ")}`);
   }
   if (reachRun.length > 0) console.log(`  reached: ${reachRun.join(" ")}`);
+  if (captures.length > 0) {
+    console.log(
+      `  ${captures.length} visual capture(s) the diff names, light mode only ` +
+        `(about ${Math.round(captureMs(captures) / 60000)} CI-minutes):`,
+    );
+    for (const title of captures) {
+      console.log(`    ${title}  — ${[...selection.captures.get(title)].slice(0, 2).join("; ")}`);
+    }
+  }
   if (baseSpecs.length > 0) console.log(`  red on the base: ${baseSpecs.join(" ")}`);
   if (testsOnly) console.log("  only tests changed: no e2e build, no browser specs.");
-  const skipped = notRunHere({ docsOnly, testsOnly, specs, allSpecs: allSpecFiles() });
+  const skipped = notRunHere({ docsOnly, testsOnly, specs, allSpecs: allSpecFiles(), captures });
   if (args.includes("--plan")) {
     for (const step of steps) {
-      const shown =
-        step.name === "source scans" ? [`<${step.args.length - 4} test files>`] : step.args;
-      console.log(`  step ${step.name}: ${step.command} ${shown.join(" ")}`);
+      const env = step.workers ? `E2E_WORKERS=${e2eWorkersHere().workers} ` : "";
+      console.log(`  step ${step.name}: ${env}${step.command} ${step.args.join(" ")}`);
     }
     for (const line of skipped) console.log(`  not run here: ${line}`);
     return;
@@ -404,6 +446,8 @@ function main() {
   const logs = gitPath(git, "diveday-verify");
   mkdirSync(logs, { recursive: true });
   const ran = [];
+  let browserNote;
+  const workerCounts = [];
   for (const step of steps) {
     if (step.build) {
       try {
@@ -416,9 +460,18 @@ function main() {
     const log = path.join(logs, `${step.name.replace(/\W+/g, "-")}.log`);
     const fd = openSync(log, "w");
     const started = Date.now();
-    process.stdout.write(`… ${step.name}\n`);
-    const result = runBounded(step.command, step.args, {
+    let env = process.env;
+    if (step.workers) {
+      const { workers, formula } = e2eWorkersHere();
+      env = { ...process.env, E2E_WORKERS: String(workers) };
+      workerCounts.push({ step: step.name, workers, formula });
+      process.stdout.write(`… ${step.name} on ${workers} worker(s): ${formula}\n`);
+    } else {
+      process.stdout.write(`… ${step.name}\n`);
+    }
+    const result = runStep(step.command, step.args, {
       cwd: ROOT,
+      env,
       stdio: ["ignore", fd, fd],
       timeoutMs: SUBPROCESS_TIMEOUTS.verifyPushStep,
     });
@@ -432,6 +485,13 @@ function main() {
         failed = true;
         why = `\nIt rewrote generated files; look at them, commit them, and run verify:push again:\n${after}`;
       }
+    }
+    const fallback = step.workers && readFileSync(log, "utf8").match(BROWSER_FALLBACK);
+    if (fallback && !browserNote) {
+      browserNote = fallback[0];
+      // Said once, pass or fail: the older Chromium is not why a functional spec fails here
+      // (CORES_PER_E2E_WORKER above), so nobody chases it again.
+      console.log(`${browserNote}\n(not a cause of functional failures; see CORES_PER_E2E_WORKER)`);
     }
     if (failed) {
       console.error(`✗ ${step.name} (${seconds}s) — full log: ${log}\n${tail(log)}${why}`);
@@ -452,6 +512,9 @@ function main() {
     at: new Date().toISOString(),
     steps: ran,
     specs,
+    captures: captures.length > 0 ? captures : undefined,
+    e2eWorkers: workerCounts.length > 0 ? workerCounts : undefined,
+    browser: browserNote ?? undefined,
     notRunHere: skipped,
     baseCi: verdict.unknown
       ? { unknown: verdict.unknown }

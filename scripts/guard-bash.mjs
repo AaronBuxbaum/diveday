@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// A `PreToolUse` hook on `Bash` that refuses three command shapes this repository has
+// A `PreToolUse` hook on `Bash` that refuses the command shapes this repository has
 // already been burned by, and names the correct form in the refusal.
 //
 // All three are written down as hard rules in AGENTS.md, and being written down is not
@@ -46,6 +46,21 @@
 //     `--force-with-lease`, and any push to `main`, are refused unconditionally: one
 //     overwrites a branch somebody else may have advanced, the other skips the pull request.
 //
+//  7. Cancelling a `push` run on `main` — `gh run cancel <id>`, or a POST to
+//     `actions/runs/<id>/cancel` (or `force-cancel`) through `gh api`. A main push run is
+//     what publishes that commit's visual snapshot, the baseline every branch cut from it
+//     compares against, which is why `ci.yml` gives each one a concurrency lane of its own.
+//     Five main runs cancelled on 2026-10-12 and -13 each carry "The run was canceled by
+//     @AaronBuxbaum", the identity every session's `gh` uses: explicit cancels, not
+//     concurrency (code review 2026-10-13). The run's event and branch are read with one
+//     `gh api` call; a run that cannot be read is let through, as every hook here fails open.
+//
+//  8. An environment file read through the shell — `grep -r . .env.local`, `cat .env`. The
+//     settings deny the Read tool those names, and `grep`/`find` are allowed without a
+//     prompt, so the shell printed production keys (2026-10-13 review, row 26). A reader
+//     handed a `.env*` path other than `.env.example` is refused; `config/env-registry.mjs`
+//     says what every key is, and `pnpm check:env` which ones are blank.
+//
 // The contract is Claude Code's: JSON on stdin, exit 2 with the reason on stderr to block,
 // exit 0 to stay out of the way. It **fails open** on anything it does not understand —
 // unparseable payload, unexpected shape, its own bug — because a guard that blocks the
@@ -78,6 +93,47 @@ const GENERATED_ARTIFACT =
 /** Commands whose only purpose is to print a file. */
 const PRINTERS = /^(?:cat|head|tail|less|more|bat)\b/;
 
+/** Commands that print, search or copy out a file's contents. */
+const READERS =
+  /^(?:cat|head|tail|less|more|bat|tac|nl|grep|egrep|fgrep|rg|ag|awk|gawk|sed|cut|sort|uniq|strings|xxd|od|hexdump|base64|diff|cmp|jq|dd|source|\.)$/;
+
+/** A `.env` file, or `.env.<anything>` except the generated, value-free `.env.example`. */
+const ENV_FILE = /(?:^|\/)\.env(?:\.(?!example$)[\w.-]+)?$/;
+
+/** A glob or brace expansion that the shell may expand to a `.env` file: `.env*`, `.env.{local,vercel}`. */
+const ENV_PATTERN = /(?:^|\/)\.env[^/]*[*?{]/;
+
+/**
+ * Whether one argument names an environment file. Quotes are the shell's, not
+ * the file's, so they are stripped; an input redirection (`<.env`) and a
+ * `name=value` operand (`dd if=.env`) are read for their path.
+ */
+function namesEnvFile(token) {
+  const bare = token.replaceAll(/['"]/g, "").replace(/^\d?</, "");
+  const path = bare.includes("=") ? bare.slice(bare.lastIndexOf("=") + 1) : bare;
+  return ENV_FILE.test(path) || ENV_PATTERN.test(path);
+}
+
+/**
+ * The reader in `command` handed an environment file, or null. Judged on the
+ * raw text rather than the quote-blanked form the other rules use, because a
+ * quoted path (`cat ".env.local"`) is still a path. Heredoc bodies are dropped
+ * and output redirections stripped first, so `cat >> .env.local <<'EOF'`, which
+ * writes the file, is not a read.
+ */
+function envFileRead(command) {
+  const withoutHeredocs = command.replace(/<<-?\s*(['"]?)(\w+)\1[\s\S]*?^\s*\2\s*$/gm, "");
+  for (const segment of segments(withoutHeredocs)) {
+    for (const part of withoutRedirection(segment).split("|")) {
+      const tokens = withoutEnvAssignments(part.trim().split(/\s+/));
+      if (READERS.test(tokens[0] ?? "") && tokens.slice(1).some(namesEnvFile)) {
+        return tokens.join(" ");
+      }
+    }
+  }
+  return null;
+}
+
 function workingTreeChanges() {
   const status = readBounded("git", ["status", "--porcelain"], {
     cwd: ROOT,
@@ -85,6 +141,60 @@ function workingTreeChanges() {
     timeoutMs: SUBPROCESS_TIMEOUTS.git,
   });
   return status.split("\n").filter(Boolean);
+}
+
+/** `{ event, branch }` of an Actions run, or null when `gh` cannot say. */
+function actionsRun(repoPath, id) {
+  try {
+    const out = readBounded(
+      "gh",
+      ["api", `${repoPath}/actions/runs/${id}`, "--jq", '.event + " " + .head_branch'],
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+        timeoutMs: SUBPROCESS_TIMEOUTS.ghHookRead,
+        stdio: ["ignore", "pipe", "ignore"],
+      },
+    );
+    const [event, branch] = String(out).trim().split(" ");
+    return event && branch ? { event, branch } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The run a segment cancels, as `{ repoPath, id }`: `gh run cancel <id> [--repo o/r]`, or
+ * `gh api [-X POST] repos/o/r/actions/runs/<id>/cancel` (and `force-cancel`). Null otherwise.
+ */
+export function cancelledRun(segment) {
+  const cancel = segment.match(/^gh\s+run\s+cancel\b(.*)$/);
+  if (cancel) {
+    const id = cancel[1].match(/(?:^|\s)(\d+)(?=\s|$)/)?.[1];
+    if (!id) return null;
+    const repo = cancel[1].match(/(?:-R|--repo)[\s=]+([\w.-]+\/[\w.-]+)/)?.[1];
+    return { repoPath: repo ? `repos/${repo}` : "repos/{owner}/{repo}", id };
+  }
+  if (/^gh\s+api\b/.test(segment)) {
+    const endpoint = segment.match(
+      /\/?(repos\/[^/\s'"]+\/[^/\s'"]+)\/actions\/runs\/(\d+)\/(?:force-)?cancel\b/,
+    );
+    if (endpoint) return { repoPath: endpoint[1], id: endpoint[2] };
+  }
+  return null;
+}
+
+function cancelViolation(segment, runOf) {
+  const target = cancelledRun(segment);
+  if (!target) return null;
+  const run = runOf(target.repoPath, target.id);
+  if (run?.event !== "push" || run.branch !== "main") return null;
+  return (
+    `\`${segment}\` cancels run ${target.id}, a push to main. A main push run publishes that commit's ` +
+    "visual snapshot, the baseline every branch cut from it compares against, so ci.yml gives each one a " +
+    "lane of its own and never cancels it. Two overlapping main runs only queue behind the 20-job cap; " +
+    "they do not cancel each other. Let it finish. To stop your own pull request's run, cancel that one."
+  );
 }
 
 /** Commands whose output an agent has to wait minutes for. */
@@ -279,7 +389,7 @@ function discardViolation(segment, changes) {
 export function violationFor(
   command,
   scripts = packageScripts(),
-  { changes = workingTreeChanges } = {},
+  { changes = workingTreeChanges, runOf = actionsRun } = {},
 ) {
   for (const segment of segments(withoutInertText(command))) {
     const pnpmScript = segment.match(/^pnpm\s+(?:run\s+)?([\w:.-]+)\b/);
@@ -342,6 +452,18 @@ export function violationFor(
 
     const discard = discardViolation(segment, changes);
     if (discard) return discard;
+
+    const cancel = cancelViolation(segment, runOf);
+    if (cancel) return cancel;
+  }
+
+  const envRead = envFileRead(command);
+  if (envRead) {
+    return (
+      `\`${envRead}\` reads an environment file, which holds live keys; the Read tool is denied ` +
+      `these files and the shell is not the way round it. \`config/env-registry.mjs\` says what each key is ` +
+      `and who supplies it, \`.env.example\` lists them with no values, and \`pnpm check:env\` says which are blank.`
+    );
   }
   return null;
 }

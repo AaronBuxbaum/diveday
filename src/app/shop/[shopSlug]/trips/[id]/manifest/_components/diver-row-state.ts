@@ -1,4 +1,9 @@
-import { blockedAtRail, type RollCallCheckpoint, type TripManifest } from "@/lib/manifests";
+import {
+  blockedAtRail,
+  medicalHoldAfterDive,
+  type RollCallCheckpoint,
+  type TripManifest,
+} from "@/lib/manifests";
 import { runningLateOnManifest } from "@/lib/running-late";
 import { medicalWarningDays } from "@/lib/waivers";
 import { rollCallRecordedTone, rollCallRowState } from "./RollCallControls";
@@ -7,7 +12,14 @@ import { rollCallRecordedTone, rollCallRowState } from "./RollCallControls";
  * Which of the row's exceptions took its one capsule — or none. The printed
  * block reads it to say the *other* facts without repeating this one.
  */
-export type DiverCapsuleKind = "buddy" | "blocked" | "medical" | "minor" | "depth" | "birthday";
+export type DiverCapsuleKind =
+  | "buddy"
+  | "blocked"
+  | "medicalHold"
+  | "medical"
+  | "minor"
+  | "depth"
+  | "birthday";
 
 /**
  * **What one diver's row is, before anything is drawn**: the recorded
@@ -73,10 +85,14 @@ export function diverRowState(
   // the priority when a diver is several things at once, loudest first
   // — a team that did not come back after a dive outranks a desk
   // blocker outranks a split buddy team at the dock outranks a medical
+  // blocker a diver was boarded over (after a dive, #2380) outranks a medical
   // warning outranks the crew's duty of care to a minor outranks
   // an advisory outranks a birthday. Everything not chosen here still
-  // reaches the reader: it is in the panel one tap away, and
-  // unconditionally on paper.
+  // reaches paper, unconditionally. On screen the panel one tap away
+  // carries what a loser of this chain must not lose: the medical
+  // warnings (in its facts), a medical hold (`medicalHoldInPanel`), the
+  // age with the minor flag, and an advisory the strip does not name. A
+  // buddy alert and a birthday the capsule did not take are on paper only.
   //
   // **The medical warnings** (`medicalWarningChips`, strongest first):
   // a rider riding only under a "no" or an open referral (H-109), an
@@ -100,6 +116,17 @@ export function diverRowState(
   // a boat it is not cleared for. The row read "Someone not aboard"
   // under a head count saying "1 blocked person aboard".
   const splitAfterDive = diver.buddyAlert === "separated_after_dive";
+  // **A medical "no" stays on the row between dives** (issue #2380, Aaron's
+  // decision (b)): for a diver boarded over `medical_not_cleared` or
+  // `medical_review`, after a dive, where `blockedAtDock` has gone quiet.
+  // Warning-toned and ranked where the rider's riding-only chip sits — the
+  // danger "Blocked" stays the dock's, and the red stays the alarm's.
+  const medicalHold = medicalHoldAfterDive({
+    checkpoint,
+    boardedEarlier: diver.boardedEarlier,
+    notBackAboard: rowState.notBackAboard,
+    blockerCodes: diver.readiness.blockers.map((blocker) => blocker.code),
+  });
   // A buddy alert earns the capsule only with a team to name, so the
   // kind below is the capsule the row actually draws.
   const buddyAlerted = Boolean(diver.buddyAlert && diver.buddyTeam);
@@ -116,15 +143,23 @@ export function diverRowState(
           ? "blocked"
           : buddyAlerted
             ? "buddy"
-            : medicalWarned
-              ? "medical"
-              : minorAge
-                ? "minor"
-                : diver.depthAdvisory?.status === "exceeds"
-                  ? "depth"
-                  : diver.birthday
-                    ? "birthday"
-                    : null;
+            : medicalHold
+              ? "medicalHold"
+              : medicalWarned
+                ? "medical"
+                : minorAge
+                  ? "minor"
+                  : diver.depthAdvisory?.status === "exceeds"
+                    ? "depth"
+                    : diver.birthday
+                      ? "birthday"
+                      : null;
+  // **The hold the capsule did not take** (#2380 review): a split team
+  // after a dive outranks it, `blockedAtDock` is quiet after a dive, and a
+  // referred or refused record draws no waiver fact, so without this the
+  // hold has no place on screen. The panel names it; the capsule never
+  // twice. Gated on the kind, as the panel's minor age is.
+  const medicalHoldInPanel = capsuleKind === "medicalHold" ? null : medicalHold;
   return {
     diverStatus,
     ready,
@@ -137,6 +172,8 @@ export function diverRowState(
     boardingControlShown,
     lateAt,
     medicalDays,
+    medicalHold,
+    medicalHoldInPanel,
     splitAfterDive,
     capsuleKind,
   };

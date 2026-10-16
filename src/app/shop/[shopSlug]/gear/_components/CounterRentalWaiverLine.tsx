@@ -72,7 +72,7 @@ export function CounterRentalWaiverLine({
                 href={recordHref(refusal.recordId)}
                 className="font-semibold text-primary hover:underline"
               >
-                {t("trips.roster.viewSignedRecord")}
+                {t("trips.roster.viewPhysicianDecision")}
               </Link>
             </WarningLine>
           ) : null}

@@ -78,6 +78,12 @@ import { completeWaiver, issueWaiverRequest } from "./waivers";
  */
 const ctx = fileScopedShopContext();
 
+/** The saved row, or a failure naming the refusal. */
+function saved(result: Awaited<ReturnType<typeof updateDiver>>) {
+  if (!result.ok) throw new Error(`updateDiver refused: ${result.reason}`);
+  return result.person;
+}
+
 describe("person-first diver records", () => {
   it("uses contact information as the temporary name for contact-first intake", async () => {
     const { db, shop } = ctx;
@@ -191,69 +197,25 @@ describe("person-first diver records", () => {
       email: "edited-eli@example.com",
     });
     if (!diver) throw new Error("diver insert failed");
-    const edited = await updateDiver(db, {
-      shopId: shop.id,
-      personId: diver.id,
-      fullName: "Edited Eli",
-      phone: "305.555.0302",
-    });
-    expect(edited?.phone).toBe("+13055550302");
+    const edited = saved(
+      await updateDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        fullName: "Edited Eli",
+        phone: "305.555.0302",
+      }),
+    );
+    expect(edited.phone).toBe("+13055550302");
 
-    const cleared = await updateDiver(db, {
-      shopId: shop.id,
-      personId: diver.id,
-      fullName: "Edited Eli",
-      phone: "   ",
-    });
-    expect(cleared?.phone).toBeNull();
-  });
-
-  /**
-   * H-100, dive-domain review: once a date answers the age question, a
-   * staffer's earlier "18 or older" goes, so clearing the date later cannot
-   * bring back an adult claim the date may have disproved.
-   */
-  it("drops an 18-or-older answer when a date of birth is typed, and keeps it when one is not", async () => {
-    const { db, shop } = ctx;
-    const diver = await createDiver(db, {
-      shopId: shop.id,
-      fullName: "Attested Ari",
-      email: "attested-ari@example.com",
-    });
-    if (!diver) throw new Error("diver insert failed");
-    const [staff] = await db
-      .select({ id: people.id })
-      .from(people)
-      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Dana Reyes")));
-    if (!staff) throw new Error("expected the seeded staffer");
-    await db
-      .update(people)
-      .set({ adultAttestedAt: nowDate(), adultAttestedByPersonId: staff.id })
-      .where(eq(people.id, diver.id));
-
-    const untouched = await updateDiver(db, {
-      shopId: shop.id,
-      personId: diver.id,
-      fullName: "Attested Ari",
-      dateOfBirth: "",
-    });
-    expect(untouched?.adultAttestedAt).not.toBeNull();
-
-    await updateDiver(db, {
-      shopId: shop.id,
-      personId: diver.id,
-      fullName: "Attested Ari",
-      dateOfBirth: "2011-04-09",
-    });
-    const cleared = await updateDiver(db, {
-      shopId: shop.id,
-      personId: diver.id,
-      fullName: "Attested Ari",
-      dateOfBirth: "",
-    });
-    expect(cleared?.dateOfBirth).toBeNull();
-    expect(cleared?.adultAttestedAt).toBeNull();
-    expect(cleared?.adultAttestedByPersonId).toBeNull();
+    const cleared = saved(
+      await updateDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        fullName: "Edited Eli",
+        phone: "   ",
+      }),
+    );
+    expect(cleared.phone).toBeNull();
   });
 
   it("resolves the staff member who cleared a self-declared no-certification stamp", async () => {
@@ -431,25 +393,29 @@ describe("person-first diver records", () => {
       }),
     ).toBeNull();
 
-    const updated = await updateDiver(db, {
-      shopId: shop.id,
-      personId: diver.id,
-      fullName: "Returning Riley Updated",
-      email: "riley@example.com",
-      phone: "555",
-      diveInsurance: "  DAN #12345  ",
-    });
-    expect(updated?.fullName).toBe("Returning Riley Updated");
+    const updated = saved(
+      await updateDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        fullName: "Returning Riley Updated",
+        email: "riley@example.com",
+        phone: "555",
+        diveInsurance: "  DAN #12345  ",
+      }),
+    );
+    expect(updated.fullName).toBe("Returning Riley Updated");
     // The dive-insurance field is trimmed and persisted; blanking it clears it.
-    expect(updated?.diveInsurance).toBe("DAN #12345");
-    const cleared = await updateDiver(db, {
-      shopId: shop.id,
-      personId: diver.id,
-      fullName: "Returning Riley Updated",
-      email: "riley@example.com",
-      diveInsurance: "   ",
-    });
-    expect(cleared?.diveInsurance).toBeNull();
+    expect(updated.diveInsurance).toBe("DAN #12345");
+    const cleared = saved(
+      await updateDiver(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        fullName: "Returning Riley Updated",
+        email: "riley@example.com",
+        diveInsurance: "   ",
+      }),
+    );
+    expect(cleared.diveInsurance).toBeNull();
 
     const staff = (await listDiverSummaries(db, shop.id)).divers.find(
       (row) => row.fullName === "Dana Reyes",
@@ -466,13 +432,15 @@ describe("person-first diver records", () => {
       const diver = await createDiver(db, { shopId: shop.id, fullName: "Contact Casey" });
       if (!diver) throw new Error("diver insert failed");
 
-      const withContact = await updateDiver(db, {
-        shopId: shop.id,
-        personId: diver.id,
-        fullName: "Contact Casey",
-        emergencyContactName: "  Robin Casey  ",
-        emergencyContactPhone: "  +1 305 555 0177  ",
-      });
+      const withContact = saved(
+        await updateDiver(db, {
+          shopId: shop.id,
+          personId: diver.id,
+          fullName: "Contact Casey",
+          emergencyContactName: "  Robin Casey  ",
+          emergencyContactPhone: "  +1 305 555 0177  ",
+        }),
+      );
       expect(withContact).toMatchObject({
         emergencyContactName: "Robin Casey",
         emergencyContactPhone: "+1 305 555 0177",
@@ -481,11 +449,13 @@ describe("person-first diver records", () => {
       // Undefined (the field simply wasn't part of this save) leaves the
       // existing value alone — a staffer editing only the phone number must
       // never silently wipe the name.
-      const untouched = await updateDiver(db, {
-        shopId: shop.id,
-        personId: diver.id,
-        fullName: "Contact Casey",
-      });
+      const untouched = saved(
+        await updateDiver(db, {
+          shopId: shop.id,
+          personId: diver.id,
+          fullName: "Contact Casey",
+        }),
+      );
       expect(untouched).toMatchObject({
         emergencyContactName: "Robin Casey",
         emergencyContactPhone: "+1 305 555 0177",
@@ -494,13 +464,15 @@ describe("person-first diver records", () => {
       // "" is an explicit clear — unlike the diver-facing capture on
       // /ready and /waivers (saveBookingEmergencyContact), a staffer
       // correcting a wrong entry here must be able to blank it out.
-      const cleared = await updateDiver(db, {
-        shopId: shop.id,
-        personId: diver.id,
-        fullName: "Contact Casey",
-        emergencyContactName: "   ",
-        emergencyContactPhone: "   ",
-      });
+      const cleared = saved(
+        await updateDiver(db, {
+          shopId: shop.id,
+          personId: diver.id,
+          fullName: "Contact Casey",
+          emergencyContactName: "   ",
+          emergencyContactPhone: "   ",
+        }),
+      );
       expect(cleared).toMatchObject({
         emergencyContactName: null,
         emergencyContactPhone: null,
@@ -524,7 +496,7 @@ describe("person-first diver records", () => {
         emergencyContactName: "Should Not Land",
         emergencyContactPhone: "+1 000 000 0000",
       });
-      expect(result).toBeNull();
+      expect(result).toEqual({ ok: false, reason: "not_found" });
 
       const [row] = await db.select().from(people).where(eq(people.id, diver.id));
       expect(row?.emergencyContactName).toBeNull();

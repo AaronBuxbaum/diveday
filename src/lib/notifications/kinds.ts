@@ -149,6 +149,37 @@ const seatMoneySchema = z.discriminatedUnion("due", [
   }),
 ]);
 
+/**
+ * The longest trip title a notification carries. `trips.title` is unbounded, so
+ * a long stored title is clipped to this with {@link notificationTripTitle}
+ * before it is measured: a long title must shorten the subject, never fail the
+ * send (security review 20261014, issue #2603).
+ */
+export const NOTIFICATION_TRIP_TITLE_MAX = 200;
+
+/**
+ * A trip title that fits {@link NOTIFICATION_TRIP_TITLE_MAX} as zod measures
+ * it (UTF-16 units), ending in "…" when cut, and never splitting a surrogate
+ * pair (an emoji in a title stays whole or goes). A title that already fits
+ * comes back unchanged apart from the trim.
+ */
+export function notificationTripTitle(title: string): string {
+  const trimmed = title.trim();
+  if (trimmed.length <= NOTIFICATION_TRIP_TITLE_MAX) return trimmed;
+  let cut = trimmed.slice(0, NOTIFICATION_TRIP_TITLE_MAX - 1);
+  if (/[\uD800-\uDBFF]$/.test(cut)) cut = cut.slice(0, -1);
+  return `${cut.trimEnd()}…`;
+}
+
+/**
+ * **The one `tripTitle` every kind shares.** It shortens rather than rejects,
+ * so no writer has to remember to clip a stored title first, and a trip with a
+ * long name (a multi-site charter) still sends its mail, its reminder and its
+ * roll-call alert. `notificationSchema.parse` is the one door a notification
+ * passes before it is sent or queued, so the shortened value is what is sent.
+ */
+const tripTitleSchema = z.string().trim().min(1).transform(notificationTripTitle);
+
 const bookingConfirmationSchema = z.object({
   kind: z.literal("booking_confirmation"),
   bookingId: z.uuid(),
@@ -157,7 +188,7 @@ const bookingConfirmationSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -219,7 +250,7 @@ const waiverRequestSchema = z.object({
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   /** Present when the link was requested from a departure; omitted otherwise. */
-  tripTitle: z.string().trim().min(1).max(200).optional(),
+  tripTitle: tripTitleSchema.optional(),
   completionUrl: z.url().max(2_000),
   expiresAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -311,7 +342,7 @@ const bookingHandoffSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   bookingUrl: z.url().max(2_000),
   expiresAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -325,7 +356,7 @@ const readinessLinkSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   readinessUrl: z.url().max(2_000),
   expiresAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -346,7 +377,7 @@ const waitlistInviteSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -371,7 +402,7 @@ const tripInvitationSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -406,7 +437,7 @@ const lastMinuteDealSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -440,7 +471,7 @@ const checkoutRecoverySchema = z.object({
   to: emailAddressSchema,
   locale: localeSchema,
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -455,7 +486,7 @@ const tripReminderFields = {
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
@@ -531,7 +562,7 @@ const tripRescheduledSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   previousStartsAt: z.date(),
   startsAt: z.date(),
   endsAt: z.date(),
@@ -556,7 +587,7 @@ const tripRecapSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   sites: z.array(z.string().trim().min(1).max(120)).max(10).optional(),
@@ -591,7 +622,7 @@ const tripConditionsHoldSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   conditionsSummary: z.string().trim().max(600).nullish(),
@@ -621,7 +652,7 @@ const tripMinimumNotMetSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   /** What the departure needed, and what it had when the call was made. */
@@ -653,7 +684,7 @@ const tripBlowoutSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   /**
@@ -718,7 +749,7 @@ const bookingCancelledSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   cancelledBy: z.enum(["diver", "shop"]),
@@ -734,6 +765,17 @@ const bookingCancelledSchema = z.object({
       currency: z.string().trim().length(3),
     }),
   ]),
+  /**
+   * A party lead's cancel: how many of the seats they booked went with it and
+   * how many stayed booked (already claimed, or checked in). Counts only; the
+   * lead's own page names the seats. Absent when there was no party.
+   */
+  party: z
+    .object({
+      cancelled: z.number().int().min(0).max(1_000),
+      stayed: z.number().int().min(0).max(1_000),
+    })
+    .optional(),
   /** Back to the shop's own schedule, to find another day. */
   scheduleUrl: z.url().max(2_000),
 });
@@ -1224,7 +1266,7 @@ const departureNoteSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   body: z
@@ -1249,7 +1291,7 @@ const lostItemFoundSchema = z.object({
   locale: localeSchema,
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(200),
+  tripTitle: tripTitleSchema,
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   description: z.string().trim().min(1).max(120),
@@ -1372,7 +1414,7 @@ const crewScheduleChangeSchema = z.object({
       z.object({
         change: z.enum(CREW_NOTICE_CHANGES),
         role: z.enum(CREW_TRIP_ROLES).nullable().optional(),
-        tripTitle: z.string().trim().min(1).max(200),
+        tripTitle: tripTitleSchema,
         startsAt: z.date(),
         /** On `time_moved`: when it left before the move (#2283). */
         previousStartsAt: z.date().optional(),
@@ -1446,27 +1488,6 @@ const stripePaymentsRestrictedSchema = z.object({
  * Not queued (`notificationIsQueueable`): an alert that arrives hours late,
  * after the count closed, says something false.
  */
-/**
- * The longest trip title a notification carries. `trips.title` is unbounded,
- * so a writer that hands a stored title to a kind capped here clips it first
- * with {@link notificationTripTitle}: a long title must shorten the subject,
- * never fail the send (security review 20261014).
- */
-export const NOTIFICATION_TRIP_TITLE_MAX = 200;
-
-/**
- * A trip title that fits {@link NOTIFICATION_TRIP_TITLE_MAX} as zod measures
- * it (UTF-16 units), ending in "…" when cut, and never splitting a surrogate
- * pair (an emoji in a title stays whole or goes).
- */
-export function notificationTripTitle(title: string): string {
-  const trimmed = title.trim();
-  if (trimmed.length <= NOTIFICATION_TRIP_TITLE_MAX) return trimmed;
-  let cut = trimmed.slice(0, NOTIFICATION_TRIP_TITLE_MAX - 1);
-  if (/[\uD800-\uDBFF]$/.test(cut)) cut = cut.slice(0, -1);
-  return `${cut.trimEnd()}…`;
-}
-
 const rollCallStaleSchema = z.object({
   kind: z.literal("roll_call_stale"),
   shopId: z.uuid(),
@@ -1476,17 +1497,92 @@ const rollCallStaleSchema = z.object({
   locale: localeSchema,
   recipientName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
-  tripTitle: z.string().trim().min(1).max(NOTIFICATION_TRIP_TITLE_MAX),
+  tripTitle: tripTitleSchema,
   /** The after-dive checkpoint that is open: 1–4. */
   diveNumber: z.number().int().min(1).max(4),
-  /** People not accounted for there, or recorded not back aboard when `missing`. */
-  unaccounted: z.number().int().min(1).max(10_000),
-  missing: z.boolean(),
+  /**
+   * The two counts, summed across the departure's diver and crew rows (EAP
+   * review on H-118): people recorded not back aboard, and people with no
+   * result yet. Never one number that could mean either.
+   */
+  notBackAboard: z.number().int().min(0).max(10_000),
+  awaiting: z.number().int().min(0).max(10_000),
   /** When the boat was due back (the departure's end), said in the shop's zone. */
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   rollCallUrl: z.url().max(2_000),
   alertedAt: z.date(),
+});
+
+/**
+ * **The same alert, to the shop's shore contact** (H-118, decided 2026-10-15).
+ * Addressed to somebody outside the shop's accounts, so it carries less than
+ * the owners' copy: no person, no link behind a staff sign-in, and no name of
+ * anybody aboard. The shop and its phone, the departure, the dive, the two
+ * counts, when the boat was due back and when this was sent. Sent only to an
+ * address with a recorded consent that its inbox confirmed
+ * (`shoreAlertRecipient`, `src/lib/shore-alert-contact.ts`).
+ *
+ * `stopUrl` is the one link: `/unsubscribe/<token>`, which takes the address
+ * off the shop. Not named `unsubscribeUrl`, which would mark the kind
+ * commercial (`withPostalFooter`); the SES adapter lifts it into the
+ * `List-Unsubscribe` pair all the same.
+ */
+const rollCallStaleShoreSchema = z.object({
+  kind: z.literal("roll_call_stale_shore"),
+  shopId: z.uuid(),
+  tripId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  shopName: z.string().trim().min(1).max(120),
+  /** The shop's own phone, when it has one on file: who to call first. */
+  shopPhone: z.string().trim().min(1).max(60).nullable(),
+  tripTitle: tripTitleSchema,
+  diveNumber: z.number().int().min(1).max(4),
+  notBackAboard: z.number().int().min(0).max(10_000),
+  awaiting: z.number().int().min(0).max(10_000),
+  endsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  /** When this pass ran: the email says when it was true. */
+  alertedAt: z.date(),
+  stopUrl: z.url().max(2_000),
+});
+
+/**
+ * **The link a saved shore address receives before any alert goes to it**
+ * (H-118 review; the front desk's `contact_email_confirmation` is the model).
+ * From the shop, in the shop's language; it says what agreeing means and that
+ * ignoring it sends nothing.
+ */
+const shoreAlertConfirmationSchema = z.object({
+  kind: z.literal("shore_alert_confirmation"),
+  shopId: z.uuid(),
+  tokenId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  shopName: z.string().trim().min(1).max(120),
+  confirmUrl: z.url().max(2_000),
+  expiresAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
+/**
+ * **The shore contact stopped the alerts themselves** (H-118 re-review): one
+ * email to each owner with an active login when a stop link took the address
+ * off the shop, so the shop learns its shore contact is gone. Staff
+ * operational mail, from DiveDay; the address that stopped is never in it.
+ */
+const shoreAlertStoppedSchema = z.object({
+  kind: z.literal("shore_alert_stopped"),
+  shopId: z.uuid(),
+  personId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  settingsUrl: z.url().max(2_000),
+  /** When the link was used: one email per owner per stop. */
+  stoppedAt: z.date(),
 });
 
 export const notificationSenderSchema = z.object({
@@ -1561,6 +1657,9 @@ export const notificationSchema = z
     deskAfterHoursSchema,
     stripePaymentsRestrictedSchema,
     rollCallStaleSchema,
+    rollCallStaleShoreSchema,
+    shoreAlertConfirmationSchema,
+    shoreAlertStoppedSchema,
     departureNoteSchema,
     lostItemFoundSchema,
     courseCertifiedSchema,
@@ -1676,6 +1775,8 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "crew_schedule_change":
     case "desk_after_hours":
     case "roll_call_stale":
+    case "roll_call_stale_shore":
+    case "shore_alert_confirmation":
     case "departure_note":
     case "lost_item_found":
     case "course_certified":
@@ -1851,5 +1952,12 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One alert per departure per owner; the departure's claim comes first.
     case "roll_call_stale":
       return `roll-call-stale/${notification.tripId}/${notification.personId}`;
+    // One alert per departure to the shore contact, under the same claim.
+    case "roll_call_stale_shore":
+      return `roll-call-stale-shore/${notification.tripId}`;
+    case "shore_alert_confirmation":
+      return `shore-alert-confirmation/${notification.tokenId}`;
+    case "shore_alert_stopped":
+      return `shore-alert-stopped/${notification.personId}/${notification.stoppedAt.toISOString()}`;
   }
 }

@@ -13,6 +13,8 @@ const seen = vi.hoisted(() => ({
 
 vi.mock("../booking-actions", () => ({
   cancelMyBookingAction: async () => {},
+  addSeatFromReady: async () => {},
+  payForPartySeatFromReady: async () => {},
   askToMoveAction: async () => {},
 }));
 vi.mock("./RunningLate", () => ({ RunningLate: () => <p>late</p> }));

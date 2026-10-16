@@ -1,0 +1,795 @@
+{
+  "area": "turks-caicos-providenciales",
+  "method": "Providenciales (Grace Bay, Northwest Point, south-side banks), West Caicos and French Cay; Pine Cay sites are recorded as excluded because they fall outside the area label. Lists: (1) the official dive-boat mooring list, the Turks & Caicos Reef Fund's 'Dive Mooring List' of 20 Oct 2016 (installed under its memorandum of understanding with the Department of Environment and Coastal Resources; the Reef Fund's own site-map page shows the same sites and counts as the same list), with its coordinates converted from degrees and decimal minutes to decimal degrees; (2) the Visit Turks and Caicos tourism board's 2026 dive sites map, read from the map image; (3) Dive Provo's published site list. Each counts once. A site is counted when it is named, divable and on at least two of the three; aliases are merged by name or by the tourism board's own 'also' marks (Aquarium West is the tourism board's and Dive Provo's Aquarium; Stairway is Coral Stairway; Whiteface is The Anchor; Molasses Reef is the Molasses Reef Wreck). Sites on one list only, including mooring-list names no shop or board repeats, are excluded, as are Pine Cay and the shore snorkel reef Smith's Reef. Bight Reef is not on any list read. Other operators were tried: Flamingo Divers, Caicos Adventures, Big Blue Collective, Caicos Dream Tours (snorkel only) and Art Pickering's Provo Turtle Divers publish no site list (the last domain now serves another business); the Aggressor and Explorer Ventures liveaboard site lists could not be fetched, so neither is counted. Counted 2026-10-14.",
+  "sources": [
+    "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+    "https://www.tcreef.org/turks-and-caicos-scuba-diving-sites",
+    "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+    "https://www.visittci.com/diving",
+    "https://diveprovo.com/dive-sites/"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Awesome",
+      "template": null,
+      "position": [21.883, -72.12517],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ],
+      "excluded": "Pine Cay, outside this area's bounds (Providenciales, West Caicos, French Cay); belongs with a Pine Cay area if one is added"
+    },
+    {
+      "name": "Eagle Ray Pass",
+      "template": null,
+      "position": [21.889, -72.12067],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ],
+      "excluded": "Pine Cay, outside this area's bounds (Providenciales, West Caicos, French Cay); belongs with a Pine Cay area if one is added"
+    },
+    {
+      "name": "Mystery Reef",
+      "template": null,
+      "position": [21.896, -72.11798],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ],
+      "excluded": "Pine Cay, outside this area's bounds (Providenciales, West Caicos, French Cay); belongs with a Pine Cay area if one is added"
+    },
+    {
+      "name": "50 Yard Line",
+      "template": null,
+      "position": [21.90518, -72.11492],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ],
+      "excluded": "Pine Cay, outside this area's bounds (Providenciales, West Caicos, French Cay); belongs with a Pine Cay area if one is added"
+    },
+    {
+      "name": "Football Field",
+      "template": null,
+      "position": [21.9064, -72.1145],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ],
+      "excluded": "Pine Cay, outside this area's bounds (Providenciales, West Caicos, French Cay); belongs with a Pine Cay area if one is added"
+    },
+    {
+      "name": "Barracuda Point",
+      "template": null,
+      "position": [21.9081, -72.11295],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ],
+      "excluded": "Pine Cay, outside this area's bounds (Providenciales, West Caicos, French Cay); belongs with a Pine Cay area if one is added"
+    },
+    {
+      "name": "Angelfish Reef",
+      "template": null,
+      "position": [21.9099, -72.11],
+      "listedBy": ["https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf"],
+      "excluded": "Pine Cay, outside this area's bounds (Providenciales, West Caicos, French Cay); belongs with a Pine Cay area if one is added"
+    },
+    {
+      "name": "Black Durgon Reef",
+      "template": null,
+      "position": [21.8731, -72.13403],
+      "listedBy": ["https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf"],
+      "excluded": "Pine Cay, outside this area's bounds (Providenciales, West Caicos, French Cay); belongs with a Pine Cay area if one is added"
+    },
+    {
+      "name": "Sunset Strip",
+      "template": null,
+      "position": [21.8302, -72.17383],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Shark Alley",
+      "template": null,
+      "position": [21.82917, -72.17417],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Fifi's Folly",
+      "template": null,
+      "position": [21.82745, -72.17557],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Catacombs",
+      "template": null,
+      "position": [21.825, -72.17787],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Two Sharks",
+      "template": null,
+      "position": [21.8238, -72.17915],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Half Moon Bay",
+      "template": null,
+      "position": [21.822, -72.18183],
+      "listedBy": ["https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf"],
+      "excluded": "on one list only (TC Reef Fund mooring list)"
+    },
+    {
+      "name": "Crocodile",
+      "template": null,
+      "position": [21.81718, -72.184],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Coral Gables",
+      "template": "coral-gables-providenciales",
+      "position": [21.81633, -72.1845],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Cathedral",
+      "template": "cathedral-providenciales",
+      "position": [21.81533, -72.18517],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Piranha Cove",
+      "template": null,
+      "position": [21.81483, -72.18627],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Pinnacles",
+      "template": "pinnacles-providenciales",
+      "position": [21.81417, -72.187],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Graceland",
+      "template": "graceland-providenciales",
+      "position": [21.81333, -72.18713],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Grouper Hole",
+      "template": "grouper-hole-providenciales",
+      "position": [21.81268, -72.18942],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Grotto",
+      "template": null,
+      "position": [21.80945, -72.19337],
+      "listedBy": ["https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf"],
+      "excluded": "on one list only (TC Reef Fund mooring list; the tourism board's 'Dolphin Grotto' is the Northwest Point site, not this one)"
+    },
+    {
+      "name": "Arawak",
+      "template": null,
+      "position": [21.80648, -72.20005],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Boneyard",
+      "template": null,
+      "position": [21.80515, -72.20175],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Coral Cable",
+      "template": null,
+      "position": [21.804, -72.20413],
+      "listedBy": ["https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf"],
+      "excluded": "on one list only (TC Reef Fund mooring list)"
+    },
+    {
+      "name": "Aquarium (Aquarium West)",
+      "template": "aquarium-west-providenciales",
+      "position": [21.80845, -72.22597],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Southwind Wreck",
+      "template": null,
+      "position": [21.81003, -72.238],
+      "listedBy": ["https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf"],
+      "excluded": "on one list only (TC Reef Fund mooring list)"
+    },
+    {
+      "name": "W.E. Wreck",
+      "template": null,
+      "position": [21.81088, -72.23742],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Shark Hole",
+      "template": null,
+      "position": [21.81133, -72.2408],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Smith's Reef",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map); shore snorkel reef, not a boat dive"
+    },
+    {
+      "name": "Canyons (Northwest Point)",
+      "template": null,
+      "position": [21.87867, -72.32967],
+      "listedBy": ["https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf"],
+      "excluded": "on one list only (TC Reef Fund mooring list; no mooring installed)"
+    },
+    {
+      "name": "Dolphin Grotto",
+      "template": null,
+      "position": [21.85575, -72.3401],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Two Step (Two Steps)",
+      "template": null,
+      "position": [21.85418, -72.34017],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Blue's Ledge",
+      "template": null,
+      "position": [21.8527, -72.34045],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "North Wall",
+      "template": null,
+      "position": [21.85042, -72.3409],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Grand Canyon",
+      "template": null,
+      "position": [21.8471, -72.34203],
+      "listedBy": ["https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf"],
+      "excluded": "on one list only (TC Reef Fund mooring list)"
+    },
+    {
+      "name": "Shark Hotel",
+      "template": "shark-hotel-providenciales",
+      "position": [21.84433, -72.34183],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Black Coral Forest",
+      "template": null,
+      "position": [21.84292, -72.3416],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Amphitheatre (Amphitheater)",
+      "template": "amphitheatre-providenciales",
+      "position": [21.84117, -72.34117],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Chimney",
+      "template": null,
+      "position": [21.83812, -72.34113],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Thunderdome",
+      "template": "thunderdome-providenciales",
+      "position": [21.83708, -72.34095],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "The Crack",
+      "template": "the-crack-providenciales",
+      "position": [21.83542, -72.34133],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Eel Garden",
+      "template": "eel-garden-providenciales",
+      "position": [21.83433, -72.341],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Tiki Hut Wall",
+      "template": null,
+      "position": [21.83233, -72.3424],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Hammerhead Hideaway",
+      "template": null,
+      "position": [21.83025, -72.34353],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Coral Stairway (Stairway)",
+      "template": null,
+      "position": [21.82752, -72.34452],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Gary's Groove",
+      "template": null,
+      "position": [21.82593, -72.34528],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Triple S Point",
+      "template": null,
+      "position": [21.82462, -72.34615],
+      "listedBy": ["https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf"],
+      "excluded": "on one list only (TC Reef Fund mooring list)"
+    },
+    {
+      "name": "Sandy Cove",
+      "template": null,
+      "position": [21.82348, -72.34655],
+      "listedBy": ["https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf"],
+      "excluded": "on one list only (TC Reef Fund mooring list)"
+    },
+    {
+      "name": "Hole in the Wall",
+      "template": "hole-in-the-wall-providenciales",
+      "position": [21.82217, -72.347],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Land of Giants",
+      "template": null,
+      "position": [21.717, -72.45633],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Midnight Manta",
+      "template": null,
+      "position": [21.70033, -72.467],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Highway to Heaven",
+      "template": "highway-to-heaven-west-caicos",
+      "position": [21.6907, -72.46985],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Stingray Deep",
+      "template": null,
+      "position": [21.68648, -72.47452],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Elephant Ear Canyon",
+      "template": "elephant-ear-canyon-west-caicos",
+      "position": [21.68327, -72.46983],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Devil's Horn",
+      "template": null,
+      "position": [21.6815, -72.47032],
+      "listedBy": ["https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf"],
+      "excluded": "on one list only (TC Reef Fund mooring list)"
+    },
+    {
+      "name": "Stingray Bay",
+      "template": null,
+      "position": [21.67937, -72.4699],
+      "listedBy": ["https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf"],
+      "excluded": "on one list only (TC Reef Fund mooring list)"
+    },
+    {
+      "name": "The Gully (Gully)",
+      "template": "the-gully-west-caicos",
+      "position": [21.67695, -72.46967],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Pickering's Place",
+      "template": null,
+      "position": [21.6751, -72.46972],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Boat Cove",
+      "template": null,
+      "position": [21.67283, -72.46917],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Rock Garden Interlude",
+      "template": null,
+      "position": [21.67048, -72.46973],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Rock Garden",
+      "template": null,
+      "position": [21.66877, -72.46997],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Magic Mushroom",
+      "template": null,
+      "position": [21.66503, -72.47073],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Yankee Town",
+      "template": null,
+      "position": [21.66272, -72.47028],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Driveway",
+      "template": "driveway-west-caicos",
+      "position": [21.659, -72.47067],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Brandywine",
+      "template": null,
+      "position": [21.65567, -72.4715],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Conch City",
+      "template": null,
+      "position": [21.6529, -72.47265],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Jagged Edge",
+      "template": null,
+      "position": [21.64993, -72.47337],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Stark Reality",
+      "template": null,
+      "position": [21.64748, -72.47458],
+      "listedBy": ["https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf"],
+      "excluded": "on one list only (TC Reef Fund mooring list)"
+    },
+    {
+      "name": "Whiteface (The Anchor)",
+      "template": "whiteface-west-caicos",
+      "position": [21.64567, -72.475],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Sunday Service",
+      "template": null,
+      "position": [21.63533, -72.481],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Isle's End",
+      "template": null,
+      "position": [21.63317, -72.48217],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "The Falls",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    },
+    {
+      "name": "Pots of Gold",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    },
+    {
+      "name": "Tons of Sponges",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    },
+    {
+      "name": "Spanish Anchor",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    },
+    {
+      "name": "Southwest Reefs (South West Reef)",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Double D",
+      "template": "double-d-french-cay",
+      "position": [21.48975, -72.20707],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Rock and Roll",
+      "template": "rock-and-roll-french-cay",
+      "position": [21.492, -72.21883],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "G Spot",
+      "template": "g-spot-french-cay",
+      "position": [21.49253, -72.21543],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Jules Junction",
+      "template": null,
+      "position": [21.49595, -72.21127],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Half Mile Reef",
+      "template": "half-mile-reef-french-cay",
+      "position": [21.498, -72.20745],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Quarter Mile Reef",
+      "template": null,
+      "position": [21.49867, -72.20633],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Dewey's Delight",
+      "template": null,
+      "position": [21.50093, -72.19805],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Nightingale",
+      "template": null,
+      "position": [21.49897, -72.1865],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Lion's Den",
+      "template": null,
+      "position": [21.50018, -72.1816],
+      "listedBy": [
+        "https://www.tcreef.org/s/TCI-Dive_Site_Summary_List_20_Oct_16.pdf",
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"
+      ]
+    },
+    {
+      "name": "Dax Canyon",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    },
+    {
+      "name": "Edder Flat",
+      "template": null,
+      "listedBy": ["https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png"],
+      "excluded": "on one list only (tourism board map)"
+    },
+    {
+      "name": "Molasses Reef (Molasses Reef Wreck)",
+      "template": null,
+      "listedBy": [
+        "https://www.visittci.com/core/turks-and-caicos-dive-sites-map_2048x1583.png",
+        "https://diveprovo.com/dive-sites/"
+      ]
+    }
+  ]
+}

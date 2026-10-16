@@ -45,13 +45,14 @@ const { requireShopSurface } = await import("@/lib/session");
 const {
   addToWaitlistAction,
   carryWaitlistAction,
-  confirmDiverIdentityAction,
-  markRosterWaiverInPersonAction,
-  splitDiverIdentityAction,
   moveSeatAction,
   removeBookingAction,
   undoRemoveBookingAction,
-} = await import("./actions");
+} = await import("./roster-seating-actions");
+const { confirmDiverIdentityAction, splitDiverIdentityAction } = await import(
+  "./roster-identity-actions"
+);
+const { markRosterWaiverInPersonAction } = await import("./roster-waiver-actions");
 const { certifyDiverFromRosterAction, saveCourseNextStepAction } = await import("./course-actions");
 const { elearningCheckAction } = await import("./elearning-actions");
 

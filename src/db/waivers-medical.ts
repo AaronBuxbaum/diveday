@@ -10,6 +10,7 @@ import { nowDate } from "@/lib/clock";
 import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
+import { publishManifestEventsForPerson } from "./manifest-events";
 import { waiverRecords } from "./schema";
 import { activeStaffAttestorId } from "./waivers-in-person";
 
@@ -190,7 +191,7 @@ export async function recordMedicalEvaluation(
   if (input.evaluatedOn > calendarDateInTimezone(now, "UTC")) {
     return { ok: false, reason: "evaluation_in_future" };
   }
-  return db.transaction(async (tx): Promise<MedicalEvaluationResult> => {
+  const result = await db.transaction(async (tx): Promise<MedicalEvaluationResult> => {
     const recordedBy = await activeStaffAttestorId(tx, input.shopId, input.recordedByPersonId);
     if (!recordedBy) return { ok: false, reason: "staff_not_found" };
 
@@ -289,6 +290,12 @@ export async function recordMedicalEvaluation(
     }
     return { ok: true, recordId: written.id, outcome: input.outcome, alreadyRecorded: false };
   });
+  // A physician's answer clears or holds every seat this diver has: open and
+  // primed manifests re-read, after the commit (issue #2613).
+  if (result.ok && !result.alreadyRecorded) {
+    await publishManifestEventsForPerson(db, input.shopId, input.personId);
+  }
+  return result;
 }
 
 export type RetireMedicalRefusalResult =
@@ -323,7 +330,7 @@ export async function retireMedicalRefusal(
   input: { shopId: string; bookingId: string; actorPersonId: string; now?: Date },
 ): Promise<RetireMedicalRefusalResult> {
   const now = input.now ?? nowDate();
-  return db.transaction(async (tx): Promise<RetireMedicalRefusalResult> => {
+  const result = await db.transaction(async (tx): Promise<RetireMedicalRefusalResult> => {
     const roles = await loadActiveStaffRoles(tx, input.shopId, input.actorPersonId);
     if (!canRetireMedicalRefusal(roles ?? undefined))
       return { ok: false, reason: "not_authorized" };
@@ -344,6 +351,8 @@ export async function retireMedicalRefusal(
     if (!retired) return { ok: false, reason: "no_refusal" };
     return { ok: true, personId: retired.personId };
   });
+  if (result.ok) await publishManifestEventsForPerson(db, input.shopId, result.personId);
+  return result;
 }
 
 /**

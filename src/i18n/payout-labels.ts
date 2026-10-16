@@ -38,6 +38,7 @@ export function payoutSentence(
   const amount = formatMoneyCents(payout.amountCents, payout.currency, locale);
   const date = dayIn(payout.arrivalDate, "UTC", locale);
   if (payout.status === "failed") return t("shared.payouts.failed", { amount, date });
+  if (payout.status === "canceled") return t("shared.payouts.canceled", { amount, date });
   if (!payout.coveredFrom || !payout.coveredTo) {
     return t("shared.payouts.paidNoSpan", { amount, date });
   }

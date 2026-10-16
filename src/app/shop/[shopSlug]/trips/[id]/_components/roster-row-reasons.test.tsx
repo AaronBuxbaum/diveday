@@ -167,7 +167,7 @@ describe("an earlier physician refusal under a cleared release", () => {
     expect(line).toBeVisible();
     expect(line.textContent).toMatch(/Aug\s1 \(earlier waiver\)/);
     const link = within(line.closest("li") as HTMLElement).getByRole("link", {
-      name: "View signed record",
+      name: "View the physician’s decision",
     });
     expect(link).toHaveAttribute("href", "/shop/blue-mantis/divers/p-r/waivers/w-refused");
   });

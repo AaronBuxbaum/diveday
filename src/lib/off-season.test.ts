@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { OFF_SEASON_QUIET_DAYS, offSeason } from "./off-season";
+import { OFF_SEASON_QUIET_DAYS, offSeason, reopensOnTooFar } from "./off-season";
 
 const now = new Date("2026-01-15T12:00:00Z");
 const TZ = "America/New_York";
@@ -97,5 +97,17 @@ describe("offSeason", () => {
         offSeason({ now, timeZone: TZ, firstDeparture: inDays(3), reopensOn: "2026-03-01" }),
       ).toEqual({ quiet: false, opensAt: null, reopensOn: null });
     });
+  });
+});
+
+describe("reopensOnTooFar", () => {
+  it("allows a date up to eighteen months out and refuses one day past it", () => {
+    expect(reopensOnTooFar("2027-07-15", "2026-01-15")).toBe(false);
+    expect(reopensOnTooFar("2027-07-16", "2026-01-15")).toBe(true);
+  });
+
+  it("refuses a typo'd year and never refuses a past date", () => {
+    expect(reopensOnTooFar("2062-03-01", "2026-01-15")).toBe(true);
+    expect(reopensOnTooFar("2025-03-01", "2026-01-15")).toBe(false);
   });
 });
