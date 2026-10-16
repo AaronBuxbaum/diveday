@@ -193,6 +193,11 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "trips.notices.identityRepointMedicalHold",
   },
+  "identity-split-contact-conflict": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identitySplitContactConflict",
+  },
   "identity-contact-differs": {
     form: "roster",
     tone: "danger",

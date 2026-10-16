@@ -174,3 +174,29 @@ export function heldContactCarry(
   if (choice === "keep_record") return null;
   return "differs";
 }
+
+/**
+ * The one emergency contact a split's moving seats carry onto the new record
+ * (issue #2145): the first complete pair among them, `null` when none holds
+ * one, and `"conflict"` when two hold different pairs, which the desk settles
+ * before the split rather than one being dropped (dive-domain review H4).
+ */
+export function movingHeldContact(
+  seats: ReadonlyArray<{ heldContactName: string | null; heldContactPhone: string | null }>,
+): { name: string; phone: string } | null | "conflict" {
+  let found: { name: string; phone: string } | null = null;
+  for (const seat of seats) {
+    if (!seat.heldContactName || !seat.heldContactPhone) continue;
+    const pair = { name: seat.heldContactName, phone: seat.heldContactPhone };
+    if (!found) {
+      found = pair;
+      continue;
+    }
+    const same = heldContactCarry(
+      { heldName: pair.name, heldPhone: pair.phone, recordName: found.name, recordPhone: found.phone },
+      undefined,
+    );
+    if (same !== null) return "conflict";
+  }
+  return found;
+}

@@ -274,6 +274,65 @@ describe("a held seat's emergency contact", () => {
     expect(record?.emergencyContactName).toBe("Pilar Vega");
   });
 
+  /** A second seat booked as Lucia on Marisol's email, on another charter. */
+  async function siblingSeat(tripId: string, email: string) {
+    const { db, shop } = ctx;
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const other = trips.find((row) => !row.courseId && row.id !== tripId && row.booked < row.capacity);
+    if (!other) throw new Error("no second open charter");
+    const seat = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: other.id,
+      fullName: "Lucia Vega",
+      email,
+    });
+    if (!seat.ok) throw new Error("second seat refused");
+    return seat.bookingId;
+  }
+
+  async function heldPair() {
+    const held = await heldSeat();
+    const [record] = await ctx.db.select().from(people).where(eq(people.id, held.marisol));
+    if (!record?.email) throw new Error("record email missing");
+    return { ...held, sibling: await siblingSeat(held.trip.id, record.email) };
+  }
+
+  it("carries a contact recorded on any moving seat onto the new record", async () => {
+    const { db, shop, bookingId, sibling, staff } = await heldPair();
+    await recordHeld(sibling);
+    const split = await splitBookingIdentity(db, {
+      shopId: shop.id,
+      bookingId,
+      actorPersonId: staff.id,
+      fullName: "Lucia Vega",
+      adultAttested: true,
+      sameNameSeatIds: [sibling],
+    });
+    if (!split.ok) throw new Error(`split refused: ${split.reason}`);
+    expect(split.seats).toBe(2);
+    const [lucia] = await db.select().from(people).where(eq(people.id, split.personId));
+    expect(lucia?.emergencyContactName).toBe("Rosa Vega");
+  });
+
+  it("refuses a split whose moving seats hold different contacts", async () => {
+    const { db, shop, marisol, bookingId, sibling, staff } = await heldPair();
+    await recordHeld(bookingId);
+    await recordHeld(sibling, "Ines Vega", "+34 600 555 666");
+    const split = await splitBookingIdentity(db, {
+      shopId: shop.id,
+      bookingId,
+      actorPersonId: staff.id,
+      fullName: "Lucia Vega",
+      adultAttested: true,
+      sameNameSeatIds: [sibling],
+    });
+    expect(split).toEqual({ ok: false, reason: "held_contact_conflict" });
+    const { seat } = await contacts(bookingId, marisol);
+    expect(seat?.personId).toBe(marisol);
+    expect(seat?.heldEmergencyContactName).toBe("Rosa Vega");
+  });
+
   it("refuses a name without a number at the column, whatever the writer", async () => {
     const { db, bookingId } = await heldSeat();
     // In a savepoint of its own, so the refusal leaves the test's transaction usable.

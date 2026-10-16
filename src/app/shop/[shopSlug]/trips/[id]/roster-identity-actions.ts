@@ -209,6 +209,7 @@ const SPLIT_REFUSAL_NOTICE = {
   date_of_birth_invalid: "identity-split-dob-invalid",
   age_unstated: "identity-split-age-unstated",
   email_in_use: "identity-split-email-in-use",
+  held_contact_conflict: "identity-split-contact-conflict",
 } as const satisfies Record<
   Extract<Awaited<ReturnType<typeof splitBookingIdentity>>, { ok: false }>["reason"],
   string

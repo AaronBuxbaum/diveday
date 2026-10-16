@@ -15,7 +15,12 @@ import { seatListPriceCents } from "@/lib/deposits";
 import { typeChangedDeskEventKind } from "@/lib/desk-events";
 import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
-import { type HeldContactChoice, heldContactCarry, seatName } from "@/lib/held-seat";
+import {
+  type HeldContactChoice,
+  heldContactCarry,
+  movingHeldContact,
+  seatName,
+} from "@/lib/held-seat";
 import { inTrainingBefore } from "@/lib/in-training";
 import { normalizeEmailAddress } from "@/lib/inbox";
 import { rowCanBeReactivated } from "@/lib/no-show";
@@ -3290,7 +3295,9 @@ export type SplitBookingIdentityResult =
         | "date_of_birth_required"
         | "date_of_birth_invalid"
         | "age_unstated"
-        | "email_in_use";
+        | "email_in_use"
+        /** Two moving seats hold different emergency contacts (issue #2145). */
+        | "held_contact_conflict";
     };
 
 /** What the staffer told a split about the new diver, beyond a name (issue #2081). */
@@ -3513,7 +3520,8 @@ export async function splitBookingIdentity(
     | "medical_hold"
     | "date_of_birth_required"
     | "age_unstated"
-    | "email_in_use";
+    | "email_in_use"
+    | "held_contact_conflict";
   type Split =
     | { refused: Refusal }
     | {
@@ -3558,7 +3566,12 @@ export async function splitBookingIdentity(
       const candidates =
         requested.size > 0 && booking.bookedAs
           ? await tx
-              .select({ bookingId: bookings.id, tripId: bookings.tripId })
+              .select({
+                bookingId: bookings.id,
+                tripId: bookings.tripId,
+                heldContactName: bookings.heldEmergencyContactName,
+                heldContactPhone: bookings.heldEmergencyContactPhone,
+              })
               .from(bookings)
               .innerJoin(trips, eq(trips.id, bookings.tripId))
               .where(
@@ -3580,6 +3593,13 @@ export async function splitBookingIdentity(
       );
       const seats = [{ bookingId: input.bookingId, tripId: booking.tripId }, ...siblings];
       const seatIds = seats.map((seat) => seat.bookingId);
+
+      // The contact the desk recorded for the person on any moving seat
+      // (issue #2145) is theirs, whichever seat it was written on; two
+      // different ones are a question for the desk, not a pick made here
+      // (dive-domain review H4).
+      const heldContact = movingHeldContact([booking, ...siblings]);
+      if (heldContact === "conflict") return { refused: "held_contact_conflict" as const };
 
       // A course with a minimum age measures it against this record, and so
       // does the guardian rule: a record with no date reads as an adult and
@@ -3660,8 +3680,8 @@ export async function splitBookingIdentity(
             : { adultAttestedAt: now, adultAttestedByPersonId: input.actorPersonId }),
           // The contact the desk recorded for the person on this seat while
           // it was held (issue #2145) is theirs: it goes onto their record.
-          emergencyContactName: booking.heldContactName,
-          emergencyContactPhone: booking.heldContactPhone,
+          emergencyContactName: heldContact?.name ?? null,
+          emergencyContactPhone: heldContact?.phone ?? null,
         })
         .returning({ id: people.id });
       if (!person) throw new Error("splitBookingIdentity: person insert returned no row");
