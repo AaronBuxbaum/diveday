@@ -994,7 +994,7 @@
     "hotelPickupFieldLabel": "Where you’re staying",
     "hotelPickupPlaceholder": "Hotel name, room, or landmark",
     "dietaryLabel": "Anything you can’t eat?",
-    "dietaryHint": "Lunch is served aboard. For a severe allergy, tell the shop directly too.",
+    "dietaryHint": "Lunch is served aboard, and the crew who make it see your answer. For a severe allergy, tell the shop directly too.",
     "dietaryPlaceholder": "Vegetarian, no shellfish…",
     "hotelPickupDetail": "{location}",
     "hotelPickupDetailWithTime": "{location} · Pickup at {time}",
