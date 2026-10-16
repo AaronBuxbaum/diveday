@@ -6033,6 +6033,10 @@
       "reason": "Commons search (English and French) cleared no candidate for this site; no underwater photograph of it; the Saint-Pierre wrecks that surface are different wrecks",
       "checked": "2026-10-15"
     },
+    "site:nanton-point-antigua": {
+      "reason": "No vetted Commons photograph of this dive site exists: Commons holds no image tied to this headland or reef, and a search for the site name cleared no candidate.",
+      "checked": "2026-10-16"
+    },
     "site:narwal-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
