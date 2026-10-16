@@ -155,3 +155,13 @@ export function gearReturnOutcomeLabel(t: StaffTranslator, outcome: GearReturnOu
       return t("gear.unit.returnOutcomeServiceConcern");
   }
 }
+
+/**
+ * A counter tank's recorded gas (issue #2257): "Air" at 21% oxygen, otherwise
+ * "EANx 32". The percent is the stored oxygen figure, never rounded here.
+ */
+export function tankFillLabel(t: StaffTranslator, o2Percent: number): string {
+  return o2Percent === 21
+    ? t("counterRentals.fill.air")
+    : t("counterRentals.fill.eanx", { percent: o2Percent });
+}

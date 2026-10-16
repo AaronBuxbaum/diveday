@@ -5,8 +5,11 @@ import { nowDate } from "@/lib/clock";
 import {
   type CounterRentalCardRefusal,
   type CounterRentalWindowRefusal,
+  type CounterTankFillRefusal,
   checkCounterRentalWindow,
   counterRentalCardRefusal,
+  counterTankFillRefusal,
+  isEnrichedFill,
   isLifeSupportKind,
 } from "@/lib/counter-rentals";
 import {
@@ -25,6 +28,7 @@ import {
   openServiceConcerns,
   pullReturnedUnitsForService,
 } from "./gear";
+import { authorizesNitroxFill } from "./nitrox";
 import { violatesExclusionConstraint } from "./query-helpers";
 import {
   type CertificationReviewRefusal,
@@ -38,6 +42,7 @@ import {
   certifications,
   gearItems,
   gearReservations,
+  nitroxCertifications,
   orders,
   people,
   specialtyCertifications,
@@ -77,7 +82,8 @@ export type CreateCounterRentalOutcome =
         | "person_not_found"
         | "unit_not_found"
         | "unit_out_of_service"
-        | CounterRentalCardRefusal;
+        | CounterRentalCardRefusal
+        | CounterTankFillRefusal;
     }
   | {
       ok: false;
@@ -350,6 +356,11 @@ export async function createCounterRental(
     todayLocal: CalendarDate;
     /** Flagged soft goods the staffer confirmed lending anyway. */
     confirmedFlaggedIds?: readonly string[];
+    /**
+     * The gas recorded in each tank, by unit id, as oxygen percent (issue
+     * #2257): 21 is air, 22 to 40 is EANx. A unit left out is not recorded.
+     */
+    tankFills?: Readonly<Record<string, number>>;
   },
 ): Promise<CreateCounterRentalOutcome> {
   const reservedFrom = input.reservedFrom.trim();
@@ -391,6 +402,18 @@ export async function createCounterRental(
     await counterRentalCards(db, input.shopId, input.personId),
   );
   if (cardRefusal) return { ok: false, reason: cardRefusal };
+  // **The fills' shape** — on a tank of this rental, in range — before any
+  // card is read. The card half waits for the transaction below.
+  const kindById = new Map(kinds.map((unit) => [unit.id, unit.kind] as const));
+  const fills = Object.entries(input.tankFills ?? {}).map(([unitId, o2Percent]) => ({
+    unitId,
+    kind: kindById.get(unitId),
+    o2Percent,
+  }));
+  if (fills.some((fill) => fill.kind === undefined)) return { ok: false, reason: "fill_invalid" };
+  const fillShape = fills.flatMap(({ kind, o2Percent }) => (kind ? [{ kind, o2Percent }] : []));
+  const fillShapeRefusal = counterTankFillRefusal(fillShape, true);
+  if (fillShapeRefusal) return { ok: false, reason: fillShapeRefusal };
   const verdicts = await counterRentalServiceVerdicts(db, input.shopId, kinds, reservedUntil);
   const confirmed = new Set(input.confirmedFlaggedIds ?? []);
   for (const unit of kinds) {
@@ -423,6 +446,26 @@ export async function createCounterRental(
         .limit(1);
       if (!person) throw new CounterRentalRefused({ ok: false, reason: "person_not_found" });
 
+      // **EANx needs a nitrox card that authorizes a fill**, read in the same
+      // transaction that writes the fill, through the one predicate every
+      // nitrox fill gate shares (`authorizesNitroxFill`). Wrong gas is the
+      // highest-consequence mistake a counter can make.
+      if (fillShape.some((fill) => isEnrichedFill(fill.o2Percent))) {
+        const [card] = await tx
+          .select({ id: nitroxCertifications.id })
+          .from(nitroxCertifications)
+          .where(
+            and(
+              eq(nitroxCertifications.shopId, input.shopId),
+              eq(nitroxCertifications.personId, person.id),
+              authorizesNitroxFill,
+            ),
+          )
+          .limit(1);
+        const fillRefusal = counterTankFillRefusal(fillShape, Boolean(card));
+        if (fillRefusal) throw new CounterRentalRefused({ ok: false, reason: fillRefusal });
+      }
+
       const units = await tx
         .select({ id: gearItems.id, label: gearItems.label, status: gearItems.status })
         .from(gearItems)
@@ -453,6 +496,7 @@ export async function createCounterRental(
             personId: person.id,
             reservedFrom,
             reservedUntil,
+            fillO2Percent: input.tankFills?.[unitId] ?? null,
           })
           .returning({ id: gearReservations.id });
         if (!row) throw new Error("createCounterRental: insert returned no row");
@@ -658,6 +702,8 @@ export type CounterRentalUnit = {
   checkedOutAt: Date | null;
   returnedAt: Date | null;
   returnOutcome: GearReturnOutcome | null;
+  /** The recorded gas, as oxygen percent (21 is air); null when nobody recorded it. */
+  fillO2Percent: number | null;
 };
 
 export type CounterRentalTicket = {
@@ -766,6 +812,7 @@ async function counterRentalRows(
       checkedOutAt: gearReservations.checkedOutAt,
       returnedAt: gearReservations.returnedAt,
       returnOutcome: gearReservations.returnOutcome,
+      fillO2Percent: gearReservations.fillO2Percent,
       personId: people.id,
       personName: people.fullName,
       reservedFrom: gearReservations.reservedFrom,
@@ -831,6 +878,7 @@ function groupCounterRentals(rows: readonly CounterRentalRow[]): CounterRentalTi
       checkedOutAt: row.checkedOutAt,
       returnedAt: row.returnedAt,
       returnOutcome: row.returnOutcome,
+      fillO2Percent: row.fillO2Percent,
     });
   }
   return [...byKey.values()];

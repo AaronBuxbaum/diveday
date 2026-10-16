@@ -1,4 +1,5 @@
 {
+  "fill": { "air": "Air", "eanx": "EANx {percent}" },
   "rentOut": "Rent out",
   "new": {
     "title": "Rent out",
@@ -23,6 +24,10 @@
     "noFleet": "The register is empty. Add a unit first.",
     "days": "{count, plural, one {# day} other {# days}}",
     "priceAria": "Price for {label}",
+    "fillLabel": "Fill",
+    "fillAria": "Fill for {label}",
+    "fillNotRecorded": "Not recorded",
+    "fillHint": "Above air needs a verified nitrox card.",
     "pay": {
       "heading": "How they pay",
       "cash": "Cash",
@@ -59,6 +64,9 @@
       "unitNeedsConfirmUnnamed": "One of those units has a service flag. Tick the box under it to lend it anyway.",
       "notCertified": "Life support needs a verified card. Record the card you’ve seen, or rent soft goods only.",
       "noDrysuitCard": "A drysuit needs a verified drysuit card.",
+      "fillInvalid": "A fill is air or EANx 22 to 40, on a tank.",
+      "fillNotTank": "Only a tank takes a fill.",
+      "noNitroxCard": "EANx needs a verified nitrox card. Fill air, or verify their nitrox card on their record first.",
       "cardRecorded": "Card recorded as seen by you.",
       "cardDuplicate": "That card is already on file. Confirm it on the diver’s record.",
       "cardNotRecorded": "That card didn’t save. Try again from the diver’s record.",

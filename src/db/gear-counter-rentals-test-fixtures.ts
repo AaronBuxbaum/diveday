@@ -94,7 +94,11 @@ export function lend(
   shopId: string,
   personId: string,
   gearItemIds: string[],
-  extra: { reservedUntil?: string; confirmedFlaggedIds?: string[] } = {},
+  extra: {
+    reservedUntil?: string;
+    confirmedFlaggedIds?: string[];
+    tankFills?: Record<string, number>;
+  } = {},
 ) {
   return createCounterRental(db, {
     shopId,
@@ -104,6 +108,7 @@ export function lend(
     reservedUntil: extra.reservedUntil ?? TODAY,
     todayLocal: TODAY,
     confirmedFlaggedIds: extra.confirmedFlaggedIds,
+    tankFills: extra.tankFills,
   });
 }
 

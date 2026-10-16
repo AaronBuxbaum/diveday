@@ -619,6 +619,17 @@ export const gearReservations = pgTable(
      */
     divesLogged: integer("dives_logged"),
     /**
+     * **The gas in a counter-rented tank** (issue #2257, Aaron 2026-10-13,
+     * option a), as oxygen percent: 21 is air, 22 to 40 is EANx. Null means
+     * nobody recorded it. Only a counter rental carries it (a booking's gas is
+     * its nitrox request, H-11), and only a tank (the writer refuses any other
+     * kind). Above 21 the writer refuses unless the person holds a nitrox card
+     * that authorizes a fill (`authorizesNitroxFill`, the trip gate's own
+     * predicate). Not a fill log and not an analyzer reading: what the staffer
+     * said went in the tank, printed on the ticket.
+     */
+    fillO2Percent: integer("fill_o2_percent"),
+    /**
      * **When a hold that never left the counter was let go** (issue #2258).
      * Releasing stamps the row instead of deleting it (ADR
      * 20260820-every-delete-is-soft), so the record that a unit was held for
@@ -651,6 +662,10 @@ export const gearReservations = pgTable(
     check(
       "gear_reservations_dives_logged",
       sql`${table.divesLogged} is null or (${table.divesLogged} >= 0 and ${table.divesLogged} <= 200)`,
+    ),
+    check(
+      "gear_reservations_fill_o2_percent",
+      sql`${table.fillO2Percent} is null or (${table.bookingId} is null and ${table.fillO2Percent} >= 21 and ${table.fillO2Percent} <= 40)`,
     ),
     check(
       "gear_reservations_release_never_left",

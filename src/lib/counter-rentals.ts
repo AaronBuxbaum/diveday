@@ -169,6 +169,65 @@ export function counterRentalCardRefusal(
 }
 
 /**
+ * **The gas in a counter-rented tank** (issue #2257, Aaron 2026-10-13), as
+ * oxygen percent. 21 is air; 22 to 40 is EANx, the range a recreational nitrox
+ * card covers. The database holds the same bounds
+ * (`gear_reservations_fill_o2_percent`).
+ */
+export const TANK_FILL_O2_PERCENT = { air: 21, max: 40 } as const;
+
+/**
+ * A typed fill as oxygen percent: blank is null (not recorded), "air" is 21,
+ * and a whole number from 21 to 40 is itself. Anything else, a decimal
+ * included, is `"invalid"`: a fill is never rounded into a different mix.
+ */
+export function parseTankFill(raw: string): number | null | "invalid" {
+  const value = raw.trim().toLowerCase();
+  if (value === "") return null;
+  if (value === "air") return TANK_FILL_O2_PERCENT.air;
+  if (!/^\d{2}$/.test(value)) return "invalid";
+  const percent = Number(value);
+  return percent >= TANK_FILL_O2_PERCENT.air && percent <= TANK_FILL_O2_PERCENT.max
+    ? percent
+    : "invalid";
+}
+
+/** Above air. */
+export function isEnrichedFill(o2Percent: number): boolean {
+  return o2Percent > TANK_FILL_O2_PERCENT.air;
+}
+
+export type CounterTankFillRefusal = "fill_invalid" | "fill_not_tank" | "no_nitrox_card";
+
+/**
+ * Whether these recorded fills may go on this rental, as a refusal or null.
+ * Safety-critical and deliberately boring: a fill is on a tank or it is
+ * refused; it is in range or it is refused; and anything above air needs
+ * `holdsNitroxFillCard`, which the caller reads through `authorizesNitroxFill`
+ * (src/db/nitrox.ts), the one predicate every nitrox fill gate shares. A
+ * pending, self-declared, deleted or unconfirmed imported card is no card.
+ */
+export function counterTankFillRefusal(
+  fills: readonly { kind: GearItemKind; o2Percent: number }[],
+  holdsNitroxFillCard: boolean,
+): CounterTankFillRefusal | null {
+  for (const fill of fills) {
+    if (fill.kind !== "tank") return "fill_not_tank";
+    if (
+      !Number.isInteger(fill.o2Percent) ||
+      fill.o2Percent < TANK_FILL_O2_PERCENT.air ||
+      fill.o2Percent > TANK_FILL_O2_PERCENT.max
+    ) {
+      return "fill_invalid";
+    }
+  }
+  if (fills.some((fill) => isEnrichedFill(fill.o2Percent)) && !holdsNitroxFillCard) {
+    return "no_nitrox_card";
+  }
+  return null;
+}
+
+/**
  * What the counter shows about a person's cards before anything is picked:
  * the highest verified level (null when none clears), whether the drysuit
  * specialty clears, and how many cards are on file that do not count yet —

@@ -11,7 +11,10 @@ import {
   counterRentalLineCents,
   counterRentalWaiverFlag,
   counterRentalWaiverStanding,
+  counterTankFillRefusal,
+  isEnrichedFill,
   isLifeSupportKind,
+  parseTankFill,
 } from "./counter-rentals";
 import type { RentalPricing } from "./rentals";
 
@@ -265,5 +268,54 @@ describe("counterRentalWaiverStanding", () => {
     expect(counterRentalWaiverStanding({ state: "none" }, "America/New_York")).toEqual({
       state: "none",
     });
+  });
+});
+
+describe("tank fills (#2257)", () => {
+  it("reads blank as not recorded, air as 21, and a whole percent in range as itself", () => {
+    expect(parseTankFill("")).toBeNull();
+    expect(parseTankFill("  ")).toBeNull();
+    expect(parseTankFill("Air")).toBe(21);
+    expect(parseTankFill("21")).toBe(21);
+    expect(parseTankFill(" 32 ")).toBe(32);
+    expect(parseTankFill("40")).toBe(40);
+  });
+
+  it.each(["20", "41", "100", "32.5", "32%", "-32", "eanx", "1e1", "0x20", "3"])(
+    "refuses %s rather than guess a mix",
+    (raw) => {
+      expect(parseTankFill(raw)).toBe("invalid");
+    },
+  );
+
+  it("lets air through without a nitrox card", () => {
+    expect(counterTankFillRefusal([{ kind: "tank", o2Percent: 21 }], false)).toBeNull();
+  });
+
+  it("refuses any enriched tank without a nitrox card, even beside air", () => {
+    expect(
+      counterTankFillRefusal(
+        [
+          { kind: "tank", o2Percent: 21 },
+          { kind: "tank", o2Percent: 22 },
+        ],
+        false,
+      ),
+    ).toBe("no_nitrox_card");
+    expect(counterTankFillRefusal([{ kind: "tank", o2Percent: 32 }], true)).toBeNull();
+  });
+
+  it("refuses a fill on anything but a tank, and out-of-range or fractional percents", () => {
+    expect(counterTankFillRefusal([{ kind: "regulator", o2Percent: 21 }], true)).toBe(
+      "fill_not_tank",
+    );
+    for (const o2Percent of [20, 41, 32.5, Number.NaN]) {
+      expect(counterTankFillRefusal([{ kind: "tank", o2Percent }], true)).toBe("fill_invalid");
+    }
+  });
+
+  it("calls only above 21 enriched", () => {
+    expect(isEnrichedFill(21)).toBe(false);
+    expect(isEnrichedFill(22)).toBe(true);
   });
 });

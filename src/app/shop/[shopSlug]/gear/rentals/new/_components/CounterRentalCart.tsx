@@ -18,6 +18,7 @@ import type { GearItemKind } from "@/lib/gear";
 import { currencySymbol, majorToMinor } from "@/lib/money";
 import {
   CONFIRM_FIELD_PREFIX,
+  FILL_FIELD_PREFIX,
   PAYMENT_FIELD,
   PRICE_FIELD_PREFIX,
   type RentalPayment,
@@ -40,6 +41,8 @@ export type PickerUnit = {
   price: string;
   priceAria: string;
   removeAria: string;
+  /** A tank's fill menu label; null for every other kind, which takes no fill. */
+  fillAria: string | null;
 };
 
 export type PaymentChoice = { value: RentalPayment; label: string; hint?: string };
@@ -57,6 +60,10 @@ export type CartWords = {
   items: { one: string; other: string };
   submit: string;
   submitting: string;
+  /** A tank's gas (#2257): the menu's visible label, its choices, and the card rule. */
+  fillLabel: string;
+  fillOptions: { value: string; label: string }[];
+  fillHint: string;
 };
 
 /**
@@ -322,6 +329,14 @@ export function CounterRentalCart({
                         </svg>
                       </button>
                     </div>
+                    {unit.fillAria ? (
+                      <TankFillField
+                        unitId={unit.id}
+                        aria={unit.fillAria}
+                        hintId={`${billId}-fill-hint`}
+                        words={words}
+                      />
+                    ) : null}
                     {unit.confirmLabel ? (
                       <ChoiceRow
                         type="checkbox"
@@ -334,6 +349,11 @@ export function CounterRentalCart({
                   </li>
                 );
               })}
+              {picked.some((unit) => unit.fillAria !== null) && (
+                <li id={`${billId}-fill-hint`} className="py-2 text-sm text-muted">
+                  {words.fillHint}
+                </li>
+              )}
               <li className="flex min-h-12 items-center gap-3 pt-3">
                 <p className="flex-1 font-medium">{words.total}</p>
                 <p className={FIGURE_INLINE_CLASS}>{total}</p>
@@ -385,5 +405,40 @@ export function CounterRentalCart({
         </SubmitButton>
       </StickyFormActions>
     </>
+  );
+}
+
+/**
+ * A tank's gas (#2257): a menu, never a typed figure, so nothing is rounded
+ * into a different mix. The writer refuses EANx without a nitrox card.
+ */
+function TankFillField({
+  unitId,
+  aria,
+  hintId,
+  words,
+}: {
+  unitId: string;
+  aria: string;
+  hintId: string;
+  words: Pick<CartWords, "fillLabel" | "fillOptions">;
+}) {
+  return (
+    <label className="flex min-h-11 items-center gap-3 text-sm">
+      <span className="text-muted">{words.fillLabel}</span>
+      <select
+        name={`${FILL_FIELD_PREFIX}${unitId}`}
+        defaultValue=""
+        aria-label={aria}
+        aria-describedby={hintId}
+        className={`${controlClass.replace("w-full", "")} w-40`}
+      >
+        {words.fillOptions.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

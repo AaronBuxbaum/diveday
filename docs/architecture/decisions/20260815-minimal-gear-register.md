@@ -413,10 +413,8 @@ the counter nobody does, and the unit is gone for days.
 - **Dives on a counter rental** count on the unit's dive clock when the return says how many
   (`dives_logged`), dated by the window's first day, and count nothing when it does not: a floor,
   like the trip side's planned dives.
-- **Counter tanks are air only, for now.** Nothing at the counter models a nitrox fill (no mix, no
-  analysis, no nitrox card check); a shop filling a counter tank with nitrox records it outside
-  DiveDay. A nitrox fill on a counter rental is future work, and it will need the nitrox card and
-  the analysis record the boat side keeps.
+- **Counter tanks are air only, for now.** Superseded by the 2026-10-16 amendment below: a
+  counter tank now records its fill, and EANx is gated on a nitrox card.
 - **The counter says the person's waiver, and never waits on it** (H-108, issue #2261; this
   bullet called it a known gap until 2026-10-10). The one shop-wide waiver (CR-015) is signed once
   and belongs to the person, whichever booking or person-scoped link it was signed on, so the
@@ -478,3 +476,18 @@ is null and released_at is null`, so a released hold never blocks a new one, and
 open-reservation read carries the same pair (`openGearReservation` in `src/db/gear.ts`). A release
 stamp is refused on a unit that left the counter (`gear_reservations_release_never_left`), and a
 released hold is not restorable: the unit is held again.
+
+## Amendment 2026-10-16 — a counter tank records its fill, and EANx needs a nitrox card
+
+Issue #2257, Aaron 2026-10-13 (option a). `gear_reservations.fill_o2_percent` (nullable integer)
+is the gas a staffer recorded in a counter-rented tank, as oxygen percent: 21 is air, 22 to 40 is
+EANx. Null means nobody recorded it. The database refuses it on a booking-held row and outside
+21 to 40 (`gear_reservations_fill_o2_percent`); `createCounterRental` refuses it on any kind but a
+tank, and refuses anything above 21 unless the person holds a nitrox card that passes
+`authorizesNitroxFill`, the one predicate every nitrox fill gate shares. That card read runs inside
+the transaction that writes the fill. A refusal writes nothing. The new-rental form offers each
+tank a menu (not recorded, air, EANx 22 to 40; never a typed decimal, so nothing is rounded into a
+different mix), and the counter ticket prints the fill beside the unit.
+
+It is what the staffer said went in the tank, not a fill log and not an analyzer reading: the boat
+side's per-booking nitrox request (H-11) is unchanged, and a fill log (HD-8) is still open.

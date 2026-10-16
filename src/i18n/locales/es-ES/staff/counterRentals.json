@@ -1,4 +1,5 @@
 {
+  "fill": { "air": "Aire", "eanx": "EANx {percent}" },
   "rentOut": "Alquilar",
   "new": {
     "title": "Alquilar",
@@ -23,6 +24,10 @@
     "noFleet": "El registro está vacío. Añade una unidad primero.",
     "days": "{count, plural, one {# día} other {# días}}",
     "priceAria": "Precio de {label}",
+    "fillLabel": "Mezcla",
+    "fillAria": "Mezcla de {label}",
+    "fillNotRecorded": "Sin anotar",
+    "fillHint": "Por encima del aire hace falta una tarjeta de nitrox verificada.",
     "pay": {
       "heading": "Cómo paga",
       "cash": "Efectivo",
@@ -59,6 +64,9 @@
       "unitNeedsConfirmUnnamed": "Una de esas unidades tiene un aviso de mantenimiento. Marca la casilla de debajo para prestarla de todos modos.",
       "notCertified": "El soporte vital necesita una tarjeta verificada. Registra la tarjeta que has visto, o alquila solo equipo ligero.",
       "noDrysuitCard": "Un traje seco necesita la tarjeta de traje seco verificada.",
+      "fillInvalid": "Una mezcla es aire o EANx del 22 al 40, en una botella.",
+      "fillNotTank": "Solo una botella lleva mezcla.",
+      "noNitroxCard": "El EANx necesita una tarjeta de nitrox verificada. Carga aire o verifica antes su tarjeta de nitrox en su ficha.",
       "cardRecorded": "Tarjeta registrada como vista por ti.",
       "cardDuplicate": "Esa tarjeta ya está registrada. Confírmala en la ficha del buceador.",
       "cardNotRecorded": "La tarjeta no se guardó. Vuelve a intentarlo desde la ficha del buceador.",

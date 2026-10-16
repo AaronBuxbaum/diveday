@@ -15,9 +15,9 @@ import {
   counterRentalWaiverStandings,
 } from "@/db/gear-counter-rentals";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
-import { gearItemKindLabel } from "@/i18n/gear-labels";
+import { gearItemKindLabel, tankFillLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { isMinorOnDate } from "@/lib/age";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -29,6 +29,7 @@ import {
   counterRentalDays,
   counterRentalLineCents,
   isLifeSupportKind,
+  TANK_FILL_O2_PERCENT,
 } from "@/lib/counter-rentals";
 import { GEAR_KIND_ORDER, type GearItemKind, gearServiceKeepsUnitBack } from "@/lib/gear";
 import { currencyFractionDigits, minorToMajor, toShopCurrency } from "@/lib/money";
@@ -219,6 +220,8 @@ export default async function RentOutPage({
       price: priceOf(unit.kind),
       priceAria: t("counterRentals.new.priceAria", { label: unit.label }),
       removeAria: t("counterRentals.new.removeAria", { label: unit.label }),
+      fillAria:
+        unit.kind === "tank" ? t("counterRentals.new.fillAria", { label: unit.label }) : null,
       order: blocked ? 2 : flagged ? 1 : 0,
     };
   };
@@ -370,6 +373,9 @@ export default async function RentOutPage({
                   },
                   submit: t("counterRentals.new.submit"),
                   submitting: t("counterRentals.new.submitting"),
+                  fillLabel: t("counterRentals.new.fillLabel"),
+                  fillOptions: tankFillOptions(t),
+                  fillHint: t("counterRentals.new.fillHint"),
                 }}
               />
             )}
@@ -378,4 +384,16 @@ export default async function RentOutPage({
       </div>
     </main>
   );
+}
+
+/** A counter tank's fill menu (#2257): not recorded, air, then EANx 22 to 40. */
+function tankFillOptions(t: StaffTranslator): { value: string; label: string }[] {
+  const { air, max } = TANK_FILL_O2_PERCENT;
+  return [
+    { value: "", label: t("counterRentals.new.fillNotRecorded") },
+    ...Array.from({ length: max - air + 1 }, (_, index) => ({
+      value: String(air + index),
+      label: tankFillLabel(t, air + index),
+    })),
+  ];
 }

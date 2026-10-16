@@ -86,6 +86,7 @@ describe("GearAndSizes", () => {
                 checkedOutAt: null,
                 returnedAt: null,
                 returnOutcome: null,
+                fillO2Percent: null,
               },
               {
                 reservationId: "res-2",
@@ -96,6 +97,7 @@ describe("GearAndSizes", () => {
                 checkedOutAt: null,
                 returnedAt: null,
                 returnOutcome: null,
+                fillO2Percent: null,
               },
             ],
           },

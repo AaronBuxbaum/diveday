@@ -25,7 +25,12 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { isPlausibleCardNumber } from "@/lib/card-number";
 import { nowDate } from "@/lib/clock";
-import { counterRentalCoreKinds, counterRentalDays, isOneCoreSet } from "@/lib/counter-rentals";
+import {
+  counterRentalCoreKinds,
+  counterRentalDays,
+  isOneCoreSet,
+  parseTankFill,
+} from "@/lib/counter-rentals";
 import { allValues, formValue, readForm, text } from "@/lib/form-parse";
 import { GEAR_RETURN_OUTCOMES } from "@/lib/gear";
 import { majorToMinor } from "@/lib/money";
@@ -42,6 +47,7 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import {
   CONFIRM_FIELD_PREFIX,
   counterRentalFormPath,
+  FILL_FIELD_PREFIX,
   PAYMENT_FIELD,
   PRICE_FIELD_PREFIX,
   RENTAL_PAYMENTS,
@@ -149,6 +155,15 @@ export async function createCounterRentalAction(formData: FormData) {
     }
   }
 
+  // A tank's gas, as the staffer chose it. Unreadable is refused, never
+  // guessed; the writer decides whether it may go out (#2257).
+  const tankFills: Record<string, number> = {};
+  for (const unitId of units) {
+    const fill = parseTankFill(String(fields[`${FILL_FIELD_PREFIX}${unitId}`] ?? ""));
+    if (fill === "invalid") redirect(noticeUrl(form, "fill-invalid"));
+    if (fill !== null) tankFills[unitId] = fill;
+  }
+
   const outcome = await createCounterRental(db, {
     shopId: shop.id,
     personId,
@@ -161,6 +176,7 @@ export async function createCounterRentalAction(formData: FormData) {
     confirmedFlaggedIds: units.filter(
       (unitId) => fields[`${CONFIRM_FIELD_PREFIX}${unitId}`] === "on",
     ),
+    tankFills,
   });
   if (!outcome.ok) {
     // The unit travels by id, never by name: the page looks its label up in

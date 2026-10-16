@@ -179,6 +179,7 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/incidents.json form.no", "the same word in both languages"],
   // A number and the millimetre symbol, which is SI and the same in Spanish.
   ["staff/gear.json prep.optionThickness", "a number and an SI unit symbol"],
+  ["staff/counterRentals.json fill.eanx", "EANx is the gas's international name, then a number"],
   // Examined one by one for issue #1797. Each is a value with no Spanish
   // form to give it: a brand, an acronym, a place, a unit, or a word Spanish
   // diving uses unchanged. Held both ways like every entry above — the day

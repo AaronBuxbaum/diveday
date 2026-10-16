@@ -18,6 +18,12 @@ export const PRICE_FIELD_PREFIX = "price-";
  */
 export const SET_PRICE_FIELD = "price-set";
 
+/**
+ * A tank's recorded gas posts as `fill-<unit id>`: blank (not recorded), or an
+ * oxygen percent from 21 (air) to 40, read by `parseTankFill` (issue #2257).
+ */
+export const FILL_FIELD_PREFIX = "fill-";
+
 /** A flagged soft-goods unit the staffer chose to lend anyway posts `confirm-<unit id>`. */
 export const CONFIRM_FIELD_PREFIX = "confirm-";
 

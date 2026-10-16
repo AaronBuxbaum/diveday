@@ -1097,6 +1097,7 @@ export const GEAR_RESERVATIONS_CSV = sharedFile<ShopRow<"gearReservationRows">>(
     { header: "return_outcome", in: "shop", value: (row) => row.returnOutcome },
     { header: "return_note", in: "shop", value: (row) => row.returnNote },
     { header: "dives_logged", in: "shop", value: (row) => row.divesLogged },
+    { header: "fill_o2_percent", in: "both", value: (row) => row.fillO2Percent },
     { header: "released_at", in: "both", value: (row) => row.releasedAt },
     { header: "released_by_person_id", in: "shop", value: (row) => row.releasedByPersonId },
     {

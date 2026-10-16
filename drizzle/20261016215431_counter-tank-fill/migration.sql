@@ -1,0 +1,2 @@
+ALTER TABLE "gear_reservations" ADD COLUMN "fill_o2_percent" integer;--> statement-breakpoint
+ALTER TABLE "gear_reservations" ADD CONSTRAINT "gear_reservations_fill_o2_percent" CHECK ("fill_o2_percent" is null or ("booking_id" is null and "fill_o2_percent" >= 21 and "fill_o2_percent" <= 40));
