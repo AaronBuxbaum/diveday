@@ -344,6 +344,7 @@
       "eyebrow": "Offline manifests",
       "headingWithTrips": "Saved on this device",
       "headingEmpty": "No manifest saved on this phone yet",
+      "readFailedHeading": "Couldn’t open this phone’s saved manifests",
       "diverCount": "{count, plural, one {# diver} other {# divers}}",
       "expiredViewOnly": "Expired — view only",
       "emptyHint": "Open a departure’s manifest while online and it is kept here.",

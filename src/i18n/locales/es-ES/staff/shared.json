@@ -344,6 +344,7 @@
       "eyebrow": "Manifiestos sin conexión",
       "headingWithTrips": "Guardado en este dispositivo",
       "headingEmpty": "Todavía no hay ningún manifiesto guardado en este teléfono",
+      "readFailedHeading": "No se pudieron abrir los manifiestos guardados en este teléfono",
       "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
       "expiredViewOnly": "Caducado — solo lectura",
       "emptyHint": "Abre el manifiesto de una salida mientras tengas conexión y se guarda aquí.",

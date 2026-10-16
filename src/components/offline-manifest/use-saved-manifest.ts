@@ -261,6 +261,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     loadOfflineManifest(tripId)
       .then((saved) => {
         dispatchSaved({ type: "loaded", envelope: saved });
+        setStoreReadFailed(false);
         // The requested checkpoint's shape was checked before the trip's
         // planned-dive count was known; re-validate against it now so a
         // stale or out-of-range checkpoint (from an edited URL, or a trip
