@@ -699,6 +699,23 @@ describe("notificationProviderFromEnvironment (ADR 20260803-ses-sole-email-provi
     );
   });
 
+  it("sends from the compiled production sender when SES_FROM_EMAIL is unset, and nothing when it is set empty", async () => {
+    const credentials = {
+      SES_AWS_REGION: "us-east-1",
+      SES_AWS_ACCESS_KEY_ID: "AKIA_TEST",
+      SES_AWS_SECRET_ACCESS_KEY: "test-secret",
+    };
+    const sesClient = { send: vi.fn().mockResolvedValue({ MessageId: "ses-id" }) };
+    await notify(booking, notificationProviderFromEnvironment(credentials, { client: sesClient }));
+    const command = sesClient.send.mock.calls[0]?.[0] as SendEmailCommand;
+    expect(command.input.FromEmailAddress).toBe(
+      '"Blue Mantis via DiveDay" <notifications@ses.dive.day>',
+    );
+    await expect(
+      notify(booking, notificationProviderFromEnvironment({ ...credentials, SES_FROM_EMAIL: "" })),
+    ).resolves.toEqual({ status: "not_configured" });
+  });
+
   it("is disabled when SES config is incomplete", async () => {
     const provider = notificationProviderFromEnvironment({ SES_AWS_REGION: "us-east-1" });
 
