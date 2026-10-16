@@ -50,7 +50,11 @@ the `order.refunded` the shop's books needed. A dispute was invisible until the 
   event's `created` time so a late `updated` never reopens a closed one; an `updated` stamped the
   same second as the close does not either. An undecided dispute is a
   Today row for owners and managers, and a banner on its order, with the amount and the evidence
-  deadline. Nothing here moves money.
+  deadline. Nothing here moves money. *Amended 2026-10-16 (issue #2292, product owner 2026-10-13):*
+  a close with status `lost` writes a **reversal line**, `payment_disputes.reversed_at`, set by the
+  first lost close and never moved, so a replay writes no second one. The order keeps what was
+  paid; the order page shows the reversal as its own line and Reports' money out counts it in the
+  month it was lost.
 
 ## Alternatives considered
 
@@ -66,6 +70,8 @@ the `order.refunded` the shop's books needed. A dispute was invisible until the 
 - The Connect webhook must list the four new events; `config/env-registry.mjs` says so.
 - A refund that later **fails** at the bank (`charge.refund.updated`) is not handled: the books
   keep it. A lost dispute is not written onto the order either. Both are follow-ups if they occur.
+  *Amended 2026-10-16 (issue #2292):* a lost dispute is now a reversal line; see "Disputes are a
+  mirror" above.
   *Amended 2026-10-12 (issue #2291):* a failed or canceled refund is now handled. The endpoint
   also listens to `charge.refund.updated`; one `stripe_refund_failures` row per Stripe refund
   reverses the recorded refund on the order or checkout (and on a seat DiveDay refunded itself),

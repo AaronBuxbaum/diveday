@@ -88,6 +88,7 @@
     "stillHeld": "Still held",
     "disputeOpen": "The cardholder’s bank is disputing {amount}. Send Stripe your evidence by {due}.",
     "disputeOpenNoDeadline": "The cardholder’s bank is disputing {amount}. Answer it in Stripe.",
+    "disputeLost": "Dispute lost on {date}. The cardholder’s bank took back {amount}.",
     "refundAmountLabel": "Refund ({currency})",
     "refunding": "Refunding…",
     "paidAtCounter": {

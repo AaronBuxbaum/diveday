@@ -88,6 +88,7 @@
     "stillHeld": "Retenido",
     "disputeOpen": "El banco del titular de la tarjeta disputa {amount}. Envía tus pruebas a Stripe antes del {due}.",
     "disputeOpenNoDeadline": "El banco del titular de la tarjeta disputa {amount}. Respóndela en Stripe.",
+    "disputeLost": "Disputa perdida el {date}. El banco del titular de la tarjeta recuperó {amount}.",
     "refundAmountLabel": "Reembolsar ({currency})",
     "refunding": "Reembolsando…",
     "paidAtCounter": {

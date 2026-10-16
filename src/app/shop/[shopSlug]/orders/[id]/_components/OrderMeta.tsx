@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
-import type { OpenPaymentDispute } from "@/db/payment-disputes";
+import type { LostPaymentDispute, OpenPaymentDispute } from "@/db/payment-disputes";
 import type { DiverLocale } from "@/i18n/settings";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
@@ -103,5 +103,37 @@ export function OrderDisputeBanner({
           })
         : t("orders.detail.disputeOpenNoDeadline", { amount })}
     </StaffNoticeBanner>
+  );
+}
+
+/**
+ * The reversal line of each card dispute the shop lost on this order (issue
+ * #2292): what the bank took back, and when. The order above still says what
+ * was paid; this is the money that left after. Renders nothing when none was
+ * lost; `loadOrderHeader` withholds it as it does the open dispute.
+ */
+export function OrderLostDisputes({
+  lost,
+  timezone,
+  locale,
+  t,
+}: {
+  lost: LostPaymentDispute[];
+  timezone: string;
+  locale: DiverLocale;
+  t: StaffTranslator;
+}) {
+  if (lost.length === 0) return null;
+  return (
+    <>
+      {lost.map((dispute) => (
+        <StaffNoticeBanner key={dispute.id} tone="danger">
+          {t("orders.detail.disputeLost", {
+            amount: formatMoneyCents(dispute.amountCents, dispute.currency, locale),
+            date: formatShortDate(dispute.reversedAt, locale, timezone),
+          })}
+        </StaffNoticeBanner>
+      ))}
+    </>
   );
 }
