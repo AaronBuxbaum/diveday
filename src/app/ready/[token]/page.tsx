@@ -263,7 +263,7 @@ async function DiverReadinessPage({
     const recapState = await afterDive.recap();
     if (recapState.kind === "waiting") return <RecapWaitingCard shop={shopContact} t={t} />;
     const recap = recapState.kind === "recap" ? recapState.data : null;
-    if (!recap) return <NoShowCard shop={shopContact} t={t} />;
+    if (!recap) return <NoShowCard shop={shopContact} t={t} turnedAway={data.turnedAway} />;
     const recapToken = signRecapToken(bookingId);
     const after = await buildAfterStateProps({
       db,

@@ -582,7 +582,11 @@ export function groupRoster({
   // has gone blocked since, or still owes the desk something, stays in "Still
   // to clear" wearing its reasons — the counter's most dangerous silence was
   // folding that row away.
-  const notHere = arrival ? roster.filter(({ booking }) => booking.status === "no_show") : [];
+  // A released seat the desk turned away (H-124) is its own group: seen and
+  // refused is not "not here", and the two must never share a heading.
+  const released = arrival ? roster.filter(({ booking }) => booking.status === "no_show") : [];
+  const notHere = released.filter(({ booking }) => !booking.turnedAwayReason);
+  const turnedAway = released.filter(({ booking }) => Boolean(booking.turnedAwayReason));
   const working = arrival ? roster.filter(({ booking }) => booking.status !== "no_show") : roster;
   const arrived = (entry: RosterEntry) => Boolean(arrival) && entry.booking.status === "checked_in";
   const here = working.filter((entry) => arrived(entry) && deskTasksClear(entry));
@@ -620,6 +624,7 @@ export function groupRoster({
     ready,
     here,
     notHere,
+    turnedAway,
     deskWorkOpen,
     hereMeta,
     blockedCount,
@@ -654,6 +659,7 @@ function recordGroups(roster: RosterEntry[], record: RosterRecord) {
   const didNotSail: RosterEntry[] = [];
   const uncounted: RosterEntry[] = [];
   const unrecorded: RosterEntry[] = [];
+  const turnedAway: RosterEntry[] = [];
   for (const entry of roster) {
     const id = entry.booking.id;
     const dockResult = record.dock.get(id) ?? null;
@@ -663,6 +669,10 @@ function recordGroups(roster: RosterEntry[], record: RosterRecord) {
       (record.rollCallTaken ? uncounted : unrecorded).push(entry);
     } else if (seatSailed({ noShow, dockResult, afterDiveResultStands })) {
       sailed.push(entry);
+    } else if (noShow && entry.booking.turnedAwayReason) {
+      // Did not sail because the desk refused them (H-124), said apart from
+      // the divers who never came.
+      turnedAway.push(entry);
     } else {
       didNotSail.push(entry);
     }
@@ -672,6 +682,7 @@ function recordGroups(roster: RosterEntry[], record: RosterRecord) {
     ready: [] as RosterEntry[],
     here: [] as RosterEntry[],
     notHere: [] as RosterEntry[],
+    turnedAway,
     deskWorkOpen: false,
     hereMeta: undefined as string | undefined,
     blockedCount: 0,

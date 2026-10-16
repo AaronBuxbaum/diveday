@@ -4,7 +4,8 @@
     "hereOf": "<figure>{here}</figure> of {expected} here",
     "toCome": "{count} to come",
     "cantBoard": "{count, plural, one {# person can’t board yet} other {# people can’t board yet}}",
-    "notHere": "{count, plural, one {# person is not here} other {# people are not here}}"
+    "notHere": "{count, plural, one {# person is not here} other {# people are not here}}",
+    "turnedAway": "{count, plural, one {# person turned away} other {# people turned away}}"
   },
   "row": {
     "arrived": "Checked in",
@@ -31,6 +32,25 @@
     "nothing": "Nobody is waiting, and no similar departure has room for them.",
     "money": "Marking someone not here does not charge or refund anything.",
     "moneyDoor": "Open their orders"
+  },
+  "turnAway": {
+    "door": "Turned away",
+    "legend": "Reason",
+    "reason": {
+      "medical": "Medical",
+      "waiver": "Waiver",
+      "card": "Card",
+      "age": "Age",
+      "identity": "Identity",
+      "payment": "Payment"
+    },
+    "consequence": "Records that you saw them and turned them away, and frees the seat. You can put them back while the seat is still free.",
+    "confirm": "Turn away",
+    "confirming": "Recording…",
+    "confirmAriaLabel": "Turn {name} away",
+    "line": "Seen at the desk, turned away: {reason, select, medical {medical} waiver {waiver} card {card} age {age} identity {identity} payment {payment} other {not ready}}",
+    "badge": "Turned away",
+    "money": "Turning someone away does not charge or refund anything. Move their booking or refund it from their orders."
   },
   "settledAllBoarded": "All boarded",
   "settledSomeBoarded": "{count} boarded",
@@ -84,6 +104,11 @@
     "noShowWindowClosed": "That departure is too far past to mark anyone not here. Change the booking from their row instead.",
     "noShowNotMarked": "That diver is not marked not here.",
     "noShowTripFull": "The freed seat has already been taken, so that diver cannot go back on this boat.",
+    "turnAwayAlreadyBoarded": "The crew boarded that diver. Open the trip’s manifest.",
+    "turnAwayAlreadyMarked": "That seat is already released.",
+    "turnAwayOutsideWindow": "That departure is outside the desk’s hours. Change the booking from their row instead.",
+    "turnAwayNotBlocked": "Nothing stops them boarding now. Check them in instead.",
+    "turnAwayReasonNotBlocking": "Their row changed. Choose a reason it shows now.",
     "noShowCourseRatioFull": "That session is at its instructor-to-student ratio, so that diver can’t go back on it. Assign another instructor first."
   },
   "walkIn": {

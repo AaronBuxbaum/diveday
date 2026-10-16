@@ -4411,6 +4411,56 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-desk-no-show-sailed", scheme);
       });
 
+      /**
+       * **"Turned away", open and then recorded** (safety sheet 2026-10-15,
+       * item 6; H-124). Open before the boat leaves, so no departure move:
+       * Odile arrives blocked on the release, the door offers that reason
+       * alone, and the recorded row says it in its own group with the move and
+       * refund doors under it.
+       */
+      test(`the counter's turned-away door renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const title = "Turned Away Two-Tank";
+        await createTrip(page, {
+          title,
+          date: daysFromNow(0),
+          departsAt: "09:45",
+          returnsAt: "12:00",
+          capacity: 1,
+        });
+        const tripId = await seededTripId(page, "blue-mantis", title);
+        await page.goto(`${counterPath("blue-mantis", tripId)}/walk-in`);
+        const findDiver = page.getByRole("searchbox", {
+          name: "Search by name, email, or phone",
+        });
+        await findDiver.fill("Odile Marchand");
+        await findDiver.press("Enter");
+        await page.getByRole("button", { name: "Add Odile Marchand to this boat" }).click();
+        await page.waitForURL(new RegExp(`/trips/${tripId}\\?notice=walkin-added`));
+
+        await page.goto(counterPath("blue-mantis", tripId));
+        await expect(page.locator("[data-check-in-queue]")).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
+        const row = page
+          .locator('#roster li[id^="booking-"]')
+          .filter({ visible: true })
+          .filter({ has: page.getByRole("link", { name: "Odile Marchand", exact: true }) });
+        const door = row
+          .locator("details")
+          .filter({ has: page.getByText("Turned away", { exact: true }) });
+        await door.locator("> summary").click();
+        await disclosureSettled(door);
+        await capture(page, "trip-desk-turn-away", scheme);
+
+        await row.getByRole("button", { name: "Turn Odile Marchand away" }).click();
+        await expect(page.getByRole("heading", { name: "Turned away · 1" })).toBeVisible();
+        await capture(page, "trip-desk-turned-away", scheme);
+      });
+
       // **The home's evening reading** (ADR
       // 20260827-clearwater-surface-language, decision 4). The surface to
       // photograph is the shop home once every station has settled: the

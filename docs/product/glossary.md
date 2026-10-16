@@ -267,6 +267,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Trip phase
 - Trip series
 - Trip stage
+- Turned away
 - Unaccounted for
 - Wait list
 - Wait-list roll

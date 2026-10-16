@@ -1102,6 +1102,10 @@ async function scrubBookingRows(
         // with their date of birth. The release keeps the fact that a guardian
         // co-signed, which is the evidence; this only said why it was asked.
         minorDeclaredAt: null,
+        // Why the desk turned them away is a category, but "medical" is still a
+        // health fact about this person; it goes with them. The seat stays
+        // released (`no_show`), which is the shop's own record.
+        turnedAwayReason: null,
         // The instructor's next step is prose about this named student — "book
         // your deep dive with Marcus before the card arrives" — so it goes
         // with them (issues #1196, #1205). All three columns together, or the

@@ -70,7 +70,7 @@ export const EXPORT_FILE_NOTES = {
   "staff_credentials.csv":
     "Staff-owned ratings, insurance, and safety credentials, including their review status and renewal dates.",
   "bookings.csv":
-    "Every booking with its trip, diver, and payment state. wants_nitrox is a request, never a fill authorization — honor it only against a verified Nitrox card, checked at fill time.",
+    "Every booking with its trip, diver, and payment state. wants_nitrox is a request, never a fill authorization — honor it only against a verified Nitrox card, checked at fill time. status no_show is a released seat: with turned_away_reason set, the desk saw the diver and turned them away for that reason (medical, waiver, card, age, identity or payment — the category only, never the answers or card details); blank, the diver did not arrive.",
   "trip_help_requests.csv":
     "One non-medical day-of help request per booking, with its visible hand-off status and timestamps. The request is retained with the trip history; resolved staff identity is included when available.",
   "waitlist_entries.csv":

@@ -17,7 +17,16 @@ export type StorySeatRollCall = {
 
 /** The slice of one booking row the story's notes are read from. */
 export type StoryNoteBooking = {
-  booking: { id: string; status: string; paidRentalKinds?: readonly string[] | null };
+  booking: {
+    id: string;
+    status: string;
+    paidRentalKinds?: readonly string[] | null;
+    /**
+     * Set when the desk turned this diver away (H-124). Required, so the story
+     * can never say "no-show" over somebody the desk saw and refused.
+     */
+    turnedAwayReason: string | null;
+  };
   trip: { status: string; diveMode?: "boat" | "shore" | "pool" | null };
   reviewRating?: number | null;
   /**
@@ -93,6 +102,12 @@ export function storyNotes(
   t: StaffTranslator,
   locale: string,
 ): string[] {
+  // **Seen at the desk, turned away** (H-124): a past fact even on a boat that
+  // has not left yet, so it is said ahead as well as behind. The crew's own
+  // word outranks it: a seat they counted aboard has no reason left on it.
+  if (entry.booking.status === "no_show" && entry.booking.turnedAwayReason) {
+    return [t("divers.story.turnedAway", { reason: entry.booking.turnedAwayReason })];
+  }
   if (ahead) return [];
   switch (seatOutcome(entry)) {
     case "cancelled":

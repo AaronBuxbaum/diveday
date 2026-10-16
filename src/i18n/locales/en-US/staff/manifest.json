@@ -102,6 +102,7 @@
   "checkpointRollCallHeading": "{checkpoint} roll call",
   "checkedInPill": "Checked in",
   "notHerePill": "Not here",
+  "turnedAwayPill": "Turned away",
   "runningLate": "Running late, said {time}",
   "diverNotesHeading": "Diver notes",
   "noteAppliesAcrossDepartures": "Applies across departures",

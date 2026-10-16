@@ -642,6 +642,8 @@
     "noRecapBody": "Esta reserva no tiene resumen.",
     "noShowHeading": "Esta reserva figura como no presentado",
     "noShowBody": "{shop} registró que no llegaste a esta salida, así que no hay día que recordar.",
+    "turnedAwayHeading": "No embarcaste en esta salida",
+    "turnedAwayBody": "{shop} no pudo llevarte en esta salida, así que no hay día que recordar.",
     "waitingHeading": "Tu resumen aún no está listo",
     "waitingBody": "Vuelve a abrir este enlace más tarde.",
     "heldHeading": "Tu día de buceo lo tiene el centro",

@@ -1090,6 +1090,8 @@ async function writeSeat(
       .update(bookings)
       .set({
         status: "booked",
+        // A new booking, so no turned-away reason from the row's last life.
+        turnedAwayReason: null,
         // A reactivated row is a new booking and takes this booking's type.
         // An old nitrox request rides along only for a diver: enriched air is
         // something a diver breathes, and the column's check refuses it on
@@ -1706,7 +1708,9 @@ export async function restoreBooking(
 
     await tx
       .update(bookings)
-      .set({ status: "booked" })
+      // A seat back on the boat carries no turned-away reason from its last
+      // life (`bookings_turned_away_is_released`).
+      .set({ status: "booked", turnedAwayReason: null })
       .where(and(eq(bookings.id, bookingId), eq(bookings.status, "cancelled")));
     await settlePackageCoverage(tx, {
       shopId,

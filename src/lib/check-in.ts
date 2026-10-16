@@ -18,6 +18,8 @@
 export type CounterSeat = {
   bookingStatus: string;
   readiness: { status: string };
+  /** Set on a released seat the desk turned away (H-124); absent or null otherwise. */
+  turnedAwayReason?: string | null;
 };
 
 /**
@@ -55,6 +57,15 @@ export function isBlockedAtCounter(seat: CounterSeat): boolean {
  */
 export function isNoShowAtCounter(seat: CounterSeat): boolean {
   return seat.bookingStatus === "no_show";
+}
+
+/**
+ * **A released seat the desk saw and turned away** (H-124), rather than one
+ * whose diver never came. Same release, different statement, so the counter
+ * says it in its own words and its own count.
+ */
+export function isTurnedAwayAtCounter(seat: CounterSeat): boolean {
+  return isNoShowAtCounter(seat) && Boolean(seat.turnedAwayReason);
 }
 
 /**
@@ -117,8 +128,10 @@ export function counterTally(seats: readonly CounterSeat[]): {
   cantBoard: number;
   /** Cleared, and not here yet. */
   toCome: number;
-  /** Seats a staffer released: the diver is not coming (issue #1209). */
+  /** Seats a staffer released because the diver never came (issue #1209). */
   notHere: number;
+  /** Seats a staffer released after turning the diver away at the desk (H-124). */
+  turnedAway: number;
 } {
   // **A released seat leaves `expected` rather than joining a fourth band of
   // it.** "4 of 7 here" is a claim about who the boat is carrying, and a
@@ -126,7 +139,9 @@ export function counterTally(seats: readonly CounterSeat[]): {
   // otherwise the figure can never complete and the cleared line never lands.
   // Reported separately so the number is still said out loud: a count that
   // silently drops a person is the other way to lie about a boat.
-  const notHere = seats.filter(isNoShowAtCounter).length;
+  const released = seats.filter(isNoShowAtCounter);
+  const turnedAway = released.filter(isTurnedAwayAtCounter).length;
+  const notHere = released.length - turnedAway;
   const present = seats.filter((seat) => !isNoShowAtCounter(seat));
   const here = present.filter(isSettledAtCounter).length;
   const cantBoard = present.filter(isBlockedAtCounter).length;
@@ -136,5 +151,6 @@ export function counterTally(seats: readonly CounterSeat[]): {
     cantBoard,
     toCome: present.length - here - cantBoard,
     notHere,
+    turnedAway,
   };
 }

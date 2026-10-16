@@ -32,10 +32,16 @@ export function noShowSalvageCopy(input: {
   diver: { id: string; name: string };
   /** The page holds the locale and the shop's zone; this holds neither. */
   formatWhen: (startsAt: Date) => string;
+  /**
+   * The desk turned this diver away (H-124) rather than marking them not
+   * here: the money sentence names moving or refunding the booking, which is
+   * the next act for somebody who came and could not board.
+   */
+  turnedAway?: boolean;
 }): NoShowSalvageCopy {
   const { t, offer, shopSlug, tripId, diver } = input;
   const money = {
-    line: t("checkIn.noShow.money"),
+    line: input.turnedAway ? t("checkIn.turnAway.money") : t("checkIn.noShow.money"),
     href: `/shop/${shopSlug}/orders?personId=${encodeURIComponent(diver.id)}`,
     label: t("checkIn.noShow.moneyDoor"),
   };

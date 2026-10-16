@@ -20,12 +20,28 @@ type ShopContact = Pick<Shop, "name" | "contactEmail" | "contactPhone">;
  * fee, holding DiveDay's own page telling them the trip never ran, is where a
  * chargeback argument starts.
  */
-export function NoShowCard({ shop, t }: { shop: ShopContact; t: DiverTranslator }) {
+export function NoShowCard({
+  shop,
+  t,
+  turnedAway = false,
+}: {
+  shop: ShopContact;
+  t: DiverTranslator;
+  /**
+   * The desk saw this diver and could not take them (H-124). "Marked as a
+   * no-show" would be false to the one reader who knows it.
+   */
+  turnedAway?: boolean;
+}) {
   return (
     <ExpiredLinkCard
       glyph="cancelled"
-      title={t("recap.noShowHeading")}
-      text={t("recap.noShowBody", { shop: shop.name })}
+      title={turnedAway ? t("recap.turnedAwayHeading") : t("recap.noShowHeading")}
+      text={
+        turnedAway
+          ? t("recap.turnedAwayBody", { shop: shop.name })
+          : t("recap.noShowBody", { shop: shop.name })
+      }
       shop={shop}
       t={t}
     />

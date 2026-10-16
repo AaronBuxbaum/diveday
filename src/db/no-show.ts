@@ -78,7 +78,7 @@ export type UndoNoShowOutcome =
  * `loadActiveStaffRoles` has already proven the person is this shop's, alive
  * and holding an active account, so `isStaff` is the only question left.
  */
-async function activeStaffRecorderId(
+export async function activeStaffRecorderId(
   tx: DbExecutor,
   shopId: string,
   personId: string,
@@ -370,7 +370,9 @@ export async function undoBookingNoShow(
     const standing = await standingArrivalStatus(tx, input.shopId, seat.tripId, seat.id);
     const [updated] = await tx
       .update(bookings)
-      .set({ status: standing === "arrived" ? "checked_in" : "booked" })
+      // Back on the list, so no longer turned away either: the reason only
+      // ever sits on a released seat (`bookings_turned_away_is_released`).
+      .set({ status: standing === "arrived" ? "checked_in" : "booked", turnedAwayReason: null })
       .where(and(eq(bookings.id, seat.id), eq(bookings.status, "no_show")))
       .returning({ id: bookings.id });
     if (!updated) return { ok: false, reason: "not_marked" };

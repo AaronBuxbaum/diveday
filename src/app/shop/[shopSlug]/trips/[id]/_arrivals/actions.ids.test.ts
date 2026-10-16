@@ -58,9 +58,8 @@ const { getDb } = await import("@/db/client");
 const { getShopBookingTripId } = await import("@/db/bookings");
 const { checkInBooking } = await import("@/db/check-in");
 const { requireStaffSession } = await import("@/lib/session");
-const { checkInAction, markNoShowAction, undoCheckInAction, undoNoShowAction } = await import(
-  "./actions"
-);
+const { checkInAction, markNoShowAction, turnAwayAction, undoCheckInAction, undoNoShowAction } =
+  await import("./actions");
 
 const SHOP_SLUG = "reef-life";
 const SHOP_ID = "11111111-1111-4111-8111-111111111111";
@@ -94,6 +93,26 @@ describe("a malformed booking id at the counter", () => {
     signIn();
 
     const to = await redirectedTo(() => action(SHOP_SLUG, FOCUS_TRIP_ID, bookingForm(NOT_A_UUID)));
+
+    expect(to).toBe(noticeUrl(counterQueuePath(SHOP_SLUG, FOCUS_TRIP_ID), "invalid"));
+    expect(getDb).not.toHaveBeenCalled();
+  });
+
+  /**
+   * "Turned away" posts a reason beside the seat, and only the enum's own
+   * words reach the writer: anything else is the counter's `invalid`, before
+   * the database is opened (H-124).
+   */
+  it.each([
+    ["a malformed seat", NOT_A_UUID, "card"],
+    ["a reason that is not one", "55555555-5555-4555-8555-555555555555", "asthma"],
+    ["no reason at all", "55555555-5555-4555-8555-555555555555", ""],
+  ])("settles a turn-away with %s back on the counter", async (_label, bookingId, reason) => {
+    signIn();
+    const form = bookingForm(bookingId);
+    form.set("reason", reason);
+
+    const to = await redirectedTo(() => turnAwayAction(SHOP_SLUG, FOCUS_TRIP_ID, form));
 
     expect(to).toBe(noticeUrl(counterQueuePath(SHOP_SLUG, FOCUS_TRIP_ID), "invalid"));
     expect(getDb).not.toHaveBeenCalled();

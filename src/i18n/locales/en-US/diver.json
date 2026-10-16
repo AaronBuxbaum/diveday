@@ -642,6 +642,8 @@
     "noRecapBody": "There’s no recap for this booking.",
     "noShowHeading": "This booking is marked as a no-show",
     "noShowBody": "{shop} recorded that you didn’t make this departure, so there’s no day to look back on.",
+    "turnedAwayHeading": "You didn’t board this departure",
+    "turnedAwayBody": "{shop} couldn’t take you on this departure, so there’s no day to look back on.",
     "waitingHeading": "Your recap isn’t ready yet",
     "waitingBody": "Check back on this link later.",
     "heldHeading": "Your dive day is with the shop",

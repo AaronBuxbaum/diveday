@@ -191,6 +191,12 @@ export function RosterSection({
             context={context}
           />
           <RosterSeatGroup
+            label={t("trips.roster.groupTurnedAway")}
+            entries={record ? groups.turnedAway : []}
+            settled={false}
+            context={context}
+          />
+          <RosterSeatGroup
             label={t("trips.roster.groupNotCounted")}
             entries={groups.uncounted}
             settled={false}
@@ -256,6 +262,12 @@ export function RosterSection({
           <RosterSeatGroup
             label={t("trips.roster.groupNotHere")}
             entries={notHere}
+            settled={false}
+            context={context}
+          />
+          <RosterSeatGroup
+            label={t("trips.roster.groupTurnedAway")}
+            entries={record ? [] : groups.turnedAway}
             settled={false}
             context={context}
           />

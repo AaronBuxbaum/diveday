@@ -14,12 +14,18 @@ import {
   welcomeDockLine,
   welcomeDockLineUnchecked,
 } from "@/i18n/welcome-cue-labels";
-import { counterIsClear, counterTally, isNoShowAtCounter } from "@/lib/check-in";
+import {
+  counterIsClear,
+  counterTally,
+  isNoShowAtCounter,
+  isTurnedAwayAtCounter,
+} from "@/lib/check-in";
 import { formatTime, formatWeekdayTime } from "@/lib/format";
 import { type NoShowClaim, noShowClaim, noShowGate } from "@/lib/no-show";
 import { arrivalsWindow } from "@/lib/operational-window";
 import { paperPassPath } from "@/lib/print-sheets";
 import { hasSailed } from "@/lib/trips";
+import { turnAwayReasons } from "@/lib/turn-away";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import type { RosterArrival } from "../_components/RosterSection";
 import { ArrivalTap } from "./ArrivalTap";
@@ -27,6 +33,7 @@ import {
   checkInAction,
   markNoShowAction,
   offerAnotherDayAction,
+  turnAwayAction,
   undoCheckInAction,
   undoNoShowAction,
 } from "./actions";
@@ -34,6 +41,7 @@ import { CounterInstrument } from "./CounterInstrument";
 import { NoShowSalvage, NoShowScript } from "./NoShowScript";
 import { RowActionForm } from "./RowActionForm";
 import { noShowSalvageCopy } from "./salvage-copy";
+import { TurnAwayScript } from "./TurnAwayScript";
 
 /** What the Divers tab adds while a departure's arrivals are open. */
 export type ArrivalDesk = {
@@ -104,6 +112,37 @@ export async function buildArrivalDesk({
   const markNoShow = markNoShowAction.bind(null, shopSlug, tripId);
   const undoNoShow = undoNoShowAction.bind(null, shopSlug, tripId);
   const offerAnotherDay = offerAnotherDayAction.bind(null, shopSlug, tripId);
+  const turnAway = turnAwayAction.bind(null, shopSlug, tripId);
+
+  // **"Turned away" on a blocked row, before the boat leaves too** (H-124: any
+  // active staff, blocked rows only). The reasons offered are this row's own
+  // blocker categories; `turnBookingAway` re-reads readiness under the seat's
+  // lock and refuses any other, so this decides only what is drawn.
+  const turnAwayFor = (row: CheckInQueueRow): ReactNode => {
+    if (row.onTheWater) return null;
+    const reasons = turnAwayReasons(row.readiness);
+    if (reasons.length === 0) return null;
+    return (
+      <TurnAwayScript
+        key="turn-away"
+        action={turnAway}
+        bookingId={row.bookingId}
+        reasons={reasons.map((reason) => ({
+          value: reason,
+          label: t(`checkIn.turnAway.reason.${reason}`),
+        }))}
+        copy={{
+          door: t("checkIn.turnAway.door"),
+          legend: t("checkIn.turnAway.legend"),
+          consequence: t("checkIn.turnAway.consequence"),
+          confirm: t("checkIn.turnAway.confirm"),
+          confirming: t("checkIn.turnAway.confirming"),
+          confirmAriaLabel: t("checkIn.turnAway.confirmAriaLabel", { name: row.personName }),
+          sendFailed: t("checkIn.sendFailedButton"),
+        }}
+      />
+    );
+  };
 
   // **"Not here" opens when the boat leaves without them**, and says something
   // different once it is gone. `markBookingNoShow` runs the same gate again
@@ -151,21 +190,38 @@ export async function buildArrivalDesk({
           </SubmitButton>
         </RowActionForm>,
       );
+      // **Turned away says so, in its own words** (H-124): the desk saw this
+      // diver and refused them, which is not "did not arrive". The reason is
+      // the category alone.
+      const turnedAway =
+        isTurnedAwayAtCounter(row) && row.turnedAwayReason ? (
+          <p key="turned-away" className="mt-1 text-sm font-medium text-foreground">
+            {t("checkIn.turnAway.line", { reason: row.turnedAwayReason })}
+          </p>
+        ) : null;
       const salvage = salvageFor.get(row.personId);
-      if (salvage) {
+      const panel = salvage ? (
+        <NoShowSalvage
+          key="salvage"
+          offerAction={offerAnotherDay}
+          copy={noShowSalvageCopy({
+            t,
+            offer: salvage,
+            shopSlug,
+            tripId,
+            diver: { id: row.personId, name: row.personName },
+            formatWhen: (startsAt) => formatWeekdayTime(startsAt, locale, timeZone),
+            turnedAway: turnedAway !== null,
+          })}
+        />
+      ) : null;
+      if (turnedAway || panel) {
         below.set(
           row.bookingId,
-          <NoShowSalvage
-            offerAction={offerAnotherDay}
-            copy={noShowSalvageCopy({
-              t,
-              offer: salvage,
-              shopSlug,
-              tripId,
-              diver: { id: row.personId, name: row.personName },
-              formatWhen: (startsAt) => formatWeekdayTime(startsAt, locale, timeZone),
-            })}
-          />,
+          <>
+            {turnedAway}
+            {panel}
+          </>,
         );
       }
       continue;
@@ -200,6 +256,11 @@ export async function buildArrivalDesk({
           />
         </span>,
       );
+      // A diver who arrived and has since gone blocked can still be sent home.
+      if (!ready) {
+        const door = turnAwayFor(row);
+        if (door) below.set(row.bookingId, door);
+      }
       continue;
     }
     // Readiness is the gate: a tap beside the reasons would be an act the
@@ -218,6 +279,8 @@ export async function buildArrivalDesk({
         />,
       );
     }
+    const turnAwayDoor = ready ? null : turnAwayFor(row);
+    if (turnAwayDoor) below.set(row.bookingId, turnAwayDoor);
     const claim = noShowClaimFor(row);
     if (claim) {
       // **"Not here" on a blocked row too** (dive-domain review 2026-10-05):
@@ -230,25 +293,29 @@ export async function buildArrivalDesk({
       // says this person did not dive.
       below.set(
         row.bookingId,
-        <NoShowScript
-          action={markNoShow}
-          bookingId={row.bookingId}
-          // One door and one confirm either side of the departure ("Not
-          // here"): "did not dive" also describes a diver who sat a dive out
-          // aboard, whom this tap refuses (dive-domain review 2026-10-06).
-          // What differs is the sentence saying what the tap records.
-          copy={{
-            door: t("checkIn.noShow.door"),
-            consequence:
-              claim === "did_not_dive"
-                ? t("checkIn.noShow.sailedConsequence")
-                : t("checkIn.noShow.consequence"),
-            confirm: t("checkIn.noShow.confirm"),
-            confirming: t("checkIn.noShow.confirming"),
-            confirmAriaLabel: t("checkIn.noShow.confirmAriaLabel", { name: row.personName }),
-            sendFailed: t("checkIn.sendFailedButton"),
-          }}
-        />,
+        <>
+          {turnAwayDoor}
+          <NoShowScript
+            key="no-show"
+            action={markNoShow}
+            bookingId={row.bookingId}
+            // One door and one confirm either side of the departure ("Not
+            // here"): "did not dive" also describes a diver who sat a dive out
+            // aboard, whom this tap refuses (dive-domain review 2026-10-06).
+            // What differs is the sentence saying what the tap records.
+            copy={{
+              door: t("checkIn.noShow.door"),
+              consequence:
+                claim === "did_not_dive"
+                  ? t("checkIn.noShow.sailedConsequence")
+                  : t("checkIn.noShow.consequence"),
+              confirm: t("checkIn.noShow.confirm"),
+              confirming: t("checkIn.noShow.confirming"),
+              confirmAriaLabel: t("checkIn.noShow.confirmAriaLabel", { name: row.personName }),
+              sendFailed: t("checkIn.sendFailedButton"),
+            }}
+          />
+        </>,
       );
     }
   }
@@ -346,12 +413,13 @@ export async function buildArrivalDesk({
   // arrival — checked in and cleared to board. Whether the desk is *finished*
   // is the roster's question (a contact number, a balance), so the roster
   // says whether the cleared line may show.
-  const { here, expected, cantBoard, toCome, notHere } = counterTally(rows);
+  const { here, expected, cantBoard, toCome, notHere, turnedAway } = counterTally(rows);
   const remainder =
     [
       toCome > 0 ? t("checkIn.instrument.toCome", { count: toCome }) : null,
       cantBoard > 0 ? t("checkIn.instrument.cantBoard", { count: cantBoard }) : null,
       notHere > 0 ? t("checkIn.instrument.notHere", { count: notHere }) : null,
+      turnedAway > 0 ? t("checkIn.instrument.turnedAway", { count: turnedAway }) : null,
     ]
       .filter(Boolean)
       .join(" · ") || null;

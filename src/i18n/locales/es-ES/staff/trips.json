@@ -523,6 +523,7 @@
     "groupReady": "Listos",
     "groupCheckedIn": "Registrados",
     "groupNotHere": "No vinieron",
+    "groupTurnedAway": "No pudieron embarcar",
     "groupStillToClear": "Pendientes de resolver",
     "groupSailed": "Zarparon",
     "groupDidNotSail": "No zarparon",

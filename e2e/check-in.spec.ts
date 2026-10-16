@@ -708,6 +708,64 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
 });
 
 /**
+ * **"Turned away" at the desk** (safety sheet 2026-10-15, item 6; H-124): a
+ * diver the desk saw and would not board is recorded as that, with the reason
+ * from their own row, and the seat is free before the boat leaves — where
+ * "Not here" is still closed.
+ */
+test("the desk turns a blocked diver away before the boat leaves, says why, and frees the seat", async ({
+  page,
+}) => {
+  const title = `Turned Away ${e2eNow().getTime()}`;
+  // 09:45 against the frozen 09:30: still ahead, so "Not here" is closed.
+  await createTrip(page, {
+    title,
+    date: daysFromNow(0),
+    departsAt: "09:45",
+    returnsAt: "12:00",
+    capacity: 1,
+  });
+  const tripId = await seededTripId(page, "blue-mantis", title);
+  const counter = counterPath("blue-mantis", tripId);
+
+  // Odile Marchand is carded and booked on nothing (`src/db/seed-cert-gates.ts`),
+  // so on this boat she is blocked on the release alone.
+  await page.goto(`${counter}/walk-in`);
+  const findDiver = page.getByRole("searchbox", { name: "Search by name, email, or phone" });
+  await findDiver.fill("Odile Marchand");
+  await findDiver.press("Enter");
+  await page.getByRole("button", { name: "Add Odile Marchand to this boat" }).click();
+  await page.waitForURL(new RegExp(`/trips/${tripId}\\?notice=walkin-added`));
+
+  await page.goto(counter);
+  const odile = deskRow(page, "Odile Marchand");
+  await expect(odile).toHaveCount(1);
+  await expect(odile.getByText("Not here", { exact: true })).toHaveCount(0);
+
+  // The door, its one reason already chosen, and one confirm.
+  await odile.getByText("Turned away", { exact: true }).click();
+  await expect(odile.getByRole("radio", { name: "Waiver" })).toBeChecked();
+  await expect(odile.getByRole("radio", { name: "Medical" })).toHaveCount(0);
+  await odile.getByRole("button", { name: "Turn Odile Marchand away" }).click();
+
+  // Its own group and its own words, never "Not here".
+  await expect(page.getByRole("heading", { name: "Turned away · 1" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Not here/ })).toHaveCount(0);
+  const released = deskRow(page, "Odile Marchand");
+  await expect(released.getByText("Seen at the desk, turned away: waiver")).toBeVisible();
+  await expect(released.getByText(/^Turning someone away does not charge/)).toBeVisible();
+  await expect(released.getByRole("link", { name: "Open their orders" })).toBeVisible();
+  await expect(released.getByRole("button", { name: /refund|charge/i })).toHaveCount(0);
+  await expect(
+    released.getByRole("button", { name: "Put Odile Marchand back on this boat’s list" }),
+  ).toBeVisible();
+
+  // The seat is free at once.
+  await page.goto(`${counter}/walk-in`);
+  await expect(page.getByText(/0\/1 booked/)).toBeVisible();
+});
+
+/**
  * **The counter's half of the same act** (issue #1765, in the browser for
  * #1787).
  *

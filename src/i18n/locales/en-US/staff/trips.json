@@ -523,6 +523,7 @@
     "groupReady": "Ready",
     "groupCheckedIn": "Checked in",
     "groupNotHere": "Not here",
+    "groupTurnedAway": "Turned away",
     "groupStillToClear": "Still to clear",
     "groupSailed": "Sailed",
     "groupDidNotSail": "Didn’t sail",

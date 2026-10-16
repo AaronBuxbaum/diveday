@@ -9,11 +9,18 @@ import { bookings, certifications, nitroxCertifications, trips } from "@/db/sche
 import { welcomeCueInputsByBooking } from "@/db/welcome-cues";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
+import { turnAwayReasons } from "@/lib/turn-away";
 import { fileScopedShopContext } from "@/test/db";
 
 const ctx = fileScopedShopContext();
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+// A blocked row carries the "Turned away" door, whose form refreshes the
+// router after a send; rendered here outside an app router.
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 
 const { buildArrivalDesk } = await import("./arrival-desk");
 
@@ -131,5 +138,41 @@ describe("the counter's welcome word (UX audit 2026-10-07, item 46)", () => {
     const below = await belowFor(seat);
     expect(below).not.toHaveTextContent("first time with us");
     expect(below).not.toHaveTextContent("Say hello");
+  });
+});
+
+describe("the counter's turned-away door (H-124)", () => {
+  /** A blocked row offers exactly the categories its own blockers name. */
+  it("offers a blocked row its own reasons, and only those", async () => {
+    const seat = await firstTimerAtTheCounter();
+    // A held seat (H-13) fails closed on identity, whatever else is on file.
+    await seat.db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: seat.now })
+      .where(eq(bookings.id, seat.bookingId));
+    const [row] = (await listCheckInQueue(seat.db, seat.shop.id, { now: seat.now })).filter(
+      (candidate) => candidate.bookingId === seat.bookingId,
+    );
+    if (!row) throw new Error("the seat left the queue");
+    const expected = turnAwayReasons(row.readiness);
+    expect(expected).toContain("identity");
+    const below = await belowFor(seat);
+    expect(below).toHaveTextContent("Turned away");
+    const offered = [...below.querySelectorAll<HTMLInputElement>('input[name="reason"]')].map(
+      (input) => input.value,
+    );
+    expect(offered).toEqual(expected);
+  });
+
+  it("says a turned-away seat was seen at the desk, with its reason", async () => {
+    const seat = await firstTimerAtTheCounter();
+    await seat.db
+      .update(bookings)
+      .set({ status: "no_show", turnedAwayReason: "card" })
+      .where(eq(bookings.id, seat.bookingId));
+    const below = await belowFor(seat);
+    expect(below).toHaveTextContent("Seen at the desk, turned away: card");
+    expect(below).toHaveTextContent("Turning someone away does not charge or refund anything.");
+    expect(below).not.toHaveTextContent("Marking someone not here");
   });
 });

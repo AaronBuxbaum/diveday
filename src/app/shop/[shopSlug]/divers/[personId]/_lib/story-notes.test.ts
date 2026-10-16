@@ -18,6 +18,7 @@ function seat(
     diveMode?: "boat" | "shore" | "pool";
     dock?: "boarded" | "not_boarded" | null;
     afterDive?: "boarded" | "missing_after_dive" | null;
+    turnedAwayReason?: string | null;
   } = {},
 ): StoryNoteBooking {
   return {
@@ -25,6 +26,7 @@ function seat(
       id: "b-1",
       status: overrides.status ?? "booked",
       paidRentalKinds: overrides.rented ?? [],
+      turnedAwayReason: overrides.turnedAwayReason ?? null,
     },
     trip: { status: overrides.tripStatus ?? "scheduled", diveMode: overrides.diveMode ?? "boat" },
     reviewRating: overrides.rating ?? null,
@@ -33,6 +35,29 @@ function seat(
 }
 
 const behind = { ahead: false, firstSailed: false };
+
+describe("a seat the desk turned away (H-124)", () => {
+  const turnedAway = seat({ status: "no_show", turnedAwayReason: "card" });
+
+  it("says the desk saw them and why, never no-show", () => {
+    expect(storyNotes(turnedAway, behind, t, "en-US")).toEqual([
+      "seen at the desk, turned away: card",
+    ]);
+    expect(storyNotes(seat({ status: "no_show" }), behind, t, "en-US")).toEqual(["no-show"]);
+  });
+
+  it("says it on a boat that has not left yet, too", () => {
+    expect(storyNotes(turnedAway, { ahead: true, firstSailed: false }, t, "en-US")).toEqual([
+      "seen at the desk, turned away: card",
+    ]);
+  });
+
+  it("says it in Spanish", () => {
+    expect(storyNotes(turnedAway, behind, staffTranslator("es-ES"), "es-ES")).toEqual([
+      "atendido en el mostrador, no embarcó: certificación",
+    ]);
+  });
+});
 
 describe("what a seat behind the diver says", () => {
   it("falls back to 'sailed' for a trip that went as trips go", () => {

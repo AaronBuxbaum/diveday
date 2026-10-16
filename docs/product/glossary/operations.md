@@ -123,7 +123,7 @@
   gone. A row the crew recorded as not boarded keeps it. **It gates nothing** and it is not a **no-show**: the
   diver still has to arrive, and a diver who said it and never came is still the desk's call.
 - **No-show** — one staffer's recorded statement that a booked diver did not come. The status is
-  `bookings.status = "no_show"`, written only by `markBookingNoShow` (`src/db/no-show.ts`), behind
+  `bookings.status = "no_show"`, written by `markBookingNoShow` (`src/db/no-show.ts`), behind
   the Divers tab's "Not here" disclosure (inside the arrivals window, on any row the gate allows, blocked or not) and its confirm tap. **It is not the three things it is most easily mistaken
   for.** Not a **cancellation**: a diver who told the shop they were not coming gave the seat up
   themselves, and the mark is refused on that booking (`not_booked`), because the difference between
@@ -168,7 +168,20 @@
   a promise the reader made and the writer did not keep, and the seat it was broken on is the one
   that most needs it — a staffer's own seat is the one readiness refuses at the dock, so the crew
   list is often the only place a boarding for them can be written at all (issue #1686). It is never
-  a **dive day**, in any of the four readers that count them.
+  a **dive day**, in any of the four readers that count them. The same status, with a reason, is
+  also how a seat is **turned away**.
+- **Turned away** — the desk saw a diver readiness would not board and sent them home (H-124). Its
+  writer, `turnBookingAway` (`src/db/turn-away.ts`), sets `bookings.status = "no_show"` and
+  `bookings.turned_away_reason`, so the seat is released exactly as a **no-show**'s is, and every
+  reader that leaves a no-show out (capacity, recap, tips, dive days) leaves this seat out too. What
+  differs is the statement: seen and refused, not "did not come", and every surface that names a
+  released seat says which (the desk's own group and line, the manifest pill, the diver's story,
+  `bookings.csv`, the trail's `booking_turned_away`). **Any active staff member, on a blocked row
+  only**: the reason is one category from that row's own readiness blockers (`turnAwayReasons`,
+  `src/lib/turn-away.ts`: medical, waiver, card, age, identity, payment), re-read under the seat's
+  lock, and never the evidence: no medical answer or card detail is stored. Open before the boat
+  leaves, unlike "Not here", inside the **arrivals window**. "Put back on the list" undoes it, and a
+  seat back on the boat never carries a reason (`bookings_turned_away_is_released`).
 - **Seat release** — the confirm tap on a **no-show** *is* the release. There is no second tap, no
   timer, no evening sweep and no `seat_released_at` column: `no_show` leaves the statuses that hold
   a seat (**seat held**), so the boat reads one seat lighter the moment the mark lands and the next

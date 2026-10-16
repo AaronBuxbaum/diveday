@@ -314,6 +314,13 @@ export type ReadyPageData = {
    */
   canCancelBooking: boolean;
   /**
+   * The desk saw this diver and turned them away (H-124), rather than marking
+   * them not here. After the departure the page says the shop could not take
+   * them, never that they did not make it. The category is not carried: the
+   * diver was there, and a bearer link is no place to print it.
+   */
+  turnedAway: boolean;
+  /**
    * **"Add a seat"** (UX review 2026-10-11, item 13): this booking may lead a
    * party seat added from the page. The same moment a seat may be released
    * (`canCancelBooking`), never on a held seat, and never on a party member's
@@ -385,6 +392,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       hotelPickupLocation: bookings.hotelPickupLocation,
       pickupTime: bookings.pickupTime,
       status: bookings.status,
+      turnedAwayReason: bookings.turnedAwayReason,
       runningLateAt: bookings.runningLateAt,
       bookingCreatedAt: bookings.createdAt,
       carriedFactsConfirmedAt: bookings.carriedFactsConfirmedAt,
@@ -628,6 +636,7 @@ export async function getReadyPageData(
     canPay,
     cancelPreview,
     canCancelBooking,
+    turnedAway: row.status === "no_show" && row.turnedAwayReason !== null,
     canAddSeat,
     runningLate: {
       open: canSayRunningLate({
