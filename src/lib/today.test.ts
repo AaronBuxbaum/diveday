@@ -11,6 +11,8 @@ import {
   factOfScaleFor,
   filterActionsForRoles,
   getSeasonalBriefing,
+  groupByDeparture,
+  KIND_AUDIENCE,
   type OwedRefundInput,
   primaryBlocker,
   readNeedsYou,
@@ -875,47 +877,17 @@ describe("sortStationRows", () => {
     sortStationRows(input);
     expect(input.map((row) => row.id)).toEqual(["quiet", "danger"]);
   });
-
-  it("puts saying hello below every piece of work in the station", () => {
-    // The courtesy row (issue #1182, delight report D22). It is a thing the
-    // desk may do if the morning allows, so it never leads a station and never
-    // outranks something somebody has to do.
-    const at = hoursFromNow(2);
-    const sorted = sortStationRows([
-      action({ id: "hello", kind: "say_hello", dueAt: at }),
-      action({ id: "prep", kind: "dive_prep", dueAt: at }),
-      action({ id: "medical", kind: "medical_review", dueAt: at }),
-      action({ id: "waiver", kind: "waiver", dueAt: at }),
-    ]);
-    expect(sorted.map((row) => row.id)).toEqual(["medical", "waiver", "prep", "hello"]);
-  });
 });
 
 /**
- * The Say hello row's own registry entries (issue #1182). Each is a decision
- * rather than a default, and each is the kind of thing that quietly drifts:
- * a warning tone would read as a thing that has gone wrong, a narrower audience
- * would hide it from the captain who is actually at the dock.
+ * **Saying hello is not a job** (fifth loop, item 10). A greeting has no done
+ * state, so it is a line on the departure card (`SpineDeparture.welcome`) and
+ * the roster's own cue, never a Needs you row or a number in its count.
  */
-describe("the Say hello row", () => {
-  it("is neutral-toned, at the bottom of the severity order, and visible to everyone", () => {
-    expect(ACTION_KIND_META.say_hello.tone).toBe("neutral");
-    const at = hoursFromNow(2);
-    const belowEverything = sortStationRows([
-      action({ id: "hello", kind: "say_hello", dueAt: at }),
-      action({ id: "units", kind: "units_unconfirmed", dueAt: at }),
-    ]);
-    expect(belowEverything.map((row) => row.id)).toEqual(["units", "hello"]);
-    for (const role of [
-      "owner",
-      "manager",
-      "instructor",
-      "divemaster",
-      "captain",
-      "crew",
-    ] as const) {
-      expect(filterActionsForRoles([action({ kind: "say_hello" })], [role])).toHaveLength(1);
-    }
+describe("saying hello", () => {
+  it("is not a kind the queue can hold", () => {
+    expect(Object.keys(ACTION_KIND_META)).not.toContain("say_hello");
+    expect(Object.keys(KIND_AUDIENCE)).not.toContain("say_hello");
   });
 });
 
@@ -1141,7 +1113,6 @@ describe("readNeedsYou, one reading for every role", () => {
     // The blocked diver's fix: the desk's, withheld from a captain's lens.
     action({ id: "waiver", kind: "waiver", subject: "Priya", departure: boat("t1") }),
     action({ id: "prep", kind: "dive_prep", subject: "4 sizes", departure: boat("t1") }),
-    action({ id: "hello", kind: "say_hello", subject: "Priya and Tom", departure: boat("t1") }),
     action({ id: "fill", kind: "last_minute_fill", subject: "3 seats", departure: boat("t1") }),
     action({ id: "messages", kind: "unanswered_messages", subject: "3", departure: undefined }),
   ];
@@ -1188,19 +1159,20 @@ describe("readNeedsYou, one reading for every role", () => {
     },
   );
 
-  it("reads the captain's day as the captain's list: two things, both before the boat", () => {
+  it("reads the captain's day as the captain's list: one thing, before the boat", () => {
     const reading = readFor({ role: "captain", crews: true });
-    expect(reading.lead.map((row) => row.id)).toEqual(["prep", "hello"]);
-    expect(reading.count).toBe(2);
-    expect(reading.dueBeforeNext).toBe(2);
+    // No greeting row: saying hello is a line on the card (fifth loop, item 10).
+    expect(reading.lead.map((row) => row.id)).toEqual(["prep"]);
+    expect(reading.count).toBe(1);
+    expect(reading.dueBeforeNext).toBe(1);
     // The desk's messages fold behind one line; they are not the boat's.
     expect(reading.folded?.map((row) => row.id)).toEqual(["messages"]);
   });
 
   it("reads the owner's day whole, with the desk's row counted but not as due before the boat", () => {
     const reading = readFor({ role: "owner", crews: false });
-    expect(reading.count).toBe(5);
-    expect(reading.dueBeforeNext).toBe(4);
+    expect(reading.count).toBe(4);
+    expect(reading.dueBeforeNext).toBe(3);
     expect(reading.folded).toBeNull();
   });
 
@@ -1647,5 +1619,30 @@ describe("the boat's emergency kit on Today (dive-domain review 2026-10-09)", ()
     expect(ACTION_KIND_META.boat_safety_expired.tone).toBe("warning");
     expect(filterActionsForRoles([due, lapsed], ["crew"])).toEqual([]);
     expect(filterActionsForRoles([due, lapsed], ["manager"])).toHaveLength(2);
+  });
+});
+
+describe("groupByDeparture", () => {
+  it("says each boat once, keeps the rank inside it, and puts the desk last", () => {
+    const rows = sortStationRows([
+      action({ id: "messages", kind: "unanswered_messages", subject: "3", departure: undefined }),
+      action({ id: "waiver-late", kind: "waiver", subject: "Ana", departure: boat("late") }),
+      action({ id: "medical", kind: "medical_review", subject: "Bo", departure: boat("early") }),
+      action({ id: "prep", kind: "dive_prep", subject: "4 sizes", departure: boat("early") }),
+    ]);
+    const groups = groupByDeparture(rows);
+    expect(groups.map((group) => group.departure?.tripId ?? "desk")).toEqual([
+      "early",
+      "late",
+      "desk",
+    ]);
+    expect(groups[0]?.rows.map((row) => row.id)).toEqual(["medical", "prep"]);
+    expect(groups.flatMap((group) => group.rows)).toHaveLength(rows.length);
+  });
+
+  it("draws no desk group when every row is about a boat", () => {
+    const groups = groupByDeparture([action({ id: "w", kind: "waiver", departure: boat("t1") })]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.departure?.tripId).toBe("t1");
   });
 });

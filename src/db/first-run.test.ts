@@ -13,6 +13,7 @@ const BARE = {
   description: null,
   logoUrl: null,
   unitsConfirmedAt: null,
+  emergencyReference: { lines: [], vessel: "", shoreContact: "", plan: "" },
 };
 
 describe("loadFirstRunFacts", () => {
@@ -51,10 +52,28 @@ describe("loadFirstRunFacts", () => {
       profileDone: true,
       unitsDone: true,
       releaseDone: false,
+      emergencyDone: false,
       stripeDone: false,
     });
     const siteStep = facts.steps.diveSiteCount > 0 ? 1 : 0;
     expect(facts.doneCount).toBe(3 + siteStep);
+  });
+
+  it("counts the emergency card done once it carries a number to dial", async () => {
+    const { db, shop } = ctx;
+    const facts = await loadFirstRunFacts(
+      db,
+      {
+        ...BARE,
+        id: shop.id,
+        emergencyReference: {
+          ...BARE.emergencyReference,
+          lines: [{ label: "Chamber", phone: "+1 305 555 0177" }],
+        },
+      },
+      null,
+    );
+    expect(facts.steps.emergencyDone).toBe(true);
   });
 });
 

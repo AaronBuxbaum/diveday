@@ -55,6 +55,7 @@ import {
   gearServiceEvents,
   importedPaymentHistory,
   inboundMessages,
+  inboxSavedAnswers,
   integrationDeliveries,
   integrationEvents,
   integrationOauthStates,
@@ -1447,6 +1448,9 @@ export async function resetDemoSchedule(
   // second, and both before the people and delivery rows they point at.
   await db.delete(staffReplies).where(eq(staffReplies.shopId, shopId));
   await db.delete(inboundMessages).where(eq(inboundMessages.shopId, shopId));
+  // Saved answers are re-seeded beside the inbox, so a spec that saves one
+  // does not leave the next one an extra chip.
+  await db.delete(inboxSavedAnswers).where(eq(inboxSavedAnswers.shopId, shopId));
   // Stripe checkout/refund state references bookings, trips, and orders, so it
   // must be cleared before those parents or the deletes below FK-violate and
   // abort the whole reset mid-run — leaving a prior payment test's trips and

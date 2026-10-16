@@ -84,6 +84,27 @@
     "lateMarked": "Marked running late. The roster and the manifest show it.",
     "lateClosed": "That seat is past running late: checked in, canceled, or the boat has sailed.",
     "deleted": "Message deleted.",
-    "gone": "That message is no longer in the inbox."
+    "gone": "That message is no longer in the inbox.",
+    "answerSaved": "Saved. It’s above the reply box now, on every diver’s record.",
+    "answerDuplicate": "That answer is already saved.",
+    "answersFull": "{count, plural, one {You keep # saved answer.} other {You keep # saved answers.}} Delete one in the Inbox to make room.",
+    "answerDeleted": "Saved answer deleted.",
+    "answerRestored": "Saved answer put back.",
+    "answerGone": "That saved answer is no longer there."
+  },
+  "savedAnswers": {
+    "heading": "Saved answers",
+    "empty": "Send a reply from a diver’s record and choose Save this answer. It shows up here, and above every reply box.",
+    "markersHint": "'{name}' becomes the diver’s first name, and '{trip}' the departure they are booked on next.",
+    "save": "Save this answer",
+    "saving": "Saving…",
+    "delete": "Delete",
+    "deleteFor": "Delete {title}",
+    "deleting": "Deleting…",
+    "deletedHeading": "Deleted",
+    "restore": "Put back",
+    "restoreFor": "Put back {title}",
+    "restoring": "Putting back…",
+    "tripFill": "{title} on {date} at {time}"
   }
 }

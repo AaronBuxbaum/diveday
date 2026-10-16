@@ -103,8 +103,9 @@
     "workOrderUncollected": "Reparación sin recoger",
     "staffCredentialDue": "Credencial",
     "unitsUnconfirmed": "Configuración",
+    "emergencyCardBlank": "Referencia de emergencia",
+    "lostItemsWaiting": "Objetos perdidos",
     "helpRequest": "Solicitud de ayuda",
-    "sayHello": "Saluda",
     "rentalFit": "Equipo",
     "blockedAboard": "A bordo",
     "crewAway": "Tripulación ausente"
@@ -205,7 +206,6 @@
     "openTrip": "Abrir salida",
     "openCrew": "Abrir tripulación",
     "openLastMinuteDeal": "Abrir oferta de última hora",
-    "openGuests": "Abrir buceadores",
     "inviteFromWaitlist": "Invitar de la lista de espera",
     "resendWaiverLink": "Reenviar enlace de exención",
     "resendConfirmation": "Reenviar confirmación",
@@ -271,6 +271,15 @@
     "detail": "Confírmalos.",
     "feet": "pies",
     "meters": "metros"
+  },
+  "emergencyCard": {
+    "subject": "Tu referencia de emergencia no tiene números",
+    "detail": "La salida de las {time} de {day} zarpa sin un número de cámara hiperbárica ni de guardacostas.",
+    "action": "Añadir los números"
+  },
+  "lostItems": {
+    "subject": "{count, plural, one {# objeto esperando a su dueño} other {# objetos esperando a sus dueños}}",
+    "action": "Abrir objetos perdidos"
   },
   "gear": {
     "overdueDetail": "{units} {count, plural, one {debía devolverse} other {debían devolverse}} el {dueOn} y {count, plural, one {sigue fuera} other {siguen fuera}}.",

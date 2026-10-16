@@ -448,11 +448,20 @@ export async function createBookingParty(
         // single-booking path never carries party state, and written even for
         // a reactivated row (whose stale linkage the reactivation path just
         // cleared) so a re-booked party member is claimable again.
+        //
+        // A party **staff** seat is stamped claimed as it is made (security
+        // review N3): the counter typed each name with that person standing at
+        // the desk, so no claim link from the lead's readiness page may
+        // re-point the seat to whoever opens it. The public party form's seats
+        // stay claimable, which is what the claim link is for.
         const leadBookingId = created[0]?.bookingId;
         if (index > 0 && leadBookingId) {
           await tx
             .update(bookings)
-            .set({ partyLeadBookingId: leadBookingId })
+            .set({
+              partyLeadBookingId: leadBookingId,
+              ...(request.actor === "staff" ? { claimedAt: nowDate() } : {}),
+            })
             .where(eq(bookings.id, outcome.bookingId));
         }
         created.push(outcome);

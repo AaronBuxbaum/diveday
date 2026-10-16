@@ -96,6 +96,8 @@ test.describe("staff", () => {
     // remounted door has to be hydrated again before it answers.
     await openAddGear(page);
     await page.getByLabel("Tag").fill(tag);
+    await page.getByLabel("Serial number").fill("SN-E2E-4471");
+    await page.getByLabel("Brand & model").fill("Apeks XTX50");
     await page.getByRole("button", { name: "Add to the register" }).click();
     // The refusal lands on the Tag field itself (role="alert" via Field's
     // error prop), and the offending input is marked invalid. Filtered by
@@ -104,6 +106,11 @@ test.describe("staff", () => {
       page.getByRole("alert").filter({ hasText: "Another unit already wears that tag." }),
     ).toBeVisible();
     await expect(page.getByLabel("Tag")).toHaveAttribute("aria-invalid", "true");
+    // **And keeps what was typed** (fifth loop, item 14): the serial and the
+    // brand are still there, so only the tag needs changing.
+    await expect(page.getByLabel("Serial number")).toHaveValue("SN-E2E-4471");
+    await expect(page.getByLabel("Brand & model")).toHaveValue("Apeks XTX50");
+    await expect(page.getByLabel("Tag")).toHaveValue(tag);
   });
 
   test("walks a seeded reservation through check-out and return from the unit's record", async ({

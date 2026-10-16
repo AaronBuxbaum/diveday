@@ -84,6 +84,27 @@
     "lateMarked": "Marcado: llega tarde. La lista y el manifiesto lo muestran.",
     "lateClosed": "Ese lugar ya no admite el aviso: hizo el check-in, se canceló o el barco ya salió.",
     "deleted": "Mensaje eliminado.",
-    "gone": "Ese mensaje ya no está en la bandeja."
+    "gone": "Ese mensaje ya no está en la bandeja.",
+    "answerSaved": "Guardada. Ya está sobre el cuadro de respuesta, en la ficha de cada buceador.",
+    "answerDuplicate": "Esa respuesta ya está guardada.",
+    "answersFull": "{count, plural, one {Guardas # respuesta.} other {Guardas # respuestas.}} Elimina una en Mensajes para hacer sitio.",
+    "answerDeleted": "Respuesta guardada eliminada.",
+    "answerRestored": "Respuesta guardada recuperada.",
+    "answerGone": "Esa respuesta guardada ya no está."
+  },
+  "savedAnswers": {
+    "heading": "Respuestas guardadas",
+    "empty": "Envía una respuesta desde la ficha de un buceador y elige Guardar esta respuesta. Aparecerá aquí y sobre cada cuadro de respuesta.",
+    "markersHint": "'{name}' se convierte en el nombre del buceador, y '{trip}' en su próxima salida reservada.",
+    "save": "Guardar esta respuesta",
+    "saving": "Guardando…",
+    "delete": "Eliminar",
+    "deleteFor": "Eliminar {title}",
+    "deleting": "Eliminando…",
+    "deletedHeading": "Eliminadas",
+    "restore": "Recuperar",
+    "restoreFor": "Recuperar {title}",
+    "restoring": "Recuperando…",
+    "tripFill": "{title}, {date}, {time}"
   }
 }

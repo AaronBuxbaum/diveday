@@ -43,7 +43,15 @@ async function requireGearSurface() {
 export async function createGearItemAction(formData: FormData) {
   const { session, gear } = await requireGearSurface();
   const parsed = unitFormSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
+  // A refusal names its field where one is to blame (fifth loop, item 14), so
+  // it renders beside that box with the rest of the form still typed.
+  if (!parsed.success) {
+    const field = parsed.error.issues[0]?.path[0];
+    revalidateAndRedirect(
+      gear,
+      noticeUrl(gear, field === "purchasedOn" ? "invalid-date" : "invalid"),
+    );
+  }
 
   const outcome = await createGearItem(await getDb(), {
     shopId: session.user.shopId,

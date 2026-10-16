@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useEffect, useEffectEvent, useId, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -24,6 +24,7 @@ import {
   SET_PRICE_FIELD,
   UNIT_FIELD,
 } from "../../rental-form";
+import { readKeptCart } from "./kept-cart";
 
 export type PickerUnit = {
   id: string;
@@ -110,6 +111,7 @@ export function CounterRentalCart({
   invoiceExtras,
   words,
   notice,
+  restoreKept = null,
 }: {
   groups: { kind: GearItemKind; kindLabel: string; units: PickerUnit[] }[];
   coreKinds: GearItemKind[];
@@ -124,6 +126,13 @@ export function CounterRentalCart({
   invoiceExtras: ReactNode;
   words: CartWords;
   notice: ReactNode;
+  /**
+   * The page came back with this form's refusal: put back the picks, prices
+   * and payment this tab just submitted (fifth loop, item 14), so the staffer
+   * swaps the one unit that was refused rather than building the bill again.
+   * The kept form's scope (`keptTypedScope`) when it did, else null.
+   */
+  restoreKept?: string | null;
 }) {
   const billId = useId();
   const [kind, setKind] = useState<GearItemKind | undefined>(groups[0]?.kind);
@@ -133,6 +142,19 @@ export function CounterRentalCart({
   const [payment, setPayment] = useState<RentalPayment | null>(null);
 
   const byId = new Map(groups.flatMap((group) => group.units.map((unit) => [unit.id, unit])));
+
+  const restore = useEffectEvent(() => {
+    if (!restoreKept) return;
+    const kept = readKeptCart(restoreKept, (id) => byId.has(id));
+    if (!kept) return;
+    if (kept.ids.length > 0) setPickedIds(kept.ids);
+    setPrices(kept.prices);
+    if (kept.setFigure !== undefined) setSetFigure(kept.setFigure);
+    if (kept.payment) setPayment(kept.payment);
+  });
+  useEffect(() => {
+    if (restoreKept) restore();
+  }, [restoreKept]);
   const picked = pickedIds.flatMap((id) => byId.get(id) ?? []);
   const asSet =
     setPrice !== null &&

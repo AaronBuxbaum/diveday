@@ -99,6 +99,7 @@ import {
   gearReservations,
   importedPaymentHistory,
   inboundMessages,
+  inboxSavedAnswers,
   incidentReportAddenda,
   incidentReportPeople,
   incidentReports,
@@ -2323,6 +2324,15 @@ async function scrubInbox(
     // would leave their address in the one row this sweep had just cleaned.
     .set({ body: REDACTED_TEXT, toAddress: REDACTED_TEXT, sendError: null })
     .where(and(eq(staffReplies.shopId, shopId), eq(staffReplies.personId, personId)));
+  // A saved answer copied from a reply to them: the name was swapped out, but
+  // the words were still written to this diver, so the copy goes too. A merge
+  // leaves `source_person_id` on the merged-away record, so its shells count.
+  const sources = [personId, ...(await mergedIntoChain(tx, shopId, personId))];
+  await tx
+    .delete(inboxSavedAnswers)
+    .where(
+      and(eq(inboxSavedAnswers.shopId, shopId), inArray(inboxSavedAnswers.sourcePersonId, sources)),
+    );
   return [];
 }
 

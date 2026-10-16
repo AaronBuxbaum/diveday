@@ -253,6 +253,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Safety kit
 - Sailed
 - Salvage offer
+- Saved answer
 - Seat
 - Seat claim
 - Seat held

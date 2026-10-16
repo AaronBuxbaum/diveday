@@ -23,6 +23,7 @@ import {
   readTodayFirstWave,
   readTodaySecondWave,
 } from "@/app/shop/[shopSlug]/_components/today/today-reads";
+import { TodayUpdated } from "@/app/shop/[shopSlug]/_components/today/TodayUpdated";
 import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessions";
 import { YourWeek } from "@/app/shop/[shopSlug]/_components/today/YourWeek";
 import { FlashParams } from "@/components/FlashParams";
@@ -248,6 +249,7 @@ async function TodayBody({
     evidence,
     arrivalRows,
     counterOpen,
+    arrivalElsewhereRows,
     closeout,
     shopTripCount,
     stripeAccount,
@@ -496,6 +498,7 @@ async function TodayBody({
           timeZone={shop.timezone}
           t={t}
         />
+        <TodayUpdated t={t} time={formatTime(now, locale, shop.timezone)} />
       </DayHeader>
 
       {created && firstBookableMoment ? (
@@ -536,6 +539,7 @@ async function TodayBody({
         <ArrivalLookup
           query={arrivalQuery}
           rows={arrivalRows}
+          elsewhere={arrivalElsewhereRows}
           shopSlug={shopSlug}
           locale={locale}
           timeZone={shop.timezone}

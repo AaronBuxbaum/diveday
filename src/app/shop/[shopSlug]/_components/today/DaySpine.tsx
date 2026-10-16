@@ -45,12 +45,14 @@ import {
 } from "@/lib/today";
 import { ClosingStation } from "./ClosingStation";
 import { DayStation } from "./DayStation";
+import { NeedsYouGroups } from "./NeedsYouGroups";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
 import { RentalFitKeepControl } from "./RentalFitKeepControl";
 import {
   ResendConfirmationControl,
   type ResendConfirmationCopy,
 } from "./ResendConfirmationControl";
+import { rowKey } from "./row-key";
 import { spineClearUnlessWindy, spineEntries, spineMoment } from "./spine-reading";
 import { EveningReadings } from "./TomorrowFromTonight";
 import { WaiverSendControl } from "./WaiverSendControl";
@@ -174,41 +176,6 @@ function rowControls(
 }
 
 /**
- * One job, as a ledger row: its kind as a word in the row's own type, the one
- * sentence saying what is wrong, and the one fix beside it.
- *
- * A row whose fix *performs* something — a waiver send, a wait-list invite, an
- * invoice resend — keeps a real control, because the tap has a consequence. A
- * row whose fix merely navigates becomes the link itself, with the destination
- * named for a screen reader on the stretched overlay and a quiet chevron for
- * everyone else (principle 10, "actions ride on their objects").
- */
-/**
- * **The key a performing row keeps across its own fix landing.**
- *
- * `TodayAction.id` is `blocker:<booking>:<code>`, and the code is exactly what
- * a fix changes — a waiver goes from `waiver_missing` to `waiver_pending` the
- * moment it is sent. Keyed on the id, the row that was just tapped is a
- * *different* row to React, so its control unmounts and takes `useActionState`
- * with it: on a shop with no email configured that discards the private
- * fallback link the tap just produced, which is the one thing the staffer
- * needed. The row's own words still update — that part was never in doubt —
- * but the payload disappeared between the tap and the render.
- *
- * So a row that *performs* is keyed on what it performs against, which does
- * not change when the fix lands. A row that merely navigates holds no state
- * and keeps the id.
- */
-function rowKey(action: TodayAction): string {
-  if (action.waiver) return `waiver:${action.waiver.bookingIds.join(",")}`;
-  if (action.resend) return `resend:${action.resend.bookingIds.join(",")}`;
-  if (action.invite) return `invite:${action.invite.entryId}`;
-  if (action.payment?.orderId) return `payment:${action.payment.orderId}`;
-  if (action.helpRequest) return `help-request:${action.helpRequest.requestId}`;
-  return action.id;
-}
-
-/**
  * A horizon's panel: the tideline, the panel radius, no bed (a sunken panel
  * sits *in* the sand rather than on it), and the same inset padding on the
  * summary row and the week row so the two doors align. From `sm` up only —
@@ -277,7 +244,7 @@ const QUIET_ROW_ICON: Record<QuietKind, RowIconName> = {
   boat_papers_due: "boat",
   work_order_uncollected: "workOrders",
   units_unconfirmed: "settings",
-  say_hello: "divers",
+  lost_items_waiting: "lostFound",
   rental_fit_confirm: "gear",
 };
 
@@ -384,15 +351,28 @@ function SpineRow({
   );
 }
 
+/**
+ * One job, as a ledger row: its kind as a word in the row's own type, the one
+ * sentence saying what is wrong, and the one fix beside it.
+ *
+ * A row whose fix *performs* something — a waiver send, a wait-list invite, an
+ * invoice resend — keeps a real control, because the tap has a consequence. A
+ * row whose fix merely navigates becomes the link itself, with the destination
+ * named for a screen reader on the stretched overlay and a quiet chevron for
+ * everyone else (principle 10, "actions ride on their objects").
+ */
 function StationRow({
   action,
   controls,
   closed = true,
+  grouped = false,
 }: {
   action: TodayAction;
   controls: RowControls;
   /** `false` inside a station's panel, whose own edge closes the list. */
   closed?: boolean;
+  /** Under its boat's own heading (`NeedsYouGroups`): the row does not say the boat again. */
+  grouped?: boolean;
 }) {
   const { t } = controls;
   const performs = Boolean(
@@ -428,7 +408,7 @@ function StationRow({
       {action.detail ? (
         <span className={tone === "neutral" ? "text-muted" : undefined}>{action.detail}</span>
       ) : null}
-      {action.departure ? (
+      {action.departure && !grouped ? (
         <span className="block text-sm text-muted">{action.departure.label}</span>
       ) : null}
     </>
@@ -544,6 +524,28 @@ function StationRows({ rows, controls }: { rows: readonly TodayAction[]; control
       ))}
     </ul>
   );
+}
+
+/** One queue row, keyed for `NeedsYouGroups`. */
+function stationRowFor(controls: RowControls) {
+  return (action: TodayAction, grouped: boolean) => (
+    <StationRow key={rowKey(action)} action={action} controls={controls} grouped={grouped} />
+  );
+}
+
+/** What the reader started and did not finish: a draft is theirs alone, so the row is too. */
+function DraftRows({ drafts, t }: { drafts: readonly SpineDraft[]; t: StaffTranslator }) {
+  return drafts.map((draft) => (
+    <SpineRow
+      key={`draft:${draft.form}`}
+      tone="neutral"
+      icon="activity"
+      kind={t("today.unfinished.label")}
+      door={{ href: draft.href, linkLabel: t("today.unfinished.resume") }}
+    >
+      <span className="text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</span>
+    </SpineRow>
+  ));
 }
 
 /**
@@ -1143,25 +1145,20 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
           label={t("shopHome.spine.needsYouLabel")}
           meta={needsYouMeta(t, needsYouReading, locale, timeZone)}
         >
-          <ul>
-            {lead.map((action) => (
-              <StationRow key={rowKey(action)} action={action} controls={controls} />
-            ))}
-            {/* What the reader started and did not finish — a draft is theirs
-                alone, so the row is too. Renders nothing when there is none. */}
-            {drafts.map((draft) => (
-              <SpineRow
-                key={`draft:${draft.form}`}
-                tone="neutral"
-                icon="activity"
-                kind={t("today.unfinished.label")}
-                door={{ href: draft.href, linkLabel: t("today.unfinished.resume") }}
-              >
-                <span className="text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</span>
-              </SpineRow>
-            ))}
-            {deskFold ? null : paymentsRow}
-          </ul>
+          <NeedsYouGroups
+            rows={lead}
+            row={stationRowFor(controls)}
+            shopSlug={shopSlug}
+            deskLabel={t("shopHome.spine.deskGroupLabel")}
+            desk={
+              drafts.length > 0 || (!deskFold && paymentsRow) ? (
+                <>
+                  <DraftRows drafts={drafts} t={t} />
+                  {deskFold ? null : paymentsRow}
+                </>
+              ) : undefined
+            }
+          />
           {/* **The desk's rows, folded, for a reader who crews a boat** (UX
               audit 2026-10-07, item 7). A captain's "what now" is the boats
               they are on; the front desk's twenty jobs are one line they can
@@ -1173,12 +1170,13 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
               className="mt-4"
               label={t("shopHome.spine.deskFoldLabel", { count: deskFold.length + paymentsRows })}
             >
-              <ul>
-                {deskFold.map((action) => (
-                  <StationRow key={rowKey(action)} action={action} controls={controls} />
-                ))}
-                {paymentsRow}
-              </ul>
+              <NeedsYouGroups
+                rows={deskFold}
+                row={stationRowFor(controls)}
+                shopSlug={shopSlug}
+                deskLabel={t("shopHome.spine.deskGroupLabel")}
+                desk={paymentsRow ?? undefined}
+              />
             </LedgerGroup>
           ) : null}
         </LedgerGroup>

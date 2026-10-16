@@ -15,6 +15,7 @@
   "emailFailed": "Ese correo no se pudo enviar. Revisa la dirección y la configuración de correo.",
   "offlineLabel": "Sin conexión: este tablón puede estar desactualizado",
   "nextDeparture": "La próxima es <link>{title}</link> el {date} a las {time}.",
+  "updatedAt": "Actualizado: {time}",
   "noDeparturesEmpty": "Todavía no hay nada programado. Añade una salida y aparecerá aquí la mañana que zarpe.",
   "scheduleTrip": "Añadir una salida",
   "notice": {
@@ -98,6 +99,10 @@
     "releaseBody": "Los buceadores firman el texto de muestra de DiveDay hasta que publiques el tuyo.",
     "releaseAction": "Leer la exención",
     "releaseDone": "Tu propia exención está publicada.",
+    "emergencyTitle": "Completa tu referencia de emergencia",
+    "emergencyBody": "Los números que tu tripulación marca en el mar. Van en cada manifiesto, también sin conexión.",
+    "emergencyAction": "Añadir los números",
+    "emergencyDone": "Tu referencia de emergencia tiene números.",
     "tripTitle": "Añade tu primera salida",
     "tripBody": "Aparecerá en tu calendario en cuanto la guardes.",
     "tripAction": "Añadir una salida",
@@ -143,6 +148,7 @@
     "crewing": "Formas parte de la tripulación",
     "openBoat": "Abrir el barco",
     "crewRollCallOpen": "Todos los buceadores están a bordo y falta pasar lista a la tripulación.",
+    "sayHello": "Saluda",
     "allHome": "Todos los barcos están en puerto: salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",
     "firstBoatHome": "Tu primer barco está en puerto: salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",
     "firstBooking": "Tu primera reserva",
@@ -180,6 +186,7 @@
     "needsYouCountBeforeNext": "{count, plural, one {# cosa} other {# cosas}} · {before, plural, =0 {ninguna antes de la de las {time}} other {# antes de la de las {time}}}",
     "deskFoldLabel": "{count, plural, one {# más para otras salidas y el mostrador} other {# más para otras salidas y el mostrador}}",
     "needsYouLabel": "Pendiente",
+    "deskGroupLabel": "El mostrador",
     "crewTips": "Tu parte de las propinas esta semana: {amount}."
   },
   "quietAddDeparture": "Añadir una salida",
@@ -189,6 +196,10 @@
     "placeholder": "Nombre, teléfono, correo o ID de reserva",
     "none": "Nadie de los que llegan coincide con “{query}”.",
     "resultsFor": "Buceadores que llegan y coinciden con “{query}”",
-    "open": "Abrir el check-in de {trip} para {name}"
+    "open": "Abrir el check-in de {trip} para {name}",
+    "notToday": "No llega hoy.",
+    "bookedOn": "{name} tiene reserva el {date} · {time}.",
+    "nothingBooked": "{name} no tiene nada reservado.",
+    "openRecord": "Abrir la ficha de {name}"
   }
 }

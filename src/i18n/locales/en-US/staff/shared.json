@@ -160,6 +160,8 @@
     "groupGear": "Gear",
     "groupSession": "Session",
     "groupGoTo": "Go to",
+    "groupRecent": "Recent",
+    "groupToday": "Today",
     "goToBoarding": "Boarding — today’s boat",
     "goToOfflineRollCall": "Open offline roll call",
     "hintMove": "to move",

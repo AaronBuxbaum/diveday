@@ -4780,6 +4780,27 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-walk-in-diver", scheme);
       });
 
+      // **A walk-in family on one form** (fifth loop, item 9): the same diver
+      // step with two more people added, one of them ticked "Under 18". Pinned
+      // words so the picture is the same on every run.
+      test(`the walk-in party rows render true to the design (${scheme})`, async ({ page }) => {
+        await openWalkIn(page);
+        await page.getByRole("link", { name: "Add diver", exact: true }).click();
+        await page.waitForURL(/\/divers\/new/);
+        await page.getByRole("heading", { name: "Add a diver", level: 1 }).waitFor();
+        await page.getByLabel("Full name").first().fill("Ana Brightwater");
+        await page.getByRole("button", { name: "Add another person" }).click();
+        const second = page.getByRole("group", { name: "Person 2" });
+        await second.getByLabel("Full name").fill("Mia Brightwater");
+        await second.getByLabel(/Under 18/).check();
+        await page.getByRole("button", { name: "Add another person" }).click();
+        await page
+          .getByRole("group", { name: "Person 3" })
+          .getByLabel("Full name")
+          .fill("Leo Brightwater");
+        await capture(page, "trip-walk-in-party", scheme);
+      });
+
       // The global Add-booking door, both halves: the departure picker — one
       // ledger grouped by day since slice 9g of ADR
       // 20260827-the-shops-shelves, seats-left on every row — and the diver
@@ -7944,6 +7965,17 @@ for (const scheme of ["light", "dark"] as const) {
           .getByText(/today.s reef boat/)
           .waitFor();
         await capture(page, "staff-diver-conversation", scheme);
+      });
+
+      // **Saved answers** (fifth loop, item 15), where the shop keeps them: the
+      // foot of the Inbox, holding the two the seed saves, one with both
+      // markers. The chips above the reply box are in the capture above.
+      test(`the inbox's saved answers render true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/inbox");
+        const saved = page.getByRole("region", { name: "Saved answers" });
+        await saved.getByText("Wetsuit sizes").waitFor();
+        await saved.scrollIntoViewIfNeeded();
+        await capture(page, "staff-inbox-saved-answers", scheme);
       });
 
       // Shop-wide discount codes: the codes as one ledger shelved live /

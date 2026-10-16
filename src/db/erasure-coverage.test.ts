@@ -3,6 +3,7 @@ import { and, eq, getTableName, isNull } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { schemaTableNameOf } from "@/test/schema-tables";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
 import { EXPORT_TABLES, type ExportTableRead } from "./export-tables";
@@ -207,12 +208,9 @@ function erasureWriteSites(): { written: Set<string>; unresolved: string[] } {
   const unresolved: string[] = [];
   for (const match of source.matchAll(/\.(?:update|delete)\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\)/g)) {
     const identifier = match[1] as string;
-    const value = (schema as Record<string, unknown>)[identifier];
-    try {
-      written.add(getTableName(value as Parameters<typeof getTableName>[0]));
-    } catch {
-      unresolved.push(identifier);
-    }
+    const name = schemaTableNameOf(identifier);
+    if (name) written.add(name);
+    else unresolved.push(identifier);
   }
   return { written, unresolved };
 }
@@ -226,13 +224,9 @@ function erasureHardDeleteOrder(): string[] {
   const source = stripCommentsAndStrings(readFileSync("src/db/anonymize.ts", "utf8"));
   const order: string[] = [];
   for (const match of source.matchAll(/\.delete\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\)/g)) {
-    const value = (schema as Record<string, unknown>)[match[1] as string];
-    try {
-      const name = getTableName(value as Parameters<typeof getTableName>[0]);
-      if (!order.includes(name)) order.push(name);
-    } catch {
-      // Resolved and reported by `erasureWriteSites`; not this function's job.
-    }
+    // An unresolved one is reported by `erasureWriteSites`; not this function's job.
+    const name = schemaTableNameOf(match[1] as string);
+    if (name && !order.includes(name)) order.push(name);
   }
   return order;
 }

@@ -21,6 +21,7 @@ import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 import type { SeasonStart } from "./season";
 import type { TripStageReading } from "./trip-stages";
 import { hasReturned, hasSailed } from "./trips";
+import type { WelcomeCue } from "./welcome-cue";
 import { utcToWallTime } from "./zoned";
 
 /**
@@ -77,6 +78,7 @@ export type TodayActionKind =
   | "dive_prep"
   | "help_request"
   | "nitrox_gate"
+  | "emergency_card_blank"
   | "high_wind_alert"
   | "instructor_missing"
   | "uncrewed_course"
@@ -107,7 +109,7 @@ export type TodayActionKind =
   | "work_order_uncollected"
   | "staff_credential_due"
   | "units_unconfirmed"
-  | "say_hello"
+  | "lost_items_waiting"
   | "rental_fit_confirm";
 
 /**
@@ -211,6 +213,11 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // dock count and desk chore: it is about the minutes after somebody is hurt
   // in the water, and it is fixed before the lines come off, not after.
   boat_safety_kit: 13.5,
+  // **The shop's emergency card has no number on it** (fifth loop, item 3),
+  // with a boat sailing inside the 48 hours the offline manifest is saved in.
+  // Beside the boat's own kit: both are about the minutes after somebody is
+  // hurt, and both are fixed ashore before the lines come off.
+  emergency_card_blank: 13.6,
   high_wind_alert: 14,
   // The dock-side counts. An unfinished *departure* count is paperwork — the
   // boat is home and nobody was ever unaccounted for in the water — so it
@@ -289,10 +296,9 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // trip before opening the Units row would never be asked again, and currency
   // decides what a diver's card is charged in (issue #835).
   units_unconfirmed: 35,
-  // Below even that, and rightly: nothing has gone wrong and nothing is owed.
-  // It is a courtesy the desk can pay if the morning allows, so it never
-  // outranks a thing somebody has to do (issue #1182).
-  say_hello: 36,
+  // **Something found aboard is waiting to go home** (fifth loop, item 7). A
+  // courtesy the desk pays when the owner walks in; nothing has gone wrong.
+  lost_items_waiting: 36,
   // Lower still, because it is a question about *yesterday's* boat rather than
   // anything today wants: a unit came home in a size the fit does not record,
   // and the shop may keep it or leave it (issue #1174, D14).
@@ -570,9 +576,11 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   ],
   staff_credential_due: ["owner", "manager"],
   units_unconfirmed: ["owner", "manager"],
-  // Every staff role: the person who says hello is whoever is at the dock when
-  // the diver walks up, which is as often the captain as the owner.
-  say_hello: [
+  // The card is the owner's to fill in (Settings > Emergency reference).
+  emergency_card_blank: ["owner", "manager"],
+  // Whoever is at the counter when the diver comes back hands it over, which
+  // is why Lost and found is ungated (`staff-destinations.ts`).
+  lost_items_waiting: [
     "owner",
     "manager",
     "instructor",
@@ -703,9 +711,10 @@ export const ACTION_KIND_META = {
   // Neutral, not warning: the shop is trading on a derived default that is
   // probably right. It wants confirming, not alarming about.
   units_unconfirmed: { tone: "neutral" },
-  // Neutral, and there is no other honest tone: a warning-coloured row about
-  // greeting somebody would read as a thing that has gone wrong.
-  say_hello: { tone: "neutral" },
+  // Warning: a crew may reach for the card in the worst minute and find it empty.
+  emergency_card_blank: { tone: "warning" },
+  // Neutral: a mask waiting for its owner is not a problem.
+  lost_items_waiting: { tone: "neutral" },
   // Neutral: a question about a size is not a problem, and a warning-toned row
   // asking whether to keep a wetsuit size would read as gear trouble.
   rental_fit_confirm: { tone: "neutral" },
@@ -1584,6 +1593,14 @@ export type SpineDeparture = {
    * never a pairing. Nothing about ranking or `assembleDaySpine` reads it.
    */
   intents?: readonly DiveIntentCount[];
+  /**
+   * **Who to say hello to** (issue #1182; fifth loop, item 10): today's divers
+   * who shared that this is their first trip with the shop, or that they are
+   * back after a long gap. A line on the card, never a Needs you row: a
+   * greeting has no done state, so a row for it was a job nobody could finish.
+   * Empty, the card says nothing.
+   */
+  welcome?: readonly { name: string; cue: WelcomeCue }[];
 };
 
 /**
@@ -2011,3 +2028,33 @@ export function factOfScaleFor(input: {
 
 /** Every hundredth diver, which is the ADR's own number. */
 const FACT_OF_SCALE_EVERY = 100;
+
+/**
+ * **Needs you, one heading per boat** (fifth loop, item 11). The list read
+ * "3:00 PM · Two-Tank Reef" under each of seven rows; grouped, the boat is said
+ * once and each row is its own sentence. Groups keep the ranked list's order:
+ * a boat's group sits where its most pressing row stood, and the rows inside it
+ * keep their rank. Rows bound to no departure follow every boat as the desk's
+ * group (`departure: null`), whatever their rank, because they are not about a
+ * boat leaving at a time.
+ */
+export type NeedsYouGroup = {
+  departure: { tripId: string; label: string } | null;
+  rows: TodayAction[];
+};
+
+export function groupByDeparture(rows: readonly TodayAction[]): NeedsYouGroup[] {
+  const boats = new Map<string, NeedsYouGroup>();
+  const desk: TodayAction[] = [];
+  for (const row of rows) {
+    if (!row.departure) {
+      desk.push(row);
+      continue;
+    }
+    const group = boats.get(row.departure.tripId);
+    if (group) group.rows.push(row);
+    else boats.set(row.departure.tripId, { departure: row.departure, rows: [row] });
+  }
+  const groups = [...boats.values()];
+  return desk.length > 0 ? [...groups, { departure: null, rows: desk }] : groups;
+}

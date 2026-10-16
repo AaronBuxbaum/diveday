@@ -244,6 +244,40 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
 });
 
 /**
+ * **A walk-in family in one pass** (fifth loop, item 9): the same form takes
+ * the rest of the party, each with an "Under 18" tick, and seats them all
+ * together on the boat.
+ */
+test("a counter walk-in family is seated together from one form", async ({ page }) => {
+  const tripId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
+  const counter = counterPath("blue-mantis", tripId);
+  await page.goto(counter);
+  const find = page.getByRole("searchbox", { name: "Find a returning diver" });
+  await find.fill("Zzyzx No Such Diver");
+  await find.press("Enter");
+  await page.getByRole("link", { name: "Add as a walk-in" }).click();
+  await page.waitForURL(/\/divers\/new\?.*surface=walk-in/);
+
+  await page.getByLabel("Full name").first().fill("Quillon Brightwater");
+  await page.getByRole("button", { name: "Add another person" }).click();
+  const second = page.getByRole("group", { name: "Person 2" });
+  await second.getByLabel("Full name").fill("Mia Brightwater");
+  await second.getByLabel(/Under 18/).check();
+  await page.getByRole("button", { name: "Add another person" }).click();
+  await page
+    .getByRole("group", { name: "Person 3" })
+    .getByLabel("Full name")
+    .fill("Odo Brightwater");
+  await page.getByRole("button", { name: "Add to boat" }).click();
+
+  await expect(page).toHaveURL(counter);
+  await expect(page.getByText(/^Everyone is on this boat’s list, together/)).toBeVisible();
+  for (const name of ["Quillon Brightwater", "Mia Brightwater", "Odo Brightwater"]) {
+    await expect(deskRow(page, name)).toHaveCount(1);
+  }
+});
+
+/**
  * **The counter's own guess, cleared at the counter** (H-13, issues #1556 and
  * #1696).
  *
@@ -694,7 +728,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   // predicate the booking transaction enforces — and the sale itself runs
   // through `createBooking`, not through anything this ticket added.
   await page.goto(walkIn);
-  await expect(page.getByText(/0\/1 booked/)).toBeVisible();
+  await expect(page.getByText(/0 of 1 booked/)).toBeVisible();
   const findSecond = page.getByRole("searchbox", { name: "Search by name, email, or phone" });
   await findSecond.fill("Diego Alvarez");
   await findSecond.press("Enter");
@@ -743,4 +777,30 @@ test("a phone number read off a diver's record finds their seat at the counter",
   await match.click();
   await page.waitForURL(/\/trips\/[0-9a-f-]{36}#booking-[0-9a-f-]+$/);
   await expect(deskRow(page, "Priya Sharma")).toBeVisible();
+});
+
+/**
+ * **Today's search falls through to the shop** (fifth loop, item 12): a name
+ * that is on file but not arriving today says so, and opens their record,
+ * rather than answering with nothing.
+ */
+test("Today's arrival search says who is on file but not arriving today", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/divers/new");
+  await page.getByLabel("Full name").fill("Zephyrine Quayside");
+  await page.getByRole("button", { name: "Add diver" }).click();
+  await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);
+
+  await page.goto("/shop/blue-mantis");
+  // The search names itself on the page, not only to a screen reader.
+  await expect(page.getByRole("heading", { name: "Find an arriving diver" })).toBeVisible();
+  const search = page.getByRole("searchbox", { name: "Find an arriving diver" });
+  await expect(search).toHaveAttribute("data-hydrated", "true");
+  await search.fill("Zephyrine Quayside");
+  await search.press("Enter");
+
+  const elsewhere = page.getByTestId("arrival-elsewhere");
+  await expect(elsewhere.getByText("Not arriving today.")).toBeVisible();
+  await expect(elsewhere.getByText("Zephyrine Quayside has nothing booked.")).toBeVisible();
+  await elsewhere.getByRole("link", { name: "Open Zephyrine Quayside’s record" }).click();
+  await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);
 });

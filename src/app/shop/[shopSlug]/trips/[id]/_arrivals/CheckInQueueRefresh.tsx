@@ -2,7 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { LiveRefresh } from "@/components/LiveRefresh";
 import { PullToRefresh, type PullToRefreshCopy } from "@/components/PullToRefresh";
+
+/** How long a tap in the queue holds the next refresh off. */
+const CHECK_IN_TAP_HOLD_MS = 5 * 1000;
 
 export function CheckInQueueRefresh({
   copy,
@@ -23,6 +27,9 @@ export function CheckInQueueRefresh({
       <PullToRefresh copy={copy} onRefresh={async () => router.refresh()}>
         {children}
       </PullToRefresh>
+      {/* The queue fills while it sits on the counter (fifth loop, item 8),
+          never in the seconds after a tap. */}
+      <LiveRefresh holdAfterTapMs={CHECK_IN_TAP_HOLD_MS} />
     </div>
   );
 }

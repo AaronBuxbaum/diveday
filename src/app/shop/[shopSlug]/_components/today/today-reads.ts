@@ -1,6 +1,6 @@
+import { readArrivalLookup } from "@/db/arrival-elsewhere";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { sharedInHorizonReadiness } from "@/db/blockers";
-import { hasArrivals, listCheckInQueue } from "@/db/check-in";
 import type { AppDb } from "@/db/client";
 import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "@/db/closeout";
 import { shopFirstBooking } from "@/db/first-booking";
@@ -49,7 +49,7 @@ export async function readTodayFirstWave({
     freshDrafts,
     canReadShopMoney,
     evidence,
-    [arrivalRows, counterOpen],
+    { rows: arrivalRows, counterOpen, elsewhere: arrivalElsewhereRows },
     closeout,
     shopTripCount,
     stripeAccount,
@@ -79,10 +79,7 @@ export async function readTodayFirstWave({
     // ten queries; running it twice would double the page's entire database bill for one collapsed
     // disclosure.
     sharedInHorizonReadiness(db, shop.id, now),
-    Promise.all([
-      arrivalQuery ? listCheckInQueue(db, shop.id, { query: arrivalQuery, now }) : [],
-      arrivalQuery ? true : hasArrivals(db, shop.id, now),
-    ]),
+    readArrivalLookup(db, shop.id, arrivalQuery, now),
     // **The day's closing state** (ADR 20260827-clearwater-surface-language, decision 4): how each
     // of today's boats settled, for the evening stations; tomorrow's load-out once they are due back.
     getDayCloseout(db, shop.id, shop.timezone, now, shop),
@@ -102,6 +99,7 @@ export async function readTodayFirstWave({
     evidence,
     arrivalRows,
     counterOpen,
+    arrivalElsewhereRows,
     closeout,
     shopTripCount,
     stripeAccount,

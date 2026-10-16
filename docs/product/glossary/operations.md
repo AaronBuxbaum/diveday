@@ -13,9 +13,13 @@
   surface derives its bounds from there rather than declaring its own. Reports is deliberately
   outside this model — a calendar month is genuinely its job.
 - **Needs you** — the one list of jobs on Today (ADR 20261001-logbook, decision 4): every row from
-  Today's work queue, at a boat or at the desk, ranked together by tone and then by when it is due,
-  each naming its own boat on a quiet line. It sits under the day's departures, which carry no rows
-  of their own. A status list, not a page: an empty one is not drawn. A row about one diver is
+  Today's work queue, ranked by tone and then by when it is due, and **grouped by boat** (fifth
+  loop, item 11): one heading per departure, naming the boat and its time once and linking to the
+  trip, with that boat's rows under it in rank order. A boat's group sits where its most pressing
+  row ranked. Rows bound to no departure (unanswered messages, found items waiting to go home)
+  follow every boat as **The desk** group. A row about the shop that names a boat, such as a blank
+  emergency reference, is filed under that boat so it keeps its rank. It sits under the day's
+  departures, which carry no rows of their own. A status list, not a page: an empty one is not drawn. A row about one diver is
   titled with their name over what is wrong in a few words ("Waiver not signed, not sent yet."); a
   row for several says it as one sentence ("9 divers not certified for this trip.") and names
   nobody. Neither carries the levels or the other blockers — the roster and the diver record carry
@@ -860,7 +864,10 @@
   text throughout, including the phone lines: an international dive line is not a `tel:`-shaped
   string until the shop writes it, and nothing on this card links, dials, escalates, or opens an
   incident. Its free-text shore contact is never messaged; the address DiveDay may email lives
-  beside it as the **shore alert contact**. It is a laminated card retyped, priced at zero words of DiveDay's own.
+  beside it as the **shore alert contact**. It is a laminated card retyped, priced at zero words of DiveDay's own. While it has no
+  phone line, the owner and manager see a Today row, filed under the first boat sailing in the
+  next 48 hours ("Your emergency reference has no numbers"), and a new shop's first-run checklist
+  carries "Fill in your emergency reference" as a step (fifth loop, item 3).
 - **Radio identity** — what a **boat** answers to on the radio: its name, its **call sign** and its
   nine-digit **MMSI** (`boats.call_sign`, `boats.mmsi`, fourth review item 11). Held per hull, so
   the emergency card and the printed packet name the departure's own boat
@@ -1623,3 +1630,4 @@
   `src/lib/staffing-warnings.ts`; words in `src/i18n/staffing-warning-labels.ts`.
 - **Seat** — the one word for what a diver buys and what a boat holds, said by staff and divers alike ([H-122](../human-decisions/H-122-seat-is-the-word.md)): "3 seats left", "Book 2 seats", "Cancel my seat". Never "spot" for capacity. `scripts/check-seat-word.mjs` reads the staff bundles and `diver.json` both; its allowlist keeps words that are not the thing bought (a marine-life "spot", "on the spot").
 - **Ask to move** — a diver's request, from their own `/ready`, that the shop move their seat to another date ([H-126](../human-decisions/H-126-ask-to-move.md)). Offered on a paid seat the diver may still release where cancelling would return nothing right away: past the free-cancellation window, or on a trip with none. It is a request, not a move: it files one Inbox row per booking and departure on the `page` channel, naming the booking (`inbound_messages.booking_id`, `recordMoveAsk` in `src/db/inbound-messages.ts`), and the page then says it was asked while that row stands. Staff decide, and a move is a **seat move**, which answers the ask; one staff answered or deleted no longer stands, and asking again files it anew.
+- **Saved answer** — words the desk sends often enough to keep, offered as a chip above the reply box on a diver's record; a tap puts them in the box, and Send stays the reader's. The shop's own, like a template, and about no diver: `{name}` becomes the diver's first name and `{trip}` the departure they are next booked on. "Save this answer" under a reply that just went out writes one from the stored reply with that diver's name swapped for `{name}`, so the list grows from real replies; the Inbox lists them with a soft Delete and Put back. At most twelve live. Rows in `inbox_saved_answers` (`src/db/inbox-saved-answers.ts`), helpers in `src/lib/saved-answers.ts`.

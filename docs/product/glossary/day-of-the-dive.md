@@ -89,7 +89,11 @@
   are listed at Lost and found. Resolved items are pruned after 90 days, and an erasure deletes
   the diver's items outright (`src/db/lost-items.ts`). The Boat tab's "Left aboard" form opens
   at Heading in, Home, or once the departure is Back (`leftAboardOpen`; see **At sea**,
-  [operations.md](operations.md)).
+  [operations.md](operations.md)). Open items show in three more places (fifth loop, item 7): a
+  Today row in The desk group ("2 things waiting to go home"), counting every open item tied to a
+  diver and any unclaimed one from the last 30 days; and a found-item line on that diver's
+  check-in row and under their record's header, so it goes home on the visit it can be handed
+  over.
 - **Dock line** — the one sentence under a consented first-timer's "First dive with us" on the
   arrivals roster ("First time with us" under a snorkeler or a rider, whose seat is not a dive, and
   a no-show or a non-diving seat never counts as a prior dive; `src/db/welcome-cues.ts`): the first name to greet and the level they hold ("Say hello to Priya: Open
