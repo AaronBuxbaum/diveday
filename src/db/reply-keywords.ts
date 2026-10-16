@@ -168,7 +168,7 @@ async function cancellableBookings(
   const open: CandidateBooking[] = [];
   for (const row of rows) {
     if (hasSailed(row.startsAt, now)) continue;
-    // Counted aboard a boat past its time: `selfCancelBooking` refuses it (H-122).
+    // Counted aboard a boat past its time: `selfCancelBooking` refuses it (H-126).
     const held = await heldAtTheDoor(db, {
       shopId,
       tripId: row.tripId,

@@ -645,7 +645,7 @@
   labelled "Papers lapsed", to owners and managers only. Hull insurance lapses on its expiry date
   itself, since the policy's cover ends that day. A paper still good today that lapses before a
   later departure reads "ends {date}, before this departure" on that departure. A lapsed paper
-  never blocks a departure (H-125). `boat_safety_expired` is the safety kit's row, not the papers'.
+  never blocks a departure (H-129). `boat_safety_expired` is the safety kit's row, not the papers'.
 - **Safety kit** — the boat's own emergency equipment kept on the **gear register** as units:
   `o2_kit`, `aed`, `first_aid_kit` and `flares` (roadmap N-08). Each may be assigned **aboard** one
   boat (`gear_items.aboard_boat_id`; any other kind is never aboard), and runs **service clocks**

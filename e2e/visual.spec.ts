@@ -4184,7 +4184,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: /^Not counted at the dock · 1$/ }).waitFor();
         await capture(page, "trip-record-uncounted", scheme);
 
-        // Remove on that seat (H-122): held as possibly carried, and told how
+        // Remove on that seat (H-126): held as possibly carried, and told how
         // to let it go, never that it sailed.
         const row = page
           .locator('#roster li[id^="booking-"]')
@@ -4197,7 +4197,7 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-remove-uncounted-refused", scheme);
       });
 
-      // **Remove on a diver marked aboard a boat that has left** (H-122). The
+      // **Remove on a diver marked aboard a boat that has left** (H-126). The
       // dawn boat boarded its sailed seats and is home, so a sailed row's
       // Remove opens on why it will not, with nothing to confirm.
       test(`Remove on a diver marked aboard says why it will not (${scheme})`, async ({ page }) => {

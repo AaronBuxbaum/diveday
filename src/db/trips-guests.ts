@@ -126,7 +126,7 @@ export async function getTripGuests(
     // (issues #1196, #1205), so the roster's box opens holding it.
     courseNextStepsByBooking(db, shop.id, tripId),
     // Who Remove refuses on this roster: seats the boat carried or may be
-    // carrying (H-122), the rule `cancelBooking` applies under its locks.
+    // carrying (H-126), the rule `cancelBooking` applies under its locks.
     // Asked from the scheduled time on, so a boat still to sail pays nothing;
     // a crew who take it out early with someone counted aboard are refused by
     // `cancelBooking` itself, and the row's notice says why.
@@ -322,7 +322,7 @@ export async function getTripGuests(
     notesByBooking,
     courseNextStepByBooking,
     sameNameHeldSeats,
-    /** Seats the boat carried or may be carrying: Remove refuses them (H-122). */
+    /** Seats the boat carried or may be carrying: Remove refuses them (H-126). */
     aboardAtSea,
     /**
      * Per held seat, the matched diver's last dive day at this shop, or null

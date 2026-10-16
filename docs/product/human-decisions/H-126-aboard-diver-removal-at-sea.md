@@ -1,4 +1,4 @@
-# H-122: May a manager remove a diver marked Aboard from a boat at sea?
+# H-126: May a manager remove a diver marked Aboard from a boat at sea?
 
 - **Status:** Implemented
 - **Human owner:** Product owner

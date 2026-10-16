@@ -11,7 +11,7 @@ import { listStaff, upcomingTripsWithCounts } from "./trips";
 const ctx = fileScopedShopContext();
 
 /**
- * **The party-cancel preview mirrors the cancel** (H-122): a seat counted
+ * **The party-cancel preview mirrors the cancel** (H-126): a seat counted
  * aboard a boat past its time stays with the crew, as
  * `cancelUnclaimedPartySeats` keeps it, so the confirm never lists it as going.
  */
@@ -39,7 +39,7 @@ describe("issuePartySeatClaims and a seat counted aboard", () => {
     return { db, shop, open, lead, memberOne, memberTwo };
   }
 
-  it("lists a seat counted aboard a boat past its time as staying, as the cancel keeps it (H-122)", async () => {
+  it("lists a seat counted aboard a boat past its time as staying, as the cancel keeps it (H-126)", async () => {
     const { db, shop, open, lead, memberOne, memberTwo } = await party();
     const [recorder] = await listStaff(db, shop.id);
     if (!recorder) throw new Error("seeded staff missing");

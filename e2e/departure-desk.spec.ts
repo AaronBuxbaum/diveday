@@ -109,7 +109,7 @@ test("the crew records something left aboard and the shop hands it back", async 
 });
 
 /**
- * H-122: a diver the crew marked aboard a boat that has left cannot be taken
+ * H-126: a diver the crew marked aboard a boat that has left cannot be taken
  * off the roster. The dawn boat is home with its sailed seats boarded, so a
  * sailed row's Remove says why and offers no confirm; the seat stays.
  */
