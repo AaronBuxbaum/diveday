@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
@@ -92,7 +93,13 @@ function MoveSeatControl({
 }) {
   const selectId = `move-seat-${booking.id}`;
   return (
-    <details className="group/move-seat basis-full">
+    // Opened by the Inbox's "Move to another departure" (`#move-booking-…`,
+    // fourth review, item 32); scroll-mt keeps it clear of the sticky header.
+    <AutoOpenDetails
+      id={`move-booking-${booking.id}`}
+      openOnHash={`move-booking-${booking.id}`}
+      className="group/move-seat basis-full scroll-mt-24"
+    >
       <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-sm font-medium text-muted hover:text-foreground [&::-webkit-details-marker]:hidden">
         {t("trips.roster.moveSeat")}
       </summary>
@@ -122,6 +129,6 @@ function MoveSeatControl({
           </SubmitButton>
         </div>
       </form>
-    </details>
+    </AutoOpenDetails>
   );
 }

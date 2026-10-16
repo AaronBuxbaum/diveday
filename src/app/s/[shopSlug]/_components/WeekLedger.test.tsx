@@ -20,7 +20,7 @@ function row(overrides: Partial<WeekLedgerRow> = {}): WeekLedgerRow {
     dayKey: "2026-08-27",
     dayParts: { day: "27", weekday: "Thu", month: "Aug" },
     href: "/s/blue-mantis/trips/trip-1",
-    linkLabel: "Aug 27 · 7:00 AM – 10:30 AM · Two-Tank Reef · 3 spots left",
+    linkLabel: "Aug 27 · 7:00 AM – 10:30 AM · Two-Tank Reef · 3 seats left",
     timeRange: "7:00 AM – 10:30 AM",
     title: "Two-Tank Reef — Molasses & French",
     lens: null,
@@ -28,7 +28,7 @@ function row(overrides: Partial<WeekLedgerRow> = {}): WeekLedgerRow {
     site: "Molasses Reef and French Reef",
     requirements: ["Open Water or higher"],
     aboveLevel: null,
-    capacityText: "3 spots left",
+    capacityText: "3 seats left",
     capacityTone: "quiet",
     price: "$95.00",
     ...overrides,
@@ -375,15 +375,15 @@ describe("seat state and price", () => {
   it("keeps the warning words and warning tone for scarcity", () => {
     render(
       <WeekLedger
-        rows={[row({ capacityText: "Only 2 spots left", capacityTone: "low" })]}
+        rows={[row({ capacityText: "Only 2 seats left", capacityTone: "low" })]}
         listLabel="Upcoming trips"
         stickyTop="top-(--chrome-h)"
       />,
     );
 
-    expect(screen.getByText("Only 2 spots left").className).toContain("bg-warning-tint");
+    expect(screen.getByText("Only 2 seats left").className).toContain("bg-warning-tint");
     // A sales nudge never wears the safety triangle: the words carry it.
-    expect(screen.getByText("Only 2 spots left").querySelector("svg")).toBeNull();
+    expect(screen.getByText("Only 2 seats left").querySelector("svg")).toBeNull();
     // Routine availability is not an alert, so it is not dimmed.
     expect(screen.getByRole("listitem").querySelector(".opacity-60")).toBeNull();
   });
@@ -398,7 +398,7 @@ describe("seat state and price", () => {
   it("sets the time, the title and the seat state on one baseline", () => {
     render(
       <WeekLedger
-        rows={[row({ capacityText: "Only 2 spots left", capacityTone: "low" })]}
+        rows={[row({ capacityText: "Only 2 seats left", capacityTone: "low" })]}
         listLabel="Upcoming trips"
         stickyTop="top-(--chrome-h)"
       />,
@@ -412,7 +412,7 @@ describe("seat state and price", () => {
   it("leaves routine availability as a quiet fact rather than a badge", () => {
     render(<WeekLedger rows={[row()]} listLabel="Upcoming trips" stickyTop="top-(--chrome-h)" />);
 
-    const seats = screen.getByText("3 spots left");
+    const seats = screen.getByText("3 seats left");
     expect(seats.className).toContain("text-muted");
     expect(seats.className).not.toContain("bg-warning-tint");
   });

@@ -34,12 +34,12 @@
   },
   "helpRequest": {
     "kind": {
-      "carryGear": "Ayuda con el equipo",
-      "firstTimer": "Orientación para principiantes",
-      "findGroup": "Encontrar su grupo"
+      "carryGear": "cargar el equipo",
+      "firstTimer": "orientación para principiantes",
+      "findGroup": "encontrar su grupo"
     },
-    "detailRequested": "{name} ha pedido ayuda: {help}.",
-    "detailAcknowledged": "{name} espera ayuda: {help}.",
+    "detailRequested": "Pidió ayuda: {help}.",
+    "detailAcknowledged": "Espera ayuda: {help}.",
     "acknowledge": "Confirmar recibida",
     "markHandled": "Marcar como atendida",
     "saving": "Guardando…"
@@ -49,7 +49,8 @@
     "studentsCount": "{count, plural, one {# estudiante} other {# estudiantes}}",
     "readyCount": "{count, plural, one {# listo} other {# listos}}",
     "blockedCount": "{count, plural, one {# bloqueado} other {# bloqueados}}",
-    "openRoster": "Ver lista"
+    "openRoster": "Ver lista",
+    "away": "Avisaste que estás ausente {dates}."
   },
   "yourWeek": {
     "heading": "Tu semana",
@@ -104,7 +105,8 @@
     "helpRequest": "Solicitud de ayuda",
     "sayHello": "Saluda",
     "rentalFit": "Equipo",
-    "blockedAboard": "A bordo"
+    "blockedAboard": "A bordo",
+    "crewAway": "Tripulación ausente"
   },
   "blockerAction": {
     "setRequirements": "Configurar requisitos",
@@ -173,7 +175,8 @@
     "departureCountOpen": "Recuento en el muelle sin terminar: {uncounted, plural, one {# de {total, plural, one {# persona} other {# personas}} no tiene} other {# de {total, plural, one {# persona} other {# personas}} no tienen}} resultado.",
     "noRollCall": "Sin recuento registrado para {total, plural, one {# persona} other {# personas}}.",
     "boatWork": "{work}.",
-    "missingFitNamed": "Le faltan tallas de alquiler.",
+    "missingSizeNamed": "Le falta una talla de alquiler.",
+    "kitUnaskedNamed": "Sin preguntar por su equipo.",
     "ungatedNitroxNamed": "Quiere nitrox, sin certificación verificada.",
     "highWindAlert": "Previsión de viento de {speed} nudos{hasDirection, select, yes { del {direction}} other {}}{hasGusts, select, yes {, rachas de {gusts} nudos} other {}}.",
     "instructorMissing": "Sin instructor asignado.",
@@ -189,6 +192,7 @@
     "missingContactNamed": "Sin contacto de emergencia.",
     "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}}, sin oferta de última hora enviada.",
     "waitlistSeat": "{seats, plural, one {# plaza libre} other {# plazas libres}}, {waiting} en la lista de espera.",
+    "crewAway": "{name} está ausente {dates}.",
     "rollCallAlerted": "Propietarios avisados: {time}.",
     "rollCallAlertedWithShore": "Propietarios y contacto en tierra avisados: {time}.",
     "rollCallShoreAlerted": "Contacto en tierra avisado: {time}."
@@ -255,10 +259,10 @@
     "restrictedDetail": "Stripe los pausó el {when}. Los buceadores pagan en el centro hasta que Stripe los reactive."
   },
   "reviewsPending": {
-    "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión"
+    "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión."
   },
   "unansweredMessages": {
-    "subject": "{count, plural, one {# mensaje espera} other {# mensajes esperan}} respuesta"
+    "subject": "{count, plural, one {# mensaje espera} other {# mensajes esperan}} respuesta."
   },
   "unitsUnconfirmed": {
     "subject": "{currency} y {depth}, deducidos de tu zona horaria",
@@ -282,7 +286,8 @@
     "overdueDetail": "{credential} venció el {dueOn}."
   },
   "sayHello": {
-    "firstTrip": "{names}: primera inmersión contigo.",
+    "firstTrip": "{names}: primera inmersión con nosotros.",
+    "firstTime": "{names}: primera vez con nosotros.",
     "returning": "{name} vuelve tras {years, plural, one {# año} other {# años}}."
   },
   "unfinished": {

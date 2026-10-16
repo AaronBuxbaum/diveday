@@ -8,7 +8,8 @@ import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { scopedHash, scopedId } from "@/lib/element-id";
+import { scopedHash } from "@/lib/element-id";
+import { emergencyReferenceForDeparture } from "@/lib/emergency-reference";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
@@ -42,9 +43,9 @@ import { offlineManifestPayload } from "./_components/offline-payload";
 import { openCheckpoint } from "./_components/open-checkpoint";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
 import {
-  PrintedKitBlanks,
-  PrintedMissingProcedure,
+  PrintedBoatPaper,
   printedBoatProcedureCopy,
+  printedKitRegister,
 } from "./_components/PrintedBoatProcedure";
 import { PrintedSoulsOnBoard } from "./_components/PrintedSoulsOnBoard";
 import { personTrailIndex } from "./_components/person-trail";
@@ -132,6 +133,8 @@ export default async function TripManifestPage({
     diveIntents,
     stageStrip,
     meetingPoint,
+    vessel,
+    kitRecord,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
@@ -181,7 +184,8 @@ export default async function TripManifestPage({
   const notesByBooking = manifestNoteThreads(bookingNotes, diverNotes);
   const { crewRollCallButtonCopy, rollCallButtonCopy } = rollCallCopies(t, shopSlug, tripId);
   const emergencyCopy = emergencyReferenceCopy(t);
-  const printedProcedureCopy = printedBoatProcedureCopy(t);
+  // This departure's own boat on every copy of the card, the shop line only without one (item 11).
+  const emergencyReference = emergencyReferenceForDeparture(shop.emergencyReference, vessel);
 
   return (
     <div className="boat-mode">
@@ -224,7 +228,7 @@ export default async function TripManifestPage({
               className="mt-0"
               headingId="emergency-reference-phone-heading"
               inOverlay
-              reference={shop.emergencyReference}
+              reference={emergencyReference}
               copy={emergencyCopy}
             />
           </ManifestMoreMenu>
@@ -234,7 +238,7 @@ export default async function TripManifestPage({
           reading of where the boat is, and a second one above it would be the
           same fact twice. */}
       <TripTabs shopSlug={shopSlug} tripId={tripId} current="boat" copy={tripTabsCopy(t)} />
-      <PrintedSoulsOnBoard manifest={manifest} t={t} />
+      <PrintedSoulsOnBoard manifest={manifest} vesselName={vessel?.name ?? null} t={t} />
       {/* **The catch-up strip**, under the masthead and above the instrument,
           exactly where the canvas draws it (ADR 20260904-reef-all-the-way-down
           slice 16d). It renders nothing when there is nothing new, and nothing
@@ -364,9 +368,9 @@ export default async function TripManifestPage({
           shopId={shop.id}
           tripId={tripId}
           isDeparture={isDeparture}
-          startsAt={departureManifest.trip.startsAt}
+          trip={departureManifest.trip}
+          timeZone={shop.timezone}
           stage={stageStrip.stage}
-          cancelled={departureManifest.trip.cancelled === true}
           seats={manifest.divers}
         />
 
@@ -412,24 +416,13 @@ export default async function TripManifestPage({
             (ADR 20260827-the-departure-is-two-working-surfaces, decision 2). The
             printed manifest is the fallback under the fallback, so its complete
             copy is rendered outside either interactive disclosure below. */}
-        <div className="hidden print:block">
-          {/* The boat card's two parts that printed nowhere once it was cut
-              (issue #2035): the missing-diver procedure above the numbers it
-              sends the crew to, and the kit blanks under them. */}
-          <PrintedMissingProcedure
-            copy={printedProcedureCopy}
-            headingId={scopedId(idPrefix, "missing-procedure-print-heading")}
-          />
-          <EmergencyReferenceCard
-            headingId={scopedId(idPrefix, "emergency-reference-print-heading")}
-            reference={shop.emergencyReference}
-            copy={emergencyCopy}
-          />
-          <PrintedKitBlanks
-            copy={printedProcedureCopy}
-            headingId={scopedId(idPrefix, "kit-blanks-print-heading")}
-          />
-        </div>
+        <PrintedBoatPaper
+          idPrefix={idPrefix}
+          reference={emergencyReference}
+          emergencyCopy={emergencyCopy}
+          copy={printedBoatProcedureCopy(t)}
+          kitRegister={printedKitRegister(kitRecord, t, locale)}
+        />
         {/* Buddy teams are dock/desk prep, not mid-roll-call work: grouping
             people happens before the boat leaves, while the lists above are
             worked at the rail. Below the lists, still expanded — the teams
@@ -463,7 +456,7 @@ export default async function TripManifestPage({
           locale={locale}
           payload={offlineManifestPayload({
             completeManifests,
-            shop,
+            shop: { ...shop, emergencyReference },
             shopSlug,
             checklistItems,
             checklistChecks,
@@ -484,7 +477,7 @@ export default async function TripManifestPage({
         <EmergencyReferenceCard
           className="mt-0"
           headingId="emergency-reference-desktop-heading"
-          reference={shop.emergencyReference}
+          reference={emergencyReference}
           copy={emergencyCopy}
         />
       </ManifestMoreMenu>

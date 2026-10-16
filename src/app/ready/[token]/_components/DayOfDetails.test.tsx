@@ -20,6 +20,7 @@ function data(participantType: ReadyPageData["participantType"]): ReadyPageData 
     reEntryOffersOpen: false,
     refresherCourseOffered: false,
     hotelPickupLocation: null,
+    offersHotelPickup: true,
     helpRequest: null,
     rentalFit: null,
     welcomeOffer: null,
@@ -44,6 +45,31 @@ describe("the day-of step asks a seat only what fits it (ADR 20261007-participan
       expect(screen.getByText(t("ready.hotelPickupLabel"))).toBeInTheDocument();
       cleanup();
     }
+  });
+});
+
+/**
+ * **No pickup a shop never offered** (fourth UX review, item 8): every diver at
+ * every shop was asked "Want a morning pickup?". Only a shop that says it runs
+ * pickups has the question asked.
+ */
+describe("the pickup question follows the shop's own setting", () => {
+  it("asks nothing about a pickup at a shop that runs none", () => {
+    render(
+      <DayOfDetails
+        token="tok"
+        data={{ ...data("diver"), offersHotelPickup: false } as ReadyPageData}
+        saved={false}
+        t={t}
+      />,
+    );
+    expect(screen.queryByText(t("ready.hotelPickupLabel"))).toBeNull();
+    expect(screen.queryByLabelText(t("ready.hotelPickupFieldLabel"))).toBeNull();
+  });
+
+  it('asks "Want a pickup?", never a morning one, where the shop runs them', () => {
+    render(<DayOfDetails token="tok" data={data("diver")} saved={false} t={t} />);
+    expect(screen.getByText("Want a pickup?")).toBeInTheDocument();
   });
 });
 

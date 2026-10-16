@@ -100,6 +100,7 @@
   "addCrewToTrip": "Add crew to trip",
   "manageCrewOnTrip": "Manage this trip’s crew",
   "checkpointRollCallHeading": "{checkpoint} roll call",
+  "checkedInAtDesk": "Checked in at the desk",
   "checkedInPill": "Checked in",
   "notHerePill": "Not here",
   "runningLate": "Running late, said {time}",
@@ -208,6 +209,8 @@
     "heading": "In an emergency",
     "empty": "No emergency numbers recorded for this shop.",
     "vesselLabel": "Vessel:",
+    "callSignLabel": "Call sign:",
+    "mmsiLabel": "MMSI:",
     "shoreContactLabel": "Shore contact:",
     "planLabel": "If something goes wrong"
   },

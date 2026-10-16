@@ -1,9 +1,16 @@
-import { eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import type { DbExecutor } from "./client";
-import type { bookings, trips } from "./schema";
-import { buddyPairMembers, buddyTeamEvents, people } from "./schema";
+import {
+  bookings,
+  buddyPairMembers,
+  buddyTeamEvents,
+  people,
+  rollCallEvents,
+  trips,
+} from "./schema";
 import { demoReefDiverIndexes } from "./seed-bookings";
-import { at } from "./seed-clock";
+import { at, DEMO_DAWN_BOAT } from "./seed-clock";
+import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 
 /**
  * Buddy teams on today's reef trip (ADR 20260804-buddy-teams): Keiko groups
@@ -116,6 +123,105 @@ export async function seedBuddyPairs(
       memberNames,
       recordedByPersonId: ctx.pairedByPersonId,
       occurredAt: team.at,
+    });
+  }
+
+  await seedDawnBuddyTeams(db, shopId, {
+    personId: ctx.pairedByPersonId,
+    fullName: recorder.fullName,
+  });
+}
+
+/**
+ * **The dawn boat sailed with its divers paired** (fourth review, item 52).
+ * Its departure log is the demo's proof-of-safety page, and every diver row
+ * read "No buddy team recorded" under a Boat tab saying "No teams yet · 8
+ * divers not on a team": eight people in the water unpaired, on the one
+ * record a shop hands an insurer.
+ *
+ * The teams are the divers its own dock count boarded, in pairs by booking
+ * order, the last three a trio when the count is odd, formed at the dock
+ * before the lines came off. Read from the roll call's standing result at the
+ * dock rather than the roster (the newest word per booking, a `cleared` undo
+ * leaving none: `standing()` in `src/lib/safety-report.ts`), so a diver
+ * turned away at the dock is never on a team that went in. Their after-dive
+ * counts are all "boarded", so no team reads split.
+ */
+export async function seedDawnBuddyTeams(
+  db: DbExecutor,
+  shopId: string,
+  recorder: { personId: string; fullName: string },
+): Promise<void> {
+  const [dawn] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    // diveday:allow-deleted-trips: the seed's own departure, inserted moments ago.
+    .where(and(eq(trips.shopId, shopId), eq(trips.title, DEMO_COMPLETED_TRIP_TITLE)))
+    .limit(1);
+  if (!dawn) return;
+  const dockEvents = await db
+    .select({
+      bookingId: bookings.id,
+      fullName: people.fullName,
+      bookedAt: bookings.createdAt,
+      status: rollCallEvents.status,
+    })
+    .from(rollCallEvents)
+    .innerJoin(bookings, eq(bookings.id, rollCallEvents.bookingId))
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(and(eq(rollCallEvents.tripId, dawn.id), eq(rollCallEvents.checkpoint, "departure")))
+    .orderBy(
+      asc(rollCallEvents.occurredAt),
+      asc(rollCallEvents.createdAt),
+      asc(rollCallEvents.seq),
+    );
+  // The newest word per booking stands; a `cleared` undo leaves none.
+  const standing = new Map<string, (typeof dockEvents)[number]>();
+  for (const event of dockEvents) {
+    if (event.status === "cleared") standing.delete(event.bookingId);
+    else standing.set(event.bookingId, event);
+  }
+  const aboard = [...standing.values()]
+    .filter((event) => event.status === "boarded")
+    .sort(
+      (a, b) =>
+        a.bookedAt.getTime() - b.bookedAt.getTime() ||
+        a.fullName.localeCompare(b.fullName) ||
+        a.bookingId.localeCompare(b.bookingId),
+    )
+    .map(({ bookingId, fullName }) => ({ bookingId, fullName }));
+  if (aboard.length < 2) return;
+  const teams: (typeof aboard)[] = [];
+  for (let i = 0; i + 1 < aboard.length; i += 2) teams.push(aboard.slice(i, i + 2));
+  const odd = aboard.length % 2 === 1 ? aboard.at(-1) : undefined;
+  if (odd) teams.at(-1)?.push(odd);
+
+  for (const [index, members] of teams.entries()) {
+    // Two minutes apart, the last at twenty past five, ten before the 5:30 sail.
+    const formedAt = at(
+      0,
+      DEMO_DAWN_BOAT.sails.hour,
+      DEMO_DAWN_BOAT.sails.minute - 10 - (teams.length - 1 - index) * 2,
+    );
+    const pairId = crypto.randomUUID();
+    await db.insert(buddyPairMembers).values(
+      members.map((member) => ({
+        shopId,
+        tripId: dawn.id,
+        pairId,
+        bookingId: member.bookingId,
+        pairedByPersonId: recorder.personId,
+        createdAt: formedAt,
+      })),
+    );
+    await db.insert(buddyTeamEvents).values({
+      shopId,
+      tripId: dawn.id,
+      pairId,
+      action: "formed",
+      memberNames: members.map((member) => member.fullName).sort((a, b) => a.localeCompare(b)),
+      recordedByPersonId: recorder.personId,
+      occurredAt: formedAt,
     });
   }
 }

@@ -47,6 +47,8 @@
     "integration_backfill_sent": "{actor} sent earlier checkouts to {provider}, from {since} (queued: {count})",
     "running_late_from_message": "{actor} marked {diver} running late from their message",
     "order_refunded": "{actor} refunded an order",
+    "order_paid_cash": "{actor} recorded an order paid in cash",
+    "order_paid_card_machine": "{actor} recorded an order paid on the card machine",
     "paid_after_close_refunded": "{actor} refunded a card paid after its checkout closed",
     "seat_refunded": "{actor} removed {diver} and refunded the seat by card",
     "payment_waived": "{actor} marked {diver}’s seat waived",

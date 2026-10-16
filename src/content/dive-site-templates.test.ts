@@ -34,6 +34,36 @@ describe("the dive-site catalog", () => {
     expect(thin).toEqual([]);
   });
 
+  it("says safety stop only at 5 m, never at the top of a wreck", () => {
+    // A safety stop is 5 m / 15 ft. The catalog once called the Duane's 18 m
+    // crow's nest "where the safety stop happens", which a feet shop's
+    // divemaster then read aloud as a stop at 60 ft.
+    // A sentence may name the dive's depth limit and end on the safety stop;
+    // what must never happen is a depth other than 5 m sitting in the same
+    // clause as the stop, or a place "where the safety stop happens".
+    const atDepth = (text: string) => /\d\s?m\b/.test(text) && !/\b5 m\b/.test(text);
+    const placesStop = (sentence: string) =>
+      sentence
+        .split(/,|;|\band\b|\bthen\b/)
+        .some((clause) => /safety stop/i.test(clause) && atDepth(clause)) ||
+      (/where (?:the|you make the|you do the) safety stop/i.test(sentence) && atDepth(sentence));
+    expect(placesStop("The crow's nest at 18 m is where the safety stop happens.")).toBe(true);
+    expect(placesStop("Up the line to the 18 m crow's nest, where the safety stop happens.")).toBe(
+      true,
+    );
+    expect(placesStop("Do the safety stop at 6 m on the line.")).toBe(true);
+    expect(
+      placesStop("Along the wall no deeper than 18 m, and back up the line for the safety stop."),
+    ).toBe(false);
+    const misplaced = DIVE_SITE_TEMPLATES.flatMap(({ slug, briefing }) =>
+      [briefing.divePlan, briefing.description, ...(briefing.landmarks ?? []).map((l) => l.note)]
+        .flatMap((text) => (text ?? "").split(/(?<=\.)\s/))
+        .filter(placesStop)
+        .map((sentence) => `${slug}: ${sentence}`),
+    );
+    expect(misplaced).toEqual([]);
+  });
+
   it("places every site and states a depth that agrees with itself", () => {
     const problems = DIVE_SITE_TEMPLATES.flatMap(({ slug, briefing }) => {
       const found: string[] = [];

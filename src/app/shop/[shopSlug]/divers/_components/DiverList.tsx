@@ -10,7 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { SearchField } from "@/components/ui/form";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
-import type { DiverFilter } from "@/db/divers";
+import type { DiverFilter, DiverSort } from "@/db/divers";
 import { groupByLetter } from "@/lib/roster-rows";
 
 /**
@@ -56,7 +56,10 @@ export interface DiverListCopy {
   viewDivingToday: string;
   viewNeedsAttention: string;
   viewMissingContact: string;
+  viewNotBack: string;
   viewRemoved: string;
+  /** The one group label over a roster sorted by last dive, which has no letters. */
+  lastDivedGroup: string;
   viewsAriaLabel: string;
   /** Replaces the count line while the Removed view is on. */
   removedNote: string;
@@ -108,6 +111,8 @@ export function DiverList({
   shopSlug,
   query,
   filter,
+  sort = "name",
+  orderLine,
   importHref,
   canRestore,
   quickAddAction,
@@ -121,6 +126,9 @@ export function DiverList({
   shopSlug: string;
   query: string;
   filter: DiverFilter;
+  sort?: DiverSort;
+  /** Sort by name or last dive, and the list's CSV: links the page builds (item 27). */
+  orderLine?: React.ReactNode;
   /** Where a bulk import lives, or null when this staffer may not run one. */
   importHref: string | null;
   /**
@@ -159,24 +167,16 @@ export function DiverList({
     { label: copy.viewDivingToday, filter: "diving_today" },
     { label: copy.viewNeedsAttention, filter: "needs_attention" },
     { label: copy.viewMissingContact, filter: "missing_contact" },
+    { label: copy.viewNotBack, filter: "not_back" },
     ...(canRestore ? [{ label: copy.viewRemoved, filter: "removed" as DiverFilter }] : []),
   ];
   const router = useRouter();
   const pathname = usePathname();
   const [typed, setTyped] = useState(query);
-  // **The roster opens ready to be typed into**: a staffer arrives here holding a name, and
-  // searching is the first thing they do. Focused through a ref rather than the
-  // `autoFocus` attribute because biome's `noAutofocus` rule forbids that JSX
-  // prop outright — every focus-on-mount in this repo goes the same way.
-  //
-  // **`preventScroll`, because this runs at hydration, not at first paint.**
-  // The roster is server-rendered and readable (and scrollable) before React
-  // owns it; a plain `focus()` scrolls the box into view, so a staffer who had
-  // already scrolled down to the pager was thrown back to the top as the page
-  // hydrated, and the tap they aimed at "Next" landed on whatever slid under
-  // it. That is how `divers.spec.ts`'s pager tests failed on CI: the click hit
-  // the roster's `<div>`, and no request of any kind left the page. On a fresh
-  // load the box is already on screen, so nothing is lost.
+  // **The roster opens ready to be typed into**, focused through a ref (biome's
+  // `noAutofocus`). **`preventScroll`, because this runs at hydration**: a plain
+  // `focus()` threw a staffer already scrolled to the pager back to the top, and
+  // the tap aimed at "Next" landed on whatever slid under it (`divers.spec.ts`).
   const searchRef = useRef<HTMLInputElement>(null);
   const quickAddFormRef = useRef<HTMLFormElement>(null);
   const rosterRef = useRef<HTMLDivElement>(null);
@@ -242,9 +242,10 @@ export function DiverList({
       const params = new URLSearchParams();
       if (nextQuery.trim()) params.set("q", nextQuery.trim());
       if (nextFilter !== "all") params.set("filter", nextFilter);
+      if (sort !== "name") params.set("sort", sort);
       return params.size ? `${pathname}?${params}` : pathname;
     },
-    [pathname],
+    [pathname, sort],
   );
 
   /**
@@ -312,7 +313,8 @@ export function DiverList({
    * the chips are how you widen back out.
    */
   const showViews = rows.length > 0 || narrowed;
-  const groups = groupByLetter(rows);
+  // Sorted by last dive, the letters mean nothing: one group, in the query's order.
+  const groups = sort === "last_dived" ? [{ letter: null, rows: [...rows] }] : groupByLetter(rows);
 
   return (
     <section className="mt-8">
@@ -340,12 +342,8 @@ export function DiverList({
           }))}
         />
       ) : null}
-      {/* Phone: the button wraps to its own row under a full-width box and the
-          count sits beneath both. Desktop: box and button on the left, the
-          count quiet on the right — the artboard's one line. Either way the
-          button is on screen from first paint; it used to mount on the first
-          keystroke and slide the search box aside to make room, which on a
-          phone moved the box under the thumb typing into it (#781). */}
+      {/* Phone: button under a full-width box, the count beneath both. Desktop:
+          the artboard's one line. The button is there from first paint (#781). */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex w-full max-w-full flex-wrap items-center gap-2 sm:w-auto">
           <SearchField
@@ -412,6 +410,7 @@ export function DiverList({
           The empty card takes the ledger's `mt-8` too, so narrowing the view
           to nothing moves nothing under the toolbar. */}
       <div ref={rosterRef}>
+        {orderLine}
         {rows.length === 0 ? (
           <EmptyState
             className="mt-8"
@@ -457,7 +456,9 @@ export function DiverList({
                   key={labelId}
                   as="h2"
                   id={labelId}
-                  label={group.letter ?? copy.letterOther}
+                  label={
+                    group.letter ?? (sort === "last_dived" ? copy.lastDivedGroup : copy.letterOther)
+                  }
                 >
                   <ul aria-labelledby={labelId}>
                     {group.rows.map((row) => (

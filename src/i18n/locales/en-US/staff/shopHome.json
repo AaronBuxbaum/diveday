@@ -136,7 +136,6 @@
     "week": "This week",
     "openBoard": "Open the board",
     "departures": "{count, plural, one {# departure} other {# departures}}",
-    "jobs": "{count, plural, one {# job} other {# jobs}}",
     "seatsOpen": "{count, plural, one {# seat open} other {# seats open}}",
     "full": "Full",
     "until": "until {time}",

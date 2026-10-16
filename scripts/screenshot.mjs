@@ -337,11 +337,12 @@ try {
             .waitFor({ timeout: SKELETON_TIMEOUT_MS });
         }
         await openAndSettle(page, target);
-        // Filesystem-safe name: drop any query/fragment, then collapse every
-        // non-alphanumeric run to a dash — `/shop/x/today?view=departures`
-        // becomes `shop-x-today` rather than a filename with `?` in it.
-        const [pathOnly] = target.split(/[?#]/, 1);
-        const slug = pathOnly.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") || "home";
+        // Filesystem-safe name: drop any fragment, keep the query, then collapse
+        // every non-alphanumeric run to a dash. `/shop/x/reports?range=year`
+        // becomes `shop-x-reports-range-year`, so it no longer overwrites the
+        // month capture of `/shop/x/reports` taken in the same folder.
+        const [withQuery] = target.split("#", 1);
+        const slug = withQuery.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") || "home";
         // The role is part of the name only when it is not the default, so the
         // common look keeps today's short filenames and `--as captain` beside
         // `--as divemaster` gives two files instead of one overwriting the

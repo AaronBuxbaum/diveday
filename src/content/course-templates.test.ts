@@ -125,3 +125,21 @@ describe("COURSE_TEMPLATES depth markers", () => {
     }
   });
 });
+
+describe("SDI templates", () => {
+  it("gate at SDI's own floor, Open Water Scuba Diver, where the ladder can say it", () => {
+    // SDI asks Open Water Scuba Diver for Rescue, Deep and Wreck; its Advanced
+    // Adventure Diver is built from those dives. An Advanced gate told an SDI
+    // Open Water diver the agency wanted more and to phone instead of book.
+    for (const slug of ["sdi-rescue-diver", "sdi-deep-diver", "sdi-wreck-diver"]) {
+      const template = COURSE_TEMPLATES.find((entry) => entry.slug === slug);
+      expect(template?.minimumCertificationLevel, slug).toBe("open_water");
+      const note = template?.content.prerequisiteNote ?? "";
+      expect(note, slug).toContain("SDI Open Water Scuba Diver or equivalent");
+      expect(note, slug).not.toMatch(/Advanced Adventure|between Open Water and Advanced/);
+    }
+    expect(
+      COURSE_TEMPLATES.find((entry) => entry.slug === "sdi-rescue-diver")?.content.prerequisiteNote,
+    ).toContain("SDI Open Water Scuba Diver or equivalent, plus current CPR and first aid");
+  });
+});

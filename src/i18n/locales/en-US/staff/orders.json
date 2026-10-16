@@ -109,7 +109,15 @@
       "voidNotAuthorized": "Voiding is limited to owners and managers.",
       "demoDisabled": "This is a demo order, so it can’t be changed.",
       "disputeNotAuthorized": "Dispute sheets are limited to owners and managers. Ask one of them to print this one.",
-      "fallback": "Something changed on this order. The details below are current."
+      "fallback": "Something changed on this order. The details below are current.",
+      "paymentRecorded": "Payment recorded. Stripe won’t ask the diver for it again.",
+      "paymentStripeRefused": "Stripe wouldn’t mark this invoice paid. The diver may have just paid it online, so refresh before recording anything.",
+      "paymentRecordFailed": "Couldn’t record this payment.",
+      "paymentInFlight": "A payment for this order is being recorded. Check the order in a minute before trying again."
+    },
+    "recordPayment": {
+      "label": "Record payment:",
+      "recording": "Recording…"
     }
   },
   "index": {
@@ -154,8 +162,9 @@
     "ledger": {
       "today": "Today · {date}",
       "continued": "{day}, continued",
-      "dayMeta": "{count, plural, one {# order} other {# orders}} · {subtotal}",
-      "rowLabel": "{name} — {amount}"
+      "dayMeta": "{count, plural, one {# entry} other {# entries}} · {subtotal}",
+      "rowLabel": "{name} — {amount}",
+      "paidAtBooking": "Paid at booking"
     },
     "table": {
       "diver": "Diver",
@@ -163,7 +172,7 @@
       "amount": "Amount"
     },
     "pagination": {
-      "total": "{count, plural, one {# order} other {# orders}}"
+      "total": "{count, plural, one {# entry} other {# entries}}"
     },
     "importedHistory": {
       "sectionLabel": "Imported payment history",
@@ -219,6 +228,11 @@
       "heading": "{count, plural, one {# refund} other {# refunds}} didn’t reach the diver. The money is back in your Stripe balance. Refund them again.",
       "openOrder": "Open order",
       "openTrip": "Open trip"
+    },
+    "owed": {
+      "label": "Owed:",
+      "orders": "{amount} on {count, plural, one {# open order} other {# open orders}}, the oldest from {date}",
+      "seats": "{amount} on {count, plural, one {# seat} other {# seats}} that sailed unpaid"
     }
   }
 }

@@ -18,13 +18,14 @@ import {
   sum,
 } from "drizzle-orm";
 import { canViewShopReports, type Role } from "@/lib/authz";
+import type { MonthRef } from "@/lib/calendar";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { emptyParticipantCounts } from "@/lib/participant-types";
 import type { MonthlyReportInput, ReportTrip } from "@/lib/reporting";
 import type { ShopYearDay, ShopYearInput } from "@/lib/shop-year";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
-import { wallTimeToUtc } from "@/lib/zoned";
+import { shopMonthBounds, wallTimeToUtc } from "@/lib/zoned";
 import { buddyReferredSeatsForWindow } from "./buddy-referrals";
 import type { DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
@@ -838,6 +839,50 @@ export async function crewCountsByTrip(
     .where(inArray(tripAssignments.tripId, tripIds))
     .groupBy(tripAssignments.tripId);
   return new Map(rows.map((row) => [row.tripId, Number(row.crewCount)]));
+}
+
+/**
+ * **The year's money, month by month** (fourth UX review, item 25): one
+ * month report per month of `year` that has begun, each over the departures
+ * that left before `now`, so the current month reads "so far" and nothing on
+ * the books is counted. The year CSV writes one row per entry; the year view
+ * sums them through {@link getYearToDate} instead, one read.
+ */
+export async function getYearMonthInputs(
+  db: DbExecutor,
+  shopId: string,
+  options: { timeZone: string; currency?: string; year: number; now: Date },
+): Promise<{ month: MonthRef; input: MonthlyReportInput }[]> {
+  const { timeZone, year, now } = options;
+  const months: MonthRef[] = [];
+  for (let month = 1; month <= 12; month++) {
+    if (shopMonthBounds({ year, month }, timeZone).from >= now) break;
+    months.push({ year, month });
+  }
+  return queryAll(
+    db,
+    months.map((month) => async () => {
+      const { from, to } = shopMonthBounds(month, timeZone);
+      const input = await getMonthlyReport(db, shopId, from, to < now ? to : now, options);
+      return { month, input };
+    }),
+  );
+}
+
+/**
+ * The year so far as one month report: every departure of `year` that left
+ * before `now`. Revenue, tax and tips add across departures, so this is the
+ * sum of {@link getYearMonthInputs}' rows in one read.
+ */
+export async function getYearToDate(
+  db: DbExecutor,
+  shopId: string,
+  options: { timeZone: string; currency?: string; year: number; now: Date },
+): Promise<MonthlyReportInput> {
+  const { timeZone, year, now } = options;
+  const from = wallTimeToUtc({ year, month: 1, day: 1, hour: 0, minute: 0 }, timeZone);
+  const to = wallTimeToUtc({ year: year + 1, month: 1, day: 1, hour: 0, minute: 0 }, timeZone);
+  return getMonthlyReport(db, shopId, from, to < now ? to : now, options);
 }
 
 /**

@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
 import { expect, makeActivitySafe, READ_ONLY, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
@@ -69,7 +69,7 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await page.getByLabel("Name").fill("Nora Quinn");
   await page.getByLabel("Email").fill("nora@example.com");
   await acceptAgeAttestation(page);
-  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
 
   // Sizes live in the thread's "Gear and sizes" step, and at most one step is
@@ -95,6 +95,14 @@ test("a signed-out visitor browses the public course catalog, with the editor st
   await expect(
     page.getByRole("heading", { level: 3, name: "Open Water Diver", exact: true }),
   ).toBeVisible();
+  // When each course next runs, as the storefront's shelf says it (fourth
+  // review, item 33), and a door to ask on a course with nothing on the board.
+  const openWater = page
+    .getByRole("listitem")
+    .filter({ has: page.getByRole("heading", { name: "Open Water Diver", exact: true }) });
+  await expect(openWater).toContainText(/Next \w{3},\s\w{3}\s\d{1,2}/);
+  const ask = page.getByRole("link").filter({ hasText: "Ask for a date" }).first();
+  await expect(ask).toHaveAttribute("href", /^\/s\/blue-mantis\/courses\/[^#]+#get-in-touch$/);
   // No staff affordance renders at all — not disabled, absent (AGENTS.md
   // hard rule: gate by not rendering).
   await expect(page.getByRole("link", { name: "Edit" })).toHaveCount(0);
@@ -565,7 +573,7 @@ test.describe("staff", () => {
     await page.getByLabel("Name").fill(diver);
     await page.getByLabel("Email").fill(`ravi-${e2eNow().getTime()}@example.com`);
     await acceptAgeAttestation(page);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Ravi/ })).toBeVisible();
   });
 
@@ -623,7 +631,9 @@ test.describe("staff", () => {
         await emailField.fill(`ratio-${stamp}-${label}@example.com`);
       }
       await acceptAgeAttestation(page);
-      await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+      await page
+        .getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ })
+        .click();
       await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).toBeVisible();
     };
 
@@ -639,7 +649,7 @@ test.describe("staff", () => {
     await page.getByLabel("Name", { exact: true }).fill(`Ratio Diver ${stamp}-9`);
     await page.getByLabel("Email", { exact: true }).fill(`ratio-${stamp}-9@example.com`);
     await acceptAgeAttestation(page);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(
       page.getByText("This session is at its instructor-to-student ratio limit"),
     ).toBeVisible();
@@ -1292,7 +1302,9 @@ test("a course's learning materials reach the student's thread, and staff tick t
   await diverPage.getByLabel("Name").fill(diver);
   await diverPage.getByLabel("Email").fill(`mira-${e2eNow().getTime()}@example.com`);
   await acceptAgeAttestation(diverPage);
-  await diverPage.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await diverPage
+    .getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ })
+    .click();
   await expect(diverPage).toHaveURL(/\/ready\//);
 
   await expect(diverPage.getByRole("heading", { name: "Before your first day" })).toBeVisible();
@@ -1324,12 +1336,19 @@ test("a course's learning materials reach the student's thread, and staff tick t
  * review 2026-10-10, item 16). The course editor draws its Forms section only
  * for someone who may configure courses, so a divemaster reading the roster is
  * told the wording is missing and is offered no link into an editor with no
- * Forms in it.
+ * Forms in it. The demo's forms carry the shop's words (fourth review, item
+ * 53), so each test first adds one the shop has named and not yet written.
  */
+async function addUnwordedForm(request: APIRequestContext) {
+  const seeded = await request.post("/api/test/seed-unworded-course-form");
+  expect(seeded.ok(), await seeded.text()).toBe(true);
+}
+
 test.describe("the agency-wording notice on the course roster", () => {
   test.describe("for an owner", () => {
     signedInAsOwner();
-    test("says what is missing and opens the first course's Forms", async ({ page }) => {
+    test("says what is missing and opens the first course's Forms", async ({ page, request }) => {
+      await addUnwordedForm(request);
       await page.goto("/shop/blue-mantis/courses");
       const notice = page.getByText(/needs? (its|their) agency form wording/);
       await expect(notice).toBeVisible();
@@ -1344,7 +1363,9 @@ test.describe("the agency-wording notice on the course roster", () => {
     signedInAs("divemaster");
     test("says what is missing and offers no door into a Forms section they cannot see", async ({
       page,
+      request,
     }) => {
+      await addUnwordedForm(request);
       await page.goto("/shop/blue-mantis/courses");
       await expect(page.getByText(/needs? (its|their) agency form wording/)).toBeVisible();
       await expect(page.getByRole("link", { name: /^Start with / })).toHaveCount(0);

@@ -27,7 +27,7 @@ import type { DiverProfile } from "./shared";
  * **Contact details, as the record's first file group** (ADR 20261001-logbook,
  * decision 2: one page shape, at most one primary action).
  *
- * The editor was a second dropdown button beside Book a departure. It is a door
+ * The editor was a second dropdown button beside Add a booking. It is a door
  * like the waiver and the gear now, and its summary is the one fact a crew
  * needs from it on the day: who to call.
  *

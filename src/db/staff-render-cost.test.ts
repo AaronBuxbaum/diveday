@@ -8,6 +8,7 @@ import { createBookingParty } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
 import { hasActiveCourses } from "@/db/courses";
+import { diverCrewWithAway } from "@/db/crew-away-diver";
 import { countSpendableDives } from "@/db/dive-packages";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { countGearItems } from "@/db/gear";
@@ -35,7 +36,6 @@ import {
   listTripScheduleDays,
   pagedUpcomingTripsWithCounts,
   tripCrewSpokenLanguages,
-  tripPublicCrew,
 } from "@/db/trips";
 import { getTripGuests } from "@/db/trips-guests";
 import { liveTrip } from "@/db/trips-live";
@@ -361,7 +361,7 @@ async function publicTripPageReads(db: AppDb, shopSlug: string, tripId: string) 
     tripDivesRead,
     listTripScheduleDays(db, shop.id, tripId),
     tripCrewSpokenLanguages(db, shop.id, tripId),
-    tripPublicCrew(db, shop.id, tripId),
+    tripRead.then((found) => (found ? diverCrewWithAway(db, shop.id, found, shop.timezone) : [])),
     listTripChangeEvents(db, shop.id, tripId),
     tripDivesRead.then((dives) => {
       const siteIds = dives
@@ -410,7 +410,7 @@ async function readyPageReads(db: AppDb, token: string) {
     getTripWithBooked(db, data.shop.id, data.trip.id),
     listTripDives(db, data.shop.id, data.trip.id),
     listTripChangeEvents(db, data.shop.id, data.trip.id),
-    tripPublicCrew(db, data.shop.id, data.trip.id),
+    diverCrewWithAway(db, data.shop.id, data.detail.trip, data.detail.shop.timezone),
     latestTripStage(db, data.shop.id, data.trip.id),
     getBookingPayment(db, data.shop.id, capability.bookingId),
     data.trip.course ? getCourseFormsForBooking(db, data.shop.id, capability.bookingId) : null,
@@ -577,7 +577,11 @@ const CHROME_CEILING = 20;
 // 65 → 66: a "certification pending" row offers the agency check (H-105), so
 // Today reads which of the blocked divers' cards the extension could look up
 // (`listAgencyCheckableCards`), one statement beside the wave, not after it.
-const TODAY_CEILING = 66;
+// 66 → 69 (fourth review, items 12 and 14): Today names rostered crew who are
+// away (`crewAwayByTrip`, the departures' crew, schedule days and days away)
+// and keeps every crew assignment on "Your week" (`readerCrewedTrips`), three
+// statements in the queue's one wave.
+const TODAY_CEILING = 69;
 // 49 → 50: the roster reads each diver's unspent package dives for the payment
 // control (`spendableDivesForTrip`, H-79, issue #1697). The held seat's
 // last-dive-day read beside it (`lastDiveDaysHere`, #1789) skips itself when no
@@ -631,8 +635,15 @@ const TRIP_WIDE_PHASE_CEILING = 6;
  * reads one after another after its fan-out, and `/ready` its readiness pass,
  * four more steps of `getReadyPageData` and five single awaits in the thread.
  */
-const PUBLIC_TRIP_CEILING = 18;
-const READY_CEILING = 36;
+// 18 → 20 (fourth review, item 12; r4-4 reviews N2/N5): both diver doors mark
+// an away crew member "to be confirmed", which reads the departure's schedule
+// days and the crew's days away beside the crew, in the same round trip.
+const PUBLIC_TRIP_CEILING = 20;
+// 36 → 38 (fourth review, item 12): the thread names the crew with who is
+// away on the departure's days (`diverCrewWithAway`), which reads the
+// schedule days and the days away beside the crew. Measured 38; the phases
+// stay 5, since both ride the thread's one wave.
+const READY_CEILING = 38;
 // 10 → 3: the shop, then `readTripPage`'s one wave (issue #2353; code review
 // 2026-10-11, item 2), whose chained reads — the briefings off the dives, the
 // Stripe account and the other boats off the trip — are its third round trip.
@@ -651,6 +662,6 @@ const READY_PHASE_CEILING = 5;
 // The two above them are the capability and the readiness detail, as for one
 // seat.
 const READY_PARTY_PHASE_CEILING = 7;
-// A party of three or six: the single seat's 36, plus the party panel's
+// A party of three or six: the single seat's 38, plus the party panel's
 // own reads and one claim-link mint for every unclaimed seat together.
-const READY_PARTY_CEILING = 38;
+const READY_PARTY_CEILING = 40;

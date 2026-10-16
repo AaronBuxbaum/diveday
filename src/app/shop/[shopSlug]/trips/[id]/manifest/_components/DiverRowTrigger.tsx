@@ -18,6 +18,7 @@ export function DiverRowTrigger({
   capsule,
   typeBadge,
   lateAt,
+  checkedInAtDesk = false,
   locale,
   timezone,
   t,
@@ -29,6 +30,8 @@ export function DiverRowTrigger({
   typeBadge: ReactNode;
   /** When the diver said they are running late, while it still applies (`runningLateOnManifest`). */
   lateAt: Date | null;
+  /** The desk checked this diver in and the crew has said nothing yet (`diverRowState`). */
+  checkedInAtDesk?: boolean;
   locale: string;
   timezone: string;
   t: StaffTranslator;
@@ -48,6 +51,7 @@ export function DiverRowTrigger({
           t={t}
           welcomeCue={diver.welcomeCue}
           lateAt={lateAt}
+          checkedInAtDesk={checkedInAtDesk}
           locale={locale}
           timezone={timezone}
         />
@@ -110,7 +114,7 @@ export function DiverRowTrigger({
  * "running late".
  *
  * **The welcome word** (issue #1182, delight report D22; ADR
- * 20260904-reef-all-the-way-down slice 16d): "first time with us", "back after
+ * 20260904-reef-all-the-way-down slice 16d): "First dive with us", "Back after
  * 3 years". Muted text under the name, never a `Badge` and never inside the
  * roll-call circle — a badge is the profile decoration D22's boundary rules
  * out, and it would also take the row's one capsule away from an exception the
@@ -123,6 +127,11 @@ export function DiverRowTrigger({
  * for the same reason: it is context, never a roll-call result, and nothing
  * on this page counts it.
  *
+ * **"Checked in at the desk"** (fourth review, item 15): the counter's word
+ * on a dock row the crew has not called yet, so the gangway can tell the two
+ * who are here from the eight still to come without opening eleven sheets.
+ * The same quiet clothes: context, never a roll-call result, never a gate.
+ *
  * `text-base`, not the 12.5px the canvas drew: this is a manifest, where
  * AGENTS.md's licence to trade legibility for restraint stops. It costs a
  * second line on some rows, which is the price of it being readable at the
@@ -132,12 +141,14 @@ function UnderName({
   t,
   welcomeCue,
   lateAt,
+  checkedInAtDesk,
   locale,
   timezone,
 }: {
   t: StaffTranslator;
   welcomeCue: TripManifest["divers"][number]["welcomeCue"];
   lateAt: Date | null;
+  checkedInAtDesk: boolean;
   locale: string;
   timezone: string;
 }) {
@@ -150,6 +161,9 @@ function UnderName({
         <span className="mt-0.5 block text-base text-muted">
           {t("manifest.runningLate", { time: formatTime(lateAt, locale, timezone) })}
         </span>
+      ) : null}
+      {checkedInAtDesk ? (
+        <span className="mt-0.5 block text-base text-muted">{t("manifest.checkedInAtDesk")}</span>
       ) : null}
     </>
   );

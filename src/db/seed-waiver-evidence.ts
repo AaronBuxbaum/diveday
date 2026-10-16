@@ -6,7 +6,7 @@ import {
 } from "@/lib/waiver-integrity";
 import type { DbExecutor } from "./client";
 import { type WaiverRecord, waiverRecords } from "./schema";
-import { at } from "./seed-clock";
+import { at, withinDeskHours } from "./seed-clock";
 
 /**
  * What the shop's signed evidence actually looks like — the Signatures tab's
@@ -79,12 +79,17 @@ const SIGNING_SPREAD_DAYS = 21;
  * read. The per-index millisecond keeps two signatures on the same day from
  * tying, which is what `nextCreatedAt` exists to prevent elsewhere.
  */
-function signedAtFor(index: number): Date {
+export function signedAtFor(index: number): Date {
   const daysBack = index % SIGNING_SPREAD_DAYS;
   if (daysBack === 0) return new Date(nowMs() - (35 + index * 7) * 60_000);
   const hour = 8 + (index % 8);
   const minute = (index * 13) % 60;
   return new Date(at(-daysBack, hour, minute).getTime() + (index % 1_000));
+}
+
+/** Recorded by a staffer from a signature made in front of them. */
+function staffRecorded(record: WaiverRecord): boolean {
+  return record.signatureMethod === "in_person" || record.signatureMethod === "in_person_attested";
 }
 
 export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promise<void> {
@@ -116,7 +121,9 @@ export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promis
   const updates: { id: string; next: WaiverRecord }[] = [];
   for (const record of records) {
     const stampedNow = (record.signedAt?.getTime() ?? 0) >= todayStart;
-    const signedAt = stampedNow ? signedAtFor(spreadIndex) : record.signedAt;
+    const spread = stampedNow ? signedAtFor(spreadIndex) : record.signedAt;
+    const signedAt =
+      spread && stampedNow && staffRecorded(record) ? withinDeskHours(spread) : spread;
     if (stampedNow) spreadIndex += 1;
     const sealed = (signedAt?.getTime() ?? 0) >= sealFrom;
     if (!stampedNow && !sealed) continue;

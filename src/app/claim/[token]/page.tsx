@@ -225,6 +225,15 @@ export default async function SeatClaimPage({
             seatName: data.seatName,
           })}
         </p>
+        {/* A seat booked "Under 18" (H-124): a parent or guardian signs with
+            them, and, only where that door exists, the parent who booked can
+            do it from their own page. */}
+        {data.minorDeclared ? (
+          <p className="mt-3 text-base text-muted">
+            {t("seatClaim.minorNote", { seatName: data.seatName })}
+            {data.parentCanSign ? ` ${t("seatClaim.minorNoteParentSigns")}` : null}
+          </p>
+        ) : null}
         <form action={claimSeatAction.bind(null, token)} className="mt-5 flex flex-col gap-4">
           <Field label={t("seatClaim.nameLabel")}>
             <input

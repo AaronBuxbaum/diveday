@@ -609,6 +609,9 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // Matches a later refund or dispute event to this order; provider
     // linkage like the two above (ADR 20261009-stripe-reversals-reach-diveday).
     "stripe_payment_intent_id",
+    // A lock stamp for one Stripe round trip, null on every settled row
+    // (ADR 20261009-counter-payments); nothing a shop would read in a backup.
+    "counter_claimed_at",
   ],
   order_line_items: ["shop_id"],
   work_order_bills: ["shop_id"],

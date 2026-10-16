@@ -3,6 +3,7 @@ import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { type ReactNode, Suspense } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
+import { HeroFootnotes } from "@/app/_components/HeroFootnotes";
 import { HomeBodySkeleton } from "@/app/_components/HomeBodySkeleton";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { WaiverSigningFallback } from "@/components/MarketingFeatureScreens";
@@ -300,19 +301,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                 door, where the decision is actually made. The closing band
                 repeats the door, not the note. */}
             <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
-            {/* The terms, standing at the door rather than four bands below it
-                (docs/product/marketing-review-20260827.md, diagnosis 2). It is
-                deliberately a sentence and not a third CTA: the hero's decision
-                density is pinned at one primary and one secondary, and a
-                "See pricing" link here would spend that budget to answer a
-                question this line already answers. The closing band keeps the
-                two-year-lock detail and the door to /pricing. */}
-            <p className="mt-2 text-sm text-muted">
-              {t("marketing.home.heroPriceLine", {
-                price: earlyAccessPrice.price,
-                cadence: t(earlyAccessPrice.cadenceKey),
-              })}
-            </p>
+            <HeroFootnotes t={t} />
           </div>
           <MarketingHeroMotion>
             <div className="mx-auto w-full max-w-sm lg:max-w-md">

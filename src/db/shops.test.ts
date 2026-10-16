@@ -9,6 +9,7 @@ import { courses, divePackages, shops, trips } from "./schema";
 import {
   clearPassedReopensOn,
   getShopBySlug,
+  listShopsForDiverPicker,
   listShopsForSitemap,
   setShopAddress,
   setShopDepthUnit,
@@ -190,6 +191,35 @@ describe("listShopsForSitemap", () => {
     const { db, shop } = await shopWithNoDepartures("demo-shop", true);
     await scheduleADeparture(db, shop.id);
     expect((await listShopsForSitemap(db)).map((row) => row.slug)).not.toContain("demo-shop");
+  });
+});
+
+/**
+ * **The diver's shop picker names exactly the listed shops** (fourth review,
+ * item 50). It is a public list DiveDay publishes, so it reads through the same
+ * scope as the sitemap: never a demo, never a shop that opted out of search.
+ */
+describe("listShopsForDiverPicker", () => {
+  it("names the sitemap's shops, in name order, with their town", async () => {
+    const db = ctx.db;
+    const picker = await listShopsForDiverPicker(db);
+    expect(picker.map((row) => row.slug).sort()).toEqual(
+      (await listShopsForSitemap(db)).map((row) => row.slug).sort(),
+    );
+    const names = picker.map((row) => row.name);
+    expect(names).toEqual([...names].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)));
+    expect(picker.map((row) => row.slug)).not.toContain("blue-mantis");
+    expect(picker.find((row) => row.slug === "reef-line-divers")?.locality).toBe("Key Largo");
+  });
+
+  it("drops a shop that opted out of search", async () => {
+    const db = ctx.db;
+    const [shop] = await db.select().from(shops).where(eq(shops.slug, "reef-line-divers"));
+    if (!shop) throw new Error("the listed seed shop is missing");
+    await setShopSearchListing(db, shop.id, false);
+    expect((await listShopsForDiverPicker(db)).map((row) => row.slug)).not.toContain(
+      "reef-line-divers",
+    );
   });
 });
 

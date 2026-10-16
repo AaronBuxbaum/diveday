@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, lt, max, ne, notInArray } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, lt, max, ne, notInArray, type SQL, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { hasReturned } from "@/lib/trips";
 import type { WelcomeHello } from "@/lib/welcome-cue";
@@ -17,21 +17,68 @@ import { liveTrip } from "./trips-live";
 
 export type WelcomeCueInputs = {
   sharedAt: Date | null;
+  /**
+   * The start of this person's latest earlier seat that counts: for a diver,
+   * a seat they dived; for a snorkeler or a rider, any seat they sat in.
+   */
   lastDivedAt: Date | null;
+  /** This seat is a snorkeler's or a rider's: its words never say "dive". */
+  nonDiver: boolean;
   /** What the diver chose to add (#2425). Null whenever `sharedAt` is: no consent, no choice. */
   hello: WelcomeHello | null;
 };
 
 /**
+ * Every earlier seat a person actually sat in with this shop, on a departure
+ * that has started: never a cancelled seat or a no-show, who never got wet.
+ * Two starts per person, because the seat being greeted decides which counts:
+ * a diver's "first dive with us" counts only diving seats, and a snorkeler's or
+ * a rider's "first time with us" counts any (dive-domain review of layer r4-5,
+ * note 7).
+ */
+function priorSeats(db: DbExecutor, shopId: string, otherTrips: SQL, now: Date) {
+  return db
+    .select({
+      personId: bookings.personId,
+      lastDiveAt:
+        sql<Date | null>`max(case when ${bookings.participantType} = 'diver' then ${trips.startsAt} end)`
+          .mapWith(trips.startsAt)
+          .as("last_dive_at"),
+      lastSeatAt: max(trips.startsAt).as("last_seat_at"),
+    })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        otherTrips,
+        notInArray(bookings.status, ["cancelled", "no_show"]),
+        lt(trips.startsAt, now),
+      ),
+    )
+    .groupBy(bookings.personId)
+    .as("prior");
+}
+
+/** The prior seat that counts for this one: a dive for a diver, any seat otherwise. */
+function lastCounted(row: {
+  participantType: string;
+  lastDiveAt: Date | null;
+  lastSeatAt: Date | null;
+}): Pick<WelcomeCueInputs, "lastDivedAt" | "nonDiver"> {
+  const nonDiver = row.participantType !== "diver";
+  return { lastDivedAt: (nonDiver ? row.lastSeatAt : row.lastDiveAt) ?? null, nonDiver };
+}
+
+/**
  * One query for the whole departure: each live seat's consent stamp, and the
  * start of that diver's most recent already-departed booking with this shop.
  *
- * The "already departed" half is the same predicate `returningDiverIds`
- * (src/db/reminders.ts) uses — a non-cancelled booking on a trip that has
- * started — so "first time with us" means one thing wherever the app says it.
- * It deliberately looks at **every** prior seat, including one on a departure
- * that was later cancelled after sailing: the question is whether this shop has
- * met them, not whether a row is tidy.
+ * The "already departed" half is a seat the person sat in on a trip that has
+ * started (`priorSeats`: no cancelled seat, no no-show, and for a diver only a
+ * seat they dived). It deliberately looks at **every** such seat, including
+ * one on a departure that was later cancelled after sailing: the question is
+ * whether this shop has met them, not whether a row is tidy.
  */
 export async function welcomeCueInputsByBooking(
   db: DbExecutor,
@@ -39,30 +86,16 @@ export async function welcomeCueInputsByBooking(
   tripId: string,
   now: Date = nowDate(),
 ): Promise<Map<string, WelcomeCueInputs>> {
-  const prior = db
-    .select({
-      personId: bookings.personId,
-      lastDivedAt: max(trips.startsAt).as("last_dived_at"),
-    })
-    .from(bookings)
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        ne(bookings.tripId, tripId),
-        ne(bookings.status, "cancelled"),
-        lt(trips.startsAt, now),
-      ),
-    )
-    .groupBy(bookings.personId)
-    .as("prior");
+  const prior = priorSeats(db, shopId, ne(bookings.tripId, tripId), now);
 
   const rows = await db
     .select({
       bookingId: bookings.id,
       sharedAt: bookings.welcomeSharedAt,
+      participantType: bookings.participantType,
+      lastDiveAt: prior.lastDiveAt,
+      lastSeatAt: prior.lastSeatAt,
       hello: bookings.welcomeHello,
-      lastDivedAt: prior.lastDivedAt,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -82,7 +115,7 @@ export async function welcomeCueInputsByBooking(
       row.bookingId,
       {
         sharedAt: row.sharedAt,
-        lastDivedAt: row.lastDivedAt ?? null,
+        ...lastCounted(row),
         // Gated here as well as at the write: a choice without a consent stamp
         // is never read, whatever the row holds.
         hello: row.sharedAt ? row.hello : null,
@@ -96,8 +129,7 @@ export type SharedWelcomeSeat = {
   bookingId: string;
   personName: string;
   sharedAt: Date;
-  lastDivedAt: Date | null;
-};
+} & Pick<WelcomeCueInputs, "lastDivedAt" | "nonDiver">;
 
 /**
  * Every **consented** seat across a set of departures, with the name to greet
@@ -117,23 +149,7 @@ export async function sharedWelcomeSeatsByTrip(
   const byTrip = new Map<string, SharedWelcomeSeat[]>();
   if (tripIds.length === 0) return byTrip;
 
-  const prior = db
-    .select({
-      personId: bookings.personId,
-      lastDivedAt: max(trips.startsAt).as("last_dived_at"),
-    })
-    .from(bookings)
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        notInArray(bookings.tripId, [...tripIds]),
-        ne(bookings.status, "cancelled"),
-        lt(trips.startsAt, now),
-      ),
-    )
-    .groupBy(bookings.personId)
-    .as("prior");
+  const prior = priorSeats(db, shopId, notInArray(bookings.tripId, [...tripIds]), now);
 
   const rows = await db
     .select({
@@ -141,7 +157,9 @@ export async function sharedWelcomeSeatsByTrip(
       bookingId: bookings.id,
       personName: people.fullName,
       sharedAt: bookings.welcomeSharedAt,
-      lastDivedAt: prior.lastDivedAt,
+      participantType: bookings.participantType,
+      lastDiveAt: prior.lastDiveAt,
+      lastSeatAt: prior.lastSeatAt,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -167,7 +185,7 @@ export async function sharedWelcomeSeatsByTrip(
       bookingId: row.bookingId,
       personName: row.personName,
       sharedAt: row.sharedAt,
-      lastDivedAt: row.lastDivedAt ?? null,
+      ...lastCounted(row),
     });
     byTrip.set(row.tripId, seats);
   }

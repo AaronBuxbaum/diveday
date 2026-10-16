@@ -106,15 +106,19 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Card dispute
 - Checkout sale / tip sale
 - Dashboard refund
+- Dive (package unit)
+- Dives owed on packages
 - Failed refund
 - First paid month
 - Free term
+- Owed
 - Paid after close
 - Paid mark
 - Party payment
 - Pass-through fee
 - Payments restricted
 - Payout
+- Sailed / Still to sail
 - Subscription (DiveDay billing)
 
 ## Operations
@@ -126,6 +130,8 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Arrival event
 - Arrival lookup
 - Arrivals window
+- Ask to move
+- At sea
 - Automated cancellation refund
 - Automated marine outlook
 - Back on the water
@@ -180,10 +186,12 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - First-timer track
 - Held
 - Horizon
+- Hotel pickup
 - Implausible-station advisory
 - Imported payment history
 - Imported waiver acceptance
 - In-water certified assistant
+- Inbox seat
 - Incident kind
 - Incident report
 - Instruction fee / e-learning fee
@@ -224,6 +232,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Prerequisite note
 - Private session / private course
 - Progression order
+- Radio identity
 - Reconciliation
 - Rehearsal
 - Reminder cadence
@@ -240,6 +249,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Safety kit
 - Sailed
 - Salvage offer
+- Seat
 - Seat claim
 - Seat held
 - Seat move
@@ -275,6 +285,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Trip stage
 - Unaccounted for
 - Wait list
+- Wait-list party
 - Wait-list roll
 - Waiver / release
 - Waiver activity
@@ -298,6 +309,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Material generation
 - Observed species
 - Photo ledger
+- Sailed with no crew on record
 - Sighting
 - Staff credential
 - Supervision claim

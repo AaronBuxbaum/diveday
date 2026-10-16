@@ -114,6 +114,16 @@ export function WaitlistGroup({
                   {t("trips.waitlist.joined", {
                     date: formatShortDate(entry.createdAt, locale, timezone),
                   })}
+                  {/* A party waits and is invited together (fourth review,
+                      item 34): the seats an invite would need. */}
+                  {entry.partySize > 1 ? (
+                    <>
+                      {" · "}
+                      <span className="font-medium text-foreground">
+                        {t("trips.waitlist.party", { count: entry.partySize })}
+                      </span>
+                    </>
+                  ) : null}
                 </p>
                 {/* On its own line rather than appended to the contact line:
                     this is the fact that decides whether the invite is a good

@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, lt } from "drizzle-orm";
+import { and, asc, eq, gte, lt, notInArray } from "drizzle-orm";
 import type { StaffGapCode } from "@/lib/staffing-week";
 import type { AppDb } from "./client";
 import { boats, tripAssignments, trips } from "./schema";
@@ -43,6 +43,8 @@ export async function crewWeekFor(
     to: Date;
     diversPerDivemaster?: number;
     now?: Date;
+    /** Departures the reader's page already lists, left out before the limit counts. */
+    excludeTripIds?: readonly string[];
   },
 ): Promise<CrewWeekLine[]> {
   const rows = await db
@@ -66,6 +68,7 @@ export async function crewWeekFor(
         gte(trips.startsAt, input.from),
         lt(trips.startsAt, input.to),
         liveTrip(),
+        input.excludeTripIds?.length ? notInArray(trips.id, [...input.excludeTripIds]) : undefined,
       ),
     )
     .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id))

@@ -197,6 +197,18 @@ export const boats = pgTable(
     inspectionDueOn: date("inspection_due_on"),
     registrationExpiresOn: date("registration_expires_on"),
     insuranceExpiresOn: date("insurance_expires_on"),
+    /**
+     * **The boat's radio identity** (fourth review, item 11): its call sign and
+     * its MMSI, the two facts a coastguard asks for after the name. Held per
+     * hull because a shop with two boats has two of each: the packet's
+     * emergency card printed one shop-wide vessel line on every departure, so
+     * a boat sailing on Mantis I read Mantis II's MMSI. Optional each; a
+     * departure on no boat, or on one with neither, falls back to the shop's
+     * own vessel line (`emergencyReferenceForDeparture`). The MMSI is nine
+     * digits (ITU-R M.585); the call sign is stored upper-cased.
+     */
+    callSign: text("call_sign"),
+    mmsi: text("mmsi"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /**
      * Deleting a hull stamps this and leaves the row (ADR
@@ -221,6 +233,8 @@ export const boats = pgTable(
       "boats_certified_passengers_positive",
       sql`${table.certifiedPassengers} is null or ${table.certifiedPassengers} between 1 and 999`,
     ),
+    // An MMSI is nine digits; anything else read over the radio is a wrong number.
+    check("boats_mmsi_nine_digits", sql`${table.mmsi} is null or ${table.mmsi} ~ '^[0-9]{9}$'`),
   ],
 );
 

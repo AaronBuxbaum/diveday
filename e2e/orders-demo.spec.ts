@@ -20,7 +20,8 @@ const ledgerRows = (page: Page) =>
 const dayHeadings = (page: Page) => page.locator('h2[id^="orders-day-"]');
 
 /** The toolbar's count, which is where the whole filtered total is stated now. */
-const orderCount = (page: Page) => page.getByText(/^\d+ orders?$/);
+// "entries", not "orders": the ledger lists online seat payments beside orders.
+const orderCount = (page: Page) => page.getByText(/^\d+ entr(?:y|ies)$/);
 
 // The seeded demo carries a billing history whose orders have fabricated Stripe
 // ids (the demo never connects an account). The Stripe-calling controls —
@@ -121,7 +122,7 @@ test.describe("demo billing history", () => {
     expect(response.status()).toBe(200);
     const [header, ...rows] = (await response.text()).trimEnd().split("\r\n");
     expect(header).toBe(
-      "Order,Raised,Diver,Departure,Departure date,Status,Line kind,Line,Quantity,Line amount,Order total,Tax,Paid,Refunded,Currency",
+      "Order,Raised,Diver,Departure,Departure date,Status,Paid on,Method,Line kind,Line,Quantity,Line amount,Order total,Tax,Paid,Refunded,Currency",
     );
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.every((row) => row.includes(",paid,"))).toBe(true);
@@ -315,17 +316,17 @@ test.describe("demo billing history", () => {
 test.describe("no connected payment account", () => {
   signedInAsOwner();
 
-  test("the orders index offers connecting payments instead of a dead New order", {
+  test("the orders index offers neither a dead New order nor a setup ask on the demo", {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/orders");
     await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
 
     await expect(page.getByRole("link", { name: "New order" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Connect payments" }).first()).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/settings#money",
-    );
+    // A shop shown running with paid orders does not open on "Take payments
+    // with DiveDay" (fourth review, item 53); a real shop with no account
+    // still gets the card (orders/page.test.tsx).
+    await expect(page.getByText("Take payments with DiveDay")).toHaveCount(0);
   });
 
   test("reaching orders/new anyway lands back on Orders with a reason", { tag: READ_ONLY }, async ({

@@ -32,7 +32,7 @@ export type ExportFile = { name: string; content: string | Uint8Array };
 export const EXPORT_FILE_NOTES = {
   "shop.csv": "The shop profile, packing checklist, rental catalog, and rental prices.",
   "boats.csv":
-    "The shop's boats: the seats each sells, the passenger limit on its certificate when the shop recorded one, and the dates its next safety inspection is due and its registration and insurance expire. Every date is a calendar day the shop typed; an empty one was never recorded.",
+    "The shop's boats: the seats each sells, the passenger limit on its certificate when the shop recorded one, and the dates its next safety inspection is due and its registration and insurance expire, and its radio identity: the call sign, upper case, and the nine-digit MMSI the emergency card prints for departures on that boat. Every date is a calendar day the shop typed; an empty one was never recorded.",
   "trip_lenses.csv":
     "The shop's trip tags, as they appear on its public schedule. trips.csv points at one by lens_id.",
   "contacts.csv":
@@ -74,7 +74,7 @@ export const EXPORT_FILE_NOTES = {
   "trip_help_requests.csv":
     "One non-medical day-of help request per booking, with its visible hand-off status and timestamps. The request is retained with the trip history; resolved staff identity is included when available.",
   "waitlist_entries.csv":
-    "Divers in line for full trips. A wait-list entry never consumed a seat and never appears on a manifest.",
+    "Divers in line for full trips, and how many seats each waits for (party_size, themselves included). A wait-list entry never consumed a seat and never appears on a manifest.",
   "trip_invitations.csv":
     "Staff outreach attached to a departure without claiming a seat: the source request or diver, the contact snapshot, and whether staff recorded an invitation attempt. Invitations never become bookings, capacity, readiness or manifest state by themselves.",
   "last_minute_list.csv":

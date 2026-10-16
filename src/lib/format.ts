@@ -360,6 +360,35 @@ export function formatRelativeDay(
 }
 
 /**
+ * "Today" / "Tomorrow" / "Yesterday" in the reader's language, capitalized to
+ * open a line, when `date` falls within one calendar day of `now` in
+ * `timeZone`; null further out, where a date says more than a day name would.
+ *
+ * Staff timestamps used to be dates only (fourth review, item 45): the Inbox
+ * stamped this morning's WhatsApp "Oct 14, 7:00 AM EDT" and its seat
+ * "Wednesday 1:30 PM" on that same Wednesday, and nobody could tell this
+ * afternoon from next week. The diver side already said "Today" through
+ * {@link formatRelativeDay}; this is the same reading, bounded.
+ *
+ * `lead: false` keeps the platform's own case for the middle of a sentence
+ * ("Booked on Two-Tank Reef, today 1:30 PM").
+ */
+export function formatNearDay(
+  date: Date,
+  now: Date,
+  locale = "en-US",
+  timeZone: string,
+  { lead = true }: { lead?: boolean } = {},
+): string | null {
+  const diffDays = Math.round(
+    (calendarDayMs(date, timeZone) - calendarDayMs(now, timeZone)) / 86_400_000,
+  );
+  if (Math.abs(diffDays) > 1) return null;
+  const word = formatRelativeDay(date, now, locale, timeZone);
+  return lead ? word.charAt(0).toLocaleUpperCase(locale) + word.slice(1) : word;
+}
+
+/**
  * The seven weekday names, Sunday first, in the given locale — "Sun", "Mon", …
  * or their equivalents in the reader's own language.
  *

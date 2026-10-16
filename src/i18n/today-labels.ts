@@ -6,6 +6,7 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import { firstNameOf } from "@/lib/person-name";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "@/lib/readiness";
 import type { RollCallGapReason, TodayActionKind, TodaySeason } from "@/lib/today";
+import { awayDatesText } from "./away-labels";
 import { SPECIALTY_KEYS } from "./readiness-labels";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
@@ -29,6 +30,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   uncrewed_departure: "today.actionKind.uncrewedDeparture",
   crew_clash: "today.actionKind.crewClash",
   crew_clash_sailed: "today.actionKind.crewClashSailed",
+  crew_away: "today.actionKind.crewAway",
   nitrox_gate: "today.actionKind.nitroxGate",
   high_wind_alert: "today.actionKind.highWindAlert",
   dive_prep: "today.actionKind.divePrep",
@@ -246,8 +248,9 @@ export function nameListText(t: StaffTranslator, names: readonly string[], shown
 
 /** The remaining `src/db/today.ts` action rows, resolved through the same bundle-only rule. */
 
-export function missingFitNamedDetailText(t: StaffTranslator): string {
-  return t("today.detail.missingFitNamed");
+/** One diver's sizes job: a blank size, or nobody has asked about their kit yet. */
+export function missingFitNamedDetailText(t: StaffTranslator, unasked: boolean): string {
+  return t(unasked ? "today.detail.kitUnaskedNamed" : "today.detail.missingSizeNamed");
 }
 
 export function ungatedNitroxNamedDetailText(t: StaffTranslator): string {
@@ -323,6 +326,26 @@ export function crewClashDetailText(
 ): string {
   return clashGroups(locale, clashes)
     .map((group) => t("today.detail.crewClash", group))
+    .join(" ");
+}
+
+/**
+ * **Who on this departure said they are away on a day it meets** (fourth
+ * review, item 12): one sentence a person, with the days, in the words the
+ * staffing week and the board use (`awayDatesText`).
+ */
+export function crewAwayDetailText(
+  t: StaffTranslator,
+  locale: string,
+  away: readonly { fullName: string; blocks: readonly { startsOn: string; endsOn: string }[] }[],
+): string {
+  return away
+    .map((person) =>
+      t("today.detail.crewAway", {
+        name: person.fullName,
+        dates: awayDatesText(person.blocks, locale),
+      }),
+    )
     .join(" ");
 }
 
@@ -786,11 +809,14 @@ export function openPrepListActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openPrepList");
 }
 
-/** The small day-of hand-off row, kept as codes here so staff copy stays localized. */
+/**
+ * The small day-of hand-off row, kept as codes here so staff copy stays
+ * localized. The row leads with the diver's name, as every person row does,
+ * so the sentence never repeats it (fourth review, item 43).
+ */
 export function helpRequestDetailText(
   t: StaffTranslator,
   input: {
-    personName: string;
     kind: "carry_gear" | "first_timer" | "find_group";
     status: "requested" | "acknowledged";
   },
@@ -806,7 +832,7 @@ export function helpRequestDetailText(
     input.status === "acknowledged"
       ? "today.helpRequest.detailAcknowledged"
       : "today.helpRequest.detailRequested",
-    { name: input.personName, help },
+    { help },
   );
 }
 

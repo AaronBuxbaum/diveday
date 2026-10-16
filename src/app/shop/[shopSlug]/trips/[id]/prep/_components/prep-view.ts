@@ -15,6 +15,8 @@ export type PrepView = {
   idPrefix: string | undefined;
   /** A blown-out departure packs nothing; see `PrepBody`'s `cancelled`. */
   cancelled: boolean;
+  /** The boat has left the dock; see `PrepBody`'s `sailed`. Absent reads as at the dock. */
+  sailed?: boolean;
 };
 
 /** One piece a renting diver still wants a unit for. */

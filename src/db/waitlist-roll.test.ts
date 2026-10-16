@@ -18,7 +18,14 @@ import { carryWaitlist, rollSailedSeriesWaitlists } from "./waitlist-roll";
 const ctx = fileScopedShopContext();
 const SAT = 6;
 
-async function lead(db: AppDb, shopId: string, tripId: string, name: string, invitedAt?: Date) {
+async function lead(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  name: string,
+  invitedAt?: Date,
+  partySize = 1,
+) {
   const person = await createDiver(db, {
     shopId,
     fullName: name,
@@ -31,6 +38,7 @@ async function lead(db: AppDb, shopId: string, tripId: string, name: string, inv
     personId: person.id,
     createdAt: new Date("2030-08-01T12:00:00Z"),
     invitedAt: invitedAt ?? null,
+    partySize,
   });
   return person;
 }
@@ -160,6 +168,19 @@ describe("rollSailedSeriesWaitlists, measuring the next date as a seat is measur
     expect((await waiting(db, third.id)).map((row) => row.personId)).toEqual([ana.id]);
   });
 
+  // A lead asked on the public page; the invite links the public page, so a
+  // date made private is never where it lands (security review r4-4, N4).
+  it("skips a private next date for the one after it", async () => {
+    const { db, shop, first, second, now } = await saturdays();
+    const third = await nextAfter(db, shop.id, second);
+    await db.update(trips).set({ isPrivate: true }).where(eq(trips.id, second.id));
+    const ana = await lead(db, shop.id, first.id, "Ana Private");
+
+    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 1, invited: 1 });
+    expect(await waiting(db, second.id)).toEqual([]);
+    expect((await waiting(db, third.id)).map((row) => row.personId)).toEqual([ana.id]);
+  });
+
   it("invites nobody when the divers-only limit is reached, though the boat has room", async () => {
     const { db, shop, first, second, now } = await saturdays();
     await db.update(trips).set({ diverCapacity: 1 }).where(eq(trips.id, second.id));
@@ -213,6 +234,39 @@ describe("rollSailedSeriesWaitlists, measuring the next date as a seat is measur
     const next = await waiting(db, second.id);
     expect(next.find((row) => row.personId === native.id)?.invitedAt).toEqual(now);
     expect(next.find((row) => row.personId === rolled.id)?.invitedAt).toBeNull();
+  });
+});
+
+/**
+ * **A wait-list party rolls and is invited whole** (fourth UX review, item 34):
+ * a couple is one lead of two, invited only when two seats are free, and an
+ * invitation out to a party holds its whole party's seats.
+ */
+describe("rollSailedSeriesWaitlists with a party", () => {
+  it("carries the party onto the next date", async () => {
+    const { db, shop, first, second, now } = await saturdays();
+    await lead(db, shop.id, first.id, "Ivy Pair", undefined, 2);
+    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 1, invited: 1 });
+    const [rolled] = await db
+      .select({ partySize: tripWaitlistEntries.partySize })
+      .from(tripWaitlistEntries)
+      .where(eq(tripWaitlistEntries.tripId, second.id));
+    expect(rolled?.partySize).toBe(2);
+  });
+
+  it("never invites a pair onto one free seat, and lets a single behind them take it", async () => {
+    const { db, shop, first, now } = await saturdays(1);
+    await lead(db, shop.id, first.id, "Jo Pair", undefined, 2);
+    await lead(db, shop.id, first.id, "Kai Single");
+    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 2, invited: 1 });
+  });
+
+  it("counts an invited party's whole party against the open seats", async () => {
+    const { db, shop, first, second, now } = await saturdays(3);
+    await lead(db, shop.id, second.id, "Lu Invited", new Date(now.getTime() - 60_000), 2);
+    await lead(db, shop.id, first.id, "Mo Pair", undefined, 2);
+    // Three seats, two spoken for by the invited pair: one left, not two.
+    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 1, invited: 0 });
   });
 });
 

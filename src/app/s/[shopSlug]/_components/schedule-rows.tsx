@@ -4,7 +4,12 @@ import type { nextSessionStartByCourse } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
 import { tripRequirementMarkers } from "@/i18n/readiness-labels";
 import { courseDepthFormat } from "@/i18n/unit-labels";
-import { courseTotalCents, resolveCourseContentDepths, resolveImageAlt } from "@/lib/courses";
+import {
+  courseTotalCents,
+  perDiverBookingPriceCents,
+  resolveCourseContentDepths,
+  resolveImageAlt,
+} from "@/lib/courses";
 import { formatDayParts, formatMoneyScanned, formatShortDate, formatTimeRange } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { ShopCurrency } from "@/lib/money";
@@ -23,6 +28,23 @@ import type { WeekLedgerRow } from "./WeekLedger";
  * word has since been deleted resolves to null and renders nothing, which is
  * the same silence a departure that never wore one gets.
  */
+/**
+ * A departure's per-seat price as a schedule row shows it: the booking's own
+ * figure, so a course session reads the course total the booking charges and
+ * never the trip row's price (fourth UX review item 2, H-125). Null when
+ * nothing is priced.
+ */
+export function seatPriceLabel(
+  trip: Parameters<typeof perDiverBookingPriceCents>[0] & {
+    course: Parameters<typeof perDiverBookingPriceCents>[1];
+  },
+  currency: string,
+  locale: string,
+): string | null {
+  const cents = perDiverBookingPriceCents(trip, trip.course);
+  return cents !== null ? formatMoneyScanned(cents, currency, locale) : null;
+}
+
 export function weekLedgerRows({
   listedTrips,
   lenses,
@@ -107,8 +129,9 @@ export function weekLedgerRows({
       aboveLevel: aboveStatedLevel.has(trip.id) ? t("schedule.filters.aboveLevelChip") : null,
       capacityText: seats.text,
       capacityTone: seats.tone,
-      price:
-        trip.priceCents !== null ? formatMoneyScanned(trip.priceCents, currency, locale) : null,
+      // A course session reads the course total the booking charges, never
+      // the trip row's own figure (fourth UX review item 2, H-125).
+      price: seatPriceLabel(trip, currency, locale),
     };
   });
 }

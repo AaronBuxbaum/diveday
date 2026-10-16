@@ -1,3 +1,4 @@
+import type { RecordPaymentOnOrderOutcome } from "@/db/orders";
 import type { OrderStatus } from "@/db/schema";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import type { NoticeTone } from "@/lib/staff-notices";
@@ -53,4 +54,24 @@ export const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }>
   "not-authorized": { tone: "danger", key: "orders.detail.notice.notAuthorized" },
   "dispute-not-authorized": { tone: "danger", key: "orders.detail.notice.disputeNotAuthorized" },
   "demo-disabled": { tone: "neutral", key: "orders.detail.notice.demoDisabled" },
+  "payment-recorded": { tone: "success", key: "orders.detail.notice.paymentRecorded" },
+  "payment-stripe-refused": { tone: "warning", key: "orders.detail.notice.paymentStripeRefused" },
+  "payment-record-failed": { tone: "danger", key: "orders.detail.notice.paymentRecordFailed" },
+  // Another tap's claim is still with Stripe, or Stripe never answered this
+  // one: either way the money may already be recorded, so not a failure.
+  "payment-in-flight": { tone: "warning", key: "orders.detail.notice.paymentInFlight" },
 };
+
+/** The `?notice=` code a Record payment outcome redirects with. */
+export function recordPaymentNotice(outcome: RecordPaymentOnOrderOutcome | null): string {
+  if (outcome?.ok) return "payment-recorded";
+  switch (outcome?.reason) {
+    case "stripe_refused":
+      return "payment-stripe-refused";
+    case "stripe_unknown":
+    case "claim_held":
+      return "payment-in-flight";
+    default:
+      return "payment-record-failed";
+  }
+}

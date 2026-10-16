@@ -7,12 +7,21 @@ import { FormStatus } from "@/components/ui/form";
 import type { DbExecutor } from "@/db/client";
 import type { CustomerGearNotice, WorkOrder } from "@/db/schema";
 import { billAndPickupFacts } from "@/db/work-order-follow-up";
-import { ORDER_STATUS_KEYS, ORDER_STATUS_TONES } from "@/i18n/order-labels";
+import {
+  ORDER_COLLECTION_KEYS,
+  ORDER_PAID_AT_COUNTER_KEYS,
+  ORDER_STATUS_KEYS,
+  ORDER_STATUS_TONES,
+} from "@/i18n/order-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { workOrderBillAllowsAnother } from "@/lib/work-order-follow-up";
-import { resendReadyNoticeAction, sendWorkOrderBillAction } from "../follow-up-actions";
+import {
+  recordBenchPaymentAction,
+  resendReadyNoticeAction,
+  sendWorkOrderBillAction,
+} from "../follow-up-actions";
 
 type CardNotice = { form: "ready" | "bill"; tone: NoticeTone; key: StaffMessageKey };
 
@@ -32,6 +41,11 @@ const NOTICES: Record<string, CardNotice> = {
   "ready-failed": { form: "ready", tone: "danger", key: "benchFollowUp.notice.readyFailed" },
   "ready-not-ready": { form: "ready", tone: "warning", key: "benchFollowUp.notice.readyNotReady" },
   "bill-sent": { form: "bill", tone: "success", key: "benchFollowUp.notice.billSent" },
+  "bill-paid-counter": {
+    form: "bill",
+    tone: "success",
+    key: "benchFollowUp.notice.billPaidCounter",
+  },
   "bill-already": { form: "bill", tone: "warning", key: "benchFollowUp.notice.billAlready" },
   "bill-no-lines": { form: "bill", tone: "danger", key: "benchFollowUp.notice.billNoLines" },
   "bill-not-connected": {
@@ -182,9 +196,13 @@ export async function BillAndPickupCard({
                   {t(ORDER_STATUS_KEYS[bill.status])}
                 </Badge>
                 <span>
-                  {t("benchFollowUp.bill.sent", {
-                    date: formatShortDate(bill.sentAt, locale, shop.timezone),
-                  })}
+                  {bill.collection === "stripe_invoice"
+                    ? t("benchFollowUp.bill.sent", {
+                        date: formatShortDate(bill.sentAt, locale, shop.timezone),
+                      })
+                    : t(ORDER_PAID_AT_COUNTER_KEYS[bill.collection], {
+                        date: formatShortDate(bill.sentAt, locale, shop.timezone),
+                      })}
                 </span>
                 <Link
                   href={shopPath(shop.slug, "orders", bill.orderId)}
@@ -194,9 +212,29 @@ export async function BillAndPickupCard({
                 </Link>
               </p>
             ) : null}
-            {!mayBillAgain || lineCount === 0 ? null : !connected ? (
-              <p className="mt-2 text-sm text-muted">{t("benchFollowUp.bill.atShop")}</p>
-            ) : !canBill ? (
+            {/* **Paid at pickup** (fourth UX review, item 19): cash or the
+                shop's card machine, recorded as the ticket's bill so it reads
+                Paid here and reaches Reports' Gear bench line. Any staff, with
+                or without Stripe; the line that stood here said "Collected at
+                the counter." on an unpaid ticket, which read as paid. */}
+            {!mayBillAgain || lineCount === 0 ? null : (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium">{t("benchFollowUp.bill.paidAtPickup")}</span>
+                {(["cash", "card_machine"] as const).map((collection) => (
+                  <form key={collection} action={recordBenchPaymentAction}>
+                    <input type="hidden" name="workOrderId" value={workOrder.id} />
+                    <input type="hidden" name="collection" value={collection} />
+                    <SubmitButton
+                      pendingLabel={t("benchFollowUp.bill.recording")}
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                    >
+                      {t(ORDER_COLLECTION_KEYS[collection])}
+                    </SubmitButton>
+                  </form>
+                ))}
+              </div>
+            )}
+            {!mayBillAgain || lineCount === 0 || !connected ? null : !canBill ? (
               <p className="mt-2 text-sm text-muted">{t("benchFollowUp.bill.ownerOnly")}</p>
             ) : !customerHasEmail ? (
               <p className="mt-2 text-sm text-muted">{t("benchFollowUp.bill.needsEmail")}</p>

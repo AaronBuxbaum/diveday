@@ -11,6 +11,7 @@ import {
 } from "@/app/shop/[shopSlug]/_components/today/DaySpine";
 import { FirstRunChecklist } from "@/app/shop/[shopSlug]/_components/today/FirstRunChecklist";
 import { firstRunChecklistCopy } from "@/app/shop/[shopSlug]/_components/today/first-run-copy";
+import { ReleaseStillSample } from "@/app/shop/[shopSlug]/_components/today/ReleaseStillSample";
 import { recapEditorsFor } from "@/app/shop/[shopSlug]/_components/today/recap-editors";
 import { TodayFirstBookable } from "@/app/shop/[shopSlug]/_components/today/TodayFirstBookable";
 import { TodayHeaderNotes } from "@/app/shop/[shopSlug]/_components/today/TodayHeaderNotes";
@@ -274,10 +275,6 @@ async function TodayBody({
   // and badges the boat they crew; an instructor's leads with their sessions. It never re-orders
   // the spine — clock order wins.
   const lens = roleLensFor(session.user.roles);
-  // "Your week" is the crew's: a reader the lens files under boat work, or a
-  // deckhand, at a shop that plans its crew in DiveDay.
-  const showCrewWeek =
-    shop.crewScheduleEnabled && (lens === "boat" || session.user.roles.includes("crew"));
   const eveningClose = assembleEveningClose(closeout.departures, now);
   // **The shop's own calendar day**, as the two UTC instants that bracket it. Four readers below
   // want it — the first-boat-ever question, the day strip's window and ticks, and the day's takings
@@ -322,18 +319,10 @@ async function TodayBody({
     (a, b) => a.startsAt.getTime() - b.startsAt.getTime(),
   );
   const firstBoatEver = eveningClose.allHome && !sailedBefore;
-  // **First run is "never had a departure", not "none coming up".**
-  //
-  // `nextDeparture` is null in three different situations, and only one of them is a new shop:
-  // `getTodayWork` hands it back *only when nothing sails today* (`src/db/today.ts`), so a shop
-  // whose boat left this morning read as identical to a shop that had never opened. So
-  // `!nextDeparture` stays only as the cheap prefilter it can honestly be — a shop with no trips
-  // has none upcoming — and the count is what decides.
-  //
-  // **A demo shop is excluded, and that is the right call rather than an oversight** (the second
-  // question in issue #806): a minted demo arrives with every setup step already done, so the
-  // ledger would open on ticked boxes and a call to action nobody needs. Its count is never read
-  // (`shopTripCount` is null for it).
+  // **First run is "never had a departure", not "none coming up"**: `nextDeparture` is null on
+  // any day nothing sails (`src/db/today.ts`), so it is only the cheap prefilter and the count
+  // decides. A demo shop is excluded (issue #806): it arrives with every step done, and its count
+  // is never read. The release step outlives first run (`ReleaseStillSample`, item 21).
   const showFirstRunChecklist = !nextDeparture && shopTripCount === 0;
   // The reads only a first-run shop makes, so the one third wave.
   const firstRun = showFirstRunChecklist ? await loadFirstRunFacts(db, shop, stripeAccount) : null;
@@ -348,12 +337,8 @@ async function TodayBody({
     : [null, true];
   const showPaymentsRow =
     paymentsRowCandidate && !canAcceptPayments(paymentsAccount) && !hasEverTakenAnOrder;
-  // **The shop's first booking, while it is still the only one** — the staff
-  // side's once-in-a-shop's-life coral moment (ADR 20260827-first-light,
-  // decision 6). One bounded read (`limit 2`), skipped where it could never
-  // fire: a shop still in first run has no departures and so no bookings, and a
-  // demo shop's board arrives seeded, so no booking on it is ever a first —
-  // the same reasoning `firstBookableMoment` below makes about departures.
+  // **The shop's first booking, while it is still the only one** (ADR 20260827-first-light,
+  // decision 6). Skipped in first run (no departures, no bookings) and on a seeded demo board.
   const firstBooking = showFirstRunChecklist ? null : firstBookingRead;
   // **One fact of scale, on the day it is true** (ADR
   // 20260904-reef-all-the-way-down, decision 2, Budget rule 3). A read, never
@@ -558,6 +543,13 @@ async function TodayBody({
         />
       ) : null}
 
+      <ReleaseStillSample
+        db={db}
+        shop={shop}
+        roles={session.user.roles}
+        firstRun={showFirstRunChecklist}
+        t={t}
+      />
       {quietDay ? (
         <TodayQuietDay
           shopSlug={shopSlug}
@@ -617,10 +609,13 @@ async function TodayBody({
         />
       )}
 
-      {/* A crew member's next three departures, on any day, quiet or not. */}
-      {showCrewWeek ? (
+      {/* **"Your week"**: the reader's next three departures, on any day, quiet or not, at a
+          shop that plans its crew in DiveDay. Any role with an assignment (fourth review, item
+          14), minus the sessions "Your sessions" already lists; nothing for nobody rostered. */}
+      {shop.crewScheduleEnabled ? (
         <Suspense fallback={null}>
           <YourWeek
+            listedTripIds={lens === "sessions" ? crewedSessions.map((row) => row.tripId) : []}
             db={db}
             shopId={shop.id}
             shopSlug={shopSlug}

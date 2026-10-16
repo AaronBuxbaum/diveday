@@ -100,6 +100,7 @@
   "addCrewToTrip": "Añadir tripulación a la salida",
   "manageCrewOnTrip": "Gestionar la tripulación de esta salida",
   "checkpointRollCallHeading": "Pase de lista · {checkpoint}",
+  "checkedInAtDesk": "Ya se registró en el mostrador",
   "checkedInPill": "Registrado",
   "notHerePill": "No vino",
   "runningLate": "Llega tarde, avisó a las {time}",
@@ -208,6 +209,8 @@
     "heading": "En una emergencia",
     "empty": "Este centro no tiene números de emergencia registrados.",
     "vesselLabel": "Embarcación:",
+    "callSignLabel": "Indicativo:",
+    "mmsiLabel": "MMSI:",
     "shoreContactLabel": "Contacto en tierra:",
     "planLabel": "Si algo sale mal"
   },

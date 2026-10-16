@@ -27,7 +27,7 @@ export function WeekHorizon({
       summaryVariant="row"
       className={`${panelClass} open:sm:col-span-2 sm:[&>summary]:border-0 sm:[&>summary]:rounded-panel max-sm:[&>summary]:border-b`}
       label={t("shopHome.spine.week")}
-      meta={t("shopHome.spine.jobs", { count: jobs })}
+      meta={t("shopHome.spine.needsYouCount", { count: jobs })}
     >
       <div className="mt-4">
         {children}

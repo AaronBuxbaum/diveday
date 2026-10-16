@@ -173,7 +173,7 @@ describe("every link-preview card wears the shared chrome", () => {
    * **Whose card is it?** The two shop-scoped cards led with the wordmark at
    * display scale and closed with DiveDay's tagline, on links a dive shop
    * posts to its own audience — and on the departure card the tagline shared a
-   * line with the shop's own "3 spots left", so the two read as one claim
+   * line with the shop's own "3 seats left", so the two read as one claim
    * (issue #810). `brand.md` already had the answer: the product may be the
    * actor when it acts on someone's behalf, and otherwise the shop's work
    * stays in the foreground.

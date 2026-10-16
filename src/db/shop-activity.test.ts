@@ -104,6 +104,43 @@ describe("recordShopActivity", () => {
     });
   });
 
+  it("files counter money on the order, the method in the code, under money", async () => {
+    // Recording payment at the counter stops Stripe collecting for good, so
+    // the owner can see which staffer did it (security review of layer r4-3).
+    const { db, shop } = ctx;
+    const { seat, owner } = await bookedSeat(db, shop.id);
+    const [order] = await db
+      .insert(orders)
+      .values({
+        shopId: shop.id,
+        personId: seat.person.id,
+        createdByPersonId: owner.id,
+        currency: "usd",
+        totalCents: 34000,
+        collection: "card_machine",
+      })
+      .returning();
+    if (!order) throw new Error("order not written");
+
+    for (const code of ["order_paid_cash", "order_paid_card_machine"] as const) {
+      expect(
+        await recordShopActivity(db, {
+          shopId: shop.id,
+          actorPersonId: owner.id,
+          write: { code, orderId: order.id },
+        }),
+      ).toBe(true);
+    }
+    const log = await linesBy(db, shop.id, owner.id, "money");
+    for (const code of ["order_paid_cash", "order_paid_card_machine"]) {
+      expect(log.rows.find((row) => row.code === code)).toMatchObject({
+        orderId: order.id,
+        subjectPersonId: seat.person.id,
+        params: { actor: owner.fullName },
+      });
+    }
+  });
+
   it("writes nothing about another shop's seat, order or departure, or for an outsider", async () => {
     const { db, shop } = ctx;
     const { trip, seat, owner } = await bookedSeat(db, shop.id);

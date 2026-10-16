@@ -34,12 +34,12 @@
   },
   "helpRequest": {
     "kind": {
-      "carryGear": "Carry gear",
-      "firstTimer": "First-timer orientation",
-      "findGroup": "Find their group"
+      "carryGear": "carry gear",
+      "firstTimer": "first-timer orientation",
+      "findGroup": "finding their group"
     },
-    "detailRequested": "{name} asked for help: {help}.",
-    "detailAcknowledged": "{name} is waiting for help: {help}.",
+    "detailRequested": "Asked for help: {help}.",
+    "detailAcknowledged": "Waiting for help: {help}.",
     "acknowledge": "Acknowledge",
     "markHandled": "Mark handled",
     "saving": "Saving…"
@@ -49,7 +49,8 @@
     "studentsCount": "{count, plural, one {# student} other {# students}}",
     "readyCount": "{count} ready",
     "blockedCount": "{count} blocked",
-    "openRoster": "Open roster"
+    "openRoster": "Open roster",
+    "away": "You said you’re away {dates}."
   },
   "yourWeek": {
     "heading": "Your week",
@@ -104,7 +105,8 @@
     "helpRequest": "Help request",
     "sayHello": "Say hello",
     "rentalFit": "Gear",
-    "blockedAboard": "Aboard"
+    "blockedAboard": "Aboard",
+    "crewAway": "Crew away"
   },
   "blockerAction": {
     "setRequirements": "Set requirements",
@@ -173,7 +175,8 @@
     "departureCountOpen": "Dock count unfinished: {uncounted, plural, one {# of {total, plural, one {# person} other {# people}} has} other {# of {total, plural, one {# person} other {# people}} have}} no result.",
     "noRollCall": "No roll call recorded for {total, plural, one {# person} other {# people}}.",
     "boatWork": "{work}.",
-    "missingFitNamed": "Missing rental sizes.",
+    "missingSizeNamed": "Missing a rental size.",
+    "kitUnaskedNamed": "Not asked about kit.",
     "ungatedNitroxNamed": "Wants nitrox, no verified card.",
     "highWindAlert": "Forecast {speed} kt wind{hasDirection, select, yes { from {direction}} other {}}{hasGusts, select, yes {, gusts {gusts} kt} other {}}.",
     "instructorMissing": "No instructor assigned.",
@@ -189,6 +192,7 @@
     "missingContactNamed": "No emergency contact.",
     "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open, no last-minute deal sent.",
     "waitlistSeat": "{seats, plural, one {# seat} other {# seats}} open, {waiting} on the wait list.",
+    "crewAway": "{name} is away {dates}.",
     "rollCallAlerted": "Owners alerted: {time}.",
     "rollCallAlertedWithShore": "Owners and shore contact alerted: {time}.",
     "rollCallShoreAlerted": "Shore contact alerted: {time}."
@@ -255,10 +259,10 @@
     "restrictedDetail": "Stripe paused them on {when}. Divers pay at the shop until Stripe turns them back on."
   },
   "reviewsPending": {
-    "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you"
+    "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you."
   },
   "unansweredMessages": {
-    "subject": "{count, plural, one {# message is} other {# messages are}} waiting on an answer"
+    "subject": "{count, plural, one {# message is} other {# messages are}} waiting on an answer."
   },
   "unitsUnconfirmed": {
     "subject": "{currency} and {depth}, guessed from your timezone",
@@ -282,7 +286,8 @@
     "overdueDetail": "{credential} expired {dueOn}."
   },
   "sayHello": {
-    "firstTrip": "{names}: first dive with you.",
+    "firstTrip": "{names}: first dive with us.",
+    "firstTime": "{names}: first time with us.",
     "returning": "{name} is back after {years, plural, one {# year} other {# years}}."
   },
   "unfinished": {

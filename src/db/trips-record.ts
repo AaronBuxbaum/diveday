@@ -223,6 +223,12 @@ export type PublicCrewMember = {
   /** What they are doing on *this* boat, or null when the roster did not say. */
   tripRole: TripCrewRole | null;
   languages: SpokenLanguageTag[];
+  /**
+   * Away on a day this departure meets (`diverCrewWithAway`, fourth UX review
+   * item 12). Then the diver reads the role and "to be confirmed", never the
+   * name: we do not promise a person who will not be there.
+   */
+  away?: boolean;
 };
 
 /**

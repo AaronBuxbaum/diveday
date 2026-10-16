@@ -3,7 +3,7 @@
   "instrument": {
     "hereOf": "<figure>{here}</figure> of {expected} here",
     "toCome": "{count} to come",
-    "cantBoard": "{count, plural, one {# person can’t board yet} other {# people can’t board yet}}",
+    "cantBoard": "{count} blocked",
     "notHere": "{count, plural, one {# person is not here} other {# people are not here}}"
   },
   "row": {
@@ -64,6 +64,7 @@
     "waiverIdentityUnconfirmed": "This seat is held until somebody confirms who this diver is, so a paper release can’t go on their record yet. Confirm it on their row, then record the release.",
     "waiverError": "That paper waiver couldn’t be recorded. Try again.",
     "walkinAdded": "Added to this boat’s list. Check them in on their row.",
+    "walkinAddedConfirmed": "Added to this boat’s list, and their confirmation is on its way.",
     "walkinAddedWaiverUndelivered": "Added to this boat’s list, but their waiver wasn’t emailed. Send it or share the link from their row below.",
     "walkinAddedIdentityUnconfirmed": "Added to this boat’s list, but the seat is held until you confirm it’s the same person. Confirm it on their row below before they board.",
     "walkinFull": "That boat is full. Add them to the wait list instead.",

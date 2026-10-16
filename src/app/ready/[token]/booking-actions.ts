@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { addPartySeat, selfCancelBooking } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
+import { recordMoveAsk } from "@/db/inbound-messages";
 import { startPartySeatCheckout } from "@/db/party-seat-checkout";
 import {
   planReadinessLinkRescue,
@@ -14,6 +15,7 @@ import { settleReleasedPartySeats, settleSelfCancelledSeat } from "@/db/self-can
 import { diverTranslator } from "@/i18n/messages";
 import { describeCheckoutLine } from "@/i18n/participant-labels";
 import { trackEvent } from "@/lib/analytics";
+import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
@@ -57,6 +59,43 @@ export async function payFromReady(token: string) {
   const url = outcome?.ok ? outcome.checkout.checkoutUrl : null;
   if (!url) redirect(`${base(token)}?error=pay`);
   redirect(url);
+}
+
+/**
+ * **Ask to move** (H-126). Past the free-cancellation window, cancelling
+ * forfeits what was paid; this files a request in the shop's Inbox naming the
+ * seat instead, with the diver's optional note. Nothing moves here: moving a
+ * paid seat stays staff-side (ADR 20260821-the-diver-may-release-their-own-seat).
+ *
+ * Re-derived from the page's own read, never the form: only an `open` ask is
+ * filed, so a held seat, a seat inside the window or one already asked about
+ * is refused for who is asking. A repeat is the same row (`recordMoveAsk`),
+ * and only a row this tap filed says "Sent": an ask that already stood is
+ * shown as the page's own asked line, never reported as news.
+ */
+export async function askToMoveAction(token: string, formData: FormData) {
+  const ip = await clientIp();
+  if (
+    !(await checkRateLimit(rateLimitKey("booking-move-ask", ip), RATE_LIMITS.bookingSelfCancel))
+      .allowed
+  ) {
+    redirect(bounceTarget(token, "rate_limited"));
+  }
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  refuseWhileHeld(token, ctx.data);
+  if (ctx.data.moveAsk === "asked") redirect(`${base(token)}#move-ask`);
+  if (ctx.data.moveAsk !== "open") redirect(`${base(token)}?error=move-ask`);
+  const note = formData.get("note");
+  const outcome = await recordMoveAsk(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    note: typeof note === "string" ? note : null,
+    now: nowDate(),
+  });
+  if (outcome.status === "not_found") redirect(`${base(token)}?error=move-ask`);
+  if (outcome.status === "already") revalidateAndRedirect(base(token), `${base(token)}#move-ask`);
+  revalidateAndRedirect(base(token), `${base(token)}?saved=move-ask#move-ask`);
 }
 
 /**

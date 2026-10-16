@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
 import { arrivalCardFacts, siteRunsLine, TripArrivalCard } from "./TripArrivalCard";
 
@@ -196,6 +196,31 @@ describe("the map", () => {
     return document.querySelector("iframe");
   }
 
+  // The frame waits for the map host to answer a probe image (`ArrivalMap`,
+  // fourth UX review item 4); these cases answer it, as a reachable host does.
+  const probes: { onload: (() => void) | null }[] = [];
+  class FakeImage {
+    src = "";
+    referrerPolicy = "";
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    constructor() {
+      probes.push(this);
+    }
+  }
+  beforeEach(() => {
+    probes.length = 0;
+    vi.stubGlobal("Image", FakeImage);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+  function hostAnswers() {
+    act(() => {
+      for (const probe of probes) probe.onload?.();
+    });
+  }
+
   it("draws nothing unless the caller asks", () => {
     render(<TripArrivalCard shop={shop} trip={trip} locale="en-US" />);
     expect(mapFrame()).toBeNull();
@@ -203,6 +228,7 @@ describe("the map", () => {
 
   it("draws the meeting point, titled by the place rather than the shop", () => {
     render(<TripArrivalCard shop={shop} trip={trip} locale="en-US" showMap />);
+    hostAnswers();
     const frame = mapFrame();
     expect(frame).not.toBeNull();
     expect(frame?.getAttribute("title")).toBe("Map of Blue Mantis Divers");
@@ -225,6 +251,7 @@ describe("the map", () => {
         showMap
       />,
     );
+    hostAnswers();
     expect(mapFrame()?.getAttribute("title")).toBe("Map of North Jetty");
   });
 
@@ -251,6 +278,7 @@ describe("the map", () => {
 
   it("steps aside when the connection drops, and comes back with it", () => {
     render(<TripArrivalCard shop={shop} trip={trip} locale="en-US" showMap />);
+    hostAnswers();
     expect(mapFrame()).not.toBeNull();
     const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     act(() => {

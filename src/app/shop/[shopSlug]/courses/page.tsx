@@ -25,6 +25,7 @@ import { nextSessionStartByCourse } from "@/db/trips";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { courseTotalCents } from "@/lib/courses";
 import { formatMoneyScanned, formatShortDate, joinFacts } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursesPath } from "@/lib/public-routes";
@@ -208,10 +209,14 @@ export default async function CoursesPage({
         })
       : st("courses.list.notScheduled");
   };
-  const priceLine = (course: (typeof courseList)[number]) =>
-    course.priceCents === null
+  // The course total a diver is charged, fee plus eLearning (fourth UX review,
+  // item 26): "$709", as every diver sees it, never the fee alone.
+  const priceLine = (course: (typeof courseList)[number]) => {
+    const totalCents = courseTotalCents(course);
+    return totalCents === null
       ? null
-      : formatMoneyScanned(course.priceCents, toShopCurrency(shop.currency), locale);
+      : formatMoneyScanned(totalCents, toShopCurrency(shop.currency), locale);
+  };
   const metaLine = (course: (typeof courseList)[number]) => {
     // `joinFacts`, not `.join(" · ")`: the line wraps only after a separator,
     // never inside "2 dives" or before a lone price.

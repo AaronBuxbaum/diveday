@@ -6,6 +6,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRow, DisclosureRowMessage } from "@/components/ui/disclosure";
 import { controlClass, Field } from "@/components/ui/form";
+import { FIND_MY_BOOKING_FRAGMENT } from "@/lib/public-routes";
 import { type FindMyBookingFormState, requestFindMyBookingAction } from "../actions";
 
 const INITIAL_STATE: FindMyBookingFormState = {};
@@ -30,14 +31,14 @@ export function FindMyBookingForm({ shopSlug }: { shopSlug: string }) {
 
   if (state.success) {
     return (
-      <DisclosureRowMessage id="find-my-booking" heading={t("findMyBooking.sentHeading")}>
+      <DisclosureRowMessage id={FIND_MY_BOOKING_FRAGMENT} heading={t("findMyBooking.sentHeading")}>
         {t("findMyBooking.sentBody")}
       </DisclosureRowMessage>
     );
   }
 
   return (
-    <DisclosureRow id="find-my-booking" heading={t("findMyBooking.heading")}>
+    <DisclosureRow id={FIND_MY_BOOKING_FRAGMENT} heading={t("findMyBooking.heading")}>
       <p className="text-sm text-muted">{t("findMyBooking.body")}</p>
       <form action={formAction} className="mt-4 flex flex-wrap items-end gap-3">
         <Field label={t("common.email")} className="min-w-64 flex-1">

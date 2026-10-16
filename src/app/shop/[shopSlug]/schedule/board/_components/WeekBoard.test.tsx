@@ -544,6 +544,32 @@ describe("the crew line and the crew schedule switch", () => {
     expect(screen.queryByText("nobody yet")).toBeNull();
     expect(screen.queryByText(new RegExp(COPY.crewLabel))).toBeNull();
   });
+
+  /**
+   * **Rostered and away, on the board** (fourth review, item 12): said even
+   * when the crew is the week's usual one, which is when no crew line prints.
+   */
+  it("says who is away on a departure they are rostered on, in warning ink", () => {
+    const usual = ["Marcus Webb", "Sal Moretti"];
+    board(
+      week({}, [
+        entry({ tripId: "t1", crew: usual }),
+        entry({ tripId: "t2", startTime: "09:00", time: "9:00 AM", crew: usual }),
+        entry({
+          tripId: "t3",
+          startTime: "13:00",
+          time: "1:00 PM",
+          crew: usual,
+          crewAway: "Marcus Webb away Sat, Oct 17 – Sun, Oct 18",
+        }),
+      ]),
+    );
+    const line = screen.getByText("Marcus Webb away Sat, Oct 17 – Sun, Oct 18");
+    expect(line.parentElement).toHaveClass("text-warning");
+    // The usual crew prints no crew line; the away line stands on its own.
+    expect(screen.queryByText(new RegExp(`${COPY.crewLabel} Marcus`))).toBeNull();
+    expect(screen.getAllByText(/away/)).toHaveLength(1);
+  });
 });
 
 describe("days gone by with no boats (UX review 2026-10-10, item 24)", () => {

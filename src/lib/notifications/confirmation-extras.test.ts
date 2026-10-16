@@ -79,6 +79,20 @@ describe("confirmationExtras", () => {
     ).toMatchObject({ money: { due: "at_shop", amountCents: 15_000 } });
   });
 
+  it("sums the party's seats the lead still holds into one figure (fourth UX review, item 5)", () => {
+    expect(
+      confirmationExtras({
+        shop,
+        trip: { ...trip, depositCents: null },
+        course: null,
+        participantType: "diver",
+        partyTypes: ["diver", "diver"],
+        chargesOnline: false,
+        origin: null,
+      }),
+    ).toMatchObject({ money: { due: "at_shop", amountCents: 45_000, seats: 3 } });
+  });
+
   it("says nothing of money, window or calendar for a free seat with no policy and no origin", () => {
     const extras = confirmationExtras({
       shop,
