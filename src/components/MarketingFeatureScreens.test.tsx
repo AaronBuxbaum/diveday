@@ -202,7 +202,7 @@ describe("the feature screens' words", () => {
     [
       "ScheduleWeekFallback",
       ScheduleWeekFallback,
-      ["Dos tanques de tarde", "nadie todavía", "Añadir"],
+      ["Dos tanques de tarde", "nadie todavía", "Agregar"],
     ],
   ] as const)("%s speaks Spanish", (_name, Mock, words) => {
     render(<Mock locale="es-ES" />);
