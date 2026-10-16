@@ -3,15 +3,26 @@
  * evaluation, the hold an unanswered one keeps, and retiring a refusal.
  * Imported through the `./waivers` barrel.
  */
-import { and, desc, eq, isNotNull, isNull, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { canRetireMedicalRefusal } from "@/lib/authz";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { log } from "@/lib/log";
+import {
+  answeredMedicalForm,
+  calculateMedicalResult,
+  type MedicalReferralItem,
+  type PublishedMedicalForm,
+  referralItems,
+} from "@/lib/medical";
+import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { isUuid } from "@/lib/uuid";
+import { awaitsPhysician, DOCTOR_UNLOCK_FAILURE_LIMIT, doctorPageWithinTrip } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
-import { waiverRecords } from "./schema";
+import { bookings, people, trips, waiverRecords } from "./schema";
+import { livePerson, liveTrip } from "./trips-live";
 import { activeStaffAttestorId } from "./waivers-in-person";
 
 /**
@@ -406,4 +417,144 @@ export async function getMedicalClearanceDocument(
     )
     .limit(1);
   return row?.url ? { url: row.url, personId: row.personId } : null;
+}
+
+type HeldRecord = typeof waiverRecords.$inferSelect;
+
+/**
+ * **What the doctor's page shows before anything is unlocked** (fifth-loop
+ * ideas, item 17; H-127 and ADR 20261016-doctor-referral-page, both amended by
+ * the layer r5-3 reviews). Only the diver's name, and which of three things the
+ * answers section says:
+ *
+ * - `locked`: there are answers to show, behind the diver's date of birth;
+ * - `whole`: nothing to show, so the doctor goes through the whole form (no
+ *   date of birth on file to unlock with, or a paper or status-only hold);
+ * - `unfinished`: the stored form was never finished.
+ *
+ * Neither the date of birth nor any answer reaches the page module.
+ */
+export type DoctorReferral = {
+  fullName: string;
+  answers: "locked" | "whole" | "unfinished";
+};
+
+/** What the answers section shows once the date of birth matches. */
+export type DoctorReferralAnswers = {
+  items: MedicalReferralItem[];
+  form: PublishedMedicalForm | null;
+};
+
+/**
+ * The person behind a release still waiting on a physician, while its seat is
+ * held and its departure has not ended (plus `DOCTOR_PAGE_TRIP_GRACE_MS`).
+ * Anything else is no doctor's page: a hold on a canceled seat or a trip that
+ * has sailed is rarely resolved by staff, so without this the page and every
+ * printed or forwarded copy of its link would open for ever (security review of
+ * layer r5-3, F3).
+ */
+async function heldPersonForDoctor(db: DbExecutor, record: HeldRecord, now: Date) {
+  if (!awaitsPhysician(record) || !record.bookingId) return null;
+  const [seat] = await db
+    .select({ tripEndsAt: trips.endsAt })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.id, record.bookingId),
+        eq(bookings.shopId, record.shopId),
+        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
+        eq(trips.status, "scheduled"),
+        liveTrip(),
+      ),
+    )
+    .limit(1);
+  if (!seat || !doctorPageWithinTrip(seat.tripEndsAt, now)) return null;
+  const [person] = await db
+    .select({ fullName: people.fullName, dateOfBirth: people.dateOfBirth })
+    .from(people)
+    .where(and(eq(people.id, record.personId), eq(people.shopId, record.shopId), livePerson()))
+    .limit(1);
+  return person ?? null;
+}
+
+/** Whether the held waiver page offers the doctor's page at all. */
+export async function doctorPageOpen(
+  db: DbExecutor,
+  record: HeldRecord,
+  now: Date = nowDate(),
+): Promise<boolean> {
+  return (await heldPersonForDoctor(db, record, now)) !== null;
+}
+
+/**
+ * **The doctor's page's one read.** The caller has already resolved `record`
+ * from the diver's own waiver link, so this widens nothing. Null for a release
+ * the page does not open for, which the page answers with a redirect.
+ */
+export async function getDoctorReferral(
+  db: DbExecutor,
+  record: HeldRecord,
+  now: Date = nowDate(),
+): Promise<DoctorReferral | null> {
+  const person = await heldPersonForDoctor(db, record, now);
+  if (!person) return null;
+  const hasItems =
+    referralItems(record.medicalAnswers).length > 0 &&
+    record.doctorUnlockFailures < DOCTOR_UNLOCK_FAILURE_LIMIT;
+  const unfinished =
+    record.medicalAnswers !== null &&
+    calculateMedicalResult(record.medicalAnswers).status === "incomplete";
+  return {
+    fullName: person.fullName,
+    answers:
+      hasItems && person.dateOfBirth ? "locked" : unfinished && !hasItems ? "unfinished" : "whole",
+  };
+}
+
+/**
+ * **The answers, for whoever knows the diver's date of birth** (security
+ * review of layer r5-3, F1 and second-pass FIX-1). A forwarded or printed
+ * waiver link alone no longer tells its reader which conditions the diver
+ * disclosed: the published prompts sit behind a date of birth the page never
+ * prints.
+ *
+ * - null when the page itself would not open;
+ * - `whole` without comparing anything when there is nothing to unlock (no
+ *   referral items, no date on file), so the action never confirms a date of
+ *   birth for its own sake, and once the release has taken
+ *   `DOCTOR_UNLOCK_FAILURE_LIMIT` wrong dates;
+ * - `mismatch` for a wrong date, counted on the record, the attempt that
+ *   reaches the ceiling answering `whole` and logging
+ *   `doctor_answers.locked_out` with the record id only.
+ *
+ * A right date spends nothing. The caller rate-limits as well.
+ */
+export async function revealDoctorReferral(
+  db: DbExecutor,
+  record: HeldRecord,
+  enteredBirthdate: string,
+  now: Date = nowDate(),
+): Promise<DoctorReferralAnswers | "mismatch" | "whole" | null> {
+  const person = await heldPersonForDoctor(db, record, now);
+  if (!person) return null;
+  const items = referralItems(record.medicalAnswers);
+  if (items.length === 0 || !person.dateOfBirth) return "whole";
+  if (record.doctorUnlockFailures >= DOCTOR_UNLOCK_FAILURE_LIMIT) return "whole";
+  if (isValidCalendarDate(enteredBirthdate) && enteredBirthdate === person.dateOfBirth) {
+    return { items, form: answeredMedicalForm(record.medicalAnswers) };
+  }
+  // Counted in the statement, never from the read above: two tries racing each
+  // other must both be counted.
+  const [counted] = await db
+    .update(waiverRecords)
+    .set({ doctorUnlockFailures: sql`${waiverRecords.doctorUnlockFailures} + 1` })
+    .where(and(eq(waiverRecords.id, record.id), eq(waiverRecords.shopId, record.shopId)))
+    .returning({ failures: waiverRecords.doctorUnlockFailures });
+  const failures = counted?.failures ?? DOCTOR_UNLOCK_FAILURE_LIMIT;
+  if (failures < DOCTOR_UNLOCK_FAILURE_LIMIT) return "mismatch";
+  if (failures === DOCTOR_UNLOCK_FAILURE_LIMIT) {
+    log("doctor_answers.locked_out", "warn", { record: record.id });
+  }
+  return "whole";
 }

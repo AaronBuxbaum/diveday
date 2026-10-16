@@ -422,6 +422,17 @@ describe("booking delight planning", () => {
     expect(packingConfidence([], null, false).provided).toEqual(["tanksAndWeights"]);
   });
 
+  it("names the scuba unit on a course whose fee includes the gear, and leaves personal gear to bring (ideas item 16)", () => {
+    const packing = packingConfidence(["Towel"], null, false, true);
+    expect(packing.provided).toEqual(["scubaUnit", "instructorBriefing"]);
+    expect(packing.bringPersonal).toEqual(["mask", "fins", "snorkel", "boots"]);
+    expect(packing.bring).toEqual(["Towel"]);
+  });
+
+  it("asks nobody to bring personal gear on an ordinary departure", () => {
+    expect(packingConfidence(["Towel"], null).bringPersonal).toEqual([]);
+  });
+
   it("turns a water temperature into the suit most divers want", () => {
     // A reading is a number a diver has to translate; this is the
     // translation. Bands are the ordinary recreational rule of thumb, read

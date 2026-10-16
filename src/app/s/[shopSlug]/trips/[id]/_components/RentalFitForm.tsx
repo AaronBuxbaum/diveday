@@ -130,6 +130,12 @@ export function ItemPrice({ price, widest }: { price: string; widest: string }) 
   );
 }
 
+/** A course whose fee includes the gear asks for sizes only (fifth-loop ideas, item 16). */
+function CourseGearLine() {
+  const t = useTranslations();
+  return <p className="mt-4 text-base text-foreground">{t("rental.courseGearIncluded")}</p>;
+}
+
 /**
  * The diver's rental-fit capture — the action of `/ready`'s "Gear and setup"
  * checklist row. The submit target is passed in as `action` so the surface
@@ -162,10 +168,11 @@ export function RentalFitForm({
   rentalItems: string[];
   /**
    * The course this departure teaches, or null on an ordinary charter — read
-   * only for whether it may run on enriched air (`nitroxAvailableOn`), the
-   * same gate the booking page's gear fields use.
+   * for whether it may run on enriched air (`nitroxAvailableOn`), the same gate
+   * the booking page's gear fields use, and whether its fee includes the gear,
+   * which asks for sizes with no prices (fifth-loop ideas, item 16).
    */
-  course: { nitroxCompatible: boolean } | null;
+  course: { nitroxCompatible: boolean; gearIncluded?: boolean } | null;
   pricing: RentalPricing;
   wantsNitrox: boolean;
   nitroxCardVerified: boolean;
@@ -201,7 +208,7 @@ export function RentalFitForm({
 }) {
   const t = useTranslations();
   const locale = useLocale();
-  const offered = offeredRentableItems(rentalItems);
+  const offered = offeredRentableItems(rentalItems, course?.gearIncluded === true);
   const offers = new Set(offered.map((item) => item.kind));
   // The suit is one choice of four rather than two of the ticks (H-78): a
   // diver dives one suit, and has to be able to say a drysuit is their own.
@@ -212,7 +219,7 @@ export function RentalFitForm({
   const [suit, setSuit] = useState<SuitChoice>(storedSuit);
   const ticked = offered.filter((item) => !SUIT_KINDS.has(item.kind));
   const nitroxOffered = nitroxAvailableOn(rentalItems, course);
-  const showPricing = hasAnyRentalPricing(pricing);
+  const showPricing = !course?.gearIncluded && hasAnyRentalPricing(pricing);
   const widestPrice = widestItemPrice(offered, pricing, currency, locale);
   const [tickedKinds, setTickedKinds] = useState(
     () =>
@@ -324,6 +331,7 @@ export function RentalFitForm({
           {t("rental.savedNote")}
         </p>
       ) : null}
+      {course?.gearIncluded ? <CourseGearLine /> : null}
       <form action={action} className="mt-4 flex flex-col gap-4">
         <ChoiceFieldset legend={t("rental.suitLegend")}>
           <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
@@ -341,7 +349,8 @@ export function RentalFitForm({
                   checked={suit === choice}
                   onChange={() => setSuit(choice)}
                   aside={
-                    hintKey || (showPricing && priceCents !== undefined) ? (
+                    // The suit is never in a course's included gear: it keeps its price.
+                    hintKey || (hasAnyRentalPricing(pricing) && priceCents !== undefined) ? (
                       <>
                         {hintKey ? (
                           <InfoHint
@@ -353,7 +362,7 @@ export function RentalFitForm({
                             detail={t(hintKey)}
                           />
                         ) : null}
-                        {showPricing && priceCents !== undefined ? (
+                        {hasAnyRentalPricing(pricing) && priceCents !== undefined ? (
                           <ItemPrice
                             price={formatMoneyCents(priceCents, currency, locale)}
                             widest={widestPrice}
@@ -419,7 +428,7 @@ export function RentalFitForm({
                 );
               })}
             </div>
-            {showPricing ? null : (
+            {showPricing || course?.gearIncluded ? null : (
               <p className="mt-2 text-sm text-muted">{t("rental.askWhatsIncluded")}</p>
             )}
             {showPricing && quote.subtotalCents > 0 ? (
@@ -477,7 +486,7 @@ export function RentalFitForm({
               checked={nitroxRequested}
               onChange={(event) => setNitroxRequested(event.target.checked)}
             >
-              {showPricing && pricing.nitroxCents !== null
+              {pricing.nitroxCents !== null
                 ? t("rental.nitroxReserveWithPrice", {
                     price: formatMoneyCents(pricing.nitroxCents, currency, locale),
                   })

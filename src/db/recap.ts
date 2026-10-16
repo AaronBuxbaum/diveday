@@ -1647,9 +1647,7 @@ async function sendRecaps(
     // locale, exactly as before the column existed.
     const locale = recipientLocale(person.locale, shop.defaultLocale);
     const t = diverTranslator(locale);
-    const smsBody = recapUrl
-      ? t("notifications.sms.recap", { shopName: shop.name, tripTitle: trip.title, recapUrl })
-      : "";
+    const smsBody = recapUrl ? t("notifications.sms.recap", { shopName: shop.name, recapUrl }) : "";
 
     if (recapUrl && person.email && !person.courtesyEmailOptOutAt) {
       const unsubscribeToken = await issuePersonCourtesyEmailUnsubscribeToken(db, {

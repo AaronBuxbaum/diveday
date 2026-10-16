@@ -9,18 +9,19 @@ import {
   ledgerRowOpenBoxClass,
 } from "@/components/ui/ledger";
 import { isMarineLifeSlug } from "@/db/marine-life-catalog";
+import type { SiteReview } from "@/db/reviews";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
-import { depthText } from "@/i18n/unit-labels";
+import { depthRangeText, depthText } from "@/i18n/unit-labels";
 import { dayProfileRows } from "@/lib/day-profile";
 import type { DepthUnit } from "@/lib/depth-units";
 import { type DiveSiteLandmarkKind, parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
-import { type DiveMode, type DockDayRhythm, siteFit } from "@/lib/diver-planning";
-import { formatShortDate } from "@/lib/format";
+import { type DiveMode, type DockDayRhythm, dockDayTimeline, siteFit } from "@/lib/diver-planning";
+import { formatShortDate, formatTime } from "@/lib/format";
 import { capturePhoto } from "@/lib/marine-life-tiles";
 import { publicDiveSitePath } from "@/lib/public-routes";
 import type { SiteSightings } from "@/lib/sightings";
-import type { DiveBriefing, Shop, SiteBriefing } from "./types";
+import type { DiveBriefing, Shop, SiteBriefing, Trip } from "./types";
 
 /**
  * What the departure's own row and the shop's rhythm say about the shape of
@@ -37,7 +38,79 @@ export type DayProfileFacts = {
   diveMode: DiveMode;
   /** How many days the departure meets on (`trip_schedule_days`). */
   dayCount: number;
+  /**
+   * The one boat day this departure is, for the rhythm line (fifth-loop
+   * ideas, item 19): "At the dock 6:30 AM · back about 10:30 AM". Absent on a
+   * course session or a departure that meets on more than one day, whose
+   * days the line could not say in one breath.
+   */
+  day?: { startsAt: Date; endsAt: Date; plannedDives: number };
+  /** The reader's depth unit, added after the shop's when it differs (ideas item 22). */
+  readerDepthUnit?: DepthUnit | null;
 };
+
+type ProfileShop = Pick<Shop, keyof DockDayRhythm | "depthUnit">;
+type ProfileTrip = Pick<Trip, "diveMode" | "course" | "startsAt" | "endsAt" | "plannedDives">;
+
+/**
+ * The facts "The day" reads off the shop and the departure. The day's two
+ * ends ride along only for a one-day boat (fifth-loop ideas, item 19): a
+ * course says its own day, and a departure meeting on several days could not
+ * say them in one breath.
+ */
+export function dayProfileFacts(
+  shop: ProfileShop,
+  trip: ProfileTrip,
+  dayCount: number,
+  readerDepthUnit: DepthUnit | null,
+): DayProfileFacts {
+  return {
+    rhythm: shop,
+    depthUnit: shop.depthUnit,
+    diveMode: trip.diveMode,
+    dayCount,
+    readerDepthUnit,
+    day:
+      trip.course || dayCount > 1
+        ? undefined
+        : { startsAt: trip.startsAt, endsAt: trip.endsAt, plannedDives: trip.plannedDives },
+  };
+}
+
+/**
+ * "At the dock 6:30 AM · back about 10:30 AM": the first and last beats of the
+ * same `dockDayTimeline` `/ready`'s "Your dock-day rhythm" lays out, so the
+ * page a first boat diver reads before paying and the page they keep after
+ * agree to the minute. The return is the departure's own published end, never
+ * the shop's arithmetic.
+ */
+export function dayRhythmLine(
+  facts: DayProfileFacts,
+  briefings: readonly DiveBriefing[],
+  t: DiverTranslator,
+  locale: string,
+  timeZone: string,
+): string | null {
+  const day = facts.day;
+  if (!day) return null;
+  const beats = dockDayTimeline(
+    day.startsAt,
+    facts.rhythm,
+    day.endsAt,
+    day.plannedDives,
+    briefings.map(({ diveSite }) => diveSite?.expectedBottomTimeMinutes),
+    briefings.map(({ dive }) => dive.travelMinutes),
+    facts.diveMode,
+  );
+  const first = beats[0];
+  const back = beats.find((beat) => beat.step === "return");
+  if (!first || !back) return null;
+  // A shore or pool day has no dock: the first beat is where the group meets.
+  return t(facts.diveMode === "boat" ? "trip.dayRhythmLine" : "trip.dayRhythmMeetLine", {
+    dock: formatTime(first.at, locale, timeZone),
+    back: formatTime(back.at, locale, timeZone),
+  });
+}
 
 /**
  * **"Seen here this month"** — the crew's own log, under the site it is about.
@@ -125,9 +198,13 @@ function SiteSeen({
  *
  * What survives here is what a deciding diver actually needs: the run of dives
  * in plan order, and the species the shop has put on those sites' field guides.
- * Time-neutral on purpose — a dive plan's clock belongs to the day itself
- * (`PackingSection`'s dock-day rhythm on the thread), and a schedule printed
- * beside a Book button reads as a commitment the crew has not made.
+ * The dives stay time-neutral — a dive plan's clock belongs to the day itself
+ * (`PackingSection`'s dock-day rhythm on the thread), and a schedule of
+ * tanks printed beside a Book button reads as a commitment the crew has not
+ * made. The day's two ends are the exception (fifth-loop ideas, item 19): when
+ * to be at the dock and when the boat is due back are the shop's published
+ * promise, and a first boat diver deciding whether the morning fits needs
+ * them before paying, in one line.
  */
 export function TripDayPlan({
   briefings,
@@ -136,6 +213,7 @@ export function TripDayPlan({
   profile,
   sightings,
   nextOpensOnRule = false,
+  siteReviews,
 }: {
   briefings: DiveBriefing[];
   /**
@@ -162,9 +240,20 @@ export function TripDayPlan({
    * run then leaves its close to that rule.
    */
   nextOpensOnRule?: boolean;
+  /**
+   * Published reviews from departures to the day's sites (`listSiteReviews`),
+   * at most two. Absent or empty renders nothing.
+   */
+  siteReviews?: readonly SiteReview[];
 }) {
   const t = diverTranslator(locale);
   if (briefings.length === 0) return null;
+  const rhythm = profile ? dayRhythmLine(profile, briefings, t, locale, shop.timezone) : null;
+  const rhythmLine = rhythm ? (
+    <p data-testid="trip-day-rhythm" className="mt-2 text-sm font-medium">
+      {rhythm}
+    </p>
+  ) : null;
   // Durations, never a clock. The beat stays time-neutral — the day's hours
   // belong to the thread a booked diver walks — but how long a dive runs and
   // how long the boat sits between two of them are facts about the day itself,
@@ -216,6 +305,7 @@ export function TripDayPlan({
     return (
       <section>
         <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
+        {rhythmLine}
         <p className="mt-2 text-sm text-muted">
           {t("trip.sitesToBeConfirmed", { count: briefings.length })}
         </p>
@@ -225,14 +315,17 @@ export function TripDayPlan({
   // **The run closes itself unless a rule follows it directly** (pixel-craft
   // class 6). With a pitch opening on its door, the run's closing rule sat
   // 32px over the door's own, two parallel hairlines with nothing between
-  // them. Anywhere else the rule is the list's only close: over a pitch that
-  // opens on its fit word and faces, leaving it open left the last dive
-  // unclosed above body text. Every line, hand-set or not, takes one box.
-  const runCloses = !nextOpensOnRule;
+  // them. Anywhere else the rule is the list's only close: over the site
+  // reviews, or over a pitch that opens on its fit word and faces, leaving it
+  // open left the last dive unclosed above body text. Every line, hand-set or
+  // not, takes one box.
+  const reviews = siteReviews ?? [];
+  const runCloses = !nextOpensOnRule || reviews.length > 0;
   const handSetBox = runCloses ? ledgerRowBoxClass : ledgerRowOpenBoxClass;
   return (
     <section>
       <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
+      {rhythmLine}
       <ul className="mt-2">
         {briefings.map(({ dive, diveSite }) => {
           const bottomTime = bottomTimes.get(dive.diveNumber) ?? null;
@@ -241,11 +334,11 @@ export function TripDayPlan({
           // maximum where it did not.
           // The crew's month for this site, once — decided above, in plan order.
           const seen = seenByDive.get(dive.id) ?? null;
-          const depth =
-            diveSite?.depthRange ??
-            (profile && diveSite?.maxDepthMeters
-              ? depthText(t, diveSite.maxDepthMeters, profile.depthUnit)
-              : null);
+          const depth = diveSite?.depthRange
+            ? depthRangeText(t, diveSite.depthRange, profile?.readerDepthUnit)
+            : profile && diveSite?.maxDepthMeters
+              ? depthText(t, diveSite.maxDepthMeters, profile.depthUnit, profile.readerDepthUnit)
+              : null;
           // **The site's name is the door to its own page** (N-48). The whole
           // of what the shop wrote about a place — the prose, the drawn route,
           // the field guide, the diver photos, and every other departure going
@@ -324,6 +417,32 @@ export function TripDayPlan({
           );
         })}
       </ul>
+      {/* What earlier divers said about these sites, under the plan they
+          are about (fifth-loop ideas, item 20). Their words, quoted, with a
+          name and the day they went; no stars, which the shop's own reviews
+          page already carries. */}
+      {reviews.length > 0 ? (
+        <div data-testid="trip-site-reviews" className="mt-6">
+          <p className="text-sm font-medium">{t("trip.siteReviews.heading")}</p>
+          <ul className="mt-2 space-y-3">
+            {reviews.map((review) => (
+              <li key={review.id}>
+                <figure>
+                  <blockquote className="line-clamp-4 text-sm leading-relaxed text-pretty">
+                    {t("trip.siteReviews.quote", { words: review.comment })}
+                  </blockquote>
+                  <figcaption className="mt-1 text-sm text-muted">
+                    {t("trip.siteReviews.byline", {
+                      name: review.reviewer,
+                      date: formatShortDate(review.divedAt, locale, shop.timezone),
+                    })}
+                  </figcaption>
+                </figure>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -3,6 +3,17 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { RENTAL_FIT_TEXT_LIMITS, type RentableItemKind, type SuitChoice } from "@/lib/rentals";
 import type { RentalFit } from "./types";
 
+/** The rented items that take a size, any one of which opens the sizes block. */
+const SIZED_KINDS: readonly RentableItemKind[] = [
+  "bcd",
+  "wetsuit",
+  "drysuit",
+  "hood",
+  "gloves",
+  "mask_fins",
+  "weights",
+];
+
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 
 /**
@@ -118,13 +129,7 @@ export function RentalSizeFields({
             the third, and "Usual weight setup" is the same shape of answer as
             the fields it now sits with. On a phone the grid is one column and
             the order is unchanged. */}
-      {offers.has("bcd") ||
-      offers.has("wetsuit") ||
-      offers.has("drysuit") ||
-      offers.has("hood") ||
-      offers.has("gloves") ||
-      offers.has("mask_fins") ||
-      offers.has("weights") ? (
+      {SIZED_KINDS.some((kind) => offers.has(kind)) ? (
         <FieldGrid columns={2}>
           {offers.has("bcd") ? (
             <Field label={t("rental.bcdSize")}>

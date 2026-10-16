@@ -172,9 +172,21 @@ export function toRentableKinds(values: readonly string[]): ShopCatalogKind[] {
 }
 
 /** The rentable gear a shop offers, in canonical order, from its stored catalog. */
-export function offeredRentableItems(rentalItems: readonly string[]): RentableItem[] {
+export function offeredRentableItems(
+  rentalItems: readonly string[],
+  /**
+   * The departure's course includes the scuba unit: only the unit and the
+   * suit are asked about, and personal gear is the student's own
+   * (`SCUBA_UNIT_KINDS`).
+   */
+  courseGearIncluded = false,
+): RentableItem[] {
   const offered = new Set(toRentableKinds(rentalItems));
-  return RENTABLE_ITEMS.filter((item) => offered.has(item.kind));
+  return RENTABLE_ITEMS.filter(
+    (item) =>
+      offered.has(item.kind) &&
+      (!courseGearIncluded || SCUBA_UNIT_KINDS.has(item.kind) || SUIT_KINDS.has(item.kind)),
+  );
 }
 
 /**
@@ -253,6 +265,19 @@ export type SuitChoice = (typeof SUIT_CHOICES)[number];
 
 /** The catalog kinds the suit choice answers for, and so no longer ticks of their own. */
 export const SUIT_KINDS: ReadonlySet<RentableItemKind> = new Set(["wetsuit", "drysuit"]);
+
+/**
+ * **What a course's "gear included" covers: the scuba unit** (BCD, regulator,
+ * tank and weights; the tank is never a rental line). Not personal gear: mask,
+ * fins, snorkel and boots are the student's to bring, which most shops require
+ * of a student anyway, and not the suit or a nitrox fill, which keep the
+ * shop's price (dive-domain review of layer r5-3, FIX 7).
+ */
+export const SCUBA_UNIT_KINDS: ReadonlySet<RentableItemKind> = new Set([
+  "bcd",
+  "regulator",
+  "weights",
+]);
 
 /**
  * A rental pick holding at most one suit: the drysuit when both arrive, which

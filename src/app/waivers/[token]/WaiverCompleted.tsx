@@ -25,6 +25,7 @@ export function WaiverCompleted({
   locale,
   needsReview,
   readyPath,
+  doctorPath,
   signedRail,
   diveSitesList,
 }: {
@@ -33,6 +34,8 @@ export function WaiverCompleted({
   locale: string;
   needsReview: boolean;
   readyPath: string | null;
+  /** "Take this to your doctor", while the release waits on a physician (H-127). */
+  doctorPath: string | null;
   signedRail: WaiverRailProgress;
   diveSitesList: TripSitePeek[];
 }) {
@@ -55,6 +58,14 @@ export function WaiverCompleted({
               controls. */}
             <p className="mt-3">{t("waiver.medicalReviewNext")}</p>
             <MedicalReviewContact shop={shop} t={t} />
+            {doctorPath ? (
+              <Link
+                href={doctorPath}
+                className={buttonClass({ variant: "secondary", className: "mt-5 me-3" })}
+              >
+                {t("waiver.doctor.open")}
+              </Link>
+            ) : null}
           </>
         ) : null}
         {readyPath ? (

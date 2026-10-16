@@ -204,6 +204,14 @@ export const courses = pgTable(
      */
     nitroxCompatible: boolean("nitrox_compatible").notNull().default(true),
     /**
+     * **Rental gear is part of the course fee** (fifth-loop ideas, item 16).
+     * The shop's own answer, beside its prices: on a session of this course a
+     * student's `/ready` asks only for sizes, quotes no rental price, and says
+     * the shop provides the full scuba set. Defaults false, so every existing
+     * course keeps quoting gear exactly as before.
+     */
+    gearIncluded: boolean("gear_included").notNull().default(false),
+    /**
      * **The row's edit generation, for the "somebody else changed this" refusal.**
      *
      * Both editors post their *whole* form — nine sections, pricing, photos,

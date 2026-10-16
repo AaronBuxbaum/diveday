@@ -521,9 +521,8 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "draft_acknowledged",
     "draft_medical_answers",
     "draft_guardian", // the guardian section as typed, same class as the three above
-    // Delivery plumbing is provider-specific operational state. The signed
-    // waiver remains portable; a destination can issue its own link and
-    // delivery attempt rather than importing stale provider ids or outcomes.
+    // Delivery plumbing is provider-specific operational state: a destination issues
+    // its own link and delivery rather than importing stale provider ids or outcomes.
     "delivery_status",
     "delivery_provider_message_id",
     "delivery_provider_status",
@@ -545,6 +544,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // and the file being retrievable *inside* the product is precisely why it
     // does not need to travel outside it.
     "medical_clearance_document_url",
+    "doctor_unlock_failures", // abuse control on the doctor's page, not part of the record
   ],
   // `created_at` is when DiveDay wrote the row; `occurred_at` is when the
   // money actually moved, and that is the one a reader replays.

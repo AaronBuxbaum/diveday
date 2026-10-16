@@ -3145,6 +3145,68 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The held release and the doctor's page** (fifth-loop ideas, item 17;
+       * ADR 20261016-doctor-referral-page). Priya Sharma answers question 3
+       * yes and signs, so her link reopens on the medical hold with its new
+       * "Take this to your doctor" door, and that door opens the printable
+       * evaluation form with her name in it and the question's number.
+       */
+      test(`the doctor's page renders true to the design (${scheme})`, async ({
+        page,
+        browser,
+        workerBaseURL,
+        staffStorageState,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const staffContext = await browser.newContext({
+          baseURL: workerBaseURL,
+          storageState: await staffStorageState("owner"),
+        });
+        const staffPage = makeActivitySafe(await staffContext.newPage());
+        await staffPage.goto("/shop/blue-mantis/schedule/board");
+        await staffPage
+          .locator("li")
+          .filter({ hasText: REEF_TRIP })
+          .getByRole("link", { name: REEF_TRIP, exact: true })
+          .click();
+        await staffPage.waitForURL(/\/trips\/[a-f0-9-]+$/);
+        const unsent = await openFirstRosterRowWith(staffPage, "Send waiver");
+        await unsent.getByRole("button", { name: "Send waiver", exact: true }).click();
+        const resultNotice = staffPage.locator("#roster").getByRole("status");
+        await resultNotice.waitFor();
+        const waiverHref = await waiverLinkFromResult(staffPage, resultNotice);
+        await staffContext.close();
+
+        await page.goto(waiverHref);
+        const noRadios = page.getByRole("radio", { name: "No" });
+        await noRadios.first().waitFor();
+        const questionCount = await noRadios.count();
+        for (let index = 0; index < questionCount; index++) {
+          await noRadios.nth(index).check();
+        }
+        await page
+          .locator("fieldset")
+          .filter({ visible: true })
+          .nth(2)
+          .getByRole("radio", { name: "Yes" })
+          .check();
+        await page.getByLabel("Type your full name").fill("Priya Sharma");
+        await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
+        await page.getByRole("button", { name: "Sign waiver" }).click();
+        await page.waitForURL(/\/ready\//);
+
+        await page.goto(waiverHref);
+        await page.getByRole("link", { name: "Take this to your doctor" }).waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "waiver-medical-held", scheme);
+
+        await page.getByRole("link", { name: "Take this to your doctor" }).click();
+        await page.getByTestId("doctor-evaluation-form").waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "waiver-doctor", scheme);
+      });
+
+      /**
        * **The guardian's card** (ADR 20260907-guardian-co-signature): the
        * second signature a minor's release takes, and the one composition on
        * this page no other capture can reach — it renders from the diver's own

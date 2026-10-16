@@ -250,6 +250,31 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // and turns up at the dock unboardable.
   await expect(page.getByTestId("waiver-step-rail")).toContainText("2 of 3 done");
 
+  // The page a referred diver hands their doctor (H-127, amended after the
+  // layer r5-3 reviews): their name and the official form to print; the
+  // answers wait behind their date of birth, which the page never prints.
+  await page.getByRole("link", { name: "Take this to your doctor" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Take this to your doctor", level: 1 }),
+  ).toBeVisible();
+  const form = page.getByTestId("doctor-evaluation-form");
+  await expect(form).toContainText("Diver Medical | Participant Questionnaire");
+  await expect(form).toContainText("Priya Sharma");
+  await expect(
+    form.getByRole("link", { name: "Open the official form and print page 3" }),
+  ).toHaveAttribute("href", /uhms\.org\/.+10346_EN/);
+  await expect(page.getByText("Question 3")).toHaveCount(0);
+  await expect(page.getByText("I struggle to perform moderate exercise")).toHaveCount(0);
+  await page.getByLabel("Date of birth").fill("1900-01-01");
+  await page.getByRole("button", { name: "Show my answers" }).click();
+  await expect(page.getByText("That date doesn’t match the one on your booking.")).toBeVisible();
+  await expect(page.getByText("Question 3")).toHaveCount(0);
+  await expect(
+    page.getByText(
+      "Send a photo of the signed form to front.desk@mail.example before your dive day, or bring it to the shop before you dive.",
+    ),
+  ).toBeVisible();
+
   // Back on the roster, the single button now reports the completed-but-flagged
   // state, and the medical answer is spelled out for staff follow-up.
   await page.goto(staffTripUrl);

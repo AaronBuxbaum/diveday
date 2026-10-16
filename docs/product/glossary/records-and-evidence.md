@@ -101,7 +101,15 @@
   yesterday's fell silent. The longer wait is the one that costs nothing if wrong, and reaching
   repetitive can never shorten one, because the fixed `repetitive` is longer than the fixed `single`.
   A record that is short of its plan, or missing its last exit, anchors on the return, never on an
-  earlier dive. Rendered on the thread's after-state and in the recap email, in the shop's zone. The
+  earlier dive. Rendered on the thread's after-state and in the recap email, in the shop's zone; and
+  before the dive on `/ready`, in a **planned** form (`plannedFlySafeFrom`, `src/lib/fly-safe.ts`)
+  for a visitor booking the flight before the boat sails. The planned form anchors on the scheduled
+  end plus an hour, and its sentence says that hour ("plus an hour in case we run late"). It goes
+  repetitive when the departure plans more than one dive or the diver holds another dive day here
+  inside the lookback window. It is said with weekday, date, time and zone, because it is read days
+  ahead and from other zones. It answers a diver's seat only, and stays **silent** past
+  no-decompression limits, with no scheduled end, or when the diver's next seat with the shop
+  starts before the time it would name (that boat's own page says the time). The
   sentence states its reason on the two routes a diver cannot check for themselves — the earlier
   day, which is nowhere on a recap of today, and the multi-dive *plan*, whose figure can be more
   than the diver dived — because neither surface carries a dive count at all: the record card
@@ -131,7 +139,10 @@
   depth (`src/lib/day-profile.ts`, rendered in "The day"). Every figure is **planned, never
   observed** — the source is `shops.bottom_time_minutes` / `surface_interval_minutes`, a site's
   `expected_bottom_time_minutes` and a departure's `trip_dives.travel_minutes`, so the copy says
-  "usually" and the page states no clock. Its gap is deliberately *not* the **surface interval**
+  "usually". "The day" opens with the two clock times the departure is scheduled to, when to be at
+  the dock (on a shore or pool day, where to meet) and when it is back ("At the dock 2:00 PM · back
+  about 6:00 PM", one-day charters only, `dayRhythmLine` over `dockDayTimeline`); the profile below
+  that line states no clock of its own. Its gap is deliberately *not* the **surface interval**
   above, which is measured between two executed dives; and it never crosses a night, so a course
   weekend's day-one close and day-two open are two days rather than one long rest. The arithmetic is
   the dock-day timeline's own (`betweenDivesMinutes`), so the figure a diver reads before booking is

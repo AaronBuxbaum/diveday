@@ -4,6 +4,7 @@ import { type LanguageFallback, languageEndonym, languageNameIn } from "./langua
 import { LOCALE_COOKIE } from "./locale-cookie";
 import { diverTranslator } from "./messages";
 import { firstHandLocale, negotiateLocale, unsupportedLanguage } from "./negotiate";
+import { type ReaderUnits, readerUnitsFrom } from "./reader-units";
 import { type DiverLocale, isDiverLocale } from "./settings";
 
 /**
@@ -58,6 +59,15 @@ export async function requestLocale(shopDefaultLocale?: string | null): Promise<
   if (isDiverLocale(fixed)) return fixed;
   const header = requestHeaders.get("accept-language");
   return negotiateLocale(header, shopDefaultLocale);
+}
+
+/**
+ * The units this reader thinks in, beside the shop's (fifth-loop ideas, item
+ * 22; the rule is `readerUnitsFrom`'s). Only for a diver page that already
+ * reads `headers()` through {@link requestLocale}, so it costs no rendering mode.
+ */
+export async function requestReaderUnits(locale: DiverLocale): Promise<ReaderUnits> {
+  return readerUnitsFrom((await headers()).get("accept-language"), locale);
 }
 
 /**

@@ -9,6 +9,7 @@ import {
   formatMonthDay,
   formatNearDay,
   formatOrdinal,
+  formatPlannedDateTimeTz,
   formatRelativeDay,
   formatShortDate,
   formatTime,
@@ -211,6 +212,18 @@ describe("formatDayParts", () => {
 describe("formatTime", () => {
   it("renders 12-hour time with minutes", () => {
     expect(formatTime(morning, "en-US", "UTC")).toBe("7:30\u00A0AM");
+  });
+});
+
+describe("formatPlannedDateTimeTz", () => {
+  it("says the weekday, the date, the time and the zone, for a time planned against from afar", () => {
+    const at = new Date("2026-10-26T19:00:00Z");
+    expect(formatPlannedDateTimeTz(at, "en-US", "America/New_York").replace(/\u00A0/g, " ")).toBe(
+      "Mon, Oct 26, 3:00 PM EDT",
+    );
+    const es = formatPlannedDateTimeTz(at, "es-ES", "America/New_York");
+    expect(es).toMatch(/26/);
+    expect(es).toMatch(/15:00/);
   });
 });
 

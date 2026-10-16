@@ -6,6 +6,7 @@ import { BOAT_PAPERS, MUST_CARRY_KIT_KINDS } from "@/lib/boat-safety";
 import type { BoatWorkCode } from "@/lib/boat-work";
 import type { CertificationCardRowState } from "@/lib/certification-cards";
 import type { DepthUnit } from "@/lib/depth-units";
+import { DESK_PAYMENTS } from "@/lib/desk-payment";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
 import type { RentalItemKind } from "@/lib/dive-prep";
 import { DIVE_SITE_DIFFICULTIES } from "@/lib/dive-site-difficulty";
@@ -52,6 +53,7 @@ import {
 } from "./closeout-labels";
 import { compassText } from "./compass-labels";
 import { customerGearDueText, customerGearPieceText } from "./customer-gear-labels";
+import { DESK_PAYMENT_KEYS } from "./desk-payment-labels";
 import {
   DIVER_DIVE_INTENT_KEYS,
   DIVER_RE_ENTRY_KEYS,
@@ -178,24 +180,14 @@ import {
  *
  * ## Every map, not most of them
  *
- * The table began at thirty-four of the directory's fifty-eight maps, with
- * seven modules deferred to their own test files in a `PROVED_BY_MODULE_TEST`
- * list. That was the weaker claim of the two and said so: `gear-labels.ts`
- * carries four maps and `gear-labels.test.ts` exercised one of them, so
- * `STATUS_KEYS`, `SERVICE_KIND_KEYS` and `PHASE_KEYS` had no proof that the key
- * each code maps to resolves at all. The list is gone (issue #1756) and every
- * map in the directory has a row; the scan at the bottom now has no allowlist
- * to fall through, and it holds the table to the map count as well as to the
- * names, so a row left behind by a deleted map fails too.
- *
- * The two maps that made it real work were `today-labels.ts`'s
- * `STUCK_OPERATION_KIND_KEYS` and `MEDIA_DELETION_KIND_KEYS`, keyed by `string`
- * rather than a union, so "every code" had no compiler answer and the keys of
- * the literal would only ever have proved the rows somebody already wrote.
- * Both had a closed source of truth sitting unused — the `payment_operation_kind`
- * and `media_deletion_kind` pg enums — so they are keyed on those now, and the
- * second one turned out to hold seven of nine reachable kinds: a stuck
- * `shop_logo` or `shop_hero` deletion put the raw enum value on the Today queue.
+ * Every map in the directory has a row (issue #1756 retired the deferral list
+ * that left three of `gear-labels.ts`'s four maps unproved). The scan at the
+ * bottom has no allowlist, and holds the table to the map count as well as the
+ * names, so a row left behind by a deleted map fails too. A map keyed by
+ * `string` is keyed on its closed source instead: `today-labels.ts`'s two
+ * Today-queue maps read the `payment_operation_kind` and `media_deletion_kind`
+ * pg enums, which is how a stuck `shop_logo` deletion was found printing its
+ * raw enum value.
  *
  * The failure the issue opens with — a code mapped to the **wrong real key** —
  * is caught by none of that on its own: a wrong-but-real key renders a
@@ -672,6 +664,13 @@ const CASES: readonly LabelMapCase[] = [
     map: "INCIDENT_SEVERITY_KEYS",
     rows: codeRows(INCIDENT_SEVERITIES, (locale, severity) =>
       staffTranslator(locale)(INCIDENT_SEVERITY_KEYS[severity]),
+    ),
+  },
+  {
+    module: "desk-payment-labels.ts",
+    map: "DESK_PAYMENT_KEYS",
+    rows: codeRows(DESK_PAYMENTS, (locale, code) =>
+      diverTranslator(locale)(DESK_PAYMENT_KEYS[code]),
     ),
   },
   {

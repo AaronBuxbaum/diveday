@@ -15,6 +15,7 @@ import {
   DIVER_PARTICIPANT_CHOICE_KEYS,
   DIVER_PARTICIPANT_CHOICE_UNPRICED_KEYS,
 } from "@/i18n/participant-labels";
+import type { DeskPayment } from "@/lib/desk-payment";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import { type ParticipantType, rentsGear } from "@/lib/participant-types";
@@ -388,6 +389,11 @@ export type BookSpotSectionContext = {
    */
   taxEnabled?: boolean;
   /**
+   * How the shop takes money at the desk (fifth-loop ideas, item 21), said
+   * under "Due at the shop". Null says nothing.
+   */
+  deskPayment?: DeskPayment | null;
+  /**
    * A course session's two priced halves, per diver (`courseCharges`), resolved
    * by the page so the arithmetic stays server-side. Null on an ordinary
    * charter, and each hides its own line in `MoneyBlock`.
@@ -469,6 +475,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
     rentalPricing,
     passThroughFee,
     taxEnabled,
+    deskPayment = null,
     courseFeeCents,
     eLearningFeeCents,
     depositCents,
@@ -709,6 +716,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
               // read in the wrong branch).
               taxLine: taxEnabled && payAtBooking ? "checkout" : "none",
               dueNow: payAtBooking ? "checkout" : "at_shop",
+              deskPayment,
               depositCents: depositCents ?? null,
               balanceDueAt: balanceDueAt ?? null,
               currency,

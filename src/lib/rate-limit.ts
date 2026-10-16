@@ -360,6 +360,29 @@ export async function checkRateLimit(
 }
 
 /**
+ * {@link checkRateLimit}, but a store error **refuses** rather than allows.
+ * For the one bucket where a guess that slips through costs more than a
+ * refused legitimate try: the doctor's page's date-of-birth unlock, which
+ * stands in front of medical answers (second-pass security review of layer
+ * r5-3, N4). The failure is reported exactly as the fail-open path reports it.
+ */
+export async function checkRateLimitFailClosed(
+  key: string,
+  config: RateLimitConfig,
+  now: number = nowMs(),
+  store: RateLimitStore = defaultStore,
+): Promise<RateLimitResult> {
+  if (rateLimitDisabled()) return { allowed: true, retryAfterMs: 0 };
+  announceMemoryStoreInProduction(store);
+  try {
+    return await store.take(key, config, now);
+  } catch (error) {
+    await reportStoreFailure(error, store, now);
+    return { allowed: false, retryAfterMs: 60_000 };
+  }
+}
+
+/**
  * Hashes the key's parts so a raw bearer token, email address, or other
  * sensitive value is never held as a literal Map key or written to a log —
  * only its hash, which cannot be reversed into the original (CR-013's "no
@@ -693,6 +716,20 @@ export const RATE_LIMITS = {
    * because the first was made would read as the feature being broken.
    */
   readinessLinkResendByBooking: perHour(5),
+  /**
+   * Unlocking the answers on the doctor's page (`/waivers/[token]/doctor`) by
+   * typing the diver's date of birth, per **diver** (the held release's
+   * person) rather than per IP or per record, so neither rotating addresses
+   * nor a reissued link buys a fresh budget. Five a quarter hour is plenty for
+   * a diver mistyping their own birthday, but a bucket refills: sustained, it
+   * is 20 an hour, so on its own it would walk a known birth year in under a
+   * day. The real bound is the record's lifetime ceiling,
+   * `DOCTOR_UNLOCK_FAILURE_LIMIT` wrong dates, after which the answers stay
+   * locked for the rest of the hold; this only paces the tries before it.
+   * Checked with `checkRateLimitFailClosed` (security review of layer r5-3,
+   * F1, and its second pass).
+   */
+  doctorAnswersByPerson: per15Min(5),
   /**
    * Core Web Vitals beacons to `/api/vitals`, per IP.
    *

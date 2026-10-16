@@ -3,7 +3,13 @@ import { resolveCourseDepths } from "@/lib/courses";
 import { SEA_STATES } from "@/lib/marine-forecast";
 import { diverTranslator } from "./messages";
 import { staffTranslator } from "./staff-messages";
-import { courseDepthFormat, depthText, seaStateText, temperatureText } from "./unit-labels";
+import {
+  courseDepthFormat,
+  depthRangeText,
+  depthText,
+  seaStateText,
+  temperatureText,
+} from "./unit-labels";
 
 const en = diverTranslator("en-US");
 const es = diverTranslator("es-ES");
@@ -14,6 +20,26 @@ describe("depthText / temperatureText", () => {
     expect(depthText(en, 18.288, "feet")).toBe("60 ft");
     expect(temperatureText(en, 27, "celsius")).toBe("27°C");
     expect(temperatureText(en, 27, "fahrenheit")).toBe("81°F");
+  });
+});
+
+/** Fifth-loop ideas, item 22: the reader's unit after the shop's, when it differs. */
+describe("the reader's second unit", () => {
+  it("adds the reader's unit after the shop's, and nothing when they agree", () => {
+    expect(depthText(en, 18.288, "feet", "meters")).toBe("60 ft (18 m)");
+    expect(depthText(en, 18.288, "feet", "feet")).toBe("60 ft");
+    expect(depthText(en, 18.288, "feet", null)).toBe("60 ft");
+    expect(temperatureText(en, 26, "fahrenheit", "celsius")).toBe("79°F (26°C)");
+    expect(temperatureText(es, 26, "fahrenheit", "celsius")).toBe("79 °F (26 °C)");
+  });
+
+  it("converts a range the shop typed as numbers and a unit, and leaves other words alone", () => {
+    expect(depthRangeText(en, "60–130 ft", "meters")).toBe("60–130 ft (18–40 m)");
+    expect(depthRangeText(en, "18-40 m", "feet")).toBe("18-40 m (59–131 ft)");
+    expect(depthRangeText(en, "40 ft", "meters")).toBe("40 ft (12 m)");
+    expect(depthRangeText(en, "60–130 ft", "feet")).toBe("60–130 ft");
+    expect(depthRangeText(en, "60–130 ft", null)).toBe("60–130 ft");
+    expect(depthRangeText(en, "Shallow, to about 40 ft", "meters")).toBe("Shallow, to about 40 ft");
   });
 });
 

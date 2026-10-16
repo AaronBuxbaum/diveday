@@ -78,6 +78,8 @@
     "groupSizePlaceholder": "Max 5 students per instructor",
     "nitroxCompatibleLabel": "We can run this course on nitrox",
     "nitroxCompatibleHint": "When it is off, sessions of this course never offer divers the enriched-air box. A diver still needs verified nitrox certification before any fill.",
+    "gearIncludedLabel": "The scuba unit is part of the course fee",
+    "gearIncludedHint": "BCD, regulator, tank and weights. Students bring their own mask and fins, and give their sizes before a session.",
     "enrollLegend": "Who can enroll",
     "orHigher": "{level} or higher",
     "ageSuffix": ", {age}+",

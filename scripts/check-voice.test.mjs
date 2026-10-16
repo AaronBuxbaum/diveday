@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   BRITISH_SPELLINGS,
   ENCRYPTION_ALLOWLIST,
+  EXCLAMATION_ALLOWLIST,
+  exclamations,
   findTells,
   housePhrases,
   metadataStrings,
@@ -10,6 +12,7 @@ import {
   pageOf,
   proseDashes,
   RULES,
+  scanBundles,
   straightApostrophes,
   straightDoubleQuotes,
   stringLiterals,
@@ -393,6 +396,31 @@ describe("source literals", () => {
 
   it("leaves a tagged template alone, because it is a query", () => {
     expect(stringLiterals("sql`status <> 'cancelled'`; const s = \"a b\";")).toEqual(["a b"]);
+  });
+});
+
+describe("the exclamation mark in a diver's message (ideas item 24)", () => {
+  it("catches the closing mark, and the opening one in Spanish", () => {
+    expect(exclamations("See you on the boat!").map((hit) => hit.rule)).toEqual(["exclamation"]);
+    expect(exclamations("¡Nos vemos en el barco!")).toHaveLength(2);
+  });
+
+  it("leaves a plain sentence alone", () => {
+    expect(exclamations("See you on the boat.")).toEqual([]);
+  });
+
+  it("exempts only the WhatsApp template body Meta reviews", () => {
+    expect([...EXCLAMATION_ALLOWLIST]).toEqual(["notifications.whatsappTemplate.body"]);
+    expect(exclamations("Hi! An update", "notifications.whatsappTemplate.body")).toEqual([]);
+    expect(exclamations("Hi! An update", "notifications.sms.recap")).toHaveLength(1);
+  });
+
+  it("finds none left in the diver bundles", async () => {
+    const { details } = await scanBundles();
+    const hits = [...details.entries()].flatMap(([file, found]) =>
+      found.filter((hit) => hit.rule === "exclamation").map((hit) => `${file} ${hit.key}`),
+    );
+    expect(hits).toEqual([]);
   });
 });
 

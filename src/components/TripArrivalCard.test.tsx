@@ -3,7 +3,12 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
-import { arrivalCardFacts, siteRunsLine, TripArrivalCard } from "./TripArrivalCard";
+import {
+  arrivalCardFacts,
+  arrivalDockCallLine,
+  siteRunsLine,
+  TripArrivalCard,
+} from "./TripArrivalCard";
 
 afterEach(cleanup);
 
@@ -146,37 +151,34 @@ describe("the Sites row", () => {
 });
 
 /**
- * **The dock call is on the card** (issue #2034). The card is what a diver has
- * offline at the dock, and a diver reading only the departure range would
- * arrive as the boat leaves. Same sentence and same minute `/ready` gives:
- * the trip sails 9:00 AM New York time, so a 30-minute call is 8:30.
+ * **The dock call is said once** (fifth-loop ideas, item 23). `/ready`'s
+ * masthead says "Aim to be at the dock by 8:30 AM"; this card, two screens
+ * down, used to repeat the date, the range and the same sentence. It keeps
+ * where to go. The saved card still says the dock call (issue #2034), through
+ * `arrivalDockCallLine`, because it travels without the masthead: the trip
+ * sails 9:00 AM New York time, so a 30-minute call is 8:30.
  */
-describe("the dock-call line", () => {
-  it("names when to be at the dock, in the shop's zone, beside the departure range", () => {
-    render(<TripArrivalCard shop={shop} trip={trip} locale="en-US" dockCallMinutes={30} />);
-    expect(
-      screen.getByText("Aim to be at the dock by 8:30 AM, 30 minutes before we sail."),
-    ).toBeInTheDocument();
-    // The departure range stays, beside it.
-    expect(screen.getByText(/9:00.*1:00\sPM/)).toBeInTheDocument();
+describe("the dock call", () => {
+  it("is not on the card: no date, no range, no dock sentence", () => {
+    render(<TripArrivalCard shop={shop} trip={trip} locale="en-US" />);
+    expect(screen.getByText("Blue Mantis Divers")).toBeInTheDocument();
+    expect(screen.queryByText(/at the dock by/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/9:00.*1:00\sPM/)).not.toBeInTheDocument();
   });
 
-  it("speaks the diver's language", () => {
-    render(<TripArrivalCard shop={shop} trip={trip} locale="es-ES" dockCallMinutes={45} />);
+  it("is the saved card's line, in the shop's zone and the diver's language", () => {
     expect(
-      screen.getByText("Procura estar en el muelle a las 8:15, 45 minutos antes de zarpar."),
-    ).toBeInTheDocument();
+      arrivalDockCallLine(diverTranslator("en-US"), trip.startsAt, 30, "en-US", shop.timezone),
+    ).toBe("Aim to be at the dock by 8:30\u00a0AM, 30 minutes before we sail.");
+    expect(
+      arrivalDockCallLine(diverTranslator("es-ES"), trip.startsAt, 45, "es-ES", shop.timezone),
+    ).toBe("Procura estar en el muelle a las 8:15, 45 minutos antes de zarpar.");
   });
 
-  it("says nothing when the shop asks for no lead time, or the caller passes none", () => {
-    const { rerender } = render(
-      <TripArrivalCard shop={shop} trip={trip} locale="en-US" dockCallMinutes={0} />,
-    );
-    expect(screen.queryByText(/at the dock by/)).not.toBeInTheDocument();
-    rerender(<TripArrivalCard shop={shop} trip={trip} locale="en-US" dockCallMinutes={null} />);
-    expect(screen.queryByText(/at the dock by/)).not.toBeInTheDocument();
-    rerender(<TripArrivalCard shop={shop} trip={trip} locale="en-US" />);
-    expect(screen.queryByText(/at the dock by/)).not.toBeInTheDocument();
+  it("says nothing when the shop asks for no lead time, or none is known", () => {
+    const t = diverTranslator("en-US");
+    expect(arrivalDockCallLine(t, trip.startsAt, 0, "en-US", shop.timezone)).toBeNull();
+    expect(arrivalDockCallLine(t, trip.startsAt, null, "en-US", shop.timezone)).toBeNull();
   });
 });
 

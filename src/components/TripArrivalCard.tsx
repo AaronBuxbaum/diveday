@@ -6,7 +6,7 @@ import { FactSource } from "@/components/ui/FactSource";
 import { DIVER_FACT_SOURCE_KEYS } from "@/i18n/fact-source-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { dockCallAt } from "@/lib/dock-call";
-import { formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
+import { formatTime } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { googleMapEmbedUrl, googleMapsUrl } from "@/lib/maps";
 import { meetingPointOf } from "@/lib/meeting-point";
@@ -121,7 +121,6 @@ export function TripArrivalCard({
   trip,
   locale,
   sites,
-  dockCallMinutes,
   downloadHref,
   showMap = false,
 }: {
@@ -138,12 +137,6 @@ export function TripArrivalCard({
    * order and the provenance appear together.
    */
   sites?: readonly string[];
-  /**
-   * The shop's dock-call lead time, for the "be at the dock by" line under
-   * the departure range. Omit it (or pass `null`) for a diver who is being
-   * collected from their hotel; `0` draws no line.
-   */
-  dockCallMinutes?: number | null;
   /** A post-booking download URL carrying the Ready capability. */
   downloadHref?: string | null;
   /**
@@ -164,13 +157,6 @@ export function TripArrivalCard({
 }) {
   const t = diverTranslator(locale);
   const facts = arrivalCardFacts(shop, trip);
-  const dockCallLine = arrivalDockCallLine(
-    t,
-    trip.startsAt,
-    dockCallMinutes,
-    locale,
-    shop.timezone,
-  );
   return (
     <SectionCard
       title={t("trip.arrivalHeading")}
@@ -219,13 +205,11 @@ export function TripArrivalCard({
             </a>
           ) : null}
         </div>
-        <div>
-          <p className="text-sm text-muted">
-            {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
-            {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
-          </p>
-          {dockCallLine ? <p className="mt-1 text-sm font-medium">{dockCallLine}</p> : null}
-        </div>
+        {/* No date, time range or dock call here (fifth-loop ideas, item 23):
+            the masthead above says when to be at the dock, and this card is
+            only where. The saved card (`arrival-card/route.ts`) still carries
+            the dock call, through `arrivalDockCallLine`, because it travels
+            without the masthead. */}
         <dl className="grid gap-4 border-t border-border pt-3 sm:grid-cols-2">
           {sites && sites.length > 0 ? (
             <div>

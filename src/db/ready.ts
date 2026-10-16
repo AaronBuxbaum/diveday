@@ -3,6 +3,7 @@ import { type CarriedPreparation, carriedPreparation } from "@/lib/carried-prepa
 import { nowDate } from "@/lib/clock";
 import { type CourseLearningMaterial, readLearningMaterials } from "@/lib/courses";
 import { seatListPriceCents, withinCancellationWindow } from "@/lib/deposits";
+import type { DeskPayment } from "@/lib/desk-payment";
 import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { publicAppUrl } from "@/lib/notifications";
@@ -162,17 +163,20 @@ export type ReadyPageData = {
     rentalPricing: RentalPricing;
     /** Minutes before departure the shop wants divers at the dock — the same figure the night-before email's arrival line uses. */
     dockCallMinutes: number;
+    /** How the desk takes money, said after a figure owed there (fifth-loop ideas, item 21). */
+    deskPayment: DeskPayment | null;
   };
   trip: {
     id: string;
     plannedDives: number;
     /**
-     * Only what the nitrox gate needs, never the whole catalog row: whether a
+     * Only what the gear step needs, never the whole catalog row: whether a
      * session of this course may run on enriched air (`nitroxAvailableOn`,
-     * src/lib/rentals.ts). Null on an ordinary charter, which the gate reads
-     * as "the shop's answer is the whole answer".
+     * src/lib/rentals.ts), and whether its rental gear is part of the course
+     * fee, which takes the prices off the sizes form. Null on an ordinary
+     * charter, which the gate reads as "the shop's answer is the whole answer".
      */
-    course: { nitroxCompatible: boolean } | null;
+    course: { nitroxCompatible: boolean; gearIncluded: boolean } | null;
     /**
      * What this seat costs on this departure (`seatListPriceCents`): the fare
      * for its participant type, or null on an unpriced trip. The thread's
@@ -435,6 +439,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       rentalPricing: shops.rentalPricing,
       dockCallMinutes: shops.dockCallMinutes,
       offersHotelPickup: shops.offersHotelPickup,
+      deskPayment: shops.deskPayment,
       personEmail: people.email,
       personLocale: people.locale,
       emergencyContactName: people.emergencyContactName,
@@ -633,11 +638,14 @@ export async function getReadyPageData(
       rentalItems: row.rentalItems,
       rentalPricing: row.rentalPricing,
       dockCallMinutes: row.dockCallMinutes,
+      deskPayment: row.deskPayment,
     },
     trip: {
       id: row.tripId,
       plannedDives: trip.plannedDives,
-      course: trip.course ? { nitroxCompatible: trip.course.nitroxCompatible } : null,
+      course: trip.course
+        ? { nitroxCompatible: trip.course.nitroxCompatible, gearIncluded: trip.course.gearIncluded }
+        : null,
       seatPriceCents: perDiverPriceCents,
     },
     person: {

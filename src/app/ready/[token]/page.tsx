@@ -46,6 +46,7 @@ import { type AppDb, getDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
 import { diverCrewWithAway } from "@/db/crew-away-diver";
 import { packageDivesForBooking } from "@/db/dive-packages";
+import { readPlannedFlySafe } from "@/db/fly-safe-plan";
 import { getBookedCard, getReadyPageData } from "@/db/ready";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
@@ -352,7 +353,7 @@ async function DiverReadinessPage({
     // verified `readiness` capability above; the query only ever walks seats
     // led by this booking, so a member's own /ready renders no panel. One wave with
     // the rest: each needs only the verified booking, shop and person (review 2026-10-11).
-    const [partySeatClaims, tripReads, paymentReceipt, courseForms, packageDives] =
+    const [partySeatClaims, tripReads, paymentReceipt, courseForms, packageDives, flySafePlan] =
       await Promise.all([
         issuePartySeatClaims(db, { shopId: shop.id, leadBookingId: bookingId }),
         threadTripReads,
@@ -360,12 +361,8 @@ async function DiverReadinessPage({
         // I pay?" is a question the night before too — and it is what the Pay step's
         // settled line says, now that the receipt panel that used to say it above
         // the checklist is gone (ADR 20260827-the-divers-thread, decision 3).
-        //
-        // The emails line went with that panel. It claimed, in the minutes after a
-        // submit, that two messages were on their way — a third statement of the
-        // booking's status in one screenful, on a page whose status is now said once
-        // by the spine. `EmbedBookedNotice` still carries it where it is the *only*
-        // thing the reader gets, which is the embed's confirmation and not this page.
+        // The emails line went with that panel; `EmbedBookedNotice` still carries it,
+        // where it is the only thing the reader gets.
         resolvePaymentReceipt(
           db,
           shop.id,
@@ -381,6 +378,8 @@ async function DiverReadinessPage({
         // Asked whatever `COURSE_FORMS_BLOCK_BOARDING` says: warn-only raises no blocker (#2266).
         data.trip.course ? getCourseFormsForBooking(db, shop.id, bookingId) : null,
         packageDivesForBooking(db, { shopId: shop.id, personId: data.person.id, bookingId }),
+        // When to fly home, as a plan, before the boat sails (fifth-loop ideas, item 18).
+        readPlannedFlySafe(db, data),
       ]);
     const [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage] = tripReads;
     const courseFormsOwed = (courseForms?.outstanding.length ?? 0) > 0;
@@ -412,24 +411,23 @@ async function DiverReadinessPage({
     });
 
     /** "Everyone's set — see you at the dock." The rule is `partyIsAllSet`'s. */
-    const ownSignStep = spine.steps.find((step) => step.id === "sign");
     const currentStep = spine.steps.find((step) => step.id === spine.current);
     const partyAllSet = partyIsAllSet({
       seats: partySeatClaims,
-      ownSignSettled: !ownSignStep || ownSignStep.state === "done",
+      ownSignSettled: (spine.steps.find((step) => step.id === "sign")?.state ?? "done") === "done",
       diveDay,
     });
 
     /** A money figure in the currency it was actually charged in, never today's shop setting. */
     const money = (cents: number, currency: string) => formatMoneyCents(cents, currency, locale);
-    const { paidLine, depositBalanceLine } = payStepLines(t, money, paymentReceipt, packageDives);
+    const paid = payStepLines(t, money, paymentReceipt, packageDives, data.shop.deskPayment);
 
     // What is owed at the shop, said once (fourth UX review, item 5).
     const atShopLine = atShopMoneyLine(t, locale, shop.currency, data, fullTrip, partySeatClaims);
 
     /** One step's fact, and one step's form. The two things the spine cannot derive. */
     const stepLine = (step: ThreadStep): string | null =>
-      readyStepLine(step, { t, facts, lastDivedBand: data.lastDivedBand, paidLine });
+      readyStepLine(step, { t, facts, lastDivedBand: data.lastDivedBand, paidLine: paid.paidLine });
 
     /**
      * The step's form, or nothing.
@@ -493,12 +491,12 @@ async function DiverReadinessPage({
           const payable =
             data.canPay &&
             (step.item?.code === "payment_due" || step.item?.code === "payment_refunded");
-          if (!payable && !depositBalanceLine) return null;
+          if (!payable && !paid.depositBalanceLine) return null;
           return (
             <PayStepBody
               token={token}
               payable={payable}
-              depositBalanceLine={depositBalanceLine}
+              depositBalanceLine={paid.depositBalanceLine}
               actionButton={actionButton}
               fullShop={fullShop}
               fullTrip={fullTrip}
@@ -548,9 +546,7 @@ async function DiverReadinessPage({
           <p className="mt-8 text-base text-muted">{checklistDetailText(t, spine.setupItem)}</p>
         ) : (
           <>
-            {stageLine ? (
-              <BoatStageLine sentence={stageLine.sentence} said={stageLine.said} />
-            ) : null}
+            {stageLine ? <BoatStageLine {...stageLine} /> : null}
             <ThreadStatus
               lead={
                 spine.done === spine.countable
@@ -580,6 +576,7 @@ async function DiverReadinessPage({
             publicCrew,
             partySeatClaims,
             partyAllSet,
+            flySafePlan,
           }}
         />
       </>

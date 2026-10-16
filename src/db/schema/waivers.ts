@@ -408,6 +408,15 @@ export const waiverRecords = pgTable(
      * erasure is inside the seal rather than an unsealed annotation beside it.
      */
     anonymizedAt: timestamp("anonymized_at", { withTimezone: true }),
+    /**
+     * Wrong dates of birth typed on the doctor's page to unlock this release's
+     * referral answers (`revealDoctorReferral`). At
+     * `DOCTOR_UNLOCK_FAILURE_LIMIT` the answers stay locked for the rest of
+     * the hold: a ceiling for the life of the record, which a refilling rate
+     * limit cannot give (second-pass security review of layer r5-3, FIX-1).
+     * Outside the seal; a count of attempts, not evidence.
+     */
+    doctorUnlockFailures: integer("doctor_unlock_failures").notNull().default(0),
     /** The shop owner who ordered the erasure — see `people.anonymized_by_person_id`. */
     anonymizedByPersonId: uuid("anonymized_by_person_id").references(() => people.id),
     /**

@@ -1,6 +1,6 @@
 import type { CourseDepthFormat } from "@/lib/courses";
 import type { DepthUnit } from "@/lib/depth-units";
-import { depthInUnit } from "@/lib/depth-units";
+import { depthInUnit, depthToMeters } from "@/lib/depth-units";
 import type { SeaState, WindState } from "@/lib/marine-forecast";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { temperatureInUnit } from "@/lib/temperature-units";
@@ -29,9 +29,53 @@ const TEMPERATURE_UNIT_KEYS: Record<TemperatureUnit, DiverMessageKey> = {
   fahrenheit: "common.units.fahrenheit",
 };
 
-/** A stored depth (metres) written out in the shop's unit. */
-export function depthText(t: DiverTranslator, meters: number, unit: DepthUnit): string {
-  return t(DEPTH_UNIT_KEYS[unit], { value: depthInUnit(meters, unit) });
+/**
+ * The shop's figure with the reader's after it, "60 ft (18 m)", when the
+ * reader thinks in the other unit (fifth-loop ideas, item 22; `ReaderUnits`).
+ * One ICU template, so a locale may set the pair its own way.
+ */
+function withReaderUnit(t: DiverTranslator, first: string, second: string | null): string {
+  return second ? t("common.units.withReaderUnit", { first, second }) : first;
+}
+
+/**
+ * A stored depth (metres) written out in the shop's unit, and in the reader's
+ * after it when theirs differs.
+ */
+export function depthText(
+  t: DiverTranslator,
+  meters: number,
+  unit: DepthUnit,
+  reader: DepthUnit | null = null,
+): string {
+  const own = t(DEPTH_UNIT_KEYS[unit], { value: depthInUnit(meters, unit) });
+  const theirs =
+    reader && reader !== unit
+      ? t(DEPTH_UNIT_KEYS[reader], { value: depthInUnit(meters, reader) })
+      : null;
+  return withReaderUnit(t, own, theirs);
+}
+
+/**
+ * A depth range the shop typed ("60–130 ft", "18 m"), with the reader's unit
+ * after it when theirs differs: "60–130 ft (18–40 m)". Only a range written as
+ * one or two numbers and a unit is converted; anything else is the shop's own
+ * words and stays exactly as written.
+ */
+export function depthRangeText(
+  t: DiverTranslator,
+  written: string,
+  reader: DepthUnit | null = null,
+): string {
+  const match = /^\s*(\d+(?:\.\d+)?)(?:\s*[–-]\s*(\d+(?:\.\d+)?))?\s*(ft|feet|m|meters)\s*$/i.exec(
+    written,
+  );
+  if (!match || !reader) return written;
+  const unit: DepthUnit = /^f/i.test(match[3]) ? "feet" : "meters";
+  if (unit === reader) return written;
+  const convert = (value: string) => depthInUnit(depthToMeters(Number(value), unit), reader);
+  const value = match[2] ? `${convert(match[1])}–${convert(match[2])}` : `${convert(match[1])}`;
+  return withReaderUnit(t, written, t(DEPTH_UNIT_KEYS[reader], { value }));
 }
 
 /**
@@ -54,13 +98,22 @@ export function courseDepthFormat(t: DiverTranslator, unit: DepthUnit): CourseDe
   };
 }
 
-/** A stored water temperature (Celsius) written out in the shop's unit. */
+/**
+ * A stored water temperature (Celsius) written out in the shop's unit, and in
+ * the reader's after it when theirs differs: "79°F (26°C)".
+ */
 export function temperatureText(
   t: DiverTranslator,
   celsius: number,
   unit: TemperatureUnit,
+  reader: TemperatureUnit | null = null,
 ): string {
-  return t(TEMPERATURE_UNIT_KEYS[unit], { value: temperatureInUnit(celsius, unit) });
+  const own = t(TEMPERATURE_UNIT_KEYS[unit], { value: temperatureInUnit(celsius, unit) });
+  const theirs =
+    reader && reader !== unit
+      ? t(TEMPERATURE_UNIT_KEYS[reader], { value: temperatureInUnit(celsius, reader) })
+      : null;
+  return withReaderUnit(t, own, theirs);
 }
 
 const SEA_STATE_KEYS: Record<SeaState, DiverMessageKey> = {

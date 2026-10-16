@@ -35,9 +35,11 @@ import {
   reviewModerationReason,
   reviewReplies,
   shops,
+  tripDives,
   tripReviews,
   trips,
 } from "./schema";
+import { liveTrip } from "./trips-live";
 
 /**
  * Reviews from divers who provably dived. The write path is a booking's own
@@ -385,6 +387,78 @@ export async function listPublishedShopReviews(
     const review = publicReviewFromRow(row);
     return review ? [review] : [];
   });
+}
+
+/** How many divers' words sit under a trip's plan (fifth-loop ideas, item 20). */
+export const SITE_REVIEW_LIMIT = 2;
+
+export type SiteReview = {
+  id: string;
+  comment: string;
+  /** First name and last initial (`reviewerDisplayName`). */
+  reviewer: string;
+  divedAt: Date;
+};
+
+/**
+ * **What earlier divers said about these sites** (fifth-loop ideas, item 20):
+ * up to {@link SITE_REVIEW_LIMIT} published reviews with words, from
+ * departures that went to any of `siteIds`, by the departure's own site or a
+ * planned dive's. The same release the shop's public reviews already pass
+ * (published, written) and the same newest-day-first order, so this shows
+ * nothing the shop's review archive does not already show; it only puts the
+ * words beside the place they are about.
+ *
+ * A review is about a whole departure, so a two-site day's review sits under
+ * both sites' trips; the departure is what the diver remembers, and the date
+ * says which one it was.
+ */
+export async function listSiteReviews(
+  db: DbExecutor,
+  shopId: string,
+  siteIds: readonly string[],
+  limit: number = SITE_REVIEW_LIMIT,
+): Promise<SiteReview[]> {
+  if (siteIds.length === 0) return [];
+  const ids = [...new Set(siteIds)];
+  const wentThere = or(
+    inArray(trips.diveSiteId, ids),
+    exists(
+      db
+        .select({ one: tripDives.id })
+        .from(tripDives)
+        .where(and(eq(tripDives.tripId, trips.id), inArray(tripDives.diveSiteId, ids))),
+    ),
+  );
+  const rows = await db
+    .select({
+      id: tripReviews.id,
+      comment: tripReviews.comment,
+      fullName: people.fullName,
+      divedAt: trips.startsAt,
+    })
+    .from(tripReviews)
+    .innerJoin(people, eq(people.id, tripReviews.personId))
+    .innerJoin(trips, and(eq(trips.id, tripReviews.tripId), eq(trips.shopId, tripReviews.shopId)))
+    .innerJoin(shops, eq(shops.id, tripReviews.shopId))
+    // Never a private charter's: beside a public departure to the same site,
+    // its date would say where that group dived and when (security review of
+    // layer r5-3, N1). The archive only hides such a trip's title.
+    .where(and(publicWrittenReviewScope(shopId), liveTrip(), eq(trips.isPrivate, false), wentThere))
+    .orderBy(...publicReviewOrder())
+    .limit(limit);
+  return rows.flatMap((row) =>
+    row.comment?.trim()
+      ? [
+          {
+            id: row.id,
+            comment: row.comment.trim(),
+            reviewer: reviewerDisplayName(row.fullName),
+            divedAt: row.divedAt,
+          },
+        ]
+      : [],
+  );
 }
 
 export type PublicReviewPage = {
