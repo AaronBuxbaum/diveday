@@ -215,6 +215,15 @@ export const certifications = pgTable(
      * path. Set only alongside `issuedByShopAt`.
      */
     issuedByPersonId: uuid("issued_by_person_id").references(() => people.id),
+    /**
+     * **When the shop told the agency about this card** (fifth-loop ideas,
+     * item 46): the instructor's "Processed with PADI" after Certify. It
+     * records the shop's own act and issues nothing; the agency's card still
+     * comes from the agency. Set only on a card the shop issued.
+     */
+    processedWithAgencyAt: timestamp("processed_with_agency_at", { withTimezone: true }),
+    /** The staff member who ticked it; set only alongside `processedWithAgencyAt`. */
+    processedByPersonId: uuid("processed_by_person_id").references(() => people.id),
     /** Soft-archive: a deleted card keeps its row for safety history but drops
      * out of every readiness/roster read (ADR 20260719-crud-archive-semantics). */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -229,6 +238,15 @@ export const certifications = pgTable(
     // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
     index("certifications_person_id_idx").on(table.personId),
     index("certifications_shop_person_idx").on(table.shopId, table.personId),
+    // Partial: almost every card is never processed here, and a merge or a
+    // demo cascade probes this foreign key (`people-fk-indexes.test.ts`).
+    index("certifications_processed_by_person_idx")
+      .on(table.processedByPersonId)
+      .where(sql`${table.processedByPersonId} is not null`),
+    check(
+      "certifications_processed_only_when_issued",
+      sql`${table.processedWithAgencyAt} is null or ${table.issuedByShopAt} is not null`,
+    ),
     // Partial on the live rows only, so archiving a card frees its number for
     // re-entry (e.g. a renewed card carrying the same identifier).
     // Case-insensitive so "ab1234" and "AB1234" can't create two live rows

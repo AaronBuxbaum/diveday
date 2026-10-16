@@ -254,6 +254,13 @@ export const bookings = pgTable(
     reEntryAsk: reEntryAsk("re_entry_ask"),
     /** Optional lodging / hotel pickup address or landmark provided by the diver on /ready. */
     hotelPickupLocation: text("hotel_pickup_location"),
+    /**
+     * What this diver cannot eat, as they wrote it on /ready (fifth-loop
+     * ideas, item 56), asked only on a departure with lunch aboard. Food, not
+     * medicine: anything life-threatening belongs on the medical form, and the
+     * question says so.
+     */
+    dietaryNote: text("dietary_note"),
     /** Optional staff-set pickup time for this booking (e.g., "07:15"). */
     pickupTime: text("pickup_time"),
     status: bookingStatus("status").notNull().default("booked"),

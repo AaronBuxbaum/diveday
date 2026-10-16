@@ -291,6 +291,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "buddy_team_events.recorded_by_person_id": "who recorded the team change",
   "certifications.deleted_by_person_id": "who removed the card",
   "certifications.issued_by_person_id": "who entered the card",
+  "certifications.processed_by_person_id": "who told the agency about the card",
   "certifications.reviewed_by_person_id": "who confirmed the card",
   "crew_assignment_requests.decided_by_person_id": "who answered the ask",
   "crew_notices.actor_person_id": "who made the crew change",
