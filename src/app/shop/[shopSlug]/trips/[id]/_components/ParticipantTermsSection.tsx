@@ -162,11 +162,12 @@ export function participantTermsRows({
   const currency = toShopCurrency(shop.currency);
   const status = noticeForForm(tripNotice, "participant-terms");
   const summary = participantTermsSummary(t, trip, currency, locale);
-  // Snorkeler seats open over sites the shop itself marked no good for
-  // snorkeling (issue #2214). A line on the row, never a refusal: the captain
-  // picks the site on the day.
+  // Snorkelers on, or able to book, a departure over sites the shop itself
+  // marked no good for snorkeling (issue #2214, domain review F8). A line on
+  // the row, never a refusal: the captain picks the site on the day.
   const unsuitable = snorkelersOnUnsuitableSites({
     snorkelerSeatsOpen: trip.snorkelerPriceCents !== null,
+    snorkelersBooked: trip.bookedSnorkelers,
     plannedSites: tripDiveList.flatMap(({ diveSite }) => (diveSite ? [diveSite] : [])),
   });
   return [
@@ -177,7 +178,11 @@ export function participantTermsRows({
         <>
           {summary}
           <span className="mt-0.5 block font-medium text-warning-strong">
-            {t("participants.terms.sitesNotForSnorkelers")}
+            {trip.bookedSnorkelers > 0
+              ? t("participants.terms.sitesNotForBookedSnorkelers", {
+                  count: trip.bookedSnorkelers,
+                })
+              : t("participants.terms.sitesNotForSnorkelers")}
           </span>
         </>
       ) : (

@@ -450,9 +450,10 @@
   catalog**, and importing one makes an independent copy the shop then owns.
 - **Snorkel-suitable** — the shop's yes, no or not-said about whether a **dive site** is any good
   for a snorkeler (`dive_sites.snorkel_suitable`, issue #2214), set beside difficulty and copied
-  from a common-site template where the template knows. Null is not said and never reads as no.
-  It only ever raises a warning-tone line on a departure's "Snorkelers and riders" row when
-  snorkeler seats are open and every planned site says no (`snorkelersOnUnsuitableSites`); it
+  from a common-site template where the template knows; an import sets it only from an explicit
+  yes or no. Null is not said and never reads as no. It only ever raises a warning-tone line on a
+  departure's "Snorkelers and riders" row when snorkeler seats are open or a snorkeler is booked,
+  and every planned site says no (`snorkelersOnUnsuitableSites`); it
   never refuses a snorkeler's seat, because the captain picks the site on the day.
 - **Dive briefing** — what a diver reads (and the crew says) about **one tank on one dated trip**:
   the `trip_dives` row, rendered from the site's saved notes plus whatever the crew wrote for that

@@ -49,6 +49,7 @@ import {
 import { liveTrip, notRehearsal } from "./trips-live";
 import {
   bookedDiversCount,
+  bookedSnorkelersCount,
   heldSeatCounts,
   seatHeld,
   tripBoatCertifiedPassengers,
@@ -118,6 +119,7 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
       diveSite: diveSites,
       booked: count(bookings.id),
       bookedDivers: bookedDiversCount(),
+      bookedSnorkelers: bookedSnorkelersCount(),
       certifiedPassengers: tripBoatCertifiedPassengers(),
     })
     .from(trips)
@@ -138,6 +140,8 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
         diveSite: row.diveSite,
         booked: row.booked,
         bookedDivers: row.bookedDivers,
+        /** Snorkelers holding a seat, for the snorkel-site line (domain review F8). */
+        bookedSnorkelers: row.bookedSnorkelers,
       }
     : null;
 }
