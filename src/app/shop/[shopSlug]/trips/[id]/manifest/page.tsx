@@ -140,7 +140,7 @@ export default async function TripManifestPage({
   const { catalogSpecies, speciesBySite } = manifestSpecies(locale, fieldGuides);
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
-  const boatSafety = await departureBoatSafetySection(db, shop, departureManifest, t);
+  const boatSafety = await departureBoatSafetySection(db, shop, departureManifest, t, locale);
 
   const opened = openCheckpoint(completeManifests, departureManifest, requestedCheckpoint);
   // A checkpoint this plan lacks leaves the address bar, never opening the dock (#2508).

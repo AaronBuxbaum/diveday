@@ -54,7 +54,7 @@ function at(
 }
 
 describe("checkpointGap", () => {
-  it("reports divers and crew apart: unmarked and not back aboard in each half", () => {
+  it("reports divers and crew apart, and the people marked not back aboard on their own", () => {
     const list = [
       at("departure", {
         crew: [
@@ -71,8 +71,9 @@ describe("checkpointGap", () => {
     expect(checkpointGap(list, "after_dive_1")).toEqual({
       kind: "unmarked",
       checkpoint: "after_dive_1",
-      divers: 2,
-      crew: 2,
+      divers: 1,
+      crew: 1,
+      missing: 2,
     });
   });
 
@@ -97,7 +98,8 @@ describe("checkpointGap", () => {
       kind: "unmarked",
       checkpoint: "after_dive_2",
       divers: 0,
-      crew: 1,
+      crew: 0,
+      missing: 1,
     });
   });
 
@@ -153,6 +155,7 @@ describe("previousCheckpointGaps", () => {
       checkpoint: "after_dive_1",
       divers: 2,
       crew: 0,
+      missing: 0,
     });
     // Dive 2 closed, so opening dive 3 warns about nothing.
     expect(gaps.has("after_dive_3")).toBe(false);
@@ -184,7 +187,7 @@ describe("homewardCheckpointGap", () => {
         at("after_dive_1", { boarded: 8 }),
         at("after_dive_2", { boarded: 5, awaiting: 3 }),
       ]),
-    ).toEqual({ kind: "unmarked", checkpoint: "after_dive_2", divers: 3, crew: 0 });
+    ).toEqual({ kind: "unmarked", checkpoint: "after_dive_2", divers: 3, crew: 0, missing: 0 });
   });
 
   it("lets a later full count settle an earlier gap", () => {
@@ -221,7 +224,7 @@ describe("homewardCheckpointGap", () => {
           at("after_dive_1", { boarded: 8 }),
           at("after_dive_2", { awaiting: 8, crew: [{ id: "dm", state: "boarded" }] }),
         ]),
-      ).toEqual({ kind: "unmarked", checkpoint: "after_dive_2", divers: 8, crew: 0 });
+      ).toEqual({ kind: "unmarked", checkpoint: "after_dive_2", divers: 8, crew: 0, missing: 0 });
     });
 
     it("stays a head-count warning when the dive before is open too", () => {

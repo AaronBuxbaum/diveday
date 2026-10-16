@@ -4,6 +4,7 @@ import type {
   AgencyListedHostAction,
 } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckHost";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
+import type { AboardHold } from "@/db/aboard-at-sea";
 import type { SameNameHeldSeat } from "@/db/bookings";
 import type { CourseMaterialsDone } from "@/db/course-materials";
 import type { listBookingNotes } from "@/db/operations";
@@ -137,6 +138,8 @@ export type RosterRows = {
   courseMaterialsDoneByPerson?: ReadonlyMap<string, CourseMaterialsDone>;
   /** Per held seat, the other held seats a split may move with it (`sameNameHeldSeats`). */
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
+  /** Seats the boat carried or may be carrying: Remove refuses them (H-122). */
+  aboardAtSea?: ReadonlyMap<string, AboardHold>;
   /**
    * Per held seat, the matched diver's last dive day at this shop, or null for
    * none (issue #1789): the evidence line in the armed "Same person" confirm.

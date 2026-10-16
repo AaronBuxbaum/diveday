@@ -96,6 +96,7 @@
     "gearServiceDue": "Mantenimiento",
     "boatSafetyKit": "Equipo de seguridad",
     "boatPapersDue": "Documentos por vencer",
+    "boatPapersLapsed": "Documentos vencidos",
     "boatSafetyExpired": "Seguridad vencida",
     "incidentReportUnfiled": "Informe de incidente",
     "workOrderLate": "Reparación atrasada",

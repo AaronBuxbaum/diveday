@@ -11,7 +11,6 @@ import {
 } from "@/db/authz";
 import { sendBookingCancelledNotice } from "@/db/booking-cancelled-notice";
 import {
-  cancelBooking,
   confirmBookingIdentity,
   restoreBooking,
   setBookingParticipantType,
@@ -64,7 +63,7 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { uuidParam } from "@/lib/uuid";
-import { isRosterBooking, requireRosterBooking, tripPath } from "./roster-booking";
+import { isRosterBooking, removeSeat, requireRosterBooking, tripPath } from "./roster-booking";
 
 const paymentStatusSchema = z.enum(["unpaid", "deposit_paid", "paid", "waived", "refunded"]);
 
@@ -291,13 +290,8 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   if (!uuidParam(bookingId)) redirect(back);
   const dbi = await getDb();
   await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, back);
-  // The trail's "who took this diver off the manifest?" line is written in
-  // the removal's own transaction, named by record (security review
-  // 2026-10-16, F1).
-  const cancelled = await cancelBooking(dbi, s.user.shopId, bookingId, {
-    actorPersonId: s.user.personId,
-  });
-  const from = cancelled?.previousStatus ?? "cancelled";
+  // Refused, with nothing sent, for a diver marked aboard at sea (H-122).
+  const from = await removeSeat(dbi, s.user.shopId, bookingId, back, s.user.personId);
   await trackEvent({ name: "booking_cancelled", source: "staff" });
   // Freeing the seat is roster work any staff member does, but moving money is
   // owner/manager work (H-14, ADR 20260724-role-authorization). A crew member

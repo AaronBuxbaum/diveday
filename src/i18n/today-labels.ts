@@ -53,6 +53,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   gear_service_due: "today.actionKind.gearServiceDue",
   boat_safety_kit: "today.actionKind.boatSafetyKit",
   boat_papers_due: "today.actionKind.boatPapersDue",
+  boat_papers_lapsed: "today.actionKind.boatPapersLapsed",
   boat_safety_expired: "today.actionKind.boatSafetyExpired",
   incident_report_unfiled: "today.actionKind.incidentReportUnfiled",
   work_order_late: "today.actionKind.workOrderLate",

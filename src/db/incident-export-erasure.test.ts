@@ -38,7 +38,7 @@ async function lateRemoval(options: { bookedAs?: string; renameTo?: string }) {
       })
       .where(eq(bookings.id, first.booking.id));
   }
-  await cancelBooking(db, shop.id, first.booking.id, { actorPersonId: owner.id });
+  await cancelBooking(db, shop.id, first.booking.id, { trail: { actorPersonId: owner.id } });
   // Twenty minutes after the boat was due out, so the log prints it.
   await db
     .update(activityEvents)
@@ -100,7 +100,7 @@ describe("a held seat's late lines, once the seat is split off", () => {
         identityBookedAs: "Jo Smith",
       })
       .where(eq(bookings.id, first.booking.id));
-    await cancelBooking(db, shop.id, first.booking.id, { actorPersonId: owner.id });
+    await cancelBooking(db, shop.id, first.booking.id, { trail: { actorPersonId: owner.id } });
     expect(
       await restoreBooking(db, shop.id, first.booking.id, { actorPersonId: owner.id }),
     ).not.toBe("not_found");

@@ -40,7 +40,7 @@ async function lines(tripId: string, code: string) {
 describe("a seat change on the departure's trail", () => {
   it("names a removed seat's diver by record, in the removal itself", async () => {
     const { db, shop, trip, owner, bookingId, person } = await seat();
-    await cancelBooking(db, shop.id, bookingId, { actorPersonId: owner.id });
+    await cancelBooking(db, shop.id, bookingId, { trail: { actorPersonId: owner.id } });
     expect(await lines(trip.id, "booking_removed")).toEqual([
       { subject: person.id, params: { actor: owner.fullName, diver: person.fullName } },
     ]);
@@ -56,7 +56,7 @@ describe("a seat change on the departure's trail", () => {
         identityBookedAs: "Jo Smith",
       })
       .where(eq(bookings.id, bookingId));
-    await cancelBooking(db, shop.id, bookingId, { actorPersonId: owner.id });
+    await cancelBooking(db, shop.id, bookingId, { trail: { actorPersonId: owner.id } });
     expect(await lines(trip.id, "booking_removed")).toEqual([
       { subject: person.id, params: { actor: owner.fullName, diver: "Jo Smith" } },
     ]);
@@ -77,9 +77,9 @@ describe("a seat change on the departure's trail", () => {
     const { db, shop, trip, owner } = await seat();
     expect(
       await cancelBooking(db, shop.id, "99999999-8888-4777-8666-555555555555", {
-        actorPersonId: owner.id,
+        trail: { actorPersonId: owner.id },
       }),
-    ).toBeNull();
+    ).toEqual({ ok: false, reason: "not_found" });
     expect(await lines(trip.id, "booking_removed")).toEqual([]);
   });
 

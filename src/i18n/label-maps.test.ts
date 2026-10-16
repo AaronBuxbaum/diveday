@@ -472,7 +472,7 @@ const CASES: readonly LabelMapCase[] = [
     rows: codeRows(GEAR_SERVICE_KINDS, (locale, clock) =>
       [false, true]
         .map((expired) =>
-          boatSafetyNoticeText(staffTranslator(locale), {
+          boatSafetyNoticeText(staffTranslator(locale), locale, {
             code: "kit_clock",
             gearItemId: "unit",
             label: "AED",
@@ -492,7 +492,7 @@ const CASES: readonly LabelMapCase[] = [
     rows: codeRows(BOAT_PAPERS, (locale, paper) =>
       [false, true]
         .map((expired) =>
-          boatSafetyNoticeText(staffTranslator(locale), {
+          boatSafetyNoticeText(staffTranslator(locale), locale, {
             code: "paper",
             paper,
             dueOn: "2026-10-21",
@@ -507,7 +507,7 @@ const CASES: readonly LabelMapCase[] = [
     module: "boat-safety-labels.ts",
     map: "MISSING_KEYS",
     rows: codeRows(MUST_CARRY_KIT_KINDS, (locale, kind) =>
-      boatSafetyNoticeText(staffTranslator(locale), { code: "kit_missing", kind }),
+      boatSafetyNoticeText(staffTranslator(locale), locale, { code: "kit_missing", kind }),
     ),
   },
   {

@@ -76,7 +76,7 @@ describe("stageStripProps on the way home (batch 6, item 4)", () => {
 
   it("words the open last roll call and points at it on this page", () => {
     expect(homeward(2).copy.rollCallOpen).toEqual({
-      line: "2 divers not marked after dive 2.",
+      line: "2 people not marked after dive 2.",
       openLabel: "Open roll call",
       href: "?checkpoint=after_dive_2",
       plan: undefined,

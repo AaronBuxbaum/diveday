@@ -64,6 +64,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     heldSeatLastDiveDay,
     packageDivesByBooking,
     paymentMarksByBooking,
+    aboardAtSea,
     keepOpenBookingId,
     namesakeRefusedBookingId,
     participantTypeCertBookingId,
@@ -302,6 +303,8 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     updatePickupAction,
     // Only a booked seat moves: checked in or absent is the day's own record.
     moveSeat: booking.status === "booked" ? moveSeat : undefined,
+    // Marked aboard a boat that has left: Remove says so and changes nothing (H-122).
+    removeRefusedAboard: aboardAtSea?.get(booking.id) ?? null,
     materialsDone,
     materialsPending,
     readiness,

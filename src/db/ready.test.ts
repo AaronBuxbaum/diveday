@@ -21,9 +21,9 @@ import {
 } from "./readiness";
 import { carriedPreparationForDiver, getBookedCard, getReadyPageData } from "./ready";
 import { getRentalFit, toDiverRentalFit } from "./rental-fit";
-import { bookings, people, shops, waiverRecords } from "./schema";
+import { bookings, people, rollCallEvents, shops, waiverRecords } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff, setTripStatus, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver } from "./waivers";
 import { issueWaiverRequest } from "./waivers-requests";
 
@@ -225,6 +225,26 @@ describe("getReadyPageData", () => {
     const pastBuffer = new Date(open.startsAt.getTime() + 60 * 60 * 1000);
     expect((await getReadyPageData(db, bookingId, midBuffer))?.canCancelBooking).toBe(true);
     expect((await getReadyPageData(db, bookingId, pastBuffer))?.canCancelBooking).toBe(false);
+  });
+
+  it("withdraws the cancel inside the late hour once the dock counted the diver aboard (H-122)", async () => {
+    // `selfCancelBooking` refuses this seat (`aboardAtSeaBookingIds`), so the
+    // page must not offer it.
+    const { db, shop, open, bookingId } = await unpaidBooking();
+    const midBuffer = new Date(open.startsAt.getTime() + 20 * 60 * 1000);
+    expect((await getReadyPageData(db, bookingId, midBuffer))?.canCancelBooking).toBe(true);
+    const [recorder] = await listStaff(db, shop.id);
+    if (!recorder) throw new Error("seeded staff missing");
+    await db.insert(rollCallEvents).values({
+      shopId: shop.id,
+      tripId: open.id,
+      bookingId,
+      recordedByPersonId: recorder.person.id,
+      status: "boarded",
+      checkpoint: "departure",
+      occurredAt: new Date(open.startsAt.getTime() + 5 * 60 * 1000),
+    });
+    expect((await getReadyPageData(db, bookingId, midBuffer))?.canCancelBooking).toBe(false);
   });
 
   it("reads a waived booking as owing no refund, since there is no money to give back", async () => {

@@ -176,7 +176,7 @@ export default async function BoatsSettingsPage({
                           {error.text}
                         </p>
                       ) : null}
-                      <BoatPaperFacts boat={boat} t={t} todayLocal={todayLocal} />
+                      <BoatPaperFacts boat={boat} t={t} todayLocal={todayLocal} locale={locale} />
                       {/* **Save and Delete on one line**, in the update form's
                         own action row rather than a form of their own apart.
                         The confirm posts to the delete through `formAction`,
