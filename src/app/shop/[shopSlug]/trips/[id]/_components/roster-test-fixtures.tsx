@@ -183,6 +183,8 @@ function rosterProps({
     actions: {
       markRosterWaiverInPersonAction: noRefusal,
       markPaymentAction: noop,
+      previewPartyPaymentAction: noop,
+      markPartyPaidAction: noop,
       removeBookingAction: noop,
       confirmIdentityAction: noop,
       splitIdentityAction: noop,

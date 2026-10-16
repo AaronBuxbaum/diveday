@@ -53,7 +53,7 @@ import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PAPER_WAIVER_IDLE, type PaperWaiverFormState } from "@/lib/paper-waiver-form";
 import { PARTICIPANT_TYPES } from "@/lib/participant-types";
-import { heldAfterMark, markNeedsWriteOffRight, readManualPaymentMark } from "@/lib/payment-marks";
+import { heldAfterMark, markNeedsWriteOffRight, readPaymentMarkForm } from "@/lib/payment-marks";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import {
   blankableDiverEmailSchema,
@@ -919,16 +919,14 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
   // no amount reached every revenue sum as $0, so cash taken at the dock never
   // showed on Reports. An amount that cannot be read is refused rather than
   // guessed, and a Paid mark with *no* money is the write-off below.
-  const mark = readManualPaymentMark(
-    submitted,
-    formData.get("amount") === null ? null : String(formData.get("amount")),
-    formData.get("method") === null ? null : String(formData.get("method")),
-    currency,
-  );
+  // What a refusal below carries back, so the sheet reopens holding what the
+  // staffer typed (issue #2607).
+  const { mark, retry } = readPaymentMarkForm(formData, submitted, currency);
   if (mark.kind === "invalid") {
     redirect(
       noticeUrl(back, mark.field === "method" ? "payment-method" : "payment-amount", {
         bid: bookingId,
+        ...retry,
       }),
     );
   }
@@ -974,6 +972,7 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
         ? noticeUrl(back, "not-authorized")
         : noticeUrl(back, mark.kind === "money" ? "payment-short" : "payment-amount", {
             bid: bookingId,
+            ...retry,
           }),
     );
   }

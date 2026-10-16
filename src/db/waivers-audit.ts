@@ -267,6 +267,12 @@ export async function getSignedWaiverForDiver(
     recordId: string;
     /** `canReadMedicalAnswers`: every answer and the physician's name, or only the prompts that flagged. */
     readsMedicalAnswers: boolean;
+    /**
+     * Leave every answer out even for a reader allowed them: the signed
+     * record page's render, which shows them only after a recorded tap
+     * (issue #2157).
+     */
+    withholdAnswers?: boolean;
   },
 ) {
   if (!isUuid(input.recordId) || !isUuid(input.personId)) return null;
@@ -331,8 +337,14 @@ export async function getSignedWaiverForDiver(
     guardianEmailErasedAt: record.guardianEmailErasedAt,
     /** Which seal is on it — the redaction note is only true under version 4. */
     integrityVersion: record.integrityVersion,
+    /**
+     * Whether a questionnaire is stored and readable here at all: what the
+     * signed record page offers "Show answers" on (issue #2157), without
+     * putting a single answer in its render.
+     */
+    medicalAnswersOnFile: answers !== null,
     /** Every answer, for an owner or manager; null for anyone else. */
-    medicalAnswers: input.readsMedicalAnswers ? answers : null,
+    medicalAnswers: input.readsMedicalAnswers && !input.withholdAnswers ? answers : null,
     /** What the roster shows every staff role: the prompts that flagged, on a record held for them. */
     flaggedPrompts:
       answers && record.status === "medical_review" ? flaggedMedicalPrompts(answers) : [],

@@ -89,3 +89,10 @@ describe("counts a diver reads", () => {
     if (locale === "es-ES") expect(line(1)).not.toBe(line(2).replace("2", "1"));
   });
 });
+
+describe("an age a staffer reads", () => {
+  it("says the unit in Spanish, which a bare number does not imply (#2167)", () => {
+    const t = staffTranslator("es-ES");
+    expect(t("divers.header.clearDateAdultAttestedMinor", { age: 16 })).toContain("tiene 16 años.");
+  });
+});

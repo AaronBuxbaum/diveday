@@ -30,6 +30,18 @@
  * person is renamed. That is also why erasure has to reach in here — see
  * {@link ACTIVITY_REDACTED} and `src/db/anonymize.ts`.
  */
+/**
+ * **Why the system, not a person, wrote a line.** Stored in
+ * `activity_events.system_reason` when there is no actor. Only reasons with a
+ * writer are listed: `minimum_not_met` is the hourly rule that cancels a
+ * departure short of its minimum head count; `shore_contact_stopped` is the shore
+ * contact stopping roll-call alerts from the link in an email, with no account
+ * behind it. (The nightly series roll only adds
+ * dates and cancels none, so it has no reason here.)
+ */
+export const SYSTEM_REASONS = ["minimum_not_met", "shore_contact_stopped"] as const;
+export type SystemReason = (typeof SYSTEM_REASONS)[number];
+
 type ActivityParamShapes = {
   /** A diver arrived and a staffer recorded it. */
   counter_check_in: { diver: string };
@@ -161,14 +173,37 @@ type ActivityParamShapes = {
   seat_self_cancelled: { actor: string };
   /** …and the shop's cancellation window refunded them by card. */
   seat_self_refunded: { actor: string };
+  /**
+   * The same two acts on a seat whose identity is held for review (issue
+   * #2467, #2082): whoever held the link cancelled, and the person the seat was
+   * matched to on a guess is not named as the one who did.
+   */
+  seat_holder_cancelled: { actor: string };
+  seat_holder_refunded: { actor: string };
   /** A party lead's own cancel took an unclaimed seat they booked with it (batch 6 item 10). */
   party_seat_self_cancelled: { actor: string; diver: string };
   /** …and the shop's cancellation window refunded that seat by card. */
   party_seat_self_refunded: { actor: string; diver: string };
   /** A staffer opened a diver's physician's evaluation. */
   medical_clearance_opened: { actor: string; diver: string };
+  /**
+   * The owner queued a connected ledger's earlier checkouts (#2606). Names the
+   * provider, how many events went into the queue and the start day; no ids,
+   * no diver.
+   */
+  integration_backfill_sent: { actor: string; provider: string; count: string; since: string };
+  /** An owner or manager read a diver's full medical questionnaire (issue #2157). */
+  medical_answers_read: { actor: string; diver: string };
+  /**
+   * A staffer cleared a diver's stored date of birth by answering "They're 18
+   * or older" (issue #2167). On the trail, because a date typed later drops
+   * the record's own answer columns and must not drop who said it.
+   */
+  date_of_birth_cleared_as_adult: { actor: string; diver: string };
   /** A staffer downloaded a diver's own record. */
   record_exported: { actor: string; diver: string };
+  /** A staffer opened a seat's dispute sheet, which leaves the shop (#2390). */
+  dispute_sheet_printed: { actor: string; diver: string };
   /**
    * A staffer marked a diver running late from a message they wrote (UX
    * review 2026-10-13, item 19), so the roster's "said {time}" has a name
@@ -204,6 +239,11 @@ type ActivityParamShapes = {
    */
   payment_balance_written_off: { actor: string; diver: string };
   /**
+   * A seat took its share of one payment for a whole party (issue #2605),
+   * one line per seat. The amount is on the payment trail; this says who took it.
+   */
+  party_marked_paid: { actor: string; diver: string };
+  /**
    * **Who changed the board**: the schedule builder's four acts, which wrote
    * no actor anywhere until the activity log asked. Each is recorded on the
    * departure it changed; a repeating departure is one line, on its first
@@ -220,6 +260,14 @@ type ActivityParamShapes = {
    */
   series_cancelled: { actor: string };
   /**
+   * **The system called the departure off on its own** (issue #2539): no
+   * person did it, so the line has no actor (`activity_events.actor_person_id`
+   * is null and `system_reason` says why) and `reason` is that same code, for
+   * the sentence. Written beside the crew notice and the divers' mail by the
+   * rule that made the call (`src/db/trips-minimum.ts`).
+   */
+  departure_called_off_automatically: { reason: SystemReason };
+  /**
    * **The shop answered a review in public** (batch 4, K2): wrote the reply
    * under it, changed it, or took it down. Filed on the departure the review
    * is about, and naming no reviewer, like the moderation lines beside it.
@@ -227,6 +275,22 @@ type ActivityParamShapes = {
   review_replied: { actor: string };
   review_reply_edited: { actor: string };
   review_reply_deleted: { actor: string };
+  /**
+   * **Who set the shore contact's alert address** (H-118 security review):
+   * the address roll-call alerts go to outside the shop's accounts, added,
+   * replaced or removed. Shop-level lines; no address in them, so an erasure
+   * has nothing here to reach.
+   */
+  shore_alert_contact_set: { actor: string };
+  shore_alert_contact_changed: { actor: string };
+  shore_alert_contact_cleared: { actor: string };
+  /**
+   * **The shore contact stopped the alerts themselves**, with the link in one
+   * (H-118 re-review). No account did it, so the line names nobody: the one
+   * row in `activity_events` with no actor (the table's check allows it for
+   * this code only).
+   */
+  shore_alert_contact_stopped: Record<string, never>;
   /**
    * An erasure ran over this line.
    *
@@ -313,10 +377,16 @@ export const ACTIVITY_CODES = [
   "seat_claimed",
   "seat_self_cancelled",
   "seat_self_refunded",
+  "seat_holder_cancelled",
+  "seat_holder_refunded",
   "party_seat_self_cancelled",
   "party_seat_self_refunded",
   "medical_clearance_opened",
+  "medical_answers_read",
+  "date_of_birth_cleared_as_adult",
   "record_exported",
+  "dispute_sheet_printed",
+  "integration_backfill_sent",
   "running_late_from_message",
   "order_refunded",
   "paid_after_close_refunded",
@@ -324,15 +394,21 @@ export const ACTIVITY_CODES = [
   "payment_waived",
   "payment_marked_refunded",
   "payment_balance_written_off",
+  "party_marked_paid",
   "departure_added",
   "series_added",
   "departure_moved",
   "departure_copied",
   "departure_deleted",
   "series_cancelled",
+  "departure_called_off_automatically",
   "review_replied",
   "review_reply_edited",
   "review_reply_deleted",
+  "shore_alert_contact_set",
+  "shore_alert_contact_changed",
+  "shore_alert_contact_cleared",
+  "shore_alert_contact_stopped",
   "redacted",
   "demo_charter_confirmed",
   "demo_second_dive_moved",

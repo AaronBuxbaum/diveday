@@ -11,7 +11,11 @@ const seen = vi.hoisted(() => ({
   party: null as Record<string, unknown> | null,
 }));
 
-vi.mock("../booking-actions", () => ({ cancelMyBookingAction: async () => {} }));
+vi.mock("../booking-actions", () => ({
+  cancelMyBookingAction: async () => {},
+  addSeatFromReady: async () => {},
+  payForPartySeatFromReady: async () => {},
+}));
 vi.mock("./RunningLate", () => ({ RunningLate: () => <p>late</p> }));
 vi.mock("./CourseMaterials", () => ({ CourseMaterials: () => <p>materials</p> }));
 vi.mock("@/components/TripArrivalCard", () => ({

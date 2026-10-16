@@ -73,6 +73,7 @@
   "takings": {
     "heading": "What today made",
     "tips": "And {amount} in tips.",
+    "tipsOnBoat": "And {amount} in tips on {boat}.",
     "imported": "{count, plural, one {Includes # imported record Stripe has not confirmed.} other {Includes # imported records Stripe has not confirmed.}}",
     "boatTips": "{time} {boat}: {amount}"
   }

@@ -25,12 +25,11 @@ import { nowDate } from "@/lib/clock";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { type FormNotice, noticeForForm, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { shopPath } from "@/lib/staff-notices";
 import { departureStage } from "@/lib/trip-phase";
 import { acceptsNewDivers, isFull, seatsOnSale } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { diversTabState } from "./_arrivals/departure-record";
-import { DESK_NOTICES } from "./_arrivals/notices";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { departureConditionReads } from "./_components/departure-conditions";
 import { openSeatsDetailsRows } from "./_components/details-rows";
@@ -41,15 +40,16 @@ import { TripAboutLinks } from "./_components/TripAboutLinks";
 import { TripAboutSection } from "./_components/TripAboutSection";
 import { TripIncidentReports } from "./_components/TripIncidentReports";
 import { TripMoreActions } from "./_components/TripMoreActions";
-import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
+import { TripNoticeBanner } from "./_components/TripNoticeBanner";
 import { TripAddDiverLink, TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader";
 import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRosterContent";
 import { TripStageBadge, TripTabs } from "./_components/TripTabs";
 import { assignedCrewNames, tripAboutRows } from "./_components/trip-about-rows";
 import { tripCrewNotes } from "./_components/trip-crew-notes";
 import { tripHeaderPrice } from "./_components/trip-header-price";
-import { DETAILS_FORMS, pageNoticesFor } from "./_components/trip-notice-tabs";
-import { tripPulseFacts } from "./_components/trip-pulse-facts";
+import { DETAILS_FORMS } from "./_components/trip-notice-tabs";
+import { paymentAsks, tripPageNotices } from "./_components/trip-page-asks";
+import { tripPulseFactsOf } from "./_components/trip-pulse-facts";
 import type { TripPageSearchParams } from "./_components/trip-search-params";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
 import { reinstateTripAction } from "./details-actions";
@@ -106,6 +106,7 @@ export default async function ManageTripPage({
       view,
       held,
       tell,
+      ...paymentParams
     },
   ] = await Promise.all([params, searchParams]);
   // An unparseable id names no row. Guarded here rather than in the query
@@ -159,20 +160,17 @@ export default async function ManageTripPage({
     trip,
     cancelled,
     pulseNeeded,
-    requirement,
     tripDiveList,
     series,
     scheduleDays,
     canConfigure,
     blowoutCalled,
-    pulse,
     boatClashes,
     crew,
   } = overview;
   // One hull, one departure at a time (H-80, issue #1780). A called-off
   // departure holds no hull, and `boatClashes` answers nothing for one anyway.
   const liveBoatClashes = cancelled ? [] : boatClashes;
-  const { crewGap } = crew;
   const crewNotes = tripCrewNotes({
     crew,
     diversPerDivemaster: shop.diversPerDivemaster,
@@ -180,35 +178,18 @@ export default async function ManageTripPage({
     t,
   });
 
-  // One resolution, handed to the section it belongs to. Whatever no rendered
-  // section claims — a page-level permission refusal, or a section this
-  // staffer's role means we never rendered — falls through to the banner.
-  // The desk's own refusals and walk-in outcomes (`_arrivals/notices.ts`) are
-  // page-level: they have no form on the roster to sit beside, and a code the
-  // roster's own vocabulary also speaks is the roster's.
-  const deskNoticeDefinition = noticeFromParam(notice, DESK_NOTICES);
-  const tripNotice: FormNotice | undefined =
-    resolveTripNotice({ notice, count, form, gate, tripId, locale }) ??
-    (deskNoticeDefinition
-      ? { form: "page", tone: deskNoticeDefinition.tone, text: t(deskNoticeDefinition.key) }
-      : undefined);
-  const lifecycleStatus = noticeForForm(tripNotice, "lifecycle");
-
-  const now = nowDate();
-  const pulseFacts = tripPulseFacts({
-    pulseNeeded,
-    pulse,
-    crewGap,
-    requirement,
-    cancelled,
-    course: trip.course,
-    liveBoatClashes,
-    shopSlug,
+  const { tripNotice, lifecycleStatus, rootPageNotice, rosterPageNotice } = tripPageNotices({
+    notice,
+    count,
+    form,
+    gate,
     tripId,
-    startsAt: trip.startsAt,
-    now,
+    locale,
     t,
   });
+
+  const now = nowDate();
+  const pulseFacts = tripPulseFactsOf(overview, { liveBoatClashes, shopSlug, tripId, now, t });
 
   // **Details is its own tab**, and a save on it lands back on it.
   const showDetails =
@@ -224,7 +205,6 @@ export default async function ManageTripPage({
     t,
   });
 
-  const { rootPageNotice, rosterPageNotice } = pageNoticesFor(tripNotice);
   const acceptsDivers = acceptsNewDivers(trip, now);
   const { shown, finished, checkInOpen } = departureStage({
     startsAt: trip.startsAt,
@@ -259,6 +239,14 @@ export default async function ManageTripPage({
     locale,
     now,
     mayRetireRefusal,
+  });
+
+  const { paymentMarkRetry, partyPreview } = await paymentAsks(db, {
+    shopId: shop.id,
+    tripId,
+    notice,
+    bookingId: bid,
+    params: paymentParams,
   });
 
   return (
@@ -411,6 +399,7 @@ export default async function ManageTripPage({
                   tideLines,
                   held: notice === "saved" ? held : undefined,
                   tell,
+                  refundsHeld: !mayWriteOffPayment,
                 }),
                 ...(await openSeatsRows),
               ]}
@@ -443,6 +432,7 @@ export default async function ManageTripPage({
                     series={canConfigure ? series : null}
                     crewNames={assignedCrewNames(overview)}
                     lifecycleStatus={lifecycleStatus}
+                    refundsHeld={!mayWriteOffPayment}
                     locale={locale}
                     t={t}
                   />
@@ -505,6 +495,8 @@ export default async function ManageTripPage({
                 // staffer lands where they were working, not on a closed list.
                 // A removed seat has no row to hold.
                 keepOpenBookingId: notice?.startsWith("booking-removed") ? undefined : bid,
+                paymentMarkRetry,
+                partyPreview,
                 // The one paper-release refusal with a way through (issue #1573),
                 // scoped to the seat the action named so a roster of minors does not
                 // all sprout the staffer's confirmation.

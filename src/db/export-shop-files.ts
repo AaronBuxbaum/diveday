@@ -160,6 +160,11 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "boat_ride_minutes",
       "bottom_time_minutes",
       "surface_interval_minutes",
+      // The turnaround the shop wants between departures (issue #2141): its
+      // own operating policy, so the backup records it. No importer reads
+      // `shops` columns, so a restore does not bring it back: the Move
+      // panel's advice waits until it is set again in Settings.
+      "min_turnaround_minutes",
       "review_url",
       "packing_list",
       "rental_items",
@@ -247,6 +252,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.boatRideMinutes,
         shop.bottomTimeMinutes,
         shop.surfaceIntervalMinutes,
+        shop.minTurnaroundMinutes,
         shop.reviewUrl,
         JSON.stringify(shop.packingList),
         JSON.stringify(shop.rentalItems),
@@ -1300,7 +1306,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         templateRows.find((template) => template.id === row.templateId)?.title,
         row.material,
         row.actorPersonId,
-        personName.get(row.actorPersonId),
+        row.actorPersonId ? personName.get(row.actorPersonId) : null,
         row.decidedAt,
         row.seq,
       ]),
@@ -1664,6 +1670,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "booking_id",
       "actor_person_id",
       "actor_name",
+      "system_reason",
       "subject_person_id",
       "subject_name",
       "code",
@@ -1678,7 +1685,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.tripId ? tripTitle.get(row.tripId) : null,
         row.bookingId,
         row.actorPersonId,
-        personName.get(row.actorPersonId),
+        row.actorPersonId ? personName.get(row.actorPersonId) : null,
+        row.systemReason,
         row.subjectPersonId,
         row.subjectPersonId ? personName.get(row.subjectPersonId) : null,
         row.code,

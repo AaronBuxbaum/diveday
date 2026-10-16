@@ -83,6 +83,10 @@
     "noQuestionnairePaper": "The shop reviewed the medical form on paper. The answers are not kept here.",
     "answersRestricted": "Only an owner or manager can read the full questionnaire.",
     "identityHeld": "Medical answers stay hidden until someone confirms who is in this seat.",
+    "showAnswers": "Show answers",
+    "showingAnswers": "Showing…",
+    "showAnswersHint": "Opening them is noted on their record.",
+    "showAnswersFailed": "The answers couldn’t be shown. Try again.",
     "answerYes": "Yes",
     "answerNo": "No",
     "releaseHeading": "What they signed"

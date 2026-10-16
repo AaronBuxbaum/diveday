@@ -5,7 +5,11 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import type { ForgivingCopy } from "@/components/ui/ForgivingInput";
 import { ChoiceFieldset, ChoicePill, controlClass, PriceField } from "@/components/ui/form";
-import { MANUAL_PAYMENT_METHODS, type ManualPaymentMethodCode } from "@/lib/payment-marks";
+import {
+  MANUAL_PAYMENT_METHODS,
+  type ManualPaymentMethodCode,
+  type MarkRetry,
+} from "@/lib/payment-marks";
 
 /**
  * Every value the column can hold — which is not the same as every value this
@@ -63,6 +67,12 @@ export type PaymentMarkDefaults = {
    * mark on it, so the picker offers nothing but the seat's own status.
    */
   handMarkRefused?: boolean;
+  /**
+   * The mark the server just refused (issue #2607): the status picked, the
+   * amount typed and the method chosen, so the sheet reopens holding them
+   * instead of empty. Absent on every other render.
+   */
+  retry?: MarkRetry | null;
 };
 
 /**
@@ -111,7 +121,7 @@ export function PaymentStatusControl({
   // The picked status, so the Paid mark opens the moment Paid is chosen rather
   // than after a round trip. Only a change *into* a money status asks: the
   // seat's own status re-submitted is a tap that changes nothing.
-  const [picked, setPicked] = useState<PaymentStatus>(status);
+  const [picked, setPicked] = useState<PaymentStatus>(mark.retry?.status ?? status);
   const asksForMoney = picked !== status && MONEY_STATUSES.includes(picked);
   const showRefund =
     (optimisticStatus === "paid" || optimisticStatus === "deposit_paid") && refundNote;
@@ -202,7 +212,7 @@ export function PaymentStatusControl({
             name="amount"
             label={copy.amountLabel}
             hint={mark.balanceHint ?? undefined}
-            cents={mark.amountCents}
+            cents={mark.retry?.amountCents ?? mark.amountCents}
             currency={mark.currency}
             locale={mark.locale}
             copy={copy.forgiving}
@@ -218,6 +228,7 @@ export function PaymentStatusControl({
                 // how the money came in. The browser asks first, and the
                 // action asks again for a post without one.
                 required
+                defaultChecked={mark.retry?.method === method}
               >
                 {copy.methods[method]}
               </ChoicePill>

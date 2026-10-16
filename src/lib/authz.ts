@@ -135,6 +135,16 @@ export function canManageBilling(roles: readonly Role[] | undefined): boolean {
 }
 
 /**
+ * Send the checkouts, tips and refunds that completed before an integration
+ * was connected to it (issue #2606). Owner only, stricter than connecting the
+ * integration: it posts history into a shop's books, which may have a closed
+ * period or a month the owner reconciled by hand, and nothing recalls it.
+ */
+export function canBackfillIntegrations(roles: readonly Role[] | undefined): boolean {
+  return (roles ?? []).some((role) => role === "owner");
+}
+
+/**
  * Read the shop's activity log (D5, `src/db/shop-activity.ts`): who refunded,
  * who wrote a seat past a missing card, who changed a departure, across the
  * whole team. It is an account of the staff's own work, named person by
@@ -142,6 +152,20 @@ export function canManageBilling(roles: readonly Role[] | undefined): boolean {
  * the same owner/manager gate as reports and the export.
  */
 export function canViewShopActivity(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/**
+ * Print a seat's dispute sheet (`orders/[id]/print/dispute`, issue #2390): the
+ * signed release's date, name and version, the check-in time and every
+ * roll-call result for one booking, on a page whose purpose is to be handed to
+ * a card network. Owner or manager, the same wall as {@link canRefund} and
+ * {@link canExportShopData}: it is a diver's attendance record leaving the shop
+ * on the strength of a money argument, and the crew who run the water have no
+ * part in that argument. It carries no medical answer at any role
+ * (`assembleDisputeSheet`, src/lib/dispute-sheet.ts).
+ */
+export function canExportDisputeSheet(roles: readonly Role[] | undefined): boolean {
   return isOwnerOrManager(roles);
 }
 

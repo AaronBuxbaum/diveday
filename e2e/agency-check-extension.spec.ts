@@ -59,6 +59,12 @@ type AgencyPages = {
    * shows, and the search is answered with the sign-in form.
    */
   padi: "sign-in-form" | "sign-in-redirect" | "signed-in-on-pros" | "expires-on-search";
+  /**
+   * Holds SSI's answer to every lookup after the first `after` ones until
+   * `open` resolves, so a state that lasts only as long as a lookup (the
+   * second card of a "Check all") stays on screen for as long as a test needs.
+   */
+  ssiHold: { after: number; open: Promise<void> } | null;
   /** The card number DiveChek's result row shows. */
   padiCardNumber: string;
   /** Every request a fake agency page received, as `METHOD url`. */
@@ -218,7 +224,7 @@ async function serveAgencyPages(pages: AgencyPages, dir: string): Promise<https.
   );
   const server = https.createServer(
     { key: fs.readFileSync(key), cert: fs.readFileSync(cert) },
-    (request, response) => {
+    async (request, response) => {
       const url = new URL(request.url ?? "/", `https://${request.headers.host}`);
       pages.requests.push(`${request.method} ${url.href}`);
       const send = (status: number, body = "", headers: Record<string, string> = {}) => {
@@ -226,6 +232,10 @@ async function serveAgencyPages(pages: AgencyPages, dir: string): Promise<https.
         response.end(body);
       };
       if (url.hostname === "my.divessi.com" && url.pathname === "/online_diver_check") {
+        const lookups = pages.requests.filter((each) => each.includes("diver_name=")).length;
+        if (url.search.includes("diver_name=") && pages.ssiHold && lookups > pages.ssiHold.after) {
+          await pages.ssiHold.open;
+        }
         return send(200, ssiPage(url, pages.ssiListsMore, pages.ssiForm));
       }
       if (PADI_HOSTS.includes(url.hostname) && url.pathname === "/__typed") {
@@ -307,6 +317,7 @@ const test = base.extend<{ agencyPages: AgencyPages; extensionId: string }>({
     await use({
       ssiListsMore: false,
       ssiForm: "as-is",
+      ssiHold: null,
       padi: "sign-in-form",
       padiCardNumber: "",
       requests: [],
@@ -592,13 +603,23 @@ test("Check all on a departure settles its rows one at a time through the extens
     .getByRole("region", { name: "Divers", exact: true })
     .locator("li")
     .filter({ hasText: CERTIFIED });
+  // "Checking 2 of 2…" lasts only as long as the second lookup, a few seconds
+  // that a loaded runner can spend between two polls. SSI holds that answer
+  // until the first card has been seen settled and the second still checking.
+  let openSecondLookup = () => {};
+  agencyPages.ssiHold = {
+    after: 1,
+    open: new Promise<void>((resolve) => {
+      openSecondLookup = resolve;
+    }),
+  };
 
   await page.getByRole("button", { name: "Check all 2 cards with their agencies" }).click();
 
   // One card at a time: while the second is being looked up, only the first has settled.
-  await expect(page.getByText("Checking 1 of 2…")).toBeVisible();
   await expect(page.getByText("Checking 2 of 2…")).toBeVisible({ timeout: 20_000 });
   await expect(settled).toHaveCount(1);
+  openSecondLookup();
   await expect(page.getByText("Checked 2. Certified: 2.")).toBeVisible({ timeout: 20_000 });
   for (const diver of [SEEDED_DIVER, newcomer]) {
     await expect(rosterRow(page, diver).getByText(CERTIFIED)).toBeVisible();

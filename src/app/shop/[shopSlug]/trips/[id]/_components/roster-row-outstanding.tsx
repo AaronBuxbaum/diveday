@@ -14,6 +14,7 @@ import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { CourseFormsRowControl } from "./CourseFormsRowControl";
 import { ElearningCheck } from "./ElearningCheck";
 import { elearningCheckCopy } from "./elearning-check-copy";
+import { PartyPaymentSection } from "./PartyPaymentSection";
 import { PaymentStatusControl } from "./PaymentStatusControl";
 import { PAYMENT_STATUSES_ALL, PAYMENT_STATUSES_RECORDING_ONLY } from "./roster-model";
 import type { RowIdentity } from "./roster-row-identity";
@@ -50,6 +51,9 @@ export type RowOutstandingInput = Pick<
   | "elearningChecksOff"
   | "markRosterWaiverInPersonAction"
   | "markPaymentAction"
+  | "previewPartyPaymentAction"
+  | "markPartyPaidAction"
+  | "partyPay"
   | "certifyDiverAction"
   | "saveCourseNextStepAction"
   | "setCourseMaterialsDoneAction"
@@ -94,6 +98,9 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     elearningChecksOff,
     markRosterWaiverInPersonAction,
     markPaymentAction,
+    previewPartyPaymentAction,
+    markPartyPaidAction,
+    partyPay,
     certifyDiverAction,
     saveCourseNextStepAction,
     setCourseMaterialsDoneAction,
@@ -296,6 +303,16 @@ export function rowOutstanding(seat: RowOutstandingInput) {
             }
             copy={paymentStatusCopy}
           />
+          {partyPay ? (
+            <PartyPaymentSection
+              bookingId={booking.id}
+              party={partyPay}
+              previewAction={previewPartyPaymentAction}
+              confirmAction={markPartyPaidAction}
+              copy={paymentStatusCopy}
+              t={t}
+            />
+          ) : null}
         </div>
       ) : null}
     </>

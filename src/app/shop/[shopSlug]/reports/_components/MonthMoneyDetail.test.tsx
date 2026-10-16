@@ -1,0 +1,76 @@
+// @vitest-environment jsdom
+import { cleanup, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+import type { MonthMoneyDetail as Detail } from "@/db/report-lines";
+import { staffTranslator } from "@/i18n/staff-messages";
+import { MoneyByLine, MonthFootnotes } from "./MonthMoneyDetail";
+
+afterEach(cleanup);
+
+const t = staffTranslator("en-US");
+const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+
+function detail(over: Partial<Detail> = {}): Detail {
+  return {
+    lines: [{ line: "funDives", cents: 120_000 }],
+    packageDivesOwed: { dives: 0, valueCents: 0 },
+    divers: { total: 0, returning: 0 },
+    out: { refundedCents: 4_000, discountedCents: 2_500, stripeFeesCents: 3_100 },
+    payouts: [],
+    ...over,
+  };
+}
+
+/**
+ * Issue #2466: refunded, discounted and Stripe-fee lines are on the paid-in-the-month
+ * basis of "Money in, by line", so they render inside that section and not under the
+ * departure-basis Revenue figure.
+ */
+describe("the money-out lines", () => {
+  it("sit in the Money in, by line section, in the order refunded, discounted, fees", () => {
+    render(<MoneyByLine detail={detail()} t={t} money={money} />);
+    const section = screen.getByRole("region", { name: "Money in, by line" });
+    expect(within(section).getByText("Refunded $40.00 of this month’s payments")).toBeTruthy();
+    expect(within(section).getByText("Discount codes took $25.00 off")).toBeTruthy();
+    expect(within(section).getByText("Stripe fees $31.00, on this month’s payouts")).toBeTruthy();
+  });
+
+  it("are left out when there is nothing to say, and a fee total of null is not $0", () => {
+    render(
+      <MoneyByLine
+        detail={detail({ out: { refundedCents: 0, discountedCents: 0, stripeFeesCents: null } })}
+        t={t}
+        money={money}
+      />,
+    );
+    expect(screen.queryByText(/Refunded/)).toBeNull();
+    expect(screen.queryByText(/Discount codes/)).toBeNull();
+    expect(screen.queryByText(/Stripe fees/)).toBeNull();
+  });
+
+  it("show for a month with refunds but no revenue lines, and the section vanishes when empty", () => {
+    const refundOnly = detail({
+      lines: [],
+      out: { refundedCents: 4_000, discountedCents: 0, stripeFeesCents: null },
+    });
+    const { container, rerender } = render(<MoneyByLine detail={refundOnly} t={t} money={money} />);
+    expect(screen.getByText(/Refunded \$40\.00/)).toBeTruthy();
+    rerender(
+      <MoneyByLine
+        detail={detail({
+          lines: [],
+          out: { refundedCents: 0, discountedCents: 0, stripeFeesCents: 0 },
+        })}
+        t={t}
+        money={money}
+      />,
+    );
+    expect(container.innerHTML).toBe("");
+  });
+
+  it("are no longer under the figures", () => {
+    render(<MonthFootnotes taxCents={500} csvHref="/x.csv" t={t} money={money} />);
+    expect(screen.queryByText(/Refunded/)).toBeNull();
+    expect(screen.queryByText(/Stripe fees/)).toBeNull();
+  });
+});

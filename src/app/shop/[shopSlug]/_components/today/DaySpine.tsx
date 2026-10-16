@@ -794,11 +794,10 @@ function DeskPaymentsRow({ shopSlug, t }: { shopSlug: string; t: StaffTranslator
 }
 
 /**
- * **What the divers left the reader's boats** (UX review 2026-10-11, item 18):
- * paid tips on the boats this reader crewed this week (`crewTipsOnBoats`), in
- * the shop's minor units. The diver was told the shop passes tips on to the
- * crew; this is the crew seeing that it did. A plain line, not a coral moment:
- * it is money, and the coral table never carries money. Zero renders nothing.
+ * The reader's share of the week's paid tips on boats they crewed (`crewTipShare`;
+ * UX review 2026-10-11, item 18; issue #2468): the crew seeing the shop pass
+ * tips on. A plain line, never coral. The only shop money shown below the
+ * money gate, and not precedent for more (H-125). Zero renders nothing.
  */
 function CrewTipsLine({
   cents,

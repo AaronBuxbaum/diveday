@@ -175,6 +175,46 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
   });
 
   /**
+   * **A tight turnaround is advice** (issue #2141, Aaron's decision (b)): one
+   * muted line per near miss, under every clash line, naming the other
+   * departure and the minutes — never an alert, and the Move button stays.
+   */
+  it("says a tight turnaround under the clash lines, muted, and keeps the move", async () => {
+    loadMovePreflight.mockImplementation(async () => ({
+      blocked: null,
+      sections: [
+        { kind: "boat", clashes: [{ boat: "Mantis I", departure: "Night Dive" }] },
+        {
+          kind: "turnaround",
+          items: [
+            { kind: "boat", name: "Mantis I", departure: "Afternoon Wreck", minutes: 10 },
+            { kind: "crew", name: "Marisol", departure: "Shore Intro", minutes: 20 },
+          ],
+        },
+      ],
+    }));
+    renderBoard();
+    await openMovePanel();
+
+    const boatLine = await screen.findByText(
+      "Tight turnaround: Mantis I has 10 min between this and Afternoon Wreck.",
+    );
+    const crewLine = screen.getByText(
+      "Tight turnaround: Marisol has 20 min between this and Shore Intro, from another meeting point.",
+    );
+    for (const line of [boatLine, crewLine]) {
+      expect(line.closest("ul")).not.toBeNull();
+      expect(line).not.toHaveClass("text-warning");
+    }
+    for (const alert of screen.getAllByRole("alert")) {
+      expect(alert).not.toHaveTextContent("Tight turnaround");
+    }
+    const clash = screen.getByText("Mantis I is already out on Night Dive at that time.");
+    expect(clash.compareDocumentPosition(boatLine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole("button", { name: COPY.moveIt })).toBeEnabled();
+  });
+
+  /**
    * A clash on its own used to print the "If you move it" heading over one
    * grey line. The alert says the whole thing; the heading it would have stood
    * under has nothing left to introduce.

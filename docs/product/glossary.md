@@ -110,6 +110,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Free term
 - Paid after close
 - Paid mark
+- Party payment
 - Pass-through fee
 - Payments restricted
 - Payout
@@ -246,6 +247,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Setup link
 - Shop currency
 - Shop day scan
+- Shore alert contact
 - Sign once
 - Skipped occurrence
 - SMS channel
@@ -259,6 +261,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - STOP list
 - The record
 - Tide window
+- Tight turnaround
 - Tip
 - Touch guard
 - Transactional notification
@@ -283,6 +286,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 
 - Coverage denominator
 - Day profile
+- Dispute sheet
 - Dive area
 - Earliest flight
 - Executed dive
