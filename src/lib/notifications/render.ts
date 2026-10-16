@@ -40,6 +40,7 @@ import {
   welcomeEmail,
   wrapEmailHtml,
 } from "./email";
+import { incidentMissingDiverEmail } from "./incident-emails";
 import type { Notification } from "./kinds";
 import { partyPaymentReceiptEmail } from "./party-payment-receipt";
 import {
@@ -157,6 +158,8 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   }
   if (notification.kind === "roll_call_stale") return rollCallStaleEmail(notification);
   if (notification.kind === "roll_call_stale_shore") return rollCallStaleShoreEmail(notification);
+  if (notification.kind === "incident_missing_diver")
+    return incidentMissingDiverEmail(notification);
   if (notification.kind === "shore_alert_stopped") return shoreAlertStoppedEmail(notification);
   if (notification.kind === "shore_alert_confirmation") {
     return shoreAlertConfirmationEmail(notification);

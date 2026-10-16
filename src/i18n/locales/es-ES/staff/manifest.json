@@ -270,5 +270,9 @@
     "pushBody": "{title}: {awaiting, plural, one {# persona sin resultado} other {# personas sin resultado}} después de la inmersión {dive}.",
     "pushBodyMissing": "{title}: {missing, plural, one {# persona consta} other {# personas constan}} como no de vuelta a bordo después de la inmersión {dive}.",
     "pushBodyBoth": "{title}: {missing, plural, one {# persona consta} other {# personas constan}} como no de vuelta a bordo después de la inmersión {dive}; {awaiting, plural, one {# más sin resultado} other {# más sin resultado}}."
+  },
+  "missingDiverAlert": {
+    "pushTitle": "Buceador desaparecido",
+    "pushBody": "{title}: el equipo presentó un reporte de buceador desaparecido."
   }
 }

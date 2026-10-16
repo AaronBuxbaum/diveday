@@ -5567,6 +5567,11 @@
       "shoreWhy": "Recibes este aviso porque {shopName} te tiene como su contacto en tierra para los avisos del pase de lista, y lo confirmaste.",
       "shoreStop": "Dejar de recibir estos avisos"
     },
+    "incidentMissingDiver": {
+      "subject": "{shopName}: buceador desaparecido en {tripTitle}",
+      "body": "Tu equipo presentó un reporte de buceador desaparecido en {tripTitle}, {when}. El reporte tiene los detalles.",
+      "open": "Abrir el reporte"
+    },
     "shoreAlertStopped": {
       "subject": "{shopName}: el contacto en tierra dejó los avisos del pase de lista",
       "body": "Tu contacto en tierra usó el enlace de un aviso del pase de lista para dejar de recibirlos. DiveDay no volverá a escribirle salvo que guardes su dirección y la confirme de nuevo.",

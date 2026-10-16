@@ -124,6 +124,14 @@ export const incidentReports = pgTable(
      * discarded.
      */
     legalHoldAt: timestamp("legal_hold_at", { withTimezone: true }),
+    /**
+     * **The missing-diver alert's claim** (H-126, decided 2026-10-16): stamped
+     * when the owners were told a report of kind "missing diver" was filed, so
+     * a report alerts once. A send that reached nobody gives it back and the
+     * hourly crew-notices pass tries again (`sendMissingDiverAlerts`). Null on
+     * every other kind, and on a report not yet filed.
+     */
+    missingAlertedAt: timestamp("missing_alerted_at", { withTimezone: true }),
   },
   (table) => [
     index("incident_reports_shop_trip_idx")

@@ -1552,6 +1552,40 @@ const rollCallStaleSchema = z.object({
 });
 
 /**
+ * **A filed incident report of kind "missing diver"** (H-126, decided
+ * 2026-10-16; `sendMissingDiverAlerts`, src/db/missing-diver-alerts.ts). Staff
+ * safety mail to each of the shop's owners at once, once per report: whoever
+ * filed it chose "missing diver" on purpose, so the shop does not wait for the
+ * roll call to go stale.
+ *
+ * **The fact and a link, never the report.** The mail lands in a personal
+ * inbox that may sit on a shared phone: it says that a missing diver was
+ * reported on this departure and when, and links the report behind the staff
+ * sign-in. No name, no severity, no word of what happened (the report is
+ * personal and medical data).
+ *
+ * Not queued (`notificationIsQueueable`): an alert that arrives late says
+ * something the crew already acted on. Carries `incidentReportId`, never
+ * `bookingId`, so the delivery is not tracked against a booking.
+ */
+const incidentMissingDiverSchema = z.object({
+  kind: z.literal("incident_missing_diver"),
+  shopId: z.uuid(),
+  personId: z.uuid(),
+  tripId: z.uuid(),
+  incidentReportId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: tripTitleSchema,
+  /** When the report was filed: said in the shop's zone. */
+  reportedAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  reportUrl: z.url().max(2_000),
+});
+
+/**
  * **The same alert, to the shop's shore contact** (H-118, decided 2026-10-15).
  * Addressed to somebody outside the shop's accounts, so it carries less than
  * the owners' copy: no person, no link behind a staff sign-in, and no name of
@@ -1704,6 +1738,7 @@ export const notificationSchema = z
     stripePaymentsRestrictedSchema,
     rollCallStaleSchema,
     rollCallStaleShoreSchema,
+    incidentMissingDiverSchema,
     shoreAlertConfirmationSchema,
     shoreAlertStoppedSchema,
     departureNoteSchema,
@@ -1822,6 +1857,7 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "desk_after_hours":
     case "roll_call_stale":
     case "roll_call_stale_shore":
+    case "incident_missing_diver":
     case "shore_alert_confirmation":
     case "departure_note":
     case "lost_item_found":
@@ -2006,6 +2042,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One alert per departure per owner; the departure's claim comes first.
     case "roll_call_stale":
       return `roll-call-stale/${notification.tripId}/${notification.personId}`;
+    // One alert per report per owner; the report's claim comes first.
+    case "incident_missing_diver":
+      return `incident-missing-diver/${notification.incidentReportId}/${notification.personId}`;
     // One alert per departure to the shore contact, under the same claim.
     case "roll_call_stale_shore":
       return `roll-call-stale-shore/${notification.tripId}`;

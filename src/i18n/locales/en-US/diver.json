@@ -5567,6 +5567,11 @@
       "shoreWhy": "You’re getting this because {shopName} lists you as its shore contact for roll-call alerts, and you confirmed it.",
       "shoreStop": "Stop these alerts"
     },
+    "incidentMissingDiver": {
+      "subject": "{shopName}: missing diver reported on {tripTitle}",
+      "body": "Your crew filed a report of a missing diver on {tripTitle}, {when}. The report has the details.",
+      "open": "Open the report"
+    },
     "shoreAlertStopped": {
       "subject": "{shopName}: the shore contact stopped roll-call alerts",
       "body": "Your shore contact used the link in a roll-call alert to stop them. DiveDay won’t email them again unless you save their address and they confirm it again.",
