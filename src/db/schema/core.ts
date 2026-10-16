@@ -763,6 +763,13 @@ export const people = pgTable(
      */
     drysuitExperienceSeenByPersonId: uuid("drysuit_experience_seen_by_person_id"),
     /**
+     * What the staffer saw, in their words: the suit, where, when (domain
+     * review A4). Required by the writer, 1 to 200 characters, and set and
+     * cleared with the two columns above. The record and each clear also
+     * leave an append-only line on the diver's activity trail (A5).
+     */
+    drysuitExperienceSeenNote: text("drysuit_experience_seen_note"),
+    /**
      * The language this diver reads, captured from the `Accept-Language` of a
      * request they made themselves (a public booking, a waiver signature) and
      * preferred over the shop's `default_locale` when DiveDay emails or texts

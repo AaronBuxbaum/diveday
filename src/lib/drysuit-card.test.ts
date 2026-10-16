@@ -82,10 +82,12 @@ describe("checkDrysuitCard", () => {
       expect(checkDrysuitCard(true, [], seen)).toEqual({ status: "ok" });
     });
 
-    it("clears it when the only drysuit card is unconfirmed, too", () => {
+    it("leaves an unconfirmed drysuit card firing: confirming the card is the fix (F4)", () => {
       expect(checkDrysuitCard(true, [specialty({ status: "pending" })], seen)).toEqual({
-        status: "ok",
+        status: "unconfirmed",
       });
+      const imported = specialty({ importedAt: new Date("2026-01-01") });
+      expect(checkDrysuitCard(true, [imported], seen)).toEqual({ status: "unconfirmed" });
     });
 
     it("still fires without the fact", () => {

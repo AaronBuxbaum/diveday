@@ -40,6 +40,7 @@ describe("merging drysuit experience seen", () => {
       .set({
         drysuitExperienceSeenAt: new Date("2026-09-01T00:00:00.000Z"),
         drysuitExperienceSeenByPersonId: owner.id,
+        drysuitExperienceSeenNote: "earliest",
       })
       .where(eq(people.id, source.id));
 
@@ -54,6 +55,7 @@ describe("merging drysuit experience seen", () => {
     const [merged] = await db.select().from(people).where(eq(people.id, survivor.id));
     expect(merged?.drysuitExperienceSeenAt).toEqual(new Date("2026-09-01T00:00:00.000Z"));
     expect(merged?.drysuitExperienceSeenByPersonId).toBe(owner.id);
+    expect(merged?.drysuitExperienceSeenNote).toBe("earliest");
   });
 
   it("keeps the earlier recording with its own author, never mixing the halves", async () => {
@@ -63,6 +65,7 @@ describe("merging drysuit experience seen", () => {
       .set({
         drysuitExperienceSeenAt: new Date("2026-09-10T00:00:00.000Z"),
         drysuitExperienceSeenByPersonId: survivor.id,
+        drysuitExperienceSeenNote: "later",
       })
       .where(eq(people.id, survivor.id));
     await db
@@ -70,6 +73,7 @@ describe("merging drysuit experience seen", () => {
       .set({
         drysuitExperienceSeenAt: new Date("2026-09-01T00:00:00.000Z"),
         drysuitExperienceSeenByPersonId: owner.id,
+        drysuitExperienceSeenNote: "earliest",
       })
       .where(eq(people.id, source.id));
 
@@ -84,6 +88,7 @@ describe("merging drysuit experience seen", () => {
     const [merged] = await db.select().from(people).where(eq(people.id, survivor.id));
     expect(merged?.drysuitExperienceSeenAt).toEqual(new Date("2026-09-01T00:00:00.000Z"));
     expect(merged?.drysuitExperienceSeenByPersonId).toBe(owner.id);
+    expect(merged?.drysuitExperienceSeenNote).toBe("earliest");
   });
 
   it("leaves neither half set when neither record has one", async () => {

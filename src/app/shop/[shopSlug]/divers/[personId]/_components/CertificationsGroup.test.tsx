@@ -753,6 +753,7 @@ describe("drysuit experience seen", () => {
         noCertificationClearedByPersonId: null,
         drysuitExperienceSeenAt: new Date("2026-10-01T15:00:00Z"),
         drysuitExperienceSeenByPersonId: "staff-1",
+        drysuitExperienceSeenNote: "Own DUI shell, three shore dives",
       },
       drysuitExperienceSeenByName: "Dana Reyes",
       rentalFit: { divesDry: true },
@@ -766,6 +767,15 @@ describe("drysuit experience seen", () => {
       screen.getByText(/Recorded by Dana Reyes on .*Staff-observed, not a drysuit card/),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Clear" })).toBeInTheDocument();
+    // Domain review A5: what they saw travels with who saw it.
+    expect(screen.getByText(/Own DUI shell, three shore dives/)).toBeInTheDocument();
+  });
+
+  it("asks what was seen before recording it", () => {
+    renderGroup(diver({ rentalFit: { divesDry: true } } as unknown as Partial<DiverProfile>));
+    const note = screen.getByRole("textbox", { name: "What you saw" });
+    expect(note).toBeRequired();
+    expect(note).toHaveAttribute("maxLength", "200");
   });
 
   it("never reads as a card: the door and the empty state are unchanged", () => {
@@ -801,6 +811,24 @@ describe("drysuit experience seen", () => {
           reviewedAt: null,
           selfDeclaredAt: null,
           identifier: "D1",
+        },
+      ]),
+    );
+    expect(screen.queryByRole("button", { name: "I’ve seen them dive dry" })).toBeNull();
+    cleanup();
+
+    // A drysuit card awaiting review: confirming it is the fix (domain review F4).
+    renderGroup(
+      unrecorded({ divesDry: true }, [
+        {
+          id: "s2",
+          specialty: "drysuit",
+          agency: "padi",
+          status: "pending",
+          importedAt: null,
+          reviewedAt: null,
+          selfDeclaredAt: null,
+          identifier: "D2",
         },
       ]),
     );

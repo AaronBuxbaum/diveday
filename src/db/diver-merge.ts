@@ -580,6 +580,7 @@ function noCertificationStamp(
 type DrysuitExperienceSeen = {
   drysuitExperienceSeenAt: Date | null;
   drysuitExperienceSeenByPersonId: string | null;
+  drysuitExperienceSeenNote: string | null;
 };
 
 /** Whichever record has the earlier "seen diving dry", with that record's author. */
@@ -598,6 +599,7 @@ function drysuitExperienceSeen(
     drysuitExperienceSeenByPersonId: pick.drysuitExperienceSeenAt
       ? pick.drysuitExperienceSeenByPersonId
       : null,
+    drysuitExperienceSeenNote: pick.drysuitExperienceSeenAt ? pick.drysuitExperienceSeenNote : null,
   };
 }
 
@@ -1293,8 +1295,8 @@ export async function mergeDiverRecords(input: {
           // all: the stamp vanishes from the record, the certification send
           // lists and the export, with nothing saying so.
           ...noCertificationStamp(survivor, source),
-          // A staffer's "seen diving dry" (#2136) travels as a pair with its
-          // author: the earliest record wins, survivor on a tie.
+          // A staffer's "seen diving dry" (#2136) travels with its author and
+          // note: the earliest record wins, survivor on a tie.
           ...drysuitExperienceSeen(survivor, source),
           courtesyEmailOptOutAt: oldestDate(
             survivor.courtesyEmailOptOutAt,

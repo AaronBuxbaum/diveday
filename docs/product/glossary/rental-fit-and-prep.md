@@ -131,10 +131,14 @@
   suits for the drysuit, the conservative answer for weighting; a post that says nothing about the
   suit changes nothing. It defaults false with no separate "unknown": every fit form opens on the
   stored answer, and a diver nobody has asked is shown no weight check either way.
-- **Drysuit experience seen** — a staffer's recorded "I have seen this diver dive dry", with who
-  and when (`people.drysuit_experience_seen_at` and `_by_person_id`, issue #2136, Aaron
-  2026-10-13). It quiets the roster's drysuit-card advisory for a **Dives dry** diver with no
-  drysuit card, and nothing else: it is staff-observed, **never a card**, has no row in
+- **Drysuit experience seen** — a staffer's recorded "I have seen this diver dive dry", with who,
+  when and a short note saying what they saw (`people.drysuit_experience_seen_at`,
+  `_by_person_id` and `_note`, issue #2136, Aaron 2026-10-13). Only an instructor, assistant
+  instructor, divemaster, manager or owner may record it, by live roles and never for themselves;
+  only the recorder, a manager or the owner may clear it, and each act leaves a line on the
+  diver's activity trail. It quiets the roster's drysuit-card advisory for a **Dives dry** diver
+  with no drysuit card on file at all, and nothing else (a card awaiting review keeps the
+  advisory up: confirming the card is the fix): it is staff-observed, **never a card**, has no row in
   `specialty_certifications`, and no readiness, admission or counter-rental gate reads it, so a trip
   or site requiring the drysuit specialty still refuses. Recorded and cleared only from the
   diver record's certifications group; no diver-facing form, `/ready` included, can set it.
@@ -210,12 +214,15 @@
   cold-snap day is the one that matters. A wetsuit unit carries its own thickness
   (`gear_items.thickness_mm`, the thickest panel, so a 5/4 is 5) on its details form, and the
   picker line says it. Only **gear proposals** read the pair: a wetsuit is proposed when size and
-  thickness both match, and not at all when either side has not said. It never gates.
+  thickness both match, and not at all when either side has not said. One value per departure,
+  matched exactly: a boat mixing 3 mm and 5 mm divers names one, the other thickness is never
+  proposed, and an assigned unit of another thickness says it is not the day's. It never gates.
 - **Nitrox-designated regulator** — a regulator the shop keeps for enriched air, O2-cleaned or set
   aside by its own policy (`gear_items.nitrox_designated`, issue #2207), ticked on the unit's
   details form; only a regulator carries the answer, and not said reads as no. It shapes
-  **gear proposals** (a nitrox diver's regulator from the set, an air diver's from outside it) and
-  labels the unit in a nitrox diver's picker. It never gates: any free regulator can still be
+  **gear proposals** (a regulator from the set only for a diver whose nitrox is approved by a
+  verified card, never for a bare request; an air diver's from outside it) and labels the unit on
+  every picker row, with a "check before air" caution on an air diver's. It never gates: any free regulator can still be
   assigned to anyone, because most agencies accept a standard regulator up to 40%, and a refusal
   here would be a boarding gate in disguise.
 - **Gear proposal** — the unit the Gear tab offers for a piece a diver wants, so staff confirm

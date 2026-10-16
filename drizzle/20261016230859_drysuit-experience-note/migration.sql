@@ -1,0 +1,1 @@
+ALTER TABLE "people" ADD COLUMN "drysuit_experience_seen_note" text;

@@ -43,6 +43,8 @@
     "medical_answers_read": "{actor} read {diver}’s medical answers",
     "date_of_birth_cleared_as_adult": "{actor} cleared {diver}’s date of birth and said they’re 18 or older",
     "record_exported": "{actor} downloaded a copy of {diver}’s record",
+    "drysuit_experience_recorded": "{actor} recorded seeing {diver} dive dry",
+    "drysuit_experience_cleared": "{actor} took back the record of seeing {diver} dive dry",
     "dispute_sheet_printed": "{actor} opened {diver}’s dispute sheet",
     "integration_backfill_sent": "{actor} sent earlier checkouts to {provider}, from {since} (queued: {count})",
     "running_late_from_message": "{actor} marked {diver} running late from their message",

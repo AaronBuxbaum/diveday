@@ -206,6 +206,7 @@ const ERASED_PERSON_COLUMNS = {
   noCertificationClearedByPersonId: null,
   drysuitExperienceSeenAt: null,
   drysuitExperienceSeenByPersonId: null,
+  drysuitExperienceSeenNote: null,
   // A published name is a personal name, and it is the one that was on a page
   // the whole internet could read. Unreachable today — `anonymizeDiver` refuses
   // anybody holding a staff role, and the only way to lose every staff role is

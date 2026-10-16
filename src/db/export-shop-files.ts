@@ -477,6 +477,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // never a card: it has no row in specialty_certifications.csv.
       "drysuit_experience_seen_at",
       "drysuit_experience_seen_by_person_id",
+      "drysuit_experience_seen_note",
       // **Where this record came from.** Set once, when a diver put
       // themselves on file at the shop's counter QR rather than being
       // typed in by staff (issue #1236). It changes how a destination
@@ -521,6 +522,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.adultAttestedByPersonId,
         row.drysuitExperienceSeenAt,
         row.drysuitExperienceSeenByPersonId,
+        row.drysuitExperienceSeenNote,
         row.selfRegisteredAt,
         row.deletedAt,
         row.anonymizedAt,
