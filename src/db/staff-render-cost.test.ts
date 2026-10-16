@@ -445,7 +445,11 @@ const CHROME_CEILING = 20;
 // 65 → 66: a "certification pending" row offers the agency check (H-105), so
 // Today reads which of the blocked divers' cards the extension could look up
 // (`listAgencyCheckableCards`), one statement beside the wave, not after it.
-const TODAY_CEILING = 66;
+// 66 → 69 (fourth review, items 12 and 14): Today names rostered crew who are
+// away (`crewAwayByTrip`, the departures' crew, schedule days and days away)
+// and keeps every crew assignment on "Your week" (`readerCrewedTrips`), three
+// statements in the queue's one wave.
+const TODAY_CEILING = 69;
 // 49 → 50: the roster reads each diver's unspent package dives for the payment
 // control (`spendableDivesForTrip`, H-79, issue #1697). The held seat's
 // last-dive-day read beside it (`lastDiveDaysHere`, #1789) skips itself when no
@@ -489,11 +493,15 @@ const TRIP_PHASE_CEILING = 6;
  * reads one after another after its fan-out, and `/ready` its readiness pass,
  * four more steps of `getReadyPageData` and five single awaits in the thread.
  */
-// 18 → 20 and 36 → 38 (fourth review, item 12; r4-4 reviews N2/N5): both
-// diver doors mark an away crew member "to be confirmed", which reads the
-// departure's schedule days and the crew's days away beside the crew, in the
-// same round trip (the phase ceilings below are unchanged).
+// 18 → 20 (fourth review, item 12; r4-4 reviews N2/N5): both diver doors mark
+// an away crew member "to be confirmed", which reads the departure's schedule
+// days and the crew's days away beside the crew, in the same round trip.
 const PUBLIC_TRIP_CEILING = 20;
+// 36 → 38, for two reasons on two seeds. On layer 3's seed the replay's first
+// upcoming seat is paid with no cancellation policy, and its page reads whether
+// an Ask to move (H-126) stands (`hasMoveAsk`), two statements more. On this
+// layer's seed the seat is unpaid again, and the away-crew read above adds the
+// same two. Measured 38 here.
 const READY_CEILING = 38;
 // 10 → 3: the shop, then `readTripPage`'s one wave (issue #2353; code review
 // 2026-10-11, item 2), whose chained reads — the briefings off the dives, the
@@ -505,4 +513,7 @@ const PUBLIC_TRIP_PHASE_CEILING = 3;
 // 12 → 5 (item 3): the capability; the readiness detail beside the booking
 // row and its fan-out (`getReadyPageData`); the readiness pass's one wave; and
 // the thread's one wave.
+// 5 → 7 on layer 3's seed, for its paid seat: whether an Ask to move stands is
+// read after the payment answers. 7 → 5 here: this seed's seat is unpaid, and
+// the away-crew read rides the thread's one wave. Measured 5.
 const READY_PHASE_CEILING = 5;
