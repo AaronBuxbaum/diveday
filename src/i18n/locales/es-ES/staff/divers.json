@@ -43,6 +43,16 @@
     }
   },
   "certifications": {
+    "drysuitSeenTitle": "Visto bucear con traje seco",
+    "drysuitSeenNote": "Lo anotó {name} el {date}. Lo observó el personal; no es una certificación de traje seco: calla el aviso de traje seco de la lista y no cambia nada de lo que exige una salida.",
+    "drysuitSeenByUnknown": "un miembro del personal",
+    "drysuitSeenHint": "Bucea con traje seco y no tiene certificación de traje seco. Si lo has visto bucear con traje seco, anótalo aquí y la lista deja de avisarte. No es una certificación.",
+    "drysuitSeenNoteLabel": "Qué viste",
+    "drysuitSeenNotePlaceholder": "p. ej., traje seco propio, tres inmersiones desde costa con nosotros en octubre",
+    "recordDrysuitSeen": "Lo he visto bucear con traje seco",
+    "recordingDrysuitSeen": "Anotando…",
+    "clearDrysuitSeen": "Quitar",
+    "clearingDrysuitSeen": "Quitando…",
     "heading": "Registros de certificación",
     "addCard": "Agregar certificación",
     "agency": "Agencia",
@@ -424,6 +434,12 @@
     "waiverChannelUnavailable": "Sin configurar"
   },
   "notices": {
+    "drysuitExperienceRecorded": "Anotado. La lista deja de avisarte de la certificación de traje seco de este buceador. No se ha añadido ninguna certificación.",
+    "drysuitExperienceCleared": "Quitado. La lista vuelve a avisarte de la certificación de traje seco de este buceador.",
+    "drysuitExperienceUnchanged": "No ha cambiado nada. La ficha ya lo decía.",
+    "drysuitExperienceNotAuthorized": "Solo un instructor, asistente de instructor, divemaster, gerente o propietario puede anotar que vio a alguien bucear con traje seco. Quitarlo corresponde a quien lo anotó, a un gerente o al propietario.",
+    "drysuitExperienceNoteRequired": "No se ha anotado. Di brevemente qué viste, en 200 caracteres o menos.",
+    "drysuitExperienceNotRecordable": "No se ha anotado. Solo sirve para otra persona que bucea con traje seco y no tiene certificación de traje seco en su ficha. Una certificación en la ficha se confirma en su lugar.",
     "alreadyBooked": "Este buceador ya está reservado en esa actividad.",
     "booked": "Reservado. Revísalo abajo, luego crea y envía la factura.",
     "bookedConfirmed": "Reservado, y su confirmación va en camino. Revísalo abajo, luego crea y envía la factura.",

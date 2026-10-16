@@ -27,7 +27,9 @@
     "divesOnly": "Divers only",
     "priceLine": "{type} {price}",
     "free": "free",
-    "diverSeatsLine": "{count, plural, one {# diver seat} other {# diver seats}}"
+    "diverSeatsLine": "{count, plural, one {# diver seat} other {# diver seats}}",
+    "sitesNotForSnorkelers": "Snorkeler seats are open, but every planned site is marked not good for snorkeling.",
+    "sitesNotForBookedSnorkelers": "{count, plural, one {A snorkeler is} other {# snorkelers are}} booked, but every planned site is marked not good for snorkeling."
   },
   "roster": {
     "comingAs": "Coming as: {type}",

@@ -302,6 +302,25 @@ describe("the dive-site importer", () => {
   });
 
   /**
+   * **Snorkel suitable is said, or not said** (domain review A6, security X6):
+   * only an explicit yes or no sets it. Anything else, a typo or "maybe",
+   * reads as not said, never as "no" — a guessed no would hide the site from
+   * snorkel planning, and a guessed yes is a safety claim nobody made.
+   */
+  it("reads snorkel_suitable as yes, no, or not said", () => {
+    const parse = (value: string) =>
+      prepareDiveSiteImport(`name,snorkel_suitable\nSite,${value}\n`).rows[0]?.snorkelSuitable;
+    expect(parse("yes")).toBe(true);
+    expect(parse("TRUE")).toBe(true);
+    expect(parse("no")).toBe(false);
+    expect(parse("false")).toBe(false);
+    expect(parse("0")).toBe(false);
+    expect(parse("maybe")).toBeNull();
+    expect(parse("yse")).toBeNull();
+    expect(parse("")).toBeNull();
+  });
+
+  /**
    * The same normalizer one column over. `parseDiveSiteLandmarks` does not drop
    * a landmark whose `kind` is not a kind — it reads it as a plain point of
    * interest and bounds the note — which is the right answer and the one the

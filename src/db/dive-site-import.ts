@@ -327,6 +327,7 @@ function diveSiteInput(
     marineLife: row.marineLife ?? undefined,
     marineLifeDescription: row.marineLifeDescription ?? undefined,
     difficultyLevel: row.difficultyLevel,
+    snorkelSuitable: row.snorkelSuitable,
     depthRange: row.depthRange ?? undefined,
     depthMinMeters: row.depthMinMeters,
     maxDepthMeters: row.maxDepthMeters,

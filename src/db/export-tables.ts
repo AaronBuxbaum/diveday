@@ -24,7 +24,6 @@ import {
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
-  diveSiteMoments,
   diveSites,
   executedDives,
   gearItems,
@@ -132,11 +131,6 @@ export const EXPORT_TABLES = {
       asc(diveSiteCreatures.id),
     ],
     scope: { shopColumn: diveSiteCreatures.shopId },
-  },
-  diveSiteMoments: {
-    table: diveSiteMoments,
-    order: [asc(diveSiteMoments.createdAt), asc(diveSiteMoments.id)],
-    scope: { shopColumn: diveSiteMoments.shopId },
   },
   recapPhotos: {
     table: recapPhotos,

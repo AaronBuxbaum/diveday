@@ -302,6 +302,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "customer_gear_items.deleted_by_person_id": "who removed the piece from the record",
   "gear_items.deleted_by_person_id": "who retired the unit",
   "gear_reservations.released_by_person_id": "who let go of the hold",
+  "gear_reservations.fill_recorded_by_person_id": "who recorded a counter tank's gas",
   "gear_service_events.recorded_by_person_id": "who serviced the unit",
   "incident_report_addenda.author_person_id": "who wrote the addendum",
   "incident_reports.created_by_person_id": "who started the incident report",
@@ -318,6 +319,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "people.merged_into_person_id":
     "the merge pointer itself — structural, and what makes the shell resolve",
   "people.no_certification_cleared_by_person_id": "who cleared the no-card stamp",
+  "people.drysuit_experience_seen_by_person_id": "who saw the diver dive dry (#2136)",
   "people.adult_attested_by_person_id": "who said the diver is 18 or older (H-100)",
   "shops.shore_alert_consent_by_person_id": "who recorded the shore contact's consent (H-118)",
   "pre_departure_check_events.recorded_by_person_id": "who ticked the check",
@@ -573,6 +575,32 @@ function noCertificationStamp(
     noCertificationDeclaredAt: pick.noCertificationDeclaredAt,
     noCertificationClearedAt: pick.noCertificationClearedAt,
     noCertificationClearedByPersonId: pick.noCertificationClearedByPersonId,
+  };
+}
+
+type DrysuitExperienceSeen = {
+  drysuitExperienceSeenAt: Date | null;
+  drysuitExperienceSeenByPersonId: string | null;
+  drysuitExperienceSeenNote: string | null;
+};
+
+/** Whichever record has the earlier "seen diving dry", with that record's author. */
+function drysuitExperienceSeen(
+  survivor: DrysuitExperienceSeen,
+  source: DrysuitExperienceSeen,
+): DrysuitExperienceSeen {
+  const pick =
+    survivor.drysuitExperienceSeenAt &&
+    (!source.drysuitExperienceSeenAt ||
+      survivor.drysuitExperienceSeenAt <= source.drysuitExperienceSeenAt)
+      ? survivor
+      : source;
+  return {
+    drysuitExperienceSeenAt: pick.drysuitExperienceSeenAt,
+    drysuitExperienceSeenByPersonId: pick.drysuitExperienceSeenAt
+      ? pick.drysuitExperienceSeenByPersonId
+      : null,
+    drysuitExperienceSeenNote: pick.drysuitExperienceSeenAt ? pick.drysuitExperienceSeenNote : null,
   };
 }
 
@@ -1268,6 +1296,9 @@ export async function mergeDiverRecords(input: {
           // all: the stamp vanishes from the record, the certification send
           // lists and the export, with nothing saying so.
           ...noCertificationStamp(survivor, source),
+          // A staffer's "seen diving dry" (#2136) travels with its author and
+          // note: the earliest record wins, survivor on a tie.
+          ...drysuitExperienceSeen(survivor, source),
           courtesyEmailOptOutAt: oldestDate(
             survivor.courtesyEmailOptOutAt,
             source.courtesyEmailOptOutAt,

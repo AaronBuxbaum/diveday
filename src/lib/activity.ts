@@ -239,6 +239,8 @@ type ActivityParamShapes = {
   date_of_birth_cleared_as_adult: { actor: string; diver: string };
   /** A staffer downloaded a diver's own record. */
   record_exported: { actor: string; diver: string };
+  drysuit_experience_recorded: { actor: string; diver: string };
+  drysuit_experience_cleared: { actor: string; diver: string };
   /** A staffer opened a seat's dispute sheet, which leaves the shop (#2390). */
   dispute_sheet_printed: { actor: string; diver: string };
   /**
@@ -449,6 +451,8 @@ export const ACTIVITY_CODES = [
   "medical_answers_read",
   "date_of_birth_cleared_as_adult",
   "record_exported",
+  "drysuit_experience_recorded",
+  "drysuit_experience_cleared",
   "dispute_sheet_printed",
   "integration_backfill_sent",
   "running_late_from_message",

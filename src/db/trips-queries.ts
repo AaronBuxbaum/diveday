@@ -370,6 +370,12 @@ export const bookedDiversCount = () =>
     Number,
   );
 
+/** The snorkelers among the held seats, the same count shape as `bookedDiversCount`. */
+export const bookedSnorkelersCount = () =>
+  sql<number>`count(${bookings.id}) filter (where ${bookings.participantType} = 'snorkeler')`.mapWith(
+    Number,
+  );
+
 /**
  * **Every seat held on a departure, and the divers among them** — the two
  * numbers the two limits are measured against (ADR 20261007-participant-types).

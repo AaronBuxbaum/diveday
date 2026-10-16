@@ -111,6 +111,8 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   note_added: "records",
   note_deleted: "records",
   record_exported: "records",
+  drysuit_experience_recorded: "records",
+  drysuit_experience_cleared: "records",
   dispute_sheet_printed: "records",
   integration_backfill_sent: "records",
   running_late_from_message: "seats",

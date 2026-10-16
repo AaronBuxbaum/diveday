@@ -45,6 +45,8 @@
     "medical_answers_read": "{actor} leyó las respuestas médicas de {diver}",
     "date_of_birth_cleared_as_adult": "{actor} borró la fecha de nacimiento de {diver} e indicó que tiene 18 años o más",
     "record_exported": "{actor} descargó una copia del registro de {diver}",
+    "drysuit_experience_recorded": "{actor} anotó que vio bucear a {diver} con traje seco",
+    "drysuit_experience_cleared": "{actor} retiró la anotación de haber visto bucear a {diver} con traje seco",
     "dispute_sheet_printed": "{actor} abrió la hoja de disputa de {diver}",
     "integration_backfill_sent": "{actor} envió los cobros anteriores a {provider}, desde {since} (en cola: {count})",
     "running_late_from_message": "{actor} marcó que {diver} llega tarde según su mensaje",

@@ -6,6 +6,7 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { formatCalendarDate } from "@/lib/calendar-date";
+import { nitroxTanksApproved } from "@/lib/dive-prep";
 import { scopedId } from "@/lib/element-id";
 import { proposalKey } from "@/lib/gear-proposals";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -19,7 +20,7 @@ import { confirmProposedGearUnits } from "../proposal-actions";
 import { FoldBelowLg } from "./FoldBelowLg";
 import { GearReturnPane } from "./GearReturnPane";
 import { ConfirmProposals } from "./ProposedUnit";
-import { assignmentRowIsSettled, careLine, kitLineClass } from "./prep-lines";
+import { assignmentRowIsSettled, careLine, kitLineClass, suitMismatchLine } from "./prep-lines";
 import type { PrepView } from "./prep-view";
 import { WantedPiece } from "./WantedPiece";
 
@@ -197,6 +198,11 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                             {careLine(t, assignment)}
                           </span>
                         ) : null}
+                        {suitMismatchLine(t, assignment, prep.trip.wetsuitThicknessMm) ? (
+                          <span className="font-medium text-warning-strong">
+                            {suitMismatchLine(t, assignment, prep.trip.wetsuitThicknessMm)}
+                          </span>
+                        ) : null}
                         {assignment.checkedOutAt ? (
                           <span className="text-muted">{t("gear.prep.outLabel")}</span>
                         ) : (
@@ -280,6 +286,7 @@ export function PrepAssignments({ view }: { view: PrepView }) {
                           key={item.kind}
                           view={view}
                           bookingId={diver.bookingId}
+                          wantsNitrox={nitroxTanksApproved(diver)}
                           item={item}
                         />
                       ))}

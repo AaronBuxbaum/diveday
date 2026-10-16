@@ -485,6 +485,11 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // answer the guardian rule read when no date was on file.
       "adult_attested_at",
       "adult_attested_by_person_id",
+      // A staffer's "seen diving dry", and whose (#2136). Staff-observed,
+      // never a card: it has no row in specialty_certifications.csv.
+      "drysuit_experience_seen_at",
+      "drysuit_experience_seen_by_person_id",
+      "drysuit_experience_seen_note",
       // **Where this record came from.** Set once, when a diver put
       // themselves on file at the shop's counter QR rather than being
       // typed in by staff (issue #1236). It changes how a destination
@@ -527,6 +532,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.noCertificationClearedByPersonId,
         row.adultAttestedAt,
         row.adultAttestedByPersonId,
+        row.drysuitExperienceSeenAt,
+        row.drysuitExperienceSeenByPersonId,
+        row.drysuitExperienceSeenNote,
         row.selfRegisteredAt,
         row.deletedAt,
         row.anonymizedAt,
@@ -598,6 +606,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // so it leaves with the shop (issue #973).
       "self_guided",
       "exceeds_no_deco_limits",
+      // The wetsuit the boat ran that day, in millimetres (issue #2206).
+      "wetsuit_thickness_mm",
       // The bundle carries deleted departures (they are still the shop's
       // rows), so it has to carry the stamp that says which — a file that
       // hands back a deleted departure looking live is worse than one
@@ -650,6 +660,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.isPrivate,
         row.selfGuided,
         row.exceedsNoDecoLimits,
+        row.wetsuitThicknessMm,
         row.deletedAt,
         row.createdAt,
       ]),
@@ -1401,6 +1412,11 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "status",
       "service_note",
       "aboard_boat_id",
+      // true on a regulator the shop keeps for enriched air (issue #2207);
+      // empty when the shop has not said, and on every other kind.
+      "nitrox_designated",
+      // A wetsuit's thickness in whole millimetres (issue #2206).
+      "thickness_mm",
       "deleted_at",
       "created_at",
       "updated_at",
@@ -1417,6 +1433,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.status,
         row.serviceNote,
         row.aboardBoatId,
+        row.nitroxDesignated,
+        row.thicknessMm,
         row.deletedAt,
         row.createdAt,
         row.updatedAt,
@@ -1798,6 +1816,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "location_name",
       "description",
       "difficulty_level",
+      // true, false, or empty for "the shop has not said" (issue #2214).
+      "snorkel_suitable",
       "depth_range",
       "depth_min_meters",
       "max_depth_meters",
@@ -1850,6 +1870,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         // 20260813-dive-site-difficulty-is-a-code). The column keeps its
         // three stable values, so a destination system can map them.
         row.difficultyLevel,
+        row.snorkelSuitable,
         row.depthRange,
         row.depthMinMeters,
         row.maxDepthMeters,
@@ -1939,29 +1960,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         ];
       }),
     note: EXPORT_FILE_NOTES["dive_site_creatures.csv"],
-  },
-  {
-    file: "dive_site_moments.csv",
-    header: [
-      "id",
-      "dive_site_id",
-      "dive_site_name",
-      "caption",
-      "is_published",
-      "image_url",
-      "created_at",
-    ],
-    rows: ({ siteName, momentRows }) =>
-      momentRows.map((row) => [
-        row.id,
-        row.diveSiteId,
-        siteName.get(row.diveSiteId),
-        row.caption,
-        row.isPublished,
-        row.imageUrl,
-        row.createdAt,
-      ]),
-    note: EXPORT_FILE_NOTES["dive_site_moments.csv"],
   },
   shopFile(RECAP_PHOTOS_CSV),
   {

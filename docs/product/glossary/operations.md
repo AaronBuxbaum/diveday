@@ -500,13 +500,13 @@
   temperature, visibility, surface state) belong to the charter that sailed, not to the reef.
   A shop's library is at Dive sites; DiveDay's published starting points are the **common-site
   catalog**, and importing one makes an independent copy the shop then owns.
-- **Diver moment** — a caption, usually with a photo, that an earlier diver brought back from one
-  **dive site** (`dive_site_moments`). The caption is the diver's own line. Moments are
-  **staff-moderated and opt-in**: a row shows nowhere until the shop publishes it
-  (`is_published`). No surface writes one yet: today only the demo seed does, and the shop export
-  carries them. Published moments with a photo show as one strip on a public trip page, deduplicated
-  by site and capped at four (`dayMomentsFor`), and on the site's own public page. Marketing copy
-  calls them "moments from divers".
+- **Snorkel-suitable** — the shop's yes, no or not-said about whether a **dive site** is any good
+  for a snorkeler (`dive_sites.snorkel_suitable`, issue #2214), set beside difficulty and copied
+  from a common-site template where the template knows; an import sets it only from an explicit
+  yes or no. Null is not said and never reads as no. It only ever raises a warning-tone line on a
+  departure's "Snorkelers and riders" row when snorkeler seats are open or a snorkeler is booked,
+  and every planned site says no (`snorkelersOnUnsuitableSites`); it
+  never refuses a snorkeler's seat, because the captain picks the site on the day.
 - **Dive briefing** — what a diver reads (and the crew says) about **one tank on one dated trip**:
   the `trip_dives` row, rendered from the site's saved notes plus whatever the crew wrote for that
   particular dive. There is one briefing per *planned dive*, so a two-tank trip always has two —

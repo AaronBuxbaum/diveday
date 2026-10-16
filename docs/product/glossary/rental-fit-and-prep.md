@@ -131,6 +131,17 @@
   suits for the drysuit, the conservative answer for weighting; a post that says nothing about the
   suit changes nothing. It defaults false with no separate "unknown": every fit form opens on the
   stored answer, and a diver nobody has asked is shown no weight check either way.
+- **Drysuit experience seen** — a staffer's recorded "I have seen this diver dive dry", with who,
+  when and a short note saying what they saw (`people.drysuit_experience_seen_at`,
+  `_by_person_id` and `_note`, issue #2136, Aaron 2026-10-13). Only an instructor, assistant
+  instructor, divemaster, manager or owner may record it, by live roles and never for themselves;
+  only the recorder, a manager or the owner may clear it, and each act leaves a line on the
+  diver's activity trail. It quiets the roster's drysuit-card advisory for a **Dives dry** diver
+  with no drysuit card on file at all, and nothing else (a card awaiting review keeps the
+  advisory up: confirming the card is the fix): it is staff-observed, **never a card**, has no row in
+  `specialty_certifications`, and no readiness, admission or counter-rental gate reads it, so a trip
+  or site requiring the drysuit specialty still refuses. Recorded and cleared only from the
+  diver record's certifications group; no diver-facing form, `/ready` included, can set it.
 - **Gear register** — the shop's own rental fleet as physical units (`gear_items`), opt-in **by
   presence**: a shop with zero units sees no gear UI anywhere and its prep flow is untouched, and
   adding the first unit is what turns it on — never a settings flag
@@ -176,8 +187,12 @@
   past is "Card seen", the staffer capturing and certifying the card they hold. Soft goods go to
   anybody. **The service screen** refuses a life-support unit whose service clock is overdue as of
   the window's last day or that has an open service concern, and lends a flagged soft-goods unit
-  only with its own "Lend anyway": the one place a **service clock** gates. Counter tanks are air
-  only; a nitrox fill is not modelled. **The waiver informs and never gates** (H-108): the
+  only with its own "Lend anyway": the one place a **service clock** gates. Every counter tank
+  says its **fill** (`gear_reservations.fill_o2_percent`: 21 is air, 22 to 40 is EANx, issue #2257),
+  with who recorded it, printed on the ticket as recorded at the counter and not analyzed, and
+  correctable from the ticket while the tank is out; EANx is refused unless the person's nitrox card authorizes a fill
+  (`authorizesNitroxFill`, the trip gate's predicate). A fill is what the staffer recorded, never
+  an analyzer reading. **The waiver informs and never gates** (H-108): the
   release is the person's, so the new-rental form, the ticket and the Rentals list say its
   standing when it is short of signed ("Waiver: Not signed"), and the form and the ticket offer the
   person's waiver link. A medical hold or a physician's "not cleared" is said in the readiness
@@ -193,12 +208,31 @@
   says the person took the units; it is a receipt for gear, never a liability release, and the one
   shop-wide waiver stays the only waiver (CR-015). No terms set prints none, and DiveDay supplies
   no default. ADR 20260815-minimal-gear-register, the second amendment of 2026-10-08.
+- **Wetsuit for the day** — the thickness, in whole millimetres, of the wetsuit a departure is
+  running (`trips.wetsuit_thickness_mm`, issue #2206), set on the departure's details beside the
+  dive plan when the shop rents wetsuits. Per departure rather than per season, because the
+  cold-snap day is the one that matters. A wetsuit unit carries its own thickness
+  (`gear_items.thickness_mm`, the thickest panel, so a 5/4 is 5) on its details form, and the
+  picker line says it. Only **gear proposals** read the pair: a wetsuit is proposed when size and
+  thickness both match, and not at all when either side has not said. One value per departure,
+  matched exactly: a boat mixing 3 mm and 5 mm divers names one, the other thickness is never
+  proposed, and an assigned unit of another thickness says it is not the day's. It never gates.
+- **Nitrox-designated regulator** — a regulator the shop keeps for enriched air, O2-cleaned or set
+  aside by its own policy (`gear_items.nitrox_designated`, issue #2207), ticked on the unit's
+  details form; only a regulator carries the answer, and not said reads as no. It shapes
+  **gear proposals** (a regulator from the set only for a diver whose nitrox is approved by a
+  verified card, never for a bare request; an air diver's from outside it) and labels the unit on
+  every picker row, with a "check before air" caution on an air diver's. It never gates: any free regulator can still be
+  assigned to anyone, because most agencies accept a standard regulator up to 40%, and a refusal
+  here would be a boarding gate in disguise.
 - **Gear proposal** — the unit the Gear tab offers for a piece a diver wants, so staff confirm
   instead of choose (`proposeRentalUnits`, `src/lib/gear-proposals.ts`). A proposal is never a
   reservation and never a fit check, and it gates nothing: nothing is held until a staffer taps
   Assign, and the exclusion constraint still decides availability at write time. A sized kind is
   proposed only from units *exactly* the size on file; a sizeless kind only from units with no
-  size label, because a mask labelled "Kids" or "RX -4.0" was labelled for somebody. A drysuit
+  size label, because a mask labelled "Kids" or "RX -4.0" was labelled for somebody. A wetsuit is
+  proposed only when its **thickness** (`gear_items.thickness_mm`) is also the departure's
+  **wetsuit for the day** (`trips.wetsuit_thickness_mm`), and never when either has not said. A drysuit
   diver's fins and gloves, and a diver flagged for a staff fit, are never proposed. A unit whose
   service clock has lapsed, or whose last return raised a **service concern** nobody has answered
   since, is never proposed; a unit coming due soon is proposed only after every unit that is not,
@@ -213,9 +247,10 @@
   unticked box per unit, shown only once the concern is open, which moves a ticked unit to
   `needs_service` with the concern as its note. While the concern is open, the fast answers hide,
   so the note cannot be dropped by a tap on "All good"; Cancel closes it. Never automatic, and still
-  no service event. A regulator is
-  never proposed for a diver who asked for nitrox, because the register cannot yet say which
-  regulators are O2-clean. One unit is never proposed twice. Every pick, one row or "Assign all",
+  no service event. A diver who asked for nitrox is proposed only a **nitrox-designated**
+  regulator, and an air diver only one that is not, so a set the shop keeps for enriched air stays
+  off air fills; none when that side has nothing free. The picker still offers every free
+  regulator, the designated ones labelled on a nitrox diver's row, and never refuses one. One unit is never proposed twice. Every pick, one row or "Assign all",
   goes through `assignGearUnit` or `confirmProposedGearUnits`, and each is re-read against what
   the departure still wants before it reserves (`screenGearPicks`), so a stale tab cannot give a
   diver a second unit of a kind they hold. A proposed pick is also re-read for care at that

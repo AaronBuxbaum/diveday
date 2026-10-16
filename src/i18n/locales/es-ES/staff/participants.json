@@ -27,7 +27,9 @@
     "divesOnly": "Solo buceadores",
     "priceLine": "{type} {price}",
     "free": "gratis",
-    "diverSeatsLine": "{count, plural, one {# plaza de buceo} other {# plazas de buceo}}"
+    "diverSeatsLine": "{count, plural, one {# plaza de buceo} other {# plazas de buceo}}",
+    "sitesNotForSnorkelers": "Hay plazas de snorkel abiertas, pero todos los sitios previstos están marcados como no aptos para snorkel.",
+    "sitesNotForBookedSnorkelers": "{count, plural, one {Hay una plaza de snorkel reservada} other {Hay # plazas de snorkel reservadas}}, pero todos los sitios previstos están marcados como no aptos para snorkel."
   },
   "roster": {
     "comingAs": "Participa como: {type}",

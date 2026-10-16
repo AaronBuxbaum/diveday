@@ -321,7 +321,7 @@ const ERASURE_KEEPS: Record<string, string> = {
     "the shop’s photographs of a departure, uploaded by a staff member and attached to the trip rather than to anyone on it. A photo *of* a diver is `recap_photos`, which the erasure deletes and queues for blob deletion",
   dive_sites: "a place, its briefing and its conditions",
   dive_site_creatures: "which catalog species a site lists",
-  dive_site_moments: "the shop’s own photographs of a site and their captions",
+  dive_site_moments: "retired (#2330): the shop’s own site photographs, dropped later",
   dive_packages: "the shop’s price list of multi-dive packages",
   pre_departure_checklist_items: "the shop’s own checklist lines",
   departure_boat_safety_snapshots:

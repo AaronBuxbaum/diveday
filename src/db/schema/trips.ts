@@ -391,6 +391,15 @@ export const trips = pgTable(
      * by a constraint about something else.
      */
     diverCapacity: integer("diver_capacity"),
+    /**
+     * **The wetsuit the boat is running today, in millimetres** (issue #2206;
+     * Aaron 2026-10-13), set on the departure's details beside the dive plan.
+     * Per departure rather than per season because the cold-snap day is the
+     * one that matters. Null is "not said", and then the Gear tab proposes no
+     * wetsuit at all: a staffer picks one, as before. It proposes, it never
+     * gates (`proposeRentalUnits`).
+     */
+    wetsuitThicknessMm: integer("wetsuit_thickness_mm"),
     /** Drives the after-dive roll-call checkpoints; recreational charters are commonly two-tank. */
     plannedDives: integer("planned_dives").notNull().default(2),
     /**
@@ -685,6 +694,11 @@ export const trips = pgTable(
     check(
       "trips_snorkeler_price_nonnegative",
       sql`${table.snorkelerPriceCents} is null or ${table.snorkelerPriceCents} >= 0`,
+    ),
+    // `WETSUIT_THICKNESS_MM` in src/lib/gear.ts, which the details form reads.
+    check(
+      "trips_wetsuit_thickness_mm_range",
+      sql`${table.wetsuitThicknessMm} is null or ${table.wetsuitThicknessMm} between 1 and 10`,
     ),
     check(
       "trips_rider_price_nonnegative",

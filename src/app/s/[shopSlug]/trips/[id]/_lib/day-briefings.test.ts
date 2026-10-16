@@ -11,7 +11,6 @@ const dives = [
   { dive: { id: "dive-1", diveNumber: 1 }, diveSite: reef },
   { dive: { id: "dive-2", diveNumber: 2 }, diveSite: null },
 ] as unknown as Dives;
-const moment = { id: "moment-1" };
 const extras = {
   creatures: new Map([
     [
@@ -23,18 +22,16 @@ const extras = {
       ],
     ],
   ]),
-  moments: new Map([[reef.id, [moment]]]),
 } as unknown as Extras;
 
 describe("dayBriefings", () => {
-  it("gives each dive, in order, its site's field-guide cards and saved moments", () => {
+  it("gives each dive, in order, its site's field-guide cards", () => {
     const [first] = dayBriefings(dives, extras, t);
     expect(first?.dive).toBe(dives[0]?.dive);
     expect(first?.diveSite).toBe(reef);
     expect(first?.creatures.map((card) => [card.id, card.slug])).toEqual([
       ["row-1", "blue-chromis"],
     ]);
-    expect(first?.moments).toEqual([moment]);
   });
 
   it("drops a creature with no catalogue species rather than drawing an empty card", () => {
@@ -42,17 +39,15 @@ describe("dayBriefings", () => {
     expect(first?.creatures).toHaveLength(1);
   });
 
-  it("gives a dive with no site neither cards nor moments", () => {
+  it("gives a dive with no site no cards", () => {
     const [, second] = dayBriefings(dives, extras, t);
     expect(second?.diveSite).toBeNull();
     expect(second?.creatures).toEqual([]);
-    expect(second?.moments).toEqual([]);
   });
 
-  it("gives a site the shop has said nothing about empty lists, not undefined", () => {
-    const empty = { creatures: new Map(), moments: new Map() } as unknown as Extras;
+  it("gives a site the shop has said nothing about an empty list, not undefined", () => {
+    const empty = { creatures: new Map() } as unknown as Extras;
     const [first] = dayBriefings(dives, empty, t);
     expect(first?.creatures).toEqual([]);
-    expect(first?.moments).toEqual([]);
   });
 });

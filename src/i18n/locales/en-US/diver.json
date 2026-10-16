@@ -151,7 +151,6 @@
     "sharedDemoNote": "This is the shared demo: anyone trying it can see what you type here.",
     "theDay": "The day",
     "lookFor": "Look for",
-    "momentsHeading": "Moments from divers",
     "theRoute": "{count, plural, one {The route} other {The routes}}",
     "conditionsWater": "{value} water",
     "conditionsVisibility": "{value} visibility",

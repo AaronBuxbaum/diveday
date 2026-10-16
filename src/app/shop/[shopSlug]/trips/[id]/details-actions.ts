@@ -26,6 +26,7 @@ import {
   updateTrip,
 } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
+import { parseWetsuitThicknessMm } from "@/lib/gear";
 import { meetingPointMoved, meetingPointOfRows } from "@/lib/meeting-point";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -80,6 +81,15 @@ const detailsSchema = z.object({
   // The dives went past no-decompression limits: the recap then says nothing
   // about flying (H-84, issue #1555). Nothing else reads it.
   exceedsNoDecoLimits: z.preprocess((value) => value === "on", z.boolean()),
+  // The wetsuit the boat is running today (issue #2206): whole millimetres,
+  // or "" for not said. Only on the form of a shop that rents wetsuits, so
+  // absent leaves the departure's answer alone.
+  wetsuitThicknessMm: z
+    .string()
+    .trim()
+    .max(2)
+    .refine((value) => value === "" || parseWetsuitThicknessMm(value) !== null)
+    .optional(),
   // How many consecutive days this departure meets on (src/lib/trip-days.ts).
   // Absent from an older cached form is one day, the shape every trip had
   // before multi-day existed.
@@ -157,6 +167,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     isPrivate,
     selfGuided,
     exceedsNoDecoLimits,
+    wetsuitThicknessMm,
   } = parsed.data;
   const dbi = await getDb();
   const shopNow = await getShopById(dbi, s.user.shopId);
@@ -251,6 +262,8 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     isPrivate,
     selfGuided,
     exceedsNoDecoLimits,
+    wetsuitThicknessMm:
+      wetsuitThicknessMm === undefined ? undefined : parseWetsuitThicknessMm(wetsuitThicknessMm),
     priceCents: details.patch.priceCents,
     depositCents: details.patch.depositCents,
     cancellationWindowHours: details.patch.cancellationWindowHours,

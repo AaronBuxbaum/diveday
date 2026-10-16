@@ -13,6 +13,7 @@ export const DIVE_SITE_TEMPLATE_SYNC_FIELDS = [
   "marineLife",
   "marineLifeDescription",
   "difficultyLevel",
+  "snorkelSuitable",
   "depthMinMeters",
   "maxDepthMeters",
   "expectedBottomTimeMinutes",
@@ -39,6 +40,7 @@ export type DiveSiteTemplateSnapshot = {
   marineLife: string | null;
   marineLifeDescription: string | null;
   difficultyLevel: DiveSiteDifficulty | null;
+  snorkelSuitable: boolean | null;
   depthMinMeters: number | null;
   maxDepthMeters: number | null;
   expectedBottomTimeMinutes: number | null;
@@ -71,6 +73,7 @@ export type DiveSiteTemplateSource = {
   marineLifeDescription?: string;
   difficulty?: string;
   difficultyLevel?: DiveSiteDifficulty;
+  snorkelSuitable?: boolean;
   depthMinMeters?: number;
   maxDepthMeters?: number;
   expectedBottomTimeMinutes?: number;
@@ -96,6 +99,7 @@ export type DiveSiteTemplateSiteRecord = {
   marineLife: string | null;
   marineLifeDescription: string | null;
   difficultyLevel: DiveSiteDifficulty | null;
+  snorkelSuitable: boolean | null;
   depthMinMeters: number | null;
   maxDepthMeters: number | null;
   expectedBottomTimeMinutes: number | null;
@@ -131,6 +135,7 @@ export function diveSiteTemplateSnapshot(source: DiveSiteTemplateSource): DiveSi
     marineLife: source.marineLife ?? null,
     marineLifeDescription: source.marineLifeDescription ?? null,
     difficultyLevel: source.difficultyLevel ?? parseDiveSiteDifficulty(source.difficulty),
+    snorkelSuitable: source.snorkelSuitable ?? null,
     depthMinMeters: source.depthMinMeters ?? null,
     maxDepthMeters: source.maxDepthMeters ?? null,
     expectedBottomTimeMinutes: source.expectedBottomTimeMinutes ?? null,

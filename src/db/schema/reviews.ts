@@ -26,8 +26,8 @@ import { trips } from "./trips";
  * a per-booking signed token (public, noindex), so an upload is scoped to that
  * booking and a diver only ever sees the shots on their own page. Staff see a
  * trip's diver photos on the roster so the shop can reuse them and take down
- * anything inappropriate — the moderation seam is a delete, mirroring the opt-in
- * `dive_site_moments` shape (20260723-post-trip-recap follow-up).
+ * anything inappropriate — the moderation seam is a delete
+ * (20260723-post-trip-recap follow-up).
  */
 export const recapPhotos = pgTable(
   "recap_photos",
@@ -85,8 +85,7 @@ export const tripRecapPhotos = pgTable(
  * boat. Unique on `booking_id`: a diver revises their own review rather than
  * stacking several, and a replayed submit can't inflate a shop's average.
  *
- * `isPublished` is the moderation seam, same shape as `diveSiteMoments`. A
- * bare rating carries no text to moderate and publishes immediately; a review
+ * `isPublished` is the moderation seam. A bare rating carries no text to moderate and publishes immediately; a review
  * *with* a comment waits for staff, because the comment lands on the shop's
  * public schedule page. Aggregates are computed over published rows only, so
  * the number a visitor sees and the reviews under it always describe the same

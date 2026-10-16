@@ -100,7 +100,6 @@ const EXPECTED_FILES = [
   "tips.csv",
   "dive_sites.csv",
   "dive_site_creatures.csv",
-  "dive_site_moments.csv",
   "recap_photos.csv",
   "trip_recap_photos.csv",
   "trip_reviews.csv",
@@ -192,7 +191,6 @@ const EXPORTED_TABLES = [
   "tips",
   "dive_sites",
   "dive_site_creatures",
-  "dive_site_moments",
   "recap_photos",
   "trip_recap_photos",
   "trip_reviews",
@@ -221,6 +219,8 @@ const FOLDED_TABLES = [
  * its export fate fails the coverage test below.
  */
 const EXCLUDED_TABLES = [
+  // Retired (#2330): declared until a later release drops it; nothing writes it.
+  "dive_site_moments",
   // Card disputes (ADR 20261009-stripe-reversals-reach-diveday). Stripe's own
   // record, mirrored here only so an owner sees an open one on Today and on
   // the order; every field is Stripe's, kept current from Stripe's events, and

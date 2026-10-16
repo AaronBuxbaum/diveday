@@ -118,6 +118,10 @@
     "briefingLabel": "Underwater briefing",
     "difficultyLabel": "Difficulty",
     "difficultyUnset": "Not said: the crew will call it",
+    "snorkelLabel": "Good for snorkeling",
+    "snorkelUnset": "Not said",
+    "snorkelYes": "Yes",
+    "snorkelNo": "No",
     "difficultyLevels": {
       "beginner": "Beginner",
       "intermediate": "Intermediate",
@@ -255,6 +259,7 @@
         "marineLife": "Marine life",
         "marineLifeDescription": "Marine-life note",
         "difficultyLevel": "Difficulty",
+        "snorkelSuitable": "Good for snorkeling",
         "depthRange": "Depth range",
         "maxDepthMeters": "Maximum depth",
         "expectedBottomTimeMinutes": "Bottom time",

@@ -179,7 +179,6 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Dive day (north star)
 - Dive record
 - Dive site
-- Diver moment
 - Diver seats
 - Dock call time
 - Emergency contact
@@ -267,6 +266,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Sign once
 - Skipped occurrence
 - SMS channel
+- Snorkel-suitable
 - Snorkeler
 - Souls on board
 - Staff invite
@@ -335,6 +335,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Demand signal
 - Diver profile
 - Dives dry
+- Drysuit experience seen
 - Gear proposal
 - Gear register
 - Gear register groups
@@ -346,6 +347,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Nitrox / EANx
 - Nitrox request
 - Nitrox-compatible course
+- Nitrox-designated regulator
 - Private staff note
 - Ready message
 - Rental catalog
@@ -359,6 +361,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Technician
 - The bench
 - Trip prep list
+- Wetsuit for the day
 - Work done record
 - Work order
 

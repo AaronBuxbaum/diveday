@@ -151,7 +151,6 @@
     "sharedDemoNote": "Esta es la demo compartida: cualquiera que la pruebe puede ver lo que escribes aquí.",
     "theDay": "El día",
     "lookFor": "Busca",
-    "momentsHeading": "Momentos de buceadores",
     "theRoute": "{count, plural, one {La ruta} other {Las rutas}}",
     "conditionsWater": "agua a {value}",
     "conditionsVisibility": "{value} de visibilidad",

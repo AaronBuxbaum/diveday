@@ -1,0 +1,1 @@
+ALTER TABLE "dive_sites" ADD COLUMN "snorkel_suitable" boolean;

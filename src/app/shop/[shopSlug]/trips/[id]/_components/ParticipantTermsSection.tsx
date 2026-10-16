@@ -3,6 +3,7 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { staffParticipantTypeLabel } from "@/i18n/participant-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { snorkelersOnUnsuitableSites } from "@/lib/dive-site-difficulty";
 import { formatMoneyCents } from "@/lib/format";
 import {
   currencyFractionDigits,
@@ -145,8 +146,11 @@ export function participantTermsRows({
   tripNotice,
   canConfigure,
   shopSlug,
+  tripDiveList,
 }: {
   trip: Trip;
+  /** The departure's dives; the sites they plan to visit carry the snorkel flag (#2214). */
+  tripDiveList: readonly { diveSite: { snorkelSuitable: boolean | null } | null }[];
   shop: { currency: string };
   locale: string;
   tripNotice: FormNotice | undefined;
@@ -157,11 +161,33 @@ export function participantTermsRows({
   const t = staffTranslator(locale);
   const currency = toShopCurrency(shop.currency);
   const status = noticeForForm(tripNotice, "participant-terms");
+  const summary = participantTermsSummary(t, trip, currency, locale);
+  // Snorkelers on, or able to book, a departure over sites the shop itself
+  // marked no good for snorkeling (issue #2214, domain review F8). A line on
+  // the row, never a refusal: the captain picks the site on the day.
+  const unsuitable = snorkelersOnUnsuitableSites({
+    snorkelerSeatsOpen: trip.snorkelerPriceCents !== null,
+    snorkelersBooked: trip.bookedSnorkelers,
+    plannedSites: tripDiveList.flatMap(({ diveSite }) => (diveSite ? [diveSite] : [])),
+  });
   return [
     {
       id: "participant-terms",
       label: t("participants.terms.heading"),
-      value: participantTermsSummary(t, trip, currency, locale),
+      value: unsuitable ? (
+        <>
+          {summary}
+          <span className="mt-0.5 block font-medium text-warning-strong">
+            {trip.bookedSnorkelers > 0
+              ? t("participants.terms.sitesNotForBookedSnorkelers", {
+                  count: trip.bookedSnorkelers,
+                })
+              : t("participants.terms.sitesNotForSnorkelers")}
+          </span>
+        </>
+      ) : (
+        summary
+      ),
       editLabel: t("participants.terms.edit"),
       editorOpen: Boolean(status),
       editor: canConfigure ? (

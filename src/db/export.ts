@@ -276,8 +276,6 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     ]),
   );
 
-  const momentRows = await readScoped(tx, "diveSiteMoments", scope);
-
   const recapPhotoRows = await readScoped(tx, "recapPhotos", scope);
 
   const tripRecapPhotoRows = await tx
@@ -618,7 +616,6 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     // (ADR 20260813-marine-life-is-diveday-copy) rather than anything this
     // shop uploaded. `dive_site_creatures.csv` still prints the path, which
     // resolves against DiveDay and needs nothing bundled.
-    ...momentRows.map((row) => row.imageUrl),
     ...courseRows.flatMap((row) => [
       row.heroImageUrl,
       ...row.galleryPhotos.map((photo) => photo.url),
@@ -639,7 +636,6 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     siteName,
     creatureRows,
     cardById,
-    momentRows,
     recapPhotoRows,
     tripRecapPhotoRows,
     reviewModerationRows,
@@ -1305,7 +1301,6 @@ export async function loadShopExportCounts(
     "tips.csv": await countShopScoped(db, "tips", shopId),
     "dive_sites.csv": await countShopScoped(db, "diveSites", shopId),
     "dive_site_creatures.csv": await countShopScoped(db, "diveSiteCreatures", shopId),
-    "dive_site_moments.csv": await countShopScoped(db, "diveSiteMoments", shopId),
     "recap_photos.csv": await countShopScoped(db, "recapPhotos", shopId),
     "trip_recap_photos.csv": await countOf(
       db.select({ n: count() }).from(tripRecapPhotos).where(eq(tripRecapPhotos.shopId, shopId)),

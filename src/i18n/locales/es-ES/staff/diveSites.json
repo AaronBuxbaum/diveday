@@ -118,6 +118,10 @@
     "briefingLabel": "Ficha submarina",
     "difficultyLabel": "Dificultad",
     "difficultyUnset": "Sin definir: lo dirá la tripulación",
+    "snorkelLabel": "Apto para snorkel",
+    "snorkelUnset": "Sin definir",
+    "snorkelYes": "Apto",
+    "snorkelNo": "No apto",
     "difficultyLevels": {
       "beginner": "Principiante",
       "intermediate": "Intermedio",
@@ -255,6 +259,7 @@
         "marineLife": "Vida marina",
         "marineLifeDescription": "Nota sobre vida marina",
         "difficultyLevel": "Dificultad",
+        "snorkelSuitable": "Apto para snorkel",
         "depthRange": "Rango de profundidad",
         "maxDepthMeters": "Profundidad máxima",
         "expectedBottomTimeMinutes": "Tiempo de fondo",

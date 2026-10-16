@@ -135,6 +135,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sergeant majors guard purple egg patches on the statue's base all summer, and the coral heads around it are as good as anything deeper.",
       difficultyLevel: "beginner",
+      snorkelSuitable: true,
       depthMinMeters: 5,
       maxDepthMeters: 8,
       currentNote:
@@ -238,6 +239,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Expect big silhouettes, moving schools, and changing light along the exterior decks. The superstructure is thick with coral and sponge now.",
       difficultyLevel: "advanced",
+      snorkelSuitable: false,
       depthMinMeters: 18,
       maxDepthMeters: 40,
       currentNote: "Open-water current can run hard, and it is a long ship.",
@@ -296,6 +298,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A resident goliath grouper often holds near the wheelhouse. Look out into the blue for jacks working the current off the bow.",
       difficultyLevel: "advanced",
+      snorkelSuitable: false,
       depthMinMeters: 18,
       maxDepthMeters: 37,
       currentNote: "Can run strong on the surface and at depth.",
@@ -354,6 +357,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The crest is so shallow it breaks the surface at low tide. Small reef fish crowd the coral heads, and conch work the sand behind.",
       difficultyLevel: "beginner",
+      snorkelSuitable: true,
       depthMinMeters: 3,
       maxDepthMeters: 10,
       currentNote:

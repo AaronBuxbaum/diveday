@@ -857,6 +857,7 @@ export async function getDiverProfile(
 ) {
   const clearedBy = alias(people, "no_certification_cleared_by");
   const attestedBy = alias(people, "adult_attested_by");
+  const drysuitSeenBy = alias(people, "drysuit_experience_seen_by");
   const levelReviewer = alias(people, "level_certification_reviewer");
   const specialtyReviewer = alias(people, "specialty_certification_reviewer");
   const nitroxReviewer = alias(people, "nitrox_certification_reviewer");
@@ -865,12 +866,21 @@ export async function getDiverProfile(
       person: people,
       clearedByName: clearedBy.fullName,
       adultAttestedByName: attestedBy.fullName,
+      drysuitExperienceSeenByName: drysuitSeenBy.fullName,
     })
     .from(people)
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
     .leftJoin(
       clearedBy,
       and(eq(clearedBy.id, people.noCertificationClearedByPersonId), eq(clearedBy.shopId, shopId)),
+    )
+    .leftJoin(
+      drysuitSeenBy,
+      and(
+        eq(drysuitSeenBy.id, people.drysuitExperienceSeenByPersonId),
+        eq(drysuitSeenBy.shopId, shopId),
+        isNull(drysuitSeenBy.anonymizedAt),
+      ),
     )
     .leftJoin(
       attestedBy,
@@ -1049,6 +1059,8 @@ export async function getDiverProfile(
     noCertificationClearedByName: personRow.clearedByName,
     /** Who said, at a split, that this diver is 18 or older (H-100). */
     adultAttestedByName: personRow.adultAttestedByName,
+    /** Who recorded seeing this diver dive dry (#2136); staff-observed, never a card. */
+    drysuitExperienceSeenByName: personRow.drysuitExperienceSeenByName,
     /** This diver also holds a staff role at this shop. */
     holdsStaffRole: staffRoleRows.length > 0,
     certifications: levelCards.map(({ card, reviewedByName }) => ({ ...card, reviewedByName })),

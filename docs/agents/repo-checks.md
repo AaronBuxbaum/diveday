@@ -603,8 +603,8 @@ For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules
   behind one action `src/app/actions/inquiry.ts`; staff read them at `shop/[shopSlug]/requests`.
   Never the wait list or the last-minute deal list — those answer "tell me when a seat frees".
 - **A dive site's briefing**: written on `dive-sites/_components/SiteFields.tsx`; read on the
-  departure page as four beats in `_components/TripDayPlan.tsx` — `TripLookFor`, `TripRoutes`,
-  `TripMoments`, `TripSiteNotes`. Every sentence comes off the site row, uncaptioned; the fit tone
+  departure page as three beats in `_components/TripDayPlan.tsx` — `TripLookFor`, `TripRoutes`,
+  `TripSiteNotes`. Every sentence comes off the site row, uncaptioned; the fit tone
   is one word and there is no canned filler (ADR 20260813-dive-site-briefings-are-the-shops-own-words).
   The field guide is the one exception — a *selection* of catalog species whose words are DiveDay's
   (`src/i18n/marine-life-labels.ts`).

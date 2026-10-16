@@ -76,6 +76,7 @@ export async function createDiveSiteAction(
     requiredSpecialties: specialties.data,
     requiresNitrox: extras.requiresNitrox,
     difficultyLevel: parsed.difficultyLevel,
+    snorkelSuitable: parsed.snorkelSuitable,
     depthRange: parsed.fields.depthRange,
     maxDepthMeters: parsed.maxDepthMeters,
     depthMinMeters: parsed.depthMinMeters,
