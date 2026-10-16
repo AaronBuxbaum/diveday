@@ -23,7 +23,7 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Enormous schools sit in the cuts between the spurs, and tarpon patrol the deeper edge in summer.",
       difficultyLevel: "beginner",
-      depthRange: "3–20 m (10–65 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 20,
       currentNote: "Runs with the tide through the cuts — an easy drift when it does.",
       divePlan:
@@ -72,7 +72,7 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The broken ends are the best of it — open, lit, and thick with schooling fish holding out of the current.",
       difficultyLevel: "advanced",
-      depthRange: "21–34 m (70–110 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 34,
       currentNote: "Open water, and often a real current — a line dive when it is running.",
       divePlan:
@@ -125,7 +125,7 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big mounding coral heads, and dense fish life because the structure is dense.",
       difficultyLevel: "beginner",
-      depthRange: "2–6 m (6–20 ft)",
+      depthMinMeters: 2,
       maxDepthMeters: 6,
       currentNote: "Inshore and sheltered — the reliable call when the outer reef is unworkable.",
       divePlan:
@@ -171,7 +171,7 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Grunts, yellowtail and grouper on the reef top, and rays and turtles cruising the face of the slope.",
       difficultyLevel: "intermediate",
-      depthRange: "5–24 m (16–80 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 24,
       currentNote:
         "Outer-reef current is common along the wall, and the slope keeps going deeper than the dive should. Agree a floor before descending.",
@@ -219,7 +219,7 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Dense soft coral on the reef top, and big schools sheltering in the cuts below it.",
       difficultyLevel: "beginner",
-      depthRange: "5–17 m (15–55 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 17,
       currentNote:
         "Easy navigation along the ledge. A preservation area, so no fishing or collecting and no touching the coral; boats use the mooring buoys. Some moorings on the seaward side sit near 17 m, so check which one the boat is on.",
@@ -266,7 +266,7 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Grunt schools around the mounds and a forest of purple sea fans between them.",
       difficultyLevel: "beginner",
-      depthRange: "3–7 m (10–22 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 7,
       currentNote:
         "Inshore and shallow, the place to go when the outer reef is blown out, though visibility is usually lower than offshore. It sits in Hawk Channel, so boat traffic passes close: fly the dive flag and come up by the boat. No fishing or collecting inside the preservation area.",
@@ -313,7 +313,7 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sponges and gorgonians crowd the slope, and big animals pass along it on the current.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "The wall is run as a drift, and the slope continues below recreational depth, so the floor is the diver’s to hold. The reef top is a Sanctuary Preservation Area (no fishing or collecting), and the Research Only area beside it, marked by yellow buoys, is closed to all entry.",
@@ -364,7 +364,7 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
         "A patch reef of large coral heads and purple gorgonians off Islamorada, with resident turtles and schools of fish thick enough to shade the bottom.",
       marineLife: "Sea turtles · schooling grunts · purple sea fans · parrotfish",
       difficultyLevel: "beginner",
-      depthRange: "5–9 m (16–30 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 9,
       currentNote: "Usually easy. Moor on the buoys and keep fins off the coral heads.",
       divePlan:
@@ -400,7 +400,7 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The ballast pile is a reef of its own in the middle of the seagrass, and it is full of small fish.",
       difficultyLevel: "beginner",
-      depthRange: "5–6 m (15–20 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 6,
       currentNote:
         "Shallow and in Hawk Channel, so watch for boat traffic and fly a dive flag. A state Underwater Archaeological Preserve: every stone and brick stays exactly where it lies.",
@@ -452,7 +452,7 @@ export const FLORIDA_KEYS_ISLAMORADA: DiveSiteTemplate[] = [
         "A 37 m steel barge sunk off Islamorada in 1984 with a field of bridge rubble around it. Plain to look at, it draws big animals well beyond its size.",
       marineLife: "Goliath grouper · sea turtles · sharks · reef fish",
       difficultyLevel: "advanced",
-      depthRange: "24–32 m (80–105 ft)",
+      depthMinMeters: 24,
       maxDepthMeters: 32,
       currentNote: "Deep and in open water, with current possible. Stay outside the structure.",
       divePlan:

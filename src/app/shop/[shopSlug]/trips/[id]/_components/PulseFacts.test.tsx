@@ -56,6 +56,42 @@ describe("PulseFacts (UX audit item 23)", () => {
     const hazard = screen.getByRole("link", { name: "Needs an instructor" });
     expect(hazard.closest("details")).toBeNull();
   });
+
+  it("stands a warning fact on its own line, outside the fold, in warning ink", () => {
+    const { container } = render(
+      <PulseFacts
+        facts={[
+          { text: "4 divers are missing rental sizes", href: "/prep" },
+          { text: "2 people want nitrox with no verified card", href: "/nitrox", tone: "warning" },
+          { text: "1 order is awaiting payment", href: "/orders" },
+        ]}
+        foldLabel={label}
+      />,
+    );
+    const warning = screen.getByRole("link", {
+      name: "2 people want nitrox with no verified card",
+    });
+    expect(warning.closest("details")).toBeNull();
+    expect(warning.className).toContain("text-warning-strong");
+    expect(warning.className).not.toContain("text-danger");
+    // The two neutral facts still fold into one line of their own.
+    expect(screen.getByText("2 things to sort")).toBeInTheDocument();
+    expect(container.querySelectorAll("details a")).toHaveLength(2);
+  });
+
+  it("never counts a warning fact among the things to sort", () => {
+    render(
+      <PulseFacts
+        facts={[
+          { text: "4 divers are missing rental sizes", href: "/prep" },
+          { text: "2 people want nitrox with no verified card", href: "/nitrox", tone: "warning" },
+        ]}
+        foldLabel={label}
+      />,
+    );
+    expect(screen.queryByText(/to sort/)).toBeNull();
+    expect(screen.getByRole("link", { name: "4 divers are missing rental sizes" })).toBeVisible();
+  });
 });
 
 describe("shownPulseFacts", () => {

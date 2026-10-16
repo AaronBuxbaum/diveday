@@ -23,7 +23,7 @@ export const FLORIDA_KEYS_MARATHON: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The arches hold fish out of the light all day. Look through them rather than over them.",
       difficultyLevel: "beginner",
-      depthRange: "3–9 m (10–30 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 9,
       currentNote: "Usually mild; a sanctuary preservation area, so mooring buoys only.",
       divePlan:
@@ -72,7 +72,7 @@ export const FLORIDA_KEYS_MARATHON: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Resident goliath grouper hold in the superstructure; the deeper steel is furred with hydroids and black coral.",
       difficultyLevel: "advanced",
-      depthRange: "23–37 m (75–120 ft)",
+      depthMinMeters: 23,
       maxDepthMeters: 37,
       currentNote:
         "Open water on the Gulf Stream side — current is the usual reason a day is called.",
@@ -125,7 +125,7 @@ export const FLORIDA_KEYS_MARATHON: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sea fans and mounding coral heads on each patch, with lobster tucked under the edges and butterflyfish in pairs over the top.",
       difficultyLevel: "beginner",
-      depthRange: "3–9 m (10–30 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 9,
       currentNote: "Sheltered inside the reef line and usually calm.",
       divePlan:

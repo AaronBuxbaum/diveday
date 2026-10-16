@@ -11,7 +11,7 @@ import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
-import { isCompletedWaiverCurrent } from "@/lib/waivers";
+import { isCompletedWaiverCurrent, waiverClockInstant } from "@/lib/waivers";
 import { type AboardHold, heldAtTheDoor } from "./aboard-at-sea";
 import {
   type IssuedCapability,
@@ -269,7 +269,14 @@ export type ClaimSeatResult =
       /** Set when the claimant's submitted name didn't match the person row their email resolved to (H-13). */
       identityUnconfirmed: boolean;
     }
-  | { ok: false; reason: "invalid" | "already_booked" | "course_prerequisite" }
+  | { ok: false; reason: "invalid" | "course_prerequisite" }
+  /**
+   * The typed address already holds a live seat on this trip. `held`
+   * is that seat, for the note to its holder (`tellSeatAlreadyHeld`); the
+   * claimant is never shown it. Null only when two claims raced and the seat
+   * could not be re-found.
+   */
+  | { ok: false; reason: "already_booked"; held: { shopId: string; bookingId: string } | null }
   | { ok: false; reason: "trip_prerequisite"; refusal: TripAdmissionRefusal };
 
 /**
@@ -406,11 +413,10 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
   // on this trip, re-pointing this one would put them on the manifest twice
   // (and violate bookings_trip_person_unique). The organizer's other seats
   // stay untouched — this refusal is about the claimant, not the party.
-  // It runs after every gate, so a gate refusal no longer depends on whether
-  // the typed email holds a seat here (issue #2288). What it does not close:
-  // a claimant the gates admit still gets this refusal where a stranger's
-  // claim would succeed, so the outcome still differs for a booked email, as
-  // it does on the public booking form (H-22).
+  // It runs after every gate, so a gate refusal does not depend on whether
+  // the typed email holds a seat here (issue #2288). The refusal itself is not
+  // shown: the action answers it exactly as it answers a claim that worked,
+  // and tells the seat's holder by email instead (issue #2381).
   if (existing && existing.id !== booking.personId) {
     const [clash] = await tx
       .select({ id: bookings.id })
@@ -423,7 +429,12 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
         ),
       )
       .limit(1);
-    if (clash) return { ok: false, reason: "already_booked" };
+    if (clash)
+      return {
+        ok: false,
+        reason: "already_booked",
+        held: { shopId: capability.shopId, bookingId: clash.id },
+      };
   }
 
   // Gates passed — now resolve for real. Under a racing insert for the same
@@ -496,27 +507,130 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
 }
 
 /**
- * Claim a party seat, with every consequence the seating paths owe
- * (`seatDiver` is the model): the re-point itself is one transaction, then
- * the claimant's own waiver goes out, the trip's activity trail records who
- * claimed, and the analytics event fires — each best-effort after the claim
- * is committed, so a mail-provider outage can never cost anyone their claim.
+ * The live seat the typed address already holds on the claimed seat's trip,
+ * found again after a racing claim rolled back. Null when it cannot be told.
  */
-export async function claimPartySeat(db: AppDb, input: ClaimSeatInput): Promise<ClaimSeatResult> {
+async function heldSeatForClaim(
+  db: AppDb,
+  input: ClaimSeatInput,
+): Promise<{ shopId: string; bookingId: string } | null> {
+  const capability = await verifyBookingCapability(db, {
+    token: input.token,
+    purpose: "claim",
+    now: input.now ?? nowDate(),
+  });
+  if (!capability) return null;
+  const [seat] = await db
+    .select({ tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(eq(bookings.id, capability.bookingId), eq(bookings.shopId, capability.shopId)))
+    .limit(1);
+  if (!seat) return null;
+  const [held] = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
+    .where(
+      and(
+        eq(bookings.shopId, capability.shopId),
+        eq(bookings.tripId, seat.tripId),
+        eq(people.email, input.email.trim().toLowerCase()),
+        isNull(people.deletedAt),
+        ne(bookings.status, "cancelled"),
+        ne(bookings.id, capability.bookingId),
+      ),
+    )
+    .limit(1);
+  return held ? { shopId: capability.shopId, bookingId: held.id } : null;
+}
+
+/**
+ * **A refused claim kills its link, as a claim that worked does** (issue
+ * #2381). The action answers a booked address exactly as it answers a fresh
+ * one, but the claim page behind the link is a second answer: a success ends
+ * every claim link on the seat, so a refusal that left its link live would tell
+ * anyone holding it which addresses hold a seat. Committed here, outside the
+ * claim's transaction, because that one rolled back (or ended with no write)
+ * and a revoke inside it would roll back with it. The organizer's next view of
+ * the party panel mints a fresh link (`issuePartySeatClaims`).
+ *
+ * Fails open to the log: the refusal stands either way, and a failed revoke
+ * must not turn into a different answer for a booked address.
+ */
+async function retireRefusedClaimLink(db: AppDb, input: ClaimSeatInput): Promise<void> {
+  try {
+    const now = input.now ?? nowDate();
+    const capability = await verifyBookingCapability(db, {
+      token: input.token,
+      purpose: "claim",
+      now,
+    });
+    if (!capability) return;
+    await revokeBookingCapabilities(db, {
+      shopId: capability.shopId,
+      bookingId: capability.bookingId,
+      purpose: "claim",
+      now,
+    });
+  } catch (error) {
+    log("seat_claim.refused_link_not_retired", "error", {
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+  }
+}
+
+/**
+ * The claim itself and nothing after it: the re-point (one transaction) and,
+ * for a refusal of an address that already holds a seat, the retired link.
+ * The caller owes `settleClaimedSeat` for a success, after its response
+ * (`claimSeatAction`): that work sends mail inline, so doing it before the
+ * answer would let a claim that worked take visibly longer than one that was
+ * refused (issue #2381).
+ */
+export async function claimPartySeatRecord(
+  db: AppDb,
+  input: ClaimSeatInput,
+): Promise<ClaimSeatResult> {
   const outcome = await db
     .transaction((tx) => claimSeatRecord(tx, input))
-    .catch((error: unknown): ClaimSeatResult => {
+    .catch(async (error: unknown): Promise<ClaimSeatResult> => {
       // Two truly concurrent claims by the same *new* email on two different
       // seats of one trip both pass the serial clash check (neither person
       // row exists yet), converge on one person via `findOrCreatePerson`, and
       // the second re-point then trips `bookings_trip_person_unique`. The
       // index is the backstop that keeps one diver off the manifest twice;
       // surface it as the same refusal the serial path gives.
-      if (isUniqueConstraintViolation(error)) return { ok: false, reason: "already_booked" };
+      if (isUniqueConstraintViolation(error)) {
+        return {
+          ok: false,
+          reason: "already_booked",
+          held: await heldSeatForClaim(db, input),
+        };
+      }
       throw error;
     });
-  if (!outcome.ok) return outcome;
-  await trackEvent({ name: "seat_claimed", source: "diver" });
+  if (!outcome.ok && outcome.reason === "already_booked") await retireRefusedClaimLink(db, input);
+  return outcome;
+}
+
+/**
+ * What a committed claim owes, each best-effort so a mail-provider outage can
+ * never cost anyone their claim: the claimant's own waiver goes out, the
+ * analytics event fires and the trip's activity trail records who claimed
+ * (`seatDiver` is the model).
+ */
+export async function settleClaimedSeat(
+  db: AppDb,
+  outcome: Extract<ClaimSeatResult, { ok: true }>,
+): Promise<void> {
+  try {
+    await trackEvent({ name: "seat_claimed", source: "diver" });
+  } catch (error) {
+    log("seat_claim.event_failed", "error", {
+      bookingId: outcome.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+  }
   try {
     // The claimant's own waiver, to their own address — idempotent, and a
     // sign-once diver with a current signature at this shop is skipped.
@@ -540,6 +654,12 @@ export async function claimPartySeat(db: AppDb, input: ClaimSeatInput): Promise<
       errorCode: error instanceof Error ? error.name : "unknown_error",
     });
   }
+}
+
+/** Claim a party seat and settle it at once; the action splits the two around its response. */
+export async function claimPartySeat(db: AppDb, input: ClaimSeatInput): Promise<ClaimSeatResult> {
+  const outcome = await claimPartySeatRecord(db, input);
+  if (outcome.ok) await settleClaimedSeat(db, outcome);
   return outcome;
 }
 
@@ -775,7 +895,9 @@ export async function issuePartySeatClaims(
         ? isCompletedWaiverCurrent(
             row.waiver,
             row.generation === null ? null : Number(row.generation),
-            now,
+            // The roster's instant for this seat (issue #2611): a release that
+            // runs out before the trip is one the diver signs again.
+            waiverClockInstant({ now, startsAt: row.trip.startsAt, endsAt: row.trip.endsAt }),
           )
         : false,
       participantType: row.booking.participantType,

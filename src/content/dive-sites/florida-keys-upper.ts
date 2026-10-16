@@ -24,7 +24,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Look along the coral heads for schooling grunts and curious damselfish; rays often cruise the sandy channels between the spurs.",
       difficultyLevel: "beginner",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote: "Usually gentle, but reef-line current can run.",
       divePlan:
@@ -78,7 +78,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The overhangs hide sleeping nurse sharks and squirrelfish. Check the ceilings, not just the sand.",
       difficultyLevel: "beginner",
-      depthRange: "5–14 m (15–45 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 14,
       currentNote: "Usually mild; a swim-through is no place to be surprised by surge.",
       divePlan:
@@ -135,7 +135,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sergeant majors guard purple egg patches on the statue's base all summer, and the coral heads around it are as good as anything deeper.",
       difficultyLevel: "beginner",
-      depthRange: "5–8 m (15–25 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 8,
       currentNote:
         "Usually gentle; it is shallow enough that surface chop is felt on the bottom. Ascend on the mooring line, never in open water: there are always boats and snorkelers overhead.",
@@ -187,7 +187,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The hull is a fish apartment block. Look into every gap in the plates and something is home.",
       difficultyLevel: "intermediate",
-      depthRange: "8–15 m (25–50 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 15,
       currentNote: "Mild, but it sits in open water off the reef line.",
       divePlan:
@@ -238,7 +238,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Expect big silhouettes, moving schools, and changing light along the exterior decks. The superstructure is thick with coral and sponge now.",
       difficultyLevel: "advanced",
-      depthRange: "18–40 m (60–130 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 40,
       currentNote: "Open-water current can run hard, and it is a long ship.",
       divePlan:
@@ -296,7 +296,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A resident goliath grouper often holds near the wheelhouse. Look out into the blue for jacks working the current off the bow.",
       difficultyLevel: "advanced",
-      depthRange: "18–37 m (60–120 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 37,
       currentNote: "Can run strong on the surface and at depth.",
       divePlan:
@@ -354,7 +354,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The crest is so shallow it breaks the surface at low tide. Small reef fish crowd the coral heads, and conch work the sand behind.",
       difficultyLevel: "beginner",
-      depthRange: "3–10 m (10–35 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 10,
       currentNote:
         "The back side is sheltered even when the reef line is not — a good bad-weather call.",
@@ -404,7 +404,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Carysfort is one of NOAA's Mission: Iconic Reefs restoration sites. The 2023 heat wave killed much of the planted coral, so what you see here changes year to year.",
       difficultyLevel: "intermediate",
-      depthRange: "8–21 m (25–70 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 21,
       currentNote:
         "Exposed and further offshore than the rest of the Key Largo line — current and surface conditions decide the day.",
@@ -454,7 +454,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Grazing parrotfish work the coral heads all day; blue tangs move through in loose, easy groups.",
       difficultyLevel: "beginner",
-      depthRange: "4–9 m (12–30 ft)",
+      depthMinMeters: 4,
       maxDepthMeters: 9,
       currentNote: "Usually gentle.",
       divePlan:
@@ -504,7 +504,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Baitfish hang in the mouth of the undercut, and the barracuda that hunt them are rarely far away.",
       difficultyLevel: "beginner",
-      depthRange: "3–12 m (10–40 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 12,
       currentNote:
         "Shallow and usually easy on the reef top. The northern moorings (North North Dry Rocks) are the deeper ones, so check which one the boat is on.",
@@ -550,7 +550,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Grunts and snapper school in the grooves, and turtles are regulars along the deeper fingers.",
       difficultyLevel: "intermediate",
-      depthRange: "3–17 m (10–55 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 17,
       currentNote:
         "Closer to the Gulf Stream than most Key Largo reefs: clearer water, and more current in exchange, so it is often run as a drift. A Sanctuary Preservation Area, so no fishing or collecting, and boats use the mooring buoys.",
@@ -607,7 +607,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Coral has grown through the broken iron, and the fish use it like any other ledge.",
       difficultyLevel: "beginner",
-      depthRange: "4–8 m (12–25 ft)",
+      depthMinMeters: 4,
       maxDepthMeters: 8,
       currentNote:
         "Shallow, but on the Elbow, so current can run across the wreck. Inside The Elbow Sanctuary Preservation Area: nothing is taken, and every piece of the wreck is protected.",
@@ -658,7 +658,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Close enough to the Gulf Stream for big visibility and big animals passing through.",
       difficultyLevel: "advanced",
-      depthRange: "29–40 m (95–130 ft)",
+      depthMinMeters: 29,
       maxDepthMeters: 40,
       currentNote:
         "Current here can be strong enough to call the dive off. The port rail is the shallowest point, near 29 m, and the sand lies at about 40 m. Stay outside the hull: cables and debris make penetration a different dive and a different card.",
@@ -706,7 +706,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools along the ledge, nurse sharks tucked underneath it, and morays in the holes between.",
       difficultyLevel: "beginner",
-      depthRange: "5–8 m (15–25 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 8,
       currentNote: "Usually gentle, and shallow enough for snorkelers on the same boat.",
       divePlan:
@@ -756,7 +756,7 @@ export const FLORIDA_KEYS_UPPER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Look into the nooks on the shallow northeast side, where the young fish hide.",
       difficultyLevel: "beginner",
-      depthRange: "5–9 m (15–30 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 9,
       currentNote: "The rough-weather choice: sheltered and easy when the deeper reefs are not.",
       divePlan:

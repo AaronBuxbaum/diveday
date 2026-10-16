@@ -1,6 +1,7 @@
 import type { CourseDepthFormat } from "@/lib/courses";
 import type { DepthUnit } from "@/lib/depth-units";
 import { depthInUnit } from "@/lib/depth-units";
+import { siteDepthInUnit } from "@/lib/dive-site-depth";
 import type { SeaState, WindState } from "@/lib/marine-forecast";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { temperatureInUnit } from "@/lib/temperature-units";
@@ -28,6 +29,32 @@ const TEMPERATURE_UNIT_KEYS: Record<TemperatureUnit, DiverMessageKey> = {
   celsius: "common.units.celsius",
   fahrenheit: "common.units.fahrenheit",
 };
+
+const DEPTH_RANGE_KEYS: Record<DepthUnit, DiverMessageKey> = {
+  meters: "common.units.metersRange",
+  feet: "common.units.feetRange",
+};
+
+/**
+ * A dive site's depth in the shop's unit: "15–28 m" where the shop recorded a
+ * shallow end and a deepest point, "28 m" with only the deepest. One unit on
+ * every briefing, whatever the shop typed. With no recorded depth at all the
+ * shop's own depth note stands in, and null when there is none.
+ */
+export function diveSiteDepthText(
+  t: DiverTranslator,
+  depth: {
+    depthMinMeters?: number | null;
+    maxDepthMeters?: number | null;
+    depthRange?: string | null;
+  },
+  unit: DepthUnit,
+): string | null {
+  const inUnit = siteDepthInUnit(depth, unit);
+  if (!inUnit) return depth.depthRange?.trim() || null;
+  if (inUnit.min === null) return t(DEPTH_UNIT_KEYS[unit], { value: inUnit.max });
+  return t(DEPTH_RANGE_KEYS[unit], { min: inUnit.min, max: inUnit.max });
+}
 
 /** A stored depth (metres) written out in the shop's unit. */
 export function depthText(t: DiverTranslator, meters: number, unit: DepthUnit): string {

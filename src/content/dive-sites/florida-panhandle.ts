@@ -23,7 +23,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Pelagic. The tower holds bait balls and the amberjack that work them; the open Gulf brings everything else.",
       difficultyLevel: "advanced",
-      depthRange: "26–44 m (85–145 ft)",
+      depthMinMeters: 26,
       maxDepthMeters: 44,
       currentNote:
         "Open Gulf, 22 miles out. Current, visibility and the boat ride all decide the day together.",
@@ -75,7 +75,6 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Gulf life rather than reef life — the wreck is an island of structure on an otherwise empty sand plain.",
       difficultyLevel: "beginner",
-      depthRange: "8 m (25 ft)",
       maxDepthMeters: 9,
       currentNote: "Shallow and usually calm; Gulf visibility is the variable, not the current.",
       divePlan:
@@ -119,7 +118,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Bait schools over the hull bring the mackerel in, and a goliath grouper turns up often enough to keep watching the shadows.",
       difficultyLevel: "beginner",
-      depthRange: "14–18 m (45–60 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 18,
       currentNote:
         "Usually mild current and a short ride from East Pass. Gulf visibility changes day to day, and fishing line snags on the hull.",
@@ -164,7 +163,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Summer brings the spadefish and jacks; the goliaths and the rays on the sand stay all year.",
       difficultyLevel: "intermediate",
-      depthRange: "21–27 m (68–90 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 28,
       currentNote:
         "Mild to moderate current, short ride from East Pass. The wreck is broken and partly collapsed at the north end, so stay outside the structure and watch for fishing line.",
@@ -205,7 +204,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barracuda hang over the wheelhouse, schooling snapper surround the hull, and rays and toadfish sit in the sand off the stern.",
       difficultyLevel: "advanced",
-      depthRange: "24–30 m (80–97 ft)",
+      depthMinMeters: 24,
       maxDepthMeters: 30,
       currentNote:
         "About 10 miles southeast of East Pass, open Gulf, with no mooring buoy, so boats tie into the wreck or anchor nearby. Bottom time is short at this depth; the openings cut in the hull are for divers trained in overhead environments only.",
@@ -260,7 +259,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A large resident goliath, schools of spadefish and snapper, and angelfish and butterflyfish along the hull.",
       difficultyLevel: "advanced",
-      depthRange: "24–33 m (79–108 ft)",
+      depthMinMeters: 24,
       maxDepthMeters: 33,
       currentNote:
         "Open Gulf about 15 miles out, so current and the ride decide the day. The wheelhouse and the opening behind it are overhead; stay outside.",
@@ -305,7 +304,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Bait swarms around the pilot house, with angelfish, hinds and lobsters tucked into the hull.",
       difficultyLevel: "advanced",
-      depthRange: "23–34 m (77–112 ft)",
+      depthMinMeters: 23,
       maxDepthMeters: 34,
       currentNote:
         "Open Gulf, a long ride south of Destin. The open back of the wheelhouse is a partly enclosed space; look in, do not go in.",
@@ -339,7 +338,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 28 m tug sunk in 2003 at the center of the Sand Dollar reef complex, a ring of six concrete reefs around her. She sits upright, was shifted by Hurricane Ivan the year after, and is one of the deepest wrecks on the Panhandle Shipwreck Trail.",
       marineLife: "Amberjack · goliath grouper · bait schools · sand dollars",
       difficultyLevel: "advanced",
-      depthRange: "30–38 m (98–125 ft)",
+      depthMinMeters: 30,
       maxDepthMeters: 38,
       currentNote:
         "Open Gulf, well offshore. The top of the wreck is already at 30 m, so bottom time is short; the pilot house is an overhead space.",
@@ -383,7 +382,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A steel tug sunk by Okaloosa County in 1992, one of the oldest wrecks on the Panhandle Shipwreck Trail. More than thirty years down, she shows what the Gulf does to a hull, and how much life it grows on one.",
       marineLife: "Snapper · grouper · bait schools · encrusting sponges",
       difficultyLevel: "advanced",
-      depthRange: "28–33 m (92–107 ft)",
+      depthMinMeters: 28,
       maxDepthMeters: 33,
       currentNote:
         "Open Gulf, a long ride west and south of East Pass. Low relief, so most of the dive is close to the sand at depth; watch the no-stop time and the fishing line.",
@@ -412,7 +411,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 23 m Navy landing craft from Eglin Air Force Base, sunk as Eglin Reef #1 in 2000. She lies a short swim from the tug Janet, so the two are often dived together.",
       marineLife: "Snapper · grouper · barracuda · stingrays",
       difficultyLevel: "advanced",
-      depthRange: "22–29 m (72–94 ft)",
+      depthMinMeters: 22,
       maxDepthMeters: 30,
       currentNote:
         "About 10 miles southeast of East Pass, in the same water as Janet. Deep enough that bottom time runs out quickly; watch for fishing line.",
@@ -448,7 +447,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 15 m steel tug sunk in 2011 in the middle of the Conch Reef patch, a spread of limestone reef pyramids set down around her that summer. Small, deep and busy with fish.",
       marineLife: "Snapper · grouper · amberjack · bait schools",
       difficultyLevel: "advanced",
-      depthRange: "30–36 m (97–117 ft)",
+      depthMinMeters: 30,
       maxDepthMeters: 36,
       currentNote:
         "Open Gulf, a long run southeast of Destin. The top of the wreck is already near 30 m, so bottom time is short.",
@@ -492,7 +491,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Every gap in the concrete is a hiding place, so look into the culverts as well as over them.",
       difficultyLevel: "intermediate",
-      depthRange: "18–23 m (60–76 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 23,
       currentNote:
         "Close to the pass, so the ride is short, but tide through East Pass can carry bay water and current out over the site. Spearfishers work this reef; keep clear of them and of fishing line.",
@@ -543,7 +542,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Fish crowd the rocks, and rays rest on the sand at the foot of the jetty.",
       difficultyLevel: "intermediate",
-      depthRange: "9–17 m (30–55 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       currentNote:
         "Dive it only at slack tide: the current through the pass is strong at other times and has carried swimmers off. The clearest water comes in with the high tide. Expect boat traffic in the channel and fishing line on the rocks; the depth at the tip changes as the sand bars move.",
@@ -579,7 +578,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 28 m Air Force boat used to train aircrews in parachute water survival, donated and sunk as a reef in 2021. She settled upright, and extra steel added to her deck gives the fish more to hang on.",
       marineLife: "Snapper · amberjack · grouper · bait schools",
       difficultyLevel: "advanced",
-      depthRange: "21–32 m (69–104 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 32,
       currentNote:
         "Open Gulf, well offshore. Holes were cut in the deck before she was sunk; inside is overhead and for trained divers only.",
@@ -615,7 +614,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 55 m research vessel that once laid seismic cable for oil and gas surveys, sunk off Destin in 2023. Long and narrow, she stands tall off the sand, and her superstructure starts within reach of a moderate dive.",
       marineLife: "Amberjack · snapper · barracuda · grouper",
       difficultyLevel: "advanced",
-      depthRange: "18–34 m (59–111 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 34,
       currentNote:
         "Open Gulf, a long ride south of East Pass. The upper structure is shallow enough to keep most of the dive above 25 m if you choose to.",
@@ -658,7 +657,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 57 m harbor dinner-cruise ship, sunk by the Air Force in a weapons exercise off Okaloosa County in 2025. She is one of the biggest and most intact of the deep Destin wrecks, standing about 15 m off the sand.",
       marineLife: "Amberjack · snapper · barracuda · bait schools",
       difficultyLevel: "advanced",
-      depthRange: "23–39 m (77–128 ft)",
+      depthMinMeters: 23,
       maxDepthMeters: 39,
       currentNote:
         "Open Gulf, a long ride offshore. A new wreck sunk by a weapons test, so expect torn steel; stay outside the structure.",
@@ -696,7 +695,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Fish gather around both halves, and the twisted steel at the break holds the most.",
       difficultyLevel: "advanced",
-      depthRange: "21–40 m (70–130 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 40,
       currentNote:
         "Open Gulf, a long ride offshore. The torn hull at the break is a real entanglement hazard; stay outside the structure and away from the jagged steel.",
@@ -740,7 +739,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 72 m oil and gas exploration ship from the 1990s, sunk in 2024 by Okaloosa and Walton counties and Panama City Beach together. She sits upright with her open back deck filled with concrete reef modules, and her wheelhouse rises about 20 m off the sand.",
       marineLife: "Amberjack · snapper · grouper · bait schools",
       difficultyLevel: "advanced",
-      depthRange: "21–40 m (70–130 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 40,
       currentNote:
         "Open Gulf, about 23 nautical miles southeast of East Pass. The sand lies at about 41 m, deeper than a recreational dive goes; the engine holds are overhead and for trained divers only.",
@@ -784,7 +783,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 23 m steel catamaran with an aluminum superstructure, sunk in 2025 as one of the two Ted Forsgren reefs southeast of Destin. Her sister, the Nekton Rorqual, lies about 2 km to the west.",
       marineLife: "Amberjack · snapper · bait schools",
       difficultyLevel: "advanced",
-      depthRange: "27–40 m (90–130 ft)",
+      depthMinMeters: 27,
       maxDepthMeters: 40,
       currentNote:
         "Open Gulf, a long ride offshore. The top of the wreck is already below 27 m and the sand is at about 40 m, so the dive is short and deep. A new wreck; expect little growth yet.",
@@ -813,7 +812,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 24 m steel catamaran with an aluminum superstructure, sunk in 2025 as one of the two Ted Forsgren reefs southeast of Destin. Her sister, the Nekton Pilot, lies about 2 km to the east.",
       marineLife: "Amberjack · snapper · bait schools",
       difficultyLevel: "advanced",
-      depthRange: "28–40 m (92–130 ft)",
+      depthMinMeters: 28,
       maxDepthMeters: 40,
       currentNote:
         "Open Gulf, a long ride offshore. The top of the wreck is below 28 m and the sand lies at about 40 m, right at the recreational limit, so the dive is short and deep. A new wreck; expect little growth yet.",
@@ -842,7 +841,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 58 m seismic research ship from the oil and gas fields, sunk by Okaloosa County in 2023, about 16 nautical miles southeast of East Pass. She stands nearly 15 m off the sand, a little longer than her sister ship Manta.",
       marineLife: "Goliath grouper · vermilion snapper · amberjack",
       difficultyLevel: "advanced",
-      depthRange: "22–37 m (71–122 ft)",
+      depthMinMeters: 22,
       maxDepthMeters: 37,
       currentNote:
         "Open Gulf, a long ride offshore. The covered main deck, wheelhouse and stern are overhead environments; stay outside.",
@@ -878,7 +877,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 20 m experimental military fast-response catamaran sunk in 2021 at the Boat Yard, a few meters from the sailboat Dylan and 23 m from the tug Miss Joann. Her aft superstructure has collapsed onto the sand, but she still stands about 4 m tall.",
       marineLife: "Red snapper · sea urchins · bait schools",
       difficultyLevel: "advanced",
-      depthRange: "32–36 m (105–119 ft)",
+      depthMinMeters: 32,
       maxDepthMeters: 36,
       currentNote:
         "Open Gulf, a long ride offshore. Low relief means the whole dive is close to 36 m; watch the no-stop time and the collapsed steel.",
@@ -919,7 +918,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 19 m steel sailboat seized by U.S. Customs and sunk in 2020 as the first wreck of the Boat Yard. She lies on her starboard side with two steel chicken-transport cages welded to her deck, next to the catamaran Brannon and the tug Miss Joann.",
       marineLife: "Snapper · grouper · bait schools",
       difficultyLevel: "advanced",
-      depthRange: "33–36 m (107–119 ft)",
+      depthMinMeters: 33,
       maxDepthMeters: 36,
       currentNote:
         "Open Gulf, a long ride offshore. She lies low on the sand, so the dive is spent near 36 m; most divers visit her as part of a Boat Yard dive.",
@@ -960,7 +959,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 20 m steel tug sunk in 2022 as the third and last wreck of the Boat Yard, with a concrete mermaid statue by artist Meg Powell on her forward deck. She stands about 9 m tall, the highest point of the site.",
       marineLife: "Snapper · amberjack · bait schools",
       difficultyLevel: "advanced",
-      depthRange: "26–36 m (84–119 ft)",
+      depthMinMeters: 26,
       maxDepthMeters: 36,
       currentNote:
         "Open Gulf, a long ride offshore. Her wheelhouse and interior are overhead; stay outside.",
@@ -1003,7 +1002,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 44 m former casino boat sunk in 2025 as the Alex and Anna Jernigan Fantasea Reef. She is tall for her length, so a lot of the wreck sits in moderate depths.",
       marineLife: "Snapper · amberjack · bait schools",
       difficultyLevel: "intermediate",
-      depthRange: "16–27 m (51–88 ft)",
+      depthMinMeters: 16,
       maxDepthMeters: 27,
       // Below 30 m, but the sand is at 27 m, past an Open Water diver's depth, as on the Dupont spans.
       minimumCertificationLevel: "advanced_open_water",
@@ -1039,7 +1038,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 36 m offshore supply boat sunk in 2025, lying on her port side a short ride south of East Pass. A good first wreck at Destin.",
       marineLife: "Snapper · amberjack · bait schools",
       difficultyLevel: "beginner",
-      depthRange: "16–23 m (51–77 ft)",
+      depthMinMeters: 16,
       maxDepthMeters: 24,
       currentNote:
         "Short ride from East Pass, open Gulf. She lies on her side, so doorways and hatches face sideways or down; stay outside the hull.",
@@ -1066,7 +1065,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 38 m offshore supply vessel built in 1979, sunk upright off Destin in 2023. The top of her wheelhouse is within easy reach, so newer divers get a proper Gulf wreck without going deep.",
       marineLife: "Snapper · amberjack · spadefish · bait schools",
       difficultyLevel: "intermediate",
-      depthRange: "16–24 m (52–80 ft)",
+      depthMinMeters: 16,
       maxDepthMeters: 25,
       currentNote:
         "A short ride south of East Pass, open Gulf. Current and visibility vary by the day; watch for fishing line on the rails.",
@@ -1100,7 +1099,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLife: "Goliath grouper · snapper · jacks",
       marineLifeDescription: "A goliath grouper often waits behind the wheelhouse.",
       difficultyLevel: "beginner",
-      depthRange: "14–22 m (45–72 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 22,
       currentNote:
         "Close to the pass and shallow, but upside down: the spaces under the hull are overhead, so stay outside.",
@@ -1127,7 +1126,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 26 m steel paddlewheel boat, said to have once worked the Mississippi, sunk in 2002 as the Okaloosa Reef Odyssey. She lies about 450 m from the tug Belize Queen.",
       marineLife: "Snapper · grouper · bait schools",
       difficultyLevel: "advanced",
-      depthRange: "31–34 m (102–110 ft)",
+      depthMinMeters: 31,
       maxDepthMeters: 34,
       currentNote:
         "Open Gulf, a long ride offshore. Low on the sand, so the dive is spent past 30 m.",
@@ -1155,7 +1154,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 22 m steel sailboat, the Flying Eagle, sunk off Destin in 2023 as AJ's Blackbeard. She stands about 13 m off the sand, and a second sunken steel sailboat, the Cordonazo, lies about 30 m away.",
       marineLife: "Amberjack · snapper · bait schools",
       difficultyLevel: "advanced",
-      depthRange: "21–35 m (70–114 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 35,
       currentNote:
         "Open Gulf, a long ride offshore. A young wreck; watch for fishing line on the rigging.",
@@ -1183,7 +1182,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 41 m tug sunk off Okaloosa County in 1999 on a deep stretch of sand south of Destin.",
       marineLife: "Amberjack · snapper · grouper",
       difficultyLevel: "advanced",
-      depthRange: "37–40 m (120–130 ft)",
+      depthMinMeters: 37,
       maxDepthMeters: 40,
       currentNote:
         "Open Gulf, a long ride offshore. Sources put the sand at 39–41 m, at or past the recreational limit, and the top of the wreck is at about 37 m: turn at 40 m, not the sand. Bottom time is very short.",
@@ -1212,7 +1211,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 110 m roll-on roll-off ship sunk by the Air Force in a weapons exercise off Okaloosa County in 2024. She rises about 30 m off the bottom, so her upper structure is diveable even though the sand is far below.",
       marineLife: "Amberjack · snapper · barracuda · bait schools",
       difficultyLevel: "advanced",
-      depthRange: "24–40 m (80–130 ft)",
+      depthMinMeters: 24,
       maxDepthMeters: 40,
       currentNote:
         "Open Gulf, far offshore. The sand lies at about 55 m, well beyond recreational limits; stay on the upper structure and on the line. A weapons-test wreck, so expect torn steel.",
@@ -1244,7 +1243,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 134 m World War II Liberty Ship sunk as a reef off Santa Rosa County around 1980. She stands about 5 m off the sand, a long, low wreck with plenty of hull to follow.",
       marineLife: "Snapper · grouper · amberjack · barracuda",
       difficultyLevel: "advanced",
-      depthRange: "25–30 m (83–98 ft)",
+      depthMinMeters: 25,
       maxDepthMeters: 30,
       currentNote:
         "Open Gulf, a long ride from either Destin or Pensacola. Sources put the sand at 28–30 m; stay outside the structure.",
@@ -1282,7 +1281,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Every sculpture is its own small reef, and the fish move between them.",
       difficultyLevel: "intermediate",
-      depthRange: "13–18 m (43–59 ft)",
+      depthMinMeters: 13,
       maxDepthMeters: 18,
       currentNote:
         "Usually a calm, shallow Gulf site, but more than fifty sculptures spread over open sand make navigation the real challenge; go with a guide or a compass plan. From Destin it is an hour or more each way by boat.",
@@ -1313,7 +1312,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 56 m oilfield supply ship sunk in 1993 and named for Captain Charles Bartholomew, the Navy's supervisor of salvage. She sits upright about 6.5 nautical miles from St. Andrew Bay Pass, and her upright hull and open holds make her the town's favorite training wreck.",
       marineLife: "Spadefish · snapper · grouper · flounder · turtles (sometimes)",
       difficultyLevel: "intermediate",
-      depthRange: "15–26 m (50–85 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 26,
       currentNote:
         "The bottom is silty and visibility near the deck often runs 6–8 m, worse after rain or a blow. Hurricane Michael opened up the wheelhouse in 2018, so expect loose and changed structure.",
@@ -1365,7 +1364,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Bait balls over the wreck can be thick enough to hide it, with jacks and snapper working them.",
       difficultyLevel: "intermediate",
-      depthRange: "16–23 m (52–76 ft)",
+      depthMinMeters: 16,
       maxDepthMeters: 23,
       currentNote:
         "No mooring buoys: boats tie in to the bow or anchor in the sand. Fine sediment can drop the visibility to almost nothing near the bottom, and hanging wires around the collapsed superstructure are an entanglement risk.",
@@ -1415,7 +1414,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 62 m Navy fleet tug launched in 1942 that towed and salvaged from the Caribbean to Newfoundland. She was sunk in 1990 as a training platform for the Navy's dive unit in Panama City and now sits upright on the sand, one of the bigger wrecks on the offshore run.",
       marineLife: "Amberjack · snapper · spadefish · grouper",
       difficultyLevel: "advanced",
-      depthRange: "17–31 m (55–102 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 31,
       currentNote:
         "Open Gulf, about 12 nautical miles from the pass. Current and a summer thermocline vary by the day, and the sand is past 30 m.",
@@ -1453,7 +1452,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 44 m fleet tug built in 1944 that towed damaged ships away from Okinawa and worked the world's oceans for 26 years. The Navy dive school in Panama City sank and raised her over and over for training before she went down for the last time in 2000.",
       marineLife: "Amberjack · snapper · spadefish · grouper",
       difficultyLevel: "advanced",
-      depthRange: "18–31 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 31,
       currentNote:
         "Open Gulf, about 12 nautical miles out. Current, visibility and a summer thermocline change by the day, and the sand sits at about 30 m.",
@@ -1491,7 +1490,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "Two derelict harbor tugs, 26 and 29 m long, sunk in 2003 bow to bow on a tether. A storm later lifted one and set it down on top of the other, so the dive is two wrecks stacked in one pile.",
       marineLife: "Amberjack · snapper · spadefish · grouper",
       difficultyLevel: "advanced",
-      depthRange: "21–31 m (70–100 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 31,
       currentNote:
         "Open Gulf, about 11 nautical miles from the pass. Current and visibility vary by the day, and the sand is at about 30 m.",
@@ -1535,7 +1534,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "An aluminum passenger vessel that Hurricane Ivan drove ashore in Panama City in 2004 and Hurricane Michael tore loose again in 2018. Her owner gave her to the reef program, and she was sunk in May 2019 about 12 nautical miles south of the pass, standing tall off the sand.",
       marineLife: "Amberjack · snapper · spadefish · grouper",
       difficultyLevel: "advanced",
-      depthRange: "19–31 m (62–103 ft)",
+      depthMinMeters: 19,
       maxDepthMeters: 32,
       currentNote:
         "Open Gulf. Current, visibility and a summer thermocline change by the day, and the sand is past 30 m.",
@@ -1576,7 +1575,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       conservationNote:
         "A protected preserve and the grave of the people lost with her. Use the submerged mooring buoys, and take nothing.",
       difficultyLevel: "advanced",
-      depthRange: "27–30 m (90–100 ft)",
+      depthMinMeters: 27,
       maxDepthMeters: 30,
       currentNote:
         "Open Gulf at close to 30 m. Visibility varies widely and drops after heavy rain.",
@@ -1621,7 +1620,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       conservationNote:
         "Thirty-three of her crew died in the attack. A historic wreck and a grave: look, and leave everything.",
       difficultyLevel: "advanced",
-      depthRange: "33–35 m (110–115 ft)",
+      depthMinMeters: 33,
       maxDepthMeters: 35,
       currentNote:
         "A long open-Gulf run with nothing near it. Current and a strong summer thermocline are both common, and the low, scattered wreck gives little to hide behind.",
@@ -1652,7 +1651,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 38 m steel ocean tug sunk in June 2009, about 6.6 nautical miles from St. Andrew Bay Pass and not far from the Strength. She stands tall for her depth, rising about 11 m off the sand.",
       marineLife: "Spadefish · snapper · barracuda · grouper",
       difficultyLevel: "intermediate",
-      depthRange: "12–23 m (38–74 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 23,
       currentNote:
         "Nearshore Gulf water: visibility swings with rain and wind, and is often poorer near the sand than up on the hull.",
@@ -1678,7 +1677,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 30 m prototype Navy amphibious assault hovercraft, sunk as a reef in 1995. An unusual shape to find on the bottom, and a short ride from the pass.",
       marineLife: "Snapper · spadefish · triggerfish · grouper",
       difficultyLevel: "intermediate",
-      depthRange: "20–23 m (65–75 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 23,
       currentNote:
         "Low relief on sand and rubble, so visibility near the bottom decides the dive. Watch for fishing line, as on every public reef here.",
@@ -1709,7 +1708,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 33 m tugboat that has been on the bottom since about 1970, one of the oldest wrecks off Panama City. Decades have flattened her to a low pile of steel close to the pass.",
       marineLife: "Snapper · spadefish · triggerfish · grouper",
       difficultyLevel: "intermediate",
-      depthRange: "19–21 m (63–70 ft)",
+      depthMinMeters: 19,
       maxDepthMeters: 21,
       currentNote:
         "Little relief left, so the dive happens close to the sand where visibility is at its worst. Boat traffic from the pass and fishing line are the usual hazards.",
@@ -1741,7 +1740,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "An oilfield supply boat, about 55 m long, that was converted into a fish processor and later renamed for a local charter captain. She was sunk in November 1993 on the offshore run, about 13 nautical miles from the pass.",
       marineLife: "Amberjack · snapper · spadefish · grouper",
       difficultyLevel: "advanced",
-      depthRange: "21–32 m (70–106 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 33,
       currentNote:
         "Open Gulf with the sand past 30 m. Current and a summer thermocline vary by the day.",
@@ -1776,7 +1775,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 32 m Navy tug sunk in 1978, with loads of tires and later debris around her. One of the oldest wrecks in Bay County, reached on a long run west of the pass.",
       marineLife: "Amberjack · snapper · grouper · spadefish",
       difficultyLevel: "advanced",
-      depthRange: "26–32 m (85–105 ft)",
+      depthMinMeters: 26,
       maxDepthMeters: 33,
       currentNote:
         "Open Gulf, well offshore, with the sand past 30 m. Current, visibility and a summer thermocline vary by the day.",
@@ -1812,7 +1811,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A steel barge sunk in 1990 together with bridge spans. One of the shallowest dives on the Panama City list, about 2.5 nautical miles from the pass.",
       marineLife: "Snapper · spadefish · triggerfish · grouper",
       difficultyLevel: "beginner",
-      depthRange: "12–14 m (40–45 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 14,
       currentNote:
         "Close to St. Andrew Bay Pass, so watch for boat traffic on the way down and up. Nearshore visibility swings with rain and wind, and fishing line is common on the public reefs.",
@@ -1845,7 +1844,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A steel barge and scrap steel placed around 1980, with bundled tires laid around it the following year. A low, nearshore reef that has had more than 40 years to grow over.",
       marineLife: "Snapper · spadefish · triggerfish · grouper",
       difficultyLevel: "intermediate",
-      depthRange: "18–23 m (60–75 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 23,
       currentNote:
         "Low relief, so visibility near the sand decides the dive. Fishing line is common on the public reefs.",
@@ -1876,7 +1875,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 30 m barge sunk in 2000 a short run from St. Andrew Bay Pass. Low and compact, an easy site to cover on one tank.",
       marineLife: "Snapper · spadefish · triggerfish · grouper",
       difficultyLevel: "beginner",
-      depthRange: "15–18 m (50–60 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 18,
       currentNote:
         "Close to St. Andrew Bay Pass, so watch for boat traffic on the way down and up. Nearshore visibility swings with rain and wind, and fishing line is common on the public reefs.",
@@ -1910,7 +1909,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 32 m steel barge sunk in 1999 on the offshore run, also called the Cobia Barge. It stands only a few meters off the sand.",
       marineLife: "Amberjack · snapper · grouper · cobia (seasonal)",
       difficultyLevel: "advanced",
-      depthRange: "28–30 m (92–100 ft)",
+      depthMinMeters: 28,
       maxDepthMeters: 31,
       currentNote:
         "Open Gulf, about 11 nautical miles from the pass, with the sand at about 30 m. Current, visibility and a summer thermocline vary by the day.",
@@ -1946,7 +1945,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A steel barge donated by the Navy and sunk in 1994, about 2 nautical miles south of St. Andrew Bay Pass. A short, shallow dive among a cluster of nearshore reefs.",
       marineLife: "Snapper · spadefish · triggerfish · grouper",
       difficultyLevel: "beginner",
-      depthRange: "14–17 m (45–55 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 17,
       currentNote:
         "Close to St. Andrew Bay Pass, so watch for boat traffic on the way down and up. Nearshore visibility swings with rain and wind, and fishing line is common on the public reefs.",
@@ -1980,7 +1979,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "One of the first reef sites off Panama City: a steel tank, tires and concrete rubble from 1978, with scrap, more rubble and slabs of the old Hathaway Bridge added through the 1980s. A sprawling, low site close to the pass.",
       marineLife: "Snapper · spadefish · triggerfish · grouper",
       difficultyLevel: "intermediate",
-      depthRange: "14–20 m (45–65 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 20,
       currentNote:
         "Close to St. Andrew Bay Pass, so watch for boat traffic on the way down and up. Nearshore visibility swings with rain and wind, and fishing line is common on the public reefs.",
@@ -2012,7 +2011,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "Concrete deck sections from an old US 331 bridge, dropped in 1991 less than 2 nautical miles from the pass. Shallow slabs and rubble that make an easy nearshore dive.",
       marineLife: "Snapper · spadefish · triggerfish · grouper",
       difficultyLevel: "beginner",
-      depthRange: "12–15 m (40–50 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 15,
       currentNote:
         "Close to St. Andrew Bay Pass, so watch for boat traffic on the way down and up. Nearshore visibility swings with rain and wind, and fishing line is common on the public reefs.",
@@ -2046,7 +2045,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 55 m section of the old DuPont Bridge, sunk intact in October 2008 as the first of three spans on the offshore run. It stands about 11 m off the sand.",
       marineLife: "Amberjack · snapper · spadefish · grouper",
       difficultyLevel: "advanced",
-      depthRange: "17–30 m (55–100 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 30,
       currentNote:
         "Open Gulf, about 11 nautical miles from the pass. Current, visibility and a summer thermocline vary by the day.",
@@ -2083,7 +2082,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "The last of three 55 m DuPont Bridge spans sunk intact in December 2008. It stands about 11 m tall on the sand, close to where the El Dorado was later placed.",
       marineLife: "Amberjack · snapper · spadefish · grouper",
       difficultyLevel: "advanced",
-      depthRange: "17–30 m (55–100 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 30,
       currentNote:
         "Open Gulf, about 11 nautical miles from the pass. Current, visibility and a summer thermocline vary by the day.",
@@ -2120,7 +2119,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A steel truss span from the old Hathaway Bridge, sunk in May 1988 at the Fontainebleau site off Panama City Beach. The truss stands tall off the sand and gathers fish through every opening.",
       marineLife: "Snapper · spadefish · triggerfish · grouper",
       difficultyLevel: "intermediate",
-      depthRange: "14–23 m (45–75 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 23,
       currentNote:
         "Nearshore Gulf water: visibility swings with rain and wind, and fishing line snags easily on the steel truss.",
@@ -2152,7 +2151,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A steel truss span from the old Hathaway Bridge, sunk in May 1988 at the Midway site about 5 nautical miles south of the pass. Other spans, boxcars, culverts and tires were dropped around the same area over the years.",
       marineLife: "Snapper · spadefish · triggerfish · grouper",
       difficultyLevel: "intermediate",
-      depthRange: "14–22 m (45–72 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 22,
       currentNote:
         "Nearshore Gulf water: visibility swings with rain and wind, and fishing line snags easily on the steel truss.",
@@ -2184,7 +2183,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A steel truss span from the old Hathaway Bridge, sunk in May 1988 at the Warsaw site, close to the Black Bart and the Jeff-A Hovercraft. Concrete rubble and tire reefs lie nearby.",
       marineLife: "Snapper · spadefish · triggerfish · grouper",
       difficultyLevel: "intermediate",
-      depthRange: "14–23 m (45–75 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 23,
       currentNote:
         "Nearshore Gulf water: visibility swings with rain and wind, and fishing line snags easily on the steel truss.",
@@ -2219,7 +2218,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Pass water brings a bit of everything: schooling spadefish over the hull, barracuda that shadow divers, and morays tucked into the armor plate.",
       difficultyLevel: "intermediate",
-      depthRange: "3–9 m (10–30 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 9,
       currentNote:
         "Tide runs hard through the pass close by, so dive her at slack water, ideally slack high for the best visibility. Fishing boats anchor on her often, and monofilament is common.",
@@ -2271,7 +2270,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "Three steel coal barges that broke loose under tow in 1974 and were sunk where they lay by Navy demolition divers. Storms have broken them into pieces among a field of bridge rubble, and they are the first stop on the Florida Panhandle Shipwreck Trail.",
       marineLife: "Snapper · spadefish · triggerfish · shells in the sand",
       difficultyLevel: "beginner",
-      depthRange: "12–18 m (40–60 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 18,
       currentNote:
         "Close to the pass, so the tide and outflow from the bay set the visibility. Fifty years and many hurricanes have left the barges broken and partly buried; the county rates their condition very poor.",
@@ -2309,7 +2308,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Baitfish often hang so thick over the barge that it is hard to see from the surface.",
       difficultyLevel: "beginner",
-      depthRange: "11–15 m (35–50 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 15,
       currentNote:
         "Usually an easy dive, but visibility follows the tide out of the pass. Watch for fishing line on the sculptures.",
@@ -2348,7 +2347,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A large steel barge sunk on New Year's Eve 1982 east of Pensacola Pass. It is still intact and holds a lot of fish for its size.",
       marineLife: "Snapper · triggerfish · spadefish · reef fish",
       difficultyLevel: "intermediate",
-      depthRange: "18–23 m (60–75 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 23,
       currentNote:
         "Open Gulf, about seven miles out east of the pass, so the sea state decides the day. Fishing line is common on the barge.",
@@ -2383,7 +2382,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLifeDescription: "Long fished, and resident sharks know it.",
       difficultyLevel: "advanced",
       fitTone: "demanding",
-      depthRange: "23–29 m (75–95 ft)",
+      depthMinMeters: 23,
       maxDepthMeters: 29,
       // The sand is at 29 m, a few feet off the 30 m line: Advanced Open Water, without the Deep specialty.
       minimumCertificationLevel: "advanced_open_water",
@@ -2413,7 +2412,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A banana boat torpedoed by a U-boat in Costa Rica in 1942, raised, and blown apart off Pensacola in 1944 in a secret weapons test. The secrecy gave her the local nickname Russian Freighter. Today she is a field of twisted steel with her boilers still standing.",
       marineLife: "Spadefish · snapper · barracuda · lionfish",
       difficultyLevel: "intermediate",
-      depthRange: "18–26 m (60–86 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 26,
       currentNote:
         "Nine miles out in open Gulf. The wreckage is broken and sharp, so keep clear of loose plate and watch for fishing line.",
@@ -2454,7 +2453,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 26 m tug that towed many of Escambia County's reefs out to sea, then joined them in January 2016. She sits intact near the wrecks she once delivered.",
       marineLife: "Spadefish · snapper · barracuda · reef fish",
       difficultyLevel: "intermediate",
-      depthRange: "16–25 m (52–83 ft)",
+      depthMinMeters: 16,
       maxDepthMeters: 25,
       currentNote:
         "Ten miles out in open Gulf; sea state and visibility vary day to day. Stay outside the hull.",
@@ -2484,7 +2483,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools of spadefish around the wheelhouse are close to guaranteed; snapper and barracuda work the hull.",
       difficultyLevel: "advanced",
-      depthRange: "19–32 m (62–105 ft)",
+      depthMinMeters: 19,
       maxDepthMeters: 32,
       currentNote:
         "Twelve miles out with no mooring buoy; boats tie into the wreck or anchor nearby. Monofilament and old netting cover parts of the wreck, and wires hang inside the wheelhouse.",
@@ -2536,7 +2535,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "Two oil platform jackets laid side by side on the sand in 1993, donated by Chevron to the Rigs to Reefs program. The steel lattice draws big schools of fish and usually clearer water than the wrecks closer in.",
       marineLife: "Amberjack · barracuda · snapper · spadefish",
       difficultyLevel: "advanced",
-      depthRange: "23–40 m (76–130 ft)",
+      depthMinMeters: 23,
       maxDepthMeters: 40,
       currentNote:
         "Eighteen miles out in open Gulf. The sand is at about 42 m, below recreational limits, so plan the dive on the upper structure and keep clear of the inside of the jackets.",
@@ -2576,7 +2575,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLife: "Barracuda · spadefish · snapper · reef fish",
       marineLifeDescription: "Resident barracuda hang around the upper structure.",
       difficultyLevel: "advanced",
-      depthRange: "20–31 m (65–100 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 31,
       currentNote:
         "Eighteen miles out in open Gulf. The sand is just past 30 m. Fishing line is common on the bridge.",
@@ -2612,7 +2611,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "The sister of YDT-14, a 40 m Navy covered lighter from 1942 that became a dive tender and was sunk beside her in April 2000. She has settled and broken up more than her sister, with most of the bridge gone and debris spread around her.",
       marineLife: "Snapper · spadefish · barracuda · reef fish",
       difficultyLevel: "advanced",
-      depthRange: "23–31 m (75–100 ft)",
+      depthMinMeters: 23,
       maxDepthMeters: 31,
       currentNote:
         "Eighteen miles out in open Gulf. The county notes loose wires in the pilot house, and storms have buried much of the hull, so stay outside and off the debris.",
@@ -2642,7 +2641,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 75 m clamshell dredge built in 1943 and sunk as a reef in May 1991. Her hull has since cracked across the beam into two sections a couple of meters apart, and her height makes her a magnet for big fish.",
       marineLife: "Red snapper · cobia · triggerfish · African pompano",
       difficultyLevel: "advanced",
-      depthRange: "21–36 m (70–117 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 36,
       currentNote:
         "Twenty miles out in open Gulf, so the boat ride and the sea state decide the day. A popular spearfishing wreck; expect fishing line and other divers' spear lines.",
@@ -2688,7 +2687,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 118 m freighter sunk on 27 September 1995, then the largest artificial reef in Florida. Hurricanes have since broken most of her apart, but the stern and the tall stack still stand above a wide field of hull and ribs.",
       marineLife: "Amberjack · snapper · barracuda · spadefish",
       difficultyLevel: "advanced",
-      depthRange: "21–40 m (70–130 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 40,
       currentNote:
         "Twenty-one miles out in open Gulf. The sand lies at about 40 to 43 m, so stay on the stack and the stern. The broken structure is unstable and is not a penetration dive.",
@@ -2740,7 +2739,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "Two pieces of a retired Tenneco oil platform, barged in and sunk in 1982 as the first complete platform reefed under Rigs to Reefs. The upper lattice is full of fish, and the rest drops far below recreational depth.",
       marineLife: "Amberjack · barracuda · snapper · spadefish",
       difficultyLevel: "advanced",
-      depthRange: "27–40 m (90–130 ft)",
+      depthMinMeters: 27,
       maxDepthMeters: 40,
       currentNote:
         "About 22 nautical miles out in open Gulf. The sand is at about 53 m, well past recreational limits; dive the top of the structure only and stay outside the lattice.",
@@ -2778,7 +2777,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 36 m steel barge sunk in February 2003 with fourteen large pieces of concrete ballast. It has since collapsed, and it is known as a good place to hunt lionfish.",
       marineLife: "Lionfish · snapper · triggerfish · reef fish",
       difficultyLevel: "advanced",
-      depthRange: "34–37 m (111–122 ft)",
+      depthMinMeters: 34,
       maxDepthMeters: 37,
       currentNote:
         "About 17 miles out in deep open Gulf with little relief, so the whole dive is spent near the bottom; gas and no-stop time go quickly. A collapsed barge has sharp edges.",
@@ -2809,7 +2808,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLifeDescription: "Look into the ends of the pipes for lobster.",
       difficultyLevel: "advanced",
       fitTone: "demanding",
-      depthRange: "20–29 m (65–96 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 30,
       // The sand is at 29 m, a few feet off the 30 m line: Advanced Open Water, without the Deep specialty.
       minimumCertificationLevel: "advanced_open_water",
@@ -2845,7 +2844,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 34 m steel barge whose deck now stands a couple of meters off the sand on its hollowed-out frame, with two sets of radio tower sections lying on either side. Easy to navigate and busy with fish around the towers.",
       marineLife: "Snapper · spadefish · reef fish · lionfish",
       difficultyLevel: "intermediate",
-      depthRange: "21–25 m (70–82 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 25,
       currentNote:
         "Open Gulf about nine miles out. Stay out of the space under the deck; it is an overhead environment.",
@@ -2879,7 +2878,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 20 m steel barge that sank on its own on 2 October 1995 while being towed out to its permitted reef site, about two miles short. It sits low on the sand but holds a lot of fish for its size.",
       marineLife: "Snapper · triggerfish · reef fish",
       difficultyLevel: "intermediate",
-      depthRange: "21–23 m (70–75 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 23,
       currentNote:
         "Open Gulf about eight miles out. With only about 1.5 m of relief the barge is easy to lose in poor visibility; stay close to the line.",
@@ -2906,7 +2905,6 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A Navy steel barge sunk as a reef in 1993, with a Navy camel float added about 12 m north of it the following year. Two low structures close together on the sand.",
       marineLife: "Snapper · spadefish · reef fish",
       difficultyLevel: "intermediate",
-      depthRange: "25 m (82 ft)",
       maxDepthMeters: 25,
       currentNote:
         "Open Gulf about nine miles out. Both pieces have partly subsided into the sand; watch for fishing line.",
@@ -2941,7 +2939,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "An 83 m coastal freighter built in the Netherlands in 1972 and scuttled without explosives in May 2013. She sits upright and whole about 17 nautical miles south of Perdido Pass, and most of the ship can be seen from her upper decks.",
       marineLife: "Snapper · spadefish · barracuda · amberjack",
       difficultyLevel: "advanced",
-      depthRange: "18–35 m (60–115 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 35,
       currentNote:
         "Open Gulf, a long run from either pass. Winter usually brings the best visibility and summer the warmest water. Stay outside the hull.",
@@ -2990,7 +2988,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A 76 m survey and research ship built in 1986, cleaned and sunk by Alabama as a reef in June 2018 with oil-spill restoration money. She lies about 20 nautical miles south of Orange Beach, with large holes cut in her sides and interior.",
       marineLife: "Snapper · spadefish · barracuda · amberjack",
       difficultyLevel: "advanced",
-      depthRange: "18–39 m (60–127 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 39,
       currentNote:
         "Far out in open Gulf with the sand near 39 m. The cut-outs were made for trained penetration divers; everyone else stays outside.",
@@ -3029,7 +3027,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
       marineLife: "Sheepshead · flounder · spadefish · stingrays · porcupinefish",
       marineLifeDescription: "Good by day and better at night, when the jetty rocks come alive.",
       difficultyLevel: "intermediate",
-      depthRange: "3–15 m (10–50 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 15,
       currentNote:
         "Tide dependent: the pass current can be dangerous, so dive only around slack water. Boat traffic runs through the pass, a dive flag is required, monofilament is everywhere, and diving is not allowed within about 60 m (200 ft) of the Fort Pickens fishing pier.",
@@ -3066,7 +3064,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "About a dozen tall reef modules set in shallow Gulf water roughly 150 m off the Park East beach access, east of the Portofino towers on Pensacola Beach. A shore dive or snorkel among small reef fish.",
       marineLife: "Small reef fish · sergeant majors · baitfish",
       difficultyLevel: "beginner",
-      depthRange: "3–4 m (10–12 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 4,
       currentNote:
         "Not tide dependent, but surf, surge and longshore current can be strong; check the beach flags before going in. There are no lifeguards at the reef, and a dive flag is required.",
@@ -3094,7 +3092,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "A sound-side snorkel and training reef about 90 m north of Park West, built from concrete modules, 270 tons of rubble for the Captain Bob Quarles Reef in 2011, and faux ballast rock laid as a mock old shipwreck. Four pilings mark its corners.",
       marineLife: "Pinfish · pipefish · small reef fish · crabs",
       difficultyLevel: "beginner",
-      depthRange: "2–4 m (6–14 ft)",
+      depthMinMeters: 2,
       maxDepthMeters: 4,
       currentNote:
         "Sheltered bay water, but visibility is often poor. Boats use the sound, so fly a dive flag and stay inside the pilings.",
@@ -3129,7 +3127,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "Seventeen concrete reef modules set on pilings in June 2020, about 210 m off the Gulf beach just east of the Casino Beach swimming area. It is named the Charles Fennell Gonzalez IV reef, and the tops sit about 2 m below the surface.",
       marineLife: "Small reef fish · sergeant majors · baitfish",
       difficultyLevel: "beginner",
-      depthRange: "3–5 m (7–17 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 5,
       currentNote:
         "Outside the lifeguarded swimming area, and surf here can be high; check the beach flags. A dive flag is required, and a small white buoy marks the northernmost module.",
@@ -3164,7 +3162,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "Three rows of eight reef modules built by Escambia County in 2014, running about 150 m out from the beach off Sandy Key Drive. A shore dive or snorkel in shallow Gulf water.",
       marineLife: "Small reef fish · sergeant majors · baitfish",
       difficultyLevel: "beginner",
-      depthRange: "3–5 m (10–15 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 5,
       currentNote:
         "Surf and longshore current decide the day; there are no lifeguards at the reef and a dive flag is required. Parking at the beach access is very limited.",
@@ -3191,7 +3189,7 @@ export const FLORIDA_PANHANDLE: DiveSiteTemplate[] = [
         "Stacked-disc reef modules set by Santa Rosa County from 2012, about 90 m off the beach and roughly 600 m east of the Navarre Beach Fishing Pier. Part of the Navarre Beach Marine Sanctuary, and an easy swim from the sand.",
       marineLife: "Reef fish · baitfish · octopus · sea turtles (sometimes)",
       difficultyLevel: "beginner",
-      depthRange: "3–6 m (10–20 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 6,
       currentNote:
         "Depth changes with the tide, and surf and longshore current can be strong. A dive flag is required; stay well clear of the fishing pier.",

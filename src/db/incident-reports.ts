@@ -20,9 +20,12 @@ import {
   mayStartIncidentReport,
   mayWriteIncidentReport,
 } from "@/lib/incident-reports";
+import { log } from "@/lib/log";
+import type { NotificationProvider } from "@/lib/notifications";
 import { OFFLINE_EVENT_SKEW_MS } from "@/lib/offline-events";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
+import { sendMissingDiverAlerts } from "./missing-diver-alerts";
 import { recordTripActivity } from "./operations";
 import { queryAll } from "./query-helpers";
 import {
@@ -545,13 +548,14 @@ export async function saveIncidentDraft(
  */
 export async function fileIncidentReport(
   db: AppDb,
-  input: WriteTarget,
+  input: WriteTarget & { provider?: NotificationProvider },
 ): Promise<
   | { ok: true }
   | { ok: false; reason: Exclude<IncidentWriteRefusal, "incomplete"> }
   | { ok: false; reason: "incomplete"; gaps: IncidentFilingGap[] }
 > {
-  return db.transaction(async (tx) => {
+  let missingDiver = false;
+  const filed = await db.transaction(async (tx) => {
     const { report, allowed } = await lockForWrite(tx, input);
     if (!report || !allowed) return { ok: false, reason: "not_found" } as const;
     if (report.status !== "draft") return { ok: false, reason: "filed" } as const;
@@ -579,8 +583,20 @@ export async function fileIncidentReport(
       actorPersonId: input.actorPersonId,
       entry: { code: "incident_report_filed" },
     });
+    missingDiver = report.kind === "missing_diver";
     return { ok: true } as const;
   });
+  // A report of a missing diver tells the owners at once (H-138). After the
+  // commit, and never able to undo it: a failed send is given back and the
+  // hourly pass tries again.
+  if (filed.ok && missingDiver) {
+    try {
+      await sendMissingDiverAlerts(db, { reportId: input.reportId, provider: input.provider });
+    } catch {
+      log("incident.missing_diver_alert_failed", "error", { reportId: input.reportId });
+    }
+  }
+  return filed;
 }
 
 /** Add a dated, attributed addendum to a filed report. A draft is edited instead. */
@@ -818,6 +834,11 @@ export type IncidentReportView = {
   legalHold: boolean;
   /** Whether this viewer may discard the draft or set or release the hold: owners. */
   mayDecide: boolean;
+  /**
+   * For a filed report of a missing diver only (H-138): when every owner's
+   * email was sent, or `null` while they are not all told yet.
+   */
+  ownersAlert: { sentAt: Date | null } | null;
 };
 
 /**
@@ -953,6 +974,10 @@ export async function getIncidentReport(
     mayWrite: mayWriteIncidentReport(viewer, report),
     legalHold: report.legalHoldAt !== null,
     mayDecide: mayDecideIncidentRecord(viewer),
+    ownersAlert:
+      report.status === "filed" && report.kind === "missing_diver"
+        ? { sentAt: report.missingAlertSentAt }
+        : null,
   };
 }
 

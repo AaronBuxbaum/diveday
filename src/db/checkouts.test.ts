@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import type { CheckoutSessionLookupResult, CheckoutSessionSnapshot } from "@/lib/payments/checkout";
+import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeCheckout, fakeEmail, fakePromotions, recordingCheckout } from "@/test/fakes";
 import { cancelBooking, createBookingParty } from "./bookings";
@@ -958,8 +959,6 @@ describe("startBookingCheckout", () => {
     // reusing the stale one would make Stripe replay the very session whose
     // price is wrong (CR-005). And seats-before-money: the bookings were
     // committed before any of this ran, so retiring a session touches no seat.
-    // Its own database: "the latest checkout" is ordered by created_at, which the
-    // shared transaction would freeze for both mints.
     const { db, shop, reef, bookingIds } = await checkoutContext({ fresh: true });
     const seen = recordingCheckout();
     const first = await startBookingCheckout(
@@ -970,6 +969,7 @@ describe("startBookingCheckout", () => {
     if (!first.ok) throw new Error("first checkout failed");
 
     await reprice(db, shop.id, reef, { priceCents: 21_000 });
+    advanceClock();
     const second = await startBookingCheckout(
       db,
       startInput(shop.id, reef.id, bookingIds),
@@ -2865,6 +2865,7 @@ describe("settledPartyPayment", () => {
 
     await markCheckoutPaidBySessionId(db, started.checkout.stripeSessionId, undefined, 31_590);
     expect(await settledPartyPayment(db, shop.id, lead)).toEqual({
+      checkoutId: started.checkout.id,
       amountCents: 31_590,
       currency: started.checkout.currency,
       seats: 2,

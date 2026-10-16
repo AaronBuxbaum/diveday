@@ -958,6 +958,7 @@ export type TodayAction = {
 const WAIVER_CODES = new Set<ReadinessBlockerCode>([
   "waiver_not_sent",
   "waiver_lapsed",
+  "waiver_runs_out",
   "waiver_pending",
   "waiver_expired",
   "guardian_signature_missing",
@@ -986,6 +987,7 @@ export const BLOCKER_ACTIONS: Record<
   under_minimum_age: { kind: "certification", target: "diver" },
   waiver_not_sent: { kind: "waiver", target: "trip" },
   waiver_lapsed: { kind: "waiver", target: "trip" },
+  waiver_runs_out: { kind: "waiver", target: "trip" },
   waiver_pending: { kind: "waiver", target: "trip" },
   waiver_expired: { kind: "waiver", target: "trip" },
   // **The diver, not the departure**, since #1252 gave the hold a door: the

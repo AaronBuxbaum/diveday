@@ -24,7 +24,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Silversides and tarpon move through the rock formations, and the canyon walls are crusted with sponges and soft corals.",
       difficultyLevel: "intermediate",
-      depthRange: "12–21 m (40–70 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 21,
       currentNote:
         "PADI calls the tunnels safe only when the surface is flat calm and the surge is down; swell passing through a crevice makes the snoring sound. The tunnels and caverns are overhead; stay out of them. Current not documented; ask the crew on the day.",
@@ -65,7 +65,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       marineLife: "Reef fish · soft corals · sea fans",
       marineLifeDescription: "Plenty of tropical fish over the reefs.",
       difficultyLevel: "beginner",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       currentNote:
         "A busy public beach: snorkelers, swimmers and SNUBA divers share the water off the sand. Surface well clear of them with an SMB. Usually light; it can change, so carry an SMB. Exit by the same sandy entry.",
@@ -107,7 +107,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Stingrays and nurse sharks work the sand flats, silversides gather by the rocks, and eagle rays and dolphins pass on the edge of deeper water.",
       difficultyLevel: "intermediate",
-      depthRange: "6–27 m (20–90 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 27,
       currentNote:
         "Tidal currents run past the cay and around Congo Point (NPS). Carry an SMB, and plan the dive with the guide for the current.",
@@ -150,7 +150,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Tarpon hunt the baitfish in spring, and the shallow coral gardens on the way back hold nurse sharks, reef squid and octopus.",
       difficultyLevel: "advanced",
-      depthRange: "5–24 m (15–80 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 24,
       currentNote:
         "Strong, stiff current through The Cut and around the rock; check it before every dive. Carry an SMB. Mornings are usually calmest. The bottom on the outside slopes past the plan; stay above it.",
@@ -192,7 +192,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sea turtles and rays glide over the sand flats, conch graze the sand, and the coral heads shelter parrotfish and lobsters.",
       difficultyLevel: "intermediate",
-      depthRange: "5–21 m (15–70 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 21,
       currentNote:
         "Pillsbury Sound has tidal flow; ask the crew about it on the day, and carry an SMB.",
@@ -232,7 +232,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Tube worms, crinoids and urchins in the small holes of the slope, and squid and a barracuda over the coral canyon at the west end.",
       difficultyLevel: "beginner",
-      depthRange: "5–14 m (15–45 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 14,
       currentNote:
         "Pillsbury Sound has tidal flow; ask the crew about it on the day, and carry an SMB.",
@@ -275,7 +275,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
         "Lobsters and brittle stars sit between the rocks, and turtles, tarpon and nurse sharks cruise the ledges.",
       conservationNote: "The rocks sit inside a marine preserve.",
       difficultyLevel: "intermediate",
-      depthRange: "8–14 m (25–45 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 14,
       currentNote:
         "Surge and wave action at Cow Rock: the swim-throughs can push divers through. They are overhead; stay out of them and keep to the open reef. Calm days only; the guide decides. Current not documented; ask the crew on the day.",
@@ -323,7 +323,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Spotted eagle rays pass overhead, and the canyon walls hold eels, octopus and lobster condos.",
       difficultyLevel: "intermediate",
-      depthRange: "9–18 m (30–60 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan: "Start out on the reef, then thread through the canyons between the boulders.",
@@ -363,7 +363,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Hawksbill turtles and spotted eagle rays are regular, nurse sharks sleep under the ledges, and big schools of yellowtail snapper hang over the reef.",
       difficultyLevel: "beginner",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       currentNote: "Sheltered. Current not documented; ask the crew on the day.",
       divePlan:
@@ -403,7 +403,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sharks and southern stingrays gather over the sandy center, and lobsters, eels and nurse sharks sit in the ledges.",
       difficultyLevel: "intermediate",
-      depthRange: "9–24 m (30–80 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 24,
       currentNote: "A calm-day site. Current not documented; ask the crew on the day.",
       divePlan:
@@ -449,7 +449,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Large groupers and moray eels sit in the wreckage, sharks pass, and sponges and lionfish cover the decks.",
       difficultyLevel: "advanced",
-      depthRange: "12–28 m (40–92 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 28,
       currentNote:
         "The wreck lies by the airport runway and boats work this shore: listen for engines and carry an SMB. Protected inshore water. Current not documented; ask the crew on the day.",
@@ -496,7 +496,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools of barracuda, big angelfish and hawksbill turtles over the rocks, with grunts and yellowtail on the north ledges. Roofing tiles, pottery shards and clay pipes lie in the reef; leave them.",
       difficultyLevel: "intermediate",
-      depthRange: "1–18 m (3–60 ft)",
+      depthMinMeters: 1,
       maxDepthMeters: 18,
       // Traffic: the rock sits in a cut between St Thomas and Buck Island; no source documents boat traffic there, so the line is a conservative caution.
       currentNote:
@@ -537,7 +537,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big southern stingrays and sharks, with schools of creole wrasse, snapper and jacks.",
       difficultyLevel: "intermediate",
-      depthRange: "12–24 m (40–80 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 24,
       currentNote:
         "A one-way drift with the current, and the boat follows your bubbles. Carry an SMB, send it up at the end, and watch your gas.",
@@ -579,7 +579,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A cleaning station draws turtles and spotted eagle rays, young blacktip reef sharks patrol the wall, and the machinery shelters schooling chromis.",
       difficultyLevel: "intermediate",
-      depthRange: "9–21 m (30–70 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 21,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -618,7 +618,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Octopus in the rocks, nurse sharks and sea turtles over the terraces, and large groupings of schooling fish.",
       difficultyLevel: "intermediate",
-      depthRange: "11–18 m (35–60 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -658,7 +658,7 @@ export const USVI_ST_THOMAS_ST_JOHN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Yellowtail snapper follow divers along the hull, turtles rest on the deck, and octopus live along the hull.",
       difficultyLevel: "intermediate",
-      depthRange: "11–18 m (35–60 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:

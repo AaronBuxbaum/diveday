@@ -13,14 +13,11 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * clock, so a capture that prints a record's "Added" date stops changing every
  * day (issue #2297).
  *
- * `people.created_at` is a `defaultNow()` column, stamped by Postgres from the
- * wall clock, which `DIVEDAY_CLOCK` does not reach (`dbNow`'s docblock in
- * `src/test/db.ts`). The merge preview prints both records' added dates, one
- * seeded and one made at the counter a moment before the shot, so both read
- * the real calendar. Pinned here rather than in the writers or the seed: those
- * stamps also order lists of people, and moving every seeded diver onto the
- * frozen clock, ahead of the staff still on the wall clock, would reorder them
- * for every spec to fix one picture.
+ * A Drizzle insert now stamps `created_at` from the app clock (`appNowTimestamp`,
+ * issue #2538), so a row made during a capture already carries it. The demo
+ * seed's own rows were stamped when the e2e database was built, and the merge
+ * preview prints two records' "Added" dates, one seeded and one made at the
+ * counter, so this still moves the named records onto the clock for that picture.
  *
  * Resolves the demo shop itself and refuses one that is not `isDemo`, like
  * `seed-trouble-states`. Safe to mutate because each Playwright worker owns

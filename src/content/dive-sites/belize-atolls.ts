@@ -27,7 +27,7 @@ export const BELIZE_ATOLLS: DiveSiteTemplate[] = [
         "Groupers, snappers and jacks swim up to inspect divers near the top of the wall. Blacktip sharks patrol the deeper water.",
       conservationNote: "Protected as a Natural Monument, within the World Heritage reef system.",
       difficultyLevel: "advanced",
-      depthRange: "5–40 m (16–130 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 40,
       currentNote:
         "Current not documented; ask the crew on the day, and carry an SMB. Operators report a thermocline somewhere between 15 and 27 m (50 to 90 ft).",
@@ -69,7 +69,7 @@ export const BELIZE_ATOLLS: DiveSiteTemplate[] = [
         "Eagle rays, sharks and tarpon pass along the wall, with stingrays and hogfish working the sand above it and a colony of garden eels beyond.",
       conservationNote: "Half Moon Caye is a Natural Monument. Take nothing and touch nothing.",
       difficultyLevel: "advanced",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day, and carry an SMB.",
       divePlan:
@@ -108,7 +108,7 @@ export const BELIZE_ATOLLS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big schools gather in the current, with large gorgonians and sponges on the wall. Permit and Atlantic spadefish join the jacks.",
       difficultyLevel: "advanced",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       currentNote:
         "Strong current, about 2 knots out of the north depending on the tide, and the dive is a drift. Most of it is spent in mid-water, and divers can be separated. Every diver carries an SMB and a whistle or air horn.",
@@ -154,7 +154,7 @@ export const BELIZE_ATOLLS: DiveSiteTemplate[] = [
         "Stingrays and garden eels live on the sand, with lobsters in the coral and eagle rays gliding past the edge. Mantas are sometimes reported along the wall.",
       conservationNote: "Glover’s Reef is a marine reserve and part of the World Heritage site.",
       difficultyLevel: "advanced",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day, and carry an SMB.",
       divePlan:
@@ -193,7 +193,6 @@ export const BELIZE_ATOLLS: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schoolmasters and creole wrasse fill the water over the coral, and decorator and neck crabs cling to the sea fans.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 15 m (50 ft)",
       maxDepthMeters: 15,
       currentNote: "Current not documented; ask the crew on the day, and carry an SMB.",
       divePlan:
@@ -234,7 +233,6 @@ export const BELIZE_ATOLLS: DiveSiteTemplate[] = [
         "Coral growth covers the hull, and reef fish shelter around the steel.",
       difficultyLevel: "advanced",
       // Ramon's gives 80 ft (24 m); Blackbird's quick facts say 60 ft. The deeper figure is kept.
-      depthRange: "Up to 24 m (80 ft)",
       maxDepthMeters: 24,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -277,7 +275,7 @@ export const BELIZE_ATOLLS: DiveSiteTemplate[] = [
         "Hog snappers and schoolmasters hold in the sand channels. Reef sharks, tarpon and barracuda pass through now and then.",
       conservationNote: "Glover’s Reef is a marine reserve and part of the World Heritage site.",
       difficultyLevel: "advanced",
-      depthRange: "8–30 m (25–100 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day, and carry an SMB.",
       divePlan:
@@ -323,7 +321,7 @@ export const BELIZE_ATOLLS: DiveSiteTemplate[] = [
         "Big schools gather early in the morning and late in the afternoon, which operators call the best times. Dolphins and turtles are sometimes reported.",
       conservationNote: "Glover’s Reef is a marine reserve and part of the World Heritage site.",
       difficultyLevel: "advanced",
-      depthRange: "10–30 m (30–100 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day, and carry an SMB.",
       divePlan:
@@ -371,7 +369,7 @@ export const BELIZE_ATOLLS: DiveSiteTemplate[] = [
         "Nurse sharks and big groupers shelter in the coral. Conchs crawl across the sand at the start of the dive.",
       conservationNote: "Glover’s Reef is a marine reserve and part of the World Heritage site.",
       difficultyLevel: "advanced",
-      depthRange: "11–27 m (35–90 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 27,
       currentNote: "Current not documented; ask the crew on the day, and carry an SMB.",
       divePlan:

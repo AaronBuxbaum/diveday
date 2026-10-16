@@ -328,6 +328,7 @@ function diveSiteInput(
     marineLifeDescription: row.marineLifeDescription ?? undefined,
     difficultyLevel: row.difficultyLevel,
     depthRange: row.depthRange ?? undefined,
+    depthMinMeters: row.depthMinMeters,
     maxDepthMeters: row.maxDepthMeters,
     expectedBottomTimeMinutes: row.expectedBottomTimeMinutes,
     currentNote: row.currentNote ?? undefined,

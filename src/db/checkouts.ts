@@ -922,7 +922,7 @@ export async function settledPartyPayment(
   db: DbExecutor,
   shopId: string,
   bookingId: string,
-): Promise<{ amountCents: number; currency: string; seats: number } | null> {
+): Promise<{ checkoutId: string; amountCents: number; currency: string; seats: number } | null> {
   const [booking] = await db
     .select({ partyLeadBookingId: bookings.partyLeadBookingId })
     .from(bookings)
@@ -949,6 +949,7 @@ export async function settledPartyPayment(
     );
   if (covered.some((seat) => seat.status === "cancelled")) return null;
   return {
+    checkoutId: checkout.id,
     amountCents: checkout.settledTotalCents,
     currency: checkout.currency,
     seats: Math.max(1, covered.length),
@@ -1204,8 +1205,23 @@ export async function markCheckoutPaidBySessionId(
   settledTotalCents?: number | null,
   /** Stripe's reported tax total for the completed session. */
   settledTaxCents?: number | null,
+  /**
+   * Out-parameter: set `firstCompletion` true when THIS call is the one that
+   * moved the checkout `pending -> completed`, and left false for a replay,
+   * a repair run or a refusal. It is what lets the caller do something once
+   * per payment (the party receipt, #2566) without a second durable flag: the
+   * transition happens once, under the checkout's row lock. And
+   * `reportedOverCeiling`: Stripe's total was more than DiveDay could have
+   * asked for (the recorded figure is clamped to the ceiling), so it is not a
+   * figure to read back to anyone: the receipt sends nothing.
+   */
+  outcome?: { firstCompletion: boolean; reportedOverCeiling?: boolean },
 ): Promise<BookingCheckout | null> {
-  return db.transaction(async (tx) => {
+  let firstCompletion = false;
+  let reportedOverCeiling = false;
+  const result = await db.transaction(async (tx) => {
+    firstCompletion = false;
+    reportedOverCeiling = false;
     // The seats first, then the checkout (issue #2335): the order every
     // writer that retires a pending checkout already takes (it holds the seat
     // it is changing, then expires the checkout quoting it). Taking the
@@ -1320,6 +1336,7 @@ export async function markCheckoutPaidBySessionId(
         ? null
         : Math.min(reportedTaxCents, reportedSettledCents ?? checkout.totalCents);
     if (reportedSettledCents !== null && reportedSettledCents > settledCeiling) {
+      reportedOverCeiling = true;
       log("checkout.settled_total_over_asked", "error", {
         shopId: checkout.shopId,
         checkoutId: checkout.id,
@@ -1369,6 +1386,7 @@ export async function markCheckoutPaidBySessionId(
       if (checkout.status === "pending") logPaidDisqualified(checkout, "no_longer_pending");
       return null;
     }
+    firstCompletion = checkout.status === "pending";
 
     const linked = await tx
       .select({
@@ -1499,6 +1517,11 @@ export async function markCheckoutPaidBySessionId(
     });
     return updated;
   });
+  if (outcome) {
+    outcome.firstCompletion = result !== null && firstCompletion;
+    outcome.reportedOverCeiling = reportedOverCeiling;
+  }
+  return result;
 }
 
 /**

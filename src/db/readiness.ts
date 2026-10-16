@@ -24,8 +24,9 @@ import {
   effectiveWaiverForBooking,
   overriddenReferral,
   overriddenRefusal,
-  releaseLapsedForBooking,
+  releaseLapseForBooking,
   riderMedicalHold,
+  waiverClockInstant,
 } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
 import {
@@ -1632,6 +1633,7 @@ export async function listTripsReadiness(
           .select({
             id: trips.id,
             startsAt: trips.startsAt,
+            endsAt: trips.endsAt,
             courseId: trips.courseId,
             minimumAge: courses.minimumAge,
             priceCents: trips.priceCents,
@@ -1774,6 +1776,17 @@ export async function listTripsReadiness(
       ? calendarDateInTimezone(courseRow.startsAt, timezone)
       : null;
 
+    // **The release's clocks run at the departure** (issue #2611): while the
+    // trip has not started, at its end; once under way, at now. The
+    // night-before roster, Today and the reminder then agree with the dock, a
+    // night dive's release that lapses mid-dive blocks before it sails, and a
+    // liveaboard guest on day two reads at now. Cards, payment and age keep
+    // their own instants.
+    const waiverNow = waiverClockInstant({
+      now,
+      startsAt: courseRow?.startsAt ?? null,
+      endsAt: courseRow?.endsAt ?? null,
+    });
     // A rider is held to the release and never to its medical (H-109), so a
     // hold does not outrank their signatures and a held record is a signed one
     // — read only while it is itself current, never the hold's own standing.
@@ -1785,14 +1798,16 @@ export async function listTripsReadiness(
       bookingWaiver: row.waiver,
       personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
       currentTemplateVersion: currentTemplateGeneration,
-      now,
+      now: waiverNow,
     });
-    const releaseLapsed = releaseLapsedForBooking({
+    const releaseLapse = releaseLapseForBooking({
       bookingWaiver: row.waiver,
       personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
       currentTemplateVersion: currentTemplateGeneration,
       heldToMedical: isHeldToMedical(row.booking.participantType),
       now,
+      startsAt: courseRow?.startsAt ?? null,
+      endsAt: courseRow?.endsAt ?? null,
     });
     const referral = overriddenReferral(
       effectiveWaiver,
@@ -1861,7 +1876,7 @@ export async function listTripsReadiness(
         requirement,
         siteRequirement,
         waiver: effectiveWaiver,
-        releaseLapsed,
+        releaseLapse,
         certifications: certificationsByPerson.get(row.person.id) ?? [],
         // Measured against this departure: only a course that finishes before
         // it sails can be the card this diver boards on.

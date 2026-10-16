@@ -15,7 +15,7 @@
     "saved": "Guardado.",
     "invalid": "Revisa los precios y las plazas de buceo. Las plazas de buceo no pueden superar lo que lleva el barco.",
     "heading": "Snorkel y acompañantes",
-    "description": "Deja un precio en blanco para que esa plaza no aparezca en el formulario público de reservas. El equipo puede seguir añadiendo a cualquiera desde la página de la salida.",
+    "description": "Deja un precio en blanco para que esa plaza no aparezca en el formulario público de reservas. El equipo puede seguir agregando a cualquiera desde la página de la salida.",
     "snorkelerPrice": "Precio de snorkel",
     "riderPrice": "Precio de acompañante",
     "diverSeats": "Plazas de buceo",

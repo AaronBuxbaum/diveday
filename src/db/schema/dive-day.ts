@@ -16,6 +16,7 @@ import {
 import type { BoatPaperRecord, BoatSafetyNotice } from "@/lib/boat-safety";
 import type { ReadinessBlocker } from "@/lib/readiness";
 import { bookings } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { boats, trips } from "./trips";
 
@@ -91,7 +92,7 @@ export const rollCallEvents = pgTable(
     /** The blockers behind a `blocked` snapshot, as the engine raised them; null otherwise. */
     readinessBlockers: jsonb("readiness_blockers").$type<ReadinessBlocker[]>(),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /**
      * The order these were written in — **the final tiebreak on every
      * roll-call read**, and the only column here that records what actually
@@ -229,7 +230,7 @@ export const rollCallCrewEvents = pgTable(
      */
     note: text("note"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /**
      * The same final tiebreak the diver table carries, and it has to be the
      * same one: the two halves of a head count are read minutes apart on one
@@ -284,8 +285,8 @@ export const preDepartureChecklistItems = pgTable(
      * row stays so `pre_departure_check_events` naming it keeps reading. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     index("pre_departure_checklist_items_shop_order_idx")
@@ -340,7 +341,7 @@ export const preDepartureCheckEvents = pgTable(
     clientEventId: uuid("client_event_id"),
     note: text("note"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /** The same final tiebreak `rollCallEvents.seq` carries, and for the same
      * reason: this document is hashed for the incident export, and `occurred_at`
      * ties constantly under a frozen e2e clock or a batched offline sync. */
@@ -431,7 +432,7 @@ export const bookingArrivalEvents = pgTable(
      */
     offlineSnapshotSavedAt: timestamp("offline_snapshot_saved_at", { withTimezone: true }),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /** The same final tiebreak `rollCallEvents.seq` carries, and for the same
      * reason: `occurred_at` ties constantly under a frozen e2e clock or a
      * batched offline sync, and this trail is replayed in order. */
@@ -503,7 +504,7 @@ export const buddyPairMembers = pgTable(
     pairedByPersonId: uuid("paired_by_person_id")
       .notNull()
       .references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // A diver is in at most one team per departure — the invariant that keeps
@@ -564,7 +565,7 @@ export const buddyTeamEvents = pgTable(
       .notNull()
       .references(() => people.id),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("buddy_team_events_shop_trip_idx").on(table.shopId, table.tripId, table.occurredAt),
@@ -627,7 +628,7 @@ export const tripBlowouts = pgTable(
     calledAt: timestamp("called_at", { withTimezone: true }).notNull(),
     /** What the diver is told the cancellation was; see `blowoutCause`. */
     cause: blowoutCause("cause").notNull().default("weather"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("trip_blowouts_trip_unique").on(table.tripId),
@@ -663,7 +664,7 @@ export const tripBlowoutDivers = pgTable(
     /** When the message settled as sent; null while pending/queued/failed/no_email. */
     notifiedAt: timestamp("notified_at", { withTimezone: true }),
     offeredTripIds: jsonb("offered_trip_ids").$type<string[]>().notNull().default([]),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // A booking belongs to exactly one trip and a trip to one blow-out, so the

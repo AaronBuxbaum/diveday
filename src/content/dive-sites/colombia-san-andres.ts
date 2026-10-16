@@ -26,7 +26,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Rays work the sand lanes, lobsters and morays sit inside the reef, and nurse sharks rest on the edge of the shallow plateau.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (16–59 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote:
         "A cave in the reef is overhead; stay out of it. Current not documented; ask the crew on the day.",
@@ -68,7 +68,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Fish gather along the edge. Rays, nurse sharks, lobsters and the odd turtle turn up.",
       difficultyLevel: "intermediate",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -113,7 +113,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLife: "Stingrays · nurse sharks · lobsters · morays",
       marineLifeDescription: "The edge is the busiest part. With luck there are turtles.",
       difficultyLevel: "beginner",
-      depthRange: "10–20 m (35–65 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 20,
       currentNote:
         "A cave in the reef is overhead; stay out of it. Current not documented; ask the crew on the day.",
@@ -152,7 +152,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLife: "Stingrays · nurse sharks · lobsters · morays",
       marineLifeDescription: "The edge of the southern garden holds most of the fish.",
       difficultyLevel: "beginner",
-      depthRange: "10–15 m (33–49 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 15,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -192,7 +192,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barracuda patrol the reef, rays work the sand lanes, and nurse sharks rest on the shallow edge.",
       difficultyLevel: "intermediate",
-      depthRange: "10–20 m (33–66 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 20,
       // Gate: a reported moderate current at the mooring line and a 20 m floor; the sources call no gate, so this is the conservative reading.
       currentNote:
@@ -228,7 +228,6 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Fish gather around the steel, and the corals growing on it are the reason to look.",
       difficultyLevel: "intermediate",
-      depthRange: "14 m (46 ft)",
       maxDepthMeters: 14,
       // Gate: an open-water surface swim of about 80 m from shore, surface traffic and loose steel, not depth.
       currentNote:
@@ -271,7 +270,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Fish are everywhere over the rock, and the statue draws most divers first.",
       difficultyLevel: "beginner",
-      depthRange: "6–12 m (20–40 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 12,
       currentNote:
         "Entry is from the shore or by boat; confirm the entry, exit and any surface swim with the crew, and watch for surface traffic. Current not documented; ask the crew on the day.",
@@ -314,7 +313,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLife: "Parrotfish · butterflyfish · angelfish · grunts",
       marineLifeDescription: "Soft and hard corals, with the usual reef fish over them.",
       difficultyLevel: "beginner",
-      depthRange: "6–12 m (20–40 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 12,
       currentNote:
         "Sea urchins are common, so watch your hands and fins at the shore entry. A small cavern is overhead; stay out of it. Current not documented; ask the crew on the day.",
@@ -354,7 +353,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLife: "Stingrays · lobsters · barracuda · turtles",
       marineLifeDescription: "Jacks and barracuda pass along the edge.",
       difficultyLevel: "intermediate",
-      depthRange: "10–30 m (33–100 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -394,7 +393,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools of parrotfish and angelfish, with groupers and barracuda along the structure.",
       difficultyLevel: "advanced",
-      depthRange: "12–40 m (40–131 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 40,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -435,7 +434,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLife: "Stingrays · lobsters · barracuda · turtles",
       marineLifeDescription: "Jacks and barracuda along the edge.",
       difficultyLevel: "advanced",
-      depthRange: "12–25 m (40–82 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 25,
       currentNote:
         "Strong currents often push divers off the reef. Carry an SMB and stay close to the group. If you are swept off the wall, send up the SMB, ascend slowly beside its line with a safety stop, and signal the boat.",
@@ -470,7 +469,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Rays and green morays are common. Dolphins, turtles and sharks have turned up, though none is promised.",
       difficultyLevel: "advanced",
-      depthRange: "10–30 m (33–100 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 30,
       currentNote:
         "Open water on the east barrier reef; current is not documented, so carry an SMB. Sharks, rays and other big animals: stay put, keep nothing dangling, do not chase or touch, stay with the group and follow the crew's briefing.",
@@ -513,7 +512,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sharks cruise around the coral blocks, nurse sharks rest on the plateau, and large parrotfish graze the reef.",
       difficultyLevel: "advanced",
-      depthRange: "8–40 m (26–131 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 40,
       currentNote:
         "Current is variable and strong winds from November to January stir the surface. Carry an SMB. A cavern and a canyon swim-through near the wall are overhead; stay out. Sharks: stay put, keep nothing dangling, do not chase or touch, stay with the group and follow the crew's briefing. No season is documented for the sharks, so ask the crew; without them the dive is a wall and coral blocks.",
@@ -556,7 +555,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Lobsters and shrimp sit in the small caves, and reef sharks cruise past the wall.",
       difficultyLevel: "intermediate",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "Current not documented; ask the crew on the day. Small caves on the wall are overhead; stay out. Sharks: stay put, keep nothing dangling, do not chase or touch, follow the crew's briefing. Medical care is far; confirm the boat's oxygen and plan.",
@@ -597,7 +596,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Colored sponges cover the wall, and lobsters and cryptic fish sit in the small caves.",
       difficultyLevel: "intermediate",
-      depthRange: "8–30 m (26–100 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 30,
       currentNote:
         "Current not documented; ask the crew on the day. A crevice on the wall forms a tunnel, which is overhead; stay out of it. Medical care is far; confirm the boat's oxygen and plan.",
@@ -633,7 +632,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Chromis hang in the water over the platform, with cryptic fish on the wall.",
       difficultyLevel: "intermediate",
-      depthRange: "8–30 m (26–100 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 30,
       currentNote:
         "Current not documented; ask the crew on the day. Medical care is far; confirm the boat's oxygen and plan.",
@@ -669,7 +668,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big fish pass along the wall, and the platform above is busy with smaller fish.",
       difficultyLevel: "intermediate",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "Current not documented; ask the crew on the day. A cave in the reef is overhead; stay out of it. Sharks: stay put, keep nothing dangling, do not chase or touch, follow the crew's briefing. Medical care is far; confirm the boat's oxygen and plan.",
@@ -705,7 +704,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Small caves hold lobsters and crabs, and the return across the platform is good for rays.",
       difficultyLevel: "intermediate",
-      depthRange: "18–30 m (59–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       currentNote:
         "Current not documented; ask the crew on the day. Sharks: stay put, keep nothing dangling, do not chase or touch, follow the crew's briefing. No shark season is documented, so ask the crew; without them the dive is a wall and a platform with rays. Medical care is far; confirm the boat's oxygen and plan.",
@@ -740,7 +739,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big schools of grunts and angelfish over the top, and nurse sharks are seen often. Dolphins pass sometimes.",
       difficultyLevel: "beginner",
-      depthRange: "6–9 m (20–30 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 9,
       currentNote:
         "Current not documented; ask the crew on the day. Medical care is far; confirm the boat's oxygen and plan.",
@@ -780,7 +779,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Stingrays glide over the sand, and snapper and surgeonfish school over the patches.",
       difficultyLevel: "beginner",
-      depthRange: "5–12 m (16–40 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 12,
       currentNote:
         "Current not documented; ask the crew on the day. Medical care is far; confirm the boat's oxygen and plan.",
@@ -819,7 +818,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Fish gather on the reef around the hull, and basket stars curl up on the soft corals.",
       difficultyLevel: "intermediate",
-      depthRange: "18–24 m (60–79 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 24,
       currentNote:
         "Stay outside the hull. Current not documented; ask the crew on the day. Medical care is far; confirm the boat's oxygen and plan.",
@@ -862,7 +861,7 @@ export const COLOMBIA_SAN_ANDRES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Gray angelfish and French angelfish cross the platform, with sharks along the wall.",
       difficultyLevel: "intermediate",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       currentNote:
         "Current not documented; ask the crew on the day. Sharks: stay put, keep nothing dangling, do not chase or touch, follow the crew's briefing. No shark season is documented, so ask the crew; without them the dive is a platform and a wall of sponges and corals. Medical care is far; confirm the boat's oxygen and plan.",

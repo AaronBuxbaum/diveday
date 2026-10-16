@@ -10,6 +10,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { SHOP_MILESTONES } from "@/lib/founder-metrics";
+import { appNowTimestamp } from "./columns";
 import { shops } from "./core";
 
 /**
@@ -55,7 +56,7 @@ export const setupRequests = pgTable(
     /** The language the reader filled the form in, so the first reply can match it. */
     locale: text("locale").notNull(),
     notifiedAt: timestamp("notified_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [index("setup_requests_created_idx").on(table.createdAt)],
 );
@@ -95,7 +96,7 @@ export const shopSetupLinks = pgTable(
      * which shop. Cleared if that shop is deleted; the spend stands.
      */
     spentByShopId: uuid("spent_by_shop_id").references(() => shops.id, { onDelete: "set null" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("shop_setup_links_token_hash_unique").on(table.tokenHash),
@@ -123,7 +124,7 @@ export const demoEntries = pgTable(
     source: text("source").notNull(),
     /** A `DemoRoleId`. */
     role: text("role").notNull(),
-    enteredAt: timestamp("entered_at", { withTimezone: true }).notNull().defaultNow(),
+    enteredAt: appNowTimestamp("entered_at").notNull(),
   },
   (table) => [index("demo_entries_entered_idx").on(table.enteredAt)],
 );

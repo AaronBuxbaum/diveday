@@ -42,7 +42,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       // all-levels outing, so the plan holds an 18 m floor. The sources call the current light to
       // medium and never say how strong the drift runs, so the difficulty is intermediate rather
       // than beginner and the note says the strength is not documented.
-      depthRange: "0–25 m (0–80 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 25,
       currentNote:
         "Light to medium by the clubs' account, and the site suits a drift; how strong the drift runs is not documented. Carry an SMB and follow the crew's drift plan.",
@@ -80,7 +80,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Squid hover over the sand and an octopus keeps house in the rocks. The wreck gives small fish somewhere to hide.",
       difficultyLevel: "beginner",
-      depthRange: "0–15 m (0–50 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 15,
       currentNote: "None reported. The cove is very sheltered.",
       divePlan:
@@ -115,7 +115,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       difficultyLevel: "beginner",
       // Sources run the slope to 28 m; clubs dive it as an all-levels outing, so the plan holds
       // an 18 m floor and the slope continues deeper beyond it.
-      depthRange: "0–28 m (0–90 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 28,
       currentNote: "None to occasional. Run as a drift from Anse 3 Airs, carry an SMB.",
       divePlan:
@@ -151,7 +151,6 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barracuda hold over the deck. Lobsters and morays shelter in the structure.",
       difficultyLevel: "advanced",
-      depthRange: "Up to 36 m (118 ft)",
       maxDepthMeters: 36,
       currentNote:
         "Occasional current. Ascend on the mooring line or an SMB. Stay outside the hull.",
@@ -191,7 +190,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Look at the sponges and anemones, not out into the blue. The small animals are the show.",
       difficultyLevel: "beginner",
-      depthRange: "0–15 m (0–50 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 15,
       currentNote: "Usually light; it can change, so carry an SMB.",
       divePlan:
@@ -230,7 +229,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       // sloping reef, and no source says it continues past 40 m. The deepest sourced foot, 40 m, is
       // the maxDepthMeters, so the gate is Advanced Open Water with the Deep specialty; the plan holds
       // 20 m and says so.
-      depthRange: "0–40 m (0–130 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 40,
       currentNote:
         "Medium current along the coast; a small cave is overhead and off the plan. The site suits a drift and the current can carry you toward Cap Salomon, so carry an SMB.",
@@ -266,7 +265,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The boulders make a small diver feel smaller, and the animals use their gaps all the time.",
       difficultyLevel: "advanced",
-      depthRange: "0–30 m (0–100 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 30,
       currentNote:
         "Medium, and stronger below 30 m, beyond the plan. Run as a drift if the crew chooses, and carry an SMB.",
@@ -306,7 +305,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       difficultyLevel: "beginner",
       // Sources run the third plateau onto a wall; clubs dive the gardens as an all-levels outing,
       // so the plan holds an 18 m floor and the wall lies beyond it.
-      depthRange: "0–30 m (0–100 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 30,
       currentNote: "Medium. The crew may run it as a drift; carry an SMB.",
       divePlan:
@@ -335,7 +334,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A site of small, strange animals and a colorful wall right beside the mooring.",
       difficultyLevel: "advanced",
-      depthRange: "0–40 m (0–130 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 40,
       currentNote:
         "Usually light, and the point blocks most of the current; it can change, so carry an SMB.",
@@ -376,7 +375,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The wall is the color. Frogfish sit disguised on the sponges for patient divers.",
       difficultyLevel: "beginner",
-      depthRange: "0–20 m (0–65 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 20,
       currentNote:
         "Light. The cavity at about 6 m that gives the site its name is overhead; stay out of it and enjoy the wall from outside.",
@@ -412,7 +411,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       difficultyLevel: "intermediate",
       // The wall is dived as an all-levels outing; the plan holds an 18 m floor and the reef
       // falls deeper toward open water, beyond it.
-      depthRange: "0–35 m (0–115 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 35,
       currentNote: "Usually light; it can change, so carry an SMB.",
       divePlan:
@@ -451,7 +450,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A school of big-eyed jacks stays over the edge, and turtles and rays work the sand.",
       difficultyLevel: "advanced",
-      depthRange: "0–25 m (0–80 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 25,
       currentNote:
         "Exposed and far from shore; the current runs from light to steady. Carry an SMB. The Grandes Jorasses beyond are deeper and stronger and are not part of this plan.",
@@ -489,7 +488,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big schools of grunts and other reef fish move through the fissures. Finish with the safety stop at 5 m, on the line or an SMB.",
       difficultyLevel: "intermediate",
-      depthRange: "3–18 m (10–60 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 18,
       currentNote: "Light to steady.",
       divePlan:
@@ -519,7 +518,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       marineLife: "Turtles · grunts · schools of fish",
       marineLifeDescription: "Turtles graze the plateau and the fissures hold schooling fish.",
       difficultyLevel: "advanced",
-      depthRange: "3–35 m (10–115 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 35,
       currentNote:
         "Occasional. A small tunnel on the site is overhead; stay out of it and finish over the plateau.",
@@ -558,7 +557,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Terraced rock, big gorgonians and hawksbills. The wall is the draw, not the surface.",
       difficultyLevel: "advanced",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote:
         "Open sea about 2 km from the coast and a boat ride of around 20 minutes. The current is light to medium and sometimes stronger; carry an SMB. A fissure through the rock is overhead; stay out of it. Medical care is far; confirm the boat's oxygen and plan.",
@@ -599,7 +598,7 @@ export const MARTINIQUE: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barracuda, jacks and turtles hold in the current among the black gorgonians.",
       difficultyLevel: "advanced",
-      depthRange: "16–30 m (50–100 ft)",
+      depthMinMeters: 16,
       maxDepthMeters: 30,
       currentNote:
         "Often strong, and it is a drift dive in open water. Carry an SMB. The wall continues past the plan, so the floor is the diver's to hold. Medical care is far; confirm the boat's oxygen and plan.",

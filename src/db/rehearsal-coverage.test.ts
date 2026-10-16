@@ -267,6 +267,11 @@ const SENDERS: Record<string, string> = {
   "src/db/trip-invitations.ts": HELD_AT_CHOKEPOINT,
   "src/db/waitlist.ts": HELD_AT_CHOKEPOINT,
   "src/db/waiver-guardian-copy.ts": HELD_AT_CHOKEPOINT,
+  "src/db/party-payment-receipt.ts":
+    "a rehearsal starts no card checkout, so nothing settles; the email is also held at the chokepoint",
+  "src/db/seat-already-held.ts": HELD_AT_CHOKEPOINT,
+  "src/db/missing-diver-alerts.ts":
+    "refuses a rehearsal's report itself, before any email or push; the email is also held at the chokepoint",
   "src/app/s/[shopSlug]/trips/[id]/actions.ts":
     "the public trip page, which a rehearsal never reaches",
   "src/app/shop/[shopSlug]/trips/[id]/conditions-actions.ts": HELD_AT_CHOKEPOINT,

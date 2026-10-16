@@ -10,6 +10,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 
 /**
@@ -81,7 +82,7 @@ export const mediaDeletionAttempts = pgTable(
     status: mediaDeletionStatus("status").notNull().default("pending"),
     attempts: integer("attempts").notNull().default(0),
     lastError: text("last_error"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
   },
   (table) => [index("media_deletion_attempts_shop_status_idx").on(table.shopId, table.status)],
@@ -178,7 +179,7 @@ export const processorErasureObligations = pgTable(
     attempts: integer("attempts").notNull().default(0),
     /** Why the last attempt failed, so an owner sees *why* and not merely *that*. */
     lastError: text("last_error"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     dischargedAt: timestamp("discharged_at", { withTimezone: true }),
     /**
      * Who attested the processor-side work was done. Null while still owed —

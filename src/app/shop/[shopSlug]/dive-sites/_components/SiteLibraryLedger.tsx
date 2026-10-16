@@ -2,10 +2,12 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { SiteLibraryGroup } from "@/db/dive-sites";
+import { staffDiveSiteDepthText } from "@/i18n/depth-labels";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import type { DiverTranslator } from "@/i18n/messages";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
+import type { DepthUnit } from "@/lib/depth-units";
 import type { SiteLibraryGroupLabel } from "@/lib/dive-site-difficulty";
 import { planningNoteIsFresh } from "@/lib/dive-site-memory";
 import { siteFitCutsAgainstGroup, siteLibraryRequirement } from "@/lib/dive-sites";
@@ -51,6 +53,7 @@ export function SiteLibraryLedger({
   shopSlug,
   t,
   diverT,
+  depthUnit,
   currentTemplateVersion,
   catalog,
 }: {
@@ -59,6 +62,8 @@ export function SiteLibraryLedger({
   t: StaffTranslator;
   /** The three difficulty words are diver copy; the staffer reads them in their own language. */
   diverT: DiverTranslator;
+  /** The shop's own unit: a site's depth is stored in metres and read in this. */
+  depthUnit: DepthUnit;
   /** Published version per source template id, for the one badge a row may wear. */
   currentTemplateVersion: ReadonlyMap<string, number>;
   /** The tail door, or null when DiveDay publishes nothing to browse. */
@@ -89,6 +94,7 @@ export function SiteLibraryLedger({
                     group={group.label}
                     shopSlug={shopSlug}
                     t={t}
+                    depthUnit={depthUnit}
                     currentTemplateVersion={currentTemplateVersion}
                   />
                 ))}
@@ -125,28 +131,30 @@ function SiteRow({
   group,
   shopSlug,
   t,
+  depthUnit,
   currentTemplateVersion,
 }: {
   site: SiteLibraryGroup["sites"][number];
   group: SiteLibraryGroupLabel;
   shopSlug: string;
   t: StaffTranslator;
+  depthUnit: DepthUnit;
   currentTemplateVersion: ReadonlyMap<string, number>;
 }) {
   const fit = siteFit({
     difficultyLevel: site.difficultyLevel,
     depthRange: site.depthRange,
+    maxDepthMeters: site.maxDepthMeters,
     currentNote: site.currentNote,
     fitTone: site.fitTone,
   }).tone;
   // Location · the fit reading where it disagrees with the group · depth. The
-  // depth is the shop's own prose ("6–12 m", "shallow ledge to 18") and renders
-  // exactly as typed: it carries a shape a single number cannot, and it is
-  // already the fragment the diver-facing card shows.
+  // depth is the recorded range in the shop's unit; the shop's own note stands
+  // in only where none is recorded, so a row never names two units.
   const meta = [
     site.locationName || t("diveSites.list.locationToAdd"),
     siteFitCutsAgainstGroup(group, fit) ? t(FIT_TONE_KEYS[fit]) : null,
-    site.depthRange?.trim() || null,
+    staffDiveSiteDepthText(t, site, depthUnit),
   ].filter((fragment): fragment is string => Boolean(fragment));
 
   const requirement = siteLibraryRequirement(site);

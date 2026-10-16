@@ -40,6 +40,7 @@
     "seat_holder_refunded": "The diver on this seat canceled it from their trip link and was refunded by card",
     "party_seat_self_cancelled": "{actor} canceled {diver}’s seat with their own, from their trip link",
     "party_seat_self_refunded": "{actor} canceled {diver}’s seat with their own, from their trip link, and it was refunded by card",
+    "medical_answered_by_earlier_letter": "{actor} used a physician’s letter dated {evaluated}, written for {diver}’s referral signed {referred}, to answer the later referral signed {signed}",
     "medical_clearance_opened": "{actor} opened the physician’s evaluation for {diver}",
     "medical_answers_read": "{actor} read {diver}’s medical answers",
     "date_of_birth_cleared_as_adult": "{actor} cleared {diver}’s date of birth and said they’re 18 or older",

@@ -207,6 +207,23 @@ type ActivityParamShapes = {
   /** A staffer opened a diver's physician's evaluation. */
   medical_clearance_opened: { actor: string; diver: string };
   /**
+   * A physician's answer was recorded from a letter dated before the referral it
+   * answers (issue #2616): the letter's date, the earlier referral it was written
+   * for (its signing day and id), the later referral's signing day and id, and
+   * which way the physician answered. The ids are the audit; the sentence names
+   * the days.
+   */
+  medical_answered_by_earlier_letter: {
+    actor: string;
+    diver: string;
+    evaluated: string;
+    referred: string;
+    signed: string;
+    referral: string;
+    record: string;
+    outcome: string;
+  };
+  /**
    * The owner queued a connected ledger's earlier checkouts (#2606). Names the
    * provider, how many events went into the queue and the start day; no ids,
    * no diver.
@@ -421,6 +438,7 @@ export const ACTIVITY_CODES = [
   "party_seat_self_cancelled",
   "party_seat_self_refunded",
   "medical_clearance_opened",
+  "medical_answered_by_earlier_letter",
   "medical_answers_read",
   "date_of_birth_cleared_as_adult",
   "record_exported",

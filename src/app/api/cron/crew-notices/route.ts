@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { sendDueCrewNotices } from "@/db/crew-notices";
+import { sendMissingDiverAlerts } from "@/db/missing-diver-alerts";
 import { sendStaleRollCallAlerts } from "@/db/roll-call-alerts";
 import { CREW_NOTICE_CRON_CRONTAB } from "@/lib/crew-notices";
 import { requireCronSecret } from "@/lib/cron-auth";
@@ -46,14 +47,17 @@ export async function GET(request: Request) {
   try {
     const db = await getDb();
     const rollCall = await staleRollCallPass(db);
+    const missingDiver = await missingDiverPass(db);
     const summary = await sendDueCrewNotices(db);
     log("cron_crew_notices.scan_complete", "info", summary);
     await sentry.captureCheckIn({
       checkInId,
       monitorSlug: CRON_MONITOR_SLUG,
-      status: rollCall ? "ok" : "error",
+      // A filed report of a missing diver whose owners are still untold is
+      // this monitor's error, so someone is paged to call them.
+      status: rollCall && missingDiver && missingDiver.overdue === 0 ? "ok" : "error",
     });
-    return NextResponse.json({ ...summary, rollCall });
+    return NextResponse.json({ ...summary, rollCall, missingDiver });
   } catch (error) {
     await sentry.captureException(error, { tags: { cron_scan: "crew_notices" } });
     log("cron_crew_notices.scan_failed", "error", { scan: "crew_notices" });
@@ -73,6 +77,24 @@ async function staleRollCallPass(db: Awaited<ReturnType<typeof getDb>>) {
   } catch (error) {
     await sentry.captureException(error, { tags: { cron_scan: "roll_call_alerts" } });
     log("cron_roll_call_alerts.scan_failed", "error", { scan: "roll_call_alerts" });
+    return null;
+  }
+}
+
+/**
+ * The missing-diver alert's retry (H-138), held apart like the pass above: filing a
+ * report sends at once, and this finds a filed report whose owners were not
+ * all told. A throw is reported and answered as `null`; a report still untold
+ * half an hour after filing (`overdue`) turns the monitor's check-in to error.
+ */
+async function missingDiverPass(db: Awaited<ReturnType<typeof getDb>>) {
+  try {
+    const summary = await sendMissingDiverAlerts(db);
+    log("cron_missing_diver_alerts.scan_complete", "info", summary);
+    return summary;
+  } catch (error) {
+    await sentry.captureException(error, { tags: { cron_scan: "missing_diver_alerts" } });
+    log("cron_missing_diver_alerts.scan_failed", "error", { scan: "missing_diver_alerts" });
     return null;
   }
 }

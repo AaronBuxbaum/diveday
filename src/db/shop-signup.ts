@@ -3,6 +3,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { shopDefaultsForTimeZone } from "@/lib/curated-defaults";
 import { hashPassword } from "@/lib/password-hashing";
+import { shopNameNeedsReview } from "@/lib/shop-name-review";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { AppDb } from "./client";
 import {
@@ -80,6 +81,10 @@ export async function createSignedUpShop(
         .insert(shops)
         .values({
           name: signup.shopName,
+          // A name that could pass for a brand or an institution is held for
+          // review: its mail goes out as plain DiveDay until a human clears it
+          // (issue #2450). The shop is created and can send either way.
+          nameFlaggedAt: shopNameNeedsReview(signup.shopName) ? nowDate() : null,
           slug: signup.shopSlug,
           timezone: signup.timezone,
           // **The timezone already answered these.** A shop that just said

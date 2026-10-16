@@ -848,7 +848,10 @@
   start one and read their own; owners and managers read all of them, on the trip's Details tab
   and the Reports **Safety** tab. Nothing a diver sees, and never a gate. It is not the
   **departure log**, which prints recorded facts and judges nothing; the report is the shop's
-  narrative beside it. Kept seven years from the incident; erasing a diver removes their identity
+  narrative beside it. Filing a report of kind **missing diver** is also an alarm: it emails every
+  active owner and pushes the manifest's followers at once, naming no one (H-138,
+  `sendMissingDiverAlerts`), and the filed report says when the owners were alerted or that they
+  were not reached yet. Kept seven years from the incident; erasing a diver removes their identity
   from it and keeps the report
   ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
 - **Legal hold** (on an **incident report**) — an owner-set flag that keeps a report past its
@@ -861,7 +864,9 @@
 - **Incident kind** / **incident severity** — the two closed answers an **incident report** files
   with: its kind (injury or illness, near miss, equipment, missing diver, fatality, other) and how
   serious the writer judged it (minor, moderate, serious). Shown on the report and the Safety page;
-  read by nothing that gates. A severity is the crew's judgment, never a medical classification
+  read by nothing that gates, with one exception: a filed report of kind missing diver tells the
+  owners at once (H-138). This is the written account's "missing diver"; the roll call's is the
+  first kind under **Unaccounted for**, below, and filing the one does not mark the other. A severity is the crew's judgment, never a medical classification
   ([20261014-incident-kind-severity](../../architecture/decisions/20261014-incident-kind-severity.md)).
 - **Shore alert contact** — the one person outside the shop's accounts who hears a **stale roll
   call**: an email address on the emergency reference page, beside the free-text shore contact a
@@ -883,7 +888,9 @@
   "boarded"**; nothing else closes that count, and the rule is the same whether they hold a booking
   or a roster line.
   1. **Missing diver** — a crew member explicitly marked someone *not back aboard* at an after-dive
-     checkpoint. A human said a diver did not return to the boat: the loudest row the app has.
+     checkpoint. A human said a diver did not return to the boat: the loudest row the app has. (A
+     filed **incident report** of kind missing diver is a separate act with its own alert, H-138;
+     neither sets the other.)
   2. **Missing crew** — the same statement about a named **crew member**. The divemaster who went
      back down for a lost weight belt and has not surfaced is this row. It sits beside the diver
      row rather than below the clerical ones, because the crew are the people most reliably in the
@@ -1257,7 +1264,17 @@
   shop has since changed. The seat is blocked as surely as one with no release, under its own code,
   `waiver_lapsed` ("Signed waiver lapsed"), never `waiver_not_sent` ("Not sent yet") or
   `waiver_expired` (a link that expired unsigned), and the fix is a fresh link the diver signs again
-  (`releaseLapsedForBooking`). See [20260721-waiver-sign-once](../../architecture/decisions/20260721-waiver-sign-once.md).
+  (`releaseLapsedForBooking`). **A seat's release is measured at the end of its trip while the
+  trip has not started** (issue #2611, decided 2026-10-16; `waiverClockInstant`): the later of now
+  and the trip's `endsAt`, both clocks (the signature's year and a physician clearance's year), for
+  every trip however short. Once the trip is under way it is read at now, so a liveaboard guest on
+  day two of seven is not blocked by a release that stands today. A release that stands today and
+  runs out before the trip ends blocks the seat under its own code, `waiver_runs_out` ("Waiver runs
+  out before the trip"), not "lapsed", and the same instant answers every door and reader: the
+  roster, Today, the reminder, a fresh link (`issueWaiverRequest`), a paper copy
+  (`recordInPersonWaiver`), a party panel's "signed" and the diver record ("Runs out <date>, before
+  the trip"), so the diver can sign again the day the roster blocks them. Cards, payment and age
+  keep their own instants, and admission still never refuses a seat for it. See [20260721-waiver-sign-once](../../architecture/decisions/20260721-waiver-sign-once.md).
 - **Medical hold** — a signed release the medical questionnaire **referred** to a physician and no
   physician has cleared: an open referral, or one the physician refused. It is the record's status
   (`medical_review`), never the stored answers, because a paper or status-only hold stores none and
@@ -1285,7 +1302,20 @@
   its own clearance; "cleared for this diver forever" is not a state that exists. It carries the
   **physician's evaluation date**, which is not the day a staffer typed it in: the release then
   stands only while *both* clocks run, a year from the signature and a year from the evaluation,
-  and an evaluation predating the answers it would clear is refused. And it records **evidence** —
+  and an evaluation predating the answers it would clear is refused, with one exception (issue
+  #2616, decided 2026-10-16): when the diver re-signed the same "yes" before the letter was recorded,
+  a letter dated on or after the **earliest earlier referral still unanswered** whose flagged
+  prompts include every prompt the open record flags, and still inside its own year, clears the open
+  record, and only that record. A newly flagged prompt, a letter before that referral, one older than
+  a year, an earlier referral a physician already answered, or one whose seat has since passed to
+  somebody else, each keep the refusal. **The prompts match by text, not by condition**, so the
+  recording form asks for a staff confirmation on this path alone, naming the earlier referral's
+  date: that the physician evaluated the diver's *current* condition, not only that referral. Without
+  the tick the letter is refused, a clearance or a refusal alike. The act is audited as
+  `medical_answered_by_earlier_letter` on the diver's trail (the letter's date, the earlier referral's
+  id and signing day, the answered record's id). It answers the open record only, so a live seat
+  still held by the earlier referral stays blocked and the desk is told so plainly; recording the
+  same letter against that referral is the ordinary path and clears it. And it records **evidence** —
   the evaluation itself, or the clinician's name — because without one the row says only that a
   member of the shop's own staff pressed a button. Any live staff member may record one, and the
   row names who did. Issue #1252.

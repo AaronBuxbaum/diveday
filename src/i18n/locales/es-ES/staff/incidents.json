@@ -23,8 +23,8 @@
   "page": {
     "title": "Informe de incidente",
     "tripLine": "{trip} · {date}",
-    "draftNote": "Un borrador. Lo pueden leer quien lo escribe y los propietarios y encargados del centro. Una vez presentado ya no cambia, y lo que se sepa después se añade como nota fechada.",
-    "filedNote": "Presentado por {name}, {date}. Un informe presentado no cambia. Añade abajo una nota fechada con lo que se sepa después.",
+    "draftNote": "Un borrador. Lo pueden leer quien lo escribe y los propietarios y encargados del centro. Una vez presentado ya no cambia, y lo que se sepa después se agrega como nota fechada.",
+    "filedNote": "Presentado por {name}, {date}. Un informe presentado no cambia. Agrega abajo una nota fechada con lo que se sepa después.",
     "timesIn": "Las horas están en {zone}."
   },
   "form": {
@@ -93,8 +93,8 @@
     "outsiderName": "Su nombre",
     "outsiderNameHint": "Solo para alguien que no está en las listas.",
     "part": "Su papel",
-    "add": "Añadir al informe",
-    "adding": "Añadiendo…",
+    "add": "Agregar al informe",
+    "adding": "Agregando…",
     "remove": "Quitar",
     "removeLabel": "Quitar a {name} del informe",
     "removing": "Quitando…",
@@ -111,6 +111,7 @@
     "title": "Presentar el informe",
     "description": "Al presentarlo, queda con tu nombre y la hora. Después ya no cambia.",
     "submit": "Presentar informe",
+    "missingDiverWarning": "Al presentarlo, avisamos a los propietarios ahora. ¿Sigue desaparecido el buceador?",
     "pending": "Presentando…",
     "needs": "Antes de presentarlo, falta:",
     "gap": {
@@ -126,6 +127,8 @@
     }
   },
   "read": {
+    "ownersAlerted": "Propietarios avisados",
+    "ownersNotReached": "Aún sin avisar. Llámalos.",
     "when": "Cuándo",
     "where": "Dónde",
     "notAnswered": "Sin responder",
@@ -138,15 +141,15 @@
     "description": "Cada nota lleva quién la escribió y cuándo. Una nota no se puede cambiar.",
     "empty": "No hay notas posteriores.",
     "by": "{name}, {date}",
-    "label": "Añadir una nota",
-    "submit": "Añadir nota",
-    "pending": "Añadiendo…"
+    "label": "Agregar una nota",
+    "submit": "Agregar nota",
+    "pending": "Agregando…"
   },
   "notices": {
     "saved": "Borrador guardado.",
     "filed": "Informe presentado.",
-    "addendumAdded": "Nota añadida.",
-    "personAdded": "Añadido al informe.",
+    "addendumAdded": "Nota agregada.",
+    "personAdded": "Agregado al informe.",
     "personRemoved": "Quitado del informe.",
     "occurredAtInvalid": "Indica fecha y hora de cuándo pasó, o deja ambas en blanco.",
     "handedOverAtInvalid": "Indica fecha y hora de la entrega, o deja ambas en blanco.",
@@ -154,13 +157,13 @@
     "oxygenMinutesInvalid": "Los minutos con oxígeno deben ser un número entero hasta 1440.",
     "textTooLong": "Una de las respuestas es demasiado larga. Acórtala y vuelve a guardar.",
     "incomplete": "Aún no se ha presentado. Responde primero a lo que aparece en la lista.",
-    "alreadyFiled": "Este informe ya está presentado. Añade una nota fechada.",
+    "alreadyFiled": "Este informe ya está presentado. Agrega una nota fechada.",
     "siteNotFound": "Ese sitio de buceo ya no está en la lista del centro. Elige otro.",
     "subjectNotFound": "Esa persona no va en esta salida. Elige de la lista.",
     "alreadyListed": "Esa persona ya está en el informe.",
     "nobodyChosen": "Elige a una persona o escribe un nombre.",
-    "blankNote": "Escribe la nota antes de añadirla.",
-    "notYetFiled": "Presenta el informe antes de añadir una nota posterior.",
+    "blankNote": "Escribe la nota antes de agregarla.",
+    "notYetFiled": "Presenta el informe antes de agregar una nota posterior.",
     "held": "Un informe con retención legal no se puede eliminar. Levanta antes la retención.",
     "holdSet": "Retención legal puesta.",
     "holdReleased": "Retención legal levantada."

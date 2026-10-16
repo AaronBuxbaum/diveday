@@ -1,4 +1,5 @@
-import { date, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { date, index, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { notificationDeliveryStatus } from "./notifications";
 
@@ -39,7 +40,7 @@ export const weeklyDigestSends = pgTable(
     weekOf: date("week_of", { mode: "string" }).notNull(),
     status: notificationDeliveryStatus("status"),
     unsubscribeTokenHash: text("unsubscribe_token_hash").notNull().unique(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("weekly_digest_sends_person_week_unique").on(table.personId, table.weekOf),

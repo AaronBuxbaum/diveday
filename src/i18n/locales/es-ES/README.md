@@ -100,6 +100,7 @@ them, and became rules too.
 | comprobar / comprobación | verificar / revisar (see below) |
 | aparcamiento | estacionamiento |
 | (número de) móvil | (número de) celular |
+| añadir / añade / añadido | agregar / agrega / agregado |
 
 - **verificar vs. revisar.** *Verificar* is confirming a fact against evidence — a card, an age, a
   connection, readiness. *Revisar* is looking something over — a price list, an address, a browser

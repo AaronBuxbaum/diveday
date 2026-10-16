@@ -16,12 +16,17 @@ import type { DiveBriefing } from "./types";
 
 afterEach(cleanup);
 
-const SHOP = { slug: "blue-mantis", timezone: "America/New_York", name: "Blue Mantis Divers" };
+const SHOP = {
+  slug: "blue-mantis",
+  timezone: "America/New_York",
+  name: "Blue Mantis Divers",
+  depthUnit: "meters",
+} as const;
 
 function briefing(overrides: Partial<DiveBriefing> = {}): DiveBriefing {
   return {
     dive: { id: "dive-1", diveNumber: 1, title: "French Reef swim-throughs" },
-    diveSite: { id: "site-1", name: "French Reef", depthRange: "to 12 m" },
+    diveSite: { id: "site-1", name: "French Reef", maxDepthMeters: 12 },
     creatures: [],
     moments: [],
     ...overrides,
@@ -29,6 +34,33 @@ function briefing(overrides: Partial<DiveBriefing> = {}): DiveBriefing {
 }
 
 describe("TripDayPlan", () => {
+  it("writes each dive's depth in the shop's unit, and the shop's note only where none is recorded", () => {
+    render(
+      <TripDayPlan
+        briefings={[
+          briefing({
+            diveSite: {
+              id: "site-1",
+              name: "French Reef",
+              depthMinMeters: 15,
+              maxDepthMeters: 40,
+              depthRange: "15–40 m",
+            },
+          } as unknown as Partial<DiveBriefing>),
+          briefing({
+            dive: { id: "dive-2", diveNumber: 2, title: "Ledge" },
+            diveSite: { id: "site-2", name: "Ledge", depthRange: "shallow ledge to 18" },
+          } as unknown as Partial<DiveBriefing>),
+        ]}
+        shop={{ ...SHOP, depthUnit: "feet" }}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+    expect(screen.getByText("49–131 ft")).toBeInTheDocument();
+    expect(screen.queryByText("15–40 m")).not.toBeInTheDocument();
+    expect(screen.getByText("shallow ledge to 18")).toBeInTheDocument();
+  });
+
   it("lists the dives in plan order with their depths, and no clock", () => {
     render(
       <TripDayPlan
@@ -40,7 +72,7 @@ describe("TripDayPlan", () => {
               diveNumber: 2,
               title: "White Sand Bottom Cave",
             },
-            diveSite: { id: "site-2", name: "White Sand", depthRange: "to 14 m" },
+            diveSite: { id: "site-2", name: "White Sand", maxDepthMeters: 14 },
           } as unknown as DiveBriefing),
         ]}
         shop={SHOP}
@@ -51,7 +83,7 @@ describe("TripDayPlan", () => {
     expect(screen.getByText("The day")).toBeInTheDocument();
     expect(screen.getByText("Dive 1")).toBeInTheDocument();
     expect(screen.getByText("French Reef swim-throughs")).toBeInTheDocument();
-    expect(screen.getByText("to 12 m")).toBeInTheDocument();
+    expect(screen.getByText("12 m")).toBeInTheDocument();
     expect(screen.getByText("Dive 2")).toBeInTheDocument();
     // Time-neutral: a dive plan's clock belongs to the day itself, on the
     // thread. A schedule beside a Book button reads as a promise the crew has
@@ -130,7 +162,7 @@ describe("TripDayPlan's profile", () => {
 
   const wall = briefing({
     dive: { id: "dive-2", diveNumber: 2, title: null },
-    diveSite: { id: "site-2", name: "Spiegel Grove", depthRange: "18–40 m", maxDepthMeters: 40 },
+    diveSite: { id: "site-2", name: "Spiegel Grove", depthMinMeters: 18, maxDepthMeters: 40 },
   } as unknown as Partial<DiveBriefing>);
 
   it("states the time in the water and the gap between two dives", () => {
@@ -178,7 +210,7 @@ describe("TripDayPlan's profile", () => {
   it("leaves a bare run open when the page says a rule follows it", () => {
     const secondDive = briefing({
       dive: { id: "dive-2", diveNumber: 2, title: "White Sand Bottom Cave" },
-      diveSite: { id: "site-2", name: "White Sand", depthRange: "to 14 m" },
+      diveSite: { id: "site-2", name: "White Sand", maxDepthMeters: 14 },
     } as unknown as Partial<DiveBriefing>);
     const { rerender } = render(
       <TripDayPlan

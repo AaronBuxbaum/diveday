@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { canSayRunningLate, RUNNING_LATE_LEAD_MS } from "@/lib/running-late";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { recordDiverActivity } from "./operations";
 import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -38,7 +38,7 @@ export type RunningLateOutcome =
  * message a staffer marks later); the window is always checked at `now`.
  */
 async function stamp(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   bookingId: string,
   now: Date,
@@ -175,16 +175,18 @@ export async function clearBookingRunningLate(
  * same family the same way.
  */
 async function stampWithParty(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   bookingId: string,
   now: Date,
   saidAt: Date = now,
+  /** Collects the people of the party seats this call newly stamped. */
+  stampedPeople?: string[],
 ): Promise<RunningLateOutcome> {
   const own = await stamp(db, shopId, bookingId, now, saidAt);
   if (own.status !== "marked") return own;
   const party = await db
-    .select({ id: bookings.id })
+    .select({ id: bookings.id, personId: bookings.personId })
     .from(bookings)
     .where(
       and(
@@ -193,7 +195,10 @@ async function stampWithParty(
         eq(bookings.status, "booked"),
       ),
     );
-  for (const seat of party) await stamp(db, shopId, seat.id, now, saidAt);
+  for (const seat of party) {
+    const stamped = await stamp(db, shopId, seat.id, now, saidAt);
+    if (stamped.status === "marked") stampedPeople?.push(seat.personId);
+  }
   return own;
 }
 
@@ -348,32 +353,32 @@ async function openSeatsOf(
 }
 
 /**
- * **The seat a message was about** (UX review 2026-10-13, item 19): the
- * sender's soonest seat that is open now *and* was already inside the
- * running-late window when they wrote. The second half keeps a "running late"
- * from last Tuesday off this Saturday's boat: the words were about a boat that
- * has gone, and the soonest seat now is a different one.
+ * **The seats a message could be about** (UX review 2026-10-13, item 19;
+ * issue #2551): every one of the sender's seats that is open now *and* was
+ * already inside the running-late window when they wrote, soonest first. The
+ * second half keeps a "running late" from last Tuesday off this Saturday's
+ * boat: the words were about a boat that has gone, and the seats open now are
+ * different ones. When more than one is left, the desk chooses; a `LATE`
+ * keyword reply, which names no seat, stays the soonest (`markPersonRunningLate`).
  */
-function seatForMessage(seats: readonly SeatRow[], personId: string, receivedAt: Date) {
-  return (
-    seats.find(
-      (seat) =>
-        seat.personId === personId &&
-        canSayRunningLate({
-          bookingStatus: seat.bookingStatus,
-          tripStatus: seat.tripStatus,
-          startsAt: seat.startsAt,
-          now: receivedAt,
-        }),
-    ) ?? null
+function seatsForMessage(seats: readonly SeatRow[], personId: string, receivedAt: Date) {
+  return seats.filter(
+    (seat) =>
+      seat.personId === personId &&
+      canSayRunningLate({
+        bookingStatus: seat.bookingStatus,
+        tripStatus: seat.tripStatus,
+        startsAt: seat.startsAt,
+        now: receivedAt,
+      }),
   );
 }
 
 /**
- * The seat each Inbox message could be about, keyed by message id, for the
+ * The seats each Inbox message could be about, keyed by message id, for the
  * rows of one page. A message that names its booking (an "Ask to move" from
- * the booking page, H-126) is about that seat, whenever it departs; every
- * other message is read off the sender's open seats (`seatForMessage`). A
+ * the booking page, H-126) is about that one seat, whenever it departs; every
+ * other message is read off the sender's open seats (`seatsForMessage`). A
  * message from a stranger, or from a diver with no open seat it could be
  * about, is absent.
  */
@@ -387,8 +392,8 @@ export async function messageSeats(
     bookingId?: string | null;
   }[],
   now: Date,
-): Promise<Map<string, MessageSeat>> {
-  const found = new Map<string, MessageSeat>();
+): Promise<Map<string, MessageSeat[]>> {
+  const found = new Map<string, MessageSeat[]>();
   const named = messages.filter((message): message is typeof message & { bookingId: string } =>
     Boolean(message.bookingId),
   );
@@ -412,7 +417,7 @@ export async function messageSeats(
     const byBooking = new Map(rows.map((row) => [row.bookingId, row]));
     for (const message of named) {
       const seat = byBooking.get(message.bookingId);
-      if (seat) found.set(message.id, seat);
+      if (seat) found.set(message.id, [seat]);
     }
   }
   const attributed = messages.filter(
@@ -426,10 +431,18 @@ export async function messageSeats(
     now,
   );
   for (const message of attributed) {
-    const seat = seatForMessage(seats, message.personId, message.receivedAt);
-    if (seat) {
-      const { bookingId, tripId, title, startsAt, runningLateAt } = seat;
-      found.set(message.id, { bookingId, tripId, title, startsAt, runningLateAt });
+    const candidates = seatsForMessage(seats, message.personId, message.receivedAt);
+    if (candidates.length > 0) {
+      found.set(
+        message.id,
+        candidates.map(({ bookingId, tripId, title, startsAt, runningLateAt }) => ({
+          bookingId,
+          tripId,
+          title,
+          startsAt,
+          runningLateAt,
+        })),
+      );
     }
   }
   return found;
@@ -441,34 +454,61 @@ export async function messageSeats(
  * sentence, and a sentence is never read as a command (ADR
  * 20260909-reply-keywords), so nothing marks it on arrival; the Inbox row
  * names the seat and a person decides. The seat is the one the row named
- * (`seatForMessage`), the instant stored is when the diver wrote, and an
- * organizer's party travels with them as on every other door.
+ * the desk chose among (`seatsForMessage`), the instant stored is when the
+ * diver wrote, and an organizer's party travels with them as on every other
+ * door.
+ *
+ * **The booking id is the desk's choice, never trusted** (issue #2551): the
+ * candidates are re-derived here from the stored message (person, `receivedAt`)
+ * and a booking id that is not among them is refused as `closed`, so a hand-built
+ * form can name neither somebody else's seat nor a boat the message was not
+ * about.
  *
  * A fresh mark files a line on the diver's record naming the staffer
  * (`running_late_from_message`), because the roster's "said {time}" reads as
- * the diver's own tap otherwise. A repeat changes nothing and files nothing.
+ * the diver's own tap otherwise; each party seat the mark stamped gets its own
+ * line, in the same transaction as the stamps. A repeat changes nothing and
+ * files nothing.
  */
 export async function markMessageRunningLate(
   db: AppDb,
-  input: { shopId: string; personId: string; receivedAt: Date; now: Date; actorPersonId: string },
+  input: {
+    shopId: string;
+    personId: string;
+    /** The seat the desk chose; refused unless it is one of the message's own. */
+    bookingId: string;
+    receivedAt: Date;
+    now: Date;
+    actorPersonId: string;
+  },
 ): Promise<RunningLateOutcome> {
   const seats = await openSeatsOf(db, input.shopId, [input.personId], input.now);
-  const seat = seatForMessage(seats, input.personId, input.receivedAt);
-  if (!seat) return { status: "closed" };
-  const outcome = await stampWithParty(
-    db,
-    input.shopId,
-    seat.bookingId,
-    input.now,
-    input.receivedAt,
+  const seat = seatsForMessage(seats, input.personId, input.receivedAt).find(
+    (candidate) => candidate.bookingId === input.bookingId,
   );
-  if (outcome.status === "marked") {
-    await recordDiverActivity(db, {
-      shopId: input.shopId,
-      personId: input.personId,
-      actorPersonId: input.actorPersonId,
-      code: "running_late_from_message",
-    });
-  }
-  return outcome;
+  if (!seat) return { status: "closed" };
+  // The stamps and the staffer's lines commit together: a mark with no line
+  // would read as the diver's own tap, and a line with no mark would lie.
+  return db.transaction(async (tx) => {
+    const partyPeople: string[] = [];
+    const outcome = await stampWithParty(
+      tx,
+      input.shopId,
+      seat.bookingId,
+      input.now,
+      input.receivedAt,
+      partyPeople,
+    );
+    if (outcome.status === "marked") {
+      for (const personId of new Set([input.personId, ...partyPeople])) {
+        await recordDiverActivity(tx, {
+          shopId: input.shopId,
+          personId,
+          actorPersonId: input.actorPersonId,
+          code: "running_late_from_message",
+        });
+      }
+    }
+    return outcome;
+  });
 }

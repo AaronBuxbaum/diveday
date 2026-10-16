@@ -41,4 +41,4 @@ Keep owners only until a shop asks. A structured shore contact is a settings fie
 
 ## Unblocks / follow-up
 
-Nothing waits on it: the owner alert and the shore contact's are live. Still open, for whoever asks: SMS to the shore contact, and managers as recipients. The window is `STALE_ROLL_CALL_AFTER_MS` in `src/lib/roll-call-alerts.ts`.
+Nothing waits on it: the owner alert and the shore contact's are live. Still open, for whoever asks: SMS to the shore contact, and managers as recipients. H-127 recorded the shore contact's structured, consented form again on 2026-10-16. The window is `STALE_ROLL_CALL_AFTER_MS` in `src/lib/roll-call-alerts.ts`.

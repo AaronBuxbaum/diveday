@@ -54,6 +54,9 @@ const MENU_DANGER_ROW_CLASS = `${menuRowClass("danger", { gutter: false })} whit
  */
 const EXCERPT_LENGTH = 140;
 
+/** Whether a seat already carries the mark, by any door. */
+const marked = (seat: InboxSeat) => seat.runningLateAt !== null;
+
 function excerpt(body: string): string {
   const flattened = body.replace(/\s+/g, " ").trim();
   return flattened.length <= EXCERPT_LENGTH
@@ -98,7 +101,10 @@ function excerpt(body: string): string {
  * departure, and its "⋯" offers **Mark running late**: the mark the diver's
  * own tap sets, which the roster and the manifest already show. A sentence is
  * never read as a command (ADR 20260909-reply-keywords), so a person decides;
- * once the seat carries the mark, by any door, the row says so instead.
+ * once the seat carries the mark, by any door, the row says so instead. When
+ * the sender holds **more than one** such seat, the row names each and the "⋯"
+ * offers **Mark running late for {trip}** once per seat, so the desk chooses
+ * (issue #2551); the server re-derives the candidates and refuses any other.
  *
  * **The seat is a door, and moving it is one tap away** (fourth UX review,
  * item 32). Outside the late window the row names every seat the sender
@@ -138,7 +144,7 @@ export function InboxRow({
   doneAction: (formData: FormData) => Promise<void>;
   /** The open seats this message may be about, soonest first (`inboxSeats`). */
   seats?: readonly InboxSeat[];
-  /** Puts the running-late mark on the late-window seat; required whenever `seats` is passed. */
+  /** Puts the running-late mark on the chosen late-window seat; required whenever `seats` is passed. */
   lateAction?: (formData: FormData) => Promise<void>;
 }) {
   const { message, personName } = row;
@@ -167,8 +173,10 @@ export function InboxRow({
   const seatHref = (seat: InboxSeat) => shopPath(shopSlug, "trips", seat.tripId);
   // "today 1:30 PM" near the day, the weekday further out (fourth review, item 45).
   const when = (seat: InboxSeat) => seatWhen(seat.startsAt, { now, locale, timezone, t });
-  const lateSeat = seats.find((seat) => seat.lateWindow) ?? null;
-  const markedLate = seats.find((seat) => seat.runningLateAt) ?? null;
+  // The seats the running-late mark may go on, and, with more than one, each
+  // mark names its departure so the desk chooses (issue #2551).
+  const lateSeats = seats.filter((seat) => seat.lateWindow);
+  const severalLate = lateSeats.length > 1;
   type Fact = { key: string; node: ReactNode };
   const facts = (
     [
@@ -176,29 +184,36 @@ export function InboxRow({
       // above already says who this is, and their address is on their record.
       message.personId ? null : { key: "from", node: message.fromAddress },
       // A LATE reply already marked the seat; the seat's own fact says so.
-      message.keywordIntent && !(message.keywordIntent === "late" && markedLate)
+      message.keywordIntent && !(message.keywordIntent === "late" && seats.some(marked))
         ? { key: "keyword", node: t(KEYWORD_KEYS[message.keywordIntent]) }
         : null,
-      ...seats.map((seat) => ({
-        key: `seat-${seat.bookingId}`,
-        node: (
-          // Above the row's stretched door (`z-0`), so it takes its own tap.
-          <Link
-            href={`${seatHref(seat)}#booking-${seat.bookingId}`}
-            className="relative z-10 font-medium text-primary hover:underline"
-          >
-            {t("inbox.seat", { trip: seat.title, when: when(seat) })}
-          </Link>
-        ),
-      })),
-      markedLate?.runningLateAt
-        ? {
-            key: "late",
-            node: t("inbox.late.marked", {
-              time: formatTime(markedLate.runningLateAt, locale, timezone),
-            }),
-          }
-        : null,
+      ...seats.flatMap((seat): (Fact | null)[] => [
+        {
+          key: `seat-${seat.bookingId}`,
+          node: (
+            // Above the row's stretched door (`z-0`), so it takes its own tap.
+            <Link
+              href={`${seatHref(seat)}#booking-${seat.bookingId}`}
+              className="relative z-10 font-medium text-primary hover:underline"
+            >
+              {t("inbox.seat", { trip: seat.title, when: when(seat) })}
+            </Link>
+          ),
+        },
+        seat.runningLateAt
+          ? {
+              key: `late-${seat.bookingId}`,
+              node: severalLate
+                ? t("inbox.late.markedFor", {
+                    trip: seat.title,
+                    time: formatTime(seat.runningLateAt, locale, timezone),
+                  })
+                : t("inbox.late.marked", {
+                    time: formatTime(seat.runningLateAt, locale, timezone),
+                  }),
+            }
+          : null,
+      ]),
       message.mediaCount > 0
         ? { key: "media", node: t("inbox.attachments", { count: message.mediaCount }) }
         : null,
@@ -221,19 +236,34 @@ export function InboxRow({
           </span>
           <RowMenu label={t("inbox.menu.label", { name })}>
             {/* An "Ask to move" (H-126) is about another date, never this
-                boat's lateness. */}
-            {lateSeat && !lateSeat.runningLateAt && lateAction && message.channel !== "page" ? (
-              <form action={lateAction}>
-                <input type="hidden" name="messageId" value={message.id} />
-                <SubmitButton
-                  pendingLabel={t("inbox.done.pending")}
-                  className={MENU_ROW_CLASS}
-                  ariaLabel={t("inbox.late.actionFor", { name, trip: lateSeat.title })}
-                >
-                  {t("inbox.late.action")}
-                </SubmitButton>
-              </form>
-            ) : null}
+                boat's lateness: its seat carries no late window. */}
+            {lateAction && message.channel !== "page"
+              ? lateSeats
+                  .filter((seat) => !seat.runningLateAt)
+                  .map((seat) => (
+                    <form key={seat.bookingId} action={lateAction}>
+                      <input type="hidden" name="messageId" value={message.id} />
+                      <input type="hidden" name="bookingId" value={seat.bookingId} />
+                      <SubmitButton
+                        pendingLabel={t("inbox.done.pending")}
+                        className={MENU_ROW_CLASS}
+                        ariaLabel={
+                          severalLate
+                            ? t("inbox.late.actionForSeat", {
+                                name,
+                                trip: seat.title,
+                                when: when(seat),
+                              })
+                            : t("inbox.late.actionFor", { name, trip: seat.title })
+                        }
+                      >
+                        {severalLate
+                          ? t("inbox.late.actionTrip", { trip: seat.title })
+                          : t("inbox.late.action")}
+                      </SubmitButton>
+                    </form>
+                  ))
+              : null}
             {seats.map((seat) => (
               <Link
                 key={seat.bookingId}

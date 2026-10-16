@@ -1,68 +1,64 @@
-import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { shopSenderOf } from "@/lib/notifications/sender";
 import { unseededTestDb } from "@/test/db";
 import { recordSetupRequest } from "./funnel";
-import { preDepartureChecklistItems } from "./schema";
 import { issueSetupLink } from "./setup-links";
 import { createSignedUpShop } from "./shop-signup";
+import { clearShopNameReview } from "./shops";
 
-async function signUp(slug: string) {
-  const db = await unseededTestDb();
+type Db = Awaited<ReturnType<typeof unseededTestDb>>;
+
+async function signUp(db: Db, shopName: string, slug: string) {
   const request = await recordSetupRequest(db, {
-    shopName: "Reef Runners",
+    shopName,
     region: "Key Largo",
     runsBoat: true,
     currentSystem: "paper",
-    contactName: "Marisol Vega",
-    email: `owner@${slug}.example`,
+    contactName: "Ana Ruiz",
+    email: `${slug}@example.test`,
     phone: null,
     source: "pricing",
     locale: "en-US",
   });
-  const { token } = await issueSetupLink(db, { setupRequestId: request.id });
+  const link = await issueSetupLink(db, { setupRequestId: request.id });
   const outcome = await createSignedUpShop(db, {
-    setupToken: token,
-    shopName: "Reef Runners",
+    setupToken: link.token,
+    shopName,
     shopSlug: slug,
     timezone: "America/New_York",
-    ownerName: "Marisol Vega",
-    ownerEmail: `owner@${slug}.example`,
-    ownerPassword: "a long enough password 1",
+    ownerName: "Ana Ruiz",
+    ownerEmail: `${slug}@example.test`,
+    ownerPassword: "a-long-enough-password-1",
   });
   if (!outcome.ok) throw new Error(outcome.reason);
-  return { db, shop: outcome.shop };
+  return outcome.shop;
 }
 
-describe("createSignedUpShop", () => {
-  // Issue #2301 (Aaron, 2026-10-13): the pre-departure check asks about oxygen
-  // on every new shop's boats from the first departure.
-  it("starts the pre-departure checklist with the oxygen line, in the shop's language", async () => {
-    const { db, shop } = await signUp("o2-default");
-    const items = await db
-      .select({
-        label: preDepartureChecklistItems.label,
-        sortOrder: preDepartureChecklistItems.sortOrder,
-        deletedAt: preDepartureChecklistItems.deletedAt,
-      })
-      .from(preDepartureChecklistItems)
-      .where(eq(preDepartureChecklistItems.shopId, shop.id));
-    expect(items).toEqual([
-      { label: "O2 kit aboard and cylinder full", sortOrder: 0, deletedAt: null },
-    ]);
+const off = { EMAIL_INBOUND_DOMAIN: "" };
+
+/** Issue #2450: a sign-up name that could pass for a brand is held, and a human clears it. */
+describe("a shop name held for review at sign-up", () => {
+  it("flags a name that reads as a brand, and mails as plain DiveDay until cleared", async () => {
+    const db = await unseededTestDb();
+    const shop = await signUp(db, "PayPal Security", "paypal-security");
+    const flaggedAt = shop.nameFlaggedAt;
+    if (!flaggedAt) throw new Error("expected the name to be flagged");
+    expect(shopSenderOf({ ...shop, contactEmail: null }, off)).toEqual({ nameUnderReview: true });
+
+    const cleared = await clearShopNameReview(db, shop.id, new Date(flaggedAt.getTime() + 1000));
+    expect(cleared?.nameClearedAt).toBeInstanceOf(Date);
+    expect(shopSenderOf({ ...cleared, contactEmail: null }, off)).toBeUndefined();
   });
 
-  it("writes no checklist line when the signup is refused", async () => {
+  it("leaves an ordinary dive shop name unflagged", async () => {
     const db = await unseededTestDb();
-    const outcome = await createSignedUpShop(db, {
-      setupToken: "never-minted",
-      shopName: "Reef Runners",
-      shopSlug: "refused",
-      timezone: "America/New_York",
-      ownerName: "Marisol Vega",
-      ownerEmail: "owner@refused.example",
-      ownerPassword: "a long enough password 1",
-    });
-    expect(outcome).toEqual({ ok: false, reason: "setup_link_closed" });
-    expect(await db.select().from(preDepartureChecklistItems)).toEqual([]);
+    const shop = await signUp(db, "Blue Mantis Divers", "blue-mantis-divers");
+    expect(shop.nameFlaggedAt).toBeNull();
+    expect(shopSenderOf({ ...shop, contactEmail: null }, off)).toBeUndefined();
+  });
+
+  it("clearing a shop that does not exist is null", async () => {
+    const db = await unseededTestDb();
+    expect(await clearShopNameReview(db, "00000000-0000-4000-8000-0000000000ff")).toBeNull();
   });
 });

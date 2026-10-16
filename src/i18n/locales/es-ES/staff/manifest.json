@@ -43,8 +43,8 @@
   "ofTotalAboard": "de {total, plural, one {# buceador} other {# buceadores}} a bordo",
   "allAccountedFor": "Todos contabilizados, buceadores y tripulación. Listo para el siguiente control.",
   "notBackAboardOpen": "{count, plural, one {# persona no ha regresado a bordo.} other {# personas no han regresado a bordo.}} Este control sigue abierto hasta contabilizarlas.",
-  "crewNoneAssignedYet": "Todavía no hay nadie en la tripulación de esta salida. Añade a quienes navegaron para cerrar este control.",
-  "crewNoneAboard": "Todas las personas a bordo están contabilizadas y toda la tripulación de esta salida figura en tierra, así que nadie a bordo está en la lista de tripulación. Añade a quienes navegaron.",
+  "crewNoneAssignedYet": "Todavía no hay nadie en la tripulación de esta salida. Agrega a quienes navegaron para cerrar este control.",
+  "crewNoneAboard": "Todas las personas a bordo están contabilizadas y toda la tripulación de esta salida figura en tierra, así que nadie a bordo está en la lista de tripulación. Agrega a quienes navegaron.",
   "crewNotBackAboard": "{count, plural, one {# tripulante no ha vuelto a bordo.} other {# tripulantes no han vuelto a bordo.}} Este control sigue abierto.",
   "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}}",
   "crewHeading": "Tripulación",
@@ -56,7 +56,7 @@
   "crewMarkNotBackAboard": "Marcar sin regresar a bordo",
   "crewNotBackAboardActive": "Sin regresar a bordo",
   "crewRollCallRecordedBy": "{label} · {date} · {name}",
-  "noCrew": "Todavía no hay tripulación en esta salida. Añade a quien llevó el barco para completar este control.",
+  "noCrew": "Todavía no hay tripulación en esta salida. Agrega a quien llevó el barco para completar este control.",
   "executedDive": {
     "heading": "Lo que ocurrió bajo el agua",
     "dive": "Inmersión {number}",
@@ -99,7 +99,7 @@
     "deleteNamed": "Eliminar {species}",
     "refusal": "Sin señal. Toca de nuevo cuando el barco tenga cobertura."
   },
-  "addCrewToTrip": "Añadir tripulación a la salida",
+  "addCrewToTrip": "Agregar tripulación a la salida",
   "manageCrewOnTrip": "Gestionar la tripulación de esta salida",
   "checkpointRollCallHeading": "Pase de lista · {checkpoint}",
   "checkedInAtDesk": "Ya se registró en el mostrador",
@@ -137,7 +137,7 @@
   "medicalReferralLink": "Ver la derivación",
   "medicalRefusalLink": "Ver la decisión del médico",
   "resolveBlockersLink": "Resolver bloqueos en Buceadores →",
-  "addNoteSummary": "Añadir una nota",
+  "addNoteSummary": "Agregar una nota",
   "rollCallRecordedByPlain": "{label} {date} por {name}",
   "carriedForwardFromDock": "En tierra desde el muelle",
   "buddyHeading": "Parejas de buceo",
@@ -147,8 +147,8 @@
   "buddyRecordedBy": "Registrado por {name}",
   "buddyDissolve": "Deshacer pareja",
   "buddyRemoveMember": "Quitar a {name}",
-  "buddyAddMemberLabel": "Añadir a esta pareja",
-  "buddyAddMemberSubmit": "Añadir",
+  "buddyAddMemberLabel": "Agregar a esta pareja",
+  "buddyAddMemberSubmit": "Agregar",
   "buddySelectPlaceholder": "Elige a alguien",
   "buddyNewTeamHeading": "Nueva pareja de buceo",
   "buddyNewTeamHint": "Marca dos o más. La tripulación cuenta, y un divemaster puede llevar varias parejas.",
@@ -279,5 +279,9 @@
     "pushBody": "{title}: {awaiting, plural, one {# persona sin resultado} other {# personas sin resultado}} después de la inmersión {dive}.",
     "pushBodyMissing": "{title}: {missing, plural, one {# persona consta} other {# personas constan}} como no de vuelta a bordo después de la inmersión {dive}.",
     "pushBodyBoth": "{title}: {missing, plural, one {# persona consta} other {# personas constan}} como no de vuelta a bordo después de la inmersión {dive}; {awaiting, plural, one {# más sin resultado} other {# más sin resultado}}."
+  },
+  "missingDiverAlert": {
+    "pushTitle": "Buceador desaparecido",
+    "pushBody": "{title}: el equipo presentó un reporte de buceador desaparecido."
   }
 }

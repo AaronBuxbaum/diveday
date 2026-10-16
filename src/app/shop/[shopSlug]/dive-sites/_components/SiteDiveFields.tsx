@@ -42,21 +42,56 @@ export function SiteDiveFields({
             ))}
           </select>
         </Field>
-        <Field label={t("diveSites.form.depthRangeLabel")} hint={t("diveSites.form.optionalHint")}>
+        {/* Minutes, in nobody's unit but its own — so it sits with the site's
+            other facts rather than being folded into the shop-wide rhythm in
+            Settings. A wall run at 30 minutes and a shallow reef run at 60
+            are both real, and one shop-wide number told a diver the wrong
+            one on whichever it was not. Blank leaves the shop's own figure
+            standing. */}
+        <Field
+          label={t("diveSites.form.expectedBottomTimeLabel")}
+          hint={t("diveSites.form.optionalHint")}
+          description={t("diveSites.form.expectedBottomTimeHint")}
+        >
           <input
-            name="depthRange"
-            maxLength={120}
-            defaultValue={values?.depthRange ?? ""}
-            placeholder={t(
-              depthUnit === "feet"
-                ? "diveSites.form.depthRangePlaceholderFeet"
-                : "diveSites.form.depthRangePlaceholderMeters",
-            )}
+            name="expectedBottomTime"
+            type="number"
+            inputMode="numeric"
+            min={DOCK_DAY_LIMITS.bottomTimeMinutes.min}
+            max={DOCK_DAY_LIMITS.bottomTimeMinutes.max}
+            step={1}
+            defaultValue={values?.expectedBottomTimeMinutes ?? ""}
+            placeholder={t("diveSites.form.expectedBottomTimePlaceholder")}
             className={controlClass}
           />
         </Field>
       </FieldGrid>
       <FieldGrid columns={2} className="gap-y-5">
+        {/* The shallow end of the range, beside the deep end below. Both are
+            typed in the shop's unit and stored in metres, so a briefing prints
+            one unit whatever this shop typed or later switches to. */}
+        <Field
+          label={t(
+            depthUnit === "feet"
+              ? "diveSites.form.minDepthFeetLabel"
+              : "diveSites.form.minDepthMetersLabel",
+          )}
+          hint={t("diveSites.form.optionalHint")}
+        >
+          <input
+            name="minDepth"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={maxEnteredDepth(depthUnit)}
+            step={1}
+            defaultValue={
+              values?.depthMinMeters == null ? "" : depthInUnit(values.depthMinMeters, depthUnit)
+            }
+            placeholder={depthUnit === "feet" ? "20" : "6"}
+            className={controlClass}
+          />
+        </Field>
         {/* The one depth figure a certification ceiling can be compared
             against (H-08). Left blank it simply never warns — this advises,
             it never gates. */}
@@ -83,31 +118,23 @@ export function SiteDiveFields({
             className={controlClass}
           />
         </Field>
-        {/* Minutes, in nobody's unit but its own — so it sits beside the
-            depth rather than being folded into the shop-wide rhythm in
-            Settings. A wall run at 30 minutes and a shallow reef run at 60
-            are both real, and one shop-wide number told a diver the wrong
-            one on whichever it was not. Blank leaves the shop's own figure
-            standing. */}
+      </FieldGrid>
+      <FieldGrid columns={1} className="gap-y-5">
+        {/* The shop's own words about depth, for what two numbers cannot say.
+            The briefing prints the numbers; this stands in only where they
+            are blank. */}
         <Field
-          label={t("diveSites.form.expectedBottomTimeLabel")}
+          label={t("diveSites.form.depthNoteLabel")}
           hint={t("diveSites.form.optionalHint")}
-          description={t("diveSites.form.expectedBottomTimeHint")}
+          description={t("diveSites.form.depthNoteHint")}
         >
           <input
-            name="expectedBottomTime"
-            type="number"
-            inputMode="numeric"
-            min={DOCK_DAY_LIMITS.bottomTimeMinutes.min}
-            max={DOCK_DAY_LIMITS.bottomTimeMinutes.max}
-            step={1}
-            defaultValue={values?.expectedBottomTimeMinutes ?? ""}
-            placeholder={t("diveSites.form.expectedBottomTimePlaceholder")}
+            name="depthRange"
+            maxLength={120}
+            defaultValue={values?.depthRange ?? ""}
             className={controlClass}
           />
         </Field>
-      </FieldGrid>
-      <FieldGrid columns={1} className="gap-y-5">
         <Field label={t("diveSites.form.currentNoteLabel")} hint={t("diveSites.form.optionalHint")}>
           <textarea
             name="currentNote"

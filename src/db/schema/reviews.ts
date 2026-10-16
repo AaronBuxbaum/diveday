@@ -13,6 +13,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { bookings } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { trips } from "./trips";
 
@@ -43,7 +44,7 @@ export const recapPhotos = pgTable(
       .references(() => trips.id),
     imageUrl: text("image_url").notNull(),
     caption: text("caption"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("recap_photos_booking_idx").on(table.bookingId, table.createdAt),
@@ -70,7 +71,7 @@ export const tripRecapPhotos = pgTable(
     uploadedByPersonId: uuid("uploaded_by_person_id")
       .notNull()
       .references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("trip_recap_photos_shop_trip_idx").on(table.shopId, table.tripId, table.createdAt),
@@ -114,8 +115,8 @@ export const tripReviews = pgTable(
     isPublished: boolean("is_published").notNull().default(false),
     /** Null until published; drives "newest published first" on the public list. */
     publishedAt: timestamp("published_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("trip_reviews_booking_unique").on(table.bookingId),
@@ -161,8 +162,8 @@ export const reviewReplies = pgTable(
     writtenByPersonId: uuid("written_by_person_id")
       .notNull()
       .references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
@@ -229,7 +230,7 @@ export const reviewModerationEvents = pgTable(
     recordedByPersonId: uuid("recorded_by_person_id")
       .notNull()
       .references(() => people.id),
-    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+    occurredAt: appNowTimestamp("occurred_at").notNull(),
   },
   (table) => [
     index("review_moderation_events_shop_idx").on(table.shopId, table.occurredAt),
@@ -319,8 +320,8 @@ export const recapPulses = pgTable(
      * 20260820-every-delete-is-soft): the row stays, the shop stops seeing it.
      */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     // One live pulse per booking. Partial, over the live rows only, so a

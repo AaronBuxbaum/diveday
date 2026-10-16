@@ -27,7 +27,7 @@ export const MEXICO_COSTA_MAYA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Turtles and eagle rays pass over the sand between terraces. Look into the canyon walls for big groupers and green morays.",
       difficultyLevel: "intermediate",
-      depthRange: "12–23 m (40–75 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 23,
       currentNote:
         "Cruise ships call at Mahahual: do not dive while a ship is alongside, listen for engines on the way up and carry an SMB. Usually light; it can change, so carry an SMB.",
@@ -80,7 +80,7 @@ export const MEXICO_COSTA_MAYA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Turtles graze on the sand flats, rays pass over the sandbanks and garden eels sway in the open areas. Morays sit in the coral.",
       difficultyLevel: "advanced",
-      depthRange: "15–24 m (50–80 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 24,
       currentNote:
         "Cruise ships call at Mahahual: do not dive while a ship is alongside, listen for engines on the way up and carry an SMB. Current is not documented; ask the crew on the day.",
@@ -126,7 +126,7 @@ export const MEXICO_COSTA_MAYA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools of large tarpon hold along the coral wall, with jacks, snappers and rays beside them.",
       difficultyLevel: "advanced",
-      depthRange: "5–26 m (15–85 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 26,
       currentNote:
         "Strong current and nutrient-rich water. Depending on the day it is a relaxed reef dive or a drift, so carry an SMB.",
@@ -176,7 +176,7 @@ export const MEXICO_COSTA_MAYA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Lobsters and octopus tuck into the coral. Groupers and snappers use the ledges in the deeper section.",
       difficultyLevel: "intermediate",
-      depthRange: "9–24 m (30–80 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 24,
       currentNote:
         "Current not documented; it can change, so carry an SMB and ask the crew on the day.",

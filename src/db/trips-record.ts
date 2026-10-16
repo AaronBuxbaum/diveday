@@ -387,7 +387,11 @@ export type TripSitePeek = {
   description: string | null;
   /** A `dive_site_difficulty` code; the surface prints a translated label. */
   difficultyLevel: DiveSiteDifficulty | null;
+  /** The shop's own depth note, shown only where no depth is recorded. */
   depthRange: string | null;
+  /** The recorded range in metres; the surface prints it in the shop's unit. */
+  depthMinMeters: number | null;
+  maxDepthMeters: number | null;
   imageUrls: string[];
 };
 
@@ -408,6 +412,8 @@ export async function getTripDiveSitesPeek(
     description: diveSites.description,
     difficultyLevel: diveSites.difficultyLevel,
     depthRange: diveSites.depthRange,
+    depthMinMeters: diveSites.depthMinMeters,
+    maxDepthMeters: diveSites.maxDepthMeters,
     imageUrls: diveSites.imageUrls,
   };
   const primarySite = await db

@@ -48,6 +48,7 @@ export const STORED: SiteFieldValues = {
   marineLifeDescription: null,
   difficultyLevel: null,
   depthRange: null,
+  depthMinMeters: null,
   maxDepthMeters: null,
   expectedBottomTimeMinutes: null,
   currentNote: null,

@@ -49,6 +49,9 @@ describe("POST /api/test/pin-added-date", () => {
       email: "priya.duplicate@example.com",
     });
 
+    // Rows added long ago, as the e2e database's seed leaves them.
+    await db.update(people).set({ createdAt: new Date("2020-01-01T00:00:00Z") });
+
     const response = await POST(pinRequest({ fullName: "Priya Sharma" }));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ pinned: 2 });
@@ -72,6 +75,7 @@ describe("POST /api/test/pin-added-date", () => {
     const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
     await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
+    await db.update(people).set({ createdAt: new Date("2020-01-01T00:00:00Z") });
 
     const response = await POST(pinRequest({ fullName: "Priya Sharma" }));
     expect(response.status).toBe(404);

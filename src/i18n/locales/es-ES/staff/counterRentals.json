@@ -6,7 +6,7 @@
     "change": "Cambiar",
     "pick": "Elegir",
     "pickAria": "Alquilar a {name}",
-    "addPerson": "Añadir",
+    "addPerson": "Agregar",
     "whenHeading": "Cuándo",
     "gearHeading": "Equipo",
     "kindsAria": "Tipo de equipo",
@@ -20,7 +20,7 @@
     "itemsOther": "# artículos",
     "removeAria": "Quitar {label}",
     "noUnits": "No hay nada en la pared libre para estos días.",
-    "noFleet": "El registro está vacío. Añade una unidad primero.",
+    "noFleet": "El registro está vacío. Agrega una unidad primero.",
     "days": "{count, plural, one {# día} other {# días}}",
     "priceAria": "Precio de {label}",
     "pay": {

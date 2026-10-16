@@ -1799,6 +1799,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "description",
       "difficulty_level",
       "depth_range",
+      "depth_min_meters",
       "max_depth_meters",
       "expected_bottom_time_minutes",
       "current_note",
@@ -1850,6 +1851,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         // three stable values, so a destination system can map them.
         row.difficultyLevel,
         row.depthRange,
+        row.depthMinMeters,
         row.maxDepthMeters,
         row.expectedBottomTimeMinutes,
         row.currentNote,

@@ -3,7 +3,13 @@ import { resolveCourseDepths } from "@/lib/courses";
 import { SEA_STATES } from "@/lib/marine-forecast";
 import { diverTranslator } from "./messages";
 import { staffTranslator } from "./staff-messages";
-import { courseDepthFormat, depthText, seaStateText, temperatureText } from "./unit-labels";
+import {
+  courseDepthFormat,
+  depthText,
+  diveSiteDepthText,
+  seaStateText,
+  temperatureText,
+} from "./unit-labels";
 
 const en = diverTranslator("en-US");
 const es = diverTranslator("es-ES");
@@ -14,6 +20,21 @@ describe("depthText / temperatureText", () => {
     expect(depthText(en, 18.288, "feet")).toBe("60 ft");
     expect(temperatureText(en, 27, "celsius")).toBe("27°C");
     expect(temperatureText(en, 27, "fahrenheit")).toBe("81°F");
+  });
+});
+
+describe("diveSiteDepthText", () => {
+  it("writes a site's range, or its deepest point alone, in the shop's own unit", () => {
+    const site = { depthMinMeters: 15, maxDepthMeters: 28 };
+    expect(diveSiteDepthText(en, site, "meters")).toBe("15–28 m");
+    expect(diveSiteDepthText(en, site, "feet")).toBe("49–92 ft");
+    expect(diveSiteDepthText(es, site, "feet")).toBe("49–92 ft");
+    expect(diveSiteDepthText(en, { maxDepthMeters: 18 }, "meters")).toBe("18 m");
+    expect(diveSiteDepthText(en, { depthMinMeters: 6, maxDepthMeters: null }, "meters")).toBeNull();
+    // The shop's own words stand in only where no depth is recorded, so a briefing never names two units.
+    const note = { depthRange: " shallow ledge to 18 " };
+    expect(diveSiteDepthText(en, note, "feet")).toBe("shallow ledge to 18");
+    expect(diveSiteDepthText(en, { ...note, maxDepthMeters: 18 }, "feet")).toBe("59 ft");
   });
 });
 

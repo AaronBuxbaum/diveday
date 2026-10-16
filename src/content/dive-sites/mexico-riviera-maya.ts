@@ -25,7 +25,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sharks rest in the cave and are rarely visible from the mouth. Keep your distance and stay outside the cave.",
       difficultyLevel: "advanced",
-      depthRange: "16–30 m (52–98 ft)",
+      depthMinMeters: 16,
       maxDepthMeters: 30,
       currentNote: "Low current on most days, a little at times.",
       divePlan:
@@ -60,7 +60,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Fish crowd the broken hull, with groupers, jacks and barracuda along the decks.",
       difficultyLevel: "advanced",
-      depthRange: "30–33 m (98–108 ft)",
+      depthMinMeters: 30,
       maxDepthMeters: 33,
       currentNote: "Strong current. Carry an SMB and listen for boat engines on the ascent.",
       divePlan:
@@ -101,7 +101,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Figures are crusted with sponges and young coral. Look at the people, then at what lives on them.",
       difficultyLevel: "beginner",
-      depthRange: "4–12 m (13–39 ft)",
+      depthMinMeters: 4,
       maxDepthMeters: 12,
       currentNote:
         "Boat and snorkeler traffic. Carry an SMB and listen for engines. Low current, around 1 knot. Many operators visit, so midday is busy.",
@@ -142,7 +142,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Turtles feed on the patches, and a nurse shark turns up now and then.",
       difficultyLevel: "beginner",
-      depthRange: "8–10 m (26–33 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 10,
       currentNote:
         "Boat and snorkeler traffic. Carry an SMB and listen for engines. Low current, under 1 knot. A few swim-throughs cut the reef; they are overheads, so stay out of them.",
@@ -178,7 +178,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLife: "Sea turtles · reef fish",
       marineLifeDescription: "Turtles are the draw in May to July.",
       difficultyLevel: "advanced",
-      depthRange: "10–11 m (33–36 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 11,
       currentNote:
         "Current around 2 knots, run as a drift. Carry an SMB and plan where the boat will pick you up.",
@@ -212,7 +212,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLife: "Barracuda · snapper · angelfish · sea fans",
       marineLifeDescription: "Gorgonians cover the flat rock and the fish sit in them.",
       difficultyLevel: "advanced",
-      depthRange: "8–9 m (26–30 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 9,
       currentNote:
         "Usually strong current, and some days it cannot be dived. Carry an SMB. The reef has two swim-throughs, which are overheads: stay out of them.",
@@ -251,7 +251,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLife: "Soft corals · reef fish",
       marineLifeDescription: "Soft corals and small reef fish.",
       difficultyLevel: "intermediate",
-      depthRange: "8–10 m (26–34 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 11,
       currentNote:
         "Boat and snorkeler traffic. Carry an SMB and listen for engines. Medium current, 1 to 2 knots, and up to 2 knots at times. Plan it as a drift.",
@@ -284,7 +284,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLife: "Sea turtles · lobster · rays · groupers",
       marineLifeDescription: "Turtles feed here and rays cross the sand.",
       difficultyLevel: "beginner",
-      depthRange: "8–10 m (26–33 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 10,
       currentNote:
         "Boat and snorkeler traffic. Carry an SMB and listen for engines. Current at Chitales is not documented, and the neighboring reef, Santo Remedio, runs 1 to 2 knots; ask the crew on the day.",
@@ -323,7 +323,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLife: "Reef fish · juvenile grunts",
       marineLifeDescription: "The reef balls are young habitat, and small fish have moved in.",
       difficultyLevel: "beginner",
-      depthRange: "8–9 m (25–30 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 9,
       currentNote:
         "Boat and snorkeler traffic. Carry an SMB and listen for engines. A gentle drift current carries you toward Manchones.",
@@ -356,7 +356,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big animals pass along the wall; look under the ledges for crustaceans.",
       difficultyLevel: "advanced",
-      depthRange: "21–30 m (69–98 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 30,
       currentNote:
         "Boat traffic first: ferries to Cozumel and dive boats use this water, so carry an SMB, send it up before you ascend and listen for engines. Strong current.",
@@ -396,7 +396,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLife: "Lobster · king crab · turtles · stingrays",
       marineLifeDescription: "Crustaceans in the ledges and turtles along the face.",
       difficultyLevel: "advanced",
-      depthRange: "21–30 m (69–98 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 30,
       currentNote:
         "Boat traffic first: ferries to Cozumel and dive boats use this water, so carry an SMB, send it up before you ascend and listen for engines. Medium to strong current.",
@@ -436,7 +436,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Eagle rays pass along the wall; bull sharks are seasonal, so follow the crew's briefing.",
       difficultyLevel: "advanced",
-      depthRange: "20–30 m (66–98 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 30,
       currentNote:
         "Boat traffic first: ferries to Cozumel and dive boats use this water, so carry an SMB, send it up before you ascend and listen for engines. Changing, medium to strong current.",
@@ -476,7 +476,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Small coral heads, with fish packed around the arch at the north end. The arch is overhead; stay out.",
       difficultyLevel: "beginner",
-      depthRange: "7–14 m (23–46 ft)",
+      depthMinMeters: 7,
       maxDepthMeters: 14,
       currentNote:
         "Boat traffic first: ferries to Cozumel and dive boats use this water, so carry an SMB, send it up before you ascend and listen for engines. Current is usually light; it can change, so carry an SMB.",
@@ -509,7 +509,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Snappers fill the overhang. Overhead; stay out. Look from outside the ledge and keep off the bottom.",
       difficultyLevel: "beginner",
-      depthRange: "10–12 m (33–39 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 12,
       currentNote:
         "Boat traffic first: ferries to Cozumel and dive boats use this water, so carry an SMB, send it up before you ascend and listen for engines. Weak current.",
@@ -546,7 +546,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLife: "Sponges · hard corals · reef fish",
       marineLifeDescription: "Sponges and hard coral crowd the reef, with fish in every gap.",
       difficultyLevel: "beginner",
-      depthRange: "8–12 m (26–39 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 12,
       currentNote:
         "Boat traffic first: ferries to Cozumel and dive boats use this water, so carry an SMB, send it up before you ascend and listen for engines. Mild current. Dive it north to south or the reverse, depending on the current that day.",
@@ -582,7 +582,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLife: "Rays · moray eels · flounders · arrow crabs",
       marineLifeDescription: "Look on the sand beside the reef for rays and flounders.",
       difficultyLevel: "beginner",
-      depthRange: "6–13 m (20–43 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 13,
       currentNote:
         "Boat traffic first: ferries to Cozumel and dive boats use this water, so carry an SMB, send it up before you ascend and listen for engines. Current is usually light; it can change, so carry an SMB. Drift north along the reef from its southern end.",
@@ -620,7 +620,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLife: "Lobster · king crab · moray eels · reef fish",
       marineLifeDescription: "Brain corals carry the dive, with lobsters and crabs underneath.",
       difficultyLevel: "beginner",
-      depthRange: "6–13 m (20–43 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 13,
       currentNote:
         "Boat traffic first: ferries to Cozumel and dive boats use this water, so carry an SMB, send it up before you ascend and listen for engines. Current is usually light; it can change.",
@@ -652,7 +652,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLife: "Green morays · trunkfish · parrotfish · lobster",
       marineLifeDescription: "Look in the crevices for morays and under the ledges for lobsters.",
       difficultyLevel: "beginner",
-      depthRange: "6–13 m (20–43 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 13,
       currentNote:
         "Boat traffic first: the reef lies under the boats' route, so send up an SMB before you ascend and listen for engines. Current is little to none, and it can change direction quickly.",
@@ -691,7 +691,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Hawksbill turtles are common; bull sharks are seasonal, so follow the crew's briefing.",
       difficultyLevel: "advanced",
-      depthRange: "16–30 m (52–98 ft)",
+      depthMinMeters: 16,
       maxDepthMeters: 30,
       currentNote:
         "Boat traffic first: ferries to Cozumel and dive boats use this water, so carry an SMB, send it up before you ascend and listen for engines. Medium to strong current, running south to north.",
@@ -731,7 +731,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLife: "Barracuda · giant morays · lobster · crabs",
       marineLifeDescription: "Barracuda hunt the small fish, and big morays sit in the bays.",
       difficultyLevel: "advanced",
-      depthRange: "12–14 m (39–46 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 14,
       currentNote:
         "Boat traffic first: ferries to Cozumel and dive boats use this water, so carry an SMB, send it up before you ascend and listen for engines. Strong current at times.",
@@ -763,7 +763,6 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Observation only, with no bait and no feeding. Sharks are seasonal and never certain. Out of season the dive is a sand dive at 27 m with no sharks.",
       difficultyLevel: "advanced",
-      depthRange: "27 m (89 ft)",
       maxDepthMeters: 28,
       currentNote:
         "Boat traffic first: ferries to Cozumel and dive boats use this water, so carry an SMB, send it up before you ascend and listen for engines. The crew confirms the current before the dive.",
@@ -797,7 +796,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLife: "Groupers · barracuda · turtles · green morays",
       marineLifeDescription: "Fish shelter on the hull and morays hide in the plating.",
       difficultyLevel: "advanced",
-      depthRange: "18–30 m (59–98 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       currentNote:
         "Boat traffic first: ferries to Cozumel and dive boats use this water, so carry an SMB, send it up before you ascend and listen for engines. Medium to strong current, running across the wreck from south to north.",
@@ -838,7 +837,7 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Twenty or more eagle rays circle the ship in season, and garden eels sway in the sand about 25 m south of the hull.",
       difficultyLevel: "advanced",
-      depthRange: "25–30 m (82–98 ft)",
+      depthMinMeters: 25,
       maxDepthMeters: 30,
       currentNote: "Moderate current as a rule; the tourism board calls it strong. Carry an SMB.",
       divePlan: "Down to the hull, along the outside of the deck, and back up with reserve gas.",
@@ -875,7 +874,6 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLife: "Porkfish · French grunts · lobster · crabs",
       marineLifeDescription: "Schools fill the arch, and lobsters sit along the ridge.",
       difficultyLevel: "intermediate",
-      depthRange: "20 m (66 ft)",
       maxDepthMeters: 20,
       currentNote: "A gentle current that follows the ridge toward the arch.",
       divePlan: "Follow the ridge to the arch with the current and look at it from the side.",
@@ -906,7 +904,6 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLife: "Nurse sharks · reef fish",
       marineLifeDescription: "Reef fish and the odd resting nurse shark.",
       difficultyLevel: "beginner",
-      depthRange: "7 m (23 ft)",
       maxDepthMeters: 7,
       currentNote:
         "Boat traffic first: dive boats pass this reef on the way out, so carry an SMB, send it up before you ascend and listen for engines. Current is usually light; it can change. Visibility varies and can be limited.",
@@ -937,7 +934,6 @@ export const MEXICO_RIVIERA_MAYA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The grass inside the curve holds juvenile fish, trunkfish and small stingrays.",
       difficultyLevel: "beginner",
-      depthRange: "12 m (39 ft)",
       maxDepthMeters: 12,
       currentNote: "The outer edge can be rough; the inside is calm.",
       fitTone: "welcoming",

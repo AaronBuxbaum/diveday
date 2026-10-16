@@ -169,6 +169,7 @@ export default async function IncidentReportPage({
       {editing ? (
         <IncidentFiling
           gaps={incidentFilingGaps(report.fields)}
+          missingDiver={report.fields.kind === "missing_diver"}
           action={fileIncidentReportAction.bind(null, shopSlug, tripId, reportId)}
           notice={noticeForForm(notice, "file")}
           t={t}

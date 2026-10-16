@@ -26,7 +26,7 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. No gloves, no touching or removing coral or other sea life, and no feeding.",
       difficultyLevel: "intermediate",
-      depthRange: "18–20 m (59–65 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 20,
       currentNote:
         "Open water where two seas meet. Current and surge are not documented; carry an SMB and ask the crew on the day.",
@@ -71,7 +71,7 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. No gloves, no touching or removing coral or other sea life, and no feeding.",
       difficultyLevel: "advanced",
-      depthRange: "18–31 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 31,
       currentNote: "Current not documented; carry an SMB and ask the crew on the day.",
       divePlan:
@@ -122,7 +122,6 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. No gloves, no touching or removing coral or other sea life, and no feeding.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 18 m (60 ft)",
       maxDepthMeters: 18,
       currentNote:
         "The site is dived from a mooring when sea conditions allow, and it lies a 20-minute boat ride out, so carry an SMB. Current is not documented; ask the crew on the day. Medical care is far; confirm the boat’s oxygen and plan.",
@@ -164,7 +163,7 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. This is a historic wreck site: leave the ballast stones and artifacts where they lie.",
       difficultyLevel: "intermediate",
-      depthRange: "18–20 m (60–67 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 20,
       currentNote:
         "Oil tankers anchor close to the island, so listen for engines and carry an SMB. The boat flies the alpha flag. No diving while a ship is maneuvering or alongside. Ascend on the mooring line or an SMB. Current not documented; ask the crew on the day.",
@@ -212,7 +211,7 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. This is a historic wreck site: leave the ballast stones and artifacts where they lie.",
       difficultyLevel: "intermediate",
-      depthRange: "17–19 m (55–62 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 19,
       currentNote:
         "Oil tankers anchor close to the island, so listen for engines and carry an SMB. The boat flies the alpha flag. No diving while a ship is maneuvering or alongside. Ascend on the mooring line or an SMB. Current not documented; ask the crew on the day.",
@@ -254,7 +253,7 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. No gloves, no touching or removing coral or other sea life, and no feeding.",
       difficultyLevel: "intermediate",
-      depthRange: "15–27 m (50–90 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 27,
       currentNote:
         "Oil tankers anchor close to the island, so listen for engines and carry an SMB. The boat flies the alpha flag. No diving while a ship is maneuvering or alongside. Ascend on the mooring line or an SMB. Current sometimes runs over the wreck.",
@@ -305,7 +304,6 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. No gloves, no touching or removing coral or other sea life, and no feeding.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 19 m (62 ft)",
       maxDepthMeters: 19,
       currentNote:
         "Oil tankers anchor close to the island, so listen for engines and carry an SMB. The boat flies the alpha flag. No diving while a ship is maneuvering or alongside. Ascend on the mooring line or an SMB. Current not documented; ask the crew on the day.",
@@ -345,7 +343,7 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. No gloves, no touching or removing coral or other sea life, and no feeding.",
       difficultyLevel: "advanced",
-      depthRange: "19–23 m (62–74 ft)",
+      depthMinMeters: 19,
       maxDepthMeters: 23,
       currentNote:
         "The reef is long and has three moorings, and the crew runs it as a moored dive that turns into a drift when the current runs. The strength of that drift is not documented. Carry an SMB and ask the crew on the day.",
@@ -389,7 +387,7 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. No gloves, no touching or removing coral or other sea life, and no feeding.",
       difficultyLevel: "beginner",
-      depthRange: "10–17 m (30–55 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 17,
       currentNote: "Current not documented; ask the crew on the day.",
       fitTone: "welcoming",
@@ -427,7 +425,7 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. No gloves, no touching or removing coral or other sea life, and no feeding.",
       difficultyLevel: "beginner",
-      depthRange: "13–16 m (43–52 ft)",
+      depthMinMeters: 13,
       maxDepthMeters: 16,
       currentNote: "Current not documented; ask the crew on the day.",
       fitTone: "welcoming",
@@ -468,7 +466,7 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. No gloves, no touching or removing coral or other sea life, and no feeding.",
       difficultyLevel: "advanced",
-      depthRange: "20–30 m (66–100 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 30,
       currentNote:
         "A 20-minute boat ride to open water. Current is not documented; carry an SMB and ask the crew on the day. Medical care is far; confirm the boat’s oxygen and plan.",
@@ -512,7 +510,6 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. No gloves, no touching or removing coral or other sea life, and no feeding.",
       difficultyLevel: "beginner",
-      depthRange: "Up to 17 m (55 ft)",
       maxDepthMeters: 17,
       currentNote:
         "Oil tankers anchor close to the island, so listen for engines and carry an SMB. The boat flies the alpha flag. No diving while a ship is maneuvering or alongside. Ascend on the mooring line or an SMB. Current not documented; ask the crew on the day.",
@@ -553,7 +550,6 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. No gloves, no touching or removing coral or other sea life, and no feeding.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 19 m (62 ft)",
       maxDepthMeters: 19,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -602,7 +598,7 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. No gloves, no touching or removing coral or other sea life, and no feeding.",
       difficultyLevel: "intermediate",
-      depthRange: "17–20 m (56–66 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 20,
       currentNote:
         "Oil tankers anchor close to the island, so listen for engines and carry an SMB. The boat flies the alpha flag. No diving while a ship is maneuvering or alongside. Ascend on the mooring line or an SMB. Current not documented; ask the crew on the day.",
@@ -643,7 +639,7 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. No gloves, no touching or removing coral or other sea life, and no feeding.",
       difficultyLevel: "intermediate",
-      depthRange: "18–19 m (60–62 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 19,
       currentNote:
         "Current not documented; ask the crew on the day. The swim-through is overhead; stay out of it.",
@@ -690,7 +686,7 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. No gloves, no touching or removing coral or other sea life, and no feeding.",
       difficultyLevel: "advanced",
-      depthRange: "20–30 m (66–100 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 30,
       currentNote:
         "Open water along the cliff. Current is not documented; carry an SMB and ask the crew on the day.",
@@ -733,7 +729,7 @@ export const SINT_EUSTATIUS: DiveSiteTemplate[] = [
       conservationNote:
         "Statia National Marine Park requires every dive to be supervised by a dive center and charges a marine park fee that pays for the moorings and staff. No gloves, no touching or removing coral or other sea life, and no feeding.",
       difficultyLevel: "advanced",
-      depthRange: "26–30 m (86–100 ft)",
+      depthMinMeters: 26,
       maxDepthMeters: 30,
       currentNote:
         "Open water along the walls. Current is not documented; carry an SMB and ask the crew on the day. Stay out of the narrow cracks.",

@@ -23,7 +23,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Permit meet you on the way down. The superstructure carries dense schooling fish, and the dishes are usually surrounded.",
       difficultyLevel: "advanced",
-      depthRange: "12–44 m (40–145 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 44,
       currentNote: "Seven miles offshore in open water — current is common.",
       divePlan:
@@ -81,7 +81,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Dense soft coral on the seaward face, and a permanent cloud of yellowtail wherever a boat has been.",
       difficultyLevel: "beginner",
-      depthRange: "3–14 m (10–45 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 14,
       currentNote: "Pick the lee side of the light and the day is usually easy.",
       divePlan:
@@ -126,7 +126,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The ledges hold big fish through the day. In spring and early summer the spawning gatherings here are extraordinary.",
       difficultyLevel: "intermediate",
-      depthRange: "6–20 m (20–65 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 20,
       currentNote:
         "Tidal current runs through the cuts and can be strong, so it is often dived as a drift. Outside the spring closure the ledges carry fishing line: carry a cutter and look before you reach into a hole.",
@@ -174,7 +174,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The grouper are the reason most people come. Schools of snapper hang off the hull.",
       difficultyLevel: "advanced",
-      depthRange: "21–30 m (70–100 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 30,
       currentNote:
         "Open water south of Key West, where current is common. The deck lies around 21–29 m depending on where you stand, and the sand near 30 m. Stay outside the hull.",
@@ -222,7 +222,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The wreckage and the reef beside it share their fish, so a dive here is two sites in one.",
       difficultyLevel: "intermediate",
-      depthRange: "15–20 m (50–65 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 20,
       currentNote:
         "Open water south of Key West, so current is possible. Storm damage has left sharp, loose metal: look, but stay off and out of it.",
@@ -260,7 +260,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Gorgonians across the fingers, and reef fish moving through every canyon.",
       difficultyLevel: "beginner",
-      depthRange: "2–11 m (5–35 ft)",
+      depthMinMeters: 2,
       maxDepthMeters: 11,
       currentNote:
         "A Sanctuary Preservation Area: no fishing or collecting, no touching the coral, and boats use the mooring buoys. Generally an easy reef.",
@@ -304,7 +304,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
         "A small bank reef a mile east of Sand Key Light, packing coral fingers, sand canyons and a rubble zone into a short swim. It is a Sanctuary Preservation Area, and the fish behave like it.",
       marineLife: "Parrotfish · grunts · snapper · sea fans",
       difficultyLevel: "beginner",
-      depthRange: "2–11 m (5–35 ft)",
+      depthMinMeters: 2,
       maxDepthMeters: 11,
       currentNote:
         "Usually easy. A preservation area: no fishing or collecting, no touching the coral, moor on the buoys.",
@@ -350,7 +350,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big gray angelfish drift over the shallows, and the reef fish here are noticeably bold.",
       difficultyLevel: "beginner",
-      depthRange: "3–8 m (10–26 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 8,
       currentNote:
         "Inside a no-take reserve (the Western Sambo Ecological Reserve, renamed a Conservation Area under the sanctuary’s new rules): no fishing, spearing or collecting of any kind, and boats use the mooring buoys. Usually easy on the reef top.",
@@ -394,7 +394,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
         "Shallow sponge and sand bottom off a small key northwest of Key West, the northernmost of the Mule Keys. A gentle, easy swim where rays and turtles turn up among the sponges.",
       marineLife: "Sponges · rays · sea turtles · tropical fish",
       difficultyLevel: "beginner",
-      depthRange: "2–4 m (6–14 ft)",
+      depthMinMeters: 2,
       maxDepthMeters: 4,
       currentNote:
         "Barely deeper than a snorkel site, so any chop reaches the bottom. Save it for a calm day.",
@@ -429,7 +429,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
         "A shallow reef south of Key West named for the marker stake that once stood on it. Easy, clear and close to town, it is a common first dive and a favorite with photographers.",
       marineLife: "Green morays · parrotfish · grunts · snapper",
       difficultyLevel: "beginner",
-      depthRange: "2–9 m (6–30 ft)",
+      depthMinMeters: 2,
       maxDepthMeters: 9,
       currentNote:
         "Current is usually limited, and the reef is shallow enough to stay close to the mooring.",
@@ -464,7 +464,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
         "A shallow spur-and-groove reef south of Key West, beside the channel marker numbered 32 that gives it its other name. Its coral fingers rise off a sand bottom and hold a steady crowd of reef fish.",
       marineLife: "Grunts · yellowtail snapper · green morays · sea turtles",
       difficultyLevel: "beginner",
-      depthRange: "3–8 m (10–27 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 8,
       currentNote:
         "Current is usually limited, but boats run past the marker: fly a dive flag and surface by the boat. Not a preservation area, so you may share it with fishing boats.",
@@ -510,7 +510,7 @@ export const FLORIDA_KEYS_KEY_WEST: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Remote and protected, so the fish are larger and more numerous than on most Keys reefs.",
       difficultyLevel: "beginner",
-      depthRange: "1–6 m (3–21 ft)",
+      depthMinMeters: 1,
       maxDepthMeters: 7,
       currentNote:
         "Inside the park’s Research Natural Area: boats must use the mooring buoy (two hours at most), and nothing is taken or touched. Wreckage reaches the surface, so watch your head on ascent and your hands near the sharp iron. The nearest help is a long boat ride away.",

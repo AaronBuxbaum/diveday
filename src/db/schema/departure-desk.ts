@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { bookings } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { trips } from "./trips";
 
@@ -52,8 +53,8 @@ export const lostItems = pgTable(
     /** The last time the owner was told, and how. Null until somebody taps Tell. */
     toldAt: timestamp("told_at", { withTimezone: true }),
     toldChannel: lostItemToldChannel("told_channel"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     index("lost_items_shop_status_idx").on(table.shopId, table.status, table.createdAt),
@@ -104,7 +105,7 @@ export const departureNotes = pgTable(
     /** Seats it was addressed to, and how many of them a provider accepted. */
     recipients: integer("recipients").notNull().default(0),
     delivered: integer("delivered").notNull().default(0),
-    sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+    sentAt: appNowTimestamp("sent_at").notNull(),
   },
   (table) => [
     index("departure_notes_shop_trip_idx").on(table.shopId, table.tripId, table.sentAt),

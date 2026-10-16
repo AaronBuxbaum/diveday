@@ -26,7 +26,7 @@ import {
 import { shopBySlugCached } from "@/db/shops-cached";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { requestTranslator } from "@/i18n/request";
-import { depthText } from "@/i18n/unit-labels";
+import { diveSiteDepthText } from "@/i18n/unit-labels";
 import { parseDiveSiteSlug } from "@/lib/dive-site-slug";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
@@ -131,12 +131,10 @@ export default async function DiveSitePage({
     },
   ];
 
-  // The shop's own words for how deep it is, and the recorded maximum where it
-  // wrote none — the same fallback the departure page's day rows use, so the
-  // two surfaces never name different depths for one reef.
-  const depth =
-    site.depthRange ??
-    (site.maxDepthMeters ? depthText(t, site.maxDepthMeters, shop.depthUnit) : null);
+  // The recorded range in the shop's unit, the same line the departure page's
+  // day rows print, so the two surfaces never name different depths for one
+  // reef. The shop's note stands in only where no depth is recorded.
+  const depth = diveSiteDepthText(t, site, shop.depthUnit);
   const facts = [site.locationName, depth].filter((fact) => fact !== null);
   const [cover = null, ...gallery] = site.imageUrls;
 

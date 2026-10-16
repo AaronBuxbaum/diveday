@@ -26,7 +26,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Grunts, snappers and groupers crowd the coral stacks between the chutes.",
       difficultyLevel: "intermediate",
-      depthRange: "9–18 m (30–60 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -58,7 +58,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLife: "Reef fish · plate corals",
       marineLifeDescription: "Fish gather at the reef corner, where water and food move through.",
       difficultyLevel: "intermediate",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote:
         "Currents are noted at the reef corner at one end of the site; elsewhere current is not documented. Ask the crew on the day and carry an SMB.",
@@ -92,7 +92,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Each coral stand has its own residents; a second pass often shows something new.",
       difficultyLevel: "intermediate",
-      depthRange: "11–18 m (35–60 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -126,7 +126,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The wall is cut with buttresses and hollows; look out into the blue for sharks.",
       difficultyLevel: "intermediate",
-      depthRange: "15–30 m (50–100 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 30,
       currentNote:
         "Current not documented. The 2016 mooring list shows no buoy here, so the crew will brief how the boat is secured. Carry an SMB.",
@@ -160,7 +160,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Groupers keep to the coral head and the grotto edge; watch them from the sand.",
       difficultyLevel: "intermediate",
-      depthRange: "12–18 m (40–60 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -193,7 +193,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The schools are thickest along the top of the wall; the chutes show the reef's structure.",
       difficultyLevel: "intermediate",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day and carry an SMB.",
       divePlan:
@@ -227,7 +227,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools hold along the top of the wall; small reef sharks work the blue beyond it.",
       difficultyLevel: "intermediate",
-      depthRange: "14–30 m (45–100 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 30,
       currentNote:
         "Current not documented for this site; the northernmost Northwest Point sites regularly have some. Ask the crew on the day and carry an SMB.",
@@ -269,7 +269,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Jacks hang over the pillar coral; the undercut holds sponges, plate coral and black coral along its lip.",
       difficultyLevel: "intermediate",
-      depthRange: "11–26 m (35–85 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 26,
       currentNote:
         "Current not documented for this site; the northernmost Northwest Point sites regularly have some. Ask the crew on the day and carry an SMB.",
@@ -310,7 +310,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Groupers and snappers gather along the face; rays and sharks pass along the wall outside the crack.",
       difficultyLevel: "intermediate",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "Current not documented for this site; the northernmost Northwest Point sites regularly have some. Ask the crew on the day and carry an SMB.",
@@ -351,7 +351,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLife: "Sheet corals · reef fish",
       marineLifeDescription: "Sheet coral and small fish line the wall.",
       difficultyLevel: "intermediate",
-      depthRange: "14–30 m (45–100 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 30,
       currentNote:
         "Current not documented for this site; the northernmost Northwest Point sites regularly have some. Ask the crew on the day and carry an SMB.",
@@ -392,7 +392,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Keep low and slow on the sand and the eels stay up; the wall edge is close.",
       difficultyLevel: "intermediate",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "Current not documented for this site; the northernmost Northwest Point sites regularly have some. Ask the crew on the day and carry an SMB.",
@@ -428,7 +428,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Look closely at the frame and sand around it; small blennies, crabs and morays use the structure.",
       difficultyLevel: "beginner",
-      depthRange: "5–11 m (15–35 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 11,
       currentNote:
         "Snorkelers visit the debris from the surface interval, so listen for engines and surface with an SMB. Current is regular at Northwest Point; ask the crew about it on the day.",
@@ -476,7 +476,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Eels and rays work the flat; sharks and larger fish pass along the wall.",
       difficultyLevel: "intermediate",
-      depthRange: "15–30 m (50–100 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 30,
       currentNote:
         "Usually light; it can change, so carry an SMB. Current is not documented site by site; ask the crew on the day.",
@@ -511,7 +511,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The chute holds small life in the seagrass; hawksbills are common, and garden eels and stingrays work the sand under the boat.",
       difficultyLevel: "intermediate",
-      depthRange: "15–30 m (50–100 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 30,
       currentNote:
         "Usually light; it can change, so carry an SMB. Current is not documented site by site; ask the crew on the day.",
@@ -551,7 +551,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Watch the cleaning stations on the reef lip; sponges and black coral grow on the undercut face.",
       difficultyLevel: "intermediate",
-      depthRange: "15–30 m (50–100 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 30,
       currentNote:
         "Usually light; it can change, so carry an SMB. Current is not documented site by site; ask the crew on the day.",
@@ -585,7 +585,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sharks and groupers work the ledge; black durgon school over the reef.",
       difficultyLevel: "intermediate",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "Usually light; it can change, so carry an SMB. Current is not documented site by site; ask the crew on the day.",
@@ -619,7 +619,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Pillar coral stands crowd the reef top; barracuda, groupers and angelfish cruise over it.",
       difficultyLevel: "intermediate",
-      depthRange: "14–30 m (45–100 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 30,
       currentNote:
         "Usually light; it can change, so carry an SMB. Current is not documented site by site; ask the crew on the day.",
@@ -661,7 +661,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The pinnacles draw schools of jacks and durgon; large tube sponges make good wide-angle subjects.",
       difficultyLevel: "intermediate",
-      depthRange: "14–30 m (45–100 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 30,
       currentNote:
         "Open to the sea off the French Cay bird sanctuary, where the reef meets current. Carry an SMB with line, stay with the group, and expect the trip to run only in good weather.",
@@ -703,7 +703,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Look for nurse sharks on the reef top; keep checking the blue behind you.",
       difficultyLevel: "intermediate",
-      depthRange: "14–30 m (45–100 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 30,
       currentNote:
         "Open blue water lies behind the notch, and the reef meets current. Carry an SMB with line, keep checking the group, and expect the trip to run only in good weather.",
@@ -737,7 +737,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLife: "Grunts · groupers · reef sharks",
       marineLifeDescription: "The wall holds the larger animals; sharks cruise along it.",
       difficultyLevel: "intermediate",
-      depthRange: "14–30 m (45–100 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 30,
       currentNote:
         "The site gets its name from windy, rough conditions at French Cay, which is remote and open to the sea. Expect surface chop and current, carry an SMB with line, and stay with the group.",
@@ -772,7 +772,7 @@ export const TURKS_CAICOS_PROVIDENCIALES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The bowl shelters big schools; reef sharks may shadow divers over the reef top.",
       difficultyLevel: "intermediate",
-      depthRange: "14–30 m (45–100 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 30,
       currentNote:
         "Current meets the reef outside the bowl, and French Cay is remote and open to the sea. Carry an SMB with line, stay with the group, and expect the trip to run only in good weather.",

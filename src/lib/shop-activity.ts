@@ -69,6 +69,7 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   identity_split: "safety",
   identity_split_off: "safety",
   medical_clearance_opened: "safety",
+  medical_answered_by_earlier_letter: "safety",
   medical_answers_read: "safety",
   date_of_birth_cleared_as_adult: "safety",
   incident_report_filed: "safety",

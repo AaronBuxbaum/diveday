@@ -25,7 +25,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sea fans and sponges crowd the wall, and schooling fish gather where the current is strongest.",
       difficultyLevel: "advanced",
-      depthRange: "15–30 m (50–100 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 30,
       currentNote:
         "Boats work this coast, so carry an SMB and listen for engines on the way up. Currents from both shores converge at the tip and the surface can be rough, so the site depends on the weather. It is run as a drift.",
@@ -76,7 +76,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The eels stay in their holes if you come too close, so watch from a few meters back. Peacock flounder and squid use the sand and coral heads.",
       difficultyLevel: "intermediate",
-      depthRange: "6–20 m (20–65 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 20,
       currentNote:
         "The site is off West Bay beach, so listen for engines on the way up and carry an SMB. Currents are mild.",
@@ -126,7 +126,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Slow, close looking pays off on the sand, with jacks, snapper and parrotfish over the coral.",
       difficultyLevel: "beginner",
-      depthRange: "12–18 m (40–60 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 18,
       currentNote:
         "West Bay's boat traffic is close, so listen for engines on the way up and carry an SMB. Currents are low.",
@@ -172,7 +172,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Nursery fragments draw small fish, and the sand holds the occasional southern stingray.",
       difficultyLevel: "intermediate",
-      depthRange: "12–18 m (40–60 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 18,
       currentNote:
         "Current not documented; ask the crew on the day. Listen for engines on the way up and carry an SMB.",
@@ -211,7 +211,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools sit over the ridge, and the sand beside it is where a nurse shark rests.",
       difficultyLevel: "beginner",
-      depthRange: "8–15 m (25–50 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 15,
       currentNote:
         "Currents are minimal on most days. Listen for engines on the way up and carry an SMB.",
@@ -251,7 +251,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLife: "Hawksbill turtles · black grouper · blue tang",
       marineLifeDescription: "Turtles, groupers and schools of blue tang work the shallow top.",
       difficultyLevel: "beginner",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       currentNote:
         "The site is near the West End channel and its boat traffic, so listen for engines, carry an SMB, and surface only after checking above you. Currents are not documented; ask the crew on the day.",
@@ -295,7 +295,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLife: "Hawksbill turtles · black grouper · blue tang",
       marineLifeDescription: "Turtles and groupers on the reef top, and blue tang in schools.",
       difficultyLevel: "beginner",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       currentNote:
         "Currents are not documented; ask the crew on the day. Boats from West End pass nearby, so carry an SMB and listen for engines.",
@@ -335,7 +335,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Lobsters and crabs sit in the crevices, and flamingo tongue snails are on the sea fans in the shallows.",
       difficultyLevel: "advanced",
-      depthRange: "3–18 m (10–60 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 18,
       currentNote:
         "The wall sits off the West End shore, so listen for engines on the way up and carry an SMB. It shares the wall with Half Moon Bay, where the current usually runs north and some days carries you past several sites; ask the crew before you go.",
@@ -386,7 +386,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Rays and turtles pass along the wall, with glassy sweepers in the shallows and silversides in the late summer.",
       difficultyLevel: "advanced",
-      depthRange: "12–33 m (40–110 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 33,
       currentNote:
         "Boats work the West End coast, so carry an SMB and listen for engines on the way up. The wall is exposed to open water. Currents are not documented; ask the crew on the day.",
@@ -443,7 +443,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools of sergeant majors, grunts and chubs stack up along the top of the wall.",
       difficultyLevel: "intermediate",
-      depthRange: "11–27 m (35–90 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 30,
       currentNote:
         "Run as a drift in either direction. The wreck next door is popular, so expect boat and diver traffic: listen for engines and carry an SMB.",
@@ -490,7 +490,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Turtles and groupers on the shallow reef, and neck crabs in the rubble and sponges.",
       difficultyLevel: "beginner",
-      depthRange: "9–18 m (30–60 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       currentNote:
         "Currents are not documented; ask the crew on the day. Boats from Sandy Bay use the mooring, so listen for engines and carry an SMB.",
@@ -531,7 +531,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The channel itself holds little life. Snapper, grouper and barracuda wait near the mooring on the outer reef.",
       difficultyLevel: "advanced",
-      depthRange: "11–30 m (35–100 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 30,
       currentNote:
         "Water from the lagoon mixes in and can leave the visibility poor. Currents are not documented; ask the crew on the day.",
@@ -574,7 +574,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Glassy sweepers hang in the light shafts, and lettuce-leaf sea slugs and spotted drum live on the rocks at the entrance.",
       difficultyLevel: "advanced",
-      depthRange: "8–15 m (25–50 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 15,
       currentNote:
         "Currents are not documented; ask the crew on the day. The cavern is small, so wait outside until the guide calls your group.",
@@ -629,7 +629,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Anemones, shrimp and lobsters live on the coral heads, and big schools come in from the blue along the wall.",
       difficultyLevel: "intermediate",
-      depthRange: "11–30 m (35–100 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 30,
       currentNote:
         "Currents are not documented; ask the crew on the day. Carry an SMB at the wall. A night dive needs a guide.",
@@ -678,7 +678,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big groupers and snappers circle the hull, garden eels cover the sand, and blennies and nudibranchs live on the mast.",
       difficultyLevel: "advanced",
-      depthRange: "24–33 m (80–110 ft)",
+      depthMinMeters: 24,
       maxDepthMeters: 33,
       currentNote:
         "Boat and diver traffic is heavy on this popular wreck, so listen for engines, carry an SMB, and ascend along the line or the wall. Currents are not documented; ask the crew on the day.",
@@ -735,7 +735,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barracuda hold over the hull, schools of snapper move through, and coral has begun to grow along the cargo hull.",
       difficultyLevel: "advanced",
-      depthRange: "12–37 m (40–120 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 37,
       currentNote:
         "Boat traffic uses the wreck, so listen for engines and carry an SMB. Currents are not documented; ask the crew on the day.",
@@ -791,7 +791,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Black coral and sea fans cover the crevice walls, and schools of horse-eye jacks move through.",
       difficultyLevel: "advanced",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote:
         "The south shore is often windy with rough water, so the trip depends on the weather. Currents are not documented; ask the crew on the day.",
@@ -847,7 +847,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Reef sharks gather on the bait and move along the coral in front of the group. Numbers vary, and no animal is promised.",
       difficultyLevel: "advanced",
-      depthRange: "18–24 m (60–80 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 24,
       currentNote:
         "Ships use the Coxen Hole and Mahogany Bay approaches near this bank, so listen for engines and carry an SMB. It is open water on a bank about 20 minutes offshore by boat. Currents are not documented; ask the crew on the day. Medical care is far; confirm the boat's oxygen and plan.",
@@ -891,7 +891,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Triggerfish, hogfish and barracuda cruise the crest, and the wall holds many kinds of coral.",
       difficultyLevel: "intermediate",
-      depthRange: "16–30 m (52–100 ft)",
+      depthMinMeters: 16,
       maxDepthMeters: 30,
       currentNote:
         "Ships use the Coxen Hole and Mahogany Bay approaches near this bank, so listen for engines and carry an SMB. It is open water offshore, so the trip depends on the weather. Currents are not documented; ask the crew on the day.",
@@ -938,7 +938,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big sponges make the overhangs, and the dense hard coral on top holds reef fish.",
       difficultyLevel: "intermediate",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       currentNote:
         "Growth on the wall moves in the current. Currents are not documented; ask the crew on the day.",
@@ -980,7 +980,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLife: "Soft corals · sponges · reef fish",
       marineLifeDescription: "Soft corals sway on the wall in the current.",
       difficultyLevel: "advanced",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote:
         "The south side is unpredictable, so the trip depends on the weather. Currents are not documented; ask the crew on the day.",
@@ -1014,7 +1014,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Jawfish and garden eels live in the sand, and a seahorse can turn up in the sea plumes.",
       difficultyLevel: "intermediate",
-      depthRange: "14–18 m (45–60 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 18,
       currentNote:
         "Boats pass through French Cay Cut nearby, so listen for engines on the way up and carry an SMB. Currents are not documented; ask the crew on the day.",
@@ -1062,7 +1062,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLife: "Elkhorn coral · staghorn coral · lettuce coral",
       marineLifeDescription: "Shallow, dense coral with plenty of small fish.",
       difficultyLevel: "beginner",
-      depthRange: "3–12 m (10–40 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 12,
       currentNote:
         "Watch for surge on the reef top. Currents are not documented; ask the crew on the day.",
@@ -1093,7 +1093,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLife: "Soft corals · sea fans · reef fish",
       marineLifeDescription: "Soft corals and sea fans cover the top and upper wall.",
       difficultyLevel: "advanced",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "The trip crosses a channel, so it depends on a calm day. Currents are not documented; ask the crew on the day.",
@@ -1132,7 +1132,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLife: "Sea fans · reef fish",
       marineLifeDescription: "Sea fans line the top of the wall.",
       difficultyLevel: "beginner",
-      depthRange: "6–12 m (20–40 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 12,
       currentNote:
         "Watch for east-west surge. Currents are not documented; ask the crew on the day.",
@@ -1162,7 +1162,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLife: "Rope sponges · tube sponges · barrel sponges",
       marineLifeDescription: "Sponges and cascading corals make up the wall.",
       difficultyLevel: "beginner",
-      depthRange: "6–8 m (20–25 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 8,
       currentNote: "Currents are not documented; ask the crew on the day.",
       divePlan: "Stay on the shallow top and the winding wall, and keep clear of the broken edge.",
@@ -1202,7 +1202,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLife: "Lettuce coral · reef fish",
       marineLifeDescription: "Lettuce coral covers the edge of the reef.",
       difficultyLevel: "beginner",
-      depthRange: "2–9 m (5–30 ft)",
+      depthMinMeters: 2,
       maxDepthMeters: 9,
       currentNote: "Currents are not documented; ask the crew on the day.",
       divePlan: "Stay on the reef top and in the channels, well clear of the coral.",
@@ -1230,7 +1230,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLife: "Sea fans · creole wrasse · blue chromis · black durgon",
       marineLifeDescription: "Schools of creole wrasse and chromis hang over the sea fans.",
       difficultyLevel: "advanced",
-      depthRange: "9–14 m (30–45 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 14,
       currentNote:
         "Current can exceed a diver's swimming ability; staff brief the day's flow. Carry an SMB.",
@@ -1275,7 +1275,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLife: "Sponges · sea fans · reef fish",
       marineLifeDescription: "The walls of the crack are covered in growth and small life.",
       difficultyLevel: "advanced",
-      depthRange: "9–24 m (30–80 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 24,
       currentNote: "Currents are not documented; ask the crew on the day.",
       divePlan:
@@ -1321,7 +1321,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Hundreds of small reef fish gather around the mound, and the gorgonians shelter small crabs and seahorses.",
       difficultyLevel: "beginner",
-      depthRange: "3–18 m (10–60 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 18,
       currentNote:
         "Boats work the West End coast, so listen for engines on the way up and carry an SMB. Currents are not documented; ask the crew on the day.",
@@ -1370,7 +1370,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barracuda, trumpetfish, snapper and jacks school along the wall, and a nurse or reef shark turns up now and then.",
       difficultyLevel: "advanced",
-      depthRange: "15–30 m (50–100 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 30,
       currentNote:
         "Run as a drift. The current usually flows east to west, light to moderate, and the day depends on the weather and current. Carry an SMB.",
@@ -1423,7 +1423,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sponges big enough to hide in, queen triggerfish and black durgon over the plains, and the shy sargassum triggerfish in the coral patches.",
       difficultyLevel: "advanced",
-      depthRange: "12–27 m (40–90 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 27,
       currentNote:
         "The current runs east to west across the plains, and it is stronger along the wall. The surface can be rough, so the site depends on the weather. Carry an SMB.",
@@ -1475,7 +1475,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Spotted eagle rays and southern stingrays hunt along the base, and creole wrasse and jacks stream past on the current.",
       difficultyLevel: "advanced",
-      depthRange: "6–27 m (20–90 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 27,
       currentNote: "A steady current runs along the wall, so it is run as a drift. Carry an SMB.",
       divePlan:
@@ -1525,7 +1525,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Green moray eels and pipefish live at the entrance, and in late summer silversides fill the channel so thickly you cannot see across it.",
       difficultyLevel: "beginner",
-      depthRange: "3–14 m (10–45 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 14,
       currentNote:
         "The channel is close to West End shore and its boat traffic: listen for engines, carry an SMB, and come up in the channel only after checking above you. Current not documented; ask the crew on the day.",
@@ -1574,7 +1574,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Eagle rays cruise along the reef, and groupers, chromis and creole wrasse work the sides of the wall.",
       difficultyLevel: "intermediate",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Boats work the West End beach, so listen for engines on the way up and carry an SMB. Currents usually run north, and on some days hard enough to carry you past several sites; ask the crew before you go.",
@@ -1625,7 +1625,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Eagle rays cruise the slope, and seahorses and octopus live among the soft coral stands.",
       difficultyLevel: "intermediate",
-      depthRange: "3–18 m (10–60 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 18,
       currentNote:
         "Boats work the West End coast, so listen for engines on the way up and carry an SMB. Run as a drift. Current strength is not documented; ask the crew on the day.",
@@ -1673,7 +1673,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Eagle rays drift toward the bay, and seahorses turn up in the gorgonians.",
       difficultyLevel: "advanced",
-      depthRange: "3–27 m (10–90 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 27,
       currentNote:
         "Nutrient-rich water from Gibson Bay runs through the site. Current not documented in strength; ask the crew on the day.",
@@ -1723,7 +1723,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "At least four big groupers hold on the wall, with dog snapper and creole wrasse beside them.",
       difficultyLevel: "advanced",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote:
         "Run as a drift. Current strength is not documented; ask the crew on the day. Do not drift north past the end of the dive.",
@@ -1771,7 +1771,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A very large gorgonian bends in the current, and green morays live in the canyons.",
       difficultyLevel: "beginner",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       currentNote:
         "Boats from Sandy Bay use the mooring, so listen for engines and carry an SMB. The current usually flows north.",
@@ -1818,7 +1818,7 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Eagle rays, southern stingrays and squid pass along the hull, and the sand holds small life.",
       difficultyLevel: "intermediate",
-      depthRange: "12–24 m (40–80 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 24,
       currentNote:
         "Listen for engines on the way up. Current not documented; ask the crew on the day. Shore entries run from the resort: ask about the entry point, any surf or rocks and the exit route before you go, and night dives need a guide.",
