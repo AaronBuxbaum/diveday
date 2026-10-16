@@ -139,3 +139,38 @@ export function withholdHeldSeatParticulars(diver: ManifestDiver): ManifestDiver
     readiness: { status: "blocked", blockers: kept },
   };
 }
+
+/**
+ * Which emergency contact a confirmed record keeps when the held seat's own
+ * (issue #2145) differs from it: the seat's (`use_held`) or the record's
+ * (`keep_record`). The staffer picks in the armed "Same person".
+ */
+export type HeldContactChoice = "use_held" | "keep_record";
+
+/**
+ * What a confirm does with the held seat's contact: the pair to write onto the
+ * record, nothing (`null`), or `"differs"` when both hold a complete contact,
+ * they are not the same, and nobody has picked. A pair needs both halves, as
+ * `readEmergencyContact` does everywhere else.
+ */
+export function heldContactCarry(
+  contacts: {
+    heldName: string | null;
+    heldPhone: string | null;
+    recordName: string | null;
+    recordPhone: string | null;
+  },
+  choice: HeldContactChoice | undefined,
+): { name: string; phone: string } | null | "differs" {
+  const { heldName, heldPhone, recordName, recordPhone } = contacts;
+  if (!heldName || !heldPhone) return null;
+  const held = { name: heldName, phone: heldPhone };
+  if (!recordName || !recordPhone) return held;
+  const same =
+    heldName.trim().toLocaleLowerCase() === recordName.trim().toLocaleLowerCase() &&
+    heldPhone.replace(/\D/g, "") === recordPhone.replace(/\D/g, "");
+  if (same) return null;
+  if (choice === "use_held") return held;
+  if (choice === "keep_record") return null;
+  return "differs";
+}

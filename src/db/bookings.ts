@@ -15,7 +15,7 @@ import { seatListPriceCents } from "@/lib/deposits";
 import { typeChangedDeskEventKind } from "@/lib/desk-events";
 import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
-import { seatName } from "@/lib/held-seat";
+import { type HeldContactChoice, heldContactCarry, seatName } from "@/lib/held-seat";
 import { inTrainingBefore } from "@/lib/in-training";
 import { normalizeEmailAddress } from "@/lib/inbox";
 import { rowCanBeReactivated } from "@/lib/no-show";
@@ -3175,15 +3175,44 @@ export async function confirmBookingIdentity(
     shopId: string;
     bookingId: string;
     actorPersonId: string;
+    /**
+     * Which emergency contact the confirmed record keeps, when the desk
+     * recorded one on the held seat that differs from the record's own
+     * (`HeldContactChoice`). Without it, a differing pair refuses the confirm.
+     */
+    heldContact?: HeldContactChoice;
   },
   notices: SendRescheduleNoticesOptions = {},
-) {
+): Promise<boolean | "contact_differs"> {
   const booking = await db.transaction(async (tx) => {
+    // **The held seat's contact is never dropped silently** (issue #2145,
+    // dive-domain review H3). Once the staffer says "Same person", the desk's
+    // note of who to call is that person's: onto a record with no contact it
+    // goes as it is; beside a different one, the staffer picks which stands.
+    const [held] = await tx
+      .select({
+        personId: bookings.personId,
+        heldName: bookings.heldEmergencyContactName,
+        heldPhone: bookings.heldEmergencyContactPhone,
+        recordName: people.emergencyContactName,
+        recordPhone: people.emergencyContactPhone,
+      })
+      .from(bookings)
+      .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          isNotNull(bookings.identityUnconfirmedAt),
+        ),
+      )
+      .for("update")
+      .limit(1);
+    if (!held) return null;
+    const carry = heldContactCarry(held, input.heldContact);
+    if (carry === "differs") return "contact_differs" as const;
     const [row] = await tx
       .update(bookings)
-      // The held seat's own contact (issue #2145) was only ever read while it
-      // was held; the confirmed record's contact stands now, and the desk's
-      // note of it is not copied onto that record.
       .set({
         identityUnconfirmedAt: null,
         identityBookedAs: null,
@@ -3200,6 +3229,12 @@ export async function confirmBookingIdentity(
       )
       .returning({ tripId: bookings.tripId, personId: bookings.personId });
     if (!row) return null;
+    if (carry) {
+      await tx
+        .update(people)
+        .set({ emergencyContactName: carry.name, emergencyContactPhone: carry.phone })
+        .where(and(eq(people.id, row.personId), eq(people.shopId, input.shopId)));
+    }
     await settleConfirmedPackageCoverage(tx, {
       shopId: input.shopId,
       bookingId: input.bookingId,
@@ -3208,6 +3243,7 @@ export async function confirmBookingIdentity(
     return row;
   });
   if (!booking) return false;
+  if (booking === "contact_differs") return booking;
   const code = "identity_confirmed";
   const diver = await bookingDiverName(db, input.shopId, input.bookingId);
   if (diver) {

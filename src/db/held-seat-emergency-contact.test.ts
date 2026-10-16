@@ -18,16 +18,19 @@ const ctx = fileScopedShopContext();
  * 2026-10-13, option b). The matched record's contact may be somebody else's
  * next of kin, so it is withheld from every crew surface; the desk records one
  * on the booking, which stands in its place while the seat is held and goes
- * onto the new record at a split. Nothing is ever written to the matched record
- * on the held seat's behalf. Failure paths first: emergency contacts on a
+ * onto the new record at a split. Nothing is written to the matched record
+ * while the seat is held; at a confirm it is the same person, so the seat's
+ * contact goes onto a record with none, and beside a different one the staffer
+ * picks (dive-domain review H3). Failure paths first: emergency contacts on a
  * manifest are safety-critical, and they are personal data.
  */
 
 let seq = 0;
 
 /** Marisol, with her sister on file, and a seat booked on her email as Lucia. */
-async function heldSeat() {
+async function heldSeat(options: { recordContact?: boolean } = {}) {
   const { db, shop } = ctx;
+  const recordContact = options.recordContact ?? true;
   seq += 1;
   const email = `marisol-${seq}@example.com`;
   const [marisol] = await db
@@ -36,8 +39,8 @@ async function heldSeat() {
       shopId: shop.id,
       fullName: "Marisol Vega",
       email,
-      emergencyContactName: "Pilar Vega",
-      emergencyContactPhone: "+34 600 111 222",
+      emergencyContactName: recordContact ? "Pilar Vega" : null,
+      emergencyContactPhone: recordContact ? "+34 600 111 222" : null,
     })
     .returning({ id: people.id });
   if (!marisol) throw new Error("person insert failed");
@@ -182,21 +185,92 @@ describe("a held seat's emergency contact", () => {
     expect(record?.emergencyContactName).toBe("Pilar Vega");
   });
 
-  it("is cleared at a confirm, and never copied onto the confirmed record", async () => {
+  /** The desk's contact for the person on the seat, recorded while it is held. */
+  async function recordHeld(bookingId: string, name = "Rosa Vega", phone = "+34 600 333 444") {
+    const { db, shop } = ctx;
+    await saveBookingEmergencyContact(db, { shopId: shop.id, bookingId, name, phone, actor: "staff" });
+  }
+
+  async function contacts(bookingId: string, personId: string) {
+    const { db } = ctx;
+    const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    const [record] = await db.select().from(people).where(eq(people.id, personId));
+    return { seat, record };
+  }
+
+  it("refuses a confirm that would drop a differing contact, until the staffer picks one", async () => {
     const { db, shop, marisol, bookingId, staff } = await heldSeat();
-    await saveBookingEmergencyContact(db, {
-      shopId: shop.id,
-      bookingId,
-      name: "Rosa Vega",
-      phone: "+34 600 333 444",
-      actor: "staff",
-    });
+    await recordHeld(bookingId);
+    expect(
+      await confirmBookingIdentity(db, { shopId: shop.id, bookingId, actorPersonId: staff.id }),
+    ).toBe("contact_differs");
+    const { seat, record } = await contacts(bookingId, marisol);
+    expect(seat?.identityUnconfirmedAt).not.toBeNull();
+    expect(seat?.heldEmergencyContactName).toBe("Rosa Vega");
+    expect(record?.emergencyContactName).toBe("Pilar Vega");
+  });
+
+  it("puts the seat's contact on the record when the staffer picks it", async () => {
+    const { db, shop, marisol, bookingId, staff } = await heldSeat();
+    await recordHeld(bookingId);
+    expect(
+      await confirmBookingIdentity(db, {
+        shopId: shop.id,
+        bookingId,
+        actorPersonId: staff.id,
+        heldContact: "use_held",
+      }),
+    ).toBe(true);
+    const { seat, record } = await contacts(bookingId, marisol);
+    expect(seat?.identityUnconfirmedAt).toBeNull();
+    expect(seat?.heldEmergencyContactName).toBeNull();
+    expect(record?.emergencyContactName).toBe("Rosa Vega");
+    expect(record?.emergencyContactPhone).toBe("+34 600 333 444");
+  });
+
+  it("keeps the record's contact when the staffer picks it", async () => {
+    const { db, shop, marisol, bookingId, staff } = await heldSeat();
+    await recordHeld(bookingId);
+    expect(
+      await confirmBookingIdentity(db, {
+        shopId: shop.id,
+        bookingId,
+        actorPersonId: staff.id,
+        heldContact: "keep_record",
+      }),
+    ).toBe(true);
+    const { seat, record } = await contacts(bookingId, marisol);
+    expect(seat?.heldEmergencyContactName).toBeNull();
+    expect(record?.emergencyContactName).toBe("Pilar Vega");
+  });
+
+  it("copies the seat's contact onto a record that has none", async () => {
+    const { db, shop, marisol, bookingId, staff } = await heldSeat({ recordContact: false });
+    await recordHeld(bookingId);
     expect(
       await confirmBookingIdentity(db, { shopId: shop.id, bookingId, actorPersonId: staff.id }),
     ).toBe(true);
-    const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
-    expect(seat?.heldEmergencyContactName).toBeNull();
-    const [record] = await db.select().from(people).where(eq(people.id, marisol));
+    const { record } = await contacts(bookingId, marisol);
+    expect(record?.emergencyContactName).toBe("Rosa Vega");
+    expect(record?.emergencyContactPhone).toBe("+34 600 333 444");
+  });
+
+  it("asks nothing when the seat's contact is the record's", async () => {
+    const { db, shop, marisol, bookingId, staff } = await heldSeat();
+    await recordHeld(bookingId, "Pilar Vega", "+34 600 111 222");
+    expect(
+      await confirmBookingIdentity(db, { shopId: shop.id, bookingId, actorPersonId: staff.id }),
+    ).toBe(true);
+    const { record } = await contacts(bookingId, marisol);
+    expect(record?.emergencyContactName).toBe("Pilar Vega");
+  });
+
+  it("leaves the record's contact alone when the seat recorded none", async () => {
+    const { db, shop, marisol, bookingId, staff } = await heldSeat();
+    expect(
+      await confirmBookingIdentity(db, { shopId: shop.id, bookingId, actorPersonId: staff.id }),
+    ).toBe(true);
+    const { record } = await contacts(bookingId, marisol);
     expect(record?.emergencyContactName).toBe("Pilar Vega");
   });
 

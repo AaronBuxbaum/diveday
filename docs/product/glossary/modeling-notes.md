@@ -71,7 +71,8 @@
   emergency contact**, which the desk records on the roster for the person in front of them
   (`bookings.held_emergency_contact_*`, issue #2145): written on the booking, never on the matched
   record, shown on the manifest, its sheet and the crew phone's copy, moved onto the new record at a
-  split, and cleared at a confirm. The Gear tab packs nothing of the matched diver's for it
+  split, and at a confirm copied onto a record with none; beside a different one, the staffer
+  picks which stands in the armed "Same person", which refuses until they do. The Gear tab packs nothing of the matched diver's for it
   either: its booked-as name, no sizes and no verified nitrox card until the desk confirms who it
   is (`listTripPrepDivers`, issue #2144). Its bearer links name nobody: `/ready` greets the name
   it was booked under and remembers nothing on the device, no release link is issued or signed

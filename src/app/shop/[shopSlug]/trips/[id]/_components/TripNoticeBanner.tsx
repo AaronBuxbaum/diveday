@@ -193,6 +193,11 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "trips.notices.identityRepointMedicalHold",
   },
+  "identity-contact-differs": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityContactDiffers",
+  },
   "identity-repoint-already-booked": {
     form: "roster",
     tone: "danger",

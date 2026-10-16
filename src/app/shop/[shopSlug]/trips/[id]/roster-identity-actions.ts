@@ -36,11 +36,21 @@ export async function confirmDiverIdentityAction(
   if (!uuidParam(bookingId)) redirect(back);
   const db = await getDb();
   await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
+  // Which emergency contact stands, when the seat's and the record's differ
+  // (dive-domain review H3); anything else posted is no answer.
+  const heldContactPosted = String(formData.get("heldContact") ?? "");
+  const heldContact =
+    heldContactPosted === "use_held" || heldContactPosted === "keep_record"
+      ? heldContactPosted
+      : undefined;
   const confirmed = await confirmBookingIdentity(db, {
     shopId: s.user.shopId,
     bookingId,
     actorPersonId: s.user.personId,
+    heldContact,
   });
+  if (confirmed === "contact_differs")
+    revalidateAndRedirect(back, noticeUrl(back, "identity-contact-differs", { bid: bookingId }));
   if (!confirmed) revalidateAndRedirect(back, noticeUrl(back, "invalid", { bid: bookingId }));
   // The gear this seat paid for at checkout waited on the booking while it was
   // held (`paid_rental_kinds`); the staffer's tick carries it to the fit, which

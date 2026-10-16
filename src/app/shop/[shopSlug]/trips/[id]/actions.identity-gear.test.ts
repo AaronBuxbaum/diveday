@@ -102,6 +102,33 @@ describe("Same person, with gear paid for at checkout", () => {
   });
 });
 
+describe("Same person, with the seat's emergency contact", () => {
+  it("passes the staffer's pick and lands on the ask when none was made", async () => {
+    signIn();
+    vi.mocked(confirmBookingIdentity).mockResolvedValue("contact_differs" as never);
+    const target = await redirectedTo(() =>
+      confirmDiverIdentityAction(SHOP_SLUG, TRIP_ID, form({ applyPaidGear: "on" })),
+    );
+    expect(target).toContain("identity-contact-differs");
+    expect(applyPaidRentalKindsToFit).not.toHaveBeenCalled();
+  });
+
+  it("passes only a pick it knows", async () => {
+    signIn();
+    vi.mocked(confirmBookingIdentity).mockResolvedValue(true as never);
+    await redirectedTo(() =>
+      confirmDiverIdentityAction(SHOP_SLUG, TRIP_ID, form({ heldContact: "use_held" })),
+    );
+    await redirectedTo(() =>
+      confirmDiverIdentityAction(SHOP_SLUG, TRIP_ID, form({ heldContact: "anything" })),
+    );
+    expect(vi.mocked(confirmBookingIdentity).mock.calls.map(([, input]) => input.heldContact)).toEqual([
+      "use_held",
+      undefined,
+    ]);
+  });
+});
+
 describe("Different person, with gear paid for at checkout", () => {
   it("gives the new diver the pieces their seat paid for", async () => {
     signIn();

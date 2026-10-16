@@ -8,6 +8,7 @@ import { maxPlausibleBirthDate } from "@/lib/age";
 import { mailtoHref, telHref } from "@/lib/contact-links";
 import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { formatShortDate, formatTimeTz } from "@/lib/format";
+import { heldContactCarry } from "@/lib/held-seat";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { isDiver } from "@/lib/participant-types";
 import { type RentableItemKind, toRentableKinds } from "@/lib/rentals";
@@ -160,6 +161,40 @@ export function rowIdentity(seat: RowIdentityInput) {
         (kind): kind is RentableItemKind => kind !== "nitrox",
       )
     : [];
+  /**
+   * **Which emergency contact stands, asked before "Same person"** (dive-domain
+   * review H3). The desk recorded one on the held seat; if the record holds a
+   * different one, the staffer picks, and the confirm refuses until they do.
+   */
+  const contactsDiffer =
+    identityUnconfirmed &&
+    heldContactCarry(
+      {
+        heldName: booking.heldEmergencyContactName ?? null,
+        heldPhone: booking.heldEmergencyContactPhone ?? null,
+        recordName: person.emergencyContactName ?? null,
+        recordPhone: person.emergencyContactPhone ?? null,
+      },
+      undefined,
+    ) === "differs";
+  const contactChoice = contactsDiffer ? (
+    <fieldset className="pb-2" data-testid="held-contact-choice">
+      <legend className="text-sm text-muted">{t("trips.roster.heldContactChoice")}</legend>
+      <ChoiceRow type="radio" name="heldContact" value="use_held" required>
+        {t("trips.roster.heldContactUseHeld", {
+          contactName: booking.heldEmergencyContactName ?? "",
+          phone: displayStoredPhoneWhole(booking.heldEmergencyContactPhone ?? ""),
+        })}
+      </ChoiceRow>
+      <ChoiceRow type="radio" name="heldContact" value="keep_record" required>
+        {t("trips.roster.heldContactKeepRecord", {
+          contactName: person.emergencyContactName ?? "",
+          phone: displayStoredPhoneWhole(person.emergencyContactPhone ?? ""),
+          name: person.fullName,
+        })}
+      </ChoiceRow>
+    </fieldset>
+  ) : null;
   const identityCheck = identityUnconfirmed ? (
     <IdentityCheck
       bookingId={booking.id}
@@ -199,6 +234,7 @@ export function rowIdentity(seat: RowIdentityInput) {
       confirm={
         <form action={confirmIdentityAction}>
           <input type="hidden" name="bookingId" value={booking.id} />
+          {contactChoice}
           {/* What this seat paid for at checkout waited on the booking while
               it was held; "Same person" may carry it to the standing fit,
               ticked, and the staffer may decline (dive-domain review). */}
