@@ -149,7 +149,10 @@ describe("welcomeCueInputsByBooking", () => {
       .where(eq(trips.shopId, shop.id))
       .orderBy(trips.startsAt);
     const earlier = rows[0];
-    const later = rows.find((row) => earlier && row.startsAt > earlier.startsAt);
+    // A day apart, so the two seats are two dive days, not one.
+    const later = rows.find(
+      (row) => earlier && row.startsAt.getTime() >= earlier.startsAt.getTime() + 24 * 60 * 60 * 1000,
+    );
     if (!earlier || !later) throw new Error("welcome fixture needs two departures");
     const [person] = await db
       .insert(people)

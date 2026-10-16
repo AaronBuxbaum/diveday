@@ -143,6 +143,7 @@ describe("which parties one tap leaves for the divemaster", () => {
           personId: person.id,
           agency: "padi",
           level: "open_water",
+          identifier: `PARTY-${made}`,
           status: "verified",
         });
       }
@@ -241,7 +242,7 @@ describe("which parties one tap leaves for the divemaster", () => {
     const { db, shop } = ctx;
     const [course] = await db
       .insert(courses)
-      .values({ shopId: shop.id, title: "Party DSD", isIntroCourse: true })
+      .values({ shopId: shop.id, title: "Party DSD", slug: "party-dsd", isIntroCourse: true })
       .returning({ id: courses.id });
     if (!course) throw new Error("course not created");
     const trip = await departure(db, shop.id, course.id);
@@ -257,7 +258,7 @@ describe("which parties one tap leaves for the divemaster", () => {
     const { db, shop } = ctx;
     const [course] = await db
       .insert(courses)
-      .values({ shopId: shop.id, title: "Party Open Water", isIntroCourse: false })
+      .values({ shopId: shop.id, title: "Party Open Water", slug: "party-open-water", isIntroCourse: false })
       .returning({ id: courses.id });
     if (!course) throw new Error("course not created");
     const trip = await departure(db, shop.id, course.id);
@@ -287,12 +288,15 @@ describe("which parties one tap leaves for the divemaster", () => {
       team.members.flatMap((member) => (member.kind === "diver" ? [member.bookingId] : [])).sort(),
     );
     expect(teamed.sort()).toEqual([[...couple].sort(), [...family].sort()].sort());
-    const left = (await planPartyTeams(db, shop.id, trip.id)).left;
+    const left = (await planPartyTeams(db, shop.id, trip.id)).left.map((entry) => ({
+      bookingIds: [...entry.bookingIds].sort(),
+      reason: entry.reason,
+    }));
     expect(left).toEqual(
       expect.arrayContaining([
-        { bookingIds: kids, reason: "young_child" },
-        { bookingIds: teens, reason: "junior_without_adult" },
-        { bookingIds: bigGroup, reason: "too_large" },
+        { bookingIds: [...kids].sort(), reason: "young_child" },
+        { bookingIds: [...teens].sort(), reason: "junior_without_adult" },
+        { bookingIds: [...bigGroup].sort(), reason: "too_large" },
       ]),
     );
     expect(left).toHaveLength(3);

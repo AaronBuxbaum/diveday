@@ -43,10 +43,10 @@ describe("welcomeCueText", () => {
     );
   });
 
-  it("says a regular's milestone boat as a count in both locales (H-128)", () => {
+  it("says a regular's milestone dive day as a count in both locales (H-128)", () => {
     expect(welcomeCueText(en, { kind: "milestone", count: 25 }, "en-US")).toBe("25th dive day with us");
     expect(welcomeCueText(es, { kind: "milestone", count: 25 }, "es-ES")).toBe(
-      "25.º barco con nosotros",
+      "25.º día de buceo con nosotros",
     );
   });
 
@@ -96,7 +96,7 @@ describe("sayHelloSentences", () => {
     expect(sentences[0]).toContain("Ben Okafor y Lina Costa");
   });
 
-  it("gives a regular on a milestone boat their own sentence, in each language (H-128)", () => {
+  it("gives a regular on a milestone dive day their own sentence, in each language (H-128)", () => {
     expect(
       sayHelloSentences(en, "en-US", [
         { name: "Bjorn Aasen", cue: { kind: "milestone", count: 25 } },
@@ -106,7 +106,7 @@ describe("sayHelloSentences", () => {
       sayHelloSentences(es, "es-ES", [
         { name: "Bjorn Aasen", cue: { kind: "milestone", count: 50 } },
       ]),
-    ).toEqual(["Bjorn Aasen: 50.º barco con nosotros."]);
+    ).toEqual(["Bjorn Aasen: 50.º día de buceo con nosotros."]);
   });
 
   it("gives each returning diver their own sentence, with their own number", () => {
