@@ -27,7 +27,10 @@ function team(names: string[]): TripBuddyTeam {
   };
 }
 
-function renderPanel(teams: TripBuddyTeam[]) {
+function renderPanel(
+  teams: TripBuddyTeam[],
+  partyLines: { together: string; alone: string | null; teamable: number } | null = null,
+) {
   render(
     <BuddyTeamsPanel
       defaultOpen
@@ -38,6 +41,8 @@ function renderPanel(teams: TripBuddyTeam[]) {
       unteamedDivers={[]}
       buddyErrorText={null}
       buddyErrorForm={null}
+      partyLines={partyLines}
+      teamUpPartiesAction={noop}
       formBuddyTeamAction={noop}
       addBuddyTeamMemberAction={noop}
       removeBuddyTeamMemberAction={noop}
@@ -142,5 +147,23 @@ describe("the panel's disclosure line", () => {
     const caret = summary?.querySelector("svg");
     expect(caret).not.toBeNull();
     expect(caret).toHaveClass("size-4");
+  });
+});
+
+describe("who came together (item 50)", () => {
+  it("says the parties and who came alone, and offers one tap when a party can team", () => {
+    renderPanel([], {
+      together: "Came together: Ana and Ben",
+      alone: "Came alone: Cleo",
+      teamable: 1,
+    });
+    expect(screen.getByText("Came together: Ana and Ben")).toBeInTheDocument();
+    expect(screen.getByText("Came alone: Cleo")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "manifest.buddyTeamUpParties" })).toBeInTheDocument();
+  });
+
+  it("offers no tap when every party is too big to team whole", () => {
+    renderPanel([], { together: "Came together: a family of four", alone: null, teamable: 0 });
+    expect(screen.queryByRole("button", { name: "manifest.buddyTeamUpParties" })).toBeNull();
   });
 });

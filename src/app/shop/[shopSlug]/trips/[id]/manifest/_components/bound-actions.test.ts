@@ -16,6 +16,7 @@ vi.mock("../actions", () => {
       "rollCallAction",
       "saveExecutedDiveAction",
       "setTripStageAction",
+      "teamUpPartiesAction",
     ].map((name) => [name, named(name)]),
   );
 });
@@ -27,6 +28,10 @@ describe("bindManifestActions", () => {
     const actions = bindManifestActions(context);
     expect(actions.rollCall).toEqual({ name: "rollCallAction", context });
     expect(actions.saveExecutedDive).toEqual({ name: "saveExecutedDiveAction", context });
+    expect(actions.buddyTeams.teamUpPartiesAction).toEqual({
+      name: "teamUpPartiesAction",
+      context,
+    });
     expect(actions.buddyTeams.formBuddyTeamAction).toEqual({
       name: "formBuddyTeamAction",
       context,

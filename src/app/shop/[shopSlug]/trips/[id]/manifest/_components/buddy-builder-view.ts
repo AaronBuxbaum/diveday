@@ -1,4 +1,4 @@
-import type { listTripBuddyTeams } from "@/db/buddy-pairs";
+import { type listTripBuddyTeams, MIN_BUDDY_TEAM_SIZE, PARTY_TEAM_MAX } from "@/db/buddy-pairs";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { ManifestBuddyTeam, TripManifest } from "@/lib/manifests";
@@ -13,11 +13,14 @@ export function buddyBuilderView({
   manifest,
   buddyTeamsList,
   buddyError,
+  parties,
   locale,
   t,
 }: {
   /** This checkpoint's manifest, held seats already withheld. */
   manifest: TripManifest;
+  /** Each seat's party key (`listTripParties`): who came together (item 50). */
+  parties: ReadonlyMap<string, string>;
   buddyTeamsList: Awaited<ReturnType<typeof listTripBuddyTeams>>;
   /** The refusal code the last buddy action redirected with, if any. */
   buddyError: string | undefined;
@@ -77,9 +80,42 @@ export function buddyBuilderView({
       ? "builder"
       : "panel"
     : null;
+  // **Who came together, and who came alone** (fifth-loop ideas, item 50):
+  // the divers still to team, grouped by the party they booked in. A line to
+  // build from, never a pairing made for anyone.
+  const byParty = new Map<string, string[]>();
+  for (const diver of unteamedDivers) {
+    const key = parties.get(diver.bookingId) ?? diver.bookingId;
+    byParty.set(key, [...(byParty.get(key) ?? []), diver.fullName]);
+  }
+  const groups = [...byParty.values()];
+  const together = groups.filter((names) => names.length >= MIN_BUDDY_TEAM_SIZE);
+  const alone = groups.filter((names) => names.length === 1).map(([name]) => name ?? "");
+  const groupList = cachedListFormat(locale, { type: "unit", style: "short" });
+  const partyLines =
+    together.length === 0
+      ? null
+      : {
+          together: t("manifest.buddyCameTogether", {
+            parties: groupList.format(together.map((names) => teamNameList.format(names))),
+          }),
+          alone:
+            alone.length === 0
+              ? null
+              : t("manifest.buddyCameAlone", { names: groupList.format(alone) }),
+          /** Parties "Team up each party" would make a team of. */
+          teamable: together.filter((names) => names.length <= PARTY_TEAM_MAX).length,
+        };
   return {
     buddyTeamLabel,
     /** Named as `BuddyTeamsPanel` takes them, so the page hands them on whole. */
-    panel: { unteamedDivers, diverOptions, crewOptions, buddyErrorText, buddyErrorForm },
+    panel: {
+      unteamedDivers,
+      diverOptions,
+      crewOptions,
+      buddyErrorText,
+      buddyErrorForm,
+      partyLines,
+    },
   };
 }

@@ -11,6 +11,7 @@ import {
   rollCallAction,
   saveExecutedDiveAction,
   setTripStageAction,
+  teamUpPartiesAction,
 } from "../actions";
 
 /**
@@ -44,6 +45,7 @@ export function bindManifestActions(actionContext: ManifestActionContext) {
     // Named as `BuddyTeamsPanel` takes them, so the page hands them on whole.
     buddyTeams: {
       formBuddyTeamAction: formBuddyTeamAction.bind(null, actionContext),
+      teamUpPartiesAction: teamUpPartiesAction.bind(null, actionContext),
       addBuddyTeamMemberAction: addBuddyTeamMemberAction.bind(null, actionContext),
       removeBuddyTeamMemberAction: removeBuddyTeamMemberAction.bind(null, actionContext),
       dissolveBuddyTeamAction: dissolveBuddyTeamAction.bind(null, actionContext),

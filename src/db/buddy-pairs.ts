@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -444,6 +444,94 @@ async function formBuddyTeamInTx(
     occurredAt,
   });
   return { ok: true, teamId };
+}
+
+/**
+ * The largest party "Team up each party" makes one team of (fifth-loop ideas,
+ * item 50). Two or three is a buddy team; a party of four or more is how a
+ * family arrives, not how it dives, so the divemaster splits it by hand.
+ */
+export const PARTY_TEAM_MAX = 3;
+
+/**
+ * **Who came together**: each live seat on a departure keyed to its party,
+ * the organizer's booking id (`partyLeadBookingId`, ADR
+ * 20260804-seat-claim-links) or the seat's own when it booked alone.
+ */
+export async function listTripParties(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<Map<string, string>> {
+  const rows = await db
+    .select({ bookingId: bookings.id, partyLeadBookingId: bookings.partyLeadBookingId })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, tripId),
+        ne(bookings.status, "cancelled"),
+      ),
+    );
+  return new Map(rows.map((row) => [row.bookingId, row.partyLeadBookingId ?? row.bookingId]));
+}
+
+/**
+ * **"Team up each party"** (fifth-loop ideas, item 50): one team per party of
+ * two to {@link PARTY_TEAM_MAX} diver seats not yet on a team. A suggestion
+ * staff tap, never automatic, and every team goes through `formBuddyTeam`, so
+ * each one keeps that write's refusals and its line on the trail. Snorkelers,
+ * riders, held seats and no-shows are left out, as the manifest leaves them.
+ * Returns how many teams formed.
+ */
+export async function formPartyTeams(
+  db: AppDb,
+  input: { shopId: string; tripId: string; recordedByPersonId: string; now?: Date },
+): Promise<number> {
+  const [seats, teamed] = await Promise.all([
+    db
+      .select({
+        bookingId: bookings.id,
+        partyLeadBookingId: bookings.partyLeadBookingId,
+        participantType: bookings.participantType,
+      })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.tripId, input.tripId),
+          inArray(bookings.status, ["booked", "checked_in"]),
+          isNull(bookings.identityUnconfirmedAt),
+        ),
+      )
+      .orderBy(asc(bookings.createdAt), asc(bookings.id)),
+    db
+      .select({ bookingId: buddyPairMembers.bookingId })
+      .from(buddyPairMembers)
+      .where(
+        and(eq(buddyPairMembers.shopId, input.shopId), eq(buddyPairMembers.tripId, input.tripId)),
+      ),
+  ]);
+  const onATeam = new Set(teamed.map((row) => row.bookingId));
+  const parties = new Map<string, string[]>();
+  for (const seat of seats) {
+    if (!isDiver(seat.participantType) || onATeam.has(seat.bookingId)) continue;
+    const key = seat.partyLeadBookingId ?? seat.bookingId;
+    parties.set(key, [...(parties.get(key) ?? []), seat.bookingId]);
+  }
+  let formed = 0;
+  for (const bookingIds of parties.values()) {
+    if (bookingIds.length < MIN_BUDDY_TEAM_SIZE || bookingIds.length > PARTY_TEAM_MAX) continue;
+    const outcome = await formBuddyTeam(db, {
+      shopId: input.shopId,
+      tripId: input.tripId,
+      members: bookingIds.map((bookingId) => ({ kind: "diver" as const, bookingId })),
+      recordedByPersonId: input.recordedByPersonId,
+      now: input.now,
+    });
+    if (outcome.ok) formed += 1;
+  }
+  return formed;
 }
 
 /** Add one member to a team that already stands. */

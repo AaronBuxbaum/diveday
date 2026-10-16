@@ -12,7 +12,11 @@ const manifest = tripManifest({
   crew: [crewMember()],
 });
 
-function view(buddyError?: string, teamed: string[] = []) {
+function view(
+  buddyError?: string,
+  teamed: string[] = [],
+  parties: ReadonlyMap<string, string> = new Map(),
+) {
   return buddyBuilderView({
     manifest,
     buddyTeamsList: teamed.length
@@ -21,6 +25,7 @@ function view(buddyError?: string, teamed: string[] = []) {
         ] as never)
       : [],
     buddyError,
+    parties,
     locale: "en-US",
     t,
   });
@@ -50,5 +55,15 @@ describe("buddyBuilderView", () => {
       { teamId: "b", others: [{ fullName: "Ana Ruiz" }] },
     ] as never);
     expect(label).toBe(t("shared.buddyTeam.with", { names: "Ana Ruiz and Ben Okafor" }));
+  });
+
+  it("says who came together and who came alone, and counts the parties one tap would team", () => {
+    expect(view().panel.partyLines).toBeNull();
+    const { panel } = view(undefined, [], new Map([["b-2", "b-1"]]));
+    expect(panel.partyLines).toEqual({
+      together: t("manifest.buddyCameTogether", { parties: "Ana Ruiz and Ben Okafor" }),
+      alone: null,
+      teamable: 1,
+    });
   });
 });
