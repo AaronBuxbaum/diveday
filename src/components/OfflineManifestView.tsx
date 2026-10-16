@@ -63,6 +63,7 @@ function OfflineManifestScreen() {
     message,
     setMessage,
     storeRead,
+    storeReadFailed,
     discarded,
     acknowledgeDiscarded,
     reconcile,
@@ -133,6 +134,7 @@ function OfflineManifestScreen() {
         t={t}
         message={message}
         removedForOtherShop={removedForOtherShop}
+        readFailed={storeReadFailed}
         discardNotice={discardNotice}
       />
     );
