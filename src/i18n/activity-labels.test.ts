@@ -20,6 +20,9 @@ describe("activity lines", () => {
     provider: "zapier",
     count: "12",
     since: "2026-09-01",
+    evaluated: "2026-08-20",
+    referred: "2026-07-18",
+    signed: "2026-10-16",
   };
 
   it.each(["en-US", "es-ES"])("words every code in %s", (locale) => {

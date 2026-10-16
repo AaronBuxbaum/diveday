@@ -1163,7 +1163,17 @@
   shop has since changed. The seat is blocked as surely as one with no release, under its own code,
   `waiver_lapsed` ("Signed waiver lapsed"), never `waiver_not_sent` ("Not sent yet") or
   `waiver_expired` (a link that expired unsigned), and the fix is a fresh link the diver signs again
-  (`releaseLapsedForBooking`). See [20260721-waiver-sign-once](../../architecture/decisions/20260721-waiver-sign-once.md).
+  (`releaseLapsedForBooking`). **A seat's release is measured at the end of its trip while the
+  trip has not started** (issue #2611, decided 2026-10-16; `waiverClockInstant`): the later of now
+  and the trip's `endsAt`, both clocks (the signature's year and a physician clearance's year), for
+  every trip however short. Once the trip is under way it is read at now, so a liveaboard guest on
+  day two of seven is not blocked by a release that stands today. A release that stands today and
+  runs out before the trip ends blocks the seat under its own code, `waiver_runs_out` ("Waiver runs
+  out before the trip"), not "lapsed", and the same instant answers every door and reader: the
+  roster, Today, the reminder, a fresh link (`issueWaiverRequest`), a paper copy
+  (`recordInPersonWaiver`), a party panel's "signed" and the diver record ("Runs out <date>, before
+  the trip"), so the diver can sign again the day the roster blocks them. Cards, payment and age
+  keep their own instants, and admission still never refuses a seat for it. See [20260721-waiver-sign-once](../../architecture/decisions/20260721-waiver-sign-once.md).
 - **Medical hold** — a signed release the medical questionnaire **referred** to a physician and no
   physician has cleared: an open referral, or one the physician refused. It is the record's status
   (`medical_review`), never the stored answers, because a paper or status-only hold stores none and
@@ -1196,7 +1206,15 @@
   a letter dated on or after the **earliest earlier referral still unanswered** whose flagged
   prompts include every prompt the open record flags, and still inside its own year, clears the open
   record, and only that record. A newly flagged prompt, a letter before that referral, one older than
-  a year, or an earlier referral a physician already answered, each keep the refusal. And it records **evidence** —
+  a year, an earlier referral a physician already answered, or one whose seat has since passed to
+  somebody else, each keep the refusal. **The prompts match by text, not by condition**, so the
+  recording form asks for a staff confirmation on this path alone, naming the earlier referral's
+  date: that the physician evaluated the diver's *current* condition, not only that referral. Without
+  the tick the letter is refused, a clearance or a refusal alike. The act is audited as
+  `medical_answered_by_earlier_letter` on the diver's trail (the letter's date, the earlier referral's
+  id and signing day, the answered record's id). It answers the open record only, so a live seat
+  still held by the earlier referral stays blocked and the desk is told so plainly; recording the
+  same letter against that referral is the ordinary path and clears it. And it records **evidence** —
   the evaluation itself, or the clinician's name — because without one the row says only that a
   member of the shop's own staff pressed a button. Any live staff member may record one, and the
   row names who did. Issue #1252.

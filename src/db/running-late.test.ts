@@ -491,6 +491,46 @@ describe("one statement for the people travelling together", () => {
     expect(await lateAt(member.bookingId)).toEqual(now);
   });
 
+  it("files the staffer's line for every party member a message mark stamped, in one stroke", async () => {
+    const { db, shop, trip, now, actorPersonId } = await context();
+    const party = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Eve Organizer",
+        email: "eve.organizer@example.com",
+      },
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Finn Member",
+        email: "finn.member@example.com",
+      },
+    ]);
+    if (!party.ok) throw new Error(`party failed: ${party.reason}`);
+    const [lead, member] = party.bookings;
+    if (!lead || !member) throw new Error("party seats missing");
+    const receivedAt = new Date(now.getTime() - 5 * MINUTE_MS);
+    expect(
+      await markMessageRunningLate(db, {
+        shopId: shop.id,
+        personId: lead.personId,
+        bookingId: lead.bookingId,
+        receivedAt,
+        now,
+        actorPersonId,
+      }),
+    ).toMatchObject({ status: "marked", bookingId: lead.bookingId });
+    expect(await lateAt(member.bookingId)).toEqual(receivedAt);
+    // The member's "said {time}" is the staffer's doing too, so it is on their trail.
+    expect(await lateLines(lead.personId)).toHaveLength(1);
+    expect(await lateLines(member.personId)).toEqual([
+      expect.objectContaining({ actor: actorPersonId }),
+    ]);
+  });
+
   it("covers every seat on that boat held under the texting number, and nothing else", async () => {
     const { db, shop, trip, bookingId, now } = await context();
     const sibling = await createBooking(db, {

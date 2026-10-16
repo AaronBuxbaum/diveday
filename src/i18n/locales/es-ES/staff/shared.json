@@ -58,7 +58,8 @@
     "documentChoose": "Elige un archivo",
     "documentChooseAnother": "Elige otro archivo",
     "recording": "Registrando…",
-    "confirm": "Registrar la respuesta"
+    "confirm": "Registrar la respuesta",
+    "earlierLetterConfirm": "Marca si esta carta tiene fecha anterior a la última derivación: el médico evaluó su estado actual, no solo la derivación firmada el {date}."
   },
   "waiverSend": {
     "sending": "Enviando…",
@@ -210,6 +211,7 @@
       "waiverPending": "Exención sin firmar. Enlace enviado.",
       "waiverExpired": "El enlace de la exención caducó; emite uno nuevo.",
       "waiverLapsed": "La exención firmada caducó; envía un enlace nuevo.",
+      "waiverRunsOut": "La exención caduca antes de la salida; envía un enlace nuevo.",
       "medicalReview": "Una respuesta médica necesita el visto bueno de un médico antes de bucear.",
       "medicalNotCleared": "Un médico no autorizó a esta persona a bucear.",
       "guardianSignatureMissing": "Firmada por un menor sin acompañante. Falta la firma de su madre, padre o tutor legal; envía un enlace nuevo de la exención.",
@@ -596,7 +598,7 @@
   },
   "boatWork": {
     "missingSizes": "{count, plural, one {A # persona le faltan} other {A # personas les faltan}} tallas de alquiler",
-    "ungatedNitrox": "{count, plural, one {# buceador quiere} other {# buceadores quieren}} nitrox sin certificación verificada",
+    "ungatedNitrox": "{count, plural, one {# buceador quiere nitrox y recibe aire} other {# buceadores quieren nitrox y reciben aire}} a menos que se verifique una certificación antes de que salga el barco",
     "missingContact": "{count, plural, one {# persona no tiene} other {# personas no tienen}} contacto de emergencia",
     "openOrders": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}"
   },

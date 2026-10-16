@@ -142,6 +142,15 @@ export function MedicalClearanceControl({
             className={controlClass}
           />
         </Field>
+        {/* Only when the diver holds an earlier referral a letter dated before
+            the latest one could cover (issue #2616). Unticked by default: a
+            letter dated after the latest referral needs nothing, and a letter
+            that predates it is refused without the tick. */}
+        {copy.earlierLetterConfirm ? (
+          <ChoicePill type="checkbox" name="earlierLetterConfirmed">
+            {copy.earlierLetterConfirm}
+          </ChoicePill>
+        ) : null}
         <Field
           label={copy.documentLabel}
           description={copy.documentHint}

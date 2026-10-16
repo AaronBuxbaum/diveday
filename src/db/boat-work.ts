@@ -1,4 +1,5 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
+import { seatUngatedNitrox } from "@/lib/boat-work";
 import { rentalFitCompleteness } from "@/lib/rentals";
 import type { AppDb } from "./client";
 import { authorizesNitroxFill } from "./nitrox";
@@ -85,8 +86,9 @@ type SeatWork = {
  *   rack otherwise. Scoped to the shop's own catalog (joined, not re-read), so
  *   a fit written before the shop stopped renting an item never nags about a
  *   size nobody can be handed.
- * - **Nitrox.** Asked for, with no card that authorizes a fill right now. A
- *   diver may request nitrox before their card is verified (flagged, not
+ * - **Nitrox.** Asked for by a diver (`seatUngatedNitrox`; a snorkeler or a
+ *   rider never breathes a tank), with no card that authorizes a fill right
+ *   now. A diver may request nitrox before their card is verified (flagged, not
  *   blocked), and a card can be pulled after a request was accepted; either way
  *   the tank goes back to air unless someone verifies a card before the boat
  *   leaves. Read live through the fill gate's own predicate
@@ -144,7 +146,11 @@ async function readSeatWork(
       fullName: row.fullName,
       missingFit:
         rentalFitCompleteness(row.fit, row.rentalItems, row.participantType).state !== "complete",
-      ungatedNitrox: row.wantsNitrox && !row.nitroxCard,
+      ungatedNitrox: seatUngatedNitrox({
+        participantType: row.participantType,
+        wantsNitrox: row.wantsNitrox,
+        hasFillCard: row.nitroxCard,
+      }),
       missingContact: !row.contactName || !row.contactPhone,
     });
   }

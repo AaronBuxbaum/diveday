@@ -1,6 +1,6 @@
 import type { MedicalAnswers, WaiverRecord as StoredWaiverRecord } from "@/db/schema";
 import { type CalendarDate, calendarDateInTimezone, isValidCalendarDate } from "./calendar-date";
-import { DAY_MS, nowDate } from "./clock";
+import { nowDate } from "./clock";
 import {
   type GuardianSignature,
   type GuardianSigner,
@@ -253,18 +253,20 @@ export function clearanceEvaluatedAt(record: WaiverRecord): number | null {
 }
 
 /**
- * **The instant a seat's release is measured at** (issue #2611): the later of
- * `now` and the departure, never earlier than `now`. A roster read the night
- * before must not call a release "Ready" that lapses before the boat leaves,
- * and a liveaboard's release that lapses mid-trip must read blocked before it
- * sails, so both clocks of a release (the signature's year and a cleared
- * referral's physician evaluation) run against the departure.
+ * **The instant a seat's release is measured at** (issue #2611): while the trip
+ * has not started, the departure's end (its `endsAt`, whatever the trip's
+ * length); once it is under way or over, `now`. A roster read the night before
+ * must not call a release "Ready" that lapses before the boat is home, so both
+ * clocks of a release (the signature's year and a cleared referral's physician
+ * evaluation) run against the end of a trip still to come.
  *
- * The departure is the trip's `endsAt` when it runs a day or more (a multi-day
- * trip, the same threshold `meetingWindowsByTrip` uses) and `startsAt`
- * otherwise. Cards, payment and age do not use this: they keep their own
- * instants. Fail-closed by construction: the result is never before `now`, so
- * a trip already under way or over is read exactly as today.
+ * Every door that asks "does this seat's release stand?" reads the same instant,
+ * so a release that runs out before the trip is blocked on the roster **and**
+ * can be signed again today: the readers (`listTripsReadiness`, the diver
+ * record) and the re-sign doors (`issueWaiverRequest`, the paper path, a seat
+ * claim) cannot disagree. Cards, payment and age do not use it: they keep their
+ * own instants. Fail-closed by construction: the result is never before `now`,
+ * and an unknown trip reads at `now`.
  */
 export function waiverClockInstant(input: {
   now: Date;
@@ -272,10 +274,8 @@ export function waiverClockInstant(input: {
   endsAt: Date | null;
 }): Date {
   const { now, startsAt, endsAt } = input;
-  if (!startsAt) return now;
-  const multiDay = endsAt !== null && endsAt.getTime() - startsAt.getTime() >= DAY_MS;
-  const departure = multiDay ? endsAt : startsAt;
-  return departure.getTime() > now.getTime() ? departure : now;
+  if (!startsAt || startsAt.getTime() <= now.getTime()) return now;
+  return endsAt !== null && endsAt.getTime() > startsAt.getTime() ? endsAt : startsAt;
 }
 
 /**
@@ -393,6 +393,56 @@ export function releaseLapsedForBooking(input: {
   );
 }
 
+/** Why a seat's release does not stand: aged out already, or aging out before the trip. */
+export type ReleaseLapse = "lapsed" | "before_trip";
+
+/**
+ * **Whether, and how, a seat's release has run out at the seat's trip**
+ * (issue #2611). Null when the seat has no lapsed release to name (it stands,
+ * or the diver never signed). `before_trip` is a release that still stands
+ * today and runs out before the departure's end ({@link waiverClockInstant}):
+ * the seat is blocked, but "lapsed" would be untrue, so the desk and the diver
+ * read "runs out before the trip" and sign again now. `lapsed` is a release
+ * that no longer stands today.
+ */
+export function releaseLapseForBooking(input: {
+  bookingWaiver: WaiverRecord | null;
+  personSignedWaivers: readonly WaiverRecord[];
+  currentTemplateVersion: number | null;
+  heldToMedical?: boolean;
+  /** Real now, never the trip-scoped instant. */
+  now: Date;
+  startsAt: Date | null;
+  endsAt: Date | null;
+}): ReleaseLapse | null {
+  const at = waiverClockInstant(input);
+  if (!releaseLapsedForBooking({ ...input, now: at })) return null;
+  if (at.getTime() === input.now.getTime()) return "lapsed";
+  const resolve =
+    (input.heldToMedical ?? true) ? effectiveWaiverForBooking : effectiveReleaseForRiderSeat;
+  return resolve(input) !== null ? "before_trip" : "lapsed";
+}
+
+/**
+ * **Whether a signature a seat already holds no longer stands** at `at`: the
+ * one test `issueWaiverRequest` and the paper path share, so a fresh link or a
+ * paper copy is never refused as "already completed" for a release the roster
+ * has blocked (issue #2611). A seat in the water reads a clean completion; a
+ * rider's seat (H-109) reads only the signature's own clock. A pending link
+ * is never "lapsed" here.
+ */
+export function bookingRecordLapsed(
+  record: WaiverRecord,
+  currentTemplateGeneration: number | null,
+  at: Date,
+  heldToMedical: boolean,
+): boolean {
+  return heldToMedical
+    ? isCleanCompletion(record) && !isCompletedWaiverCurrent(record, currentTemplateGeneration, at)
+    : (record.status === "completed" || record.status === "medical_review") &&
+        !isSignatureCurrent(record, currentTemplateGeneration, at);
+}
+
 /**
  * Where a diver stands with **the shop**, independent of any one booking.
  *
@@ -414,6 +464,13 @@ export type ShopWaiverStatus =
       recordId: string;
       signedAt: Date;
       expiresAt: Date;
+      /**
+       * True when the release stands today and runs out before the departure
+       * the caller named (`through`, issue #2611): the seat is blocked for it
+       * on the roster, so this record must not read as plain "Signed".
+       * `expiresAt` is then the first of its clocks to end.
+       */
+      runsOutBeforeTrip: boolean;
       medical: MedicalWaiverMark | null;
     }
   /**
@@ -476,13 +533,24 @@ export function shopWaiverStatus(input: {
    */
   signer?: GuardianSigner;
   now?: Date;
+  /**
+   * The trip-scoped instant of the diver's upcoming seat (`waiverClockInstant`,
+   * issue #2611). A release that stands today but not then reads
+   * `runsOutBeforeTrip`, the same answer the roster gives that seat.
+   */
+  through?: Date;
 }): ShopWaiverStatus {
   const now = input.now ?? nowDate();
-  const clean = input.personSignedWaivers
-    .filter((record) => isCompletedWaiverCurrent(record, input.currentTemplateVersion, now))
-    .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
+  const standsAt = (record: WaiverRecord, at: Date) =>
+    isCompletedWaiverCurrent(record, input.currentTemplateVersion, at);
+  const newest = (records: readonly WaiverRecord[]) =>
+    [...records].sort((a, b) => signatureTime(b) - signatureTime(a))[0];
+  const through = input.through && input.through.getTime() > now.getTime() ? input.through : now;
+  const clean = newest(input.personSignedWaivers.filter((record) => standsAt(record, through)));
+  const cleanNow = newest(input.personSignedWaivers.filter((record) => standsAt(record, now)));
 
-  const cleanTime = clean ? signatureTime(clean) : Number.NEGATIVE_INFINITY;
+  const standing = clean ?? cleanNow;
+  const cleanTime = standing ? signatureTime(standing) : Number.NEGATIVE_INFINITY;
   const hold = input.personSignedWaivers
     .filter(outranksOlderSignatures)
     .filter((record) => signatureTime(record) >= cleanTime)
@@ -505,8 +573,8 @@ export function shopWaiverStatus(input: {
   // The same precedence the readiness engine applies: a hold outranks it, and
   // it outranks "Signed". The record still *is* the diver's current signature
   // for every other purpose; it is only the standing that changes word.
-  if (clean && input.signer && guardianSignatureMissing(clean, input.signer)) {
-    return { state: "guardian_missing", signedAt: new Date(signatureTime(clean)) };
+  if (standing && input.signer && guardianSignatureMissing(standing, input.signer)) {
+    return { state: "guardian_missing", signedAt: new Date(signatureTime(standing)) };
   }
 
   if (clean) {
@@ -515,7 +583,26 @@ export function shopWaiverStatus(input: {
       recordId: clean.id,
       signedAt: new Date(signatureTime(clean)),
       expiresAt: new Date(signatureTime(clean) + WAIVER_SIGNATURE_VALIDITY_MS),
+      runsOutBeforeTrip: false,
       medical: medicalWaiverMark(clean, input.personSignedWaivers),
+    };
+  }
+  // Standing today, gone by the departure: the seat is blocked, and the desk
+  // reads why instead of "Signed".
+  if (cleanNow) {
+    const evaluatedAt = clearanceEvaluatedAt(cleanNow);
+    const signatureEnds = signatureTime(cleanNow) + WAIVER_SIGNATURE_VALIDITY_MS;
+    return {
+      state: "current",
+      recordId: cleanNow.id,
+      signedAt: new Date(signatureTime(cleanNow)),
+      expiresAt: new Date(
+        evaluatedAt === null
+          ? signatureEnds
+          : Math.min(signatureEnds, evaluatedAt + WAIVER_SIGNATURE_VALIDITY_MS),
+      ),
+      runsOutBeforeTrip: true,
+      medical: medicalWaiverMark(cleanNow, input.personSignedWaivers),
     };
   }
 

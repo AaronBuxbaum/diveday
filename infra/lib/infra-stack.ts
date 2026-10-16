@@ -2874,8 +2874,10 @@ exports.handler = async (event) => {
     //
     // **Trusted from the two shapes of run that publish a snapshot, not `*`**:
     // a pull request's own run and a run on `main` (a push, or a manual dispatch
-    // of it). A fork's pull request is never handed an OIDC token, and the
-    // nightly schedule does not publish. **Scoped to the visual bucket and to
+    // of it). A fork's pull request is never handed an OIDC token. The `main`
+    // subject is the ref, so a scheduled run on `main` carries it too: this
+    // trust does not exclude schedule runs, the workflow's own triggers do.
+    // **Scoped to the visual bucket and to
     // what `reg-suit run` does with it** -- list, read and write objects. No
     // delete (the pruner, section 15, owns expiry and runs with its own role),
     // no ACL (`enableACL` is false in regconfig.json), nothing outside this one

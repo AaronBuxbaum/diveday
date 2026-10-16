@@ -18,7 +18,7 @@ import {
 } from "./course-forms";
 import { guardianSignatureMissing } from "./guardian";
 import { isDiver, isHeldToMedical, type ParticipantType } from "./participant-types";
-import { type WaiverStateFields, waiverState } from "./waivers";
+import { type ReleaseLapse, type WaiverStateFields, waiverState } from "./waivers";
 
 /**
  * Payment states that clear the "ready to board" payment gate.
@@ -193,6 +193,13 @@ export type ReadinessBlockerCode =
    * Blocks exactly as `waiver_not_sent` does; the fix is the diver signing again.
    */
   | "waiver_lapsed"
+  /**
+   * A release that still stands today but runs out before the trip ends
+   * (issue #2611, `waiverClockInstant`). Blocks as `waiver_lapsed` does, and
+   * the fix is the same, the diver signing again now; the word differs because
+   * "lapsed" would be untrue of a release valid today.
+   */
+  | "waiver_runs_out"
   | "waiver_pending"
   | "waiver_expired"
   | "medical_review"
@@ -269,6 +276,7 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   identity_unconfirmed: "setup",
   waiver_not_sent: "waiver",
   waiver_lapsed: "waiver",
+  waiver_runs_out: "waiver",
   waiver_pending: "waiver",
   waiver_expired: "waiver",
   medical_review: "waiver",
@@ -359,6 +367,7 @@ const ABOARD_KIND: Record<ReadinessBlockerCode, AboardBlockerKind> = {
   waiver_not_sent: "unknown",
   // A lapsed release is no current medical declaration either.
   waiver_lapsed: "unknown",
+  waiver_runs_out: "unknown",
   waiver_pending: "unknown",
   waiver_expired: "unknown",
   // A minor's release with no guardian on it is not a release the shop can
@@ -439,10 +448,11 @@ export type ReadinessInput = {
   waiver: WaiverStateFields | null;
   /**
    * With no `waiver` handed in: the diver signed a release here that has since
-   * lapsed (`releaseLapsedForBooking`). Changes the blocker's name from
-   * `waiver_not_sent` to `waiver_lapsed`, never whether there is one.
+   * lapsed (`releaseLapseForBooking`). Changes the blocker's name from
+   * `waiver_not_sent` to `waiver_lapsed` (aged out already) or
+   * `waiver_runs_out` (runs out before the trip), never whether there is one.
    */
-  releaseLapsed?: boolean;
+  releaseLapse?: ReleaseLapse | null;
   certifications: readonly Certification[];
   /**
    * Courses this diver is booked on that certify a level and finish before
@@ -1004,7 +1014,14 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // The release's own blockers follow the departure's setting.
   if (input.requirement.requiresWaiver) {
     if (state === "not_sent") {
-      blockers.push({ code: input.releaseLapsed ? "waiver_lapsed" : "waiver_not_sent" });
+      blockers.push({
+        code:
+          input.releaseLapse === "before_trip"
+            ? "waiver_runs_out"
+            : input.releaseLapse
+              ? "waiver_lapsed"
+              : "waiver_not_sent",
+      });
     }
     if (state === "awaiting_signature") {
       blockers.push({ code: "waiver_pending" });

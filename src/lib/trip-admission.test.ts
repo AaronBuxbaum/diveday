@@ -21,7 +21,7 @@ import {
   type TripAdmissionEvidence,
   type TripAdmissionRefusal,
 } from "./trip-admission";
-import { effectiveWaiverForBooking, releaseLapsedForBooking, waiverClockInstant } from "./waivers";
+import { effectiveWaiverForBooking, releaseLapseForBooking, waiverClockInstant } from "./waivers";
 
 function certification(overrides: Partial<Certification> = {}): Certification {
   return {
@@ -958,21 +958,29 @@ describe("decideTripAdmission — a release that lapses before the departure", (
         bookingWaiver: release,
         personSignedWaivers: [release],
         currentTemplateVersion: null,
-        now: waiverClockInstant({ now, startsAt: departure, endsAt: null }),
       };
       return calculateReadiness({
         timezone: "UTC",
         requirement: { ...source, requiresWaiver: true, requiresPayment: false } as TripRequirement,
         siteRequirement: null,
-        waiver: effectiveWaiverForBooking(resolution),
-        releaseLapsed: releaseLapsedForBooking(resolution),
+        waiver: effectiveWaiverForBooking({
+          ...resolution,
+          now: waiverClockInstant({ now, startsAt: departure, endsAt: null }),
+        }),
+        releaseLapse: releaseLapseForBooking({
+          ...resolution,
+          now,
+          startsAt: departure,
+          endsAt: null,
+        }),
         certifications: [card],
         now,
       });
     };
     const ahead = readinessAt(today);
     expect(ahead.status).toBe("blocked");
-    expect(ahead.blockers).toContainEqual(expect.objectContaining({ code: "waiver_lapsed" }));
+    // Valid today, so "runs out before the trip", never "lapsed".
+    expect(ahead.blockers).toContainEqual(expect.objectContaining({ code: "waiver_runs_out" }));
     // On the day: blocked, named as a signature that ran out, not one never sent.
     const onTheDay = readinessAt(departure);
     expect(onTheDay.status).toBe("blocked");

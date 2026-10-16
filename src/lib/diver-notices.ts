@@ -227,6 +227,14 @@ const NOTICE_KEYS: DiverNoticeMap = {
     tone: "success",
     key: "divers.notices.medicalClearanceRecorded",
   },
+  // Recorded from a letter dated before the referral it answers, while another
+  // live seat is still held by the earlier referral (issue #2616). A warning:
+  // the answer is on the record, and the desk has one more to record.
+  "medical-clearance-recorded-earlier-held": {
+    form: "waiver",
+    tone: "warning",
+    key: "divers.notices.medicalClearanceRecordedEarlierHeld",
+  },
   // The other answer (issue #1283). Not a success tone: nothing good happened
   // to this diver, and a green tick under "the doctor said no" would read as
   // congratulation. Not danger either — the shop did the right thing by

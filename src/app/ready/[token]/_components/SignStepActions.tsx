@@ -50,6 +50,7 @@ export function SignStepActions({
         code === "waiver_pending" ||
         code === "waiver_expired" ||
         code === "waiver_lapsed" ||
+        code === "waiver_runs_out" ||
         code === "guardian_signature_missing",
     );
   const formsOwed =
