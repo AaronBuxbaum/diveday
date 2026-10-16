@@ -2087,6 +2087,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "is_active",
       "is_intro_course",
       "nitrox_compatible",
+      "gear_included",
       "created_at",
     ],
     rows: ({ courseRows }) =>
@@ -2121,6 +2122,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.isActive,
         row.isIntroCourse,
         row.nitroxCompatible,
+        row.gearIncluded,
         row.createdAt,
       ]),
     note: EXPORT_FILE_NOTES["courses.csv"],

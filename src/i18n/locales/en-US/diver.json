@@ -222,8 +222,10 @@
       "smb": "Surface marker buoy"
     },
     "providedItems": {
+      "fullScubaSet": "Full scuba set",
       "tanksAndWeights": "Tanks and weights",
-      "crewBriefing": "Crew briefing"
+      "crewBriefing": "Crew briefing",
+      "instructorBriefing": "Instructor briefing"
     },
     "exposureSuit": {
       "swimwear": "Warm enough that most divers are comfortable in a rash guard or swimwear.",
@@ -1231,6 +1233,7 @@
       "rents_drysuit": "Rent a drysuit"
     },
     "askWhatsIncluded": "Ask the shop what’s included in the trip price.",
+    "courseGearIncluded": "Your gear comes with the course. Tell us your sizes so it’s ready.",
     "notSure": "Not sure — help me fit it",
     "sizeOnFile": "{size} — on file from the shop",
     "wetsuitSize": "Wetsuit size",

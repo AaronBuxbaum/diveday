@@ -170,12 +170,13 @@ export type ReadyPageData = {
     id: string;
     plannedDives: number;
     /**
-     * Only what the nitrox gate needs, never the whole catalog row: whether a
+     * Only what the gear step needs, never the whole catalog row: whether a
      * session of this course may run on enriched air (`nitroxAvailableOn`,
-     * src/lib/rentals.ts). Null on an ordinary charter, which the gate reads
-     * as "the shop's answer is the whole answer".
+     * src/lib/rentals.ts), and whether its rental gear is part of the course
+     * fee, which takes the prices off the sizes form. Null on an ordinary
+     * charter, which the gate reads as "the shop's answer is the whole answer".
      */
-    course: { nitroxCompatible: boolean } | null;
+    course: { nitroxCompatible: boolean; gearIncluded: boolean } | null;
     /**
      * What this seat costs on this departure (`seatListPriceCents`): the fare
      * for its participant type, or null on an unpriced trip. The thread's
@@ -623,7 +624,9 @@ export async function getReadyPageData(
     trip: {
       id: row.tripId,
       plannedDives: trip.plannedDives,
-      course: trip.course ? { nitroxCompatible: trip.course.nitroxCompatible } : null,
+      course: trip.course
+        ? { nitroxCompatible: trip.course.nitroxCompatible, gearIncluded: trip.course.gearIncluded }
+        : null,
       seatPriceCents: perDiverPriceCents,
     },
     person: {

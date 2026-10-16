@@ -14,7 +14,6 @@ import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import {
-  ChoiceRow,
   controlClass,
   Field,
   FieldGrid,
@@ -40,6 +39,7 @@ import {
   loadCourseFormsRequirement,
 } from "./_components/CourseFormsRequirement";
 import { CoursePhotoCell } from "./_components/CoursePhotoCell";
+import { CourseSwitches } from "./_components/CourseSwitches";
 import { DayByDayEditor } from "./_components/DayByDayEditor";
 import { courseEditNotices } from "./_components/edit-notices";
 import { FaqEditor } from "./_components/FaqEditor";
@@ -501,36 +501,9 @@ export default async function EditCoursePage({
                     </Field>
                   </FieldGrid>
                   {/* Filed with how the course *runs* rather than with who may take
-                it: this answers "do we teach this one on enriched air", which
-                is the shop's own call about its own gas, not an agency
-                admission rule like the facts in the next section. Unticked, no
-                session of this course offers the nitrox box at all — on the
-                booking page or on the pre-trip form — however much nitrox the
-                shop fills (`nitroxAvailableOn`, src/lib/rentals.ts). */}
-                  {/* One item in the section's `gap-5` column, with no margin
-                      of its own: `mt-5` added to the gap stood it 40px under
-                      Duration, where fields sit 20px apart. Its hint is the
-                      next line of its own words, at a `Field` description's
-                      12px: as a paragraph under the row it hung a 44px
-                      target's height under the box, and at 14px (K-414). The
-                      box is named by its label alone and described by the
-                      hint, as a `Field`'s control is. */}
-                  <ChoiceRow
-                    type="checkbox"
-                    name="nitroxCompatible"
-                    value="true"
-                    defaultChecked={course.nitroxCompatible}
-                    aria-labelledby="nitroxCompatible-label"
-                    aria-describedby="nitroxCompatible-hint"
-                    className="text-sm"
-                  >
-                    <span id="nitroxCompatible-label" className="block">
-                      {t("courses.edit.nitroxCompatibleLabel")}
-                    </span>
-                    <span id="nitroxCompatible-hint" className="block text-xs text-muted">
-                      {t("courses.edit.nitroxCompatibleHint")}
-                    </span>
-                  </ChoiceRow>
+                it: the shop's own calls about its own gas and its own gear, not
+                agency admission rules like the facts in the next section. */}
+                  <CourseSwitches course={course} t={t} />
                 </EditorSection>
 
                 <EditorSection

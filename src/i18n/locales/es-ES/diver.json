@@ -222,8 +222,10 @@
       "smb": "Boya de superficie"
     },
     "providedItems": {
+      "fullScubaSet": "Equipo de buceo completo",
       "tanksAndWeights": "Botellas y plomos",
-      "crewBriefing": "Briefing de la tripulación"
+      "crewBriefing": "Briefing de la tripulación",
+      "instructorBriefing": "Briefing del instructor"
     },
     "exposureSuit": {
       "swimwear": "El agua está lo bastante cálida como para bucear con licra o bañador.",
@@ -1231,6 +1233,7 @@
       "rents_drysuit": "Alquilar traje seco"
     },
     "askWhatsIncluded": "Pregunta al centro qué incluye el precio de la salida.",
+    "courseGearIncluded": "Tu equipo va incluido en el curso. Dinos tus tallas para tenerlo listo.",
     "notSure": "No lo tengo claro: ayúdame a elegir",
     "sizeOnFile": "{size}: registrada por el centro",
     "wetsuitSize": "Talla de neopreno",

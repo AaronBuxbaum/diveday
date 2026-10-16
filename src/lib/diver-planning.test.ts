@@ -422,6 +422,14 @@ describe("booking delight planning", () => {
     expect(packingConfidence([], null, false).provided).toEqual(["tanksAndWeights"]);
   });
 
+  it("names the full set on a course whose fee includes the gear (ideas item 16)", () => {
+    expect(packingConfidence([], null, false, true).provided).toEqual([
+      "fullScubaSet",
+      "tanksAndWeights",
+      "instructorBriefing",
+    ]);
+  });
+
   it("turns a water temperature into the suit most divers want", () => {
     // A reading is a number a diver has to translate; this is the
     // translation. Bands are the ordinary recreational rule of thumb, read

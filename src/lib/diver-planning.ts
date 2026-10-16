@@ -445,7 +445,11 @@ export function siteFit(facts: SitePlanningFacts): { tone: SiteFitTone } {
 }
 
 /** What the shop hands every diver regardless of their rental fit — a fixed pair of codes. */
-export type ProvidedItemCode = "tanksAndWeights" | "crewBriefing";
+export type ProvidedItemCode =
+  | "fullScubaSet"
+  | "tanksAndWeights"
+  | "crewBriefing"
+  | "instructorBriefing";
 
 /** Which `rental_fit_profiles` boolean field toggles which rentable kind, in display order. */
 const RENTAL_FIELD_KINDS: ReadonlyArray<readonly [string, RentableItemKind]> = [
@@ -523,6 +527,12 @@ export function packingConfidence(
    * longer had a briefing in it.
    */
   briefs = true,
+  /**
+   * The departure teaches a course whose fee includes the rental gear
+   * (`courses.gear_included`, fifth-loop ideas item 16): the shop provides the
+   * whole set, and the instructor briefs the class whatever the dock rhythm says.
+   */
+  courseGearIncluded = false,
 ): {
   bring: string[];
   rented: RentableItemKind[];
@@ -538,7 +548,11 @@ export function packingConfidence(
   return {
     bring: shopItems,
     rented,
-    provided: briefs ? ["tanksAndWeights", "crewBriefing"] : ["tanksAndWeights"],
+    provided: courseGearIncluded
+      ? ["fullScubaSet", "tanksAndWeights", "instructorBriefing"]
+      : briefs
+        ? ["tanksAndWeights", "crewBriefing"]
+        : ["tanksAndWeights"],
   };
 }
 
