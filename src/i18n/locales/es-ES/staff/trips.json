@@ -109,6 +109,7 @@
     "identityRepointUnavailable": "Esa ficha no puede quedarse con esta plaza. Elige otra persona con este nombre o usa Otra persona.",
     "identityRepointMedicalHold": "Esta plaza, o una plaza retenida que se mueve con ella, tiene una retención médica: una derivación al médico sin respuesta o una que el médico no aprobó. Para pasarla a otra ficha, cancela esta plaza y vuelve a reservarla.",
     "identitySplitContactConflict": "Las plazas que se mueven juntas tienen contactos de emergencia distintos. Anota el correcto en cada una y vuelve a intentarlo.",
+    "identityDepartureClosed": "Esta salida ya terminó o se canceló, así que la plaza se queda donde está. “Misma persona” todavía lo resuelve.",
     "identityContactDiffers": "El contacto de emergencia de esta plaza no es el de su ficha. Elige cuál conservar y confirma.",
     "identityRepointAlreadyBooked": "Esa persona ya tiene plaza en una salida que esto movería. Revisa su ficha antes de moverla.",
     "newWaiverSent": "Nueva exención enviada. La plaza sigue bloqueada hasta que la firme.",

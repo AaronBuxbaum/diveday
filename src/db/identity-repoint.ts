@@ -1,9 +1,11 @@
 import { and, asc, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { hasReturned } from "@/lib/trips";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { movableSameNameSeats } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDiverActivity, recordTripActivity } from "./operations";
+import { violatesUniqueIndex } from "./query-helpers";
 import {
   bookings,
   gearReservations,
@@ -97,7 +99,9 @@ export type RepointHeldBookingResult =
         /** A seat moving carries a medical hold nobody has cleared. */
         | "medical_hold"
         /** The chosen person already has a seat on a departure that would move. */
-        | "already_on_departure";
+        | "already_on_departure"
+        /** The seat's departure is deleted, cancelled or back (security review Y4). */
+        | "departure_closed";
     };
 
 export type RepointHeldBookingInput = {
@@ -130,7 +134,11 @@ export type RepointHeldBookingInput = {
  *   (`medical_hold`): superseding its release would lift the hold.
  * - One person is never on one departure twice: a chosen person already
  *   holding a seat on a departure that would move is refused
- *   (`already_on_departure`).
+ *   (`already_on_departure`), and so is one whose seat lands there mid-tap
+ *   (`bookings_trip_person_unique`, agency review G8).
+ * - Only a seat on a departure still to come moves: one deleted, cancelled
+ *   or back is refused (`departure_closed`, security review Y4), as the
+ *   split refuses it.
  * - Every live release on a moving seat is superseded and its token dropped,
  *   since each names the old match; unsigned links follow the seat to the new
  *   record with their drafts cleared. Every bearer link over the seats is
@@ -144,203 +152,17 @@ export async function repointHeldBooking(
   db: AppDb,
   input: RepointHeldBookingInput,
 ): Promise<RepointHeldBookingResult> {
-  type Outcome =
-    | { refused: Extract<RepointHeldBookingResult, { ok: false }>["reason"] }
-    | {
-        refused: null;
-        fromPersonId: string;
-        bookedAs: string;
-        seats: Array<{ bookingId: string; tripId: string }>;
-      };
-  const outcome = await db.transaction(async (tx): Promise<Outcome> => {
-    const now = nowDate();
-    const [booking] = await tx
-      .select({
-        tripId: bookings.tripId,
-        personId: bookings.personId,
-        bookedAs: bookings.identityBookedAs,
-      })
-      .from(bookings)
-      .where(
-        and(
-          eq(bookings.id, input.bookingId),
-          eq(bookings.shopId, input.shopId),
-          isNotNull(bookings.identityUnconfirmedAt),
-          ne(bookings.status, "cancelled"),
-        ),
-      )
-      .limit(1)
-      .for("update");
-    if (!booking) return { refused: "not_held" };
-    const bookedAs = booking.bookedAs?.trim();
-    if (!bookedAs || input.toPersonId === booking.personId) {
-      return { refused: "person_unavailable" };
+  let outcome: RepointOutcome;
+  try {
+    outcome = await db.transaction((tx) => repointInTransaction(tx, input));
+  } catch (error) {
+    // A seat of theirs that landed on a moving departure after the check
+    // below read it (agency review G8): the same refusal, not a thrown 500.
+    if (violatesUniqueIndex(error, "bookings_trip_person_unique")) {
+      return { ok: false, reason: "already_on_departure" };
     }
-
-    // Both names read under a share lock, so a rename or a removal racing
-    // this tap either lands first and refuses it, or waits for it.
-    const named = await tx
-      .select({
-        id: people.id,
-        fullName: people.fullName,
-        deletedAt: people.deletedAt,
-        anonymizedAt: people.anonymizedAt,
-        mergedIntoPersonId: people.mergedIntoPersonId,
-      })
-      .from(people)
-      .where(
-        and(
-          eq(people.shopId, input.shopId),
-          inArray(people.id, [booking.personId, input.toPersonId]),
-        ),
-      )
-      .for("share");
-    const from = named.find((row) => row.id === booking.personId);
-    const to = named.find((row) => row.id === input.toPersonId);
-    if (
-      !from ||
-      !to ||
-      to.deletedAt ||
-      to.anonymizedAt ||
-      to.mergedIntoPersonId ||
-      // The same-name reason only: the seat's booked-as name is the record's
-      // it is on now, and the record it moves to carries it too.
-      nameKey(from.fullName) !== nameKey(bookedAs) ||
-      nameKey(to.fullName) !== nameKey(bookedAs)
-    ) {
-      return { refused: "person_unavailable" };
-    }
-
-    const requested = new Set(input.sameNameSeatIds ?? []);
-    requested.delete(input.bookingId);
-    const candidates =
-      requested.size > 0
-        ? await tx
-            .select({ bookingId: bookings.id, tripId: bookings.tripId })
-            .from(bookings)
-            .innerJoin(trips, eq(trips.id, bookings.tripId))
-            .where(
-              and(
-                eq(bookings.shopId, input.shopId),
-                eq(bookings.personId, booking.personId),
-                ne(bookings.id, input.bookingId),
-                isNotNull(bookings.identityUnconfirmedAt),
-                ne(bookings.status, "cancelled"),
-                sql`lower(trim(${bookings.identityBookedAs})) = lower(trim(${bookedAs}))`,
-                eq(trips.shopId, input.shopId),
-                liveTrip(),
-              ),
-            )
-            .for("update", { of: bookings })
-        : [];
-    const siblings = movableSameNameSeats(booking.tripId, candidates).filter((seat) =>
-      requested.has(seat.bookingId),
-    );
-    const seats = [{ bookingId: input.bookingId, tripId: booking.tripId }, ...siblings];
-    const seatIds = seats.map((seat) => seat.bookingId);
-
-    // `bookings_trip_person_unique` holds a cancelled row too, so any row of
-    // theirs on a moving departure refuses the move.
-    const [already] = await tx
-      .select({ id: bookings.id })
-      .from(bookings)
-      .where(
-        and(
-          eq(bookings.shopId, input.shopId),
-          eq(bookings.personId, input.toPersonId),
-          inArray(
-            bookings.tripId,
-            seats.map((seat) => seat.tripId),
-          ),
-        ),
-      )
-      .limit(1);
-    if (already) return { refused: "already_on_departure" };
-
-    // The split's own medical refusal, read the same way and under lock.
-    const live = await tx
-      .select({
-        status: waiverRecords.status,
-        medicalClearedAt: waiverRecords.medicalClearedAt,
-      })
-      .from(waiverRecords)
-      .where(
-        and(
-          eq(waiverRecords.shopId, input.shopId),
-          inArray(waiverRecords.bookingId, seatIds),
-          isNull(waiverRecords.supersededAt),
-        ),
-      )
-      .for("update");
-    if (live.some((row) => row.status === "medical_review" && !row.medicalClearedAt)) {
-      return { refused: "medical_hold" };
-    }
-
-    // Moves the seat and nothing about who it is: the hold stays, with the
-    // name it was booked under and how it was matched.
-    await tx
-      .update(bookings)
-      .set({ personId: input.toPersonId })
-      .where(and(inArray(bookings.id, seatIds), eq(bookings.shopId, input.shopId)));
-    await tx
-      .update(waiverRecords)
-      .set({ supersededAt: now, tokenSealed: null })
-      .where(
-        and(
-          eq(waiverRecords.shopId, input.shopId),
-          inArray(waiverRecords.bookingId, seatIds),
-          isNull(waiverRecords.supersededAt),
-        ),
-      );
-    await tx
-      .update(waiverRecords)
-      .set({
-        personId: input.toPersonId,
-        draftSignerName: null,
-        draftMedicalAnswers: null,
-        draftAcknowledged: false,
-        draftGuardian: null,
-        deliveryError: null,
-        deliveryProviderMessageId: null,
-        deliveryProviderStatus: null,
-        deliveryProviderStatusAt: null,
-        movedFromPersonId: booking.personId,
-        movedAt: now,
-        movedByPersonId: input.actorPersonId,
-      })
-      .where(
-        and(
-          eq(waiverRecords.shopId, input.shopId),
-          inArray(waiverRecords.bookingId, seatIds),
-          eq(waiverRecords.personId, booking.personId),
-          isNull(waiverRecords.signedAt),
-          isNull(waiverRecords.integrityHash),
-          isNull(waiverRecords.anonymizedAt),
-        ),
-      );
-    for (const bookingId of seatIds) {
-      await revokeBookingCapabilities(tx, { shopId: input.shopId, bookingId, now });
-    }
-    await tx
-      .delete(notificationSendQueue)
-      .where(
-        and(
-          eq(notificationSendQueue.shopId, input.shopId),
-          inArray(notificationSendQueue.bookingId, seatIds),
-          eq(notificationSendQueue.status, "queued"),
-        ),
-      );
-    await tx
-      .update(gearReservations)
-      .set({ personId: input.toPersonId })
-      .where(
-        and(
-          eq(gearReservations.shopId, input.shopId),
-          inArray(gearReservations.bookingId, seatIds),
-        ),
-      );
-    return { refused: null, fromPersonId: booking.personId, bookedAs, seats };
-  });
+    throw error;
+  }
   if (outcome.refused) return { ok: false, reason: outcome.refused };
   for (const tripId of new Set(outcome.seats.map((seat) => seat.tripId))) {
     await recordTripActivity(db, {
@@ -368,4 +190,222 @@ export async function repointHeldBooking(
     tripId: first?.tripId ?? "",
     seatIds: outcome.seats.map((seat) => seat.bookingId),
   };
+}
+
+type RepointOutcome =
+  | { refused: Extract<RepointHeldBookingResult, { ok: false }>["reason"] }
+  | {
+      refused: null;
+      fromPersonId: string;
+      bookedAs: string;
+      seats: Array<{ bookingId: string; tripId: string }>;
+    };
+
+/** The re-point's reads, refusals and writes, in the caller's transaction. */
+async function repointInTransaction(
+  tx: DbExecutor,
+  input: RepointHeldBookingInput,
+): Promise<RepointOutcome> {
+  const now = nowDate();
+  // Only a seat on a departure still to come (security review Y4): one that
+  // is deleted, cancelled or back has nobody left to re-point.
+  const [booking] = await tx
+    .select({
+      tripId: bookings.tripId,
+      personId: bookings.personId,
+      bookedAs: bookings.identityBookedAs,
+      tripStatus: trips.status,
+      tripDeletedAt: trips.deletedAt,
+      endsAt: trips.endsAt,
+    })
+    .from(bookings)
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        eq(bookings.shopId, input.shopId),
+        isNotNull(bookings.identityUnconfirmedAt),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .limit(1)
+    .for("update", { of: bookings });
+  if (!booking) return { refused: "not_held" };
+  if (
+    booking.tripDeletedAt ||
+    booking.tripStatus !== "scheduled" ||
+    hasReturned(booking.endsAt, now)
+  ) {
+    return { refused: "departure_closed" };
+  }
+
+  const bookedAs = booking.bookedAs?.trim();
+  if (!bookedAs || input.toPersonId === booking.personId) {
+    return { refused: "person_unavailable" };
+  }
+
+  // Both names read under a share lock, so a rename or a removal racing
+  // this tap either lands first and refuses it, or waits for it.
+  const named = await tx
+    .select({
+      id: people.id,
+      fullName: people.fullName,
+      deletedAt: people.deletedAt,
+      anonymizedAt: people.anonymizedAt,
+      mergedIntoPersonId: people.mergedIntoPersonId,
+    })
+    .from(people)
+    .where(
+      and(
+        eq(people.shopId, input.shopId),
+        inArray(people.id, [booking.personId, input.toPersonId]),
+      ),
+    )
+    .for("share");
+  const from = named.find((row) => row.id === booking.personId);
+  const to = named.find((row) => row.id === input.toPersonId);
+  if (
+    !from ||
+    !to ||
+    to.deletedAt ||
+    to.anonymizedAt ||
+    to.mergedIntoPersonId ||
+    // The same-name reason only: the seat's booked-as name is the record's
+    // it is on now, and the record it moves to carries it too.
+    nameKey(from.fullName) !== nameKey(bookedAs) ||
+    nameKey(to.fullName) !== nameKey(bookedAs)
+  ) {
+    return { refused: "person_unavailable" };
+  }
+
+  const requested = new Set(input.sameNameSeatIds ?? []);
+  requested.delete(input.bookingId);
+  const candidates =
+    requested.size > 0
+      ? await tx
+          .select({ bookingId: bookings.id, tripId: bookings.tripId, endsAt: trips.endsAt })
+          .from(bookings)
+          .innerJoin(trips, eq(trips.id, bookings.tripId))
+          .where(
+            and(
+              eq(bookings.shopId, input.shopId),
+              eq(bookings.personId, booking.personId),
+              ne(bookings.id, input.bookingId),
+              isNotNull(bookings.identityUnconfirmedAt),
+              ne(bookings.status, "cancelled"),
+              sql`lower(trim(${bookings.identityBookedAs})) = lower(trim(${bookedAs}))`,
+              eq(trips.shopId, input.shopId),
+              eq(trips.status, "scheduled"),
+              liveTrip(),
+            ),
+          )
+          .for("update", { of: bookings })
+      : [];
+  const siblings = movableSameNameSeats(
+    booking.tripId,
+    candidates
+      .filter((seat) => !hasReturned(seat.endsAt, now))
+      .map(({ bookingId, tripId }) => ({ bookingId, tripId })),
+  ).filter((seat) => requested.has(seat.bookingId));
+  const seats = [{ bookingId: input.bookingId, tripId: booking.tripId }, ...siblings];
+  const seatIds = seats.map((seat) => seat.bookingId);
+
+  // `bookings_trip_person_unique` holds a cancelled row too, so any row of
+  // theirs on a moving departure refuses the move.
+  const [already] = await tx
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.personId, input.toPersonId),
+        inArray(
+          bookings.tripId,
+          seats.map((seat) => seat.tripId),
+        ),
+      ),
+    )
+    .limit(1);
+  if (already) return { refused: "already_on_departure" };
+
+  // The split's own medical refusal, read the same way and under lock.
+  const live = await tx
+    .select({
+      status: waiverRecords.status,
+      medicalClearedAt: waiverRecords.medicalClearedAt,
+    })
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, input.shopId),
+        inArray(waiverRecords.bookingId, seatIds),
+        isNull(waiverRecords.supersededAt),
+      ),
+    )
+    .for("update");
+  if (live.some((row) => row.status === "medical_review" && !row.medicalClearedAt)) {
+    return { refused: "medical_hold" };
+  }
+
+  // Moves the seat and nothing about who it is: the hold stays, with the
+  // name it was booked under and how it was matched.
+  await tx
+    .update(bookings)
+    .set({ personId: input.toPersonId })
+    .where(and(inArray(bookings.id, seatIds), eq(bookings.shopId, input.shopId)));
+  await tx
+    .update(waiverRecords)
+    .set({ supersededAt: now, tokenSealed: null })
+    .where(
+      and(
+        eq(waiverRecords.shopId, input.shopId),
+        inArray(waiverRecords.bookingId, seatIds),
+        isNull(waiverRecords.supersededAt),
+      ),
+    );
+  await tx
+    .update(waiverRecords)
+    .set({
+      personId: input.toPersonId,
+      draftSignerName: null,
+      draftMedicalAnswers: null,
+      draftAcknowledged: false,
+      draftGuardian: null,
+      deliveryError: null,
+      deliveryProviderMessageId: null,
+      deliveryProviderStatus: null,
+      deliveryProviderStatusAt: null,
+      movedFromPersonId: booking.personId,
+      movedAt: now,
+      movedByPersonId: input.actorPersonId,
+    })
+    .where(
+      and(
+        eq(waiverRecords.shopId, input.shopId),
+        inArray(waiverRecords.bookingId, seatIds),
+        eq(waiverRecords.personId, booking.personId),
+        isNull(waiverRecords.signedAt),
+        isNull(waiverRecords.integrityHash),
+        isNull(waiverRecords.anonymizedAt),
+      ),
+    );
+  for (const bookingId of seatIds) {
+    await revokeBookingCapabilities(tx, { shopId: input.shopId, bookingId, now });
+  }
+  await tx
+    .delete(notificationSendQueue)
+    .where(
+      and(
+        eq(notificationSendQueue.shopId, input.shopId),
+        inArray(notificationSendQueue.bookingId, seatIds),
+        eq(notificationSendQueue.status, "queued"),
+      ),
+    );
+  await tx
+    .update(gearReservations)
+    .set({ personId: input.toPersonId })
+    .where(
+      and(eq(gearReservations.shopId, input.shopId), inArray(gearReservations.bookingId, seatIds)),
+    );
+  return { refused: null, fromPersonId: booking.personId, bookedAs, seats };
 }

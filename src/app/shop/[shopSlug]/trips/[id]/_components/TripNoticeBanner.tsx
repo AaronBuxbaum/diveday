@@ -198,6 +198,11 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "trips.notices.identitySplitContactConflict",
   },
+  "identity-departure-closed": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityDepartureClosed",
+  },
   "identity-contact-differs": {
     form: "roster",
     tone: "danger",

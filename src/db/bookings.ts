@@ -3297,7 +3297,9 @@ export type SplitBookingIdentityResult =
         | "age_unstated"
         | "email_in_use"
         /** Two moving seats hold different emergency contacts (issue #2145). */
-        | "held_contact_conflict";
+        | "held_contact_conflict"
+        /** The seat's departure is deleted, cancelled or back (security review Y4). */
+        | "departure_closed";
     };
 
 /** What the staffer told a split about the new diver, beyond a name (issue #2081). */
@@ -3521,7 +3523,8 @@ export async function splitBookingIdentity(
     | "date_of_birth_required"
     | "age_unstated"
     | "email_in_use"
-    | "held_contact_conflict";
+    | "held_contact_conflict"
+    | "departure_closed";
   type Split =
     | { refused: Refusal }
     | {
@@ -3542,8 +3545,12 @@ export async function splitBookingIdentity(
           bookedAs: bookings.identityBookedAs,
           heldContactName: bookings.heldEmergencyContactName,
           heldContactPhone: bookings.heldEmergencyContactPhone,
+          tripStatus: trips.status,
+          tripDeletedAt: trips.deletedAt,
+          endsAt: trips.endsAt,
         })
         .from(bookings)
+        .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
         .where(
           and(
             eq(bookings.id, input.bookingId),
@@ -3553,8 +3560,16 @@ export async function splitBookingIdentity(
           ),
         )
         .limit(1)
-        .for("update");
+        .for("update", { of: bookings });
       if (!booking) return { refused: "not_held" as const };
+      // Only a seat on a departure still to come (security review Y4).
+      if (
+        booking.tripDeletedAt ||
+        booking.tripStatus !== "scheduled" ||
+        hasReturned(booking.endsAt, now)
+      ) {
+        return { refused: "departure_closed" as const };
+      }
 
       // The other held seats booked under the same name and guessed onto the
       // same diver: the same guess, repeated. Only on a departure that
@@ -3569,6 +3584,7 @@ export async function splitBookingIdentity(
               .select({
                 bookingId: bookings.id,
                 tripId: bookings.tripId,
+                endsAt: trips.endsAt,
                 heldContactName: bookings.heldEmergencyContactName,
                 heldContactPhone: bookings.heldEmergencyContactPhone,
               })
@@ -3583,14 +3599,16 @@ export async function splitBookingIdentity(
                   ne(bookings.status, "cancelled"),
                   sql`lower(trim(${bookings.identityBookedAs})) = lower(trim(${booking.bookedAs}))`,
                   eq(trips.shopId, input.shopId),
+                  eq(trips.status, "scheduled"),
                   liveTrip(),
                 ),
               )
               .for("update", { of: bookings })
           : [];
-      const siblings = movableSameNameSeats(booking.tripId, candidates).filter((seat) =>
-        requested.has(seat.bookingId),
-      );
+      const siblings = movableSameNameSeats(
+        booking.tripId,
+        candidates.filter((seat) => !hasReturned(seat.endsAt, now)),
+      ).filter((seat) => requested.has(seat.bookingId));
       const seats = [{ bookingId: input.bookingId, tripId: booking.tripId }, ...siblings];
       const seatIds = seats.map((seat) => seat.bookingId);
 

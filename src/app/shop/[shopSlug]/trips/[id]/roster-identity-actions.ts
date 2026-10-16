@@ -175,6 +175,7 @@ const REPOINT_REFUSAL_NOTICE = {
   person_unavailable: "identity-repoint-unavailable",
   medical_hold: "identity-repoint-medical-hold",
   already_on_departure: "identity-repoint-already-booked",
+  departure_closed: "identity-departure-closed",
 } as const satisfies Record<
   Extract<Awaited<ReturnType<typeof repointHeldBooking>>, { ok: false }>["reason"],
   string
@@ -210,6 +211,7 @@ const SPLIT_REFUSAL_NOTICE = {
   age_unstated: "identity-split-age-unstated",
   email_in_use: "identity-split-email-in-use",
   held_contact_conflict: "identity-split-contact-conflict",
+  departure_closed: "identity-departure-closed",
 } as const satisfies Record<
   Extract<Awaited<ReturnType<typeof splitBookingIdentity>>, { ok: false }>["reason"],
   string

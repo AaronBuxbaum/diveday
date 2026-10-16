@@ -6,9 +6,10 @@ import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { otherSameNamePeople, repointHeldBooking } from "./identity-repoint";
+import { splitBookingIdentity } from "./bookings";
 import { listTripActivity, pagedDiverActivity } from "./operations";
 import { getBookingReadiness } from "./readiness";
-import { bookings, people, shops, waiverRecords } from "./schema";
+import { bookings, people, shops, trips, waiverRecords } from "./schema";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 import { issueWaiverRequest } from "./waivers";
 
@@ -247,6 +248,67 @@ describe("repointHeldBooking", () => {
       email: owner?.email ?? "",
     });
     if (!theirs.ok || theirs.personId !== second) throw new Error("setup failed");
+    expect(
+      await repointHeldBooking(db, {
+        shopId: shop.id,
+        bookingId,
+        actorPersonId: staff.id,
+        toPersonId: second,
+      }),
+    ).toEqual({ ok: false, reason: "already_on_departure" });
+  });
+
+  // Security review Y4: a departure that has finished or been cancelled moves
+  // nobody, by re-point or by split.
+  it.each([
+    [
+      "returned",
+      { startsAt: new Date("2020-01-01T09:00:00Z"), endsAt: new Date("2020-01-01T12:00:00Z") },
+    ],
+    ["cancelled", { status: "cancelled" as const }],
+  ])("refuses a seat on a %s departure, by re-point and by split", async (_label, patch) => {
+    const { db, shop, trip, first, second, bookingId, staff } = await namesakes();
+    await db.update(trips).set(patch).where(eq(trips.id, trip.id));
+    expect(
+      await repointHeldBooking(db, {
+        shopId: shop.id,
+        bookingId,
+        actorPersonId: staff.id,
+        toPersonId: second,
+      }),
+    ).toEqual({ ok: false, reason: "departure_closed" });
+    expect(
+      await splitBookingIdentity(db, {
+        shopId: shop.id,
+        bookingId,
+        actorPersonId: staff.id,
+        fullName: "Alex Kim",
+        adultAttested: true,
+      }),
+    ).toEqual({ ok: false, reason: "departure_closed" });
+    const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    expect(seat?.personId).toBe(first);
+  });
+
+  // Agency review G8: a seat of theirs the pre-check cannot see still lands
+  // as the refusal, never as a thrown unique violation.
+  it("answers a seat the pre-check missed as already on the departure", async () => {
+    const { db, shop, trip, second, bookingId, staff } = await namesakes();
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Race Shop", slug: "race-shop-repoint", timezone: "UTC" })
+      .returning({ id: shops.id });
+    const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    if (!other || !seat) throw new Error("setup failed");
+    const { id: _id, ...copy } = seat;
+    await db.insert(bookings).values({
+      ...copy,
+      shopId: other.id,
+      personId: second,
+      identityUnconfirmedAt: null,
+      identityBookedAs: null,
+      identityMatchedBy: null,
+    });
     expect(
       await repointHeldBooking(db, {
         shopId: shop.id,
