@@ -67,11 +67,11 @@ describe("the public h1 joins the display scale", () => {
 });
 
 /**
- * Issue #2419: the hero is never drawn wider than the file, so a 640px photo
+ * Issue issue 2419: the hero is never drawn wider than the file, so a 640px photo
  * in the 896px column is not scaled up and softened. It takes no box of its
  * own width: the file's size, capped by the column and a height.
  */
-describe("CourseHero photo (#2419)", () => {
+describe("CourseHero photo (issue 2419)", () => {
   it("sizes the photo from its own pixels, never to fill the column", () => {
     render(
       <CourseHero

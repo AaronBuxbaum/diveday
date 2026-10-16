@@ -131,10 +131,10 @@ describe("MapFrame", () => {
     expect(iframe).not.toHaveClass("invisible");
   });
 
-  // Issue #2013: the frame says which state it is in, so a surface can draw a
+  // Issue issue 2013: the frame says which state it is in, so a surface can draw a
   // quiet line for the one that matters. A cross-origin frame has no reliable
   // error event: the probe's error and the silence are the only signals.
-  describe("its state (#2013)", () => {
+  describe("its state (issue 2013)", () => {
     it("is waiting, then reachable once the provider answers", () => {
       const iframe = frame();
       expect(iframe).toHaveAttribute("data-map-state", "waiting");

@@ -4,6 +4,8 @@ import { requirementSentenceFor } from "./requirement-sentence";
 
 const t = diverTranslator("en-US");
 const tEs = diverTranslator("es-ES");
+const card = (level: "open_water" | "advanced_open_water" | "rescue") =>
+  ({ kind: "card", level, keptAt: new Date("2026-01-01T00:00:00Z") }) as const;
 const none = { minimumCertificationLevel: null, requiredSpecialties: [], requiresNitrox: false };
 
 describe("requirementSentenceFor", () => {
@@ -37,9 +39,9 @@ describe("requirementSentenceFor", () => {
     expect(sentence).not.toContain(" and ");
   });
 
-  // Issue #1866: admission is the weaker gate and never refuses someone
+  // Issue issue 1866: admission is the weaker gate and never refuses someone
   // readiness would clear, so a level reads as a bar with a way through.
-  describe("the way through (#1866)", () => {
+  describe("the way through (issue 1866)", () => {
     const level = { ...none, minimumCertificationLevel: "advanced_open_water" } as const;
     const askShop = "Not yet at that level? Ask the shop.";
 
@@ -50,20 +52,26 @@ describe("requirementSentenceFor", () => {
     });
 
     it("says it to a known diver whose card is below the level, and to one with no card", () => {
-      expect(requirementSentenceFor(level, t, "en-US", "open_water")).toContain(askShop);
-      expect(requirementSentenceFor(level, t, "en-US", null)).toContain(askShop);
+      expect(requirementSentenceFor(level, t, "en-US", { facts: [card("open_water")] })).toContain(
+        askShop,
+      );
+      expect(requirementSentenceFor(level, t, "en-US", { facts: [] })).toContain(askShop);
     });
 
     it("leaves it out for a known diver already at or above the level", () => {
-      expect(requirementSentenceFor(level, t, "en-US", "advanced_open_water")).not.toContain(
+      expect(
+        requirementSentenceFor(level, t, "en-US", { facts: [card("advanced_open_water")] }),
+      ).not.toContain(askShop);
+      expect(requirementSentenceFor(level, t, "en-US", { facts: [card("rescue")] })).not.toContain(
         askShop,
       );
-      expect(requirementSentenceFor(level, t, "en-US", "rescue")).not.toContain(askShop);
     });
 
     it("leaves it out when the trip asks for no level", () => {
       expect(
-        requirementSentenceFor({ ...none, requiresNitrox: true }, t, "en-US", "open_water"),
+        requirementSentenceFor({ ...none, requiresNitrox: true }, t, "en-US", {
+          facts: [card("open_water")],
+        }),
       ).not.toContain("Ask the shop");
     });
 

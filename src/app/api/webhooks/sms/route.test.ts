@@ -92,7 +92,7 @@ describe("sms webhook route — replies to the texting number", () => {
     expect(markPhoneRunningLate).toHaveBeenCalledWith(FAKE_DB, {
       phone: "+13055550134",
       now: new Date("2026-10-07T00:00:00.000Z"),
-      // The shared sender names no shop (#2320).
+      // The shared sender names no shop (issue 2320).
       shopId: null,
     });
     expect(shopForSmsSender).toHaveBeenCalledWith(FAKE_DB, "+18335550100");
@@ -101,7 +101,7 @@ describe("sms webhook route — replies to the texting number", () => {
     expect(applyProviderEmailEvent).not.toHaveBeenCalled();
   });
 
-  it("hands the shop that owns the texted number to the LATE write (#2320)", async () => {
+  it("hands the shop that owns the texted number to the LATE write (issue 2320)", async () => {
     vi.mocked(shopForSmsSender).mockResolvedValue("shop-b");
     verified(inbound("Late"));
     await POST(webhookRequest());

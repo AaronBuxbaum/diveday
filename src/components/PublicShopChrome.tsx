@@ -77,6 +77,7 @@ export function PublicShopHeader({
            `text-overflow` has nothing to act on inside a flex container. */
         <Link
           href={publicSchedulePath(shop.slug)}
+          // diveday:allow-type-ramp: the shop name is a wordmark, not a heading
           className="font-brand-display flex min-h-11 min-w-0 items-center text-lg font-semibold tracking-tight"
         >
           <span className="truncate">{shop.name}</span>

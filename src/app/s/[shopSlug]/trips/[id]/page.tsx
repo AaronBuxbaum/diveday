@@ -283,13 +283,7 @@ export default async function TripDetailPage({
         },
         siteRequirement,
       );
-  const requirementSentence = requirementSentenceFor(
-    combinedRequirement,
-    t,
-    locale,
-    // A known diver whose card is already at the level is not told to ask.
-    knownDiver?.facts.find((fact) => fact.kind === "card")?.level ?? null,
-  );
+  const requirementSentence = requirementSentenceFor(combinedRequirement, t, locale, knownDiver);
 
   const inPast = hasSailed(trip.startsAt, now);
   const logEntry = inPast ? undefined : { startsAt: trip.startsAt, isCourse: !!trip.course };

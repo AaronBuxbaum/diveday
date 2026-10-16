@@ -1,6 +1,6 @@
 import type { DiverTranslator } from "@/i18n/messages";
 import { tripRequirementList } from "@/i18n/readiness-labels";
-import type { CertificationLevel } from "@/lib/certification-levels";
+import type { KnownDiverFact } from "@/lib/booking-handoff";
 import { certificationRank } from "@/lib/readiness";
 
 /**
@@ -14,18 +14,18 @@ import { certificationRank } from "@/lib/readiness";
  * **A level is a bar with a way through** (issue #1866): admission is the
  * weaker gate and never refuses someone readiness would clear, so beside a
  * required level the sentence says to ask the shop. Said to anybody the page
- * cannot place at or above the level; `holds` is the level a known diver's
- * card already shows (the handoff), and a diver at it is not told.
+ * cannot place at or above the level; `known` is the handoff's, whose card level a known diver already shows, and a diver at it is not told.
  */
 export function requirementSentenceFor(
   requirement: Parameters<typeof tripRequirementList>[1] | null,
   t: DiverTranslator,
   locale: string,
-  holds: CertificationLevel | null = null,
+  known: { facts: readonly KnownDiverFact[] } | null = null,
 ): string | null {
   if (!requirement) return null;
   const list = tripRequirementList(t, requirement, locale);
   if (!list) return null;
+  const holds = (known?.facts ?? []).find((fact) => fact.kind === "card")?.level ?? null;
   const note = t("trip.requirementNote", { list });
   const asked = requirement.minimumCertificationLevel;
   if (!asked || (holds && certificationRank(holds) >= certificationRank(asked))) return note;

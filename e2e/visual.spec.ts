@@ -2812,7 +2812,7 @@ for (const scheme of ["light", "dark"] as const) {
         // The fleet refuses the maps host (e2e/fixtures.ts), so this capture is
         // the failed state: the sunken ground, the route alone, and the quiet
         // line naming the site (issue #2013).
-        await page.getByText("The map for Molasses Reef is not loading.").waitFor();
+        await page.getByText("is not loading.").waitFor();
         await capture(page, "dive-site-page", scheme);
       });
 

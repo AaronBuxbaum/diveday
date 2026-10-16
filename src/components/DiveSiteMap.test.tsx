@@ -65,10 +65,10 @@ describe("DiveSiteMap's route ends", () => {
 
 /**
  * **A map that is not loading says so, quietly, and keeps its ground** (issue
- * #2013). The frame paints over a sunken surface, and the line naming the site
+ * issue 2013). The frame paints over a sunken surface, and the line naming the site
  * is in the document but shown only while the frame marks itself failed.
  */
-describe("DiveSiteMap when the map does not load (#2013)", () => {
+describe("DiveSiteMap when the map does not load (issue 2013)", () => {
   it("lays the frame over a sunken ground", () => {
     const { container } = render(<DiveSiteMap site={SITE} t={t} />);
     const frame = container.querySelector("iframe");
