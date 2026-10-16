@@ -52,17 +52,20 @@ import { livePerson } from "./trips-live";
  *   {@link recordShopActivity} writes with a diver's name carries that diver's
  *   `booking_id`, so the sweep finds it by construction; the one that carries
  *   no name (`order_refunded`) carries the customer as `subject_person_id`
- *   for the same reason.
+ *   for the same reason. Erasing that customer clears the pointer and keeps
+ *   the line and its actor: who refunded is a fact about staff (issue #2315).
  * - every other name on a line — the actor's, joined for the other two trails
  *   — is `people.full_name` read live, which erasure overwrites in place.
- * - a review line names no reviewer, and a plan-change line no diver.
+ * - a review line names no reviewer, and a plan-change line no diver. A
+ *   departure's title can name one; erasure retitles a departure only the
+ *   erased diver's party was booked on (issue #2315).
  *
  * ## Retention
  *
  * The log shows what the trails still hold; it keeps nothing. An
  * `activity_events` line leaves it the night `RETENTION_DAYS` prunes it
- * (`src/lib/retention.ts`); a moderation or plan-change row lives as long as
- * its review or departure does, and so does its line here.
+ * (`src/lib/retention.ts`); a moderation or plan-change row is kept for ever by
+ * decision (issue #2316), and so is its line here.
  */
 
 /** One line of the log, as the reader returns it: codes, ids and names. */
