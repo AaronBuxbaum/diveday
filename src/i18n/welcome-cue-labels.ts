@@ -1,3 +1,4 @@
+import { formatOrdinal } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { firstNameOf } from "@/lib/person-name";
 import type { WelcomeCue } from "@/lib/welcome-cue";
@@ -22,8 +23,12 @@ import type { StaffTranslator } from "./staff-messages";
  * diver record "first dive with us"; one phrase now). Sentence case, never
  * "First Time With Us": a title-cased cue is a badge with the shape filed off.
  */
-export function welcomeCueText(t: StaffTranslator, cue: WelcomeCue): string {
+export function welcomeCueText(t: StaffTranslator, cue: WelcomeCue, locale: string): string {
   if (cue.kind === "returning") return t("shared.welcomeCue.returning", { years: cue.years });
+  // "25th boat with us" (H-128): a count, never a badge.
+  if (cue.kind === "milestone") {
+    return t("shared.welcomeCue.milestone", { ordinal: formatOrdinal(cue.count, locale) });
+  }
   return cue.nonDiver ? t("shared.welcomeCue.firstTime") : t("shared.welcomeCue.firstTrip");
 }
 
@@ -59,6 +64,15 @@ export function sayHelloSentences(
     );
   }
   for (const entry of cues) {
+    if (entry.cue.kind === "milestone") {
+      sentences.push(
+        t("today.sayHello.milestone", {
+          name: entry.name,
+          ordinal: formatOrdinal(entry.cue.count, locale),
+        }),
+      );
+      continue;
+    }
     if (entry.cue.kind !== "returning") continue;
     sentences.push(t("today.sayHello.returning", { name: entry.name, years: entry.cue.years }));
   }

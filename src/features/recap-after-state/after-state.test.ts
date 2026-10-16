@@ -1,8 +1,11 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createBookingParty } from "@/db/bookings";
 import { getRecapPageData, type RecapPageData } from "@/db/recap";
-import { upcomingTripsWithCounts } from "@/db/trips";
+import { bookings } from "@/db/schema";
+import { createTrip, upcomingTripsWithCounts } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { buildAfterStateProps } from "./after-state";
 
@@ -129,6 +132,52 @@ describe("buildAfterStateProps", () => {
     });
     expect(props.nextDiveHref).toBeNull();
     expect(serialized(props)).not.toMatch(/[?&#]handoff=|\/h\//);
+  });
+
+  /**
+   * **Never a seat they already hold** (fifth-loop ideas, item 37). The seat is
+   * said on `/ready`, which only its holder opens; the forwardable recap link
+   * says nothing about the diver's other bookings.
+   */
+  it("says the diver's next held seat on /ready and never on the recap link", async () => {
+    const { data, bookingId } = await recapData();
+    const [own] = await ctx.db
+      .select({ personId: bookings.personId, tripId: bookings.tripId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    const startsAt = new Date(nowDate().getTime() + 7 * 24 * 60 * 60 * 1000);
+    const ahead = await createTrip(ctx.db, {
+      shopId: ctx.shop.id,
+      title: "Held Saturday reef",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+      capacity: 6,
+      plannedDives: 2,
+    });
+    if (!own || !ahead) throw new Error("held departure not created");
+    await ctx.db.insert(bookings).values({
+      shopId: ctx.shop.id,
+      tripId: ahead.id,
+      personId: own.personId,
+      bookedAs: "diver",
+    });
+    const base = {
+      db: ctx.db,
+      data,
+      bookingId,
+      locale: "en-US" as const,
+      t: diverTranslator("en-US"),
+      params: {},
+      actions,
+    };
+
+    const ready = await buildAfterStateProps({ ...base, mintHandoff: true });
+    expect(ready.heldNext?.title).toBe(ahead.title);
+    expect(ready.nextDive).toBeNull();
+
+    const recap = await buildAfterStateProps({ ...base, mintHandoff: false });
+    expect(recap.heldNext ?? null).toBeNull();
+    expect(serialized(recap)).not.toContain(ahead.title);
   });
 
   it("passes the URL's notice params through untouched, for the component to read through noticeFromParam", async () => {

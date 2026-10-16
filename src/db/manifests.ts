@@ -1064,6 +1064,7 @@ export async function getTripManifests(
           sharedAt: null,
           lastDivedAt: null,
           nonDiver: false,
+          boatCount: null,
         }),
         tripEndsAt: trip.endsAt,
       }),

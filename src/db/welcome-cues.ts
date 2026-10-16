@@ -1,8 +1,11 @@
 import { and, eq, inArray, isNotNull, lt, max, ne, notInArray, type SQL, sql } from "drizzle-orm";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { priorVisitStanding } from "@/lib/prior-visits";
 import { hasReturned } from "@/lib/trips";
 import type { AppDb, DbExecutor } from "./client";
-import { bookings, people, trips } from "./schema";
+import { diveDay } from "./dive-days";
+import { bookings, people, priorVisits, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -23,6 +26,12 @@ export type WelcomeCueInputs = {
   lastDivedAt: Date | null;
   /** This seat is a snorkeler's or a rider's: its words never say "dive". */
   nonDiver: boolean;
+  /**
+   * Which boat with the shop this one is, for a diver seat: their earlier dive
+   * days (`diveDay()`, the recap's own rule) and imported visits, plus this
+   * one. Null on a snorkeler's or a rider's seat. Feeds the milestone (H-128).
+   */
+  boatCount: number | null;
 };
 
 /**
@@ -42,6 +51,13 @@ function priorSeats(db: DbExecutor, shopId: string, otherTrips: SQL, now: Date) 
           .mapWith(trips.startsAt)
           .as("last_dive_at"),
       lastSeatAt: max(trips.startsAt).as("last_seat_at"),
+      // The dive days among them, by the one rule every reader of a diver's
+      // days calls (`src/db/dive-days.ts`), so the milestone counts what the
+      // recap's ordinal counts.
+      diveDays:
+        sql<number>`count(*) filter (where ${bookings.participantType} = 'diver' and ${diveDay()})`
+          .mapWith(Number)
+          .as("dive_days"),
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -58,13 +74,47 @@ function priorSeats(db: DbExecutor, shopId: string, otherTrips: SQL, now: Date) 
 }
 
 /** The prior seat that counts for this one: a dive for a diver, any seat otherwise. */
-function lastCounted(row: {
-  participantType: string;
-  lastDiveAt: Date | null;
-  lastSeatAt: Date | null;
-}): Pick<WelcomeCueInputs, "lastDivedAt" | "nonDiver"> {
+function lastCounted(
+  row: {
+    participantType: string;
+    lastDiveAt: Date | null;
+    lastSeatAt: Date | null;
+    personId: string;
+    diveDays: number | null;
+  },
+  importedVisits: ReadonlyMap<string, number>,
+): Pick<WelcomeCueInputs, "lastDivedAt" | "nonDiver" | "boatCount"> {
   const nonDiver = row.participantType !== "diver";
-  return { lastDivedAt: (nonDiver ? row.lastSeatAt : row.lastDiveAt) ?? null, nonDiver };
+  return {
+    lastDivedAt: (nonDiver ? row.lastSeatAt : row.lastDiveAt) ?? null,
+    nonDiver,
+    boatCount: nonDiver
+      ? null
+      : Number(row.diveDays ?? 0) + (importedVisits.get(row.personId) ?? 0) + 1,
+  };
+}
+
+/**
+ * Visits the shop's previous system remembers for each person, less the ones
+ * it says did not happen: the same filter the recap's ordinal applies
+ * (`priorVisitStanding`), so the two counts agree.
+ */
+async function importedVisitCounts(
+  db: DbExecutor,
+  shopId: string,
+  personIds: readonly string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (personIds.length === 0) return counts;
+  const rows = await db
+    .select({ personId: priorVisits.personId, statusLabel: priorVisits.statusLabel })
+    .from(priorVisits)
+    .where(and(eq(priorVisits.shopId, shopId), inArray(priorVisits.personId, [...personIds])));
+  for (const row of rows) {
+    if (priorVisitStanding(row.statusLabel) === "did_not_happen") continue;
+    counts.set(row.personId, (counts.get(row.personId) ?? 0) + 1);
+  }
+  return counts;
 }
 
 /**
@@ -88,10 +138,12 @@ export async function welcomeCueInputsByBooking(
   const rows = await db
     .select({
       bookingId: bookings.id,
+      personId: bookings.personId,
       sharedAt: bookings.welcomeSharedAt,
       participantType: bookings.participantType,
       lastDiveAt: prior.lastDiveAt,
       lastSeatAt: prior.lastSeatAt,
+      diveDays: prior.diveDays,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -106,8 +158,11 @@ export async function welcomeCueInputsByBooking(
       ),
     );
 
+  const imported = await importedVisitCounts(db, shopId, [
+    ...new Set(rows.map((row) => row.personId)),
+  ]);
   return new Map(
-    rows.map((row) => [row.bookingId, { sharedAt: row.sharedAt, ...lastCounted(row) }]),
+    rows.map((row) => [row.bookingId, { sharedAt: row.sharedAt, ...lastCounted(row, imported) }]),
   );
 }
 
@@ -116,7 +171,7 @@ export type SharedWelcomeSeat = {
   bookingId: string;
   personName: string;
   sharedAt: Date;
-} & Pick<WelcomeCueInputs, "lastDivedAt" | "nonDiver">;
+} & Pick<WelcomeCueInputs, "lastDivedAt" | "nonDiver" | "boatCount">;
 
 /**
  * Every **consented** seat across a set of departures, with the name to greet
@@ -142,11 +197,13 @@ export async function sharedWelcomeSeatsByTrip(
     .select({
       tripId: bookings.tripId,
       bookingId: bookings.id,
+      personId: bookings.personId,
       personName: people.fullName,
       sharedAt: bookings.welcomeSharedAt,
       participantType: bookings.participantType,
       lastDiveAt: prior.lastDiveAt,
       lastSeatAt: prior.lastSeatAt,
+      diveDays: prior.diveDays,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -164,6 +221,9 @@ export async function sharedWelcomeSeatsByTrip(
     )
     .orderBy(people.fullName, bookings.id);
 
+  const imported = await importedVisitCounts(db, shopId, [
+    ...new Set(rows.map((row) => row.personId)),
+  ]);
   for (const row of rows) {
     if (!row.sharedAt) continue;
     const seats = byTrip.get(row.tripId) ?? [];
@@ -172,7 +232,7 @@ export async function sharedWelcomeSeatsByTrip(
       bookingId: row.bookingId,
       personName: row.personName,
       sharedAt: row.sharedAt,
-      ...lastCounted(row),
+      ...lastCounted(row, imported),
     });
     byTrip.set(row.tripId, seats);
   }
@@ -220,4 +280,60 @@ export async function setWelcomeConsent(
     .set({ welcomeSharedAt: input.shared ? now : null })
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)));
   return { ok: true };
+}
+
+/**
+ * **Which boat with the shop one seat is** (H-128), for the diver's own booked
+ * moment: the diver's dive days that started before this departure, by the one
+ * rule (`diveDay()`), and the imported visits before its day, plus this one.
+ * Null for a snorkeler's or a rider's seat, a cancelled one, or a seat that is
+ * not this shop's. Counted against this departure's own start rather than
+ * now, so a diver booking three boats ahead is told which number each will be.
+ */
+export async function boatCountForSeat(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<number | null> {
+  const [seat] = await db
+    .select({
+      personId: bookings.personId,
+      participantType: bookings.participantType,
+      status: bookings.status,
+      startsAt: trips.startsAt,
+    })
+    .from(bookings)
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId), liveTrip()))
+    .limit(1);
+  if (seat?.participantType !== "diver" || seat.status === "cancelled") return null;
+  const [earlier] = await db
+    .select({ days: sql<number>`count(*)`.mapWith(Number) })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.personId, seat.personId),
+        eq(bookings.participantType, "diver"),
+        ne(bookings.id, bookingId),
+        lt(trips.startsAt, seat.startsAt),
+        diveDay(),
+      ),
+    );
+  const [shop] = await db
+    .select({ timezone: shops.timezone })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  const tripDay = calendarDateInTimezone(seat.startsAt, shop?.timezone ?? "UTC");
+  const visits = await db
+    .select({ visitedOn: priorVisits.visitedOn, statusLabel: priorVisits.statusLabel })
+    .from(priorVisits)
+    .where(and(eq(priorVisits.shopId, shopId), eq(priorVisits.personId, seat.personId)));
+  const imported = visits.filter(
+    (visit) =>
+      priorVisitStanding(visit.statusLabel) !== "did_not_happen" && visit.visitedOn < tripDay,
+  ).length;
+  return Number(earlier?.days ?? 0) + imported + 1;
 }

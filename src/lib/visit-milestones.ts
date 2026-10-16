@@ -36,3 +36,25 @@ export function visitMilestone(count: number): VisitMilestone | null {
   if (!Number.isInteger(count)) return null;
   return VISIT_MILESTONES.find((milestone) => milestone === count) ?? null;
 }
+
+/**
+ * **The boats a regular's milestone is said on** (H-128): the 10th, 25th, 50th
+ * and 100th, the stamp's set without the first, which already has its own
+ * words on both sides ("First dive with us", "First dive day"). Read from the
+ * one set above so the roster, the booked moment and the stamp never disagree.
+ */
+export const BOAT_MILESTONES = VISIT_MILESTONES.filter(
+  (milestone): milestone is Exclude<VisitMilestone, 1> => milestone !== 1,
+);
+
+export type BoatMilestone = (typeof BOAT_MILESTONES)[number];
+
+/**
+ * The milestone this boat is, or null: exact equality, for the reason
+ * `visitMilestone` gives, so boat 26 is never a 25th and a miscounted day
+ * skips a milestone rather than repeating one.
+ */
+export function boatMilestone(count: number | null | undefined): BoatMilestone | null {
+  if (typeof count !== "number" || !Number.isInteger(count)) return null;
+  return BOAT_MILESTONES.find((milestone) => milestone === count) ?? null;
+}

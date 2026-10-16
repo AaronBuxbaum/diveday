@@ -201,6 +201,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Medical hold
 - Medical questionnaire
 - Meeting point
+- Milestone
 - Milestone stamp
 - Minor unit
 - Monday email
@@ -254,6 +255,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Set-up request
 - Settled total
 - Setup link
+- Shared photo
 - Shop currency
 - Shop day scan
 - Sign once

@@ -22,7 +22,7 @@ import {
 } from "./readiness";
 import { carriedPreparationForDiver, getBookedCard, getReadyPageData } from "./ready";
 import { getRentalFit, toDiverRentalFit } from "./rental-fit";
-import { bookings, people, shops, trips as tripTable, waiverRecords } from "./schema";
+import { bookings, people, priorVisits, shops, trips as tripTable, waiverRecords } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver } from "./waivers";
@@ -579,6 +579,30 @@ describe("getBookedCard", () => {
     expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.departureCancelled).toBe(
       true,
     );
+  });
+
+  // H-128: the diver's side of a regular's milestone, said on the booked moment.
+  it("names a milestone boat, counting the shop's imported visits, and only that boat", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.milestone).toBeNull();
+    const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    if (!seat) throw new Error("seat missing");
+    await db.insert(priorVisits).values(
+      Array.from({ length: 9 }, (_, index) => ({
+        shopId: shop.id,
+        personId: seat.personId,
+        visitedOn: `2024-0${index + 1}-10`,
+        dedupeKey: `ready-milestone-${index}`,
+        importedAt: nowDate(),
+      })),
+    );
+    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.milestone).toBe(10);
+    // A held seat speaks for a record nobody has matched yet: no count of it.
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "N. Q." })
+      .where(eq(bookings.id, bookingId));
+    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.milestone).toBeNull();
   });
 
   it("greets a held identity by the name it was booked as, never the matched record's", async () => {

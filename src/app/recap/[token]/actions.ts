@@ -84,6 +84,9 @@ export async function uploadRecapPhotoAction(token: string, formData: FormData) 
   if (files.length === 0) redirect(`${back}?photo=none`);
   const captionParse = parseForm(captionForm, formData);
   const caption = captionParse.ok ? captionParse.data.caption : "";
+  // The sharer's own tick, off unless sent (H-129): only the literal "on" a
+  // checkbox posts shares a photo with the rest of the boat.
+  const shareWithBoat = formData.get("shareWithBoat") === "on";
   const db = await getDb();
   // The recap link is the diver's own, and this is a form they just submitted
   // from their own device — first-hand evidence of the language they read
@@ -129,7 +132,12 @@ export async function uploadRecapPhotoAction(token: string, formData: FormData) 
       continue; // this one file failed (wrong type/too big); keep trying the rest
     }
 
-    const result = await addRecapPhoto(db, { bookingId, imageUrl: stored.url, caption });
+    const result = await addRecapPhoto(db, {
+      bookingId,
+      imageUrl: stored.url,
+      caption,
+      shareWithBoat,
+    });
     if (!result.ok) {
       // Only reachable if a concurrent upload filled the cap (or the booking
       // was cancelled) mid-batch — the object we just stored is now

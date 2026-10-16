@@ -14,8 +14,9 @@ import { noCertificationStands } from "@/lib/readiness";
 import type { RentalPricing } from "@/lib/rentals";
 import { canSayRunningLate, runningLateShown } from "@/lib/running-late";
 import { hasSailed } from "@/lib/trips";
+import { type BoatMilestone, boatMilestone } from "@/lib/visit-milestones";
 import { shopWaiverStatus } from "@/lib/waivers";
-import { offerableWelcomeCue, type WelcomeCue } from "@/lib/welcome-cue";
+import { type OfferableWelcomeCue, offerableWelcomeCue } from "@/lib/welcome-cue";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
 import { firstActiveIntroCourse, hasActiveRefresherCourse } from "./courses";
@@ -35,7 +36,7 @@ import { bookings, certifications, people, shops, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getTripWithBooked } from "./trips";
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
-import { welcomeCueInputsByBooking } from "./welcome-cues";
+import { boatCountForSeat, welcomeCueInputsByBooking } from "./welcome-cues";
 
 /**
  * **What `/ready` says in the first paint after a booking**, and nothing else
@@ -78,6 +79,8 @@ export type BookedCard = {
   pickup: { time: string | null; location: string | null };
   bookingCancelled: boolean;
   departureCancelled: boolean;
+  /** This seat is the diver's 10th, 25th, 50th or 100th boat with the shop (H-128), or null. */
+  milestone: BoatMilestone | null;
 };
 
 export async function getBookedCard(
@@ -111,6 +114,11 @@ export async function getBookedCard(
     .limit(1);
   if (!row) return null;
   const identityHeld = row.identityUnconfirmedAt !== null;
+  // A held seat speaks for a record staff have not matched to whoever booked
+  // (#2082), so it is told no count of that record's days.
+  const milestone = identityHeld
+    ? null
+    : boatMilestone(await boatCountForSeat(db, shopId, bookingId));
   return {
     shop: {
       name: row.shopName,
@@ -124,6 +132,7 @@ export async function getBookedCard(
     pickup: { time: row.pickupTime, location: row.hotelPickupLocation },
     bookingCancelled: row.status === "cancelled",
     departureCancelled: row.tripStatus !== "scheduled",
+    milestone,
   };
 }
 
@@ -365,7 +374,7 @@ export type ReadyPageData = {
    * gap — regardless of whether they have said yes. Null means there is nothing
    * to offer and the question is not asked at all.
    */
-  welcomeOffer: WelcomeCue | null;
+  welcomeOffer: OfferableWelcomeCue | null;
   /** Whether they have said yes. Their own answer, on their own link. */
   welcomeShared: boolean;
   /**

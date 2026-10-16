@@ -1464,6 +1464,7 @@ export const RECAP_PHOTOS_CSV = sharedFile<ShopRow<"recapPhotoRows">>({
     { header: "trip_id", in: "shop", value: (row) => row.tripId },
     { header: "image_url", in: "both", value: (row) => row.imageUrl },
     { header: "caption", in: "both", value: (row) => row.caption },
+    { header: "shared_with_boat_at", in: "both", value: (row) => row.sharedWithBoatAt },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
   ],
   shop: {

@@ -1448,6 +1448,19 @@
   equality, not "at least", so a miscounted day does not blur a milestone — it skips it permanently.
   Primary ink, never coral (the thread spends its accent three times and this is not one of them),
   and on every other visit the plain ordinal line renders in its place.
+- **Milestone** — a regular's 10th, 25th, 50th or 100th boat with the shop, said once on each side
+  as a count with no badge (H-128): "25th boat with us" under the name on the roster and the
+  manifest, and "Say hello to Bjorn: 25th boat with us." on Today, for a diver who said the crew may
+  know (the welcome cue's consent); "Your 25th day with Blue Mantis Divers." on the diver's booked
+  moment. Counted by the **Dive day** rule plus imported visits, as the recap's ordinal is, with
+  this boat as the next one; silent on every other count, and on a snorkeler's or a rider's seat.
+  Not the **Milestone stamp**, which is the recap's roundel and also marks the first day.
+- **Shared photo** — a recap photo its diver ticked "Share with everyone on this boat" for at upload
+  (`recap_photos.shared_with_boat_at`, H-129, ADR 20261016-shared-boat-photos). Off by default and
+  per photo. It shows under "From the boat" on the recap of every other seat on the same departure,
+  with the sharer's first name, and leaves when the sharer's seat is cancelled or marked a no-show.
+  Staff take it down with the gallery's ordinary delete. Not a crew photo (`trip_recap_photos`),
+  which staff add and which reaches every diver without a name.
 - **Rehearsal** — a departure staff add from the schedule builder for training day, to seat test
   divers and practice the boat side: check-in, roll call, close-out. Set when it is created and
   never changed (`trips.is_rehearsal`). It is always private, never priced, never part of a series,

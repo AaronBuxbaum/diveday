@@ -286,7 +286,8 @@
   "sayHello": {
     "firstTrip": "{names}: primera inmersión con nosotros.",
     "firstTime": "{names}: primera vez con nosotros.",
-    "returning": "{name} vuelve tras {years, plural, one {# año} other {# años}}."
+    "returning": "{name} vuelve tras {years, plural, one {# año} other {# años}}.",
+    "milestone": "{name}: {ordinal} barco con nosotros."
   },
   "unfinished": {
     "label": "Sin terminar",

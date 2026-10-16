@@ -9,6 +9,7 @@ import type { DiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import {
   bindTitleDash,
+  formatOrdinal,
   formatRelativeDay,
   formatShortDate,
   formatTime,
@@ -17,6 +18,7 @@ import {
 import { publicAppUrl } from "@/lib/notifications";
 import { publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
 import { isDiveDay } from "@/lib/thread-steps";
+import type { BoatMilestone } from "@/lib/visit-milestones";
 
 /**
  * **The facts the top of `/ready` states**, and the only ones: whose shop,
@@ -153,6 +155,7 @@ export function ReadyMastheadMeta({
 export function ReadyBookedHeader({
   facts,
   greetingName,
+  milestone = null,
   locale,
   now,
   t,
@@ -161,6 +164,11 @@ export function ReadyBookedHeader({
   facts: MastheadFacts;
   /** The name the booking greets, already resolved (a held identity greets the name it booked as). */
   greetingName: string;
+  /**
+   * This seat is the diver's 10th, 25th, 50th or 100th boat with the shop
+   * (H-128): said once, as a count, under the arrival line. Null otherwise.
+   */
+  milestone?: BoatMilestone | null;
   locale: string;
   now: Date;
   t: DiverTranslator;
@@ -178,6 +186,14 @@ export function ReadyBookedHeader({
         <p className="font-semibold text-foreground">{bindTitleDash(facts.trip.title)}</p>
         <BookedWhen facts={facts} locale={locale} now={now} />
         <p className="mt-1 font-medium text-foreground">{mastheadArrivalLine(facts, locale, t)}</p>
+        {milestone ? (
+          <p className="mt-1">
+            {t("booking.milestoneDay", {
+              ordinal: formatOrdinal(milestone, locale),
+              shopName: facts.shop.name,
+            })}
+          </p>
+        ) : null}
       </EarnedMoment>
       <MastheadDoors facts={facts} t={t} />
       {children}
@@ -242,7 +258,7 @@ export function ReadyBookedPage({
   locale,
   children,
 }: {
-  card: MastheadFacts & { greetingName: string };
+  card: MastheadFacts & { greetingName: string; milestone?: BoatMilestone | null };
   locale: DiverLocale;
   children: ReactNode;
 }) {
@@ -258,6 +274,7 @@ export function ReadyBookedPage({
           <ReadyBookedHeader
             facts={card}
             greetingName={card.greetingName}
+            milestone={card.milestone ?? null}
             locale={locale}
             now={nowDate()}
             t={t}

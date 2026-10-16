@@ -1,4 +1,17 @@
-import { and, desc, eq, gt, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  ne,
+  notInArray,
+  or,
+  sql,
+} from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
 import { isStaff } from "@/lib/authz";
 import type { BrandDisplayFontCode } from "@/lib/brand";
@@ -22,6 +35,7 @@ import {
   smsRecipient,
 } from "@/lib/notifications/sms";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
+import { firstNameOf } from "@/lib/person-name";
 import { mergeShopHistory, priorVisitStanding } from "@/lib/prior-visits";
 import { recapLinkPath } from "@/lib/recap-links";
 import { RECAP_AUTOMATIC_DELAY_HOURS, unpauseRecapAutoSendAt } from "@/lib/recap-schedule";
@@ -63,8 +77,24 @@ import { tripCrewByTrip } from "./trips-crew";
 import { liveTrip, notRehearsal } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
-/** A diver's own recap photo, as the recap page renders it. */
-export type RecapPhotoView = { id: string; imageUrl: string; caption: string | null };
+/**
+ * A photo as the recap page renders it: the diver's own, the crew's, or one
+ * another diver on the same boat chose to share (H-129).
+ */
+export type RecapPhotoView = {
+  id: string;
+  imageUrl: string;
+  caption: string | null;
+  /**
+   * The first name of the diver who shared it with the boat, on a photo that
+   * is not this diver's own; absent on their own photos and the crew's. Only
+   * the first name: the recap is a forwardable page, and the boat already knew
+   * each other by it.
+   */
+  sharedBy?: string;
+  /** This diver's own photo, shared with the boat at upload. */
+  sharedWithBoat?: boolean;
+};
 
 /**
  * The post-trip recap: one reading of the day per diver per trip, generated
@@ -933,19 +963,31 @@ async function loadRecapPageData(
   return { data, latestTip };
 }
 
-/** A diver's recap photos, including staff-shared departure photos, newest first. */
+/**
+ * A diver's recap photos, newest first: their own, the crew's departure photos,
+ * and the photos other divers on the same departure chose to share with the
+ * boat (H-129, ADR 20261016-shared-boat-photos).
+ *
+ * **A shared photo shows only to the sharer's own boat.** The read is the
+ * departure the recap is for, and the sharer's seat must still be one the
+ * recap would show (not cancelled, not a no-show), so a seat taken off the
+ * boat afterwards takes its shared photos off everyone else's page with it.
+ * Erasure deletes the photo row itself (`src/db/anonymize.ts`), so an erased
+ * diver's name can never reach this read.
+ */
 async function listRecapPhotosForBooking(
   db: AppDb,
   shopId: string,
   bookingId: string,
   tripId?: string,
 ): Promise<RecapPhotoView[]> {
-  const [diverRows, crewRows] = await Promise.all([
+  const [diverRows, crewRows, boatRows] = await Promise.all([
     db
       .select({
         id: recapPhotos.id,
         imageUrl: recapPhotos.imageUrl,
         caption: recapPhotos.caption,
+        sharedWithBoatAt: recapPhotos.sharedWithBoatAt,
         createdAt: recapPhotos.createdAt,
       })
       .from(recapPhotos)
@@ -962,10 +1004,59 @@ async function listRecapPhotosForBooking(
           .where(and(eq(tripRecapPhotos.shopId, shopId), eq(tripRecapPhotos.tripId, tripId)))
           .orderBy(desc(tripRecapPhotos.createdAt))
       : Promise.resolve([]),
+    tripId ? listBoatSharedPhotos(db, shopId, tripId, bookingId) : Promise.resolve([]),
   ]);
-  return [...diverRows, ...crewRows.map((photo) => ({ ...photo, caption: null }))]
+  return [
+    ...diverRows.map(({ sharedWithBoatAt, ...photo }) =>
+      sharedWithBoatAt ? { ...photo, sharedWithBoat: true } : photo,
+    ),
+    ...crewRows.map((photo) => ({ ...photo, caption: null })),
+    ...boatRows,
+  ]
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .map(({ createdAt: _createdAt, ...photo }) => photo);
+}
+
+/**
+ * The photos other divers on this departure shared with the boat, each with
+ * the sharer's first name. Never this booking's own (those are read above).
+ */
+async function listBoatSharedPhotos(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  bookingId: string,
+): Promise<(RecapPhotoView & { createdAt: Date })[]> {
+  const rows = await db
+    .select({
+      id: recapPhotos.id,
+      imageUrl: recapPhotos.imageUrl,
+      caption: recapPhotos.caption,
+      createdAt: recapPhotos.createdAt,
+      sharerName: people.fullName,
+    })
+    .from(recapPhotos)
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, recapPhotos.bookingId), eq(bookings.shopId, recapPhotos.shopId)),
+    )
+    .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
+    .where(
+      and(
+        eq(recapPhotos.shopId, shopId),
+        eq(recapPhotos.tripId, tripId),
+        eq(bookings.tripId, tripId),
+        ne(recapPhotos.bookingId, bookingId),
+        isNotNull(recapPhotos.sharedWithBoatAt),
+        notInArray(bookings.status, ["cancelled", "no_show"]),
+        isNull(people.anonymizedAt),
+      ),
+    )
+    .orderBy(desc(recapPhotos.createdAt));
+  return rows.map(({ sharerName, ...photo }) => ({
+    ...photo,
+    sharedBy: firstNameOf(sharerName, sharerName),
+  }));
 }
 
 export type RecapPhotoEligibility =
@@ -1030,7 +1121,14 @@ export type AddRecapPhotoResult =
  */
 export async function addRecapPhoto(
   db: AppDb,
-  input: { bookingId: string; imageUrl: string; caption?: string | null },
+  input: {
+    bookingId: string;
+    imageUrl: string;
+    caption?: string | null;
+    /** The sharer's own tick under "Add to my recap" (H-129); off unless given. */
+    shareWithBoat?: boolean;
+    now?: Date;
+  },
 ): Promise<AddRecapPhotoResult> {
   return db.transaction(async (tx) => {
     const [booking] = await tx
@@ -1063,6 +1161,7 @@ export async function addRecapPhoto(
         tripId: booking.tripId,
         imageUrl: input.imageUrl,
         caption,
+        sharedWithBoatAt: input.shareWithBoat ? (input.now ?? nowDate()) : null,
       })
       .returning({
         id: recapPhotos.id,
@@ -1074,7 +1173,12 @@ export async function addRecapPhoto(
   });
 }
 
-export type StaffRecapPhoto = RecapPhotoView & { diverName: string; bookingId: string };
+export type StaffRecapPhoto = RecapPhotoView & {
+  diverName: string;
+  bookingId: string;
+  /** The diver shared it with everyone on the boat, so it shows on their recaps too. */
+  sharedWithBoat: boolean;
+};
 
 /** Every diver photo on these trips, with who shared it — the close-out's moderation gallery. */
 export async function listRecapPhotosForTrips(
@@ -1091,6 +1195,7 @@ export async function listRecapPhotosForTrips(
       diverName: people.fullName,
       bookingId: recapPhotos.bookingId,
       tripId: recapPhotos.tripId,
+      sharedWithBoat: sql<boolean>`${recapPhotos.sharedWithBoatAt} is not null`,
     })
     .from(recapPhotos)
     .innerJoin(bookings, eq(bookings.id, recapPhotos.bookingId))

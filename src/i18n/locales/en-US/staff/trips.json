@@ -357,8 +357,10 @@
     "heading": "Diver photos",
     "description": "Shared by divers from their own recap pages.",
     "photoFromAlt": "Photo from {diverName}",
+    "sharedWithBoat": "Shared with the boat",
     "removing": "…",
     "confirmRemove": "Remove this photo from the diver’s recap?",
+    "confirmRemoveShared": "Remove this photo from every recap on this boat?",
     "removeConfirmButton": "Yes, remove the photo",
     "removeCancel": "Never mind",
     "remove": "Remove"

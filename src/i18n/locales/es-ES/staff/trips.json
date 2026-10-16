@@ -357,8 +357,10 @@
     "heading": "Fotos de buceadores",
     "description": "Compartidas por los buceadores desde sus propias páginas de resumen.",
     "photoFromAlt": "Foto de {diverName}",
+    "sharedWithBoat": "Compartida con el barco",
     "removing": "…",
     "confirmRemove": "¿Eliminar esta foto del resumen del buceador?",
+    "confirmRemoveShared": "¿Eliminar esta foto de todos los resúmenes de este barco?",
     "removeConfirmButton": "Sí, eliminar la foto",
     "removeCancel": "Mejor no",
     "remove": "Eliminar"

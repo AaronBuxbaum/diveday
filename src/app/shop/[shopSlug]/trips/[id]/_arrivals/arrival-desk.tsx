@@ -311,7 +311,7 @@ export async function buildArrivalDesk({
     if (!cue) continue;
     const line = (
       <div key="welcome" className="mt-1 text-sm text-muted">
-        <p>{welcomeCueText(t, cue)}</p>
+        <p>{welcomeCueText(t, cue, locale)}</p>
         {cue.kind === "first_trip" ? (
           // A card nobody has verified wears the warning tone the phrase
           // wears everywhere else (`certificationSummaryUnchecked`).

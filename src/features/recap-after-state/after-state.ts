@@ -1,6 +1,7 @@
+import type { ReactNode } from "react";
 import { issueBookingHandoff } from "@/db/booking-handoff";
 import type { AppDb } from "@/db/client";
-import { nextDiveForBooking } from "@/db/next-dive";
+import { heldDepartures, nextDiveForBooking } from "@/db/next-dive";
 import {
   MAX_RECAP_PHOTOS_PER_BOOKING,
   type RecapPageData,
@@ -21,7 +22,13 @@ import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DiveRecordComparison } from "@/lib/dive-record";
 import type { FlySafeAnchor, FlySafeReason } from "@/lib/fly-safe";
-import { formatOrdinal, formatRelativeDay, formatShortDate, formatWeekdayTime } from "@/lib/format";
+import {
+  formatOrdinal,
+  formatRelativeDay,
+  formatShortDate,
+  formatTime,
+  formatWeekdayTime,
+} from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import type { NextDivePick } from "@/lib/next-dive";
 import type { PostcardImage } from "@/lib/postcard-image";
@@ -167,6 +174,18 @@ export type AfterStateProps = {
   /** The pick's booking page carrying this diver's own handoff, or null. */
   nextDiveHref?: string | null;
   /**
+   * **The seat this diver already holds next**, worded, in place of a pick
+   * (fifth-loop ideas, item 37): only a diver with nothing booked is offered a
+   * new boat. Null on `/recap`, which is written to be forwarded, so a stranger
+   * holding it is never told where the diver will be.
+   */
+  heldNext?: { date: string; title: string; time: string } | null;
+  /**
+   * The diver's other days with the shop, as rows that each send a fresh link
+   * (H-132). Rendered only on `/ready`; `/recap` passes nothing.
+   */
+  yourDays?: ReactNode;
+  /**
    * **The buddy seat** (ADR 20260908-one-hand, decision 6, lever W): this
    * diver's own link to the shop, carrying a non-secret referral id, for them
    * to hand to a friend.
@@ -236,6 +255,15 @@ export async function buildAfterStateProps(input: {
 }): Promise<AfterStateProps> {
   const { db, data, bookingId, locale, t, params, actions, mintHandoff } = input;
   const { shop, trip } = data;
+  // Read before the pick: a diver who already holds a later seat is offered
+  // nothing new (item 37). `/recap` reads it too, so the card stays away there
+  // as well, and only `/ready` (`mintHandoff`) says which seat it is.
+  const held = await heldDepartures(db, {
+    shopId: shop.id,
+    personId: data.personId,
+    now: nowDate(),
+    excludeTripId: trip.id,
+  });
   const [ownReview, nextDeparture, ownPulse, nextDive] = await Promise.all([
     getReviewForBooking(db, bookingId),
     nextPublicDeparture(db, shop.id, locale, shop.timezone),
@@ -246,16 +274,19 @@ export async function buildAfterStateProps(input: {
     // note in src/db/recap.ts). They never reach `AfterStateProps`: this props
     // object names every field explicitly rather than spreading `data`, which
     // is what keeps a person uuid off a client-visible bearer-token page.
-    nextDiveForBooking(db, {
-      shopId: shop.id,
-      personId: data.personId,
-      justDivedTripId: trip.id,
-      dayCourseId: trip.courseId,
-      dayShoutout: data.shoutout,
-      daySiteNames: data.sites.map((site) => site.name),
-      dayLensId: trip.lensId,
-    }),
+    held.length > 0
+      ? null
+      : nextDiveForBooking(db, {
+          shopId: shop.id,
+          personId: data.personId,
+          justDivedTripId: trip.id,
+          dayCourseId: trip.courseId,
+          dayShoutout: data.shoutout,
+          daySiteNames: data.sites.map((site) => site.name),
+          dayLensId: trip.lensId,
+        }),
   ]);
+  const [firstHeld] = held;
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
 
   return {
@@ -342,6 +373,14 @@ export async function buildAfterStateProps(input: {
     nextDiveHref:
       nextDive && mintHandoff
         ? await nextDiveHandoffHref(db, shop, bookingId, nextDive.tripId)
+        : null,
+    heldNext:
+      firstHeld && mintHandoff
+        ? {
+            date: formatShortDate(firstHeld.startsAt, locale, shop.timezone),
+            title: firstHeld.title,
+            time: formatTime(firstHeld.startsAt, locale, shop.timezone),
+          }
         : null,
     actions,
   };

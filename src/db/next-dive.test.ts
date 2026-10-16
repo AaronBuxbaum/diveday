@@ -2,9 +2,9 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { readCertificationEvidence } from "./certification-evidence";
-import { nextDiveForBooking } from "./next-dive";
+import { heldDepartures, nextDiveForBooking } from "./next-dive";
 import { createCertification, upsertTripRequirements } from "./readiness";
-import { people, trips } from "./schema";
+import { bookings, people, trips } from "./schema";
 import { createTripLens } from "./trip-lenses";
 import { createTrip } from "./trips";
 
@@ -223,6 +223,59 @@ describe("nextDiveForBooking", () => {
       ...day("00000000-0000-0000-0000-0000000000ff"),
     });
     expect(readCertificationEvidence).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * **Never a seat they already hold** (fifth-loop ideas, item 37). A recap that
+ * offers "Back to the reef" on a departure the diver is already booked on reads
+ * as the shop not knowing its own book.
+ */
+describe("a departure the diver already holds a seat on", () => {
+  async function seat(
+    db: Awaited<ReturnType<typeof boardContext>>["db"],
+    shopId: string,
+    tripId: string,
+    personId: string,
+    status: "booked" | "cancelled" = "booked",
+  ) {
+    await db.insert(bookings).values({ shopId, tripId, personId, bookedAs: "diver", status });
+  }
+
+  it("is never the next dive, and the next open departure is", async () => {
+    const { db, shop, diverId } = await boardContext();
+    const held = await departure(db, shop.id, { title: "Booked reef", startsAt: AT(24) });
+    const open = await departure(db, shop.id, { title: "Open reef", startsAt: AT(48) });
+    await seat(db, shop.id, held.id, diverId);
+
+    const pick = await nextDiveForBooking(db, {
+      shopId: shop.id,
+      personId: diverId,
+      ...day("00000000-0000-0000-0000-0000000000ff"),
+    });
+    expect(pick?.tripId).toBe(open.id);
+  });
+
+  it("lists held seats soonest first, leaving out a canceled seat, a past day and the excluded trip", async () => {
+    const { db, shop, diverId } = await boardContext();
+    const later = await departure(db, shop.id, { title: "Later", startsAt: AT(72) });
+    const sooner = await departure(db, shop.id, { title: "Sooner", startsAt: AT(24) });
+    const canceled = await departure(db, shop.id, { title: "Canceled", startsAt: AT(30) });
+    const past = await departure(db, shop.id, { title: "Past", startsAt: AT(-48) });
+    const today = await departure(db, shop.id, { title: "Today", startsAt: AT(2) });
+    await seat(db, shop.id, later.id, diverId);
+    await seat(db, shop.id, sooner.id, diverId);
+    await seat(db, shop.id, canceled.id, diverId, "cancelled");
+    await seat(db, shop.id, past.id, diverId);
+    await seat(db, shop.id, today.id, diverId);
+
+    const held = await heldDepartures(db, {
+      shopId: shop.id,
+      personId: diverId,
+      now: NOW,
+      excludeTripId: today.id,
+    });
+    expect(held.map((row) => row.title)).toEqual(["Sooner", "Later"]);
   });
 });
 

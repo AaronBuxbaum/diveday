@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { fileScopedShopContext } from "@/test/db";
-import { bookings, people, trips } from "./schema";
+import { bookings, people, priorVisits, trips } from "./schema";
 import { setWelcomeConsent, welcomeCueInputsByBooking } from "./welcome-cues";
 
 /**
@@ -198,6 +198,56 @@ describe("welcomeCueInputsByBooking", () => {
     const now = await seat(later.id, "rider");
     const inputs = await welcomeCueInputsByBooking(db, shop.id, later.id, later.startsAt);
     expect(inputs.get(now)).toMatchObject({ lastDivedAt: earlier.startsAt, nonDiver: true });
+  });
+
+  // H-128: which boat with the shop this one is, by the recap's own rule.
+  it("counts earlier dive days and imported visits toward this boat's number", async () => {
+    const { db, shop, earlier, later, seat } = await twoDepartures();
+    const earlierSeat = await seat(earlier.id, "diver");
+    const [row] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, earlierSeat));
+    if (!row) throw new Error("fixture seat missing");
+    await db.insert(priorVisits).values([
+      ...Array.from({ length: 8 }, (_, index) => ({
+        shopId: shop.id,
+        personId: row.personId,
+        visitedOn: `2024-0${(index % 9) + 1}-15`,
+        sourceLabel: "Old system",
+        dedupeKey: `milestone-${index}`,
+        importedAt: earlier.startsAt,
+      })),
+      // The import says this one never happened, so it is not a boat.
+      {
+        shopId: shop.id,
+        personId: row.personId,
+        visitedOn: "2024-10-01",
+        sourceLabel: "Old system",
+        statusLabel: "Cancelled",
+        dedupeKey: "milestone-cancelled",
+        importedAt: earlier.startsAt,
+      },
+    ]);
+    const now = await seat(later.id, "diver");
+    const inputs = await welcomeCueInputsByBooking(db, shop.id, later.id, later.startsAt);
+    expect(inputs.get(now)?.boatCount).toBe(10);
+  });
+
+  it("counts no no-show toward the number, and gives a non-diver none", async () => {
+    const { db, shop, earlier, later, seat } = await twoDepartures();
+    await seat(earlier.id, "diver", "no_show");
+    const now = await seat(later.id, "diver");
+    expect(
+      (await welcomeCueInputsByBooking(db, shop.id, later.id, later.startsAt)).get(now)?.boatCount,
+    ).toBe(1);
+    await db
+      .update(bookings)
+      .set({ participantType: "snorkeler", bookedAs: "snorkeler" })
+      .where(eq(bookings.id, now));
+    expect(
+      (await welcomeCueInputsByBooking(db, shop.id, later.id, later.startsAt)).get(now)?.boatCount,
+    ).toBeNull();
   });
 
   it("says nothing about a departure that is off the board", async () => {

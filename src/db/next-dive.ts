@@ -1,12 +1,53 @@
+import { and, asc, eq, gt, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { NextDiveCandidate, NextDivePick } from "@/lib/next-dive";
 import { pickNextDive } from "@/lib/next-dive";
 import { decideTripAdmission } from "@/lib/trip-admission";
+import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { readCertificationEvidence } from "./certification-evidence";
 import type { AppDb } from "./client";
 import { tripRequirementSummaries } from "./readiness";
+import { bookings, trips as tripTable } from "./schema";
 import { getTripLens } from "./trip-lenses";
 import { pagedUpcomingTripsWithCounts } from "./trips";
+import { liveTrip } from "./trips-live";
+
+/** A departure this diver already holds a seat on, soonest first. */
+export type HeldDeparture = { tripId: string; title: string; startsAt: Date };
+
+/**
+ * **The departures this diver already holds**, still to sail, soonest first:
+ * a live, scheduled departure with a seat of theirs that is not cancelled
+ * (fifth-loop ideas, item 37). The recap never offers one of these as "your
+ * next dive", and a diver who holds one is told so instead of being sold
+ * another seat.
+ */
+export async function heldDepartures(
+  db: AppDb,
+  input: { shopId: string; personId: string; now: Date; excludeTripId?: string },
+): Promise<HeldDeparture[]> {
+  return db
+    .select({ tripId: tripTable.id, title: tripTable.title, startsAt: tripTable.startsAt })
+    .from(bookings)
+    .innerJoin(
+      tripTable,
+      and(eq(tripTable.id, bookings.tripId), eq(tripTable.shopId, input.shopId)),
+    )
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.personId, input.personId),
+        ne(bookings.status, "cancelled"),
+        eq(tripTable.status, "scheduled"),
+        liveTrip(),
+        // Not yet sailed, the late-arrival buffer included: the same window
+        // the candidates below are drawn from.
+        gt(tripTable.startsAt, new Date(input.now.getTime() - DEPARTURE_BUFFER_MS)),
+        input.excludeTripId ? ne(tripTable.id, input.excludeTripId) : undefined,
+      ),
+    )
+    .orderBy(asc(tripTable.startsAt), asc(tripTable.id));
+}
 
 /**
  * How far down the board one recap looks. Enough for a reason to fire, small
@@ -68,13 +109,22 @@ export async function nextDiveForBooking(
   },
 ): Promise<NextDivePick | null> {
   const now = input.now ?? nowDate();
-  const { trips } = await pagedUpcomingTripsWithCounts(db, input.shopId, {
-    publicOnly: true,
-    hasSpace: true,
-    limit: NEXT_DIVE_CANDIDATE_WINDOW,
-    now,
-  });
-  const upcoming = trips.filter((trip) => trip.id !== input.justDivedTripId);
+  const [{ trips }, held] = await Promise.all([
+    pagedUpcomingTripsWithCounts(db, input.shopId, {
+      publicOnly: true,
+      hasSpace: true,
+      limit: NEXT_DIVE_CANDIDATE_WINDOW,
+      now,
+    }),
+    heldDepartures(db, { shopId: input.shopId, personId: input.personId, now }),
+  ]);
+  // **Never a seat they already hold** (fifth-loop ideas, item 37): offering
+  // Sana "Back to Molasses Reef" on a departure she is booked on reads as the
+  // shop not knowing her.
+  const heldIds = new Set(held.map((trip) => trip.tripId));
+  const upcoming = trips.filter(
+    (trip) => trip.id !== input.justDivedTripId && !heldIds.has(trip.id),
+  );
   if (upcoming.length === 0) return null;
 
   const [requirements, evidence, dayLens] = await Promise.all([

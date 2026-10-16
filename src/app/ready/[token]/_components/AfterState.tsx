@@ -4,6 +4,7 @@ import { EarnedMoment } from "@/components/EarnedMoment";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { THREAD_MEASURE_CLASS } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import type { AfterStateProps } from "@/features/recap-after-state";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
@@ -123,6 +124,8 @@ export function AfterState({
     nextDive,
     nextDiveWorded,
     nextDiveHref = null,
+    heldNext = null,
+    yourDays = null,
     buddyLinkUrl = null,
     actions,
     siteMark,
@@ -355,6 +358,18 @@ export function AfterState({
         reason={nextDiveWorded?.reason ?? ""}
         levelCovers={nextDiveWorded?.levelCovers ?? null}
       />
+      {/* ——— **The seat they already hold, in the pick's place** (fifth-loop
+          ideas, item 37). A regular booked on Dec 5 is told so rather than
+          sold another seat; `/recap` never carries it. */}
+      {heldNext ? (
+        <SectionCard padding="lg" className="mt-10 print:hidden" title={t("recap.nextDiveHeading")}>
+          <p className="text-base">{t("recap.heldNext", heldNext)}</p>
+        </SectionCard>
+      ) : null}
+
+      {/* ——— Every other day with the shop, each row sending its own fresh
+          link (H-132). Only `/ready` fills it. */}
+      {yourDays}
 
       {/* ——— **Bring a buddy next time** (ADR 20260908-one-hand, decision 6,
           lever W). One line under the day that just happened, and a link the
@@ -390,7 +405,7 @@ export function AfterState({
           departures, is the page arguing with itself — so the card wins and
           the footer keeps the link it always had. */}
       <footer className="mt-10 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-6 print:hidden">
-        {nextDeparture && !nextDive ? (
+        {nextDeparture && !nextDive && !heldNext ? (
           <p className="min-w-0 flex-1 text-base text-muted">
             {nextDeparture.title} · {nextDeparture.when}
           </p>
