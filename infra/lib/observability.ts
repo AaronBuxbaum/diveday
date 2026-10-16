@@ -192,6 +192,7 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       // Every other pass's failure code. Before these were listed, a daily
       // pass failing once reached at most AppErrors' three-in-fifteen-minutes,
       // which one failure never does; here one is enough.
+      "cron_bookkeeper.scan_failed",
       "cron_crew_notices.scan_failed",
       "cron_desk_pings.scan_failed",
       "cron_founder_metrics.failed",

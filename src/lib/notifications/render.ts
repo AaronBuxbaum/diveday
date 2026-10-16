@@ -1,6 +1,7 @@
 import { diverTranslator } from "@/i18n/messages";
 import { isDiverLocale } from "@/i18n/settings";
 import { escapeHtml } from "@/lib/html";
+import { bookkeeperMonthEndEmail } from "./bookkeeper-email";
 import { courseCertifiedEmail } from "./course-certified";
 import { courseInquiryReceivedEmail } from "./course-inquiry-received";
 import { crewScheduleChangeEmail } from "./crew-emails";
@@ -162,6 +163,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "departure_note") return departureNoteEmail(notification);
   if (notification.kind === "lost_item_found") return lostItemEmail(notification);
   if (notification.kind === "course_certified") return courseCertifiedEmail(notification);
+  if (notification.kind === "bookkeeper_month_end") return bookkeeperMonthEndEmail(notification);
   if (notification.kind === "course_inquiry_received") {
     return courseInquiryReceivedEmail(notification);
   }

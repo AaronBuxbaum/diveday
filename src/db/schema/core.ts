@@ -349,6 +349,24 @@ export const shops = pgTable(
      */
     shoreAlertConfirmedAt: timestamp("shore_alert_confirmed_at", { withTimezone: true }),
     /**
+     * **The bookkeeper's address for the month-end email** (fifth loop, item
+     * 35; ADR 20261016-bookkeeper-month-end-email): on the 2nd of each month
+     * the previous month's report, orders and crew sheet go here as three CSV
+     * attachments. Off while null. Like the shore contact's, it is an address
+     * outside the shop's accounts, so it is stored only with who set it and
+     * when (the check below holds the three together), set only by an owner
+     * or manager behind the export step-up.
+     *
+     * `bookkeeper_sent_month` is the claim: the `YYYY-MM` last mailed, moved
+     * forward in the same statement that decides to send, so two passes of
+     * the hourly job cannot both send one month. Cleared with the address, so
+     * a new address starts from the next month due.
+     */
+    bookkeeperEmail: text("bookkeeper_email"),
+    bookkeeperEmailSetAt: timestamp("bookkeeper_email_set_at", { withTimezone: true }),
+    bookkeeperEmailSetByPersonId: uuid("bookkeeper_email_set_by_person_id"),
+    bookkeeperSentMonth: text("bookkeeper_sent_month"),
+    /**
      * How many minutes before departure divers are asked to be at the dock. The
      * shop's real muster time varies (gear setup, cert check, briefing), so it is
      * configurable rather than a hardcoded "30 minutes" in every confirmation and
@@ -501,6 +519,18 @@ export const shops = pgTable(
         and ${table.shoreAlertConsentByPersonId} is null)
         or (${table.shoreAlertEmail} is not null and ${table.shoreAlertConsentAt} is not null
         and ${table.shoreAlertConsentByPersonId} is not null)`,
+    ),
+    // Item 35: the bookkeeper's address exists only with who set it and when.
+    check(
+      "shops_bookkeeper_email_provenance",
+      sql`(${table.bookkeeperEmail} is null and ${table.bookkeeperEmailSetAt} is null
+        and ${table.bookkeeperEmailSetByPersonId} is null)
+        or (${table.bookkeeperEmail} is not null and ${table.bookkeeperEmailSetAt} is not null
+        and ${table.bookkeeperEmailSetByPersonId} is not null)`,
+    ),
+    check(
+      "shops_bookkeeper_sent_month_shape",
+      sql`${table.bookkeeperSentMonth} is null or ${table.bookkeeperSentMonth} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'`,
     ),
     // A confirmation vouches for an address; there is none without one.
     check(

@@ -2054,6 +2054,19 @@ async function scrubPiiBlob(
       .where(and(eq(shops.id, shopId), sql`lower(${shops.shoreAlertEmail}) = ${address}`))
       .returning({ id: shops.id });
     logFuzzyMatch(ctx, "shore_alert_email", cleared.length);
+    // The bookkeeper's month-end address (item 35), on the same footing: a
+    // diver's address there goes with the diver, and the month stops leaving
+    // the shop until an owner sets an address again.
+    const unsent = await tx
+      .update(shops)
+      .set({
+        bookkeeperEmail: null,
+        bookkeeperEmailSetAt: null,
+        bookkeeperEmailSetByPersonId: null,
+      })
+      .where(and(eq(shops.id, shopId), sql`lower(${shops.bookkeeperEmail}) = ${address}`))
+      .returning({ id: shops.id });
+    logFuzzyMatch(ctx, "bookkeeper_email", unsent.length);
     await tx
       .delete(shopShoreAlertTokens)
       .where(and(eq(shopShoreAlertTokens.shopId, shopId), eq(shopShoreAlertTokens.email, address)));

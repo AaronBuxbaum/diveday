@@ -1366,6 +1366,39 @@ const courseInquiryReceivedSchema = z.object({
 });
 
 /**
+ * **The month-end files, to the shop's bookkeeper** (fifth loop, item 35; ADR
+ * 20261016-bookkeeper-month-end-email). On the 2nd, the previous month's
+ * report, orders and crew sheet as CSV attachments, to the one address
+ * outside the shop's accounts that an owner or manager set behind the export
+ * step-up. The files ride inside this payload, so it is never queued
+ * (`notificationIsQueueable`): a queued row would hold a month of diver names
+ * and money in the database for the length of its retries. A send that fails
+ * releases the month's claim and the next day's pass tries again.
+ */
+const bookkeeperMonthEndSchema = z.object({
+  kind: z.literal("bookkeeper_month_end"),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  shopName: z.string().trim().min(1).max(120),
+  /** The month the files are for, `YYYY-MM`. */
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+  attachments: z
+    .array(
+      z.object({
+        /** A file name DiveDay built: letters, digits, dots and dashes, ending `.csv`. */
+        fileName: z
+          .string()
+          .regex(/^[A-Za-z0-9._-]+\.csv$/)
+          .max(200),
+        content: z.string().max(10_000_000),
+      }),
+    )
+    .min(1)
+    .max(3),
+});
+
+/**
  * **A student's certification, told to the student** (third UX review, item
  * 14). Sent once, when the instructor's Certify tap writes a new level card
  * (`issueShopCertification` refuses a level the diver already holds, so a
@@ -1709,6 +1742,7 @@ export const notificationSchema = z
     lostItemFoundSchema,
     courseCertifiedSchema,
     courseInquiryReceivedSchema,
+    bookkeeperMonthEndSchema,
   ])
   .and(z.object({ sender: notificationSenderSchema.optional() }));
 
@@ -1825,6 +1859,7 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "departure_note":
     case "lost_item_found":
     case "course_certified":
+    case "bookkeeper_month_end":
       return false;
     default:
       return true;
@@ -1975,6 +2010,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per card written; a level already held writes none.
     case "course_certified":
       return `course-certified/${notification.certificationId}`;
+    // Never queued; one month per shop, which `bookkeeper_sent_month` claims.
+    case "bookkeeper_month_end":
+      return `bookkeeper-month-end/${notification.shopId}/${notification.month}`;
     // One Monday email per person per shop-local week — the same pair
     // `weekly_digest_sends` holds unique, so a queued retry and the claim
     // agree on what "this week's email" means.

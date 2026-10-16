@@ -141,5 +141,15 @@
     "heading": "How far ahead boats sell",
     "caption": "Seats on departures in the last 12 months",
     "line": "{weekday} boats: half the seats sold {days, plural, =0 {on the day} one {# day or more ahead} other {# days or more ahead}} · {percent}% in the last three days"
+  },
+  "downloadMonthEnd": "Download month-end files",
+  "bookkeeper": {
+    "label": "Bookkeeper’s email",
+    "description": "On the 2nd of each month, last month’s report, orders and crew sheet go to this address. Leave it empty to turn this off.",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved. The first files go out on the 2nd.",
+    "cleared": "Turned off. No month-end files will be sent.",
+    "invalid": "That isn’t an email address. Check it and save again."
   }
 }

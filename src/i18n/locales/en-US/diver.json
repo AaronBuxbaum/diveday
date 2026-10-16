@@ -5692,6 +5692,12 @@
       "datesTwo": "You asked for {date}, or {alternate}.",
       "reply": "We’ll get back to you by email or phone.",
       "call": "To talk sooner, call {phone}."
+    },
+    "bookkeeper": {
+      "subject": "{month} at {shopName}: month-end files",
+      "hello": "Hello,",
+      "intro": "{month} at {shopName}: the month’s report, orders and crew sheet are attached.",
+      "why": "{shopName} asked DiveDay to send these to this address on the 2nd of each month. To stop them, ask {shopName} to remove the address."
     }
   },
   "brand": {

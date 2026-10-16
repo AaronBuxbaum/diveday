@@ -5692,6 +5692,12 @@
       "datesTwo": "Pediste el {date} o el {alternate}.",
       "reply": "Te responderemos por correo o por teléfono.",
       "call": "Si quieres hablar antes, llama al {phone}."
+    },
+    "bookkeeper": {
+      "subject": "{month} en {shopName}: archivos de fin de mes",
+      "hello": "Hola:",
+      "intro": "{month} en {shopName}: van adjuntos el informe del mes, los pedidos y la hoja de tripulación.",
+      "why": "{shopName} le pidió a DiveDay que envíe estos archivos a esta dirección el día 2 de cada mes. Para dejar de recibirlos, pídele a {shopName} que quite la dirección."
     }
   },
   "brand": {

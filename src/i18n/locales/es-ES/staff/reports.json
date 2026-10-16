@@ -141,5 +141,15 @@
     "heading": "Con cuánta anticipación se venden las salidas",
     "caption": "Plazas en salidas de los últimos 12 meses",
     "line": "Salidas del {weekday}: la mitad de las plazas se vende {days, plural, =0 {el mismo día} one {con # día o más de anticipación} other {con # días o más de anticipación}} · {percent} % en los últimos tres días"
+  },
+  "downloadMonthEnd": "Descargar archivos de fin de mes",
+  "bookkeeper": {
+    "label": "Correo del contador",
+    "description": "El día 2 de cada mes, el informe, los pedidos y la hoja de tripulación del mes anterior se envían a esta dirección. Déjalo vacío para desactivarlo.",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "saved": "Guardado. Los primeros archivos salen el día 2.",
+    "cleared": "Desactivado. No se enviarán archivos de fin de mes.",
+    "invalid": "Eso no es un correo electrónico. Revísalo y guarda de nuevo."
   }
 }

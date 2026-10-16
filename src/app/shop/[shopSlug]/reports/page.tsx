@@ -41,7 +41,6 @@ import {
   summarizeMonth,
 } from "@/lib/reporting";
 import { requireShopSurface } from "@/lib/session";
-import { shopPath } from "@/lib/staff-notices";
 import { sameMomentYearBefore, shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { DepartureLedger, departureLedgerRows } from "./_components/DepartureLedger";
@@ -432,7 +431,7 @@ export default async function ReportsPage({
           <MonthFootnotes
             taxCents={report.taxCents}
             csvHref={`/shop/${shopSlug}/reports/download?month=${monthKey(current)}`}
-            crewSheetHref={`${shopPath(shopSlug, "settings", "export", "crew-sheet")}?month=${monthKey(current)}`}
+            monthEnd={{ shopSlug, month: monthKey(current) }}
             t={t}
             money={money}
           />

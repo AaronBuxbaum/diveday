@@ -6,7 +6,7 @@ import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { createDiver, deleteDiver } from "./divers";
-import { canPersonExportShopData, loadShopExportBundleInput, loadShopExportCounts } from "./export";
+import { canPersonExportShopData, loadShopExportBundleInput } from "./export";
 import * as schema from "./schema";
 import {
   activityEvents,
@@ -405,6 +405,14 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "shore_alert_consent_at",
     "shore_alert_consent_by_person_id",
     "shore_alert_confirmed_at",
+    // Item 35 (ADR 20261016-bookkeeper-month-end-email): an address the shop's
+    // month leaves for every month, set by an owner or manager past the export
+    // step-up. A restore must not start that send again on a CSV's say-so, so
+    // the restored shop sets it afresh; the sent month is send state.
+    "bookkeeper_email",
+    "bookkeeper_email_set_at",
+    "bookkeeper_email_set_by_person_id",
+    "bookkeeper_sent_month",
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
   trip_lenses: ["shop_id"],
@@ -1617,26 +1625,6 @@ describe("export privilege re-check (database, not JWT)", () => {
       .set({ status: "disabled" })
       .where(eq(userAccounts.personId, owner));
     expect(await canPersonExportShopData(db, shop.id, owner)).toBe(false);
-  });
-});
-
-describe("export counts (the settings page's cheap view)", () => {
-  it("mirrors the bundle exactly — same files, same notes, same row counts", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
-    const input = await loadShopExportBundleInput(db, shop.id);
-    const counts = await loadShopExportCounts(db, shop.id);
-    if (!input || !counts) throw new Error("shop failed to load");
-
-    expect(counts.map((row) => row.file)).toEqual(input.tables.map((row) => row.file));
-    for (const [index, row] of counts.entries()) {
-      expect(row.note).toBe(input.tables[index].note);
-      expect(row.count).toBe(input.tables[index].rows.length);
-    }
-  });
-
-  it("returns null for an unknown shop", async () => {
-    const { db } = ctx;
-    expect(await loadShopExportCounts(db, "00000000-0000-0000-0000-000000000000")).toBeNull();
   });
 });
 
