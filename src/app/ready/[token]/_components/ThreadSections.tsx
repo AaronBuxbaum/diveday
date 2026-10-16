@@ -15,7 +15,11 @@ import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { formatShortDate } from "@/lib/format";
 import { publicTripArrivalCardPath } from "@/lib/public-routes";
-import { addSeatFromReady, cancelMyBookingAction } from "../booking-actions";
+import {
+  addSeatFromReady,
+  cancelMyBookingAction,
+  payForPartySeatFromReady,
+} from "../booking-actions";
 import { CourseMaterials } from "./CourseMaterials";
 import { CANCEL_PREVIEW_KEY } from "./cancel-notices";
 import { PartyCancelPlan, partyCancelSeats } from "./PartyCancelPlan";
@@ -130,6 +134,7 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
           seats={partySeats}
           allSet={partyAllSet}
           addSeatAction={data.canAddSeat ? addSeatFromReady.bind(null, token) : null}
+          payAction={data.canPayPartySeats ? payForPartySeatFromReady.bind(null, token) : null}
           t={t}
         />
         {/* What to put in the bag. Below the spine — which carries the gear

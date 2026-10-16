@@ -27,13 +27,15 @@ import {
   addressLookupConfigFromEnvironment,
   isLookupWorthy,
 } from "@/lib/address-lookup";
-import { isValidCalendarDate } from "@/lib/calendar-date";
+import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
 import { checkbox, formValue, readForm } from "@/lib/form-parse";
 import { isValidTimeZone } from "@/lib/format";
 import { isShopCurrency, type ShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
+import { reopensOnTooFar } from "@/lib/off-season";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { parseSeasonStart } from "@/lib/season";
@@ -341,7 +343,17 @@ export async function saveReopensOnAction(formData: FormData) {
   if (submitted !== "" && !isValidCalendarDate(submitted)) {
     redirect(noticeUrl(settings, "reopens-invalid", { saved: "season" }));
   }
-  await setShopReopensOn(await getDb(), session.user.shopId, submitted === "" ? null : submitted);
+  const db = await getDb();
+  // A typo ("2062") would reach the public schedule; a date more than eighteen
+  // months past the shop's today is refused with the same notice. A past date
+  // is stored as typed and cleared by the nightly roll.
+  if (submitted !== "") {
+    const shop = await getShopById(db, session.user.shopId);
+    if (shop && reopensOnTooFar(submitted, calendarDateInTimezone(nowDate(), shop.timezone))) {
+      redirect(noticeUrl(settings, "reopens-invalid", { saved: "season" }));
+    }
+  }
+  await setShopReopensOn(db, session.user.shopId, submitted === "" ? null : submitted);
   revalidatePath(publicSchedulePath(session.user.shopSlug));
   revalidateAndRedirect(settings, noticeUrl(settings, "reopens-saved", { saved: "season" }));
 }

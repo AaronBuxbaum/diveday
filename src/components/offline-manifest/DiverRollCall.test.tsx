@@ -8,6 +8,39 @@ import { offlineTripView } from "./trip-view";
 afterEach(cleanup);
 
 describe("OfflineDiverRollCall", () => {
+  it("keeps a medical capsule after a dive on a diver boarded over a physician's no, issue 2380", () => {
+    const copy = savedCopy();
+    const [first] = copy.snapshot.manifests[0]?.divers ?? [];
+    if (!first) throw new Error("fixture diver missing");
+    first.readiness = {
+      status: "blocked",
+      blockers: [{ code: "medical_not_cleared", text: "Physician did not clear" }],
+    };
+    copy.events = [
+      {
+        clientEventId: "event-1",
+        snapshotId: "snap-trip-1",
+        snapshotSavedAt: "2026-08-01T12:00:00.000Z",
+        tripId: "trip-1",
+        bookingId: "b-priya",
+        checkpoint: "departure",
+        status: "boarded",
+        occurredAt: "2026-08-01T12:58:00.000Z",
+        syncStatus: "pending",
+      },
+    ];
+    const rowAt = (checkpoint: "departure" | "after_dive_1" | "after_dive_2") => {
+      const trip = offlineTripView(copy, checkpoint);
+      if (!trip) throw new Error("the fixture carries a manifest");
+      const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+      const text = container.querySelector("#offline-roll-call-b-priya")?.textContent ?? "";
+      cleanup();
+      return text;
+    };
+    expect(rowAt("after_dive_1")).toContain("Not medically cleared");
+    expect(rowAt("after_dive_2")).toContain("Not medically cleared");
+    expect(rowAt("departure")).not.toContain("Not medically cleared");
+  });
   it("draws one roll-call row per diver, each its own jump target", () => {
     const { container } = render(<OfflineDiverRollCall view={view()} controls={controls()} />);
     expect(container.querySelector("#offline-roll-call-b-priya")).not.toBeNull();

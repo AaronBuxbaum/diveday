@@ -40,6 +40,26 @@ describe("the pre-push plan", () => {
     expect(steps.at(-1).args).toContain("e2e/a.spec.ts");
   });
 
+  it("runs the visual captures the diff names after the specs, in light mode, on the same build (#2517)", () => {
+    const steps = plan({
+      ...base,
+      changed: ["src/lib/x.ts"],
+      specs: ["e2e/a.spec.ts"],
+      captures: ["the desk renders true to the design"],
+    });
+    expect(names(steps).slice(-3)).toEqual(["e2e build", "e2e specs", "visual captures"]);
+    const capture = steps.at(-1);
+    expect(capture.args.slice(0, 2)).toEqual(["e2e:run", "e2e/visual.spec.ts"]);
+    expect(capture.args[3]).toContain("(?!.*dark mode)");
+    expect(capture.workers).toBe(true);
+    // A diff that names only captures still builds once and runs them.
+    const only = plan({ ...base, changed: ["src/lib/x.ts"], captures: ["x renders"] });
+    expect(
+      names(only).filter((name) => name.startsWith("e2e") || name === "visual captures"),
+    ).toEqual(["e2e build", "visual captures"]);
+    expect(names(plan({ ...base, changed: ["src/lib/x.ts"] }))).not.toContain("visual captures");
+  });
+
   it("runs the whole unit suite as CI shards it, whatever the diff touches", () => {
     const units = plan({ ...base, changed: ["package.json"] }).filter((step) =>
       step.name.startsWith("unit tests"),

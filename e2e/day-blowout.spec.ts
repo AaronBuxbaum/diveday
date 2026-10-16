@@ -6,7 +6,6 @@ import {
   e2eNow,
   openTripMore,
   publicTripUrl,
-  seededTripId,
   tripPathByTitle,
 } from "./helpers";
 
@@ -117,8 +116,11 @@ test.describe("the day's weather call, for a divemaster", () => {
   signedInAs("divemaster");
 
   test("offers no door to it on a departure", async ({ page }) => {
-    const tripId = await seededTripId(page, SHOP, "Two-Tank Reef — Molasses & French");
-    await page.goto(`/shop/${SHOP}/trips/${tripId}`);
+    // Straight to the Details tab: landing on Divers made `openTripMore` load
+    // the departure a second time, a server render the 15s budget could not
+    // spare on a loaded machine, with this role's sign-in already inside it.
+    const path = await tripPathByTitle(page, SHOP, "Two-Tank Reef — Molasses & French");
+    await page.goto(`${path}?view=details`);
     const more = await openTripMore(page);
     await expect(more.getByRole("link", { name: "Weather blow-out…" })).toBeVisible();
     await expect(

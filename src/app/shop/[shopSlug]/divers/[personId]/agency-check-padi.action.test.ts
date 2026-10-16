@@ -39,7 +39,7 @@ vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { agencyCheckAction } = await import("./card-actions");
+const { agencyCheckAction } = await import("./agency-check-actions");
 
 async function context() {
   const { db, shop } = ctx;

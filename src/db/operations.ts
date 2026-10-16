@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import type { SystemReason } from "@/lib/activity";
 import { nowDate } from "@/lib/clock";
 import { seatName } from "@/lib/held-seat";
 import type { RosterChangeCode } from "@/lib/incident-export";
@@ -132,7 +133,10 @@ export type DiverActivityCode =
   | "identity_confirmed"
   | "identity_split_off"
   | "medical_clearance_opened"
+  | "medical_answers_read"
+  | "date_of_birth_cleared_as_adult"
   | "record_exported"
+  | "dispute_sheet_printed"
   | "running_late_from_message";
 
 /**
@@ -144,7 +148,7 @@ export type DiverActivityCode =
  * or a booking.
  */
 export async function recordDiverActivity(
-  db: AppDb,
+  db: DbExecutor,
   input: { shopId: string; personId: string; actorPersonId: string; code: DiverActivityCode },
 ): Promise<boolean> {
   const [diver] = await db
@@ -517,9 +521,15 @@ type OtherTripActivityEntry =
         | "series_cancelled"
         | "booking_link_requested"
         | "seat_claimed"
+        // A held seat's own cancel (issue #2467) names nobody but "the diver on
+        // this seat", and its actor is a guess: not a roster line the log prints.
+        | "seat_holder_cancelled"
+        | "seat_holder_refunded"
         | "incident_report_filed"
         | "incident_report_addendum_added"
-        | "incident_draft_deleted"
+        | "incident_draft_discarded"
+        | "incident_legal_hold_set"
+        | "incident_legal_hold_released"
         | "departure_note_sent";
     };
 
@@ -620,6 +630,38 @@ export async function recordSeatChange(
 }
 
 /**
+ * **A line the system wrote on its own** (issue #2539): an automatic call-off,
+ * where no person acted. The row has no actor and says why in `system_reason`,
+ * which the table's check holds in step. Returns null for a departure that is
+ * not this shop's.
+ */
+export async function recordSystemTripActivity(
+  db: DbExecutor,
+  input: { shopId: string; tripId: string; reason: SystemReason },
+) {
+  const [trip] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    // diveday:allow-deleted-trips: the call-off line is written as the departure is called off.
+    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)))
+    .limit(1);
+  if (!trip) return null;
+  const [event] = await db
+    .insert(activityEvents)
+    .values({
+      shopId: input.shopId,
+      tripId: input.tripId,
+      actorPersonId: null,
+      systemReason: input.reason,
+      code: "departure_called_off_automatically",
+      params: { reason: input.reason },
+      occurredAt: nowDate(),
+    })
+    .returning();
+  return event ?? null;
+}
+
+/**
  * **A diver gave up their own seat** from their trip-prep link (UX review
  * 2026-10-11, item 19), and whether the card refund went through, on the
  * departure's trail. The owner's "who refunded what" question has an answer
@@ -644,7 +686,11 @@ export async function recordDiverSelfCancel(
   },
 ) {
   const [booking] = await db
-    .select({ tripId: bookings.tripId, personId: bookings.personId })
+    .select({
+      tripId: bookings.tripId,
+      personId: bookings.personId,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+    })
     .from(bookings)
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
     .limit(1);
@@ -665,6 +711,18 @@ export async function recordDiverSelfCancel(
         code: input.refunded ? "party_seat_self_refunded" : "party_seat_self_cancelled",
         diver: input.party.seatName,
       },
+    });
+  }
+  // A seat whose identity is held for review (issue #2467, #2082) is matched to
+  // this person on a guess, and whoever held the link is not known to be them:
+  // the line says "the diver on this seat", never their name. The event still
+  // carries the matched person as its actor, which the column requires.
+  if (booking.identityUnconfirmedAt !== null) {
+    return recordTripActivity(db, {
+      shopId: input.shopId,
+      tripId: booking.tripId,
+      actorPersonId: booking.personId,
+      entry: { code: input.refunded ? "seat_holder_refunded" : "seat_holder_cancelled" },
     });
   }
   return recordTripActivity(db, {

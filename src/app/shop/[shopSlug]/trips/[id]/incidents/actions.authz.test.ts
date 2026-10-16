@@ -12,6 +12,7 @@ import { bookings, incidentReports, rollCallEvents, tripAssignments, trips } fro
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
+  demoteOwnerToManager,
   redirectedTo,
   SEEDED_CAPTAIN_EMAIL,
   SEEDED_OWNER_EMAIL,
@@ -48,8 +49,9 @@ vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }))
 const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("@/lib/session");
 const {
-  deleteIncidentDraftAction,
+  discardIncidentDraftAction,
   saveIncidentDraftAction,
+  setIncidentLegalHoldAction,
   startIncidentReportAction,
   startMissingDiverReportAction,
 } = await import("./actions");
@@ -246,33 +248,6 @@ describe("incident report actions refuse staff who may not write", () => {
   });
 });
 
-describe("deleting a draft from its page", () => {
-  it("refuses a staffer who may not read the draft, and deletes nothing", async () => {
-    const { db, shop, tripId, owner, captain } = await context();
-    const started = await startIncidentReport(db, {
-      shopId: shop.id,
-      tripId,
-      actorPersonId: owner,
-    });
-    if (!started.ok) throw new Error("expected a draft");
-    signIn(db, shop, captain);
-    await expect(deleteIncidentDraftAction(shop.slug, tripId, started.reportId)).rejects.toThrow(
-      "NOT_FOUND",
-    );
-    const [row] = await db
-      .select({ deletedAt: incidentReports.deletedAt })
-      .from(incidentReports)
-      .where(eq(incidentReports.id, started.reportId));
-    expect(row?.deletedAt).toBeNull();
-
-    signIn(db, shop, owner);
-    const to = await redirectedTo(() =>
-      deleteIncidentDraftAction(shop.slug, tripId, started.reportId),
-    );
-    expect(to).toBe(`/shop/${shop.slug}/trips/${tripId}?view=details#incidents`);
-  });
-});
-
 /** The manifest button's form: whose row, and the checkpoint it was pressed at. */
 function missingForm(subject: { bookingId: string } | { personId: string }): FormData {
   const form = new FormData();
@@ -300,3 +275,66 @@ async function markedMissing(db: AppDb, shopId: string, tripId: string, recorder
   });
   return seat.id;
 }
+
+describe("deleting a draft and holding a report are an owner's alone", () => {
+  async function ownersDraft() {
+    const c = await context();
+    const started = await startIncidentReport(c.db, {
+      shopId: c.shop.id,
+      tripId: c.tripId,
+      actorPersonId: c.owner,
+    });
+    if (!started.ok) throw new Error("expected the owner's draft");
+    const row = async () =>
+      (
+        await c.db.select().from(incidentReports).where(eq(incidentReports.id, started.reportId))
+      )[0];
+    return { ...c, reportId: started.reportId, row };
+  }
+
+  it("deletes the draft for the owner and lands on the departure's incident list", async () => {
+    const c = await ownersDraft();
+    signIn(c.db, c.shop, c.owner);
+    const to = await redirectedTo(() =>
+      discardIncidentDraftAction(c.shop.slug, c.tripId, c.reportId),
+    );
+    expect(to).toBe(`/shop/${c.shop.slug}/trips/${c.tripId}?view=details#incidents`);
+    expect((await c.row())?.deletedAt).not.toBeNull();
+  });
+
+  it("answers an ashore captain, and a manager who wrote the draft, with a 404 and keeps it", async () => {
+    const c = await ownersDraft();
+    signIn(c.db, c.shop, c.captain);
+    await expect(discardIncidentDraftAction(c.shop.slug, c.tripId, c.reportId)).rejects.toThrow(
+      "NOT_FOUND",
+    );
+    await demoteOwnerToManager(c.db, c.owner);
+    signIn(c.db, c.shop, c.owner);
+    await expect(discardIncidentDraftAction(c.shop.slug, c.tripId, c.reportId)).rejects.toThrow(
+      "NOT_FOUND",
+    );
+    expect((await c.row())?.deletedAt).toBeNull();
+  });
+
+  it("refuses a draft under a hold with its notice, and keeps it", async () => {
+    const c = await ownersDraft();
+    signIn(c.db, c.shop, c.owner);
+    expect(
+      await redirectedTo(() => setIncidentLegalHoldAction(c.shop.slug, c.tripId, c.reportId, true)),
+    ).toContain("notice=hold-set");
+    const to = await redirectedTo(() =>
+      discardIncidentDraftAction(c.shop.slug, c.tripId, c.reportId),
+    );
+    expect(to).toContain("notice=held");
+    expect((await c.row())?.deletedAt).toBeNull();
+  });
+
+  it("keeps a hold the captain tries to set off a report", async () => {
+    const c = await ownersDraft();
+    signIn(c.db, c.shop, c.captain);
+    await expect(
+      setIncidentLegalHoldAction(c.shop.slug, c.tripId, c.reportId, true),
+    ).rejects.toThrow("NOT_FOUND");
+    expect((await c.row())?.legalHoldAt).toBeNull();
+  });
+});

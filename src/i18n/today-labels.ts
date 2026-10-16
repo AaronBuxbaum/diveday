@@ -2,7 +2,7 @@ import type { MediaDeletionKind, PaymentOperationKind } from "@/db/schema";
 import { calendarDateInTimezone, calendarDaysBetween } from "@/lib/calendar-date";
 import { DSD_RATIO } from "@/lib/course-ratios";
 import type { DepthUnit } from "@/lib/depth-units";
-import { formatRelativeDay, formatShortDate, formatWeekday } from "@/lib/format";
+import { formatDateTimeTz, formatRelativeDay, formatShortDate, formatWeekday } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { firstNameOf } from "@/lib/person-name";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "@/lib/readiness";
@@ -1129,4 +1129,29 @@ export function seasonalBriefingText(
     hasShop: shopName ? "true" : "false",
     shopName: shopName ?? "",
   });
+}
+
+/** Who the stale-roll-call alert reached, and when (the owners' time first), or null. */
+export function rollCallAlertedText(
+  t: StaffTranslator,
+  gap: { alertedAt?: Date | null; shoreAlertedAt?: Date | null },
+  locale: string,
+  timeZone: string,
+): string | null {
+  const owners = gap.alertedAt ?? null;
+  const shore = gap.shoreAlertedAt ?? null;
+  if (owners && shore) {
+    return t("today.detail.rollCallAlertedWithShore", {
+      time: formatDateTimeTz(owners, locale, timeZone),
+    });
+  }
+  if (owners) {
+    return t("today.detail.rollCallAlerted", { time: formatDateTimeTz(owners, locale, timeZone) });
+  }
+  if (shore) {
+    return t("today.detail.rollCallShoreAlerted", {
+      time: formatDateTimeTz(shore, locale, timeZone),
+    });
+  }
+  return null;
 }

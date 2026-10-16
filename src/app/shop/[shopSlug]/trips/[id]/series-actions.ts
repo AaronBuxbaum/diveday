@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { canPersonRefund } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { recordTripActivity } from "@/db/operations";
 import {
@@ -91,11 +92,14 @@ export async function cancelSeriesAction(shopSlug: string, tripId: string, serie
   const s = await requireTripConfig(shopSlug, tripId);
   const db = await getDb();
   const now = nowDate();
+  // An instructor may call a run off; only a refund holder moves the money (H-123).
+  const refunds = (await canPersonRefund(db, s.user.shopId, s.user.personId)) ? "release" : "queue";
   const result = await cancelFutureSeriesTrips(db, {
     shopId: s.user.shopId,
     seriesId,
     calledByPersonId: s.user.personId,
     now,
+    refunds,
   });
   // Null is the only failure: the run was not this shop's, and nothing
   // changed. Anything else stopped the repeat, so the notice says what the
@@ -127,7 +131,9 @@ export async function cancelSeriesAction(shopSlug: string, tripId: string, serie
     back,
     result.skipped > 0
       ? noticeUrl(back, "series-cancelled-partly", { count: result.skipped })
-      : noticeUrl(back, "series-cancelled", { count: result.divers }),
+      : noticeUrl(back, refunds === "queue" ? "series-cancelled-held" : "series-cancelled", {
+          count: result.divers,
+        }),
   );
 }
 
@@ -206,7 +212,9 @@ export async function updateSeriesCadenceAction(
 /**
  * The second half of narrowing: take the upcoming dates the new cadence no
  * longer fires on off the public schedule. Cancels, never deletes, so each one
- * is reinstatable from its own trip page.
+ * is reinstatable from its own trip page. Each goes through the blow-out
+ * cascade like the run-wide cancel: its divers are told and, for a caller with
+ * the refund right, refunded (issue #2453, H-122, H-123).
  */
 export async function cancelOffCadenceSeriesAction(
   shopSlug: string,
@@ -215,13 +223,15 @@ export async function cancelOffCadenceSeriesAction(
 ) {
   const back = tripPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
-  const cancelled = await cancelOffCadenceSeriesTrips(
-    await getDb(),
-    s.user.shopId,
+  const db = await getDb();
+  const result = await cancelOffCadenceSeriesTrips(db, {
+    shopId: s.user.shopId,
     seriesId,
-    nowDate(),
-    { actorPersonId: s.user.personId },
-  );
-  const notice = cancelled > 0 ? "series-off-cadence-cancelled" : "series-error";
+    calledByPersonId: s.user.personId,
+    refunds: (await canPersonRefund(db, s.user.shopId, s.user.personId)) ? "release" : "queue",
+  });
+  revalidatePath(shopPath(shopSlug, "schedule", "board"));
+  revalidatePath(shopPath(shopSlug));
+  const notice = result.cancelled === 0 ? "series-error" : "series-off-cadence-cancelled";
   revalidateAndRedirect(back, noticeUrl(back, notice));
 }

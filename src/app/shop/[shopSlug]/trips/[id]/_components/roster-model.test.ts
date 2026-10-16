@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
 import {
   groupRoster,
   PAYMENT_STATUSES_ALL,
@@ -186,8 +187,15 @@ describe("groupRoster", () => {
     dock: Record<string, "boarded" | "not_boarded">,
     afterDive: string[] = [],
     rollCallTaken = Object.keys(dock).length > 0,
+    unaccounted: string[] = [],
   ) {
-    return { dock: new Map(Object.entries(dock)), afterDive: new Set(afterDive), rollCallTaken };
+    return {
+      dock: new Map(Object.entries(dock)),
+      afterDive: new Set(afterDive),
+      rollCallTaken,
+      unaccounted: new Set(unaccounted),
+      countedAboardBlocked: new Map<string, CountedAboardBlocked>(),
+    };
   }
 
   function recordGroupsFor(seats: RosterEntry[], record: ReturnType<typeof recordOf>) {
@@ -230,6 +238,47 @@ describe("groupRoster", () => {
     expect(ids(groups.sailed)).toEqual(["aboard", "pickedUp", "chase"]);
     expect(groups.didNotSail).toEqual([]);
     expect(groups.uncounted).toEqual([]);
+  });
+
+  it("in the record, a seat said missing and not counted back is its own group, ahead of Sailed", () => {
+    const groups = recordGroupsFor(
+      [seat("aboard"), seat("missing"), seat("ashore")],
+      // `missing` boarded at the dock and has a standing after-dive result
+      // (the "not back" word itself), so only `unaccounted` keeps it out of Sailed.
+      recordOf(
+        { aboard: "boarded", missing: "boarded", ashore: "not_boarded" },
+        ["missing"],
+        true,
+        ["missing"],
+      ),
+    );
+    expect(ids(groups.unaccounted)).toEqual(["missing"]);
+    expect(ids(groups.sailed)).toEqual(["aboard"]);
+    expect(ids(groups.didNotSail)).toEqual(["ashore"]);
+  });
+
+  it("in the record, says once how many who sailed were counted aboard while blocked", () => {
+    const record = {
+      ...recordOf({ a: "boarded", b: "boarded", c: "not_boarded" }, ["a"]),
+      countedAboardBlocked: new Map<string, CountedAboardBlocked>([
+        ["a", { checkpoint: "after_dive_1", blockers: [{ code: "certification_missing" }] }],
+        // Not a sailed seat: never counted in the sailed band's fact.
+        ["c", { checkpoint: "after_dive_1", blockers: [{ code: "certification_missing" }] }],
+      ]),
+    };
+    const groups = recordGroupsFor([seat("a"), seat("b"), seat("c")], record);
+    expect(ids(groups.sailed)).toEqual(["a", "b"]);
+    expect(groups.sailedMeta).toBe("1 counted aboard while blocked");
+  });
+
+  it("in the record, says nothing about blocking when nobody was counted aboard blocked", () => {
+    const groups = recordGroupsFor([seat("a")], recordOf({ a: "boarded" }));
+    expect(groups.sailedMeta).toBeUndefined();
+  });
+
+  it("in the record, a diver nobody has said missing is never unaccounted", () => {
+    const groups = recordGroupsFor([seat("a")], recordOf({ a: "boarded" }));
+    expect(groups.unaccounted).toEqual([]);
   });
 
   it("in the record, a dock not-boarded outranks a later count, as the evening's does", () => {

@@ -69,6 +69,58 @@ export type OpenSeatsInput = {
 };
 
 /**
+ * **Seats that never sold on a departure that has sailed** — `capacity -
+ * booked`, 0 for a boat that filled or has not gone yet. The one definition
+ * of "left with empty seats": the debrief on a departure's Details tab and
+ * Reports' monthly count both read it, so the two can never disagree about
+ * which departures qualify.
+ */
+export function unsoldSeats(
+  input: Pick<OpenSeatsInput, "capacity" | "booked" | "startsAt">,
+  now: Date = nowDate(),
+): number {
+  const open = input.capacity - input.booked;
+  if (open <= 0) return 0;
+  return hasSailed(input.startsAt, now) ? open : 0;
+}
+
+export type DepartureWithEmptySeats = {
+  tripId: string;
+  title: string;
+  startsAt: Date;
+  openSeats: number;
+};
+
+/**
+ * **A month's departures that left with empty seats** (issue #2424): how many
+ * departures and how many seats in all, and the departures themselves, the
+ * emptiest first and then the earliest, so a shop sees where the money went.
+ * Counts only; no crew, no rank and no rate, on the debrief's own boundary.
+ */
+export function departuresWithEmptySeats(
+  departures: readonly (Pick<OpenSeatsInput, "capacity" | "booked" | "startsAt"> & {
+    tripId: string;
+    title: string;
+  })[],
+  now: Date = nowDate(),
+): { departures: number; seats: number; list: DepartureWithEmptySeats[] } {
+  const list = departures
+    .map((departure) => ({
+      tripId: departure.tripId,
+      title: departure.title,
+      startsAt: departure.startsAt,
+      openSeats: unsoldSeats(departure, now),
+    }))
+    .filter((departure) => departure.openSeats > 0)
+    .sort((a, b) => b.openSeats - a.openSeats || a.startsAt.getTime() - b.startsAt.getTime());
+  return {
+    departures: list.length,
+    seats: list.reduce((sum, departure) => sum + departure.openSeats, 0),
+    list,
+  };
+}
+
+/**
  * The debrief for one departure, or null when there is nothing true to say.
  *
  * Null in three situations, and the first is the common one: **the departure
@@ -82,9 +134,8 @@ export function openSeatsDebrief(
   input: OpenSeatsInput,
   now: Date = nowDate(),
 ): OpenSeatsDebrief | null {
-  const openSeats = input.capacity - input.booked;
-  if (openSeats <= 0) return null;
-  if (!hasSailed(input.startsAt, now)) return null;
+  const openSeats = unsoldSeats(input, now);
+  if (openSeats === 0) return null;
 
   const lastBookingDaysOut = input.lastBookingAt
     ? Math.max(0, calendarDaysBetween(input.lastBookingAt, input.startsAt, input.timeZone))

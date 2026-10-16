@@ -19,6 +19,7 @@ export function PartySection({
   seats,
   allSet,
   addSeatAction,
+  payAction,
   t,
 }: {
   /** The negotiated request locale, not the shop's stored default. */
@@ -28,12 +29,14 @@ export function PartySection({
   allSet: boolean;
   /** Bound to the page's token when the booking may lead a seat; null otherwise. */
   addSeatAction: ((formData: FormData) => Promise<void>) | null;
+  /** Bound to the page's token when the lead may pay for a seat they added; null otherwise. */
+  payAction: ((formData: FormData) => Promise<void>) | null;
   t: DiverTranslator;
 }) {
   if (seats.length === 0 && !addSeatAction) return null;
   return (
     <div id="party-seats" className="scroll-mt-8 space-y-3">
-      <PartyClaimPanel locale={locale} seats={seats} />
+      <PartyClaimPanel locale={locale} seats={seats} payAction={payAction} />
       {allSet ? (
         <p>
           <SettledCheck settled label={t("thread.partyAllSet")} className="text-sm text-muted" />
@@ -58,6 +61,7 @@ export function partyClaimSeats(
     seatName: seat.seatName,
     claimed: seat.claimed,
     waiverSigned: seat.waiverSigned,
+    payable: seat.payable,
     claimUrl: seat.claim
       ? claimOrigin
         ? new URL(claimLinkPath(seat.claim.token), `${claimOrigin}/`).toString()

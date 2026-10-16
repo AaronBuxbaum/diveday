@@ -1,8 +1,14 @@
 import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components/shared";
 import type { CertificationAgency } from "@/db/schema";
 import { fill } from "@/i18n/fill";
+import { SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
-import { AGENCY_CHECKS, type CheckableAgency, isCheckableAgency } from "@/lib/agency-check";
+import {
+  AGENCY_CHECKS,
+  type AgencyListedKind,
+  type CheckableAgency,
+  isCheckableAgency,
+} from "@/lib/agency-check";
 import { type AgencyVerificationPage, agencyVerificationPage } from "@/lib/agency-verification";
 
 /**
@@ -21,12 +27,20 @@ export type AgencyCheckCopy = {
    * that a member sign-in says so ("Check with PADI (member sign-in)").
    */
   link: string;
+  /**
+   * The button's words for a nitrox or specialty card, by kind (issue #2592):
+   * "Check Nitrox with SSI", so a diver's two cards at one agency do not wear
+   * the same button. A level card keeps `check`.
+   */
+  checkKind: Record<AgencyListedKind, string>;
   checking: string;
   /** A pending card certified. */
   matched: string;
   /** An imported card confirmed. */
   matchedConfirmed: string;
   levelUnconfirmed: string;
+  /** A nitrox or specialty card: the diver is on the page, this certification is not. */
+  cardUnconfirmed: string;
   /** The diver's record is junior, limited or unfinished. */
   limitedCard: string;
   /** PADI shows a junior rating, and the diver is under 15. */
@@ -134,13 +148,30 @@ export function agencyCheckCopy(
   const signIn = agencyVerificationPage(agency)?.kind === "member_sign_in";
   // What the agency was searched by, for "found this name, not this" and "found nobody".
   const identity = isCheckableAgency(agency) ? AGENCY_CHECKS[agency].needs : "birth_date";
+  const kindNames: Record<AgencyListedKind, string> = {
+    nitrox: t("shared.certificationSummary.nitrox"),
+    deep: t(SPECIALTY_KEYS.deep),
+    wreck: t(SPECIALTY_KEYS.wreck),
+    night: t(SPECIALTY_KEYS.night),
+    drysuit: t(SPECIALTY_KEYS.drysuit),
+    cavern: t(SPECIALTY_KEYS.cavern),
+  };
+  const checkKind = {} as Record<AgencyListedKind, string>;
+  for (const kind of Object.keys(kindNames) as AgencyListedKind[]) {
+    checkKind[kind] = t("divers.certifications.agencyCheck.checkCard", {
+      card: kindNames[kind],
+      agency: name,
+    });
+  }
   return {
     check: signIn ? t("divers.certifications.checkWithAgency", { agency: name }) : link,
+    checkKind,
     link,
     checking: t("divers.certifications.agencyCheck.checking", { agency: name }),
     matched: t("divers.certifications.agencyCheck.matched", { agency: name }),
     matchedConfirmed: t("divers.certifications.agencyCheck.matchedConfirmed", { agency: name }),
     levelUnconfirmed: t("divers.certifications.agencyCheck.levelUnconfirmed", { agency: name }),
+    cardUnconfirmed: t("divers.certifications.agencyCheck.cardUnconfirmed", { agency: name }),
     limitedCard: t("divers.certifications.agencyCheck.limitedCard", { agency: name }),
     juniorUnder15: t("divers.certifications.agencyCheck.juniorUnder15", { agency: name }),
     namesake: t("divers.certifications.agencyCheck.namesake", { agency: name, identity }),

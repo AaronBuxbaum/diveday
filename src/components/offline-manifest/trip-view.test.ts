@@ -71,3 +71,63 @@ describe("offlineTripView — blocked at the rail after a dive", () => {
     ).toEqual([true]);
   });
 });
+
+/**
+ * **A medical block after a dive, offline** (issue #2380): the same predicate
+ * the live roll call reads (`medicalHoldAfterDive`), off this device's own
+ * taps as well as the saved copy, so the two never disagree.
+ */
+describe("offlineTripView — a medical block after a dive", () => {
+  const boardedAtDock: OfflineRollCallEvent = {
+    clientEventId: "event-1",
+    snapshotId: "snap-trip-1",
+    snapshotSavedAt: "2026-08-01T12:00:00.000Z",
+    tripId: "trip-1",
+    bookingId: "diver-priya",
+    checkpoint: "departure",
+    status: "boarded",
+    occurredAt: "2026-08-01T12:58:00.000Z",
+    syncStatus: "pending",
+  };
+  function medicallyBlocked(events: OfflineRollCallEvent[]) {
+    const envelope = richEnvelope("trip-1", { readiness: "blocked" }, { events });
+    for (const manifest of envelope.snapshot.manifests) {
+      for (const diver of manifest.divers) {
+        if (diver.readiness.status === "blocked") {
+          diver.readiness.blockers = [
+            { code: "medical_not_cleared", text: "Physician did not clear" },
+          ];
+        }
+      }
+    }
+    return envelope;
+  }
+
+  it("names it for a diver this device boarded over it at the dock", () => {
+    const view = offlineTripView(medicallyBlocked([boardedAtDock]), "after_dive_1");
+    expect(view?.medicalHold).toEqual(["medical_not_cleared"]);
+    expect(view?.blockedAtRail).toEqual([false]);
+  });
+
+  it("stays quiet at the dock and for a diver nobody boarded, where Blocked speaks", () => {
+    expect(offlineTripView(medicallyBlocked([boardedAtDock]), "departure")?.medicalHold).toEqual([
+      null,
+    ]);
+    const unboarded = offlineTripView(medicallyBlocked([]), "after_dive_1");
+    expect(unboarded?.medicalHold).toEqual([null]);
+    expect(unboarded?.blockedAtRail).toEqual([true]);
+  });
+
+  it("gives way to the not-back alarm", () => {
+    const notBack: OfflineRollCallEvent = {
+      ...boardedAtDock,
+      clientEventId: "event-2",
+      checkpoint: "after_dive_1",
+      status: "not_boarded",
+      occurredAt: "2026-08-01T14:10:00.000Z",
+    };
+    expect(
+      offlineTripView(medicallyBlocked([boardedAtDock, notBack]), "after_dive_1")?.medicalHold,
+    ).toEqual([null]);
+  });
+});

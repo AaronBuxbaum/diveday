@@ -6,6 +6,7 @@ import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import {
+  medicalHoldChip,
   medicalWarningChips,
   ridingOnlyMedicalSentences,
   rollCallLabelText,
@@ -111,7 +112,15 @@ function OfflineDiverRow({
   const medicalWarnings = withheld ? undefined : diver.medicalWarnings;
   // The live roll call's capsule for the same facts, strongest first: riding
   // only (H-109), then an earlier refusal (H-98), then an open referral.
-  const medicalChip = medicalWarnings ? medicalWarningChips(t, medicalWarnings)[0] : undefined;
+  // Ahead of them, after a dive, the live row's medical-hold capsule (#2380):
+  // a diver boarded over a physician's "no" or an open review, read through
+  // the one predicate both surfaces share (`medicalHoldAfterDive`).
+  const medicalHold = withheld ? null : (view.medicalHold[index] ?? null);
+  const medicalChip = medicalHold
+    ? medicalHoldChip(t, medicalHold)
+    : medicalWarnings
+      ? medicalWarningChips(t, medicalWarnings)[0]
+      : undefined;
   const warningDate = (day: string) => formatCalendarDate(day, locale);
   // The diver's own "running late" (#2319), on the live page's terms: a dock
   // row not boarded yet, with nothing from the counter on it — this device's

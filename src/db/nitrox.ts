@@ -1,9 +1,15 @@
 import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { isDiver } from "@/lib/participant-types";
-import { type CardUnreviewRefusal, needsCardSighting, unreviewedCardState } from "@/lib/readiness";
+import {
+  type CardUnreviewRefusal,
+  cardUndoRefusal,
+  needsCardSighting,
+  unreviewedCardState,
+} from "@/lib/readiness";
 import { shopOffersNitrox } from "@/lib/rentals";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
+import { publishManifestEventsForPerson } from "./manifest-events";
 import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   activeCertificationReviewerId,
@@ -81,6 +87,13 @@ export async function reviewNitroxCertification(
     reviewedByPersonId?: string;
     /** Required for, and only meaningful on, a still-unsighted self-declaration. */
     sighting?: CardSighting;
+    /**
+     * The review is the agency's own lookup page listing this card for this
+     * diver (H-105, issue #2592), read by `judgeAgencyListedCard`. Stamps
+     * `agencyCheckedAt`. A card that needs a sighting is never certified this
+     * way: a page does not stand in for the card in a staffer's hand.
+     */
+    agencyChecked?: boolean;
   },
 ): Promise<
   | { ok: true; certification: typeof nitroxCertifications.$inferSelect }
@@ -120,7 +133,7 @@ export async function reviewNitroxCertification(
   if (!existing) return { ok: false, reason: "not_found" };
 
   const sighting = needsCardSighting(existing) ? input.sighting : undefined;
-  if (needsCardSighting(existing) && !sighting?.identifier.trim()) {
+  if (needsCardSighting(existing) && (input.agencyChecked || !sighting?.identifier.trim())) {
     return { ok: false, reason: "card_sighting_required" };
   }
 
@@ -131,6 +144,7 @@ export async function reviewNitroxCertification(
         status: input.status,
         reviewNote: reviewNoteFor(input.reviewNote) ?? existing.reviewNote,
         reviewedAt: nowDate(),
+        agencyCheckedAt: input.agencyChecked ? nowDate() : null,
         ...(reviewedByPersonId ? { reviewedByPersonId } : undefined),
         ...(sighting
           ? { agency: sighting.agency, identifier: sighting.identifier.trim() }
@@ -146,7 +160,10 @@ export async function reviewNitroxCertification(
         ),
       )
       .returning();
-    return certification ? { ok: true, certification } : { ok: false, reason: "not_found" };
+    if (!certification) return { ok: false, reason: "not_found" };
+    // Open and primed manifests re-read (issue #2613).
+    await publishManifestEventsForPerson(db, input.shopId, certification.personId);
+    return { ok: true, certification };
   } catch (error) {
     if (isUniqueConstraintViolation(error)) return { ok: false, reason: "duplicate_card" };
     throw error;
@@ -162,12 +179,37 @@ export async function reviewNitroxCertification(
  */
 export async function unreviewNitroxCertification(
   db: AppDb,
-  input: { shopId: string; certificationId: string },
+  input: { shopId: string; certificationId: string; reviewedAt: Date },
 ): Promise<{ ok: true } | { ok: false; reason: CardUnreviewRefusal }> {
+  const undone = await reverseNitroxReview(db, input);
+  if (!undone.ok) return undone;
+  await publishManifestEventsForPerson(db, input.shopId, undone.personId);
+  return { ok: true };
+}
+
+/**
+ * The write behind {@link unreviewNitroxCertification}, with no manifest event,
+ * for a caller inside a transaction (`undoAgencyCheck`): the event goes out
+ * after the commit. The twin of `reverseCertificationReview`
+ * (src/db/readiness.ts), with the same two guards: the review this Undo was
+ * offered for is still the one standing (issue #2612), and only the agency
+ * check's own Undo reverses an agency-checked review (issue #2592).
+ */
+export async function reverseNitroxReview(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    certificationId: string;
+    reviewedAt: Date;
+    reversingAgencyCheck?: boolean;
+  },
+): Promise<{ ok: true; personId: string } | { ok: false; reason: CardUnreviewRefusal }> {
   const [existing] = await db
     .select({
+      personId: nitroxCertifications.personId,
       status: nitroxCertifications.status,
       reviewedAt: nitroxCertifications.reviewedAt,
+      agencyCheckedAt: nitroxCertifications.agencyCheckedAt,
       selfDeclaredAt: nitroxCertifications.selfDeclaredAt,
       issuedByShopAt: nitroxCertifications.issuedByShopAt,
       importedAt: nitroxCertifications.importedAt,
@@ -188,8 +230,17 @@ export async function unreviewNitroxCertification(
     )
     .limit(1);
   if (!existing) return { ok: false, reason: "not_found" };
-  const target = unreviewedCardState(existing);
+  // An agency check never certifies a card that needed a sighting, so the
+  // number on a card it certified is the one it was checked by, even at an
+  // agency that numbers each card: its Undo puts back exactly what was there.
+  const target = unreviewedCardState(
+    input.reversingAgencyCheck ? { ...existing, listedFromCertificationId: null } : existing,
+  );
   if (!target.ok) return target;
+  const refusal = cardUndoRefusal(existing, input.reviewedAt, {
+    reversingAgencyCheck: input.reversingAgencyCheck,
+  });
+  if (refusal) return { ok: false, reason: refusal };
   const [row] = await db
     .update(nitroxCertifications)
     .set({
@@ -197,16 +248,18 @@ export async function unreviewNitroxCertification(
       reviewNote: existing.listedFromCertificationId ? existing.reviewNote : null,
       reviewedAt: null,
       reviewedByPersonId: null,
+      agencyCheckedAt: null,
     })
     .where(
       and(
         eq(nitroxCertifications.id, input.certificationId),
         eq(nitroxCertifications.shopId, input.shopId),
         isNull(nitroxCertifications.deletedAt),
+        eq(nitroxCertifications.reviewedAt, input.reviewedAt),
       ),
     )
     .returning({ id: nitroxCertifications.id });
-  return row ? { ok: true } : { ok: false, reason: "not_found" };
+  return row ? { ok: true, personId: existing.personId } : { ok: false, reason: "stale" };
 }
 
 /**

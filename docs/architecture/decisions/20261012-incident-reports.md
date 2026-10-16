@@ -34,8 +34,8 @@ access, export, retention and erasure are decided here.
   an outsider row with their name is redacted, and every word-boundary match of their name in the
   narrative fields and addenda becomes `[redacted]`. A filed report changes only through this.
   The trade-off is H-111.
-- **Safety tab:** an owner/manager tab beside Reports reads the month's existing records and
-  lists its reports.
+- **Safety page:** an owner/manager destination at `/safety` reads the month's records and lists
+  its reports.
 
 ## Alternatives considered
 

@@ -199,6 +199,9 @@ export const SPECIALTY_CERTIFICATIONS_CSV = sharedFile<ShopRow<"specialtyRows">>
         row.reviewedByPersonId ? personName.get(row.reviewedByPersonId) : null,
     },
     { header: "reviewed_by_person_id", in: "shop", value: (row) => row.reviewedByPersonId },
+    // The agency's own page, read through the DiveDay browser extension
+    // (H-105, as certifications.csv above): review_note then holds its words.
+    { header: "agency_checked_at", in: "both", value: (row) => row.agencyCheckedAt },
     // The level card whose agency check listed this one (layer 3 of ADR
     // 20261008-cert-check-extension): review_note then holds the agency's
     // words, not a staffer's. Another provenance stamp, and it travels for
@@ -244,6 +247,9 @@ export const NITROX_CERTIFICATIONS_CSV = sharedFile<ShopRow<"nitroxRows">>({
         row.reviewedByPersonId ? personName.get(row.reviewedByPersonId) : null,
     },
     { header: "reviewed_by_person_id", in: "shop", value: (row) => row.reviewedByPersonId },
+    // The agency's own page, read through the DiveDay browser extension
+    // (H-105, as certifications.csv above): review_note then holds its words.
+    { header: "agency_checked_at", in: "both", value: (row) => row.agencyCheckedAt },
     { header: "imported_at", in: "both", value: (row) => row.importedAt },
     { header: "imported_from_label", in: "both", value: (row) => row.importedFromLabel },
     // Same reason as the level card's — see certifications.csv above.
@@ -358,6 +364,9 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
     // as `last_dived_band` above — and a shop that moved its data would
     // otherwise be asking every one of them again.
     { header: "welcome_shared_at", in: "shop", value: (row) => row.welcomeSharedAt },
+    // What the same diver chose to add to the hello (issue #2425): a code,
+    // present only while the consent above is.
+    { header: "welcome_hello", in: "shop", value: (row) => row.welcomeHello },
     // The diver answering "nothing has changed" about the sizes, gas
     // and emergency contact the shop already holds (ADR
     // 20260904-reef-all-the-way-down, D15). Same class as the two
@@ -489,6 +498,7 @@ export const TRIP_INVITATIONS_CSV = sharedFile<ShopRow<"invitationRows">>({
       value: (row, { personName }) => personName.get(row.createdByPersonId),
     },
     { header: "invited_at", in: "both", value: (row) => row.invitedAt },
+    { header: "emailed_at", in: "both", value: (row) => row.emailedAt },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
   ],
   shop: {
@@ -710,6 +720,15 @@ export const ROLL_CALL_EVENTS_CSV = sharedFile<ShopRow<"rollCallRows">>({
       value: (row, { personName }) => personName.get(row.recordedByPersonId),
     },
     { header: "note", in: "shop", value: (row) => row.note },
+    // What readiness said when a diver was counted aboard (issue #2414): the
+    // evidence behind "counted aboard while blocked", which is recomputed live
+    // and so cannot be rebuilt afterwards. Codes only, `;`-joined.
+    { header: "readiness_status", in: "both", value: (row) => row.readinessStatus },
+    {
+      header: "readiness_blockers",
+      in: "both",
+      value: (row) => row.readinessBlockers?.map((blocker) => blocker.code).join(";") ?? null,
+    },
     { header: "occurred_at", in: "both", value: (row) => row.occurredAt },
     { header: "created_at", in: "shop", value: (row) => row.createdAt },
   ],

@@ -360,3 +360,145 @@ describe("getMovePreflight", () => {
     });
   });
 });
+
+/**
+ * **A tight turnaround, on the Move panel only** (issue #2141, Aaron's
+ * decision (b)): a shop setting with a default of 30 minutes, advice and never
+ * a refusal, crew only when the two departures meet in different places.
+ * H-80's half-open overlap is untouched: nose to tail is still no clash.
+ */
+describe("getMovePreflight's turnaround line", () => {
+  const timeZone = "UTC";
+  // The moved departure lands 08:00–12:00 on the 5th.
+  const target = { startsAt: new Date("2030-08-05T08:00:00Z"), timeZone };
+
+  async function departure(
+    title: string,
+    startsAt: string,
+    endsAt: string,
+    extra: { boatId?: string } = {},
+  ) {
+    const trip = await createTrip(ctx.db, {
+      shopId: ctx.shop.id,
+      title,
+      startsAt: new Date(startsAt),
+      endsAt: new Date(endsAt),
+      capacity: 6,
+      ...extra,
+    });
+    if (!trip) throw new Error("departure not created");
+    return trip;
+  }
+
+  async function hullPair(otherStartsAt: string, otherEndsAt: string, sameHull = true) {
+    await ctx.db.update(shops).set({ timezone: timeZone }).where(eq(shops.id, ctx.shop.id));
+    const hull = await createBoat(ctx.db, ctx.shop.id, "Turnaround Hull", 20);
+    const otherHull = await createBoat(ctx.db, ctx.shop.id, "Other Hull", 20);
+    const moving = await departure("Morning Reef", "2030-08-01T08:00:00Z", "2030-08-01T12:00:00Z", {
+      boatId: hull.id,
+    });
+    const other = await departure("Afternoon Wreck", otherStartsAt, otherEndsAt, {
+      boatId: sameHull ? hull.id : otherHull.id,
+    });
+    return { moving, other };
+  }
+
+  const turnaroundOf = (preflight: Awaited<ReturnType<typeof getMovePreflight>>) =>
+    preflight?.sections.find((section) => section.kind === "turnaround");
+
+  it("names the departure on the same hull one minute under the gap, and the minutes", async () => {
+    const { moving } = await hullPair("2030-08-05T12:29:00Z", "2030-08-05T16:00:00Z");
+    const preflight = await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target);
+    expect(turnaroundOf(preflight)).toEqual({
+      kind: "turnaround",
+      items: [{ kind: "boat", name: "Turnaround Hull", departure: "Afternoon Wreck", minutes: 29 }],
+    });
+    expect(preflight?.blocked).toBeNull();
+    // Not a clash: H-80's line stays quiet.
+    expect(preflight?.sections.some((section) => section.kind === "boat")).toBe(false);
+  });
+
+  it("is quiet exactly at the gap", async () => {
+    const { moving } = await hullPair("2030-08-05T12:30:00Z", "2030-08-05T16:00:00Z");
+    const preflight = await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target);
+    expect(turnaroundOf(preflight)).toBeUndefined();
+  });
+
+  it("speaks for nose to tail, which stays no clash", async () => {
+    const { moving } = await hullPair("2030-08-05T12:00:00Z", "2030-08-05T16:00:00Z");
+    const preflight = await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target);
+    expect(turnaroundOf(preflight)).toMatchObject({ items: [{ minutes: 0 }] });
+    expect(preflight?.sections.some((section) => section.kind === "boat")).toBe(false);
+  });
+
+  it("is quiet for a different hull", async () => {
+    const { moving } = await hullPair("2030-08-05T12:10:00Z", "2030-08-05T16:00:00Z", false);
+    const preflight = await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target);
+    expect(turnaroundOf(preflight)).toBeUndefined();
+  });
+
+  it("is quiet for a cancelled departure", async () => {
+    const { moving, other } = await hullPair("2030-08-05T12:10:00Z", "2030-08-05T16:00:00Z");
+    await ctx.db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, other.id));
+    const preflight = await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target);
+    expect(turnaroundOf(preflight)).toBeUndefined();
+  });
+
+  it("is quiet before a time is chosen, and leaves an overlap to the clash line", async () => {
+    const { moving } = await hullPair("2030-08-05T11:00:00Z", "2030-08-05T16:00:00Z");
+    expect(turnaroundOf(await getMovePreflight(ctx.db, ctx.shop.id, moving.id))).toBeUndefined();
+    const preflight = await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target);
+    expect(turnaroundOf(preflight)).toBeUndefined();
+    expect(preflight?.sections[0]?.kind).toBe("boat");
+  });
+
+  it("reads the shop's own gap, and none at all when it is zero", async () => {
+    const { moving } = await hullPair("2030-08-05T12:45:00Z", "2030-08-05T16:00:00Z");
+    expect(turnaroundOf(await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target))).toBe(
+      undefined,
+    );
+    await ctx.db.update(shops).set({ minTurnaroundMinutes: 60 }).where(eq(shops.id, ctx.shop.id));
+    expect(
+      turnaroundOf(await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target)),
+    ).toMatchObject({ items: [{ kind: "boat", minutes: 45 }] });
+    await ctx.db.update(shops).set({ minTurnaroundMinutes: 0 }).where(eq(shops.id, ctx.shop.id));
+    expect(turnaroundOf(await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target))).toBe(
+      undefined,
+    );
+  });
+
+  it("names a crew member leaving from a different meeting point, and not one on the same dock", async () => {
+    await ctx.db.update(shops).set({ timezone: timeZone }).where(eq(shops.id, ctx.shop.id));
+    const [first] = await listStaff(ctx.db, ctx.shop.id);
+    if (!first) throw new Error("expected a seeded staff member");
+    const moving = await departure("Morning Reef", "2030-08-01T08:00:00Z", "2030-08-01T12:00:00Z");
+    const other = await departure(
+      "Afternoon Shore",
+      "2030-08-05T12:20:00Z",
+      "2030-08-05T15:00:00Z",
+    );
+    await setTripCrew(ctx.db, ctx.shop.id, moving.id, [first.person.id]);
+    await setTripCrew(ctx.db, ctx.shop.id, other.id, [first.person.id]);
+
+    // Both meet at the shop: the same-dock hand-off stays quiet.
+    expect(turnaroundOf(await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target))).toBe(
+      undefined,
+    );
+
+    await ctx.db
+      .update(trips)
+      .set({ meetingPointLabel: "North Beach car park" })
+      .where(eq(trips.id, other.id));
+    expect(turnaroundOf(await getMovePreflight(ctx.db, ctx.shop.id, moving.id, target))).toEqual({
+      kind: "turnaround",
+      items: [
+        {
+          kind: "crew",
+          name: first.person.fullName,
+          departure: "Afternoon Shore",
+          minutes: 20,
+        },
+      ],
+    });
+  });
+});

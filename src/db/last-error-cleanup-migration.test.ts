@@ -1,0 +1,130 @@
+// @vitest-environment node
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { eq, sql } from "drizzle-orm";
+import { describe, expect, it } from "vitest";
+import { ERASURE_FAILURE_DETAIL, erasureFailureOf } from "@/lib/payments/erasure-failure";
+import { fileScopedShopContext } from "@/test/db";
+import { notificationSendQueue, people, processorErasureObligations } from "./schema";
+
+/**
+ * The data migration that cleans provider free text out of `last_error` rows
+ * written before #2334 (issue #2532). `createTestDb()` has already applied it
+ * to an empty database, so the test writes rows in the old shape and runs the
+ * migration's own SQL over them.
+ */
+const ctx = fileScopedShopContext();
+
+const MIGRATIONS = path.join(process.cwd(), "drizzle");
+const FOLDER = readdirSync(MIGRATIONS).find((name) =>
+  name.endsWith("_clean-provider-text-from-last-error"),
+);
+
+async function runCleanup() {
+  if (!FOLDER) throw new Error("the clean-provider-text-from-last-error migration is missing");
+  const text = readFileSync(path.join(MIGRATIONS, FOLDER, "migration.sql"), "utf8");
+  for (const statement of text.split("--> statement-breakpoint")) {
+    if (statement.trim()) await ctx.db.execute(sql.raw(statement));
+  }
+}
+
+async function seedObligations(lastErrors: Array<string | null>) {
+  const { db, shop } = ctx;
+  const [person] = await db.select({ id: people.id }).from(people).limit(1);
+  if (!person) throw new Error("seed person missing");
+  const rows = await db
+    .insert(processorErasureObligations)
+    .values(
+      lastErrors.map((lastError, index) => ({
+        shopId: shop.id,
+        personId: person.id,
+        target: "stripe_customer" as const,
+        externalId: `cus_cleanup_${index}`,
+        stripeAccountId: "acct_test",
+        lastError,
+      })),
+    )
+    .returning();
+  return rows;
+}
+
+describe("the last_error cleanup migration", () => {
+  it("keeps what a writer emits today and cuts the rest down to its HTTP status or the unanswered detail", async () => {
+    const kept = [
+      "HTTP 404",
+      "HTTP 400: resource_missing",
+      "HTTP 429: rate_limit",
+      ...Object.values(ERASURE_FAILURE_DETAIL),
+    ];
+    const rows = await seedObligations([
+      ...kept,
+      // Stripe's own English, which can quote the customer or the input it refused.
+      "HTTP 400: No such customer: 'cus_123' for jane@example.com",
+      "HTTP 402 Your card was declined for Jane Diver",
+      "HTTP 400: Resource_Missing",
+      // No status to keep: a thrown message, a stray body.
+      "connect ECONNREFUSED 10.0.0.1:443 while deleting jane@example.com",
+      null,
+    ]);
+
+    await runCleanup();
+
+    const after = new Map(
+      (await ctx.db.select().from(processorErasureObligations)).map((row) => [
+        row.externalId,
+        row.lastError,
+      ]),
+    );
+    const at = (index: number) => after.get(rows[index]?.externalId ?? "");
+    kept.forEach((value, index) => {
+      expect(at(index)).toBe(value);
+    });
+    expect(at(kept.length)).toBe("HTTP 400");
+    expect(at(kept.length + 1)).toBe("HTTP 402");
+    expect(at(kept.length + 2)).toBe("HTTP 400");
+    // No status to keep: the fixed "unanswered" detail, so the reason survives.
+    expect(at(kept.length + 3)).toBe(ERASURE_FAILURE_DETAIL.unanswered);
+    expect(erasureFailureOf(at(kept.length + 3) ?? null)).toBe("unreachable");
+    expect(at(kept.length + 4)).toBeNull();
+  });
+
+  it("keeps a queue row's token-shaped last_error and nulls the rest, whatever its error_code", async () => {
+    const { db, shop } = ctx;
+    const nextAttemptAt = new Date("2026-10-15T12:00:00Z");
+    const rows = [
+      ["cleanup-coded-free", "provider_rejected", "550 mailbox jane@example.com unavailable"],
+      ["cleanup-uncoded-free", null, "Error: could not send to Jane Diver"],
+      ["cleanup-class", null, "TypeError"],
+      ["cleanup-code", "provider_rejected", "ECONNRESET"],
+      ["cleanup-sqlstate", null, "23505"],
+      ["cleanup-coded-token", "provider_rejected", "ResendError"],
+      ["cleanup-clean", "provider_rejected", null],
+    ] as const;
+    await db.insert(notificationSendQueue).values(
+      rows.map(([idempotencyKey, errorCode, lastError]) => ({
+        shopId: shop.id,
+        idempotencyKey,
+        nextAttemptAt,
+        errorCode,
+        lastError,
+      })),
+    );
+
+    await runCleanup();
+
+    const lastErrorOf = async (key: string) =>
+      (
+        await db
+          .select({ lastError: notificationSendQueue.lastError })
+          .from(notificationSendQueue)
+          .where(eq(notificationSendQueue.idempotencyKey, key))
+      )[0]?.lastError;
+    expect(await lastErrorOf("cleanup-coded-free")).toBeNull();
+    expect(await lastErrorOf("cleanup-uncoded-free")).toBeNull();
+    expect(await lastErrorOf("cleanup-class")).toBe("TypeError");
+    expect(await lastErrorOf("cleanup-code")).toBe("ECONNRESET");
+    expect(await lastErrorOf("cleanup-sqlstate")).toBe("23505");
+    expect(await lastErrorOf("cleanup-coded-token")).toBe("ResendError");
+    expect(await lastErrorOf("cleanup-clean")).toBeNull();
+  });
+});

@@ -67,12 +67,16 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     paymentMarksByBooking,
     aboardAtSea,
     keepOpenBookingId,
+    paymentMarkRetry,
+    partyPreview,
     namesakeRefusedBookingId,
     participantTypeCertBookingId,
   } = rows;
   const {
     markRosterWaiverInPersonAction,
     markPaymentAction,
+    previewPartyPaymentAction,
+    markPartyPaidAction,
     removeBookingAction,
     setParticipantTypeAction,
     confirmIdentityAction,
@@ -131,7 +135,34 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
           })
         : null,
     handMarkRefused: paymentSourceCode === "online" || paymentSourceCode === "package",
+    retry: paymentMarkRetry?.bookingId === booking.id ? paymentMarkRetry : null,
   };
+  // **Mark the party paid** (issue #2605), offered on a lead's seat while two or
+  // more seats of the party still owe money and none of them was paid online
+  // (the server refuses that, so the door is not drawn). The party is the
+  // lead and every seat on the roster that points at it.
+  const partySeats = rows.roster.filter(
+    (entry) => entry.booking.id === booking.id || entry.booking.partyLeadBookingId === booking.id,
+  );
+  const partyOwing = partySeats.filter(
+    (entry) => (paymentMarksByBooking?.get(entry.booking.id)?.balanceOwedCents ?? 0) > 0,
+  );
+  const partyOwedCents = partyOwing.reduce(
+    (sum, entry) => sum + (paymentMarksByBooking?.get(entry.booking.id)?.balanceOwedCents ?? 0),
+    0,
+  );
+  const partyPay =
+    requiresPayment &&
+    partyOwing.length >= 2 &&
+    !partyOwing.some((entry) => readinessByBooking.get(entry.booking.id)?.paymentProvider)
+      ? {
+          seatCount: partyOwing.length,
+          owed: formatMoneyCents(partyOwedCents, markCurrency, locale),
+          currency: markCurrency,
+          locale,
+          preview: partyPreview?.leadBookingId === booking.id ? partyPreview : null,
+        }
+      : null;
   const paymentSource = counterMark
     ? markFacts?.mark?.recordedByName
       ? t("trips.roster.paymentMarkLine", {
@@ -288,6 +319,8 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     participantTypeCertBookingId,
     markRosterWaiverInPersonAction,
     markPaymentAction,
+    previewPartyPaymentAction,
+    markPartyPaidAction,
     removeBookingAction,
     setParticipantTypeAction,
     confirmIdentityAction,
@@ -302,6 +335,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     elearningCheckAction,
     recordPaperCourseFormAction,
     updatePickupAction,
+    // A booked seat, or one turned away before the start (`seatMoveForRow`).
     moveSeat: seatMoveForRow(booking, moveSeat),
     // Marked aboard a boat that has left: Remove says so and changes nothing (H-126).
     removeRefusedAboard: aboardAtSea?.get(booking.id) ?? null,
@@ -311,6 +345,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     paymentStatus,
     paymentSource,
     paymentMark,
+    partyPay,
     currentWaiver,
     waiverStatus,
     refusalRetired,

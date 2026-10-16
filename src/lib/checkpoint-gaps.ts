@@ -56,8 +56,17 @@ export type CheckpointGap =
       checkpoint: RollCallCheckpoint;
     };
 
-type GapCrewMember = Pick<TripManifest["crew"][number], "id" | "rollCall">;
-type GapManifest = Pick<TripManifest, "checkpoint" | "summary"> & {
+/**
+ * A crew member as a checkpoint reads them. `rollCall` is only the state and
+ * whether it was carried forward, so the offline manifest's own reading
+ * (`OfflineRollCallResult`) fits as well as the live record.
+ */
+type GapCrewMember = {
+  id: string;
+  rollCall?: { state: "boarded" | "not_boarded"; implied?: boolean } | undefined;
+};
+type GapManifest = Pick<TripManifest, "checkpoint"> & {
+  summary: Pick<TripManifest["summary"], "awaiting" | "boarded" | "notBackAboard">;
   crew: readonly GapCrewMember[];
 };
 

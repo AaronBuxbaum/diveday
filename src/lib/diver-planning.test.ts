@@ -450,3 +450,30 @@ describe("booking delight planning", () => {
     expect(conditionsChangedSinceBooking(booked, booked)).toBe(false);
   });
 });
+
+/**
+ * **Autumn fall-back day, America/New_York, 2026-11-01** (issue #2614): the
+ * dock-day beats are instants, so a departure in the repeated 01:00 hour lays
+ * them out in elapsed minutes before it, not wall-clock minutes.
+ */
+describe("dock-day rhythm on the fall-back day", () => {
+  it("puts the arrival an elapsed dock call before a 01:15 EST departure", () => {
+    // 01:15 EST is the second pass through the hour; 60 elapsed minutes before
+    // is 01:15 EDT, not 00:15 EDT.
+    const start = new Date("2026-11-01T06:15:00.000Z");
+    const [arrive] = dockDayTimeline(start, rhythm({ dockCallMinutes: 60 }));
+    expect(arrive?.step).toBe("arrive");
+    expect(arrive?.at.toISOString()).toBe("2026-11-01T05:15:00.000Z");
+  });
+
+  it("keeps the water half in elapsed minutes across the change", () => {
+    // Sails 01:30 EDT; the dive-two beat lands 2h05 after, on the far side of
+    // the change: 05:30Z + 2h05 = 07:35Z = 02:35 EST (wall-clock arithmetic
+    // would say 03:35).
+    const start = new Date("2026-11-01T05:30:00.000Z");
+    const end = new Date("2026-11-01T10:30:00.000Z");
+    const timeline = dockDayTimeline(start, rhythm(), end, 2);
+    const dive2 = timeline.find((beat) => beat.step === "dive" && beat.number === 2);
+    expect(dive2?.at.toISOString()).toBe("2026-11-01T07:35:00.000Z");
+  });
+});

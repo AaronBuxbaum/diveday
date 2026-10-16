@@ -1,1 +1,0 @@
-ALTER TYPE "trip_desk_event_kind" ADD VALUE 'seat_turned_away';

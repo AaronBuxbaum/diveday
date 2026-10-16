@@ -121,14 +121,12 @@ function payloadFromForm(formData: FormData, currency: string): HeldSendPayload 
 
 /**
  * "Tell them" after an Undo names the departure and nothing else about the
- * move: the time the divers were last told is the server's record
- * (`trips.divers_told_starts_at`), never a form field, so a posted
- * `previousStartsAt` is not read at all.
+ * move: the time the divers were last told and whether the meeting point moved
+ * are the server's record (`trips.divers_told_starts_at`,
+ * `trips.divers_told_meeting_point`), never form fields, so a posted
+ * `previousStartsAt` or `meetingPointMoved` is not read at all.
  */
-const tellThemForm = z.object({
-  tripId: z.uuid(),
-  meetingPointMoved: z.boolean(),
-});
+const tellThemForm = z.object({ tripId: z.uuid() });
 
 export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
   const session = await requireStaffSession();
@@ -141,14 +139,12 @@ export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
     if (!(await canPersonConfigureTrips(db, session.user.shopId, session.user.personId))) {
       throw new Error("not_authorized");
     }
-    const form = tellThemForm.parse({
-      tripId: formData.get("tripId"),
-      meetingPointMoved: formData.get("meetingPointMoved") === "true",
-    });
+    const form = tellThemForm.parse({ tripId: formData.get("tripId") });
+    // Whether the meeting point moved is the server's record too
+    // (`trips.divers_told_meeting_point`): a posted `meetingPointMoved` is not read.
     const held = await holdRescheduleNotice(db, {
       shopId: session.user.shopId,
       tripId: form.tripId,
-      meetingPointMoved: form.meetingPointMoved,
       actorPersonId: session.user.personId,
     });
     if (!held) throw new Error("nothing_to_send");

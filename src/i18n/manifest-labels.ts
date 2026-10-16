@@ -1,4 +1,4 @@
-import type { RollCallCheckpoint, RollCallLabel } from "@/lib/manifests";
+import type { MedicalHoldCode, RollCallCheckpoint, RollCallLabel } from "@/lib/manifests";
 import type { MedicalWarningDays } from "@/lib/waivers";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
@@ -76,6 +76,17 @@ export function medicalWarningChips(t: StaffTranslator, days: MedicalWarningDays
     days.refusedOn ? t("manifest.medicalEarlierRefusalChip") : null,
     days.referredOn ? t("manifest.medicalReferralUnresolvedChip") : null,
   ].filter((chip): chip is string => chip !== null);
+}
+
+/**
+ * The capsule for a diver boarded over a medical blocker, after a dive
+ * (`medicalHoldAfterDive`, issue #2380): the live roll call and the offline
+ * copy word it through this one function.
+ */
+export function medicalHoldChip(t: StaffTranslator, code: MedicalHoldCode): string {
+  return code === "medical_not_cleared"
+    ? t("manifest.medicalHoldNotClearedChip")
+    : t("manifest.medicalHoldReviewChip");
 }
 
 /** The riding-only sentences of {@link medicalWarningChips}, dated. */

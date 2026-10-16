@@ -1,4 +1,4 @@
-import type { AgencyCheckQuery, CheckableAgency } from "./agency-check";
+import type { AgencyCheckQuery, AgencyListedKind, CheckableAgency } from "./agency-check";
 
 /**
  * **"Check all N with their agencies", one card at a time** (H-105, layer 1 of
@@ -35,9 +35,17 @@ import type { AgencyCheckQuery, CheckableAgency } from "./agency-check";
  *   wrong tap can never uncertify a boat.
  */
 
-/** One level card the extension can check, with the lookup it would type. */
+/**
+ * One card the extension can check, with the lookup it would type: a level
+ * card, or a nitrox or specialty card (issue #2592), which says so in
+ * `cardType` and names its kind.
+ */
 export type AgencyCheckableCard = {
   certificationId: string;
+  /** Absent for a level card. A nitrox or specialty card is judged by its own rule and Undone by its own table. */
+  cardType?: "nitrox" | "specialty";
+  /** The kind a nitrox or specialty card is, for the words beside its button. */
+  kind?: AgencyListedKind;
   personId: string;
   /** The diver's name as the shop holds it, for the queue's own words. */
   fullName: string;

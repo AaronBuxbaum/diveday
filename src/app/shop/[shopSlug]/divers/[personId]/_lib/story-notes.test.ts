@@ -198,11 +198,29 @@ describe("a seat the crew marked ashore at the dock and counted aboard later", (
   const pickedUp = seat({ dock: "not_boarded", afterDive: "boarded", rented: ["bcd"] });
 
   it("says it joined later, never 'sailed', and is never the first dive", () => {
-    expect(storyNotes(pickedUp, { ahead: false, firstSailed: true }, t, "en-US")).toEqual([
-      "joined later",
-    ]);
+    expect(
+      storyNotes(
+        seat({ dock: "not_boarded", afterDive: "boarded" }),
+        { ahead: false, firstSailed: true },
+        t,
+        "en-US",
+      ),
+    ).toEqual(["joined later"]);
     expect(seatWentToSea(pickedUp)).toBe(false);
     expect(seatMayBeFirstDive(pickedUp)).toBe(false);
+  });
+
+  it("keeps the gear rented and the stars given, and still no first-dive credit", () => {
+    const rated = seat({ dock: "not_boarded", afterDive: "boarded", rented: ["bcd"], rating: 5 });
+    const notes = storyNotes(rated, { ahead: false, firstSailed: true }, t, "en-US");
+    expect(notes[0]).toBe("joined later");
+    expect(notes).toHaveLength(3);
+    expect(notes.join(" ")).not.toMatch(/first dive/i);
+  });
+
+  it("gives a seat that stayed ashore, or never counted aboard later, no gear or stars", () => {
+    const ashore = seat({ dock: "not_boarded", rented: ["bcd"], rating: 5 });
+    expect(storyNotes(ashore, behind, t, "en-US")).toEqual(["stayed ashore"]);
   });
 });
 

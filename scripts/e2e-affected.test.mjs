@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  captureGrep,
+  captureMs,
   HUB_SPECS,
   importersOf,
   overlapScores,
@@ -10,11 +12,13 @@ import {
   routeOf,
   routePattern,
   SMOKE,
+  selectCaptures,
   selectSpecs,
   smokeTests,
   stackBase,
   symbolsOf,
   textOf,
+  visualBlocks,
   withinBudget,
 } from "./e2e-affected.mjs";
 import { moduleIndex } from "./symbol-reach.mjs";
@@ -333,5 +337,90 @@ describe("the base a layer is measured from", () => {
       "rev-parse --verify --quiet origin/main": "def",
     });
     expect(stackBase(git)).toBe("origin/main");
+  });
+});
+
+/**
+ * Five visual-shard jobs between 2026-10-09 and 2026-10-12 failed on one capture ("the desk's
+ * settled boat renders true to the design" waited for a "Checked in · N" heading a change had
+ * moved), on every layer above it, and nothing before the push ran a capture (#2517).
+ */
+describe("picking captures out of the visual spec", () => {
+  const source = [
+    "test.describe(`${scheme} mode`, () => {",
+    '  test("the desk\'s settled boat renders true to the design", async ({ page }) => {',
+    '    await page.goto("/shop/blue-mantis/trips/abc");',
+    '    await expect(page.getByRole("heading", { name: "Checked in · 3" })).toBeVisible();',
+    "  });",
+    "  test(`the landing page renders true to the design (${scheme})`, async ({ page }) => {",
+    '    await page.goto("/");',
+    "  });",
+    '  test("the dive sites index renders", async ({ page }) => {',
+    '    await page.goto("/s/blue-mantis/dive-sites");',
+    "  });",
+    "});",
+  ].join("\n");
+
+  it("splits the spec into its tests by title, each with its own body", () => {
+    const blocks = visualBlocks(source);
+    expect(blocks.map((block) => block.title)).toEqual([
+      "the desk's settled boat renders true to the design",
+      "the landing page renders true to the design (${scheme})",
+      "the dive sites index renders",
+    ]);
+    expect(blocks[0].body).toContain("Checked in · 3");
+    expect(blocks[0].body).not.toContain("landing");
+  });
+
+  it("names the capture that waits for a heading the diff removed", () => {
+    const diff = parseDiff(
+      diffOf("src/i18n/locales/en-US/staff/trip.json", ['  "checkedIn": "Checked in · 3"']),
+    );
+    const picked = selectCaptures({
+      changed: ["src/i18n/locales/en-US/staff/trip.json"],
+      diff,
+      source,
+    });
+    expect([...picked.keys()]).toEqual(["the desk's settled boat renders true to the design"]);
+  });
+
+  it("names the captures of a route whose own directory the diff edits, and no other", () => {
+    const picked = selectCaptures({
+      changed: ["src/app/s/[shopSlug]/dive-sites/page.tsx"],
+      diff: new Map(),
+      source,
+    });
+    expect([...picked.keys()]).toEqual(["the dive sites index renders"]);
+  });
+
+  it("names nothing for a diff no capture reads", () => {
+    expect(selectCaptures({ changed: ["src/lib/clock.ts"], diff: new Map(), source }).size).toBe(0);
+    expect(selectCaptures({ changed: [], diff: new Map(), source: "" }).size).toBe(0);
+  });
+
+  it("builds a -g that runs the titles in light mode and never under a dark describe", () => {
+    expect(captureGrep([])).toBeNull();
+    const grep = new RegExp(
+      captureGrep(["the landing page renders true to the design (${scheme})", "a.b"]) ?? "",
+    );
+    expect(
+      grep.test(
+        "visual.spec.ts light mode public the landing page renders true to the design (light)",
+      ),
+    ).toBe(true);
+    expect(
+      grep.test(
+        "visual.spec.ts dark mode public the landing page renders true to the design (dark)",
+      ),
+    ).toBe(false);
+    expect(grep.test("visual.spec.ts light mode public a.b")).toBe(true);
+    expect(grep.test("visual.spec.ts light mode public axb")).toBe(false);
+  });
+
+  it("counts the recorded time of the light run only", () => {
+    expect(captureMs(["the landing page renders true to the design (${scheme})"])).toBeGreaterThan(
+      0,
+    );
+    expect(captureMs(["a title no record has met"])).toBe(0);
   });
 });

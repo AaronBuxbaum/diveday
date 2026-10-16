@@ -110,31 +110,44 @@ export const incidentReports = pgTable(
     filedAt: timestamp("filed_at", { withTimezone: true }),
     filedByPersonId: uuid("filed_by_person_id").references(() => people.id),
     /**
-     * **A draft its writer, an owner or a manager deleted** (ADR
-     * 20261016-incident-drafts): a double start, a test, a report about
-     * something that turned out to be nothing. Soft (ADR
-     * 20260820-every-delete-is-soft): the row stays, the departure log lists
-     * it as a deleted draft, and the departure's trail says who. A filed
-     * report is never deleted; the database holds that too.
+     * **A mistaken draft, discarded** (soft, like every delete): an owner took
+     * it off the departure's Details tab and the Reports Safety tab. Only a
+     * draft can be discarded, and the database says so below; a filed report
+     * is amend-only. Who and when are on the departure's activity trail, which
+     * carries no report content.
      */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /**
+     * **A legal hold**, set and cleared by an owner: the seven-year retention
+     * prune skips a held report until it is released (ADR
+     * 20261012-incident-reports, amendment 2026-10-15). A held report cannot be
+     * discarded.
+     */
+    legalHoldAt: timestamp("legal_hold_at", { withTimezone: true }),
+    /** Who discarded the draft, named beside it on the departure log. */
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
   },
   (table) => [
-    index("incident_reports_shop_trip_idx").on(table.shopId, table.tripId, table.createdAt),
+    index("incident_reports_shop_trip_idx")
+      .on(table.shopId, table.tripId, table.createdAt)
+      .where(sql`${table.deletedAt} is null`),
     // Today's "not filed" line reads the shop's live drafts, oldest first.
     index("incident_reports_live_drafts_idx")
       .on(table.shopId, table.createdAt)
       .where(sql`${table.status} = 'draft' and ${table.deletedAt} is null`),
     check(
-      "incident_reports_deleted_draft_only",
-      sql`${table.deletedAt} is null or ${table.status} = 'draft'`,
-    ),
-    check(
       "incident_reports_deleted_by_whom",
       sql`(${table.deletedAt} is null) = (${table.deletedByPersonId} is null)`,
     ),
     index("incident_reports_shop_occurred_idx").on(table.shopId, table.occurredAt),
+    check(
+      "incident_reports_only_a_draft_is_discarded",
+      sql`${table.deletedAt} is null or ${table.status} = 'draft'`,
+    ),
+    check(
+      "incident_reports_a_held_report_is_kept",
+      sql`${table.legalHoldAt} is null or ${table.deletedAt} is null`,
+    ),
     check(
       "incident_reports_oxygen_minutes",
       sql`${table.oxygenMinutes} is null or (${table.oxygenGiven} is true and ${table.oxygenMinutes} between 1 and 1440)`,

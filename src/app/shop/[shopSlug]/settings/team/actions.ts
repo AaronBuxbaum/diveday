@@ -26,6 +26,7 @@ import {
 } from "@/db/staff-credentials";
 import { revokeFeedsForFormerStaff } from "@/features/calendar-sync";
 import { toDiverLocale } from "@/i18n/settings";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { inviteLinkPath } from "@/lib/account-tokens";
 import { type Role, STAFF_ROLE_LABELS, STAFF_ROLES } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
@@ -206,7 +207,8 @@ export async function inviteStaffAction(formData: FormData) {
     locale: shop.defaultLocale,
     to: parsed.data.email,
     inviteeName: parsed.data.fullName,
-    inviterName: session.user.name ?? "A teammate",
+    inviterName:
+      session.user.name ?? staffTranslator(shop.defaultLocale)("settings.team.unnamedInviter"),
     roles,
     timezone: shop.timezone,
   });
@@ -243,7 +245,8 @@ export async function resendInviteAction(formData: FormData) {
     locale: shop.defaultLocale,
     to: member.email,
     inviteeName: member.fullName,
-    inviterName: session.user.name ?? "A teammate",
+    inviterName:
+      session.user.name ?? staffTranslator(shop.defaultLocale)("settings.team.unnamedInviter"),
     roles: member.roles,
     timezone: shop.timezone,
   });

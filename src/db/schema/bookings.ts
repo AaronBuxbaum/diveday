@@ -120,6 +120,17 @@ export const diveIntent = pgEnum("dive_intent", [
 ]);
 
 /**
+ * **What a first-timer chose to tell the crew** (issue #2425, delight report
+ * D22), asked on `/ready` beside the `welcome_shared_at` consent and nowhere
+ * else. A fixed choice, never free text: a free-text channel to the crew can
+ * carry medical details onto a roster, and three true things give the crew
+ * something to say hello with. Not a safety signal and not a gate — a diver who
+ * is nervous is told hello to, and any real concern goes through the medical
+ * path.
+ */
+export const welcomeHello = pgEnum("welcome_hello", ["first_ocean_dive", "celebrating", "nervous"]);
+
+/**
  * **The one support a diver easing back asked for** (ADR
  * 20260904-reef-all-the-way-down, D18/#1178). Offered only to a diver who has
  * just said they are getting comfortable again, and only when the departure is
@@ -323,6 +334,17 @@ export const bookings = pgTable(
     /** Why the flag was raised — see {@link identityMatchKind}. Set and cleared with it. */
     identityMatchedBy: identityMatchKind("identity_matched_by"),
     /**
+     * **A reschedule notice this seat was skipped for** (#2445). While
+     * `identity_unconfirmed_at` is set the reschedule notice does not go (the
+     * address may be somebody else's), and nothing re-sends it when staff
+     * confirm. So the skip leaves this behind: the start the seat last knew,
+     * kept as the earliest of any skipped moves, and whether the meeting point
+     * moved too. Confirming the diver sends the one catch-up notice and clears
+     * both; null and false on every seat that missed nothing.
+     */
+    rescheduleMissedFrom: timestamp("reschedule_missed_from", { withTimezone: true }),
+    rescheduleMissedPlace: boolean("reschedule_missed_place").notNull().default(false),
+    /**
      * **Whoever booked this seat said its diver is under 18** (the "Under 18"
      * box on the public party form; H-21 follow-up, decision of 2026-10-13).
      * The guardian co-signature rule reads it beside the date of birth
@@ -404,6 +426,13 @@ export const bookings = pgTable(
      * every shop surface forever, which is the badge D22 exists to refuse.
      */
     welcomeSharedAt: timestamp("welcome_shared_at", { withTimezone: true }),
+    /**
+     * What the diver chose to add to the hello (issue #2425). **Only ever
+     * non-null while `welcome_shared_at` is**: withdrawing the consent clears
+     * it in the same write, and the staff readers return it only for a
+     * consented seat. Cleared on erasure with the stamp it hangs from.
+     */
+    welcomeHello: welcomeHello("welcome_hello"),
     /**
      * **What the instructor told this student to do next** (issues #1196 and
      * #1205), written from the course session's own roster and read back by
@@ -610,6 +639,12 @@ export const tripInvitations = pgTable(
       .references(() => people.id),
     /** The staff outreach attempt; null means the invitation is still pending. */
     invitedAt: timestamp("invited_at", { withTimezone: true }),
+    /**
+     * A cold (`direct`) invitation's last email, sent or still sending; null
+     * when none went. Set by the send's claim and rolled back when the mail
+     * does not go, so only mail that went holds the 24-hour window (#2133).
+     */
+    emailedAt: timestamp("emailed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

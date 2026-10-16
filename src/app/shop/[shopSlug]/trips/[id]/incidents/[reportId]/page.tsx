@@ -5,7 +5,6 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
-import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { listDiveSites } from "@/db/dive-sites";
 import {
   getIncidentReport,
@@ -23,11 +22,13 @@ import { uuidParam } from "@/lib/uuid";
 import {
   addIncidentAddendumAction,
   addIncidentPersonAction,
-  deleteIncidentDraftAction,
+  discardIncidentDraftAction,
   fileIncidentReportAction,
   removeIncidentPersonAction,
   saveIncidentDraftAction,
+  setIncidentLegalHoldAction,
 } from "../actions";
+import { IncidentDiscard, IncidentLegalHold } from "./_components/IncidentDecisions";
 import { IncidentDraftForm } from "./_components/IncidentDraftForm";
 import { IncidentPeople } from "./_components/IncidentPeople";
 import { IncidentAddenda, IncidentFiling, IncidentRecord } from "./_components/IncidentRecord";
@@ -174,23 +175,12 @@ export default async function IncidentReportPage({
         />
       ) : null}
 
-      {/* A draft started twice, or about nothing in the end, can be retired by
-          whoever may edit it (ADR 20261016-incident-drafts). Soft: the log
-          still lists it as a deleted draft. */}
-      {editing ? (
-        <form
-          action={deleteIncidentDraftAction.bind(null, shopSlug, tripId, reportId)}
-          className="print:hidden"
-        >
-          <InlineConfirm
-            triggerLabel={t("incidents.delete.trigger")}
-            message={t("incidents.delete.confirm")}
-            confirmLabel={t("incidents.delete.confirmLabel")}
-            cancelLabel={t("incidents.delete.cancel")}
-            pendingLabel={t("incidents.delete.pending")}
-            triggerClassName={buttonClass({ variant: "danger-ghost" })}
-          />
-        </form>
+      {report.mayDecide && report.status === "draft" ? (
+        <IncidentDiscard
+          action={discardIncidentDraftAction.bind(null, shopSlug, tripId, reportId)}
+          notice={noticeForForm(notice, "discard")}
+          t={t}
+        />
       ) : null}
 
       {report.status === "filed" ? (
@@ -204,6 +194,21 @@ export default async function IncidentReportPage({
               : null
           }
           notice={noticeForForm(notice, "addenda")}
+          t={t}
+        />
+      ) : null}
+
+      {report.mayDecide && report.status === "filed" ? (
+        <IncidentLegalHold
+          held={report.legalHold}
+          action={setIncidentLegalHoldAction.bind(
+            null,
+            shopSlug,
+            tripId,
+            reportId,
+            !report.legalHold,
+          )}
+          notice={noticeForForm(notice, "hold")}
           t={t}
         />
       ) : null}

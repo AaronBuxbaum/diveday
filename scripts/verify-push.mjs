@@ -52,7 +52,15 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { baseDecision, baseRedArgs, readBaseVerdict, repoSlug } from "./base-ci.mjs";
-import { affectedSpecs, durations, estimateMs, stackBase, withinBudget } from "./e2e-affected.mjs";
+import {
+  affectedSpecs,
+  captureGrep,
+  captureMs,
+  durations,
+  estimateMs,
+  stackBase,
+  withinBudget,
+} from "./e2e-affected.mjs";
 import { verifiedFile } from "./guard-push.mjs";
 import { gitReader } from "./stack-map.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
@@ -133,9 +141,10 @@ export const UNIT_SHARDS = 4;
 
 /**
  * The steps for a diff. `changed` is the file list against the base, `specs` the Playwright
- * files to run.
+ * files to run, `captures` the titles of the visual captures to run (light mode only, after
+ * the functional specs).
  */
-export function plan({ changed, specs }) {
+export function plan({ changed, specs, captures = [] }) {
   const docsOnly = docsOnlyDiff(changed);
   const snapshot = changed.some((file) => SNAPSHOT_INPUTS.test(file));
   const steps = [
@@ -173,7 +182,7 @@ export function plan({ changed, specs }) {
       ],
     });
   }
-  if (specs.length > 0) {
+  if (specs.length > 0 || captures.length > 0) {
     steps.push({ name: "e2e build", command: "pnpm", args: ["e2e:build"], build: true });
     // Chunked so a hub-route change, which selects most of the suite, stays inside each step's
     // hour (SUBPROCESS_TIMEOUTS.verifyPushStep) and prints progress between chunks.
@@ -188,6 +197,15 @@ export function plan({ changed, specs }) {
         workers: true,
       });
     });
+    const grep = captureGrep(captures);
+    if (grep) {
+      steps.push({
+        name: "visual captures",
+        command: "pnpm",
+        args: ["e2e:run", "e2e/visual.spec.ts", "-g", grep, "--reporter=line"],
+        workers: true,
+      });
+    }
   }
   return steps;
 }
@@ -214,7 +232,7 @@ export function browserSpecs({ changed, strong, reach, rank, record }) {
  * What this run did not run, said plainly in the output and the stamp, so "verify:push is
  * green" is never read as "every test passed here". CI runs all of it.
  */
-export function notRunHere({ docsOnly, testsOnly, specs, allSpecs }) {
+export function notRunHere({ docsOnly, testsOnly, specs, allSpecs, captures = [] }) {
   const lines = [];
   const visual = (spec) => /(?:^|\/)visual[^/]*\.spec\.ts$/.test(spec);
   // A smoke pick is `file:line`; its file counts as run, though only that test of it ran.
@@ -227,7 +245,11 @@ export function notRunHere({ docsOnly, testsOnly, specs, allSpecs }) {
         : `${skipped.length} Playwright specs the diff neither names nor reaches`,
     );
   }
-  lines.push("visual captures (reg-suit): CI only, and a difference never fails the build");
+  lines.push(
+    captures.length > 0
+      ? `visual captures (reg-suit): the ${captures.length} the diff names ran here in light mode; the rest, dark mode and the comparison are CI's, and a difference never fails the build`
+      : "visual captures (reg-suit): CI only, and a difference never fails the build",
+  );
   return lines;
 }
 
@@ -384,9 +406,11 @@ function main() {
     ? []
     : decision.specs.filter((spec) => existing(spec) && !specs.includes(spec));
   specs.push(...baseSpecs);
+  const captures = docsOnly || testsOnly ? [] : [...selection.captures.keys()].sort();
   const steps = plan({
     changed: selection.changed,
     specs,
+    captures,
   });
 
   console.log(
@@ -398,9 +422,18 @@ function main() {
     console.log(`  ${spec}  — ${[...selection.strong.get(spec)].slice(0, 2).join("; ")}`);
   }
   if (reachRun.length > 0) console.log(`  reached: ${reachRun.join(" ")}`);
+  if (captures.length > 0) {
+    console.log(
+      `  ${captures.length} visual capture(s) the diff names, light mode only ` +
+        `(about ${Math.round(captureMs(captures) / 60000)} CI-minutes):`,
+    );
+    for (const title of captures) {
+      console.log(`    ${title}  — ${[...selection.captures.get(title)].slice(0, 2).join("; ")}`);
+    }
+  }
   if (baseSpecs.length > 0) console.log(`  red on the base: ${baseSpecs.join(" ")}`);
   if (testsOnly) console.log("  only tests changed: no e2e build, no browser specs.");
-  const skipped = notRunHere({ docsOnly, testsOnly, specs, allSpecs: allSpecFiles() });
+  const skipped = notRunHere({ docsOnly, testsOnly, specs, allSpecs: allSpecFiles(), captures });
   if (args.includes("--plan")) {
     for (const step of steps) {
       const env = step.workers ? `E2E_WORKERS=${e2eWorkersHere().workers} ` : "";
@@ -479,6 +512,7 @@ function main() {
     at: new Date().toISOString(),
     steps: ran,
     specs,
+    captures: captures.length > 0 ? captures : undefined,
     e2eWorkers: workerCounts.length > 0 ? workerCounts : undefined,
     browser: browserNote ?? undefined,
     notRunHere: skipped,

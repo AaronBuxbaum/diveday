@@ -120,7 +120,7 @@ describe("CounterRentalWaiverLine", () => {
     expect(
       screen.getByText(/A physician did not clear this person on Jul 18, 2026 \(earlier waiver\)/),
     ).toBeVisible();
-    expect(screen.getByRole("link", { name: "View signed record" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "View the physician’s decision" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers/person-1/waivers/refused-1",
     );

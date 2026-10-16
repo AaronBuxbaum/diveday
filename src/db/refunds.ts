@@ -8,7 +8,7 @@ import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { releasePackageCoverageForBooking } from "./bookings";
 import { lockSeatsInOrder } from "./checkouts";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
-import { enqueueCheckoutIntegrationEvent } from "./integration-events";
+import { checkoutRefundKey, enqueueCheckoutIntegrationEvent } from "./integration-events";
 import { boundLockWaits } from "./lock-bounds";
 import { applyStripeRefundedTotalToOrder } from "./orders";
 import {
@@ -364,7 +364,7 @@ async function enqueueCheckoutRefundEvent(
     shopId: checkout.shopId,
     checkoutId: checkout.id,
     eventType: "order.refunded",
-    idempotencyKey: `checkout:${checkout.id}:refund:${checkout.refundedCents}`,
+    idempotencyKey: checkoutRefundKey(checkout.id, checkout.refundedCents),
     refundCents,
   });
 }
@@ -548,7 +548,13 @@ export type ShopCancellationRefundOutcome =
    */
   | { status: "needs_reconciliation" }
   /** Stripe was asked to refund and failed; staff should retry. */
-  | { status: "failed" };
+  | { status: "failed" }
+  /**
+   * The caller who cancelled may not move money (H-123), so the capture stays
+   * where it is and a refund holder releases it
+   * ({@link refundBookingsForShopCancelledTrip}). The diver is told it is owed.
+   */
+  | { status: "queued" };
 
 /**
  * Refund a booking because the shop cancelled its departure — a weather
@@ -674,6 +680,39 @@ export async function refundBookingOnShopCancellation(
   if (result.status === "not_refundable") return { status: "manual", reason: "not_refundable" };
   if (result.status === "not_configured") return { status: "manual", reason: "not_connected" };
   return { status: "failed" };
+}
+
+/**
+ * What a shop cancellation does with a seat's money when the person who called
+ * it off may not refund (H-123): nothing moves, and a captured seat reads
+ * `queued`. Everything else reads exactly as {@link refundBookingOnShopCancellation}
+ * would answer it, so the diver's mail is right for an unpaid seat, a package
+ * dive and a seat already refunded. The queue itself is the derivable list of
+ * captured seats on cancelled departures ({@link listOwedShopCancellationRefunds}).
+ */
+export async function queueBookingRefundOnShopCancellation(
+  db: AppDb,
+  input: { shopId: string; bookingId: string },
+): Promise<ShopCancellationRefundOutcome> {
+  const payment = await getBookingPayment(db, input.shopId, input.bookingId);
+  if (payment?.status === "refunded") return { status: "already_refunded" };
+  if (isCapturedPaymentStatus(payment?.status)) {
+    return payment?.provider === "dive_package"
+      ? { status: "dive_returned" }
+      : { status: "queued" };
+  }
+  const [packageConsumption] = await db
+    .select({ id: bookingPaymentEvents.id })
+    .from(bookingPaymentEvents)
+    .where(
+      and(
+        eq(bookingPaymentEvents.shopId, input.shopId),
+        eq(bookingPaymentEvents.bookingId, input.bookingId),
+        eq(bookingPaymentEvents.operation, "package_consumed"),
+      ),
+    )
+    .limit(1);
+  return packageConsumption ? { status: "dive_returned" } : { status: "unpaid" };
 }
 
 /**

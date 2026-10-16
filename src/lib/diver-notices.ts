@@ -164,6 +164,14 @@ const NOTICE_KEYS: DiverNoticeMap = {
 
   // Details editor.
   "person-saved": { form: "details", tone: "success", key: "divers.notices.personSaved" },
+  // Issue #2167: "They're 18 or older" ticked beside a date that was kept or
+  // typed. The date answers the age, so the tick is dropped, and said so.
+  "person-saved-adult-answer-unused": {
+    form: "details",
+    tone: "warning",
+    key: "divers.notices.personSavedAdultAnswerUnused",
+    field: "diver-date-of-birth",
+  },
   "not-authorized-details": {
     form: "details",
     tone: "danger",
@@ -175,6 +183,19 @@ const NOTICE_KEYS: DiverNoticeMap = {
     key: "divers.notices.duplicate",
     // The refusal is about one box, so it renders on that box.
     field: "diver-email",
+  },
+  // Issue #2167: a stored date of birth emptied without "They're 18 or older".
+  "date-of-birth-age-unstated": {
+    form: "details",
+    tone: "danger",
+    key: "divers.notices.dateOfBirthAgeUnstated",
+    field: "diver-date-of-birth",
+  },
+  "date-of-birth-course-minimum-age": {
+    form: "details",
+    tone: "danger",
+    key: "divers.notices.dateOfBirthCourseMinimumAge",
+    field: "diver-date-of-birth",
   },
   "removed-read-only": {
     form: "details",

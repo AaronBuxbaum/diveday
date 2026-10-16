@@ -191,7 +191,9 @@
     "missingContactNamed": "No emergency contact.",
     "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open, no last-minute deal sent.",
     "waitlistSeat": "{seats, plural, one {# seat} other {# seats}} open, {waiting} on the wait list.",
-    "rollCallAlerted": "Owners alerted: {time}."
+    "rollCallAlerted": "Owners alerted: {time}.",
+    "rollCallAlertedWithShore": "Owners and shore contact alerted: {time}.",
+    "rollCallShoreAlerted": "Shore contact alerted: {time}."
   },
   "actionLabel": {
     "openIncidentReport": "Open report",

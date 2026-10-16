@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { heldAfterMark, markNeedsWriteOffRight, readManualPaymentMark } from "./payment-marks";
+import {
+  heldAfterMark,
+  markNeedsWriteOffRight,
+  markRetryParams,
+  readManualPaymentMark,
+  readMarkRetry,
+  splitPartyPayment,
+} from "./payment-marks";
 
 describe("readManualPaymentMark", () => {
   it("reads money taken: the amount in minor units and the method", () => {
@@ -149,5 +156,120 @@ describe("heldAfterMark", () => {
       amountCents: 12_000,
       method: "cash",
     });
+  });
+});
+
+describe("markRetryParams", () => {
+  it("carries the parsed amount in cents, the status and the method", () => {
+    expect(markRetryParams("paid", "$45.50", "cash", "usd")).toEqual({
+      markStatus: "paid",
+      markAmount: "4550",
+      markMethod: "cash",
+    });
+  });
+
+  it("drops what it cannot read instead of repeating it", () => {
+    expect(markRetryParams("deposit_paid", "lots", "barter", "usd")).toEqual({
+      markStatus: "deposit_paid",
+      markAmount: undefined,
+      markMethod: undefined,
+    });
+    expect(markRetryParams("paid", "-5", null, "usd").markAmount).toBeUndefined();
+    expect(markRetryParams("paid", null, "card", "usd").markAmount).toBeUndefined();
+  });
+
+  it("is empty for a status that carries no money", () => {
+    expect(markRetryParams("waived", "10", "cash", "usd")).toEqual({});
+    expect(markRetryParams("unpaid", null, null, "usd")).toEqual({});
+  });
+});
+
+describe("readMarkRetry", () => {
+  it("reads a bounced mark back", () => {
+    expect(readMarkRetry({ status: "paid", amount: "4550", method: "card" })).toEqual({
+      status: "paid",
+      amountCents: 4550,
+      method: "card",
+    });
+  });
+
+  it("is no retry without a money status", () => {
+    expect(readMarkRetry({})).toBeNull();
+    expect(readMarkRetry({ status: "refunded", amount: "100" })).toBeNull();
+  });
+
+  it("falls back to empty on hand-edited values rather than failing", () => {
+    expect(readMarkRetry({ status: "deposit_paid", amount: "12.5", method: "<b>" })).toEqual({
+      status: "deposit_paid",
+      amountCents: null,
+      method: null,
+    });
+    for (const amount of ["0", "-3", "1e9", "9999999999", "abc", ""]) {
+      expect(readMarkRetry({ status: "paid", amount })?.amountCents).toBeNull();
+    }
+  });
+});
+
+describe("splitPartyPayment", () => {
+  const seat = (bookingId: string, owedCents: number | null, handMarkRefused = false) => ({
+    bookingId,
+    owedCents,
+    handMarkRefused,
+  });
+  const party = [seat("lead", 12_000), seat("a", 12_000), seat("b", 8_000)];
+
+  it("gives each seat its balance in order when the amount is exactly what is owed", () => {
+    expect(splitPartyPayment(32_000, party)).toEqual({
+      kind: "split",
+      unspentCents: 0,
+      shares: [
+        { bookingId: "lead", amountCents: 12_000, settles: true },
+        { bookingId: "a", amountCents: 12_000, settles: true },
+        { bookingId: "b", amountCents: 8_000, settles: true },
+      ],
+    });
+  });
+
+  it("runs out on one seat as a deposit and leaves the later seats alone", () => {
+    expect(splitPartyPayment(15_000, party)).toEqual({
+      kind: "split",
+      unspentCents: 17_000,
+      shares: [
+        { bookingId: "lead", amountCents: 12_000, settles: true },
+        { bookingId: "a", amountCents: 3_000, settles: false },
+      ],
+    });
+  });
+
+  it("never gives a seat more than it owes, and refuses a payment above the party's total", () => {
+    expect(splitPartyPayment(32_001, party)).toEqual({ kind: "over", owedCents: 32_000 });
+    const split = splitPartyPayment(32_000, party);
+    if (split.kind !== "split") throw new Error("expected a split");
+    for (const share of split.shares) {
+      expect(share.amountCents).toBeLessThanOrEqual(
+        party.find((p) => p.bookingId === share.bookingId)?.owedCents ?? 0,
+      );
+    }
+  });
+
+  it("skips seats that owe nothing", () => {
+    expect(splitPartyPayment(5_000, [seat("lead", null), seat("a", 0), seat("b", 8_000)])).toEqual({
+      kind: "split",
+      unspentCents: 3_000,
+      shares: [{ bookingId: "b", amountCents: 5_000, settles: false }],
+    });
+    expect(splitPartyPayment(5_000, [seat("lead", null)])).toEqual({ kind: "nothing_owed" });
+    expect(splitPartyPayment(5_000, [])).toEqual({ kind: "nothing_owed" });
+  });
+
+  it("refuses the whole party when a seat that owes was paid through DiveDay", () => {
+    expect(splitPartyPayment(5_000, [seat("lead", 12_000), seat("a", 4_000, true)])).toEqual({
+      kind: "refused",
+      bookingId: "a",
+    });
+    // A provider-backed seat that owes nothing is not in the way.
+    expect(splitPartyPayment(5_000, [seat("lead", 12_000), seat("a", null, true)]).kind).toBe(
+      "split",
+    );
   });
 });

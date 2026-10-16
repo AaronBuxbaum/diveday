@@ -134,10 +134,10 @@ describe("a seat change on the departure's trail", () => {
 });
 
 describe("the backfill of roster lines written before they named their subject", () => {
-  /** Migration 20261016150423_roster-change-subjects, statement by statement. */
+  /** Migration 20261016180823_roster-change-subjects, statement by statement. */
   async function backfill() {
     const text = readFileSync(
-      join(process.cwd(), "drizzle/20261016150423_roster-change-subjects/migration.sql"),
+      join(process.cwd(), "drizzle/20261016180823_roster-change-subjects/migration.sql"),
       "utf8",
     );
     for (const statement of text.split("--> statement-breakpoint")) {

@@ -67,7 +67,7 @@ cancelled, and 90 failed jobs inside them. Classified from their annotations and
 | 23 unit | tests that read source from disk (`form.test.tsx`, `button.test.ts`, `EntryShell.test.tsx`, the erasure and rehearsal coverage scans), and the export snapshot after a seed change | yes, but `vitest --changed` cannot select a test that imports nothing it checks |
 | 9 safeguards | the `guards` Vitest project (`eyebrow-way-up`, `focus-ring`), and four pull request bodies | yes; no local step ran either |
 | 2 typecheck | fixtures a merge from the layer below broke | yes; the layer's checks had run before the merge |
-| 5 visual, 2 reg-suit | one capture that timed out on a moved heading | by a filtered capture run |
+| 5 visual, 2 reg-suit | one capture that timed out on a moved heading | yes: the gate runs the captures a diff names, in light mode (`selectCaptures`, `scripts/e2e-affected.mjs`) |
 | 2 build | Google Fonts unreachable at build time | no: infrastructure |
 
 So the problem was never flakiness. A stacked change that breaks a spec breaks it on every layer
@@ -108,7 +108,7 @@ common git dir too, so a push from any worktree finds it):
    19 with the name walk.
 
 A green run ends with **"Not run here"**, also recorded as `notRunHere` in the stamp: the
-Playwright specs the diff neither names nor reaches, and the visual captures. CI runs those first, so a report says "verify:push green",
+Playwright specs the diff neither names nor reaches, and the visual captures it does not name (the ones it names run, in light mode, after the specs; dark mode and the reg-suit comparison stay CI's). CI runs those first, so a report says "verify:push green",
 never "all tests pass locally".
 
 Replayed against the commits that broke specs on 2026-10-11 and 2026-10-12, the selection ran
