@@ -6,6 +6,7 @@ import { BOAT_PAPERS, MUST_CARRY_KIT_KINDS } from "@/lib/boat-safety";
 import type { BoatWorkCode } from "@/lib/boat-work";
 import type { CertificationCardRowState } from "@/lib/certification-cards";
 import type { DepthUnit } from "@/lib/depth-units";
+import { DESK_PAYMENTS } from "@/lib/desk-payment";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
 import type { RentalItemKind } from "@/lib/dive-prep";
 import { DIVE_SITE_DIFFICULTIES } from "@/lib/dive-site-difficulty";
@@ -52,6 +53,7 @@ import {
 } from "./closeout-labels";
 import { compassText } from "./compass-labels";
 import { customerGearDueText, customerGearPieceText } from "./customer-gear-labels";
+import { DESK_PAYMENT_KEYS } from "./desk-payment-labels";
 import {
   DIVER_DIVE_INTENT_KEYS,
   DIVER_RE_ENTRY_KEYS,
@@ -665,6 +667,13 @@ const CASES: readonly LabelMapCase[] = [
     map: "INCIDENT_SEVERITY_KEYS",
     rows: codeRows(INCIDENT_SEVERITIES, (locale, severity) =>
       staffTranslator(locale)(INCIDENT_SEVERITY_KEYS[severity]),
+    ),
+  },
+  {
+    module: "desk-payment-labels.ts",
+    map: "DESK_PAYMENT_KEYS",
+    rows: codeRows(DESK_PAYMENTS, (locale, code) =>
+      diverTranslator(locale)(DESK_PAYMENT_KEYS[code]),
     ),
   },
   {
