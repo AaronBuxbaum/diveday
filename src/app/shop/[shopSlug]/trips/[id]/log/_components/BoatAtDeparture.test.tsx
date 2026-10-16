@@ -14,6 +14,7 @@ afterEach(cleanup);
 
 const SNAPSHOT: IncidentBoatSafety = {
   boatName: "Reef Runner",
+  boatChanged: false,
   judgedOn: "2026-08-04",
   capturedAt: "2026-08-04T12:40:00.000Z",
   papers: {
@@ -29,16 +30,37 @@ const SNAPSHOT: IncidentBoatSafety = {
 
 for (const locale of ["en-US", "es-ES"] as const) {
   const t = staffTranslator(locale);
-  const draw = (boatSafety: IncidentBoatSafety | null) =>
+  const draw = (
+    boatSafety: IncidentBoatSafety | null,
+    absence: "no_boat" | "not_kept" | null = null,
+  ) =>
     render(
-      <BoatAtDeparture boatSafety={boatSafety} locale={locale} dateTime={() => "WHEN"} t={t} />,
+      <BoatAtDeparture
+        doc={{ boatSafety, boatSafetyAbsence: absence }}
+        locale={locale}
+        dateTime={() => "WHEN"}
+        t={t}
+      />,
     );
 
   describe(`BoatAtDeparture (${locale})`, () => {
-    it("states that nothing was kept when there is no snapshot", () => {
-      draw(null);
+    it("says nothing was kept, without guessing why", () => {
+      draw(null, "not_kept");
       expect(screen.getByRole("heading", { name: t("incidentExport.boatHeading") })).toBeVisible();
-      expect(screen.getByText(t("incidentExport.boatNotCaptured"))).toBeInTheDocument();
+      expect(screen.getByText(t("incidentExport.boatNotKept"))).toBeInTheDocument();
+    });
+
+    it("says the departure names no boat", () => {
+      draw(null, "no_boat");
+      expect(screen.getByText(t("incidentExport.boatNoBoat"))).toBeInTheDocument();
+      expect(screen.queryByText(t("incidentExport.boatNotKept"))).toBeNull();
+    });
+
+    it("says when the departure has since moved to another boat", () => {
+      draw({ ...SNAPSHOT, boatChanged: true });
+      expect(screen.getByText(t("incidentExport.boatChanged"))).toBeInTheDocument();
+      draw(SNAPSHOT);
+      expect(screen.getAllByText(t("incidentExport.boatChanged"))).toHaveLength(1);
     });
 
     it("sets the kept papers, says which were not recorded, and words each notice", () => {
@@ -52,6 +74,8 @@ for (const locale of ["en-US", "es-ES"] as const) {
       // Total persons, registration and insurance were never recorded.
       expect(screen.getAllByText(t("incidentExport.boatNotRecorded"))).toHaveLength(3);
       expect(screen.getAllByRole("listitem")).toHaveLength(1);
+      // The notices are what the register showed, not what was aboard.
+      expect(screen.getByText(t("incidentExport.boatNoticesLabel"))).toBeInTheDocument();
     });
 
     it("says the boat carried no notice when it carried none", () => {

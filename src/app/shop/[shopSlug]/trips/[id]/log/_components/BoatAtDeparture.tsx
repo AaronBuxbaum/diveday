@@ -3,7 +3,7 @@ import { boatSafetyNoticeText } from "@/i18n/boat-safety-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { BoatPaperRecord } from "@/lib/boat-safety";
 import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
-import type { IncidentBoatSafety } from "@/lib/incident-export";
+import type { IncidentExportDocument } from "@/lib/incident-export";
 
 /** Each kept paper fact, in the order Settings asks for them, under the fleet row's own label. */
 const PAPER_ROWS: readonly {
@@ -26,12 +26,13 @@ const PAPER_ROWS: readonly {
  * paper the shop never recorded says so.
  */
 export function BoatAtDeparture({
-  boatSafety,
+  doc: { boatSafety, boatSafetyAbsence: absence },
   locale,
   dateTime,
   t,
 }: {
-  boatSafety: IncidentBoatSafety | null;
+  /** The snapshot, and why nothing was kept when it is null (worded without guessing). */
+  doc: Pick<IncidentExportDocument, "boatSafety" | "boatSafetyAbsence">;
   locale: string;
   /** The page's own instant formatter, in the shop's zone. */
   dateTime: (isoString: string) => string;
@@ -50,6 +51,11 @@ export function BoatAtDeparture({
               date: dateTime(boatSafety.capturedAt),
             })}
           </p>
+          {boatSafety.boatChanged ? (
+            <p className="mt-1 max-w-prose text-sm font-medium">
+              {t("incidentExport.boatChanged")}
+            </p>
+          ) : null}
           <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
             {PAPER_ROWS.map((row) => {
               const value = boatSafety.papers[row.key];
@@ -70,17 +76,22 @@ export function BoatAtDeparture({
           {boatSafety.notices.length === 0 ? (
             <p className="mt-3 text-sm text-muted">{t("incidentExport.boatNoNotices")}</p>
           ) : (
-            <ul className="mt-3 list-disc space-y-1 ps-5 text-sm">
-              {boatSafety.notices.map((notice, index) => (
-                // Codes kept in the snapshot's order; two can word alike.
-                // biome-ignore lint/suspicious/noArrayIndexKey: a fixed, never-reordered record
-                <li key={index}>{boatSafetyNoticeText(t, locale, notice)}</li>
-              ))}
-            </ul>
+            <>
+              <p className="mt-3 text-sm text-muted">{t("incidentExport.boatNoticesLabel")}</p>
+              <ul className="mt-1 list-disc space-y-1 ps-5 text-sm">
+                {boatSafety.notices.map((notice, index) => (
+                  // Codes kept in the snapshot's order; two can word alike.
+                  // biome-ignore lint/suspicious/noArrayIndexKey: a fixed, never-reordered record
+                  <li key={index}>{boatSafetyNoticeText(t, locale, notice)}</li>
+                ))}
+              </ul>
+            </>
           )}
         </>
       ) : (
-        <p className="mt-1 max-w-prose text-sm text-muted">{t("incidentExport.boatNotCaptured")}</p>
+        <p className="mt-1 max-w-prose text-sm text-muted">
+          {t(absence === "no_boat" ? "incidentExport.boatNoBoat" : "incidentExport.boatNotKept")}
+        </p>
       )}
     </section>
   );

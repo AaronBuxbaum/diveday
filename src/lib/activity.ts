@@ -333,6 +333,13 @@ type ActivityParamShapes = {
    * has nothing here to reach.
    */
   shore_alert_contact_set: { actor: string };
+  /**
+   * **A boat's certificate limit or paper date changed** (records review 2):
+   * the staffer, the boat's name, which field (`BOAT_PAPER_FIELDS`) and both
+   * values as written ("none" when not recorded). One line per field.
+   * Shop-level; no diver in it.
+   */
+  boat_papers_changed: { actor: string; boat: string; field: string; from: string; to: string };
   shore_alert_contact_changed: { actor: string };
   shore_alert_contact_cleared: { actor: string };
   /**
@@ -466,6 +473,7 @@ export const ACTIVITY_CODES = [
   "review_reply_edited",
   "review_reply_deleted",
   "shore_alert_contact_set",
+  "boat_papers_changed",
   "shore_alert_contact_changed",
   "shore_alert_contact_cleared",
   "shore_alert_contact_stopped",

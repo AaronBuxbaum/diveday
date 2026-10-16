@@ -172,4 +172,66 @@ describe("captureDepartureBoatSafety", () => {
       boatName: "Snapshot Hull",
     });
   });
+
+  // Review D1 / records 1: the boat is judged at the tap, not at the sync.
+  it("keeps an offline departure count synced long after sailing, as of the tap", async () => {
+    const { db, shop } = ctx;
+    const boat = await paperedBoat(db, shop.id);
+    const now = nowMs();
+    const startsAt = new Date(now - 4 * 3_600_000);
+    const trip = await departure(db, shop.id, boat.id, startsAt);
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("demo staff missing");
+    await db.insert(tripAssignments).values({ tripId: trip.id, personId: staff.person.id });
+    const tappedAt = new Date(startsAt.getTime() - 10 * 60_000);
+
+    const synced = await recordCrewRollCall(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: staff.person.id,
+      recordedByPersonId: staff.person.id,
+      status: "boarded",
+      source: "offline",
+      clientEventId: "dddddddd-2300-4300-8300-dddddddddddd",
+      offlineSnapshotSavedAt: new Date(startsAt.getTime() - 2 * 3_600_000),
+      occurredAt: tappedAt,
+    });
+    expect(synced.ok).toBe(true);
+    expect(await departureBoatSafetySnapshot(db, shop.id, trip.id)).toMatchObject({
+      boatName: "Snapshot Hull",
+      capturedAt: tappedAt,
+    });
+  });
+
+  it("never lets an older tap overwrite a newer one", async () => {
+    const { db, shop } = ctx;
+    const boat = await paperedBoat(db, shop.id);
+    const trip = await departure(db, shop.id, boat.id);
+    const later = new Date(BEFORE.getTime() + 30 * 60_000);
+    expect(await captureDepartureBoatSafety(db, shop.id, trip.id, later)).toBe("captured");
+    await db.update(boats).set({ name: "Renamed Hull" }).where(eq(boats.id, boat.id));
+    // An offline tap from before the live one arrives second.
+    expect(await captureDepartureBoatSafety(db, shop.id, trip.id, BEFORE)).toBe("kept_newer");
+    expect(await departureBoatSafetySnapshot(db, shop.id, trip.id)).toMatchObject({
+      boatName: "Snapshot Hull",
+      capturedAt: later,
+    });
+  });
+
+  it("keeps nothing for a deleted hull", async () => {
+    const { db, shop } = ctx;
+    const boat = await paperedBoat(db, shop.id);
+    const trip = await departure(db, shop.id, boat.id);
+    await db.update(boats).set({ deletedAt: BEFORE }).where(eq(boats.id, boat.id));
+    expect(await captureDepartureBoatSafety(db, shop.id, trip.id, BEFORE)).toBe("no_boat");
+    expect(await departureBoatSafetySnapshot(db, shop.id, trip.id)).toBeNull();
+  });
+
+  it("names the hull it kept, so a swapped boat can be told apart", async () => {
+    const { db, shop } = ctx;
+    const boat = await paperedBoat(db, shop.id);
+    const trip = await departure(db, shop.id, boat.id);
+    await captureDepartureBoatSafety(db, shop.id, trip.id, BEFORE);
+    expect((await departureBoatSafetySnapshot(db, shop.id, trip.id))?.boatId).toBe(boat.id);
+  });
 });

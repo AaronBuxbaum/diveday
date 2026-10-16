@@ -292,11 +292,11 @@ describe("updateBoatWithinCertificate", () => {
     });
   });
 
-  it("never caps the seats on sale at total persons (the booking count is unchanged)", async () => {
+  // Dive-domain review D2: more seats than persons is a typo at save. The
+  // sale is untouched (Aaron, 2026-10-13); only the boat row is refused.
+  it("refuses saving more seats than total persons, and keeps the boat as it was", async () => {
     const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Spanish Hull", 6);
-    // A certificate that prints one number, crew included: 20 seats on sale
-    // still saves. The manifest says when the people and crew pass it.
     expect(
       await updateBoatWithinCertificate(db, {
         shopId: shop.id,
@@ -308,7 +308,15 @@ describe("updateBoatWithinCertificate", () => {
         timeZone: "America/New_York",
         now: NOW,
       }),
-    ).toMatchObject({ ok: true, boat: { capacity: 20, certifiedTotalPersons: 12 } });
+    ).toEqual({
+      ok: false,
+      reason: "certificate",
+      refusal: { code: "seats_above_total_persons", capacity: 20, limit: 12 },
+    });
+    expect(await getBoatById(db, shop.id, boat.id)).toMatchObject({
+      capacity: 6,
+      certifiedTotalPersons: null,
+    });
   });
 
   // One refused statement per test: it aborts the test's transaction.

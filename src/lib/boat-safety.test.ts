@@ -587,6 +587,37 @@ describe("boatSafetyNoticeTone", () => {
     expect(boatSafetyNoticeIsUrgent({ ...paper, expired: false })).toBe(false);
     expect(boatSafetyNoticeIsUrgent({ code: "kit_missing", kind: "aed" })).toBe(true);
   });
+
+  // Dive-domain review D3, records 6: a lapsed certificate or inspection means
+  // the boat is not certified to carry anyone. Danger, informing, never a gate.
+  it("is danger for a lapsed certificate or inspection, and only once lapsed", () => {
+    for (const which of ["coi", "inspection"] as const) {
+      const paper = { code: "paper", paper: which, dueOn: TODAY, days: 3 } as const;
+      expect(boatSafetyNoticeTone({ ...paper, expired: true })).toBe("danger");
+      expect(boatSafetyNoticeTone({ ...paper, expired: false })).toBe("neutral");
+    }
+    expect(
+      boatSafetyNoticeTone({
+        code: "paper",
+        paper: "registration",
+        dueOn: TODAY,
+        days: 3,
+        expired: true,
+      }),
+    ).toBe("warning");
+  });
+
+  it("raises a lapsed certificate or inspection on Today's departure row, for every role", () => {
+    const lapsed = (which: "coi" | "inspection" | "insurance") =>
+      ({ code: "paper", paper: which, dueOn: TODAY, days: 3, expired: true }) as const;
+    expect(lifeSafetyNotices([lapsed("coi"), lapsed("inspection"), lapsed("insurance")])).toEqual([
+      lapsed("coi"),
+      lapsed("inspection"),
+    ]);
+    expect(
+      lifeSafetyNotices([{ code: "paper", paper: "coi", dueOn: TODAY, days: 3, expired: false }]),
+    ).toEqual([]);
+  });
 });
 
 /**
@@ -781,11 +812,14 @@ describe("boatSeatsRefusal and total persons (#2302)", () => {
     ).toBeNull();
   });
 
-  it("never caps the seats on sale at total persons: the booking count is unchanged", () => {
-    // Aaron, 2026-10-13: the total-persons check is the manifest's, and the
-    // seat counting of the booking transaction does not change.
+  // Dive-domain review D2: more seats than persons is a typo at save, like
+  // passengers above persons. The sale itself is untouched (Aaron, 2026-10-13).
+  it("refuses saving more seats than persons, and still caps no sale at it", () => {
     expect(
       boatSeatsRefusal({ capacity: 20, certifiedPassengers: null, certifiedTotalPersons: 12 }),
+    ).toEqual({ code: "seats_above_total_persons", capacity: 20, limit: 12 });
+    expect(
+      boatSeatsRefusal({ capacity: 12, certifiedPassengers: null, certifiedTotalPersons: 12 }),
     ).toBeNull();
     expect(sellableSeats(20, null)).toBe(20);
   });

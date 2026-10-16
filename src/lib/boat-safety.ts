@@ -153,6 +153,35 @@ export type BoatPaperRecord = BoatPaperDates & {
   certifiedTotalPersons: number | null;
 };
 
+/** The six certificate and paper fields a boat save can change, in the fleet row's order. */
+export const BOAT_PAPER_FIELDS = [
+  "certifiedPassengers",
+  "certifiedTotalPersons",
+  "coiExpiresOn",
+  "inspectionDueOn",
+  "registrationExpiresOn",
+  "insuranceExpiresOn",
+] as const satisfies readonly (keyof BoatPaperRecord)[];
+
+export type BoatPaperField = (typeof BOAT_PAPER_FIELDS)[number];
+
+/**
+ * **What a boat save changed on the certificate and papers** (records review
+ * 2), one entry per field whose value moved, old and new as written ("none"
+ * for a value not recorded). `before` null is a new boat.
+ */
+export function boatPaperChanges(
+  before: BoatPaperRecord | null,
+  after: BoatPaperRecord,
+): { field: BoatPaperField; from: string; to: string }[] {
+  const written = (value: number | string | null) => (value === null ? "none" : String(value));
+  return BOAT_PAPER_FIELDS.flatMap((field) => {
+    const from = before ? before[field] : null;
+    const to = after[field];
+    return from === to ? [] : [{ field, from: written(from), to: written(to) }];
+  });
+}
+
 /**
  * The notices a departure-checkpoint snapshot keeps (#2300): papers and kit,
  * never the head-count lines, which the roll call itself records.
@@ -362,6 +391,20 @@ export function passengersAboveCertificateAboard(
 }
 
 /**
+ * **Everyone counted aboard against the certificate's total persons** (#2302,
+ * dive-domain review D2): passengers and crew the roll call recorded aboard at
+ * this checkpoint. Null with no total recorded. Informs only: nothing on the
+ * boarding path refuses on it, and no seat on sale is capped by it.
+ */
+export function personsAboveTotalPersonsAboard(
+  aboard: number,
+  certifiedTotalPersons: number | null | undefined,
+): { aboard: number; limit: number } | null {
+  if (certifiedTotalPersons == null) return null;
+  return aboard > certifiedTotalPersons ? { aboard, limit: certifiedTotalPersons } : null;
+}
+
+/**
  * The crew half of the total-persons count (#2302), off the departure
  * checkpoint's crew list: everyone named for the boat, and those the crew roll
  * call has recorded aboard. A crew member recorded ashore still counts as
@@ -401,6 +444,11 @@ export type BoatSeatsRefusal =
    * some of the persons aboard, so this is a typo in one of the two boxes.
    */
   | { code: "passengers_above_total_persons"; passengers: number; limit: number }
+  /**
+   * More seats than persons on the certificate (dive-domain review D2): a typo
+   * at save, refused like the one above. Caps no sale.
+   */
+  | { code: "seats_above_total_persons"; capacity: number; limit: number }
   | { code: "seats_above_certificate"; capacity: number; limit: number }
   | {
       code: "departures_above_certificate";
@@ -428,8 +476,11 @@ export function boatSeatsRefusal(input: {
   upcomingDepartures?: readonly { capacity: number; on: string }[];
 }): BoatSeatsRefusal | null {
   const limit = input.certifiedPassengers;
-  if (limit === null) return null;
   const totalPersons = input.certifiedTotalPersons ?? null;
+  if (totalPersons !== null && input.capacity > totalPersons) {
+    return { code: "seats_above_total_persons", capacity: input.capacity, limit: totalPersons };
+  }
+  if (limit === null) return null;
   if (totalPersons !== null && limit > totalPersons) {
     return { code: "passengers_above_total_persons", passengers: limit, limit: totalPersons };
   }
@@ -564,15 +615,30 @@ export function boatSafetyNotices(input: {
 }
 
 /**
+ * The papers whose lapse means the boat is not certified to carry anyone: the
+ * certificate itself and its inspection (dive-domain review D3). Danger once
+ * lapsed, and on Today for every role. Informs; nothing refuses on it.
+ */
+function isLapsedCertification(notice: BoatSafetyNotice): boolean {
+  return (
+    notice.code === "paper" &&
+    notice.expired &&
+    (notice.paper === "coi" || notice.paper === "inspection")
+  );
+}
+
+/**
  * The notices Today raises **on a departure sailing today** (danger, every
- * role): a must-carry kind missing, and any clock on oxygen, the AED or flares
- * aboard that has run out or will inside the kit horizon.
+ * role): a must-carry kind missing, any clock on oxygen, the AED or flares
+ * aboard that has run out or will inside the kit horizon, and a lapsed
+ * certificate or inspection.
  */
 export function lifeSafetyNotices(notices: readonly BoatSafetyNotice[]): BoatSafetyNotice[] {
   return notices.filter(
     (notice) =>
       notice.code === "kit_missing" ||
-      (notice.code === "kit_clock" && isLifeSafetyKitKind(notice.kind)),
+      (notice.code === "kit_clock" && isLifeSafetyKitKind(notice.kind)) ||
+      isLapsedCertification(notice),
   );
 }
 
@@ -615,7 +681,8 @@ export function boatSafetyNoticeTone(notice: BoatSafetyNotice): BoatSafetyTone {
   if (
     notice.code === "over_certificate" ||
     notice.code === "over_total_persons" ||
-    notice.code === "kit_missing"
+    notice.code === "kit_missing" ||
+    isLapsedCertification(notice)
   ) {
     return "danger";
   }

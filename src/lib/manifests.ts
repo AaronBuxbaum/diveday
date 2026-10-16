@@ -923,6 +923,12 @@ export type TripManifest = {
      */
     certifiedPassengers?: number | null;
     /**
+     * The certificate's total persons, crew included
+     * (`boats.certified_total_persons`, #2302); null for no boat or none
+     * recorded. The head count turns danger past it. Optional like `capacity`.
+     */
+    certifiedTotalPersons?: number | null;
+    /**
      * A rehearsal (ADR 20261012-rehearsal-departures): the paper manifest says
      * so beside souls on board. Optional for the same reason as `capacity`.
      */

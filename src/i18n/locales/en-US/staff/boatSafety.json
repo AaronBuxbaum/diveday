@@ -5,7 +5,7 @@
     "aboard": "{passengers, plural, one {# passenger} other {# passengers}} aboard; the boat’s certificate allows {limit}."
   },
   "overTotalPersons": {
-    "booked": "{persons, plural, one {# person} other {# people}} booked, crew included; the certificate allows {limit} in all.",
+    "booked": "{persons, plural, one {# person} other {# people}} booked or named as crew; the certificate allows {limit} in all.",
     "aboard": "{persons, plural, one {# person} other {# people}} aboard, crew included; the certificate allows {limit} in all."
   },
   "missing": {

@@ -393,6 +393,15 @@ function certificateRefusal(page: string, boat: string, refusal: BoatSeatsRefusa
   if (!refusal) return;
   // The fragment scrolls to the row the error is on (`boatRowId`).
   const row = `${page}#${boatRowId(boat)}`;
+  if (refusal.code === "seats_above_total_persons") {
+    redirect(
+      noticeUrl(row, "boat-seats-above-persons", {
+        boat,
+        capacity: refusal.capacity,
+        limit: refusal.limit,
+      }),
+    );
+  }
   if (refusal.code === "passengers_above_total_persons") {
     redirect(
       noticeUrl(row, "boat-passengers-above-persons", {
@@ -439,7 +448,15 @@ export async function createBoatAction(formData: FormData) {
   certificateRefusal(page, "new", boatSeatsRefusal({ capacity, ...papers }));
 
   const db = await getDb();
-  await createBoat(db, session.user.shopId, name, capacity, description, papers);
+  await createBoat(
+    db,
+    session.user.shopId,
+    name,
+    capacity,
+    description,
+    papers,
+    session.user.personId,
+  );
 
   revalidateAndRedirect(page, noticeUrl(page, "boat-created"));
 }
@@ -476,6 +493,7 @@ export async function updateBoatAction(formData: FormData) {
     description,
     papers,
     timeZone: (await getShopById(db, session.user.shopId))?.timezone ?? "UTC",
+    actorPersonId: session.user.personId,
   });
   if (!saved.ok && saved.reason === "certificate") certificateRefusal(page, boatId, saved.refusal);
 

@@ -10,7 +10,7 @@
     "errorRefusal": "That didn’t save. Check your connection and tap again.",
     "openRollCall": "Open roll call"
   },
-  "cancelledRollCallClosed": "This departure is canceled. Nobody was counted aboard, so roll call is closed.",
+  "cancelledRollCallClosed": "This departure is canceled and nobody has been counted aboard, so roll call is closed. If anyone is aboard, reinstate the trip to count them.",
   "cancelledRollCallStillCounting": "This departure is canceled. Roll call stays open because the count had started.",
   "skipToRollCall": "Skip to roll call",
   "stillToBoardHeading": "Still to board ({count})",
@@ -39,6 +39,7 @@
   "headCountBlocked": "{count} blocked",
   "headCountBlockedAboard": "{count, plural, one {# blocked person aboard} other {# blocked people aboard}}",
   "headCountOverCertificate": "{limit, plural, one {Certificate allows # passenger} other {Certificate allows # passengers}}",
+  "headCountOverTotalPersons": "{limit, plural, one {Certificate allows # person, crew included} other {Certificate allows # persons, crew included}}",
   "progressAriaLabel": "Roll-call progress",
   "ofTotalAboard": "of {total, plural, one {# diver} other {# divers}} aboard",
   "allAccountedFor": "Everyone’s accounted for, divers and crew. Ready for the next check.",

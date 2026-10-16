@@ -14,7 +14,7 @@ import {
   rosterCutoff,
 } from "@/lib/incident-export";
 import { canPersonExportIncidentRecord } from "./authz";
-import { departureBoatSafetySnapshot } from "./boat-safety";
+import { departureBoatId, departureBoatSafetySnapshot } from "./boat-safety";
 import { listTripBuddyTeamEvents, listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb } from "./client";
 import { listExecutedDives } from "./executed-dives";
@@ -223,6 +223,7 @@ export async function getIncidentExport(
     rosterRows,
     reportRows,
     boatSafety,
+    boatId,
   ] = await Promise.all([
     listTripBuddyTeams(db, shopId, tripId),
     listTripBuddyTeamEvents(db, shopId, tripId),
@@ -257,6 +258,7 @@ export async function getIncidentExport(
     listDepartureLogIncidentReports(db, shopId, tripId, generatedByPersonId),
     // The boat as it stood at the departure checkpoint (#2300).
     departureBoatSafetySnapshot(db, shopId, tripId),
+    departureBoatId(db, shopId, tripId),
   ]);
   // Everyone the export gate above admits may read this list; this is a second
   // lock, so a gate that drifted wider fails closed rather than printing "no
@@ -361,6 +363,7 @@ export async function getIncidentExport(
       };
     }),
     boatSafety,
+    departureBoatId: boatId,
     generatedAt,
     generatedByName,
   });

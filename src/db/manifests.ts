@@ -1178,6 +1178,7 @@ export async function getTripManifests(
     // The certificate itself, so the head count can say when the people the
     // crew counted aboard pass it (batch 6, item 2).
     certifiedPassengers: trip.certifiedPassengers,
+    certifiedTotalPersons: trip.certifiedTotalPersons,
     // Printed beside souls on board, so a practice sheet is never read as a boat.
     isRehearsal: trip.isRehearsal,
     // The dock-rider form stays shut on a cancelled departure (#2394).
@@ -1651,10 +1652,18 @@ async function pauseRecapOnMissingAfterDive(
  * who is aboard and who came back. The blow-out refuses such a trip outright
  * (`setUpTripBlowout`); this is the other side of the same rule. The id is
  * bound as a value so the subqueries cannot match another trip's rows.
+ *
+ * An offline tap made before the cancel (`offlineOccurredAt` earlier than
+ * `cancelled_at`) is taken too: the crew counted with no signal while the
+ * departure was still on, and its sync must not lose that count (records
+ * review 8). A live write, or an offline one made after the cancel, is not.
  */
-function scheduledOrCountingHeads(tripId: string) {
+function scheduledOrCountingHeads(tripId: string, offlineOccurredAt: Date | null = null) {
   return or(
     eq(trips.status, "scheduled"),
+    offlineOccurredAt
+      ? sql`${trips.cancelledAt} > ${offlineOccurredAt.toISOString()}::timestamptz`
+      : undefined,
     sql`exists (select 1 from ${rollCallEvents} where ${rollCallEvents.tripId} = ${tripId})`,
     sql`exists (select 1 from ${rollCallCrewEvents} where ${rollCallCrewEvents.tripId} = ${tripId})`,
   );
@@ -1710,10 +1719,11 @@ export async function recordRollCall(
     occurredAt?: Date;
   },
 ): Promise<RecordRollCallOutcome> {
+  // One instant for the event and the boat snapshot it keeps (#2300).
+  const occurredAt = input.occurredAt ?? nowDate();
   const outcome = await db.transaction(async (tx): Promise<RecordRollCallOutcome> => {
     const checkpoint = input.checkpoint ?? "departure";
     const source = input.source ?? "live";
-    const occurredAt = input.occurredAt ?? nowDate();
     const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
     if (!staffId) return { ok: false, reason: "staff_not_found" };
 
@@ -1764,7 +1774,7 @@ export async function recordRollCall(
           eq(bookings.shopId, input.shopId),
           eq(bookings.tripId, input.tripId),
           ne(bookings.status, "cancelled"),
-          scheduledOrCountingHeads(input.tripId),
+          scheduledOrCountingHeads(input.tripId, source === "offline" ? occurredAt : null),
         ),
       )
       .limit(1)
@@ -1939,7 +1949,8 @@ export async function recordRollCall(
     // The boat's papers and kit as the boat leaves (#2300), for the departure
     // log once the live section is gone. After the commit, and never throws.
     if ((input.checkpoint ?? "departure") === "departure") {
-      await captureDepartureBoatSafety(db, input.shopId, input.tripId);
+      // As of the tap, not the sync: an offline count made before sailing keeps the boat.
+      await captureDepartureBoatSafety(db, input.shopId, input.tripId, occurredAt);
     }
   }
   logOfflineRetractionSignals(input, outcome);
@@ -2018,10 +2029,11 @@ export async function recordCrewRollCall(
     occurredAt?: Date;
   },
 ): Promise<RecordCrewRollCallOutcome> {
+  // One instant for the event and the boat snapshot it keeps (#2300).
+  const occurredAt = input.occurredAt ?? nowDate();
   const outcome = await db.transaction(async (tx): Promise<RecordCrewRollCallOutcome> => {
     const checkpoint = input.checkpoint ?? "departure";
     const source = input.source ?? "live";
-    const occurredAt = input.occurredAt ?? nowDate();
 
     const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
     if (!staffId) return { ok: false, reason: "staff_not_found" };
@@ -2060,7 +2072,7 @@ export async function recordCrewRollCall(
           liveTrip(),
           eq(trips.id, input.tripId),
           eq(trips.shopId, input.shopId),
-          scheduledOrCountingHeads(input.tripId),
+          scheduledOrCountingHeads(input.tripId, source === "offline" ? occurredAt : null),
         ),
       )
       .limit(1)
@@ -2271,7 +2283,8 @@ export async function recordCrewRollCall(
     // The boat's papers and kit as the boat leaves (#2300), for the departure
     // log once the live section is gone. After the commit, and never throws.
     if ((input.checkpoint ?? "departure") === "departure") {
-      await captureDepartureBoatSafety(db, input.shopId, input.tripId);
+      // As of the tap, not the sync: an offline count made before sailing keeps the boat.
+      await captureDepartureBoatSafety(db, input.shopId, input.tripId, occurredAt);
     }
   }
   logOfflineRetractionSignals(input, outcome);

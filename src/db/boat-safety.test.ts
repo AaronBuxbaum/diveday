@@ -450,6 +450,23 @@ describe("todayBoatSafety", () => {
     );
   });
 
+  // Dive-domain review D3: every role sees a lapsed certificate on the departure.
+  it("raises a lapsed certificate or inspection on a departure sailing today", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Lapsed Hull", 14, null, {
+      ...PAPERS_CLEAR,
+      coiExpiresOn: "2026-10-01",
+      insuranceExpiresOn: "2026-10-01",
+    });
+    const { departures } = await todayBoatSafety(db, shop.id, {
+      todayLocal: TODAY,
+      departures: [{ tripId: "trip-lapsed", boatId: boat.id }],
+    });
+    expect(departures.find((row) => row.boatId === boat.id)?.notices).toEqual([
+      expect.objectContaining({ code: "paper", paper: "coi", expired: true }),
+    ]);
+  });
+
   it("forgets a boat the shop deleted", async () => {
     const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Sold Hull", 14, null, {

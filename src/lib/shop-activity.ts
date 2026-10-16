@@ -91,6 +91,7 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   review_reply_edited: "reviews",
   review_reply_deleted: "reviews",
   shore_alert_contact_set: "safety",
+  boat_papers_changed: "safety",
   shore_alert_contact_changed: "safety",
   shore_alert_contact_cleared: "safety",
   shore_alert_contact_stopped: "safety",

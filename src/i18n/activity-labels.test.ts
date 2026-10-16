@@ -23,7 +23,35 @@ describe("activity lines", () => {
     evaluated: "2026-08-20",
     referred: "2026-07-18",
     signed: "2026-10-16",
+    boat: "Reef Runner",
+    field: "inspectionDueOn",
+    to: "none",
   };
+
+  // Records review 2: the paper line names the field and both values.
+  it.each([
+    [
+      "en-US",
+      "Marisol Vega changed Reef Runner’s inspection due date from 2030-06-01 to not recorded",
+    ],
+    [
+      "es-ES",
+      "Marisol Vega cambió la fecha de la inspección de Reef Runner de 2030-06-01 a sin registrar",
+    ],
+  ])("words a boat paper change in %s", (locale, expected) => {
+    expect(
+      activityLine(staffTranslator(locale), {
+        code: "boat_papers_changed",
+        params: {
+          actor: "Marisol Vega",
+          boat: "Reef Runner",
+          field: "inspectionDueOn",
+          from: "2030-06-01",
+          to: "none",
+        },
+      }),
+    ).toBe(expected);
+  });
 
   it.each(["en-US", "es-ES"])("words every code in %s", (locale) => {
     const t = staffTranslator(locale);

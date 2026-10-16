@@ -295,6 +295,11 @@ export type IncidentPreDepartureCheckEntry = {
  */
 export type IncidentBoatSafety = {
   boatName: string;
+  /**
+   * The departure no longer names the hull that was kept: the boat was swapped
+   * or taken off after the count (dive-domain review D6). Said, never hidden.
+   */
+  boatChanged: boolean;
   /** The departure's own local day the notices were judged on. */
   judgedOn: string;
   capturedAt: string;
@@ -470,6 +475,14 @@ export type IncidentExportDocument = {
    * states that absence rather than leaving the section out.
    */
   boatSafety: IncidentBoatSafety | null;
+  /**
+   * Why `boatSafety` is null, read off the departure as it stands: it names no
+   * boat, or it does and nothing was kept (a log from before this record, a
+   * count taken only after sailing, or a capture that failed). Worded without
+   * claiming which, and left out of the content hash: it is today's reading of
+   * the departure, not a fact of the day.
+   */
+  boatSafetyAbsence: "no_boat" | "not_kept" | null;
   /** Every stored roll-call event and crew count, oldest first. Empty is stated by the UI. */
   timeline: IncidentTimelineEntry[];
   /** The departure's incident reports, oldest first: a list, never their contents. */
@@ -629,12 +642,15 @@ export type IncidentExportInput = {
   incidentReports?: readonly IncidentLogReport[];
   /** The departure-checkpoint snapshot of the boat (#2300), when one was taken. */
   boatSafety?: {
+    boatId: string;
     boatName: string;
     judgedOn: string;
     capturedAt: Date;
     papers: BoatPaperRecord;
     notices: readonly BoatSafetyNotice[];
   } | null;
+  /** The boat the departure names now, for the swap and absence wording. */
+  departureBoatId?: string | null;
   generatedAt: Date;
   generatedByName: string;
 };
@@ -1064,12 +1080,18 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
     boatSafety: input.boatSafety
       ? {
           boatName: input.boatSafety.boatName,
+          boatChanged: input.boatSafety.boatId !== (input.departureBoatId ?? null),
           judgedOn: input.boatSafety.judgedOn,
           capturedAt: input.boatSafety.capturedAt.toISOString(),
           papers: input.boatSafety.papers,
           notices: [...input.boatSafety.notices],
         }
       : null,
+    boatSafetyAbsence: (input.boatSafety
+      ? null
+      : input.departureBoatId
+        ? "not_kept"
+        : "no_boat") as IncidentExportDocument["boatSafetyAbsence"],
     timeline,
     incidentReports: (input.incidentReports ?? []).map((report) => ({ ...report })),
     hashVersion: INCIDENT_EXPORT_HASH_VERSION,

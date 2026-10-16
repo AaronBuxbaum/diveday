@@ -51,6 +51,19 @@ describe("boatCertificateError", () => {
     ).toBeNull();
   });
 
+  it("says more seats than persons is a typo too (dive-domain review D2)", () => {
+    expect(
+      boatCertificateError(
+        t,
+        { notice: "boat-seats-above-persons", boat: "b1", capacity: "20", limit: "12" },
+        LOCALE,
+      ),
+    ).toEqual({
+      boat: "b1",
+      text: "The certificate allows 12 persons in all, crew included, so this boat can’t seat 20. Lower the seats, or correct the certificate.",
+    });
+  });
+
   it("counts the departures still selling above a lowered certificate", () => {
     expect(
       boatCertificateError(

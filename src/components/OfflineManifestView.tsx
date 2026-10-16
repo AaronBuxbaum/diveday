@@ -118,6 +118,7 @@ function OfflineManifestScreen() {
         list={list}
         message={message}
         discardNotice={discardNotice}
+        readFailed={storeReadFailed}
       />
     );
   }

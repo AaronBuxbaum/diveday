@@ -699,8 +699,9 @@
   and a certificate with only a passenger figure is never asked for it. Checked at the manifest
   beside the passenger line and never at the point of sale: when the people booked plus the crew
   named for the departure pass it, the Boat tab says so in danger ink, and once the crew roll call
-  has counted more people and crew aboard than it allows, the line counts them instead. Passengers
-  above persons is refused at save as a typo (`passengers_above_total_persons`). The booking
+  has counted more people and crew aboard than it allows, the line counts them instead, and the
+  head count goes danger. Passengers or seats above persons is refused at save as a typo
+  (`passengers_above_total_persons`, `seats_above_total_persons`). The booking
   transaction counts seats exactly as before (Aaron, 2026-10-13).
 - **Boat papers** — a boat's four dated documents: when its certificate itself expires (a
   Certificate of Inspection runs for years, apart from the annual inspection, issue 2302), when its
@@ -718,10 +719,12 @@
   never blocks a departure (H-136). `boat_safety_expired` is the safety kit's row, not the papers'.
 - **Boat at departure** — the boat's papers and its papers-and-kit notices as they stood when the
   boat left, kept for the departure log (`departure_boat_safety_snapshots`, issue 2300). Written by
-  each departure roll-call tap, diver or crew, live or synced, and rewritten until the departure
-  has sailed, never after; judged on the departure's own local day. Head-count lines are left out
-  because the roll call records them. A departure with none says so on the log rather than
-  showing the boat as it is today.
+  each departure roll-call tap, diver or crew, live or synced, as of the tap: a tap made before the
+  departure sailed keeps the boat however late it syncs, one made after keeps nothing, and an older
+  tap never overwrites a newer one. Judged on the departure's own local day; a deleted hull keeps
+  nothing. Head-count lines are left out because the roll call records them. The log says when
+  nothing was kept or the departure names no boat, and when the departure has moved to another
+  boat since.
 - **Safety kit** — the boat's own emergency equipment kept on the **gear register** as units:
   `o2_kit`, `aed`, `first_aid_kit` and `flares` (roadmap N-08). Each may be assigned **aboard** one
   boat (`gear_items.aboard_boat_id`; any other kind is never aboard), and runs **service clocks**
