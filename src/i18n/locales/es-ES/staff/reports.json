@@ -86,7 +86,14 @@
       "revenueDetail": "De las salidas que ya zarparon",
       "downloadYear": "Descargar el año (CSV)",
       "tipsDetail": "{count, plural, =0 {Aún sin propinas este año} one {# propina, para la tripulación} other {# propinas, para la tripulación}}"
-    }
+    },
+    "chooseYear": "Elegir un año",
+    "rangeWhole": "{year} · del 1 de enero al 31 de diciembre · {zone}",
+    "lastYearToDate": "{value, number} a esta fecha en {year}",
+    "lastYearWhole": "{value, number} en {year}",
+    "weatherDays": "{days, plural, one {# día de mal clima} other {# días de mal clima}}, {departures, plural, one {# salida cancelada} other {# salidas canceladas}}",
+    "certifiedHere": "Certificados aquí: {count, number}",
+    "certifiedLevel": "{count, number} {level}"
   },
   "buddySeats": "{count, plural, one {# plaza llegó} other {# plazas llegaron}} desde el enlace de un buceador",
   "byLine": {

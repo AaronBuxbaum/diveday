@@ -113,10 +113,10 @@ export default async function ReportsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ month?: string; page?: string; range?: string }>;
+  searchParams: Promise<{ month?: string; page?: string; range?: string; year?: string }>;
 }) {
   const { shopSlug } = await params;
-  const { month, page, range } = await searchParams;
+  const { month, page, range, year } = await searchParams;
   // Checked against the database, not the JWT, so a revoked manager loses
   // revenue access immediately (see canPersonViewShopReports).
   //
@@ -149,7 +149,13 @@ export default async function ReportsPage({
   // the staff registry, its own `loading.tsx` and its own eyebrow, to say the
   // same word twice.
   if (range === "year") {
-    return <YearView {...{ db, shop, shopSlug, locale, now, t }} roles={session.user.roles} />;
+    return (
+      <YearView
+        {...{ db, shop, shopSlug, locale, now, t }}
+        roles={session.user.roles}
+        requestedYear={year}
+      />
+    );
   }
 
   // Revenue is this shop's own money — a Bali shop's month reads in rupiah

@@ -83,3 +83,24 @@ describe("the year's money", () => {
     expect(screen.queryByRole("region", { name: "The year’s money" })).toBeNull();
   });
 });
+
+/** Last year beside the figures, and the year's lines (fifth loop, items 25, 27, 32). */
+describe("last year and the year's lines", () => {
+  it("sets last year's figure under this year's, and the lines under the sentence", () => {
+    render(
+      <YearReport
+        year={YEAR}
+        lastYear={{ divers: "291 by this date in 2025", boats: "39 by this date in 2025" }}
+        lines={["4 weather days, 6 departures called off", "Certified here: 34 · 22 Open Water"]}
+        locale="en-US"
+        shopSlug="blue-mantis"
+        t={t}
+      />,
+    );
+    const figures = screen.getByRole("region", { name: t("reports.year.numbersLabel") });
+    expect(figures).toHaveTextContent("291 by this date in 2025");
+    expect(figures).toHaveTextContent("39 by this date in 2025");
+    expect(screen.getByText("Certified here: 34 · 22 Open Water")).toBeTruthy();
+    expect(screen.getByText("4 weather days, 6 departures called off")).toBeTruthy();
+  });
+});
