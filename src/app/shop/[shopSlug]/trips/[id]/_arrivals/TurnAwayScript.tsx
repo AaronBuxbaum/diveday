@@ -5,7 +5,7 @@ import { RowActionForm } from "./RowActionForm";
 
 /**
  * **"Turned away" — the desk saw this diver and would not board them**
- * (safety sheet 2026-10-15, item 6; H-124).
+ * (safety sheet 2026-10-15, item 6; H-128).
  *
  * The sibling of `NoShowScript`, in the same shape for the same reasons: a
  * native `<details>` at the foot of a blocked row, quiet when closed, one

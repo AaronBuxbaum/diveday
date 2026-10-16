@@ -19,7 +19,7 @@ import {
 } from "@/test/staff-session";
 
 /**
- * **A diver marked aboard a boat that has left stays on the roster** (H-122).
+ * **A diver marked aboard a boat that has left stays on the roster** (H-126).
  * An owner, who may refund, is refused all the same: no cancellation, no
  * refund, no email, no trail line, and the row says why. `cancelBooking`'s own
  * contract is `src/db/aboard-at-sea.test.ts`.

@@ -893,7 +893,7 @@ export type OffCadenceSeriesTrip = {
  * slot at all (created before the ledger existed) is left out — there is nothing
  * to judge it against, and guessing would offer to cancel a real departure.
  * So is one the crew have taken out before its time (`departureMayBeAtSea`,
- * H-122): a bulk call-off never cancels a boat on the water.
+ * H-126): a bulk call-off never cancels a boat on the water.
  */
 export async function listOffCadenceSeriesTrips(
   db: AppDb,
@@ -977,7 +977,7 @@ export async function cancelOffCadenceSeriesTrips(
   if (stale.length === 0) return 0;
   const cancelledIds = await db.transaction(async (tx) => {
     // Asked again under each trip's row lock, the one the roll call takes: the
-    // crew may have taken one out since the list was read (H-122).
+    // crew may have taken one out since the list was read (H-126).
     const locked = await tx
       .select({ id: trips.id, startsAt: trips.startsAt })
       .from(trips)

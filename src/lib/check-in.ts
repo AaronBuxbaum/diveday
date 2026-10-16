@@ -18,7 +18,7 @@
 export type CounterSeat = {
   bookingStatus: string;
   readiness: { status: string };
-  /** Set on a released seat the desk turned away (H-124); absent or null otherwise. */
+  /** Set on a released seat the desk turned away (H-128); absent or null otherwise. */
   turnedAwayReason?: string | null;
   /**
    * When the desk turned this seat away: the fact, which erasure keeps while
@@ -65,7 +65,7 @@ export function isNoShowAtCounter(seat: CounterSeat): boolean {
 }
 
 /**
- * **A released seat the desk saw and turned away** (H-124), rather than one
+ * **A released seat the desk saw and turned away** (H-128), rather than one
  * whose diver never came. Same release, different statement, so the counter
  * says it in its own words and its own count.
  */
@@ -135,7 +135,7 @@ export function counterTally(seats: readonly CounterSeat[]): {
   toCome: number;
   /** Seats a staffer released because the diver never came (issue #1209). */
   notHere: number;
-  /** Seats a staffer released after turning the diver away at the desk (H-124). */
+  /** Seats a staffer released after turning the diver away at the desk (H-128). */
   turnedAway: number;
 } {
   // **A released seat leaves `expected` rather than joining a fourth band of

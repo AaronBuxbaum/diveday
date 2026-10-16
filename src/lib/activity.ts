@@ -125,7 +125,7 @@ type ActivityParamShapes = {
   booking_no_show_missing_after_dive: { actor: string; diver: string };
   /**
    * The desk saw a diver readiness would not board and turned them away, which
-   * frees the seat as a no-show does (safety sheet 2026-10-15, item 6; H-124).
+   * frees the seat as a no-show does (safety sheet 2026-10-15, item 6; H-128).
    * Its own line, never `booking_no_show`'s: "did not arrive" about somebody
    * the desk stood in front of is the record an insurer would misread.
    * `reason` is a category from the seat's own blockers, never the evidence.

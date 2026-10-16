@@ -29,7 +29,7 @@ import { completeWaiver, issueWaiverRequest } from "./waivers";
 const fileCtx = fileScopedShopContext();
 
 /**
- * **"Turned away" at the desk** (safety sheet 2026-10-15, item 6; H-124): any
+ * **"Turned away" at the desk** (safety sheet 2026-10-15, item 6; H-128): any
  * active staff member, blocked rows only, one reason from the row's own
  * blockers, and the seat freed once. Every refusal below is a write a hostile
  * or confused caller could post straight at the action, so each is proven here
@@ -186,7 +186,7 @@ describe("turnBookingAway", () => {
     expect(row).toMatchObject({ bookingStatus: "no_show", turnedAwayReason: "waiver" });
   });
 
-  /** H-124: blocked rows only. A cleared diver has nothing to be turned away for. */
+  /** H-128: blocked rows only. A cleared diver has nothing to be turned away for. */
   it("refuses a row readiness clears, whatever the caller posts", async () => {
     const ctx = await context();
     await signWaiver(ctx);

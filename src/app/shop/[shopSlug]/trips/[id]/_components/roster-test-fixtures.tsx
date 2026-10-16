@@ -128,7 +128,7 @@ export type RosterFixtureOptions = {
   certifyDefaultLevel?: "open_water" | "advanced_open_water" | null;
   /** "Move to another departure", when the page offers it. */
   moveSeat?: SeatMove;
-  /** Seats marked aboard a boat that has left, whose Remove refuses (H-122). */
+  /** Seats marked aboard a boat that has left, whose Remove refuses (H-126). */
   aboardAtSea?: ReadonlyMap<string, AboardHold>;
 };
 

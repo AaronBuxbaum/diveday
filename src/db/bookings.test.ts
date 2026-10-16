@@ -1128,7 +1128,7 @@ describe("restoreBooking (undo of a roster removal)", () => {
    *
    * An **already-departed** trip does not refuse either, and this one is a
    * safety matter rather than a nicety: `cancelBooking` refuses only a diver
-   * marked aboard (H-122), and Remove still works on every other row at sea
+   * marked aboard (H-126), and Remove still works on every other row at sea
    * (a departed trip is still `scheduled`, and roll call stays live). If
    * the undo refused there, one misclick would strike a diver off an at-sea
    * manifest permanently. The two errors are not symmetric — an under-listed

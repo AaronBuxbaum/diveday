@@ -141,7 +141,7 @@ describe("the counter's welcome word (UX audit 2026-10-07, item 46)", () => {
   });
 });
 
-describe("the counter's turned-away door (H-124)", () => {
+describe("the counter's turned-away door (H-128)", () => {
   /** A blocked row offers exactly the categories its own blockers name. */
   it("offers a blocked row its own reasons, and only those", async () => {
     const seat = await firstTimerAtTheCounter();

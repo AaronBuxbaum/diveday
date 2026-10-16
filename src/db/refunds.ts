@@ -53,7 +53,7 @@ export type CancellationRefundOutcome =
   /**
    * Refund is owed, or may be, but can't be automated here — staff must issue
    * it. `turned_away`: the desk turned this diver away before the seat was
-   * removed (H-124), so the diver's cancellation window does not apply and
+   * removed (H-128), so the diver's cancellation window does not apply and
    * whether the fare is moved, refunded or kept is a person's call.
    */
   | {

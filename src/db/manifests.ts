@@ -1080,7 +1080,7 @@ export async function getTripManifests(
       // released at the desk. The row stays — `getTripRoster` keeps every
       // non-cancelled booking on purpose — and now says so.
       notHere: booking.status === "no_show",
-      // Seen at the desk and refused (H-124), which the row says apart from a
+      // Seen at the desk and refused (H-128), which the row says apart from a
       // diver who never came.
       turnedAway: booking.status === "no_show" && booking.turnedAwayAt !== null,
       buddyTeam: teamByBooking.get(booking.id) ?? null,

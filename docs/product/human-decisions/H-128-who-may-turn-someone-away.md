@@ -1,4 +1,4 @@
-# H-124: May any active staff turn someone away at the desk, or managers only?
+# H-128: May any active staff turn someone away at the desk, or managers only?
 
 - **Status:** Implemented
 - **Human owner:** Product owner

@@ -257,7 +257,7 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   if (!uuidParam(bookingId)) redirect(back);
   const dbi = await getDb();
   await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, back);
-  // Refused, with nothing sent, for a diver marked aboard at sea (H-122).
+  // Refused, with nothing sent, for a diver marked aboard at sea (H-126).
   const from = await removeSeat(dbi, s.user.shopId, bookingId, back, s.user.personId);
   await trackEvent({ name: "booking_cancelled", source: "staff" });
   // Freeing the seat is roster work any staff member does, but moving money is

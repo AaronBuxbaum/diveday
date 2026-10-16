@@ -3,7 +3,7 @@ import { arrivalsWindow } from "./operational-window";
 import type { ReadinessBlocker, ReadinessBlockerCode, ReadinessResult } from "./readiness";
 
 /**
- * **"Turned away" at the desk** (safety sheet 2026-10-15, item 6; H-124).
+ * **"Turned away" at the desk** (safety sheet 2026-10-15, item 6; H-128).
  *
  * A diver the desk saw and would not board used to have one door, "Not here",
  * which records that they did not arrive. An insurer reading that line about
@@ -17,7 +17,7 @@ import type { ReadinessBlocker, ReadinessBlockerCode, ReadinessResult } from "./
  * A medical answer or a card number never reaches the column, the trail or the
  * export: the category is the whole record.
  *
- * **Any active staff member, blocked rows only** (H-124). The system already
+ * **Any active staff member, blocked rows only** (H-128). The system already
  * refuses this diver's boarding, so recording why is no new power; it frees the
  * seat at once with the same capacity effect as a no-show, and "Put back on the
  * list" takes it back.
@@ -131,7 +131,7 @@ export function turnAwayReasons(readiness: {
  * - `outside_window` — the departure is outside the counter's own reach
  *   (`arrivalsWindow`); a correction there belongs on the booking.
  * - `not_blocked` — readiness clears this diver, so there is nothing to turn
- *   them away for (H-124: blocked rows only).
+ *   them away for (H-128: blocked rows only).
  * - `reason_not_blocking` — the reason given is not one of this row's own
  *   blockers.
  *

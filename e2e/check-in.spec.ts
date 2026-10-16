@@ -709,7 +709,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
 });
 
 /**
- * **"Turned away" at the desk** (safety sheet 2026-10-15, item 6; H-124): a
+ * **"Turned away" at the desk** (safety sheet 2026-10-15, item 6; H-128): a
  * diver the desk saw and would not board is recorded as that, with the reason
  * from their own row, and the seat is free before the boat leaves — where
  * "Not here" is still closed.

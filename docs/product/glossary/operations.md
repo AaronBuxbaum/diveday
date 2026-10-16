@@ -170,7 +170,7 @@
   list is often the only place a boarding for them can be written at all (issue #1686). It is never
   a **dive day**, in any of the four readers that count them. The same status, with a reason, is
   also how a seat is **turned away**.
-- **Turned away** — the desk saw a diver readiness would not board and sent them home (H-124). Its
+- **Turned away** — the desk saw a diver readiness would not board and sent them home (H-128). Its
   writer, `turnBookingAway` (`src/db/turn-away.ts`), sets `bookings.status = "no_show"`,
   `bookings.turned_away_at` (the fact) and `bookings.turned_away_reason` (the category), so the seat
   is released exactly as a **no-show**'s is, and every reader that leaves a no-show out (capacity,
@@ -681,7 +681,7 @@
   labelled "Papers lapsed", to owners and managers only. Hull insurance lapses on its expiry date
   itself, since the policy's cover ends that day. A paper still good today that lapses before a
   later departure reads "ends {date}, before this departure" on that departure. A lapsed paper
-  never blocks a departure (H-125). `boat_safety_expired` is the safety kit's row, not the papers'.
+  never blocks a departure (H-129). `boat_safety_expired` is the safety kit's row, not the papers'.
 - **Safety kit** — the boat's own emergency equipment kept on the **gear register** as units:
   `o2_kit`, `aed`, `first_aid_kit` and `flares` (roadmap N-08). Each may be assigned **aboard** one
   boat (`gear_items.aboard_boat_id`; any other kind is never aboard), and runs **service clocks**

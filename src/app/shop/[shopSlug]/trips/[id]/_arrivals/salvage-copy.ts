@@ -33,7 +33,7 @@ export function noShowSalvageCopy(input: {
   /** The page holds the locale and the shop's zone; this holds neither. */
   formatWhen: (startsAt: Date) => string;
   /**
-   * The desk turned this diver away (H-124) rather than marking them not
+   * The desk turned this diver away (H-128) rather than marking them not
    * here. Their next day is **their own booking moved** (`moveBooking` takes a
    * turned-away seat), so the panel names that door, on their row, and offers
    * no new booking: a second seat would charge them twice or spend a package
