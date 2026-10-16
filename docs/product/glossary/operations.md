@@ -1147,7 +1147,10 @@
   `COURSE_FORMS_BLOCK_BOARDING`, turns that into a warning instead, and buying a seat never waits on
   it (ADR 20261008-course-forms). A course template names its agency's **standard forms** by title.
   Creating or syncing the course sets them up empty, and a form with no text is asked of nobody
-  until the shop pastes the agency's wording in. A form the shop ticks as a **medical
+  until the shop pastes the agency's wording in. A course may bound a form to an **age**
+  (`course_form_requirements.max_age_years`, issue #2265): it is then asked only of a student that
+  age or younger on the session's first day in the shop's zone, and of one whose birthday the shop
+  does not know. Open Water's template bounds PADI's Youth Diving acknowledgment (10615) at 11. A form the shop ticks as a **medical
   statement** (signature only; no answers are screened, unlike the **Medical questionnaire**
   below) keeps blocking even with that switch at warn-only.
 - **Sign once** — a diver signs the release once, not every trip. A **completed** signature is held

@@ -1,6 +1,10 @@
 import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
-import { type CalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
+import {
+  type CalendarDate,
+  calendarDateInTimezone,
+  isValidCalendarDate,
+} from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
   COURSE_FORM_INTEGRITY_VERSION_ERASED,
@@ -316,18 +320,74 @@ export async function listCourseFormRequirements(
 }
 
 /**
+ * The age bound on each of a course's live form requirements that has one
+ * (issue #2265), by form id, for the course editor's box.
+ */
+export async function listCourseFormAgeBounds(
+  db: DbExecutor,
+  shopId: string,
+  courseId: string,
+): Promise<Map<string, number>> {
+  const rows = await db
+    .select({
+      formId: courseFormRequirements.formId,
+      maxAgeYears: courseFormRequirements.maxAgeYears,
+    })
+    .from(courseFormRequirements)
+    .where(
+      and(
+        eq(courseFormRequirements.shopId, shopId),
+        eq(courseFormRequirements.courseId, courseId),
+        isNull(courseFormRequirements.deletedAt),
+        isNotNull(courseFormRequirements.maxAgeYears),
+      ),
+    );
+  return new Map(
+    rows.flatMap((row) =>
+      row.maxAgeYears === null ? [] : [[row.formId, row.maxAgeYears] as const],
+    ),
+  );
+}
+
+/** The age bounds a course form requirement may carry: a child's age, never zero. */
+export const COURSE_FORM_MAX_AGE_MIN = 1;
+export const COURSE_FORM_MAX_AGE_MAX = 120;
+
+/**
  * Set the forms a course requires, in the order given. Ids that are not one
  * of this shop's live forms are refused as a whole rather than dropped — a
  * list the shop did not mean is worse than no change. A form taken off the
  * list is soft-deleted from it; one still on it keeps its row and takes its
  * new position.
+ *
+ * `maxAgeYears`, when given, is the whole answer for every listed form: a
+ * form it names is asked only of students at or under that age (issue
+ * #2265), and one it leaves out asks everyone. Absent, each kept row keeps
+ * its bound and a new one has none. A bound out of range is refused whole.
  */
 export async function setCourseFormRequirements(
   db: AppDb,
-  input: { shopId: string; courseId: string; formIds: readonly string[]; now?: Date },
-): Promise<{ ok: true } | { ok: false; reason: "not_found" | "unknown_form" }> {
+  input: {
+    shopId: string;
+    courseId: string;
+    formIds: readonly string[];
+    maxAgeYears?: ReadonlyMap<string, number>;
+    now?: Date;
+  },
+): Promise<{ ok: true } | { ok: false; reason: "not_found" | "unknown_form" | "invalid_age" }> {
   const now = input.now ?? nowDate();
   const formIds = [...new Set(input.formIds)];
+  const bounds = input.maxAgeYears;
+  if (
+    bounds &&
+    [...bounds.values()].some(
+      (age) =>
+        !Number.isInteger(age) || age < COURSE_FORM_MAX_AGE_MIN || age > COURSE_FORM_MAX_AGE_MAX,
+    )
+  ) {
+    return { ok: false, reason: "invalid_age" };
+  }
+  const boundOf = (formId: string) => (bounds ? { maxAgeYears: bounds.get(formId) ?? null } : {});
   return db.transaction(async (tx) => {
     const [course] = await tx
       .select({ id: courses.id })
@@ -372,12 +432,16 @@ export async function setCourseFormRequirements(
       if (id) {
         await tx
           .update(courseFormRequirements)
-          .set({ position })
+          .set({ position, ...boundOf(formId) })
           .where(eq(courseFormRequirements.id, id));
       } else {
-        await tx
-          .insert(courseFormRequirements)
-          .values({ shopId: input.shopId, courseId: course.id, formId, position });
+        await tx.insert(courseFormRequirements).values({
+          shopId: input.shopId,
+          courseId: course.id,
+          formId,
+          position,
+          ...boundOf(formId),
+        });
       }
     }
     return { ok: true } as const;
@@ -418,9 +482,20 @@ export async function attachStandardCourseForms(
     courseId: string;
     titles: readonly string[];
     offeredBefore?: readonly string[];
+    /**
+     * The age bound the template puts on a form, by its title (issue #2265):
+     * set on the requirement this attaches, never on one the shop already has.
+     */
+    maxAgeByTitle?: ReadonlyMap<string, number>;
   },
 ): Promise<{ created: number; attached: number }> {
   const titleKey = (title: string) => normalizeCourseFormText(title).toLocaleLowerCase("en-US");
+  const boundByTitle = new Map(
+    [...(input.maxAgeByTitle ?? new Map<string, number>())].map(([title, age]) => [
+      titleKey(title),
+      age,
+    ]),
+  );
   const offeredBefore = new Set((input.offeredBefore ?? []).map(titleKey));
   const titles = [...new Set(input.titles.map(normalizeCourseFormText))].filter(
     (title) => title !== "" && !offeredBefore.has(titleKey(title)),
@@ -504,9 +579,13 @@ export async function attachStandardCourseForms(
       created += 1;
     }
     if (required.has(formId) || declined.has(formId)) continue;
-    await db
-      .insert(courseFormRequirements)
-      .values({ shopId: input.shopId, courseId: course.id, formId, position });
+    await db.insert(courseFormRequirements).values({
+      shopId: input.shopId,
+      courseId: course.id,
+      formId,
+      position,
+      maxAgeYears: boundByTitle.get(titleKey(title)) ?? null,
+    });
     required.add(formId);
     position += 1;
     attached += 1;
@@ -594,6 +673,8 @@ export async function requiredCourseFormsForTrips(
       formId: courseForms.id,
       medicalScreening: courseForms.medicalScreening,
       position: courseFormRequirements.position,
+      maxAgeYears: courseFormRequirements.maxAgeYears,
+      timezone: shops.timezone,
       requiredSince: courseFormRequirements.createdAt,
       versionId: courseFormVersions.id,
       version: courseFormVersions.version,
@@ -605,6 +686,7 @@ export async function requiredCourseFormsForTrips(
     .innerJoin(courseFormRequirements, eq(courseFormRequirements.courseId, trips.courseId))
     .innerJoin(courseForms, eq(courseForms.id, courseFormRequirements.formId))
     .innerJoin(courseFormVersions, eq(courseFormVersions.formId, courseForms.id))
+    .innerJoin(shops, eq(shops.id, trips.shopId))
     .where(
       and(
         eq(trips.shopId, shopId),
@@ -651,6 +733,13 @@ export async function requiredCourseFormsForTrips(
       title: asked.title,
       position: current.position,
       ...(current.medicalScreening ? { medicalScreening: true } : {}),
+      // Measured on the session's first day in the shop's zone (issue #2265).
+      ...(current.maxAgeYears !== null
+        ? {
+            maxAgeYears: current.maxAgeYears,
+            sessionFirstDay: calendarDateInTimezone(current.startsAt, current.timezone),
+          }
+        : {}),
       ...(alsoAccepted.length > 0 ? { alsoAccepted } : {}),
     });
     result.set(current.tripId, list);

@@ -19,6 +19,7 @@ import {
   createCourseForm,
   deleteCourseForm,
   getCourseFormsForBooking,
+  listCourseFormAgeBounds,
   listCourseFormRequirements,
   listCourseForms,
   recordPaperCourseForm,
@@ -304,12 +305,12 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
   });
 
   it("adds only a form new in this template version, and not one the shop already declined", async () => {
-    const [first, second] = (getCourseTemplate("open-water-diver")?.standardForms ?? []).map(
-      (form) => form.title,
-    );
+    const [first, second, ...rest] = (
+      getCourseTemplate("open-water-diver")?.standardForms ?? []
+    ).map((form) => form.title);
     if (!first || !second) throw new Error("Open Water names two forms");
-    // The previous version named only the first form; this one adds the second.
-    const { db, shop, openWater } = await openWaterBehindItsTemplate([first]);
+    // The previous version named every form but the second; this one adds it.
+    const { db, shop, openWater } = await openWaterBehindItsTemplate([first, ...rest]);
     const before = await listCourseFormRequirements(db, shop.id, openWater.id);
     const forms = await listCourseForms(db, shop.id);
     const firstId = forms.find((form) => form.title === first)?.id;
@@ -324,15 +325,19 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
     await pullCourseTemplateUpdates(db, shop.id, openWater.id, "preserve-shop-edits");
 
     // New in this version, but taken off by the shop: its soft-deleted row is the shop's no.
-    expect(await listCourseFormRequirements(db, shop.id, openWater.id)).toEqual([firstId]);
+    expect(await listCourseFormRequirements(db, shop.id, openWater.id)).toEqual(
+      before.filter((id) => id !== secondId),
+    );
+    expect(firstId).toBeDefined();
   });
 
   it("adds a form new in this template version that the course never had", async () => {
-    const [first, second] = (getCourseTemplate("open-water-diver")?.standardForms ?? []).map(
+    const titles = (getCourseTemplate("open-water-diver")?.standardForms ?? []).map(
       (form) => form.title,
     );
+    const [first, second, ...rest] = titles;
     if (!first || !second) throw new Error("Open Water names two forms");
-    const { db, shop, openWater } = await openWaterBehindItsTemplate([first]);
+    const { db, shop, openWater } = await openWaterBehindItsTemplate([first, ...rest]);
     // A course that never listed the second form at all: delete the seeded form,
     // which takes its requirement row with it, then forget that row ever was.
     const secondId = (await listCourseForms(db, shop.id)).find((form) => form.title === second)?.id;
@@ -342,7 +347,7 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
     await pullCourseTemplateUpdates(db, shop.id, openWater.id, "preserve-shop-edits");
 
     const required = await listCourseFormRequirements(db, shop.id, openWater.id);
-    expect(required).toHaveLength(2);
+    expect(required).toHaveLength(titles.length);
     expect(required).toContain(secondId);
   });
 });
@@ -355,6 +360,113 @@ async function otherShop(db: AppDb) {
   if (!other) throw new Error("other shop insert failed");
   return other;
 }
+
+/**
+ * **A form asked only of the youngest students** (issue #2265, Aaron
+ * 2026-10-13): an optional age on a course's form requirement, measured on
+ * the session's first day in the shop's zone. PADI's Youth Diving
+ * acknowledgment (10615) is the case, at 11.
+ */
+describe("course forms — a form bound to an age (in-memory PGlite)", () => {
+  it("sets up the seeded Open Water youth acknowledgment at 11, and nothing else bound", async () => {
+    const { db, shop } = fileCtx;
+    const openWater = await getCourseBySlug(db, shop.id, "open-water-diver");
+    if (!openWater) throw new Error("seeded Open Water missing");
+    const forms = await listCourseForms(db, shop.id);
+    const bounds = await listCourseFormAgeBounds(db, shop.id, openWater.id);
+    expect(
+      [...bounds].map(([formId, age]) => [forms.find((form) => form.id === formId)?.title, age]),
+    ).toEqual([["Youth Diving: Responsibility and Risks Acknowledgment", 11]]);
+  });
+
+  it("does not ask an adult on the course, and asks a ten-year-old on the same session", async () => {
+    const ctx = await courseContext();
+    const form = await requireOneForm(ctx);
+    expect(
+      await setCourseFormRequirements(ctx.db, {
+        shopId: ctx.shop.id,
+        courseId: ctx.seat.courseId,
+        formIds: [form.id],
+        maxAgeYears: new Map([[form.id, 11]]),
+      }),
+    ).toEqual({ ok: true });
+
+    const codes = async () =>
+      (await getBookingReadiness(ctx.db, ctx.shop.id, ctx.seat.bookingId))?.blockers.map(
+        (blocker) => blocker.code,
+      );
+    expect(await codes()).not.toContain("course_form_unsigned");
+    expect(
+      (await getCourseFormsForBooking(ctx.db, ctx.shop.id, ctx.seat.bookingId))?.outstanding,
+    ).toEqual([]);
+
+    // Ten on the session's first day, in the shop's zone.
+    const [trip] = await ctx.db
+      .select({ startsAt: trips.startsAt })
+      .from(trips)
+      .where(eq(trips.id, ctx.seat.tripId));
+    if (!trip) throw new Error("session missing");
+    const firstDay = calendarDateInTimezone(trip.startsAt, ctx.shop.timezone);
+    await ctx.db
+      .update(people)
+      .set({ dateOfBirth: shiftCalendarDateMonths(firstDay, -120) })
+      .where(eq(people.id, ctx.seat.personId));
+    expect(await codes()).toContain("course_form_unsigned");
+    expect(
+      (await getCourseFormsForBooking(ctx.db, ctx.shop.id, ctx.seat.bookingId))?.outstanding.map(
+        (row) => row.formId,
+      ),
+    ).toEqual([form.id]);
+  });
+
+  it("refuses an age out of range, changing nothing, and a blank asks everyone again", async () => {
+    const ctx = await courseContext();
+    const form = await requireOneForm(ctx);
+    for (const age of [0, 121, 10.5]) {
+      expect(
+        await setCourseFormRequirements(ctx.db, {
+          shopId: ctx.shop.id,
+          courseId: ctx.seat.courseId,
+          formIds: [form.id],
+          maxAgeYears: new Map([[form.id, age]]),
+        }),
+      ).toEqual({ ok: false, reason: "invalid_age" });
+    }
+    expect((await listCourseFormAgeBounds(ctx.db, ctx.shop.id, ctx.seat.courseId)).size).toBe(0);
+
+    await setCourseFormRequirements(ctx.db, {
+      shopId: ctx.shop.id,
+      courseId: ctx.seat.courseId,
+      formIds: [form.id],
+      maxAgeYears: new Map([[form.id, 11]]),
+    });
+    await setCourseFormRequirements(ctx.db, {
+      shopId: ctx.shop.id,
+      courseId: ctx.seat.courseId,
+      formIds: [form.id],
+      maxAgeYears: new Map(),
+    });
+    expect((await listCourseFormAgeBounds(ctx.db, ctx.shop.id, ctx.seat.courseId)).size).toBe(0);
+    expect(
+      (await getCourseFormsForBooking(ctx.db, ctx.shop.id, ctx.seat.bookingId))?.outstanding.map(
+        (row) => row.formId,
+      ),
+    ).toEqual([form.id]);
+  });
+
+  it("refuses an age at the column, whatever the writer", async () => {
+    const ctx = await courseContext();
+    await requireOneForm(ctx);
+    await expect(
+      ctx.db.transaction((tx) =>
+        tx
+          .update(courseFormRequirements)
+          .set({ maxAgeYears: 0 })
+          .where(eq(courseFormRequirements.courseId, ctx.seat.courseId)),
+      ),
+    ).rejects.toThrow();
+  });
+});
 
 describe("course forms — authoring (in-memory PGlite)", () => {
   it("versions a form by insertion and writes nothing for the same words", async () => {

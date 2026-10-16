@@ -138,6 +138,15 @@ into a course form must not quietly become a warning. The roster's warning line 
 form out, since its blocker line already names it. No standard template is marked: the shipped
 forms are releases and safe-practices statements, and DiveDay ships no medical wording.
 
+**An age bound on a requirement** (amended 2026-10-16, issue #2265, Aaron 2026-10-13, option 1):
+`course_form_requirements.max_age_years`, nullable, set beside each ticked form in the course
+editor. A bounded form is asked only of a student at or under the age on the session's first day,
+in the shop's zone (`courseFormAskedOf`), and of a student whose date of birth is not on file,
+because a missed youth acknowledgment is the failure nobody catches at the dock. It is not the
+guardian rule (18, or the local age of majority), which still governs who co-signs. A template's
+standard form may carry the bound; Open Water's carries PADI's Youth Diving: Responsibility and
+Risks Acknowledgment (10615) at 11.
+
 **Parity with releases:**
 
 - Export: the shop export carries all four tables, and a diver export carries that diver's records.

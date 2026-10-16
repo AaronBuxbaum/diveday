@@ -1,3 +1,5 @@
+import { ageOnDate } from "./age";
+import type { CalendarDate } from "./calendar-date";
 import { type GuardianSigner, guardianSignatureRequired, signingDate } from "./guardian";
 
 /**
@@ -46,6 +48,13 @@ export type RequiredCourseForm = {
    * `COURSE_FORMS_BLOCK_BOARDING` says (#2337).
    */
   medicalScreening?: boolean;
+  /**
+   * Asked only of a student this age or younger on `sessionFirstDay` (issue
+   * #2265). Absent asks every student.
+   */
+  maxAgeYears?: number;
+  /** The session's first day in the shop's zone, beside `maxAgeYears`. */
+  sessionFirstDay?: CalendarDate;
   /**
    * Older versions that still count for this session: the one that was
    * current when a session that has started began. A student who signed the
@@ -146,6 +155,22 @@ export function courseFormGaps(input: {
 }
 
 /**
+ * **Whether a form is asked of this student at all** (issue #2265). A form
+ * with an age bound is asked of a student at or under it on the session's
+ * first day, and of one whose age the shop does not know: a youth
+ * acknowledgment missed for a child is the failure nobody catches at the
+ * dock, so an unknown birthday asks rather than skips.
+ */
+export function courseFormAskedOf(
+  form: Pick<RequiredCourseForm, "maxAgeYears" | "sessionFirstDay">,
+  dateOfBirth: CalendarDate | null | undefined,
+): boolean {
+  if (form.maxAgeYears === undefined) return true;
+  if (!dateOfBirth || !form.sessionFirstDay) return true;
+  return ageOnDate(dateOfBirth, form.sessionFirstDay) <= form.maxAgeYears;
+}
+
+/**
  * The forms this enrollment still owes, in the course's own order. A required
  * form that belongs to another shop is owed, never skipped: a requirement the
  * shop cannot satisfy is not a requirement it may ignore.
@@ -160,6 +185,7 @@ export function outstandingCourseForms(input: {
 }): RequiredCourseForm[] {
   return [...input.required]
     .sort((a, b) => a.position - b.position)
+    .filter((form) => courseFormAskedOf(form, input.signer.dateOfBirth))
     .filter(
       (form) => !input.signatures.some((signature) => signatureSatisfies(signature, form, input)),
     );

@@ -10,6 +10,7 @@ import {
   outstandingCourseForms,
   type RequiredCourseForm,
 } from "./course-forms";
+import type { GuardianSigner } from "./guardian";
 import { aboardBlockerKind, BLOCKER_CATEGORY, calculateReadiness } from "./readiness";
 import { buildDiverChecklist } from "./readiness-summary";
 
@@ -53,7 +54,11 @@ function signed(overrides: Partial<CourseFormSignature> = {}): CourseFormSignatu
   };
 }
 
-function owed(signatures: CourseFormSignature[], signer = adult, required = [release]) {
+function owed(
+  signatures: CourseFormSignature[],
+  signer: GuardianSigner = adult,
+  required = [release],
+) {
   return outstandingCourseForms({
     shopId: SHOP,
     bookingId: BOOKING,
@@ -133,6 +138,47 @@ describe("outstandingCourseForms — which forms an enrollment still owes", () =
     // Recorded today, the student is eighteen; on the paper's date they were not.
     expect(owed([signed({ paperSignedOn: "2026-10-01" })], turning)).toEqual(["form-release"]);
     expect(owed([signed({ paperSignedOn: "2026-10-08" })], turning)).toEqual([]);
+  });
+});
+
+/**
+ * **A form for the youngest students only** (issue #2265, Aaron 2026-10-13):
+ * PADI's Youth Diving acknowledgment (10615) is asked of a student aged 11
+ * or younger on the session's first day, in the shop's zone, and of nobody
+ * older. A child whose birthday the shop does not know is asked.
+ */
+describe("outstandingCourseForms — a form bound to an age", () => {
+  const youth: RequiredCourseForm = {
+    shopId: SHOP,
+    formId: "form-youth",
+    versionId: "youth-v1",
+    version: 1,
+    title: "Youth Diving: Responsibility and Risks Acknowledgment",
+    position: 2,
+    maxAgeYears: 11,
+    sessionFirstDay: "2026-10-20",
+  };
+  const born = (dateOfBirth: string | null) => ({ ...adult, dateOfBirth });
+
+  it("asks a student who turns 12 the day after the session starts", () => {
+    expect(owed([], born("2014-10-21"), [youth])).toEqual([youth.formId]);
+  });
+
+  it("does not ask one who turned 12 that very morning, nor one the day before", () => {
+    expect(owed([], born("2014-10-20"), [youth])).toEqual([]);
+    expect(owed([], born("2014-10-19"), [youth])).toEqual([]);
+  });
+
+  it("never asks an adult on the same course, and still asks them the course's other forms", () => {
+    expect(owed([], adult, [release, youth])).toEqual([release.formId]);
+  });
+
+  it("asks a student whose birthday the shop does not know", () => {
+    expect(owed([], born(null), [youth])).toEqual([youth.formId]);
+  });
+
+  it("asks everyone a form with no bound", () => {
+    expect(owed([], adult, [release])).toEqual([release.formId]);
   });
 });
 

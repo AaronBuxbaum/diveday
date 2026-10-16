@@ -94,6 +94,11 @@ export type CourseTemplate = {
  */
 export type StandardCourseForm = {
   title: string;
+  /**
+   * Asked only of a student this age or younger on the session's first day
+   * (issue #2265), as the agency limits it. Absent asks every student.
+   */
+  maxAgeYears?: number;
   source: {
     agency: CourseTemplate["agency"];
     productNumber: string;
@@ -101,6 +106,14 @@ export type StandardCourseForm = {
     url: string;
   };
 };
+
+/**
+ * PADI's Youth Diving: Responsibility and Risks Acknowledgment (product
+ * 10615): the Instructor Manual 2021 asks a 10- or 11-year-old student going
+ * to open water, and their parent or guardian, to sign it before the course
+ * (issue #2265). Bound to 11, so no older student is asked.
+ */
+const PADI_YOUTH_ACKNOWLEDGMENT_MAX_AGE = 11;
 
 /**
  * PADI's own list of course paperwork: the PADI Instructor Manual 2021
@@ -140,6 +153,16 @@ const PADI_ENTRY_FORMS: readonly StandardCourseForm[] = [
  * It does **not** include the medical form — that is the Diver Medical
  * Questionnaire, which the shop's own release flow already asks every diver.
  */
+/** The entry course's forms, and the youth acknowledgment for its youngest students. */
+const PADI_OPEN_WATER_FORMS: readonly StandardCourseForm[] = [
+  ...PADI_ENTRY_FORMS,
+  {
+    title: "Youth Diving: Responsibility and Risks Acknowledgment",
+    maxAgeYears: PADI_YOUTH_ACKNOWLEDGMENT_MAX_AGE,
+    source: { agency: "padi", productNumber: "10615", url: PADI_INSTRUCTOR_MANUAL_2021 },
+  },
+];
+
 const PADI_CONTINUING_EDUCATION_FORMS: readonly StandardCourseForm[] = [
   {
     title: "Continuing Education Administrative Document",
@@ -274,7 +297,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     version: 2,
     title: "Open Water Diver",
     agency: "padi",
-    standardForms: PADI_ENTRY_FORMS,
+    standardForms: PADI_OPEN_WATER_FORMS,
     description: "The foundational certification course for new divers.",
     minimumCertificationLevel: null,
     certifiesLevel: "open_water",
@@ -3846,6 +3869,19 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
 /** Resolve the current code-owned template without exposing the array to callers. */
 export function getCourseTemplate(slug: string): CourseTemplate | null {
   return COURSE_TEMPLATES.find((template) => template.slug === slug) ?? null;
+}
+
+/**
+ * The age bound each of a template's standard forms carries, by title
+ * (issue #2265). A sync reads it here: the snapshot a course keeps names its
+ * forms by title alone.
+ */
+export function standardFormAgeBounds(template: CourseTemplate | null): Map<string, number> {
+  return new Map(
+    (template?.standardForms ?? []).flatMap((form) =>
+      form.maxAgeYears === undefined ? [] : [[form.title, form.maxAgeYears] as const],
+    ),
+  );
 }
 
 /** The baseline persisted beside a shop copy when it begins following a template. */

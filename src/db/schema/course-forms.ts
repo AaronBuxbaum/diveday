@@ -92,7 +92,7 @@ export const courseFormVersions = pgTable(
 
 /**
  * A course asking every student enrolled on its sessions to sign a form, in
- * the order the shop listed them. Soft-deleted when the course stops asking,
+ * the order the shop listed them, or only those at or under an age. Soft-deleted when the course stops asking,
  * so the list a course once had is still on record.
  */
 export const courseFormRequirements = pgTable(
@@ -109,10 +109,20 @@ export const courseFormRequirements = pgTable(
       .notNull()
       .references(() => courseForms.id),
     position: integer("position").notNull(),
+    /**
+     * Asked only of a student this age or younger on the session's first day,
+     * in the shop's zone (issue #2265): PADI's Youth Diving acknowledgment
+     * (10615) is for 10- and 11-year-olds. Null asks every student.
+     */
+    maxAgeYears: integer("max_age_years"),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    check(
+      "course_form_requirements_max_age_sane",
+      sql`${table.maxAgeYears} is null or (${table.maxAgeYears} >= 1 and ${table.maxAgeYears} <= 120)`,
+    ),
     uniqueIndex("course_form_requirements_live_unique")
       .on(table.courseId, table.formId)
       .where(sql`${table.deletedAt} is null`),

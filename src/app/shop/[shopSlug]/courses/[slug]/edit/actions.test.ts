@@ -139,8 +139,54 @@ describe("saveCourseFormRequirementsAction", () => {
     expect(to).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-saved#forms");
     expect(setCourseFormRequirements).toHaveBeenCalledWith(
       {},
-      { shopId: SHOP_ID, courseId: COURSE_ID, formIds: [FORM_C, FORM_B, FORM_A] },
+      {
+        shopId: SHOP_ID,
+        courseId: COURSE_ID,
+        formIds: [FORM_C, FORM_B, FORM_A],
+        maxAgeYears: new Map(),
+      },
     );
+  });
+
+  it("saves the age under a ticked form, and refuses one that is not a whole number (#2265)", async () => {
+    vi.mocked(setCourseFormRequirements).mockResolvedValue({ ok: true });
+
+    await posted([
+      ["formId", FORM_A],
+      ["formId", FORM_B],
+      [`maxAge-${FORM_A}`, " 11 "],
+      [`maxAge-${FORM_B}`, ""],
+      // An age under a form that is not ticked asks nothing of anyone.
+      [`maxAge-${FORM_C}`, "9"],
+    ]);
+    expect(setCourseFormRequirements).toHaveBeenCalledWith(
+      {},
+      {
+        shopId: SHOP_ID,
+        courseId: COURSE_ID,
+        formIds: [FORM_A, FORM_B],
+        maxAgeYears: new Map([[FORM_A, 11]]),
+      },
+    );
+    vi.mocked(setCourseFormRequirements).mockClear();
+
+    for (const age of ["eleven", "10.5", "-3"]) {
+      expect(
+        await posted([
+          ["formId", FORM_A],
+          [`maxAge-${FORM_A}`, age],
+        ]),
+      ).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-invalid-age#forms");
+    }
+    expect(setCourseFormRequirements).not.toHaveBeenCalled();
+
+    vi.mocked(setCourseFormRequirements).mockResolvedValue({ ok: false, reason: "invalid_age" });
+    expect(
+      await posted([
+        ["formId", FORM_A],
+        [`maxAge-${FORM_A}`, "0"],
+      ]),
+    ).toBe("/shop/blue-mantis/courses/open-water-diver/edit?notice=forms-invalid-age#forms");
   });
 
   it("saves an empty list when nothing is ticked: the course asks for no forms", async () => {
@@ -150,7 +196,7 @@ describe("saveCourseFormRequirementsAction", () => {
 
     expect(setCourseFormRequirements).toHaveBeenCalledWith(
       {},
-      { shopId: SHOP_ID, courseId: COURSE_ID, formIds: [] },
+      { shopId: SHOP_ID, courseId: COURSE_ID, formIds: [], maxAgeYears: new Map() },
     );
   });
 

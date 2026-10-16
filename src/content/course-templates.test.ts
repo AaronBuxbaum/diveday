@@ -20,12 +20,17 @@ describe("standard course forms", () => {
     }
   });
 
-  it("asks Open Water for the release and the safe-practices statement, and continuing education for its one document", () => {
+  it("asks Open Water for the release, the safe-practices statement and the youth acknowledgment, and continuing education for its one document", () => {
     const products = (slug: string) =>
       (COURSE_TEMPLATES.find((template) => template.slug === slug)?.standardForms ?? []).map(
         (form) => form.source.productNumber,
       );
-    expect(products("open-water-diver")).toEqual(["10072", "10060"]);
+    expect(products("open-water-diver")).toEqual(["10072", "10060", "10615"]);
+    // The youth acknowledgment is for 10- and 11-year-olds only (issue #2265).
+    const youth = COURSE_TEMPLATES.find(
+      (template) => template.slug === "open-water-diver",
+    )?.standardForms?.find((form) => form.source.productNumber === "10615");
+    expect(youth?.maxAgeYears).toBe(11);
     expect(products("advanced-open-water-diver")).toEqual(["10038"]);
     expect(products("rescue-diver")).toEqual(["10038"]);
     // No list where the manual names none DiveDay could read (issue #2264),

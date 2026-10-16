@@ -402,12 +402,28 @@ export async function saveCourseFormRequirementsAction(slug: string, formData: F
     }
   }
 
+  // The optional age under each ticked form (issue #2265): blank asks every
+  // student; anything else that is not a whole age in range refuses the save.
+  const maxAgeYears = new Map<string, number>();
+  for (const id of ordered) {
+    const raw = String(formData.get(`maxAge-${id}`) ?? "").trim();
+    if (raw === "") continue;
+    const age = /^\d+$/.test(raw) ? Number(raw) : Number.NaN;
+    if (!Number.isInteger(age)) redirect(noticeUrl(anchor, "forms-invalid-age"));
+    maxAgeYears.set(id, age);
+  }
+
   const result = await setCourseFormRequirements(db, {
     shopId: staff.user.shopId,
     courseId: course.id,
     formIds: ordered,
+    maxAgeYears,
   });
-  if (!result.ok) redirect(noticeUrl(anchor, "forms-invalid"));
+  if (!result.ok) {
+    redirect(
+      noticeUrl(anchor, result.reason === "invalid_age" ? "forms-invalid-age" : "forms-invalid"),
+    );
+  }
   // Every roster and prep page reading this course's readiness changes with it.
   revalidatePath(shopPath(staff.user.shopSlug), "layout");
   revalidateAndRedirect(base, noticeUrl(anchor, "forms-saved"));

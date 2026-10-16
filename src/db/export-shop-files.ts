@@ -1362,13 +1362,14 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
   },
   {
     file: "course_form_requirements.csv",
-    header: ["id", "course_id", "form_id", "position", "deleted_at", "created_at"],
+    header: ["id", "course_id", "form_id", "position", "max_age_years", "deleted_at", "created_at"],
     rows: ({ courseFormRequirementRows }) =>
       courseFormRequirementRows.map((row) => [
         row.id,
         row.courseId,
         row.formId,
         row.position,
+        row.maxAgeYears,
         row.deletedAt,
         row.createdAt,
       ]),
