@@ -284,6 +284,10 @@ export type ReadyPageData = {
   canPay: boolean;
   /** The shop runs hotel pickups, so Day-of details asks about one (fourth UX review, item 8). */
   offersHotelPickup: boolean;
+  /** Lunch is served aboard, so Day-of details asks what this diver can't eat (ideas item 56). */
+  lunchAboard: boolean;
+  /** What this diver said they can't eat; null when nothing. */
+  dietaryNote: string | null;
   /**
    * This seat is priced, unpaid, and the page cannot take a card for it: the
    * money is owed at the shop, and `/ready` says how much, the party's unclaimed
@@ -413,6 +417,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       diveIntent: bookings.diveIntent,
       reEntryAsk: bookings.reEntryAsk,
       hotelPickupLocation: bookings.hotelPickupLocation,
+      dietaryNote: bookings.dietaryNote,
       pickupTime: bookings.pickupTime,
       status: bookings.status,
       runningLateAt: bookings.runningLateAt,
@@ -443,6 +448,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       noCertificationClearedAt: people.noCertificationClearedAt,
       tripStartsAt: trips.startsAt,
       tripCourseId: trips.courseId,
+      tripLunchAboard: trips.lunchAboard,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -677,6 +683,8 @@ export async function getReadyPageData(
     pickupTime: row.pickupTime,
     canPay,
     offersHotelPickup: row.offersHotelPickup,
+    lunchAboard: row.tripLunchAboard,
+    dietaryNote: row.dietaryNote,
     owesAtShop: Boolean(perDiverPriceCents) && !settled && !canPay,
     cancelPreview,
     canCancelBooking,

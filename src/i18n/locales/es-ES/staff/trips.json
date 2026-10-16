@@ -238,6 +238,8 @@
     "priceLabel": "Precio por buceador",
     "exceedsNoDecoLabel": "Buceo con descompresión",
     "exceedsNoDecoHint": "Estas inmersiones superan los límites sin descompresión, así que el resumen no dice nada sobre cuándo pueden volar los buceadores.",
+    "lunchAboardLabel": "Almuerzo a bordo",
+    "lunchAboardHint": "El formulario del día pregunta a cada buceador qué no puede comer, y la preparación lo muestra.",
     "payAtBookingLegend": "Pago al reservar",
     "payAtBookingDescription": "Opcional. Deja el depósito en blanco para cobrar la tarifa completa cuando un buceador reserve en línea.",
     "depositLabel": "Depósito por buceador",

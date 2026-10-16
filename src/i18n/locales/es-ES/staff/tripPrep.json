@@ -1,4 +1,10 @@
 {
+  "lunch": {
+    "heading": "Almuerzo",
+    "count": "Almuerzo para {count}",
+    "note": "{name}: {note}",
+    "noNotes": "Nadie ha dicho que no pueda comer algo."
+  },
   "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
   "crewCount": "{count, plural, one {# tripulante que bucea} other {# tripulantes que bucean}}",
   "diveCount": "{count, plural, one {# inmersión} other {# inmersiones}}",

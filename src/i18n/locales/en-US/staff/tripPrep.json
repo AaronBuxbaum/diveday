@@ -1,4 +1,10 @@
 {
+  "lunch": {
+    "heading": "Lunch",
+    "count": "Lunch for {count}",
+    "note": "{name}: {note}",
+    "noNotes": "Nobody has said they can’t eat something."
+  },
   "diverCount": "{count, plural, one {# diver} other {# divers}}",
   "crewCount": "{count, plural, one {# diving crew member} other {# diving crew}}",
   "diveCount": "{count, plural, one {# dive} other {# dives}}",

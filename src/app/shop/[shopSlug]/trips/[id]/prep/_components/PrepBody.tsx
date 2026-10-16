@@ -8,6 +8,7 @@ import { type NoticeTone, noticeCountParam, noticeFromParam } from "@/lib/staff-
 import { PrepAssignments } from "./PrepAssignments";
 import { PrepFitGaps } from "./PrepFitGaps";
 import { PrepKitList } from "./PrepKitList";
+import { PrepLunch } from "./PrepLunch";
 import { PrepPickups } from "./PrepPickups";
 import { PrepTanks } from "./PrepTanks";
 import type { PrepView } from "./prep-view";
@@ -174,6 +175,8 @@ export function PrepBody({
               blow-out morning this run is the list of hotels somebody has to
               phone before a diver is standing in a lobby at 06:00. */}
           <PrepPickups view={view} />
+
+          {cancelled ? null : <PrepLunch view={view} />}
 
           {cancelled ? null : <PrepKitList view={view} grouping={grouping} groupPath={groupPath} />}
 

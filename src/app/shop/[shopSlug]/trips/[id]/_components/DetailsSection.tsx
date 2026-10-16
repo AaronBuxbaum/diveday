@@ -434,6 +434,17 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
                 `undefined`, so `updateTrip` writes the correction. */}
         {trip.courseId ? null : <SelfGuidedField t={t} checked={trip.selfGuided} />}
         <DecompressionField t={t} checked={trip.exceedsNoDecoLimits} />
+        <Field label={t("trips.details.lunchAboardLabel")} htmlFor="trip-details-lunch-aboard">
+          <ChoiceRow
+            type="checkbox"
+            id="trip-details-lunch-aboard"
+            name="lunchAboard"
+            defaultChecked={trip.lunchAboard}
+            className="text-sm"
+          >
+            {t("trips.details.lunchAboardHint")}
+          </ChoiceRow>
+        </Field>
       </FieldGrid>
       <PayAtBookingFields
         t={t}

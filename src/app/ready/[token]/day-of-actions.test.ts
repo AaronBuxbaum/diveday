@@ -72,6 +72,7 @@ async function seat() {
       diveIntent: null,
       reEntryAsk: null,
       hotelPickupLocation: null,
+      dietaryNote: null,
       identityUnconfirmedAt: null,
       participantType: "diver",
     })
@@ -185,6 +186,25 @@ describe("saveDayOfDetailsFromReady", () => {
     await db.update(shops).set({ offersHotelPickup: false }).where(eq(shops.id, shop.id));
     await save(token, { hotelPickupLocation: "Marriott, room 214" });
     expect((await read(bookingId)).hotelPickupLocation).toBeNull();
+  });
+
+  it("asks what a diver can't eat only on a boat that serves lunch, and clears it with a blank", async () => {
+    const { db, bookingId, token } = await seat();
+    const [own] = await db
+      .select({ tripId: bookings.tripId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    await db.update(trips).set({ lunchAboard: false }).where(eq(trips.id, own.tripId));
+    await save(token, { dietaryNote: "no shellfish" });
+    expect((await read(bookingId)).dietaryNote).toBeNull();
+
+    await db.update(trips).set({ lunchAboard: true }).where(eq(trips.id, own.tripId));
+    expect(await save(token, { dietaryNote: "  no   shellfish " })).toBe(
+      `REDIRECT:/ready/${token}?saved=day-of`,
+    );
+    expect((await read(bookingId)).dietaryNote).toBe("no shellfish");
+    await save(token, { dietaryNote: "" });
+    expect((await read(bookingId)).dietaryNote).toBeNull();
   });
 
   it("never blanks a stored answer with Choose", async () => {

@@ -238,6 +238,8 @@
     "priceLabel": "Price per diver",
     "exceedsNoDecoLabel": "Decompression diving",
     "exceedsNoDecoHint": "These dives go past no-decompression limits, so the recap says nothing about when divers may fly.",
+    "lunchAboardLabel": "Lunch aboard",
+    "lunchAboardHint": "The Day-of form asks each diver what they can’t eat, and Prep lists it.",
     "payAtBookingLegend": "Pay at booking",
     "payAtBookingDescription": "Optional. Leave the deposit blank to charge the full fare when a diver books online.",
     "depositLabel": "Deposit per diver",

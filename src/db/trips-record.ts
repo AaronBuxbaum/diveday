@@ -476,6 +476,8 @@ export type TripPatch = {
   selfGuided?: boolean;
   /** The dives went past no-decompression limits, so the recap says nothing about flying (H-84). */
   exceedsNoDecoLimits?: boolean;
+  /** Lunch is served aboard, so the Day-of form asks what a diver can't eat (ideas item 56). */
+  lunchAboard?: boolean;
 };
 
 export type UpdateTripOutcome =
@@ -688,6 +690,7 @@ export async function updateTrip(
         ...(patch.exceedsNoDecoLimits === undefined
           ? {}
           : { exceedsNoDecoLimits: patch.exceedsNoDecoLimits }),
+        ...(patch.lunchAboard === undefined ? {} : { lunchAboard: patch.lunchAboard }),
         ...(patch.diveSiteId === undefined
           ? {}
           : { diveSiteId: patch.diveSiteId ?? (drafts ? primaryDiveSiteId(drafts) : null) }),
