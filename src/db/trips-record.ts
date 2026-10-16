@@ -470,6 +470,11 @@ export type TripPatch = {
   selfGuided?: boolean;
   /** The dives went past no-decompression limits, so the recap says nothing about flying (H-84). */
   exceedsNoDecoLimits?: boolean;
+  /**
+   * The wetsuit the boat is running today, in whole millimetres (issue
+   * #2206). `null` clears it, `undefined` leaves it alone.
+   */
+  wetsuitThicknessMm?: number | null;
 };
 
 export type UpdateTripOutcome =
@@ -682,6 +687,9 @@ export async function updateTrip(
         ...(patch.exceedsNoDecoLimits === undefined
           ? {}
           : { exceedsNoDecoLimits: patch.exceedsNoDecoLimits }),
+        ...(patch.wetsuitThicknessMm === undefined
+          ? {}
+          : { wetsuitThicknessMm: patch.wetsuitThicknessMm }),
         ...(patch.diveSiteId === undefined
           ? {}
           : { diveSiteId: patch.diveSiteId ?? (drafts ? primaryDiveSiteId(drafts) : null) }),

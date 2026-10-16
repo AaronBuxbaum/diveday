@@ -118,7 +118,8 @@
     "aboard": "Aboard",
     "ashore": "Ashore",
     "nitroxDesignated": "Nitrox",
-    "nitroxDesignatedHint": "Kept for enriched air"
+    "nitroxDesignatedHint": "Kept for enriched air",
+    "thicknessMm": "Thickness (mm)"
   },
   "notice": {
     "added": "On the register.",
@@ -267,6 +268,7 @@
     "optionServiceOverdue": "service overdue",
     "optionServiceDueSoon": "service due soon",
     "optionNitroxDesignated": "for nitrox",
+    "optionThickness": "{mm} mm",
     "optionServiceConcern": "service concern",
     "pickUnit": "Pick a unit…",
     "proposal": {

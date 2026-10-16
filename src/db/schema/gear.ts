@@ -424,6 +424,16 @@ export const gearItems = pgTable(
      */
     nitroxDesignated: boolean("nitrox_designated"),
     /**
+     * **A wetsuit's thickness in whole millimetres** (issue #2206; Aaron
+     * 2026-10-13): the thickest panel, so a 5/4 is 5. Only a wetsuit carries
+     * one (`updateGearItem` clears it for any other kind); null is "not said".
+     * The Gear tab proposes a wetsuit only when this matches the departure's
+     * `trips.wetsuit_thickness_mm` as well as the size, and proposes nothing
+     * when either is unknown. A size label like "3mm L" stays free text: this
+     * is the column the proposal reads.
+     */
+    thicknessMm: integer("thickness_mm"),
+    /**
      * Set when staff delete a unit (ADR 20260820-every-delete-is-soft). The row
      * stays, and so do its `gear_service_events` and `gear_reservations` — a
      * fleet's care history is the last thing a delete should take, and it is
@@ -463,6 +473,11 @@ export const gearItems = pgTable(
       .on(table.aboardBoatId)
       .where(sql`${table.aboardBoatId} is not null and ${table.deletedAt} is null`),
     index("gear_items_label_trgm_idx").using("gin", sql`${table.label} gin_trgm_ops`),
+    // `WETSUIT_THICKNESS_MM` in src/lib/gear.ts, which the forms read.
+    check(
+      "gear_items_thickness_mm_range",
+      sql`${table.thicknessMm} is null or ${table.thicknessMm} between 1 and 10`,
+    ),
     index("gear_items_serial_trgm_idx").using("gin", sql`${table.serialNumber} gin_trgm_ops`),
     index("gear_items_brand_model_trgm_idx").using("gin", sql`${table.brandModel} gin_trgm_ops`),
   ],

@@ -227,6 +227,7 @@
     "meetingPointLabelLabel": "Meeting point",
     "meetingPointAddressLabel": "Meeting point address",
     "optionalHint": "(optional)",
+    "wetsuitThicknessLabel": "Wetsuit for the day (mm)",
     "dateLabel": "Date",
     "departsLabel": "Departs",
     "returnsLabel": "Returns",

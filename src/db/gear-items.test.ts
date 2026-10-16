@@ -176,6 +176,50 @@ describe("gear items", () => {
     expect(nowAnOctopus).toMatchObject({ ok: true, item: { nitroxDesignated: null } });
   });
 
+  // Issue #2206: only a wetsuit holds a thickness, and the database refuses
+  // one outside 1–10 mm whatever writes it.
+  it("holds a thickness on a wetsuit only, keeps it across an edit that does not say, and refuses one out of range", async () => {
+    const { db, shop } = await gearShopContext(ctx);
+    const suit = mustCreate(
+      await createGearItem(db, {
+        shopId: shop.id,
+        kind: "wetsuit",
+        label: "WS #mm-7",
+        size: "L",
+        thicknessMm: 7,
+      }),
+    );
+    expect(suit.thicknessMm).toBe(7);
+    const bcd = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #mm", thicknessMm: 5 }),
+    );
+    expect(bcd.thicknessMm).toBeNull();
+
+    const untouched = await updateGearItem(db, {
+      shopId: shop.id,
+      gearItemId: suit.id,
+      kind: "wetsuit",
+      label: "WS #mm-7",
+      size: "L",
+    });
+    expect(untouched).toMatchObject({ ok: true, item: { thicknessMm: 7 } });
+    const cleared = await updateGearItem(db, {
+      shopId: shop.id,
+      gearItemId: suit.id,
+      kind: "wetsuit",
+      label: "WS #mm-7",
+      size: "L",
+      thicknessMm: null,
+    });
+    expect(cleared).toMatchObject({ ok: true, item: { thicknessMm: null } });
+
+    await expect(
+      db.transaction((tx) =>
+        tx.execute(sql`update gear_items set thickness_mm = 11 where id = ${suit.id}`),
+      ),
+    ).rejects.toThrow();
+  });
+
   it("refuses a duplicate tag and an empty one — the tag is how a wet hand finds the row", async () => {
     // A database of its own, not the file's shared transaction: the duplicate
     // is refused by the unique index, a violation aborts a wrapping

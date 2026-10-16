@@ -62,6 +62,7 @@ function renderDetails(
         hasBoatDiving: true,
         hasShoreDiving: false,
         hasPoolDiving: false,
+        rentalItems: [],
       }}
     />,
   );

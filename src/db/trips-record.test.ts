@@ -11,6 +11,7 @@ import {
   rollCallCrewEvents,
   rollCallEvents,
   shops,
+  trips,
   userAccounts,
 } from "./schema";
 import { listTripChangeEvents } from "./trip-change-events";
@@ -112,6 +113,39 @@ describe("trip records (in-memory PGlite)", () => {
       priceCents: null,
     });
     expect((await getTripWithBooked(db, shop.id, priced.id))?.priceCents).toBeNull();
+  });
+
+  // Issue #2206: the day's wetsuit, set, left alone by a patch that does not
+  // carry it, cleared, and refused by the database outside 1–10 mm.
+  it("stores the day's wetsuit thickness, leaves it on a patch that does not say, and clears it", async () => {
+    const { db, shop } = ctx;
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "February wreck — 7 mm day",
+      startsAt: new Date("2030-02-03T13:00:00.000Z"),
+      endsAt: new Date("2030-02-03T17:00:00.000Z"),
+      capacity: 10,
+    });
+    if (!trip) throw new Error("trip not created");
+    expect(trip.wetsuitThicknessMm).toBeNull();
+    const base = {
+      title: trip.title,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      capacity: trip.capacity,
+      plannedDives: trip.plannedDives,
+    };
+    await updateTrip(db, shop.id, trip.id, { ...base, wetsuitThicknessMm: 7 });
+    expect((await getTripWithBooked(db, shop.id, trip.id))?.wetsuitThicknessMm).toBe(7);
+    await updateTrip(db, shop.id, trip.id, base);
+    expect((await getTripWithBooked(db, shop.id, trip.id))?.wetsuitThicknessMm).toBe(7);
+    await updateTrip(db, shop.id, trip.id, { ...base, wetsuitThicknessMm: null });
+    expect((await getTripWithBooked(db, shop.id, trip.id))?.wetsuitThicknessMm).toBeNull();
+    await expect(
+      db.transaction((tx) =>
+        tx.update(trips).set({ wetsuitThicknessMm: 11 }).where(eq(trips.id, trip.id)),
+      ),
+    ).rejects.toThrow();
   });
 
   it("stores an optional meeting point and lets staff clear it back to null (issue #704)", async () => {

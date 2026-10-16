@@ -227,6 +227,7 @@
     "meetingPointLabelLabel": "Punto de encuentro",
     "meetingPointAddressLabel": "Dirección del punto de encuentro",
     "optionalHint": "(opcional)",
+    "wetsuitThicknessLabel": "Neopreno del día (mm)",
     "dateLabel": "Fecha",
     "departsLabel": "Sale",
     "returnsLabel": "Vuelve",

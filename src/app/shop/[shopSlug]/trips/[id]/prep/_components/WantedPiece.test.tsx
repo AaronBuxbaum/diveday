@@ -23,6 +23,7 @@ const unit = (id: string, label: string, size: string | null) => ({
   serviceState: { state: "no_clock" } as GearServiceState,
   serviceConcern: false,
   nitroxDesignated: null as boolean | null,
+  thicknessMm: null as number | null,
 });
 
 function prepWith(free: ReturnType<typeof unit>[], proposed?: ReturnType<typeof unit>): TripPrep {

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/form";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents } from "@/lib/format";
+import { WETSUIT_THICKNESS_MM } from "@/lib/gear";
 import {
   MAX_DECISION_HOURS,
   MAX_MINIMUM_BOOKINGS,
@@ -23,6 +24,7 @@ import {
   MINIMUM_SEATS_DECISION_HOURS_DEFAULT,
 } from "@/lib/minimum-seats";
 import { currencyFractionDigits, maxPriceMajor, minorToMajor } from "@/lib/money";
+import { offeredRentableItems } from "@/lib/rentals";
 import type { FormNotice } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
@@ -58,6 +60,8 @@ export type DetailsSectionContext = {
   hasBoatDiving: boolean;
   hasShoreDiving: boolean;
   hasPoolDiving: boolean;
+  /** The shop's rental catalog: renting wetsuits makes the day's thickness worth asking (#2206). */
+  rentalItems: readonly string[];
   locale: string;
   /** The shop's currency — what the numbers in these price boxes mean. */
   currency: string;
@@ -79,25 +83,13 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
     boats,
     lenses,
     hasBoatDiving,
-    hasShoreDiving,
-    hasPoolDiving,
   } = context;
   const t = staffTranslator(locale);
   // Both price boxes follow the shop's currency: whole-number entry and a
   // symbol-only placeholder for a zero-decimal currency, where "$0.00" was
   // wrong twice over.
   const digits = currencyFractionDigits(currency);
-  // Only the modes this shop actually runs, same rule the add panel applies —
-  // a departure must not be switchable to a kind of diving the shop has said it
-  // does not do. One option is no choice, so the select does not render.
-  const MODE_KEYS = {
-    boat: "boats.modeBoat",
-    shore: "boats.modeShore",
-    pool: "boats.modePool",
-  } as const;
-  const modeOptions = (["boat", "shore", "pool"] as const).filter((mode) =>
-    mode === "boat" ? hasBoatDiving : mode === "shore" ? hasShoreDiving : hasPoolDiving,
-  );
+  const modeOptions = departureModes(context);
   const priceStep = digits === 0 ? "1" : `0.${"0".repeat(digits - 1)}1`;
   const pricePlaceholder = formatMoneyCents(0, currency, locale);
   return (
@@ -296,6 +288,7 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
           footerNote: t("shared.tripDiveFields.footerNote"),
         }}
       />
+      <WetsuitThicknessField rentalItems={context.rentalItems} t={t} mm={trip.wetsuitThicknessMm} />
       {/* Two rows of three, not one row of six. Six equal columns gave
               every box the same ~120px whatever it held — a date picker and a
               seat count side by side at the same width, with "Price per diver
@@ -469,6 +462,65 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
  * departure's minimum head count with the hour it is decided, in the shop's
  * currency. One group inside the Details form, wearing `GROUP_INSET`.
  */
+const MODE_KEYS = {
+  boat: "boats.modeBoat",
+  shore: "boats.modeShore",
+  pool: "boats.modePool",
+} as const;
+
+/**
+ * Only the modes this shop actually runs, same rule the add panel applies — a
+ * departure must not be switchable to a kind of diving the shop has said it
+ * does not do. One option is no choice, so the select does not render.
+ */
+function departureModes(
+  shop: Pick<DetailsSectionContext, "hasBoatDiving" | "hasShoreDiving" | "hasPoolDiving">,
+) {
+  return (["boat", "shore", "pool"] as const).filter((mode) =>
+    mode === "boat"
+      ? shop.hasBoatDiving
+      : mode === "shore"
+        ? shop.hasShoreDiving
+        : shop.hasPoolDiving,
+  );
+}
+
+/**
+ * The wetsuit the boat is running today (issue #2206): what the Gear tab
+ * matches a wetsuit's thickness against. Blank proposes no wetsuit at all, and
+ * a staffer picks one as before. Shown only where the shop rents wetsuits.
+ */
+function WetsuitThicknessField({
+  rentalItems,
+  t,
+  mm,
+}: {
+  rentalItems: readonly string[];
+  t: StaffTranslator;
+  mm: number | null;
+}) {
+  if (!offeredRentableItems(rentalItems).some((item) => item.kind === "wetsuit")) return null;
+  return (
+    <FieldGrid columns={3}>
+      <Field
+        label={t("trips.details.wetsuitThicknessLabel")}
+        hint={t("trips.details.optionalHint")}
+      >
+        <input
+          name="wetsuitThicknessMm"
+          type="number"
+          inputMode="numeric"
+          step={1}
+          min={WETSUIT_THICKNESS_MM.min}
+          max={WETSUIT_THICKNESS_MM.max}
+          defaultValue={mm ?? ""}
+          className={`${controlClass} tabular-nums`}
+        />
+      </Field>
+    </FieldGrid>
+  );
+}
+
 function PayAtBookingFields({
   t,
   trip,

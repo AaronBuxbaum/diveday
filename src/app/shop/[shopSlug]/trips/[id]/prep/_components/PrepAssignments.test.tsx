@@ -33,6 +33,7 @@ describe("proposed units on the Gear tab", () => {
       serviceState: { state: "no_clock" } as GearServiceState,
       serviceConcern: false,
       nitroxDesignated: null,
+      thicknessMm: null,
     });
     const proposed = {
       ...unit("u3", "BCD #3", "L"),
@@ -123,6 +124,7 @@ describe("a diver flagged for a staff fit on the Gear tab", () => {
       serviceState: { state: "no_clock" } as GearServiceState,
       serviceConcern: false,
       nitroxDesignated: null,
+      thicknessMm: null,
     };
     return {
       ...base,

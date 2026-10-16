@@ -86,6 +86,25 @@ export const GEAR_SERVICE_KINDS = [
 export type GearServiceKind = (typeof GEAR_SERVICE_KINDS)[number];
 
 /**
+ * **A wetsuit's thickness, in whole millimetres** (issue #2206): the bounds
+ * the unit form and the departure's details form accept, and the database's
+ * own check constraints on `gear_items.thickness_mm` and
+ * `trips.wetsuit_thickness_mm` repeat. Skins and 0.5 mm suits are not
+ * thermal protection anyone proposes by thickness; nothing rents thicker
+ * than a 10 mm.
+ */
+export const WETSUIT_THICKNESS_MM = { min: 1, max: 10 } as const;
+
+/** A posted thickness narrowed to whole millimetres in range, or null. */
+export function parseWetsuitThicknessMm(value: unknown): number | null {
+  if (typeof value !== "string" || value.trim() === "") return null;
+  const mm = Number(value.trim());
+  return Number.isInteger(mm) && mm >= WETSUIT_THICKNESS_MM.min && mm <= WETSUIT_THICKNESS_MM.max
+    ? mm
+    : null;
+}
+
+/**
  * Fleet display order. The four shared kinds before mask/fins keep the prep
  * list's own order
  * (`KIND_ORDER` in dive-prep.ts) so the register and the packing list read

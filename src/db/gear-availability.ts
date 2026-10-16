@@ -36,6 +36,8 @@ export type AvailableGearUnit = {
   size: string | null;
   /** A regulator kept for enriched air (issue #2207); null for every other kind. */
   nitroxDesignated: boolean | null;
+  /** A wetsuit's thickness in millimetres (issue #2206); null when not said and on every other kind. */
+  thicknessMm: number | null;
   /**
    * The unit's most urgent clock, so the picker can say "service overdue"
    * in the option itself. Informing at the moment of the decision, never
@@ -163,6 +165,7 @@ export async function listAvailableGearUnits(
       label: gearItems.label,
       size: gearItems.size,
       nitroxDesignated: gearItems.nitroxDesignated,
+      thicknessMm: gearItems.thicknessMm,
     })
     .from(gearItems)
     .where(

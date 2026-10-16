@@ -32,7 +32,16 @@ export type ProposalUnit = {
    * issue #2207). Only `true` counts; null is "not said".
    */
   nitroxDesignated?: boolean | null;
+  /** A wetsuit's thickness in millimetres (`gear_items.thickness_mm`, issue #2206). */
+  thicknessMm?: number | null;
 };
+
+/**
+ * What the departure says that a proposal reads: the wetsuit the boat is
+ * running today (`trips.wetsuit_thickness_mm`, issue #2206). Absent or null
+ * is "not said", and then no wetsuit is proposed.
+ */
+export type ProposalDeparture = { wetsuitThicknessMm?: number | null };
 
 /**
  * One diver's row as the proposal reads it. `wantsNitrox` decides which side
@@ -68,7 +77,12 @@ export function proposalKey(bookingId: string, kind: string): string {
  *   file — the same exact-match band the picker heads with that size. No size
  *   on file, or a size that is only a starting point (`sizeIsAStart`), is no
  *   proposal: those are the rows a person has to fit. Exact-size matching
- *   reads the size label only: it does not cover a wetsuit's thickness or cut.
+ *   reads the size label only, so it says nothing of a suit's cut.
+ * - **A wetsuit only when its thickness is the departure's too** (issue
+ *   #2206; Aaron 2026-10-13): the size *and* `thicknessMm` both match the
+ *   day's `wetsuitThicknessMm`. The day not saying, or the unit not saying,
+ *   is no proposal: the L diver on a February wreck day is otherwise handed
+ *   the first free L, which may be a 3 mm shorty on a 7 mm day.
  * - **A sizeless piece** (a mask, a regulator, a computer) only from units
  *   with no size label. A mask labelled "Kids" or "RX -4.0" was labelled for
  *   somebody, and handing it over is a person's call.
@@ -95,7 +109,9 @@ export function proposalKey(bookingId: string, kind: string): string {
 export function proposeRentalUnits<U extends ProposalUnit>(
   rows: readonly ProposalRow[],
   freeByKind: ReadonlyMap<string, readonly U[]>,
+  departure: ProposalDeparture = {},
 ): Map<string, U> {
+  const dayThickness = departure.wetsuitThicknessMm ?? null;
   const taken = new Set<string>();
   const proposals = new Map<string, U>();
   for (const row of rows) {
@@ -109,6 +125,10 @@ export function proposeRentalUnits<U extends ProposalUnit>(
         candidates = groupUnitsForSize(free, need.size).exact;
       } else {
         candidates = groupUnitsForSize(free, null).rest.filter((unit) => !unit.size?.trim());
+      }
+      if (need.kind === "wetsuit") {
+        if (dayThickness === null) continue;
+        candidates = candidates.filter((unit) => unit.thicknessMm === dayThickness);
       }
       if (need.kind === "regulator") {
         const nitrox = row.wantsNitrox === true;

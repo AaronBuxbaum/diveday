@@ -118,7 +118,8 @@
     "aboard": "A bordo",
     "ashore": "En tierra",
     "nitroxDesignated": "Uso con nitrox",
-    "nitroxDesignatedHint": "Reservado para aire enriquecido"
+    "nitroxDesignatedHint": "Reservado para aire enriquecido",
+    "thicknessMm": "Grosor (mm)"
   },
   "notice": {
     "added": "En el registro.",
@@ -267,6 +268,7 @@
     "optionServiceOverdue": "mantenimiento vencido",
     "optionServiceDueSoon": "mantenimiento por vencer",
     "optionNitroxDesignated": "para nitrox",
+    "optionThickness": "{mm} mm",
     "optionServiceConcern": "revisión pendiente",
     "pickUnit": "Elige una unidad…",
     "proposal": {

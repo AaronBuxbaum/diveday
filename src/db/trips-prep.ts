@@ -302,6 +302,7 @@ export async function getTripPrep(
             wantsNitrox: row.diver.wantsNitrox,
           })),
           freeByKind,
+          { wetsuitThicknessMm: trip.wetsuitThicknessMm },
         );
 
   return {

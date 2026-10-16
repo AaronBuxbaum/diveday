@@ -146,11 +146,11 @@ export function participantTermsRows({
   tripNotice,
   canConfigure,
   shopSlug,
-  plannedSites,
+  tripDiveList,
 }: {
   trip: Trip;
-  /** The sites the departure's dives plan to visit, one per dive that names one. */
-  plannedSites: readonly { snorkelSuitable: boolean | null }[];
+  /** The departure's dives; the sites they plan to visit carry the snorkel flag (#2214). */
+  tripDiveList: readonly { diveSite: { snorkelSuitable: boolean | null } | null }[];
   shop: { currency: string };
   locale: string;
   tripNotice: FormNotice | undefined;
@@ -167,7 +167,7 @@ export function participantTermsRows({
   // picks the site on the day.
   const unsuitable = snorkelersOnUnsuitableSites({
     snorkelerSeatsOpen: trip.snorkelerPriceCents !== null,
-    plannedSites,
+    plannedSites: tripDiveList.flatMap(({ diveSite }) => (diveSite ? [diveSite] : [])),
   });
   return [
     {

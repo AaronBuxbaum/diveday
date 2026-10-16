@@ -344,6 +344,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Technician
 - The bench
 - Trip prep list
+- Wetsuit for the day
 - Work done record
 - Work order
 

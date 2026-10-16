@@ -586,6 +586,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // so it leaves with the shop (issue #973).
       "self_guided",
       "exceeds_no_deco_limits",
+      // The wetsuit the boat ran that day, in millimetres (issue #2206).
+      "wetsuit_thickness_mm",
       // The bundle carries deleted departures (they are still the shop's
       // rows), so it has to carry the stamp that says which — a file that
       // hands back a deleted departure looking live is worse than one
@@ -638,6 +640,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.isPrivate,
         row.selfGuided,
         row.exceedsNoDecoLimits,
+        row.wetsuitThicknessMm,
         row.deletedAt,
         row.createdAt,
       ]),
@@ -1392,6 +1395,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // true on a regulator the shop keeps for enriched air (issue #2207);
       // empty when the shop has not said, and on every other kind.
       "nitrox_designated",
+      // A wetsuit's thickness in whole millimetres (issue #2206).
+      "thickness_mm",
       "deleted_at",
       "created_at",
       "updated_at",
@@ -1409,6 +1414,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.serviceNote,
         row.aboardBoatId,
         row.nitroxDesignated,
+        row.thicknessMm,
         row.deletedAt,
         row.createdAt,
         row.updatedAt,

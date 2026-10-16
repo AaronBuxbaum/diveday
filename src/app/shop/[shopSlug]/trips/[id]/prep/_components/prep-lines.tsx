@@ -42,6 +42,7 @@ export const unitLine = (
     serviceState: { state: string };
     serviceConcern?: boolean;
     nitroxDesignated?: boolean | null;
+    thicknessMm?: number | null;
   },
   /**
    * The row is a nitrox diver's, so a regulator the shop keeps for enriched
@@ -52,6 +53,9 @@ export const unitLine = (
 ) =>
   [
     unit.size ? `${unit.label} · ${unit.size}` : unit.label,
+    // A wetsuit's thickness, so a staffer picking by hand sees the 3 mm from
+    // the 7 mm without reading it off a tag (issue #2206).
+    unit.thicknessMm ? t("gear.prep.optionThickness", { mm: unit.thicknessMm }) : null,
     forNitroxDiver && unit.nitroxDesignated === true ? t("gear.prep.optionNitroxDesignated") : null,
     ...careNotes(t, unit),
   ]

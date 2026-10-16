@@ -193,6 +193,13 @@
   says the person took the units; it is a receipt for gear, never a liability release, and the one
   shop-wide waiver stays the only waiver (CR-015). No terms set prints none, and DiveDay supplies
   no default. ADR 20260815-minimal-gear-register, the second amendment of 2026-10-08.
+- **Wetsuit for the day** — the thickness, in whole millimetres, of the wetsuit a departure is
+  running (`trips.wetsuit_thickness_mm`, issue #2206), set on the departure's details beside the
+  dive plan when the shop rents wetsuits. Per departure rather than per season, because the
+  cold-snap day is the one that matters. A wetsuit unit carries its own thickness
+  (`gear_items.thickness_mm`, the thickest panel, so a 5/4 is 5) on its details form, and the
+  picker line says it. Only **gear proposals** read the pair: a wetsuit is proposed when size and
+  thickness both match, and not at all when either side has not said. It never gates.
 - **Nitrox-designated regulator** — a regulator the shop keeps for enriched air, O2-cleaned or set
   aside by its own policy (`gear_items.nitrox_designated`, issue #2207), ticked on the unit's
   details form; only a regulator carries the answer, and not said reads as no. It shapes
@@ -205,7 +212,9 @@
   reservation and never a fit check, and it gates nothing: nothing is held until a staffer taps
   Assign, and the exclusion constraint still decides availability at write time. A sized kind is
   proposed only from units *exactly* the size on file; a sizeless kind only from units with no
-  size label, because a mask labelled "Kids" or "RX -4.0" was labelled for somebody. A drysuit
+  size label, because a mask labelled "Kids" or "RX -4.0" was labelled for somebody. A wetsuit is
+  proposed only when its **thickness** (`gear_items.thickness_mm`) is also the departure's
+  **wetsuit for the day** (`trips.wetsuit_thickness_mm`), and never when either has not said. A drysuit
   diver's fins and gloves, and a diver flagged for a staff fit, are never proposed. A unit whose
   service clock has lapsed, or whose last return raised a **service concern** nobody has answered
   since, is never proposed; a unit coming due soon is proposed only after every unit that is not,
