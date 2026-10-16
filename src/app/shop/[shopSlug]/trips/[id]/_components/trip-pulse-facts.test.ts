@@ -91,4 +91,19 @@ describe("tripPulseFacts", () => {
     expect(facts[1]?.href).toBe("/shop/blue-mantis/trips/trip-1#roster");
     expect(facts.every((fact) => fact.tone === undefined)).toBe(true);
   });
+
+  it("reads ungated nitrox in warning ink, below the hazards and above the neutral work", () => {
+    const facts = tripPulseFacts(
+      input({
+        pulse: {
+          blocked: 1,
+          boarded: 0,
+          work: { missingFit: 2, ungatedNitrox: 3, missingContact: 0, openOrders: 1 },
+        },
+      }),
+    );
+    const nitrox = facts.find((fact) => fact.href.includes("/prep#") && fact.tone === "warning");
+    expect(nitrox).toBeDefined();
+    expect(facts.map((fact) => fact.tone ?? "work")).toEqual(["danger", "work", "warning", "work"]);
+  });
 });

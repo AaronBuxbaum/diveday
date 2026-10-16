@@ -20,7 +20,14 @@ export type BoatWorkCounts = {
   openOrders: number;
 };
 
-export type BoatWorkItem = { code: BoatWorkCode; count: number };
+/**
+ * How loud a job reads. `work` is the neutral "things to sort"; `warning` is a
+ * fact that stands on its own line in warning ink, matching Today's chip for it.
+ * Neither holds the boat up: that is a hazard, and hazards are not boat work.
+ */
+export type BoatWorkTone = "work" | "warning";
+
+export type BoatWorkItem = { code: BoatWorkCode; count: number; tone: BoatWorkTone };
 
 /**
  * The items worth saying about a boat, in reading order.
@@ -37,10 +44,13 @@ export function boatWorkItems(
 ): BoatWorkItem[] {
   const close = urgencyFor(startsAt, now) !== "later";
   const items: BoatWorkItem[] = [
-    { code: "missing_sizes", count: counts.missingFit },
-    { code: "ungated_nitrox", count: counts.ungatedNitrox },
-    { code: "missing_contact", count: close ? counts.missingContact : 0 },
-    { code: "open_orders", count: counts.openOrders },
+    { code: "missing_sizes", count: counts.missingFit, tone: "work" },
+    // A diver who planned for nitrox and breathes air has shorter
+    // no-decompression limits than planned, so this one is a warning
+    // (issue #2549, decided 2026-10-16), as Today's `nitrox_gate` already is.
+    { code: "ungated_nitrox", count: counts.ungatedNitrox, tone: "warning" },
+    { code: "missing_contact", count: close ? counts.missingContact : 0, tone: "work" },
+    { code: "open_orders", count: counts.openOrders, tone: "work" },
   ];
   return items.filter((item) => item.count > 0);
 }

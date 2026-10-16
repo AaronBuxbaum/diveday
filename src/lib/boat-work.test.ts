@@ -18,10 +18,10 @@ describe("boatWorkItems", () => {
         { startsAt: tonight, now },
       ),
     ).toEqual([
-      { code: "missing_sizes", count: 4 },
-      { code: "ungated_nitrox", count: 1 },
-      { code: "missing_contact", count: 3 },
-      { code: "open_orders", count: 2 },
+      { code: "missing_sizes", count: 4, tone: "work" },
+      { code: "ungated_nitrox", count: 1, tone: "warning" },
+      { code: "missing_contact", count: 3, tone: "work" },
+      { code: "open_orders", count: 2, tone: "work" },
     ]);
   });
 
@@ -29,13 +29,28 @@ describe("boatWorkItems", () => {
     const counts = { ...none, missingContact: 3 };
     expect(boatWorkItems(counts, { startsAt: nextWeek, now })).toEqual([]);
     expect(boatWorkItems(counts, { startsAt: tonight, now })).toEqual([
-      { code: "missing_contact", count: 3 },
+      { code: "missing_contact", count: 3, tone: "work" },
     ]);
   });
 
   it("keeps money owed on a boat a week out: an invoice is chased early", () => {
     expect(boatWorkItems({ ...none, openOrders: 1 }, { startsAt: nextWeek, now })).toEqual([
-      { code: "open_orders", count: 1 },
+      { code: "open_orders", count: 1, tone: "work" },
     ]);
+  });
+
+  it("reads ungated nitrox as a warning on every boat, near or far, and nothing else", () => {
+    // A diver who planned for nitrox and breathes air has shorter
+    // no-decompression limits than planned (issue #2549), matching Today's
+    // nitrox_gate chip.
+    for (const startsAt of [tonight, nextWeek]) {
+      const items = boatWorkItems(
+        { missingFit: 1, ungatedNitrox: 2, missingContact: 1, openOrders: 1 },
+        { startsAt, now },
+      );
+      expect(items.filter((item) => item.tone === "warning").map((item) => item.code)).toEqual([
+        "ungated_nitrox",
+      ]);
+    }
   });
 });

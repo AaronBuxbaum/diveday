@@ -11,8 +11,12 @@ export type TripPulseFact = {
    * the trip-filtered Orders index. Never the page this strip is already on.
    */
   href: string;
-  /** Marks the facts that hold the boat up; the words already say so too. */
-  tone?: "danger";
+  /**
+   * `danger` marks the facts that hold the boat up; `warning` one that does
+   * not but should not read as plain work (nitrox with no verified card, issue
+   * #2549). The words already say so too.
+   */
+  tone?: "danger" | "warning";
 };
 
 /**
@@ -76,7 +80,11 @@ export function TripPulse({
               key={fact.href}
               href={fact.href}
               className={`inline-flex min-h-11 w-fit items-center text-base font-medium hover:underline ${
-                fact.tone === "danger" ? "text-danger" : "text-primary"
+                fact.tone === "danger"
+                  ? "text-danger"
+                  : fact.tone === "warning"
+                    ? "text-warning-strong"
+                    : "text-primary"
               }`}
             >
               {fact.text}
