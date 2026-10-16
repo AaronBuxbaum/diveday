@@ -16,12 +16,14 @@ import {
 import { getShopById } from "@/db/shops";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import { trackEvent } from "@/lib/analytics";
+import type { Role } from "@/lib/authz";
 import { nowMs } from "@/lib/clock";
 import { formValue, parseForm, trimmedText } from "@/lib/form-parse";
 import { type HeldSendPayload, heldSendPayloadSchema } from "@/lib/held-sends";
 import { majorToMinor, toShopCurrency } from "@/lib/money";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { rolesMayActOnKind } from "@/lib/today";
 
 /**
  * The three moves of a send you can take back (ADR 20260906-before-you-ask,
@@ -162,6 +164,14 @@ export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
     );
     if (!allowed) throw new Error("not_authorized");
   }
+  // The wait-list invite is Today's `waitlist_seat` row: what Today hides from
+  // a role, the action refuses it too (issue #2134).
+  if (
+    payload.kind === "waitlist_invite" &&
+    !rolesMayActOnKind("waitlist_seat", session.user.roles)
+  ) {
+    throw new Error("not_authorized");
+  }
   // A reschedule notice is only ever held by a move or by "Tell them" above,
   // both of which take the "before" time from the server's record.
   if (payload.kind === "trip_rescheduled") throw new Error("nothing_to_send");
@@ -195,7 +205,7 @@ function ticketFor(held: { id: string; runAt: Date }): HeldTicket {
  */
 async function assertMayActOnHeld(
   db: AppDb,
-  session: { user: { shopId: string; personId: string } },
+  session: { user: { shopId: string; personId: string; roles: readonly Role[] } },
   id: string,
 ): Promise<void> {
   const row = await pendingHeldSend(db, session.user.shopId, id);
@@ -207,6 +217,9 @@ async function assertMayActOnHeld(
         ? canPersonManagePaymentSettings
         : null;
   if (gate && !(await gate(db, session.user.shopId, session.user.personId))) {
+    throw new Error("not_authorized");
+  }
+  if (row.kind === "waitlist_invite" && !rolesMayActOnKind("waitlist_seat", session.user.roles)) {
     throw new Error("not_authorized");
   }
 }

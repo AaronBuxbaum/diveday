@@ -1990,3 +1990,14 @@ export function factOfScaleFor(input: {
 
 /** Every hundredth diver, which is the ADR's own number. */
 const FACT_OF_SCALE_EVERY = 100;
+
+/**
+ * Whether any of these roles is in a kind's Today audience. The server-side
+ * twin of `filterActionsForRoles`, for an action that does what a row offers:
+ * what Today hides from a role, the action behind it refuses (issue #2134).
+ * Unlike the filter, an empty list is nobody, not everybody.
+ */
+export function rolesMayActOnKind(kind: TodayActionKind, roles: readonly Role[]): boolean {
+  const audience = KIND_AUDIENCE[kind];
+  return roles.some((role) => audience.includes(role));
+}
