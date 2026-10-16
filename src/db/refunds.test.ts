@@ -12,6 +12,7 @@ import { getBookingPayment, listBookingPaymentEvents, setBookingPayment } from "
 import {
   listOwedShopCancellationRefunds,
   OWED_REFUND_STALE_AFTER_MS,
+  queueBookingRefundOnShopCancellation,
   refundBookingOnCancellation,
   refundBookingOnShopCancellation,
   refundBookingsForShopCancelledTrip,
@@ -755,6 +756,87 @@ describe("refundBookingOnShopCancellation", () => {
       fakeCheckout({ status: "refunded" }),
     );
     expect(outcome).toEqual({ status: "failed" });
+  });
+});
+
+/**
+ * The queued arm (H-123): a caller who may not move money still tells the diver
+ * the truth about their seat, and moves nothing.
+ */
+describe("queueBookingRefundOnShopCancellation", () => {
+  it("queues a captured Stripe seat and leaves the money where it is", async () => {
+    const { db, shop, bookingId } = await paidBookingContext(48);
+    const outcome = await queueBookingRefundOnShopCancellation(db, {
+      shopId: shop.id,
+      bookingId,
+    });
+    expect(outcome).toEqual({ status: "queued" });
+    expect((await getBookingPayment(db, shop.id, bookingId))?.status).toBe("paid");
+  });
+
+  it("answers already_refunded for a seat that was refunded", async () => {
+    const { db, shop, bookingId, capturedCents } = await paidBookingContext(48);
+    await refundBookingOnShopCancellation(
+      db,
+      { shopId: shop.id, bookingId },
+      fakeCheckout({ status: "refunded", refundId: "re_q" }, [], capturedCents),
+    );
+    expect(await queueBookingRefundOnShopCancellation(db, { shopId: shop.id, bookingId })).toEqual({
+      status: "already_refunded",
+    });
+  });
+
+  it("returns the dive for a seat paid with a package", async () => {
+    const { db, shop, bookingId } = await paidBookingContext(48);
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      currency: "usd",
+      amountCents: 0,
+      provider: "dive_package",
+      operation: "package_consumed",
+    });
+    expect(await queueBookingRefundOnShopCancellation(db, { shopId: shop.id, bookingId })).toEqual({
+      status: "dive_returned",
+    });
+  });
+
+  it("returns the dive when a package was spent but the seat no longer reads captured", async () => {
+    const { db, shop, bookingId } = await paidBookingContext(48);
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      currency: "usd",
+      amountCents: 0,
+      provider: "dive_package",
+      operation: "package_consumed",
+    });
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "unpaid",
+      currency: "usd",
+      amountCents: 0,
+    });
+    expect(await queueBookingRefundOnShopCancellation(db, { shopId: shop.id, bookingId })).toEqual({
+      status: "dive_returned",
+    });
+  });
+
+  it("answers unpaid for a seat nobody paid for", async () => {
+    const { db, shop, bookingId } = await paidBookingContext(48);
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "unpaid",
+      currency: "usd",
+      amountCents: 0,
+    });
+    expect(await queueBookingRefundOnShopCancellation(db, { shopId: shop.id, bookingId })).toEqual({
+      status: "unpaid",
+    });
   });
 });
 
