@@ -27,6 +27,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   instructor_missing: "today.actionKind.instructorMissing",
   uncrewed_course: "today.actionKind.uncrewedCourse",
   uncrewed_departure: "today.actionKind.uncrewedDeparture",
+  boat_clash: "today.actionKind.boatClash",
   crew_clash: "today.actionKind.crewClash",
   crew_clash_sailed: "today.actionKind.crewClashSailed",
   nitrox_gate: "today.actionKind.nitroxGate",
@@ -309,6 +310,21 @@ function clashGroups(
     count: names.length,
     departure,
   }));
+}
+
+/**
+ * One sentence per other departure on the same hull (H-80, issue #2135), the
+ * hull and the other departure named, in the words the departure page uses.
+ */
+export function boatClashDetailText(
+  t: StaffTranslator,
+  clashes: readonly { boatName: string; otherTitle: string }[],
+): string {
+  return clashes
+    .map((clash) =>
+      t("today.detail.boatClash", { boat: clash.boatName, departure: clash.otherTitle }),
+    )
+    .join(" ");
 }
 
 /**

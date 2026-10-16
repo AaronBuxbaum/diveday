@@ -392,6 +392,14 @@ export async function POST(request: Request) {
       ? await slideOneDepartureOntoAnother(db, shop.id, now, shop.timezone)
       : null;
 
+  // Two departures on one hull at the same hours (H-80, issue #2135): the
+  // second is slid onto the first through `moveTrip`, the way a shop reaches
+  // it. Opt-in, and it moves a departure, for the same reasons as above.
+  const boatClash =
+    new URL(request.url).searchParams.get("boatClash") === "1"
+      ? await slideOneDepartureOntoAnotherHull(db, shop.id, now)
+      : null;
+
   // The same clash with both boats already out on the water, two hours gone:
   // no longer stations, so Today files the sailed row at the desk (H-80,
   // issue #1814). Opt-in for the same reason, and it moves two departures.
@@ -480,6 +488,7 @@ export async function POST(request: Request) {
     ...(blockedMinor ? { blockedMinor } : {}),
     ...(crewClash ? { crewClash } : {}),
     ...(crewClashSailed ? { crewClashSailed } : {}),
+    ...(boatClash ? { boatClash } : {}),
     ...(identityHeld ? { identityHeld } : {}),
     ...(moveBlocked ? { moveBlocked } : {}),
     ...(farStation ? { farStation } : {}),
@@ -1037,6 +1046,48 @@ async function slideOneDepartureOntoAnother(
     otherTitle: host.title,
     date: calendarDateInTimezone(landing, timezone),
   };
+}
+
+/**
+ * **Two departures on one hull at the same hours** (H-80, issue #2135): the
+ * first two upcoming departures that do not overlap are put on the shop's
+ * first boat, then the later one is moved onto the earlier one. Returns the
+ * departure that moved and the one it landed on.
+ */
+async function slideOneDepartureOntoAnotherHull(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  now: Date,
+): Promise<{ tripId: string; otherTitle: string } | null> {
+  const [hull] = await db
+    .select({ id: boats.id })
+    .from(boats)
+    .where(and(eq(boats.shopId, shopId), isNull(boats.deletedAt)))
+    .orderBy(boats.name);
+  if (!hull) return null;
+  const upcoming = await db
+    .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt, endsAt: trips.endsAt })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        isNull(trips.deletedAt),
+        gte(trips.startsAt, new Date(now.getTime() + HOUR_MS)),
+      ),
+    )
+    .orderBy(trips.startsAt);
+  const [host] = upcoming;
+  const mover = upcoming.find(
+    (trip) => trip.id !== host?.id && host && trip.startsAt >= host.endsAt,
+  );
+  if (!host || !mover) return null;
+  await db
+    .update(trips)
+    .set({ boatId: hull.id })
+    .where(inArray(trips.id, [host.id, mover.id]));
+  if (!(await moveTrip(db, shopId, mover.id, host.startsAt)).ok) return null;
+  return { tripId: mover.id, otherTitle: host.title };
 }
 
 /**

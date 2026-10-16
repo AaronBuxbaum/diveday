@@ -4206,6 +4206,22 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **One hull on two departures at once** (H-80, issue #2135). `?boatClash=1`
+       * slides a seeded departure onto another that shares its boat through
+       * `moveTrip`; Today says it once, on the earlier departure.
+       */
+      test(`today names a boat on two departures at once (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?boatClash=1");
+        expect(seeded.ok()).toBe(true);
+        await page.goto("/shop/blue-mantis");
+        await page.getByText("Boat on two departures").first().waitFor();
+        await capture(page, "today-boat-clash", scheme);
+      });
+
+      /**
        * **The same clash with both boats two hours out** (H-80, issue #1814).
        * Neither is a station any more, so the sailed row files at the desk in
        * Needs you, naming its own boat, rather than into the week's count.

@@ -81,6 +81,7 @@ export type TodayActionKind =
   | "instructor_missing"
   | "uncrewed_course"
   | "uncrewed_departure"
+  | "boat_clash"
   | "crew_clash"
   | "crew_clash_sailed"
   | "crew_below_target"
@@ -190,6 +191,11 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // of the two boats will sail without them, so it sits beside the zero-crew
   // row rather than with the advisory ones; it ranks just under it because the
   // boat it names does have somebody rostered, and the fix is one call.
+  // **Two departures on one hull at once** (H-80, issue #2135). The same fault
+  // as the crew clash seen from the boat, and the move that makes one usually
+  // makes the other, so it sits just above it: a hull cannot sail twice, a
+  // person at least can be swapped.
+  boat_clash: 11.25,
   crew_clash: 11.5,
   // A course session short of its instructor with somebody else in the water.
   // It refuses a sale (`course_unstaffed`, src/db/bookings.ts) and no
@@ -415,6 +421,7 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   ],
   // The crew rows' audience: the divemaster and captain at the rail are as
   // likely to notice they are on two boats as the office is to fix it.
+  boat_clash: ["owner", "manager", "instructor", "assistant_instructor", "divemaster", "captain"],
   crew_clash: ["owner", "manager", "instructor", "assistant_instructor", "divemaster", "captain"],
   crew_clash_sailed: [
     "owner",
@@ -638,6 +645,7 @@ export const ACTION_KIND_META = {
   uncrewed_course: { tone: "warning" },
   // Warning both: a clash is a roster that contradicts itself, not a person
   // somebody has said is missing — that is `roll_call_missing_crew`'s danger.
+  boat_clash: { tone: "warning" },
   crew_clash: { tone: "warning" },
   crew_clash_sailed: { tone: "warning" },
   nitrox_gate: { tone: "warning" },

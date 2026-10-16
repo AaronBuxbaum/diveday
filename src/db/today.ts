@@ -93,14 +93,14 @@ import {
 } from "./stripe-accounts";
 import { pushDepartureRows } from "./today-departure-rows";
 import { pushEquipmentRows } from "./today-equipment-rows";
-import { pushRollCallRows } from "./today-roll-call-rows";
+import { pushBoatClashRows, pushRollCallRows } from "./today-roll-call-rows";
 import type { TodayRowsContext } from "./today-rows-context";
 import { at, shopDay } from "./today-shared";
 import { pushShopRows } from "./today-shop-rows";
 import { meetingWindowsByTrip } from "./trip-meeting-windows";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { latestTripStagesByTrip } from "./trip-stages";
-import { countShopTrips, crewClashesByTrip, listStaff } from "./trips";
+import { boatClashesByTrip, countShopTrips, crewClashesByTrip, listStaff } from "./trips";
 import { liveTrip } from "./trips-live";
 import { sharedWelcomeSeatsByTrip } from "./welcome-cues";
 import { listWorkOrdersNeedingAttention } from "./work-order-follow-up";
@@ -887,8 +887,10 @@ async function standingCrewClashes(
   // The departure roll call is read here for every one of these departures,
   // not borrowed from the station reader: a boat that left more than an hour
   // ago is no longer a station, and it is the boat this question is about.
-  const [clashes, divers, crew, stages, meetingWindows] = await Promise.all([
+  const [clashes, boatClashes, divers, crew, stages, meetingWindows] = await Promise.all([
     crewClashesByTrip(db, shopId, ids, now),
+    // The hull half of the same fault (H-80, issue #2135): one batched read.
+    boatClashesByTrip(db, shopId, ids, now),
     listDepartureRollCallByTrip(db, shopId, ids),
     listDepartureCrewRollCallByTrip(db, shopId, ids),
     latestTripStagesByTrip(
@@ -915,6 +917,7 @@ async function standingCrewClashes(
     }) === "aboard";
   return {
     clashes,
+    boatClashes,
     divers,
     crew,
     departures: [...departures.values()],
@@ -1989,6 +1992,7 @@ export async function getTodayWork(
   };
 
   pushRollCallRows(actions, rows);
+  pushBoatClashRows(actions, rows);
 
   pushDepartureRows(actions, rows);
 

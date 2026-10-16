@@ -1,8 +1,10 @@
 import {
+  boatClashDetailText,
   crewClashDetailText,
   crewClashSailedDetailText,
   openCrewActionText,
   openRollCallActionText,
+  openTripActionText,
   rollCallAlertedText,
   rollCallGapDetailText,
 } from "@/i18n/today-labels";
@@ -17,7 +19,7 @@ import {
 } from "@/lib/today";
 import type { TodayRowsContext } from "./today-rows-context";
 import { at } from "./today-shared";
-import type { CrewClash } from "./trips";
+import type { BoatClash, CrewClash } from "./trips";
 
 /**
  * The rows about who is not accounted for: blocked divers aboard a boat that is out, the open roll calls, and crew rostered on two boats at once. They lead the queue, so they are pushed first.
@@ -218,5 +220,45 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
         dueAt: sails,
       });
     }
+  }
+}
+
+/**
+ * **One hull on two departures at once** (H-80, issue #2135), said once like
+ * the crew clash (issue #2211): the row sits on the earlier departure and
+ * names the other. A side goes quiet when its own leg has sailed
+ * (`boatClashesByTrip`), so the later departure keeps the row whenever the
+ * earlier one is not saying it. Information only; nothing is gated.
+ */
+export function pushBoatClashRows(actions: TodayAction[], ctx: TodayRowsContext): void {
+  const { shopSlug, timeZone, locale, t, now } = ctx;
+  const { departures, boatClashes } = ctx.wave.crewClashState;
+  const ordered = [...departures].sort(
+    (a, b) => a.startsAt.getTime() - b.startsAt.getTime() || a.id.localeCompare(b.id),
+  );
+  const position = new Map(ordered.map((trip, index) => [trip.id, index]));
+  for (const trip of ordered) {
+    const standing: BoatClash[] = (boatClashes.get(trip.id) ?? []).filter((clash) => {
+      const partnerSaysIt =
+        position.has(clash.otherTripId) &&
+        boatClashes.get(clash.otherTripId)?.some((other) => other.otherTripId === trip.id);
+      if (!partnerSaysIt) return true;
+      return (position.get(trip.id) ?? 0) < (position.get(clash.otherTripId) ?? 0);
+    });
+    if (standing.length === 0) continue;
+    const when = at(trip.startsAt, timeZone, locale);
+    actions.push({
+      id: `boat-clash:${trip.id}`,
+      kind: "boat_clash",
+      urgency: urgencyFor(trip.startsAt, now),
+      subject: trip.title,
+      context: when,
+      departure: { tripId: trip.id, label: `${trip.title} · ${when}` },
+      aboutDeparture: true,
+      detail: boatClashDetailText(t, standing),
+      actionLabel: openTripActionText(t),
+      href: `/shop/${shopSlug}/trips/${trip.id}?view=details`,
+      dueAt: trip.startsAt,
+    });
   }
 }
