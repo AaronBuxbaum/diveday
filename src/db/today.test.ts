@@ -228,6 +228,10 @@ describe("today's work queue (in-memory PGlite)", () => {
     // one thing left to do about them.
     expect(row?.subject).toContain(shop.currency.toUpperCase());
     expect(row?.subject).toMatch(/feet|meters/);
+    // And the third, which the first-run checklist names too (issue #2571).
+    expect(row?.subject).toMatch(/Fahrenheit|Celsius/);
+    expect(row?.subject).toContain("picked for where you are");
+    expect(row?.subject).not.toMatch(/guess/i);
 
     // **Answering it empties the row for good.** The row is derived from the
     // column, not from a dismissal, so there is no state to get stuck.

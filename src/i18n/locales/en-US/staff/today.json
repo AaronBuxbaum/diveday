@@ -261,10 +261,12 @@
     "subject": "{count, plural, one {# message is} other {# messages are}} waiting on an answer"
   },
   "unitsUnconfirmed": {
-    "subject": "{currency} and {depth}, guessed from your timezone",
+    "subject": "{currency}, {depth} and {temperature}, picked for where you are",
     "detail": "Confirm them.",
     "feet": "feet",
-    "meters": "meters"
+    "meters": "meters",
+    "fahrenheit": "Fahrenheit",
+    "celsius": "Celsius"
   },
   "gear": {
     "overdueDetail": "{units} {count, plural, one {was} other {were}} due back {dueOn} and {count, plural, one {is} other {are}} still out.",

@@ -1717,6 +1717,7 @@ async function readTodayWave(
         unitsConfirmedAt: shops.unitsConfirmedAt,
         currency: shops.currency,
         depthUnit: shops.depthUnit,
+        temperatureUnit: shops.temperatureUnit,
       })
       .from(shops)
       .where(eq(shops.id, shopId))
@@ -2032,6 +2033,7 @@ export async function getTodayWork(
       subject: unitsUnconfirmedSubjectText(t, {
         currency: shopUnits.currency.toUpperCase(),
         depthUnit: shopUnits.depthUnit,
+        temperatureUnit: shopUnits.temperatureUnit,
       }),
       context: null,
       detail: unitsUnconfirmedDetailText(t),

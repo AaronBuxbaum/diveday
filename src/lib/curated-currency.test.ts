@@ -250,7 +250,10 @@ describe("a shop in the euro area", () => {
   it("leaves a European shop outside the euro area alone", () => {
     expect(shopDefaults({ country: "GB", timeZone: "Europe/London" }).currency).toBe("gbp");
     expect(shopDefaults({ country: "PL", timeZone: "Europe/Warsaw" }).currency).toBe("usd");
-    expect(shopDefaultsForTimeZone("Europe/Zurich").currency).toBe("usd");
+    // Zurich is no longer a guess at dollars (#2571); Warsaw is known to be in
+    // Poland, whose złoty DiveDay does not offer, so it still starts in dollars.
+    expect(shopDefaultsForTimeZone("Europe/Zurich").currency).toBe("chf");
+    expect(shopDefaultsForTimeZone("Europe/Warsaw").currency).toBe("usd");
   });
 
   it("keeps the dive countries on their own currencies by country alone", () => {
@@ -262,5 +265,89 @@ describe("a shop in the euro area", () => {
     // Stripe does not operate in Belize or Honduras: dollars, by country too.
     expect(shopDefaults({ country: "BZ", timeZone: "Europe/Madrid" }).currency).toBe("usd");
     expect(shopDefaults({ country: "HN", timeZone: "Europe/Madrid" }).currency).toBe("usd");
+  });
+});
+
+/**
+ * **A new shop's units follow the country its timezone is in, for every zone
+ * that has one** (issue #2571, decided 2026-10-16: option B, no new sign-up
+ * field). Sign-up passes only the timezone, and the lookup used to know the
+ * curated shortcuts and the euro area alone, so a shop in Zurich, Warsaw or
+ * Tokyo started in US dollars, and a Phoenix shop in metres.
+ */
+describe("a shop that gave only a timezone outside the curated zones", () => {
+  it.each([
+    ["Europe/Zurich", "chf"],
+    ["Asia/Tokyo", "jpy"],
+    ["America/Toronto", "cad"],
+    ["America/Vancouver", "cad"],
+    ["Australia/Perth", "aud"],
+    ["Australia/Brisbane", "aud"],
+    ["America/Sao_Paulo", "brl"],
+    ["Asia/Kuala_Lumpur", "myr"],
+    ["Africa/Johannesburg", "zar"],
+    ["Asia/Jerusalem", "ils"],
+    ["Europe/Copenhagen", "dkk"],
+    ["Europe/Oslo", "nok"],
+    ["Europe/Stockholm", "sek"],
+    ["America/Mexico_City", "mxn"],
+    ["Europe/Monaco", "eur"],
+    ["America/Cayenne", "eur"],
+  ])("starts a shop in %s on %s", (zone, currency) => {
+    expect(shopDefaultsForTimeZone(zone).currency).toBe(currency);
+  });
+
+  it("starts a shop in Tokyo on yen, metres and Celsius", () => {
+    expect(shopDefaultsForTimeZone("Asia/Tokyo")).toEqual({
+      currency: "jpy",
+      depthUnit: "meters",
+      temperatureUnit: "celsius",
+    });
+  });
+
+  it("starts a shop in Warsaw in metres and Celsius, and in dollars because DiveDay offers no złoty", () => {
+    expect(shopDefaultsForTimeZone("Europe/Warsaw")).toEqual({
+      currency: "usd",
+      depthUnit: "meters",
+      temperatureUnit: "celsius",
+    });
+  });
+
+  it.each([
+    "America/Phoenix",
+    "America/Anchorage",
+    "America/Detroit",
+    "America/Boise",
+    "America/Indiana/Indianapolis",
+    "America/Adak",
+    "Pacific/Guam",
+  ])("starts a shop in %s on dollars, feet and Fahrenheit", (zone) => {
+    expect(shopDefaultsForTimeZone(zone)).toEqual({
+      currency: "usd",
+      depthUnit: "feet",
+      temperatureUnit: "fahrenheit",
+    });
+  });
+
+  it("leaves a zone no table knows on the defaults, metres and Celsius", () => {
+    expect(shopDefaultsForTimeZone("Nowhere/Atlantis")).toEqual({
+      currency: "usd",
+      depthUnit: "meters",
+      temperatureUnit: "celsius",
+    });
+  });
+
+  it("never lets the wider table overrule a curated zone", () => {
+    for (const zone of Object.keys(ZONE_COUNTRY) as CuratedTimeZone[]) {
+      expect(shopDefaults({ timeZone: zone })).toEqual(
+        shopDefaults({ country: ZONE_COUNTRY[zone], timeZone: zone }),
+      );
+    }
+  });
+
+  it("only ever names a currency DiveDay offers", () => {
+    for (const zone of Intl.supportedValuesOf("timeZone")) {
+      expect(isShopCurrency(shopDefaultsForTimeZone(zone).currency)).toBe(true);
+    }
   });
 });
