@@ -28,7 +28,13 @@ import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS, seasonalBriefingText } from "@/i18n/today-labels";
 import type { DayTakings as DayTakingsReading, EveningClose } from "@/lib/closeout";
 import { FORM_DRAFT_LABEL_KEYS, type FormDraftKind } from "@/lib/form-drafts";
-import { formatMoneyScanned, formatMonthDay, formatShortDate, formatTime } from "@/lib/format";
+import {
+  formatMoneyScanned,
+  formatMonthDay,
+  formatShortDate,
+  formatTime,
+  monthNames,
+} from "@/lib/format";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import type { StaffDestinationId } from "@/lib/staff-destinations";
 import {
@@ -818,6 +824,34 @@ function CrewTipsLine({
   );
 }
 
+/**
+ * **The reader's month on the boats** (fifth-loop ideas, item 51): "October:
+ * 14 boats · 26 dives · 31 hours on the water." Their own working record,
+ * counted from the departures they crewed (`crewMonth`). Quiet, under the
+ * tips line; nothing when they have not crewed this month.
+ */
+function CrewMonthLine({
+  season,
+  locale,
+  t,
+}: {
+  season: { boats: number; dives: number; minutes: number; month: number } | null;
+  locale: string;
+  t: StaffTranslator;
+}) {
+  if (!season) return null;
+  return (
+    <p className="text-sm text-muted tabular-nums">
+      {t("shopHome.spine.crewMonth", {
+        month: monthNames(locale)[season.month - 1] ?? "",
+        boats: season.boats,
+        dives: season.dives,
+        hours: Math.round(season.minutes / 60),
+      })}
+    </p>
+  );
+}
+
 /** Everything `DaySpine` draws, assembled once by its caller and handed over as one object. */
 export type DaySpineContext = {
   spine: DaySpineData;
@@ -869,6 +903,8 @@ export type DaySpineContext = {
   factOfScale?: FactOfScale | null;
   /** Paid tips on the reader's boats this week (`CrewTipsLine`). */
   crewTipsCents?: number;
+  /** The reader's month on the boats (`readDayMoney`), or null (item 51). */
+  crewMonth?: { boats: number; dives: number; minutes: number; month: number } | null;
   /** The instructor lens's own labeled group, above the first station. */
   sessions?: React.ReactNode;
   /** The day's closing state. Omitted, the spine renders its morning reading alone. */
@@ -929,6 +965,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
     firstBooking,
     factOfScale,
     crewTipsCents = 0,
+    crewMonth = null,
     sessions,
     evening,
     highWind,
@@ -1039,6 +1076,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
       ) : null}
 
       <CrewTipsLine cents={crewTipsCents} currency={currency} locale={locale} t={t} />
+      <CrewMonthLine season={crewMonth} locale={locale} t={t} />
 
       {/* **The first booking ever, and then never again.** The word, the coral
           dot, and the seat itself — one row, because the moment *is* that
