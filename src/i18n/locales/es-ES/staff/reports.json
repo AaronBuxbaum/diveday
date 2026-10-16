@@ -148,8 +148,14 @@
     "description": "El día 2 de cada mes, el informe, los pedidos y la hoja de tripulación del mes anterior se envían a esta dirección. Déjalo vacío para desactivarlo.",
     "save": "Guardar",
     "saving": "Guardando…",
-    "saved": "Guardado. Los primeros archivos salen el día 2.",
+    "saved": "Guardado. Los archivos salen el día 2.",
     "cleared": "Desactivado. No se enviarán archivos de fin de mes.",
-    "invalid": "Eso no es un correo electrónico. Revísalo y guarda de nuevo."
+    "invalid": "Eso no es un correo electrónico. Revísalo y guarda de nuevo.",
+    "confirmationSent": "Guardado. Enviamos un enlace de confirmación a esa dirección; no se envía nada hasta que se use.",
+    "confirmationNotSent": "Guardado, pero el enlace de confirmación no se pudo enviar ahora. Guarda de nuevo más tarde para reenviarlo.",
+    "setBy": "Puesto por {name}, {date}.",
+    "setByGone": "Puesto el {date} por alguien que ya no está en el equipo.",
+    "waiting": "Esperando a que {email} confirme; no se envía nada hasta entonces.",
+    "setterLapsed": "Esa persona ya no puede exportar los datos del centro, así que no se envía nada. Guarda la dirección de nuevo para mantenerla, o cámbiala."
   }
 }

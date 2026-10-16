@@ -413,6 +413,11 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "bookkeeper_email_set_at",
     "bookkeeper_email_set_by_person_id",
     "bookkeeper_sent_month",
+    // Its confirmation (security review B1) is DiveDay's proof the inbox said
+    // yes, and the hash is a credential's: a restored shop asks again.
+    "bookkeeper_confirmed_at",
+    "bookkeeper_confirm_token_hash",
+    "bookkeeper_confirm_expires_at",
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
   trip_lenses: ["shop_id"],

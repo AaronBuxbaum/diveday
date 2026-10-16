@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "9821ba87-c865-4ea5-ba17-54907e0b72e9",
+  "id": "eae74921-c62e-4670-bdeb-212e6209213c",
   "prevIds": [
     "3d7fc55a-3967-4f48-90a3-b52a48da3569",
     "44c0586d-ddc3-4af2-9187-992a8cd1a59b",
@@ -7114,6 +7114,45 @@
       "generated": null,
       "identity": null,
       "name": "bookkeeper_sent_month",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "bookkeeper_confirmed_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "bookkeeper_confirm_token_hash",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "bookkeeper_confirm_expires_at",
       "entityType": "columns",
       "schema": "public",
       "table": "shops"
@@ -27376,6 +27415,27 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "bookkeeper_confirm_token_hash",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "shops_bookkeeper_confirm_token_hash_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "email",
           "isExpression": false,
           "asc": true,
@@ -43241,6 +43301,20 @@
     {
       "value": "(\"bookkeeper_email\" is null and \"bookkeeper_email_set_at\" is null\n        and \"bookkeeper_email_set_by_person_id\" is null)\n        or (\"bookkeeper_email\" is not null and \"bookkeeper_email_set_at\" is not null\n        and \"bookkeeper_email_set_by_person_id\" is not null)",
       "name": "shops_bookkeeper_email_provenance",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "value": "\"bookkeeper_email\" is not null\n        or (\"bookkeeper_confirmed_at\" is null and \"bookkeeper_confirm_token_hash\" is null)",
+      "name": "shops_bookkeeper_confirmation_has_address",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "value": "(\"bookkeeper_confirm_token_hash\" is null) = (\"bookkeeper_confirm_expires_at\" is null)",
+      "name": "shops_bookkeeper_confirm_token_expiry",
       "entityType": "checks",
       "schema": "public",
       "table": "shops"

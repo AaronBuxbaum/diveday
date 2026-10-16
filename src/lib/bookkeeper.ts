@@ -41,11 +41,23 @@ export function bookkeeperMonthOnSet(now: Date, timeZone: string): string {
   return monthKey(closed);
 }
 
-/** An address a person typed, normalized, or null when it is not one. */
+/**
+ * How long the bookkeeper's confirm link works (security review B1): the
+ * shore contact's week (`SHORE_ALERT_CONFIRMATION_TTL_MS`).
+ */
+export const BOOKKEEPER_CONFIRMATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * An address a person typed, trimmed with its domain lowercased, or null when
+ * it is not one. The mailbox before the `@` keeps its case: a server may
+ * treat it as case-sensitive (security review N3).
+ */
 export function bookkeeperAddress(value: string): string | null {
-  const trimmed = value.trim().toLowerCase();
+  const trimmed = value.trim();
   if (trimmed.length === 0 || trimmed.length > 254) return null;
-  return /^[^\s@<>(),;:"[\]\\]+@[^\s@<>(),;:"[\]\\]+\.[^\s@<>(),;:"[\]\\]+$/.test(trimmed)
-    ? trimmed
-    : null;
+  if (!/^[^\s@<>(),;:"[\]\\]+@[^\s@<>(),;:"[\]\\]+\.[^\s@<>(),;:"[\]\\]+$/.test(trimmed)) {
+    return null;
+  }
+  const at = trimmed.lastIndexOf("@");
+  return `${trimmed.slice(0, at)}@${trimmed.slice(at + 1).toLowerCase()}`;
 }

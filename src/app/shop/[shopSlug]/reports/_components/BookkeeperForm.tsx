@@ -14,7 +14,12 @@ export type BookkeeperFormCopy = {
   saved: string;
   cleared: string;
   invalid: string;
+  confirmationSent: string;
+  confirmationNotSent: string;
 };
+
+/** The standing line under the field: who set it, when, and whether it is live. */
+export type BookkeeperStatus = { tone: "muted" | "warning"; text: string };
 
 /**
  * **"Bookkeeper's email"** (fifth loop, item 35): one address, saved in
@@ -24,10 +29,12 @@ export type BookkeeperFormCopy = {
 export function BookkeeperForm({
   action,
   current,
+  status,
   copy,
 }: {
   action: (state: BookkeeperFormState, formData: FormData) => Promise<BookkeeperFormState>;
   current: string | null;
+  status: BookkeeperStatus | null;
   copy: BookkeeperFormCopy;
 }) {
   const idle: BookkeeperFormState = { status: "idle" };
@@ -39,7 +46,11 @@ export function BookkeeperForm({
         ? { tone: "success" as const, text: copy.cleared }
         : state.status === "invalid"
           ? { tone: "danger" as const, text: copy.invalid }
-          : null;
+          : state.status === "confirmation-sent"
+            ? { tone: "success" as const, text: copy.confirmationSent }
+            : state.status === "confirmation-not-sent"
+              ? { tone: "warning" as const, text: copy.confirmationNotSent }
+              : null;
   return (
     <form action={formAction} className="flex max-w-xl flex-wrap items-end gap-3">
       <Field label={copy.label} description={copy.description} className="min-w-0 flex-1">
@@ -58,6 +69,12 @@ export function BookkeeperForm({
         <FormStatus tone={answer.tone} className="basis-full">
           {answer.text}
         </FormStatus>
+      ) : status ? (
+        <p
+          className={`basis-full text-sm ${status.tone === "warning" ? "text-warning-strong" : "text-muted"}`}
+        >
+          {status.text}
+        </p>
       ) : null}
     </form>
   );

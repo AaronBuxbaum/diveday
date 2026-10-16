@@ -1,8 +1,10 @@
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { monthLabel, parseMonthKey } from "@/lib/calendar";
+import { formatDateTimeTz } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
-import type { NotificationEmail } from "./email";
+import { firstNameOf } from "@/lib/person-name";
+import { emailButton, type NotificationEmail } from "./email";
 
 // i18n-exempt-file: the terminal renderer for the month-end email (fifth loop,
 // item 35), on the same footing as `./weekly-digest-email.ts`: no React
@@ -43,5 +45,70 @@ export function bookkeeperMonthEndEmail(input: BookkeeperMonthEndInput): Notific
       .join(
         "",
       )}</ul><p style="margin-top: 32px; font-size: 13px; line-height: 1.5; opacity: 0.75;">${escapeHtml(why)}</p>`,
+  };
+}
+
+export type BookkeeperConfirmationInput = {
+  locale: DiverLocale;
+  shopName: string;
+  confirmUrl: string;
+  expiresAt: Date;
+  timezone: string;
+};
+
+/**
+ * The link a bookkeeper's address gets before any file goes to it (security
+ * review B1). No files: what agreeing means, the button, and that ignoring it
+ * sends nothing.
+ */
+export function bookkeeperConfirmationEmail(input: BookkeeperConfirmationInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const values = { shopName: input.shopName };
+  const body = t("notifications.bookkeeperConfirmation.body", values);
+  const confirm = t("notifications.bookkeeperConfirmation.confirm");
+  const expiry = t("notifications.bookkeeperConfirmation.expiry", {
+    expiresAt: formatDateTimeTz(input.expiresAt, input.locale, input.timezone),
+  });
+  return {
+    subject: t("notifications.bookkeeperConfirmation.subject", values),
+    text: `${body}\n\n${confirm}:\n${input.confirmUrl}\n\n${expiry}\n`,
+    html: `<p>${escapeHtml(body)}</p>${emailButton(input.confirmUrl, confirm)}<p>${escapeHtml(expiry)}</p>`,
+  };
+}
+
+export type BookkeeperNoticeInput = {
+  locale: DiverLocale;
+  recipientName: string;
+  shopName: string;
+  reportsUrl: string;
+  event: "set" | "changed" | "cleared" | "sent";
+  email?: string | undefined;
+  actorName?: string | undefined;
+  month?: string | undefined;
+};
+
+/**
+ * To each owner (security review B1 and F1): one line on what happened to the
+ * bookkeeper's address, or where this month's files went, and the way to
+ * Reports to change it.
+ */
+export function bookkeeperNoticeEmail(input: BookkeeperNoticeInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.recipientName, t("notifications.common.genericName"));
+  const greetingText = t("notifications.common.greeting", { firstName });
+  const greetingHtml = t("notifications.common.greeting", { firstName: escapeHtml(firstName) });
+  const ref = input.month ? parseMonthKey(input.month) : null;
+  const values = {
+    shopName: input.shopName,
+    email: input.email ?? "",
+    actor: input.actorName ?? t("notifications.common.genericName"),
+    month: ref ? monthLabel(ref, input.locale) : (input.month ?? ""),
+  };
+  const body = t(`notifications.bookkeeperNotice.${input.event}`, values);
+  const open = t("notifications.bookkeeperNotice.open");
+  return {
+    subject: t(`notifications.bookkeeperNotice.subject.${input.event}`, values),
+    text: `${greetingText}\n\n${body}\n\n${open}:\n${input.reportsUrl}\n`,
+    html: `<p>${greetingHtml}</p><p>${escapeHtml(body)}</p>${emailButton(input.reportsUrl, open)}`,
   };
 }

@@ -2055,14 +2055,19 @@ async function scrubPiiBlob(
       .returning({ id: shops.id });
     logFuzzyMatch(ctx, "shore_alert_email", cleared.length);
     // The bookkeeper's month-end address (item 35), on the same footing: a
-    // diver's address there goes with the diver, and the month stops leaving
-    // the shop until an owner sets an address again.
+    // diver's address there goes with the diver, with its confirmation, the
+    // hash of its confirm link and its claim, and the month stops leaving the
+    // shop until an owner sets an address again.
     const unsent = await tx
       .update(shops)
       .set({
         bookkeeperEmail: null,
         bookkeeperEmailSetAt: null,
         bookkeeperEmailSetByPersonId: null,
+        bookkeeperSentMonth: null,
+        bookkeeperConfirmedAt: null,
+        bookkeeperConfirmTokenHash: null,
+        bookkeeperConfirmExpiresAt: null,
       })
       .where(and(eq(shops.id, shopId), sql`lower(${shops.bookkeeperEmail}) = ${address}`))
       .returning({ id: shops.id });

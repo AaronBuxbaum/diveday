@@ -1663,6 +1663,52 @@ const shoreAlertStoppedSchema = z.object({
   stoppedAt: z.date(),
 });
 
+/**
+ * **The link a bookkeeper's address receives before any month-end file goes
+ * to it** (security review B1; the shore contact's confirmation is the
+ * model). From the shop, in the shop's language, with no files: it says what
+ * agreeing means and that ignoring it sends nothing.
+ */
+const bookkeeperConfirmationSchema = z.object({
+  kind: z.literal("bookkeeper_confirmation"),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  shopName: z.string().trim().min(1).max(120),
+  confirmUrl: z.url().max(2_000),
+  expiresAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
+/**
+ * **What every owner hears about the bookkeeper's address** (security review
+ * B1 and F1): that it was set, changed or removed, and by whom, and one line
+ * on each month-end send naming where the files went. Staff operational
+ * mail, from DiveDay.
+ */
+const bookkeeperNoticeSchema = z.object({
+  kind: z.literal("bookkeeper_notice"),
+  shopId: z.uuid(),
+  personId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  reportsUrl: z.url().max(2_000),
+  event: z.enum(["set", "changed", "cleared", "sent"]),
+  /** The bookkeeper's address: absent only on `cleared`. */
+  email: emailAddressSchema.optional(),
+  /** Who saved it: on `set`, `changed` and `cleared`. */
+  actorName: z.string().trim().min(1).max(120).optional(),
+  /** `YYYY-MM`, on `sent`. */
+  month: z
+    .string()
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+    .optional(),
+  /** When it happened: one email per owner per event. */
+  at: z.date(),
+});
+
 export const notificationSenderSchema = z.object({
   replyTo: emailAddressSchema.optional(),
   /** One line, already in postal order (`shopAddressLines(...).join(", ")`). */
@@ -1743,6 +1789,8 @@ export const notificationSchema = z
     courseCertifiedSchema,
     courseInquiryReceivedSchema,
     bookkeeperMonthEndSchema,
+    bookkeeperConfirmationSchema,
+    bookkeeperNoticeSchema,
   ])
   .and(z.object({ sender: notificationSenderSchema.optional() }));
 
@@ -1860,6 +1908,10 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "lost_item_found":
     case "course_certified":
     case "bookkeeper_month_end":
+    // A live link, and a bookkeeper's address in an owner's notice: a
+    // courtesy that missed its moment is not worth a row holding either.
+    case "bookkeeper_confirmation":
+    case "bookkeeper_notice":
       return false;
     default:
       return true;
@@ -2013,6 +2065,10 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // Never queued; one month per shop, which `bookkeeper_sent_month` claims.
     case "bookkeeper_month_end":
       return `bookkeeper-month-end/${notification.shopId}/${notification.month}`;
+    case "bookkeeper_confirmation":
+      return `bookkeeper-confirmation/${notification.shopId}/${notification.expiresAt.toISOString()}`;
+    case "bookkeeper_notice":
+      return `bookkeeper-notice/${notification.personId}/${notification.event}/${notification.at.toISOString()}`;
     // One Monday email per person per shop-local week — the same pair
     // `weekly_digest_sends` holds unique, so a queued retry and the claim
     // agree on what "this week's email" means.

@@ -367,6 +367,19 @@ export const shops = pgTable(
     bookkeeperEmailSetByPersonId: uuid("bookkeeper_email_set_by_person_id"),
     bookkeeperSentMonth: text("bookkeeper_sent_month"),
     /**
+     * **The bookkeeper confirmed this inbox is theirs** (security review B1,
+     * on the shore contact's model, H-118): no file leaves until it is set.
+     * The link that sets it is single-purpose and expiring, held here as a
+     * hash: it can only confirm the address the shop names now, because any
+     * change of address clears all three columns. The hash stays after use so
+     * the page can read the link back as confirmed.
+     */
+    bookkeeperConfirmedAt: timestamp("bookkeeper_confirmed_at", { withTimezone: true }),
+    bookkeeperConfirmTokenHash: text("bookkeeper_confirm_token_hash"),
+    bookkeeperConfirmExpiresAt: timestamp("bookkeeper_confirm_expires_at", {
+      withTimezone: true,
+    }),
+    /**
      * How many minutes before departure divers are asked to be at the dock. The
      * shop's real muster time varies (gear setup, cert check, briefing), so it is
      * configurable rather than a hardcoded "30 minutes" in every confirmation and
@@ -511,6 +524,7 @@ export const shops = pgTable(
   },
   (table) => [
     uniqueIndex("shops_inbound_email_token_unique").on(table.inboundEmailToken),
+    uniqueIndex("shops_bookkeeper_confirm_token_hash_unique").on(table.bookkeeperConfirmTokenHash),
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
     // H-118: an address DiveDay sends to exists only with its recorded consent.
     check(
@@ -527,6 +541,16 @@ export const shops = pgTable(
         and ${table.bookkeeperEmailSetByPersonId} is null)
         or (${table.bookkeeperEmail} is not null and ${table.bookkeeperEmailSetAt} is not null
         and ${table.bookkeeperEmailSetByPersonId} is not null)`,
+    ),
+    // A confirmation, or a link to give one, exists only for an address on file.
+    check(
+      "shops_bookkeeper_confirmation_has_address",
+      sql`${table.bookkeeperEmail} is not null
+        or (${table.bookkeeperConfirmedAt} is null and ${table.bookkeeperConfirmTokenHash} is null)`,
+    ),
+    check(
+      "shops_bookkeeper_confirm_token_expiry",
+      sql`(${table.bookkeeperConfirmTokenHash} is null) = (${table.bookkeeperConfirmExpiresAt} is null)`,
     ),
     check(
       "shops_bookkeeper_sent_month_shape",

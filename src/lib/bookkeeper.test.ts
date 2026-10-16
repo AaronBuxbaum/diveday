@@ -38,7 +38,8 @@ describe("bookkeeperMonthOnSet", () => {
 
 describe("bookkeeperAddress", () => {
   it("normalizes an address and refuses what is not one", () => {
-    expect(bookkeeperAddress("  Books@Example.COM ")).toBe("books@example.com");
+    // Only the domain is case-free; a mailbox may be case-sensitive (review N3).
+    expect(bookkeeperAddress("  Books@Example.COM ")).toBe("Books@example.com");
     expect(bookkeeperAddress("")).toBeNull();
     expect(bookkeeperAddress("books at example")).toBeNull();
     expect(bookkeeperAddress("a@b.c, d@e.f")).toBeNull();

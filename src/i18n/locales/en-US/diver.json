@@ -5698,6 +5698,25 @@
       "hello": "Hello,",
       "intro": "{month} at {shopName}: the month’s report, orders and crew sheet are attached.",
       "why": "{shopName} asked DiveDay to send these to this address on the 2nd of each month. To stop them, ask {shopName} to remove the address."
+    },
+    "bookkeeperConfirmation": {
+      "subject": "{shopName} wants to send you its month-end files",
+      "body": "{shopName} asked DiveDay to email its month-end files to this address on the 2nd of each month: last month’s report, orders and crew sheet, with divers’ and crew names and money. Confirm this is your inbox to start them.",
+      "confirm": "Yes, send me the files",
+      "expiry": "This link expires {expiresAt}. If this isn’t you, ignore this email and nothing will be sent."
+    },
+    "bookkeeperNotice": {
+      "subject": {
+        "set": "{shopName}: month-end files will go to {email}",
+        "changed": "{shopName}: the bookkeeper’s email changed",
+        "cleared": "{shopName}: month-end files turned off",
+        "sent": "{shopName}: {month} files sent to {email}"
+      },
+      "set": "{actor} set {email} as the bookkeeper’s email. Once that inbox confirms, last month’s report, orders and crew sheet go there on the 2nd of each month.",
+      "changed": "{actor} changed the bookkeeper’s email to {email}. Nothing goes to it until that inbox confirms.",
+      "cleared": "{actor} removed the bookkeeper’s email. No month-end files will be sent.",
+      "sent": "Month-end files for {month} sent to {email}.",
+      "open": "Open Reports"
     }
   },
   "brand": {
@@ -5774,5 +5793,15 @@
     "signedOne": "Signed. The next form is below.",
     "linkDeadTitle": "This link no longer works",
     "linkDeadBody": "Ask {shopName} to send your course forms again."
+  },
+  "bookkeeperConfirm": {
+    "title": "Get {shopName}’s month-end files?",
+    "description": "On the 2nd of each month, {shopName} will email last month’s report, orders and crew sheet to {email}. Nothing is sent until you confirm.",
+    "confirming": "Confirming…",
+    "submit": "Yes, send me the files",
+    "confirmedTitle": "Address confirmed",
+    "confirmedText": "{shopName}’s month-end files will come here on the 2nd of each month.",
+    "unavailableTitle": "This link isn’t available",
+    "unavailableText": "It may have expired or been replaced by a newer one, or the shop has changed the address since. Ask the shop to send a fresh one."
   }
 }

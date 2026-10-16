@@ -431,7 +431,7 @@ export default async function ReportsPage({
           <MonthFootnotes
             taxCents={report.taxCents}
             csvHref={`/shop/${shopSlug}/reports/download?month=${monthKey(current)}`}
-            monthEnd={{ shopSlug, month: monthKey(current) }}
+            monthEnd={{ shopSlug, month: monthKey(current), locale, timeZone: tz }}
             t={t}
             money={money}
           />

@@ -198,7 +198,7 @@ export function MonthFootnotes({
    * The month's other files (fifth loop, items 31 and 35): the crew sheet,
    * all three as one zip, and the bookkeeper's address they go to on the 2nd.
    */
-  monthEnd?: { shopSlug: string; month: string };
+  monthEnd?: { shopSlug: string; month: string; locale: string; timeZone: string };
   t: StaffTranslator;
   money: (cents: number) => string;
 }) {
@@ -232,7 +232,12 @@ export function MonthFootnotes({
       </p>
       {monthEnd ? (
         <Suspense fallback={null}>
-          <MonthEndSection shopSlug={monthEnd.shopSlug} t={t} />
+          <MonthEndSection
+            shopSlug={monthEnd.shopSlug}
+            locale={monthEnd.locale}
+            timeZone={monthEnd.timeZone}
+            t={t}
+          />
         </Suspense>
       ) : null}
     </>

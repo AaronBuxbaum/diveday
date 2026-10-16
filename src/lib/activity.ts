@@ -311,6 +311,14 @@ type ActivityParamShapes = {
    */
   shore_alert_contact_stopped: Record<string, never>;
   /**
+   * **Who set the bookkeeper's month-end address** (item 35, security review
+   * F1): the address a month of diver names and money leaves the shop for,
+   * added, replaced or removed. Shop-level lines with no address in them.
+   */
+  bookkeeper_email_set: { actor: string };
+  bookkeeper_email_changed: { actor: string };
+  bookkeeper_email_cleared: { actor: string };
+  /**
    * An erasure ran over this line.
    *
    * A code rather than a blanked payload, so the row reads the same way it
@@ -434,6 +442,9 @@ export const ACTIVITY_CODES = [
   "shore_alert_contact_changed",
   "shore_alert_contact_cleared",
   "shore_alert_contact_stopped",
+  "bookkeeper_email_set",
+  "bookkeeper_email_changed",
+  "bookkeeper_email_cleared",
   "redacted",
   "demo_charter_confirmed",
   "demo_second_dive_moved",
