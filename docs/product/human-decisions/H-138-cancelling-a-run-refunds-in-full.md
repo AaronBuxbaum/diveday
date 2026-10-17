@@ -1,4 +1,4 @@
-# H-122: Does cancelling every upcoming date of a run refund each seat in full?
+# H-138: Does cancelling every upcoming date of a run refund each seat in full?
 
 - **Status:** Implemented
 - **Human owner:** Product owner

@@ -1,4 +1,4 @@
-# H-124: How does one cash payment divide across a party?
+# H-140: How does one cash payment divide across a party?
 
 - **Status:** Implemented
 - **Human owner:** Product owner
