@@ -801,7 +801,7 @@ test("the desk turns a blocked diver away before the boat leaves, says why, and 
 
   // The seat is free at once.
   await page.goto(`${counter}/walk-in`);
-  await expect(page.getByText(/0\/1 booked/)).toBeVisible();
+  await expect(page.getByText(/0 of 1 booked/)).toBeVisible();
 });
 
 /**
