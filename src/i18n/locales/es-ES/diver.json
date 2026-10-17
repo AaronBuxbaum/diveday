@@ -9,7 +9,7 @@
     "said": "La tripulación lo dijo a las {time}."
   },
   "common": {
-    "smsConsent": "Al dar un número de celular, aceptas recibir mensajes de texto de DiveDay sobre tus reservas: recordatorios, enlaces de exención y resúmenes del viaje, hasta cuatro por reserva. Pueden aplicarse tarifas de mensajes y datos. Responde STOP para darte de baja o HELP para pedir ayuda. <a>Política de privacidad</a>",
+    "smsConsent": "Al dar un número de celular, aceptas recibir mensajes de texto de DiveDay sobre tus reservas y cursos: recordatorios, enlaces de exención, cambios del viaje, notas de la tripulación, objetos perdidos y resúmenes. La frecuencia de los mensajes varía. Pueden aplicarse tarifas de mensajes y datos. Responde STOP para darte de baja o HELP para pedir ayuda. <a>Política de privacidad</a>",
     "backToSchedule": "Volver al calendario",
     "needHelpContact": "¿Necesitas ayuda? <link>Contacta con {shop}</link>.",
     "needHelpPlain": "¿Necesitas ayuda? Contacta directamente con {shop}.",
