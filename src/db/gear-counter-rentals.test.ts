@@ -1,5 +1,6 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { advanceClock } from "@/test/clock";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { deleteDiver } from "./divers";
@@ -358,6 +359,8 @@ describe("counter rental tickets", () => {
         todayLocal: TODAY,
       }),
     );
+    // A rental is its insert's stamp, so the second one is made a moment later.
+    advanceClock();
     const second = rented(
       await createCounterRental(db, {
         shopId: shop.id,

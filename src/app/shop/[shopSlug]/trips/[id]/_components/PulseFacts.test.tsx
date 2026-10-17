@@ -22,7 +22,7 @@ describe("PulseFacts (UX audit item 23)", () => {
       />,
     );
     expect(screen.getByRole("link", { name: "1 order is awaiting payment" })).toBeVisible();
-    expect(screen.queryByText(/to sort/)).toBeNull();
+    expect(screen.queryByText(/Needs you/)).toBeNull();
   });
 
   it("folds two work facts into one closed line that opens to the same doors", () => {
@@ -75,7 +75,7 @@ describe("PulseFacts (UX audit item 23)", () => {
     expect(warning.className).toContain("text-warning-strong");
     expect(warning.className).not.toContain("text-danger");
     // The two neutral facts still fold into one line of their own.
-    expect(screen.getByText("2 things to sort")).toBeInTheDocument();
+    expect(screen.getByText("Needs you · 2")).toBeInTheDocument();
     expect(container.querySelectorAll("details a")).toHaveLength(2);
   });
 
@@ -89,7 +89,7 @@ describe("PulseFacts (UX audit item 23)", () => {
         foldLabel={label}
       />,
     );
-    expect(screen.queryByText(/to sort/)).toBeNull();
+    expect(screen.queryByText(/Needs you/)).toBeNull();
     expect(screen.getByRole("link", { name: "4 divers are missing rental sizes" })).toBeVisible();
   });
 });
