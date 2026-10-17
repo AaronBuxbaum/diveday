@@ -76,6 +76,16 @@ export type MonthMoneyDetail = {
   payouts: ShopPayout[];
   /** The divers whose buddy links brought this month's buddy seats, most friends first (fifth-loop ideas, item 41). */
   buddyReferrers: BuddyReferrer[];
+  /**
+   * **Money taken at the counter this month, tax included** (issue #2674):
+   * cash, the shop's own card machine or a room charge, paid in the month.
+   * DiveDay holds no tax rate for a shop, so `recordCounterOrder` and
+   * `recordPaymentOnOpenOrder` write `tax_cents = 0` and the whole figure is
+   * counted; Reports says so beside its tax figure while this is above zero.
+   * An order whose tax Stripe computed before it was settled at the counter
+   * carries its tax and is not counted here.
+   */
+  counterTaxIncludedCents: number;
 };
 
 /** Same set the roster and every other report figure count as "on the boat". */
@@ -115,14 +125,18 @@ export async function getMonthMoneyDetail(
    */
   payoutMonth?: { year: number; month: number },
 ): Promise<MonthMoneyDetail> {
-  const [lines, packageDivesOwed, divers, out, payouts, buddyReferrers] = await queryAll(db, [
-    () => moneyByLine(db, shopId, startUtc, endUtc, shopMoney),
-    () => packageDivesOwedAt(db, shopId, endUtc < now ? endUtc : now),
-    () => returningDivers(db, shopId, startUtc, endUtc),
-    () => moneyOut(db, shopId, startUtc, endUtc),
-    () => listShopPayoutsArriving(db, shopId, payoutWindow(payoutMonth, startUtc, endUtc)),
-    () => buddyReferrersForWindow(db, shopId, startUtc, endUtc),
-  ]);
+  const [lines, packageDivesOwed, divers, out, payouts, buddyReferrers, counter] = await queryAll(
+    db,
+    [
+      () => moneyByLine(db, shopId, startUtc, endUtc, shopMoney),
+      () => packageDivesOwedAt(db, shopId, endUtc < now ? endUtc : now),
+      () => returningDivers(db, shopId, startUtc, endUtc),
+      () => moneyOut(db, shopId, startUtc, endUtc),
+      () => listShopPayoutsArriving(db, shopId, payoutWindow(payoutMonth, startUtc, endUtc)),
+      () => buddyReferrersForWindow(db, shopId, startUtc, endUtc),
+      () => counterTaxIncluded(db, shopId, startUtc, endUtc),
+    ],
+  );
   const paidFees = payouts.flatMap((payout) =>
     payout.status === "paid" && payout.feeCents !== null ? [payout.feeCents] : [],
   );
@@ -136,7 +150,32 @@ export async function getMonthMoneyDetail(
     },
     payouts,
     buddyReferrers,
+    counterTaxIncludedCents: counter,
   };
+}
+
+/** What the counter took in the window with no tax split out of it; see `counterTaxIncludedCents`. */
+async function counterTaxIncluded(
+  db: DbExecutor,
+  shopId: string,
+  startUtc: Date,
+  endUtc: Date,
+): Promise<number> {
+  const [row] = await db
+    .select({ total: sql<string>`coalesce(sum(${orders.amountPaidCents}), 0)` })
+    .from(orders)
+    .where(
+      and(
+        eq(orders.shopId, shopId),
+        ne(orders.collection, "stripe_invoice"),
+        inArray(orders.status, [...KEPT_ORDER_STATUSES]),
+        eq(orders.taxCents, 0),
+        gt(orders.amountPaidCents, 0),
+        gte(orders.paidAt, startUtc),
+        lt(orders.paidAt, endUtc),
+      ),
+    );
+  return Number(row?.total ?? 0);
 }
 
 /**

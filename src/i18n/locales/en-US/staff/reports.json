@@ -14,6 +14,7 @@
   },
   "downloadCsv": "Download CSV",
   "taxLine": "Tax collected {amount}",
+  "counterTaxIncluded": "Money taken at the counter is counted with its tax included.",
   "metrics": {
     "revenueLabel": "Net revenue",
     "revenueBasis": "For this month’s departures",

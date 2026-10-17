@@ -91,7 +91,13 @@ async function paidOrder(
     quantity?: number;
     packageId?: string;
   }>,
-  options: { refundedCents?: number; taxCents?: number; bookingId?: string; paidAt?: Date } = {},
+  options: {
+    refundedCents?: number;
+    taxCents?: number;
+    bookingId?: string;
+    paidAt?: Date;
+    collection?: "cash" | "card_machine";
+  } = {},
 ) {
   seq += 1;
   const subtotal = lines.reduce((sum, line) => sum + line.cents * (line.quantity ?? 1), 0);
@@ -111,9 +117,13 @@ async function paidOrder(
       taxCents,
       amountPaidCents: totalCents - refundedCents,
       refundedCents,
-      stripeAccountId: "acct_lines",
-      stripeCustomerId: `cus_${seq}`,
-      stripeInvoiceId: `in_lines_${seq}`,
+      ...(options.collection
+        ? { collection: options.collection }
+        : {
+            stripeAccountId: "acct_lines",
+            stripeCustomerId: `cus_${seq}`,
+            stripeInvoiceId: `in_lines_${seq}`,
+          }),
       paidAt: options.paidAt ?? MID_JUNE,
     })
     .returning();
@@ -392,6 +402,40 @@ describe("what left the month's money", () => {
     );
     expect(detail.payouts).toHaveLength(1);
     expect(detail.payouts[0]?.arrivalDate).toEqual(JUNE);
+  });
+});
+
+// Issue #2674: counter money carries no tax of its own, and Reports says so.
+describe("money taken at the counter, tax included", () => {
+  it("counts cash and card-machine money paid in the month, and no invoice", async () => {
+    const db = await unseededTestDb();
+    const shop = await freshShop(db);
+    await paidOrder(db, shop, [{ kind: "rental", cents: 10_700 }], { collection: "cash" });
+    await paidOrder(db, shop, [{ kind: "other", cents: 3_000 }], { collection: "card_machine" });
+    // A Stripe invoice split its own tax out: not counter money.
+    await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }], { taxCents: 700 });
+    // Settled at the counter after Stripe computed its tax: the tax is already apart.
+    await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }], {
+      collection: "cash",
+      taxCents: 700,
+    });
+    // Paid in May: not June's.
+    await paidOrder(db, shop, [{ kind: "rental", cents: 5_000 }], {
+      collection: "cash",
+      paidAt: new Date("2031-05-20T12:00:00Z"),
+    });
+
+    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW, SHOP_MONEY);
+    expect(detail.counterTaxIncludedCents).toBe(13_700);
+  });
+
+  it("is zero in a month that took nothing at the counter", async () => {
+    const db = await unseededTestDb();
+    const shop = await freshShop(db);
+    await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }], { taxCents: 700 });
+
+    const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW, SHOP_MONEY);
+    expect(detail.counterTaxIncludedCents).toBe(0);
   });
 });
 

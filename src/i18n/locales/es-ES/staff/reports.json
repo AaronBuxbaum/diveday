@@ -14,6 +14,7 @@
   },
   "downloadCsv": "Descargar CSV",
   "taxLine": "Impuestos cobrados {amount}",
+  "counterTaxIncluded": "El dinero cobrado en el mostrador se cuenta con el impuesto incluido.",
   "metrics": {
     "revenueLabel": "Ingresos netos",
     "revenueBasis": "De las salidas de este mes",
