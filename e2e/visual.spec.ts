@@ -2841,8 +2841,13 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Next departures here" }).waitFor();
         // The fleet refuses the maps host (e2e/fixtures.ts), so this capture is
         // the failed state: the sunken ground, the route alone, and the quiet
-        // line naming the site (issue #2013).
+        // line naming the site (issue #2013). The frame asks the maps host
+        // only once it is on screen (`MapFrame`), so bring it there first, or
+        // the state stays "waiting" and the line never shows. Then back to the
+        // top, where every other capture starts.
+        await page.locator("iframe[data-map-state]").first().scrollIntoViewIfNeeded();
         await page.getByText("is not loading.").waitFor();
+        await page.evaluate(() => window.scrollTo(0, 0));
         await capture(page, "dive-site-page", scheme);
       });
 
