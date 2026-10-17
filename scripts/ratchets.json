@@ -506,7 +506,7 @@
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1285,
     "src/db/divers.test.ts": 3077,
-    "src/db/erasure-coverage.test.ts": 1173,
+    "src/db/erasure-coverage.test.ts": 1169,
     "src/db/executed-dives.test.ts": 1085,
     "src/db/export.test.ts": 1581,
     "src/db/import.test.ts": 1077,

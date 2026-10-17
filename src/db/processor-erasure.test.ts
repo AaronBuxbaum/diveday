@@ -29,20 +29,20 @@ function providerReturning(result: DeleteCustomerResult): CustomerProvider & {
   return { deleteCustomer: vi.fn().mockResolvedValue(result) };
 }
 
-const CUSTOMER = (externalId: string, providerAccountId = "acct_test") => ({
+const CUSTOMER = (externalId: string, stripeAccountId = "acct_test") => ({
   target: "stripe_customer" as const,
   externalId,
-  providerAccountId,
+  stripeAccountId,
 });
-const INVOICE = (externalId: string, providerAccountId = "acct_test") => ({
+const INVOICE = (externalId: string, stripeAccountId = "acct_test") => ({
   target: "stripe_invoice_snapshot" as const,
   externalId,
-  providerAccountId,
+  stripeAccountId,
 });
-const SESSION = (externalId: string, providerAccountId = "acct_test") => ({
+const SESSION = (externalId: string, stripeAccountId = "acct_test") => ({
   target: "stripe_checkout_session_snapshot" as const,
   externalId,
-  providerAccountId,
+  stripeAccountId,
 });
 
 async function personIdByName(db: AppDb, shopId: string, fullName: string) {
@@ -99,8 +99,7 @@ describe("recording processor erasure obligations", () => {
         INVOICE("in_a"),
         // Missing account id: a row with nowhere to send the delete is worse
         // than no row, because it can never be discharged by anything.
-        { target: "stripe_customer" as const, externalId: "cus_c", providerAccountId: "" },
-        { target: "stripe_invoice_snapshot" as const, externalId: "in_c", providerAccountId: null },
+        { target: "stripe_customer" as const, externalId: "cus_c", stripeAccountId: "" },
       ],
     });
     expect(raised.map((row) => row.externalId).sort()).toEqual(["cus_a", "cus_b", "in_a"]);
@@ -135,6 +134,32 @@ describe("recording processor erasure obligations", () => {
       }),
     ).toEqual([]);
     expect(await listOwedProcessorErasures(db, shop.id)).toHaveLength(1);
+  });
+
+  // Security review of #1721, F2: an entry dropped for naming no account is an
+  // erasure that reports finished while Stripe still holds the object, so the
+  // drop must not be silent. The target and the ids, never the handle.
+  it("says so when it drops an entry that names no account", async () => {
+    const { db, shop, ownerId } = await twoShops();
+    const lines: string[] = [];
+    setLogSink((line) => lines.push(line));
+    try {
+      expect(
+        await recordProcessorErasureObligations(db, {
+          shopId: shop.id,
+          personId: ownerId,
+          targets: [CUSTOMER("cus_nowhere", " ")],
+        }),
+      ).toEqual([]);
+    } finally {
+      setLogSink(null);
+    }
+    const warned = lines.find((line) => line.includes("processor_erasure_target_dropped"));
+    expect(warned).toBeDefined();
+    expect(warned).toContain(shop.id);
+    expect(warned).toContain(ownerId);
+    expect(warned).toContain("stripe_customer");
+    expect(warned).not.toContain("cus_nowhere");
   });
 
   it("keeps one shop's obligations out of another's, even on the same handle", async () => {

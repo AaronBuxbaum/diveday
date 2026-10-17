@@ -213,14 +213,13 @@
   erasure — it says nothing about what was erased, which no one can verify afterwards.
 - **Processor erasure obligation** — what an erasure still owes at a system outside DiveDay, one
   row per object in `processor_erasure_obligations`. DiveDay discharges a Stripe customer itself by
-  deleting it; a Stripe invoice, a Checkout Session and a **WhatsApp chat** have no delete, so the
-  owner discharges them by attesting to the work in Settings. A WhatsApp chat is one row per shop
-  and diver number, holds the number only while it is owed, and is found from the diver's WhatsApp
-  messages and replies, from a send recorded as WhatsApp (a `wamid.` booking message or waiver
-  link, a gear notice, a lost-item tell), or, as a guess, from a booking on a departure after the
-  shop finished connecting its number. SES and SNS message ids raise none: DiveDay's own log
-  retention discharges them. A QuickBooks or Xero Customer is not one either: it holds the diver's
-  details, and the shop's books are the shop's to keep. See
+  deleting it; a Stripe invoice and a Checkout Session have no delete, so the owner discharges them
+  by attesting to the work in Settings. Messaging providers raise none: SES and SNS logs sit in
+  DiveDay's own account under its own retention, and Meta keeps a WhatsApp Cloud API message at
+  most 30 days with no business-accessible view or delete. Erasure redacts DiveDay's inbox and
+  rewrites each kept `wamid.` id, which embeds the number, to its SHA-256. A QuickBooks or Xero
+  Customer is not one either: it holds the diver's details, and the shop's books are the shop's to
+  keep. See
   [20260803-processor-erasure-obligations](../../architecture/decisions/20260803-processor-erasure-obligations.md).
 - **Buddy-group preference** — an optional, non-sensitive note a diver adds while booking about
   pace, photography, or friends they hope to stay with. It helps the crew plan groups but is never

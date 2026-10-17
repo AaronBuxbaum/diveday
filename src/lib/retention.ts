@@ -123,9 +123,9 @@
  * `held_sends` (its own sweep, `src/db/held-sends.ts`) and
  * `media_deletion_attempts`. Kept as the record of an erasure's outside work:
  * `processor_erasure_obligations`, which nothing prunes; a discharged row is
- * the attestation, and a discharged WhatsApp row no longer holds the diver's
- * number (ADR 20260803-processor-erasure-obligations). Signed evidence H-02
- * has not ruled on: `waiver_records` and the course-form records.
+ * the attestation (ADR 20260803-processor-erasure-obligations). Signed
+ * evidence H-02 has not ruled on: `waiver_records` and the course-form
+ * records.
  */
 
 import { DAY_MS } from "@/lib/clock";

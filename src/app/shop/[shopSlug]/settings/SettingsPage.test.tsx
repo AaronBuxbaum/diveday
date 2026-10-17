@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { SubmitButton } from "@/components/SubmitButton";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { type Fact, FactLine } from "@/components/ui/FactLine";
 import { InsetGroup } from "@/components/ui/ledger";
@@ -254,7 +253,7 @@ describe("the units card", () => {
  * split on the erasure buttons.
  */
 const MEDIA_PANEL = "Photos that didn’t finish deleting";
-const ERASURE_PANEL = "Erasures not finished outside DiveDay";
+const ERASURE_PANEL = "Erasures not finished at Stripe";
 
 async function queueStuckDeletion(db: AppDb, session: DiveDaySession) {
   await db.insert(mediaDeletionAttempts).values({
@@ -274,22 +273,17 @@ async function queueStuckDeletion(db: AppDb, session: DiveDaySession) {
 async function oweErasure(
   db: AppDb,
   session: DiveDaySession,
-  target: "stripe_customer" | "stripe_invoice_snapshot" | "whatsapp_conversation",
+  target: "stripe_customer" | "stripe_invoice_snapshot",
   lastError: string | null = null,
 ) {
-  const externalIds = {
-    stripe_customer: "cus_test",
-    stripe_invoice_snapshot: "in_test",
-    whatsapp_conversation: "+13055550177",
-  } as const;
   await db.insert(processorErasureObligations).values({
     lastError,
     shopId: session.user.shopId,
     // Provenance only — the row this points at is already anonymized.
     personId: session.user.personId,
     target,
-    externalId: externalIds[target],
-    providerAccountId: target === "whatsapp_conversation" ? "pn_test" : "acct_test",
+    externalId: target === "stripe_customer" ? "cus_test" : "in_test",
+    stripeAccountId: "acct_test",
     status: "owed",
   });
 }
@@ -366,55 +360,18 @@ describe("the data-compliance queues in the Data group", () => {
   });
 
   /**
-   * A chat in the shop's WhatsApp (issue #1721). Meta has no delete for a
-   * message, so the row offers only the attestation, and it shows the number:
-   * a chat is found by its number, and by nothing else.
-   */
-  it("offers a WhatsApp chat only the attestation, with the number to find it by", async () => {
-    const element = await renderSettings("owner", (db, session) =>
-      oweErasure(db, session, "whatsapp_conversation"),
-    );
-    expect(ariaLabelsIn(element)).toContain(ERASURE_PANEL);
-    expect(hiddenInputNamesIn(element).filter((name) => name === "obligationId")).toHaveLength(1);
-    const values = findElements<{ facts: readonly Fact[] }>(element, FactLine)
-      .flatMap((line) => line.props.facts)
-      .map((fact) => (fact && typeof fact === "object" ? fact.value : fact));
-    expect(values).toContain("WhatsApp chat");
-    expect(values).toContain("+13055550177");
-    const buttons = findElements<{ children?: unknown }>(element, SubmitButton).map(
-      (button) => button.props.children,
-    );
-    expect(buttons).toContain("Mark deleted in WhatsApp");
-    expect(buttons).not.toContain("Mark done at Stripe");
-  });
-
-  /**
-   * Desk review F5: the panel opened on "Erasing a diver also deletes their
-   * Stripe customer", which a WhatsApp-only shop has no reason to read. Each
-   * row now carries the one step its own target needs.
+   * Desk review of #1721, F5: one paragraph explained every kind at once.
+   * Each row now carries the one step its own target needs.
    */
   it("tells each row the one step its own kind needs", async () => {
     const element = await renderSettings("owner", async (db, session) => {
+      await oweErasure(db, session, "stripe_customer");
       await oweErasure(db, session, "stripe_invoice_snapshot");
-      await oweErasure(db, session, "whatsapp_conversation");
     });
     const texts = everyString(element);
+    expect(texts).toContain("Retries on its own tonight, or retry now.");
     expect(texts).toContain("File a data-deletion request with Stripe, then mark it done.");
-    expect(texts).toContain(
-      "Delete any chat with this number on your WhatsApp, if there is one, then mark it deleted.",
-    );
     expect(texts).not.toContain("also deletes their Stripe customer");
-  });
-
-  it("shows a manager who cannot erase the chat, but not the diver's number", async () => {
-    // Desk review F6: the number is there so the owner can find the chat; a
-    // reader who cannot discharge it has no use for it.
-    const element = await renderSettings("manager", async (db, session) => {
-      await demoteOwnerToManager(db, session.user.personId);
-      await oweErasure(db, session, "whatsapp_conversation");
-    });
-    expect(ariaLabelsIn(element)).toContain(ERASURE_PANEL);
-    expect(everyString(element)).not.toContain("3055550177");
   });
 
   it("shows a manager the owed erasure but no button to close it", async () => {

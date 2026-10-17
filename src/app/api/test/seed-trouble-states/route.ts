@@ -194,12 +194,12 @@ export async function POST(request: Request) {
       {
         target: "stripe_customer",
         externalId: erasureExternalIds[0],
-        providerAccountId: "acct_e2e_test",
+        stripeAccountId: "acct_e2e_test",
       },
       {
         target: "stripe_invoice_snapshot",
         externalId: erasureExternalIds[1],
-        providerAccountId: "acct_e2e_test",
+        stripeAccountId: "acct_e2e_test",
       },
     ],
   });

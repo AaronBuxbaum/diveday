@@ -7521,7 +7521,7 @@ for (const scheme of ["light", "dark"] as const) {
         await request.post("/api/test/seed-trouble-states");
         await page.goto("/shop/blue-mantis/settings");
         await page.getByRole("region", { name: "Photos that didn’t finish deleting" }).waitFor();
-        await page.getByRole("region", { name: "Erasures not finished outside DiveDay" }).waitFor();
+        await page.getByRole("region", { name: "Erasures not finished at Stripe" }).waitFor();
         await capture(page, "settings-data-unfinished", scheme);
       });
 

@@ -108,35 +108,12 @@ export const mediaDeletionAttempts = pgTable(
  *   `POST /v1/checkout/sessions/{id}/expire` closes it but rewrites neither
  *   field. Same shape as the invoice snapshot, therefore, and discharged the
  *   same way — a human attesting to the data-deletion request (issue #1621).
- * - `whatsapp_conversation` — the chat between the shop's own WhatsApp
- *   Business number and one diver number, at Meta. The Cloud API has no
- *   delete for a sent or received message, so it is manual: the owner deletes
- *   the chat, if there is one, and attests to it. One row per (shop, diver
- *   number), never one per message: a season of reminders is one chat, and
- *   one chat is what the owner deletes (issue #1721).
- *
- * SES and SNS message ids raise nothing: those logs sit in DiveDay's own AWS
- * account, where no owner can act, and DiveDay's log retention discharges
- * them (ADR 20260803-processor-erasure-obligations, "Widened 2026-10-17").
  */
 export const processorErasureTarget = pgEnum("processor_erasure_target", [
   "stripe_customer",
   "stripe_invoice_snapshot",
   "stripe_checkout_session_snapshot",
-  "whatsapp_conversation",
 ]);
-
-/**
- * The targets that live on a shop's connected Stripe account, and so must
- * name the account they live on. Written out rather than derived from a
- * prefix, so a new Stripe target is a deliberate edit here and in the check
- * constraint below.
- */
-export const STRIPE_ERASURE_TARGETS = [
-  "stripe_customer",
-  "stripe_invoice_snapshot",
-  "stripe_checkout_session_snapshot",
-] as const satisfies readonly (typeof processorErasureTarget.enumValues)[number][];
 
 export const processorErasureStatus = pgEnum("processor_erasure_status", ["owed", "discharged"]);
 
@@ -169,12 +146,7 @@ export const processorErasureStatus = pgEnum("processor_erasure_status", ["owed"
  *      and email is still sitting on a finalized invoice or a Checkout Session.
  *
  * `external_id` is a `cus_…`/`in_…`/`cs_…` handle, not personal data: it is the
- * pointer, and the row deliberately keeps no name, address or amount. The one
- * exception is `whatsapp_conversation`, whose handle is the diver's number in
- * E.164: a chat is found by its number and by nothing
- * else, so the owner cannot do the work without it. It is held only while the
- * row is owed — discharging one replaces the number with the row's own id
- * (`dischargeProcessorErasure`).
+ * pointer, and the row deliberately keeps no name, address or amount.
  */
 export const processorErasureObligations = pgTable(
   "processor_erasure_obligations",
@@ -194,28 +166,14 @@ export const processorErasureObligations = pgTable(
     target: processorErasureTarget("target").notNull(),
     externalId: text("external_id").notNull(),
     /**
-     * The provider account the object lives on, snapshotted at erasure rather
-     * than re-derived from the shop later.
-     *
-     * - A Stripe target: the connected account, from the source row's own
-     *   `stripe_account_id` — the same discipline `refundOrder` uses
-     *   (src/db/orders.ts). A shop that disconnects and reconnects gets a
-     *   *different* account id, and a delete aimed at the current one would
-     *   404 forever against an object still sitting on the old one. Never null
-     *   (the check constraint below).
-     * - `whatsapp_conversation`: the shop's WhatsApp `phone_number_id` the chat
-     *   is on, or null when the shop had no number connected at erasure. Only
-     *   ever shown, never called: nothing deletes a WhatsApp chat but the owner.
+     * The connected account the object lives on, snapshotted from the source
+     * row's own `stripe_account_id` rather than re-derived from the shop at retry
+     * time — the same discipline `refundOrder` uses (src/db/orders.ts). A shop
+     * that disconnects and reconnects gets a *different* account id, and a
+     * delete aimed at the current one would 404 forever against an object that
+     * is still sitting on the old one.
      */
-    providerAccountId: text("provider_account_id"),
-    /**
-     * Retired by `provider_account_id` (issue #1721). This release still
-     * writes it on a Stripe row, and reads it when `provider_account_id` is
-     * null, because the release before this one reads and writes only this
-     * column and serves while the migrations run. The next release stops
-     * both and drops it (expand/contract, `.claude/rules/db.md`).
-     */
-    stripeAccountId: text("stripe_account_id"),
+    stripeAccountId: text("stripe_account_id").notNull(),
     status: processorErasureStatus("status").notNull().default("owed"),
     /** Delete attempts made so far. Always 0 for a target no API can discharge. */
     attempts: integer("attempts").notNull().default(0),
@@ -243,18 +201,6 @@ export const processorErasureObligations = pgTable(
     ),
     // The reports-page panel's read: this shop's still-owed obligations.
     index("processor_erasure_obligations_shop_status_idx").on(table.shopId, table.status),
-    // A Stripe object lives on one connected account, and a row that cannot
-    // say which can never be retried or found. Only a WhatsApp chat may lack
-    // an account: a shop that disconnected its number still owes the chat.
-    // Spelled with the Stripe values rather than `<> 'whatsapp_conversation'`
-    // so a future target has to choose, not inherit. Either column counts this
-    // release, because the release still serving during the deploy writes
-    // only `stripe_account_id`; it narrows to `provider_account_id` in the
-    // release that drops the old column.
-    check(
-      "processor_erasure_obligations_stripe_names_account",
-      sql`${table.target} not in ('stripe_customer', 'stripe_invoice_snapshot', 'stripe_checkout_session_snapshot') or coalesce(${table.providerAccountId}, ${table.stripeAccountId}) is not null`,
-    ),
     check(
       "processor_erasure_obligations_discharged_consistent",
       sql`(${table.status} = 'discharged') = (${table.dischargedAt} is not null)`,

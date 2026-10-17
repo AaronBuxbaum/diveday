@@ -62,7 +62,6 @@ const PROCESSOR_ERASURE_TARGET_KEYS: Record<ProcessorErasureTarget, StaffMessage
   stripe_invoice_snapshot: "settings.main.dataJobs.erasureTarget.stripe_invoice_snapshot",
   stripe_checkout_session_snapshot:
     "settings.main.dataJobs.erasureTarget.stripe_checkout_session_snapshot",
-  whatsapp_conversation: "settings.main.dataJobs.erasureTarget.whatsapp_conversation",
 };
 
 /** The one step each kind of row still needs, said on the row (desk review of #1721, F5). */
@@ -71,7 +70,6 @@ const PROCESSOR_ERASURE_TODO_KEYS: Record<ProcessorErasureTarget, StaffMessageKe
   stripe_invoice_snapshot: "settings.main.dataJobs.processorErasures.todo.stripe_invoice_snapshot",
   stripe_checkout_session_snapshot:
     "settings.main.dataJobs.processorErasures.todo.stripe_checkout_session_snapshot",
-  whatsapp_conversation: "settings.main.dataJobs.processorErasures.todo.whatsapp_conversation",
 };
 
 /**
@@ -193,18 +191,15 @@ export async function DataGroup({
       ) : null}
 
       {/*
-      Erasures that are done here but not yet done outside DiveDay — at Stripe,
-      or in the shop's WhatsApp (ADR 20260803-processor-erasure-obligations).
-      Two kinds, and the row
+      Erasures that are done here but not yet done at Stripe
+      (ADR 20260803-processor-erasure-obligations). Two kinds, and the row
       offers what can actually act on each: a customer delete DiveDay makes
       itself gets "Retry" (the nightly tick also retries it), while an
       invoice snapshot has no API behind it at all and can only be closed by
-      an owner attesting they filed Stripe's data-deletion request. A WhatsApp
-      chat is the same manual shape: the owner deletes it, if there is one.
-      The panel shows the `cus_…`/`in_…` handle and nothing else — the diver's
-      identity is exactly what erasure already removed here — except for a
-      chat, which shows the diver's number: a chat is found by its number and
-      by nothing else, and discharging the row forgets it (issue #1721).
+      an owner attesting they filed Stripe's data-deletion request. Each row
+      says its own one step (desk review of #1721, F5). The panel shows the
+      `cus_…`/`in_…` handle and nothing else — the diver's identity is exactly
+      what erasure already removed here.
     */}
       {owedProcessorErasures.length > 0 ? (
         <section
@@ -229,12 +224,7 @@ export async function DataGroup({
                           value: t(PROCESSOR_ERASURE_TARGET_KEYS[obligation.target]),
                           className: "font-medium",
                         },
-                        // A chat's handle is the diver's number, there only so
-                        // the owner can find the chat; a reader who cannot
-                        // discharge it sees the row without it.
-                        obligation.target === "whatsapp_conversation" && !canErase
-                          ? null
-                          : { value: obligation.externalId, className: "font-mono" },
+                        { value: obligation.externalId, className: "font-mono" },
                         {
                           value: t("settings.main.dataJobs.processorErasures.raised", {
                             date: formatShortDate(obligation.createdAt, locale, shop.timezone),
@@ -267,11 +257,7 @@ export async function DataGroup({
                           pendingLabel={t("settings.main.dataJobs.processorErasures.discharging")}
                           className={buttonClass({ variant: "secondary", size: "sm" })}
                         >
-                          {t(
-                            obligation.target === "whatsapp_conversation"
-                              ? "settings.main.dataJobs.processorErasures.dischargeWhatsapp"
-                              : "settings.main.dataJobs.processorErasures.discharge",
-                          )}
+                          {t("settings.main.dataJobs.processorErasures.discharge")}
                         </SubmitButton>
                       </form>
                     </div>

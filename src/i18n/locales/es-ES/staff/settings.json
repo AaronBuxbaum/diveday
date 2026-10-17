@@ -505,24 +505,21 @@
       "erasureTarget": {
         "stripe_customer": "Cliente de Stripe",
         "stripe_invoice_snapshot": "Factura de Stripe",
-        "stripe_checkout_session_snapshot": "Página de pago de Stripe",
-        "whatsapp_conversation": "Chat de WhatsApp"
+        "stripe_checkout_session_snapshot": "Página de pago de Stripe"
       },
       "processorErasures": {
-        "sectionLabel": "Borrados sin terminar fuera de DiveDay",
-        "heading": "{count, plural, one {# registro} other {# registros}} de un buceador borrado siguen fuera de DiveDay",
-        "detail": "Borrado en DiveDay, pero aún no fuera de DiveDay.",
+        "sectionLabel": "Borrados sin terminar en Stripe",
+        "heading": "{count, plural, one {# registro} other {# registros}} de un buceador borrado siguen en Stripe",
+        "detail": "Borrado en DiveDay, pero aún no en Stripe.",
         "todo": {
           "stripe_customer": "Se reintenta solo esta noche, o reinténtalo ahora.",
           "stripe_invoice_snapshot": "Presenta una solicitud de eliminación de datos a Stripe y márcalo como hecho.",
-          "stripe_checkout_session_snapshot": "Presenta una solicitud de eliminación de datos a Stripe y márcalo como hecho.",
-          "whatsapp_conversation": "Borra el chat con este número en tu WhatsApp, si lo hay, y márcalo como borrado."
+          "stripe_checkout_session_snapshot": "Presenta una solicitud de eliminación de datos a Stripe y márcalo como hecho."
         },
         "raised": "registrado el {date}",
         "retry": "Reintentar borrado",
         "retrying": "Reintentando…",
         "discharge": "Marcar como hecho en Stripe",
-        "dischargeWhatsapp": "Marcar como borrado en WhatsApp",
         "discharging": "Guardando…",
         "failure": {
           "account_not_owned": "La cuenta de Stripe ya no está conectada",

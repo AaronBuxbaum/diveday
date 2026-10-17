@@ -40,7 +40,7 @@ async function seedObligations(lastErrors: Array<string | null>) {
         personId: person.id,
         target: "stripe_customer" as const,
         externalId: `cus_cleanup_${index}`,
-        providerAccountId: "acct_test",
+        stripeAccountId: "acct_test",
         lastError,
       })),
     )

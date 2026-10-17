@@ -67,7 +67,7 @@ async function owedObligation(db: AppDb, shopId: string): Promise<string> {
     shopId,
     personId: await anyPersonId(db, shopId),
     targets: [
-      { target: "stripe_invoice_snapshot", externalId: "in_test_1", providerAccountId: "acct_1" },
+      { target: "stripe_invoice_snapshot", externalId: "in_test_1", stripeAccountId: "acct_1" },
     ],
   });
   if (!row) throw new Error("obligation not raised");
