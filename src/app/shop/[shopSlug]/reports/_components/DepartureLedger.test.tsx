@@ -119,3 +119,17 @@ describe("the row", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Trips this month" })).toBeTruthy();
   });
 });
+
+describe("each row's net (fifth loop, item 26)", () => {
+  it("says what the departure took beside its seats and crew", () => {
+    render(
+      <DepartureLedger
+        label="Trips this month"
+        labelId="trips"
+        count="1 trip"
+        rows={[{ ...FULL, net: "$855.00" }]}
+      />,
+    );
+    expect(screen.getByText("$855.00")).toBeTruthy();
+  });
+});

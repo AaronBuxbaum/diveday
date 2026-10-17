@@ -163,6 +163,50 @@ has to attest to, one per Stripe object. That is the shape `stripe_invoice_snaps
 and the alternative — one row per person — cannot be discharged, because the thing being attested to
 is a request filed about a specific object.
 
+## Widened 2026-10-17 — messaging handles (issue #1721, H-82)
+
+H-82 ruled that the erasure promise reaches messaging providers: a `provider_message_id` points at an
+object holding the diver's name, address or number, and stopping at Stripe was a statement about
+which vendor has a delete API, not about what was promised. Building it turned up three providers,
+none with a delete for a sent message, and none holding a copy an owner could act on. Aaron accepted
+this narrowed scope on 2026-10-17. No messaging provider raises a row; what the erasure does instead
+is below.
+
+**SES and SNS: no row, because DiveDay holds those logs and its retention discharges them.** Email
+ids are SES message ids and SMS ids are SNS `Publish` ids, both in DiveDay's own AWS account, not the
+shop's. SES keeps no message body. What either holds is delivery logs: the SNS delivery-log groups
+keep two weeks and the app's own groups a month (`infra/lib/infra-stack.ts`). An owner cannot attest
+to anything in DiveDay's account, so a row would be a button nobody can honestly press.
+
+**WhatsApp: no row, for the same reason.** Meta keeps a Cloud API message at most 30 days, for
+retransmission, and documents no place a business can view or delete Cloud API message history
+([WhatsApp Business Platform data privacy and security](https://developers.facebook.com/documentation/business-messaging/whatsapp/data-privacy-and-security)).
+A DiveDay number is Cloud API only and cannot also be on the WhatsApp Business app
+(`docs/engineering/whatsapp-cloud-api-runbook.md`), so the app's chat list holds no copy either. The
+durable copies are DiveDay's own: its inbox, which the erasure redacts, and the message ids, which
+it scrambles. Meta's 30 days and DiveDay's own retention cover the rest, as for SES and SNS.
+
+**The message ids forget the number.** A `wamid` embeds the recipient's number in base64, so a kept
+id is the erased number in another spelling (security review F1). The erasure rewrites every
+`wamid.` id it keeps for the diver — on `notification_deliveries`, `notification_delivery_attempts`,
+`inbound_messages`, `staff_replies`, `waiver_deliveries` and
+`waiver_records.delivery_provider_message_id` — to `wamid.` plus the SHA-256 of the id. The row
+stays the shop's evidence that a message went, and the number is gone. A delivery status Meta sends
+later for one of those messages no longer matches; the diver is erased. SES and SNS ids carry no
+address and are kept as they are.
+
+**An entry that names no account is dropped, and says so.** `recordProcessorErasureObligations`
+skips a Stripe entry with a blank account rather than writing a row nobody can act on, and logs
+`anonymize.processor_erasure_target_dropped` as a warning with the shop, the person and the target.
+
+**`integration_sync_records.external_id` stays out of the ledger.** It is the map from a DiveDay
+row to the QuickBooks or Xero object, ids on both sides and no copied details, kept so a second
+Customer is not minted for a diver already synced (issue #1015, the table's closure reason in
+`src/db/erasure-coverage.test.ts`). The row copies nothing, but the Customer it names holds the
+diver's name and contact details at QuickBooks or Xero. The books are the shop's, a Customer may
+not be deletable while its invoices reference it, and H-82 named messaging handles only. The census
+tags it `elsewhere` with that reason.
+
 ## What this does not do
 
 Stated plainly, because a compliance mechanism that overstates itself is worse than none:
@@ -177,6 +221,12 @@ Stated plainly, because a compliance mechanism that overstates itself is worse t
   this mechanism.
 - **It is raised only from `anonymizeDiver`,** with no back-fill for erasures performed before this
   table existed.
+- **It does not reach Meta's copy of a WhatsApp message.** Nothing can; it ages out within 30
+  days. A WhatsApp chat on the diver's own phone is the diver's.
+- **It does not reach the accounting integration's Customer.** A QuickBooks or Xero Customer holds
+  the diver's name and contact details, and the erasure leaves it: the books are the shop's to keep.
+- **It does not reach SES's account-level suppression list.** A bounced or complained address stays
+  there until removed. Log retention does not discharge it, and nothing in this ledger does either.
 
 ## Consequences
 
@@ -185,7 +235,8 @@ Stated plainly, because a compliance mechanism that overstates itself is worse t
 - Diver erasure now *does* the processor-side work it can do, and names the part it cannot. The
   erasure ADR's first residual narrows from "an untracked manual step covering everything at Stripe"
   to "the invoice snapshot, tracked, with an owner and a visible state".
-- A second processor is an additive enum value on a row shape that already fits.
+- A second processor is an additive enum value on a row shape that already fits. The messaging
+  providers (2026-10-17) did not need one: none holds a copy an owner can act on.
 - If Stripe ever exposes an API that clears a finalized invoice's identity snapshot, the
   `stripe_invoice_snapshot` rows become retryable the same way the customer rows already are — the
   obligation is already recorded; only who performs it would change.

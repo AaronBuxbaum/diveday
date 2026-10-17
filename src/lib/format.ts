@@ -170,6 +170,28 @@ export function formatWeekdayTime(date: Date, locale = "en-US", timeZone: string
 }
 
 /**
+ * "Sun, Oct 26, 3:00 PM EDT" — a weekday, a date and a time that names its
+ * zone, for an instant a diver plans against from far away and long before:
+ * `/ready`'s planned fly-safe time, read while booking flights a week or more
+ * ahead and often from another zone. `formatWeekdayTime` stays for the recap,
+ * whose answer is never more than three days out (dive-domain review of layer
+ * r5-3, FIX 5).
+ */
+export function formatPlannedDateTimeTz(date: Date, locale = "en-US", timeZone: string): string {
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone,
+    }).formatToParts(date),
+  );
+}
+
+/**
  * "Saturday" — the weekday alone, in the shop's zone.
  *
  * For a sentence whose subject is the *day of the week* rather than a date.
@@ -578,4 +600,37 @@ export function formatOrdinal(count: number, locale = "en-US"): string {
   );
   const suffix = suffixes[rule] ?? "th";
   return `${count}${suffix}`;
+}
+
+/**
+ * A past month as a reader places it: "Mar" within the year `now` is in,
+ * "Mar 2025" before it. For a line like "dived here before: Nadia Petrov
+ * (Mar)", where the day is noise and last year's March is not this one.
+ */
+export function formatPastMonth(date: Date, locale = "en-US", timeZone: string, now: Date): string {
+  const year = (d: Date) =>
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, { year: "numeric", timeZone }).format(d);
+  const sameYear = year(date) === year(now);
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      month: "short",
+      ...(sameYear ? {} : { year: "numeric" }),
+      timeZone,
+    }).formatToParts(date),
+  );
+}
+
+/**
+ * "Mon, 11:30 AM" — a near deadline, for a line that already names its week
+ * (a boat in the next two weeks needing divers by its call).
+ */
+export function formatWeekdayShortTime(date: Date, locale = "en-US", timeZone: string): string {
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      weekday: "short",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone,
+    }).formatToParts(date),
+  );
 }

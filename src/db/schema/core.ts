@@ -17,6 +17,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { CERTIFICATION_AGENCIES } from "@/lib/certification-options";
+import { DESK_PAYMENTS } from "@/lib/desk-payment";
 import type { EmergencyReference } from "@/lib/emergency-reference";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 import type { SpokenLanguageTag } from "@/lib/spoken-languages";
@@ -56,6 +57,9 @@ export const brandDisplayFont = pgEnum("brand_display_font", [
  * (src/lib/temperature-units.ts).
  */
 export const temperatureUnit = pgEnum("temperature_unit", ["celsius", "fahrenheit"]);
+
+/** How a shop takes money at the desk (src/lib/desk-payment.ts). */
+export const deskPayment = pgEnum("desk_payment", DESK_PAYMENTS);
 
 export const shops = pgTable(
   "shops",
@@ -350,6 +354,44 @@ export const shops = pgTable(
      */
     shoreAlertConfirmedAt: timestamp("shore_alert_confirmed_at", { withTimezone: true }),
     /**
+     * **The bookkeeper's address for the month-end email** (fifth loop, item
+     * 35; ADR 20261016-bookkeeper-month-end-email): on the 2nd of each month
+     * the previous month's report, orders and crew sheet go here as three CSV
+     * attachments. Off while null. Like the shore contact's, it is an address
+     * outside the shop's accounts, so it is stored only with who set it and
+     * when (the check below holds the three together), set only by an owner
+     * or manager behind the export step-up.
+     *
+     * `bookkeeper_sent_month` is the claim: the `YYYY-MM` last mailed, moved
+     * forward in the same statement that decides to send, so two passes of
+     * the hourly job cannot both send one month. Cleared with the address, so
+     * a new address starts from the next month due.
+     */
+    bookkeeperEmail: text("bookkeeper_email"),
+    bookkeeperEmailSetAt: timestamp("bookkeeper_email_set_at", { withTimezone: true }),
+    bookkeeperEmailSetByPersonId: uuid("bookkeeper_email_set_by_person_id"),
+    bookkeeperSentMonth: text("bookkeeper_sent_month"),
+    /**
+     * **The bookkeeper confirmed this inbox is theirs** (security review B1,
+     * on the shore contact's model, H-118): no file leaves until it is set.
+     * The link that sets it is single-purpose and expiring, held here as a
+     * hash: it can only confirm the address the shop names now, because any
+     * change of address clears all three columns. The hash stays after use so
+     * the page can read the link back as confirmed.
+     */
+    bookkeeperConfirmedAt: timestamp("bookkeeper_confirmed_at", { withTimezone: true }),
+    bookkeeperConfirmTokenHash: text("bookkeeper_confirm_token_hash"),
+    bookkeeperConfirmExpiresAt: timestamp("bookkeeper_confirm_expires_at", {
+      withTimezone: true,
+    }),
+    /**
+     * **The stop link in the latest month-end email** (security review N1),
+     * as a hash: minted with each month's claim, so only the newest email's
+     * link works, and it stops only the address it went to, since any change
+     * of address clears it. Kept after a stop so the page can say "stopped".
+     */
+    bookkeeperStopTokenHash: text("bookkeeper_stop_token_hash"),
+    /**
      * **A shop name that could pass for a brand or an institution** (issue
      * #2450, decided 2026-10-16): set when the name matched the denylist in
      * `src/lib/shop-name-review.ts` at sign-up (or a rename). While it is set
@@ -375,6 +417,13 @@ export const shops = pgTable(
      * shop that says it offers them has the question asked.
      */
     offersHotelPickup: boolean("offers_hotel_pickup").notNull().default(false),
+    /**
+     * How the shop takes money at the desk: card, cash, or both (fifth-loop
+     * ideas, item 21). Null until the shop says, and then nothing is added to
+     * "due at the shop". Read by the booking form's money block, the booking
+     * confirmation and `/ready`'s money line.
+     */
+    deskPayment: deskPayment("desk_payment"),
     /**
      * The rest of the shop's dock-day rhythm, in minutes (src/lib/diver-planning.ts).
      * Before these columns existed the whole day was inferred from
@@ -506,6 +555,8 @@ export const shops = pgTable(
   },
   (table) => [
     uniqueIndex("shops_inbound_email_token_unique").on(table.inboundEmailToken),
+    uniqueIndex("shops_bookkeeper_confirm_token_hash_unique").on(table.bookkeeperConfirmTokenHash),
+    uniqueIndex("shops_bookkeeper_stop_token_hash_unique").on(table.bookkeeperStopTokenHash),
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
     // H-118: an address DiveDay sends to exists only with its recorded consent.
     check(
@@ -514,6 +565,28 @@ export const shops = pgTable(
         and ${table.shoreAlertConsentByPersonId} is null)
         or (${table.shoreAlertEmail} is not null and ${table.shoreAlertConsentAt} is not null
         and ${table.shoreAlertConsentByPersonId} is not null)`,
+    ),
+    // Item 35: the bookkeeper's address exists only with who set it and when.
+    check(
+      "shops_bookkeeper_email_provenance",
+      sql`(${table.bookkeeperEmail} is null and ${table.bookkeeperEmailSetAt} is null
+        and ${table.bookkeeperEmailSetByPersonId} is null)
+        or (${table.bookkeeperEmail} is not null and ${table.bookkeeperEmailSetAt} is not null
+        and ${table.bookkeeperEmailSetByPersonId} is not null)`,
+    ),
+    // A confirmation, or a link to give one, exists only for an address on file.
+    check(
+      "shops_bookkeeper_confirmation_has_address",
+      sql`${table.bookkeeperEmail} is not null
+        or (${table.bookkeeperConfirmedAt} is null and ${table.bookkeeperConfirmTokenHash} is null)`,
+    ),
+    check(
+      "shops_bookkeeper_confirm_token_expiry",
+      sql`(${table.bookkeeperConfirmTokenHash} is null) = (${table.bookkeeperConfirmExpiresAt} is null)`,
+    ),
+    check(
+      "shops_bookkeeper_sent_month_shape",
+      sql`${table.bookkeeperSentMonth} is null or ${table.bookkeeperSentMonth} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'`,
     ),
     // A confirmation vouches for an address; there is none without one.
     check(

@@ -16,10 +16,12 @@ import {
   addToWaitlistAction,
   carryWaitlistAction,
   createDirectTripInvitationAction,
+  invitePastDiverAction,
   recordTripInvitationAction,
   removeBookingAction,
   setParticipantTypeAction,
   undoRemoveBookingAction,
+  updateBookingDietaryNoteAction,
   updateBookingPickupAction,
 } from "../roster-seating-actions";
 import { markRosterWaiverInPersonAction, sendNewWaiverAction } from "../roster-waiver-actions";
@@ -58,6 +60,7 @@ export async function tripRosterActions({
     addExistingDiverAction: seatExistingDiverAction.bind(null, "trip-guests", shopSlug),
     addToWaitlistAction: addToWaitlistAction.bind(null, shopSlug, tripId),
     createDirectTripInvitationAction: createDirectTripInvitationAction.bind(null, shopSlug, tripId),
+    invitePastDiverAction: invitePastDiverAction.bind(null, shopSlug, tripId),
     markRosterWaiverInPersonAction: markRosterWaiverInPersonAction.bind(null, shopSlug, tripId),
     markPaymentAction: markPaymentAction.bind(null, shopSlug, tripId),
     previewPartyPaymentAction: previewPartyPaymentAction.bind(null, shopSlug, tripId),
@@ -78,6 +81,7 @@ export async function tripRosterActions({
     ...noteRosterActions(shopSlug, tripId),
     saveRosterEmergencyContactAction: saveRosterEmergencyContactAction.bind(null, shopSlug, tripId),
     updateBookingPickupAction: updateBookingPickupAction.bind(null, shopSlug, tripId),
+    updateBookingDietaryNoteAction: updateBookingDietaryNoteAction.bind(null, shopSlug, tripId),
     recordTripInvitationAction: recordTripInvitationAction.bind(null, shopSlug, tripId),
     undoRemoveBookingAction: undoRemoveBookingAction.bind(null, shopSlug, tripId),
     carryWaitlistAction: carryWaitlistAction.bind(null, shopSlug, tripId),

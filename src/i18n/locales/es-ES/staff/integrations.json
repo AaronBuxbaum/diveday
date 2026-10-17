@@ -8,7 +8,6 @@
     "test-sent": "Prueba de Zapier entregada.",
     "invalid": "Revisa los datos y elige al menos un evento.",
     "not-configured": "Esa integración todavía no está disponible.",
-    "not-authorized": "Solo un propietario o gerente puede cambiar las integraciones.",
     "failed": "La integración no pudo completar esa solicitud. Inténtalo de nuevo o vuelve a conectarla.",
     "encryption-key-unset": "Esta instancia de DiveDay aún no está preparada para guardar credenciales de forma segura, así que no se guardó nada.",
     "encryption-key-invalid": "La clave de cifrado de esta instancia de DiveDay está mal configurada, así que no se guardó nada.",

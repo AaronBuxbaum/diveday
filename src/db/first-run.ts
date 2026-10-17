@@ -1,3 +1,4 @@
+import { emergencyCardHasNumbers } from "@/lib/emergency-reference";
 import { isSampleRelease } from "@/lib/waivers";
 import type { AppDb } from "./client";
 import { listDiveSites } from "./dive-sites";
@@ -12,6 +13,8 @@ export type FirstRunSteps = {
   unitsDone: boolean;
   diveSiteCount: number;
   releaseDone: boolean;
+  /** The emergency card carries a number to dial (fifth loop, item 3). */
+  emergencyDone: boolean;
   stripeDone: boolean;
 };
 
@@ -38,6 +41,7 @@ export async function loadFirstRunFacts(
     | "description"
     | "logoUrl"
     | "unitsConfirmedAt"
+    | "emergencyReference"
   >,
   stripeAccount: ShopStripeAccount | null,
 ): Promise<FirstRunFacts> {
@@ -51,6 +55,7 @@ export async function loadFirstRunFacts(
     unitsDone: Boolean(shop.unitsConfirmedAt),
     diveSiteCount: diveSites.length,
     releaseDone: !isSampleRelease(release?.body),
+    emergencyDone: emergencyCardHasNumbers(shop.emergencyReference),
     stripeDone: canAcceptPayments(stripeAccount),
   };
   const doneCount = [
@@ -59,6 +64,7 @@ export async function loadFirstRunFacts(
     steps.unitsDone,
     steps.diveSiteCount > 0,
     steps.releaseDone,
+    steps.emergencyDone,
     steps.stripeDone,
   ].filter(Boolean).length;
   return { steps, doneCount };

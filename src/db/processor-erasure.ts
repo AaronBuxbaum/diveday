@@ -72,6 +72,28 @@ export type RecordProcessorErasureObligationsInput = {
 };
 
 /**
+ * Drop what cannot become a row, and say so: a handle with no account is an
+ * erasure that will report finished while Stripe still holds the object, which
+ * must not be silent (security review of #1721, F2). A blank handle is no
+ * object at all and drops quietly. The log carries the target and the ids,
+ * never the handle.
+ */
+function recordableTargets(
+  input: RecordProcessorErasureObligationsInput,
+): ProcessorErasureTargetInput[] {
+  return input.targets.filter((entry) => {
+    if (entry.externalId.trim().length === 0) return false;
+    if (entry.stripeAccountId.trim().length > 0) return true;
+    log("anonymize.processor_erasure_target_dropped", "warn", {
+      shopId: input.shopId,
+      personId: input.personId,
+      target: entry.target,
+    });
+    return false;
+  });
+}
+
+/**
  * Raise one obligation per processor record the local scrub could not reach.
  * Written inside the erasure transaction on purpose: an obligation that only
  * commits if some later step also succeeds is exactly the "we forgot we owed
@@ -91,10 +113,7 @@ export async function recordProcessorErasureObligations(
   input: RecordProcessorErasureObligationsInput,
 ): Promise<ProcessorErasureObligation[]> {
   const seen = new Set<string>();
-  const values = input.targets
-    .filter(
-      (entry) => entry.externalId.trim().length > 0 && entry.stripeAccountId.trim().length > 0,
-    )
+  const values = recordableTargets(input)
     .filter((entry) => {
       const key = `${entry.target}:${entry.externalId}`;
       if (seen.has(key)) return false;

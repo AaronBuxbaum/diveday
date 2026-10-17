@@ -25,7 +25,8 @@ function read(relativePath: string) {
 /**
  * The bearer pages the thread is made of (ADR 20260827-the-divers-thread,
  * decision 1), plus the course-forms door the readiness link opens onto
- * (ADR 20261008-course-forms).
+ * (ADR 20261008-course-forms) and the doctor's page a held waiver opens onto
+ * (ADR 20261016-doctor-referral-page).
  */
 const THREAD_PAGES = [
   "app/ready/[token]/page.tsx",
@@ -33,6 +34,7 @@ const THREAD_PAGES = [
   "app/recap/[token]/page.tsx",
   "app/claim/[token]/page.tsx",
   "app/ready/[token]/forms/page.tsx",
+  "app/waivers/[token]/doctor/page.tsx",
 ] as const;
 
 const THREAD_LOADING = THREAD_PAGES.map((page) => page.replace("page.tsx", "loading.tsx"));

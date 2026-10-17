@@ -92,74 +92,88 @@ export async function createTripRequestInvitations(
   });
 }
 
+type DirectInvitationInput = {
+  shopId: string;
+  tripId: string;
+  personId: string;
+  createdByPersonId: string;
+};
+
 /** Adds one existing diver as outreach without changing their booking state. */
 export async function createDirectTripInvitation(
   db: AppDb,
-  input: {
-    shopId: string;
-    tripId: string;
-    personId: string;
-    createdByPersonId: string;
-  },
+  input: DirectInvitationInput,
 ): Promise<boolean> {
-  return db.transaction(async (tx) => {
-    const [trip] = await tx
-      .select({ id: trips.id, startsAt: trips.startsAt })
-      .from(trips)
-      .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
-      .limit(1);
-    if (!trip) return false;
+  return db.transaction((tx) => insertDirectTripInvitation(tx, input));
+}
 
-    const [author] = await tx
-      .select({ id: people.id })
-      .from(people)
-      .where(
-        and(eq(people.id, input.createdByPersonId), eq(people.shopId, input.shopId), livePerson()),
-      )
-      .limit(1);
-    if (!author) return false;
+/**
+ * The body of {@link createDirectTripInvitation}, for a caller already inside
+ * a transaction (the cooldown's locked check-and-insert, `src/db/invite-suggestions.ts`).
+ */
+export async function insertDirectTripInvitation(
+  tx: DbExecutor,
+  input: DirectInvitationInput,
+): Promise<boolean> {
+  const [trip] = await tx
+    .select({ id: trips.id, startsAt: trips.startsAt })
+    .from(trips)
+    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
+    .limit(1);
+  if (!trip) return false;
 
-    const [person] = await tx
-      .select({ id: people.id })
-      .from(people)
-      .innerJoin(personRoles, eq(personRoles.personId, people.id))
-      .where(
-        and(
-          eq(people.id, input.personId),
-          eq(people.shopId, input.shopId),
-          eq(personRoles.role, "diver"),
-          isNull(people.deletedAt),
-        ),
-      )
-      .limit(1);
-    if (!person) return false;
+  const [author] = await tx
+    .select({ id: people.id })
+    .from(people)
+    .where(
+      and(eq(people.id, input.createdByPersonId), eq(people.shopId, input.shopId), livePerson()),
+    )
+    .limit(1);
+  if (!author) return false;
 
-    const [booking] = await tx
-      .select({ status: bookings.status })
-      .from(bookings)
-      .where(
-        and(
-          eq(bookings.shopId, input.shopId),
-          eq(bookings.tripId, input.tripId),
-          eq(bookings.personId, input.personId),
-        ),
-      )
-      .limit(1);
-    if (booking && !rowCanBeReactivated(booking.status, trip.startsAt)) return false;
+  const [person] = await tx
+    .select({ id: people.id })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(
+      and(
+        eq(people.id, input.personId),
+        eq(people.shopId, input.shopId),
+        eq(personRoles.role, "diver"),
+        // Removed, erased or merged people get no invitation row (security
+        // review N4): `people_anonymized_stays_removed` and
+        // `people_merged_stays_removed` make the last two removed as well.
+        livePerson(),
+      ),
+    )
+    .limit(1);
+  if (!person) return false;
 
-    const inserted = await tx
-      .insert(tripInvitations)
-      .values({
-        shopId: input.shopId,
-        tripId: input.tripId,
-        source: "direct",
-        personId: input.personId,
-        createdByPersonId: input.createdByPersonId,
-      })
-      .onConflictDoNothing()
-      .returning({ id: tripInvitations.id });
-    return inserted.length > 0;
-  });
+  const [booking] = await tx
+    .select({ status: bookings.status })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.tripId, input.tripId),
+        eq(bookings.personId, input.personId),
+      ),
+    )
+    .limit(1);
+  if (booking && !rowCanBeReactivated(booking.status, trip.startsAt)) return false;
+
+  const inserted = await tx
+    .insert(tripInvitations)
+    .values({
+      shopId: input.shopId,
+      tripId: input.tripId,
+      source: "direct",
+      personId: input.personId,
+      createdByPersonId: input.createdByPersonId,
+    })
+    .onConflictDoNothing()
+    .returning({ id: tripInvitations.id });
+  return inserted.length > 0;
 }
 
 /** The contact projection used by the trip's guests page. */
@@ -375,6 +389,16 @@ async function sendTripInvitation(
       shopId: input.shopId,
       personId: person.id,
     });
+    // A course session's invite carries the course's prerequisite note, so it
+    // never implies the diver already qualifies (dive-domain review N3).
+    const [course] = context.trip.courseId
+      ? await db
+          .select({ prerequisiteNote: courses.prerequisiteNote })
+          .from(courses)
+          .where(and(eq(courses.id, context.trip.courseId), eq(courses.shopId, input.shopId)))
+          .limit(1)
+      : [];
+    const prerequisiteNote = course?.prerequisiteNote?.trim().slice(0, 2_000) || undefined;
     const delivery = await sendNotification(
       db,
       {
@@ -388,6 +412,7 @@ async function sendTripInvitation(
           `${origin}/`,
         ).toString(),
         unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
+        prerequisiteNote,
       },
       provider,
     );

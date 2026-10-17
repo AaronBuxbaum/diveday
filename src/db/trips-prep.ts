@@ -18,6 +18,7 @@ import {
   tripReservationWindow,
 } from "@/lib/gear";
 import { proposalKey, proposeRentalUnits } from "@/lib/gear-proposals";
+import { type LunchSummary, lunchSummary } from "@/lib/lunch-aboard";
 import { rentsKind } from "@/lib/participant-types";
 import type { AppDb } from "./client";
 import {
@@ -99,6 +100,11 @@ export type TripPrep = {
    * confirms it. Empty on a cancelled departure, which reserves nothing.
    */
   proposals: Map<string, Awaited<ReturnType<typeof listAvailableGearUnits>>[number]>;
+  /**
+   * "Lunch for 14", with each person's lunch note, on a departure that
+   * serves lunch aboard (fifth-loop ideas, item 56). Absent or null otherwise.
+   */
+  lunch?: LunchSummary | null;
 };
 
 export async function getTripPrep(
@@ -316,6 +322,15 @@ export async function getTripPrep(
     loadOut,
     assignmentRows,
     proposals,
+    lunch: lunchSummary({
+      lunchAboard: trip.lunchAboard,
+      cancelled: trip.status === "cancelled",
+      seats: divers.map((diver) => ({
+        fullName: diver.fullName,
+        dietaryNote: diver.dietaryNote ?? null,
+      })),
+      crewAboard: crew.length,
+    }),
   };
 }
 

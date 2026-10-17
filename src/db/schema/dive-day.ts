@@ -14,6 +14,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { BoatPaperRecord, BoatSafetyNotice } from "@/lib/boat-safety";
+import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
 import type { ReadinessBlocker } from "@/lib/readiness";
 import { bookings } from "./bookings";
 import { appNowTimestamp } from "./columns";
@@ -357,6 +358,79 @@ export const preDepartureCheckEvents = pgTable(
     uniqueIndex("pre_departure_check_events_shop_client_event_unique").on(
       table.shopId,
       table.clientEventId,
+    ),
+  ],
+);
+
+/**
+ * **A snag**: a problem the crew wrote against one checklist line on one boat
+ * ("VHF crackles on 16"), carried to that boat's next departures until somebody
+ * says it is fixed (fifth-loop ideas, item 1; glossary "Snag").
+ *
+ * Its own table, not a note on `pre_departure_check_events`: those rows are
+ * append-only and hashed into the departure log, and a snag has a life the
+ * tap does not (open, still there, fixed). The tap's own `note` column stays
+ * what it was, the offline queue's.
+ *
+ * Informs, never gates, like the checklist it hangs from (ADR
+ * 20260824-pre-departure-safety-check): an open snag blocks no departure.
+ *
+ * `still_there_*` is the newest crew to look and find it still there, so the
+ * next departure says who last saw it. `fixed_*` closes it; a fixed snag is
+ * never reopened, a recurring problem is a new note.
+ */
+export const boatSnags = pgTable(
+  "boat_snags",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    boatId: uuid("boat_id")
+      .notNull()
+      .references(() => boats.id),
+    checklistItemId: uuid("checklist_item_id")
+      .notNull()
+      .references(() => preDepartureChecklistItems.id),
+    /** The departure whose crew wrote it. */
+    notedOnTripId: uuid("noted_on_trip_id")
+      .notNull()
+      .references(() => trips.id),
+    note: text("note").notNull(),
+    notedByPersonId: uuid("noted_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    notedAt: timestamp("noted_at", { withTimezone: true }).notNull(),
+    stillThereOnTripId: uuid("still_there_on_trip_id").references(() => trips.id),
+    stillThereByPersonId: uuid("still_there_by_person_id").references(() => people.id),
+    stillThereAt: timestamp("still_there_at", { withTimezone: true }),
+    fixedOnTripId: uuid("fixed_on_trip_id").references(() => trips.id),
+    fixedByPersonId: uuid("fixed_by_person_id").references(() => people.id),
+    fixedAt: timestamp("fixed_at", { withTimezone: true }),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
+  },
+  (table) => [
+    index("boat_snags_shop_boat_open_idx")
+      .on(table.shopId, table.boatId, table.notedAt)
+      .where(sql`${table.fixedAt} is null`),
+    index("boat_snags_noted_on_trip_idx").on(table.shopId, table.notedOnTripId),
+    // Led by the person column, so removing a person probes each by index
+    // (`people-fk-indexes.test.ts`).
+    index("boat_snags_noted_by_person_id_idx").on(table.notedByPersonId),
+    index("boat_snags_still_there_by_person_id_idx").on(table.stillThereByPersonId),
+    index("boat_snags_fixed_by_person_id_idx").on(table.fixedByPersonId),
+    check(
+      "boat_snags_note_length",
+      sql`char_length(${table.note}) between 1 and ${sql.raw(String(SNAG_NOTE_MAX))}`,
+    ),
+    check(
+      "boat_snags_fixed_whole",
+      sql`(${table.fixedAt} is null) = (${table.fixedByPersonId} is null)`,
+    ),
+    check(
+      "boat_snags_still_there_whole",
+      sql`(${table.stillThereAt} is null) = (${table.stillThereByPersonId} is null)`,
     ),
   ],
 );

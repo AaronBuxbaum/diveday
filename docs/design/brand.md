@@ -166,6 +166,10 @@ Color rules:
 > against 281 that did not, and the Spanish copied all five. `pnpm check:voice` refuses `...`, and it
 > landed at zero.
 
+> **Settled 2026-10-16:** a diver's message never ends in an exclamation mark. "See you on the boat."
+> reads as the same writer as the dock time above it; "See you on the boat!" does not. `pnpm check:voice`
+> refuses `!` and `¡` in `diver.json`, except the WhatsApp template body Meta reviews.
+
 
 The current product type system is:
 

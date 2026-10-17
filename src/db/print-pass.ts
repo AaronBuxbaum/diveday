@@ -25,6 +25,8 @@ import { liveTrip } from "./trips-live";
 export type PassBooking = {
   bookingId: string;
   diverName: string;
+  /** The language the diver reads, first-hand (`people.locale`), or null: the pass prints in it (item 49). */
+  diverLocale: string | null;
   tripId: string;
   tripTitle: string;
   startsAt: Date;
@@ -45,6 +47,7 @@ export async function getPassBooking(
     .select({
       bookingId: bookings.id,
       diverName: people.fullName,
+      diverLocale: people.locale,
       tripId: trips.id,
       tripTitle: trips.title,
       startsAt: trips.startsAt,

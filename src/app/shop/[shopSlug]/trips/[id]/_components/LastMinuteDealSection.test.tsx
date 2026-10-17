@@ -373,3 +373,27 @@ describe("LastMinuteDealSection on a full boat", () => {
     );
   });
 });
+
+/** Fifth loop, item 34: how late this kind of day sells, under the heading. */
+describe("LastMinuteDealSection lead time", () => {
+  it("says the lead time line it is handed, ahead of the form", () => {
+    render(
+      <LastMinuteDealSection
+        shopSlug="blue-mantis"
+        recipients={[recipient("Ravi Menon", "open_water")]}
+        requirement={requires(null)}
+        openSeats={4}
+        hasWaitlist={false}
+        cancelled={false}
+        promos={[]}
+        timezone="America/New_York"
+        locale="en-US"
+        tripId="trip-1"
+        leadTime={<p>Saturday departures usually sell 40% of their seats in the last 3 days.</p>}
+      />,
+    );
+    const line = screen.getByText(/usually sell 40%/);
+    const send = screen.getByRole("button", { name: /Send to/ });
+    expect(line.compareDocumentPosition(send) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});

@@ -155,7 +155,8 @@
     "returnedSetPulled": "De vuelta. {count, plural, one {# enviado a mantenimiento.} other {# enviados a mantenimiento.}}",
     "concernNeedsWords": "Para revisar un equipo hace falta una línea que diga qué pasó, para que el técnico pueda actuar.",
     "nothingOut": "De ese conjunto no hay nada fuera.",
-    "nothingToHandOver": "Ese conjunto ya está fuera."
+    "nothingToHandOver": "Ese conjunto ya está fuera.",
+    "returnedFlagged": "De vuelta y marcado para el técnico."
   },
   "import": {
     "help": "Una fila por unidad o evento. Las unidades coinciden primero por etiqueta y luego por número de serie; las reimportaciones se deduplican.",
@@ -289,7 +290,13 @@
     "returnCancelConcern": "Cancelar",
     "returnNoteLabel": "Qué contarle al técnico",
     "returnNotePlaceholder": "Correa rota, la segunda etapa se disparó",
-    "returnPullToBench": "Enviar a mantenimiento"
+    "returnPullToBench": "Enviar a mantenimiento",
+    "backHeading": "De vuelta del barco",
+    "backCount": "{count, plural, one {# unidad por recibir} other {# unidades por recibir}}",
+    "backUnit": "De vuelta",
+    "backProblem": "De vuelta con un problema",
+    "backNoteLabel": "¿Qué le pasa?",
+    "backNotePlaceholder": "El inflador se traba"
   },
   "ticket": {
     "eyebrow": "Alquiler",

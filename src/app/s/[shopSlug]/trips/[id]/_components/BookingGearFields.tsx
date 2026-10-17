@@ -9,6 +9,7 @@ import type { ShopCurrency } from "@/lib/money";
 import { isDiver, type ParticipantType, rentsKind } from "@/lib/participant-types";
 import {
   hasAnyRentalPricing,
+  type LastGear,
   nitroxAvailableOn,
   offeredRentableItems,
   quoteRentalFit,
@@ -32,10 +33,13 @@ import {
  * refinement on the confirmation page and `/ready`, since a size doesn't
  * change what's charged today.
  *
- * **Rental gear is opt-in here, and nothing paid is ever pre-ticked.** One
+ * **Rental gear is opt-in here, and nothing paid is pre-ticked on a guess.** One
  * question ("Need rental gear?") starts off, and the per-item checkboxes only
  * appear — all unchecked — once the diver says yes (design/principles.md #8:
- * collapse the rare path). This is the one place `RentableItem.defaultRented`
+ * collapse the rare path). The one exception is the diver's own last choice
+ * (`asLastTime`, fifth-loop ideas item 40): a known diver arriving through
+ * their handoff starts from what their last trip carried, ticked and said so
+ * ("As on your last trip"), every box still theirs to untick. This is the one place `RentableItem.defaultRented`
  * is deliberately *not* consulted: it means "what a diver with no fit on file
  * is assumed to want" and still seeds the post-booking `RentalFitForm`, the
  * staff fit editor, and a new shop's catalog — all fine, because none of those
@@ -57,6 +61,7 @@ export function BookingGearFields({
   currency,
   onSubtotalChange,
   participantType = "diver",
+  asLastTime = null,
 }: {
   /** This party member's slot, 0-based — drives the `gear-${index}-*` / `nitrox-${index}` field names `bookSpot` parses. */
   index: number;
@@ -81,6 +86,12 @@ export function BookingGearFields({
    * else a hand-built post sends, so this is the honest form, not the gate.
    */
   participantType?: ParticipantType;
+  /**
+   * The known diver's last trip's gear, for their own slot only: the step
+   * starts open with those boxes ticked, limited to what this departure
+   * offers. Null starts it closed and empty, as on every cold visit.
+   */
+  asLastTime?: LastGear | null;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -88,10 +99,16 @@ export function BookingGearFields({
     rentsKind(participantType, item.kind),
   );
   const nitroxOffered = isDiver(participantType) && nitroxAvailableOn(rentalItems, course);
-  // Opt-in, and empty until then — see the note above the component.
-  const [wantsGear, setWantsGear] = useState(false);
-  const [rentedKinds, setRentedKinds] = useState<Set<RentableItemKind>>(() => new Set());
-  const [nitroxRequested, setNitroxRequested] = useState(false);
+  // Opt-in, and empty until then, unless this is the diver's own last choice
+  // (see the note above the component). Only kinds this departure offers.
+  const lastKinds = (asLastTime?.rentedKinds ?? []).filter((kind) =>
+    offered.some((item) => item.kind === kind),
+  );
+  const lastNitrox = Boolean(asLastTime?.nitrox) && nitroxOffered;
+  const startsAsLastTime = lastKinds.length > 0 || lastNitrox;
+  const [wantsGear, setWantsGear] = useState(startsAsLastTime);
+  const [rentedKinds, setRentedKinds] = useState<Set<RentableItemKind>>(() => new Set(lastKinds));
+  const [nitroxRequested, setNitroxRequested] = useState(lastNitrox);
 
   const quote = quoteRentalFit(pricing, {
     rentedKinds: [...rentedKinds],
@@ -139,6 +156,9 @@ export function BookingGearFields({
         <p className="mt-1 text-sm text-muted">
           {wantsGear ? t("bookingGear.introBody") : t("bookingGear.skipBody")}
         </p>
+        {wantsGear && startsAsLastTime ? (
+          <p className="mt-1 text-sm text-muted">{t("bookingGear.asLastTime")}</p>
+        ) : null}
         {!wantsGear ? null : (
           <>
             {offered.length > 0 ? (

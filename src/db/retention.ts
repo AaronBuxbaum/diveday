@@ -1,8 +1,9 @@
-import { and, inArray, isNotNull, isNull, lt, SQL, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt, SQL, sql } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
+  dietaryNoteCutoff,
   PRUNE_BATCH_LIMIT,
   RETENTION_DAYS,
   type RetainedTable,
@@ -15,6 +16,7 @@ import {
   activityEvents,
   bookingCapabilities,
   bookingPaymentEvents,
+  bookings,
   crewNotices,
   demoEntries,
   departureNotes,
@@ -35,6 +37,7 @@ import {
   stripeWebhookEvents,
   tripDeskEvents,
   tripReadMarks,
+  trips,
   waiverDeliveries,
   weeklyDigestSends,
 } from "./schema";
@@ -83,7 +86,40 @@ export type PruneSummary = {
   outcomes: PruneOutcome[];
   totalDeleted: number;
   failedTables: RetainedTable[];
+  /** Lunch notes cleared from seats whose boat sailed long enough ago (security review N5). */
+  dietaryNotesCleared: number;
 };
+
+/**
+ * **Clears the lunch note from seats whose boat sailed more than
+ * `DIETARY_NOTE_RETENTION_DAYS` ago** (item 56; security review N5). The
+ * booking stays; only the diver's words about their food go. Bounded like a
+ * prune batch, and measured from the departure's own start.
+ */
+export async function clearExpiredDietaryNotes(
+  db: AppDb,
+  now: Date,
+  batchLimit: number = PRUNE_BATCH_LIMIT,
+): Promise<number> {
+  const rows = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    // diveday:allow-deleted-trips: a deleted departure's seats are cleared too; nothing reads the note after it sails.
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(and(isNotNull(bookings.dietaryNote), lt(trips.startsAt, dietaryNoteCutoff(now))))
+    .limit(batchLimit);
+  if (rows.length === 0) return 0;
+  await db
+    .update(bookings)
+    .set({ dietaryNote: null })
+    .where(
+      inArray(
+        bookings.id,
+        rows.map((row) => row.id),
+      ),
+    );
+  return rows.length;
+}
 
 /**
  * `clock < cutoff`, for a column or an expression. The two branches are the
@@ -419,9 +455,16 @@ export async function pruneExpiredRecords(
     pending = pending.filter(([table]) => byTable.get(table)?.capped);
   }
   const outcomes = arms.map(([table]) => byTable.get(table) as PruneOutcome);
+  let dietaryNotesCleared = 0;
+  try {
+    dietaryNotesCleared = await clearExpiredDietaryNotes(db, now, batchLimit);
+  } catch {
+    log("retention.dietary_note_clear_failed", "error", {});
+  }
   return {
     outcomes,
     totalDeleted: outcomes.reduce((sum, outcome) => sum + outcome.deleted, 0),
     failedTables: outcomes.filter((outcome) => outcome.failed).map((outcome) => outcome.table),
+    dietaryNotesCleared,
   };
 }

@@ -340,6 +340,7 @@ export async function sendRescheduleNotices(
           .map(({ booking }) => booking.id),
         purpose: "readiness",
         now,
+        delivered: true,
       })
     : new Map<string, IssuedCapability>();
   const toldBookingIds = new Set<string>();
@@ -473,6 +474,7 @@ async function tellSeat(
             bookingId: booking.id,
             purpose: "readiness",
             now,
+            delivered: true,
           })
         : null;
   // The link was minted ahead of the send; when the send did not go nobody

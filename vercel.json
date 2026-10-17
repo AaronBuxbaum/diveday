@@ -24,6 +24,7 @@
     { "path": "/api/cron/founder-metrics", "schedule": "7 11 * * *" },
     { "path": "/api/cron/weekly-digest", "schedule": "4 * * * 0-2" },
     { "path": "/api/cron/crew-notices", "schedule": "6 * * * *" },
-    { "path": "/api/cron/desk-pings", "schedule": "5 * * * *" }
+    { "path": "/api/cron/desk-pings", "schedule": "5 * * * *" },
+    { "path": "/api/cron/bookkeeper", "schedule": "9 13 2,3 * *" }
   ]
 }

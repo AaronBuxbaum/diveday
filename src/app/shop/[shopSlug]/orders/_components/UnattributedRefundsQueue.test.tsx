@@ -93,7 +93,7 @@ describe("the refunds-made-in-Stripe queue on the Orders index", () => {
     const { db, shop } = ctx;
     const seat = await aDashboardRefundOnAParty(db, shop.id);
 
-    const backOffice = await readBackOffice(db, shop.id, true);
+    const backOffice = await readBackOffice(db, shop, true);
 
     expect(backOffice.unattributedRefunds).toHaveLength(1);
     expect(backOffice.unattributedRefunds[0]?.seats.map((row) => row.bookingId)).toEqual([seat.id]);
@@ -116,7 +116,7 @@ describe("the refunds-made-in-Stripe queue on the Orders index", () => {
   it("reads nothing for a reader who cannot reconcile payments", async () => {
     const { db, shop } = ctx;
     await aDashboardRefundOnAParty(db, shop.id);
-    expect((await readBackOffice(db, shop.id, false)).unattributedRefunds).toEqual([]);
+    expect((await readBackOffice(db, shop, false)).unattributedRefunds).toEqual([]);
   });
 
   it("renders nothing when nothing is held", () => {

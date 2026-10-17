@@ -1,3 +1,4 @@
+import { deskPaymentSentence } from "@/i18n/desk-payment-labels";
 import type { DiverTranslator } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
 import { reminderActionText } from "@/i18n/reminder-labels";
@@ -7,6 +8,7 @@ import { type CalendarDate, calendarDateInTimezone, formatCalendarDate } from "@
 import { COURSE_INQUIRY_EXPERIENCE_KEYS, type CourseInquiryExperience } from "@/lib/course-inquiry";
 import { type CourseLearningMaterial, isLearningMaterialLink } from "@/lib/courses";
 import type { DemoRoleId } from "@/lib/demo-roles";
+import type { DeskPayment } from "@/lib/desk-payment";
 import { type FlySafeResult, flySafeMessageKey } from "@/lib/fly-safe";
 import {
   formatDateTimeTz,
@@ -78,7 +80,8 @@ type MeetingPoint = {
  * currency (`seatMoneyTerms`, `partyMoneyTerms`).
  */
 type ConfirmationMoney = (
-  | { due: "at_shop" | "online"; amountCents: number; currency: string }
+  | { due: "at_shop"; amountCents: number; currency: string; deskPayment?: DeskPayment }
+  | { due: "online"; amountCents: number; currency: string }
   | { due: "deposit"; depositCents: number; balanceCents: number; currency: string }
 ) & { seats?: number };
 
@@ -120,7 +123,7 @@ type ReadinessLinkEmailInput = {
   readinessUrl: string;
   expiresAt: Date;
   timezone: string;
-  purpose?: "course_forms";
+  purpose?: "course_forms" | "other_day" | "log_entry";
 };
 
 type WaitlistInviteEmailInput = {
@@ -156,6 +159,8 @@ type TripInvitationEmailInput = {
   bookingUrl: string;
   /** Present on the cold, staff-initiated invitation only (`direct_trip_invitation`). */
   unsubscribeUrl?: string;
+  /** A course session's prerequisite note, in the shop's words. */
+  prerequisiteNote?: string;
 };
 
 type LastMinuteDealEmailInput = {
@@ -751,19 +756,31 @@ function confirmationMoneyLine(
     );
   }
   if (party) {
-    return t(
+    const partyLine = t(
       money.due === "online"
         ? "notifications.bookingConfirmation.moneyPartyOnline"
         : "notifications.bookingConfirmation.moneyPartyAtShop",
       { seats, amount: amount(money.amountCents) },
     );
+    return withDeskPayment(t, partyLine, money);
   }
-  return t(
+  const line = t(
     money.due === "online"
       ? "notifications.bookingConfirmation.moneyOnline"
       : "notifications.bookingConfirmation.moneyAtShop",
     { amount: amount(money.amountCents) },
   );
+  return withDeskPayment(t, line, money);
+}
+
+/**
+ * "Your seat: $95.00, due at the shop. Pay by card or cash when you arrive."
+ * (fifth-loop ideas, item 21): how the desk takes money, after a figure owed
+ * there, when the shop has said.
+ */
+function withDeskPayment(t: DiverTranslator, line: string, money: ConfirmationMoney): string {
+  const desk = money.due === "at_shop" ? deskPaymentSentence(t, money.deskPayment) : null;
+  return desk ? `${line} ${desk}` : line;
 }
 
 /** The diver's outstanding items as one bullet list, or empty when nothing's left. */
@@ -1078,6 +1095,12 @@ export function tripInvitationEmail(input: TripInvitationEmailInput): Notificati
   });
   const note = t("notifications.tripInvitation.note");
   const link = t("notifications.tripInvitation.link");
+  const prerequisite = input.prerequisiteNote
+    ? t("notifications.tripInvitation.prerequisite", { note: input.prerequisiteNote })
+    : null;
+  const prerequisiteHtml = input.prerequisiteNote
+    ? `<p>${t("notifications.tripInvitation.prerequisite", { note: escapeHtml(input.prerequisiteNote) })}</p>`
+    : "";
   const greeting = t("notifications.common.greeting", { firstName });
   const greetingHtml = t("notifications.common.greeting", {
     firstName: escapeHtml(firstName),
@@ -1101,8 +1124,8 @@ export function tripInvitationEmail(input: TripInvitationEmailInput): Notificati
       shopName: input.shopName,
       tripTitle: input.tripTitle,
     }),
-    text: `${[greeting, body, `${date} · ${time}`, note, `${link}:`, input.bookingUrl].join("\n\n")}${unsubscribeText}`,
-    html: `<p>${greetingHtml}</p><p>${bodyHtml}</p><p><strong>${date}</strong><br>${time}</p><p>${note}</p>${emailButton(input.bookingUrl, link)}${unsubscribeHtml}`,
+    text: `${[greeting, body, `${date} · ${time}`, ...(prerequisite ? [prerequisite] : []), note, `${link}:`, input.bookingUrl].join("\n\n")}${unsubscribeText}`,
+    html: `<p>${greetingHtml}</p><p>${bodyHtml}</p><p><strong>${date}</strong><br>${time}</p>${prerequisiteHtml}<p>${note}</p>${emailButton(input.bookingUrl, link)}${unsubscribeHtml}`,
   };
 }
 
@@ -1997,6 +2020,29 @@ export function guardianReleaseCopyEmail(input: GuardianReleaseCopyEmailInput): 
  * page's job, one tap away — restating it here would be a second surface to
  * keep in step with readiness and it would go stale in the diver's inbox.
  */
+const READINESS_LINK_WORDS = {
+  rescue: {
+    subject: "notifications.readinessLink.subject",
+    body: "notifications.readinessLink.body",
+    openLink: "notifications.readinessLink.openLink",
+  },
+  course_forms: {
+    subject: "notifications.courseFormsLink.subject",
+    body: "notifications.courseFormsLink.body",
+    openLink: "notifications.courseFormsLink.openLink",
+  },
+  other_day: {
+    subject: "notifications.otherDayLink.subject",
+    body: "notifications.otherDayLink.body",
+    openLink: "notifications.otherDayLink.openLink",
+  },
+  log_entry: {
+    subject: "notifications.logEntryLink.subject",
+    body: "notifications.logEntryLink.body",
+    openLink: "notifications.logEntryLink.openLink",
+  },
+} as const;
+
 export function readinessLinkEmail(input: ReadinessLinkEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
@@ -2004,18 +2050,9 @@ export function readinessLinkEmail(input: ReadinessLinkEmailInput): Notification
   // The course-forms send is the same link for a different reason: the release
   // is signed and the course's forms are not (ADR 20261008-course-forms), so it
   // must not tell the diver a link of theirs expired.
-  const words =
-    input.purpose === "course_forms"
-      ? ({
-          subject: "notifications.courseFormsLink.subject",
-          body: "notifications.courseFormsLink.body",
-          openLink: "notifications.courseFormsLink.openLink",
-        } as const)
-      : ({
-          subject: "notifications.readinessLink.subject",
-          body: "notifications.readinessLink.body",
-          openLink: "notifications.readinessLink.openLink",
-        } as const);
+  // `other_day` and `log_entry` are the diver asking for another of their days
+  // from one booking's page (H-132), so neither says anything expired either.
+  const words = READINESS_LINK_WORDS[input.purpose ?? "rescue"];
   const body = t(words.body, {
     shopName: input.shopName,
     tripTitle: input.tripTitle,

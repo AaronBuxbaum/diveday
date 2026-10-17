@@ -31,7 +31,7 @@
   },
   "bundle-reach": {
     "//": "Message-bundle keys no string literal in src/ can reach, per bundle. Written by `node scripts/check-bundle-reach.mjs --write`. This number may only go down — see scripts/check-bundle-reach.mjs. An entry is a list to triage, not a list to delete on sight: some are a hole in the walk.",
-    "src/i18n/locales/en-US/diver.json": 7,
+    "src/i18n/locales/en-US/diver.json": 3,
     "src/i18n/locales/en-US/staff/bookings.json": 1,
     "src/i18n/locales/en-US/staff/divers.json": 10,
     "src/i18n/locales/en-US/staff/diveSites.json": 6,
@@ -348,6 +348,21 @@
         }
       },
       {
+        "why": "merge of the stack top into fourth-review layer r4-1: both sides added to these files",
+        "files": {
+          "src/app/s/[shopSlug]/trips/[id]/actions.ts": "1110 -> 1118",
+          "src/db/seat-claims.test.ts": "1047 -> 1478",
+          "src/lib/notifications/email.test.ts": "1480 -> 1494"
+        }
+      },
+      {
+        "why": "merge of fourth-review layer r4-1 into r4-2: both sides added to these files",
+        "files": {
+          "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": "1057 -> 1072",
+          "src/db/staffing.test.ts": "946 -> 952"
+        }
+      },
+      {
         "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-104, S2, admission/readiness adversarial tests) grew these before it landed",
         "files": {
           "src/app/shop/[shopSlug]/orders/page.test.tsx": "927 -> 929",
@@ -362,34 +377,6 @@
           "src/lib/readiness.test.ts": "1614 -> 1752",
           "src/lib/trip-admission.test.ts": "918 -> 984",
           "src/lib/waivers.test.ts": "1205 -> 1402"
-        }
-      },
-      {
-        "why": "list entries that cannot live in a sibling: export.test.ts column decisions (#2445, #2446, #2425) and the label-maps row for the named buddy alert",
-        "files": {
-          "src/db/export.test.ts": "1670 -> 1673",
-          "src/i18n/label-maps.test.ts": "1327 -> 1334"
-        }
-      },
-      {
-        "why": "safety layer 2 merged onto ready-for-agent: both sides grew incident-reports.test.ts (held-seat naming, discard and hold)",
-        "files": {
-          "src/db/incident-reports.test.ts": "0 -> 1013"
-        }
-      },
-      {
-        "why": "merge of the stack top into fourth-review layer r4-1: both sides added to these files",
-        "files": {
-          "src/app/s/[shopSlug]/trips/[id]/actions.ts": "1110 -> 1118",
-          "src/db/seat-claims.test.ts": "1047 -> 1478",
-          "src/lib/notifications/email.test.ts": "1480 -> 1494"
-        }
-      },
-      {
-        "why": "merge of fourth-review layer r4-1 into r4-2: both sides added to these files",
-        "files": {
-          "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": "1057 -> 1072",
-          "src/db/staffing.test.ts": "946 -> 952"
         }
       },
       {
@@ -419,9 +406,36 @@
         }
       },
       {
+        "why": "list entries that cannot live in a sibling: export.test.ts column decisions (#2445, #2446, #2425) and the label-maps row for the named buddy alert",
+        "files": {
+          "src/db/export.test.ts": "1670 -> 1673",
+          "src/i18n/label-maps.test.ts": "1327 -> 1334"
+        }
+      },
+      {
         "why": "merge of PR 2652's stack into r4-3: both sides grew the order page (record payment, dispute sheet) and export.test.ts",
         "files": {
           "src/db/export.test.ts": "1673 -> 1675"
+        }
+      },
+      {
+        "why": "boat_snags (fifth-loop ideas, item 1) is a new table, and the export, erasure and retention coverage lists each name every table by design: one entry apiece, which no sibling file can hold",
+        "files": {
+          "src/db/erasure-coverage.test.ts": "1176 -> 1178",
+          "src/db/export.test.ts": "1670 -> 1673",
+          "src/db/retention.test.ts": "1262 -> 1265"
+        }
+      },
+      {
+        "why": "the label-maps table must hold every message-key map in src/i18n by design, and r5-4's PARTY_LEFT_KEYS (why Team up each party left a party) is one more row and its code list, which no sibling file can hold",
+        "files": {
+          "src/i18n/label-maps.test.ts": "1333 -> 1351"
+        }
+      },
+      {
+        "why": "safety layer 2 merged onto ready-for-agent: both sides grew incident-reports.test.ts (held-seat naming, discard and hold)",
+        "files": {
+          "src/db/incident-reports.test.ts": "0 -> 1013"
         }
       },
       {
@@ -474,6 +488,12 @@
           "src/app/api/test/seed-trouble-states/route.ts": "2040 -> 2049",
           "src/db/export.test.ts": "1579 -> 1581"
         }
+      },
+      {
+        "why": "merge of origin/main (168ee02bd) into the fifth-loop branch: both sides grew these functions and files, each under the limit on its own",
+        "files": {
+          "src/i18n/label-maps.test.ts": "1351 -> 1366"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -482,16 +502,16 @@
     "src/app/api/webhooks/stripe/route.test.ts": 1873,
     "src/app/api/webhooks/stripe/route.ts": 923,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
-    "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1131,
-    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1323,
+    "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1129,
+    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1296,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 926,
-    "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1072,
-    "src/app/shop/[shopSlug]/schedule/board/actions.ts": 948,
+    "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1065,
+    "src/app/shop/[shopSlug]/schedule/board/actions.ts": 944,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.test.tsx": 1040,
-    "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": 1043,
+    "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": 1034,
     "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1181,
     "src/components/MarketingFeatureScreens.tsx": 1064,
-    "src/components/search/CommandPalette.tsx": 1016,
+    "src/components/search/CommandPalette.tsx": 969,
     "src/components/ui/button.test.ts": 971,
     "src/components/ui/form.test.tsx": 1943,
     "src/components/ui/form.tsx": 1206,
@@ -506,9 +526,9 @@
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1285,
     "src/db/divers.test.ts": 3077,
-    "src/db/erasure-coverage.test.ts": 1175,
+    "src/db/erasure-coverage.test.ts": 1165,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1581,
+    "src/db/export.test.ts": 1565,
     "src/db/import.test.ts": 1077,
     "src/db/incident-reports.test.ts": 1011,
     "src/db/manifests.test.ts": 3725,
@@ -522,7 +542,7 @@
     "src/db/reminders.test.ts": 1078,
     "src/db/rental-fit.test.ts": 1227,
     "src/db/reporting.test.ts": 1633,
-    "src/db/retention.test.ts": 1262,
+    "src/db/retention.test.ts": 1248,
     "src/db/reviews.test.ts": 1034,
     "src/db/seat-claims.test.ts": 1525,
     "src/db/self-declared-cards.test.ts": 1865,
@@ -534,7 +554,7 @@
     "src/db/waivers-medical.test.ts": 1004,
     "src/db/work-order-follow-up.test.ts": 1213,
     "src/db/work-orders.test.ts": 1408,
-    "src/i18n/label-maps.test.ts": 1349,
+    "src/i18n/label-maps.test.ts": 1366,
     "src/lib/agency-check.test.ts": 930,
     "src/lib/dive-prep.test.ts": 1983,
     "src/lib/import.test.ts": 1459,
@@ -546,7 +566,7 @@
     "src/lib/offline-manifests.test.ts": 2179,
     "src/lib/readiness.test.ts": 1575,
     "src/lib/staffing-week.test.ts": 1125,
-    "src/lib/today.test.ts": 1651,
+    "src/lib/today.test.ts": 1648,
     "src/lib/trip-admission.test.ts": 992,
     "src/lib/waivers.test.ts": 1402,
     "src/proxy.test.ts": 1241
@@ -621,27 +641,37 @@
           "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": "0 -> 308",
           "src/db/reminders.ts#sendDueReminders": "332 -> 335"
         }
+      },
+      {
+        "why": "merge of origin/main (168ee02bd) into the fifth-loop branch: both sides grew these functions and files, each under the limit on its own",
+        "files": {
+          "src/app/shop/[shopSlug]/gear/rentals/new/_components/CounterRentalCart.tsx#CounterRentalCart": "0 -> 309",
+          "src/app/shop/[shopSlug]/gear/rentals/new/page.tsx#RentOutPage": "0 -> 303",
+          "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": "0 -> 310",
+          "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": "308 -> 315"
+        }
       }
     ],
-    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 304,
+    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 302,
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 425,
-    "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 332,
+    "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 331,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 333,
-    "src/app/shop/[shopSlug]/gear/page.tsx#GearRegisterPage": 308,
+    "src/app/shop/[shopSlug]/gear/rentals/new/_components/CounterRentalCart.tsx#CounterRentalCart": 309,
+    "src/app/shop/[shopSlug]/gear/rentals/new/page.tsx#RentOutPage": 303,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 410,
-    "src/app/shop/[shopSlug]/page.tsx#TodayBody": 304,
-    "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 377,
-    "src/app/shop/[shopSlug]/reports/page.tsx#ReportsPage": 378,
+    "src/app/shop/[shopSlug]/page.tsx#TodayBody": 308,
+    "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 374,
     "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 310,
-    "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 332,
+    "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 329,
+    "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 310,
     "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 310,
-    "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 308,
-    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 336,
+    "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 315,
+    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 315,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 368,
     "src/db/checkouts.ts#startBookingCheckout": 303,
     "src/db/export.ts#loadShopExportContext": 331,
     "src/db/reminders.ts#sendDueReminders": 335,
-    "src/db/reporting.ts#getMonthlyReport": 338,
+    "src/db/reporting.ts#getMonthlyReport": 334,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
     "src/db/seed-history.ts#seedHistory": 726,
     "src/db/seed-more-trips.ts#seedMoreTrips": 642,
@@ -730,26 +760,26 @@
     "src/app/onboard/page.tsx": 479,
     "src/app/page.tsx": 581,
     "src/app/pricing/page.tsx": 468,
-    "src/app/ready/[token]/page.tsx": 665,
+    "src/app/ready/[token]/page.tsx": 654,
     "src/app/s/[shopSlug]/page.tsx": 879,
-    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 524,
+    "src/app/s/[shopSlug]/trips/[id]/page.tsx": 520,
     "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
     "src/app/shop/[shopSlug]/dive-sites/[id]/page.tsx": 406,
-    "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 506,
+    "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 473,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 779,
-    "src/app/shop/[shopSlug]/gear/page.tsx": 479,
+    "src/app/shop/[shopSlug]/gear/page.tsx": 415,
     "src/app/shop/[shopSlug]/orders/[id]/page.tsx": 401,
     "src/app/shop/[shopSlug]/orders/page.tsx": 728,
-    "src/app/shop/[shopSlug]/page.tsx": 672,
-    "src/app/shop/[shopSlug]/promos/page.tsx": 601,
-    "src/app/shop/[shopSlug]/reports/page.tsx": 620,
-    "src/app/shop/[shopSlug]/reviews/page.tsx": 465,
+    "src/app/shop/[shopSlug]/page.tsx": 677,
+    "src/app/shop/[shopSlug]/promos/page.tsx": 594,
+    "src/app/shop/[shopSlug]/reports/page.tsx": 499,
+    "src/app/shop/[shopSlug]/reviews/page.tsx": 457,
     "src/app/shop/[shopSlug]/schedule/board/page.tsx": 416,
     "src/app/shop/[shopSlug]/settings/import/page.tsx": 508,
-    "src/app/shop/[shopSlug]/settings/team/page.tsx": 789,
+    "src/app/shop/[shopSlug]/settings/team/page.tsx": 714,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 593,
-    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 648,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 499,
+    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 624,
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 496,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 519
   },
   "tokens": {

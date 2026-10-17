@@ -25,11 +25,29 @@ export type MedicalQuestion = {
   referral: boolean;
 };
 
+/**
+ * **The published form a questionnaire transcribes**: what a physician looks
+ * up, and where the examiner's own page is. The doctor's page names it rather
+ * than restyling the examiner's form, because a copy of a legal form that has
+ * not been checked against the PDF must not stand in for it (dive-domain
+ * review of layer r5-3, FIX 2).
+ */
+export type PublishedMedicalForm = {
+  title: string;
+  productNumber: string;
+  /** The form's own version date, as the PDF prints it. */
+  versionDate: string;
+  url: string;
+  /** The page the medical examiner completes and signs. */
+  examinerPage: number;
+};
+
 export type MedicalQuestionnaire = {
   id: string;
   version: number;
   jurisdiction: MedicalJurisdiction;
   title: string;
+  published: PublishedMedicalForm;
   intro: string;
   questions: readonly MedicalQuestion[];
   boxes?: readonly {
@@ -82,6 +100,13 @@ export const RSTC_QUESTIONNAIRE: MedicalQuestionnaire = {
   version: 3,
   jurisdiction: "rstc",
   title: "Diver Medical | Participant Questionnaire",
+  published: {
+    title: "Diver Medical | Participant Questionnaire",
+    productNumber: "10346 EN",
+    versionDate: "2026-01-01",
+    url: "https://uhms.org/images/Recreational-Diving-Medical-Screening-System/forms/Diver_Medical_Participant_Questionnaire_10346_EN_English_2026-01-01.pdf",
+    examinerPage: 3,
+  },
   intro:
     "Answer all 10 questions. If you answer NO to all 10, a medical evaluation is not required. A YES to questions 3, 5 or 10, or to any question in an applicable Box, requires physician evaluation.",
   questions: [
@@ -614,4 +639,52 @@ export function emptyMedicalAnswers(questionnaire: MedicalQuestionnaire): Medica
     questionnaireVersion: questionnaire.version,
     responses: Object.fromEntries(questionnaire.questions.map((question) => [question.id, false])),
   };
+}
+
+/**
+ * Where a referral answer sits on the published form: a numbered question, an
+ * item in a lettered Box, or version 2's standalone dental question.
+ */
+export type MedicalReferralRef =
+  | { kind: "question"; number: number }
+  | { kind: "box"; box: string; number: number }
+  | { kind: "dental" };
+
+function referralRef(questionId: string): MedicalReferralRef | null {
+  const numbered = /^q(\d+)$/.exec(questionId);
+  if (numbered) return { kind: "question", number: Number(numbered[1]) };
+  const boxed = /^box_([a-g])_(\d+)$/.exec(questionId);
+  if (boxed) return { kind: "box", box: boxed[1].toUpperCase(), number: Number(boxed[2]) };
+  return questionId === "dental_recovery" ? { kind: "dental" } : null;
+}
+
+/** One answer that calls for a physician: where it sits on the form, and the form's own words. */
+export type MedicalReferralItem = { ref: MedicalReferralRef; prompt: string };
+
+/**
+ * **What a referred diver shows their doctor** (H-127, ADR
+ * 20261016-doctor-referral-page, amended by the layer r5-3 reviews): each yes
+ * that calls for evaluation, with its place on the form and the form's
+ * published prompt, never an answer's free-text detail. A primary yes that
+ * merely opened a Box is implied by the Box item it led to, and a clear,
+ * missing or unfinished form names nothing.
+ */
+export function referralItems(answers: MedicalAnswers | null): MedicalReferralItem[] {
+  if (!answers) return [];
+  const result = calculateMedicalResult(answers);
+  if (result.status !== "physician_review") return [];
+  return result.flaggedQuestionIds.flatMap((id, index) => {
+    const ref = referralRef(id);
+    const prompt = result.flaggedPrompts[index];
+    return ref && prompt ? [{ ref, prompt }] : [];
+  });
+}
+
+/** The published form a stored answer set was given on, or null for one no version reads. */
+export function answeredMedicalForm(answers: MedicalAnswers | null): PublishedMedicalForm | null {
+  if (!answers) return null;
+  return (
+    findQuestionnaireVersion(answers.questionnaireId, answers.questionnaireVersion)?.published ??
+    null
+  );
 }

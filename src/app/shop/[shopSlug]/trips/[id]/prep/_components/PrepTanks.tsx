@@ -68,7 +68,8 @@ export function PrepTanks({ view, showNitrox }: { view: PrepView; showNitrox: bo
         {/* What the Nitrox tile counts, beside the tile the crew packs
             cylinders from: seats that asked and hold a verified card, not
             cylinders analyzed. The analysis itself is never logged here
-            (dive-domain review of UX item 26). */}
+            (dive-domain review of UX item 26). On paper it is said once, in
+            the printed day's header (fifth-loop ideas, item 2). */}
         {showNitrox ? (
           <p className="mt-2 text-sm text-muted print:hidden">{t("tripPrep.nitroxCountNote")}</p>
         ) : null}

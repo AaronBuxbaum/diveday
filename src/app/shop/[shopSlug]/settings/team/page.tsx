@@ -8,9 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
-import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import {
   ChoicePill,
   controlClass,
@@ -38,12 +36,13 @@ import { requireShopSurface } from "@/lib/session";
 import { COMMON_SPOKEN_LANGUAGES } from "@/lib/spoken-languages";
 import { type FormNotice, noticeForForm, noticeFromParam } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
+import { InviteStaffDisclosure } from "./_components/InviteStaffDisclosure";
 import { StaffCardCredentials } from "./_components/StaffCardCredentials";
 import { StaffCredentials } from "./_components/StaffCredentials";
 import { StaffRolesDisclosure } from "./_components/StaffRolesDisclosure";
+import { type CrewYear, readStaffYears, StaffYearLine } from "./_components/StaffYear";
 import {
   deleteStaffCredentialAction,
-  inviteStaffAction,
   removeStaffAction,
   resendInviteAction,
   restoreStaffAction,
@@ -57,7 +56,7 @@ import {
 import { CREDENTIAL_KIND_KEYS } from "./credential-kinds";
 import { type CardCredential, credentialRowsFor } from "./credential-rows";
 import { noticeMessages } from "./notice-messages";
-import { TEAM_FORMS, teamNoticeForm, teamNoticeOnRoster } from "./notices";
+import { parseRoles, TEAM_FORMS, teamNoticeForm, teamNoticeOnRoster } from "./notices";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -94,39 +93,6 @@ function statusBadge(
  * flagged in the extraction report rather than changed here.
  */
 const roleLabels = staffRoleLabelRecord;
-
-/**
- * The invite form's role picker. A roster row's is `StaffRolesDisclosure` —
- * the per-row disclosure that saves on close (ADR 20260827-the-shops-shelves,
- * slice 9h). This one stays a plain fieldset because it is one part of a form
- * with its own Send invite: there is nothing to close, and nothing to save yet.
- */
-function RoleCheckboxes({
-  name,
-  defaultRoles,
-  t,
-}: {
-  name: string;
-  defaultRoles: readonly string[];
-  t: StaffTranslator;
-}) {
-  const labels = roleLabels(t);
-  return (
-    <fieldset className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-      <legend className="sr-only">{t("settings.team.rolesLegend")}</legend>
-      {STAFF_ROLES.map((role) => (
-        <ChoicePill
-          key={role}
-          type="checkbox"
-          name={`${name}_${role}`}
-          defaultChecked={defaultRoles.includes(role)}
-        >
-          {labels[role]}
-        </ChoicePill>
-      ))}
-    </fieldset>
-  );
-}
 
 /**
  * One staff member's spoken languages (issue #708) — a checkbox per language
@@ -193,6 +159,7 @@ function StaffRow({
   locale,
   timezone,
   t,
+  year,
 }: {
   member: StaffMember;
   /** This person's credentials on file, from the ledger at the foot. */
@@ -205,6 +172,7 @@ function StaffRow({
   /** The shop's own zone, so a consent stamp reads as the day the shop lived. */
   timezone: string;
   t: StaffTranslator;
+  year?: CrewYear;
 }) {
   const isDisabled = member.accountStatus === "disabled";
   const status = member.accountStatus === "active" ? null : statusBadge(t)[member.accountStatus];
@@ -219,6 +187,7 @@ function StaffRow({
         <div className="min-w-0">
           <p className="font-medium">{member.fullName}</p>
           <p className="text-sm text-muted wrap-anywhere">{member.email}</p>
+          <StaffYearLine year={year} t={t} />
           {/* What this person publishes to divers, when they have said yes on
               their own staffing page (issue #1357). Read-only here: the switch
               is theirs, and a shop that could edit it would be overriding
@@ -503,13 +472,6 @@ function StaffRow({
   );
 }
 
-/** A `?priorRoles=` value, kept to roles this app actually has. */
-function parseRoles(value: string | undefined): Role[] {
-  return (value ?? "")
-    .split(",")
-    .filter((role): role is Role => (STAFF_ROLES as readonly string[]).includes(role));
-}
-
 export default async function TeamSettingsPage({
   params,
   searchParams,
@@ -548,9 +510,10 @@ export default async function TeamSettingsPage({
     refusal: { notice: "team-not-authorized" },
   });
 
-  const [staff, credentials] = await Promise.all([
+  const [staff, credentials, years] = await Promise.all([
     listShopStaff(db, shop.id),
     listStaffCredentials(db, shop.id),
+    readStaffYears(db, shop, nowDate()),
   ]);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -624,57 +587,18 @@ export default async function TeamSettingsPage({
           `space-y-10` here, and no `mt-*` on any card
           (docs/design/forms-and-controls.md). */}
       <div className="space-y-10">
-        {/* The anchor the roster's empty state jumps to. */}
-        <SectionCard
-          id="invite"
-          padding="lg"
-          className="scroll-mt-24"
-          title={t("settings.team.invite.heading")}
-          description={t("settings.team.invite.description")}
-        >
-          <FieldGrid as="form" action={inviteStaffAction} columns={2}>
-            <Field label={t("settings.team.invite.fullNameLabel")}>
-              <input
-                name="fullName"
-                type="text"
-                required
-                maxLength={120}
-                autoComplete="name"
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("settings.team.invite.emailLabel")} error={inviteEmailError}>
-              <input
-                name="email"
-                type="email"
-                required
-                maxLength={150}
-                autoComplete="email"
-                className={controlClass}
-              />
-            </Field>
-            <div className="sm:col-span-2">
-              <RoleCheckboxes name="role" defaultRoles={[]} t={t} />
-            </div>
-            <FieldActions>
-              <SubmitButton
-                pendingLabel={t("settings.team.invite.submitting")}
-                className={buttonClass()}
-              >
-                {t("settings.team.invite.submit")}
-              </SubmitButton>
-              <FormStatus tone={inviteStatus?.tone}>{inviteStatus?.text}</FormStatus>
-            </FieldActions>
-            <FieldErrorFocus key={notice} scope="invite" />
-          </FieldGrid>
-        </SectionCard>
-
+        {/* The team first; inviting is a button under its heading (item 58). */}
         <section>
           {/* Not a card — a heading over a list of them, so a bare `h2` at
               `SECTION_TITLE_CLASS`, the rung `SectionCard` draws its own title
-              at and `card.tsx` prescribes for a heading over a plural body. It
-              once stood 18px under the invite card's 24px (K-314, #1966). */}
+              at and `card.tsx` prescribes for a heading over a plural body. */}
           <h2 className={SECTION_TITLE_CLASS}>{t("settings.team.current.heading")}</h2>
+          <InviteStaffDisclosure
+            emailError={inviteEmailError}
+            status={inviteStatus}
+            notice={notice}
+            t={t}
+          />
           {staff.length === 0 ? (
             <EmptyState
               title={t("settings.team.current.empty")}
@@ -699,6 +623,7 @@ export default async function TeamSettingsPage({
                   locale={locale}
                   timezone={shop.timezone}
                   t={t}
+                  year={years.get(member.personId)}
                 />
               ))}
             </InsetGroup>

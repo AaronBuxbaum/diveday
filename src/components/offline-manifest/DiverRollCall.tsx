@@ -380,6 +380,14 @@ function OfflineDiverRow({
                       </span>
                     </p>
                   )}
+                  {diver.dietaryNote ? (
+                    <p>
+                      <span className="font-bold">{t("manifest.dietaryNoteLabel")}</span>
+                      <span className="mt-0.5 block text-muted break-words">
+                        {diver.dietaryNote}
+                      </span>
+                    </p>
+                  ) : null}
                   {/* The live manifest's own sentences, in the same tone
                     (`DiverRollCall.tsx` under `/manifest`). */}
                   {medicalWarnings ? (

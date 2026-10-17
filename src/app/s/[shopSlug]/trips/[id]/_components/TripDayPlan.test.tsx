@@ -181,6 +181,130 @@ describe("TripDayPlan's profile", () => {
   });
 
   /**
+   * **The day's two ends, before paying** (fifth-loop ideas, item 19). The same
+   * `dockDayTimeline` `/ready` lays out: a 7:00 AM boat with a 30-minute dock
+   * call, due back 11:00 AM by its own published end. The dives stay clockless.
+   */
+  it("says when to be at the dock and when the boat is due back, in one line", () => {
+    render(
+      <TripDayPlan
+        briefings={[briefing(), wall]}
+        shop={SHOP}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={{
+          ...profile,
+          day: {
+            startsAt: new Date("2026-10-17T11:00:00.000Z"),
+            endsAt: new Date("2026-10-17T15:00:00.000Z"),
+            plannedDives: 2,
+          },
+        }}
+      />,
+    );
+    expect(screen.getByTestId("trip-day-rhythm").textContent).toMatch(
+      /^At the dock 6:30\sAM · back about 11:00\sAM$/,
+    );
+    expect(within(screen.getByRole("list")).queryByText(/\d{1,2}:\d{2}/)).not.toBeInTheDocument();
+  });
+
+  it("says when to meet rather than a dock on a shore or pool day", () => {
+    render(
+      <TripDayPlan
+        briefings={[briefing()]}
+        shop={SHOP}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={{
+          ...profile,
+          diveMode: "shore",
+          day: {
+            startsAt: new Date("2026-10-17T11:00:00.000Z"),
+            endsAt: new Date("2026-10-17T15:00:00.000Z"),
+            plannedDives: 1,
+          },
+        }}
+      />,
+    );
+    expect(screen.getByTestId("trip-day-rhythm").textContent).toMatch(
+      /^Meet at \d{1,2}:\d{2}\s[AP]M · back about 11:00\sAM$/,
+    );
+  });
+
+  it("says it in the diver's language", () => {
+    render(
+      <TripDayPlan
+        briefings={[briefing()]}
+        shop={SHOP}
+        locale="es-ES"
+        profile={{
+          ...profile,
+          day: {
+            startsAt: new Date("2026-10-17T11:00:00.000Z"),
+            endsAt: new Date("2026-10-17T15:00:00.000Z"),
+            plannedDives: 1,
+          },
+        }}
+      />,
+    );
+    expect(screen.getByTestId("trip-day-rhythm").textContent).toMatch(
+      /^En el muelle a las 6:30 · regreso hacia las 11:00$/,
+    );
+  });
+
+  /** Fifth-loop ideas, item 20: earlier divers' words under the plan. */
+  it("quotes what earlier divers said about the site, with a name and the day they went", () => {
+    render(
+      <TripDayPlan
+        briefings={[briefing()]}
+        shop={SHOP}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={profile}
+        siteReviews={[
+          {
+            id: "r1",
+            comment: "Calm, unhurried briefing, exactly what I wanted for my first boat dive back.",
+            reviewer: "Lars P.",
+            divedAt: new Date("2026-10-10T12:00:00.000Z"),
+          },
+        ]}
+      />,
+    );
+    const block = screen.getByTestId("trip-site-reviews");
+    expect(within(block).getByText("From divers who went")).toBeInTheDocument();
+    expect(
+      within(block).getByText(
+        "“Calm, unhurried briefing, exactly what I wanted for my first boat dive back.”",
+      ),
+    ).toBeInTheDocument();
+    expect(within(block).getByText(/^Lars P\. · Sat, Oct 10/)).toBeInTheDocument();
+  });
+
+  it("renders no review block when there is nothing to quote", () => {
+    render(
+      <TripDayPlan
+        briefings={[briefing()]}
+        shop={SHOP}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={profile}
+        siteReviews={[]}
+      />,
+    );
+    expect(screen.getByText("The day")).toBeInTheDocument();
+    expect(screen.queryByTestId("trip-site-reviews")).not.toBeInTheDocument();
+  });
+
+  it("says nothing when the caller passes no single day (a course, or several days)", () => {
+    render(
+      <TripDayPlan
+        briefings={[briefing()]}
+        shop={SHOP}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={profile}
+      />,
+    );
+    expect(screen.queryByTestId("trip-day-rhythm")).not.toBeInTheDocument();
+  });
+
+  /**
    * **The run closes itself unless the next thing on the page is a rule**
    * (pixel-craft class 6). On a bare day — no crew months, a pitch that opens
    * on its door — the run's closing rule sat 32px over the door's own, two

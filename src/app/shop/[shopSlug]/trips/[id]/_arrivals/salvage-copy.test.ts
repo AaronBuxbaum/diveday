@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { SimilarDeparture } from "@/lib/similar-departures";
-import { noShowSalvageCopy } from "./salvage-copy";
+import { noShowSalvageCopy, sailedRebookCopy } from "./salvage-copy";
 
 const t = staffTranslator("en-US");
 
@@ -128,5 +128,67 @@ describe("noShowSalvageCopy", () => {
     expect(rebook.links).toEqual([]);
     expect(rebook.offerCopy).toBeUndefined();
     expect(copyFor({ kind: "waitlist", count: 2 }, true).links).toHaveLength(1);
+  });
+});
+
+/** Fifth-loop ideas, item 4: the sailed list becomes the rebooking list. */
+describe("sailedRebookCopy", () => {
+  const diver = { id: "person-1", name: "Nadia Petrov" };
+  const formatWhen = (startsAt: Date) =>
+    startsAt.getUTCDay() === 4 ? "Thu 7:00 AM" : "Sat 11:30 AM";
+
+  it("says the later seat a diver already holds, and offers nothing", () => {
+    const copy = sailedRebookCopy({
+      t,
+      next: { kind: "booked", tripId: "trip-9", startsAt: new Date("2026-09-12T15:30:00Z") },
+      shopSlug: "blue-mantis",
+      diver,
+      formatWhen,
+    });
+    expect(copy).toEqual({ line: "Booked Sat 11:30 AM" });
+  });
+
+  it("names an open day with its seats, and both doors to it", () => {
+    const copy = sailedRebookCopy({
+      t,
+      next: {
+        kind: "open",
+        tripId: "trip-2",
+        title: "Two-Tank Reef",
+        startsAt: new Date("2026-09-10T11:00:00Z"),
+        seatsLeft: 3,
+      },
+      shopSlug: "blue-mantis",
+      diver,
+      formatWhen,
+    });
+    expect(copy.line).toBe("Nothing else booked · Thu 7:00 AM has 3 seats");
+    expect(copy.add).toEqual({
+      href: "/shop/blue-mantis/bookings/new/trip-2?diverq=Nadia%20Petrov",
+      label: "Add them",
+      ariaLabel: "Add Nadia Petrov to Two-Tank Reef, Thu 7:00 AM",
+    });
+    expect(copy.offer).toMatchObject({
+      tripId: "trip-2",
+      personId: "person-1",
+      label: "Email them this date",
+    });
+  });
+
+  it("speaks Spanish", () => {
+    const copy = sailedRebookCopy({
+      t: staffTranslator("es-ES"),
+      next: {
+        kind: "open",
+        tripId: "trip-2",
+        title: "Two-Tank Reef",
+        startsAt: new Date("2026-09-10T11:00:00Z"),
+        seatsLeft: 1,
+      },
+      shopSlug: "blue-mantis",
+      diver,
+      formatWhen,
+    });
+    expect(copy.line).toBe("Nada más reservado · Thu 7:00 AM tiene 1 plaza");
   });
 });

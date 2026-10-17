@@ -21,6 +21,7 @@ describe("YourWeekList", () => {
             boatName: "Reef Runner",
             tripRole: "captain",
             gap: "uncrewed_departure",
+            crewCall: null,
           },
           {
             tripId: "t-2",
@@ -29,6 +30,7 @@ describe("YourWeekList", () => {
             boatName: null,
             tripRole: null,
             gap: null,
+            crewCall: null,
           },
         ]}
         shopSlug="blue-mantis"
@@ -61,6 +63,7 @@ describe("YourWeekList", () => {
             boatName: null,
             tripRole: "divemaster",
             gap: "crew_below_target",
+            crewCall: null,
           },
           {
             tripId: "t-2",
@@ -69,6 +72,7 @@ describe("YourWeekList", () => {
             boatName: null,
             tripRole: "captain",
             gap: "no_instructor",
+            crewCall: null,
           },
         ]}
         shopSlug="blue-mantis"
@@ -80,5 +84,46 @@ describe("YourWeekList", () => {
     expect(screen.getByText(words.crew_below_target)).toHaveClass("text-muted");
     expect(screen.getByText(words.crew_below_target)).not.toHaveClass("text-warning-strong");
     expect(screen.getByText(words.no_instructor)).toHaveClass("text-warning-strong");
+  });
+});
+
+/**
+ * "At the dock 6:15 AM · leaves 7:00 AM" (fifth-loop ideas, item 47), and
+ * "Divers at the dock …" when no shift of theirs says when the crew are due
+ * (dive-domain review of layer r5-4, fix 4).
+ */
+describe("YourWeekList's dock time", () => {
+  const line = (crewCall: { at: Date; source: "shift" | "divers" }) => ({
+    tripId: "t-1",
+    title: "Morning reef",
+    startsAt: new Date("2026-10-15T11:00:00.000Z"),
+    boatName: null,
+    tripRole: "divemaster" as const,
+    gap: null,
+    crewCall,
+  });
+  const show = (crewCall: { at: Date; source: "shift" | "divers" }) =>
+    render(
+      <YourWeekList
+        lines={[line(crewCall)]}
+        shopSlug="blue-mantis"
+        timeZone="America/New_York"
+        locale="en-US"
+        t={t}
+      />,
+    );
+
+  it("says when their own shift has them at the dock, and when the boat leaves", () => {
+    show({ at: new Date("2026-10-15T10:15:00.000Z"), source: "shift" });
+    expect(
+      screen.getByText(/(?<!Divers )At the dock 6:15\sAM · leaves 7:00\sAM · Divemaster/),
+    ).toBeInTheDocument();
+  });
+
+  it("names the divers' call as theirs when no shift says the crew's", () => {
+    show({ at: new Date("2026-10-15T10:30:00.000Z"), source: "divers" });
+    expect(
+      screen.getByText(/Divers at the dock 6:30\sAM · leaves 7:00\sAM · Divemaster/),
+    ).toBeInTheDocument();
   });
 });

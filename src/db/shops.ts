@@ -4,6 +4,7 @@ import type { BrandBadgeCode, BrandDisplayFontCode } from "@/lib/brand";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
+import type { DeskPayment } from "@/lib/desk-payment";
 import type { DockDayRhythm } from "@/lib/diver-planning";
 import type { EmergencyReference } from "@/lib/emergency-reference";
 import type { ShopCurrency } from "@/lib/money";
@@ -461,6 +462,23 @@ export async function setShopMinTurnaround(db: AppDb, shopId: string, minutes: n
     .set({ minTurnaroundMinutes: minutes })
     .where(eq(shops.id, shopId))
     .returning();
+  return shop ?? null;
+}
+
+/**
+ * How the shop takes money at the desk (fifth-loop ideas, item 21), or null
+ * to say nothing. Read wherever a seat is "due at the shop".
+ */
+export async function setShopDeskPayment(
+  db: AppDb,
+  shopId: string,
+  deskPayment: DeskPayment | null,
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({ deskPayment })
+    .where(eq(shops.id, shopId))
+    .returning({ id: shops.id, deskPayment: shops.deskPayment });
   return shop ?? null;
 }
 

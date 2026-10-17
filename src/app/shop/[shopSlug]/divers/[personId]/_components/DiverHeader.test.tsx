@@ -13,6 +13,7 @@ vi.mock("@/app/actions/seat-diver", () => ({ seatExistingDiverAction: vi.fn() })
 afterEach(cleanup);
 
 const t = staffTranslator("en-US");
+const NO_STANDING = { visits: 0, since: null, lastOut: null, spent: null, friends: 0 };
 type HeaderStatus = ComponentProps<typeof DiverHeader>["status"];
 
 function diver(): DiverProfile {
@@ -43,7 +44,8 @@ function renderHeader({
       diver={diver()}
       shopSlug="blue-mantis"
       t={t}
-      visits={0}
+      standing={NO_STANDING}
+      locale="en-US"
       book={book}
       status={status}
     />,
@@ -126,7 +128,8 @@ describe("the package line", () => {
         diver={diver()}
         shopSlug="blue-mantis"
         t={t}
-        visits={0}
+        standing={NO_STANDING}
+        locale="en-US"
         packages={{ left: 7, of: 10 }}
       />,
     );
@@ -136,5 +139,39 @@ describe("the package line", () => {
   it("says nothing for a diver with no package", () => {
     const { container } = renderHeader();
     expect(container.textContent).not.toContain("Package:");
+  });
+});
+
+/**
+ * **Who this person is to the shop, in one line** (fifth-loop ideas, item 36).
+ * Each fact stands alone and says nothing when there is nothing to say.
+ */
+describe("the standing line", () => {
+  it("says visits since when, last out, money kept and friends brought", () => {
+    const { container } = render(
+      <DiverHeader
+        diver={diver()}
+        shopSlug="blue-mantis"
+        t={t}
+        locale="en-US"
+        standing={{
+          visits: 23,
+          since: "2024-03-02",
+          lastOut: "2026-09-30",
+          spent: { cents: 214_000, currency: "usd" },
+          friends: 2,
+        }}
+      />,
+    );
+    const text = container.textContent ?? "";
+    expect(text).toContain("23 visits since Mar 2024");
+    expect(text).toMatch(/Last out Sep\s30, 2026/);
+    expect(text).toContain("$2,140.00 spent");
+    expect(text).toContain("Brought 2 friends");
+  });
+
+  it("says none of it for someone new, or money to a reader who may not see it", () => {
+    const { container } = renderHeader();
+    expect(container.textContent).not.toMatch(/visit|Last out|spent|Brought/);
   });
 });

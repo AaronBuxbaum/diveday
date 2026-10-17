@@ -38,7 +38,10 @@ describe("one shop-day's departure cards", () => {
         evidence,
       );
       const cards = await getShopDayDepartures(db, shop.id, shop.timezone, day, evidence);
-      expect(cards).toEqual(whole.departures);
+      // Who to say hello to rides only on Today's own cards (`SpineDeparture.welcome`):
+      // tomorrow's reader leaves it off, and every other field agrees.
+      expect(cards.every((card) => card.welcome === undefined)).toBe(true);
+      expect(cards).toEqual(whole.departures.map(({ welcome: _welcome, ...card }) => card));
     }
   });
 

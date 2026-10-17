@@ -9,10 +9,11 @@ import type { CustomerGearNotice, WorkOrder } from "@/db/schema";
 import { billAndPickupFacts } from "@/db/work-order-follow-up";
 import {
   ORDER_COLLECTION_KEYS,
-  ORDER_PAID_AT_COUNTER_KEYS,
   ORDER_STATUS_KEYS,
   ORDER_STATUS_TONES,
+  paidAtCounterLine,
 } from "@/i18n/order-labels";
+import { ownerOrManagerWords, type StaffWords, sayWords } from "@/i18n/shared-sentences";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
@@ -23,7 +24,7 @@ import {
   sendWorkOrderBillAction,
 } from "../follow-up-actions";
 
-type CardNotice = { form: "ready" | "bill"; tone: NoticeTone; key: StaffMessageKey };
+type CardNotice = { form: "ready" | "bill"; tone: NoticeTone } & StaffWords;
 
 /** This card's own outcomes, answered beside the button that earned them. */
 const NOTICES: Record<string, CardNotice> = {
@@ -53,11 +54,7 @@ const NOTICES: Record<string, CardNotice> = {
     tone: "danger",
     key: "benchFollowUp.notice.billNotConnected",
   },
-  "bill-not-authorized": {
-    form: "bill",
-    tone: "danger",
-    key: "benchFollowUp.notice.billNotAuthorized",
-  },
+  "bill-not-authorized": { form: "bill", tone: "danger", ...ownerOrManagerWords("bill") },
   "bill-invalid": { form: "bill", tone: "danger", key: "benchFollowUp.notice.billInvalid" },
   "bill-tax-location": {
     form: "bill",
@@ -142,7 +139,7 @@ export async function BillAndPickupCard({
   const say = (form: CardNotice["form"]) =>
     outcome?.form === form ? (
       <FormStatus tone={outcome.tone} className="mt-3">
-        {t(outcome.key)}
+        {sayWords(t, outcome)}
       </FormStatus>
     ) : null;
 
@@ -200,7 +197,8 @@ export async function BillAndPickupCard({
                     ? t("benchFollowUp.bill.sent", {
                         date: formatShortDate(bill.sentAt, locale, shop.timezone),
                       })
-                    : t(ORDER_PAID_AT_COUNTER_KEYS[bill.collection], {
+                    : paidAtCounterLine(t, {
+                        collection: bill.collection,
                         date: formatShortDate(bill.sentAt, locale, shop.timezone),
                       })}
                 </span>

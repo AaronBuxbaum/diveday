@@ -60,6 +60,58 @@ describe("the weekly_digest notification", () => {
     expect(text).toContain("Open Money: https://diveday.example/shop/blue-mantis/orders");
   });
 
+  it("sets last week against the same week last year once there is one (item 29)", () => {
+    const money = (lastYearRevenueCents: number) =>
+      messageFor({
+        ...BASE,
+        sections: [
+          {
+            kind: "money",
+            revenueCents: 421_000,
+            lastYearRevenueCents,
+            tipsCents: 0,
+            owed: { orderCents: 0, orderCount: 0, seatCents: 0, seatCount: 0 },
+            currency: "usd",
+            url: "https://diveday.example/shop/blue-mantis/orders",
+          },
+        ],
+      }).text;
+    expect(money(358_000)).toContain(
+      "Last week’s departures took $4,210.00 after tax, $630.00 more than the same week last year.",
+    );
+    expect(money(500_000)).toContain("$790.00 less than the same week last year.");
+    expect(money(421_000)).toContain("after tax, the same as the same week last year.");
+  });
+
+  it("names this week's emptiest boat and links its deal form (item 29)", () => {
+    const { text, html } = messageFor({
+      ...BASE,
+      sections: [
+        {
+          kind: "this_week",
+          departures: 3,
+          seatsFilled: 9,
+          seats: 24,
+          url: "https://diveday.example/shop/blue-mantis/schedule/board",
+          weakest: {
+            title: "Deep <Wreck> Charter",
+            startsAt: new Date("2026-10-08T12:00:00Z"),
+            booked: 1,
+            capacity: 8,
+            url: "https://diveday.example/shop/blue-mantis/trips/t1?view=details#last-minute-deal",
+          },
+        },
+      ],
+    });
+    // The time keeps its units whole with a no-break space, so match around it.
+    expect(text).toMatch(/Thursday\s8:00\sAM: Deep <Wreck> Charter has 1 of 8 booked\./u);
+    expect(text).toContain(
+      "booked. Send a last-minute deal: https://diveday.example/shop/blue-mantis/trips/t1?view=details#last-minute-deal",
+    );
+    expect(html).toContain("Deep &lt;Wreck&gt; Charter");
+    expect(html).not.toContain("<Wreck>");
+  });
+
   it("leaves out a money line with nothing to say", () => {
     const { text } = messageFor({
       ...BASE,

@@ -46,6 +46,7 @@ function withLead(identityHeld = false) {
     db: {} as never,
     bookingId: LEAD,
     ownLocale: null,
+    delivered: true,
     data: { identityHeld, shop: { id: "shop-1" } } as never,
   });
 }

@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
-import { issueBookingCapability } from "@/db/booking-capabilities";
+import { issueBookedReadinessLinks, issueBookingCapability } from "@/db/booking-capabilities";
 import { consumeBookingHandoff, offerBookingHandoffByEmail } from "@/db/booking-handoff";
 import { createBookingParty, getBookingForTrip } from "@/db/bookings";
 import { recordBuddyReferral, resolveBuddyReferral } from "@/db/buddy-referrals";
@@ -501,12 +501,10 @@ export async function bookSpot(
     getTripWithBooked(dbi, shopNow.id, tripId),
   ]);
   // Where this booking now lands, and what the confirmation email links to:
-  // the diver's own `/ready` page (ADR 20260820-one-page-after-booking). Minted
-  // here, above the email send, so both uses share the one capability.
-  const readinessCapability = await issueBookingCapability(dbi, {
+  // the diver's own `/ready` page (ADR 20260820-one-page-after-booking).
+  const links = await issueBookedReadinessLinks(dbi, {
     shopId: shopNow.id,
     bookingId: primaryBookingId,
-    purpose: "readiness",
   });
   await consumeHandoffFromForm(dbi, shopNow.id, fields.handoff);
   // This form is the diver's own — the public schedule page, submitted from
@@ -533,7 +531,7 @@ export async function bookSpot(
     primaryBookingId,
     bookings: outcome.bookings,
     ownLocale,
-    readinessToken: readinessCapability?.token,
+    readinessToken: links.mailed?.token,
     money: { chargesOnline: payAtBookingForGear, partyTypes },
   });
 
@@ -649,8 +647,8 @@ export async function bookSpot(
     ? confirmCapability
       ? `${base}?booking=${confirmCapability.token}&embed=1`
       : `${base}?embed=1`
-    : readinessCapability
-      ? `${readinessLinkPath(readinessCapability.token)}?booked=1`
+    : links.redirect
+      ? `${readinessLinkPath(links.redirect.token)}?booked=1`
       : base;
   // `tripPromo`/`shopPromo` were already resolved above, before the party was
   // booked (task 20) — an invalid/expired/wrong-scope code now fails the

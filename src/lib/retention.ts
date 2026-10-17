@@ -120,10 +120,12 @@
  * departure, a review or a ticket, read as the record itself:
  * `trip_change_events`, `review_moderation_events` (argued above),
  * `work_order_events`. Queues and obligations deleted by their own work:
- * `held_sends` (its own sweep, `src/db/held-sends.ts`),
- * `media_deletion_attempts` and `processor_erasure_obligations` (deleted when
- * discharged). Signed evidence H-02 has not ruled on: `waiver_records` and
- * the course-form records.
+ * `held_sends` (its own sweep, `src/db/held-sends.ts`) and
+ * `media_deletion_attempts`. Kept as the record of an erasure's outside work:
+ * `processor_erasure_obligations`, which nothing prunes; a discharged row is
+ * the attestation (ADR 20260803-processor-erasure-obligations). Signed
+ * evidence H-02 has not ruled on: `waiver_records` and the course-form
+ * records.
  */
 
 import { DAY_MS } from "@/lib/clock";
@@ -463,6 +465,21 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
  * seconds of deletes, and the fix is a faster arm or a more frequent run.
  */
 export const PRUNE_BATCH_LIMIT = 5_000;
+
+/**
+ * **A lunch note is cleared this many days after its boat sailed** (fifth-loop
+ * ideas, item 56; security review N5). Its one purpose is that day's galley,
+ * and a diver's own words about what they eat say something about their
+ * health or faith, so the column is nulled rather than kept with the booking.
+ * Not a row prune: the booking itself stays. The window leaves room for a
+ * dispute about the day and for the trip's own record to be read back.
+ */
+export const DIETARY_NOTE_RETENTION_DAYS = 30;
+
+/** The departure start before which a seat's lunch note is cleared. */
+export function dietaryNoteCutoff(now: Date): Date {
+  return new Date(now.getTime() - DIETARY_NOTE_RETENTION_DAYS * DAY_MS);
+}
 
 /** The instant before which rows of `table` are eligible for deletion. */
 export function retentionCutoff(table: RetainedTable, now: Date): Date {

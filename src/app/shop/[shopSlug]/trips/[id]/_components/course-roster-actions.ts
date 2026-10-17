@@ -1,5 +1,6 @@
 import {
   certifyDiverFromRosterAction,
+  markCardProcessedAction,
   saveCourseNextStepAction,
   setCourseMaterialsDoneAction,
 } from "../course-actions";
@@ -21,6 +22,7 @@ export function courseRosterActions(isCourseSession: boolean, shopSlug: string, 
   return {
     certifyDiverAction: certifyDiverFromRosterAction.bind(null, shopSlug, tripId),
     saveCourseNextStepAction: saveCourseNextStepAction.bind(null, shopSlug, tripId),
+    markCardProcessedAction: markCardProcessedAction.bind(null, shopSlug, tripId),
     setCourseMaterialsDoneAction: setCourseMaterialsDoneAction.bind(null, shopSlug, tripId),
     elearningCheckAction: elearningCheckAction.bind(null, shopSlug, tripId),
   };

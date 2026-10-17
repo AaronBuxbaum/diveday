@@ -47,7 +47,7 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   await expect(page.getByText("Add your first departure")).toBeVisible();
   await expect(page.getByText("Share your public schedule")).toBeVisible();
   await expect(page.getByText("Connect payments", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("0 of 6 done")).toBeVisible();
+  await expect(page.getByText("0 of 7 done")).toBeVisible();
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveCount(1);
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveText("Add contact details");
   // A brand-new shop has completed none of the steps yet.
@@ -82,7 +82,7 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
 
   await page.goto(`/shop/${unique}`);
   await expect(page.getByText("Contact details on file.")).toBeVisible();
-  await expect(page.getByText("1 of 6 done")).toBeVisible();
+  await expect(page.getByText("1 of 7 done")).toBeVisible();
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveCount(1);
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveText("Set up profile");
   await expect(page.getByText("Add your first dive site")).toBeVisible();
@@ -99,6 +99,13 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   // The schedule-link step always offers the link, independent of "done" state.
   await expect(page.getByText(`/s/${unique}`).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible();
+
+  // **The emergency reference is a step of its own** (fifth loop, item 3): a
+  // new shop's is blank, and its door lands on the form that fills it.
+  await expect(page.getByRole("link", { name: "Add the numbers" })).toHaveAttribute(
+    "href",
+    `/shop/${unique}/settings/emergency-reference`,
+  );
 
   // **Sign-up published DiveDay's sample release, and the shop is told so**
   // (third UX review, item 30). The checklist asks for it to be read before
@@ -209,7 +216,7 @@ test("a freshly onboarded shop finds a way forward on its empty Divers and Order
   // so it is a card above the list rather than the page's standing primary
   // (UX audit item 20), and the empty state says only what is true.
   await page.goto(`/shop/${unique}/orders`);
-  await expect(page.getByText("No DiveDay orders yet.", { exact: true })).toBeVisible();
+  await expect(page.getByText("No orders yet.", { exact: true })).toBeVisible();
   // One door, once: the header holds no primary without an account to send
   // an order from, and the empty state does not repeat the card's door
   // (docs/design/principles.md #8).

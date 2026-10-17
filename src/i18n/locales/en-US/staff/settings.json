@@ -6,6 +6,8 @@
       "packingInvalid": "Add between one and twelve packing items.",
       "dockSaved": "Dock call time saved for every confirmation and reminder.",
       "pickupSaved": "Saved. Divers are asked about a pickup only when this is on.",
+      "deskPaymentSaved": "Saved. Every seat due at the shop says how to pay.",
+      "deskPaymentInvalid": "Nothing changed: choose card, cash, card and cash, or don’t say.",
       "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
       "turnaroundSaved": "Turnaround saved.",
       "turnaroundInvalid": "Enter a turnaround between 0 and 240 minutes.",
@@ -28,7 +30,7 @@
       "profileSaved": "Shop profile and branding saved.",
       "profileInvalid": "Check your tagline, description, and logo file.",
       "shopPhotosSaved": "Shop photos saved.",
-      "shopPhotosInvalid": "Those photos didn’t save. Use JPG, PNG, WebP, or HEIC under {maxMb}\u00a0MB, and keep to {max} in all.",
+      "shopPhotosInvalid": "Those photos didn’t save. Use JPG, PNG, WebP, or HEIC under {maxMb} MB, and keep to {max} in all.",
       "addressSaved": "Shop address saved.",
       "addressRemoved": "Shop address removed.",
       "addressInvalid": "That address couldn’t be saved. Search again and pick your shop from the list.",
@@ -237,6 +239,16 @@
       "submit": "Save pickup",
       "submitting": "Saving…"
     },
+    "deskPayment": {
+      "legend": "How divers pay at the desk",
+      "description": "Said wherever a seat is due at the shop: the booking form, the confirmation and the diver’s page.",
+      "none": "Don’t say",
+      "card": "Card",
+      "cash": "Cash",
+      "card_and_cash": "Card and cash",
+      "submit": "Save how divers pay",
+      "submitting": "Saving…"
+    },
     "dockCall": {
       "heading": "Dock-day rhythm",
       "description": "Every number here is in minutes.",
@@ -404,8 +416,7 @@
       "bookingsWaivers": "Bookings & waivers",
       "rentals": "Rentals",
       "money": "Money",
-      "messages": "Messages",
-      "notifications": "Notifications",
+      "reach": "How divers reach you",
       "website": "Website",
       "data": "Data",
       "account": "Account",
@@ -510,7 +521,12 @@
       "processorErasures": {
         "sectionLabel": "Erasures not finished at Stripe",
         "heading": "{count, plural, one {# record} other {# records}} from an erased diver still at Stripe",
-        "detail": "Erasing a diver also deletes their Stripe customer. These didn’t finish. A customer record retries on its own tonight. An invoice or a payment page can’t: only a data-deletion request to Stripe clears the name and email it copied. File one, then mark it done.",
+        "detail": "Erased in DiveDay, not yet at Stripe.",
+        "todo": {
+          "stripe_customer": "Retries on its own tonight, or retry now.",
+          "stripe_invoice_snapshot": "File a data-deletion request with Stripe, then mark it done.",
+          "stripe_checkout_session_snapshot": "File a data-deletion request with Stripe, then mark it done."
+        },
         "raised": "raised {date}",
         "retry": "Retry delete",
         "retrying": "Retrying…",
@@ -584,7 +600,6 @@
       "restored": "Team access restored.",
       "restoreFailed": "Couldn’t restore that person’s access. Check their account first.",
       "inviteInvalid": "Enter a name, a valid email, and check at least one role.",
-      "sendLimit": "You have sent a lot of invites this hour. Nothing went out; try again in a little while.",
       "rolesInvalid": "Check at least one role before saving.",
       "rolesConflict": "Somebody else changed these roles while you had the row open, so nothing was saved. Reload to see where they stand now.",
       "inviteAlreadyOnTeam": "That person already has an account here.",
@@ -656,7 +671,11 @@
       "label": "Emergency contact",
       "addValue": "Add"
     },
-    "publicNameSeen": "Divers see “{name}”, agreed on {date}"
+    "publicNameSeen": "Divers see “{name}”, agreed on {date}",
+    "year": {
+      "certified": "{count, plural, one {# certification issued this year} other {# certifications issued this year}}",
+      "daysAtSea": "{count, plural, one {# day at sea} other {# days at sea}}"
+    }
   },
   "safetyChecklist": {
     "title": "Pre-departure checklist",
@@ -768,7 +787,7 @@
       },
       "waiverDocuments": {
         "what": "Waiver / medical documents",
-        "detail": "Fetched once from your file’s URL and kept for audit. Images and PDFs up to 5\u00a0MB."
+        "detail": "Fetched once from your file’s URL and kept for audit. Images and PDFs up to 5 MB."
       },
       "role": {
         "what": "Role",
@@ -964,7 +983,7 @@
       "notOwnerOrManager": "Importing contacts is limited to the shop’s owner or manager.",
       "csvRequired": "Choose a CSV file to import.",
       "noImportableRows": "No rows could be imported. Every row was missing a name or duplicated.",
-      "fileTooLarge": "The file is too large. The limit is {limitMb}\u00a0MB.",
+      "fileTooLarge": "The file is too large. The limit is {limitMb} MB.",
       "fileEmpty": "The file is empty.",
       "tooManyColumns": "Too many columns ({count}). The limit is {limit}.",
       "tooManyRows": "Too many rows ({count}). The limit is {limit} per import, so split the file and import it in batches.",

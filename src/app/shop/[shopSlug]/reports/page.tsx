@@ -30,32 +30,38 @@ import {
   parseMonthKey,
 } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
+import { formatMonthDay } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { sailedSplit } from "@/lib/report-split";
 import {
   compareMonthlyReports,
-  formatPercent,
-  formatPercentChange,
-  formatPointsChange,
   formatReportMoney,
-  hasComparableBaseline,
   type MonthComparison,
   monthHasActivity,
   summarizeMonth,
 } from "@/lib/reporting";
 import { requireShopSurface } from "@/lib/session";
-import { shopMonthBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { sameMomentYearBefore, shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { DepartureLedger, departureLedgerRows } from "./_components/DepartureLedger";
+import { DepartureMoney } from "./_components/DepartureMoney";
 import { EmptySeats } from "./_components/EmptySeats";
-import { type MonthFigure, MonthFigures } from "./_components/MonthFigures";
+import { MonthFigures } from "./_components/MonthFigures";
 import {
+  BuddyReferrerLines,
   MoneyByLine,
   MonthDetailLines,
   MonthFootnotes,
   MonthPayouts,
   QuietMonth,
 } from "./_components/MonthMoneyDetail";
+import {
+  LeadTimes,
+  readMonthOwner,
+  tipsSplitLine,
+  WeatherLine,
+} from "./_components/MonthOwnerLines";
+import { monthFigureList } from "./_components/month-figure-list";
 import { ReportRangeTabs } from "./_components/ReportRangeTabs";
 import { sailedSplitLines } from "./_components/sailed-split-lines";
 import { YearView } from "./_components/YearView";
@@ -107,10 +113,10 @@ export default async function ReportsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ month?: string; page?: string; range?: string }>;
+  searchParams: Promise<{ month?: string; page?: string; range?: string; year?: string }>;
 }) {
   const { shopSlug } = await params;
-  const { month, page, range } = await searchParams;
+  const { month, page, range, year } = await searchParams;
   // Checked against the database, not the JWT, so a revoked manager loses
   // revenue access immediately (see canPersonViewShopReports).
   //
@@ -143,7 +149,13 @@ export default async function ReportsPage({
   // the staff registry, its own `loading.tsx` and its own eyebrow, to say the
   // same word twice.
   if (range === "year") {
-    return <YearView {...{ db, shop, shopSlug, locale, now, t }} roles={session.user.roles} />;
+    return (
+      <YearView
+        {...{ db, shop, shopSlug, locale, now, t }}
+        roles={session.user.roles}
+        requestedYear={year}
+      />
+    );
   }
 
   // Revenue is this shop's own money — a Bali shop's month reads in rupiah
@@ -214,60 +226,57 @@ export default async function ReportsPage({
 
   // Totals see every trip in the month (a page-limited fill rate would quietly go wrong); the
   // table below gets its own bounded slice, and the baseline month the same shape of query.
+  //
+  // **By this date last year** (fifth loop, item 25): while this month is under
+  // way, its year-ago baseline is read only to the same wall-clock moment, so
+  // a half month is never set against a whole one.
+  const underWay = monthStart < now && now < monthEnd;
+  const toDate = underWay && baselineKind === "yearAgo";
   const baselineWindow = baselineMonth
     ? {
-        start: wallTimeToUtc(
-          { year: baselineMonth.year, month: baselineMonth.month, day: 1, hour: 0, minute: 0 },
-          tz,
-        ),
-        end: wallTimeToUtc(
-          {
-            year: addMonths(baselineMonth, 1).year,
-            month: addMonths(baselineMonth, 1).month,
-            day: 1,
-            hour: 0,
-            minute: 0,
-          },
-          tz,
-        ),
+        start: shopMonthBounds(baselineMonth, tz).from,
+        end: toDate ? sameMomentYearBefore(now, tz) : shopMonthBounds(baselineMonth, tz).to,
       }
     : null;
   // Both months ride one Promise.all, so the cost is the slower call, not the sum. The month
   // under way also reads its sailed half, departures before now (item 22).
   const shopMoney = { currency, timeZone: tz };
-  const underWay = monthStart < now && now < monthEnd;
-  const [input, tripPage, baselineInput, moneyDetail, emptySeats, sailedInput] = await Promise.all([
-    getMonthlyReport(db, shop.id, monthStart, monthEnd, { currency, timeZone: tz }),
-    // A non-numeric or missing `?page=` reads as page 1; the query clamps it
-    // into range, so switching to a shorter month never strands the reader on
-    // a page that month does not have.
-    pagedMonthlyReportTrips(db, shop.id, monthStart, monthEnd, {
-      page: Number.parseInt(page ?? "", 10),
-    }),
-    baselineWindow
-      ? getMonthlyReport(db, shop.id, baselineWindow.start, baselineWindow.end, {
-          currency,
-          timeZone: tz,
-        })
-      : Promise.resolve(null),
-    // The money by line, the package dives still owed, and the returning
-    // divers (owner decision 2026-10-09) — `src/lib/report-lines.ts`.
-    getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now, shopMoney, current),
-    // The departures that left with empty seats (issue #2424), on the debrief's own rule.
-    getMonthDeparturesWithEmptySeats(db, shop.id, { startUtc: monthStart, endUtc: monthEnd }, now),
-    underWay ? getMonthlyReport(db, shop.id, monthStart, now, shopMoney) : null,
-  ]);
+  const [input, tripPage, baselineInput, moneyDetail, emptySeats, sailedInput, owner] =
+    await Promise.all([
+      getMonthlyReport(db, shop.id, monthStart, monthEnd, { currency, timeZone: tz }),
+      // A non-numeric or missing `?page=` reads as page 1; the query clamps it
+      // into range, so switching to a shorter month never strands the reader on
+      // a page that month does not have.
+      pagedMonthlyReportTrips(db, shop.id, monthStart, monthEnd, {
+        page: Number.parseInt(page ?? "", 10),
+      }),
+      baselineWindow
+        ? getMonthlyReport(db, shop.id, baselineWindow.start, baselineWindow.end, shopMoney)
+        : Promise.resolve(null),
+      // The money by line, the package dives still owed, and the returning
+      // divers (owner decision 2026-10-09) — `src/lib/report-lines.ts`.
+      getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now, shopMoney, current),
+      // The departures that left with empty seats (issue #2424), on the debrief's own rule.
+      getMonthDeparturesWithEmptySeats(
+        db,
+        shop.id,
+        { startUtc: monthStart, endUtc: monthEnd },
+        now,
+      ),
+      underWay ? getMonthlyReport(db, shop.id, monthStart, now, shopMoney) : null,
+      // The weather's month and the crew sheet's tip shares (fifth loop, items 27 and 31).
+      readMonthOwner(db, shop, current, { startUtc: monthStart, endUtc: monthEnd }, locale),
+    ]);
   const report = summarizeMonth(input);
   const money = (cents: number) => formatReportMoney(cents, currency, locale);
-  const split = sailedSplitLines(
-    t,
-    sailedInput ? sailedSplit(report, summarizeMonth(sailedInput)) : null,
-    money,
-  );
+  const sailedReport = sailedInput ? summarizeMonth(sailedInput) : null;
+  const split = sailedSplitLines(t, sailedReport ? sailedSplit(report, sailedReport) : null, money);
   const baselineReport = baselineInput ? summarizeMonth(baselineInput) : null;
+  // To date, what has sailed is what last year's same days are set against.
+  const compared = toDate && sailedReport ? sailedReport : report;
   const comparison: MonthComparison | null =
     baselineReport && baselineKind
-      ? compareMonthlyReports(baselineKind, report, baselineReport, currency)
+      ? compareMonthlyReports(baselineKind, compared, baselineReport, currency)
       : null;
   const { trips } = tripPage;
   const hasMonthlyActivity = monthHasActivity(report);
@@ -283,78 +292,7 @@ export default async function ReportsPage({
       )
     : new Map<string, number>();
 
-  // The comparison line under each headline card — "{trend}vs {baseline} in
-  // {month}", with the fallback labelled per issue #700's own acceptance
-  // criteria. Built in JS from small already-translated fragments rather
-  // than one large ICU template, matching how `bookingsDetail`/`description`
-  // above already choose between whole sentences in code: the branching
-  // (percent vs. points vs. neither, year-ago vs. previous-month) is a
-  // decision tree, not something ICU's own conditionals read clearly.
   const baselineMonthLabel = baselineMonth ? monthLabel(baselineMonth, locale) : null;
-  // **No line against nothing** (UX audit 2026-10-07, item 21): "vs $0 in
-  // October 2025" compares a month to one that had none of the thing, which
-  // reads as a bug. A zero baseline drops its line; the figure stands alone.
-  function comparisonLine(trend: string | null, baselineText: string): string | undefined {
-    if (!comparison || !baselineMonthLabel) return undefined;
-    const key =
-      comparison.kind === "yearAgo"
-        ? "reports.comparison.yearAgo"
-        : "reports.comparison.previousMonthFallback";
-    return t(key, {
-      trend: trend ? `${trend} ` : "",
-      baseline: baselineText,
-      month: baselineMonthLabel,
-    });
-  }
-  const revenueComparison =
-    comparison && hasComparableBaseline(comparison.revenueCents)
-      ? comparisonLine(
-          comparison.revenueCents.percentChange !== null
-            ? formatPercentChange(comparison.revenueCents.percentChange)
-            : null,
-          formatReportMoney(baselineReport?.revenueCents ?? 0, currency, locale),
-        )
-      : undefined;
-  const tipsComparison =
-    comparison && hasComparableBaseline(comparison.tipsCents)
-      ? comparisonLine(
-          comparison.tipsCents.percentChange !== null
-            ? formatPercentChange(comparison.tipsCents.percentChange)
-            : null,
-          formatReportMoney(baselineReport?.tipsCents ?? 0, currency, locale),
-        )
-      : undefined;
-  const bookingsComparison =
-    comparison && hasComparableBaseline(comparison.seatsBooked)
-      ? comparisonLine(
-          comparison.seatsBooked.percentChange !== null
-            ? formatPercentChange(comparison.seatsBooked.percentChange)
-            : null,
-          String(comparison.seatsBooked.baseline),
-        )
-      : undefined;
-  // Ratio cards need their own baseline to exist too, not merely a
-  // comparison month with a report — a baseline month with zero seats
-  // offered has nothing to measure fill against, and that absence must stay
-  // absent rather than render as a manufactured "0%" (docs/design/principles.md).
-  const fillComparison =
-    comparison && comparison.fillRate.baseline !== null
-      ? comparisonLine(
-          comparison.fillRate.pointsChange !== null
-            ? formatPointsChange(comparison.fillRate.pointsChange)
-            : null,
-          formatPercent(comparison.fillRate.baseline),
-        )
-      : undefined;
-  const waiverComparison =
-    comparison && comparison.waiverCompletion.baseline !== null
-      ? comparisonLine(
-          comparison.waiverCompletion.pointsChange !== null
-            ? formatPointsChange(comparison.waiverCompletion.pointsChange)
-            : null,
-          formatPercent(comparison.waiverCompletion.baseline),
-        )
-      : undefined;
 
   const isThisMonth = current.year === thisMonth.year && current.month === thisMonth.month;
   const isFuture =
@@ -385,90 +323,26 @@ export default async function ReportsPage({
   // lighting up an arrow that goes nowhere.
   const navDisabledClass = `${navClass} pointer-events-none opacity-40`;
 
-  // The five figures, in reading order. Six tiles became five: the tax tile is
-  // a footnote to net revenue and drops to the quiet line beside the CSV door,
-  // and the departure count was always the Seats figure's own denominator, so
-  // it folds into that figure's subline (ADR 20260827-the-shops-shelves).
-  //
-  // No new arithmetic — every number here is the one the tile above it carried,
-  // and the two percentages still render only over a denominator that exists
-  // (`formatPercent` answers an em dash for a null ratio, which is what
-  // `summarizeMonth` returns when a month offered no seat and took no booking).
-  const waiversAllIn = report.waiverCompletion === 1;
-  const figures: MonthFigure[] = [
-    {
-      key: "revenue",
-      label: t("reports.metrics.revenueLabel"),
-      value: formatReportMoney(report.revenueCents, currency, locale),
-      // The basis line: this figure is anchored to the month's departures, and
-      // "Money in, by line" below it to the day money was paid, so the two
-      // totals differ and each says which it is (third review, item 1). The
-      // imported case names money inside this figure Stripe has not confirmed.
-      detail:
-        report.importedFinancialRecordCount > 0
-          ? t("reports.metrics.revenueDetailWithImported", {
-              count: report.importedFinancialRecordCount,
-              payments: formatReportMoney(report.importedPaymentCents, currency, locale),
-              refunds: formatReportMoney(report.importedRefundCents, currency, locale),
-            })
-          : t("reports.metrics.revenueBasis"),
-      split: split?.revenue,
-      comparison: revenueComparison,
-      link: { href: revenueOrdersHref, label: t("reports.metrics.revenueViewOrders") },
-    },
-    {
-      // Tips sit beside revenue rather than inside it (PAY-M2): they are their
-      // own Stripe charge, 100% to the shop, and never part of the booking
-      // payment gate.
-      key: "tips",
-      label: t("reports.metrics.tipsLabel"),
-      value: formatReportMoney(report.tipsCents, currency, locale),
-      detail: t("reports.metrics.tipsDetail", { count: report.tipCount }),
-      comparison: tipsComparison,
-    },
-    {
-      key: "seats",
-      label: t("reports.metrics.bookingsLabel"),
-      value: String(report.seatsBooked),
-      detail: bookingsDetail,
-      split: split?.seats,
-      comparison: bookingsComparison,
-    },
-    {
-      key: "fill",
-      label: t("reports.metrics.seatFillLabel"),
-      value: formatPercent(report.fillRate),
-      detail: t("reports.metrics.seatFillDetail", {
-        booked: report.seatsBooked,
-        offered: report.seatsOffered,
-        count: report.atCapacityTrips,
-      }),
-      split: split?.fill,
-      comparison: fillComparison,
-    },
-    {
-      key: "waivers",
-      label: t("reports.metrics.waiversLabel"),
-      value: formatPercent(report.waiverCompletion),
-      // The month's one coral element, and the only one this surface may ever
-      // carry (ADR 20260827-clearwater-surface-language, decision 11). It is
-      // condition-derived and nothing stores it: `waiverCompletion` is null
-      // whenever the month took no booking at all, so a completion of exactly 1
-      // cannot be reached without counted signatures behind it.
-      earned: waiversAllIn ? t("reports.metrics.waiversAllIn") : undefined,
-      detail: waiversAllIn
-        ? undefined
-        : t("reports.metrics.waiversOutstanding", { count: report.waiverOutstanding }),
-      // Unsigned waivers are work somebody has to chase — the same judgement
-      // the ledger's own remainder-toned meter makes one screen below.
-      detailTone: "attention",
-      comparison: waiverComparison,
-    },
-  ];
+  const figures = monthFigureList({
+    report,
+    baselineReport,
+    comparison,
+    baselineMonthLabel,
+    toDateDay: toDate ? formatMonthDay(todayWall.month, todayWall.day, locale) : null,
+    currency,
+    locale,
+    t,
+    split,
+    bookingsDetail,
+    revenueOrdersHref,
+    tipsSplit: tipsSplitLine(owner.crewRows, t, money),
+  });
 
   const departureRows = departureLedgerRows({
     trips,
     crewCounts,
+    netByTrip: new Map(input.trips.map((trip) => [trip.tripId, trip.netCents ?? 0])),
+    money,
     shopSlug,
     locale,
     timeZone: tz,
@@ -555,9 +429,11 @@ export default async function ReportsPage({
           <MonthFootnotes
             taxCents={report.taxCents}
             csvHref={`/shop/${shopSlug}/reports/download?month=${monthKey(current)}`}
+            monthEnd={{ shopSlug, month: monthKey(current), locale, timeZone: tz }}
             t={t}
             money={money}
           />
+          <WeatherLine weather={owner.weather} t={t} money={money} />
 
           {report.importedFinancialRecordCount > 0 ? (
             <section aria-label={t("reports.importedHistory.sectionLabel")} className="mt-6">
@@ -580,6 +456,7 @@ export default async function ReportsPage({
           ) : null}
 
           <MonthDetailLines report={report} detail={moneyDetail} t={t} money={money} />
+          <BuddyReferrerLines detail={moneyDetail} t={t} shopSlug={shopSlug} />
           <MoneyByLine detail={moneyDetail} t={t} money={money} />
           <MonthPayouts detail={moneyDetail} t={t} locale={locale} timeZone={tz} />
           <EmptySeats
@@ -590,6 +467,7 @@ export default async function ReportsPage({
             timeZone={tz}
           />
 
+          <DepartureMoney trips={input.trips} timeZone={tz} t={t} money={money} />
           {report.tripCount > 0 ? (
             <DepartureLedger
               className="mt-10"
@@ -613,6 +491,7 @@ export default async function ReportsPage({
           ) : (
             <EmptyState title={t("reports.noTripsWithImportedHistory")} className="mt-8" />
           )}
+          <LeadTimes db={db} shopId={shop.id} timeZone={tz} now={now} locale={locale} t={t} />
         </>
       )}
     </main>

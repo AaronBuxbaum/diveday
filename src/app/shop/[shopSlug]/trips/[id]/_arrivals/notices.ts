@@ -68,6 +68,12 @@ export const DESK_NOTICES: DeskNoticeMap = {
   },
   // The name-match prompt hands the seat an existing diver's record on a
   // guess, held until somebody confirms it (H-13, issue #1556).
+  // A walk-in family seated together from one form (fifth loop, item 9).
+  "walkin-party-added": { tone: "success", key: "checkIn.notice.walkinPartyAdded" },
+  "walkin-party-added-waiver-undelivered": {
+    tone: "warning",
+    key: "checkIn.notice.walkinPartyAddedWaiverUndelivered",
+  },
   "walkin-added-identity-unconfirmed": {
     tone: "warning",
     key: "checkIn.notice.walkinAddedIdentityUnconfirmed",

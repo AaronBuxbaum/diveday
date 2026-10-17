@@ -1,6 +1,11 @@
 import { diverTranslator } from "@/i18n/messages";
 import { isDiverLocale } from "@/i18n/settings";
 import { escapeHtml } from "@/lib/html";
+import {
+  bookkeeperConfirmationEmail,
+  bookkeeperMonthEndEmail,
+  bookkeeperNoticeEmail,
+} from "./bookkeeper-email";
 import { courseCertifiedEmail } from "./course-certified";
 import { courseInquiryReceivedEmail } from "./course-inquiry-received";
 import { crewScheduleChangeEmail } from "./crew-emails";
@@ -169,6 +174,11 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "seat_already_held") return seatAlreadyHeldEmail(notification);
   if (notification.kind === "party_payment_receipt") return partyPaymentReceiptEmail(notification);
   if (notification.kind === "course_certified") return courseCertifiedEmail(notification);
+  if (notification.kind === "bookkeeper_month_end") return bookkeeperMonthEndEmail(notification);
+  if (notification.kind === "bookkeeper_confirmation") {
+    return bookkeeperConfirmationEmail(notification);
+  }
+  if (notification.kind === "bookkeeper_notice") return bookkeeperNoticeEmail(notification);
   if (notification.kind === "course_inquiry_received") {
     return courseInquiryReceivedEmail(notification);
   }

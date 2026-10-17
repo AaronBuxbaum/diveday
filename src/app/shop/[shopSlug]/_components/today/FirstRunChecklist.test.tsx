@@ -33,6 +33,10 @@ const COPY: FirstRunChecklistCopy = {
   releaseBody: "Divers sign DiveDay’s sample wording until you publish your own.",
   releaseAction: "Read the release",
   releaseDone: "Your own release is live.",
+  emergencyTitle: "Fill in your emergency reference",
+  emergencyBody: "The numbers your crew dials at sea. They ride on every manifest, offline too.",
+  emergencyAction: "Add the numbers",
+  emergencyDone: "Your emergency reference has numbers on it.",
   tripTitle: "Schedule your first trip",
   tripBody: "Put a departure on the board — divers can’t book until one exists.",
   tripAction: "Add a departure",
@@ -59,6 +63,7 @@ describe("FirstRunChecklist", () => {
         diveSiteCount={0}
         unitsDone={false}
         releaseDone={false}
+        emergencyDone={false}
         stripeDone={false}
         copy={COPY}
       />,
@@ -99,6 +104,7 @@ describe("FirstRunChecklist", () => {
         diveSiteCount={3}
         unitsDone={false}
         releaseDone={false}
+        emergencyDone={false}
         stripeDone={true}
         copy={COPY}
       />,
@@ -137,6 +143,7 @@ describe("the share row", () => {
         diveSiteCount={0}
         unitsDone={false}
         releaseDone={false}
+        emergencyDone={false}
         stripeDone={false}
         copy={COPY}
       />,
@@ -160,6 +167,7 @@ describe("the share row", () => {
         diveSiteCount={0}
         unitsDone={false}
         releaseDone={false}
+        emergencyDone={false}
         stripeDone={false}
         copy={COPY}
       />,
@@ -193,6 +201,7 @@ describe("the step count", () => {
         diveSiteCount={0}
         unitsDone={false}
         releaseDone={false}
+        emergencyDone={false}
         stripeDone={false}
         copy={COPY}
       />,
@@ -221,6 +230,7 @@ describe("the one next thing", () => {
         diveSiteCount={0}
         unitsDone={false}
         releaseDone={false}
+        emergencyDone={false}
         stripeDone={false}
         copy={COPY}
         {...done}
@@ -250,6 +260,7 @@ describe("the one next thing", () => {
       unitsDone: true,
       diveSiteCount: 2,
       releaseDone: true,
+      emergencyDone: true,
       stripeDone: true,
     });
     const primaries = container.querySelectorAll('[data-first-run-primary="true"]');
@@ -275,6 +286,7 @@ describe("the units step", () => {
         diveSiteCount={0}
         unitsDone={false}
         releaseDone={false}
+        emergencyDone={false}
         stripeDone={false}
         copy={COPY}
       />,
@@ -301,6 +313,7 @@ describe("the units step", () => {
         diveSiteCount={0}
         unitsDone
         releaseDone={false}
+        emergencyDone={false}
         stripeDone={false}
         copy={COPY}
       />,
@@ -329,6 +342,7 @@ describe("one primary, and the rest are the rows themselves", () => {
         diveSiteCount={0}
         unitsDone={false}
         releaseDone={false}
+        emergencyDone={false}
         stripeDone={false}
         copy={COPY}
         {...done}
@@ -455,6 +469,7 @@ describe("the release step", () => {
         diveSiteCount={1}
         unitsDone
         releaseDone={releaseDone}
+        emergencyDone
         stripeDone={false}
         copy={COPY}
       />,
@@ -476,6 +491,44 @@ describe("the release step", () => {
     const { container } = renderSetUp(true);
     expect(screen.getByText("Your own release is live.")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Read the release" })).toBeNull();
+    expect(container.querySelector('[data-first-run-primary="true"]')).toHaveTextContent(
+      "Add a departure",
+    );
+  });
+});
+
+/**
+ * **The emergency card before the first departure** (fifth loop, item 3). The
+ * numbers ride on every manifest, offline too, and DiveDay writes none of them,
+ * so the step holds the primary after the release and before the departure.
+ */
+describe("the emergency card step", () => {
+  const renderSetUp = (emergencyDone: boolean) =>
+    render(
+      <FirstRunChecklist
+        shopSlug="blue-mantis"
+        scheduleUrl="https://app.diveday.example/s/blue-mantis"
+        contactDone
+        profileDone
+        diveSiteCount={1}
+        unitsDone
+        releaseDone
+        emergencyDone={emergencyDone}
+        stripeDone={false}
+        copy={COPY}
+      />,
+    );
+
+  it("takes the primary ahead of the departure while the card is blank", () => {
+    const { container } = renderSetUp(false);
+    const primary = container.querySelector('[data-first-run-primary="true"]');
+    expect(primary).toHaveTextContent("Add the numbers");
+    expect(primary).toHaveAttribute("href", "/shop/blue-mantis/settings/emergency-reference");
+  });
+
+  it("settles once the card has a number", () => {
+    const { container } = renderSetUp(true);
+    expect(screen.getByText("Your emergency reference has numbers on it.")).toBeInTheDocument();
     expect(container.querySelector('[data-first-run-primary="true"]')).toHaveTextContent(
       "Add a departure",
     );

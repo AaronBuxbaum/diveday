@@ -3,6 +3,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   checkRateLimit,
+  checkRateLimitFailClosed,
   inMemoryRateLimitStore,
   RATE_LIMITS,
   type RateLimitConfig,
@@ -106,6 +107,31 @@ describe("checkRateLimit — fail-open", () => {
     };
     const result = await checkRateLimit("k", config, 0, throwingStore);
     expect(result).toEqual({ allowed: true, retryAfterMs: 0 });
+  });
+});
+
+/**
+ * **One bucket fails closed**: the doctor's page's date-of-birth unlock
+ * (second-pass security review of layer r5-3, N4), the first limit standing in
+ * front of medical answers. A store outage there refuses the try rather than
+ * letting every guess through; the diver loses nothing they cannot get from
+ * their doctor's whole-questionnaire visit.
+ */
+describe("checkRateLimitFailClosed", () => {
+  it("refuses when the store throws, and still allows a request the store allows", async () => {
+    const throwingStore: RateLimitStore = {
+      async take() {
+        throw new Error("network timeout");
+      },
+    };
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await checkRateLimitFailClosed("k", config, 0, throwingStore)).toMatchObject({
+      allowed: false,
+    });
+    expect(await checkRateLimitFailClosed("k", config, 0, inMemoryRateLimitStore())).toEqual({
+      allowed: true,
+      retryAfterMs: 0,
+    });
   });
 });
 

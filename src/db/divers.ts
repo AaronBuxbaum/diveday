@@ -20,6 +20,7 @@ import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { shopWaiverStatus, waiverClockInstant } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
+import { friendsBroughtBy } from "./buddy-referrals";
 import type { AppDb, DbExecutor } from "./client";
 import { diveDay } from "./dive-days";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
@@ -917,6 +918,7 @@ export async function getDiverProfile(
     waiverChannels,
     shopRows,
     staffRoleRows,
+    friendsBrought,
   ] = await Promise.all([
     db
       .select({ card: certifications, reviewedByName: levelReviewer.fullName })
@@ -1009,6 +1011,8 @@ export async function getDiverProfile(
       .from(personRoles)
       .where(and(eq(personRoles.personId, personId), inArray(personRoles.role, [...STAFF_ROLES])))
       .limit(1),
+    // Who they brought: the record's one line names it (fifth-loop ideas, item 36).
+    friendsBroughtBy(db, shopId, personId),
   ]);
   const shopTimezone = shopRows[0]?.timezone ?? "UTC";
   const waiverNow = nowDate();
@@ -1063,6 +1067,8 @@ export async function getDiverProfile(
     drysuitExperienceSeenByName: personRow.drysuitExperienceSeenByName,
     /** This diver also holds a staff role at this shop. */
     holdsStaffRole: staffRoleRows.length > 0,
+    /** Distinct people who booked on a link from one of this diver's recaps. */
+    friendsBrought,
     certifications: levelCards.map(({ card, reviewedByName }) => ({ ...card, reviewedByName })),
     specialtyCertifications: specialtyCards.map(({ card, reviewedByName }) => ({
       ...card,

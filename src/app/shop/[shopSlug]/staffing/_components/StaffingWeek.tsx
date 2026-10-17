@@ -11,14 +11,7 @@ import { awayDatesText } from "@/i18n/away-labels";
 import { fill } from "@/i18n/fill";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import type { AvailabilityBlock } from "@/lib/crew-requests";
-import {
-  formatDayParts,
-  formatShortDate,
-  formatTime,
-  formatTimeRange,
-  formatTimeRangeTz,
-  formatWeekday,
-} from "@/lib/format";
+import { formatDayParts, formatShortDate, formatTimeRange, formatTimeRangeTz } from "@/lib/format";
 import {
   GAP_TONE,
   type PlacedGap,
@@ -27,6 +20,7 @@ import {
   type StaffWeek,
   type WeekShift,
 } from "@/lib/staffing-week";
+import { windowOnThisDay } from "./window-on-this-day";
 
 /**
  * **Staffing as a week** — ADR 20260827-the-shops-shelves, decision 3, which
@@ -62,6 +56,8 @@ import {
  * leaves Remove one tap away.
  */
 export type StaffingWeekWords = {
+  /** Each person's week in one figure, by person id (`personTotalsWords`, item 52). */
+  personTotals?: Readonly<Record<string, string>>;
   /** Names the grid to a screen reader. */
   ariaLabel: string;
   previous: string;
@@ -145,30 +141,6 @@ export type GapWords = Record<StaffGapCode, string>;
 
 function tripHref(shopSlug: string, tripId: string) {
   return `/shop/${shopSlug}/trips/${tripId}?view=details#crew`;
-}
-
-/**
- * **What a departure's window is on this column's day.** The day it starts it
- * is the range (or, for a gap's narrow cell, the start alone); a later day of
- * an overnight window says when it ends and the day it began, so the 3:00 AM
- * tail of Monday's night boat never reads as Tuesday's own 11:30 PM sailing.
- */
-function windowOnThisDay(
-  trip: PlacedTrip,
-  words: StaffingWeekWords,
-  locale: string,
-  timeZone: string,
-  shape: "range" | "start",
-): string {
-  if (trip.continuesFrom !== null) {
-    const day = formatWeekday(trip.startsAt, locale, timeZone);
-    return trip.endsThisDay
-      ? fill(words.continuedUntil, { time: formatTime(trip.endsAt, locale, timeZone), day })
-      : fill(words.continuedFrom, { day });
-  }
-  return shape === "range"
-    ? formatTimeRange(trip.startsAt, trip.endsAt, locale, timeZone)
-    : formatTime(trip.startsAt, locale, timeZone);
 }
 
 /**
@@ -621,6 +593,28 @@ const GRID_CLASS = "grid grid-cols-[9rem_repeat(7,minmax(0,1fr))]";
  *   fixed `h-11` was the chip before K-498 gave it its 1px edge, 2px short
  *   of the 46px it is now, a row (K-274).
  */
+/**
+ * The grid's name cell: the person, their roles, and their week in one figure
+ * (fifth-loop ideas, item 52), the last only when they work at all.
+ */
+export function PersonFace({
+  person,
+  totals,
+}: {
+  person: { name: string; roles: readonly string[] };
+  totals: string | undefined;
+}) {
+  return (
+    <>
+      <p className="text-sm font-semibold">{person.name}</p>
+      {person.roles.length > 0 ? (
+        <p className="text-xs text-muted">{person.roles.join(" · ")}</p>
+      ) : null}
+      {totals ? <p className="text-xs text-muted tabular-nums">{totals}</p> : null}
+    </>
+  );
+}
+
 export const WEEK_GRID = {
   row: `${GRID_CLASS} ${ledgerRowBoxClass}`,
   personHead: "pe-2 py-2.5",
@@ -770,10 +764,7 @@ export function StaffingWeek({
         {week.people.map((person) => (
           <div key={person.personId} className={WEEK_GRID.row}>
             <div className={WEEK_GRID.person}>
-              <p className="text-sm font-semibold">{person.name}</p>
-              {person.roles.length > 0 ? (
-                <p className="text-xs text-muted">{person.roles.join(" · ")}</p>
-              ) : null}
+              <PersonFace person={person} totals={words.personTotals?.[person.personId]} />
             </div>
             {person.days.map((cell, index) => {
               const day = week.days[index];

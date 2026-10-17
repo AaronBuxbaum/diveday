@@ -200,7 +200,8 @@ export function MonthFigures({
                   the cell's `py-5`, without moving a line on the page. As an `inline-block` it was a 78x20 target
                   on a phone (K-288). */}
               {figure.link ? (
-                <span className="mt-2 flex h-5 items-center">
+                // A link does nothing on paper, so it does not print (review F3).
+                <span className="mt-2 flex h-5 items-center print:hidden">
                   <Link
                     href={figure.link.href}
                     className={`${tapTargetLinkClass} text-sm font-medium text-primary hover:underline`}

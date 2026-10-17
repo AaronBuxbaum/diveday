@@ -73,7 +73,8 @@ export const activityEvents = pgTable(
     /**
      * Who did it. Null only for a line no account wrote: the system's own (an
      * automatic call-off) or the shore contact stopping roll-call alerts from
-     * the link in one (`shore_alert_contact_stopped`, H-118 re-review). Then {@link activityEvents.systemReason} says
+     * the link in one (`shore_alert_contact_stopped`, H-118 re-review), or the
+     * bookkeeper stopping month-end files (`bookkeeper_email_stopped`). Then {@link activityEvents.systemReason} says
      * why; the check below holds the two together (issue #2539).
      */
     actorPersonId: uuid("actor_person_id").references(() => people.id),

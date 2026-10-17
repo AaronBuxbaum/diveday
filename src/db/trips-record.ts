@@ -6,7 +6,7 @@ import {
   inArray,
   isNotNull,
   isNull,
-  ne,
+  notInArray,
   type SQL,
   type SQLWrapper,
   sql,
@@ -178,30 +178,34 @@ export const getTripWithBookedOnce = cache(getTripWithBooked);
  * Primary-subtag languages this trip's current bookings actually signalled —
  * `people.locale`, only ever written from a request the diver themselves made
  * (`src/db/schema/`), never a default fallback. Feeds the quiet crew-
- * language coverage note (`crewLanguageGap`, issue #708): a diver who never
+ * language note (`crewLanguageBriefings`, issue #708): a diver who never
  * signalled a preference correctly contributes nothing to compare against.
  */
 export async function bookedDiverLanguages(
   db: AppDb,
   shopId: string,
   tripId: string,
-): Promise<string[]> {
+): Promise<{ name: string; language: string }[]> {
   const rows = await db
-    .selectDistinct({ locale: people.locale })
+    .selectDistinct({ name: people.fullName, locale: people.locale })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .where(
       and(
         eq(bookings.tripId, tripId),
         eq(bookings.shopId, shopId),
-        ne(bookings.status, "cancelled"),
+        notInArray(bookings.status, ["cancelled", "no_show"]),
+        // A held seat's language is the matched record's, who may not be the
+        // person aboard (#2082; dive-domain review of layer r5-4, note 9).
+        isNull(bookings.identityUnconfirmedAt),
       ),
-    );
-  const languages = rows
-    .map((row) => row.locale)
-    .filter((locale): locale is string => locale !== null)
-    .map((locale) => locale.split("-")[0]);
-  return [...new Set(languages)];
+    )
+    .orderBy(asc(people.fullName));
+  // Each diver with the language they read, so the crew note can name them
+  // (fifth-loop ideas, item 48). The codes alone are `[...new Set(languages)]`.
+  return rows.flatMap((row) =>
+    row.locale === null ? [] : [{ name: row.name, language: row.locale.split("-")[0] }],
+  );
 }
 
 /**
@@ -505,6 +509,8 @@ export type TripPatch = {
   selfGuided?: boolean;
   /** The dives went past no-decompression limits, so the recap says nothing about flying (H-84). */
   exceedsNoDecoLimits?: boolean;
+  /** Lunch is served aboard, so the Day-of form asks for a lunch preference (ideas item 56). */
+  lunchAboard?: boolean;
   /**
    * The wetsuit the boat is running today, in whole millimetres (issue
    * #2206). `null` clears it, `undefined` leaves it alone.
@@ -723,6 +729,7 @@ export async function updateTrip(
         ...(patch.exceedsNoDecoLimits === undefined
           ? {}
           : { exceedsNoDecoLimits: patch.exceedsNoDecoLimits }),
+        ...(patch.lunchAboard === undefined ? {} : { lunchAboard: patch.lunchAboard }),
         ...(patch.wetsuitThicknessMm === undefined
           ? {}
           : { wetsuitThicknessMm: patch.wetsuitThicknessMm }),

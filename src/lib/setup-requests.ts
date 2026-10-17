@@ -163,3 +163,43 @@ export type SetupRequestFormState = {
   formError?: "rate_limited";
   values?: Partial<Record<SetupField, string>>;
 };
+
+/**
+ * **What the "Request sent" page says to a reader, from what they use today**
+ * (fifth-loop ideas, item 55). The one answer travels in the page's address
+ * (`?uses=`), nothing personal with it, so the page can point at the first
+ * step of moving across while the reader is most ready to take it. `other`,
+ * and any value the list does not hold, gets no extra line.
+ */
+export type SetupSentAdvice = {
+  key: DiverMessageKey;
+  link?: { destination: "/switching" | "/switching/spreadsheet"; key: DiverMessageKey };
+};
+
+export function setupSentAdvice(uses: unknown): SetupSentAdvice | null {
+  switch (uses) {
+    case "paper":
+      return { key: "marketing.setUp.sent.paper" };
+    case "spreadsheet":
+      return {
+        key: "marketing.setUp.sent.spreadsheet",
+        link: {
+          destination: "/switching/spreadsheet",
+          key: "marketing.setUp.sent.spreadsheetLink",
+        },
+      };
+    case "booking_system":
+    case "shop_software":
+      return {
+        key: "marketing.setUp.sent.system",
+        link: { destination: "/switching", key: "marketing.setUp.sent.systemLink" },
+      };
+    default:
+      return null;
+  }
+}
+
+/** The "Request sent" page for a reader who answered `system`. */
+export function setupSentPath(base: string, system: SetupCurrentSystem): string {
+  return `${base}?uses=${system}`;
+}

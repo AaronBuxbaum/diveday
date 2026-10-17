@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { recordInboundMessage, recordStaffReply } from "./inbound-messages";
-import { inboundMessages, people, personRoles, staffReplies } from "./schema";
+import { inboundMessages, inboxSavedAnswers, people, personRoles, staffReplies } from "./schema";
 
 const ctx = fileScopedShopContext();
 
@@ -61,6 +61,16 @@ describe("anonymizeDiver — the inbox", () => {
       delivery: { status: "sent", providerMessageId: "ses-erase-1" },
       sentAt: new Date("2026-07-20T11:00:00.000Z"),
     });
+    // A saved answer made from a reply to this diver, and one made from nobody's.
+    await db.insert(inboxSavedAnswers).values([
+      {
+        shopId: shop.id,
+        sourcePersonId: diver.id,
+        title: "Of course",
+        body: "Of course, we will lift you in from the platform.",
+      },
+      { shopId: shop.id, title: "Parking", body: "Park behind the shop." },
+    ]);
     // A WhatsApp from before anybody linked the number to a record: person_id
     // null, reachable only by the address.
     await db.insert(inboundMessages).values({
@@ -113,5 +123,15 @@ describe("anonymizeDiver — the inbox", () => {
     expect(byNumber?.fromAddress).not.toBe("13055550177");
     expect(reply?.body).not.toContain("platform");
     expect(reply?.toAddress).not.toContain("@");
+
+    // The saved answer copied from their reply goes with it; the shop's own stays.
+    const saved = await db
+      .select({ body: inboxSavedAnswers.body })
+      .from(inboxSavedAnswers)
+      .where(eq(inboxSavedAnswers.shopId, shop.id));
+    expect(saved.map((row) => row.body)).not.toContain(
+      "Of course, we will lift you in from the platform.",
+    );
+    expect(saved.map((row) => row.body)).toContain("Park behind the shop.");
   });
 });

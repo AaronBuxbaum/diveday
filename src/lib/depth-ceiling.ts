@@ -1,5 +1,5 @@
 import type { Certification, SpecialtyCertification } from "@/db/schema";
-import { ageOnDate } from "./age";
+import { ageOnDate, JUNIOR_AGE_END, JUNIOR_YOUNGEST_BAND_END } from "./age";
 import type { CalendarDate } from "./calendar-date";
 import { type DepthUnit, depthInUnit } from "./depth-units";
 import {
@@ -70,7 +70,7 @@ const NO_CARD_LIMIT: DepthCeiling = { meters: 12, feet: 40 };
  * supervision (10–11 with a professional or certified guardian; 12–14 with any
  * certified adult), which DiveDay does not model — see the ADR's Consequences.
  */
-const JUNIOR_AGE_CEILING = 14;
+const JUNIOR_AGE_CEILING = JUNIOR_AGE_END - 1;
 const JUNIOR_YOUNGEST_LIMIT: DepthCeiling = { meters: 12, feet: 40 };
 const JUNIOR_OPEN_WATER_LIMIT: DepthCeiling = { meters: 18, feet: 60 };
 const JUNIOR_ADVANCED_LIMIT: DepthCeiling = { meters: 21, feet: 70 };
@@ -131,7 +131,8 @@ export function diverDepthLimit(
   // direction on a data-quality problem.
   const age = dateOfBirth && onDate ? ageOnDate(dateOfBirth, onDate) : null;
   if (age !== null && age <= JUNIOR_AGE_CEILING) {
-    if (age < 12) return { ceiling: JUNIOR_YOUNGEST_LIMIT, basis: "junior_age", level };
+    if (age < JUNIOR_YOUNGEST_BAND_END)
+      return { ceiling: JUNIOR_YOUNGEST_LIMIT, basis: "junior_age", level };
     return {
       ceiling:
         level && certificationRank(level) >= certificationRank("advanced_open_water")

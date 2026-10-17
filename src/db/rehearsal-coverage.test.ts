@@ -263,6 +263,7 @@ const SENDERS: Record<string, string> = {
   "src/db/booking-handoff.ts": HELD_AT_CHOKEPOINT,
   "src/db/checkout-recovery.ts": HELD_AT_CHOKEPOINT,
   "src/db/find-my-booking.ts": HELD_AT_CHOKEPOINT,
+  "src/db/your-days.ts": HELD_AT_CHOKEPOINT,
   "src/db/readiness-link-rescue.ts": HELD_AT_CHOKEPOINT,
   "src/db/trip-invitations.ts": HELD_AT_CHOKEPOINT,
   "src/db/waitlist.ts": HELD_AT_CHOKEPOINT,
@@ -295,6 +296,12 @@ const SENDERS: Record<string, string> = {
   "src/app/shop/[shopSlug]/settings/boat-actions.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/shop/[shopSlug]/settings/shop-actions.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/shop/[shopSlug]/settings/team/actions.ts": NOT_ABOUT_A_DEPARTURE,
+  // The bookkeeper's month-end files (fifth loop, r5-5): the owner's notices,
+  // the address's confirmation and the month's files, all to the shop's own
+  // people about a month. The files are Reports' own downloads.
+  "src/db/bookkeeper.ts": NOT_ABOUT_A_DEPARTURE,
+  "src/app/api/cron/bookkeeper/month-end-pass.ts": NOT_ABOUT_A_DEPARTURE,
+  "src/app/shop/[shopSlug]/reports/bookkeeper-actions.ts": NOT_ABOUT_A_DEPARTURE,
 };
 
 const SENDER_CALL =

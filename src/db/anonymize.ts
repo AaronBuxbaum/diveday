@@ -48,7 +48,7 @@
  * outcome available, so it either all lands or none of it does.
  */
 
-import { and, eq, inArray, isNotNull, isNull, ne, or, type SQL, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, like, ne, or, type SQL, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
@@ -69,6 +69,7 @@ import {
 } from "@/lib/waiver-integrity";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { canPersonErasePersonalData } from "./authz";
+import { BOOKKEEPER_CLEARED, tellOwnersAboutBookkeeper } from "./bookkeeper";
 import type { AppDb, AppTransaction } from "./client";
 import { queueMediaDeletion } from "./media-deletions";
 import {
@@ -100,6 +101,7 @@ import {
   gearReservations,
   importedPaymentHistory,
   inboundMessages,
+  inboxSavedAnswers,
   incidentReportAddenda,
   incidentReportPeople,
   incidentReports,
@@ -457,6 +459,7 @@ export async function anonymizeDiver(
         alreadyAnonymized: true,
         queuedMediaDeletions: 0,
         raisedProcessorErasures: [] as ProcessorErasureObligation[],
+        bookkeeperCleared: false,
       } as const;
     }
 
@@ -500,6 +503,16 @@ export async function anonymizeDiver(
       owed: stillOwed,
     });
   }
+  // The shop's month-end files stop with the address, so its owners hear it
+  // and why, without the address (second-pass N3). Never throws.
+  if (outcome.bookkeeperCleared) {
+    await tellOwnersAboutBookkeeper(db, {
+      shopId: input.shopId,
+      what: { event: "cleared", by: "erasure" },
+      at: now,
+      actorPersonId: input.actorPersonId,
+    });
+  }
   return {
     ok: true,
     alreadyAnonymized: outcome.alreadyAnonymized,
@@ -524,6 +537,8 @@ type ScrubResult = {
   queuedMediaDeletions: number;
   /** The obligation rows this scrub created — the caller attempts them post-commit. */
   raisedProcessorErasures: ProcessorErasureObligation[];
+  /** The diver's address was the shop's bookkeeper's; the caller tells the owners post-commit. */
+  bookkeeperCleared: boolean;
 };
 
 /**
@@ -630,6 +645,8 @@ type ScrubSectionContext = ScrubContext & {
     kind: "recap_photo" | "waiver_document" | "payment_receipt",
     url: string | null,
   ) => Promise<void>;
+  /** What a sweep found that the caller acts on after the commit. */
+  found: { bookkeeperCleared: boolean };
 };
 
 /** The erasure's "people" sweep. */
@@ -1162,6 +1179,9 @@ async function scrubBookingRows(
         courseNextStepByPersonId: null,
         hotelPickupLocation: null,
         pickupTime: null,
+        // Their lunch preference (ideas item 56) is health-adjacent prose about
+        // this person, typed for one boat's galley.
+        dietaryNote: null,
         // The name a held seat was booked under (H-13) is somebody's name, and
         // after an erasure no one is left to ask whether it was them.
         identityBookedAs: null,
@@ -2102,6 +2122,16 @@ async function scrubOrders(
     // consistent answer (issue #1607, found by a `security-reviewer` pass).
     .set({ hostedInvoiceUrl: null, invoicePdfUrl: null, description: null })
     .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)));
+  // The room a room charge went to (fifth-loop ideas, item 57) placed this
+  // diver in one hotel room on one night. Redacted rather than cleared, since a
+  // room charge must name a room; the hotel stays, being the shop's own
+  // account with the front desk and what the month's total is grouped by.
+  await tx
+    .update(orders)
+    .set({ roomNumber: REDACTED_TEXT })
+    .where(
+      and(eq(orders.shopId, shopId), eq(orders.personId, personId), isNotNull(orders.roomNumber)),
+    );
 
   // The per-line half of the same text, on the same form, carried out of the
   // shop under the same exclusion.
@@ -2371,6 +2401,17 @@ async function scrubPiiBlob(
       .where(and(eq(shops.id, shopId), sql`lower(${shops.shoreAlertEmail}) = ${address}`))
       .returning({ id: shops.id });
     logFuzzyMatch(ctx, "shore_alert_email", cleared.length);
+    // The bookkeeper's month-end address (item 35), on the same footing: a
+    // diver's address there goes with the diver, with its confirmation, the
+    // hash of its confirm link and its claim, and the month stops leaving the
+    // shop until an owner sets an address again.
+    const unsent = await tx
+      .update(shops)
+      .set(BOOKKEEPER_CLEARED)
+      .where(and(eq(shops.id, shopId), sql`lower(${shops.bookkeeperEmail}) = ${address}`))
+      .returning({ id: shops.id });
+    logFuzzyMatch(ctx, "bookkeeper_email", unsent.length);
+    if (unsent.length > 0) ctx.found.bookkeeperCleared = true;
     await tx
       .delete(shopShoreAlertTokens)
       .where(and(eq(shopShoreAlertTokens.shopId, shopId), eq(shopShoreAlertTokens.email, address)));
@@ -2578,6 +2619,118 @@ async function scrubCourseInquiries(
   return [];
 }
 
+/** Meta's message ids start `wamid.`; SES's and SNS's never do. */
+const WHATSAPP_MESSAGE_ID = "wamid.%";
+
+/** A `wamid.` this erasure already rewrote: the prefix and a SHA-256, nothing else. */
+const FORGOTTEN_WHATSAPP_MESSAGE_ID = "^wamid\\.[0-9a-f]{64}$";
+
+/**
+ * Rewrite every WhatsApp message id kept for this diver to `wamid.` plus a
+ * SHA-256 of itself (security review of #1721, F1). Meta's id embeds the
+ * recipient's number in base64, so a kept id is the erased number in another
+ * spelling. The rewrite keeps what the row is for — evidence that a WhatsApp
+ * message went, still found by its `wamid.` prefix — and drops the number.
+ * A delivery status Meta sends later for one of these no longer matches, which
+ * is the price: the diver is erased.
+ *
+ * Runs before every sweep, so the inbox redaction has not yet overwritten the
+ * number a message came from. The same rows the redaction reaches: by the
+ * diver's bookings, their waiver records, their person link, and the number
+ * on their record.
+ *
+ * Nothing is owed at Meta for these (ADR 20260803-processor-erasure-obligations,
+ * "Widened 2026-10-17"): the Cloud API keeps a message at most 30 days and
+ * offers a business no view or delete, so this rewrite, the inbox redaction
+ * and DiveDay's own retention are the whole of WhatsApp's share.
+ */
+async function forgetWhatsAppMessageIds(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<void> {
+  const { shopId, personId, bookingIds } = ctx;
+  const forgotten = (column: AnyPgColumn) =>
+    sql`'wamid.' || encode(sha256(convert_to(${column}, 'UTF8')), 'hex')`;
+  const unforgotten = (column: AnyPgColumn) =>
+    and(like(column, WHATSAPP_MESSAGE_ID), sql`${column} !~ ${FORGOTTEN_WHATSAPP_MESSAGE_ID}`);
+
+  if (bookingIds.length > 0) {
+    await tx
+      .update(notificationDeliveries)
+      .set({ providerMessageId: forgotten(notificationDeliveries.providerMessageId) })
+      .where(
+        and(
+          eq(notificationDeliveries.shopId, shopId),
+          inArray(notificationDeliveries.bookingId, bookingIds),
+          unforgotten(notificationDeliveries.providerMessageId),
+        ),
+      );
+    await tx
+      .update(notificationDeliveryAttempts)
+      .set({ providerMessageId: forgotten(notificationDeliveryAttempts.providerMessageId) })
+      .where(
+        and(
+          eq(notificationDeliveryAttempts.shopId, shopId),
+          inArray(notificationDeliveryAttempts.bookingId, bookingIds),
+          unforgotten(notificationDeliveryAttempts.providerMessageId),
+        ),
+      );
+  }
+
+  const records = tx
+    .select({ id: waiverRecords.id })
+    .from(waiverRecords)
+    .where(and(eq(waiverRecords.shopId, shopId), eq(waiverRecords.personId, personId)));
+  await tx
+    .update(waiverDeliveries)
+    .set({ providerMessageId: forgotten(waiverDeliveries.providerMessageId) })
+    .where(
+      and(
+        eq(waiverDeliveries.shopId, shopId),
+        inArray(waiverDeliveries.waiverRecordId, records),
+        unforgotten(waiverDeliveries.providerMessageId),
+      ),
+    );
+  await tx
+    .update(waiverRecords)
+    .set({ deliveryProviderMessageId: forgotten(waiverRecords.deliveryProviderMessageId) })
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        eq(waiverRecords.personId, personId),
+        unforgotten(waiverRecords.deliveryProviderMessageId),
+      ),
+    );
+
+  const recordDigits = erasablePhoneDigits(ctx.phone);
+  await tx
+    .update(inboundMessages)
+    .set({ providerMessageId: forgotten(inboundMessages.providerMessageId) })
+    .where(
+      and(
+        eq(inboundMessages.shopId, shopId),
+        eq(inboundMessages.channel, "whatsapp"),
+        recordDigits
+          ? or(
+              eq(inboundMessages.personId, personId),
+              eq(inboundMessages.fromAddress, recordDigits),
+            )
+          : eq(inboundMessages.personId, personId),
+        unforgotten(inboundMessages.providerMessageId),
+      ),
+    );
+  await tx
+    .update(staffReplies)
+    .set({ providerMessageId: forgotten(staffReplies.providerMessageId) })
+    .where(
+      and(
+        eq(staffReplies.shopId, shopId),
+        eq(staffReplies.personId, personId),
+        unforgotten(staffReplies.providerMessageId),
+      ),
+    );
+}
+
 /** The erasure's "the inbox (ADR 20260907-two-way-inbox)" sweep. */
 async function scrubInbox(
   tx: AppTransaction,
@@ -2640,6 +2793,15 @@ async function scrubInbox(
     // would leave their address in the one row this sweep had just cleaned.
     .set({ body: REDACTED_TEXT, toAddress: REDACTED_TEXT, sendError: null })
     .where(and(eq(staffReplies.shopId, shopId), eq(staffReplies.personId, personId)));
+  // A saved answer copied from a reply to them: the name was swapped out, but
+  // the words were still written to this diver, so the copy goes too. A merge
+  // leaves `source_person_id` on the merged-away record, so its shells count.
+  const sources = [personId, ...(await mergedIntoChain(tx, shopId, personId))];
+  await tx
+    .delete(inboxSavedAnswers)
+    .where(
+      and(eq(inboxSavedAnswers.shopId, shopId), inArray(inboxSavedAnswers.sourcePersonId, sources)),
+    );
   return [];
 }
 
@@ -2770,7 +2932,14 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     if (!url) return;
     if (await queueMediaDeletion(tx, { shopId, kind, url })) queued += 1;
   };
-  const section: ScrubSectionContext = { ...ctx, bookingIds, owned: bookingIds.length > 0, retire };
+  const found = { bookkeeperCleared: false };
+  const section: ScrubSectionContext = {
+    ...ctx,
+    bookingIds,
+    owned: bookingIds.length > 0,
+    retire,
+    found,
+  };
 
   // Every Stripe object this scrub finds standing for the erased diver, raised
   // as one ledger row apiece at the end of the transaction. Three tables feed
@@ -2779,6 +2948,10 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // dedupe, and the obligations land inside the same transaction as the
   // redactions that made them owed (issue #1621, ADR
   // 20260803-processor-erasure-obligations).
+  // The WhatsApp message ids that embed the diver's number are rewritten
+  // before any sweep, while the inbox still holds the number they are found
+  // by (issue #1721).
+  await forgetWhatsAppMessageIds(tx, section);
   const processorTargets: ProcessorErasureTargetInput[] = [];
   for (const sweep of SCRUB_SECTIONS) processorTargets.push(...(await sweep(tx, section)));
 
@@ -2797,5 +2970,9 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     targets: processorTargets,
   });
 
-  return { queuedMediaDeletions: queued, raisedProcessorErasures };
+  return {
+    queuedMediaDeletions: queued,
+    raisedProcessorErasures,
+    bookkeeperCleared: found.bookkeeperCleared,
+  };
 }

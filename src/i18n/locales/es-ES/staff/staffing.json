@@ -110,6 +110,7 @@
     "person": "Persona",
     "previous": "Semana anterior",
     "ratingLapsed": "Una titulación de la tripulación no está vigente",
+    "personTotals": "{days, plural, one {# día} other {# días}} · {boats, plural, one {# salida} other {# salidas}} · {hours} h",
     "request": "Pedir esta salida",
     "requestApproved": "Aprobado",
     "requestAria": "Pedir trabajar en {trip}",

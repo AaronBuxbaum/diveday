@@ -185,6 +185,8 @@ export type BuilderCopy = {
   impactBlockedNotScheduled: string;
   copyTo: string;
   copyDescription: string;
+  /** "Same crew", the copy panel's ticked box (item 53). */
+  copySameCrew: string;
   departureTime: string;
   copying: string;
   copyIt: string;
@@ -331,4 +333,15 @@ export type BuilderMoreOptions = {
   maxDays: number;
   /** The per-dive cards' own words, shared with the trip editor. */
   diveFields: TripDiveFieldsCopy;
+};
+
+/** One day the divers asked for, and the act that answers it. */
+export type WeekAsk = {
+  dateIso: string;
+  /** "Wed, Sep 2 · four people" — the date and the heads, already pluralised. */
+  lead: string;
+  /** Who asked, in the reader's own list grammar. */
+  who: string;
+  /** The builder, opened on that day with these leads carried forward. */
+  href: string;
 };

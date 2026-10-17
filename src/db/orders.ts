@@ -502,6 +502,25 @@ const COUNTER_COLLECTIONS: ReadonlySet<string> = new Set<CounterCollection>([
 ]);
 
 /**
+ * How an open invoice can be settled outside Stripe: the counter's two ways,
+ * and a resort guest's **room charge** (fifth-loop ideas, item 57), which the
+ * hotel collects and settles with the shop monthly.
+ */
+export type OpenOrderCollection = CounterCollection | "room_charge";
+
+const OPEN_ORDER_COLLECTIONS: ReadonlySet<string> = new Set<OpenOrderCollection>([
+  ...(COUNTER_COLLECTIONS as ReadonlySet<CounterCollection>),
+  "room_charge",
+]);
+
+/** Longest room number and hotel name a room charge keeps. */
+export const ROOM_NUMBER_MAX = 20;
+export const ROOM_HOTEL_MAX = 80;
+
+/** The room a charge went to: a number, and the hotel when the shop serves several. */
+export type RoomCharge = { number: string; hotel: string | null };
+
+/**
  * The line kinds a counter order may carry: a rental, and the parts and labor
  * of a bench job paid at pickup (`recordWorkOrderCounterPayment`), which bills
  * as `other` exactly as its Stripe bill does.
@@ -693,12 +712,19 @@ export async function recordPaymentOnOpenOrder(
     shopId: string;
     orderId: string;
     actorPersonId: string;
-    collection: CounterCollection;
+    collection: OpenOrderCollection;
+    /** Required for, and only for, a room charge. */
+    room?: RoomCharge | null;
   },
   invoicing: InvoicingProvider = invoicingProviderFromEnvironment(),
 ): Promise<RecordPaymentOnOrderOutcome> {
   const invalid = { ok: false, reason: "invalid" } as const;
-  if (!COUNTER_COLLECTIONS.has(input.collection)) return invalid;
+  if (!OPEN_ORDER_COLLECTIONS.has(input.collection)) return invalid;
+  const room = input.collection === "room_charge" ? (input.room ?? null) : null;
+  if (input.collection === "room_charge") {
+    if (!room?.number || room.number.length > ROOM_NUMBER_MAX) return invalid;
+    if ((room.hotel?.length ?? 0) > ROOM_HOTEL_MAX) return invalid;
+  }
   const roles = await loadActiveStaffRoles(db, input.shopId, input.actorPersonId);
   if (!roles || !isStaff(roles)) return invalid;
 
@@ -714,7 +740,13 @@ export async function recordPaymentOnOpenOrder(
     if (current.collection !== "stripe_invoice" && current.counterClaimedAt === null) return null;
     const [row] = await tx
       .update(orders)
-      .set({ collection: input.collection, counterClaimedAt: now, updatedAt: now })
+      .set({
+        collection: input.collection,
+        roomNumber: room?.number ?? null,
+        roomHotel: room?.hotel || null,
+        counterClaimedAt: now,
+        updatedAt: now,
+      })
       .where(eq(orders.id, current.id))
       .returning();
     return row ?? null;
@@ -795,7 +827,13 @@ async function releaseCounterClaim(db: DbExecutor, claimed: Order): Promise<void
   if (claimed.counterClaimedAt === null) return;
   await db
     .update(orders)
-    .set({ collection: "stripe_invoice", counterClaimedAt: null, updatedAt: nowDate() })
+    .set({
+      collection: "stripe_invoice",
+      roomNumber: null,
+      roomHotel: null,
+      counterClaimedAt: null,
+      updatedAt: nowDate(),
+    })
     .where(
       and(
         eq(orders.id, claimed.id),

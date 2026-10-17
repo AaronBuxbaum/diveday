@@ -30,7 +30,7 @@ import { uuidParam } from "@/lib/uuid";
 import { diversTabState } from "./_arrivals/departure-record";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { departureConditionReads } from "./_components/departure-conditions";
-import { openSeatsDetailsRows } from "./_components/details-rows";
+import { detailsReadRows } from "./_components/details-rows";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
 import { PulseFacts, shownPulseFacts } from "./_components/PulseFacts";
 import { tripRosterActions } from "./_components/roster-actions";
@@ -198,7 +198,7 @@ export default async function ManageTripPage({
   // **Details is its own tab**, and a save on it lands back on it.
   const showDetails =
     view === "details" || Boolean(tripNotice && DETAILS_FORMS.has(tripNotice.form));
-  const openSeatsRows = openSeatsDetailsRows({ db, shop, tripId, t, locale, shown: showDetails });
+  const readRows = detailsReadRows({ db, shop, overview, t, locale, shown: showDetails });
   const { automatedForecast, tideLines } = departureConditionReads({
     showDetails,
     trip,
@@ -401,7 +401,7 @@ export default async function ManageTripPage({
                   tell,
                   refundsHeld: !mayWriteOffPayment,
                 }),
-                ...(await openSeatsRows),
+                ...(await readRows),
               ]}
               actions={
                 <TripAboutLinks

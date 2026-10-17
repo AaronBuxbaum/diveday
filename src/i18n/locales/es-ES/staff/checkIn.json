@@ -54,6 +54,12 @@
     "moneyRemove": "No se cobró ni se reembolsó nada. Abre su fila para quitar la reserva y reembolsarla a mano.",
     "noWaitlist": "No hay nadie esperando esta plaza."
   },
+  "sailedRebook": {
+    "booked": "Ya reservó: {when}",
+    "open": "Nada más reservado · {when} tiene {seats, plural, one {# plaza} other {# plazas}}",
+    "add": "Agregarlo",
+    "addAriaLabel": "Agregar a {name} a {title}, {when}"
+  },
   "settledAllBoarded": "Todos embarcados",
   "settledSomeBoarded": "{count, plural, one {# embarcado} other {# embarcados}}",
   "checkInButton": "Registrar",
@@ -114,7 +120,9 @@
     "noShowNotMarked": "Ese buceador no está marcado como que no vino.",
     "noShowTurnedAwayDeparted": "Ese buceador no embarcó por decisión del mostrador y el barco ya salió, así que no puede volver a esta salida. Abre su fila para quitar la reserva.",
     "noShowTripFull": "La plaza liberada ya se ocupó, así que ese buceador no puede volver a esta salida.",
-    "noShowCourseRatioFull": "Esa sesión está en su límite de ratio instructor-alumno, así que ese buceador no puede volver a ella. Asigna otro instructor primero."
+    "noShowCourseRatioFull": "Esa sesión está en su límite de ratio instructor-alumno, así que ese buceador no puede volver a ella. Asigna otro instructor primero.",
+    "walkinPartyAdded": "Todo el grupo está en la lista de este barco. Regístralos en sus filas.",
+    "walkinPartyAddedWaiverUndelivered": "Todo el grupo está en la lista de este barco, pero no se enviaron sus exenciones por correo. Envíalas o comparte los enlaces desde sus filas de abajo. Un padre, madre o tutor firma con cada menor de 18 años."
   },
   "walkIn": {
     "title": "Walk-in",

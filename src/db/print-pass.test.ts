@@ -30,6 +30,8 @@ describe("getPassBooking", () => {
     const [person] = await db.select().from(people).where(eq(people.id, seat.personId));
     expect(pass?.bookingId).toBe(seat.bookingId);
     expect(pass?.diverName).toBe(person?.fullName);
+    // The language the pass prints in (item 49): first-hand only, null when never said.
+    expect(pass?.diverLocale).toBe(person?.locale ?? null);
   });
 
   it("prints nothing when the booking's person belongs to another shop", async () => {

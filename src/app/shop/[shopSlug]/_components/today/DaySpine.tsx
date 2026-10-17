@@ -7,6 +7,7 @@ import {
 } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckHost";
 import { AgencyCheckRow } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckRow";
 import { agencyCheckCopies } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
+import { CrewLines, type CrewReading } from "@/app/shop/[shopSlug]/_components/today/CrewLines";
 import {
   addAgencyListedCardsAction,
   agencyCheckAction,
@@ -45,14 +46,16 @@ import {
 } from "@/lib/today";
 import { ClosingStation } from "./ClosingStation";
 import { DayStation } from "./DayStation";
-import { DayTakings } from "./DayTakings";
+import { NeedsYouGroups } from "./NeedsYouGroups";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
 import { RentalFitKeepControl } from "./RentalFitKeepControl";
 import {
   ResendConfirmationControl,
   type ResendConfirmationCopy,
 } from "./ResendConfirmationControl";
+import { rowKey } from "./row-key";
 import { spineClearUnlessWindy, spineEntries, spineMoment } from "./spine-reading";
+import { EveningReadings } from "./TomorrowFromTonight";
 import { WaiverSendControl } from "./WaiverSendControl";
 import { WeekHorizon } from "./WeekHorizon";
 
@@ -128,9 +131,8 @@ type RowControls = {
 };
 
 /**
- * The copy and context every row's control needs, composed once per render on
- * the server: the controls are Client Components, so a translator never
- * crosses the boundary.
+ * The copy and context every row's control needs, composed once per render on the server:
+ * the controls are Client Components, so a translator never crosses the boundary.
  */
 function rowControls(
   base: Pick<RowControls, "shopSlug" | "shopName" | "helpRequestAction" | "t">,
@@ -171,41 +173,6 @@ function rowControls(
     },
     paymentCopy: paymentActionCopy(t),
   };
-}
-
-/**
- * One job, as a ledger row: its kind as a word in the row's own type, the one
- * sentence saying what is wrong, and the one fix beside it.
- *
- * A row whose fix *performs* something — a waiver send, a wait-list invite, an
- * invoice resend — keeps a real control, because the tap has a consequence. A
- * row whose fix merely navigates becomes the link itself, with the destination
- * named for a screen reader on the stretched overlay and a quiet chevron for
- * everyone else (principle 10, "actions ride on their objects").
- */
-/**
- * **The key a performing row keeps across its own fix landing.**
- *
- * `TodayAction.id` is `blocker:<booking>:<code>`, and the code is exactly what
- * a fix changes — a waiver goes from `waiver_missing` to `waiver_pending` the
- * moment it is sent. Keyed on the id, the row that was just tapped is a
- * *different* row to React, so its control unmounts and takes `useActionState`
- * with it: on a shop with no email configured that discards the private
- * fallback link the tap just produced, which is the one thing the staffer
- * needed. The row's own words still update — that part was never in doubt —
- * but the payload disappeared between the tap and the render.
- *
- * So a row that *performs* is keyed on what it performs against, which does
- * not change when the fix lands. A row that merely navigates holds no state
- * and keeps the id.
- */
-function rowKey(action: TodayAction): string {
-  if (action.waiver) return `waiver:${action.waiver.bookingIds.join(",")}`;
-  if (action.resend) return `resend:${action.resend.bookingIds.join(",")}`;
-  if (action.invite) return `invite:${action.invite.entryId}`;
-  if (action.payment?.orderId) return `payment:${action.payment.orderId}`;
-  if (action.helpRequest) return `help-request:${action.helpRequest.requestId}`;
-  return action.id;
 }
 
 /**
@@ -277,7 +244,7 @@ const QUIET_ROW_ICON: Record<QuietKind, RowIconName> = {
   boat_papers_due: "boat",
   work_order_uncollected: "workOrders",
   units_unconfirmed: "settings",
-  say_hello: "divers",
+  lost_items_waiting: "lostFound",
   rental_fit_confirm: "gear",
 };
 
@@ -384,15 +351,28 @@ function SpineRow({
   );
 }
 
+/**
+ * One job, as a ledger row: its kind as a word in the row's own type, the one
+ * sentence saying what is wrong, and the one fix beside it.
+ *
+ * A row whose fix *performs* something — a waiver send, a wait-list invite, an
+ * invoice resend — keeps a real control, because the tap has a consequence. A
+ * row whose fix merely navigates becomes the link itself, with the destination
+ * named for a screen reader on the stretched overlay and a quiet chevron for
+ * everyone else (principle 10, "actions ride on their objects").
+ */
 function StationRow({
   action,
   controls,
   closed = true,
+  grouped = false,
 }: {
   action: TodayAction;
   controls: RowControls;
   /** `false` inside a station's panel, whose own edge closes the list. */
   closed?: boolean;
+  /** Under its boat's own heading (`NeedsYouGroups`): the row does not say the boat again. */
+  grouped?: boolean;
 }) {
   const { t } = controls;
   const performs = Boolean(
@@ -428,7 +408,7 @@ function StationRow({
       {action.detail ? (
         <span className={tone === "neutral" ? "text-muted" : undefined}>{action.detail}</span>
       ) : null}
-      {action.departure ? (
+      {action.departure && !grouped ? (
         <span className="block text-sm text-muted">{action.departure.label}</span>
       ) : null}
     </>
@@ -544,6 +524,28 @@ function StationRows({ rows, controls }: { rows: readonly TodayAction[]; control
       ))}
     </ul>
   );
+}
+
+/** One queue row, keyed for `NeedsYouGroups`. */
+function stationRowFor(controls: RowControls) {
+  return (action: TodayAction, grouped: boolean) => (
+    <StationRow key={rowKey(action)} action={action} controls={controls} grouped={grouped} />
+  );
+}
+
+/** What the reader started and did not finish: a draft is theirs alone, so the row is too. */
+function DraftRows({ drafts, t }: { drafts: readonly SpineDraft[]; t: StaffTranslator }) {
+  return drafts.map((draft) => (
+    <SpineRow
+      key={`draft:${draft.form}`}
+      tone="neutral"
+      icon="activity"
+      kind={t("today.unfinished.label")}
+      door={{ href: draft.href, linkLabel: t("today.unfinished.resume") }}
+    >
+      <span className="text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</span>
+    </SpineRow>
+  ));
 }
 
 /**
@@ -793,36 +795,12 @@ function DeskPaymentsRow({ shopSlug, t }: { shopSlug: string; t: StaffTranslator
   );
 }
 
-/**
- * The reader's share of the week's paid tips on boats they crewed (`crewTipShare`;
- * UX review 2026-10-11, item 18; issue #2468): the crew seeing the shop pass
- * tips on. A plain line, never coral. The only shop money shown below the
- * money gate, and not precedent for more (H-141). Zero renders nothing.
- */
-function CrewTipsLine({
-  cents,
-  currency,
-  locale,
-  t,
-}: {
-  cents: number;
-  currency: string;
-  locale: string;
-  t: StaffTranslator;
-}) {
-  if (cents <= 0) return null;
-  return (
-    <p className="text-sm text-muted tabular-nums">
-      {t("shopHome.spine.crewTips", { amount: formatMoneyScanned(cents, currency, locale) })}
-    </p>
-  );
-}
-
 /** Everything `DaySpine` draws, assembled once by its caller and handed over as one object. */
 export type DaySpineContext = {
   spine: DaySpineData;
   shopSlug: string;
   shopName: string;
+  mailShopName: string; // what a mail that leaves says: always `shop.name` (H-131)
   locale: string;
   timeZone: string;
   currency: string;
@@ -867,8 +845,8 @@ export type DaySpineContext = {
    * renders, and on most days it is null.
    */
   factOfScale?: FactOfScale | null;
-  /** Paid tips on the reader's boats this week (`CrewTipsLine`). */
-  crewTipsCents?: number;
+  /** The reader's own crew lines: this week's tips, this month's boats (`CrewLines`). */
+  crew?: CrewReading;
   /** The instructor lens's own labeled group, above the first station. */
   sessions?: React.ReactNode;
   /** The day's closing state. Omitted, the spine renders its morning reading alone. */
@@ -928,7 +906,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
     firstRun,
     firstBooking,
     factOfScale,
-    crewTipsCents = 0,
+    crew = { tipsCents: 0, month: null },
     sessions,
     evening,
     highWind,
@@ -937,7 +915,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
     now,
   } = context;
   const t = staffTranslator(locale);
-  const controls = rowControls({ shopSlug, shopName, helpRequestAction, t });
+  const controls = rowControls({ shopSlug, shopName: context.mailShopName, helpRequestAction, t });
   const crewed = new Set(crewedTripIds ?? []);
   const jobs = spineJobCount(spine);
   const tomorrowDate = spine.tomorrow.stations[0]?.startsAt ?? null;
@@ -1038,7 +1016,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
         </EarnedMomentLine>
       ) : null}
 
-      <CrewTipsLine cents={crewTipsCents} currency={currency} locale={locale} t={t} />
+      <CrewLines crew={crew} currency={currency} locale={locale} t={t} />
 
       {/* **The first booking ever, and then never again.** The word, the coral
           dot, and the seat itself — one row, because the moment *is* that
@@ -1143,25 +1121,20 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
           label={t("shopHome.spine.needsYouLabel")}
           meta={needsYouMeta(t, needsYouReading, locale, timeZone)}
         >
-          <ul>
-            {lead.map((action) => (
-              <StationRow key={rowKey(action)} action={action} controls={controls} />
-            ))}
-            {/* What the reader started and did not finish — a draft is theirs
-                alone, so the row is too. Renders nothing when there is none. */}
-            {drafts.map((draft) => (
-              <SpineRow
-                key={`draft:${draft.form}`}
-                tone="neutral"
-                icon="activity"
-                kind={t("today.unfinished.label")}
-                door={{ href: draft.href, linkLabel: t("today.unfinished.resume") }}
-              >
-                <span className="text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</span>
-              </SpineRow>
-            ))}
-            {deskFold ? null : paymentsRow}
-          </ul>
+          <NeedsYouGroups
+            rows={lead}
+            row={stationRowFor(controls)}
+            shopSlug={shopSlug}
+            deskLabel={t("shopHome.spine.deskGroupLabel")}
+            desk={
+              drafts.length > 0 || (!deskFold && paymentsRow) ? (
+                <>
+                  <DraftRows drafts={drafts} t={t} />
+                  {deskFold ? null : paymentsRow}
+                </>
+              ) : undefined
+            }
+          />
           {/* **The desk's rows, folded, for a reader who crews a boat** (UX
               audit 2026-10-07, item 7). A captain's "what now" is the boats
               they are on; the front desk's twenty jobs are one line they can
@@ -1173,12 +1146,13 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
               className="mt-4"
               label={t("shopHome.spine.deskFoldLabel", { count: deskFold.length + paymentsRows })}
             >
-              <ul>
-                {deskFold.map((action) => (
-                  <StationRow key={rowKey(action)} action={action} controls={controls} />
-                ))}
-                {paymentsRow}
-              </ul>
+              <NeedsYouGroups
+                rows={deskFold}
+                row={stationRowFor(controls)}
+                shopSlug={shopSlug}
+                deskLabel={t("shopHome.spine.deskGroupLabel")}
+                desk={paymentsRow ?? undefined}
+              />
             </LedgerGroup>
           ) : null}
         </LedgerGroup>
@@ -1203,17 +1177,16 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
         </UnlessWindy>
       ) : null}
 
-      {/* **What today made** (issue #1930). While one boat is out there is no
-          day to have made anything yet. */}
-      {closing && evening?.takings ? (
-        <DayTakings
-          takings={evening.takings}
-          currency={currency}
-          locale={locale}
-          timeZone={timeZone}
-          t={t}
-        />
-      ) : null}
+      {/* **What today made** (issue #1930), and what tomorrow needs from
+          tonight (fifth-loop ideas, item 2). Neither while a boat is out. */}
+      <EveningReadings
+        evening={evening}
+        currency={currency}
+        locale={locale}
+        timeZone={timeZone}
+        shopSlug={shopSlug}
+        t={t}
+      />
 
       {/* The two horizons, collapsed. Tomorrow expands in place through the
           app's one disclosure spelling (`LedgerGroup`'s `folded`); the week is

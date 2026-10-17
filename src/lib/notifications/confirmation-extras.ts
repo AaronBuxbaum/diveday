@@ -5,6 +5,7 @@ import {
   type DepositTrip,
   partyMoneyTerms,
 } from "@/lib/deposits";
+import type { DeskPayment } from "@/lib/desk-payment";
 import { meetingPointForMessage, meetingPointOfRows } from "@/lib/meeting-point";
 import { toShopCurrency } from "@/lib/money";
 import type { ParticipantPricing, ParticipantType } from "@/lib/participant-types";
@@ -24,7 +25,12 @@ type BookingConfirmation = Extract<Notification, { kind: "booking_confirmation" 
  * it carries no capability. Absent with no public origin configured.
  */
 export function confirmationExtras(input: {
-  shop: Parameters<typeof meetingPointOfRows>[0] & { slug: string; currency: string | null };
+  shop: Parameters<typeof meetingPointOfRows>[0] & {
+    slug: string;
+    currency: string | null;
+    /** How the desk takes money, said after a figure due there (ideas item 21). */
+    deskPayment?: DeskPayment | null;
+  };
   trip: Parameters<typeof meetingPointOfRows>[1] &
     DepositTrip &
     ParticipantPricing &
@@ -72,6 +78,9 @@ export function confirmationExtras(input: {
             // shape of every confirmation sent before parties were summed.
             seats: money.seats > 1 ? money.seats : undefined,
             currency: toShopCurrency(shop.currency),
+            ...(money.due === "at_shop" && shop.deskPayment
+              ? { deskPayment: shop.deskPayment }
+              : {}),
           },
         }
       : {}),

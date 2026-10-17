@@ -91,6 +91,7 @@ function context(over: Partial<ReadyThreadSectionsContext> = {}): ReadyThreadSec
     publicCrew: [],
     partySeatClaims: [],
     partyAllSet: false,
+    flySafePlan: null,
     ...over,
   };
 }
@@ -107,18 +108,33 @@ describe("ThreadSections", () => {
     expect(screen.getByRole("button", { name: t("ready.cancelSpot") })).toBeTruthy();
   });
 
-  it("names the planned sites in order and the dock call unless a pickup replaces it", () => {
+  it("names the planned sites in order, and leaves the dock call to the masthead (ideas item 23)", () => {
     render(<ThreadSections context={context()} />);
     expect(seen.arrival?.sites).toEqual(["Molasses"]);
-    expect(seen.arrival?.dockCallMinutes).toBe(30);
+    expect(seen.arrival).not.toHaveProperty("dockCallMinutes");
     expect(seen.arrival?.downloadHref).toContain("?booking=tok");
     expect(seen.packing?.siteBottomTimes).toEqual([45, undefined]);
     expect(seen.packing?.legTravelTimes).toEqual([20, 15]);
+  });
+
+  it("says when to fly home as a plan, and nothing when there is no plan (ideas item 18)", () => {
+    render(<ThreadSections context={context()} />);
+    expect(screen.queryByTestId("ready-fly-safe-plan")).toBeNull();
     cleanup();
-    const pickedUp = context();
-    (pickedUp.data as unknown as { pickupTime: string }).pickupTime = "7:00 AM";
-    render(<ThreadSections context={pickedUp} />);
-    expect(seen.arrival?.dockCallMinutes).toBeNull();
+    render(
+      <ThreadSections
+        context={context({
+          flySafePlan: {
+            from: new Date("2026-10-16T08:30:00.000Z"),
+            reason: "dives_planned",
+            hours: 24,
+          },
+        })}
+      />,
+    );
+    expect(screen.getByTestId("ready-fly-safe-plan").textContent).toMatch(
+      /^Flying home soon\? Blue Mantis Divers asks you to plan your flight no earlier than Fri, Oct\s16, 4:30\sAM\sEDT: we plan more than one dive, so 24 hours after we’re due back, plus an hour in case we run late, following DAN’s guidance\.$/,
+    );
   });
 
   it("shows the party panel only to a party lead, with its all-set close", () => {

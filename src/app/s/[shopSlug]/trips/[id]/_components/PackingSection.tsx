@@ -7,6 +7,7 @@ import {
   dockDayTimeline,
   exposureSuitFor,
   type LegTravelTimes,
+  type PersonalGearCode,
   type ProvidedItemCode,
   packingConfidence,
   type SiteBottomTimes,
@@ -38,9 +39,18 @@ const RENTAL_ITEM_KEYS: Record<RentableItemKind, DiverMessageKey> = {
   smb: "trip.rentalItems.smb",
 };
 
+const PERSONAL_GEAR_KEYS: Record<PersonalGearCode, DiverMessageKey> = {
+  mask: "trip.personalGear.mask",
+  fins: "trip.personalGear.fins",
+  snorkel: "trip.personalGear.snorkel",
+  boots: "trip.personalGear.boots",
+};
+
 const PROVIDED_ITEM_KEYS: Record<ProvidedItemCode, DiverMessageKey> = {
+  scubaUnit: "trip.providedItems.scubaUnit",
   tanksAndWeights: "trip.providedItems.tanksAndWeights",
   crewBriefing: "trip.providedItems.crewBriefing",
+  instructorBriefing: "trip.providedItems.instructorBriefing",
 };
 
 /**
@@ -280,7 +290,12 @@ export function PackingSection({
   locale: string;
 }) {
   const rhythmDays = days?.length ? days : [day ?? trip];
-  const packing = packingConfidence(shop.packingList, rentalFit ?? null, shop.briefingMinutes > 0);
+  const packing = packingConfidence(
+    shop.packingList,
+    rentalFit ?? null,
+    shop.briefingMinutes > 0,
+    trip.course?.gearIncluded === true,
+  );
   const t = diverTranslator(locale);
   // Said here only when nothing above has said it. This used to be an
   // unconditional "water is expected around 24°C — use the shop's wetsuit
@@ -315,6 +330,9 @@ export function PackingSection({
         <div>
           <h3 className="font-semibold">{t("trip.packBring")}</h3>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
+            {packing.bringPersonal.map((code) => (
+              <li key={code}>{t(PERSONAL_GEAR_KEYS[code])}</li>
+            ))}
             {packing.bring.map((item) => (
               <li key={item}>{item}</li>
             ))}

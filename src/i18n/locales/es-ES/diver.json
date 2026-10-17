@@ -48,6 +48,7 @@
       "nitrox": "Tengo certificación de nitrox (aire enriquecido)"
     },
     "units": {
+      "withReaderUnit": "{first} ({second})",
       "meters": "{value} m",
       "feet": "{value} ft",
       "metersRange": "{min}–{max} m",
@@ -150,6 +151,13 @@
     "freeCancellationUntil": "Cancelación gratuita hasta el {when}",
     "sharedDemoNote": "Esta es la demo compartida: cualquiera que la pruebe puede ver lo que escribes aquí.",
     "theDay": "El día",
+    "dayRhythmLine": "En el muelle a las {dock} · regreso hacia las {back}",
+    "dayRhythmMeetLine": "Nos vemos a las {dock} · regreso hacia las {back}",
+    "siteReviews": {
+      "heading": "De quienes ya fueron",
+      "quote": "“{words}”",
+      "byline": "{name} · {date}"
+    },
     "lookFor": "Busca",
     "theRoute": "{count, plural, one {La ruta} other {Las rutas}}",
     "conditionsWater": "agua a {value}",
@@ -215,9 +223,17 @@
       "torch": "Linterna",
       "smb": "Boya de superficie"
     },
+    "personalGear": {
+      "mask": "Máscara",
+      "fins": "Aletas",
+      "snorkel": "Tubo de snorkel",
+      "boots": "Botines"
+    },
     "providedItems": {
+      "scubaUnit": "Equipo de buceo (chaleco, regulador, botella, plomos)",
       "tanksAndWeights": "Botellas y plomos",
-      "crewBriefing": "Briefing de la tripulación"
+      "crewBriefing": "Briefing de la tripulación",
+      "instructorBriefing": "Briefing del instructor"
     },
     "exposureSuit": {
       "swimwear": "El agua está lo bastante cálida como para bucear con licra o bañador.",
@@ -357,6 +373,11 @@
       "taxAtCheckout": "se suma al pagar",
       "dueNow": "A pagar ahora",
       "dueAtShop": "A pagar en el centro",
+      "deskPayment": {
+        "card": "Paga con tarjeta al llegar.",
+        "cash": "Paga en efectivo al llegar.",
+        "card_and_cash": "Paga con tarjeta o en efectivo al llegar."
+      },
       "balanceAtDock": "{balance} en el muelle el {when}",
       "snorkelerFare": "{price} × {count, plural, one {# persona de snorkel} other {# personas de snorkel}}",
       "riderFare": "{price} × {count, plural, one {# acompañante} other {# acompañantes}}"
@@ -399,6 +420,7 @@
     "certNoneOnGatedTrip": "Esta salida es para buceadores certificados. Reserva si quieres y habla con el centro: también hacen cursos e inmersiones más sencillas.",
     "confirmedHeading": "Tu plaza está reservada, {name}.",
     "confirmedDockCall": "{date}, {time}. Preséntate en el muelle {minutes, plural, one {# minuto} other {# minutos}} antes y nos encargamos del resto.",
+    "milestoneDay": "Tu {ordinal} día de buceo con {shopName}.",
     "paymentDepositBalance": "Tu plaza está asegurada. Los {balance} restantes se pagan en el muelle.",
     "paymentStillOpen": "Tu plaza está a salvo y el pago sigue abierto",
     "codeUsedUp": "Ese código ya se ha agotado. Tu plaza está a salvo y puedes pagar el precio completo desde tu página de preparación.",
@@ -470,7 +492,8 @@
     "diverNHeading": "Equipo del buceador {number}",
     "gearTotal": "Equipo para este buceador: {price}",
     "needGear": "¿Necesitas alquilar equipo?",
-    "skipBody": "¿Traes tu propio equipo? Deja la casilla sin marcar y no te cobraremos alquiler. Márcala para ver lo que alquilamos."
+    "skipBody": "¿Traes tu propio equipo? Deja la casilla sin marcar y no te cobraremos alquiler. Márcala para ver lo que alquilamos.",
+    "asLastTime": "Marcado como en tu último viaje."
   },
   "lastMinute": {
     "heading": "¿Quieres una oferta de última hora?",
@@ -680,7 +703,7 @@
     "waitingBody": "Vuelve a abrir este enlace más tarde.",
     "heldHeading": "Tu día de buceo lo tiene el centro",
     "heldBody": "{shop} está verificando quién iba en esta reserva. Pídeles lo que necesites de esta salida.",
-    "photoAdded": "Agregada a tu resumen. ¡Gracias por compartirla!",
+    "photoAdded": "Agregada a tu resumen. Gracias por compartirla.",
     "photoMissing": "Elige primero una foto y luego añádela.",
     "photoUnsupported": "Este centro todavía no tiene activada la subida de fotos, así que etiquétalas cuando publiques.",
     "photoFailed": "Esa foto no se ha subido. Prueba con un JPEG o PNG de menos de 5 MB.",
@@ -707,6 +730,12 @@
     "photoTooMany": "Elige un máximo de {max, plural, one {# foto} other {# fotos}} a la vez.",
     "addingPhoto": "Agregando…",
     "addToMyRecap": "Agregar a mi resumen",
+    "shareWithBoat": "Compartir con todos en este barco",
+    "fromTheBoat": "Del barco",
+    "sharedBy": "De {name}",
+    "sharedByCaption": "{name}: {caption}",
+    "sharedWithBoat": "Compartida con el barco",
+    "sharedWithBoatCaption": "{caption} · compartida con el barco",
     "seeWhatsNext": "Ver la próxima salida",
     "buddyHeading": "Trae a alguien la próxima vez",
     "buddyBody": "Una plaza junto a la tuya en cualquier barco. Reservan con tu enlace.",
@@ -768,6 +797,7 @@
     "pulseEmpty": "Elige primero de qué se trata.",
     "pulseFailed": "No se ha enviado. Inténtalo de nuevo en un momento.",
     "nextDiveHeading": "Tu próxima inmersión",
+    "bookedNext": "Ya tienes lugar: {date} · {title}, {time}.",
     "nextDiveCrewNamedSite": "Tu tripulación mencionó {site}.",
     "nextDiveCourseSession": "La próxima sesión de {course}.",
     "nextDiveSameLens": "Otro día de {lens}.",
@@ -936,6 +966,9 @@
     },
     "gearAndSetup": "Equipo y ajuste",
     "dockCallLine": "Procura estar en el muelle a las {time}, {dock} antes de zarpar.",
+    "flySafePlanned": "¿Vuelas a casa pronto? {shopName} te pide planear tu vuelo no antes de {when}: {count, plural, one {# hora} other {# horas}} después de nuestro regreso previsto, más una hora por si nos retrasamos, siguiendo las recomendaciones de DAN.",
+    "flySafePlannedDivesPlanned": "¿Vuelas a casa pronto? {shopName} te pide planear tu vuelo no antes de {when}: planificamos más de una inmersión, así que {count, plural, one {# hora} other {# horas}} después de nuestro regreso previsto, más una hora por si nos retrasamos, siguiendo las recomendaciones de DAN.",
+    "flySafePlannedEarlierDay": "¿Vuelas a casa pronto? {shopName} te pide planear tu vuelo no antes de {when}: tienes otro día de buceo con nosotros en los dos días anteriores, así que {count, plural, one {# hora} other {# horas}} después de nuestro regreso previsto, más una hora por si nos retrasamos, siguiendo las recomendaciones de DAN.",
     "fitUnavailable": "No hemos podido guardar tu equipo y ajuste ahora mismo. Inténtalo de nuevo en un momento.",
     "fitSaved": "Guardado. La tripulación tendrá tus tallas.",
     "certHeading": "Agrega tu certificación",
@@ -1001,6 +1034,9 @@
     "hotelPickupLabel": "¿Quieres que te recojamos?",
     "hotelPickupFieldLabel": "Dónde te alojas",
     "hotelPickupPlaceholder": "Nombre del hotel, habitación o punto de referencia",
+    "dietaryLabel": "¿Alguna preferencia para el almuerzo a bordo?",
+    "dietaryHint": "Solo para tu almuerzo. Una alergia alimentaria es un tema médico: avísale al centro antes de bucear.",
+    "dietaryPlaceholder": "Vegetariano, halal, sin cerdo…",
     "hotelPickupDetail": "{location}",
     "hotelPickupDetailWithTime": "{location} · Recogida a las {time}",
     "helpHeading": "Necesito un poco de ayuda",
@@ -1108,6 +1144,35 @@
     "medicalContactNone": "¿Dudas sobre los siguientes pasos? Escribe a {shop}.",
     "signedBody": "Firmado, guardado y fuera de tu cabeza. Nos vemos en el muelle. Tu centro te avisará si hace falta algo más.",
     "seeWhatsLeft": "Mira qué te queda antes de zarpar",
+    "doctor": {
+      "title": "Llévale esto a tu médico",
+      "open": "Llévale esto a tu médico",
+      "lede": "Imprime esta página (o pide que la impriman en la clínica) y pídele a tu médico que complete y firme el formulario de abajo.",
+      "print": "Imprimir esta página",
+      "back": "Volver a tu exención",
+      "formHeading": "El formulario del médico",
+      "formBody": "Tu médico completa y firma la página {page} del formulario oficial <form>{title}</form> ({product}, versión {version}).",
+      "formLink": "Abrir el formulario oficial e imprimir la página {page}",
+      "nameLabel": "Nombre del participante",
+      "answersHeading": "Tus respuestas para el médico",
+      "answersLocked": "Escribe tu fecha de nacimiento para ver las respuestas que tu médico necesita revisar.",
+      "birthdateLabel": "Fecha de nacimiento",
+      "unlock": "Ver mis respuestas",
+      "unlocking": "Verificando…",
+      "unlockMismatch": "Esa fecha no coincide con la de tu reserva.",
+      "unlockRate": "Demasiados intentos. Espera unos minutos y vuelve a intentarlo.",
+      "unlockClosed": "Esta página ya no está disponible. Vuelve a tu exención.",
+      "answersNote": "Tu médico te preguntará por cada una.",
+      "answersSource": "Del formulario {title} ({product}, versión {version}), el que respondiste.",
+      "answersWhole": "Revisa el cuestionario completo con tu médico.",
+      "answersUnfinished": "Tu cuestionario quedó sin terminar, así que revísalo entero con tu médico.",
+      "question": "Pregunta {number}",
+      "box": "Box {box}, pregunta {number}",
+      "dental": "La pregunta dental",
+      "returnHeading": "Cuando esté firmado",
+      "returnWithEmail": "Envía una foto del formulario firmado a <email>{emailAddress}</email> antes del día de tu buceo, o tráelo al centro antes de bucear.",
+      "returnToShop": "Trae el formulario firmado al centro antes de bucear."
+    },
     "signing": "Firmando…",
     "beforeDockTitle": "Un paso rápido antes del muelle",
     "beforeDockDescription": "Esta exención privada lleva unos dos minutos.",
@@ -1236,6 +1301,7 @@
       "rents_drysuit": "Alquilar traje seco"
     },
     "askWhatsIncluded": "Pregunta al centro qué incluye el precio de la salida.",
+    "courseGearIncluded": "Tu equipo de buceo (chaleco, regulador, botella, plomos) va incluido en el curso. Dinos tus tallas para tenerlo listo.",
     "notSure": "No lo tengo claro: ayúdame a elegir",
     "sizeOnFile": "{size}: registrada por el centro",
     "wetsuitSize": "Talla de neopreno",
@@ -3872,6 +3938,7 @@
     "common": {
       "gettingReady": "Preparando tu centro…",
       "tryDemo": "Probar la demo en vivo",
+      "demoShopName": "El nombre de tu centro",
       "getSetUp": "Pide tu centro",
       "demoNote": "La demo abre un centro de muestra en funcionamiento con un clic. Sin registro y sin tarjeta.",
       "setUpNote": "Una persona lee cada solicitud y prepara tu centro contigo."
@@ -5174,7 +5241,12 @@
       },
       "sent": {
         "title": "Solicitud enviada",
-        "body": "Te escribiremos para abrir tu centro. Mientras tanto, la demo está abierta."
+        "body": "Te escribiremos para abrir tu centro. Mientras tanto, la demo está abierta.",
+        "paper": "¿En papel? Trae a nuestra primera llamada una foto de la planilla de un día.",
+        "spreadsheet": "Guarda tu lista de buceadores como CSV y la leemos contigo.",
+        "spreadsheetLink": "Qué leemos en ella",
+        "system": "Mientras esperas, descarga tu lista de clientes del sistema que usas hoy.",
+        "systemLink": "Pasos de exportación por sistema"
       }
     }
   },
@@ -5310,7 +5382,7 @@
       "body": "Se acaba de liberar una plaza en {tripTitle}, y te la ofrecemos a ti.",
       "claim": "Resérvala antes de que se agote",
       "claimLink": "Reservar tu plaza",
-      "footer": "La plaza no está reservada a tu nombre, así que no esperes demasiado. ¡Nos vemos en el barco!",
+      "footer": "La plaza no está reservada a tu nombre, así que no esperes demasiado. Nos vemos en el barco.",
       "subjectParty": "Se liberaron {seats} plazas en {tripTitle}",
       "bodyParty": "Se acaban de liberar {seats} plazas en {tripTitle}, y te las ofrecemos para tu grupo.",
       "rolledBody": "La salida del {sailed} ya zarpó. El {date} tiene lugar, y te ofrecemos {seats, plural, one {una plaza} other {# plazas}} en {tripTitle}."
@@ -5319,7 +5391,8 @@
       "subject": "Una invitación de {shopName}: {tripTitle}",
       "body": "Programamos {tripTitle} y queremos invitarte.",
       "note": "Esto es una invitación, no una reserva, así que todavía no hay ninguna plaza apartada.",
-      "link": "Ver la salida y reservar tu plaza"
+      "link": "Ver la salida y reservar tu plaza",
+      "prerequisite": "Antes de reservar: {note}"
     },
     "lastMinuteDeal": {
       "subject": "{discount} de descuento en {tripTitle}: oferta de última hora",
@@ -5365,7 +5438,7 @@
       "flySafeAfterReturnDivesPlanned": "Te pedimos esperar al menos hasta el {when} antes de volar: planificamos más de una inmersión, así que {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
       "flySafeAfterReturnEarlierDay": "Te pedimos esperar al menos hasta el {when} antes de volar: nuestros registros muestran otro día de buceo en los últimos dos días, así que {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
       "seeRecap": "Ver el resumen de tu día",
-      "footer": "Si te encantó, lo mejor que puedes hacer es traer a un compañero la próxima vez. ¡Nos vemos en el agua!"
+      "footer": "Si te encantó, lo mejor que puedes hacer es traer a un compañero la próxima vez. Nos vemos en el agua."
     },
     "welcome": {
       "subject": "Bienvenido a DiveDay, {shopName}",
@@ -5398,12 +5471,15 @@
         "tips": "{amount} en propinas para repartir con la tripulación.",
         "link": "Abrir Dinero",
         "owedOrders": "Por cobrar {amount} en {count, plural, one {# pedido abierto} other {# pedidos abiertos}}.",
-        "owedSeats": "Por cobrar {amount} en {count, plural, one {# plaza que zarpó sin pagar} other {# plazas que zarparon sin pagar}}."
+        "owedSeats": "Por cobrar {amount} en {count, plural, one {# plaza que zarpó sin pagar} other {# plazas que zarparon sin pagar}}.",
+        "tookVsLastYear": "Las salidas de la semana pasada dejaron {amount} después de impuestos, {direction, select, more {{diff} más que} less {{diff} menos que} other {lo mismo que}} la misma semana del año pasado."
       },
       "thisWeek": {
         "heading": "Esta semana, {range}",
         "board": "{departures, plural, one {# salida} other {# salidas}} en la agenda, {filled} de {seats} plazas reservadas ({percent} %).",
-        "link": "Abrir la agenda"
+        "link": "Abrir la agenda",
+        "weakest": "{when}: {title} tiene {booked} de {capacity, plural, one {# plaza reservada} other {# plazas reservadas}}.",
+        "dealLink": "Enviar una oferta de última hora"
       },
       "waivers": {
         "heading": "Exenciones",
@@ -5515,7 +5591,7 @@
       "courseBody": "{shopName}: {tripTitle} empieza {when} ({date}, {time}).",
       "materials": "Antes de tu primer día: {names}.",
       "materialsWithLink": "Antes de tu primer día: {names} ({url}).",
-      "recap": "{shopName}: ¡gracias por bucear {tripTitle}! Tu resumen: {recapUrl}",
+      "recap": "{shopName}: gracias por bucear con nosotros. Tu resumen: {recapUrl}",
       "waiver": "{shopName}: firma tu exención de buceo antes de bucear — {url}",
       "waiverForTrip": "{shopName}: firma tu exención de buceo para {tripTitle} — {url}",
       "stopLine": "Responde STOP para darte de baja.",
@@ -5714,6 +5790,48 @@
       "datesTwo": "Pediste el {date} o el {alternate}.",
       "reply": "Te responderemos por correo o por teléfono.",
       "call": "Si quieres hablar antes, llama al {phone}."
+    },
+    "otherDayLink": {
+      "subject": "Tu enlace para {tripTitle}",
+      "body": "Aquí está el enlace que pediste para tu día con {shopName}: {tripTitle}.",
+      "openLink": "Abre tu preparación"
+    },
+    "logEntryLink": {
+      "subject": "Tu registro de {tripTitle}",
+      "body": "Aquí está el enlace a tu registro de {tripTitle} con {shopName}.",
+      "openLink": "Abre tu registro"
+    },
+    "bookkeeper": {
+      "subject": "{month} en {shopName}: archivos de fin de mes",
+      "hello": "Hola:",
+      "intro": "{month} en {shopName}: van adjuntos el informe del mes, los pedidos y la hoja de tripulación.",
+      "why": "{shopName} le pidió a DiveDay que envíe estos archivos a esta dirección el día 2 de cada mes.",
+      "stop": "Dejar de recibir estos correos"
+    },
+    "bookkeeperConfirmation": {
+      "subject": "{shopName} quiere enviarte sus archivos de fin de mes",
+      "body": "{shopName} le pidió a DiveDay que envíe sus archivos de fin de mes a esta dirección el día 2 de cada mes: el informe, los pedidos y la hoja de tripulación del mes anterior, con nombres de buceadores y tripulación, e importes. Confirma que esta es tu bandeja de entrada para empezar a recibirlos.",
+      "confirm": "Sí, quiero recibirlos",
+      "expiry": "Este enlace caduca el {expiresAt}. Si no eres tú, ignora este correo y no se te enviará nada."
+    },
+    "bookkeeperNotice": {
+      "subject": {
+        "set": "{shopName}: los archivos de fin de mes irán a {email}",
+        "changed": "{shopName}: cambió el correo del contador",
+        "cleared": "{shopName}: archivos de fin de mes desactivados",
+        "sent": "{shopName}: archivos de {month} enviados a {email}",
+        "vouched": "{shopName}: {actor} volvió a confirmar el correo del contador",
+        "confirmed": "{shopName}: {email} confirmó los archivos de fin de mes"
+      },
+      "set": "{actor} puso {email} como correo del contador. Cuando esa bandeja lo confirme, el informe, los pedidos y la hoja de tripulación del mes anterior se enviarán allí el día 2 de cada mes.",
+      "changed": "{actor} cambió el correo del contador a {email}. No se envía nada hasta que esa bandeja lo confirme.",
+      "cleared": "{actor} quitó el correo del contador. No se enviarán archivos de fin de mes.",
+      "sent": "Archivos de fin de mes de {month} enviados a {email}.",
+      "open": "Abrir Informes",
+      "vouched": "{actor} volvió a confirmar {email} como correo del contador. Los archivos de fin de mes vuelven a enviarse allí el día 2 de cada mes.",
+      "confirmed": "{email} confirmó que quiere recibir los archivos de fin de mes. Los primeros llegarán allí el próximo día 2 del mes.",
+      "clearedByRecipient": "{email} usó el enlace de un correo de fin de mes para dejar de recibirlos. No se enviarán archivos de fin de mes hasta que vuelvas a poner una dirección y se confirme.",
+      "clearedByErasure": "Se quitó el correo del contador al borrar los datos de esa persona a petición suya. No se enviarán archivos de fin de mes hasta que vuelvas a poner una dirección."
     }
   },
   "brand": {
@@ -5790,5 +5908,37 @@
     "signedOne": "Firmado. El siguiente formulario está abajo.",
     "linkDeadTitle": "Este enlace ya no funciona",
     "linkDeadBody": "Pide a {shopName} que te envíe de nuevo los formularios del curso."
+  },
+  "yourDays": {
+    "heading": "Tus días con {shopName}",
+    "note": "Cada enlace llega al correo que tenemos registrado.",
+    "comingUp": "Próximos",
+    "logbook": "Tu bitácora",
+    "upcomingRow": "{date} · {title}, {time}",
+    "pastRow": "{ordinal} día de buceo · {title} · {date}",
+    "send": "Envíame el enlace",
+    "sending": "Enviando…",
+    "sent": "Lo enviamos al correo registrado.",
+    "rateLimited": "Son muchos enlaces a la vez. Inténtalo de nuevo en un rato.",
+    "failed": "No se pudo enviar. Inténtalo de nuevo en un momento.",
+    "unavailable": "Ese día ya no está disponible."
+  },
+  "bookkeeperConfirm": {
+    "title": "¿Recibir los archivos de fin de mes de {shopName}?",
+    "description": "El día 2 de cada mes, {shopName} enviará a {email} el informe, los pedidos y la hoja de tripulación del mes anterior. No se envía nada hasta que confirmes.",
+    "confirming": "Confirmando…",
+    "submit": "Sí, quiero recibirlos",
+    "confirmedTitle": "Dirección confirmada",
+    "confirmedText": "Los archivos de fin de mes de {shopName} llegarán aquí el día 2 de cada mes.",
+    "unavailableTitle": "Este enlace no está disponible",
+    "unavailableText": "Puede haber caducado o haber sido sustituido por uno más reciente, o el centro cambió la dirección desde entonces. Pide al centro que te envíe uno nuevo."
+  },
+  "bookkeeperStop": {
+    "title": "¿Dejar de recibir los archivos de fin de mes de {shopName}?",
+    "description": "{shopName} envía a esta dirección el informe, los pedidos y la hoja de tripulación del mes anterior el día 2 de cada mes. Al dejarlos, tu dirección sale de los ajustes de {shopName} y se avisa a sus dueños.",
+    "submit": "Dejar de recibir estos correos",
+    "submitting": "Guardando…",
+    "confirmedTitle": "Archivos de fin de mes desactivados",
+    "confirmedText": "{shopName} ya no te enviará archivos de fin de mes. Si el centro vuelve a agregarte, se te pedirá que lo confirmes antes."
   }
 }

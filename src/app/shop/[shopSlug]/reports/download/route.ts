@@ -1,22 +1,16 @@
 import { getDb } from "@/db/client";
-import { getMonthMoneyDetail } from "@/db/report-lines";
-import {
-  canPersonViewShopReports,
-  crewCountsByTrip,
-  getMonthlyReport,
-  getYearMonthInputs,
-} from "@/db/reporting";
+import { canPersonViewShopReports, getYearMonthInputs } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { type MonthRef, monthKey, parseMonthKey } from "@/lib/calendar";
+import { type MonthRef, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { exportDateStamp } from "@/lib/export";
 import { toShopCurrency } from "@/lib/money";
-import { formatPercent, formatReportMoney, summarizeMonth, tripFillRate } from "@/lib/reporting";
+import { formatReportMoney, summarizeMonth } from "@/lib/reporting";
 import { requireStaffSession } from "@/lib/session";
-import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
-import { monthReportCsv } from "./month-report-csv";
+import { utcToWallTime } from "@/lib/zoned";
+import { monthReportFile } from "./month-report-file";
 import { yearReportCsv } from "./year-report-csv";
 
 /**
@@ -75,57 +69,9 @@ export async function GET(request: Request) {
   }
   const requested = parseMonthKey(search.get("month"));
   const current: MonthRef = requested ?? { year: todayWall.year, month: todayWall.month };
-  const { from: monthStart, to: monthEnd } = shopMonthBounds(current, shop.timezone);
-
-  const input = await getMonthlyReport(db, shop.id, monthStart, monthEnd, {
-    currency,
-    timeZone: shop.timezone,
-  });
-  const report = summarizeMonth(input);
-  const detail = await getMonthMoneyDetail(db, shop.id, monthStart, monthEnd, now, {
-    currency,
-    timeZone: shop.timezone,
-  });
   const t = staffTranslator(await requestLocale(shop.defaultLocale));
-  const crewCounts = await crewCountsByTrip(
-    db,
-    shop.id,
-    input.trips.map((trip) => trip.tripId),
-  );
-
-  const money = (cents: number) => formatReportMoney(cents, currency, shop.defaultLocale);
-  const csv = monthReportCsv(
-    {
-      summary: [
-        ["Net revenue", money(report.revenueCents)],
-        ["Pass-through collected", money(report.passThroughCents ?? 0)],
-        ["Tax collected", money(report.taxCents)],
-        ["Tips", money(report.tipsCents)],
-        ["Bookings", report.seatsBooked],
-        ["Seats offered", report.seatsOffered],
-        ["Seat fill", formatPercent(report.fillRate)],
-        ["Waivers signed", report.waiverComplete],
-        ["Waivers outstanding", report.waiverOutstanding],
-      ],
-      lines: detail.lines,
-      trips: input.trips.map((trip) => ({
-        title: trip.title,
-        startsAt: trip.startsAt,
-        seatsBooked: trip.activeBookings,
-        capacity: trip.capacity,
-        fill: formatPercent(tripFillRate(trip)),
-        crewAssigned: crewCounts.get(trip.tripId) ?? 0,
-        waiversSigned: trip.waiverComplete,
-      })),
-    },
-    t,
-    money,
-  );
-
-  return csvResponse(
-    csv,
-    `diveday-report-${shop.slug}-${monthKey(current)}-${exportDateStamp(now, shop.timezone)}.csv`,
-  );
+  const { fileName, csv } = await monthReportFile(db, shop, current, now, t);
+  return csvResponse(csv, fileName);
 }
 
 function csvResponse(csv: string, fileName: string): Response {

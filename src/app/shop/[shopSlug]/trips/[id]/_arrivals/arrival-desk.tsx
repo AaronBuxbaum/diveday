@@ -5,10 +5,12 @@ import { buttonClass } from "@/components/ui/button";
 import { FIGURE_HERO_CLASS } from "@/components/ui/typography";
 import { type CheckInQueueRow, listCheckInQueue } from "@/db/check-in";
 import type { AppDb } from "@/db/client";
+import { openLostItemsByPerson } from "@/db/lost-items";
 import { noShowSalvage } from "@/db/no-show";
 import { listCertificationSummaries } from "@/db/self-declared-cards";
 import { partyLeadBookingIds } from "@/db/turn-away";
 import { welcomeCueInputsByBooking } from "@/db/welcome-cues";
+import { foundItemsText } from "@/i18n/lost-item-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
   welcomeCueText,
@@ -365,7 +367,7 @@ export async function buildArrivalDesk({
     if (!cue) continue;
     const line = (
       <div key="welcome" className="mt-1 text-sm text-muted">
-        <p>{welcomeCueText(t, cue)}</p>
+        <p>{welcomeCueText(t, cue, locale)}</p>
         {cue.kind === "first_trip" ? (
           // A card nobody has verified wears the warning tone the phrase
           // wears everywhere else (`certificationSummaryUnchecked`).
@@ -392,6 +394,36 @@ export async function buildArrivalDesk({
         <>
           {line}
           {existing}
+        </>
+      ) : (
+        line
+      ),
+    );
+  }
+
+  // **Something of theirs is in lost and found** (fifth loop, item 7): the
+  // crew wrote it down against their seat on an earlier boat, and today they
+  // are at the counter. Last under the name: it is a hand-over, not a gate.
+  const found = await openLostItemsByPerson(
+    db,
+    shopId,
+    rows.map((row) => row.personId),
+  );
+  for (const row of rows) {
+    const items = found.get(row.personId);
+    if (!items || items.length === 0) continue;
+    const line = (
+      <p key="found" className="mt-1 text-sm" data-testid="found-item-line">
+        {foundItemsText(t, items)}
+      </p>
+    );
+    const existing = below.get(row.bookingId);
+    below.set(
+      row.bookingId,
+      existing ? (
+        <>
+          {existing}
+          {line}
         </>
       ) : (
         line

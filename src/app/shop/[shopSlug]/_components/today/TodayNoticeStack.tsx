@@ -1,4 +1,5 @@
 import { ShopNotice } from "@/components/ShopPageHeader";
+import { type StaffWords, sayWords } from "@/i18n/shared-sentences";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
 
@@ -18,7 +19,7 @@ export function TodayNoticeStack({
   firstBookableMoment: boolean;
   reset?: string;
   email?: string;
-  authNoticeKey?: StaffMessageKey;
+  authNoticeKey?: StaffMessageKey | StaffWords;
   eveningNotice?: { key: StaffMessageKey; tone: NoticeTone };
   t: StaffTranslator;
 }) {
@@ -50,12 +51,12 @@ export function TodayNoticeStack({
           ) : null}
           {authNoticeKey ? (
             <ShopNotice tone="warning" role="status">
-              {t(authNoticeKey)}
+              {sayWords(t, authNoticeKey)}
             </ShopNotice>
           ) : null}
           {eveningNotice ? (
             <ShopNotice tone={eveningNotice.tone} role={noticeRole(eveningNotice.tone)}>
-              {t(eveningNotice.key)}
+              {sayWords(t, eveningNotice)}
             </ShopNotice>
           ) : null}
         </div>

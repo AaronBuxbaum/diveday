@@ -6,7 +6,7 @@ import type { FormDraftProps } from "@/components/FormDraft";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { ForgivingInput } from "@/components/ui/ForgivingInput";
-import { DateField, Field, FieldGrid } from "@/components/ui/form";
+import { ChoiceRow, DateField, Field, FieldGrid } from "@/components/ui/form";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { fill, pluralForm } from "@/i18n/fill";
 import { shiftCalendarDate } from "@/lib/calendar-date";
@@ -463,6 +463,15 @@ function CopyPanel({
           copy={{ typedAs: copy.typedAs }}
         />
       </Field>
+      {/* **The crew comes along unless unticked** (fifth-loop ideas, item 53):
+          Thursday's boat copied to Friday was crewed again by hand. Someone
+          already on another boat then, or the course's rules, refuse the crew
+          as a whole and the copy says so. */}
+      <div className="sm:col-span-2">
+        <ChoiceRow type="checkbox" name="sameCrew" value="on" defaultChecked>
+          {copy.copySameCrew}
+        </ChoiceRow>
+      </div>
       <div className="flex items-center gap-3 sm:col-span-2">
         <SubmitButton pendingLabel={copy.copying} className={buttonClass()}>
           {copy.copyIt}

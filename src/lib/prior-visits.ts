@@ -105,6 +105,38 @@ export function mergeShopHistory<TBooking, TVisit>(
 }
 
 /**
+ * **Which dive day with the shop a given day is** (glossary **Dive day**): the
+ * distinct shop-local calendar days, through `throughDay`, among the diver's
+ * own dive-day bookings (already narrowed by `diveDay()`) and the imported
+ * visits that did not fail to happen, with `throughDay` itself counted. So a
+ * morning and an afternoon boat are one day, and an imported visit on a day
+ * the diver also booked is that same day.
+ *
+ * The one count every reader says: the recap's ordinal and its stamp, a
+ * regular's milestone on the roster and the booked moment, and the numbered
+ * rows of "Your days" (dive-domain review of layer r5-4, fix 2).
+ */
+export function diveDayOrdinal(input: {
+  diveDayStarts: readonly Date[];
+  visits: readonly { visitedOn: CalendarDate; statusLabel: string | null }[];
+  timezone: string;
+  throughDay: CalendarDate;
+}): number {
+  const history = mergeShopHistory(
+    input.diveDayStarts,
+    input.visits.filter((visit) => priorVisitStanding(visit.statusLabel) !== "did_not_happen"),
+    {
+      bookingStartsAt: (startsAt) => startsAt,
+      visitedOn: (visit) => visit.visitedOn,
+      timezone: input.timezone,
+    },
+  );
+  const days = new Set([input.throughDay]);
+  for (const entry of history) if (entry.on <= input.throughDay) days.add(entry.on);
+  return days.size;
+}
+
+/**
  * How many entries behind the diver the record's story shows before folding
  * the rest.
  *

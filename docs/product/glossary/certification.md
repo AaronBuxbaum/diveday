@@ -175,6 +175,25 @@
   all. Neither looks like a hand-verified card, so the two are never read as the same thing at a
   busy desk. Only `src/lib/readiness.ts` decides who boards; the tones carry no gate
   (`src/i18n/card-labels.test.ts` keeps this entry and the code in step).
+- **Processed with the agency** — the instructor's "Mark sent to PADI", after Certify, that the
+  shop has submitted the student to the agency (PADI, SSI and the rest), dated and naming who
+  ticked it, and read back as "Processed with PADI · Oct 25". Any card this shop issued carries it:
+  a level card, an Enriched Air card or a specialty card (`processed_with_agency_at`,
+  `processed_by_person_id` on `certifications`, `nitrox_certifications` and
+  `specialty_certifications`, each with its `*_processed_only_when_issued` check). It records the
+  shop's own act and issues nothing: the agency sends its own card. The same tap takes it back, and
+  the course page lists every issued card still to process, oldest first and with no lookback, a
+  card waiting more than 30 days saying so. A card issued before the stamp existed
+  (`CARD_PROCESSING_SINCE`, the migration that added it) is listed apart, in one collapsed "N cards
+  certified before {date}" line, and never called late: nothing is backfilled, so a card truly
+  never sent is still there to tick. Gates nothing.
+- **Course ladder** — the Courses page's "N did Discover Scuba in the last 12 months · M went on to Open Water",
+  with the names of those who did not and an Invite to the next course's soonest session with a
+  seat (`nextCourseFor`, `src/lib/course-ladder.ts`; H-130's one-at-a-time invite under the
+  **30-day invite cooldown**). The names leave out anyone holding a card at or above the level the
+  next course certifies (any agency, any state) and anyone under its minimum age on the session's
+  day, and the send re-checks both. Someone whose release waits on a physician's referral is
+  flagged for a call instead of an Invite.
 - **Shop-issued certification** — a level card **this shop's own instructor certified**, from a per-
   student tap on a course session's own roster (issue #717), never automatic. It lands `verified`
   immediately (`issued_by_shop_at` set, alongside `issued_from_trip_id` naming the session and
@@ -708,3 +727,10 @@
   See `src/lib/divemaster-ratio.ts` and
   [20260820-shop-divemaster-ratio](../../architecture/decisions/20260820-shop-divemaster-ratio.md).
 - **Refresher / ReActivate** — short course for certified divers returning after inactivity.
+- **Certifications issued here** — the certification cards the shop's own instructors issued in a
+  window (`issued_by_shop_at`; `certifiedHere` and `crewYearFacts`, `src/db/reporting.ts`; fifth
+  loop, item 32), on the Reports year ("Certifications issued here: 34 · 22 Open Water") and each
+  instructor's Team card ("4 certifications issued this year"). It counts cards, not people: a diver
+  who does Open Water and Advanced Open Water here counts twice, as agencies count (dive-domain
+  review F7). Level cards only; a specialty such as Nitrox is not in it, and a card captured from
+  another shop never is.

@@ -35,3 +35,24 @@ export function knownDiverFactLines(
     }
   });
 }
+
+/**
+ * The booking form's known-diver panel, built from the handoff's read: who it
+ * is, their facts said in their language, and the gear they took last time
+ * (fifth-loop ideas, item 40). Null when the handoff named nobody.
+ */
+export function knownDiverPanelFor(
+  knownDiver: KnownDiver | null,
+  t: DiverTranslator,
+  input: { handoff: string | null; blankHref: string; locale: DiverLocale; timeZone: string },
+) {
+  if (!knownDiver) return null;
+  return {
+    name: knownDiver.fullName,
+    handoff: input.handoff ?? "",
+    blankHref: input.blankHref,
+    lead: { fullName: knownDiver.fullName, email: knownDiver.email, phone: knownDiver.phone },
+    lines: knownDiverFactLines(knownDiver.facts, t, input),
+    lastGear: knownDiver.lastGear,
+  };
+}

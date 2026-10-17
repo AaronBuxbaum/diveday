@@ -1,6 +1,6 @@
 import type { CourseDepthFormat } from "@/lib/courses";
 import type { DepthUnit } from "@/lib/depth-units";
-import { depthInUnit } from "@/lib/depth-units";
+import { depthInUnit, depthToMeters } from "@/lib/depth-units";
 import { siteDepthInUnit } from "@/lib/dive-site-depth";
 import type { SeaState, WindState } from "@/lib/marine-forecast";
 import type { TemperatureUnit } from "@/lib/temperature-units";
@@ -30,16 +30,39 @@ const TEMPERATURE_UNIT_KEYS: Record<TemperatureUnit, DiverMessageKey> = {
   fahrenheit: "common.units.fahrenheit",
 };
 
+/**
+ * The shop's figure with the reader's after it, "60 ft (18 m)", when the
+ * reader thinks in the other unit (fifth-loop ideas, item 22; `ReaderUnits`).
+ * One ICU template, so a locale may set the pair its own way.
+ */
+function withReaderUnit(t: DiverTranslator, first: string, second: string | null): string {
+  return second ? t("common.units.withReaderUnit", { first, second }) : first;
+}
+
 const DEPTH_RANGE_KEYS: Record<DepthUnit, DiverMessageKey> = {
   meters: "common.units.metersRange",
   feet: "common.units.feetRange",
 };
 
+/** A recorded site depth in one unit: "15–28 m", or "28 m" with only the deepest. */
+function siteDepthInOneUnit(
+  t: DiverTranslator,
+  depth: { depthMinMeters?: number | null; maxDepthMeters?: number | null },
+  unit: DepthUnit,
+): string | null {
+  const inUnit = siteDepthInUnit(depth, unit);
+  if (!inUnit) return null;
+  if (inUnit.min === null) return t(DEPTH_UNIT_KEYS[unit], { value: inUnit.max });
+  return t(DEPTH_RANGE_KEYS[unit], { min: inUnit.min, max: inUnit.max });
+}
+
 /**
  * A dive site's depth in the shop's unit: "15–28 m" where the shop recorded a
  * shallow end and a deepest point, "28 m" with only the deepest. One unit on
- * every briefing, whatever the shop typed. With no recorded depth at all the
- * shop's own depth note stands in, and null when there is none.
+ * every briefing, whatever the shop typed, with the reader's after it when
+ * theirs differs (fifth-loop ideas, item 22). With no recorded depth at all
+ * the shop's own depth note stands in (converted only where it is a plain
+ * number and a unit, `depthRangeText`), and null when there is none.
  */
 export function diveSiteDepthText(
   t: DiverTranslator,
@@ -49,16 +72,55 @@ export function diveSiteDepthText(
     depthRange?: string | null;
   },
   unit: DepthUnit,
+  reader: DepthUnit | null = null,
 ): string | null {
-  const inUnit = siteDepthInUnit(depth, unit);
-  if (!inUnit) return depth.depthRange?.trim() || null;
-  if (inUnit.min === null) return t(DEPTH_UNIT_KEYS[unit], { value: inUnit.max });
-  return t(DEPTH_RANGE_KEYS[unit], { min: inUnit.min, max: inUnit.max });
+  const own = siteDepthInOneUnit(t, depth, unit);
+  if (!own) {
+    const note = depth.depthRange?.trim();
+    return note ? depthRangeText(t, note, reader) : null;
+  }
+  const theirs = reader && reader !== unit ? siteDepthInOneUnit(t, depth, reader) : null;
+  return withReaderUnit(t, own, theirs);
 }
 
-/** A stored depth (metres) written out in the shop's unit. */
-export function depthText(t: DiverTranslator, meters: number, unit: DepthUnit): string {
-  return t(DEPTH_UNIT_KEYS[unit], { value: depthInUnit(meters, unit) });
+/**
+ * A stored depth (metres) written out in the shop's unit, and in the reader's
+ * after it when theirs differs.
+ */
+export function depthText(
+  t: DiverTranslator,
+  meters: number,
+  unit: DepthUnit,
+  reader: DepthUnit | null = null,
+): string {
+  const own = t(DEPTH_UNIT_KEYS[unit], { value: depthInUnit(meters, unit) });
+  const theirs =
+    reader && reader !== unit
+      ? t(DEPTH_UNIT_KEYS[reader], { value: depthInUnit(meters, reader) })
+      : null;
+  return withReaderUnit(t, own, theirs);
+}
+
+/**
+ * A depth range the shop typed ("60–130 ft", "18 m"), with the reader's unit
+ * after it when theirs differs: "60–130 ft (18–40 m)". Only a range written as
+ * one or two numbers and a unit is converted; anything else is the shop's own
+ * words and stays exactly as written.
+ */
+export function depthRangeText(
+  t: DiverTranslator,
+  written: string,
+  reader: DepthUnit | null = null,
+): string {
+  const match = /^\s*(\d+(?:\.\d+)?)(?:\s*[–-]\s*(\d+(?:\.\d+)?))?\s*(ft|feet|m|meters)\s*$/i.exec(
+    written,
+  );
+  if (!match || !reader) return written;
+  const unit: DepthUnit = /^f/i.test(match[3]) ? "feet" : "meters";
+  if (unit === reader) return written;
+  const convert = (value: string) => depthInUnit(depthToMeters(Number(value), unit), reader);
+  const value = match[2] ? `${convert(match[1])}–${convert(match[2])}` : `${convert(match[1])}`;
+  return withReaderUnit(t, written, t(DEPTH_UNIT_KEYS[reader], { value }));
 }
 
 /**
@@ -81,13 +143,22 @@ export function courseDepthFormat(t: DiverTranslator, unit: DepthUnit): CourseDe
   };
 }
 
-/** A stored water temperature (Celsius) written out in the shop's unit. */
+/**
+ * A stored water temperature (Celsius) written out in the shop's unit, and in
+ * the reader's after it when theirs differs: "79°F (26°C)".
+ */
 export function temperatureText(
   t: DiverTranslator,
   celsius: number,
   unit: TemperatureUnit,
+  reader: TemperatureUnit | null = null,
 ): string {
-  return t(TEMPERATURE_UNIT_KEYS[unit], { value: temperatureInUnit(celsius, unit) });
+  const own = t(TEMPERATURE_UNIT_KEYS[unit], { value: temperatureInUnit(celsius, unit) });
+  const theirs =
+    reader && reader !== unit
+      ? t(TEMPERATURE_UNIT_KEYS[reader], { value: temperatureInUnit(celsius, reader) })
+      : null;
+  return withReaderUnit(t, own, theirs);
 }
 
 const SEA_STATE_KEYS: Record<SeaState, DiverMessageKey> = {

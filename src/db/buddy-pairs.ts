@@ -1,20 +1,26 @@
-import { and, asc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { ageOnDate } from "@/lib/age";
 import { isStaff } from "@/lib/authz";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { seatName } from "@/lib/held-seat";
 import { isDiver } from "@/lib/participant-types";
+import { type PartyLeftReason, type PartyMember, partyLeftReason } from "@/lib/party-teams";
 import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { survivingPersonNames } from "./people";
-import { isUniqueConstraintViolation } from "./query-helpers";
+import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import {
   bookings,
   buddyPairMembers,
   buddyTeamEvents,
+  certifications,
+  courses,
   people,
+  shops,
   tripAssignments,
   trips,
 } from "./schema";
@@ -444,6 +450,158 @@ async function formBuddyTeamInTx(
     occurredAt,
   });
   return { ok: true, teamId };
+}
+
+/** A party one tap may team, or one it left for the divemaster and why. */
+export type PartyTeamPlan = {
+  /** Each live seat's party key: the organizer's booking id, or its own. */
+  parties: Map<string, string>;
+  /** Diver seats not yet on a team, one list per party one tap would team. */
+  teamable: string[][];
+  /** Parties of two or more it leaves, with the reason the panel says. */
+  left: { bookingIds: string[]; reason: PartyLeftReason }[];
+  /** Diver seats still to team that came alone. */
+  alone: string[];
+  /** The name on each seat above, so the panel says the plan's own seats. */
+  names: Map<string, string>;
+};
+
+/**
+ * **Who came together, and which of those parties one tap may team**
+ * (fifth-loop ideas, item 50; dive-domain review of layer r5-4, BLOCK 1 and
+ * note 8). One read for the button and the action alike, so the panel never
+ * offers a team the tap would not make.
+ *
+ * A party is the diver seats that booked together (`partyLeadBookingId`, ADR
+ * 20260804-seat-claim-links) and are still to team: booked or checked in, not
+ * held, not on a team. Snorkelers and riders are not in it, so a parent who
+ * rides is no adult for the juniors. Whether a party may be teamed is
+ * `partyLeftReason` (`src/lib/party-teams.ts`), from each diver's age on the
+ * departure's own local date, the "Under 18" box, and a verified card with
+ * this shop.
+ */
+export async function planPartyTeams(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<PartyTeamPlan> {
+  const [departure] = await db
+    .select({
+      startsAt: trips.startsAt,
+      timezone: shops.timezone,
+      courseId: trips.courseId,
+      intro: courses.isIntroCourse,
+    })
+    .from(trips)
+    .innerJoin(shops, eq(shops.id, trips.shopId))
+    .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, trips.shopId)))
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1);
+  const plan: PartyTeamPlan = {
+    parties: new Map(),
+    teamable: [],
+    left: [],
+    alone: [],
+    names: new Map(),
+  };
+  if (!departure) return plan;
+  const [seats, teamed] = await queryAll(db, [
+    () =>
+      db
+        .select({
+          bookingId: bookings.id,
+          partyLeadBookingId: bookings.partyLeadBookingId,
+          participantType: bookings.participantType,
+          status: bookings.status,
+          heldAt: bookings.identityUnconfirmedAt,
+          declaredMinorAt: bookings.minorDeclaredAt,
+          fullName: people.fullName,
+          dateOfBirth: people.dateOfBirth,
+          verifiedCard: sql<boolean>`exists (select 1 from ${certifications} where ${certifications.shopId} = ${bookings.shopId} and ${certifications.personId} = ${bookings.personId} and ${certifications.status} = 'verified' and ${certifications.deletedAt} is null)`,
+        })
+        .from(bookings)
+        .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
+        .where(
+          and(
+            eq(bookings.shopId, shopId),
+            eq(bookings.tripId, tripId),
+            ne(bookings.status, "cancelled"),
+          ),
+        )
+        // diveday:allow-time-id-order: the order seats are grouped into parties; no reader sees it.
+        .orderBy(asc(bookings.createdAt), asc(bookings.id)),
+    () =>
+      db
+        .select({ bookingId: buddyPairMembers.bookingId })
+        .from(buddyPairMembers)
+        .where(and(eq(buddyPairMembers.shopId, shopId), eq(buddyPairMembers.tripId, tripId))),
+  ]);
+  const onATeam = new Set(teamed.map((row) => row.bookingId));
+  const tripDay = calendarDateInTimezone(departure.startsAt, departure.timezone);
+  const byParty = new Map<string, { bookingId: string; member: PartyMember }[]>();
+  for (const seat of seats) {
+    const key = seat.partyLeadBookingId ?? seat.bookingId;
+    plan.parties.set(seat.bookingId, key);
+    const stillToTeam =
+      (seat.status === "booked" || seat.status === "checked_in") &&
+      seat.heldAt === null &&
+      isDiver(seat.participantType) &&
+      !onATeam.has(seat.bookingId);
+    if (!stillToTeam) continue;
+    plan.names.set(seat.bookingId, seat.fullName);
+    byParty.set(key, [
+      ...(byParty.get(key) ?? []),
+      {
+        bookingId: seat.bookingId,
+        member: {
+          age: seat.dateOfBirth ? ageOnDate(seat.dateOfBirth, tripDay) : null,
+          declaredMinor: seat.declaredMinorAt !== null,
+          verifiedCard: Boolean(seat.verifiedCard),
+        },
+      },
+    ]);
+  }
+  const course = departure.courseId ? { intro: Boolean(departure.intro) } : null;
+  for (const party of byParty.values()) {
+    const bookingIds = party.map((seat) => seat.bookingId);
+    if (party.length < MIN_BUDDY_TEAM_SIZE) {
+      plan.alone.push(...bookingIds);
+      continue;
+    }
+    const reason = partyLeftReason(
+      { course },
+      party.map((seat) => seat.member),
+    );
+    if (reason) plan.left.push({ bookingIds, reason });
+    else plan.teamable.push(bookingIds);
+  }
+  return plan;
+}
+
+/**
+ * **"Team up each party"** (fifth-loop ideas, item 50): one team per party
+ * {@link planPartyTeams} says one tap may team. A suggestion staff tap, never
+ * automatic, and every team goes through `formBuddyTeam`, so each one keeps
+ * that write's refusals and its line on the trail. Returns how many teams
+ * formed.
+ */
+export async function formPartyTeams(
+  db: AppDb,
+  input: { shopId: string; tripId: string; recordedByPersonId: string; now?: Date },
+): Promise<number> {
+  const { teamable } = await planPartyTeams(db, input.shopId, input.tripId);
+  let formed = 0;
+  for (const bookingIds of teamable) {
+    const outcome = await formBuddyTeam(db, {
+      shopId: input.shopId,
+      tripId: input.tripId,
+      members: bookingIds.map((bookingId) => ({ kind: "diver" as const, bookingId })),
+      recordedByPersonId: input.recordedByPersonId,
+      now: input.now,
+    });
+    if (outcome.ok) formed += 1;
+  }
+  return formed;
 }
 
 /** Add one member to a team that already stands. */

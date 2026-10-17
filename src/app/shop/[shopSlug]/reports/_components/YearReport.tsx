@@ -44,12 +44,21 @@ export type YearMoney = {
 
 export function YearReport({
   year,
+  lastYear,
+  lines = [],
   money,
   locale,
   shopSlug,
   t,
 }: {
   year: ShopYearSummary;
+  /**
+   * Last year's figure under this year's, already worded ("291 by this date
+   * in 2025"; fifth loop, item 25). Absent until the shop has a second season.
+   */
+  lastYear?: { divers?: string; boats?: string };
+  /** Quiet lines under the figures: the weather days, the cards issued here. */
+  lines?: readonly string[];
   money?: YearMoney;
   locale: string;
   shopSlug: string;
@@ -87,6 +96,7 @@ export function YearReport({
       label: t("reports.year.figures.diversLabel"),
       value: String(year.divers),
       detail: t("reports.year.figures.diversDetail", { count: year.daysAtSea }),
+      comparison: lastYear?.divers,
     },
     {
       key: "boats",
@@ -103,6 +113,7 @@ export function YearReport({
               )
               .join(" · ")
           : undefined,
+      comparison: lastYear?.boats,
     },
     {
       key: "busiest",
@@ -147,6 +158,14 @@ export function YearReport({
         {busiestDayLabel ? ` ${t("reports.year.busiest", { day: busiestDayLabel })}` : ""}
         {quietestMonthLabel ? ` ${t("reports.year.quietest", { month: quietestMonthLabel })}` : ""}
       </p>
+
+      {lines.length > 0 ? (
+        <ul data-year-lines="" className="mt-3 space-y-1 text-sm text-muted tabular-nums">
+          {lines.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      ) : null}
 
       {/* **One rhythm between the sections, and the stack owns it.** The strip
           used to take `mt-8`, the figures nothing, and the sites

@@ -1309,12 +1309,16 @@ export async function getTripManifests(
           sharedAt: null,
           lastDivedAt: null,
           nonDiver: false,
+          diveDayCount: null,
         }),
         tripEndsAt: trip.endsAt,
       }),
       depthAdvisory: depthByBooking.get(booking.id),
       hotelPickupLocation: booking.hotelPickupLocation,
       pickupTime: booking.pickupTime,
+      // The lunch note (item 56): where the crew actually look, as well as
+      // Prep. A meal preference for the galley, never an allergy record.
+      dietaryNote: booking.dietaryNote,
       // The diver's own "running late" (#2319), cleared from an arrived or
       // released seat the way the arrivals list clears it.
       runningLateAt: runningLateShown({

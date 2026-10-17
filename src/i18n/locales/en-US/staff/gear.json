@@ -155,7 +155,8 @@
     "returnedSetPulled": "Back. {count} pulled for service.",
     "concernNeedsWords": "A service concern needs a line saying what happened, so a technician can act on it.",
     "nothingOut": "Nothing from that set is out.",
-    "nothingToHandOver": "That set is already out."
+    "nothingToHandOver": "That set is already out.",
+    "returnedFlagged": "Back, and flagged for a technician."
   },
   "import": {
     "help": "One row per unit, service event, or historical rental. Units match by tag first, then serial number; assignments match an existing diver by email or exact name, stay display-only, and never affect current availability.",
@@ -289,7 +290,13 @@
     "returnCancelConcern": "Cancel",
     "returnNoteLabel": "What to tell the technician",
     "returnNotePlaceholder": "Torn strap, second stage free-flowed",
-    "returnPullToBench": "Pull for service"
+    "returnPullToBench": "Pull for service",
+    "backHeading": "Back from the boat",
+    "backCount": "{count, plural, one {# unit to check in} other {# units to check in}}",
+    "backUnit": "Back",
+    "backProblem": "Back with a problem",
+    "backNoteLabel": "What’s wrong with it?",
+    "backNotePlaceholder": "Inflator sticks"
   },
   "ticket": {
     "eyebrow": "Rental",

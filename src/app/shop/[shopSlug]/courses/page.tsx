@@ -30,6 +30,7 @@ import { formatMoneyScanned, formatShortDate, joinFacts } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursesPath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
+import { CourseFollowUps, LadderNotice } from "./_components/CourseFollowUps";
 import { CourseRoster, type CourseRosterRow } from "./_components/CourseRoster";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -73,12 +74,12 @@ export default async function CoursesPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ page?: string; q?: string; view?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; view?: string; notice?: string }>;
 }) {
   await connection(); // visibility can change between requests — render per request
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { page, q, view: viewParam } = await searchParams;
+  const { page, q, view: viewParam, notice } = await searchParams;
   // **Find a course in one line** (third UX review, item 35): 55 courses over
   // three pages had paging and nothing else.
   const query = q?.trim() ?? "";
@@ -308,6 +309,7 @@ export default async function CoursesPage({
         }
       />
 
+      <LadderNotice notice={notice} t={st} />
       {formsAwaitingText[0] ? (
         <ShopNotice tone="warning" className="mt-6">
           {st("courses.list.formsAwaitingTextSummary", { count: formsAwaitingText.length })}
@@ -385,6 +387,7 @@ export default async function CoursesPage({
       ) : (
         <CourseRoster rows={rows} className="mt-8" />
       )}
+      <CourseFollowUps db={db} shop={shop} locale={locale} t={st} />
       <Pager
         page={coursePage.page}
         pageCount={coursePage.pageCount}

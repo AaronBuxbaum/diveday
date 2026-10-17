@@ -249,3 +249,34 @@ export function generateDemoShopIdentity(): DemoShopIdentity {
     emailFor: (localPart) => `${localPart}@${slug}.${DEMO_EMAIL_DOMAIN}`,
   };
 }
+
+/** The longest shop name a visitor may give the demo; longer is cut, not refused. */
+export const VISITOR_SHOP_NAME_MAX = 60;
+
+/**
+ * Line breaks, control and format characters (bidi overrides, zero-width
+ * joiners) and the line and paragraph separators: none belongs in a shop name,
+ * and each can disguise what a header says.
+ */
+const UNSAFE_NAME_CHARACTER = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu;
+
+/**
+ * **The name a visitor typed at the demo door, made safe to wear** (H-131).
+ *
+ * The demo may put the visitor's own shop name on its staff screens and on the
+ * email it previews there, never on the storefront, which keeps the generated
+ * name. What a visitor types is untrusted: unsafe characters are dropped, runs
+ * of space close up, and the result is cut to {@link VISITOR_SHOP_NAME_MAX}.
+ * Anything not a string, or nothing left once cleaned, is `null`, and the demo
+ * keeps its generated name.
+ */
+export function cleanVisitorShopName(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const cleaned = raw
+    .replace(/\s+/g, " ")
+    .replace(UNSAFE_NAME_CHARACTER, "")
+    .replace(/ {2,}/g, " ")
+    .trim();
+  if (!cleaned) return null;
+  return Array.from(cleaned).slice(0, VISITOR_SHOP_NAME_MAX).join("").trim();
+}

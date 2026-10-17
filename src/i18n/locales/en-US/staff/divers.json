@@ -133,7 +133,7 @@
     "noticeRestoreRefused": "Couldn’t restore that diver, because an active diver now uses their email. Change that email, then try again.",
     "removedToast": "Diver deleted.",
     "noticeErased": "Personal data erased. The signed release, the trips, and the payments stay on file with the diver’s details gone. This cannot be undone.",
-    "noticeErasedProcessorOwed": "Personal data erased here, but something at Stripe isn’t finished. Open Reports to see what’s left and clear it. Until then this diver isn’t fully erased.",
+    "noticeErasedProcessorOwed": "Personal data erased here, but something at Stripe isn’t finished. Open Settings to see what’s left and clear it. Until then this diver isn’t fully erased.",
     "noticeNotAuthorized": "Deleting or restoring a diver is limited to owners and managers.",
     "noticeInvalid": "Check the diver’s name, email, and phone number.",
     "newDiverTitle": "Add a diver",
@@ -156,7 +156,20 @@
     "confirmMatchesLastDive": "Last dive day here: {date}",
     "confirmMatchesNoDiveDay": "No dive days here yet",
     "confirmMatchesBorn": "Born {date}",
-    "confirmMatchesSubmit": "Create new diver anyway"
+    "confirmMatchesSubmit": "Create new diver anyway",
+    "partyOnFile": "Some names here read like people already on file. Choose for each one.",
+    "party": {
+      "add": "Add another person",
+      "person": "Person {n}",
+      "under18": "Under 18",
+      "under18Hint": "A parent or legal guardian signs the release with them.",
+      "dob": "Date of birth",
+      "dobHint": "Optional. It sets a junior diver’s depth limit.",
+      "remove": "Remove",
+      "removeFor": "Remove person {n}",
+      "useOnFile": "Use the record on file",
+      "newPerson": "New person"
+    }
   },
   "list": {
     "addDiverAction": "Add diver",
@@ -221,6 +234,10 @@
     "saving": "Saving…",
     "saveDetails": "Save details",
     "visits": "{count, plural, one {# visit} other {# visits}}",
+    "visitsSince": "{count, plural, one {# visit} other {# visits}} since {since}",
+    "lastOut": "Last out {date}",
+    "spent": "{amount} spent",
+    "broughtFriends": "Brought {count, plural, one {# friend} other {# friends}}",
     "packageBalance": "Package: {left} of {of, plural, one {# dive} other {# dives}} left"
   },
   "bookActivity": {

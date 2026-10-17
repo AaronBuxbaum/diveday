@@ -10,7 +10,7 @@ function crew(over: Partial<Crew> = {}): Crew {
   return {
     crewGap: { code: "none" },
     ratioGap: { code: "none" },
-    languageGap: { code: "none" },
+    languageBriefings: { uncovered: [], covered: [] },
     lapsedCrew: [],
     ...over,
   } as unknown as Crew;
@@ -26,14 +26,43 @@ describe("tripCrewNotes", () => {
     });
   });
 
-  it("names each missing language in the reader's own locale", () => {
+  it("names the divers of a missing language, and who can brief a covered one", () => {
     const notes = tripCrewNotes({
-      crew: crew({ languageGap: { code: "missing", missing: ["es", "de"] } as never }),
+      crew: crew({
+        languageBriefings: {
+          uncovered: [{ language: "de", divers: ["Freya Lindqvist"], crew: [] }],
+          covered: [
+            { language: "es", divers: ["Ines Costa", "Diego Alvarez"], crew: ["Yusra Idrissi"] },
+          ],
+        },
+      }),
       diversPerDivemaster: 8,
       locale: "en-US",
       t,
     });
-    expect(notes.languageGapNote).toContain("Spanish and German");
+    expect(notes.languageGapNote).toBe(
+      "Freya Lindqvist booked in German. No one on this crew has recorded German. " +
+        "Yusra Idrissi can brief Ines Costa and Diego Alvarez in Spanish.",
+    );
+  });
+
+  it("counts the people instead of naming them past three, never calling them all divers", () => {
+    const notes = tripCrewNotes({
+      crew: crew({
+        languageBriefings: {
+          uncovered: [
+            { language: "es", divers: ["A One", "B Two", "C Three", "D Four"], crew: [] },
+          ],
+          covered: [],
+        },
+      }),
+      diversPerDivemaster: 8,
+      locale: "en-US",
+      t,
+    });
+    expect(notes.languageGapNote).toBe(
+      "4 people booked in Spanish. No one on this crew has recorded Spanish.",
+    );
   });
 
   it("states the total the shop's target wants, not the shortfall", () => {

@@ -5,6 +5,7 @@ import { wrapEmailHtml } from "@/lib/notifications/email";
 import { messageFor } from "@/lib/notifications/render";
 import { weeklyDigestQuietWeekEmail } from "@/lib/notifications/weekly-digest-email";
 import { isLiveShopStaff, requireShopSurface } from "@/lib/session";
+import { staffShopName } from "../../../_components/staff-shop-name";
 
 /**
  * **This week's Monday email, as the signed-in staffer would get it** — the
@@ -32,8 +33,11 @@ export async function GET(
   // else's server. A deploy without a valid one has no preview to give.
   const origin = publicAppUrl();
   if (!origin) return new Response(null, { status: 503 });
+  // A minted demo's preview wears the visitor's own shop name (H-131); this
+  // document is rendered for their browser only and is never sent.
+  const shopName = await staffShopName(shop);
   const preview = await previewWeeklyDigest(db, {
-    shop,
+    shop: { ...shop, name: shopName },
     personId: session.user.personId,
     origin,
   });
@@ -42,9 +46,9 @@ export async function GET(
     : wrapEmailHtml(
         weeklyDigestQuietWeekEmail({
           locale: recipientLocale(null, shop.defaultLocale),
-          shopName: shop.name,
+          shopName,
         }).html,
-        { shopName: shop.name, locale: recipientLocale(null, shop.defaultLocale) },
+        { shopName, locale: recipientLocale(null, shop.defaultLocale) },
       );
   return new Response(html, {
     headers: {

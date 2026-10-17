@@ -320,6 +320,33 @@ describe("one diver's own record export (issue #726)", () => {
     expect(bookingsTable.rows.map((row) => row[titleIndex])).toEqual([earlier.title, later.title]);
   });
 
+  it("carries the diver's own lunch and pickup answers, since both are statements they made", async () => {
+    const { db, shop } = ctx;
+    const tripRows = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const trip = tripRows[0];
+    if (!trip) throw new Error("demo shop needs a departure");
+    const [diver] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Galley Answer" })
+      .returning();
+    await db.insert(bookings).values({
+      bookedAs: "diver",
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: diver.id,
+      dietaryNote: "Vegetarian",
+      hotelPickupLocation: "Reef Hotel lobby",
+    });
+
+    const input = await loadDiverExportBundleInput(db, shop.id, diver.id);
+    if (!input) throw new Error("export failed to load");
+    const bookingsTable = input.tables.find((t) => t.file === "bookings.csv");
+    if (!bookingsTable) throw new Error("bookings.csv missing");
+    const [row] = bookingsTable.rows;
+    expect(row?.[bookingsTable.header.indexOf("dietary_note")]).toBe("Vegetarian");
+    expect(row?.[bookingsTable.header.indexOf("hotel_pickup_location")]).toBe("Reef Hotel lobby");
+  });
+
   it("resolves a staff name onto a roll-call event without naming any other diver", async () => {
     const { db, shop } = ctx;
     const owner = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);

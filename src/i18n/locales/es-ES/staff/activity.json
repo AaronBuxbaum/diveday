@@ -56,6 +56,7 @@
     "order_refunded": "{actor} reembolsó un pedido",
     "order_paid_cash": "{actor} registró un pedido pagado en efectivo",
     "order_paid_card_machine": "{actor} registró un pedido pagado con terminal de pago",
+    "order_paid_room_charge": "{actor} registró un pedido cargado a una habitación",
     "paid_after_close_refunded": "{actor} reembolsó un pago hecho con el cobro ya cerrado",
     "seat_refunded": "{actor} quitó a {diver} y reembolsó la plaza con tarjeta",
     "payment_waived": "{actor} marcó la plaza de {diver} como exonerada",
@@ -79,6 +80,9 @@
     "shore_alert_contact_changed": "{actor} cambió el correo del contacto en tierra para los avisos del pase de lista",
     "shore_alert_contact_cleared": "{actor} quitó el correo del contacto en tierra para los avisos del pase de lista",
     "shore_alert_contact_stopped": "El contacto en tierra dejó los avisos del pase de lista con el enlace de uno de ellos",
+    "bookkeeper_email_set": "{actor} agregó el correo del contador para los archivos de fin de mes",
+    "bookkeeper_email_changed": "{actor} cambió el correo del contador para los archivos de fin de mes",
+    "bookkeeper_email_cleared": "{actor} quitó el correo del contador para los archivos de fin de mes",
     "redacted": "[eliminado]",
     "demo_charter_confirmed": "{actor} confirmó el chárter con el capitán",
     "demo_second_dive_moved": "{actor} movió el segundo buceo a French Reef por el oleaje",
@@ -101,7 +105,9 @@
     "participant_type_changed": "{actor} cambió a {diver} de {from, select, snorkeler {snorkel} rider {acompañante en el barco} other {buceo}} a {type, select, snorkeler {snorkel} rider {acompañante en el barco} other {buceo}}{certCheck, select, cleared {, y eso quitó una verificación de tarjeta} overridden {, aunque falta una tarjeta} other {}}{atSea, select, yes {, después de la salida} other {}}",
     "course_form_medical_changed": "{actor} {marked, select, yes {marcó} other {quitó la marca médica de}} el formulario del curso {form}{marked, select, yes { como declaración médica} other {}}",
     "training_dive_marked": "{actor} marcó la inmersión de {diver} como formación para {course}",
-    "training_dive_cleared": "{actor} quitó la marca de formación de la inmersión de {diver} para {course}{formsOwed, select, yes {, con formularios del curso sin firmar} other {}}"
+    "training_dive_cleared": "{actor} quitó la marca de formación de la inmersión de {diver} para {course}{formsOwed, select, yes {, con formularios del curso sin firmar} other {}}",
+    "bookkeeper_email_vouched": "{actor} volvió a confirmar el correo del contador para los archivos de fin de mes",
+    "bookkeeper_email_stopped": "El contador dejó los archivos de fin de mes con el enlace de uno de ellos"
   },
   "unknown": "Una entrada anterior",
   "review": {

@@ -25,6 +25,7 @@ import {
   e2eNow,
   manifestRow,
   offlineCopySaved,
+  openBoatCheck,
   openCounterFor,
   openDiverFileGroup,
   openFirstRosterRowWith,
@@ -3153,6 +3154,68 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The held release and the doctor's page** (fifth-loop ideas, item 17;
+       * ADR 20261016-doctor-referral-page). Priya Sharma answers question 3
+       * yes and signs, so her link reopens on the medical hold with its new
+       * "Take this to your doctor" door, and that door opens the printable
+       * evaluation form with her name in it and the question's number.
+       */
+      test(`the doctor's page renders true to the design (${scheme})`, async ({
+        page,
+        browser,
+        workerBaseURL,
+        staffStorageState,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const staffContext = await browser.newContext({
+          baseURL: workerBaseURL,
+          storageState: await staffStorageState("owner"),
+        });
+        const staffPage = makeActivitySafe(await staffContext.newPage());
+        await staffPage.goto("/shop/blue-mantis/schedule/board");
+        await staffPage
+          .locator("li")
+          .filter({ hasText: REEF_TRIP })
+          .getByRole("link", { name: REEF_TRIP, exact: true })
+          .click();
+        await staffPage.waitForURL(/\/trips\/[a-f0-9-]+$/);
+        const unsent = await openFirstRosterRowWith(staffPage, "Send waiver");
+        await unsent.getByRole("button", { name: "Send waiver", exact: true }).click();
+        const resultNotice = staffPage.locator("#roster").getByRole("status");
+        await resultNotice.waitFor();
+        const waiverHref = await waiverLinkFromResult(staffPage, resultNotice);
+        await staffContext.close();
+
+        await page.goto(waiverHref);
+        const noRadios = page.getByRole("radio", { name: "No" });
+        await noRadios.first().waitFor();
+        const questionCount = await noRadios.count();
+        for (let index = 0; index < questionCount; index++) {
+          await noRadios.nth(index).check();
+        }
+        await page
+          .locator("fieldset")
+          .filter({ visible: true })
+          .nth(2)
+          .getByRole("radio", { name: "Yes" })
+          .check();
+        await page.getByLabel("Type your full name").fill("Priya Sharma");
+        await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
+        await page.getByRole("button", { name: "Sign waiver" }).click();
+        await page.waitForURL(/\/ready\//);
+
+        await page.goto(waiverHref);
+        await page.getByRole("link", { name: "Take this to your doctor" }).waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "waiver-medical-held", scheme);
+
+        await page.getByRole("link", { name: "Take this to your doctor" }).click();
+        await page.getByTestId("doctor-evaluation-form").waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "waiver-doctor", scheme);
+      });
+
+      /**
        * **The guardian's card** (ADR 20260907-guardian-co-signature): the
        * second signature a minor's release takes, and the one composition on
        * this page no other capture can reach — it renders from the diver's own
@@ -4885,6 +4948,27 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-walk-in-diver", scheme);
       });
 
+      // **A walk-in family on one form** (fifth loop, item 9): the same diver
+      // step with two more people added, one of them ticked "Under 18". Pinned
+      // words so the picture is the same on every run.
+      test(`the walk-in party rows render true to the design (${scheme})`, async ({ page }) => {
+        await openWalkIn(page);
+        await page.getByRole("link", { name: "Add diver", exact: true }).click();
+        await page.waitForURL(/\/divers\/new/);
+        await page.getByRole("heading", { name: "Add a diver", level: 1 }).waitFor();
+        await page.getByLabel("Full name").first().fill("Ana Brightwater");
+        await page.getByRole("button", { name: "Add another person" }).click();
+        const second = page.getByRole("group", { name: "Person 2" });
+        await second.getByLabel("Full name").fill("Mia Brightwater");
+        await second.getByLabel(/Under 18/).check();
+        await page.getByRole("button", { name: "Add another person" }).click();
+        await page
+          .getByRole("group", { name: "Person 3" })
+          .getByLabel("Full name")
+          .fill("Leo Brightwater");
+        await capture(page, "trip-walk-in-party", scheme);
+      });
+
       // The global Add-booking door, both halves: the departure picker — one
       // ledger grouped by day since slice 9g of ADR
       // 20260827-the-shops-shelves, seats-left on every row — and the diver
@@ -6352,6 +6436,31 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **A snag carried to the boat's next crew** (fifth-loop ideas, item 1):
+       * the reef boat's crew notes a problem against an item, and the night
+       * dive, that hull's next departure, opens with it above the boat check,
+       * with Fixed and Still there.
+       */
+      test(`a manifest carries an earlier crew's snag (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await openBoatCheck(page);
+        const radio = page
+          .getByRole("listitem")
+          .filter({ has: page.getByRole("button", { name: "VHF radio checked" }) });
+        await radio.getByText("Note a problem").click();
+        await radio.getByLabel("What’s wrong?").fill("VHF crackles on 16");
+        await radio.getByRole("button", { name: "Save note" }).click();
+        await radio.getByText("VHF crackles on 16").waitFor();
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await openTripFromBoard(page, "Night Dive — City of Washington");
+        await openTripTab(page, "Manifest");
+        await page.getByRole("region", { name: "Open on this boat" }).waitFor();
+        await offlineCopySaved(page);
+        await capture(page, "manifest-snag-carried", scheme);
+      });
+
+      /**
        * **What the boat carries, and what it holds** (roadmap N-08, N-10): the
        * reef boat with one passenger past its certificate, its insurance three
        * weeks out, flares expired, AED pads twelve days from expiry and the
@@ -6644,6 +6753,17 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Safety" }).waitFor();
         await page.getByRole("region", { name: "Roll calls left open" }).waitFor();
         await capture(page, "reports-safety", scheme);
+      });
+
+      // The year the insurer renews on (fifth loop, item 33): the same figures
+      // over the whole year, one printable page for the broker.
+      test(`the Safety year renders true to the design (${scheme})`, async ({ page }) => {
+        // Reached by its own link, so the year is the server clock's, not the runner's.
+        await page.goto("/shop/blue-mantis/safety");
+        await page.getByRole("link", { name: "The year" }).click();
+        await page.waitForURL(/\?year=\d{4}$/);
+        await page.getByRole("button", { name: "Print the year" }).waitFor();
+        await capture(page, "reports-safety-year", scheme);
       });
 
       // The same document at its widest. The roster and crew tables are three
@@ -7594,7 +7714,9 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const email = `invite-capture-${scheme}@example.com`;
         await page.goto("/shop/blue-mantis/settings/team");
-        const inviteSection = page.locator("section").filter({ hasText: "Invite someone" });
+        // The invite form opens from its button under the team (ideas item 58).
+        const inviteSection = page.locator("#invite");
+        await inviteSection.locator("summary").click();
         await inviteSection.getByLabel("Full name").fill("Priya Nair");
         await inviteSection.getByLabel("Email").fill(email);
         await inviteSection.getByLabel("Instructor", { exact: true }).check();
@@ -8060,6 +8182,17 @@ for (const scheme of ["light", "dark"] as const) {
           .getByText(/today.s reef boat/)
           .waitFor();
         await capture(page, "staff-diver-conversation", scheme);
+      });
+
+      // **Saved answers** (fifth loop, item 15), where the shop keeps them: the
+      // foot of the Inbox, holding the two the seed saves, one with both
+      // markers. The chips above the reply box are in the capture above.
+      test(`the inbox's saved answers render true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/inbox");
+        const saved = page.getByRole("region", { name: "Saved answers" });
+        await saved.getByText("Wetsuit sizes").waitFor();
+        await saved.scrollIntoViewIfNeeded();
+        await capture(page, "staff-inbox-saved-answers", scheme);
       });
 
       // Shop-wide discount codes: the codes as one ledger shelved live /

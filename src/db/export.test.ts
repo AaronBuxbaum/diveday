@@ -4,9 +4,10 @@ import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
+import { schemaTableNames } from "@/test/schema-tables";
 import { anonymizeDiver } from "./anonymize";
 import { createDiver, deleteDiver } from "./divers";
-import { canPersonExportShopData, loadShopExportBundleInput, loadShopExportCounts } from "./export";
+import { canPersonExportShopData, loadShopExportBundleInput } from "./export";
 import * as schema from "./schema";
 import {
   activityEvents,
@@ -84,6 +85,7 @@ const EXPECTED_FILES = [
   "work_order_events.csv",
   "pre_departure_checklist_items.csv",
   "pre_departure_check_events.csv",
+  "boat_snags.csv",
   "departure_boat_safety_snapshots.csv",
   "prior_visits.csv",
   "imported_payment_history.csv",
@@ -181,6 +183,7 @@ const EXPORTED_TABLES = [
   "work_order_events",
   "pre_departure_checklist_items",
   "pre_departure_check_events",
+  "boat_snags",
   "departure_boat_safety_snapshots",
   "prior_visits",
   "imported_payment_history",
@@ -254,6 +257,7 @@ const EXCLUDED_TABLES = [
   // not a column on an existing one.
   "inbound_messages",
   "staff_replies",
+  "inbox_saved_answers", // the inbox's saved replies, out with the inbox they serve
   // Which way each waiver link was handed over and what happened on that
   // channel. The outcome another system could act on is already on
   // waiver_records.csv (`delivery_status` and the provider columns beside it);
@@ -405,11 +409,19 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // The inbound reply address's routing token (ADR 20260907-two-way-inbox):
     // a credential in all but name, so a restored shop is minted a fresh one.
     "inbound_email_token",
-    // H-118: a consent and its confirmation, recorded here; a CSV cannot vouch for them.
+    // H-118 and item 35: an address, its consent, confirmation and send state; a restore asks afresh.
     "shore_alert_email",
     "shore_alert_consent_at",
     "shore_alert_consent_by_person_id",
     "shore_alert_confirmed_at",
+    "bookkeeper_email",
+    "bookkeeper_email_set_at",
+    "bookkeeper_email_set_by_person_id",
+    "bookkeeper_sent_month",
+    "bookkeeper_confirmed_at",
+    "bookkeeper_confirm_token_hash",
+    "bookkeeper_confirm_expires_at",
+    "bookkeeper_stop_token_hash",
     // #2450: DiveDay's own review of the name at sign-up and a human's clearing
     // of it; a bundle says nothing about either, and an import joins a shop
     // already reviewed.
@@ -496,9 +508,8 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "draft_acknowledged",
     "draft_medical_answers",
     "draft_guardian", // the guardian section as typed, same class as the three above
-    // Delivery plumbing is provider-specific operational state. The signed
-    // waiver remains portable; a destination can issue its own link and
-    // delivery attempt rather than importing stale provider ids or outcomes.
+    // Delivery plumbing is provider-specific operational state: a destination issues
+    // its own link and delivery rather than importing stale provider ids or outcomes.
     "delivery_status",
     "delivery_provider_message_id",
     "delivery_provider_status",
@@ -520,6 +531,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // and the file being retrievable *inside* the product is precisely why it
     // does not need to travel outside it.
     "medical_clearance_document_url",
+    "doctor_unlock_failures", // abuse control on the doctor's page, not part of the record
   ],
   // `created_at` is when DiveDay wrote the row; `occurred_at` is when the
   // money actually moved, and that is the one a reader replays.
@@ -629,15 +641,7 @@ const ctx = fileScopedShopContext();
 
 describe("schema coverage", () => {
   it("forces every schema table to be exported, folded, or deliberately excluded", () => {
-    const tableNames = Object.values(schema)
-      .map((value) => {
-        try {
-          return getTableName(value as Parameters<typeof getTableName>[0]);
-        } catch {
-          return null;
-        }
-      })
-      .filter((name): name is string => typeof name === "string");
+    const tableNames = schemaTableNames();
     expect(tableNames.length).toBeGreaterThan(20);
 
     const decided = new Set([...EXPORTED_TABLES, ...FOLDED_TABLES, ...EXCLUDED_TABLES]);
@@ -1523,26 +1527,6 @@ describe("export privilege re-check (database, not JWT)", () => {
       .set({ status: "disabled" })
       .where(eq(userAccounts.personId, owner));
     expect(await canPersonExportShopData(db, shop.id, owner)).toBe(false);
-  });
-});
-
-describe("export counts (the settings page's cheap view)", () => {
-  it("mirrors the bundle exactly — same files, same notes, same row counts", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
-    const input = await loadShopExportBundleInput(db, shop.id);
-    const counts = await loadShopExportCounts(db, shop.id);
-    if (!input || !counts) throw new Error("shop failed to load");
-
-    expect(counts.map((row) => row.file)).toEqual(input.tables.map((row) => row.file));
-    for (const [index, row] of counts.entries()) {
-      expect(row.note).toBe(input.tables[index].note);
-      expect(row.count).toBe(input.tables[index].rows.length);
-    }
-  });
-
-  it("returns null for an unknown shop", async () => {
-    const { db } = ctx;
-    expect(await loadShopExportCounts(db, "00000000-0000-0000-0000-000000000000")).toBeNull();
   });
 });
 

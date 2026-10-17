@@ -54,6 +54,7 @@ import { uuidParam } from "@/lib/uuid";
 import type { PatternDeparture } from "@/lib/weekday-pattern";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import type { BuilderPattern, BuilderTideWindowInput } from "./_components/ScheduleBuilder";
+import { copyCrewIfAsked, duplicateSchema } from "./copy-departure";
 
 const removeDepartureForm = z.object({ tripId: z.uuid() });
 
@@ -881,12 +882,6 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
   revalidateAndRedirect(back, `${back}?${params}`);
 }
 
-const duplicateSchema = z.object({
-  tripId: z.uuid(),
-  date: z.string(),
-  startTime: z.string(),
-});
-
 export async function duplicateDepartureAction(shopSlug: string, formData: FormData) {
   const back = boardPath(shopSlug);
   const { session, db, shop } = await requireBoardAuthor(shopSlug);
@@ -911,13 +906,14 @@ export async function duplicateDepartureAction(shopSlug: string, formData: FormD
     await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "invalid" });
     redirect(`${back}?builder=invalid`);
   }
+  const crewCame = await copyCrewIfAsked(db, shop.id, parsed.data, copy.id, session.user.personId);
   await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "ok" });
   await recordShopActivity(db, {
     shopId: shop.id,
     actorPersonId: session.user.personId,
     write: { code: "departure_copied", tripId: copy.id },
   });
-  revalidateAndRedirect(back, `${back}?builder=copied`);
+  revalidateAndRedirect(back, `${back}?builder=${crewCame ? "copied" : "copied-no-crew"}`);
 }
 
 export async function removeDepartureAction(shopSlug: string, formData: FormData) {

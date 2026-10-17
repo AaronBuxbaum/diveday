@@ -55,7 +55,9 @@
   "yourWeek": {
     "heading": "Tu semana",
     "openTrip": "Abrir {title}",
-    "roleUnset": "En la tripulación"
+    "roleUnset": "En la tripulación",
+    "atTheDock": "En el muelle a las {dock} · sale a las {leaves}",
+    "diversAtTheDock": "Buceadores en el muelle a las {dock} · sale a las {leaves}"
   },
   "actionKind": {
     "rollCallMissingDiver": "Buceador sin localizar",
@@ -101,12 +103,14 @@
     "boatPapersLapsed": "Documentos vencidos",
     "boatSafetyExpired": "Seguridad vencida",
     "incidentReportUnfiled": "Informe de incidente",
+    "boatSnag": "Problema en el barco",
     "workOrderLate": "Reparación atrasada",
     "workOrderUncollected": "Reparación sin recoger",
     "staffCredentialDue": "Credencial",
     "unitsUnconfirmed": "Configuración",
+    "emergencyCardBlank": "Referencia de emergencia",
+    "lostItemsWaiting": "Objetos perdidos",
     "helpRequest": "Solicitud de ayuda",
-    "sayHello": "Saluda",
     "rentalFit": "Equipo",
     "blockedAboard": "A bordo",
     "crewAway": "Tripulación ausente"
@@ -203,7 +207,8 @@
     "crewAway": "{name} está ausente {dates}.",
     "rollCallAlerted": "Propietarios avisados: {time}.",
     "rollCallAlertedWithShore": "Propietarios y contacto en tierra avisados: {time}.",
-    "rollCallShoreAlerted": "Contacto en tierra avisado: {time}."
+    "rollCallShoreAlerted": "Contacto en tierra avisado: {time}.",
+    "boatSnag": "{item}: {note}. Anotado por {name}{count, plural, =0 {.} one {, hace # salida.} other {, hace # salidas.}}"
   },
   "actionLabel": {
     "openIncidentReport": "Abrir informe",
@@ -212,7 +217,6 @@
     "openTrip": "Abrir salida",
     "openCrew": "Abrir tripulación",
     "openLastMinuteDeal": "Abrir oferta de última hora",
-    "openGuests": "Abrir buceadores",
     "inviteFromWaitlist": "Invitar de la lista de espera",
     "resendWaiverLink": "Reenviar enlace de exención",
     "resendConfirmation": "Reenviar confirmación",
@@ -284,6 +288,15 @@
     "fahrenheit": "grados Fahrenheit",
     "celsius": "grados Celsius"
   },
+  "emergencyCard": {
+    "subject": "Tu referencia de emergencia no tiene números",
+    "detail": "La salida de las {time} de {day} zarpa sin un número de cámara hiperbárica ni de guardacostas.",
+    "action": "Agregar los números"
+  },
+  "lostItems": {
+    "subject": "{count, plural, one {# objeto esperando a su dueño} other {# objetos esperando a sus dueños}}",
+    "action": "Abrir objetos perdidos"
+  },
   "gear": {
     "overdueDetail": "{units} {count, plural, one {debía devolverse} other {debían devolverse}} el {dueOn} y {count, plural, one {sigue fuera} other {siguen fuera}}.",
     "dueBackDetail": "Equipo para devolver hoy.",
@@ -302,7 +315,8 @@
   "sayHello": {
     "firstTrip": "{names}: primera inmersión con nosotros.",
     "firstTime": "{names}: primera vez con nosotros.",
-    "returning": "{name} vuelve tras {years, plural, one {# año} other {# años}}."
+    "returning": "{name} vuelve tras {years, plural, one {# año} other {# años}}.",
+    "milestone": "{name}: {ordinal} día de buceo con nosotros."
   },
   "unfinished": {
     "label": "Sin terminar",

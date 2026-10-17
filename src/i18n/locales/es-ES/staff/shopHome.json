@@ -17,6 +17,7 @@
   "nextDeparture": "La próxima es <link>{title}</link> el {date} a las {time}.",
   "noDeparturesEmpty": "Todavía no hay nada programado. Agrega una salida y aparecerá aquí la mañana que zarpe.",
   "scheduleTrip": "Agregar una salida",
+  "updatedAt": "Actualizado: {time}",
   "notice": {
     "waiversNotAuthorized": "Editar la exención está limitado a propietarios y gerentes.",
     "exportNotAuthorized": "La exportación de datos está limitada a propietarios y gerentes.",
@@ -26,10 +27,7 @@
     "importNotAuthorized": "La importación escribe datos personales y médicos de los buceadores, así que está limitada a propietarios y gerentes.",
     "gearImportNotAuthorized": "Importar el historial del equipo está limitado a propietarios y gerentes.",
     "diveSiteImportNotAuthorized": "Importar sitios de buceo está limitado a propietarios y gerentes.",
-    "backupNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de respaldo.",
-    "whatsappNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de WhatsApp.",
     "promosNotAuthorized": "Los códigos promocionales están limitados a propietarios y gerentes.",
-    "integrationsNotAuthorized": "Solo un propietario o gerente puede cambiar las integraciones.",
     "billingNotAuthorized": "La facturación es solo para el propietario.",
     "dayBlowoutNotAuthorized": "Cancelar un día entero está limitado a propietarios, gerentes y capitanes. Aún puedes cancelar una salida desde su propia página.",
     "activityNotAuthorized": "El registro de actividad está limitado a propietarios y gerentes."
@@ -99,6 +97,10 @@
     "releaseAction": "Leer la exención",
     "releaseDone": "Tu propia exención está publicada.",
     "tripTitle": "Agrega tu primera salida",
+    "emergencyTitle": "Completa tu referencia de emergencia",
+    "emergencyBody": "Los números que tu tripulación marca en el mar. Van en cada manifiesto, también sin conexión.",
+    "emergencyAction": "Agregar los números",
+    "emergencyDone": "Tu referencia de emergencia tiene números.",
     "tripBody": "Aparecerá en tu calendario en cuanto la guardes.",
     "tripAction": "Agregar una salida",
     "scheduleTitle": "Comparte tu calendario público",
@@ -143,6 +145,7 @@
     "crewing": "Formas parte de la tripulación",
     "openBoat": "Abrir el barco",
     "crewRollCallOpen": "Todos los buceadores están a bordo y falta pasar lista a la tripulación.",
+    "sayHello": "Saluda",
     "allHome": "Todos los barcos están en puerto: salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",
     "firstBoatHome": "Tu primer barco está en puerto: salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",
     "firstBooking": "Tu primera reserva",
@@ -180,7 +183,18 @@
     "needsYouCountBeforeNext": "{count, plural, one {# cosa} other {# cosas}} · {before, plural, =0 {ninguna antes de la de las {time}} other {# antes de la de las {time}}}",
     "deskFoldLabel": "{count, plural, one {# más para otras salidas y el mostrador} other {# más para otras salidas y el mostrador}}",
     "needsYouLabel": "Pendiente",
-    "crewTips": "Tu parte de las propinas esta semana: {amount}."
+    "deskGroupLabel": "El mostrador",
+    "crewTips": "Tu parte de las propinas esta semana: {amount}.",
+    "crewMonth": "En {month}: {boats, plural, one {# salida} other {# salidas}} · {dives, plural, one {# inmersión realizada} other {# inmersiones realizadas}} · {hours, plural, one {# hora} other {# horas}} en el agua."
+  },
+  "thinBoats": {
+    "heading": "{count, plural, one {Una salida de las próximas dos semanas necesita buceadores.} other {# salidas de las próximas dos semanas necesitan buceadores.}}",
+    "seats": "{booked} de {capacity}",
+    "needsBy": "{count, plural, one {falta # más antes del {when}, o se cancela sola} other {faltan # más antes del {when}, o se cancela sola}}",
+    "deal": "Enviar una oferta de último minuto",
+    "invite": "Invitar a buceadores anteriores",
+    "ladder": "Ver quién podría tomarlo",
+    "minimum": "Cambiar el mínimo"
   },
   "quietAddDeparture": "Agregar una salida",
   "quietNextDepartureLabel": "Próxima salida",
@@ -189,6 +203,10 @@
     "placeholder": "Nombre, teléfono, correo o ID de reserva",
     "none": "Nadie de los que llegan coincide con “{query}”.",
     "resultsFor": "Buceadores que llegan y coinciden con “{query}”",
-    "open": "Abrir el check-in de {trip} para {name}"
+    "open": "Abrir el check-in de {trip} para {name}",
+    "notToday": "No llega hoy.",
+    "bookedOn": "{name} tiene reserva el {date} · {time}.",
+    "nothingBooked": "{name} no tiene nada reservado.",
+    "openRecord": "Abrir la ficha de {name}"
   }
 }

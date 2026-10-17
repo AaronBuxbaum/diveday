@@ -172,6 +172,35 @@ describe("GET /api/search", () => {
     expect(body.divers.map((d: { id: string }) => d.id)).not.toContain(otherPriya.id);
   });
 
+  it("reads back ⌘K's recents by id, inside the caller's shop only", async () => {
+    const { db, shop, personId } = await staffContext();
+    const [priya] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.fullName, "Priya Sharma"))
+      .limit(1);
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Fourth Shop", slug: "fourth-shop", timezone: "UTC" })
+      .returning();
+    const [elsewhere] = await db
+      .insert(people)
+      .values({ shopId: otherShop?.id as string, fullName: "Elsewhere Diver" })
+      .returning({ id: people.id });
+    if (!priya || !elsewhere) throw new Error("fixture missing");
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
+
+    const recent = `diver:${priya.id},diver:${elsewhere.id},nonsense,diver:not-a-uuid`;
+    const response = await GET(
+      new Request(`http://localhost/api/search?recent=${encodeURIComponent(recent)}`),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.divers.map((d: { id: string }) => d.id)).toEqual([priya.id]);
+    expect(body.answer).toBeNull();
+  });
+
   it("sets Cache-Control: private, no-store", async () => {
     const { db, shop, personId } = await staffContext();
     vi.mocked(getDb).mockResolvedValue(db);

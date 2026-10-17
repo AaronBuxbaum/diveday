@@ -288,6 +288,17 @@ export type IncidentPreDepartureCheckEntry = {
 };
 
 /**
+ * A boat snag open when the departure sailed: not fixed before its start, and
+ * written by this crew or carried from before it (`snagsOpenWhenSailed`).
+ */
+export type IncidentSailedSnagEntry = {
+  itemLabel: string;
+  note: string;
+  notedByName: string;
+  notedAt: string;
+};
+
+/**
  * **The boat's papers and kit notices as they stood at the departure
  * checkpoint** (#2300): the last snapshot written before the boat sailed
  * (`departure_boat_safety_snapshots`). The boat as it is today says nothing
@@ -470,6 +481,13 @@ export type IncidentExportDocument = {
    */
   preDepartureCheck: IncidentPreDepartureCheckEntry[];
   /**
+   * The boat's snags open when it sailed, oldest first (dive-domain review of
+   * fifth-loop item 1): the record says the crew left knowing them. Empty for
+   * a boat with none, and then outside the hash, so a log printed before the
+   * field existed still matches a fresh export of the same records.
+   */
+  sailedWithSnags: IncidentSailedSnagEntry[];
+  /**
    * The boat at the departure checkpoint (#2300), or null when no snapshot was
    * taken (no boat, or no departure roll call before it sailed): the page
    * states that absence rather than leaving the section out.
@@ -632,6 +650,13 @@ export type IncidentExportInput = {
   preDepartureCheck?: ReadonlyArray<{
     label: string;
     check?: { occurredAt: Date; recordedByName: string };
+  }>;
+  /** `snagsOpenWhenSailed`; absent or empty, the boat sailed with none. */
+  sailedWithSnags?: ReadonlyArray<{
+    itemLabel: string;
+    note: string;
+    notedByName: string;
+    notedAt: Date;
   }>;
   /**
    * Seat and crew adds, removals and moves on this departure, oldest first,
@@ -1077,6 +1102,12 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
       occurredAt: item.check ? item.check.occurredAt.toISOString() : null,
       recordedByName: item.check?.recordedByName ?? null,
     })),
+    sailedWithSnags: (input.sailedWithSnags ?? []).map((snag) => ({
+      itemLabel: snag.itemLabel,
+      note: snag.note,
+      notedByName: snag.notedByName,
+      notedAt: snag.notedAt.toISOString(),
+    })),
     boatSafety: input.boatSafety
       ? {
           boatName: input.boatSafety.boatName,
@@ -1169,6 +1200,8 @@ export function incidentExportContentHash(
     crew: body.crew.map(({ currentRatings: _currentRatings, ...entry }) => entry),
     executedDives: body.executedDives,
     preDepartureCheck: body.preDepartureCheck,
+    // Only when there is one: an empty list leaves every earlier hash as it was.
+    ...(body.sailedWithSnags.length > 0 ? { sailedWithSnags: body.sailedWithSnags } : {}),
     // Only when one was taken, so a log printed before snapshots existed (or
     // for a departure with none) keeps the code it was printed with.
     ...(body.boatSafety ? { boatSafety: body.boatSafety } : {}),

@@ -12,10 +12,9 @@ import {
   BoatsSitesGroup,
   BookingsGroup,
   DataGroup,
-  MessagesGroup,
   MoneyGroup,
-  NotificationsGroup,
   RarelyChangedGroup,
+  ReachGroup,
   RentalsGroup,
   ShopGroup,
   TeamGroup,
@@ -70,8 +69,7 @@ describe("each settings group renders as its own component", () => {
       BookingsGroup({ view, canManageWaivers: true }),
       RentalsGroup({ view }),
       MoneyGroup({ view, canPayments: true, account: null, connectConfigured: false }),
-      MessagesGroup({ view, canManageMessaging: true }),
-      NotificationsGroup({ view }),
+      ReachGroup({ view, canManageMessaging: true }),
       WebsiteGroup({ view }),
       await DataGroup({ view, db, personId, canExport: true, canImport: true }),
       AccountGroup({ view, canViewBilling: true }),
@@ -86,22 +84,21 @@ describe("each settings group renders as its own component", () => {
     expect(rendered[3]?.rows).toEqual(["certCheck", "padiChecks", "packing"]);
     expect(rendered[4]?.rows).toEqual(["rentalTerms", "regulatorService"]);
     expect(rendered[5]?.rows).toEqual(["tax", "tips", "stripe"]);
-    expect(rendered[6]?.rows).toEqual(["reviews", "reviewLink"]);
-    // Every row that decides where mail goes, in one group (they were in
-    // Shop, Messages and Account).
-    expect(rendered[7]?.rows).toEqual(["contact", "deskHours"]);
-    expect(hrefsIn(NotificationsGroup({ view }))).toEqual([
+    // How divers reach you: once Notifications and Messages (ideas item 58).
+    expect(rendered[6]?.rows).toEqual(["contact", "deskHours", "reviews", "reviewLink"]);
+    expect(hrefsIn(ReachGroup({ view, canManageMessaging: true }))).toEqual([
       `/shop/${view.shopSlug}/settings/email`,
+      `/shop/${view.shopSlug}/settings/whatsapp`,
     ]);
-    expect(rendered[8]?.rows).toEqual([
+    expect(rendered[7]?.rows).toEqual([
       "shopPhotos",
       "dateRequests",
       "lastMinuteList",
       "publicYear",
     ]);
-    expect(rendered[10]?.rows).toEqual([]);
+    expect(rendered[9]?.rows).toEqual([]);
     // The set-once rows, last.
-    expect(rendered[11]?.rows).toEqual(["season", "divingOptions", "passThrough", "searchListing"]);
+    expect(rendered[10]?.rows).toEqual(["season", "divingOptions", "passThrough", "searchListing"]);
     expect(hrefsIn(RarelyChangedGroup({ view, canPayments: true }))).toEqual([
       `/shop/${view.shopSlug}/settings/trip-tags`,
     ]);
@@ -129,7 +126,7 @@ describe("each settings group renders as its own component", () => {
       "passThrough",
     );
 
-    const messages = MessagesGroup({ view, canManageMessaging: false });
+    const messages = ReachGroup({ view, canManageMessaging: false });
     expect(hrefsIn(messages)).not.toContain(`/shop/${view.shopSlug}/settings/whatsapp`);
 
     expect(hrefsIn(AccountGroup({ view, canViewBilling: false }))).not.toContain(

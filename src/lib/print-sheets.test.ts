@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  CAPABILITY_PAGE_PRINT_MARGIN_MM,
+  capabilityPagePrintRule,
   PAPER_PASS_PAPER,
   PRINT_SHEET_BOX_MM,
   paperPassPath,
@@ -21,6 +23,15 @@ describe("the paper", () => {
     const box = PRINT_SHEET_BOX_MM[PAPER_PASS_PAPER];
     expect(box.width).toBeGreaterThan(0);
     expect(box.height).toBeGreaterThan(box.width);
+  });
+});
+
+describe("a page opened by a bearer link, on paper", () => {
+  it("leaves the browser no margin to print the link in, and pads the content instead", () => {
+    const rule = capabilityPagePrintRule();
+    expect(rule).toMatch(/@page\{margin:0;/);
+    expect(rule).toContain("@bottom-right{content:none}");
+    expect(rule).toContain(`@media print{body{padding:${CAPABILITY_PAGE_PRINT_MARGIN_MM}mm}}`);
   });
 });
 

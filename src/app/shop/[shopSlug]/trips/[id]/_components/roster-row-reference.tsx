@@ -7,6 +7,7 @@ import type { RowNotices } from "./roster-row-notices";
 import type { RosterSeat } from "./roster-seat";
 import { SeatComingAs } from "./SeatComingAs";
 import { SeatFootActions } from "./SeatFootActions";
+import { SeatLunchNote } from "./SeatLunchNote";
 import { SeatNotes } from "./SeatNotes";
 import { SeatPickup } from "./SeatPickup";
 
@@ -35,6 +36,7 @@ export type RowReferenceInput = Pick<
   | "addNoteAction"
   | "deleteNoteAction"
   | "updatePickupAction"
+  | "updateDietaryNoteAction"
   | "currentWaiver"
   | "waiverStatus"
   | "nitrox"
@@ -67,6 +69,7 @@ export function rowReference(seat: RowReferenceInput) {
     addNoteAction,
     deleteNoteAction,
     updatePickupAction,
+    updateDietaryNoteAction,
     currentWaiver,
     waiverStatus,
     nitrox,
@@ -179,6 +182,7 @@ export function rowReference(seat: RowReferenceInput) {
         ) : null}
 
         <SeatPickup booking={booking} t={t} updatePickupAction={updatePickupAction} />
+        <SeatLunchNote booking={booking} t={t} updateAction={updateDietaryNoteAction} />
       </div>
 
       {setParticipantTypeAction ? (

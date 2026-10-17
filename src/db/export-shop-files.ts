@@ -154,6 +154,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // Whether the shop runs hotel pickups: a restore must not start asking
       // divers about a pickup the shop does not offer (fourth UX review, item 8).
       "offers_hotel_pickup",
+      // How the desk takes money, so a restore still tells divers to bring
+      // cash or a card (fifth-loop ideas, item 21). Blank when never said.
+      "desk_payment",
       // The rest of the shop's dock-day rhythm (ADR
       // 20260812-configurable-dock-day-rhythm). Six numbers that describe
       // how this shop runs a day — as much the shop's own record as its
@@ -251,6 +254,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.addressCountry,
         shop.dockCallMinutes,
         shop.offersHotelPickup,
+        shop.deskPayment ?? "",
         shop.gearSetupMinutes,
         shop.briefingMinutes,
         shop.boatRideMinutes,
@@ -605,6 +609,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // The shop's own answer about this departure, not a derived fact,
       // so it leaves with the shop (issue #973).
       "self_guided",
+      "lunch_aboard",
       "exceeds_no_deco_limits",
       // The wetsuit the boat ran that day, in millimetres (issue #2206).
       "wetsuit_thickness_mm",
@@ -659,6 +664,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.arrivalPhotoUrl,
         row.isPrivate,
         row.selfGuided,
+        row.lunchAboard,
         row.exceedsNoDecoLimits,
         row.wetsuitThicknessMm,
         row.deletedAt,
@@ -1573,6 +1579,55 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     note: EXPORT_FILE_NOTES["pre_departure_check_events.csv"],
   },
   {
+    file: "boat_snags.csv",
+    header: [
+      "id",
+      "boat_id",
+      "boat_name",
+      "checklist_item_id",
+      "checklist_item_label",
+      "note",
+      "noted_on_trip_id",
+      "noted_by_person_id",
+      "noted_by_name",
+      "noted_at",
+      "still_there_on_trip_id",
+      "still_there_by_person_id",
+      "still_there_by_name",
+      "still_there_at",
+      "fixed_on_trip_id",
+      "fixed_by_person_id",
+      "fixed_by_name",
+      "fixed_at",
+      "created_at",
+      "updated_at",
+    ],
+    rows: ({ personName, boatName, checklistItemLabel, boatSnagRows }) =>
+      boatSnagRows.map((row) => [
+        row.id,
+        row.boatId,
+        boatName.get(row.boatId),
+        row.checklistItemId,
+        checklistItemLabel.get(row.checklistItemId),
+        row.note,
+        row.notedOnTripId,
+        row.notedByPersonId,
+        personName.get(row.notedByPersonId),
+        row.notedAt,
+        row.stillThereOnTripId,
+        row.stillThereByPersonId,
+        row.stillThereByPersonId ? personName.get(row.stillThereByPersonId) : null,
+        row.stillThereAt,
+        row.fixedOnTripId,
+        row.fixedByPersonId,
+        row.fixedByPersonId ? personName.get(row.fixedByPersonId) : null,
+        row.fixedAt,
+        row.createdAt,
+        row.updatedAt,
+      ]),
+    note: EXPORT_FILE_NOTES["boat_snags.csv"],
+  },
+  {
     file: "departure_boat_safety_snapshots.csv",
     header: [
       "id",
@@ -2140,6 +2195,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "is_active",
       "is_intro_course",
       "nitrox_compatible",
+      "gear_included",
       "created_at",
     ],
     rows: ({ courseRows }) =>
@@ -2174,6 +2230,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.isActive,
         row.isIntroCourse,
         row.nitroxCompatible,
+        row.gearIncluded,
         row.createdAt,
       ]),
     note: EXPORT_FILE_NOTES["courses.csv"],

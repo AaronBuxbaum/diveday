@@ -7,6 +7,7 @@ import {
   type PreDepartureCheckAction,
   PreDepartureCheckList,
   type PreDepartureCheckListCopy,
+  type PreDepartureCheckListItem,
 } from "./PreDepartureCheckList";
 
 afterEach(cleanup);
@@ -18,6 +19,14 @@ const copy: PreDepartureCheckListCopy = {
   checkedLabel: "Checked",
   uncheckedLabel: "Not checked",
   confirmClear: "Tap again to clear",
+  snagsHeading: "Open on this boat",
+  snagFixed: "Fixed",
+  snagStillThere: "Still there",
+  snagSaving: "Saving…",
+  noteProblem: "Note a problem",
+  noteLabel: "What’s wrong?",
+  noteSave: "Save note",
+  noteRefused: "Write what’s wrong, up to 280 characters.",
 };
 
 const items = [
@@ -273,5 +282,69 @@ describe("clearing a checked item", () => {
     await pause(CLEAR_CONFIRM_TIMEOUT_MS);
     expect(oxygen()).not.toHaveTextContent("Tap again to clear");
     expect(action).not.toHaveBeenCalled();
+  });
+});
+
+describe("the boat's snags (fifth-loop ideas, item 1)", () => {
+  const carried = [
+    {
+      id: "snag-1",
+      line: "Radio check done: VHF crackles on 16",
+      note: "VHF crackles on 16",
+      notedBy: "Noted by Sal Moretti, 5:16 AM",
+      printLine: "Open: Radio check done: VHF crackles on 16 (Noted by Sal Moretti, 5:16 AM)",
+    },
+  ];
+  const snagActions = { note: vi.fn(async () => null), answer: vi.fn(async () => null) };
+
+  it("stands an earlier crew's snag above the list, with Fixed and Still there", () => {
+    render(
+      <PreDepartureCheckList
+        action={vi.fn()}
+        items={items}
+        copy={copy}
+        atDeparture={false}
+        carried={carried}
+        snagActions={snagActions}
+      />,
+    );
+    const group = screen.getByRole("region", { name: "Open on this boat" });
+    expect(group).toHaveTextContent("Radio check done: VHF crackles on 16");
+    expect(group).toHaveTextContent("Noted by Sal Moretti, 5:16 AM");
+    expect(screen.getByRole("button", { name: "Fixed" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Still there" })).toBeInTheDocument();
+    // The sheet the boat carries says it too.
+    expect(screen.getByText(carried[0]?.printLine ?? "")).toBeInTheDocument();
+  });
+
+  it("offers Note a problem under every line only where a snag can be written", () => {
+    const { rerender } = render(
+      <PreDepartureCheckList
+        action={vi.fn()}
+        items={items}
+        copy={copy}
+        atDeparture
+        snagActions={snagActions}
+      />,
+    );
+    expect(screen.getAllByText("Note a problem")).toHaveLength(items.length);
+    rerender(<PreDepartureCheckList action={vi.fn()} items={items} copy={copy} atDeparture />);
+    expect(screen.queryByText("Note a problem")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Open on this boat" })).toBeNull();
+  });
+
+  it("keeps this crew's own note under its line with Fixed alone", () => {
+    render(
+      <PreDepartureCheckList
+        action={vi.fn()}
+        items={[{ ...(items[1] as PreDepartureCheckListItem), snags: carried }]}
+        copy={copy}
+        atDeparture
+        snagActions={snagActions}
+      />,
+    );
+    expect(screen.getByText("VHF crackles on 16")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fixed" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Still there" })).toBeNull();
   });
 });

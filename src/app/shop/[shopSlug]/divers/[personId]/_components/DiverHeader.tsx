@@ -2,8 +2,11 @@ import type { ReactNode } from "react";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { formatCalendarDate, formatCalendarMonth } from "@/lib/calendar-date";
 import { mailtoHref, telHref } from "@/lib/contact-links";
+import type { DiverStanding } from "@/lib/diver-standing";
 import { displayStoredPhone } from "@/lib/forgiving-fields";
+import { formatMoneyCents } from "@/lib/format";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile } from "./shared";
 
@@ -35,7 +38,8 @@ export function DiverHeader({
   status,
   book,
   moment,
-  visits,
+  standing,
+  locale,
   packages,
 }: {
   diver: DiverProfile;
@@ -54,8 +58,13 @@ export function DiverHeader({
    * (20260827-clearwater-surface-language, decision 11).
    */
   moment?: ReactNode;
-  /** How many times this diver has been out with the shop, sailed plus imported. */
-  visits: number;
+  /**
+   * Who this person is to the shop (fifth-loop ideas, item 36): visits since
+   * when, last out, money kept (null unless the reader may see money) and the
+   * friends they brought. `src/lib/diver-standing.ts`.
+   */
+  standing: DiverStanding;
+  locale: string;
   /** Dives left on the packages this diver holds (fourth UX review, item 20); null when none. */
   packages?: { left: number; of: number } | null;
 }) {
@@ -115,8 +124,34 @@ export function DiverHeader({
             {diver.person.diveInsurance ? (
               <span>{t("divers.header.diveInsuranceOnFile")}</span>
             ) : null}
-            {visits > 0 ? (
-              <span className="tabular-nums">{t("divers.header.visits", { count: visits })}</span>
+            {standing.visits > 0 ? (
+              <span className="tabular-nums">
+                {standing.since
+                  ? t("divers.header.visitsSince", {
+                      count: standing.visits,
+                      since: formatCalendarMonth(standing.since, locale),
+                    })
+                  : t("divers.header.visits", { count: standing.visits })}
+              </span>
+            ) : null}
+            {standing.lastOut ? (
+              <span className="tabular-nums">
+                {t("divers.header.lastOut", {
+                  date: formatCalendarDate(standing.lastOut, locale),
+                })}
+              </span>
+            ) : null}
+            {standing.spent ? (
+              <span className="tabular-nums">
+                {t("divers.header.spent", {
+                  amount: formatMoneyCents(standing.spent.cents, standing.spent.currency, locale),
+                })}
+              </span>
+            ) : null}
+            {standing.friends > 0 ? (
+              <span className="tabular-nums">
+                {t("divers.header.broughtFriends", { count: standing.friends })}
+              </span>
             ) : null}
             {packages ? (
               <span className="tabular-nums">{t("divers.header.packageBalance", packages)}</span>

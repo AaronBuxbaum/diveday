@@ -454,7 +454,11 @@ export function siteFit(facts: SitePlanningFacts): { tone: SiteFitTone } {
 }
 
 /** What the shop hands every diver regardless of their rental fit — a fixed pair of codes. */
-export type ProvidedItemCode = "tanksAndWeights" | "crewBriefing";
+export type ProvidedItemCode =
+  | "scubaUnit"
+  | "tanksAndWeights"
+  | "crewBriefing"
+  | "instructorBriefing";
 
 /** Which `rental_fit_profiles` boolean field toggles which rentable kind, in display order. */
 const RENTAL_FIELD_KINDS: ReadonlyArray<readonly [string, RentableItemKind]> = [
@@ -517,6 +521,14 @@ export function exposureSuitFor(celsius: number): ExposureSuit {
   return EXPOSURE_SUIT_BANDS.find(([floor]) => celsius >= floor)?.[1] ?? "drysuit";
 }
 
+/**
+ * The personal gear a student brings to a course that includes the scuba unit
+ * (`SCUBA_UNIT_KINDS` in `src/lib/rentals.ts`): what most shops expect a
+ * student to own, and what the course's included gear does not cover.
+ */
+export type PersonalGearCode = "mask" | "fins" | "snorkel" | "boots";
+const PERSONAL_GEAR: readonly PersonalGearCode[] = ["mask", "fins", "snorkel", "boots"];
+
 export function packingConfidence(
   shopItems: string[],
   /**
@@ -532,8 +544,17 @@ export function packingConfidence(
    * longer had a briefing in it.
    */
   briefs = true,
+  /**
+   * The departure teaches a course whose fee includes the rental gear
+   * (`courses.gear_included`, fifth-loop ideas item 16): the shop provides the
+   * scuba unit, the student brings their personal gear, and the instructor
+   * briefs the class whatever the dock rhythm says.
+   */
+  courseGearIncluded = false,
 ): {
   bring: string[];
+  /** Personal gear to bring, said before the shop's own list. */
+  bringPersonal: PersonalGearCode[];
   rented: RentableItemKind[];
   provided: ProvidedItemCode[];
 } {
@@ -546,8 +567,13 @@ export function packingConfidence(
     : [];
   return {
     bring: shopItems,
+    bringPersonal: courseGearIncluded ? [...PERSONAL_GEAR] : [],
     rented,
-    provided: briefs ? ["tanksAndWeights", "crewBriefing"] : ["tanksAndWeights"],
+    provided: courseGearIncluded
+      ? ["scubaUnit", "instructorBriefing"]
+      : briefs
+        ? ["tanksAndWeights", "crewBriefing"]
+        : ["tanksAndWeights"],
   };
 }
 

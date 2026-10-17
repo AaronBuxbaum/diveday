@@ -6,10 +6,12 @@ import {
   listDepartureRollCallByTrip,
   listUnaccountedForByTrip,
 } from "@/db/manifests";
+import type { SailedRollCall } from "@/db/sailed-rebooking";
 import type { latestTripStage } from "@/db/trip-stages";
 import { departureStage, type MeetingWindow } from "@/lib/trip-phase";
 import type { RosterRecord } from "../_components/roster-model";
 import { buildArrivalDesk } from "./arrival-desk";
+import { sailedRebookBelow } from "./sailed-rebook-below";
 
 /**
  * **What the Divers tab draws above and into its ledger**: the desk while
@@ -45,35 +47,54 @@ export async function diversTabState(
   });
   if (!onDivers) return { ...reading, desk: null, record: undefined };
   if (reading.finished) {
-    const record = await departureRecord(input.db, input.shopId, input.tripId, reading.unaccounted);
-    return { ...reading, desk: null, record };
+    // The record, and under each seat what that diver could do next while the
+    // boat is freshly home (fifth-loop ideas, item 4), read off the same roll
+    // call so a diver not counted back aboard never gets a line.
+    const { record, rollCall } = await departureRollCall(
+      input.db,
+      input.shopId,
+      input.tripId,
+      reading.unaccounted,
+    );
+    // When the crew said Home while that word stands (null when they have not).
+    const homeAt = reading.shown?.stage === "home" ? reading.shown.recordedAt : null;
+    const below = await sailedRebookBelow({ ...input, rollCall, homeAt });
+    return { ...reading, desk: null, record: { ...record, below } };
   }
   return { ...reading, desk: await buildArrivalDesk(deskInput), record: undefined };
 }
 
 /**
  * The roll call a finished departure's record is filed from: each seat's
- * standing dock result, the seats with a standing after-dive result, and
- * whether a dock roll call was taken at all. Three reads keyed on one trip.
+ * standing dock result, the seats with a standing after-dive result, whether
+ * a dock roll call was taken at all, and the seats counted aboard while
+ * blocked. Four reads keyed on one trip.
  */
-export async function departureRecord(
+export async function departureRollCall(
   db: AppDb,
   shopId: string,
   tripId: string,
   unaccounted: ReadonlySet<string>,
-): Promise<RosterRecord> {
+): Promise<{ record: RosterRecord; rollCall: SailedRollCall }> {
   const [dock, afterDive, taken, blocked] = await Promise.all([
     listDepartureRollCallByTrip(db, shopId, [tripId]),
     listAfterDiveRollCallByTrip(db, shopId, [tripId]),
     departureRollCallTakenTripIds(db, shopId, [tripId]),
     listCountedAboardBlockedByTrip(db, shopId, [tripId]),
   ]);
-  return {
+  const rollCall: SailedRollCall = {
     dock: dock.get(tripId) ?? new Map(),
-    afterDive: new Set(afterDive.get(tripId)?.keys() ?? []),
-    rollCallTaken: taken.has(tripId),
-    unaccounted,
-    countedAboardBlocked: blocked.get(tripId) ?? new Map(),
+    afterDive: afterDive.get(tripId) ?? new Map(),
+  };
+  return {
+    record: {
+      dock: rollCall.dock,
+      afterDive: new Set(rollCall.afterDive.keys()),
+      rollCallTaken: taken.has(tripId),
+      unaccounted,
+      countedAboardBlocked: blocked.get(tripId) ?? new Map(),
+    },
+    rollCall,
   };
 }
 

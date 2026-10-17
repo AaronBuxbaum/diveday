@@ -1,28 +1,50 @@
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
-import type { getTodayWork } from "@/db/today";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import type { DayLoadOut } from "@/lib/closeout";
 import { formatShortDate, formatTime } from "@/lib/format";
+import { QuietDayThinBoats } from "./QuietDayThinBoats";
+import { TomorrowFromTonight } from "./TomorrowFromTonight";
 
-type NextDeparture = NonNullable<Awaited<ReturnType<typeof getTodayWork>>["nextDeparture"]>;
-
-/** A day with nothing on it: the one act available, and the next boat if there is one. */
-export function TodayQuietDay({
-  shopSlug,
+/**
+ * **The quiet day** (`spineIsQuiet`): the home collapsed to the boats that
+ * could use divers, the one act available, the next departure, and, when
+ * tomorrow sails, what it needs from tonight. A no-boat Monday before a full,
+ * ready Tuesday is still the evening the fill station and the printed day are
+ * for (dive-domain review FIX 2).
+ */
+export function QuietDay({
+  shop,
   nextDeparture,
+  loadOut,
   locale,
-  timeZone,
   t,
 }: {
-  shopSlug: string;
-  nextDeparture: NextDeparture | null;
+  /** The signed-in shop, the one row every query below names (security review N7). */
+  shop: { id: string; slug: string; timezone: string };
+  nextDeparture: {
+    tripId: string;
+    title: string;
+    startsAt: Date;
+    booked: number;
+    sellableCapacity: number;
+  } | null;
+  /** `assembleEveningClose(...).tomorrow`; null says nothing. */
+  loadOut: DayLoadOut | null;
   locale: string;
-  timeZone: string;
   t: StaffTranslator;
 }) {
+  const { id: shopId, slug: shopSlug, timezone: timeZone } = shop;
   return (
     <div className="mt-8 flex flex-col gap-4">
+      <QuietDayThinBoats
+        shopId={shopId}
+        shopSlug={shopSlug}
+        locale={locale}
+        timeZone={timeZone}
+        t={t}
+      />
       <Link
         href={`/shop/${shopSlug}/schedule/board?add=1`}
         className={buttonClass({ className: "w-full justify-center sm:w-auto" })}
@@ -51,6 +73,7 @@ export function TodayQuietDay({
           </LedgerRow>
         </ul>
       ) : null}
+      {loadOut ? <TomorrowFromTonight loadOut={loadOut} shopSlug={shopSlug} t={t} /> : null}
     </div>
   );
 }

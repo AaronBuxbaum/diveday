@@ -1,6 +1,6 @@
+import { readArrivalLookup } from "@/db/arrival-elsewhere";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { sharedInHorizonReadiness } from "@/db/blockers";
-import { hasArrivals, listCheckInQueue } from "@/db/check-in";
 import type { AppDb } from "@/db/client";
 import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "@/db/closeout";
 import { shopFirstBooking } from "@/db/first-booking";
@@ -14,11 +14,11 @@ import { getShopDayDepartures, getTodayWork } from "@/db/today";
 import { countShopTrips } from "@/db/trips";
 import { isOrientationDismissed } from "@/db/user-accounts";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { assembleEveningClose } from "@/lib/closeout";
+import { type assembleEveningClose, tomorrowNoon } from "@/lib/closeout";
 import { shopCrewTarget } from "@/lib/crew-schedule";
 import { seasonStartInstant } from "@/lib/season";
 import type { roleLensFor } from "@/lib/today";
-import { type shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import type { shopDayBounds } from "@/lib/zoned";
 import { readDayMoney } from "./day-money";
 
 type Shop = NonNullable<Awaited<ReturnType<typeof shopByIdCached>>>;
@@ -49,7 +49,7 @@ export async function readTodayFirstWave({
     freshDrafts,
     canReadShopMoney,
     evidence,
-    [arrivalRows, counterOpen],
+    { rows: arrivalRows, counterOpen, elsewhere: arrivalElsewhereRows },
     closeout,
     shopTripCount,
     stripeAccount,
@@ -79,13 +79,10 @@ export async function readTodayFirstWave({
     // ten queries; running it twice would double the page's entire database bill for one collapsed
     // disclosure.
     sharedInHorizonReadiness(db, shop.id, now),
-    Promise.all([
-      arrivalQuery ? listCheckInQueue(db, shop.id, { query: arrivalQuery, now }) : [],
-      arrivalQuery ? true : hasArrivals(db, shop.id, now),
-    ]),
+    readArrivalLookup(db, shop.id, arrivalQuery, now),
     // **The day's closing state** (ADR 20260827-clearwater-surface-language, decision 4): how each
-    // of today's boats settled, for the evening stations.
-    getDayCloseout(db, shop.id, shop.timezone, now),
+    // of today's boats settled, for the evening stations; tomorrow's load-out once they are due back.
+    getDayCloseout(db, shop.id, shop.timezone, now, shop),
     // Whether this shop has ever had a departure: the first-run checklist's gate and the
     // first-bookable moment's count, below. A demo shop sits out of both, so it is never asked.
     shop.isDemo ? null : countShopTrips(db, shop.id),
@@ -102,6 +99,7 @@ export async function readTodayFirstWave({
     evidence,
     arrivalRows,
     counterOpen,
+    arrivalElsewhereRows,
     closeout,
     shopTripCount,
     stripeAccount,
@@ -110,29 +108,6 @@ export async function readTodayFirstWave({
     scale,
     orientationDismissed,
   };
-}
-
-/**
- * Noon on the shop's *next* calendar day, in its own zone — the instant the
- * second bounded `getTodayWork` call reads tomorrow's shop-day from.
- *
- * Noon rather than midnight so a daylight-saving jump cannot land it on the
- * wrong side of the boundary it is naming, and the shop's zone rather than the
- * server's because "tomorrow" is a fact about where the boat sails from.
- */
-function tomorrowNoon(now: Date, timeZone: string): Date {
-  const wall = utcToWallTime(now, timeZone);
-  const next = new Date(Date.UTC(wall.year, wall.month - 1, wall.day + 1));
-  return wallTimeToUtc(
-    {
-      year: next.getUTCFullYear(),
-      month: next.getUTCMonth() + 1,
-      day: next.getUTCDate(),
-      hour: 12,
-      minute: 0,
-    },
-    timeZone,
-  );
 }
 
 /**

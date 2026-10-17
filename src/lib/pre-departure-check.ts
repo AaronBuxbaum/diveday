@@ -68,3 +68,9 @@ export function latestPreDepartureCheck<
   }
   return latest?.status === "checked" ? latest : undefined;
 }
+
+/**
+ * The longest snag a crew member may write ("VHF crackles on 16"): a line,
+ * not a report. The column's check constraint reads this same number.
+ */
+export const SNAG_NOTE_MAX = 280;

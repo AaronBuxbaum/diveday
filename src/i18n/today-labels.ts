@@ -59,12 +59,14 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   boat_papers_due: "today.actionKind.boatPapersDue",
   boat_papers_lapsed: "today.actionKind.boatPapersLapsed",
   boat_safety_expired: "today.actionKind.boatSafetyExpired",
+  boat_snag: "today.actionKind.boatSnag",
   incident_report_unfiled: "today.actionKind.incidentReportUnfiled",
   work_order_late: "today.actionKind.workOrderLate",
   work_order_uncollected: "today.actionKind.workOrderUncollected",
   staff_credential_due: "today.actionKind.staffCredentialDue",
   units_unconfirmed: "today.actionKind.unitsUnconfirmed",
-  say_hello: "today.actionKind.sayHello",
+  emergency_card_blank: "today.actionKind.emergencyCardBlank",
+  lost_items_waiting: "today.actionKind.lostItemsWaiting",
   rental_fit_confirm: "today.actionKind.rentalFit",
 };
 
@@ -923,11 +925,6 @@ export function openTripActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openTrip");
 }
 
-/** The Say hello row's door — the departure's Guests tab (issue #1182). */
-export function openGuestsActionText(t: StaffTranslator): string {
-  return t("today.actionLabel.openGuests");
-}
-
 /**
  * A day station renders every row about one departure under one heading, so
  * two rows both saying "Open trip" are two links a screen reader announces
@@ -1061,6 +1058,23 @@ export function openGearUnitActionText(t: StaffTranslator): string {
 }
 
 /** A departure's Boat tab, where the pre-departure check names the kit aboard. */
+/**
+ * A snag's row (fifth-loop ideas, item 1): the line and what is wrong, then
+ * who wrote it and how many departures have sailed with it since.
+ */
+export function boatSnagDetailText(
+  t: StaffTranslator,
+  snag: { itemLabel: string; note: string; notedByName: string; departuresSince: number },
+): string {
+  return t("today.detail.boatSnag", {
+    item: snag.itemLabel,
+    // The sentence closes the note itself; a crew's own full stop would double it.
+    note: snag.note.replace(/[.\s]+$/u, ""),
+    name: snag.notedByName,
+    count: snag.departuresSince,
+  });
+}
+
 export function openBoatCheckActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openBoatCheck");
 }
@@ -1210,4 +1224,30 @@ export function rollCallAlertedText(
     });
   }
   return null;
+}
+
+/**
+ * The blank emergency card's row (fifth loop, item 3): what is missing, and the
+ * first boat that would sail without it, by its time and day.
+ */
+export function emergencyCardBlankText(
+  t: StaffTranslator,
+  input: { time: string; day: string },
+): { subject: string; detail: string; actionLabel: string } {
+  return {
+    subject: t("today.emergencyCard.subject"),
+    detail: t("today.emergencyCard.detail", input),
+    actionLabel: t("today.emergencyCard.action"),
+  };
+}
+
+/** Found items still waiting for their owners (fifth loop, item 7), as one count. */
+export function lostItemsWaitingText(
+  t: StaffTranslator,
+  count: number,
+): { subject: string; actionLabel: string } {
+  return {
+    subject: t("today.lostItems.subject", { count }),
+    actionLabel: t("today.lostItems.action"),
+  };
 }

@@ -288,6 +288,18 @@ async function oweErasure(
   });
 }
 
+/** Every string anywhere in a rendered tree, props included, joined. */
+function everyString(node: unknown, seen = new Set<unknown>()): string {
+  if (typeof node === "string") return node;
+  if (!node || typeof node !== "object" || seen.has(node)) return "";
+  seen.add(node);
+  if (Array.isArray(node)) return node.map((child) => everyString(child, seen)).join("\n");
+  const props = (node as { props?: Record<string, unknown> }).props;
+  return Object.values(props ?? (node as Record<string, unknown>))
+    .map((value) => everyString(value, seen))
+    .join("\n");
+}
+
 describe("the data-compliance queues in the Data group", () => {
   it("renders neither panel when the shop owes nothing", async () => {
     // The calm state, and the whole reason these could move off a page nobody
@@ -345,6 +357,21 @@ describe("the data-compliance queues in the Data group", () => {
     );
     expect(ariaLabelsIn(element)).toContain(ERASURE_PANEL);
     expect(hiddenInputNamesIn(element).filter((name) => name === "obligationId")).toHaveLength(1);
+  });
+
+  /**
+   * Desk review of #1721, F5: one paragraph explained every kind at once.
+   * Each row now carries the one step its own target needs.
+   */
+  it("tells each row the one step its own kind needs", async () => {
+    const element = await renderSettings("owner", async (db, session) => {
+      await oweErasure(db, session, "stripe_customer");
+      await oweErasure(db, session, "stripe_invoice_snapshot");
+    });
+    const texts = everyString(element);
+    expect(texts).toContain("Retries on its own tonight, or retry now.");
+    expect(texts).toContain("File a data-deletion request with Stripe, then mark it done.");
+    expect(texts).not.toContain("also deletes their Stripe customer");
   });
 
   it("shows a manager the owed erasure but no button to close it", async () => {
