@@ -1,4 +1,5 @@
 import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
+import { MAP_REACHABILITY_PROBES } from "../src/lib/maps";
 import { expect, READ_ONLY, test } from "./fixtures";
 
 /**
@@ -131,3 +132,42 @@ test("the site page publishes the place as structured data and points at itself"
   // departure's Event graph names the dock a diver turns up at instead.
   expect(graph.geo["@type"]).toBe("GeoCoordinates");
 });
+
+/**
+ * **The map shows only when both hosts the embed needs answer** (#2441). The
+ * embed lives on `maps.google.com` and redirects to `www.google.com`; measured
+ * with only `maps.google.com` blocked, the frame is the browser's error page
+ * while `www.google.com/favicon.ico` still loads. The fleet refuses both probes
+ * (e2e/fixtures.ts), so each case answers them on its own page.
+ */
+const [MAPS_HOST_PROBE, WWW_HOST_PROBE] = MAP_REACHABILITY_PROBES;
+// A one-pixel transparent GIF; the probe reads only that an image decoded.
+const PIXEL = Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64");
+
+for (const { name, blocked, state } of [
+  { name: "only maps.google.com blocked", blocked: MAPS_HOST_PROBE, state: "failed" },
+  { name: "only www.google.com blocked", blocked: WWW_HOST_PROBE, state: "failed" },
+  { name: "neither blocked", blocked: undefined, state: "reachable" },
+] as const) {
+  test(`the dive-site map is ${state} with ${name}`, {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
+    for (const probe of MAP_REACHABILITY_PROBES) {
+      await page.route(probe, (route) =>
+        probe === blocked
+          ? route.abort()
+          : route.fulfill({ status: 200, contentType: "image/gif", body: PIXEL }),
+      );
+    }
+    await page.goto(SITE_PATH);
+    const frame = page.locator("iframe[data-map-state]").first();
+    // The frame asks only once it is on screen.
+    await frame.scrollIntoViewIfNeeded();
+    await expect(frame).toHaveAttribute("data-map-state", state);
+    // The quiet line naming the site shows with the failure and only then
+    // (paired with a positive query: it is the same text in both states).
+    const line = page.getByText("is not loading.");
+    if (state === "failed") await expect(line).toBeVisible();
+    else await expect(line).toBeHidden();
+  });
+}

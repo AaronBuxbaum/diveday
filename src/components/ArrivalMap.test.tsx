@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MAP_REACHABILITY_PROBE } from "@/lib/maps";
+import { MAP_REACHABILITY_PROBES } from "@/lib/maps";
 import { ArrivalMap } from "./ArrivalMap";
 
 /**
@@ -30,14 +30,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+const answerAll = () => {
+  for (const probe of probes) probe.onload?.();
+};
+
 const mount = () => render(<ArrivalMap title="Map" src="https://maps.google.com/x" />).container;
 
 describe("ArrivalMap", () => {
   it("draws nothing while online until the map host answers, then the map", () => {
     const container = mount();
     expect(container.querySelector("iframe")).toBeNull();
-    expect(probes[0]?.src).toBe(MAP_REACHABILITY_PROBE);
-    act(() => probes[0]?.onload?.());
+    expect(probes.map((probe) => probe.src)).toEqual([...MAP_REACHABILITY_PROBES]);
+    act(() => answerAll());
     expect(container.querySelector("iframe")).not.toBeNull();
   });
 
@@ -51,7 +55,7 @@ describe("ArrivalMap", () => {
   it("steps aside when the connection drops", () => {
     const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     const container = mount();
-    act(() => probes[0]?.onload?.());
+    act(() => answerAll());
     expect(container.querySelector("iframe")).not.toBeNull();
     onLine.mockReturnValue(false);
     act(() => {

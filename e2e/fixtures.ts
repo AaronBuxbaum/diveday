@@ -2,6 +2,7 @@ import path from "node:path";
 import type { Page, Request } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
+import { MAP_REACHABILITY_PROBES } from "../src/lib/maps";
 import { currentStaffStorageStateGeneration, signInAs } from "./helpers";
 import { E2E_FROZEN_CLOCK, e2eBaseURL } from "./servers";
 
@@ -689,11 +690,15 @@ export const test = base.extend<
         body: "<!doctype html><title></title>",
       }),
     );
-    // The route maps' reachability read (`MAP_REACHABILITY_PROBE`,
-    // src/lib/maps.ts) is refused, so every capture draws the route alone over
-    // the panel, the way it reads where the map cannot load, and no test
-    // leaves this worker for it.
-    await context.route("https://www.google.com/favicon.ico", (route) => route.abort());
+    // The route maps' reachability reads (`MAP_REACHABILITY_PROBES`,
+    // src/lib/maps.ts: one image on each host the embed needs) are refused, so
+    // every capture draws the route alone over the panel, the way it reads
+    // where the map cannot load, and no test leaves this worker for it. Later
+    // routes win, so this pair sits after the maps host's catch-all above. A
+    // spec that wants the map answers both on its page (e2e/map-probe.spec.ts).
+    for (const probe of MAP_REACHABILITY_PROBES) {
+      await context.route(probe, (route) => route.abort());
+    }
     // The storefront's brand display face is a Google Fonts stylesheet (see
     // src/lib/brand.ts). Answering it with an empty sheet keeps every capture
     // on the same fallback face wherever the fleet runs — a font that arrives
