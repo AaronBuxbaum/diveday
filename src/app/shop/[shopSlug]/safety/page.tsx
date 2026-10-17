@@ -128,7 +128,13 @@ export default async function SafetyReportPage({
         year && safety.openRollCalls.length > 0
           ? `${t("incidents.safety.rollCallsDetail", { back: safety.departuresBack })} · ${t(
               "incidents.safety.year.rollCallsOpen",
-              { count: safety.openRollCalls.length },
+              // A boat that sailed with no head count at all is a worse fact
+              // than a count left open, so the year keeps them apart (chain-r5
+              // review F2), as each month's list does.
+              {
+                open: safety.openRollCalls.filter((row) => row.closure === "open").length,
+                none: safety.openRollCalls.filter((row) => row.closure === "none").length,
+              },
             )}`
           : t("incidents.safety.rollCallsDetail", { back: safety.departuresBack }),
       detailTone: safety.openRollCalls.length > 0 ? "attention" : "quiet",

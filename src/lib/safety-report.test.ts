@@ -364,6 +364,52 @@ describe("summarizeSafetyMonth: a credential that answers the job", () => {
   });
 });
 
+describe("summarizeSafetyMonth: a credential issued after the sailing (review F3)", () => {
+  it("keeps a sailing on an expired card lapsed after a renewal is added as a new record", () => {
+    // Sailed 2026-10-03 on a card that ran out 2026-10-02; the renewal was
+    // entered on 2026-10-20 as a second record of the same kind.
+    const summary = summarizeSafetyMonth(
+      month({
+        diverEvents: everyoneBack,
+        credentials: [
+          { personId: "c1", kind: "first_aid_cpr", issuedAt: "2024-10-02", renewsAt: "2026-10-02" },
+          { personId: "c1", kind: "first_aid_cpr", issuedAt: "2026-10-20", renewsAt: "2028-10-20" },
+        ],
+      }),
+    );
+    expect(summary.lapsedSailings.map((row) => row.kinds)).toEqual([["first_aid_cpr"]]);
+  });
+
+  it("never lets a license issued after the sailing answer for it", () => {
+    const summary = summarizeSafetyMonth(
+      month({
+        departures: [{ ...departure, crew: [member("c1", "captain")] }],
+        diverEvents: everyoneBack,
+        credentials: [
+          { personId: "c1", kind: "captains_licence", issuedAt: "2026-11-01", renewsAt: null },
+        ],
+      }),
+    );
+    expect(summary.unrecordedSailings).toBe(1);
+    expect(summary.checkedSailings).toBe(0);
+  });
+
+  it("counts a credential issued on the day of the sailing, or with no issue date", () => {
+    const summary = summarizeSafetyMonth(
+      month({
+        departures: [{ ...departure, crew: [member("c1", "captain")] }],
+        diverEvents: everyoneBack,
+        credentials: [
+          { personId: "c1", kind: "captains_licence", issuedAt: "2026-10-03", renewsAt: null },
+          { personId: "c1", kind: "first_aid_cpr", renewsAt: null },
+        ],
+      }),
+    );
+    expect(summary.unrecordedSailings).toBe(0);
+    expect(summary.checkedSailings).toBe(1);
+  });
+});
+
 describe("lapsedCredentialKinds", () => {
   it("is good through the renewal day itself", () => {
     expect(
@@ -460,6 +506,21 @@ describe("summarizeSafetyMonth: departures with no crew on record (fourth review
     expect(summary.noCrewDepartures).toEqual([]);
   });
 
+  it("lists the boats of a month whose rostered crew were all ashore, not the quiet line (N7)", () => {
+    const summary = summarizeSafetyMonth(
+      month({
+        departures: [departure],
+        diverEvents: everyoneBack,
+        crewEvents: [
+          { tripId: "t1", subjectId: "c1", checkpoint: "departure", status: "not_boarded" },
+        ],
+      }),
+    );
+    expect(summary.crewSailings).toBe(0);
+    expect(summary.noCrewOnRecord).toBe(false);
+    expect(summary.noCrewDepartures.map((row) => row.tripId)).toEqual(["t1"]);
+  });
+
   it("says nothing of a departure whose crew sailed, on file or not", () => {
     const summary = summarizeSafetyMonth(month({ diverEvents: everyoneBack }));
     expect(summary.crewSailings).toBe(1);
@@ -502,7 +563,8 @@ describe("summarizeSafetyYear (dive-domain review F1)", () => {
     expect(year.monthsBack).toBe(3);
     expect(year.monthsWithoutCrew).toBe(2);
     expect(year.departuresBack).toBe(6);
-    expect(year.boatsBack).toBe(6);
+    // Only the rostered month's boats were judged (chain-r5 review F1).
+    expect(year.boatsBack).toBe(2);
     expect(year.crewSailings).toBe(rostered.crewSailings);
     expect(year.rollCallsClosed).toBe(unrostered.rollCallsClosed * 2 + rostered.rollCallsClosed);
   });

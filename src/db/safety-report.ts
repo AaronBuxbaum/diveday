@@ -166,6 +166,7 @@ export async function getSafetyMonth(
             .select({
               personId: staffCredentials.personId,
               kind: staffCredentials.kind,
+              issuedAt: staffCredentials.issuedAt,
               renewsAt: staffCredentials.renewsAt,
             })
             .from(staffCredentials)

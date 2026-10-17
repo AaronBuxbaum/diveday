@@ -175,13 +175,15 @@
   crew never reaches the lapsed-credential check, so the emptiest record would otherwise read as
   the cleanest. "Who was the captain?" is an insurer's first question; zero here means every boat
   that sailed had somebody on record, never that nobody was asked. Boats only: "sailed" is a
-  boat's word, so a shore day or pool session is never listed. A month with no crew recorded on
-  any departure is a shop that does not roster crew here, so the figure gives way to one quiet
-  line, "No crew recorded on any departure this month" (`noCrewOnRecord`; review F1). Its
+  boat's word, so a shore day or pool session is never listed. A month in which no departure has
+  a single crew row is a shop that does not roster crew here, so the figure gives way to one quiet
+  line, "No crew recorded on any departure this month" (`noCrewOnRecord`; review F1); a month whose
+  rostered crew were all recorded ashore did record crew, and lists its boats (review N7). Its
   denominator is the boats back, not every departure (dive-domain review N5). On the **Safety
   year** the figure is the sum of the months, each by that rule, so a month before the shop
-  rostered crew adds no boats; the year says how many months had none ("No crew recorded in 9 of
-  12 months").
+  rostered crew adds no boats to the figure or to its denominator, which counts only the boats of
+  months with crew on record (chain-r5 review F1); the year says how many months had none ("No crew
+  recorded in 9 of 12 months").
 - **Safety year** — the Safety report over a whole year (`/shop/<slug>/safety?year=`; fifth loop,
   item 33), the one page an insurer or broker is handed at renewal instead of twelve. Figures only,
   each the sum of that year's month views read by their own rules (`getSafetyYear`,
@@ -190,4 +192,10 @@
   Daylight Time") and the day it was printed, because an undated "so far" is worthless a month
   later. Incident reports count filed reports, with drafts named beside them ("3 filed · 1 draft"):
   a draft can still be discarded. The lists behind each figure stay on the months, and the year
-  says so.
+  says so. The roll-call figure keeps "not closed" apart from "no roll call taken" (review F2). The
+  boarding caveat says what the dock count proves: the rail records nobody as boarded while
+  readiness blocks them, and a seat whose readiness changed after boarding is not separated
+  (review F4). Credentials are read as the records stand today, with two limits: one issued after
+  a sailing never answers for it, so a renewal entered as a new record leaves the earlier lapsed
+  sailing lapsed (review F3); and a credential since deleted is gone from the record, so a sailing
+  once on a lapsed card reads as unrecorded instead, which errs toward attention (review N6).
