@@ -29,6 +29,7 @@ function recordingInvoicing(answer: "voided" | "failed" = "voided", stripeStatus
       return { status: answer };
     },
     async retrieveInvoice() {
+      if (stripeStatus === "unreadable") return { status: "failed" };
       return {
         status: "ok",
         invoice: {
@@ -171,6 +172,34 @@ describe("voidStalePublicPackageInvoices", () => {
     }
 
     expect(stuck.filter((count) => count > 0)).toEqual([1]);
+  });
+
+  it("counts nothing against an invoice it could not read back, and tries it the next night", async () => {
+    const { db, shop } = ctx;
+    const unread = await openOrder(db, shop.id, { invoiceId: "in_unread", ageDays: 9 });
+    const { provider, voided } = recordingInvoicing("failed", "unreadable");
+
+    const first = await voidStalePublicPackageInvoices(db, { now: NOW, invoicing: provider });
+    await voidStalePublicPackageInvoices(db, {
+      now: new Date(NOW.getTime() + DAY_MS),
+      invoicing: provider,
+    });
+
+    expect(first).toMatchObject({ failed: 0, unread: 1 });
+    expect(voided).toEqual(["in_unread", "in_unread"]);
+    const [row] = await db.select().from(orders).where(eq(orders.id, unread.id));
+    expect(row).toMatchObject({ status: "open", autoVoidFailures: 0, autoVoidFailedAt: null });
+  });
+
+  it("treats an uncollectible invoice it could not void as a refusal, not as settled", async () => {
+    const { db, shop } = ctx;
+    const written = await openOrder(db, shop.id, { invoiceId: "in_uncollectible", ageDays: 9 });
+    const { provider } = recordingInvoicing("failed", "uncollectible");
+
+    const summary = await voidStalePublicPackageInvoices(db, { now: NOW, invoicing: provider });
+
+    expect(summary).toMatchObject({ refreshed: 0, failed: 1 });
+    expect(await statusOf(db, written.id)).toBe("open");
   });
 
   it("records an invoice Stripe says is already paid as paid, not as a refusal", async () => {

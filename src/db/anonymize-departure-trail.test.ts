@@ -112,6 +112,20 @@ describe("anonymizeDiver — a public departure's title", () => {
     expect(await titleOf(db, named.id)).toBe(t("trips.erasedTitle.public"));
   });
 
+  it("renames a public title naming them with extra spaces or family name first", async () => {
+    const { db, shop } = ctx;
+    const person = await diver(db, shop.id, "Dana Lee");
+    const spaced = await departure(db, shop.id, "Reef morning with Dana  Lee");
+    const register = await departure(db, shop.id, "Lee, Dana: reef morning");
+    await seat(db, shop.id, spaced.id, person.id);
+    await seat(db, shop.id, register.id, person.id);
+
+    await erase(db, shop.id, person.id);
+
+    expect(await titleOf(db, spaced.id)).toBe(t("trips.erasedTitle.public"));
+    expect(await titleOf(db, register.id)).toBe(t("trips.erasedTitle.public"));
+  });
+
   it("still renames a private charter that names the family inside a word", async () => {
     const { db, shop } = ctx;
     const person = await diver(db, shop.id, "Dana Lee");
@@ -164,6 +178,16 @@ describe("anonymizeDiver — a repeating charter named for the diver", () => {
       .where(eq(trips.seriesId, created.series.id));
     expect(dates.length).toBeGreaterThan(created.trips.length);
     expect(dates.filter((row) => /abernathy/i.test(row.title))).toEqual([]);
+    const lines = await db
+      .select({ tripId: activityEvents.tripId })
+      .from(activityEvents)
+      .where(
+        and(
+          eq(activityEvents.shopId, shop.id),
+          eq(activityEvents.code, "departure_retitled_by_erasure"),
+        ),
+      );
+    expect(lines).toEqual([{ tripId: first.id }]);
   });
 
   it("keeps the series' name when someone else is booked on any of its dates", async () => {
@@ -262,15 +286,19 @@ describe("anonymizeDiver — the moderation and change trails", () => {
       reasonNote,
       recordedByPersonId: actor.id,
     });
-    const [onOwn, naming, unrelated] = await db
+    const [onOwn, naming, unrelated, family, register] = await db
       .insert(reviewModerationEvents)
       .values([
         note(own.id, "Rude about the crew"),
         note(theirs.id, "Blames Teodor Halvorsen by name"),
         note(theirs.id, "Off topic"),
+        note(theirs.id, "Says Halvorsen was rude"),
+        note(theirs.id, "Copied from the register: Halvorsen, Teodor"),
       ])
       .returning({ id: reviewModerationEvents.id });
-    if (!onOwn || !naming || !unrelated) throw new Error("fixture insert failed");
+    if (!onOwn || !naming || !unrelated || !family || !register) {
+      throw new Error("fixture insert failed");
+    }
 
     await erase(db, shop.id, person.id);
 
@@ -285,6 +313,8 @@ describe("anonymizeDiver — the moderation and change trails", () => {
     expect(notes.get(onOwn.id)).toBe(REDACTED_TEXT);
     expect(notes.get(naming.id)).toBe(REDACTED_TEXT);
     expect(notes.get(unrelated.id)).toBe("Off topic");
+    expect(notes.get(family.id)).toBe(REDACTED_TEXT);
+    expect(notes.get(register.id)).toBe(REDACTED_TEXT);
   });
 
   it("redacts a departure change value that names them, keeping the rest of the change", async () => {
@@ -301,7 +331,11 @@ describe("anonymizeDiver — the moderation and change trails", () => {
           kind: "meeting_point",
           source: "shop",
           beforeValue: { label: "Dock 2", note: null },
-          afterValue: { label: "Teodor Halvorsen's house", note: "Gate code 12" },
+          afterValue: {
+            label: "Teodor  Halvorsen's house",
+            note: "Gate code 12",
+            landmark: "Halvorsen's jetty",
+          },
         },
         {
           shopId: shop.id,
@@ -322,7 +356,11 @@ describe("anonymizeDiver — the moderation and change trails", () => {
       ),
     );
     expect(rows.get(naming.id)?.beforeValue).toEqual({ label: "Dock 2", note: null });
-    expect(rows.get(naming.id)?.afterValue).toEqual({ label: REDACTED_TEXT, note: "Gate code 12" });
+    expect(rows.get(naming.id)?.afterValue).toEqual({
+      label: REDACTED_TEXT,
+      note: "Gate code 12",
+      landmark: REDACTED_TEXT,
+    });
     expect(rows.get(unrelated.id)?.afterValue).toEqual({ summary: "Calm" });
   });
 });

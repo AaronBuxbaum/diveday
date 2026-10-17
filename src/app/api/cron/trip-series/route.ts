@@ -91,7 +91,7 @@ export async function GET(request: Request) {
     const staleInvoices = await voidStalePublicPackageInvoices(db, { now: nowDate() }).catch(
       async (error: unknown) => {
         await sentry.captureException(error, { tags: { cron_scan: "stale_package_invoices" } });
-        return { considered: 0, voided: 0, refreshed: 0, failed: 0, stuck: 0 };
+        return { considered: 0, voided: 0, refreshed: 0, failed: 0, unread: 0, stuck: 0 };
       },
     );
     // An invoice Stripe has refused to void night after night needs a person:
@@ -133,6 +133,7 @@ export async function GET(request: Request) {
       staleInvoicesVoided: staleInvoices.voided,
       staleInvoicesRefreshed: staleInvoices.refreshed,
       staleInvoicesFailed: staleInvoices.failed,
+      staleInvoicesUnread: staleInvoices.unread,
     });
 
     await sentry.captureCheckIn({

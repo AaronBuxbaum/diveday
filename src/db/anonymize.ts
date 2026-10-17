@@ -291,13 +291,8 @@ const REGEX_METACHARACTERS = /[\\^$.|?*+()[\]{}]/g;
  * trailing `.` would match nothing at all.
  */
 function activityMessageNameMatch(fullName: string) {
-  const trimmed = fullName.trim();
-  const wordChars = [...trimmed].filter((char) => WORD_CHAR.test(char)).length;
-  if (wordChars < MIN_NAME_MATCH_CHARS) return undefined;
-  const escaped = trimmed.replace(REGEX_METACHARACTERS, "\\$&");
-  const first = trimmed[0] ?? "";
-  const last = trimmed[trimmed.length - 1] ?? "";
-  const pattern = `${WORD_CHAR.test(first) ? "\\y" : ""}${escaped}${WORD_CHAR.test(last) ? "\\y" : ""}`;
+  const pattern = buddyMemberNameMatch(fullName);
+  if (!pattern) return undefined;
   return sql`exists (
     select 1 from jsonb_each_text(${activityEvents.params}) as named(key, value)
     where named.value ~* ${pattern}
@@ -305,23 +300,60 @@ function activityMessageNameMatch(fullName: string) {
 }
 
 /**
- * The same word-boundary name pattern as {@link activityMessageNameMatch}, but
- * returned as the bare pattern rather than a predicate over one column — the
- * buddy sweep applies it per *array element* twice (once to find the rows, once
- * to rewrite them), so it cannot be handed a column-bound comparison, and the
- * internal-notes sweep needs it against a third column.
- *
- * `undefined` for a name too short to anchor safely, exactly as above: the
- * two-character-name blast radius is the same hazard on either table.
+ * One handle as a whole-word pattern: escaped, any run of spaces in it matching
+ * any run of whitespace ("Dana  Lee", a line break in a pasted note), and
+ * anchored with `\y` only where its own end is a word character (see
+ * {@link activityMessageNameMatch}). `undefined` below
+ * {@link MIN_NAME_MATCH_CHARS} word characters.
  */
-function buddyMemberNameMatch(fullName: string): string | undefined {
-  const trimmed = fullName.trim();
+function wholeWordPattern(handle: string): string | undefined {
+  const trimmed = handle.trim();
   const wordChars = [...trimmed].filter((char) => WORD_CHAR.test(char)).length;
   if (wordChars < MIN_NAME_MATCH_CHARS) return undefined;
-  const escaped = trimmed.replace(REGEX_METACHARACTERS, "\\$&");
+  const escaped = trimmed.replace(REGEX_METACHARACTERS, "\\$&").replace(/\s+/g, "\\s+");
   const first = trimmed[0] ?? "";
   const last = trimmed[trimmed.length - 1] ?? "";
   return `${WORD_CHAR.test(first) ? "\\y" : ""}${escaped}${WORD_CHAR.test(last) ? "\\y" : ""}`;
+}
+
+/**
+ * The word-boundary name pattern every name sweep here uses, as a bare pattern
+ * rather than a predicate over one column — the buddy sweep applies it per
+ * *array element* twice (once to find the rows, once to rewrite them), so it
+ * cannot be handed a column-bound comparison, and the internal-notes sweep
+ * needs it against a third column.
+ *
+ * It matches the full name with any whitespace between its words, and, for a
+ * name of more than one word, the family-first form a register writes ("Lee,
+ * Dana" or "Lee Dana"). With `familyName`, the family name alone as a whole
+ * word too: for the free-text trails kept for ever, where a staffer writes
+ * "pick up at Halvorsen's" (the privacy page promises it); at the price of a
+ * namesake's line, the same trade the activity sweep states.
+ *
+ * `undefined` for a name too short to anchor safely: the two-character-name
+ * blast radius is the same hazard on every table.
+ */
+function buddyMemberNameMatch(
+  fullName: string,
+  options: { familyName?: boolean } = {},
+): string | undefined {
+  const full = wholeWordPattern(fullName);
+  if (!full) return undefined;
+  const words = fullName.trim().split(/\s+/).filter(Boolean);
+  const alternatives = [full];
+  if (words.length > 1) {
+    const edges = /^[^\p{L}\p{N}_]+|[^\p{L}\p{N}_]+$/gu;
+    const family = (words[words.length - 1] ?? "").replace(edges, "");
+    const given = words.slice(0, -1).join(" ").replace(edges, "");
+    const reversed = wholeWordPattern(`${family} ${given}`);
+    // The first gap of the family-first form may carry a comma: "Lee, Dana".
+    if (reversed) alternatives.push(reversed.replace(/^(\\y)?(.+?)\\s\+/, "$1$2,?\\s+"));
+    if (options.familyName) {
+      const alone = wholeWordPattern(family);
+      if (alone) alternatives.push(alone);
+    }
+  }
+  return alternatives.join("|");
 }
 
 /**
@@ -1401,8 +1433,9 @@ function titleNameHandles(fullName: string): string[] {
  * The new title is the staff bundle's neutral one in the shop's own language
  * (`trips.erasedTitle`), "Private charter" or "Departure" by `is_private`.
  * Deleted departures are reached too: the activity log keeps naming one. Each
- * renamed departure gets a `departure_retitled_by_erasure` line by the staffer
- * who erased, naming nobody else and never the old title.
+ * renamed departure, or each renamed series on its earliest date, gets a
+ * `departure_retitled_by_erasure` line by the staffer who erased, naming
+ * nobody else and never the old title.
  */
 async function scrubDepartureTitles(
   tx: AppTransaction,
@@ -1500,8 +1533,16 @@ async function scrubDepartureTitles(
         names(trips.title, trips.isPrivate),
       ),
     )
-    .returning({ id: trips.id });
+    .returning({ id: trips.id, seriesId: trips.seriesId, startsAt: trips.startsAt });
+  // One line per one-off departure, and one per repeating run, on its
+  // earliest renamed date: the same grain the board's own series lines keep.
+  const lineOn = new Map<string, { id: string; startsAt: Date }>();
   for (const trip of retitled) {
+    const key = trip.seriesId ?? trip.id;
+    const held = lineOn.get(key);
+    if (!held || trip.startsAt < held.startsAt) lineOn.set(key, trip);
+  }
+  for (const trip of lineOn.values()) {
     await recordShopActivityWithin(tx, {
       shopId,
       actorPersonId: ctx.actorPersonId,
@@ -1517,14 +1558,15 @@ async function scrubDepartureTitles(
  * meeting point's or the conditions' values before and after for ever
  * (`src/lib/retention.ts`), and a value is free text a staffer typed ("Pick up
  * at the Halvorsens'"). Each string value naming the diver, by the same
- * whole-word full-name match as the activity sweep, becomes `[redacted]`; the
+ * whole-word name match as the activity sweep plus the family name alone,
+ * becomes `[redacted]`; the
  * keys, the other values and the row stay, so the change still reads as one.
  */
 async function scrubDepartureChangeTrail(
   tx: AppTransaction,
   ctx: ScrubSectionContext,
 ): Promise<ProcessorErasureTargetInput[]> {
-  const pattern = buddyMemberNameMatch(ctx.fullName);
+  const pattern = buddyMemberNameMatch(ctx.fullName, { familyName: true });
   if (!pattern) return [];
   const redactValues = (
     column: AnyPgColumn,
@@ -1649,7 +1691,7 @@ async function scrubReviews(
   // own reviews it is about what they wrote, and on anyone's it may name them.
   // The row (who acted, what, why by code) stays; the words become
   // `[redacted]`, never null, since an `other` reason must carry a note.
-  const notePattern = buddyMemberNameMatch(ctx.fullName);
+  const notePattern = buddyMemberNameMatch(ctx.fullName, { familyName: true });
   await tx
     .update(reviewModerationEvents)
     .set({ reasonNote: REDACTED_TEXT })

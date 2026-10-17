@@ -44,8 +44,9 @@ export const STALE_VOID_ALERT_AFTER = 3;
  * shop may be chasing it. Each void goes through `voidOrder`, the same path a
  * staffer's Void takes: Stripe voids the invoice first, and only then does the
  * order read `void`, a status rather than a delete. A refusal is read back
- * from Stripe (a paid invoice is recorded paid); otherwise the order stays
- * open, stamped, and waits {@link RETRY_AFTER_DAYS} nights. The window is measured from the order's
+ * from Stripe: a paid or void invoice is recorded as Stripe has it; one still
+ * open or uncollectible stays open here, stamped, and waits
+ * {@link RETRY_AFTER_DAYS} nights; a failed read counts nothing. The window is measured from the order's
  * creation against the clock passed in.
  */
 export async function voidStalePublicPackageInvoices(
@@ -54,9 +55,12 @@ export async function voidStalePublicPackageInvoices(
 ): Promise<{
   considered: number;
   voided: number;
-  /** Stripe would not void it because it is no longer open (paid, mostly): recorded as Stripe has it. */
+  /** Stripe would not void it because it is already paid or void: recorded as Stripe has it. */
   refreshed: number;
+  /** Refused, and Stripe still reads it open or uncollectible: stamped, tried again later. */
   failed: number;
+  /** Refused, and the read-back failed too: nothing counted, tried again tomorrow. */
+  unread: number;
   /** Refused for the {@link STALE_VOID_ALERT_AFTER}th time on this pass. */
   stuck: number;
 }> {
@@ -64,7 +68,13 @@ export async function voidStalePublicPackageInvoices(
   const cutoff = new Date(options.now.getTime() - PUBLIC_PACKAGE_INVOICE_DAYS * DAY_MS);
   const retryBefore = new Date(options.now.getTime() - RETRY_AFTER_DAYS * DAY_MS);
   const stale = await db
-    .select({ id: orders.id, shopId: orders.shopId, failures: orders.autoVoidFailures })
+    .select({
+      id: orders.id,
+      shopId: orders.shopId,
+      failures: orders.autoVoidFailures,
+      stripeAccountId: orders.stripeAccountId,
+      stripeInvoiceId: orders.stripeInvoiceId,
+    })
     .from(orders)
     .where(
       and(
@@ -93,7 +103,14 @@ export async function voidStalePublicPackageInvoices(
     .orderBy(sql`${orders.autoVoidFailedAt} asc nulls first`, asc(orders.createdAt), asc(orders.id))
     .limit(SWEEP_LIMIT);
 
-  const summary = { considered: stale.length, voided: 0, refreshed: 0, failed: 0, stuck: 0 };
+  const summary = {
+    considered: stale.length,
+    voided: 0,
+    refreshed: 0,
+    failed: 0,
+    unread: 0,
+    stuck: 0,
+  };
   for (const order of stale) {
     const result = await voidOrder(db, order.shopId, order.id, invoicing);
     if (result) {
@@ -104,17 +121,34 @@ export async function voidStalePublicPackageInvoices(
       });
       continue;
     }
-    // Stripe refuses to void an invoice that was paid meanwhile, before its
-    // webhook arrived: read it back and record what Stripe has.
-    const refreshed = await refreshOrderStatus(db, order.shopId, order.id, invoicing);
-    if (refreshed && refreshed.status !== "open") {
-      summary.refreshed += 1;
-      log("orders.stale_public_invoice_refreshed", "info", {
+    // Read back why. A failed read is not a refusal: it says nothing about
+    // the invoice, so nothing is counted and tomorrow's pass tries again.
+    const lookup =
+      order.stripeAccountId && order.stripeInvoiceId
+        ? await invoicing.retrieveInvoice(order.stripeAccountId, order.stripeInvoiceId)
+        : ({ status: "failed" } as const);
+    if (lookup.status !== "ok") {
+      summary.unread += 1;
+      log("orders.stale_public_invoice_unread", "warn", {
         shopId: order.shopId,
         orderId: order.id,
-        status: refreshed.status,
       });
       continue;
+    }
+    // Paid meanwhile, before its webhook arrived, or voided at Stripe by
+    // hand: record what Stripe has. `uncollectible` is not settled (Stripe
+    // can still void it), so it is a refusal like `open`.
+    if (lookup.invoice.status === "paid" || lookup.invoice.status === "void") {
+      const refreshed = await refreshOrderStatus(db, order.shopId, order.id, invoicing);
+      if (refreshed && refreshed.status !== "open") {
+        summary.refreshed += 1;
+        log("orders.stale_public_invoice_refreshed", "info", {
+          shopId: order.shopId,
+          orderId: order.id,
+          status: refreshed.status,
+        });
+        continue;
+      }
     }
     const failures = order.failures + 1;
     await db

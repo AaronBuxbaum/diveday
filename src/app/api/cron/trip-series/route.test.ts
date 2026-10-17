@@ -13,6 +13,7 @@ vi.mock("@/db/stale-package-invoices", () => ({
     voided: 1,
     refreshed: 0,
     failed: 1,
+    unread: 0,
     stuck: 0,
   })),
 }));
@@ -130,6 +131,7 @@ describe("GET /api/cron/trip-series — stale package invoices (issue 2304)", ()
       voided: 0,
       refreshed: 0,
       failed: 1,
+      unread: 0,
       stuck: 1,
     });
     await GET(cronRequest(`Bearer ${secret}`));
