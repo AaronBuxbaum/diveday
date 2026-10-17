@@ -1,0 +1,3 @@
+CREATE UNIQUE INDEX "bookings_shop_id_id_unique" ON "bookings" ("shop_id","id");--> statement-breakpoint
+-- diveday:allow-destructive drop-constraint bookings.training_enrollment_booking_id: the key ships unreleased in this same change (#2275), and every mark its writer makes names a seat of the same shop
+ALTER TABLE "bookings" DROP CONSTRAINT "bookings_training_enrollment_fk", ADD CONSTRAINT "bookings_training_enrollment_fk" FOREIGN KEY ("shop_id","training_enrollment_booking_id") REFERENCES "bookings"("shop_id","id");

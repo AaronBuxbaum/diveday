@@ -487,11 +487,15 @@ export const bookings = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    // The course seat a mark names is this shop's, in the database and not
+    // only in every reader (security review U6): the key runs over the shop
+    // too, against the (shop_id, id) pair below.
     foreignKey({
       name: "bookings_training_enrollment_fk",
-      columns: [table.trainingEnrollmentBookingId],
-      foreignColumns: [table.id],
+      columns: [table.shopId, table.trainingEnrollmentBookingId],
+      foreignColumns: [table.shopId, table.id],
     }),
+    uniqueIndex("bookings_shop_id_id_unique").on(table.shopId, table.id),
     // The charter seats marked as training on one enrollment, and the foreign
     // key's probe when a booking is deleted.
     index("bookings_training_enrollment_idx")

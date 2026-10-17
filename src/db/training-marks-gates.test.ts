@@ -17,7 +17,9 @@ import {
   courseFormRecords,
   courses,
   people,
+  shops,
   tripAssignments,
+  trips,
 } from "./schema";
 import { clearTrainingDive } from "./training-marks";
 import { changeTripCrew } from "./trips-crew";
@@ -409,5 +411,46 @@ describe("training marks — the gates the build review closed (in-memory PGlite
       expect(await recordAs(ctx, ctx.instructor)).toEqual({ ok: false, reason: "not_authorized" });
       expect(await seatBlockerCodes(ctx)).toContain("course_form_unsigned");
     });
+  });
+
+  it("refuses, in the database, a mark naming another shop's seat", async () => {
+    const ctx = await charterContext();
+    const [other] = await ctx.db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-training-mark", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!other) throw new Error("fixture insert failed");
+    const [person] = await ctx.db
+      .insert(people)
+      .values({ shopId: other.id, fullName: ctx.course.fullName })
+      .returning({ id: people.id });
+    const [trip] = await ctx.db
+      .insert(trips)
+      .values({
+        shopId: other.id,
+        title: "Their course",
+        startsAt: ctx.course.startsAt,
+        endsAt: ctx.course.endsAt,
+        capacity: 6,
+      })
+      .returning({ id: trips.id });
+    if (!person || !trip) throw new Error("fixture insert failed");
+    const [theirs] = await ctx.db
+      .insert(bookings)
+      .values({ bookedAs: "diver", shopId: other.id, tripId: trip.id, personId: person.id })
+      .returning({ id: bookings.id });
+    if (!theirs) throw new Error("fixture insert failed");
+    await expect(
+      ctx.db.transaction((tx) =>
+        tx
+          .update(bookings)
+          .set({
+            trainingEnrollmentBookingId: theirs.id,
+            trainingMarkedAt: ctx.now,
+            trainingMarkedByPersonId: ctx.owner,
+          })
+          .where(eq(bookings.id, ctx.seat.id)),
+      ),
+    ).rejects.toThrow();
   });
 });
