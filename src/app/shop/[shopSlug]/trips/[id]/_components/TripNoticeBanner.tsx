@@ -366,6 +366,25 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "trips.notices.materialsNotACourse",
   },
+  // A training mark on a charter seat (issue #2275), and its refusals.
+  "training-marked": { form: "roster", tone: "success", key: "trips.notices.trainingMarked" },
+  "training-cleared": { form: "roster", tone: "success", key: "trips.notices.trainingCleared" },
+  "training-mark-already": {
+    form: "roster",
+    tone: "warning",
+    key: "trips.notices.trainingMarkAlready",
+  },
+  "training-mark-invalid": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.trainingMarkInvalid",
+  },
+  "training-mark-over": { form: "roster", tone: "danger", key: "trips.notices.trainingMarkOver" },
+  "training-mark-forms-owed": {
+    form: "roster",
+    tone: "warning",
+    key: "trips.notices.trainingMarkFormsOwed",
+  },
   "contact-saved": { form: "roster", tone: "success", key: "trips.notices.contactSaved" },
   "contact-incomplete": { form: "roster", tone: "warning", key: "trips.notices.contactIncomplete" },
   "diver-invalid": { form: "add-diver", tone: "danger", key: "trips.notices.diverInvalid" },

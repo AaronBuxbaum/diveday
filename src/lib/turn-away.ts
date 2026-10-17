@@ -67,6 +67,9 @@ const REASON_FOR_BLOCKER: Record<ReadinessBlockerCode, TurnAwayReason | null> = 
   guardian_signature_missing: "waiver",
   course_form_unsigned: "waiver",
   course_form_guardian_missing: "waiver",
+  // The desk's own record is wrong (readiness files it under setup): staff
+  // clear the mark, and it says nothing about the diver.
+  training_mark_invalid: null,
   medical_review: "medical",
   medical_not_cleared: "medical",
   certification_missing: "card",

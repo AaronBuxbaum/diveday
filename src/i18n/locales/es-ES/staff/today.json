@@ -133,7 +133,8 @@
     "verifyNitroxCard": "Verificar certificación de nitrox",
     "takePayment": "Cobrar pago",
     "checkReadiness": "Verificar disponibilidad",
-    "getCourseFormsSigned": "Pedir firmas"
+    "getCourseFormsSigned": "Pedir firmas",
+    "clearTrainingMark": "Quitar marca de formación"
   },
   "blockerGroup": {
     "setRequirements": "Configurar requisitos",
@@ -156,7 +157,8 @@
     "verifyNitroxCards": "Verificar certificaciones de nitrox",
     "takePayments": "Cobrar pagos",
     "checkReadiness": "Verificar disponibilidad",
-    "getCourseFormsSigned": "Pedir firmas"
+    "getCourseFormsSigned": "Pedir firmas",
+    "clearTrainingMarks": "Quitar marcas de formación"
   },
   "pointingLabel": {
     "trip": "Ver lista",
@@ -348,6 +350,7 @@
     "paymentDue": "{count, plural, one {Pago pendiente.} other {# pagos pendientes.}}",
     "paymentRefunded": "{count, plural, one {Reembolsado, así que vuelve a deber el pago.} other {# buceadores reembolsados, así que vuelven a deber el pago.}}",
     "readinessUnavailable": "{count, plural, one {No se pudo revisar si está listo.} other {No se pudo revisar si están listos # buceadores.}}",
-    "courseFormUnsigned": "{count, plural, one {Formulario del curso sin firmar.} other {# formularios del curso sin firmar.}}"
+    "courseFormUnsigned": "{count, plural, one {Formulario del curso sin firmar.} other {# formularios del curso sin firmar.}}",
+    "trainingMarkInvalid": "{count, plural, one {Marca de formación que ya no corresponde a su plaza del curso.} other {# marcas de formación que ya no corresponden a su plaza del curso.}}"
   }
 }

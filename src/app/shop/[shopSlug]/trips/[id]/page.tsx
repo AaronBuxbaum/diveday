@@ -236,7 +236,7 @@ export default async function ManageTripPage({
     shop,
     shopSlug,
     tripId,
-    trip,
+    overview,
     locale,
     now,
     mayRetireRefusal,

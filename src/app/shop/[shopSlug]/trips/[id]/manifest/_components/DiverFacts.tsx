@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
-import { ridingOnlyMedicalSentences } from "@/i18n/manifest-labels";
+import { ridingOnlyMedicalSentences, trainingDiveLines } from "@/i18n/manifest-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
@@ -82,6 +82,7 @@ export function DiverFacts({
   const ridingOnly = ridingOnlyMedicalSentences(t, warningDays, (day) =>
     formatCalendarDate(day, locale),
   );
+  const training = trainingDiveLines(t, diver);
   const pickup = diver.hotelPickupLocation ? (
     <p>
       <span className="font-bold">{t("manifest.hotelPickupLabel")}</span>
@@ -170,6 +171,19 @@ export function DiverFacts({
       {ridingOnly.length > 0 ? (
         <p className="font-medium text-warning-strong">
           {ridingOnly.map((line) => (
+            <span key={line} className="block">
+              {line}
+            </span>
+          ))}
+        </p>
+      ) : null}
+      {/* A training dive (issue #2275): the course it counts toward, then
+          the warnings — no instructor aboard, or a mark cleared with its
+          course forms unsigned, naming who decided. */}
+      {training.fact ? <p>{training.fact}</p> : null}
+      {training.warnings.length > 0 ? (
+        <p className="font-medium text-warning-strong">
+          {training.warnings.map((line) => (
             <span key={line} className="block">
               {line}
             </span>

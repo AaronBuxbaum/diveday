@@ -253,6 +253,8 @@ const CERTIFICATION_FIX: Record<
     guardian_signature_missing: null,
     course_form_unsigned: null,
     course_form_guardian_missing: null,
+    // Fixed on the departure's roster, where the mark was made.
+    training_mark_invalid: null,
     under_minimum_age: null,
     payment_due: null,
     payment_refunded: null,

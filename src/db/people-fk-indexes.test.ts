@@ -49,7 +49,10 @@ const MUST_LEAD = [
 // 110: `gear_reservations.fill_recorded_by_person_id` (#2257) names who
 // recorded a counter tank's fill. Written once per fill and read with the
 // reservation, never probed by person.
-const UNINDEXED_CEILING = 110;
+// 111-112 with #2275: `bookings.training_marked_by_person_id` and
+// `bookings.training_cleared_by_person_id` attribute a staffer's training
+// mark, for the same reason.
+const UNINDEXED_CEILING = 112;
 
 async function unindexedPeopleForeignKeys(db: AppDb): Promise<string[]> {
   const result = await db.execute(sql`

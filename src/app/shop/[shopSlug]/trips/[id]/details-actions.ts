@@ -14,6 +14,7 @@ import { cancelDeparture } from "@/db/aboard-at-sea";
 import { getBoatById } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { flushUrgentCrewNotices } from "@/db/crew-notices";
+import { publishManifestEvent } from "@/db/manifest-events";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getTripRequirements } from "@/db/readiness";
 import { getShopById } from "@/db/shops";
@@ -426,6 +427,7 @@ export async function cancelTripAction(shopSlug: string, tripId: string) {
   }
   // Its crew hear it is off now, not on the hour (ADR 20261009-crew-hear-about-their-boats).
   await flushUrgentCrewNotices(db, { shopId: s.user.shopId, tripIds: [tripId] });
+  await publishManifestEvent(db, s.user.shopId, tripId);
   revalidateAndRedirect(back, noticeUrl(back, "cancelled"));
 }
 

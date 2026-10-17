@@ -404,6 +404,27 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
       in: "shop",
       value: (row) => row.courseMaterialsDoneByPersonId,
     },
+    // A training mark: the course seat this charter seat's dive counted
+    // toward, who marked it, and a clear made with course forms owed
+    // (issue #2275). The forms themselves stay on the enrollment.
+    {
+      header: "training_enrollment_booking_id",
+      in: "shop",
+      value: (row) => row.trainingEnrollmentBookingId,
+    },
+    { header: "training_marked_at", in: "shop", value: (row) => row.trainingMarkedAt },
+    {
+      header: "training_marked_by_person_id",
+      in: "shop",
+      value: (row) => row.trainingMarkedByPersonId,
+    },
+    { header: "training_cleared_at", in: "shop", value: (row) => row.trainingClearedAt },
+    {
+      header: "training_cleared_by_person_id",
+      in: "shop",
+      value: (row) => row.trainingClearedByPersonId,
+    },
+    { header: "training_cleared_reason", in: "shop", value: (row) => row.trainingClearedReason },
     { header: "hotel_pickup_location", in: "shop", value: (row) => row.hotelPickupLocation },
     { header: "pickup_time", in: "shop", value: (row) => row.pickupTime },
     {
@@ -967,6 +988,8 @@ export const COURSE_FORM_RECORDS_CSV = sharedFile<ShopRow<"courseFormRecordRows"
     { header: "form_version", in: "both", value: (row) => row.formVersion },
     { header: "course_title", in: "both", value: (row) => row.courseTitle },
     { header: "trip_id", in: "both", value: (row) => row.tripId },
+    // The charter seat a training-dive signature came through (issue #2275).
+    { header: "signed_via_booking_id", in: "both", value: (row) => row.signedViaBookingId },
     { header: "instructor_names", in: "both", value: (row) => row.instructorNames },
     { header: "paper_signed_on", in: "both", value: (row) => row.paperSignedOn },
     { header: "signed_name", in: "both", value: (row) => row.signedName },

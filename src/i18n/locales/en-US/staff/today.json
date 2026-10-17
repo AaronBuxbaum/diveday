@@ -133,7 +133,8 @@
     "verifyNitroxCard": "Verify nitrox certification",
     "takePayment": "Take payment",
     "checkReadiness": "Check readiness",
-    "getCourseFormsSigned": "Get forms signed"
+    "getCourseFormsSigned": "Get forms signed",
+    "clearTrainingMark": "Clear training mark"
   },
   "blockerGroup": {
     "setRequirements": "Set requirements",
@@ -156,7 +157,8 @@
     "verifyNitroxCards": "Verify nitrox certifications",
     "takePayments": "Take payments",
     "checkReadiness": "Check readiness",
-    "getCourseFormsSigned": "Get forms signed"
+    "getCourseFormsSigned": "Get forms signed",
+    "clearTrainingMarks": "Clear training marks"
   },
   "pointingLabel": {
     "trip": "Open roster",
@@ -348,6 +350,7 @@
     "paymentDue": "{count, plural, one {Payment due.} other {# payments due.}}",
     "paymentRefunded": "{count, plural, one {Refunded, so payment is due again.} other {# divers refunded, so payment is due again.}}",
     "readinessUnavailable": "{count, plural, one {Readiness couldn’t be checked.} other {Readiness couldn’t be checked for # divers.}}",
-    "courseFormUnsigned": "{count, plural, one {Course form not signed.} other {# course forms not signed.}}"
+    "courseFormUnsigned": "{count, plural, one {Course form not signed.} other {# course forms not signed.}}",
+    "trainingMarkInvalid": "{count, plural, one {Training mark no longer fits its course seat.} other {# training marks no longer fit their course seats.}}"
   }
 }

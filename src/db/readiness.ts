@@ -24,6 +24,7 @@ import {
   unavailableReadiness,
   unreviewedCardState,
 } from "@/lib/readiness";
+import type { TrainingMarkState } from "@/lib/training-mark";
 import { isUuid } from "@/lib/uuid";
 import {
   effectiveReleaseForRiderSeat,
@@ -56,6 +57,7 @@ import {
   tripRequirements,
   trips,
 } from "./schema";
+import { type MarkedSeat, resolveTrainingMarks } from "./training-mark-resolve";
 import { liveTrip } from "./trips-live";
 import {
   getCurrentWaiverGeneration,
@@ -1644,6 +1646,61 @@ export async function getBookingReadinessDetail(
   };
 }
 
+/**
+ * The seats on these rows that carry a training mark (issue #2275), as the
+ * resolver reads them. A seat whose departure `courseByTrip` lacks is read as
+ * a course seat, which the rule refuses: never a mark that stands.
+ */
+function markedSeatsOf(
+  rows: readonly { booking: typeof bookings.$inferSelect; person: { id: string } }[],
+  courseByTrip: ReadonlyMap<string, { courseId: string | null; startsAt: Date }>,
+): MarkedSeat[] {
+  const seats: MarkedSeat[] = [];
+  for (const { booking, person } of rows) {
+    if (booking.trainingEnrollmentBookingId === null) continue;
+    const trip = courseByTrip.get(booking.tripId);
+    seats.push({
+      bookingId: booking.id,
+      enrollmentBookingId: booking.trainingEnrollmentBookingId,
+      seat: {
+        personId: person.id,
+        participantType: booking.participantType,
+        onCourseSession: !trip || trip.courseId !== null,
+        departureStartsAt: trip?.startsAt ?? new Date(0),
+      },
+    });
+  }
+  return seats;
+}
+
+/**
+ * Whose forms a seat is asked, and whose records satisfy them: a training
+ * mark that stands is its enrollment's (`signatureSatisfies` is keyed on that
+ * booking), anything else is the seat's own. A mark that does not stand asks
+ * nothing here; it raises `training_mark_invalid` instead.
+ */
+function formsBookingOf(
+  bookingId: string,
+  tripId: string,
+  mark: TrainingMarkState | undefined,
+): { bookingId: string; tripId: string } {
+  return mark?.valid
+    ? { bookingId: mark.enrollmentBookingId, tripId: mark.enrollmentTripId }
+    : { bookingId, tripId };
+}
+
+/**
+ * The guardian rule's "Under 18" for a seat: its own booker's, or — on a seat
+ * whose training mark stands — the course seat's too, so the charter and the
+ * enrollment never disagree about whether a parent signs (fail closed).
+ */
+function minorDeclaredOf(
+  booking: { minorDeclaredAt: Date | null },
+  mark: TrainingMarkState | undefined,
+): boolean {
+  return booking.minorDeclaredAt !== null || (mark?.valid === true && mark.enrollmentMinorDeclared);
+}
+
 export async function listTripsReadiness(
   db: DbExecutor,
   shopId: string,
@@ -1787,17 +1844,32 @@ export async function listTripsReadiness(
       () => listCourseSeatsInTraining(db, shopId, personIds),
     ]);
   const noEvidence: Awaited<ReturnType<typeof evidence>> = [[], [], [], new Map(), []];
+  // Seats staff marked as a training dive (issue #2275): read only when a
+  // mark exists, so an ordinary fun dive still pays nothing here.
+  const markedSeats = markedSeatsOf(waiverRows, courseByTrip);
   const [
     paymentByBooking,
-    [courseFormsByTrip, courseFormSignatures],
+    [courseFormsByTrip, courseFormSignatures, trainingMarks],
     [certificationRows, specialtyRows, nitroxRows, signedWaiversByPerson, courseSeatRows],
   ] = await queryAll(db, [
     () => paymentsByBooking(db, shopId, bookingIds),
     async () => {
-      const forms = await requiredCourseFormsForTrips(db, shopId, courseTripIds, now);
+      const marks = await resolveTrainingMarks(db, shopId, markedSeats);
+      const enrollments = [...marks.values()].filter((mark) => mark.valid);
+      const forms = await requiredCourseFormsForTrips(
+        db,
+        shopId,
+        [...new Set([...courseTripIds, ...enrollments.map((mark) => mark.enrollmentTripId)])],
+        now,
+      );
       const signatures =
-        forms.size === 0 ? [] : await courseFormSignaturesForBookings(db, shopId, bookingIds);
-      return [forms, signatures] as const;
+        forms.size === 0
+          ? []
+          : await courseFormSignaturesForBookings(db, shopId, [
+              ...bookingIds,
+              ...enrollments.map((mark) => mark.enrollmentBookingId),
+            ]);
+      return [forms, signatures, marks] as const;
     },
     () => (personIds.length === 0 ? Promise.resolve(noEvidence) : evidence()),
   ]);
@@ -1877,11 +1949,13 @@ export async function listTripsReadiness(
       signedWaiversByPerson.get(row.person.id) ?? [],
     );
 
-    const requiredCourseForms = courseFormsByTrip.get(tripId);
+    const trainingMark = trainingMarks.get(row.booking.id);
+    const formsBooking = formsBookingOf(row.booking.id, tripId, trainingMark);
+    const requiredCourseForms = courseFormsByTrip.get(formsBooking.tripId);
     const courseForms = requiredCourseForms
       ? {
           shopId,
-          bookingId: row.booking.id,
+          bookingId: formsBooking.bookingId,
           personId: row.person.id,
           required: requiredCourseForms,
           signatures: courseFormSignatures,
@@ -1901,7 +1975,7 @@ export async function listTripsReadiness(
             ...courseForms,
             signer: {
               dateOfBirth: row.person.dateOfBirth,
-              minorDeclared: row.booking.minorDeclaredAt !== null,
+              minorDeclared: minorDeclaredOf(row.booking, trainingMark),
               timezone,
             },
           })
@@ -1973,7 +2047,7 @@ export async function listTripsReadiness(
         courseDate,
         dateOfBirth: row.person.dateOfBirth,
         // The booker's "Under 18" on this seat, for the guardian rule alone.
-        minorDeclared: row.booking.minorDeclaredAt !== null,
+        minorDeclared: minorDeclaredOf(row.booking, trainingMark),
         // The guardian rule measures the diver's age on the shop-local day
         // they signed (src/lib/guardian.ts), so the engine needs the zone.
         timezone,
@@ -1988,6 +2062,7 @@ export async function listTripsReadiness(
           courseRow !== undefined &&
           participantPriceCents(courseRow, row.booking.participantType) === 0,
         courseForms,
+        trainingMarkInvalid: trainingMark !== undefined && !trainingMark.valid,
         now,
       }),
     };

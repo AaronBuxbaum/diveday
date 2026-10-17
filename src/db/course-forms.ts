@@ -1,5 +1,5 @@
-import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, ne } from "drizzle-orm";
-import { isStaff } from "@/lib/authz";
+import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { canManageWaiverTemplates, isStaff } from "@/lib/authz";
 import {
   type CalendarDate,
   calendarDateInTimezone,
@@ -40,8 +40,10 @@ import { hasReturned } from "@/lib/trips";
 import { loadActiveStaffRoles } from "./authz";
 import { verifyBookingCapability } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
+import { publishManifestEventsForPerson } from "./manifest-events";
 import {
   activityEvents,
+  bookingCapabilities,
   bookings,
   courseFormRecords,
   courseFormRequirements,
@@ -54,6 +56,7 @@ import {
   tripAssignments,
   trips,
 } from "./schema";
+import { resolveTrainingMarks, teachesSessionAsRostered } from "./training-mark-resolve";
 import { livePerson, liveTrip } from "./trips-live";
 
 /**
@@ -855,6 +858,8 @@ type Enrollment = {
   /** The seat's booker said "Under 18" (`bookings.minor_declared_at`). */
   minorDeclared: boolean;
   identityHeld: boolean;
+  /** The seat this was reached from when it is not the enrollment's own (a training mark). */
+  viaBookingId: string | null;
   tripId: string;
   tripTitle: string;
   startsAt: Date;
@@ -901,11 +906,8 @@ async function sessionInstructorNames(
   return [...new Set(names)].join(", ");
 }
 
-async function enrollmentFor(
-  db: DbExecutor,
-  shopId: string,
-  bookingId: string,
-): Promise<Enrollment | null> {
+/** One seat's row, as `enrollmentFor` reads it. Null when not a live diver seat of this shop. */
+async function enrollmentRow(db: DbExecutor, shopId: string, bookingId: string) {
   const [row] = await db
     .select({
       bookingId: bookings.id,
@@ -914,8 +916,12 @@ async function enrollmentFor(
       dateOfBirth: people.dateOfBirth,
       minorDeclaredAt: bookings.minorDeclaredAt,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      participantType: bookings.participantType,
+      trainingEnrollmentBookingId: bookings.trainingEnrollmentBookingId,
+      trainingMarkedAt: bookings.trainingMarkedAt,
       tripId: trips.id,
       tripTitle: trips.title,
+      courseId: trips.courseId,
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
       timezone: shops.timezone,
@@ -942,7 +948,14 @@ async function enrollmentFor(
       ),
     )
     .limit(1);
-  if (!row) return null;
+  return row ?? null;
+}
+
+async function toEnrollment(
+  db: DbExecutor,
+  shopId: string,
+  row: NonNullable<Awaited<ReturnType<typeof enrollmentRow>>>,
+): Promise<Enrollment> {
   return {
     bookingId: row.bookingId,
     personId: row.personId,
@@ -950,6 +963,7 @@ async function enrollmentFor(
     dateOfBirth: row.dateOfBirth,
     minorDeclared: row.minorDeclaredAt !== null,
     identityHeld: row.identityUnconfirmedAt !== null,
+    viaBookingId: null,
     tripId: row.tripId,
     tripTitle: row.tripTitle,
     startsAt: row.startsAt,
@@ -960,6 +974,85 @@ async function enrollmentFor(
       courseTitle: row.courseTitle ?? row.tripTitle,
       instructorNames: await sessionInstructorNames(db, shopId, row.tripId),
     },
+  };
+}
+
+/**
+ * Whether any link to this seat that opens its forms (`readiness`,
+ * `course_forms`) was revoked at or after `since`. A null `since` (no mark
+ * time to measure from) counts as taken back: fail closed.
+ */
+async function linksTakenBackSince(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+  since: Date | null,
+): Promise<boolean> {
+  if (!since) return true;
+  const [row] = await db
+    .select({ id: bookingCapabilities.id })
+    .from(bookingCapabilities)
+    .where(
+      and(
+        eq(bookingCapabilities.shopId, shopId),
+        eq(bookingCapabilities.bookingId, bookingId),
+        inArray(bookingCapabilities.purpose, ["readiness", "course_forms"]),
+        gte(bookingCapabilities.revokedAt, since),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
+}
+
+/**
+ * **The enrollment a booking's forms belong to.** A course seat is its own. A
+ * seat on an ordinary departure that staff marked as a training dive (issue
+ * #2275) resolves to the course seat its mark names, through the one resolver
+ * every reader shares (`resolveTrainingMarks`): the forms asked, the
+ * signatures read and the record written are all the enrollment's, so signing
+ * once covers both seats and a record never lands on the charter. A mark that
+ * no longer stands resolves to nothing, so nobody signs against it; boarding
+ * says `training_mark_invalid` instead. A hold on either seat holds the
+ * signing.
+ */
+async function enrollmentFor(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<Enrollment | null> {
+  const row = await enrollmentRow(db, shopId, bookingId);
+  if (!row) return null;
+  if (row.courseId !== null || row.trainingEnrollmentBookingId === null) {
+    return toEnrollment(db, shopId, row);
+  }
+  const state = (
+    await resolveTrainingMarks(db, shopId, [
+      {
+        bookingId,
+        enrollmentBookingId: row.trainingEnrollmentBookingId,
+        seat: {
+          personId: row.personId,
+          participantType: row.participantType,
+          onCourseSession: false,
+          departureStartsAt: row.startsAt,
+        },
+      },
+    ])
+  ).get(bookingId);
+  if (!state?.valid) return null;
+  const target = await enrollmentRow(db, shopId, state.enrollmentBookingId);
+  if (!target || target.courseId === null || target.personId !== row.personId) return null;
+  // Links the shop took back from the course seat since the mark (a repoint,
+  // a claim, a cancel) are not reopened through the charter's (security
+  // review U2). The course seat's own route stays the shop's to reissue.
+  if (await linksTakenBackSince(db, shopId, target.bookingId, row.trainingMarkedAt)) return null;
+  const enrollment = await toEnrollment(db, shopId, target);
+  return {
+    ...enrollment,
+    identityHeld: enrollment.identityHeld || row.identityUnconfirmedAt !== null,
+    viaBookingId: bookingId,
+    // Either seat's "Under 18" asks the guardian: one flag for both (fail closed).
+    minorDeclared: enrollment.minorDeclared || row.minorDeclaredAt !== null,
   };
 }
 
@@ -996,10 +1089,12 @@ export async function getCourseFormsForBooking(
       enrollment.tripId,
     ) ?? [];
   if (required.length === 0) return { enrollment, required, outstanding: [] };
-  const signatures = await courseFormSignaturesForBookings(db, shopId, [bookingId]);
+  // The enrollment's, never the asked-for seat's: a charter seat carrying a
+  // training mark reads the course seat's records (issue #2275).
+  const signatures = await courseFormSignaturesForBookings(db, shopId, [enrollment.bookingId]);
   const owed = courseFormGaps({
     shopId,
-    bookingId,
+    bookingId: enrollment.bookingId,
     personId: enrollment.personId,
     required,
     signatures,
@@ -1129,11 +1224,13 @@ export async function signCourseForm(
     signedAt: now,
   });
   if (!evidence) return { ok: false, reason: "invalid_signature" };
-  return db.transaction(async (tx): Promise<SignCourseFormOutcome> => {
+  let signer: string | null = null;
+  const outcome = await db.transaction(async (tx): Promise<SignCourseFormOutcome> => {
     const enrollment = await enrollmentFor(tx, input.shopId, input.bookingId);
     if (!enrollment || enrollment.identityHeld || hasReturned(enrollment.endsAt, now)) {
       return { ok: false, reason: "unavailable" };
     }
+    signer = enrollment.personId;
     const required =
       (await requiredCourseFormsForTrips(tx, input.shopId, [enrollment.tripId], now)).get(
         enrollment.tripId,
@@ -1190,6 +1287,23 @@ export async function signCourseForm(
       guardian,
     });
   });
+  await publishSigned(db, input.shopId, signer, outcome);
+  return outcome;
+}
+
+/**
+ * A new record clears a blocker on every seat this enrollment's forms are
+ * asked on — the course seat and any charter its training mark names (issue
+ * #2275) — so each of the student's manifests re-reads. After the commit.
+ */
+async function publishSigned(
+  db: AppDb,
+  shopId: string,
+  personId: string | null,
+  outcome: { ok: boolean; alreadySigned?: boolean },
+): Promise<void> {
+  if (!personId || !outcome.ok || outcome.alreadySigned) return;
+  await publishManifestEventsForPerson(db, shopId, personId);
 }
 
 type GuardianEvidence = {
@@ -1250,6 +1364,7 @@ async function insertRecord(
       formBody: fillCourseFormText(version.body, input.enrollment.context),
       courseTitle: input.enrollment.context.courseTitle,
       tripId: input.enrollment.tripId,
+      signedViaBookingId: input.enrollment.viaBookingId,
       instructorNames: input.enrollment.context.instructorNames,
       paperSignedOn: input.paperSignedOn,
       signedName: input.signedName,
@@ -1318,6 +1433,8 @@ export type PaperCourseFormOutcome =
       ok: false;
       reason:
         | "staff_not_found"
+        /** From a marked charter's row: neither a forms manager nor the session's instructor. */
+        | "not_authorized"
         | "guardian_name_matches_diver"
         /** The staffer did not confirm they hold the signed paper copy. */
         | "paper_copy_unconfirmed"
@@ -1358,13 +1475,31 @@ export async function recordPaperCourseForm(
 ): Promise<PaperCourseFormOutcome> {
   const now = input.now ?? nowDate();
   if (!input.paperCopyConfirmed) return { ok: false, reason: "paper_copy_unconfirmed" };
-  return db.transaction(async (tx): Promise<PaperCourseFormOutcome> => {
+  let student: string | null = null;
+  const outcome = await db.transaction(async (tx): Promise<PaperCourseFormOutcome> => {
     const roles = await loadActiveStaffRoles(tx, input.shopId, input.recordedByPersonId);
     if (!roles || !isStaff(roles)) return { ok: false, reason: "staff_not_found" };
     const enrollment = await enrollmentFor(tx, input.shopId, input.bookingId);
     // A held seat is not yet known to be this student's (#2082): a paper copy
     // recorded against it could be somebody else's signature.
     if (!enrollment || enrollment.identityHeld) return { ok: false, reason: "unavailable" };
+    // From a charter seat's row (a training mark, issue #2275), the staffer
+    // attests a course's form for a session that is not this departure's: the
+    // shop's forms manager, or the instructor someone else rostered on it
+    // (security review U4), as for clearing a mark with forms owed.
+    if (
+      enrollment.viaBookingId !== null &&
+      !canManageWaiverTemplates(roles) &&
+      !(await teachesSessionAsRostered(
+        tx,
+        input.shopId,
+        enrollment.tripId,
+        input.recordedByPersonId,
+      ))
+    ) {
+      return { ok: false, reason: "not_authorized" };
+    }
+    student = enrollment.personId;
     if (hasReturned(enrollment.endsAt, now)) return { ok: false, reason: "session_ended" };
     const today = signingDate(now, enrollment.timezone);
     let paperSignedOn: CalendarDate | null = null;
@@ -1429,6 +1564,8 @@ export async function recordPaperCourseForm(
       guardian,
     });
   });
+  await publishSigned(db, input.shopId, student, outcome);
+  return outcome;
 }
 
 /** How many students, on how many sessions, a change to forms reaches. */

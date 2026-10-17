@@ -69,6 +69,9 @@ export type TripRosterActions = {
   recordTripInvitationAction: (invitationId: string) => Promise<"sent" | "fallback">;
   undoRemoveBookingAction: FormAction;
   restoreInternalNoteAction: FormAction;
+  /** Absent on a course session, and for a staffer who may not configure trips. */
+  markTrainingDiveAction?: FormAction;
+  clearTrainingDiveAction?: FormAction;
 };
 
 /** Everything `TripRosterContent` draws, assembled once by its caller and handed over as one object. */
@@ -279,6 +282,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           aboardAtSea: guests.aboardAtSea,
           sameNamePeople: guests.sameNamePeople,
           dependentCharters: guests.dependentCharters,
+          trainingMarks: guests.trainingMarks,
           heldSeatLastDiveDay: guests.heldSeatLastDiveDay,
           packageDivesByBooking: guests.packageDivesByBooking,
           paymentMarksByBooking: guests.paymentMarksByBooking,
@@ -317,6 +321,10 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           // A course form signed on paper (ADR 20261008-course-forms). Bound
           // here rather than on the page: only a seat that owes a form draws it.
           recordPaperCourseFormAction: recordPaperCourseFormAction.bind(null, shopSlug, trip.id),
+          // A training dive on a charter (issue #2275). Never on a finished
+          // departure: its ledger is the record.
+          markTrainingDiveAction: record ? undefined : actions.markTrainingDiveAction,
+          clearTrainingDiveAction: record ? undefined : actions.clearTrainingDiveAction,
           updatePickupAction: actions.updateBookingPickupAction,
         }}
         slots={{

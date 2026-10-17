@@ -4,6 +4,7 @@ import {
   setCourseMaterialsDoneAction,
 } from "../course-actions";
 import { elearningCheckAction } from "../elearning-actions";
+import { clearTrainingDiveAction, markTrainingDiveAction } from "../training-mark-actions";
 
 /**
  * A course session's three acts of teaching on the Divers tab, bound to this
@@ -22,5 +23,25 @@ export function courseRosterActions(isCourseSession: boolean, shopSlug: string, 
     saveCourseNextStepAction: saveCourseNextStepAction.bind(null, shopSlug, tripId),
     setCourseMaterialsDoneAction: setCourseMaterialsDoneAction.bind(null, shopSlug, tripId),
     elearningCheckAction: elearningCheckAction.bind(null, shopSlug, tripId),
+  };
+}
+
+/**
+ * Mark and clear a training dive on a charter seat (issue #2275), bound only
+ * where both can be used: a departure that is not itself a course session,
+ * for a staffer who may configure trips (owner, manager, instructor). A
+ * captain is offered neither (security review U7); each writer refuses one
+ * anyway.
+ */
+export function trainingMarkRosterActions(
+  isCourseSession: boolean,
+  canConfigure: boolean,
+  shopSlug: string,
+  tripId: string,
+) {
+  if (isCourseSession || !canConfigure) return {};
+  return {
+    markTrainingDiveAction: markTrainingDiveAction.bind(null, shopSlug, tripId),
+    clearTrainingDiveAction: clearTrainingDiveAction.bind(null, shopSlug, tripId),
   };
 }

@@ -244,6 +244,20 @@ export type ManifestDiverInput = {
    */
   riderMedicalHold?: RiderMedicalHold | null;
   /**
+   * A staffer cleared this seat's training mark in a way that relaxed a
+   * boarding block (issue #2275) — its course forms still owed, or a mark that
+   * no longer held — and the crew sees who decided. Never a blocker.
+   */
+  trainingMarkCleared?: TrainingMarkCleared | null;
+  /**
+   * A training mark that stands on this seat (issue #2275): the course the
+   * dive counts toward, and whether an instructor is on this departure's crew
+   * as the manifest is read — a warning when not, never a blocker. Null on an
+   * unmarked seat and on a mark that no longer stands (`training_mark_invalid`
+   * says that).
+   */
+  trainingDive?: { courseTitle: string; instructorAboard: boolean } | null;
+  /**
    * Lodging / hotel location stated by diver on /ready (marker only, not a checkpoint).
    */
   hotelPickupLocation?: string | null;
@@ -1292,3 +1306,9 @@ export function blockedAtDock(
   }
   return { undecided, aboard };
 }
+
+/** Who cleared a seat's training mark over a boarding block, and which one (issue #2275). */
+export type TrainingMarkCleared = {
+  byName: string | null;
+  reason: "forms_owed" | "mark_invalid";
+};

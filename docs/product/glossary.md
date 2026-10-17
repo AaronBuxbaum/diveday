@@ -154,6 +154,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Check-in
 - Close-out
 - Connected Stripe account
+- Counter hand-off
 - Counter self-registration
 - Course catalog copy
 - Course form
@@ -281,6 +282,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Tight turnaround
 - Tip
 - Touch guard
+- Training mark
 - Transactional notification
 - Trip / charter
 - Trip packet

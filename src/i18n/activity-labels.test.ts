@@ -72,6 +72,8 @@ describe("activity lines", () => {
           atSea: "yes",
           form: "Medical statement",
           marked: "yes",
+          course: "Advanced Open Water",
+          formsOwed: "yes",
         },
       });
       expect(line.trim(), code).not.toBe("");

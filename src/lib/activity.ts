@@ -139,6 +139,16 @@ type ActivityParamShapes = {
    */
   course_form_medical_changed: { actor: string; form: string; marked: "yes" | "no" };
   /**
+   * A staffer marked a seat on an ordinary departure as a training dive for
+   * the diver's course (issue #2275), so the seat is asked the course's forms.
+   */
+  training_dive_marked: { actor: string; diver: string; course: string };
+  /**
+   * …or cleared the mark. `formsOwed` is `yes` when forms were still owed (or
+   * the mark no longer stood): clearing it then relaxed a boarding block.
+   */
+  training_dive_cleared: { actor: string; diver: string; course: string; formsOwed: "yes" | "no" };
+  /**
    * …or the crew boarded them anyway, which takes it back at the rail. Its own
    * line rather than the undo above, because it says something the undo does
    * not: the boat carried somebody the desk had written off, which is exactly
@@ -433,6 +443,8 @@ export const ACTIVITY_CODES = [
   "booking_no_show_undo_refused",
   "participant_type_changed",
   "course_form_medical_changed",
+  "training_dive_marked",
+  "training_dive_cleared",
   "booking_no_show_boarded",
   "booking_no_show_missing_after_dive",
   "booking_turned_away",

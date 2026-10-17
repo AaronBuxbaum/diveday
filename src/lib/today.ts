@@ -1005,6 +1005,8 @@ export const BLOCKER_ACTIONS: Record<
   // The roster is where a paper copy is recorded and the link is sent.
   course_form_unsigned: { kind: "waiver", target: "trip" },
   course_form_guardian_missing: { kind: "waiver", target: "trip" },
+  // The mark is fixed or cleared on the departure's own roster.
+  training_mark_invalid: { kind: "waiver", target: "trip" },
   certification_missing: { kind: "certification", target: "diver" },
   certification_pending: { kind: "certification", target: "diver" },
   certification_self_declared: { kind: "certification", target: "diver" },

@@ -1265,6 +1265,21 @@
   does not know. Open Water's template bounds PADI's Youth Diving acknowledgment (10615) at 11. A form the shop ticks as a **medical
   statement** (signature only; no answers are screened, unlike the **Medical questionnaire**
   below) keeps blocking even with that switch at warn-only.
+- **Training mark** — a staff mark on a seat on an ordinary departure saying its dive is a training
+  dive for one of the diver's course seats (the **enrollment**), such as an Advanced adventure dive
+  on a fun-dive charter (issue #2275, ADR 20261012-course-forms-on-charters-and-counter). The seat
+  is then asked that course's **Course forms**, and they are signed once, on the enrollment: a
+  signature given from the charter seat's link is recorded against the course seat, so both seats
+  read it. Never inferred from an open enrollment or a card level; only an owner, manager or
+  instructor sets it, from the departure's Divers tab, and only on the same diver's live,
+  confirmed course seat whose session ends no earlier than the boat leaves. One enrollment per seat.
+  Checked again at every read: a mark whose enrollment is canceled, held or moved is the
+  `training_mark_invalid` blocker until staff clear it. Clearing one with forms still owed takes a
+  manager or the enrollment's own instructor, and the manifest names who did. **A training mark is
+  not In training**: it changes boarding only, and buying a seat never reads it.
+- **Counter hand-off** — signing several students' **Course forms** one at a time on one shop
+  device, each on a single-use staff-issued link, with the page dead-ending after each signature
+  (ADR 20261012-course-forms-on-charters-and-counter, decision 2). Designed, not built yet.
 - **Sign once** — a diver signs the release once, not every trip. A **completed** signature is held
   against the diver (not just the booking it was signed on) and satisfies the waiver gate on any of
   their bookings while it stays **current**: signed against the shop's current release version and

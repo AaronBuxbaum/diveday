@@ -126,6 +126,17 @@ export const tripAssignments = pgTable(
      * must never be able to mint a credential.
      */
     tripRole: tripAssignmentRole("trip_role"),
+    /**
+     * Who put this person on the boat in this role: set by each crew writer
+     * from its actor, and again whenever the role changes; null for a seed or
+     * a system pass, and for every row written before the column existed. A
+     * gate that trusts the roster to say who teaches a session (clearing a
+     * training mark with forms owed, issue #2275) reads it, so nobody can
+     * roster themselves into that trust.
+     */
+    assignedByPersonId: uuid("assigned_by_person_id").references(() => people.id, {
+      onDelete: "set null",
+    }),
   },
   (table) => [
     primaryKey({ columns: [table.tripId, table.personId] }),
@@ -133,6 +144,7 @@ export const tripAssignments = pgTable(
     // person first; the primary key leads with the trip (code review
     // 2026-10-11, item 27).
     index("trip_assignments_person_idx").on(table.personId),
+    index("trip_assignments_assigned_by_idx").on(table.assignedByPersonId),
   ],
 );
 

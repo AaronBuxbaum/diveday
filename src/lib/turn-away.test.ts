@@ -68,6 +68,11 @@ describe("turnAwayReasons", () => {
     expect(turnAwayReasons(blocked("readiness_unavailable"))).toEqual([]);
   });
 
+  /** A stale training mark is the desk's own record, cleared on the Divers tab. */
+  it("offers nothing for a training mark that no longer holds", () => {
+    expect(turnAwayReasons(blocked("training_mark_invalid"))).toEqual([]);
+  });
+
   /**
    * A held seat (security review 2026-10-16, F1): every blocker but the
    * identity question and the seat's payment is measured against the matched
