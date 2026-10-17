@@ -23,7 +23,7 @@ import {
   updateBookingPickupAction,
 } from "../roster-seating-actions";
 import { markRosterWaiverInPersonAction, sendNewWaiverAction } from "../roster-waiver-actions";
-import { courseRosterActions } from "./course-roster-actions";
+import { courseRosterActions, trainingMarkRosterActions } from "./course-roster-actions";
 import { noteRosterActions } from "./note-roster-actions";
 import { seatMoveFor } from "./seat-move";
 
@@ -42,6 +42,7 @@ export async function tripRosterActions({
   locale,
   now,
   mayRetireRefusal,
+  canConfigure,
 }: {
   db: AppDb;
   shop: { id: string; timezone: string };
@@ -51,6 +52,8 @@ export async function tripRosterActions({
   locale: string;
   now: Date;
   mayRetireRefusal: boolean;
+  /** Owner, manager or instructor (`canConfigureTrips`): who may mark a training dive. */
+  canConfigure: boolean;
 }) {
   return {
     addBookingAction: seatNewDiverAction.bind(null, "trip-guests", shopSlug),
@@ -73,6 +76,7 @@ export async function tripRosterActions({
       ? sendNewWaiverAction.bind(null, shopSlug, tripId)
       : undefined,
     ...courseRosterActions(Boolean(trip.course), shopSlug, tripId),
+    ...trainingMarkRosterActions(Boolean(trip.course), canConfigure, shopSlug, tripId),
     ...noteRosterActions(shopSlug, tripId),
     saveRosterEmergencyContactAction: saveRosterEmergencyContactAction.bind(null, shopSlug, tripId),
     updateBookingPickupAction: updateBookingPickupAction.bind(null, shopSlug, tripId),

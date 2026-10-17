@@ -134,53 +134,6 @@ export async function resolveTrainingMarks(
 }
 
 /**
- * One booking's training mark: `none` for a seat with no mark (a course seat
- * included), otherwise the resolved state. Null when the booking is not a
- * seat of this shop on a live departure.
- */
-export async function trainingMarkForBooking(
-  db: DbExecutor,
-  shopId: string,
-  bookingId: string,
-): Promise<{ marked: false } | ({ marked: true } & TrainingMarkState) | null> {
-  const [row] = await db
-    .select({
-      personId: bookings.personId,
-      participantType: bookings.participantType,
-      enrollmentBookingId: bookings.trainingEnrollmentBookingId,
-      courseId: trips.courseId,
-      startsAt: trips.startsAt,
-    })
-    .from(bookings)
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(
-      and(
-        eq(bookings.id, bookingId),
-        eq(bookings.shopId, shopId),
-        eq(trips.shopId, shopId),
-        liveTrip(),
-      ),
-    )
-    .limit(1);
-  if (!row) return null;
-  if (row.enrollmentBookingId === null) return { marked: false };
-  const states = await resolveTrainingMarks(db, shopId, [
-    {
-      bookingId,
-      enrollmentBookingId: row.enrollmentBookingId,
-      seat: {
-        personId: row.personId,
-        participantType: row.participantType as ParticipantType,
-        onCourseSession: row.courseId !== null,
-        departureStartsAt: row.startsAt,
-      },
-    },
-  ]);
-  const state = states.get(bookingId) ?? { valid: false, problem: "enrollment_missing" };
-  return { marked: true, ...state };
-}
-
-/**
  * Whether this person is rostered as an instructor on this departure **by
  * someone else** (build review T2): an assignment, or a role, they gave
  * themselves — or one nobody is recorded as giving — proves nothing about who

@@ -22,11 +22,7 @@ import type { MarkRetry } from "@/lib/payment-marks";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
-import {
-  clearTrainingDiveAction,
-  markTrainingDiveAction,
-  recordPaperCourseFormAction,
-} from "../course-actions";
+import { recordPaperCourseFormAction } from "../course-actions";
 import { AddDiverSection } from "./AddDiverSection";
 import { DepartureNoteSection } from "./DepartureNoteSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
@@ -72,6 +68,9 @@ export type TripRosterActions = {
   recordTripInvitationAction: (invitationId: string) => Promise<"sent" | "fallback">;
   undoRemoveBookingAction: FormAction;
   restoreInternalNoteAction: FormAction;
+  /** Absent on a course session, and for a staffer who may not configure trips. */
+  markTrainingDiveAction?: FormAction;
+  clearTrainingDiveAction?: FormAction;
 };
 
 /** Everything `TripRosterContent` draws, assembled once by its caller and handed over as one object. */
@@ -317,14 +316,8 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           recordPaperCourseFormAction: recordPaperCourseFormAction.bind(null, shopSlug, trip.id),
           // A training dive on a charter (issue #2275). Never on a finished
           // departure: its ledger is the record.
-          markTrainingDiveAction:
-            trip.courseId || record
-              ? undefined
-              : markTrainingDiveAction.bind(null, shopSlug, trip.id),
-          clearTrainingDiveAction:
-            trip.courseId || record
-              ? undefined
-              : clearTrainingDiveAction.bind(null, shopSlug, trip.id),
+          markTrainingDiveAction: record ? undefined : actions.markTrainingDiveAction,
+          clearTrainingDiveAction: record ? undefined : actions.clearTrainingDiveAction,
           updatePickupAction: actions.updateBookingPickupAction,
         }}
         slots={{
