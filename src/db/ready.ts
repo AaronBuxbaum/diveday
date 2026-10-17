@@ -497,6 +497,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     nitroxOnFile,
     welcomeInputs,
     fitConfirmation,
+    moveAskStands,
   ] = await Promise.all([
     getTripWithBookedOnce(db, row.shopId, row.tripId),
     reEntryOffersOpen ? hasActiveRefresherCourse(db, row.shopId) : false,
@@ -527,6 +528,15 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     // Read here rather than folded into `getRentalFit`'s row, because the
     // staffer's name comes from a join this page is the only caller of.
     fitConfirmationForDiver(db, row.shopId, row.personId),
+    // Whether an ask to move stands (H-126), read here with the rest rather
+    // than after the cancel check it is used behind: that was two round trips
+    // more for every seat past the free window. A seat that cannot be
+    // released, or whose identity is held, never shows it.
+    row.status === "booked" &&
+    !hasSailed(row.tripStartsAt, now) &&
+    row.identityUnconfirmedAt === null
+      ? hasMoveAsk(db, row.shopId, bookingId, row.tripId)
+      : false,
   ]);
   if (!trip) return null;
   return {
@@ -544,6 +554,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     welcomeInputs,
     fitConfirmation,
     materialsDoneElsewhere,
+    moveAskStands,
   };
 }
 
@@ -578,6 +589,7 @@ export async function getReadyPageData(
     welcomeInputs,
     fitConfirmation,
     materialsDoneElsewhere,
+    moveAskStands,
   } = page;
   // `partly_refunded` settles too, or this page would invite a diver who has
   // already paid — and been handed part of it back — to pay the full price a
@@ -639,11 +651,7 @@ export async function getReadyPageData(
     canCancelBooking &&
     !identityHeld &&
     (cancelPreview === "forfeit" || cancelPreview === "no_policy");
-  const moveAsk: ReadyPageData["moveAsk"] = moveAskable
-    ? (await hasMoveAsk(db, row.shopId, bookingId))
-      ? "asked"
-      : "open"
-    : null;
+  const moveAsk: ReadyPageData["moveAsk"] = moveAskable ? (moveAskStands ? "asked" : "open") : null;
 
   const canPayPartySeats =
     canCancelBooking &&

@@ -643,7 +643,12 @@ const PUBLIC_TRIP_CEILING = 20;
 // away on the departure's days (`diverCrewWithAway`), which reads the
 // schedule days and the days away beside the crew. Measured 38; the phases
 // stay 5, since both ride the thread's one wave.
-const READY_CEILING = 38;
+// 38 → 39 (#2687, H-126): a seat that can still be released reads whether an
+// ask to move stands (`hasMoveAsk`, one read), beside the rest of the page's
+// fan-out, so the phases stay 5. The seed's booking ids are random, so which
+// seat the test lands on varies: both a seat past the free window and one not
+// past it must stay inside the ceiling.
+const READY_CEILING = 39;
 // 10 → 3: the shop, then `readTripPage`'s one wave (issue #2353; code review
 // 2026-10-11, item 2), whose chained reads — the briefings off the dives, the
 // Stripe account and the other boats off the trip — are its third round trip.
@@ -662,6 +667,7 @@ const READY_PHASE_CEILING = 5;
 // The two above them are the capability and the readiness detail, as for one
 // seat.
 const READY_PARTY_PHASE_CEILING = 7;
-// A party of three or six: the single seat's 38, plus the party panel's
+// A party of three or six: the single seat's 39, plus the party panel's
 // own reads and one claim-link mint for every unclaimed seat together.
-const READY_PARTY_CEILING = 40;
+// 40 → 41 (#2687, H-126): the same move-ask read as the single seat's.
+const READY_PARTY_CEILING = 41;
