@@ -436,8 +436,8 @@ export async function seedTrips(
   await db.insert(tripRequirements).values(
     tripRows.map((trip) => {
       // The night dive has no site of its own, so its Night gate is trip-level;
-      // night diving needs the Night specialty, not a higher level. The wreck
-      // trip inherits AOW + Deep from the Spiegel Grove site and adds a
+      // this shop requires the Night specialty on that dive, not a higher level.
+      // The wreck trip inherits AOW + Deep from the Spiegel Grove site and adds a
       // trip-level nitrox requirement (deep wreck bottom time).
       const isNight = trip.title.startsWith("Night Dive");
       const isWreck = trip.title.startsWith("Wreck Trip");

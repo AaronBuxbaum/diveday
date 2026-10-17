@@ -134,6 +134,7 @@ export type RosterFixtureOptions = {
   aboardAtSea?: ReadonlyMap<string, AboardHold>;
   /** The departure is marked as past no-decompression limits. */
   exceedsNoDecoLimits?: boolean;
+  divingCrew?: boolean;
 };
 
 function rosterProps({
@@ -157,6 +158,7 @@ function rosterProps({
   moveSeat,
   aboardAtSea,
   exceedsNoDecoLimits,
+  divingCrew,
 }: RosterFixtureOptions) {
   return {
     trip: {
@@ -176,6 +178,7 @@ function rosterProps({
       splitAsksDateOfBirth,
       certifyDefaultLevel,
       exceedsNoDecoLimits,
+      divingCrew,
     },
     rows: {
       roster,

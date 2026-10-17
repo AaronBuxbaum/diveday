@@ -97,10 +97,17 @@ export function RosterSection({
   });
   const { stillToClear, ready, here, notHere, hereMeta, blockedCount, sharedFacts, sailedMeta } =
     groups;
-  const showsDecompressionReminder = needsDecompressionCardReminder(
-    trip.exceedsNoDecoLimits,
-    roster.map(({ booking }) => booking.participantType),
-  );
+  // A record never asks for action, so a finished departure carries no reminder.
+  const showsDecompressionReminder =
+    !record &&
+    needsDecompressionCardReminder({
+      exceedsNoDecoLimits: trip.exceedsNoDecoLimits,
+      seats: roster.map(({ booking }) => ({
+        participantType: booking.participantType,
+        released: booking.status === "no_show",
+      })),
+      divingCrew: trip.divingCrew,
+    });
   // A record never celebrates a clearance: there was nothing left to clear.
   const showAllClear = roster.length > 0 && !record;
   const context: RosterRowContext = {

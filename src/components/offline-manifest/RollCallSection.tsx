@@ -1,6 +1,8 @@
+import { DecompressionReminder } from "@/components/DecompressionReminder";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { FIGURE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
+import { crewDives, needsDecompressionCardReminder } from "@/lib/decompression-reminder";
 import { countParticipants, hasNonDivers, joinPassengerSplit } from "@/lib/participant-types";
 import { OfflineCrewRollCall } from "./CrewRollCall";
 import type { OfflineTripControls } from "./controls";
@@ -18,6 +20,17 @@ export function OfflineRollCallSection({
   const { manifest, checkpoint, boarded, awaiting, rollCallComplete, anyBuddies } = view;
   const { t, locale } = controls;
   const passengerTypes = countParticipants(manifest.divers);
+  // A copy saved before the flag rode along has none, and says nothing.
+  const showsDecompressionReminder =
+    checkpoint === "departure" &&
+    needsDecompressionCardReminder({
+      exceedsNoDecoLimits: manifest.trip.exceedsNoDecoLimits,
+      seats: manifest.divers.map((diver) => ({
+        participantType: diver.participantType,
+        released: Boolean(diver.notHere),
+      })),
+      divingCrew: crewDives(manifest.crew),
+    });
   return (
     <>
       {/* One look, complete or not: no coral on a roll call (ADR
@@ -78,6 +91,9 @@ export function OfflineRollCallSection({
                 })}
           </span>
         </h2>
+        {showsDecompressionReminder ? (
+          <DecompressionReminder text={t("manifest.decompressionReminder")} />
+        ) : null}
         {rollCallComplete ? (
           <p className="mt-1 text-sm font-semibold text-muted" role="status" aria-live="polite">
             {boarded === manifest.summary.totalDivers

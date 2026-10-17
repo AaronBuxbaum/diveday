@@ -50,6 +50,8 @@ export type RosterTrip = {
   rehearsal?: boolean;
   /** Marked as past no-decompression limits: the roster reminds crew to check technical cards. */
   exceedsNoDecoLimits?: boolean;
+  /** A guide in the water is rostered: they need the decompression card check too. */
+  divingCrew?: boolean;
   shopTimezone: string;
   locale: string;
   tripId: string;
