@@ -146,7 +146,9 @@ async function monthTripSpine(db: DbExecutor, shopId: string, where: SQL | undef
     )
     .leftJoin(boats, and(eq(boats.id, trips.boatId), eq(boats.shopId, shopId)))
     .leftJoin(tripLenses, and(eq(tripLenses.id, trips.lensId), eq(tripLenses.shopId, shopId)))
-    .where(and(where, liveTrip()))
+    // `notRehearsal()` here too, not only in the caller's window: a practice
+    // run is never a month's departure, whoever asks for the spine.
+    .where(and(where, liveTrip(), notRehearsal()))
     .groupBy(
       trips.id,
       trips.title,
