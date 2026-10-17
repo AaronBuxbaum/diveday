@@ -23,7 +23,14 @@ import type { StaffMessageKey } from "@/i18n/staff-messages";
  * destination is *absent* for anyone who fails the gate — never present and
  * disabled, never explained (ADR 20260724-role-gated-surfaces-hide-not-explain).
  */
-export type StaffDestinationGate = "waivers" | "reports" | "team" | "settings";
+export type StaffDestinationGate =
+  | "waivers"
+  | "reports"
+  | "team"
+  | "settings"
+  | "boats"
+  | "tripTags"
+  | "safetyChecklist";
 
 /** Which gates the current viewer passes. */
 export type StaffDestinationGates = Record<StaffDestinationGate, boolean>;
@@ -128,6 +135,9 @@ export type StaffDestinationId =
   | "staffing"
   | "lostFound"
   | "diveSites"
+  | "boats"
+  | "tripTags"
+  | "safetyChecklist"
   | "gear"
   | "workOrders"
   | "newWorkOrder"
@@ -190,6 +200,9 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   staffing: "shared.shopNavLinks.staffing",
   lostFound: "shared.shopNavLinks.lostFound",
   diveSites: "shared.shopNavLinks.diveSites",
+  boats: "shared.shopNavLinks.boats",
+  tripTags: "shared.shopNavLinks.tripTags",
+  safetyChecklist: "shared.shopNavLinks.safetyChecklist",
   gear: "shared.shopNavLinks.gear",
   workOrders: "shared.shopNavLinks.workOrders",
   newWorkOrder: "shared.shopNavLinks.newWorkOrder",
@@ -312,6 +325,20 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   { id: "rentOut", suffix: "/gear/rentals/new", section: "gear", inPalette: true },
   // What a shop sets up rather than works.
   { id: "diveSites", suffix: "/dive-sites", section: "settings", inPalette: true },
+  // The shop's other registers sit beside the dive sites (issue #2659, glossary
+  // "Register and setting"): a table of the shop's things that a departure
+  // points at, each at `/shop/<slug>/<noun>` with a gate of its own. The boats
+  // gate is also false for a shop that does not dive from a boat, because the
+  // fleet page does not exist for it (`staffDestinationGates`).
+  { id: "boats", suffix: "/boats", section: "settings", inPalette: true, gate: "boats" },
+  { id: "tripTags", suffix: "/trip-tags", section: "settings", inPalette: true, gate: "tripTags" },
+  {
+    id: "safetyChecklist",
+    suffix: "/safety-checklist",
+    section: "settings",
+    inPalette: true,
+    gate: "safetyChecklist",
+  },
   { id: "waivers", suffix: "/waivers", section: "settings", inPalette: true, gate: "waivers" },
   { id: "team", suffix: "/settings/team", section: "settings", inPalette: true, gate: "team" },
   // A staffer's own calendar subscription, filed under `/settings` by URL

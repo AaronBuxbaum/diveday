@@ -56,6 +56,6 @@ describe("pushBoatSnagRows", () => {
 
   it("opens the fleet at the boat when the departure it was written on is gone", () => {
     const [row] = rows([{ ...snag, departuresSince: 0, next: null, notedOnLive: false }]);
-    expect(row?.href).toBe("/shop/blue-mantis/settings/boats#boat-b-mantis");
+    expect(row?.href).toBe("/shop/blue-mantis/boats#boat-b-mantis");
   });
 });

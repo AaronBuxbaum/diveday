@@ -195,7 +195,7 @@ export function pushEquipmentRows(actions: TodayAction[], ctx: TodayRowsContext)
             context: null,
             detail,
             actionLabel: openBoatsActionText(t),
-            href: `/shop/${shopSlug}/settings/boats`,
+            href: `/shop/${shopSlug}/boats`,
             dueAt: null,
           }
         : {

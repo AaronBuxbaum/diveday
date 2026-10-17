@@ -14,10 +14,13 @@ import {
   canExportShopData,
   canImportShopData,
   canManageBilling,
+  canManageBoats,
   canManageMessagingSettings,
   canManageOrders,
   canManagePaymentSettings,
+  canManageSafetyChecklist,
   canManageStaffAccounts,
+  canManageTripTags,
   canManageWaiverTemplates,
   canOverrideCertBlock,
   canOverrideGearRequest,
@@ -31,6 +34,7 @@ import {
   canViewShopReports,
   isStaff,
   type Role,
+  staffDestinationGates,
 } from "./authz";
 
 describe("isStaff", () => {
@@ -80,6 +84,11 @@ describe("accountable-role gates (export/import/reports)", () => {
     ["canReplyToReviews", canReplyToReviews],
     // D5: the activity log names each staffer's own work across the team.
     ["canViewShopActivity", canViewShopActivity],
+    // #2659: each register carries its own gate; owner and manager today, the
+    // same people the Settings gate admitted before they moved out of Settings.
+    ["canManageBoats", canManageBoats],
+    ["canManageTripTags", canManageTripTags],
+    ["canManageSafetyChecklist", canManageSafetyChecklist],
   ] as const;
 
   for (const [name, gate] of gates) {
@@ -354,5 +363,32 @@ describe("canAddDiver (every staff role)", () => {
     expect(canAddDiver(["diver"])).toBe(false);
     expect(canAddDiver([])).toBe(false);
     expect(canAddDiver(undefined)).toBe(false);
+  });
+});
+
+describe("staffDestinationGates (the registers, #2659)", () => {
+  it("opens boats, trip tags and the checklist to owner and manager only", () => {
+    for (const role of ["owner", "manager"] as const) {
+      expect(staffDestinationGates([role])).toMatchObject({
+        boats: true,
+        tripTags: true,
+        safetyChecklist: true,
+      });
+    }
+    for (const role of ["instructor", "divemaster", "captain", "crew"] as const) {
+      expect(staffDestinationGates([role])).toMatchObject({
+        boats: false,
+        tripTags: false,
+        safetyChecklist: false,
+      });
+    }
+  });
+
+  it("hides the fleet from a shop that does not dive from a boat, and nothing else", () => {
+    expect(staffDestinationGates(["owner"], { hasBoatDiving: false })).toMatchObject({
+      boats: false,
+      tripTags: true,
+      safetyChecklist: true,
+    });
   });
 });

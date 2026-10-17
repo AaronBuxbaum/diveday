@@ -82,9 +82,10 @@ different device made since.
 
 ### Where it lands
 
-- **Settings**: `/shop/[shopSlug]/settings/safety-checklist`, a door row beside dive-sites and
-  waivers (the same shape for "a shop maintains a list"), gated by the same
-  `canPersonManageShopSettings` that gates the whole settings hub. Two plain buttons swap a row with
+- **Register**: `/shop/[shopSlug]/safety-checklist`, beside dive-sites and gear (the same shape for
+  "a shop maintains a list"; it moved out of `/settings/safety-checklist` on 2026-10-17, issue
+  #2659, which still redirects), gated by its own `canPersonManageSafetyChecklist`, owner and
+  manager as the settings gate was. Two plain buttons swap a row with
   its neighbor and write the whole order back (`reorderChecklistItems`) — not a drag library, for a
   list this short.
 - **Manifest**: `PreDepartureCheckList` (live, server-action-driven) and a matching section in

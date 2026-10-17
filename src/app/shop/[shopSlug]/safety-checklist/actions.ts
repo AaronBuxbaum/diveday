@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { canPersonManageShopSettings } from "@/db/authz";
+import { canPersonManageSafetyChecklist } from "@/db/authz";
 import { getDb } from "@/db/client";
 import {
   createChecklistItem,
@@ -14,7 +14,7 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 function backTo(shopSlug: string): string {
-  return shopPath(shopSlug, "settings", "safety-checklist");
+  return shopPath(shopSlug, "safety-checklist");
 }
 
 const addSchema = z.object({ label: z.string().trim().min(1).max(200) });
@@ -67,7 +67,7 @@ export async function moveChecklistItemAction(shopSlug: string, formData: FormDa
   const parsed = moveSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(back, "checklist-item-invalid"));
   const db = await getDb();
-  if (!(await canPersonManageShopSettings(db, staff.user.shopId, staff.user.personId))) {
+  if (!(await canPersonManageSafetyChecklist(db, staff.user.shopId, staff.user.personId))) {
     redirect(noticeUrl(back, "checklist-item-not-authorized"));
   }
   const items = await listChecklistItems(db, staff.user.shopId);

@@ -360,7 +360,7 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       { path: "/shop/blue-mantis/settings/integrations", heading: "Shop integrations" },
       { path: "/shop/blue-mantis/settings/activity", heading: "Activity" },
       {
-        path: "/shop/blue-mantis/settings/safety-checklist",
+        path: "/shop/blue-mantis/safety-checklist",
         heading: "Pre-departure checklist",
       },
       { path: "/shop/blue-mantis/settings/import?what=gear", heading: "Import" },

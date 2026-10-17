@@ -435,7 +435,7 @@
   "src/app/shop/[shopSlug]/settings/activity/_components/ActivityToolbar.test.tsx": 89,
   "src/app/shop/[shopSlug]/settings/billing/actions.test.ts": 3821,
   "src/app/shop/[shopSlug]/settings/billing/page.test.tsx": 7466,
-  "src/app/shop/[shopSlug]/settings/boats/certificate-error.test.ts": 249,
+  "src/app/shop/[shopSlug]/boats/certificate-error.test.ts": 249,
   "src/app/shop/[shopSlug]/settings/calendar/actions.test.ts": 2792,
   "src/app/shop/[shopSlug]/settings/editor-pages.authz.test.tsx": 15054,
   "src/app/shop/[shopSlug]/settings/email/actions.test.ts": 126,

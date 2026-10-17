@@ -8,13 +8,13 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { ListItemActions } from "@/components/ui/list-item-actions";
-import { canPersonManageShopSettings } from "@/db/authz";
+import { canPersonManageSafetyChecklist } from "@/db/authz";
 import { listChecklistItems } from "@/db/pre-departure-check";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
 import type { NoticeMessages } from "@/lib/staff-notices";
-import { settingsPaneClass } from "../_components/settings-pane";
+import { registerPaneClass } from "../_components/register-pane";
 import {
   addChecklistItemAction,
   deleteChecklistItemAction,
@@ -60,9 +60,9 @@ export default async function SafetyChecklistPage({
 }) {
   const { shopSlug } = await params;
   const { notice } = await searchParams;
-  // Same owner/manager gate as the settings hub this page hangs off of.
+  // The checklist's own gate (issue #2659): owner and manager, as Settings was.
   const { db, shop } = await requireShopSurface(shopSlug, {
-    allow: canPersonManageShopSettings,
+    allow: canPersonManageSafetyChecklist,
     refusal: { notice: "settings-not-authorized" },
   });
   const locale = await requestLocale(shop.defaultLocale);
@@ -71,7 +71,7 @@ export default async function SafetyChecklistPage({
   const message = notice ? noticeMessages(t)[notice] : undefined;
 
   return (
-    <main className={settingsPaneClass()}>
+    <main className={registerPaneClass()}>
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}

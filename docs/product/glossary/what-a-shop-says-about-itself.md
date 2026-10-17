@@ -1,10 +1,26 @@
 # What a shop says about itself
 
+- **Register** — a table of the shop's things that have identity: each row is `shop_id` plus a name
+  plus `deleted_at`, and a departure, a diver or a booking points at it. Dive sites, gear, courses,
+  waivers, boats, trip tags and the pre-departure checklist are registers. A register is edited
+  whenever the world changes (a hull is bought, a site is added), lives at `/shop/<slug>/<noun>`
+  beside dive sites and gear, and carries a permission of its own rather than borrowing Settings':
+  `canManageBoats`, `canManageTripTags` and `canManageSafetyChecklist` (`src/lib/authz.ts`) are owner
+  and manager today, the same people who held the Settings gate before the move. Delete is soft and
+  worded Delete. Decided by Aaron on 2026-10-17 (issue #2659), who moved boats, trip tags and the
+  safety checklist out of Settings; Team stays in Settings because it is a connection to people's
+  accounts rather than a list a departure points at. Settings still links to each register as a door,
+  so a staffer who thinks "where do I add a boat" finds it, but the page is not a settings page.
+- **Setting** — a fact of the shop with no identity, set once and read everywhere: the time zone,
+  the units, the address, the tax rate, the pass-through fee, whether tips are on. Settings holds
+  settings and connections (Stripe, WhatsApp, the embed), never a list of the shop's things. The
+  test for a new row: does a departure, a diver or a booking point at it by id? Yes is a register;
+  no is a setting.
 - **Conservation note** — a shop's own prose about its conservation practice at one dive site.
   The shop's words, in the shop's language, alongside the rest of the briefing — not a code and
   not a claim DiveDay renders on the shop's behalf.
 - **Lens** — the shop's own word for a kind of day ("Easygoing reef", "After dark", "First time
-  back in a while"), called a **trip tag** on every screen (Settings → Trip tags), written once in `trip_lenses` and hung on a departure by `trips.lens_id`. It
+  back in a while"), called a **trip tag** on every screen (the Trip tags register, beside dive sites), written once in `trip_lenses` and hung on a departure by `trips.lens_id`. It
   is **shop prose**, like a site briefing and unlike the marine-life catalog: DiveDay never translates it, and the whole value is that the schedule sounds like the
   shop rather than like every other shop. Shop prose is a decision rather than a default: the owner
   chose it on 2026-09-10 (issue #1392) over the fixed DiveDay taxonomy issue #1162's triage

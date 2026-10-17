@@ -7257,7 +7257,7 @@ for (const scheme of ["light", "dark"] as const) {
        * stopped fitting inside a disclosure.
        */
       test(`the boats page renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/boats");
+        await page.goto("/shop/blue-mantis/boats");
         await page.getByRole("heading", { level: 1, name: "Boats" }).waitFor();
         // The submit on the add-a-boat row, which is what this page's own
         // editor ends in now that it is a page rather than a settings row.
@@ -7270,7 +7270,7 @@ for (const scheme of ["light", "dark"] as const) {
        * — the list a diver then filters the public schedule by.
        */
       test(`the trip-tags page renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/trip-tags");
+        await page.goto("/shop/blue-mantis/trip-tags");
         await page.getByRole("heading", { level: 1, name: "Trip tags" }).waitFor();
         await capture(page, "settings-trip-tags", scheme);
       });
@@ -7687,7 +7687,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the pre-departure checklist settings render true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/settings/safety-checklist");
+        await page.goto("/shop/blue-mantis/safety-checklist");
         await page.getByRole("heading", { level: 1, name: "Pre-departure checklist" }).waitFor();
         await page.getByText("VHF radio checked").waitFor();
         await capture(page, "settings-safety-checklist", scheme);

@@ -197,10 +197,7 @@ export function RarelyChangedGroup({
           diver then filters the public schedule by. Unconditional: a
           shore-diving shop with no hull still tags its departures, so
           this row carries no `hasBoatDiving` gate. */}
-        <SettingsDoorRow
-          href={`/shop/${shopSlug}/settings/trip-tags`}
-          heading={t("lenses.heading")}
-        />
+        <SettingsDoorRow href={`/shop/${shopSlug}/trip-tags`} heading={t("lenses.heading")} />
 
         {canPayments ? (
           <SettingsRow

@@ -358,7 +358,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
       urgency: "now",
       subject: "Papers Hull",
       detail: `Hull insurance ended ${formatCalendarDate(shiftCalendarDate(today, -2), "en-US")}`,
-      href: `/shop/${shop.slug}/settings/boats`,
+      href: `/shop/${shop.slug}/boats`,
     });
     expect(lapsed && ACTION_KIND_META[lapsed.kind].tone).toBe("danger");
     // Safety kit never rides the register's bench-clock row: one dead AED,
@@ -383,7 +383,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
       kind: "boat_papers_due",
       urgency: "later",
       detail: "Next safety inspection due in 75 days",
-      href: `/shop/${shop.slug}/settings/boats`,
+      href: `/shop/${shop.slug}/boats`,
     });
   });
 

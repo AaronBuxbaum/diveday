@@ -507,7 +507,7 @@ describe("the diving options a shop runs", () => {
     // The seeded shop runs boats, so the fleet editor is reachable — as a door
     // now, not a form in a row: a list of hulls each carrying a Save and a
     // Delete is a page, and the hub is a directory.
-    expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/settings/boats`);
+    expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/boats`);
   });
 
   it("names the boats still missing a call sign and MMSI on the fleet's door (review B1)", async () => {
@@ -515,7 +515,7 @@ describe("the diving options a shop runs", () => {
       findElements<{ href: string; note?: string }>(
         element,
         settingsRowsModule.SettingsDoorRow,
-      ).find((door) => door.props.href === `/shop/${SHOP_SLUG}/settings/boats`)?.props.note;
+      ).find((door) => door.props.href === `/shop/${SHOP_SLUG}/boats`)?.props.note;
     // The seeded fleet carries both facts, so the door states nothing extra.
     expect(doorNote(await renderSettings("owner"))).toBeUndefined();
     const element = await renderSettings("owner", async (db, session) => {
@@ -547,7 +547,7 @@ describe("the diving options a shop runs", () => {
     const names = inputNamesIn(element);
     // No hull to name, so the whole Boats row is gone rather than sitting there
     // empty. (The page it opens refuses the same way, with `notFound()`.)
-    expect(hrefsIn(element)).not.toContain(`/shop/${SHOP_SLUG}/settings/boats`);
+    expect(hrefsIn(element)).not.toContain(`/shop/${SHOP_SLUG}/boats`);
     // The target survives losing the fleet — it never depended on one.
     expect(names).toContain("diversPerDivemaster");
     // The option itself stays on offer, so the shop can turn boats back on.
@@ -566,8 +566,6 @@ describe("the diving options a shop runs", () => {
     // are doors too; their editors are tested where they live now
     // (`_components/editors/editors.test.tsx`).
     for (const segment of [
-      "boats",
-      "trip-tags",
       "profile",
       "dock-day",
       "emergency-reference",
@@ -575,6 +573,11 @@ describe("the diving options a shop runs", () => {
       "rental-prices",
     ]) {
       expect(hrefs).toContain(`/shop/${SHOP_SLUG}/settings/${segment}`);
+    }
+    // The registers (glossary "Register and setting", #2659) sit beside dive
+    // sites at `/shop/<slug>/<noun>`; the hub links to them and holds none.
+    for (const noun of ["boats", "trip-tags", "safety-checklist", "dive-sites"]) {
+      expect(hrefs).toContain(`/shop/${SHOP_SLUG}/${noun}`);
     }
     const names = inputNamesIn(element);
     for (const name of [

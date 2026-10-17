@@ -27,7 +27,7 @@ export function BoatsSitesGroup({
             exactly as it was. */}
         {shop.hasBoatDiving ? (
           <SettingsDoorRow
-            href={`/shop/${shopSlug}/settings/boats`}
+            href={`/shop/${shopSlug}/boats`}
             heading={t("boats.heading")}
             note={
               boatsWithoutRadioIdentity > 0
@@ -47,7 +47,7 @@ export function BoatsSitesGroup({
         />
 
         <SettingsDoorRow
-          href={`/shop/${shopSlug}/settings/safety-checklist`}
+          href={`/shop/${shopSlug}/safety-checklist`}
           heading={t("settings.main.safetyChecklist.heading")}
         />
 

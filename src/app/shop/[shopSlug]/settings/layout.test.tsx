@@ -20,7 +20,7 @@ import { settingsPaneClass } from "./_components/settings-pane";
  */
 vi.mock("next/headers", () => nextHeadersStub());
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/shop/blue-mantis/settings/boats",
+  usePathname: () => "/shop/blue-mantis/boats",
 }));
 vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/db/authz", () => ({

@@ -220,6 +220,30 @@ export function canManageShopSettings(roles: readonly Role[] | undefined): boole
 }
 
 /**
+ * **The shop's registers each carry their own gate** (Aaron, 2026-10-17, issue
+ * #2659; glossary "Register and setting"). Boats, trip tags and the safety
+ * checklist used to borrow {@link canManageShopSettings} because they lived in
+ * Settings. They now sit beside dive sites and gear at `/shop/<slug>/<noun>`,
+ * and a register that can be loosened or tightened separately says so here.
+ * Today each answers the same roles as the settings gate did: the fleet's
+ * certificate limits, the vocabulary every departure wears and the list the
+ * crew ticks before leaving the dock are shop-wide policy, not the day's work.
+ */
+export function canManageBoats(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/** The shop's trip tags ("kinds of day"): the vocabulary every departure wears. */
+export function canManageTripTags(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/** The pre-departure safety checklist's items: what the crew must tick before the boat leaves. */
+export function canManageSafetyChecklist(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/**
  * Add a diver from the staff search: create the person a walk-up, a phone call
  * or a name on a clipboard turns out to be. **Every staff role holds it**, a
  * captain included, because the person at the dock may be the one who meets a
@@ -462,11 +486,17 @@ export function canOverrideGearRequest(roles: readonly Role[] | undefined): bool
  * palette and a section's tabs share, so a tab never offers a page the nav
  * would hide.
  */
-export function staffDestinationGates(roles: readonly Role[] | undefined): StaffDestinationGates {
+export function staffDestinationGates(
+  roles: readonly Role[] | undefined,
+  shop: { hasBoatDiving: boolean } = { hasBoatDiving: true },
+): StaffDestinationGates {
   return {
     waivers: canManageWaiverTemplates(roles),
     reports: canViewShopReports(roles),
     team: canManageStaffAccounts(roles),
     settings: canManageShopSettings(roles),
+    boats: canManageBoats(roles) && shop.hasBoatDiving,
+    tripTags: canManageTripTags(roles),
+    safetyChecklist: canManageSafetyChecklist(roles),
   };
 }

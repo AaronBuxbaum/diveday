@@ -44,7 +44,7 @@ const { callBlowoutAction } = await import("./schedule/blowout/[tripId]/actions"
 const { removeDepartureAction } = await import("./schedule/board/actions");
 const { checkInAction } = await import("./trips/[id]/_arrivals/actions");
 const { setTripStageAction } = await import("./trips/[id]/manifest/actions");
-const { addChecklistItemAction } = await import("./settings/safety-checklist/actions");
+const { addChecklistItemAction } = await import("./safety-checklist/actions");
 
 const ctx = fileScopedShopContext();
 const FOREIGN = "another-shop";

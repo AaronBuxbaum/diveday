@@ -347,7 +347,7 @@ describe("the rail keeps the current row in view", () => {
     scroller.scrollTop = 600;
 
     // ⌘K "Go to" Boats: its row is under the stuck label at the box's top.
-    pathname = `${BASE}/settings/boats`;
+    pathname = `${BASE}/boats`;
     boxes.row = { top: 60, height: 44 };
     boxes.label = { top: 56, height: 24 };
     rerender(rail());

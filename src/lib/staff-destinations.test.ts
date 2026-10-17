@@ -25,12 +25,18 @@ const owner: StaffDestinationGates = {
   reports: true,
   team: true,
   settings: true,
+  boats: true,
+  tripTags: true,
+  safetyChecklist: true,
 };
 const crew: StaffDestinationGates = {
   waivers: false,
   reports: false,
   team: false,
   settings: false,
+  boats: false,
+  tripTags: false,
+  safetyChecklist: false,
 };
 const everything: StaffNavOffers = { courses: true, gear: true, crew: true };
 const nothing: StaffNavOffers = { courses: false, gear: false, crew: false };
@@ -168,6 +174,9 @@ describe("permission gating", () => {
       "reports",
       "promoCodes",
       "safety",
+      "boats",
+      "tripTags",
+      "safetyChecklist",
       "waivers",
       "team",
       "activity",
@@ -196,6 +205,9 @@ describe("permission gating", () => {
       reports: true,
       team: false,
       settings: false,
+      boats: false,
+      tripTags: false,
+      safetyChecklist: false,
     };
     const ids = visibleStaffDestinations(reportsOnly).map((destination) => destination.id);
     expect(ids).toContain("reports");
@@ -276,6 +288,9 @@ describe("what each consumer derives", () => {
     expect(bySection("gear")).toEqual(["gear", "workOrders", "newWorkOrder", "rentOut"]);
     expect(bySection("settings")).toEqual([
       "diveSites",
+      "boats",
+      "tripTags",
+      "safetyChecklist",
       "waivers",
       "team",
       "calendarFeed",
@@ -532,6 +547,9 @@ describe("whether a destination's own link opens the page being read", () => {
     reports: true,
     team: true,
     settings: true,
+    boats: true,
+    tripTags: true,
+    safetyChecklist: true,
   };
 
   it("says yes on the destination's own href, for a root and a suffix alike", () => {

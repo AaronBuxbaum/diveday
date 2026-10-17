@@ -226,7 +226,7 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     id: "boats",
     labelKey: "boats.heading",
     group: "boats-sites",
-    target: { kind: "route", path: "/settings/boats" },
+    target: { kind: "route", path: "/boats" },
     gate: "boats",
   },
   {
@@ -239,7 +239,7 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     id: "safetyChecklist",
     labelKey: "settings.main.safetyChecklist.heading",
     group: "boats-sites",
-    target: { kind: "route", path: "/settings/safety-checklist" },
+    target: { kind: "route", path: "/safety-checklist" },
   },
   {
     id: "emergency",
@@ -469,7 +469,7 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     id: "tripTags",
     labelKey: "lenses.heading",
     group: "rarely-changed",
-    target: { kind: "route", path: "/settings/trip-tags" },
+    target: { kind: "route", path: "/trip-tags" },
   },
   {
     id: "passThrough",

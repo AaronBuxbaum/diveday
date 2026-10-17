@@ -173,7 +173,7 @@ async function StaffNotFound({ shopSlug, locale }: { shopSlug: string; locale: L
         <div className="mt-8 w-full">
           <ShopSearchField
             shopSlug={shopSlug}
-            navGates={staffDestinationGates(session.user.roles)}
+            navGates={staffDestinationGates(session.user.roles, shop)}
             crewSchedule={shop.crewScheduleEnabled}
             locale={locale ?? DEFAULT_DIVER_LOCALE}
             setLocale={setLocaleAction}

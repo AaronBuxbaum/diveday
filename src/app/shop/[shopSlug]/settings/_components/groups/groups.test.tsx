@@ -100,7 +100,7 @@ describe("each settings group renders as its own component", () => {
     // The set-once rows, last.
     expect(rendered[10]?.rows).toEqual(["season", "divingOptions", "passThrough", "searchListing"]);
     expect(hrefsIn(RarelyChangedGroup({ view, canPayments: true }))).toEqual([
-      `/shop/${view.shopSlug}/settings/trip-tags`,
+      `/shop/${view.shopSlug}/trip-tags`,
     ]);
     expect(hrefsIn(AccountGroup({ view, canViewBilling: true }))).toContain(
       `/shop/${view.shopSlug}/settings/billing`,

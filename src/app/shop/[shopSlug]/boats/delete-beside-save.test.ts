@@ -15,8 +15,8 @@ import { describe, expect, it } from "vitest";
  */
 const PAGES = [{ page: "boats", update: "updateBoatAction", remove: "deleteBoatAction" }] as const;
 
-describe.each(PAGES)("the $page rows", ({ page, update, remove }) => {
-  const source = readFileSync(join(import.meta.dirname, page, "page.tsx"), "utf8");
+describe.each(PAGES)("the $page rows", ({ update, remove }) => {
+  const source = readFileSync(join(import.meta.dirname, "page.tsx"), "utf8");
   const edit = source.slice(source.indexOf(`action={${update}}`), source.indexOf("createTitle"));
 
   it("has no form of its own for Delete", () => {
