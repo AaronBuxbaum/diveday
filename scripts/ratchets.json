@@ -273,7 +273,7 @@
     "e2e/trips.spec.ts": 5,
     "e2e/visual.spec.ts": 7,
     "e2e/waiver-print.spec.ts": 1,
-    "e2e/waivers.spec.ts": 16,
+    "e2e/waivers.spec.ts": 15,
     "e2e/whatsapp-settings.spec.ts": 1,
     "e2e/work-orders.spec.ts": 4
   },
@@ -467,10 +467,17 @@
           "src/db/waiver-issue.test.ts": "1178 -> 1179",
           "src/lib/staffing-week.test.ts": "1115 -> 1125"
         }
+      },
+      {
+        "why": "Stack integration: b4 (stale invoice void attempts) adds two orders export exclusions and a trouble-state seed; growth arrived in the merge",
+        "files": {
+          "src/app/api/test/seed-trouble-states/route.ts": "2040 -> 2049",
+          "src/db/export.test.ts": "1579 -> 1581"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
-    "src/app/api/test/seed-trouble-states/route.ts": 2040,
+    "src/app/api/test/seed-trouble-states/route.ts": 2049,
     "src/app/api/webhooks/stripe/route.replay.test.ts": 1308,
     "src/app/api/webhooks/stripe/route.test.ts": 1873,
     "src/app/api/webhooks/stripe/route.ts": 923,
@@ -499,9 +506,9 @@
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1285,
     "src/db/divers.test.ts": 3077,
-    "src/db/erasure-coverage.test.ts": 1178,
+    "src/db/erasure-coverage.test.ts": 1175,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1579,
+    "src/db/export.test.ts": 1581,
     "src/db/import.test.ts": 1077,
     "src/db/incident-reports.test.ts": 1011,
     "src/db/manifests.test.ts": 3725,
