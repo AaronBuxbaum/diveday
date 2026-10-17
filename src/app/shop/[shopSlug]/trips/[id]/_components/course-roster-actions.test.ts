@@ -11,10 +11,16 @@ vi.mock("../course-actions", () => {
     certifyDiverFromRosterAction: door("certify"),
     saveCourseNextStepAction: door("next-step"),
     setCourseMaterialsDoneAction: door("materials"),
-    markTrainingDiveAction: door("mark"),
-    clearTrainingDiveAction: door("clear"),
   };
 });
+vi.mock("../training-mark-actions", () => ({
+  markTrainingDiveAction: async (...args: unknown[]) => {
+    calls.push(["mark", ...args]);
+  },
+  clearTrainingDiveAction: async (...args: unknown[]) => {
+    calls.push(["clear", ...args]);
+  },
+}));
 vi.mock("../elearning-actions", () => ({ elearningCheckAction: async () => {} }));
 
 const { trainingMarkRosterActions } = await import("./course-roster-actions");

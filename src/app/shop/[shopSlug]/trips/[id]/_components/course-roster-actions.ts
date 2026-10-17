@@ -1,11 +1,10 @@
 import {
   certifyDiverFromRosterAction,
-  clearTrainingDiveAction,
-  markTrainingDiveAction,
   saveCourseNextStepAction,
   setCourseMaterialsDoneAction,
 } from "../course-actions";
 import { elearningCheckAction } from "../elearning-actions";
+import { clearTrainingDiveAction, markTrainingDiveAction } from "../training-mark-actions";
 
 /**
  * A course session's three acts of teaching on the Divers tab, bound to this
