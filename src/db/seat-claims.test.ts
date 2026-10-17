@@ -1396,6 +1396,61 @@ describe("a parent signs a minor seat's release", () => {
   });
 
   /**
+   * Issue #2665 (dive-domain review N3 of the parent-signs layer): a record the
+   * contact importer made has no email, no date of birth, no booking and no
+   * release, so it passed the history test. Merged onto, it is still a record
+   * the shop imported, not one this booking made, and the lead signs nothing
+   * for it.
+   */
+  it("never opens one after a merge points the seat at an imported record with no history", async () => {
+    const { db, shop, lead, mia } = await familyParty();
+    const [imported] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Mia Child" })
+      .returning();
+    if (!imported) throw new Error("imported person insert failed");
+    await db.insert(personRoles).values({ personId: imported.id, role: "diver" });
+    const [owner] = await db
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
+      .limit(1);
+    if (!owner) throw new Error("expected the seeded owner");
+    expect(
+      await mergeDiverRecords({
+        db,
+        shopId: shop.id,
+        personId: await personOfSeat(db, mia.bookingId),
+        survivorId: imported.id,
+        actorPersonId: owner.id,
+      }),
+    ).toMatchObject({ ok: true });
+    expect(await personOfSeat(db, mia.bookingId)).toBe(imported.id);
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(seats.find((seat) => seat.bookingId === mia.bookingId)?.signForMinor).toBe(false);
+    expect(
+      await openMinorSeatWaiver(db, {
+        shopId: shop.id,
+        leadBookingId: lead.bookingId,
+        seatBookingId: mia.bookingId,
+      }),
+    ).toEqual({ ok: false });
+  });
+
+  it("stamps a name-only seat's new person with the booking that made it", async () => {
+    const { db, mia } = await familyParty();
+    const [row] = await db
+      .select({ createdByBookingId: people.createdByBookingId })
+      .from(people)
+      .where(eq(people.id, await personOfSeat(db, mia.bookingId)));
+    expect(row?.createdByBookingId).toBe(mia.bookingId);
+  });
+
+  /**
    * Dive-domain review F4 of layer r4-1: a teen with an address of their own
    * gets no parent's door (the security rule stands), so neither their claim
    * page nor the lead's panel may promise one. The panel says the path that

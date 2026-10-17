@@ -1118,6 +1118,9 @@ async function createBookingRecord(
   }
   const admissionAdvisory = admission.admitted ? undefined : admission.refusal;
 
+  // A seat with no email of its own inserts a fresh person (`noEmailPersonRow`),
+  // which this booking then stamps as its own (issue #2665).
+  const madeByThisSeat = !person && pendingInsert !== null && !pendingInsert.email;
   if (!person && pendingInsert) {
     ({ person, identityUnconfirmed, identityClaim } = await writeWalkIn(tx, req, pendingInsert));
   }
@@ -1125,7 +1128,7 @@ async function createBookingRecord(
   // the walk-in path always has a pendingInsert. Guards the non-null uses below.
   if (!person) return { ok: false, reason: "person_not_found" };
 
-  return writeSeat(tx, {
+  const outcome = await writeSeat(tx, {
     req,
     trip,
     person,
@@ -1135,6 +1138,19 @@ async function createBookingRecord(
     admissionAdvisory,
     pending,
   });
+  if (madeByThisSeat && outcome.ok) {
+    await tx
+      .update(people)
+      .set({ createdByBookingId: outcome.bookingId })
+      .where(
+        and(
+          eq(people.id, person.id),
+          eq(people.shopId, req.shopId),
+          isNull(people.createdByBookingId),
+        ),
+      );
+  }
+  return outcome;
 }
 
 /**

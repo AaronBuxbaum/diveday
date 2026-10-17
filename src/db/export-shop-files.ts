@@ -500,6 +500,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // system should read every other cell on the row — a name and a
       // level nobody has sighted — so it travels with them.
       "self_registered_at",
+      // The seat that made this record, when a name-only seat did (#2665):
+      // provenance, like the row above.
+      "created_by_booking_id",
       "deleted_at",
       // Erasure travels with the bundle (ADR 20260802-diver-data-erasure).
       // Every identifying column above is already blank for such a row, so
@@ -540,6 +543,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.drysuitExperienceSeenByPersonId,
         row.drysuitExperienceSeenNote,
         row.selfRegisteredAt,
+        row.createdByBookingId,
         row.deletedAt,
         row.anonymizedAt,
         row.anonymizedByPersonId,
