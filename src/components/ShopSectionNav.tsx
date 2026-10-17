@@ -77,6 +77,10 @@ const subscribeNever = () => () => {};
  * the old row stayed lit and `aria-current` kept naming the page left behind.
  * Keyed on this, each nav is drawn afresh right after hydrating, from the
  * address as it is.
+ *
+ * The redrawn nav carries `data-hydrated="true"`, and the e2e harness waits
+ * for it before clicking a row (#2332): a press that lands before hydration,
+ * or on the server-drawn row the redraw replaces, can be lost.
  */
 function useHydratedKey(): string {
   return useSyncExternalStore(
@@ -144,6 +148,8 @@ export function ShopSidebar({ root, gates, items, blocked, copy }: NavProps) {
     <nav
       key={hydratedKey}
       aria-label={copy.navAriaLabel}
+      data-staff-nav=""
+      data-hydrated={hydratedKey === "client" ? "true" : undefined}
       className="flex h-full flex-col justify-between gap-4 px-3 py-4"
     >
       <ul className="space-y-0.5">{main.map(row)}</ul>
@@ -178,6 +184,8 @@ export function ShopTabBar({ root, gates, items, blocked, copy }: NavProps) {
     <nav
       key={hydratedKey}
       aria-label={copy.navAriaLabel}
+      data-staff-nav=""
+      data-hydrated={hydratedKey === "client" ? "true" : undefined}
       data-staff-tabbar=""
       data-staff-chrome="true"
       className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden"

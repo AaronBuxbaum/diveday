@@ -59,6 +59,11 @@ test.describe("owner", () => {
     // boats".
     await expect(nav.getByRole("link", { name: /^Today/ })).toHaveAttribute("aria-current", "page");
 
+    // **The sidebar owns its own hydration** (#2332): it streams under a
+    // boundary apart from the Search trigger the fixture waits on, and a row
+    // pressed before React redraws it can be lost, the dead Divers tap seen on
+    // CI. Its own flag, not a wider timeout or a second click.
+    await expect(nav).toHaveAttribute("data-hydrated", "true");
     const divers = nav.getByRole("link", { name: "Divers", exact: true });
     await divers.click();
     await expect(page).toHaveURL(/\/divers$/);

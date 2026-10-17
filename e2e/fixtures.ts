@@ -64,6 +64,13 @@ export function makeActivitySafe(page: Page): Page {
 export const STAFF_HYDRATION_PROBE = '[aria-keyshortcuts="Meta+K Control+K"]';
 
 /**
+ * The sidebar and the tab bar (`src/components/ShopSectionNav.tsx`), which
+ * stream under a boundary of their own and draw `data-hydrated="true"` once
+ * React has redrawn them (#2332). Hydrated Search says nothing about them.
+ */
+export const STAFF_NAV_PROBE = "nav[data-staff-nav]";
+
+/**
  * **A click on a server-rendered staff page before React owns it is lost.** It
  * was the flake class of 2026-10-12/13 (code re-review 2026-10-13, item 15):
  * `dive-sites`, `schedule-builder`, `staffing` and `blowout` each lost a press
@@ -90,6 +97,12 @@ export async function settleStaffHydration(page: Page): Promise<void> {
   await expect(
     page.locator(`${STAFF_HYDRATION_PROBE}:not([data-hydrated="true"])`),
     `${pathname} loaded, but React never took over its Search trigger`,
+  ).toHaveCount(0);
+  // A nav already streamed in is waited on too; one still behind its
+  // skeleton is the clicking spec's own wait (`e2e/staff-nav.spec.ts`).
+  await expect(
+    page.locator(`${STAFF_NAV_PROBE}:not([data-hydrated="true"])`),
+    `${pathname} loaded, but React never took over its section nav`,
   ).toHaveCount(0);
 }
 
