@@ -579,6 +579,8 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // A lock stamp for one Stripe round trip, null on every settled row
     // (ADR 20261009-counter-payments); nothing a shop would read in a backup.
     "counter_claimed_at",
+    "auto_void_failed_at", // the nightly void sweep's retry state (issue #2304), not the sale's
+    "auto_void_failures", // same
   ],
   tips: [
     "shop_id",

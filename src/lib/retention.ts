@@ -89,9 +89,11 @@
  * are shown (ADR 20260813-review-moderation-has-a-floor). A window would leave
  * a departure or a review the shop still has with a hole in its history and
  * free almost nothing: both grow with the shop's own departures and reviews,
- * not with traffic. Neither carries a diver's words; the staffer who acted is
- * a `people` reference resolved live, so erasure reaches them without a row
- * moving. Chosen by the product owner, 2026-10-13, over the `activity_events`
+ * not with traffic. Both hold free text a staffer typed (a meeting point's
+ * label, a moderator's `reason_note`), which can name a diver, so erasure
+ * redacts what names them (`scrubDepartureChangeTrail` and `scrubReviews` in
+ * `src/db/anonymize.ts`); the staffer who acted is a `people` reference
+ * resolved live, so erasure reaches them without a row moving. Chosen by the product owner, 2026-10-13, over the `activity_events`
  * window (issue #2316).
  *
  * **`notification_send_queue` empties its own rows of personal data, and the

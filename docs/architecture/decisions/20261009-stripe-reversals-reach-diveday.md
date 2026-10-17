@@ -41,7 +41,8 @@ the `order.refunded` the shop's books needed. A dispute was invisible until the 
   amount no seat carries, on the Orders index's "Refunds made in Stripe" queue, where staff pick the
   seat it was for (issue #2293, product owner 2026-10-13: no proportional split). Until it is
   matched, no DiveDay refund runs against any seat of that checkout (`needs_reconciliation`): the
-  money may already be that seat's. `src/db/unattributed-refunds.ts`.
+  money may already be that seat's. When no seat of the checkout still holds money from it, the
+  refund is counted on the checkout and not held: there is no seat to offer. `src/db/unattributed-refunds.ts`.
 - **Stripe is asked only what it can answer.** The lookup runs with a key of the event's own mode,
   and a 4xx from it is read as "not DiveDay's" (logged, 200); only the network, a 429 or a 5xx is
   retried. A tip's PaymentIntent is recorded as its session completes, so a tip's refund or dispute

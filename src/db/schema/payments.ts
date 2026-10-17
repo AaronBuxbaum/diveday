@@ -695,6 +695,15 @@ export const orders = pgTable(
      * than `STALE_AFTER_MS` belonged to a call that died.
      */
     counterClaimedAt: timestamp("counter_claimed_at", { withTimezone: true }),
+    /**
+     * When the nightly sweep last tried and failed to void this unpaid public
+     * package invoice, and how many times it has (issue #2304). Null and zero
+     * on every order it has not refused; a refused one waits a few nights
+     * before the next try, so a few invoices Stripe will never void cannot
+     * fill the sweep's batch (`src/db/stale-package-invoices.ts`).
+     */
+    autoVoidFailedAt: timestamp("auto_void_failed_at", { withTimezone: true }),
+    autoVoidFailures: integer("auto_void_failures").notNull().default(0),
     createdAt: appNowTimestamp("created_at").notNull(),
     updatedAt: appNowTimestamp("updated_at").notNull(),
   },
@@ -721,6 +730,7 @@ export const orders = pgTable(
     check("orders_tax_nonnegative", sql`${table.taxCents} >= 0`),
     check("orders_amount_paid_nonnegative", sql`${table.amountPaidCents} >= 0`),
     check("orders_refunded_nonnegative", sql`${table.refundedCents} >= 0`),
+    check("orders_auto_void_failures_nonnegative", sql`${table.autoVoidFailures} >= 0`),
     /**
      * A Stripe invoice carries all three ids. Money taken at the counter
      * carries none, or, when it settled an invoice already sent (fourth UX

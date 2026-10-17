@@ -1202,7 +1202,18 @@ async function applyStripeChargeRefund(
               ),
             );
     const [seat, ...others] = holding;
-    if (!seat || others.length > 0) {
+    if (!seat) {
+      // No seat of this checkout holds money from it any more: every seat was
+      // already refunded or released. There is nothing for staff to match it
+      // to, so it is counted on the checkout and not parked; a parked row
+      // here would sit on the Orders queue with no seat to offer for ever.
+      log("stripe_refund.checkout_nothing_held", "warn", {
+        shopId: current.shopId,
+        checkoutId: current.id,
+      });
+      return { status: "checkout_unattributed" };
+    }
+    if (others.length > 0) {
       // Counted on the checkout, matched to no seat — and parked, so that a
       // human matches it and no seat of this charge is reversed on top of it
       // meanwhile ({@link checkoutHasUnreconciledReversal}). Inside this
