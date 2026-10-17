@@ -9,7 +9,7 @@ import type { AppDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
 import { hasActiveCourses } from "@/db/courses";
 import { diverCrewWithAway } from "@/db/crew-away-diver";
-import { countSpendableDives } from "@/db/dive-packages";
+import { packageDivesForBooking } from "@/db/dive-packages";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { countGearItems } from "@/db/gear";
 import { getBookingPayment } from "@/db/payments";
@@ -413,8 +413,12 @@ async function readyPageReads(db: AppDb, token: string) {
     diverCrewWithAway(db, data.shop.id, data.detail.trip, data.detail.shop.timezone),
     latestTripStage(db, data.shop.id, data.trip.id),
     getBookingPayment(db, data.shop.id, capability.bookingId),
-    data.trip.course ? getCourseFormsForBooking(db, data.shop.id, capability.bookingId) : null,
-    countSpendableDives(db, data.shop.id, data.person.id),
+    data.asksCourseForms ? getCourseFormsForBooking(db, data.shop.id, capability.bookingId) : null,
+    packageDivesForBooking(db, {
+      shopId: data.shop.id,
+      personId: data.person.id,
+      bookingId: capability.bookingId,
+    }),
   ]);
 }
 
@@ -650,7 +654,16 @@ const PUBLIC_TRIP_CEILING = 20;
 // away on the departure's days (`diverCrewWithAway`), which reads the
 // schedule days and the days away beside the crew. Measured 38; the phases
 // stay 5, since both ride the thread's one wave.
-const READY_CEILING = 38;
+// 38 → 39 (H-126): whether a standing ask to move the seat exists
+// (`hasMoveAsk`), read in the page's one fan-out on every booked seat whose
+// identity is not held, rather than after the payment says the ask is
+// offered: one statement more and no round trip more. The seat the test picks
+// is ordered by a random id, so the ceiling holds for any seat on the
+// departure, not one the seed happened to draw (CI read 40 and 7 phases).
+// 39 → 40: the dive-package line reads what this seat itself spends beside
+// what the diver has left (`packageDivesForBooking`, one `queryAll` wave), one
+// statement more than the count it replaced, in the same round trip.
+const READY_CEILING = 40;
 // 10 → 3: the shop, then `readTripPage`'s one wave (issue #2353; code review
 // 2026-10-11, item 2), whose chained reads — the briefings off the dives, the
 // Stripe account and the other boats off the trip — are its third round trip.
@@ -669,6 +682,6 @@ const READY_PHASE_CEILING = 5;
 // The two above them are the capability and the readiness detail, as for one
 // seat.
 const READY_PARTY_PHASE_CEILING = 7;
-// A party of three or six: the single seat's 38, plus the party panel's
+// A party of three or six: the single seat's 40, plus the party panel's
 // own reads and one claim-link mint for every unclaimed seat together.
-const READY_PARTY_CEILING = 40;
+const READY_PARTY_CEILING = 42;

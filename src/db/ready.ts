@@ -504,6 +504,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     nitroxOnFile,
     welcomeInputs,
     fitConfirmation,
+    moveAskStanding,
   ] = await Promise.all([
     getTripWithBookedOnce(db, row.shopId, row.tripId),
     reEntryOffersOpen ? hasActiveRefresherCourse(db, row.shopId) : false,
@@ -534,6 +535,12 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     // Read here rather than folded into `getRentalFit`'s row, because the
     // staffer's name comes from a join this page is the only caller of.
     fitConfirmationForDiver(db, row.shopId, row.personId),
+    // Whether an ask to move already stands (H-126), read on every seat that
+    // could offer one rather than after the payment says it would: one
+    // statement more, no round trip more (staff-render-cost.test.ts).
+    row.status === "booked" && row.identityUnconfirmedAt === null
+      ? hasMoveAsk(db, row.shopId, bookingId, row.tripId)
+      : false,
   ]);
   if (!trip) return null;
   return {
@@ -551,6 +558,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     welcomeInputs,
     fitConfirmation,
     materialsDoneElsewhere,
+    moveAskStanding,
   };
 }
 
@@ -585,6 +593,7 @@ export async function getReadyPageData(
     welcomeInputs,
     fitConfirmation,
     materialsDoneElsewhere,
+    moveAskStanding,
   } = page;
   // `partly_refunded` settles too, or this page would invite a diver who has
   // already paid — and been handed part of it back — to pay the full price a
@@ -620,6 +629,7 @@ export async function getReadyPageData(
         : "forfeit"
       : "no_policy";
 
+  const identityHeld = row.identityUnconfirmedAt !== null;
   const canCancelBooking =
     row.status === "booked" &&
     !hasSailed(trip.startsAt, now) &&
@@ -633,7 +643,6 @@ export async function getReadyPageData(
         bookingIds: [bookingId],
       })
     ).has(bookingId);
-  const identityHeld = row.identityUnconfirmedAt !== null;
   // **A lead the page could charge pays before adding anyone** (security
   // review of layer 8, D3). The link is shared by design, so without this a
   // holder could add unpaid seats until the boat read full. Settled, or a
@@ -647,7 +656,7 @@ export async function getReadyPageData(
     !identityHeld &&
     (cancelPreview === "forfeit" || cancelPreview === "no_policy");
   const moveAsk: ReadyPageData["moveAsk"] = moveAskable
-    ? (await hasMoveAsk(db, row.shopId, bookingId))
+    ? moveAskStanding
       ? "asked"
       : "open"
     : null;
