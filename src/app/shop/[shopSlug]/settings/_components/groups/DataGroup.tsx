@@ -62,6 +62,7 @@ const PROCESSOR_ERASURE_TARGET_KEYS: Record<ProcessorErasureTarget, StaffMessage
   stripe_invoice_snapshot: "settings.main.dataJobs.erasureTarget.stripe_invoice_snapshot",
   stripe_checkout_session_snapshot:
     "settings.main.dataJobs.erasureTarget.stripe_checkout_session_snapshot",
+  whatsapp_conversation: "settings.main.dataJobs.erasureTarget.whatsapp_conversation",
 };
 
 /**
@@ -183,14 +184,18 @@ export async function DataGroup({
       ) : null}
 
       {/*
-      Erasures that are done here but not yet done at Stripe
-      (ADR 20260803-processor-erasure-obligations). Two kinds, and the row
+      Erasures that are done here but not yet done outside DiveDay — at Stripe,
+      or in the shop's WhatsApp (ADR 20260803-processor-erasure-obligations).
+      Two kinds, and the row
       offers what can actually act on each: a customer delete DiveDay makes
       itself gets "Retry" (the nightly tick also retries it), while an
       invoice snapshot has no API behind it at all and can only be closed by
-      an owner attesting they filed Stripe's data-deletion request. The panel
-      shows the `cus_…`/`in_…` handle and nothing else — the diver's identity
-      is exactly what erasure already removed here.
+      an owner attesting they filed Stripe's data-deletion request. A WhatsApp
+      chat is the same manual shape: the owner deletes it in WhatsApp Manager.
+      The panel shows the `cus_…`/`in_…` handle and nothing else — the diver's
+      identity is exactly what erasure already removed here — except for a
+      chat, which shows the diver's number: a chat is found by its number and
+      by nothing else, and discharging the row forgets it (issue #1721).
     */}
       {owedProcessorErasures.length > 0 ? (
         <section
@@ -247,7 +252,11 @@ export async function DataGroup({
                           pendingLabel={t("settings.main.dataJobs.processorErasures.discharging")}
                           className={buttonClass({ variant: "secondary", size: "sm" })}
                         >
-                          {t("settings.main.dataJobs.processorErasures.discharge")}
+                          {t(
+                            obligation.target === "whatsapp_conversation"
+                              ? "settings.main.dataJobs.processorErasures.dischargeWhatsapp"
+                              : "settings.main.dataJobs.processorErasures.discharge",
+                          )}
                         </SubmitButton>
                       </form>
                     </div>

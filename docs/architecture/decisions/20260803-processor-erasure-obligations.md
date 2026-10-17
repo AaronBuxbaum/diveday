@@ -163,6 +163,57 @@ has to attest to, one per Stripe object. That is the shape `stripe_invoice_snaps
 and the alternative — one row per person — cannot be discharged, because the thing being attested to
 is a request filed about a specific object.
 
+## Widened 2026-10-17 — messaging handles (issue #1721, H-82)
+
+H-82 ruled that the erasure promise reaches messaging providers: a `provider_message_id` points at an
+object holding the diver's name, address or number, and stopping at Stripe was a statement about
+which vendor has a delete API, not about what was promised. Building it turned up three providers,
+none with a delete for a sent message, and two different parties holding the copies. Aaron accepted
+this narrowed scope on 2026-10-17.
+
+**SES and SNS: no owner-facing row, because DiveDay holds those logs and its retention discharges
+them.** Email ids are SES message ids and SMS ids are SNS `Publish` ids, both in DiveDay's own AWS
+account, not the shop's. SES keeps no message body. What either holds is delivery logs: the SNS
+delivery-log groups keep two weeks and the app's own groups a month (`infra/lib/infra-stack.ts`).
+An owner cannot attest to anything in DiveDay's account, so a row would be a button nobody can
+honestly press. The local handle stays on the delivery row as the shop's evidence that a message
+went, as before.
+
+**WhatsApp: one `whatsapp_conversation` row per (shop, diver number), discharged by the owner.**
+A `wamid` lives in the shop's own WhatsApp Business account at Meta, and the Cloud API cannot
+delete a sent or received message. The owner can delete the chat in WhatsApp Manager, so that is
+the obligation, and it is per chat, not per message: a season of reminders is dozens of messages
+and one chat, and one chat is what the owner deletes.
+
+- **Which numbers.** `anonymizeDiver` raises a chat for every number the diver wrote in on WhatsApp
+  from (by the person link, or by the number on their record), every number the shop replied to
+  on WhatsApp, and the number on their record when either the diver holds a booking at a shop with
+  a WhatsApp number connected now, or a booking message or waiver link to them carries a `wamid.`
+  id. The connected-number case exists because a courtesy text riding with a reminder email goes
+  from the shop's number and is not recorded by channel. The `wamid.` case finds a chat opened
+  before the shop disconnected. The numbers are read before the inbox sweep redacts them.
+- **The account column is generalized.** `stripe_account_id` was `NOT NULL` and named for Stripe. It
+  is replaced by `provider_account_id`: the connected Stripe account for a Stripe target, and the
+  shop's WhatsApp `phone_number_id` for a chat, or null when no number is connected at erasure. A
+  check constraint keeps it non-null for every Stripe target. `stripe_account_id` stays declared,
+  nullable and unwritten for one release, because the release before this one reads it, and is
+  dropped in the next.
+- **The handle is the diver's number, held only while the row is owed.** A chat in WhatsApp Manager
+  is found by its number and by nothing else, so the owner cannot do the work without it. This is
+  the one row in the ledger that holds personal data rather than a pointer, and that is why it is
+  held only as long as it has a job: discharging the row replaces the number with the row's own
+  id, in the same statement that records the attestation. A later erasure that reaches the same
+  number therefore raises a new chat rather than folding into a closed one.
+- **Never retried and never called.** `attemptProcessorErasure` returns `manual` for it, and the
+  nightly drain reads only `stripe_customer` rows.
+
+**`integration_sync_records.external_id` stays out of the ledger.** It is the map from a DiveDay
+row to the QuickBooks or Xero object, ids on both sides and no copied details, kept so a second
+Customer is not minted for a diver already synced (issue #1015, the table's closure reason in
+`src/db/erasure-coverage.test.ts`). The books are the shop's, a Customer may not be deletable while
+its invoices reference it, and H-82 named messaging handles only. The census tags it `elsewhere`
+with that reason.
+
 ## What this does not do
 
 Stated plainly, because a compliance mechanism that overstates itself is worse than none:
@@ -177,6 +228,12 @@ Stated plainly, because a compliance mechanism that overstates itself is worse t
   this mechanism.
 - **It is raised only from `anonymizeDiver`,** with no back-fill for erasures performed before this
   table existed.
+- **A discharged `whatsapp_conversation` row is the owner's attestation too.** Nothing reads the
+  shop's WhatsApp to confirm the chat is gone.
+- **It does not reach a WhatsApp chat it has no sign of.** A chat the shop opened by hand from its
+  phone, outside DiveDay, leaves nothing here to find.
+- **It does not reach SES's account-level suppression list.** A bounced or complained address stays
+  there until removed. Log retention does not discharge it, and nothing in this ledger does either.
 
 ## Consequences
 
@@ -185,7 +242,9 @@ Stated plainly, because a compliance mechanism that overstates itself is worse t
 - Diver erasure now *does* the processor-side work it can do, and names the part it cannot. The
   erasure ADR's first residual narrows from "an untracked manual step covering everything at Stripe"
   to "the invoice snapshot, tracked, with an owner and a visible state".
-- A second processor is an additive enum value on a row shape that already fits.
+- A second processor is an additive enum value on a row shape that already fits. WhatsApp was the
+  first (2026-10-17), and it needed the account column generalized: the row shape fitted a
+  connected-account processor, not every provider.
 - If Stripe ever exposes an API that clears a finalized invoice's identity snapshot, the
   `stripe_invoice_snapshot` rows become retryable the same way the customer rows already are — the
   obligation is already recorded; only who performs it would change.

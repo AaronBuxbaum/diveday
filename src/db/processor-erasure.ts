@@ -24,6 +24,12 @@
  *     it and rewrites neither field — so it is the same manual shape as the
  *     invoice. `tips` and `booking_checkouts` both carry one, which is how a
  *     diver who only ever tipped now reaches this ledger at all (issue #1621).
+ *   - **A WhatsApp chat → recorded, not deleted.** The shop's own WhatsApp
+ *     Business number keeps every message it sent or received from a diver,
+ *     at Meta, and the Cloud API has no delete for a message. One row per
+ *     (shop, diver number), discharged by the owner deleting the chat in
+ *     WhatsApp Manager. SES and SNS ids raise nothing: those logs are
+ *     DiveDay's own and its log retention discharges them (issue #1721).
  *
  * **The delete never runs inside the erasure transaction, and never gates it.**
  * The obligation row commits with the scrub; the Stripe call happens after. A
@@ -33,7 +39,7 @@
  * over.
  */
 
-import { and, asc, eq, lt } from "drizzle-orm";
+import { and, asc, eq, lt, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import type { CustomerProvider } from "@/lib/payments/customers";
@@ -44,6 +50,7 @@ import {
   type ProcessorErasureObligation,
   type ProcessorErasureTarget,
   processorErasureObligations,
+  STRIPE_ERASURE_TARGETS,
   shopStripeAccounts,
 } from "./schema";
 import { customerProviderFromEnvironment } from "./stripe-providers";
@@ -61,8 +68,23 @@ export const MAX_AUTOMATIC_DELETE_ATTEMPTS = 5;
 export type ProcessorErasureTargetInput = {
   target: ProcessorErasureTarget;
   externalId: string;
-  stripeAccountId: string;
+  /**
+   * The provider account the object lives on. Required for a Stripe target —
+   * an entry without one is dropped, since nothing could ever retry or find
+   * it. Null is allowed only for `whatsapp_conversation`, whose shop may have
+   * disconnected its number while the chat stays on its WhatsApp.
+   */
+  providerAccountId: string | null;
 };
+
+const STRIPE_TARGETS: ReadonlySet<ProcessorErasureTarget> = new Set(STRIPE_ERASURE_TARGETS);
+
+/** Whether an entry has everything its target needs to become a row. */
+function isRecordable(entry: ProcessorErasureTargetInput): boolean {
+  if (entry.externalId.trim().length === 0) return false;
+  if (!STRIPE_TARGETS.has(entry.target)) return true;
+  return (entry.providerAccountId ?? "").trim().length > 0;
+}
 
 export type RecordProcessorErasureObligationsInput = {
   shopId: string;
@@ -92,9 +114,7 @@ export async function recordProcessorErasureObligations(
 ): Promise<ProcessorErasureObligation[]> {
   const seen = new Set<string>();
   const values = input.targets
-    .filter(
-      (entry) => entry.externalId.trim().length > 0 && entry.stripeAccountId.trim().length > 0,
-    )
+    .filter(isRecordable)
     .filter((entry) => {
       const key = `${entry.target}:${entry.externalId}`;
       if (seen.has(key)) return false;
@@ -106,7 +126,7 @@ export async function recordProcessorErasureObligations(
       personId: input.personId,
       target: entry.target,
       externalId: entry.externalId,
-      stripeAccountId: entry.stripeAccountId,
+      providerAccountId: entry.providerAccountId,
     }));
   if (values.length === 0) return [];
   return db
@@ -172,7 +192,7 @@ export async function attemptProcessorErasure(
   if (obligation.status === "discharged") return { status: "discharged" };
 
   // Re-prove the snapshotted account still belongs to this obligation's shop
-  // before firing a destructive call at it. The `(stripeAccountId, externalId)`
+  // before firing a destructive call at it. The `(providerAccountId, externalId)`
   // pair was genuinely shop-owned when the row was raised and is deliberately
   // never re-derived, but the delete goes out on the *platform* key, which can
   // act on every connected account: if shop A reconnected under a new account
@@ -183,11 +203,17 @@ export async function attemptProcessorErasure(
   // the platform has no authorization on a deauthorized account anyway, so the
   // call could only have failed. Either way the row stays `owed` and the owner
   // can close it by attestation.
-  const owned = await accountBelongsToShop(db, obligation.stripeAccountId, obligation.shopId);
-  if (!owned) return recordFailedAttempt(db, obligation, ERASURE_FAILURE_DETAIL.accountNotOwned);
+  // A customer row always names its account (the table's check constraint);
+  // the guard is here so the type says so too, and so a row that somehow did
+  // not is refused rather than fired at nothing.
+  const accountId = obligation.providerAccountId;
+  const owned = accountId ? await accountBelongsToShop(db, accountId, obligation.shopId) : false;
+  if (!accountId || !owned) {
+    return recordFailedAttempt(db, obligation, ERASURE_FAILURE_DETAIL.accountNotOwned);
+  }
 
   const result = await provider.deleteCustomer(
-    obligation.stripeAccountId,
+    accountId,
     obligation.externalId,
     // The attempt ordinal is part of the key on purpose. Stripe caches the
     // response for an idempotency key for 24h *including errors*, so a key
@@ -381,16 +407,23 @@ export type DischargeProcessorErasureResult =
 
 /**
  * Mark one obligation done on a human's word. This is the *only* way a
- * `stripe_invoice_snapshot` or `stripe_checkout_session_snapshot` row ever
- * closes — nothing automated can reach the name/email a finalized invoice or a
- * Checkout Session copied, so an owner attests they filed Stripe's
- * data-deletion request. It also stays available for a
+ * `stripe_invoice_snapshot`, `stripe_checkout_session_snapshot` or
+ * `whatsapp_conversation` row ever closes — nothing automated can reach the
+ * name/email a finalized invoice or a Checkout Session copied, or a chat in
+ * the shop's WhatsApp, so an owner attests they filed Stripe's data-deletion
+ * request or deleted the chat. It also stays available for a
  * `stripe_customer` row whose delete cannot be made to work (an account that no
  * longer exists, say) and which the owner has resolved by other means.
  *
  * `status` and `dischargedAt` move together (the table's check constraint
  * enforces it), and the `status = 'owed'` predicate makes a double-submit a
  * no-op rather than a rewritten attestation.
+ *
+ * A WhatsApp row's handle is the diver's number, held only so the owner could
+ * find the chat. Once they say it is deleted the number has no job left, so
+ * the same statement replaces it with the row's own id: unique, so the
+ * `(shop_id, target, external_id)` key still holds, and naming nobody. A
+ * Stripe handle is a pointer, not a person, and stays as it is.
  */
 export async function dischargeProcessorErasure(
   db: AppDb,
@@ -402,6 +435,7 @@ export async function dischargeProcessorErasure(
       status: "discharged",
       dischargedAt: nowDate(),
       dischargedByPersonId: input.actorPersonId,
+      externalId: sql`case when ${processorErasureObligations.target} = 'whatsapp_conversation' then ${processorErasureObligations.id}::text else ${processorErasureObligations.externalId} end`,
     })
     .where(
       and(

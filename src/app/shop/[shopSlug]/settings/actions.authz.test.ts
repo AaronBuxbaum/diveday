@@ -634,7 +634,7 @@ async function oweErasure(db: AppDb, shopId: string, personId: string): Promise<
       personId,
       target: "stripe_invoice_snapshot",
       externalId: "in_test",
-      stripeAccountId: "acct_test",
+      providerAccountId: "acct_test",
       status: "owed",
     })
     .returning({ id: processorErasureObligations.id });

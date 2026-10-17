@@ -211,6 +211,14 @@
   version 1 is the seal over an intact signed release, which covers the signer's name and medical
   answers and therefore cannot survive erasure. The seal proves the skeleton has not drifted since
   erasure — it says nothing about what was erased, which no one can verify afterwards.
+- **Processor erasure obligation** — what an erasure still owes at a system outside DiveDay, one
+  row per object in `processor_erasure_obligations`. DiveDay discharges a Stripe customer itself by
+  deleting it; a Stripe invoice, a Checkout Session and a **WhatsApp chat** have no delete, so the
+  owner discharges them by attesting to the work in Settings. A WhatsApp chat is one row per shop
+  and diver number, holds the number only while it is owed, and is found from the diver's WhatsApp
+  messages and replies or from a reminder or waiver link the shop's WhatsApp sent them. SES and SNS
+  message ids raise none: DiveDay's own log retention discharges them. See
+  [20260803-processor-erasure-obligations](../../architecture/decisions/20260803-processor-erasure-obligations.md).
 - **Buddy-group preference** — an optional, non-sensitive note a diver adds while booking about
   pace, photography, or friends they hope to stay with. It helps the crew plan groups but is never
   a promise and never carries medical or safety-clearance information.

@@ -506,10 +506,10 @@ const WRITTEN_VIA_HELPER: Record<string, string> = {
  * - `ledger` — the obligation record's own column, not a source for it.
  * - `copy` — points at an object already censused under the table that owns it.
  *   The obligation is raised there, and raising a second would double-count.
- * - `elsewhere` — an object at a system the ledger does not reach at all: a
- *   messaging provider, an accounting integration, the shop's previous
- *   software. Whether erasure should reach any of them is issue #1721; each
- *   entry says what happens to the column here in the meantime.
+ * - `elsewhere` — an object at a system the ledger deliberately does not reach:
+ *   an accounting integration, the shop's previous software. Each entry says
+ *   why, and what happens to the column instead; for the accounting handle,
+ *   ADR 20260803-processor-erasure-obligations, "Widened 2026-10-17".
  * - `none` — the net's over-reach. Caught by a segment, not a handle.
  *
  * A `person` entry must also name the ledger target it raises, and that target
@@ -524,6 +524,10 @@ const WRITTEN_VIA_HELPER: Record<string, string> = {
  * matched by name, anywhere in `anonymize.ts`. That is asserted per case in
  * `anonymize.test.ts`, against the write rather than against a name.
  */
+/** A handle that may be Meta's owes the WhatsApp chat; SES's and SNS's owe nothing (ADR). */
+const whatsAppChat = (why: string) =>
+  ({ held: "person", raises: "whatsapp_conversation", why }) as const;
+
 const PROCESSOR_OBJECT_COLUMNS: Record<
   string,
   | { held: "person"; raises: ProcessorErasureTarget; why: string }
@@ -560,6 +564,19 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     raises: "stripe_customer",
     why: "the `cus_…` that tip's session created, on the same `if_required` rule as booking_checkouts",
   },
+  "notification_deliveries.provider_message_id": whatsAppChat(
+    "SES's, SNS's or Meta's handle on a message that carried this diver's name. A `wamid.` here is a message in the shop's WhatsApp chat with the diver, found by this prefix even after the shop disconnected its number. The handle itself is kept as the shop's evidence that a message went; the prose beside it (`provider_detail`, `send_error`) is cleared",
+  ),
+  "notification_delivery_attempts.provider_message_id": whatsAppChat("as deliveries', above"),
+  "inbound_messages.provider_message_id": whatsAppChat(
+    "the provider's handle on a message the *diver* sent in. A WhatsApp one raises the chat it came in on, by its `from_address`, read before that address is redacted. `notNull`, so there is nothing to clear it to",
+  ),
+  "staff_replies.provider_message_id": whatsAppChat(
+    "the provider's handle on the shop's answer, whose body and recipient are redacted here. A WhatsApp reply raises the chat it went to, by its `to_address`",
+  ),
+  "waiver_deliveries.provider_message_id": whatsAppChat(
+    "the provider's handle on the message carrying a waiver link, which goes over the shop's WhatsApp when it has one. A `wamid.` here raises that chat. `detail` beside it is nulled",
+  ),
 
   // --- the shop's own furniture at a processor or provider -----------------
   "orders.stripe_account_id": {
@@ -603,9 +620,13 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
   },
 
   // --- the ledger's own columns -------------------------------------------
+  "processor_erasure_obligations.provider_account_id": {
+    held: "ledger",
+    why: "the obligation row's own scope column — the Stripe account or WhatsApp number the object is on. The ledger, not a source for it",
+  },
   "processor_erasure_obligations.stripe_account_id": {
     held: "ledger",
-    why: "the obligation row's own scope column — the ledger, not a source for it",
+    why: "the scope column `provider_account_id` replaced (issue #1721), written by nothing and dropped in the next release",
   },
   "processor_erasure_obligations.external_id": {
     held: "ledger",
@@ -670,39 +691,16 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     why: "Stripe's hosted page for the invoice on this row. It renders the diver's name and address, which is precisely what the `stripe_invoice_snapshot` obligation is raised for",
   },
   "orders.invoice_pdf_url": { held: "copy", why: "the same invoice, as a PDF" },
-
-  // --- at a system the obligation ledger does not reach (issue #1721) ------
-  "notification_deliveries.provider_message_id": {
-    held: "elsewhere",
-    why: "SES's or Twilio's handle on a message that carried this diver's name and address. The erasure clears the prose beside it (`provider_detail`, `send_error`) and keeps the handle, because it is the shop's evidence that a message went; nothing is owed against the copy the provider keeps",
-  },
-  "notification_delivery_attempts.provider_message_id": {
-    held: "elsewhere",
-    why: "the same handle on the append-only twin, kept for the same reason",
-  },
-  "notification_send_queue.provider_message_id": {
-    held: "elsewhere",
-    why: "the same handle on a send that was still queued. The row itself is deleted by the address and number sweeps, so this one usually goes with it",
-  },
-  "inbound_messages.provider_message_id": {
-    held: "elsewhere",
-    why: "the provider's handle on a message the *diver* sent in. `body`, `subject` and `from_address` are redacted here; the provider's copy is not reached, and this column is `notNull` so there is nothing to clear it to",
-  },
-  "staff_replies.provider_message_id": {
-    held: "elsewhere",
-    why: "the provider's handle on the shop's answer to that message, whose body and recipient are redacted here",
-  },
-  "waiver_deliveries.provider_message_id": {
-    held: "elsewhere",
-    why: "the provider's handle on the message carrying a waiver link. `detail` beside it is nulled; the sent message is not chased",
-  },
+  "notification_send_queue.provider_message_id": { held: "copy", why: "settles onto deliveries" },
   "waiver_records.delivery_provider_message_id": {
-    held: "elsewhere",
-    why: "the same handle denormalized onto the record it delivered",
+    held: "copy",
+    why: "the latest of `waiver_deliveries.provider_message_id`, denormalized onto its record",
   },
+
+  // --- at a system the obligation ledger deliberately does not reach -------
   "integration_sync_records.external_id": {
     held: "elsewhere",
-    why: "the QuickBooks or Xero object a diver was synced to, kept deliberately so a second Customer is not created for someone already synced (issue #1015). Nothing here is chased at the provider, and deleting one may not even be possible while its invoices reference it",
+    why: "the QuickBooks or Xero object a diver was synced to: the map from a DiveDay row to the provider's own object, ids on both sides and no copied details, kept so a second Customer is not created for someone already synced (`OUTSIDE_CLOSURE_REASONS` above, issue #1015). The shop's books are the shop's to keep, and deleting a Customer may not be possible while its invoices reference it. Nothing is owed (ADR 20260803-processor-erasure-obligations, widened 2026-10-17)",
   },
   "imported_payment_history.stripe_reference": {
     held: "elsewhere",

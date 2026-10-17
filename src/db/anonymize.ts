@@ -48,7 +48,7 @@
  * outcome available, so it either all lands or none of it does.
  */
 
-import { and, eq, inArray, isNotNull, isNull, ne, or, type SQL, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, like, ne, or, type SQL, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
@@ -127,6 +127,7 @@ import {
   rollCallEvents,
   shopShoreAlertTokens,
   shops,
+  shopWhatsappAccounts,
   specialtyCertifications,
   staffCredentials,
   staffReplies,
@@ -605,13 +606,13 @@ function pushSessionTargets(
     targets.push({
       target: "stripe_checkout_session_snapshot",
       externalId: row.stripeSessionId,
-      stripeAccountId: row.stripeAccountId,
+      providerAccountId: row.stripeAccountId,
     });
     if (row.stripeCustomerId) {
       targets.push({
         target: "stripe_customer",
         externalId: row.stripeCustomerId,
-        stripeAccountId: row.stripeAccountId,
+        providerAccountId: row.stripeAccountId,
       });
     }
   }
@@ -2135,12 +2136,12 @@ async function scrubOrders(
     processorTargets.push({
       target: "stripe_customer",
       externalId: row.stripeCustomerId,
-      stripeAccountId: row.stripeAccountId,
+      providerAccountId: row.stripeAccountId,
     });
     processorTargets.push({
       target: "stripe_invoice_snapshot",
       externalId: row.stripeInvoiceId,
-      stripeAccountId: row.stripeAccountId,
+      providerAccountId: row.stripeAccountId,
     });
   }
   return processorTargets;
@@ -2578,12 +2579,154 @@ async function scrubCourseInquiries(
   return [];
 }
 
+/**
+ * The shop's WhatsApp chats with this diver, one ledger entry per diver number
+ * (issue #1721, ADR 20260803-processor-erasure-obligations).
+ *
+ * Every message the shop's WhatsApp Business number sent or received stays in
+ * that chat at Meta, and the Cloud API has no delete for a message, so the
+ * owner deletes the chat in WhatsApp Manager and attests to it. One entry per
+ * number rather than per message: the chat is what gets deleted.
+ *
+ * A number counts when any of these is true:
+ *
+ * 1. the diver wrote in on WhatsApp from it — matched by the person link, or by
+ *    the number on their record, the same two handles the redaction below uses;
+ * 2. the shop wrote to it on WhatsApp — a reply to this diver;
+ * 3. it is the number on the diver's record, and either the diver holds a
+ *    booking at a shop with a WhatsApp number connected now (a courtesy text
+ *    with a reminder goes from it, and is not recorded by channel), or a
+ *    message to the diver — a booking message or a waiver link — carries a
+ *    WhatsApp message id (`wamid.`), which is how a chat opened before the
+ *    shop disconnected is still found.
+ *
+ * It must run before the redaction below, which overwrites the very addresses
+ * it reads. A placeholder an earlier erasure left has no digits and counts as
+ * no number. SES and SNS ids raise nothing here: those logs sit in DiveDay's
+ * own AWS account, and DiveDay's log retention discharges them.
+ *
+ * The account is the shop's `phone_number_id` at erasure, or null when no
+ * number is connected; the owner still owes the chat on the WhatsApp it was on.
+ */
+async function whatsAppChatTargets(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId, bookingIds, owned } = ctx;
+  const recordDigits = erasablePhoneDigits(ctx.phone);
+  const numbers = new Set<string>();
+  const add = (address: string | null) => {
+    const digits = erasablePhoneDigits(address);
+    if (digits) numbers.add(digits);
+  };
+
+  const wroteIn = await tx
+    .selectDistinct({ fromAddress: inboundMessages.fromAddress })
+    .from(inboundMessages)
+    .where(
+      and(
+        eq(inboundMessages.shopId, shopId),
+        eq(inboundMessages.channel, "whatsapp"),
+        recordDigits
+          ? or(
+              eq(inboundMessages.personId, personId),
+              eq(inboundMessages.fromAddress, recordDigits),
+            )
+          : eq(inboundMessages.personId, personId),
+      ),
+    );
+  for (const row of wroteIn) add(row.fromAddress);
+
+  const wroteTo = await tx
+    .selectDistinct({ toAddress: staffReplies.toAddress })
+    .from(staffReplies)
+    .where(
+      and(
+        eq(staffReplies.shopId, shopId),
+        eq(staffReplies.channel, "whatsapp"),
+        eq(staffReplies.personId, personId),
+      ),
+    );
+  for (const row of wroteTo) add(row.toAddress);
+
+  const [account] = await tx
+    .select({ phoneNumberId: shopWhatsappAccounts.phoneNumberId })
+    .from(shopWhatsappAccounts)
+    .where(eq(shopWhatsappAccounts.shopId, shopId))
+    .limit(1);
+
+  if (recordDigits) {
+    if ((account && owned) || (await hasWhatsAppMessage(tx, shopId, personId, bookingIds))) {
+      numbers.add(recordDigits);
+    }
+  }
+
+  return [...numbers].sort().map((digits) => ({
+    target: "whatsapp_conversation" as const,
+    externalId: `+${digits}`,
+    providerAccountId: account?.phoneNumberId ?? null,
+  }));
+}
+
+/** Meta's message ids start `wamid.`; SES's and SNS's never do. */
+const WHATSAPP_MESSAGE_ID = "wamid.%";
+
+/** Whether any booking message or waiver link to this diver went out on WhatsApp. */
+async function hasWhatsAppMessage(
+  tx: AppTransaction,
+  shopId: string,
+  personId: string,
+  bookingIds: string[],
+): Promise<boolean> {
+  const [waiverText] = await tx
+    .select({ id: waiverDeliveries.id })
+    .from(waiverDeliveries)
+    .innerJoin(waiverRecords, eq(waiverRecords.id, waiverDeliveries.waiverRecordId))
+    .where(
+      and(
+        eq(waiverDeliveries.shopId, shopId),
+        eq(waiverRecords.shopId, shopId),
+        eq(waiverRecords.personId, personId),
+        like(waiverDeliveries.providerMessageId, WHATSAPP_MESSAGE_ID),
+      ),
+    )
+    .limit(1);
+  if (waiverText) return true;
+  if (bookingIds.length === 0) return false;
+  const [delivery] = await tx
+    .select({ id: notificationDeliveries.id })
+    .from(notificationDeliveries)
+    .where(
+      and(
+        eq(notificationDeliveries.shopId, shopId),
+        inArray(notificationDeliveries.bookingId, bookingIds),
+        like(notificationDeliveries.providerMessageId, WHATSAPP_MESSAGE_ID),
+      ),
+    )
+    .limit(1);
+  if (delivery) return true;
+  const [attempt] = await tx
+    .select({ id: notificationDeliveryAttempts.id })
+    .from(notificationDeliveryAttempts)
+    .where(
+      and(
+        eq(notificationDeliveryAttempts.shopId, shopId),
+        inArray(notificationDeliveryAttempts.bookingId, bookingIds),
+        like(notificationDeliveryAttempts.providerMessageId, WHATSAPP_MESSAGE_ID),
+      ),
+    )
+    .limit(1);
+  return !!attempt;
+}
+
 /** The erasure's "the inbox (ADR 20260907-two-way-inbox)" sweep. */
 async function scrubInbox(
   tx: AppTransaction,
   ctx: ScrubSectionContext,
 ): Promise<ProcessorErasureTargetInput[]> {
   const { shopId, personId } = ctx;
+  // Read first: the redactions below overwrite the numbers it needs.
+  const chats = await whatsAppChatTargets(tx, ctx);
   // What the diver wrote is theirs end to end — the words, the subject, and the
   // address they wrote from — and what the shop wrote back names them in the
   // `To:` and usually in the body. Redacted rather than deleted, like the pulse
@@ -2640,7 +2783,7 @@ async function scrubInbox(
     // would leave their address in the one row this sweep had just cleaned.
     .set({ body: REDACTED_TEXT, toAddress: REDACTED_TEXT, sendError: null })
     .where(and(eq(staffReplies.shopId, shopId), eq(staffReplies.personId, personId)));
-  return [];
+  return chats;
 }
 
 /**
@@ -2724,8 +2867,9 @@ async function scrubIncidentReports(
 
 /**
  * Every sweep of the erasure, in the order it runs. Each takes the transaction
- * and the diver's context and hands back the Stripe objects it found standing
- * for them, which `scrub` raises as one ledger write at the end.
+ * and the diver's context and hands back the objects it found an outside
+ * provider holding for them — at Stripe, or a chat in the shop's WhatsApp —
+ * which `scrub` raises as one ledger write at the end.
  */
 const SCRUB_SECTIONS = [
   scrubPersonRecord,
@@ -2772,9 +2916,10 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   };
   const section: ScrubSectionContext = { ...ctx, bookingIds, owned: bookingIds.length > 0, retire };
 
-  // Every Stripe object this scrub finds standing for the erased diver, raised
-  // as one ledger row apiece at the end of the transaction. Three tables feed
-  // it — `orders`, `tips` and `booking_checkouts` — in sweeps far apart, so
+  // Every Stripe object this scrub finds standing for the erased diver, and
+  // every chat with them in the shop's WhatsApp (issue #1721), raised as one
+  // ledger row apiece at the end of the transaction. The Stripe ones come from
+  // three tables — `orders`, `tips` and `booking_checkouts` — in sweeps far apart, so
   // each sweep returns its share and they are raised together: one write, one
   // dedupe, and the obligations land inside the same transaction as the
   // redactions that made them owed (issue #1621, ADR
