@@ -76,6 +76,7 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "stripe_payments_restricted":
     case "roll_call_stale":
     case "incident_missing_diver":
+    case "incident_missing_diver_found":
     case "shore_alert_stopped":
     case "bookkeeper_notice":
       return null;

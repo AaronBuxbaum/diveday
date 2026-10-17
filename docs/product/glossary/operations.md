@@ -889,7 +889,9 @@
   narrative beside it. Filing a report of kind **missing diver** is also an alarm: it emails every
   active owner and pushes the manifest's followers at once, naming no one (H-142,
   `sendMissingDiverAlerts`), and the filed report says when the owners were alerted or that they
-  were not reached yet. Kept seven years from the incident; erasing a diver removes their identity
+  were not reached yet. The roll-call row's **"Missing diver, alert owners now"** sends the same
+  alert before the report is written, raising its draft, which is then never deleted; **Found**
+  on a raised or filed report sends the owners one all-clear by email (issue #2694). Kept seven years from the incident; erasing a diver removes their identity
   from it and keeps the report
   ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
 - **Legal hold** (on an **incident report**) — an owner-set flag that keeps a report past its

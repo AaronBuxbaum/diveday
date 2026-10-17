@@ -50,3 +50,40 @@ export function incidentMissingDiverEmail(
     html: `<p>${greetingHtml}</p><p>${escapeHtml(body)}</p>${emailButton(input.reportUrl, open)}<p><a href="${escapeHtml(input.emergencyUrl)}">${escapeHtml(emergency)}</a></p>`,
   };
 }
+
+export type IncidentMissingDiverFoundEmailInput = {
+  locale: DiverLocale;
+  recipientName: string;
+  shopName: string;
+  tripTitle: string;
+  /** When the crew marked the diver found. */
+  foundAt: Date;
+  timezone: string;
+  reportUrl: string;
+};
+
+/**
+ * The all-clear (issue #2694): to each owner the alert told, once, when the
+ * diver is marked found. The fact, when, and the report; nobody named.
+ */
+export function incidentMissingDiverFoundEmail(
+  input: IncidentMissingDiverFoundEmailInput,
+): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.recipientName, t("notifications.common.genericName"));
+  const greetingText = t("notifications.common.greeting", { firstName });
+  const greetingHtml = t("notifications.common.greeting", { firstName: escapeHtml(firstName) });
+  const body = t("notifications.incidentMissingDiverFound.body", {
+    tripTitle: input.tripTitle,
+    when: formatDateTimeTz(input.foundAt, input.locale, input.timezone),
+  });
+  const open = t("notifications.incidentMissingDiver.open");
+  return {
+    subject: t("notifications.incidentMissingDiverFound.subject", {
+      shopName: input.shopName,
+      tripTitle: input.tripTitle,
+    }),
+    text: `${greetingText}\n\n${body}\n\n${open}:\n${input.reportUrl}\n`,
+    html: `<p>${greetingHtml}</p><p>${escapeHtml(body)}</p>${emailButton(input.reportUrl, open)}`,
+  };
+}

@@ -47,6 +47,8 @@ export type DiverRollCallContext = {
    * here (anyone but its crew, owners and managers). The write re-checks.
    */
   startMissingDiverReport: MissingReportAction | null;
+  /** "Missing diver, alert owners now" (issue #2694), to the same readers. */
+  raiseMissingDiverAlert?: MissingReportAction | null;
   /**
    * One `RollCallButtonCopy` per diver: the "not ready" refusal embeds a rich
    * link to that diver's own Guests anchor, so it is built by the page

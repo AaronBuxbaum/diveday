@@ -25,7 +25,7 @@ import type { NotificationProvider } from "@/lib/notifications";
 import { OFFLINE_EVENT_SKEW_MS } from "@/lib/offline-events";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
-import { sendMissingDiverAlerts } from "./missing-diver-alerts";
+import { sendMissingDiverAlerts, sendMissingDiverAllClear } from "./missing-diver-alerts";
 import { recordTripActivity } from "./operations";
 import { queryAll } from "./query-helpers";
 import {
@@ -103,7 +103,9 @@ export type IncidentWriteRefusal =
   | "already_listed"
   | "blank"
   | "too_long"
-  | "held";
+  | "held"
+  /** A draft whose missing-diver alert was raised: the owners were told, so it is kept. */
+  | "alerted";
 
 type StartedDraft =
   | { ok: true; reportId: string; reused: boolean }
@@ -380,69 +382,301 @@ export async function startMissingDiverReport(
   input: { shopId: string; tripId: string; subject: MissingSubject; actorPersonId: string },
 ): Promise<MissingDiverStart> {
   return db.transaction(async (tx): Promise<MissingDiverStart> => {
-    // Who may write first, so a refused caller learns nothing about the seat.
-    const refused = await startGate(tx, input);
-    if (refused) return { ok: false, reason: refused === "not_found" ? "not_allowed" : refused };
-    if (!(await subjectOnDeparture(tx, input))) return { ok: false, reason: "not_missing" };
-    const since = standingNotBackAboardSince(await afterDiveEvents(tx, input));
-    if (!since) return { ok: false, reason: "not_missing" };
-    const { subject } = input;
-    const subjectId = subject.kind === "diver" ? subject.bookingId : subject.personId;
-    await tx.execute(
-      sql`select pg_advisory_xact_lock(hashtext('incident_report_missing'), hashtext(${`${input.tripId}:${subjectId}`}))`,
-    );
-    const filers = alias(people, "incident_missing_filers");
-    const [open] = await tx
-      .select({
-        id: incidentReports.id,
-        status: incidentReports.status,
-        createdByPersonId: incidentReports.createdByPersonId,
-        createdByName: creators.fullName,
-        filedByName: filers.fullName,
-      })
-      .from(incidentReports)
-      .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
-      .leftJoin(filers, eq(filers.id, incidentReports.filedByPersonId))
-      .innerJoin(incidentReportPeople, eq(incidentReportPeople.reportId, incidentReports.id))
+    const opened = await openMissingReport(tx, input);
+    if (!opened.ok) return opened;
+    if (opened.created) return { ok: true, reportId: opened.report.id, reused: false };
+    return reuseOrName(tx, input, opened.report);
+  });
+}
+
+/** The one report for this disappearance, as `openMissingReport` finds it. */
+type MissingReportRow = {
+  id: string;
+  status: IncidentReportStatus;
+  createdByPersonId: string;
+  createdByName: string;
+  filedByName: string | null;
+  missingAlertRaisedAt: Date | null;
+  missingFoundAt: Date | null;
+};
+
+/**
+ * `startMissingDiverReport`'s and `raiseMissingDiverAlert`'s shared half:
+ * the gate, the standing mark, the lock, and the one report for this
+ * disappearance, started as a draft when there is none. Whoever's it is: the
+ * caller decides what this viewer is told about it.
+ */
+async function openMissingReport(
+  tx: DbExecutor,
+  input: { shopId: string; tripId: string; subject: MissingSubject; actorPersonId: string },
+): Promise<
+  | { ok: true; report: MissingReportRow; created: boolean }
+  | { ok: false; reason: IncidentWriteRefusal | "not_missing" }
+> {
+  // Who may write first, so a refused caller learns nothing about the seat.
+  const refused = await startGate(tx, input);
+  if (refused) return { ok: false, reason: refused === "not_found" ? "not_allowed" : refused };
+  if (!(await subjectOnDeparture(tx, input))) return { ok: false, reason: "not_missing" };
+  const since = standingNotBackAboardSince(await afterDiveEvents(tx, input));
+  if (!since) return { ok: false, reason: "not_missing" };
+  const { subject } = input;
+  const subjectId = subject.kind === "diver" ? subject.bookingId : subject.personId;
+  await tx.execute(
+    sql`select pg_advisory_xact_lock(hashtext('incident_report_missing'), hashtext(${`${input.tripId}:${subjectId}`}))`,
+  );
+  const filers = alias(people, "incident_missing_filers");
+  const [open] = await tx
+    .select({
+      id: incidentReports.id,
+      status: incidentReports.status,
+      createdByPersonId: incidentReports.createdByPersonId,
+      createdByName: creators.fullName,
+      filedByName: filers.fullName,
+      missingAlertRaisedAt: incidentReports.missingAlertRaisedAt,
+      missingFoundAt: incidentReports.missingFoundAt,
+    })
+    .from(incidentReports)
+    .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
+    .leftJoin(filers, eq(filers.id, incidentReports.filedByPersonId))
+    .innerJoin(incidentReportPeople, eq(incidentReportPeople.reportId, incidentReports.id))
+    .where(
+      and(
+        eq(incidentReports.shopId, input.shopId),
+        eq(incidentReports.tripId, input.tripId),
+        eq(incidentReports.kind, "missing_diver"),
+        isNull(incidentReports.deletedAt),
+        // This disappearance's, not an earlier one's the diver came back
+        // from. A tablet's clock may run ahead of the server's by the
+        // offline skew, so the mark can postdate the report it opened.
+        gte(incidentReports.createdAt, new Date(since.getTime() - OFFLINE_EVENT_SKEW_MS)),
+        eq(incidentReportPeople.involvement, "affected"),
+        subject.kind === "diver"
+          ? eq(incidentReportPeople.bookingId, subject.bookingId)
+          : eq(incidentReportPeople.personId, subject.personId),
+      ),
+    )
+    // diveday:allow-time-id-order: picks the one report to reopen; nobody is shown this order.
+    .orderBy(asc(incidentReports.createdAt), asc(incidentReports.id))
+    .limit(1);
+  if (open) return { ok: true, report: open, created: false };
+  const reportId = await insertDraft(tx, input, { kind: "missing_diver", occurredAt: since });
+  if (!reportId) return { ok: false, reason: "not_found" };
+  await tx.insert(incidentReportPeople).values({
+    shopId: input.shopId,
+    reportId,
+    involvement: "affected",
+    ...(subject.kind === "diver"
+      ? { bookingId: subject.bookingId }
+      : { personId: subject.personId }),
+  });
+  return {
+    ok: true,
+    created: true,
+    report: {
+      id: reportId,
+      status: "draft",
+      createdByPersonId: input.actorPersonId,
+      createdByName: "",
+      filedByName: null,
+      missingAlertRaisedAt: null,
+      missingFoundAt: null,
+    },
+  };
+}
+
+/**
+ * An existing report for this disappearance: its writer, an owner or a
+ * manager gets it back; anyone else is told who started or filed it, and is
+ * given neither its contents nor a second report.
+ */
+async function reuseOrName(
+  tx: DbExecutor,
+  input: { shopId: string; tripId: string; actorPersonId: string },
+  open: MissingReportRow,
+): Promise<MissingDiverStart> {
+  const viewer = await loadIncidentViewer(tx, input.shopId, input.tripId, input.actorPersonId);
+  if (mayReadIncidentReport(viewer, open)) return { ok: true, reportId: open.id, reused: true };
+  if (open.status === "filed") {
+    return { ok: false, reason: "already_filed", filedByName: open.filedByName ?? "" };
+  }
+  return { ok: false, reason: "already_started", startedByName: open.createdByName };
+}
+
+export type MissingDiverRaise =
+  /** The owners are being told; `reportId` is the report this viewer may open, when they may. */
+  | { ok: true; reportId: string | null; alreadyRaised: boolean }
+  | { ok: false; reason: IncidentWriteRefusal | "not_missing" | "already_found" };
+
+/**
+ * **"Missing diver, alert owners now"** (issue #2694, decided by Aaron
+ * 2026-10-17): one tap on a roll-call row marked not back aboard tells the
+ * owners at once, apart from the report, which waits behind about nine
+ * fields. The tap also starts the one report for this disappearance, the
+ * diver and the time of the mark filled in, exactly as "Start a missing diver
+ * report" does, and stamps it raised; the alert then goes by the filed
+ * report's path (`sendMissingDiverAlerts`, H-142), once per report.
+ *
+ * - **A double tap is one alert.** The advisory lock on (departure, missing
+ *   person) serializes two taps; the second finds the report raised and
+ *   sends nothing new. A report already filed was alerted by its filing.
+ * - **Somebody else's report is still raised.** A second crew member's tap
+ *   alerts the owners on the first one's report; it is not handed over
+ *   (`reportId` null), only named.
+ * - **A diver already found is not alerted again** (`already_found`): the
+ *   crew marks them back aboard, and a later disappearance is a new report.
+ * - Same people as the report button (`mayStartIncidentReport`), same
+ *   `not_missing` refusal for a stale tap, and no alert for a rehearsal, a
+ *   cancelled departure or a demo shop (the sender's own filter).
+ */
+export async function raiseMissingDiverAlert(
+  db: AppDb,
+  input: {
+    shopId: string;
+    tripId: string;
+    subject: MissingSubject;
+    actorPersonId: string;
+    provider?: NotificationProvider;
+  },
+): Promise<MissingDiverRaise> {
+  const raised = await db.transaction(async (tx): Promise<MissingDiverRaise> => {
+    const opened = await openMissingReport(tx, input);
+    if (!opened.ok) return opened;
+    const { report } = opened;
+    if (report.missingFoundAt) return { ok: false, reason: "already_found" };
+    let alreadyRaised = report.status === "filed" || report.missingAlertRaisedAt !== null;
+    if (!alreadyRaised) {
+      const now = nowDate();
+      const stamped = await tx
+        .update(incidentReports)
+        .set({
+          missingAlertRaisedAt: now,
+          missingAlertRaisedByPersonId: input.actorPersonId,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(incidentReports.id, report.id),
+            eq(incidentReports.shopId, input.shopId),
+            eq(incidentReports.status, "draft"),
+            isNull(incidentReports.missingAlertRaisedAt),
+            isNull(incidentReports.missingFoundAt),
+            liveReport,
+          ),
+        )
+        .returning({ id: incidentReports.id });
+      alreadyRaised = stamped.length === 0;
+      if (!alreadyRaised) {
+        await recordTripActivity(tx, {
+          shopId: input.shopId,
+          tripId: input.tripId,
+          actorPersonId: input.actorPersonId,
+          entry: { code: "missing_diver_alert_raised" },
+        });
+      }
+    }
+    const reuse = opened.created
+      ? { ok: true as const, reportId: report.id }
+      : await reuseOrName(tx, input, report);
+    return { ok: true, reportId: reuse.ok ? reuse.reportId : null, alreadyRaised };
+  });
+  // After the commit, as filing does: the send never undoes the raise, and a
+  // failed send is given back for the hourly pass.
+  if (raised.ok && !raised.alreadyRaised) {
+    try {
+      const reportId = await raisedReportId(db, input);
+      if (reportId) {
+        await sendMissingDiverAlerts(db, { reportId, provider: input.provider });
+      }
+    } catch {
+      log("incident.missing_diver_alert_failed", "error", { tripId: input.tripId });
+    }
+  }
+  return raised;
+}
+
+/** The raised report for this departure and missing person, newest first: the one just raised. */
+async function raisedReportId(
+  db: DbExecutor,
+  input: { shopId: string; tripId: string; subject: MissingSubject },
+): Promise<string | null> {
+  const { subject } = input;
+  const [row] = await db
+    .select({ id: incidentReports.id })
+    .from(incidentReports)
+    .innerJoin(incidentReportPeople, eq(incidentReportPeople.reportId, incidentReports.id))
+    .where(
+      and(
+        eq(incidentReports.shopId, input.shopId),
+        eq(incidentReports.tripId, input.tripId),
+        sql`${incidentReports.missingAlertRaisedAt} is not null`,
+        isNull(incidentReports.missingFoundAt),
+        liveReport,
+        eq(incidentReportPeople.involvement, "affected"),
+        subject.kind === "diver"
+          ? eq(incidentReportPeople.bookingId, subject.bookingId)
+          : eq(incidentReportPeople.personId, subject.personId),
+      ),
+    )
+    // diveday:allow-time-id-order: the report just raised; nobody is shown this order.
+    .orderBy(desc(incidentReports.missingAlertRaisedAt), asc(incidentReports.id))
+    .limit(1);
+  return row?.id ?? null;
+}
+
+export type MissingDiverFound =
+  | { ok: true; changed: boolean }
+  | { ok: false; reason: IncidentWriteRefusal | "not_alerted" };
+
+/**
+ * **The diver was found** (issue #2694, decided by Aaron 2026-10-17): the
+ * addendum that sends one quiet all-clear to the owners the alert told. On a
+ * missing-diver report whose alert was raised or filed, by whoever may write
+ * it (as an addendum). Recorded once; a second tap changes nothing and sends
+ * nothing. It stops any alert not yet sent. The all-clear is email only, no
+ * push, at most once (`sendMissingDiverAllClear`).
+ */
+export async function markMissingDiverFound(
+  db: AppDb,
+  input: WriteTarget & { provider?: NotificationProvider },
+): Promise<MissingDiverFound> {
+  const found = await db.transaction(async (tx): Promise<MissingDiverFound> => {
+    const { report, allowed } = await lockForWrite(tx, input);
+    if (!report || !allowed) return { ok: false, reason: "not_found" };
+    if (report.kind !== "missing_diver") return { ok: false, reason: "not_alerted" };
+    if (report.status !== "filed" && report.missingAlertRaisedAt === null) {
+      return { ok: false, reason: "not_alerted" };
+    }
+    if (report.missingFoundAt !== null) return { ok: true, changed: false };
+    const now = nowDate();
+    const stamped = await tx
+      .update(incidentReports)
+      .set({ missingFoundAt: now, missingFoundByPersonId: input.actorPersonId, updatedAt: now })
       .where(
         and(
+          eq(incidentReports.id, input.reportId),
           eq(incidentReports.shopId, input.shopId),
-          eq(incidentReports.tripId, input.tripId),
-          eq(incidentReports.kind, "missing_diver"),
-          isNull(incidentReports.deletedAt),
-          // This disappearance's, not an earlier one's the diver came back
-          // from. A tablet's clock may run ahead of the server's by the
-          // offline skew, so the mark can postdate the report it opened.
-          gte(incidentReports.createdAt, new Date(since.getTime() - OFFLINE_EVENT_SKEW_MS)),
-          eq(incidentReportPeople.involvement, "affected"),
-          subject.kind === "diver"
-            ? eq(incidentReportPeople.bookingId, subject.bookingId)
-            : eq(incidentReportPeople.personId, subject.personId),
+          isNull(incidentReports.missingFoundAt),
         ),
       )
-      // diveday:allow-time-id-order: picks the one report to reopen; nobody is shown this order.
-      .orderBy(asc(incidentReports.createdAt), asc(incidentReports.id))
-      .limit(1);
-    if (open) {
-      const viewer = await loadIncidentViewer(tx, input.shopId, input.tripId, input.actorPersonId);
-      if (mayReadIncidentReport(viewer, open)) return { ok: true, reportId: open.id, reused: true };
-      if (open.status === "filed") {
-        return { ok: false, reason: "already_filed", filedByName: open.filedByName ?? "" };
-      }
-      return { ok: false, reason: "already_started", startedByName: open.createdByName };
-    }
-    const reportId = await insertDraft(tx, input, { kind: "missing_diver", occurredAt: since });
-    if (!reportId) return { ok: false, reason: "not_found" };
-    await tx.insert(incidentReportPeople).values({
+      .returning({ id: incidentReports.id });
+    // The row lock above already serializes two taps; this says so twice.
+    if (stamped.length === 0) return { ok: true, changed: false };
+    await recordTripActivity(tx, {
       shopId: input.shopId,
-      reportId,
-      involvement: "affected",
-      ...(subject.kind === "diver"
-        ? { bookingId: subject.bookingId }
-        : { personId: subject.personId }),
+      tripId: report.tripId,
+      actorPersonId: input.actorPersonId,
+      entry: { code: "missing_diver_found" },
     });
-    return { ok: true, reportId, reused: false };
+    return { ok: true, changed: true };
   });
+  if (found.ok && found.changed) {
+    try {
+      await sendMissingDiverAllClear(db, { reportId: input.reportId, provider: input.provider });
+    } catch {
+      log("incident.missing_diver_all_clear_failed", "error", { reportId: input.reportId });
+    }
+  }
+  return found;
 }
 
 /**
@@ -491,6 +725,8 @@ async function lockForWrite(
       handedOverAt: incidentReports.handedOverAt,
       followUp: incidentReports.followUp,
       legalHoldAt: incidentReports.legalHoldAt,
+      missingAlertRaisedAt: incidentReports.missingAlertRaisedAt,
+      missingFoundAt: incidentReports.missingFoundAt,
     })
     .from(incidentReports)
     // A discarded draft is gone to every write, as a report that never existed.
@@ -527,6 +763,10 @@ export async function saveIncidentDraft(
       .update(incidentReports)
       .set({
         ...fields,
+        // The owners were told a diver is missing (issue #2694): the report
+        // stays one, and a false alarm is answered by "Found", never by a
+        // changed kind. The database holds this too.
+        kind: report.missingAlertRaisedAt !== null ? "missing_diver" : fields.kind,
         // Minutes only ever stand beside a "yes"; the database holds this too.
         oxygenMinutes: fields.oxygenGiven === true ? fields.oxygenMinutes : null,
         updatedAt: nowDate(),
@@ -653,6 +893,8 @@ export async function discardIncidentDraft(
     if (!mayDecideIncidentRecord(viewer)) return { ok: false, reason: "not_allowed" } as const;
     if (report.status !== "draft") return { ok: false, reason: "filed" } as const;
     if (report.legalHoldAt !== null) return { ok: false, reason: "held" } as const;
+    // The owners were told about it (issue #2694): it stays on the record.
+    if (report.missingAlertRaisedAt !== null) return { ok: false, reason: "alerted" } as const;
     await tx
       .update(incidentReports)
       .set({ deletedAt: nowDate(), deletedByPersonId: input.actorPersonId })
@@ -835,10 +1077,16 @@ export type IncidentReportView = {
   /** Whether this viewer may discard the draft or set or release the hold: owners. */
   mayDecide: boolean;
   /**
-   * For a filed report of a missing diver only (H-142): when every owner's
-   * email was sent, or `null` while they are not all told yet.
+   * For a report of a missing diver whose alert was filed (H-142) or raised
+   * from the roll call (issue #2694): when every owner's email was sent, or
+   * `null` while they are not all told yet; and when the diver was marked
+   * found, and by whom.
    */
-  ownersAlert: { sentAt: Date | null } | null;
+  ownersAlert: {
+    sentAt: Date | null;
+    foundAt: Date | null;
+    foundByName: string | null;
+  } | null;
 };
 
 /**
@@ -853,6 +1101,7 @@ export async function getIncidentReport(
   viewerPersonId: string,
 ): Promise<IncidentReportView | null> {
   const filers = alias(people, "incident_filers");
+  const finders = alias(people, "incident_finders");
   const [row] = await db
     .select({
       report: incidentReports,
@@ -861,12 +1110,14 @@ export async function getIncidentReport(
       siteName: diveSites.name,
       createdByName: creators.fullName,
       filedByName: filers.fullName,
+      foundByName: finders.fullName,
     })
     .from(incidentReports)
     // diveday:allow-deleted-trips: a report outlives a deleted departure.
     .innerJoin(trips, and(eq(trips.id, incidentReports.tripId), eq(trips.shopId, shopId)))
     .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
     .leftJoin(filers, eq(filers.id, incidentReports.filedByPersonId))
+    .leftJoin(finders, eq(finders.id, incidentReports.missingFoundByPersonId))
     .leftJoin(diveSites, eq(diveSites.id, incidentReports.diveSiteId))
     .where(and(eq(incidentReports.id, reportId), eq(incidentReports.shopId, shopId), liveReport))
     .limit(1);
@@ -975,8 +1226,13 @@ export async function getIncidentReport(
     legalHold: report.legalHoldAt !== null,
     mayDecide: mayDecideIncidentRecord(viewer),
     ownersAlert:
-      report.status === "filed" && report.kind === "missing_diver"
-        ? { sentAt: report.missingAlertSentAt }
+      report.kind === "missing_diver" &&
+      (report.status === "filed" || report.missingAlertRaisedAt !== null)
+        ? {
+            sentAt: report.missingAlertSentAt,
+            foundAt: report.missingFoundAt,
+            foundByName: report.missingFoundAt ? (row.foundByName ?? null) : null,
+          }
         : null,
   };
 }

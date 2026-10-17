@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
@@ -11,6 +12,8 @@ import {
   type IncidentSubject,
   type IncidentWriteRefusal,
   type MissingSubject,
+  markMissingDiverFound,
+  raiseMissingDiverAlert,
   removeIncidentPerson,
   saveIncidentDraft,
   setIncidentLegalHold,
@@ -56,6 +59,7 @@ const REFUSAL_NOTICE: Record<
   already_listed: "already-listed",
   blank: "blank-note",
   held: "held",
+  alerted: "alerted",
 };
 
 const FIELD_NOTICE: Record<IncidentFieldRefusal, string> = {
@@ -137,7 +141,7 @@ export async function startIncidentReportAction(shopSlug: string, tripId: string
 }
 
 /** What "Start a missing diver report" answers in place when it opens nothing. */
-export type MissingReportState = { message: string } | null;
+export type MissingReportState = { message: string; tone?: "success" } | null;
 
 /**
  * **"Start a missing diver report"** on a manifest row marked not back aboard,
@@ -198,6 +202,79 @@ export async function startMissingDiverReportAction(
     shopPath(shopSlug, "trips", tripId),
     `${reportPath(shopSlug, tripId, result.reportId)}?${back}`,
   );
+}
+
+/**
+ * **"Missing diver, alert owners now"** on a manifest row marked not back
+ * aboard (issue #2694): tells the owners at once, apart from the report, and
+ * answers beside the button. It stays on the manifest, since the roll call is
+ * still going; "Start a missing diver report" beside it opens the report the
+ * tap started.
+ */
+export async function raiseMissingDiverAlertAction(
+  shopSlug: string,
+  tripId: string,
+  _previous: MissingReportState,
+  formData: FormData,
+): Promise<MissingReportState> {
+  const { session, shop } = await requireShopSurface(shopSlug);
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const { bookingId, personId } = readForm(missingDiverForm, formData);
+  const subject: MissingSubject | null = uuidParam(bookingId)
+    ? { kind: "diver", bookingId }
+    : uuidParam(personId)
+      ? { kind: "crew", personId }
+      : null;
+  if (!uuidParam(tripId) || !subject) return { message: t("incidents.missingDiver.notMissing") };
+  let result: Awaited<ReturnType<typeof raiseMissingDiverAlert>>;
+  try {
+    result = await raiseMissingDiverAlert(await getDb(), {
+      shopId: shop.id,
+      tripId,
+      subject,
+      actorPersonId: session.user.personId,
+    });
+  } catch {
+    return { message: t("incidents.missingDiver.alertFailed") };
+  }
+  if (!result.ok) {
+    if (result.reason === "not_missing") return { message: t("incidents.missingDiver.notMissing") };
+    if (result.reason === "already_found") {
+      return { message: t("incidents.missingDiver.alreadyFound") };
+    }
+    return { message: t("incidents.missingDiver.notAllowed") };
+  }
+  revalidatePath(shopPath(shopSlug, "trips", tripId), "layout");
+  return {
+    tone: "success",
+    message: result.alreadyRaised
+      ? t("incidents.missingDiver.alreadyAlerted")
+      : t("incidents.missingDiver.alerted"),
+  };
+}
+
+/**
+ * **Found**: on a missing-diver report whose owners were alerted, one quiet
+ * all-clear to the same owners (issue #2694). A second tap changes nothing.
+ */
+export async function markMissingDiverFoundAction(
+  shopSlug: string,
+  tripId: string,
+  reportId: string,
+) {
+  const { session, shop } = await requireShopSurface(shopSlug);
+  requireIds(tripId, reportId);
+  const back = reportPath(shopSlug, tripId, reportId);
+  const result = await markMissingDiverFound(await getDb(), {
+    shopId: shop.id,
+    reportId,
+    tripId,
+    actorPersonId: session.user.personId,
+  });
+  if (result.ok) settle(back, { ok: true }, "found", "page");
+  // A report never alerted has no "Found" to press: as for one this actor cannot see.
+  if (result.reason === "not_alerted") notFound();
+  settle(back, { ok: false, reason: result.reason }, "found", "page");
 }
 
 /** Save the draft's fields, read as wall-clock times in the shop's zone. */

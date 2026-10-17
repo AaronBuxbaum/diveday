@@ -339,7 +339,7 @@ export default async function TripManifestPage({
             rollCallAction: actions.rollCall,
             rollCallClosed: cancelled === "closed",
             addPrivateNoteAction: actions.addPrivateNote,
-            startMissingDiverReport: actions.startMissingDiverReport,
+            ...actions.missingDiver,
             rollCallButtonCopy,
             buddyTeamLabel: buddy.buddyTeamLabel,
             t,
@@ -363,7 +363,7 @@ export default async function TripManifestPage({
           crewRollCallAction={actions.crewRollCall}
           rollCallClosed={cancelled === "closed"}
           crewRollCallButtonCopy={crewRollCallButtonCopy}
-          startMissingReport={actions.startMissingDiverReport}
+          missingDiver={actions.missingDiver}
           buddyTeamLabel={buddy.buddyTeamLabel}
           t={t}
         />

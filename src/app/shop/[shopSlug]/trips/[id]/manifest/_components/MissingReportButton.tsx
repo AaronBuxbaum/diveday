@@ -36,6 +36,7 @@ export function MissingReportButton({
   label,
   pendingLabel,
   ariaLabel,
+  variant = "secondary",
 }: {
   action: MissingReportAction;
   subject: { field: "bookingId" | "personId"; id: string };
@@ -43,6 +44,8 @@ export function MissingReportButton({
   label: string;
   pendingLabel: string;
   ariaLabel: string;
+  /** `danger` for "Missing diver, alert owners now", the louder of the two (issue #2694). */
+  variant?: "secondary" | "danger";
 }) {
   const [state, formAction, isPending] = useActionState(action, null);
   useEffect(() => watchRollCallTouches(), []);
@@ -62,12 +65,15 @@ export function MissingReportButton({
           event.preventDefault();
           refusePress(event.currentTarget);
         }}
-        className={buttonClass({ variant: "secondary" })}
+        className={buttonClass({ variant })}
       >
         {isPending ? pendingLabel : label}
       </button>
       {state ? (
-        <p role="alert" className="mt-2 text-sm font-medium text-danger">
+        <p
+          role={state.tone === "success" ? "status" : "alert"}
+          className={`mt-2 text-sm font-medium ${state.tone === "success" ? "text-success-strong" : "text-danger"}`}
+        >
           {state.message}
         </p>
       ) : null}

@@ -1,4 +1,7 @@
-import { startMissingDiverReportAction } from "../../incidents/actions";
+import {
+  raiseMissingDiverAlertAction,
+  startMissingDiverReportAction,
+} from "../../incidents/actions";
 import {
   addBuddyTeamMemberAction,
   addManifestPrivateNoteAction,
@@ -52,11 +55,18 @@ export function bindManifestActions(
     noteSnag: noteSnagAction.bind(null, { shopSlug, tripId }),
     answerSnag: answerSnagAction.bind(null, { shopSlug, tripId }),
     setTripStage: setTripStageAction.bind(null, { shopSlug, tripId }),
-    // A row's "Start a missing diver report", the row binding its own seat; none
-    // for a reader who may not start a report. The write re-checks.
-    startMissingDiverReport: reader.mayStartIncidentReport
-      ? startMissingDiverReportAction.bind(null, shopSlug, tripId)
-      : null,
+    // A row's two missing-diver controls, the row binding its own seat; none
+    // for a reader who may not start a report. Each write re-checks.
+    missingDiver: {
+      // "Start a missing diver report".
+      startMissingDiverReport: reader.mayStartIncidentReport
+        ? startMissingDiverReportAction.bind(null, shopSlug, tripId)
+        : null,
+      // "Missing diver, alert owners now" (issue #2694).
+      raiseMissingDiverAlert: reader.mayStartIncidentReport
+        ? raiseMissingDiverAlertAction.bind(null, shopSlug, tripId)
+        : null,
+    },
     // Named as `BuddyTeamsPanel` takes them, so the page hands them on whole.
     buddyTeams: {
       formBuddyTeamAction: formBuddyTeamAction.bind(null, actionContext),

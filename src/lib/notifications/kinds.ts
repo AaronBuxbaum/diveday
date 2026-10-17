@@ -1698,6 +1698,30 @@ const incidentMissingDiverSchema = z.object({
 });
 
 /**
+ * **The all-clear after a missing-diver alert** (issue #2694, decided by Aaron
+ * 2026-10-17; `sendMissingDiverAllClear`, src/db/missing-diver-alerts.ts): the
+ * diver reported missing on this departure was found. One quiet email to each
+ * owner, at most once per report, and no push. The fact, when, and the
+ * report's link behind the staff sign-in; nobody named.
+ */
+const incidentMissingDiverFoundSchema = z.object({
+  kind: z.literal("incident_missing_diver_found"),
+  shopId: z.uuid(),
+  personId: z.uuid(),
+  tripId: z.uuid(),
+  incidentReportId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: tripTitleSchema,
+  /** When the crew marked the diver found: said in the shop's zone. */
+  foundAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  reportUrl: z.url().max(2_000),
+});
+
+/**
  * **The same alert, to the shop's shore contact** (H-118, decided 2026-10-15).
  * Addressed to somebody outside the shop's accounts, so it carries less than
  * the owners' copy: no person, no link behind a staff sign-in, and no name of
@@ -1901,6 +1925,7 @@ export const notificationSchema = z
     rollCallStaleSchema,
     rollCallStaleShoreSchema,
     incidentMissingDiverSchema,
+    incidentMissingDiverFoundSchema,
     shoreAlertConfirmationSchema,
     shoreAlertStoppedSchema,
     departureNoteSchema,
@@ -2027,6 +2052,7 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "roll_call_stale":
     case "roll_call_stale_shore":
     case "incident_missing_diver":
+    case "incident_missing_diver_found":
     case "shore_alert_confirmation":
     case "departure_note":
     case "lost_item_found":
@@ -2230,6 +2256,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One alert per report per owner; the report's claim comes first.
     case "incident_missing_diver":
       return `incident-missing-diver/${notification.incidentReportId}/${notification.personId}`;
+    // One all-clear per report per owner, claimed before the send.
+    case "incident_missing_diver_found":
+      return `incident-missing-diver-found/${notification.incidentReportId}/${notification.personId}`;
     // One alert per departure to the shore contact, under the same claim.
     case "roll_call_stale_shore":
       return `roll-call-stale-shore/${notification.tripId}`;

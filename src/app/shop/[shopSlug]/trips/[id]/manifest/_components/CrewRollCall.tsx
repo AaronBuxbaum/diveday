@@ -105,7 +105,7 @@ export function CrewRollCall({
   todayTrailBySubject,
   crewRollCallAction,
   crewRollCallButtonCopy,
-  startMissingReport = null,
+  missingDiver,
   rollCallClosed = false,
   buddyTeamLabel,
   t,
@@ -126,10 +126,14 @@ export function CrewRollCall({
   crewRollCallAction: RollCallAction;
   crewRollCallButtonCopy: RollCallButtonCopy;
   /**
-   * "Start a missing diver report" for a crew member marked not back aboard,
-   * bound to the departure; null for a reader who may not start a report.
+   * "Start a missing diver report" and "Missing diver, alert owners now"
+   * (issue #2694) for a crew member marked not back aboard, bound to the
+   * departure; each null for a reader who may not start a report.
    */
-  startMissingReport?: MissingReportAction | null;
+  missingDiver?: {
+    startMissingDiverReport: MissingReportAction | null;
+    raiseMissingDiverAlert?: MissingReportAction | null;
+  };
   /**
    * A cancelled departure nobody counted on (#2285): every roll-call write is
    * refused, so no row or sheet draws a roll-call control.
@@ -145,6 +149,8 @@ export function CrewRollCall({
   // only for somebody nobody has tapped yet. The instruction is said once,
   // here; the rows say only which other boat (UX audit 2026-10-07, item 3 —
   // two crew members carried the same three-line paragraph each).
+  const startMissingReport = missingDiver?.startMissingDiverReport ?? null;
+  const raiseMissingAlert = missingDiver?.raiseMissingDiverAlert ?? null;
   const crewToConfirm = isDeparture
     ? crew.filter((member) => !member.rollCall && (member.clashes ?? []).length > 0).length
     : 0;
@@ -394,6 +400,18 @@ export function CrewRollCall({
                         {/* The report, from the row that raised it, on the
                             same terms as a diver's (domain review 2026-10-16):
                             the staffer is named in it as affected. */}
+                        {rowState.notBackAboard && raiseMissingAlert ? (
+                          <MissingReportButton
+                            key={`alert-${checkpoint}`}
+                            action={raiseMissingAlert}
+                            subject={{ field: "personId", id: member.id }}
+                            checkpoint={checkpoint}
+                            label={t("incidents.missingDiver.alert")}
+                            pendingLabel={t("incidents.missingDiver.alerting")}
+                            ariaLabel={`${t("incidents.missingDiver.alert")} — ${member.fullName}`}
+                            variant="danger"
+                          />
+                        ) : null}
                         {rowState.notBackAboard && startMissingReport ? (
                           <MissingReportButton
                             key={checkpoint}

@@ -27,6 +27,8 @@
     "incident_draft_discarded": "{actor} eliminó un borrador de informe de incidente",
     "incident_legal_hold_set": "{actor} puso una retención legal en un informe de incidente",
     "incident_legal_hold_released": "{actor} levantó la retención legal de un informe de incidente",
+    "missing_diver_alert_raised": "{actor} avisó a los propietarios de un buceador desaparecido",
+    "missing_diver_found": "{actor} marcó como encontrado a un buceador desaparecido",
     "seat_added": "{actor} agregó a {diver} a la salida",
     "seat_added_walk_in": "{actor} agregó a {diver} a la salida sin reserva",
     "seat_added_from_trip_link": "{actor} agregó una plaza para {diver} desde su enlace de la salida",

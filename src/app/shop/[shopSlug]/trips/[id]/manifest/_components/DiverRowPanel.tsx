@@ -47,6 +47,7 @@ export function DiverRowPanel({
     rollCallAction,
     addPrivateNoteAction,
     startMissingDiverReport,
+    raiseMissingDiverAlert = null,
     rollCallButtonCopy,
     rollCallClosed,
     t,
@@ -216,6 +217,20 @@ export function DiverRowPanel({
         This opens the one report for this missing diver, kind, diver and
         time of the mark filled in, or says who already started it. Only for
         those who may start one. */}
+      {/* **The owners told now, apart from the report** (issue #2694): one
+        tap, the report started behind it. */}
+      {rowState.notBackAboard && raiseMissingDiverAlert ? (
+        <MissingReportButton
+          key={`alert-${checkpoint}`}
+          action={raiseMissingDiverAlert}
+          subject={{ field: "bookingId", id: diver.bookingId }}
+          checkpoint={checkpoint}
+          label={t("incidents.missingDiver.alert")}
+          pendingLabel={t("incidents.missingDiver.alerting")}
+          ariaLabel={`${t("incidents.missingDiver.alert")} — ${diver.fullName}`}
+          variant="danger"
+        />
+      ) : null}
       {rowState.notBackAboard && startMissingDiverReport ? (
         <MissingReportButton
           key={checkpoint}

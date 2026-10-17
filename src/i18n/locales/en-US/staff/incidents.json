@@ -14,7 +14,13 @@
     "notMissing": "No longer marked not back aboard.",
     "notAllowed": "Only this departure’s crew, owners and managers can start a report.",
     "failed": "The report did not open. Tap again.",
-    "backToManifest": "Back to manifest"
+    "backToManifest": "Back to manifest",
+    "alert": "Missing diver, alert owners now",
+    "alerting": "Alerting…",
+    "alerted": "Owners alerted. Keep searching; the report can wait.",
+    "alreadyAlerted": "The owners were already alerted.",
+    "alreadyFound": "Already marked found.",
+    "alertFailed": "The alert did not go. Tap again, or call the owners."
   },
   "status": {
     "draft": "Draft",
@@ -136,6 +142,13 @@
     "oxygenFor": "Yes, for {minutes, plural, one {# minute} other {# minutes}}",
     "handoverAt": "{who}, {when}"
   },
+  "found": {
+    "label": "Found",
+    "byAt": "{name}, {when}",
+    "help": "Sends the owners who were alerted one all-clear by email.",
+    "submit": "Found",
+    "pending": "Saving…"
+  },
   "addenda": {
     "title": "Later notes",
     "description": "Each note carries who wrote it and when. A note cannot be changed.",
@@ -166,7 +179,9 @@
     "notYetFiled": "File the report before adding a later note.",
     "held": "A report on legal hold can’t be deleted. Release the hold first.",
     "holdSet": "Legal hold set.",
-    "holdReleased": "Legal hold released."
+    "holdReleased": "Legal hold released.",
+    "alerted": "The owners were alerted from this report, so it is kept. Mark the diver found instead.",
+    "found": "Marked found. The owners were sent an all-clear."
   },
   "safety": {
     "intro": "What the shop recorded on departures that left this month and are home. Lapsed credentials are read as the records stand today. Nothing here changes a record.",

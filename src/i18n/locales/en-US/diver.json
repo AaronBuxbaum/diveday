@@ -5715,6 +5715,10 @@
       "open": "Open the report",
       "emergency": "Open the emergency reference"
     },
+    "incidentMissingDiverFound": {
+      "subject": "{shopName}: the missing diver on {tripTitle} was found",
+      "body": "The diver reported missing on {tripTitle} was found. Marked found {when}."
+    },
     "shoreAlertStopped": {
       "subject": "{shopName}: the shore contact stopped roll-call alerts",
       "body": "Your shore contact used the link in a roll-call alert to stop them. DiveDay won’t email them again unless you save their address and they confirm it again.",

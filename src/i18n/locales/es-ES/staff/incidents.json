@@ -14,7 +14,13 @@
     "notMissing": "Ya no figura como sin regresar a bordo.",
     "notAllowed": "Solo la tripulación de esta salida, los propietarios y los gerentes pueden empezar un informe.",
     "failed": "El informe no se abrió. Toca de nuevo.",
-    "backToManifest": "Volver al manifiesto"
+    "backToManifest": "Volver al manifiesto",
+    "alert": "Buceador desaparecido: avisar ya a los propietarios",
+    "alerting": "Avisando…",
+    "alerted": "Propietarios avisados. Sigue buscando; el informe puede esperar.",
+    "alreadyAlerted": "Ya se avisó a los propietarios.",
+    "alreadyFound": "Ya figura como encontrado.",
+    "alertFailed": "El aviso no salió. Toca de nuevo o llama a los propietarios."
   },
   "status": {
     "draft": "Borrador",
@@ -136,6 +142,13 @@
     "oxygenFor": "Sí, durante {minutes, plural, one {# minuto} other {# minutos}}",
     "handoverAt": "{who}, {when}"
   },
+  "found": {
+    "label": "Encontrado",
+    "byAt": "{name}, {when}",
+    "help": "Envía por correo un único fin de la alerta a los propietarios avisados.",
+    "submit": "Encontrado",
+    "pending": "Guardando…"
+  },
   "addenda": {
     "title": "Notas posteriores",
     "description": "Cada nota lleva quién la escribió y cuándo. Una nota no se puede cambiar.",
@@ -166,7 +179,9 @@
     "notYetFiled": "Presenta el informe antes de agregar una nota posterior.",
     "held": "Un informe con retención legal no se puede eliminar. Levanta antes la retención.",
     "holdSet": "Retención legal puesta.",
-    "holdReleased": "Retención legal levantada."
+    "holdReleased": "Retención legal levantada.",
+    "alerted": "Desde este informe se avisó a los propietarios, así que se conserva. Marca al buceador como encontrado.",
+    "found": "Marcado como encontrado. Se envió a los propietarios el fin de la alerta."
   },
   "safety": {
     "intro": "Lo que el centro registró en las salidas que zarparon este mes y ya han vuelto. Las acreditaciones caducadas se leen según los registros de hoy. Nada de esta página cambia un registro.",
