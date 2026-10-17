@@ -75,7 +75,10 @@ export const staffDefs = [
   {
     fullName: "Talia Okonkwo",
     local: "talia",
-    roles: ["instructor"],
+    // Licensed to skipper as well, so the weekly Saturday boat has a relief
+    // captain on the one Saturday the owner and Sal are both on other boats
+    // (issue #2685).
+    roles: ["instructor", "captain"],
     emergencyContact: ["Chidi Okonkwo (husband)", "+234-1-555-0105"],
     namedToDivers: false,
   },
@@ -147,6 +150,13 @@ export const OWNER_NAME = "Dana Reyes";
 export const LEAD_INSTRUCTOR_NAME = "Marcus Webb";
 /** The second instructor, rostered as a session's *divemaster* (DOM-M7). */
 export const RELIEF_INSTRUCTOR_NAME = "Talia Okonkwo";
+
+/**
+ * The shop's captain of record. Two people hold `captain` now (the relief
+ * instructor is licensed to skipper the weekly boat when he is on another), so a
+ * seed that wants *the* captain asks for him by name, never by role alone.
+ */
+export const CAPTAIN_NAME = "Sal Moretti";
 
 /**
  * The shop's divers. **Order is load-bearing**: the rosters below index into

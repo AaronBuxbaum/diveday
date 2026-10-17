@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, ne, or } from "drizzle-orm";
 import { DAY_MS } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/manifests";
 import { demoEmail } from "@/lib/simulator-email";
@@ -20,6 +20,7 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
+import { CAPTAIN_NAME } from "./seed-cast";
 import { at, nextCreatedAt, withinDeskHours } from "./seed-clock";
 import { paperRelease, signingNames } from "./seed-paper-release";
 import { reviewedBy } from "./seed-review";
@@ -991,7 +992,13 @@ async function equipHistoryBoats(
     .select({ personId: personRoles.personId, role: personRoles.role })
     .from(personRoles)
     .innerJoin(people, eq(people.id, personRoles.personId))
-    .where(and(eq(people.shopId, shopId), inArray(personRoles.role, ["captain", "divemaster"])));
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        inArray(personRoles.role, ["captain", "divemaster"]),
+        or(ne(personRoles.role, "captain"), eq(people.fullName, CAPTAIN_NAME)),
+      ),
+    );
   const historyCrew = (["captain", "divemaster"] as const).flatMap((role) => {
     const holder = crewRoles.find((row) => row.role === role);
     return holder ? [{ personId: holder.personId, tripRole: role }] : [];

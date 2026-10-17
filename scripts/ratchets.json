@@ -675,7 +675,7 @@
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
     "src/db/seed-history.ts#seedHistory": 720,
     "src/db/seed-more-trips.ts#seedMoreTrips": 633,
-    "src/db/seed-trips.ts#seedTrips": 392,
+    "src/db/seed-trips.ts#seedTrips": 384,
     "src/lib/import.ts#prepareContactImport": 508
   },
   "live-people": {

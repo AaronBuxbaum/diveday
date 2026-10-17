@@ -96,7 +96,7 @@ describe("the seeded weekly run", () => {
     expect(short).toEqual([]);
   });
 
-  it("seats only people who hold captain as captain, and calls off a date no captain is free for", async () => {
+  it("seats only people who hold captain as captain, and keeps every date but the survey Saturday", async () => {
     const { db, series } = await run();
     const live = await db
       .select({ id: trips.id })
@@ -120,13 +120,25 @@ describe("the seeded weekly run", () => {
       if (captains[0]?.personId === standingSkipper[0]?.personId) continue;
       expect(roles.map((row) => row.role)).toContain("captain");
     }
-    // 2026-07-25: the owner skippers the long boat and the shop's one captain is
-    // on another, so nobody holding captain is free and the Saturday is called off.
+    // 2026-07-25: the owner skippers the long boat and Sal is on another, so the
+    // relief instructor who also holds captain takes this boat; only the survey
+    // Saturday is skipped.
+    const kept = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(
+        and(
+          eq(trips.seriesId, series.id),
+          eq(trips.seriesOccurrenceDate, "2026-07-25"),
+          isNull(trips.deletedAt),
+        ),
+      );
+    expect(kept).toHaveLength(1);
     const skips = await db
       .select({ date: tripSeriesSkips.occurrenceDate })
       .from(tripSeriesSkips)
       .where(eq(tripSeriesSkips.seriesId, series.id));
-    expect(skips.map((row) => row.date).sort()).toEqual(["2026-07-25", "2026-09-12"]);
+    expect(skips.map((row) => row.date)).toEqual(["2026-09-12"]);
   });
 
   it("names the two sites its dives visit", async () => {
@@ -140,7 +152,7 @@ describe("the seeded weekly run", () => {
       .select({ date: tripSeriesSkips.occurrenceDate })
       .from(tripSeriesSkips)
       .where(eq(tripSeriesSkips.seriesId, series.id));
-    expect(skips.map((row) => row.date).sort()).toEqual(["2026-07-25", "2026-09-12"]);
+    expect(skips.map((row) => row.date)).toEqual(["2026-09-12"]);
     const removed = await db
       .select({ date: trips.seriesOccurrenceDate })
       .from(trips)

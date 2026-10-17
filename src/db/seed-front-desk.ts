@@ -15,6 +15,7 @@ import {
   tripLastMinutePromos,
   tripWaitlistEntries,
 } from "./schema";
+import { CAPTAIN_NAME } from "./seed-cast";
 import { at, dateAt, nextCreatedAt } from "./seed-clock";
 
 /**
@@ -98,7 +99,13 @@ export async function seedFrontDesk(
         .select({ id: people.id })
         .from(people)
         .innerJoin(personRoles, eq(personRoles.personId, people.id))
-        .where(and(eq(people.shopId, shopId), eq(personRoles.role, "captain")))
+        .where(
+          and(
+            eq(people.shopId, shopId),
+            eq(personRoles.role, "captain"),
+            eq(people.fullName, CAPTAIN_NAME),
+          ),
+        )
         .limit(1);
       if (recorder) {
         await db.insert(rollCallEvents).values({

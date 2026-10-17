@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { depthToMeters } from "@/lib/depth-units";
 import type { DbExecutor } from "./client";
@@ -16,6 +16,7 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
+import { CAPTAIN_NAME } from "./seed-cast";
 import {
   at,
   DEMO_TODAY_DEPARTURE_MS,
@@ -55,6 +56,28 @@ export async function nameDemoNightDeparture(
         eq(trips.title, DEMO_TODAY_TRIP_TITLE),
       ),
     );
+}
+
+/**
+ * Who holds each crew role, last-wins over an unordered select, so only safe for
+ * a role exactly one person holds. The captain is asked for by name, because the
+ * relief instructor holds that role too.
+ */
+async function crewIdsByRole(db: DbExecutor, shopId: string): Promise<Map<string, string>> {
+  return new Map(
+    (
+      await db
+        .select({ id: people.id, role: personRoles.role })
+        .from(people)
+        .innerJoin(personRoles, eq(personRoles.personId, people.id))
+        .where(
+          and(
+            eq(people.shopId, shopId),
+            or(ne(personRoles.role, "captain"), eq(people.fullName, CAPTAIN_NAME)),
+          ),
+        )
+    ).map((row) => [row.role, row.id]),
+  );
 }
 
 /**
@@ -472,15 +495,7 @@ export async function seedTrips(
   // one person holds. `instructor` is no longer one of those (DOM-M7) — which is
   // why both instructors are resolved by name in `seedDemoSchedule` and passed
   // in, and why nothing below reads `crewByRole.get("instructor")`.
-  const crewByRole = new Map(
-    (
-      await db
-        .select({ id: people.id, role: personRoles.role })
-        .from(people)
-        .innerJoin(personRoles, eq(personRoles.personId, people.id))
-        .where(eq(people.shopId, shopId))
-    ).map((row) => [row.role, row.id]),
-  );
+  const crewByRole = await crewIdsByRole(db, shopId);
   const captainId = crewByRole.get("captain");
   const divemasterId = crewByRole.get("divemaster");
   // The second pair of eyes in the water. Six divers per supervisor is the
