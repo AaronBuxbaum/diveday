@@ -91,9 +91,17 @@ export async function GET(request: Request) {
     const staleInvoices = await voidStalePublicPackageInvoices(db, { now: nowDate() }).catch(
       async (error: unknown) => {
         await sentry.captureException(error, { tags: { cron_scan: "stale_package_invoices" } });
-        return { considered: 0, voided: 0, failed: 0 };
+        return { considered: 0, voided: 0, refreshed: 0, failed: 0, stuck: 0 };
       },
     );
+    // An invoice Stripe has refused to void night after night needs a person:
+    // raised once, on the night it reaches the limit.
+    if (staleInvoices.stuck > 0) {
+      await sentry.captureMessage("a stale package invoice could not be voided", {
+        level: "warning",
+        tags: { stale_invoices_stuck: String(staleInvoices.stuck) },
+      });
+    }
 
     // A series that cannot be rolled is not a transient blip: it has had every
     // instance deleted, or its course was archived under it, and it will fail
@@ -123,6 +131,7 @@ export async function GET(request: Request) {
       waitlistRolled: waitlist.rolled,
       waitlistInvited: waitlist.invited,
       staleInvoicesVoided: staleInvoices.voided,
+      staleInvoicesRefreshed: staleInvoices.refreshed,
       staleInvoicesFailed: staleInvoices.failed,
     });
 

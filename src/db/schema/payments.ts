@@ -686,6 +686,15 @@ export const orders = pgTable(
     paidAt: timestamp("paid_at", { withTimezone: true }),
     voidedAt: timestamp("voided_at", { withTimezone: true }),
     refundedAt: timestamp("refunded_at", { withTimezone: true }),
+    /**
+     * When the nightly sweep last tried and failed to void this unpaid public
+     * package invoice, and how many times it has (issue #2304). Null and zero
+     * on every order it has not refused; a refused one waits a few nights
+     * before the next try, so a few invoices Stripe will never void cannot
+     * fill the sweep's batch (`src/db/stale-package-invoices.ts`).
+     */
+    autoVoidFailedAt: timestamp("auto_void_failed_at", { withTimezone: true }),
+    autoVoidFailures: integer("auto_void_failures").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -712,6 +721,7 @@ export const orders = pgTable(
     check("orders_tax_nonnegative", sql`${table.taxCents} >= 0`),
     check("orders_amount_paid_nonnegative", sql`${table.amountPaidCents} >= 0`),
     check("orders_refunded_nonnegative", sql`${table.refundedCents} >= 0`),
+    check("orders_auto_void_failures_nonnegative", sql`${table.autoVoidFailures} >= 0`),
     check(
       "orders_stripe_ids_match_collection",
       sql`(${table.collection} = 'stripe_invoice' and ${table.stripeAccountId} is not null and ${table.stripeCustomerId} is not null and ${table.stripeInvoiceId} is not null) or (${table.collection} <> 'stripe_invoice' and ${table.stripeAccountId} is null and ${table.stripeCustomerId} is null and ${table.stripeInvoiceId} is null and ${table.stripePaymentIntentId} is null)`,

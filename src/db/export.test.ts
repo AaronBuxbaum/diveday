@@ -606,9 +606,9 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "shop_id",
     "stripe_account_id", // provider linkage, useless outside this Stripe account
     "stripe_customer_id",
-    // Matches a later refund or dispute event to this order; provider
-    // linkage like the two above (ADR 20261009-stripe-reversals-reach-diveday).
-    "stripe_payment_intent_id",
+    "stripe_payment_intent_id", // refund and dispute matching; provider linkage (ADR 20261009)
+    "auto_void_failed_at", // the nightly void sweep's retry state (issue #2304), not the sale's
+    "auto_void_failures", // same
   ],
   order_line_items: ["shop_id"],
   work_order_bills: ["shop_id"],

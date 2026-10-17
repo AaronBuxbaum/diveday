@@ -8,7 +8,13 @@ vi.mock("@/db/trips", () => ({ rollAllSeriesForward: vi.fn() }));
 vi.mock("@/db/shops", () => ({ clearPassedReopensOn: vi.fn(async () => 0) }));
 vi.mock("@/db/rehearsals", () => ({ clearFinishedRehearsals: vi.fn() }));
 vi.mock("@/db/stale-package-invoices", () => ({
-  voidStalePublicPackageInvoices: vi.fn(async () => ({ considered: 2, voided: 1, failed: 1 })),
+  voidStalePublicPackageInvoices: vi.fn(async () => ({
+    considered: 2,
+    voided: 1,
+    refreshed: 0,
+    failed: 1,
+    stuck: 0,
+  })),
 }));
 vi.mock("@/db/waitlist-roll", () => ({
   rollSailedSeriesWaitlists: vi.fn(async () => ({ rolled: 0, invited: 0 })),
@@ -113,6 +119,24 @@ describe("GET /api/cron/trip-series — stale package invoices (issue 2304)", ()
     const response = await GET(cronRequest(`Bearer ${secret}`));
     expect(response.status).toBe(200);
     expect(Sentry.captureException).toHaveBeenCalled();
+  });
+
+  it("raises an invoice Stripe keeps refusing to void, and stays quiet otherwise", async () => {
+    await GET(cronRequest(`Bearer ${secret}`));
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
+
+    vi.mocked(voidStalePublicPackageInvoices).mockResolvedValueOnce({
+      considered: 1,
+      voided: 0,
+      refreshed: 0,
+      failed: 1,
+      stuck: 1,
+    });
+    await GET(cronRequest(`Bearer ${secret}`));
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      "a stale package invoice could not be voided",
+      expect.objectContaining({ level: "warning" }),
+    );
   });
 });
 
