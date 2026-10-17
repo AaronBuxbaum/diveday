@@ -22,7 +22,7 @@ test.describe("the year on Reports", () => {
     // The sentence the year says, then the four figures under the strip.
     await expect(page.getByText(/\d+ divers?, \d+ boats? out, \d+ sites?\./)).toBeVisible();
     const figures = page.getByRole("region", { name: "The year’s numbers" });
-    await expect(figures.getByText("Divers", { exact: true })).toBeVisible();
+    await expect(figures.getByText("Different divers", { exact: true })).toBeVisible();
     await expect(figures.getByText("Boats out", { exact: true })).toBeVisible();
     await expect(figures.getByText("Busiest day", { exact: true })).toBeVisible();
     await expect(figures.getByText("Quietest month", { exact: true })).toBeVisible();

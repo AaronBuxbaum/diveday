@@ -44,6 +44,8 @@ export function ClosingStation({
   timeZone,
   canOpenLog,
   t,
+  countedLaterOn,
+  notes,
   children,
 }: {
   close: StationClose;
@@ -55,6 +57,13 @@ export function ClosingStation({
   /** `canPersonExportIncidentRecord` — the log door is absent for everyone else. */
   canOpenLog: boolean;
   t: StaffTranslator;
+  /**
+   * A past day only: the closing mark's own shop day, formatted, when it is a
+   * later day than the trip's. The sentence then drops its bare time.
+   */
+  countedLaterOn?: string;
+  /** A past day only: what the record adds, one sentence each (`pastDayStationNotes`). */
+  notes?: readonly string[];
   /** This departure's recap editor, composed by the spine. */
   children?: React.ReactNode;
 }) {
@@ -88,17 +97,18 @@ export function ClosingStation({
     crew: close.crewSailed,
     back: close.back + close.crewBack,
   };
+  const timedClose = countedLaterOn ? null : headCountClose;
   const detail = counted
-    ? headCountClose
+    ? timedClose
       ? souls
         ? t("shopHome.spine.close.backSoulsBy", {
             ...soulCounts,
-            time: formatTime(headCountClose.closedAt, locale, timeZone),
+            time: formatTime(timedClose.closedAt, locale, timeZone),
           })
         : t("shopHome.spine.close.backBy", {
             back: close.back,
             sailed: close.sailed,
-            time: formatTime(headCountClose.closedAt, locale, timeZone),
+            time: formatTime(timedClose.closedAt, locale, timeZone),
           })
       : souls
         ? t("shopHome.spine.close.backSouls", soulCounts)
@@ -153,6 +163,11 @@ export function ClosingStation({
           labelClassName="font-medium"
         >
           <span className={`${detailInk} tabular-nums`}>{detail}</span>
+          {counted && countedLaterOn ? (
+            <span className="text-muted">
+              {t("closeout.pastDay.countedLater", { date: countedLaterOn })}
+            </span>
+          ) : null}
           {counted && headCountClose ? (
             <span className="text-muted">
               {t("shopHome.spine.close.closedBy", { name: headCountClose.closedBy })}
@@ -167,6 +182,11 @@ export function ClosingStation({
           recorded on this trip. the plan changed: dive 1 moved to Benwood
           Wreck"). Absent on a day that went to plan, which is most days. */}
       {planChanged ? <p className="mt-1 text-sm text-muted">{planChanged}</p> : null}
+      {notes?.map((note) => (
+        <p key={note} className="mt-1 text-sm text-warning-strong">
+          {note}
+        </p>
+      ))}
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
         {/* A boat still out is exactly the row you would chase, so it gets
             the manifest door too — not only the rows with a recorded gap

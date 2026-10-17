@@ -155,7 +155,7 @@ export async function getMonthMoneyDetail(
 }
 
 /** What the counter took in the window with no tax split out of it; see `counterTaxIncludedCents`. */
-async function counterTaxIncluded(
+export async function counterTaxIncluded(
   db: DbExecutor,
   shopId: string,
   startUtc: Date,

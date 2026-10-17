@@ -28,6 +28,16 @@ export function isValidCalendarDate(value: string): value is CalendarDate {
   return day <= daysInMonth;
 }
 
+/**
+ * **A shop day named in a URL** (`/schedule/day/[date]`): a real date, and
+ * no earlier than 2000, the floor no dive shop's records reach below. The
+ * floor lives here and not in {@link isValidCalendarDate}, which also checks
+ * dates of birth and imported records.
+ */
+export function isShopDayParam(value: string): value is CalendarDate {
+  return isValidCalendarDate(value) && value >= "2000-01-01";
+}
+
 /** "Today" as a calendar date in a shop's local timezone, for expiry comparisons. */
 export function calendarDateInTimezone(date: Date, timeZone: string): CalendarDate {
   return toDateInputValue(utcToWallTime(date, timeZone));

@@ -130,9 +130,9 @@ Hotel $1,840 on 14 orders", `src/db/room-charges.ts`), net of refunds; the CSV m
 ## Amendment 2026-10-17: Reports says counter money is tax included (issue #2674)
 
 DiveDay holds no tax rate for a shop, so counter money stays written with `tax_cents = 0` and counted
-whole. Aaron chose option (a): Reports' month page says so in one line under its tax figure ("Money
-taken at the counter is counted with its tax included."), shown only in a month whose counter took
-money: `counterTaxIncludedCents` in `getMonthMoneyDetail` (`src/db/report-lines.ts`), orders on any
+whole. Aaron chose option (a): Reports' month and year pages say so in one line under the tax
+figure ("Counter sales are not split into tax, so Tax collected leaves them out."), shown only when
+the counter took money in that window: `counterTaxIncludedCents` in `getMonthMoneyDetail` (`src/db/report-lines.ts`), orders on any
 collection but `stripe_invoice`, paid in the month, with no tax of their own. No schema. A per-shop
 counter tax rate (option b) waits until a shop asks; reading a rate from Stripe Tax for an
 off-Stripe sale stays out (ADR 20260826-stripe-tax-is-opt-in-and-provider-owned).

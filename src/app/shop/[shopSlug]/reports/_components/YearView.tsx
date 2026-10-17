@@ -3,6 +3,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { weatherCallsInWindow } from "@/db/blowouts";
 import type { DbExecutor } from "@/db/client";
+import { counterTaxIncluded } from "@/db/report-lines";
 import {
   certifiedHere,
   earliestReportedTripStart,
@@ -90,16 +91,19 @@ export async function YearView({
     return { startUtc: from, endUtc: until && until < to ? until : to, timeZone: tz };
   };
   const hasLastYear = yearNumber - 1 >= firstYear;
-  const [yearInput, toDate, lastYearInput, weather, lastWeather, certified] = await Promise.all([
-    getShopYear(db, shop.id, { timeZone: tz, ...season, now }),
-    getYearToDate(db, shop.id, { timeZone: tz, currency, ...season, now }),
-    hasLastYear
-      ? getShopYear(db, shop.id, { timeZone: tz, ...lastSeason, now: lastYearNow })
-      : null,
-    weatherCallsInWindow(db, shop.id, window(season, now)),
-    hasLastYear ? weatherCallsInWindow(db, shop.id, window(lastSeason, lastYearNow)) : null,
-    certifiedHere(db, shop.id, window(season)),
-  ]);
+  const soFar = window(season, now);
+  const [yearInput, toDate, lastYearInput, weather, lastWeather, certified, counter] =
+    await Promise.all([
+      getShopYear(db, shop.id, { timeZone: tz, ...season, now }),
+      getYearToDate(db, shop.id, { timeZone: tz, currency, ...season, now }),
+      hasLastYear
+        ? getShopYear(db, shop.id, { timeZone: tz, ...lastSeason, now: lastYearNow })
+        : null,
+      weatherCallsInWindow(db, shop.id, soFar),
+      hasLastYear ? weatherCallsInWindow(db, shop.id, window(lastSeason, lastYearNow)) : null,
+      certifiedHere(db, shop.id, window(season)),
+      counterTaxIncluded(db, shop.id, soFar.startUtc, soFar.endUtc),
+    ]);
   const year = summarizeShopYear(yearInput);
   const lastYear = lastYearInput ? summarizeShopYear(lastYearInput) : null;
   const zone = formatTimeZoneName(locale, tz, now);
@@ -200,6 +204,7 @@ export async function YearView({
         money={{
           report: summarizeMonth(toDate),
           currency,
+          counterTaxIncludedCents: counter,
           csvHref: `${shopPath(shopSlug, "reports", "download")}?year=${year.year}`,
         }}
         locale={locale}

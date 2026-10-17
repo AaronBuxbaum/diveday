@@ -14,7 +14,7 @@
   },
   "downloadCsv": "Descargar CSV",
   "taxLine": "Impuestos cobrados {amount}",
-  "counterTaxIncluded": "El dinero cobrado en el mostrador se cuenta con el impuesto incluido.",
+  "counterTaxIncluded": "Las ventas en el mostrador no separan el impuesto, así que Impuestos cobrados las deja fuera.",
   "metrics": {
     "revenueLabel": "Ingresos netos",
     "revenueBasis": "De las salidas de este mes",
@@ -70,7 +70,7 @@
     "stripQuietDay": "{day} · sin salidas",
     "numbersLabel": "Los números del año",
     "figures": {
-      "diversLabel": "Buceadores",
+      "diversLabel": "Buceadores distintos",
       "diversDetail": "{count, plural, one {# día en el mar} other {# días en el mar}}",
       "boatsLabel": "Salidas",
       "boatDays": "{name} {count, plural, one {# día} other {# días}}",

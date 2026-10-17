@@ -29,9 +29,9 @@ import {
   tripDives,
   trips,
 } from "./schema";
-import { listRollCallGaps, ROLL_CALL_RESIDUE_MS } from "./today";
+import { listRollCallGaps } from "./today";
 import { latestTripStagesByTrip } from "./trip-stages";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 import { getTripPrep, type TripPrepShop } from "./trips-prep";
 import { listShopDayDepartures } from "./trips-queries";
 
@@ -78,7 +78,12 @@ function crewSubjectsAtClose(
  * surface reconciles have mostly already fallen out of every forward-looking
  * reader.
  */
-async function dayTrips(db: AppDb, shopId: string, bounds: { from: Date; to: Date }) {
+async function dayTrips(
+  db: AppDb,
+  shopId: string,
+  bounds: { from: Date; to: Date },
+  options: { rehearsals?: boolean } = {},
+) {
   const rows = await db
     .select({
       id: trips.id,
@@ -99,6 +104,8 @@ async function dayTrips(db: AppDb, shopId: string, bounds: { from: Date; to: Dat
         eq(trips.shopId, shopId),
         // A cancelled trip never sailed; it has no end-state to confirm.
         eq(trips.status, "scheduled"),
+        // diveday:allow-rehearsal: Today keeps a rehearsal in the water on its spine; a past day does not.
+        ...(options.rehearsals === false ? [notRehearsal()] : []),
         gte(trips.startsAt, bounds.from),
         lt(trips.startsAt, bounds.to),
       ),
@@ -414,14 +421,12 @@ export async function getDayCloseout(
  * roll-call mark ever written on those boats, so a count corrected on Monday
  * reads corrected on Saturday's page.
  *
- * **Never "all home" by age.** `listRollCallGaps` looks back
- * `ROLL_CALL_RESIDUE_MS` from the instant it is asked about, and a boat older
- * than that would fall out of it and reach the clock's verdict, "All home",
- * with its count still open. So the gaps are read for exactly the day's trips,
- * as of the latest instant all of them are still inside that window: now, for
- * any day of the last thirty, and otherwise a moment the counts have long been
- * due. The marks themselves are not cut at that instant, so nothing recorded
- * later is lost.
+ * **Never "all home" by age** (review dom-w4-dock B1). Today's reader drops a
+ * dock count after 48 hours home and a boat after thirty days, because Today
+ * is a queue. This page is a record, so it asks `listRollCallGaps` in its
+ * `historical` mode: those boats only, no window, `home` from each boat's own
+ * `endsAt`. A rehearsal is left off (ADR 20261012-rehearsal-departures:
+ * counted nowhere); Today still shows one in the water.
  */
 async function pastDayCloseout(
   db: AppDb,
@@ -430,21 +435,19 @@ async function pastDayCloseout(
   now: Date,
   day: CalendarDate,
 ): Promise<DayCloseoutState> {
-  const departures = await dayTrips(db, shopId, shopDaysBounds(day, day, timeZone));
-  const earliestEnd = Math.min(...departures.map((trip) => trip.endsAt.getTime()));
-  const asOf =
-    departures.length === 0
-      ? now
-      : new Date(Math.min(now.getTime(), earliestEnd + ROLL_CALL_RESIDUE_MS));
-  const gaps =
-    departures.length === 0
-      ? []
-      : await listRollCallGaps(
-          db,
-          shopId,
-          asOf,
-          departures.map((trip) => trip.tripId),
-        );
+  const departures = await dayTrips(db, shopId, shopDaysBounds(day, day, timeZone), {
+    rehearsals: false,
+  });
+  if (departures.length === 0) {
+    return assembleDayCloseout({ trips: [], gaps: [], timeZone, now, shopDay: day });
+  }
+  const gaps = await listRollCallGaps(
+    db,
+    shopId,
+    now,
+    departures.map((trip) => trip.tripId),
+    { historical: true },
+  );
   return assembleDayCloseout({ trips: departures, gaps, timeZone, now, shopDay: day });
 }
 
@@ -572,6 +575,39 @@ export async function listHeadCountCloses(
     if (last) closes.set(tripId, { closedAt: last.occurredAt, closedBy: last.closedBy });
   }
   return closes;
+}
+
+/**
+ * **Was a diver ever recorded not back after a dive?** Per trip, the first
+ * dive with a `not_boarded` mark at its after-dive checkpoint, even when a
+ * later mark resolved it. A past day's station reads as it closed, so a
+ * resolved scare would otherwise vanish; the roll call log stays the record.
+ */
+export async function listNotBackAfterDive(
+  db: AppDb,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Map<string, number>> {
+  const firstDive = new Map<string, number>();
+  if (tripIds.length === 0) return firstDive;
+  const rows = await db
+    .select({ tripId: rollCallEvents.tripId, checkpoint: rollCallEvents.checkpoint })
+    .from(rollCallEvents)
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        inArray(rollCallEvents.tripId, [...tripIds]),
+        eq(rollCallEvents.status, "not_boarded"),
+        ne(rollCallEvents.checkpoint, "departure"),
+      ),
+    );
+  for (const row of rows) {
+    const dive = Number(/^after_dive_(\d+)$/.exec(row.checkpoint)?.[1]);
+    if (!Number.isInteger(dive)) continue;
+    const seen = firstDive.get(row.tripId);
+    if (seen === undefined || dive < seen) firstDive.set(row.tripId, dive);
+  }
+  return firstDive;
 }
 
 /**

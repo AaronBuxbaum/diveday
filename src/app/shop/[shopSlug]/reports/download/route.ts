@@ -29,16 +29,18 @@ import { yearReportCsv } from "./year-report-csv";
  * the shop's own earliest month the way the page's picker is: a hand-edited
  * out-of-range month downloads an honest, empty report rather than a page
  * that needs a floor to stay usable. `?year=` cuts the year instead, as
- * twelve month rows (`yearReportCsv`).
+ * twelve month rows (`yearReportCsv`). A slug that is not the session's shop
+ * is a 404 rather than this shop's file under that shop's name.
  */
-export async function GET(request: Request) {
+export async function GET(request: Request, { params }: { params: Promise<{ shopSlug: string }> }) {
+  const { shopSlug } = await params;
   const session = await requireStaffSession();
   const db = await getDb();
-  if (!(await canPersonViewShopReports(db, session.user.shopId, session.user.personId))) {
+  const shop = await getShopById(db, session.user.shopId);
+  if (!shop || shop.slug !== shopSlug) return new Response("Not found", { status: 404 });
+  if (!(await canPersonViewShopReports(db, shop.id, session.user.personId))) {
     return new Response("Reports are limited to the shop's owner or manager.", { status: 403 });
   }
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) return new Response("Shop not found", { status: 404 });
   const currency = toShopCurrency(shop.currency);
 
   const now = nowDate();

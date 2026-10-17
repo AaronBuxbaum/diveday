@@ -14,7 +14,7 @@
   },
   "downloadCsv": "Download CSV",
   "taxLine": "Tax collected {amount}",
-  "counterTaxIncluded": "Money taken at the counter is counted with its tax included.",
+  "counterTaxIncluded": "Counter sales are not split into tax, so Tax collected leaves them out.",
   "metrics": {
     "revenueLabel": "Net revenue",
     "revenueBasis": "For this month’s departures",
@@ -70,7 +70,7 @@
     "stripQuietDay": "{day} · no boats",
     "numbersLabel": "The year’s numbers",
     "figures": {
-      "diversLabel": "Divers",
+      "diversLabel": "Different divers",
       "diversDetail": "{count, plural, one {# day at sea} other {# days at sea}}",
       "boatsLabel": "Boats out",
       "boatDays": "{name} {count, plural, one {# day} other {# days}}",

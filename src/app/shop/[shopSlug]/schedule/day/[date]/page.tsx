@@ -4,17 +4,14 @@ import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { canPersonExportIncidentRecord } from "@/db/authz";
-import { getDayCloseout, listHeadCountCloses } from "@/db/closeout";
+import { getDayCloseout, listHeadCountCloses, listNotBackAfterDive } from "@/db/closeout";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import {
-  calendarDateInTimezone,
-  formatCalendarDate,
-  isValidCalendarDate,
-} from "@/lib/calendar-date";
+import { calendarDateInTimezone, formatCalendarDate, isShopDayParam } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { assembleEveningClose } from "@/lib/closeout";
 import { formatWeekday } from "@/lib/format";
+import { pastDayStationNotes } from "@/lib/past-day-notes";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { shopDaysBounds } from "@/lib/zoned";
@@ -45,7 +42,7 @@ export default async function PastDayPage({
   params: Promise<{ shopSlug: string; date: string }>;
 }) {
   const { shopSlug, date } = await params;
-  if (!isValidCalendarDate(date)) notFound();
+  if (!isShopDayParam(date)) notFound();
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const now = nowDate();
   const today = calendarDateInTimezone(now, shop.timezone);
@@ -56,19 +53,46 @@ export default async function PastDayPage({
 
   const closeout = await getDayCloseout(db, shop.id, shop.timezone, now, undefined, date);
   const { stations } = assembleEveningClose(closeout.departures, now);
-  const [headCountCloses, canOpenLog] =
-    stations.length > 0
-      ? await Promise.all([
-          listHeadCountCloses(
-            db,
-            shop.id,
-            stations
-              .filter((station) => station.status === "all_home")
-              .map(({ tripId, crewAccountedFor }) => ({ tripId, crewClosed: crewAccountedFor })),
-          ),
-          canPersonExportIncidentRecord(db, shop.id, session.user.personId),
-        ])
-      : [new Map<string, { closedAt: Date; closedBy: string }>(), false];
+  // Both readers answer an empty map for no trips, so an empty day reads nothing.
+  const [headCountCloses, canOpenLog, notBack] = await Promise.all([
+    listHeadCountCloses(
+      db,
+      shop.id,
+      stations
+        .filter((station) => station.status === "all_home")
+        .map(({ tripId, crewAccountedFor }) => ({ tripId, crewClosed: crewAccountedFor })),
+    ),
+    stations.length > 0 && canPersonExportIncidentRecord(db, shop.id, session.user.personId),
+    listNotBackAfterDive(
+      db,
+      shop.id,
+      stations.map((station) => station.tripId),
+    ),
+  ]);
+  // What a day read later must say that the evening could leave unsaid. The
+  // departure log stays the record; these lines only point at it.
+  const stationNotes = (station: (typeof stations)[number]) => {
+    const headCountClose = headCountCloses.get(station.tripId) ?? null;
+    const notes = pastDayStationNotes({
+      close: station,
+      day: date,
+      timeZone: shop.timezone,
+      closedAt: headCountClose?.closedAt ?? null,
+      notBackDive: notBack.get(station.tripId) ?? null,
+    });
+    return {
+      headCountClose,
+      countedLaterOn: notes.countedLaterOn
+        ? formatCalendarDate(notes.countedLaterOn, locale)
+        : undefined,
+      notes: [
+        ...(notes.crewNotCounted ? [t("closeout.pastDay.crewNotCounted")] : []),
+        ...(notes.notBackDive !== null
+          ? [t("closeout.pastDay.resolvedNotBack", { dive: notes.notBackDive })]
+          : []),
+      ],
+    };
+  };
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -91,7 +115,7 @@ export default async function PastDayPage({
               <ClosingStation
                 key={station.tripId}
                 close={station}
-                headCountClose={headCountCloses.get(station.tripId) ?? null}
+                {...stationNotes(station)}
                 shopSlug={shopSlug}
                 locale={locale}
                 timeZone={shop.timezone}

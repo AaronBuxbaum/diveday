@@ -40,6 +40,8 @@ export type YearMoney = {
   report: Pick<MonthlyReport, "revenueCents" | "taxCents" | "tipsCents" | "tipCount">;
   currency: string;
   csvHref: string;
+  /** Counter money in the year with no tax split out (issue #2674); the line shows when above 0. */
+  counterTaxIncludedCents?: number;
 };
 
 export function YearReport({
@@ -210,6 +212,9 @@ export function YearReport({
                 },
               ]}
             />
+            {(money.counterTaxIncludedCents ?? 0) > 0 ? (
+              <p className="mt-1 text-end text-sm text-muted">{t("reports.counterTaxIncluded")}</p>
+            ) : null}
             <p className="mt-3 text-end text-sm">
               <a
                 href={money.csvHref}
