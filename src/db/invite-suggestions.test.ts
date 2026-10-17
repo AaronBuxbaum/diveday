@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { INVITE_SUGGESTIONS_SHOWN } from "@/lib/invite-suggestions";
@@ -15,6 +15,7 @@ import {
   certifications,
   courses,
   diveSites,
+  nitroxCertifications,
   people,
   personRoles,
   specialtyCertifications,
@@ -458,6 +459,159 @@ describe("admittedToTrip", () => {
     expect(got).toEqual(expected.filter((c) => c.personId !== referred.id));
     expect(got.map((c) => c.personId)).toContain(advanced.id);
     expect(got.map((c) => c.personId)).not.toContain(underLevel.id);
+  });
+});
+
+describe("admittedToTrip, the branches the booking gate takes", () => {
+  // Review N2: every candidate below goes through the same expected-vs-got
+  // comparison against `tripAdmissionFor`, one departure shape at a time.
+  async function parity(
+    db: Awaited<ReturnType<typeof fixture>>["db"],
+    shopId: string,
+    tripId: string,
+    people: readonly { id: string }[],
+  ) {
+    const candidates = people.map((p) => ({ personId: p.id }));
+    const expected = [];
+    for (const c of candidates) {
+      if ((await tripAdmissionFor(db, shopId, tripId, { id: c.personId }, false, false)).admitted) {
+        expected.push(c);
+      }
+    }
+    const got = await admittedToTrip(db, shopId, tripId, candidates);
+    expect(got).toEqual(expected);
+    return got.map((c) => c.personId);
+  }
+
+  it("agrees on a departure that requires Enriched Air", async () => {
+    const { db, shop, target, diver } = await fixture();
+    const verified = await diver("Nitrox Verified");
+    const pending = await diver("Nitrox Pending");
+    const none = await diver("Nitrox None");
+    await db.insert(nitroxCertifications).values([
+      {
+        shopId: shop.id,
+        personId: verified.id,
+        agency: "padi",
+        status: "verified",
+        identifier: "EAN-V",
+      },
+      {
+        shopId: shop.id,
+        personId: pending.id,
+        agency: "padi",
+        status: "pending",
+        identifier: "EAN-P",
+      },
+    ]);
+    await db.insert(tripRequirements).values({
+      shopId: shop.id,
+      tripId: target.id,
+      requiresNitrox: true,
+    });
+    // Admission is the weaker gate (the fill is checked at the dock), so the
+    // pin is parity, whatever the gate decides for each.
+    const admitted = await parity(db, shop.id, target.id, [verified, pending, none]);
+    expect(admitted).toContain(verified.id);
+  });
+
+  it("agrees on a requirement that comes from the site alone", async () => {
+    const { db, shop, now, diver, card } = await fixture();
+    const [deepSite] = await db
+      .insert(diveSites)
+      .values({
+        shopId: shop.id,
+        name: "Parity Deep Wall",
+        slug: `parity-deep-wall-${now.getTime()}`,
+        minimumCertificationLevel: "advanced_open_water",
+      })
+      .returning();
+    const startsAt = new Date(now.getTime() + 9 * DAY_MS);
+    const [siteTrip] = await db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "Parity deep wall",
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
+        capacity: 12,
+        diveSiteId: deepSite.id,
+      })
+      .returning();
+    const aow = await diver("Site AOW");
+    const ow = await diver("Site OW");
+    const pendingAow = await diver("Site Pending AOW");
+    await card(aow.id, "advanced_open_water");
+    await card(ow.id, "open_water");
+    await db.insert(certifications).values({
+      shopId: shop.id,
+      personId: pendingAow.id,
+      agency: "padi",
+      level: "advanced_open_water",
+      status: "pending",
+      identifier: "C-PENDING-SITE",
+    });
+    const admitted = await parity(db, shop.id, siteTrip.id, [aow, ow, pendingAow]);
+    expect(admitted).toContain(aow.id);
+    expect(admitted).not.toContain(ow.id);
+  });
+
+  it("agrees on a pending card and on courses that end after the departure or already ended", async () => {
+    const { db, shop, now, target, diver, card, trip } = await fixture();
+    const pending = await diver("Level Pending");
+    const lateTrainee = await diver("Course After Departure");
+    const pastTrainee = await diver("Course Ended No Card");
+    await db.insert(certifications).values({
+      shopId: shop.id,
+      personId: pending.id,
+      agency: "padi",
+      level: "advanced_open_water",
+      status: "pending",
+      identifier: "C-PENDING-LEVEL",
+    });
+    await card(lateTrainee.id, "open_water");
+    await card(pastTrainee.id, "open_water");
+    const [course] = await db
+      .insert(courses)
+      .values({
+        shopId: shop.id,
+        title: "Parity Advanced Course",
+        slug: `parity-advanced-${now.getTime()}`,
+        certifiesLevel: "advanced_open_water",
+      })
+      .returning();
+    const after = await trip("Advanced after the wall", new Date(now.getTime() + 11 * DAY_MS));
+    const ended = await trip("Advanced last week", new Date(now.getTime() - 5 * DAY_MS));
+    await db
+      .update(trips)
+      .set({ courseId: course.id })
+      .where(inArray(trips.id, [after.id, ended.id]));
+    await db.insert(bookings).values([
+      {
+        bookedAs: "diver",
+        participantType: "diver",
+        shopId: shop.id,
+        tripId: after.id,
+        personId: lateTrainee.id,
+        status: "booked",
+      },
+      {
+        bookedAs: "diver",
+        participantType: "diver",
+        shopId: shop.id,
+        tripId: ended.id,
+        personId: pastTrainee.id,
+        status: "booked",
+      },
+    ]);
+    await db.insert(tripRequirements).values({
+      shopId: shop.id,
+      tripId: target.id,
+      minimumCertificationLevel: "advanced_open_water",
+    });
+    const admitted = await parity(db, shop.id, target.id, [pending, lateTrainee, pastTrainee]);
+    expect(admitted).not.toContain(lateTrainee.id);
+    expect(admitted).not.toContain(pastTrainee.id);
   });
 });
 

@@ -366,19 +366,6 @@ const NO_CARDS: TripAdmissionEvidence = {
   nitroxCertifications: [],
 };
 
-/**
- * Whether one person would still be admitted to this departure: the send's
- * re-check for a page left open (review F1).
- */
-export async function personAdmittedToTrip(
-  db: DbExecutor,
-  shopId: string,
-  tripId: string,
-  personId: string,
-): Promise<boolean> {
-  return (await admittedToTrip(db, shopId, tripId, [{ personId }])).length === 1;
-}
-
 export type CooledInvitation = "created" | "cooldown" | "unavailable" | "refused";
 
 /**
