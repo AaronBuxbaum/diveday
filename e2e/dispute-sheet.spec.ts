@@ -87,8 +87,12 @@ test.describe("as a captain", () => {
     await expect(page.getByRole("link", { name: "Diver record" })).toBeVisible();
     await expect(page.getByRole("link", { name: staff("disputeSheet.door") })).toHaveCount(0);
 
+    // The refusal redirects to the order with a notice. `FlashParams` strips
+    // `?notice=` from the address bar once the order hydrates, which can land
+    // before this looks, so either address is the order; the notice's own
+    // line below says which refusal it was.
     await page.goto(`${orderPath}/print/dispute`);
-    await page.waitForURL(/\/orders\/[0-9a-f-]{36}\?notice=dispute-not-authorized/);
+    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}(\?notice=dispute-not-authorized)?$/);
     await expect(page.getByText(staff("orders.detail.notice.disputeNotAuthorized"))).toBeVisible();
     await expect(
       page.getByRole("heading", { name: staff("disputeSheet.waiverHeading") }),
