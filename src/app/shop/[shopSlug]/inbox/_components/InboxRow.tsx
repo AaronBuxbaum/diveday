@@ -200,6 +200,18 @@ export function InboxRow({
             </Link>
           ),
         },
+        // **What the roster's Move will refuse** (issue #2668): an Ask to move
+        // on a party lead's seat or a buddy-teamed one, said before the desk
+        // opens the roster and is refused there.
+        seat.moveRefusal
+          ? {
+              key: `refusal-${seat.bookingId}`,
+              node:
+                seat.moveRefusal.kind === "leads_party"
+                  ? t("inbox.moveRefusal.leadsParty", { count: seat.moveRefusal.partySize })
+                  : t("inbox.moveRefusal.onBuddyTeam"),
+            }
+          : null,
         seat.runningLateAt
           ? {
               key: `late-${seat.bookingId}`,

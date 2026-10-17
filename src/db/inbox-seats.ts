@@ -1,14 +1,21 @@
-import { and, asc, eq, gt, inArray } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, ne } from "drizzle-orm";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import type { AppDb } from "./client";
 import { type MessageSeat, messageSeats } from "./running-late";
-import { bookings, trips } from "./schema";
+import { bookings, buddyPairMembers, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /** A seat an Inbox row names, and whether the late mark may be offered on it. */
 export type InboxSeat = MessageSeat & {
   /** Inside the running-late window when they wrote (`messageSeats`). */
   lateWindow: boolean;
+  /**
+   * On an Ask to move (H-126), why the roster's Move will refuse this seat as
+   * it stands (issue #2668): it leads a party (`moveBooking`'s `leads_party`,
+   * with the party's live seats), or it sits on a buddy team (`on_buddy_team`).
+   * Read off the booking when the Inbox lists it; absent otherwise.
+   */
+  moveRefusal?: { kind: "leads_party"; partySize: number } | { kind: "on_buddy_team" };
 };
 
 type Message = {
@@ -41,12 +48,23 @@ export async function inboxSeats(
   // seat alone, whenever it departs, and never offers the late mark; any other
   // answer here is the late-window seat.
   const late = await messageSeats(db, shopId, messages, now);
+  const asked = [...late.entries()].flatMap(([messageId, seats]) =>
+    messages.some((message) => message.id === messageId && message.bookingId) ? seats : [],
+  );
+  const refusals = await moveRefusals(db, shopId, asked);
   for (const message of messages) {
     const seats = late.get(message.id);
     if (seats) {
       found.set(
         message.id,
-        seats.map((seat) => ({ ...seat, lateWindow: !message.bookingId })),
+        seats.map((seat) => {
+          const moveRefusal = message.bookingId ? refusals.get(seat.bookingId) : undefined;
+          return {
+            ...seat,
+            lateWindow: !message.bookingId,
+            ...(moveRefusal ? { moveRefusal } : {}),
+          };
+        }),
       );
     }
   }
@@ -92,6 +110,53 @@ export async function inboxSeats(
         lateWindow: false,
       }));
     if (seats.length > 0) found.set(message.id, seats);
+  }
+  return found;
+}
+
+/**
+ * The two refusals `moveBooking` makes before anything else about a seat
+ * (issue #2668), read for the seats Asks to move name: a party lead with live
+ * seats behind it, and a seat on a buddy team on its departure. The same
+ * predicates `moveBooking` asks, so the row and the roster cannot disagree.
+ */
+async function moveRefusals(
+  db: AppDb,
+  shopId: string,
+  seats: readonly MessageSeat[],
+): Promise<Map<string, NonNullable<InboxSeat["moveRefusal"]>>> {
+  const found = new Map<string, NonNullable<InboxSeat["moveRefusal"]>>();
+  if (seats.length === 0) return found;
+  const bookingIds = [...new Set(seats.map((seat) => seat.bookingId))];
+  const [followers, teamed] = await Promise.all([
+    db
+      .select({ leadId: bookings.partyLeadBookingId, seats: count() })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.shopId, shopId),
+          inArray(bookings.partyLeadBookingId, bookingIds),
+          ne(bookings.status, "cancelled"),
+        ),
+      )
+      .groupBy(bookings.partyLeadBookingId),
+    db
+      .select({ bookingId: buddyPairMembers.bookingId, tripId: buddyPairMembers.tripId })
+      .from(buddyPairMembers)
+      .where(
+        and(eq(buddyPairMembers.shopId, shopId), inArray(buddyPairMembers.bookingId, bookingIds)),
+      ),
+  ]);
+  for (const seat of seats) {
+    if (teamed.some((row) => row.bookingId === seat.bookingId && row.tripId === seat.tripId)) {
+      found.set(seat.bookingId, { kind: "on_buddy_team" });
+    }
+  }
+  // The party is said first, as `moveBooking` refuses it first.
+  for (const row of followers) {
+    if (row.leadId && row.seats > 0) {
+      found.set(row.leadId, { kind: "leads_party", partySize: row.seats + 1 });
+    }
   }
   return found;
 }
