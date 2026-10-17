@@ -24,6 +24,7 @@ import {
   readTrainingEnrollments,
   resolveTrainingMarks,
   type TrainingEnrollmentRow,
+  teachesSessionAsRostered,
 } from "./training-mark-resolve";
 import { livePerson, liveTrip } from "./trips-live";
 
@@ -246,41 +247,6 @@ async function enrollmentOwesForms(
 }
 
 /**
- * Whether this person is rostered as an instructor on this departure **by
- * someone else** (build review T2): an assignment, or a role, they gave
- * themselves — or one nobody is recorded as giving — proves nothing about who
- * teaches the session, so it fails closed.
- */
-async function teachesSession(
-  tx: DbExecutor,
-  shopId: string,
-  tripId: string,
-  personId: string,
-): Promise<boolean> {
-  const rows = await tx
-    .select({ tripRole: tripAssignments.tripRole, role: personRoles.role })
-    .from(tripAssignments)
-    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-    .leftJoin(
-      personRoles,
-      and(eq(personRoles.personId, tripAssignments.personId), eq(personRoles.role, "instructor")),
-    )
-    .where(
-      and(
-        eq(trips.shopId, shopId),
-        eq(tripAssignments.tripId, tripId),
-        eq(tripAssignments.personId, personId),
-        isNotNull(tripAssignments.assignedByPersonId),
-        ne(tripAssignments.assignedByPersonId, personId),
-        liveTrip(),
-      ),
-    );
-  return rows.some((row) =>
-    row.tripRole === null ? row.role === "instructor" : row.tripRole === "instructor",
-  );
-}
-
-/**
  * **Clear a seat's training mark.** Owner, manager or instructor, as marking
  * is (`canConfigureTrips`) — except that clearing a mark whose forms are still
  * owed, or one that no longer stands, relaxes a boarding block, so it takes
@@ -331,7 +297,7 @@ export async function clearTrainingDive(
         !canManageWaiverTemplates(roles) &&
         !(
           enrollment &&
-          (await teachesSession(tx, input.shopId, enrollment.tripId, input.actorPersonId))
+          (await teachesSessionAsRostered(tx, input.shopId, enrollment.tripId, input.actorPersonId))
         )
       ) {
         return { ok: false, reason: "forms_owed" };

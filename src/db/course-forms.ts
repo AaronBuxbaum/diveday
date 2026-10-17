@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, ne } from "drizzle-orm";
-import { isStaff } from "@/lib/authz";
+import { canManageWaiverTemplates, isStaff } from "@/lib/authz";
 import {
   type CalendarDate,
   calendarDateInTimezone,
@@ -56,7 +56,7 @@ import {
   tripAssignments,
   trips,
 } from "./schema";
-import { resolveTrainingMarks } from "./training-mark-resolve";
+import { resolveTrainingMarks, teachesSessionAsRostered } from "./training-mark-resolve";
 import { livePerson, liveTrip } from "./trips-live";
 
 /**
@@ -1433,6 +1433,8 @@ export type PaperCourseFormOutcome =
       ok: false;
       reason:
         | "staff_not_found"
+        /** From a marked charter's row: neither a forms manager nor the session's instructor. */
+        | "not_authorized"
         | "guardian_name_matches_diver"
         /** The staffer did not confirm they hold the signed paper copy. */
         | "paper_copy_unconfirmed"
@@ -1481,6 +1483,22 @@ export async function recordPaperCourseForm(
     // A held seat is not yet known to be this student's (#2082): a paper copy
     // recorded against it could be somebody else's signature.
     if (!enrollment || enrollment.identityHeld) return { ok: false, reason: "unavailable" };
+    // From a charter seat's row (a training mark, issue #2275), the staffer
+    // attests a course's form for a session that is not this departure's: the
+    // shop's forms manager, or the instructor someone else rostered on it
+    // (security review U4), as for clearing a mark with forms owed.
+    if (
+      enrollment.viaBookingId !== null &&
+      !canManageWaiverTemplates(roles) &&
+      !(await teachesSessionAsRostered(
+        tx,
+        input.shopId,
+        enrollment.tripId,
+        input.recordedByPersonId,
+      ))
+    ) {
+      return { ok: false, reason: "not_authorized" };
+    }
     student = enrollment.personId;
     if (hasReturned(enrollment.endsAt, now)) return { ok: false, reason: "session_ended" };
     const today = signingDate(now, enrollment.timezone);

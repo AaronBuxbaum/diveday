@@ -374,4 +374,40 @@ describe("training marks — the gates the build review closed (in-memory PGlite
       expect(await signFrom(ctx, ctx.course.bookingId)).toMatchObject({ ok: true });
     });
   });
+
+  describe("a paper form recorded from the charter's row", () => {
+    type Ctx = Awaited<ReturnType<typeof charterContext>>;
+    const recordAs = (ctx: Ctx, recordedByPersonId: string) =>
+      recordPaperCourseForm(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId: ctx.seat.id,
+        formId: ctx.form.id,
+        recordedByPersonId,
+        paperCopyConfirmed: true,
+      });
+
+    it("takes a forms manager, or the enrollment's instructor someone else rostered", async () => {
+      const owner = await charterContext();
+      await markSeat(owner);
+      expect(await recordAs(owner, owner.owner)).toMatchObject({ ok: true });
+
+      const instructor = await charterContext();
+      await markSeat(instructor);
+      await instructor.db.insert(tripAssignments).values({
+        tripId: instructor.course.tripId,
+        personId: instructor.instructor,
+        tripRole: "instructor",
+        assignedByPersonId: instructor.owner,
+      });
+      expect(await recordAs(instructor, instructor.instructor)).toMatchObject({ ok: true });
+    });
+
+    it("refuses a captain, and an instructor who does not teach the enrollment", async () => {
+      const ctx = await charterContext();
+      await markSeat(ctx);
+      expect(await recordAs(ctx, ctx.captain)).toEqual({ ok: false, reason: "not_authorized" });
+      expect(await recordAs(ctx, ctx.instructor)).toEqual({ ok: false, reason: "not_authorized" });
+      expect(await seatBlockerCodes(ctx)).toContain("course_form_unsigned");
+    });
+  });
 });

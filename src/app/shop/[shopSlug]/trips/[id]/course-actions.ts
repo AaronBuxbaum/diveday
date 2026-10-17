@@ -242,6 +242,7 @@ const PAPER_COURSE_FORM_NOTICE: Record<
   invalid_signature: "course-form-unavailable",
   name_mismatch: "course-form-unavailable",
   staff_not_found: "not-authorized",
+  not_authorized: "not-authorized",
   guardian_required: "course-form-guardian",
   guardian_invalid: "course-form-guardian",
   guardian_name_matches_diver: "course-form-namesake",

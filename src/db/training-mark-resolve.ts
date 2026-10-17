@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, ne } from "drizzle-orm";
 import type { ParticipantType } from "@/lib/participant-types";
 import {
   type TrainingMarkEnrollment,
@@ -7,7 +7,7 @@ import {
   trainingMarkProblem,
 } from "@/lib/training-mark";
 import type { DbExecutor } from "./client";
-import { bookings, courses, trips } from "./schema";
+import { bookings, courses, personRoles, tripAssignments, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -178,4 +178,39 @@ export async function trainingMarkForBooking(
   ]);
   const state = states.get(bookingId) ?? { valid: false, problem: "enrollment_missing" };
   return { marked: true, ...state };
+}
+
+/**
+ * Whether this person is rostered as an instructor on this departure **by
+ * someone else** (build review T2): an assignment, or a role, they gave
+ * themselves — or one nobody is recorded as giving — proves nothing about who
+ * teaches the session, so it fails closed.
+ */
+export async function teachesSessionAsRostered(
+  tx: DbExecutor,
+  shopId: string,
+  tripId: string,
+  personId: string,
+): Promise<boolean> {
+  const rows = await tx
+    .select({ tripRole: tripAssignments.tripRole, role: personRoles.role })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .leftJoin(
+      personRoles,
+      and(eq(personRoles.personId, tripAssignments.personId), eq(personRoles.role, "instructor")),
+    )
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(tripAssignments.tripId, tripId),
+        eq(tripAssignments.personId, personId),
+        isNotNull(tripAssignments.assignedByPersonId),
+        ne(tripAssignments.assignedByPersonId, personId),
+        liveTrip(),
+      ),
+    );
+  return rows.some((row) =>
+    row.tripRole === null ? row.role === "instructor" : row.tripRole === "instructor",
+  );
 }
