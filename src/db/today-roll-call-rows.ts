@@ -22,12 +22,16 @@ import type { TodayRowsContext } from "./today-rows-context";
 import { at } from "./today-shared";
 import type { BoatClash, CrewClash } from "./trips";
 
+type ClockTrip = { id: string; title: string; startsAt: Date; boatId: string | null };
+
 /**
  * The rows about who is not accounted for: blocked divers aboard a boat that is out, the open roll calls, and crew rostered on two boats at once. They lead the queue, so they are pushed first.
  */
 export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext): void {
   const { shopSlug, timeZone, locale, t, now } = ctx;
   const { rollCallGaps, crewClashState, boatsOut } = ctx.wave;
+  const boatNameOf = (trip: ClockTrip) =>
+    trip.boatId ? ctx.wave.boatNames.get(trip.boatId) : null;
   // Blocked divers aboard a boat that has left the horizon but is not back
   // (issue #2064). Only the boarded ones, and only as `blocked_aboard` rows:
   // an ashore blocker on a boat that has gone is noise.
@@ -162,7 +166,7 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
   // (or already past "ahead") never silences the only row that says it.
   const startOrder = new Map(
     [...crewClashState.departures]
-      .sort(departureClockOrder((trip) => trip.id))
+      .sort(departureClockOrder<ClockTrip>((trip) => trip.id, boatNameOf))
       .map((trip, index) => [trip.id, index]),
   );
   const sayAheadOnce = (tripId: string, ahead: readonly ClashLeg[]): ClashLeg[] =>
@@ -234,10 +238,14 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
 export function pushBoatClashRows(actions: TodayAction[], ctx: TodayRowsContext): void {
   const { shopSlug, timeZone, locale, t, now } = ctx;
   const { departures, boatClashes } = ctx.wave.crewClashState;
+  const boatNameOf = (trip: ClockTrip) =>
+    trip.boatId ? ctx.wave.boatNames.get(trip.boatId) : null;
   // Same-minute departures by title, then id (issue #2788), as the spine
   // orders their stations: an id-only tiebreak hung the row on a different
   // boat each seed.
-  const ordered = [...departures].sort(departureClockOrder((trip) => trip.id));
+  const ordered = [...departures].sort(
+    departureClockOrder<ClockTrip>((trip) => trip.id, boatNameOf),
+  );
   const position = new Map(ordered.map((trip, index) => [trip.id, index]));
   for (const trip of ordered) {
     const standing: BoatClash[] = (boatClashes.get(trip.id) ?? []).filter((clash) => {

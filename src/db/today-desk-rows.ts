@@ -39,7 +39,12 @@ export function pushDeskRows(actions: TodayAction[], ctx: TodayRowsContext, fact
           !hasSailed(trip.startsAt, now) &&
           trip.startsAt.getTime() - now.getTime() <= EMERGENCY_CARD_WINDOW_MS,
       )
-      .sort(departureClockOrder((trip) => trip.id))[0];
+      .sort(
+        departureClockOrder(
+          (trip) => trip.id,
+          (trip) => (trip.boatId ? ctx.wave.boatNames.get(trip.boatId) : null),
+        ),
+      )[0];
     if (next) {
       const words = emergencyCardBlankText(t, {
         time: at(next.startsAt, timeZone, locale),

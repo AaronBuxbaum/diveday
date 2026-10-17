@@ -16,6 +16,7 @@ import { formatMoneyCents } from "@/lib/format";
 import type { AgencyCheckableCard } from "./agency-check-queue";
 import type { Role } from "./authz";
 import type { DiveIntentCount } from "./dive-intent";
+import { cachedCollator } from "./intl-cache";
 import type { CrewIncompleteReason } from "./manifests";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 import type { SeasonStart } from "./season";
@@ -1693,17 +1694,17 @@ export function sortStationRows(actions: readonly TodayAction[]): TodayAction[] 
     // short the same sizes) read in their boat's order, never in the order the
     // queue happened to build them (issue #2788).
     return (
-      a.subject.localeCompare(b.subject) ||
-      (a.departure?.label ?? "").localeCompare(b.departure?.label ?? "") ||
-      (a.departure?.tripId ?? "").localeCompare(b.departure?.tripId ?? "") ||
-      a.id.localeCompare(b.id)
+      CLOCK_COLLATOR.compare(a.subject, b.subject) ||
+      CLOCK_COLLATOR.compare(a.departure?.label ?? "", b.departure?.label ?? "") ||
+      CLOCK_COLLATOR.compare(a.departure?.tripId ?? "", b.departure?.tripId ?? "") ||
+      CLOCK_COLLATOR.compare(a.id, b.id)
     );
   });
 }
 
 /**
- * **Clock order for departures, total** (issue #2788): start time, then title,
- * then id. Two boats at the same minute read by title before id because ids
+ * **Clock order for departures, total** (issue #2788): start minute, then title,
+ * then boat name (when the caller can name it), then id. Two boats at the same minute read by title before id because ids
  * are minted fresh by every seed, so an id tiebreak alone swaps them from one
  * run to the next. Every "which of these comes first" on Today — the spine's
  * stations, and which of two clashing departures says the clash — reads this
@@ -1711,12 +1712,23 @@ export function sortStationRows(actions: readonly TodayAction[]): TodayAction[] 
  */
 export function departureClockOrder<T extends { startsAt: Date; title: string }>(
   idOf: (departure: T) => string,
+  boatOf: (departure: T) => string | null | undefined = () => null,
 ): (a: T, b: T) => number {
   return (a, b) =>
-    a.startsAt.getTime() - b.startsAt.getTime() ||
-    a.title.localeCompare(b.title) ||
-    idOf(a).localeCompare(idOf(b));
+    clockMinute(a.startsAt) - clockMinute(b.startsAt) ||
+    CLOCK_COLLATOR.compare(a.title, b.title) ||
+    CLOCK_COLLATOR.compare(boatOf(a) ?? "", boatOf(b) ?? "") ||
+    CLOCK_COLLATOR.compare(idOf(a), idOf(b));
 }
+
+/**
+ * The one collator every departure tiebreak reads, fixed to a locale so the
+ * server and the spine agree whatever the runtime's default is (issue #2788).
+ */
+const CLOCK_COLLATOR = cachedCollator("en");
+
+/** The clock minute a departure leaves in: "the 2:30 PM" is every boat inside it. */
+const clockMinute = (at: Date): number => Math.floor(at.getTime() / 60_000);
 
 /** What `assembleDaySpine` needs of one `getTodayWork` result. */
 export type SpineWork = {
@@ -1782,7 +1794,10 @@ function stationFor(departure: SpineDeparture, rows: readonly TodayAction[]): Da
  * a clock.
  */
 export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpine {
-  const byClock = departureClockOrder<SpineDeparture>((departure) => departure.tripId);
+  const byClock = departureClockOrder<SpineDeparture>(
+    (departure) => departure.tripId,
+    (departure) => departure.boatName,
+  );
   const todayDepartures = [...today.departures].sort(byClock);
   const tomorrowDepartures = [...tomorrow.departures].sort(byClock);
 
@@ -2004,7 +2019,7 @@ export function readNeedsYou(spine: DaySpine, lens: NeedsYouLens): NeedsYouReadi
   const nextTripIds = new Set(
     next
       ? spine.stations
-          .filter((station) => station.startsAt.getTime() === next.startsAt.getTime())
+          .filter((station) => clockMinute(station.startsAt) === clockMinute(next.startsAt))
           .map((station) => station.tripId)
       : [],
   );

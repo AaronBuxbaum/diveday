@@ -887,7 +887,13 @@ export async function tripsWithSomebodyMissing(
 async function standingCrewClashes(
   db: AppDb,
   shopId: string,
-  inWindow: readonly { id: string; title: string; startsAt: Date; endsAt: Date }[],
+  inWindow: readonly {
+    id: string;
+    title: string;
+    startsAt: Date;
+    endsAt: Date;
+    boatId: string | null;
+  }[],
   now: Date,
   timeZone: string,
 ) {
@@ -897,6 +903,7 @@ async function standingCrewClashes(
       title: trips.title,
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
+      boatId: trips.boatId,
     })
     .from(trips)
     .where(
@@ -910,7 +917,10 @@ async function standingCrewClashes(
       ),
     )
     .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
-  const departures = new Map<string, { id: string; title: string; startsAt: Date; endsAt: Date }>();
+  const departures = new Map<
+    string,
+    { id: string; title: string; startsAt: Date; endsAt: Date; boatId: string | null }
+  >();
   for (const trip of [...started, ...inWindow]) {
     if (!departures.has(trip.id)) {
       departures.set(trip.id, {
@@ -918,6 +928,7 @@ async function standingCrewClashes(
         title: trip.title,
         startsAt: trip.startsAt,
         endsAt: trip.endsAt,
+        boatId: trip.boatId,
       });
     }
   }

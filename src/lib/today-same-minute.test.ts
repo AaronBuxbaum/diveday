@@ -72,6 +72,12 @@ describe("two departures at the same minute (#2788)", () => {
     startsAt: hoursFromNow(1),
     endsAt: hoursFromNow(4),
   });
+  const evening = departure({
+    tripId: "trip-e",
+    title: "Sunset Cruise",
+    startsAt: hoursFromNow(6),
+    endsAt: hoursFromNow(8),
+  });
   const clashOn = (trip: SpineDeparture) =>
     action({
       id: `crew-clash:${trip.tripId}`,
@@ -127,6 +133,67 @@ describe("two departures at the same minute (#2788)", () => {
     expect(onReef.dueBeforeNext).toBe(3);
     expect(onMorning.count).toBe(4);
     expect(onReef.count).toBe(4);
+  });
+
+  it("counts only the next minute's boats, never a later boat's rows", () => {
+    const eveningPrep = action({
+      id: "prep-e",
+      kind: "dive_prep",
+      subject: "4 sizes",
+      departure: boat("trip-e", evening.title),
+    });
+    const reading = read([evening, reef, morning], [clashOn(morning), ...others, eveningPrep]);
+    expect(reading.dueBeforeNext).toBe(3);
+    expect(reading.count).toBe(5);
+    expect(reading.count).not.toBe(reading.dueBeforeNext);
+  });
+
+  it("treats departures inside one clock minute as the same minute", () => {
+    const early = departure({ ...morning, startsAt: new Date(hoursFromNow(1).getTime() + 5_000) });
+    const late = departure({ ...reef, startsAt: new Date(hoursFromNow(1).getTime() + 50_000) });
+    const spine = assembleDaySpine(
+      { departures: [late, early], actions: [clashOn(early), ...others] },
+      { departures: [], actions: [] },
+    );
+    expect(spine.stations.map((station) => station.title)).toEqual([morning.title, reef.title]);
+    expect(readNeedsYou(spine, { now: NOW }).dueBeforeNext).toBe(3);
+    // A later title does not jump ahead of an earlier title inside the same minute.
+    const swapped = assembleDaySpine(
+      {
+        departures: [
+          departure({ ...morning, startsAt: new Date(hoursFromNow(1).getTime() + 59_000) }),
+          departure({ ...reef, startsAt: new Date(hoursFromNow(1).getTime() + 1_000) }),
+        ],
+        actions: [],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(swapped.stations.map((station) => station.title)).toEqual([morning.title, reef.title]);
+  });
+
+  it("puts the boat name between title and id for two boats sharing a title", () => {
+    const north = departure({
+      tripId: "z-1",
+      title: "Reef",
+      boatName: "Alpha",
+      startsAt: hoursFromNow(1),
+    });
+    const south = departure({
+      tripId: "a-1",
+      title: "Reef",
+      boatName: "Bravo",
+      startsAt: hoursFromNow(1),
+    });
+    for (const input of [
+      [north, south],
+      [south, north],
+    ]) {
+      const spine = assembleDaySpine(
+        { departures: input, actions: [] },
+        { departures: [], actions: [] },
+      );
+      expect(spine.stations.map((station) => station.boatName)).toEqual(["Alpha", "Bravo"]);
+    }
   });
 
   it("orders two otherwise-equal rows by their departure, not by arrival", () => {
