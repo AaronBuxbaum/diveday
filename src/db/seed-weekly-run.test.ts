@@ -1,7 +1,8 @@
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { divemastersNeeded } from "@/lib/divemaster-ratio";
 import { seededShopContext } from "@/test/db";
-import { tripAssignments, tripSeries, tripSeriesCrew, tripSeriesSkips, trips } from "./schema";
+import { shops, tripAssignments, tripSeries, tripSeriesCrew, tripSeriesSkips, trips } from "./schema";
 import { DEMO_WEEKLY_RUN_TITLE, surveySaturday } from "./seed-weekly-run";
 import { getTripSeriesSummary } from "./trips";
 
@@ -56,26 +57,59 @@ describe("the seeded weekly run", () => {
     expect(summary?.endsOn).toBeNull();
   });
 
-  it("sails with a standing captain and divemaster", async () => {
-    const { db, series } = await run();
+  it("sails every live date with a captain and two in-water guides that cover its seats", async () => {
+    const { db, shop, series } = await run();
     const standing = await db
       .select({ role: tripSeriesCrew.tripRole })
       .from(tripSeriesCrew)
       .where(eq(tripSeriesCrew.seriesId, series.id));
-    expect(standing.map((row) => row.role).sort()).toEqual(["captain", "divemaster"]);
+    expect(standing.map((row) => row.role).sort()).toEqual(["captain", "divemaster", "divemaster"]);
     const dates = await db
-      .select({ id: trips.id, date: trips.seriesOccurrenceDate })
+      .select({ id: trips.id, date: trips.seriesOccurrenceDate, capacity: trips.capacity })
       .from(trips)
       .where(and(eq(trips.seriesId, series.id), isNull(trips.deletedAt)));
+    const [target] = await db
+      .select({ ratio: shops.diversPerDivemaster })
+      .from(shops)
+      .where(eq(shops.id, shop.id));
     const short: string[] = [];
     for (const date of dates) {
       const crew = await db
         .select({ role: tripAssignments.tripRole })
         .from(tripAssignments)
         .where(eq(tripAssignments.tripId, date.id));
-      if (crew.length < 2) short.push(date.date ?? date.id);
+      const guides = crew.filter((member) => member.role === "divemaster").length;
+      const hasCaptain = crew.some((member) => member.role === "captain");
+      // A date short of guides sells only the seats its guides cover.
+      if (!hasCaptain || guides < divemastersNeeded(date.capacity, target?.ratio ?? 6)) {
+        short.push(date.date ?? date.id);
+      }
     }
     expect(short).toEqual([]);
+  });
+
+  it("puts a relief on the date a standing member is out on a longer boat", async () => {
+    const { db, series } = await run();
+    const [relieved] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.seriesId, series.id), eq(trips.seriesOccurrenceDate, "2026-07-25")));
+    if (!relieved) throw new Error("the 2026-07-25 Saturday was deleted");
+    const crew = await db
+      .select({ personId: tripAssignments.personId, role: tripAssignments.tripRole })
+      .from(tripAssignments)
+      .where(eq(tripAssignments.tripId, relieved.id));
+    const standingIds = new Set(
+      (
+        await db
+          .select({ personId: tripSeriesCrew.personId })
+          .from(tripSeriesCrew)
+          .where(eq(tripSeriesCrew.seriesId, series.id))
+      ).map((row) => row.personId),
+    );
+    const captain = crew.find((member) => member.role === "captain");
+    expect(captain).toBeDefined();
+    expect(standingIds.has(captain?.personId ?? "")).toBe(false);
   });
 
   it("names the two sites its dives visit", async () => {
@@ -89,9 +123,7 @@ describe("the seeded weekly run", () => {
       .select({ date: tripSeriesSkips.occurrenceDate })
       .from(tripSeriesSkips)
       .where(eq(tripSeriesSkips.seriesId, series.id));
-    // The frozen clock's run starts on 2026-07-25, when the owner skippers
-    // the long-range day, so that Saturday makes way too.
-    expect(skips.map((row) => row.date).sort()).toEqual(["2026-07-25", "2026-09-12"]);
+    expect(skips.map((row) => row.date)).toEqual(["2026-09-12"]);
     const removed = await db
       .select({ date: trips.seriesOccurrenceDate })
       .from(trips)

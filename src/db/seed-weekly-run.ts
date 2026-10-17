@@ -9,10 +9,10 @@ import {
 import { nowDate } from "@/lib/clock";
 import { SERIES_HORIZON_DAYS, weekdaySetFrom } from "@/lib/recurrence";
 import type { AppDb, DbExecutor } from "./client";
-import { boats, crewNotices, diveSites, tripSeriesCrew, trips } from "./schema";
+import { boats, crewNotices, diveSites, shops, tripSeriesCrew, trips } from "./schema";
 import { at, DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { createTripSeries, deleteTrip } from "./trips";
-import { seatStandingCrew } from "./trips-crew";
+import { seatStandingCrew, setTripCrew } from "./trips-crew";
 
 /**
  * **The demo's weekly boat** (fourth review, item 51). A shop's most ordinary
@@ -26,11 +26,23 @@ import { seatStandingCrew } from "./trips-crew";
  * (`trip_series_crew`, seated on each date by `seatStandingCrew`, which leaves
  * a person off a date they already crew elsewhere), and the Saturday Mantis
  * II is hauled out for her annual survey, plus any Saturday the crew are out
- * on a longer boat, is deleted with `deleteTrip`, which leaves the skip the
- * nightly roll honors.
+ * is deleted with `deleteTrip`, which leaves the skip the nightly roll honors.
+ * A Saturday whose standing crew are out on a longer boat is not deleted: the
+ * shop puts a relief on the regular boat for that date alone
+ * (`setTripCrew`), which also shows that each date's crew is editable on its
+ * own.
+ *
+ * **Staffed to the shop's own ratio** (issue #2686): sixteen seats on one
+ * in-water guide read "Under target" from the seventh booking, a warning the
+ * first prospect to book would not have caused. The run sells twelve seats
+ * and stands two guides on them, so `divers_per_divemaster`'s default of six
+ * is met by every booking the boat can take.
  */
 /** Named for the two sites its dives visit, in order. */
 export const DEMO_WEEKLY_RUN_TITLE = "Saturday Two-Tank — Benwood & Christ of the Abyss";
+
+/** Seats the run sells: two guides at the default six divers per divemaster. */
+const RUN_SEATS = 12;
 
 /** Saturday, in `calendarDateWeekday`'s Sunday-zero count. */
 const SATURDAY = 6;
@@ -70,7 +82,13 @@ function daysToNextSaturday(today: CalendarDate): number {
 export async function seedWeeklyRun(
   db: DbExecutor,
   shopId: string,
-  ctx: { skipperId: string | undefined; divemasterId: string | undefined },
+  ctx: {
+    skipperId: string | undefined;
+    /** The standing in-water guides: two cover twelve divers at the default ratio. */
+    divemasterIds: readonly string[];
+    /** Staff who step onto a date a standing member is busy on, in the order tried. */
+    reliefIds: readonly string[];
+  },
 ): Promise<void> {
   // The schedule builder's doors take the app database; the seed runs on it
   // or on one transaction, and both carry `transaction`.
@@ -95,7 +113,7 @@ export async function seedWeeklyRun(
     shopId,
     title: DEMO_WEEKLY_RUN_TITLE,
     description: "The shop's regular Saturday boat: a shallow wreck, then the statue.",
-    capacity: 16,
+    capacity: RUN_SEATS,
     plannedDives: 2,
     dives: [
       { title: "Benwood Wreck", diveSiteId: sites.get("Benwood Wreck") ?? null },
@@ -113,17 +131,20 @@ export async function seedWeeklyRun(
   });
   if (!created) throw new Error("seed: the weekly Saturday run was refused");
   const { series } = created;
+  const [target] = await db
+    .select({ ratio: shops.diversPerDivemaster })
+    .from(shops)
+    .where(eq(shops.id, shopId));
+  // Divers the boat may sell on a date with this many guides: the shop's own
+  // ratio, never more than the run's twelve seats.
+  const guideSeats = (guides: number) => Math.min(RUN_SEATS, guides * (target?.ratio ?? 6));
 
-  // The skipper and the divemaster sail every Saturday: the run's own record
+  // The skipper and the divemasters sail every Saturday: the run's own record
   // of it, then each date asked whether they are free in its hours.
   const crew = [
     ...(ctx.skipperId ? [{ personId: ctx.skipperId, tripRole: "captain" as const }] : []),
-    ...(ctx.divemasterId ? [{ personId: ctx.divemasterId, tripRole: "divemaster" as const }] : []),
+    ...ctx.divemasterIds.map((personId) => ({ personId, tripRole: "divemaster" as const })),
   ];
-  // A Saturday the crew are already out on a longer boat is one the regular
-  // boat makes way for: that date goes, the way a shop deletes it, rather
-  // than sailing short of its crew.
-  const madeWay: string[] = [];
   if (crew.length > 0) {
     await db
       .insert(tripSeriesCrew)
@@ -136,7 +157,42 @@ export async function seedWeeklyRun(
         days: [{ startsAt: trip.startsAt, endsAt: trip.endsAt }],
         crew,
       });
-      if (seated.length < crew.length) madeWay.push(trip.id);
+      // A Saturday a standing member is out on a longer boat keeps its crew
+      // by a relief, the way a shop fills it, rather than sailing short or
+      // being deleted.
+      const absent = crew.filter((member) => !seated.includes(member.personId));
+      if (absent.length === 0) continue;
+      const roster: { personId: string; tripRole: (typeof crew)[number]["tripRole"] }[] =
+        crew.filter((member) => seated.includes(member.personId));
+      // The first relief who is free in the date's hours takes each place:
+      // `setTripCrew` refuses a person who is out on another boat.
+      let unfilled = false;
+      for (const member of absent) {
+        let placed = false;
+        for (const relief of ctx.reliefIds) {
+          if (roster.some((entry) => entry.personId === relief)) continue;
+          const attempt = [...roster, { personId: relief, tripRole: member.tripRole }];
+          if (await setTripCrew(app, shopId, trip.id, attempt)) {
+            roster.push({ personId: relief, tripRole: member.tripRole });
+            placed = true;
+            break;
+          }
+        }
+        // A date nobody is free to guide sells only what its guides cover, the
+        // way a shop caps a day it cannot staff; a missing captain is a seed
+        // bug, not a thing a boat sails without.
+        if (!placed && member.tripRole === "captain") {
+          throw new Error("seed: no captain was free for a Saturday of the weekly run");
+        }
+        if (!placed) unfilled = true;
+      }
+      if (unfilled) {
+        const guides = roster.filter((entry) => entry.tripRole === "divemaster").length;
+        await db
+          .update(trips)
+          .set({ capacity: guideSeats(guides) })
+          .where(eq(trips.id, trip.id));
+      }
     }
     // The crew have always sailed this run: being seated on it is not news
     // for their digest.
@@ -157,7 +213,7 @@ export async function seedWeeklyRun(
     .from(trips)
     .where(and(eq(trips.seriesId, series.id), eq(trips.seriesOccurrenceDate, closed)))
     .limit(1);
-  for (const tripId of new Set([...madeWay, ...(survey ? [survey.id] : [])])) {
+  for (const tripId of survey ? [survey.id] : []) {
     const outcome = await deleteTrip(app, shopId, tripId);
     if (!outcome.ok) throw new Error(`seed: a Saturday the run skips stayed (${outcome.reason})`);
   }

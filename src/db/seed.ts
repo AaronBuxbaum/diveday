@@ -1,5 +1,5 @@
 import { hash } from "bcryptjs";
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, eq, inArray, ne, or } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -1265,16 +1265,44 @@ export async function seedDemoSchedule(
   // board: the shop's weekly run (src/db/seed-weekly-run.ts, fourth review,
   // item 51). Rides the history flag, so the lean template keeps its board.
   if (opts.history !== false) {
-    // The owner skippers it and the assistant instructor leads the water:
-    // the captain and the divemaster are already on the long boats, and a
-    // standing crew asked of a date they are busy on is left off it.
+    // The owner skippers it and two guides lead the water, enough for the
+    // twelve seats at the shop's ratio. A standing crew asked of a date they
+    // are busy on is left off it, and a free instructor or divemaster takes
+    // their place for that date.
     const [assistant] = await db
       .select({ id: people.id })
       .from(people)
       .innerJoin(personRoles, eq(people.id, personRoles.personId))
       .where(and(eq(people.shopId, shopId), eq(personRoles.role, "assistant_instructor")))
       .limit(1);
-    await seedWeeklyRun(db, shopId, { skipperId: owner.id, divemasterId: assistant?.id });
+    const [divemaster] = await db
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(people.id, personRoles.personId))
+      .where(and(eq(people.shopId, shopId), eq(personRoles.role, "divemaster")))
+      .limit(1);
+    // Everyone else on the crew, for a date a standing member is out on a
+    // longer boat; the owner skippers, so she is not a relief.
+    const reliefPool = await db
+      .selectDistinct({ id: people.id, fullName: people.fullName })
+      .from(people)
+      .innerJoin(personRoles, eq(people.id, personRoles.personId))
+      .where(
+        and(
+          eq(people.shopId, shopId),
+          ne(people.id, owner.id),
+          inArray(personRoles.role, ["instructor", "assistant_instructor", "divemaster", "captain"]),
+        ),
+      )
+      .orderBy(people.fullName);
+    // The assistant instructor and the shop's divemaster are the standing
+    // guides.
+    const standing = [assistant?.id, divemaster?.id].filter((id): id is string => !!id);
+    await seedWeeklyRun(db, shopId, {
+      skipperId: owner.id,
+      divemasterIds: standing,
+      reliefIds: reliefPool.map((row) => row.id).filter((id) => !standing.includes(id)),
+    });
   }
 
   // Updates-only, and after every scenario that finds today's boat by its day
