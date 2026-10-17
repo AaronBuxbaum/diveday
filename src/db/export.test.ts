@@ -222,8 +222,6 @@ const FOLDED_TABLES = [
  * its export fate fails the coverage test below.
  */
 const EXCLUDED_TABLES = [
-  // Retired (#2330): declared until a later release drops it; nothing writes it.
-  "dive_site_moments",
   // Card disputes (ADR 20261009-stripe-reversals-reach-diveday). Stripe's own
   // record, mirrored here only so an owner sees an open one on Today and on
   // the order; every field is Stripe's, kept current from Stripe's events, and

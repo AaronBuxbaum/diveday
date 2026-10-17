@@ -548,31 +548,4 @@ export const marineLifeRequests = pgTable(
   (table) => [index("marine_life_requests_created_idx").on(table.createdAt)],
 );
 
-/**
- * **Retired, still declared** (issue #2330). Nothing reads or writes this
- * table any more: the public strip, its reader, its export file and its seed
- * are gone. It stays declared, with no migration dropping it, so a release
- * still running the old reader during a deploy finds its table (security
- * review X1). A later release drops it once no running code can read it.
- */
-export const diveSiteMoments = pgTable(
-  "dive_site_moments",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    diveSiteId: uuid("dive_site_id")
-      .notNull()
-      .references(() => diveSites.id),
-    caption: text("caption").notNull(),
-    imageUrl: text("image_url"),
-    isPublished: boolean("is_published").notNull().default(false),
-    createdAt: appNowTimestamp("created_at").notNull(),
-  },
-  (table) => [
-    index("dive_site_moments_site_published_idx").on(table.diveSiteId, table.isPublished),
-  ],
-);
-
 export type DiveSiteFitTone = (typeof diveSiteFitTone.enumValues)[number];
