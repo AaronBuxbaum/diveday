@@ -116,7 +116,7 @@
       "paymentInFlight": "A payment for this order is being recorded. Check the order in a minute before trying again."
     },
     "recordPayment": {
-      "label": "Record payment:",
+      "label": "Record payment",
       "recording": "Recording…"
     }
   },
