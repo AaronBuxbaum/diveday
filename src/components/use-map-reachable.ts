@@ -6,7 +6,8 @@ import { MAP_REACHABILITY_PROBE } from "@/lib/maps";
 /**
  * **Has the map host answered?** One probe image per mount, asked only once
  * `active` (a frame on screen), and with the radio off only once the signal
- * comes back, never in a loop. The frame's own `load` fires for the browser's
+ * comes back; a failed probe is asked again on `online` or when the page is
+ * visible again, never in a loop, and nothing asks after a success. The frame's own `load` fires for the browser's
  * error page as well, so the probe decides. Shared by the drawn-route frame
  * (`MapFrame`, UX review 2026-10-10 item 20) and the meeting point's map on
  * `/ready` (`ArrivalMap`, fourth UX review item 4), so one bar of signal at
@@ -32,30 +33,54 @@ export function useMapState(active: boolean, giveUpMs?: number): MapState {
   useEffect(() => {
     if (!active) return;
     let settled = false;
-    let probe: HTMLImageElement | null = null;
+    const probes: HTMLImageElement[] = [];
+    // **A failed probe is asked again** (issue #2669), once the signal comes
+    // back or the page is looked at again, never on a timer: one bar at the
+    // car park should not cost the diver the map at the dock.
+    const retry = () => {
+      if (document.visibilityState === "hidden") return;
+      ask();
+    };
+    const stopRetrying = () => {
+      window.removeEventListener("online", retry);
+      document.removeEventListener("visibilitychange", retry);
+    };
+    const retryLater = () => {
+      if (settled) return;
+      stopRetrying();
+      window.addEventListener("online", retry);
+      document.addEventListener("visibilitychange", retry);
+    };
     const giveUp =
       giveUpMs === undefined
         ? undefined
         : setTimeout(() => {
-            if (!settled) setGaveUp(true);
+            if (settled) return;
+            setGaveUp(true);
+            retryLater();
           }, giveUpMs);
     const ask = () => {
       window.removeEventListener("online", ask);
-      probe = new Image();
+      stopRetrying();
+      const probe = new Image();
+      probes.push(probe);
       // Google learns that something asked, never which page.
       probe.referrerPolicy = "no-referrer";
       probe.onload = () => {
-        if (!settled) {
-          setReachable(true);
-          setGaveUp(false);
-        }
+        if (settled) return;
+        // One answer is enough: nothing asks again after it.
+        settled = true;
+        clearTimeout(giveUp);
+        stopRetrying();
+        setReachable(true);
+        setGaveUp(false);
       };
       // Said, not left to a missing handler: the frame stays hidden.
       probe.onerror = () => {
-        if (!settled) {
-          setReachable(false);
-          setGaveUp(true);
-        }
+        if (settled) return;
+        setReachable(false);
+        setGaveUp(true);
+        retryLater();
       };
       probe.src = MAP_REACHABILITY_PROBE;
     };
@@ -68,7 +93,8 @@ export function useMapState(active: boolean, giveUpMs?: number): MapState {
       settled = true;
       clearTimeout(giveUp);
       window.removeEventListener("online", ask);
-      if (probe) {
+      stopRetrying();
+      for (const probe of probes) {
         probe.onload = null;
         probe.onerror = null;
       }
