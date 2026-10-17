@@ -2093,8 +2093,10 @@ export function notificationIdempotencyKey(notification: Notification): string {
       return `bookkeeper-month-end/${notification.shopId}/${notification.month}`;
     case "bookkeeper_confirmation":
       return `bookkeeper-confirmation/${notification.shopId}/${notification.expiresAt.toISOString()}`;
+    // The shop too (third-pass security N4): the shop-contact fallback has no
+    // person, and one pass stamps every shop with the same `at`.
     case "bookkeeper_notice":
-      return `bookkeeper-notice/${notification.personId ?? "shop-contact"}/${notification.event}/${notification.at.toISOString()}`;
+      return `bookkeeper-notice/${notification.shopId}/${notification.personId ?? "shop-contact"}/${notification.event}/${notification.at.toISOString()}`;
     // One Monday email per person per shop-local week — the same pair
     // `weekly_digest_sends` holds unique, so a queued retry and the claim
     // agree on what "this week's email" means.

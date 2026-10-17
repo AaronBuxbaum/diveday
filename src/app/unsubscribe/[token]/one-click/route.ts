@@ -6,6 +6,7 @@ import { unsubscribeLastMinuteListEntryByToken } from "@/db/last-minute-list";
 import { stopShoreAlertsByToken } from "@/db/shore-alert-tokens";
 import { turnOffWeeklyDigestByToken } from "@/db/weekly-digest";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/request-ip";
 
 /**
  * RFC 8058 one-click unsubscribe: the target of the `List-Unsubscribe` /
@@ -33,10 +34,18 @@ import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
  * contact's roll-call alerts and a bookkeeper's month-end files.
  */
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ token: string }> },
 ): Promise<NextResponse> {
   const { token } = await params;
+  // Per IP first (third-pass security N3): a guessed token is a fresh token
+  // bucket every time, so only the address limits a flood of guesses.
+  const ip = await clientIp(request.headers);
+  const byIp = await checkRateLimit(
+    rateLimitKey("unsubscribe-one-click-ip", ip),
+    RATE_LIMITS.oneClickUnsubscribeByIp,
+  );
+  if (!byIp.allowed) return new NextResponse(null, { status: 429 });
   const limit = await checkRateLimit(
     rateLimitKey("unsubscribe-one-click", token),
     RATE_LIMITS.oneClickUnsubscribe,

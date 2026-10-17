@@ -186,7 +186,12 @@ describe("the bookkeeper_notice notification", () => {
     const desk = { ...NOTICE, personId: null, recipientName: null };
     expect(notificationSchema.safeParse(desk).success).toBe(true);
     expect(messageFor(desk).text.startsWith("Hi there")).toBe(true);
-    expect(notificationIdempotencyKey(desk)).toContain("bookkeeper-notice/shop-contact/set/");
+    expect(notificationIdempotencyKey(desk)).toContain(
+      `bookkeeper-notice/${desk.shopId}/shop-contact/set/`,
+    );
+    // Two shops' desks told at the same moment are two notices (third-pass N4).
+    const otherDesk = { ...desk, shopId: "00000000-0000-4000-8000-0000000000aa" };
+    expect(notificationIdempotencyKey(otherDesk)).not.toBe(notificationIdempotencyKey(desk));
   });
 
   it("says when it was turned off, in Spanish too", () => {

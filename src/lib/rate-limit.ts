@@ -628,6 +628,14 @@ export const RATE_LIMITS = {
   /** RFC 8058 unsubscribe POSTs, per capability token rather than shared provider IP. */
   oneClickUnsubscribe: perHour(10),
   /**
+   * The same POSTs per IP (third-pass security N3), as the confirm page limits
+   * by IP: random tokens each get a fresh token bucket, so only this stops a
+   * flood of guesses. Generous, because a mail provider POSTs every one-click
+   * from a shared pool of addresses and one of its IPs may carry many real
+   * unsubscribes in an hour.
+   */
+  oneClickUnsubscribeByIp: perHour(300),
+  /**
    * Second-factor attempts (TOTP or a recovery code), per signed-in account.
    *
    * Tighter than sign-in, because the caller is already holding a session: the

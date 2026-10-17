@@ -156,6 +156,24 @@ describe("POST /unsubscribe/[token]/one-click", () => {
     );
   });
 
+  it("limits by IP as well, before the token's own bucket (third-pass security N3)", async () => {
+    vi.mocked(checkRateLimit).mockImplementation(async (key) =>
+      key === rateLimitKey("unsubscribe-one-click-ip", "203.0.113.7")
+        ? { allowed: false, retryAfterMs: 60_000 }
+        : { allowed: true, retryAfterMs: 0 },
+    );
+
+    const response = await post("a-fresh-guess");
+
+    expect(response.status).toBe(429);
+    expect(checkRateLimit).toHaveBeenCalledWith(
+      rateLimitKey("unsubscribe-one-click-ip", "203.0.113.7"),
+      RATE_LIMITS.oneClickUnsubscribeByIp,
+    );
+    expect(unsubscribeLastMinuteListEntryByToken).not.toHaveBeenCalled();
+    expect(stopBookkeeperByToken).not.toHaveBeenCalled();
+  });
+
   it("is idempotent — a second one-click POST for an already-unsubscribed token still answers 200", async () => {
     await post();
     const response = await post();
