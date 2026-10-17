@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FlashParams } from "@/components/FlashParams";
-import { KeepTypedOnRefusal, keptTypedScope } from "@/components/KeepTypedOnRefusal";
+import { KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
+import { keptTypedScope } from "@/components/kept-typed-scope";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";

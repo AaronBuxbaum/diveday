@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
-import { keptTypedScope } from "@/components/KeepTypedOnRefusal";
+import { keptTypedScope } from "@/components/kept-typed-scope";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";

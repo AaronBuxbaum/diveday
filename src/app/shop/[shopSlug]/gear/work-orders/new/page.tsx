@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { KeepTypedOnRefusal, keptTypedScope } from "@/components/KeepTypedOnRefusal";
+import { KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
+import { keptTypedScope } from "@/components/kept-typed-scope";
 import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { PersonSearchForm } from "@/components/seat-diver/PersonSearchForm";
