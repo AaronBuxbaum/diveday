@@ -146,7 +146,7 @@ export function SeriesCadenceEditor({
   status?: FormNotice;
   cadenceAction: (formData: FormData) => void;
   cancelOffCadenceAction: () => void;
-  /** True when this staffer may not refund; the card refunds wait for an owner or manager (H-123). */
+  /** True when this staffer may not refund; the card refunds wait for an owner or manager (H-139). */
   refundsHeld?: boolean;
   locale: string;
 }) {
@@ -278,7 +278,7 @@ export function SeriesMoreActions({
   applyAction: (formData: FormData) => void;
   cancelAction: () => void;
   repeatAction: (formData: FormData) => void;
-  /** True when this staffer may not refund; the card refunds wait for an owner or manager (H-123). */
+  /** True when this staffer may not refund; the card refunds wait for an owner or manager (H-139). */
   refundsHeld?: boolean;
   locale: string;
 }) {
