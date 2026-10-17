@@ -2,19 +2,22 @@
  * Waivers: issuing a signing request — minting the bearer link for a booking
  * or a person. Imported through the `./waivers` barrel.
  */
-import { and, desc, eq, gt, isNull, ne } from "drizzle-orm";
+import { and, eq, gt, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type GuardianSigner, guardianSignatureMissing } from "@/lib/guardian";
+import { isHeldToMedical } from "@/lib/participant-types";
 import { openSecret, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import {
+  bookingRecordLapsed,
   isCompletedWaiverCurrent,
   isUnresolvedMedicalHold,
   WAIVER_LINK_TTL_MS,
+  waiverClockInstant,
 } from "@/lib/waivers";
 import type { AppDb, DbExecutor } from "./client";
-import { bookings, people, trips, waiverRecords, waiverTemplates } from "./schema";
-import { shopTimezone } from "./waivers-templates";
+import { bookings, people, trips, waiverRecords } from "./schema";
+import { getCurrentWaiverTemplate, shopTimezone } from "./waivers-templates";
 
 export type IssueWaiverOutcome =
   | {
@@ -92,8 +95,12 @@ export async function issueWaiverRequest(
             id: bookings.id,
             personId: bookings.personId,
             dateOfBirth: people.dateOfBirth,
+            minorDeclaredAt: bookings.minorDeclaredAt,
             tripStatus: trips.status,
+            tripStartsAt: trips.startsAt,
+            tripEndsAt: trips.endsAt,
             identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+            participantType: bookings.participantType,
           })
           .from(bookings)
           .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -130,14 +137,14 @@ export async function issueWaiverRequest(
     // A minor's solo signature is not a standing release (ADR
     // 20260907-guardian-co-signature): the tap that would have said "already
     // signed" instead supersedes it and mints a link that asks for both.
-    const signer: GuardianSigner = { dateOfBirth, timezone: await shopTimezone(tx, input.shopId) };
+    const signer: GuardianSigner = {
+      dateOfBirth,
+      // The seat's booker's "Under 18", when a seat is what this link is for.
+      minorDeclared: booking ? booking.minorDeclaredAt !== null : false,
+      timezone: await shopTimezone(tx, input.shopId),
+    };
 
-    const [template] = await tx
-      .select()
-      .from(waiverTemplates)
-      .where(and(eq(waiverTemplates.shopId, input.shopId), isNull(waiverTemplates.deletedAt)))
-      .orderBy(desc(waiverTemplates.createdAt))
-      .limit(1);
+    const template = await getCurrentWaiverTemplate(tx, input.shopId);
     if (!template) return { ok: false, reason: "template_not_found" };
 
     const current = await tx
@@ -152,14 +159,32 @@ export async function issueWaiverRequest(
           isNull(waiverRecords.supersededAt),
         ),
       );
+    // A signature that has lapsed (its year, its physician's year, or terms the
+    // shop has since changed) stands for nothing: the seat reads
+    // `waiver_lapsed`, and the fix is this fresh link. A hold or a refusal on
+    // a seat in the water still stands; neither is a clean completion. A
+    // rider's seat reads a held record as a signature (H-109), so it lapses
+    // with the signature's own clock. **Measured where the roster measures it**
+    // (`waiverClockInstant`, issue #2611): a release that runs out before the
+    // trip is blocked there, so this door must take a fresh signature for it,
+    // not answer "already completed".
+    const heldToMedical = isHeldToMedical(booking?.participantType);
+    const clockAt = booking
+      ? waiverClockInstant({ now, startsAt: booking.tripStartsAt, endsAt: booking.tripEndsAt })
+      : now;
+    const lapsed = (record: (typeof current)[number]) =>
+      bookingRecordLapsed(record, template.materialGeneration, clockAt, heldToMedical);
     const alreadyStanding = booking
       ? current.some(
-          (record) => record.status !== "pending" && !guardianSignatureMissing(record, signer),
+          (record) =>
+            record.status !== "pending" &&
+            !lapsed(record) &&
+            !guardianSignatureMissing(record, signer),
         )
       : current.some(
           (record) =>
             isUnresolvedMedicalHold(record) ||
-            (isCompletedWaiverCurrent(record, template.materialGeneration, now) &&
+            (isCompletedWaiverCurrent(record, template.materialGeneration, clockAt) &&
               !guardianSignatureMissing(record, signer)),
         );
     if (alreadyStanding) {

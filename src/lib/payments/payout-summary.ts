@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { log } from "@/lib/log";
 import { keyLivemode } from "./payment-sources";
+import { boundedStripeFetch } from "./stripe-fetch";
 import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
@@ -12,8 +13,9 @@ import { logStripeRequestThrew } from "./stripe-request-log";
  * balance transactions (`GET /v1/balance_transactions?payout=…`), and two facts
  * an owner reconciling a bank statement wants come off that list: the span of
  * days the payout covers ("covering Sep 27 to Oct 1") and Stripe's fees on it.
- * The webhook asks once and stores the answer; Reports and the Orders index
- * only ever read the stored row, so no page waits on Stripe.
+ * The webhook asks once, after it has answered (`after()`, issue #2464), and
+ * stores the answer; Reports and the Orders index only ever read the stored
+ * row, so no page waits on Stripe.
  *
  * Read-only: nothing here moves money or carries an idempotency key.
  *
@@ -23,8 +25,9 @@ import { logStripeRequestThrew } from "./stripe-request-log";
  *   question (a 4xx no retry changes), the list ran longer than this reads, or
  *   no key of the event's mode is configured. The payout is recorded without a
  *   span or fees, which the page reads as "Stripe did not say".
- * - `failed`: Stripe was unreachable (network, 429, 5xx), so the webhook
- *   answers non-2xx and Stripe delivers the event again.
+ * - `failed`: Stripe was unreachable (network, 429, 5xx). The delivery was
+ *   already answered 2xx before the question was asked, so nothing retries it:
+ *   the payout stays recorded without a span or fees, as for `unavailable`.
  */
 export type PayoutSummary =
   | { status: "summarized"; coveredFrom: Date | null; coveredTo: Date | null; feeCents: number }
@@ -32,7 +35,16 @@ export type PayoutSummary =
   | { status: "failed" };
 
 export interface PayoutSummaryLookup {
-  summarize(stripeAccountId: string, payoutId: string): Promise<PayoutSummary>;
+  /**
+   * `automatic` is the payout's own flag. Stripe itemizes only an automatic
+   * payout's balance transactions, so a manual or instant one is read for its
+   * own fee alone and carries no span.
+   */
+  summarize(
+    stripeAccountId: string,
+    payoutId: string,
+    options: { automatic: boolean },
+  ): Promise<PayoutSummary>;
 }
 
 type Fetch = typeof fetch;
@@ -87,8 +99,9 @@ function summarized(span: Span): PayoutSummary {
 
 export function stripePayoutSummaryLookup(
   config: { secretKey: string },
-  fetchImpl: Fetch,
+  unboundedFetch: Fetch,
 ): PayoutSummaryLookup {
+  const fetchImpl = boundedStripeFetch(unboundedFetch);
   const get = (stripeAccountId: string, query: URLSearchParams) =>
     fetchImpl(`https://api.stripe.com/v1/balance_transactions?${query.toString()}`, {
       headers: {
@@ -97,8 +110,43 @@ export function stripePayoutSummaryLookup(
       },
     });
 
+  /**
+   * A manual or instant payout: Stripe refuses `payout=` for it, but the
+   * payout's own balance transaction (`source=po_…`) carries what Stripe
+   * charged to send it (an instant payout's fee; zero for a manual standard
+   * one). The money inside is not itemized, so there is no span: "covering"
+   * stays off the line rather than guess.
+   */
+  async function summarizeOwnFee(
+    stripeAccountId: string,
+    payoutId: string,
+  ): Promise<PayoutSummary> {
+    try {
+      const response = await get(
+        stripeAccountId,
+        new URLSearchParams({ source: payoutId, limit: String(PAGE_LIMIT) }),
+      );
+      if (!response.ok) {
+        if (response.status === 429 || response.status >= 500) return { status: "failed" };
+        log("stripe_payout_summary.refused", "warn", { httpStatus: response.status });
+        return { status: "unavailable" };
+      }
+      const parsed = balanceTransactionPageSchema.safeParse(await response.json());
+      if (!parsed.success) return { status: "failed" };
+      // A payout has one balance transaction; a list that says there is more
+      // is not the shape this reads, so it records no fee rather than a part.
+      if (parsed.data.has_more || parsed.data.data.length === 0) return { status: "unavailable" };
+      const feeCents = parsed.data.data.reduce((sum, transaction) => sum + transaction.fee, 0);
+      return { status: "summarized", coveredFrom: null, coveredTo: null, feeCents };
+    } catch (error) {
+      logStripeRequestThrew("summarize_payout", error);
+      return { status: "failed" };
+    }
+  }
+
   return {
-    async summarize(stripeAccountId, payoutId) {
+    async summarize(stripeAccountId, payoutId, { automatic }) {
+      if (!automatic) return summarizeOwnFee(stripeAccountId, payoutId);
       const span: Span = { earliest: null, latest: null, feeCents: 0 };
       let startingAfter: string | null = null;
       try {

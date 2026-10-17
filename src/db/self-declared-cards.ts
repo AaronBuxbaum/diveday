@@ -596,8 +596,9 @@ async function recordLevel(
  * an Open Water diver a discount on a deep wreck.
  *
  * `selfDeclared` is the whole point of the shape. A shop's own record wins when
- * it has one: a real card renders as a plain level, and only a claim nobody has
- * checked carries the mark. That ordering also means the mark can never be
+ * it has one: a verified card renders as a plain level, and a claim, or a card
+ * a staffer typed that nobody has verified (`verifiedLevel`, `nitroxVerified`;
+ * #2428), carries the mark. That ordering also means the mark can never be
  * *missing* from a claim — the alternative reading, where an unmarked level
  * might be either, is exactly the laundering this feature was written to avoid.
  *
@@ -641,6 +642,11 @@ export type CertificationSummary = {
   nitrox: boolean;
   /** True when the nitrox card behind `nitrox` is a still-unsighted claim. */
   nitroxSelfDeclared: boolean;
+  /**
+   * True when at least one nitrox card behind `nitrox` is verified. Not the
+   * same as `!nitroxSelfDeclared`, for the reason `verifiedLevel` gives.
+   */
+  nitroxVerified: boolean;
   /**
    * The highest level on a card the shop has **verified** (`status =
    * 'verified'`), or null. Not the same as `!levelSelfDeclared`: a card a
@@ -765,6 +771,7 @@ export async function listCertificationSummaries(
       nitroxSelfDeclared: current.nitrox
         ? current.nitroxSelfDeclared && selfDeclared
         : selfDeclared,
+      nitroxVerified: current.nitroxVerified || row.status === "verified",
     });
   }
 
@@ -810,6 +817,7 @@ function blankSummary(): CertificationSummary {
     noCertificationDeclared: false,
     nitrox: false,
     nitroxSelfDeclared: false,
+    nitroxVerified: false,
     verifiedLevel: null,
   };
 }

@@ -1,22 +1,30 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { nowDate } from "@/lib/clock";
 import {
   buildIncidentExport,
   type IncidentBuddyTeamEventInput,
   type IncidentBuddyTeamInput,
   type IncidentExportDocument,
+  type IncidentRosterChangeInput,
   type IncidentTimelineEventInput,
+  ROSTER_CHANGE_CODES,
+  rosterChangeFromActivity,
+  rosterCutoff,
 } from "@/lib/incident-export";
 import { canPersonExportIncidentRecord } from "./authz";
+import { departureBoatId, departureBoatSafetySnapshot } from "./boat-safety";
+import { snagsOpenWhenSailed } from "./boat-snags";
 import { listTripBuddyTeamEvents, listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb } from "./client";
 import { listExecutedDives } from "./executed-dives";
+import { listDepartureLogIncidentReports } from "./incident-reports";
 import { getTripManifests } from "./manifests";
 import { survivingPersonNames } from "./people";
 import { latestPreDepartureChecksForTrip, listChecklistItemsForTrip } from "./pre-departure-check";
 import { listTripReadiness } from "./readiness";
-import { bookings, people, rollCallCrewEvents, rollCallEvents } from "./schema";
+import { activityEvents, bookings, people, rollCallCrewEvents, rollCallEvents } from "./schema";
 import { getShopById } from "./shops";
 
 /**
@@ -50,59 +58,72 @@ export async function getIncidentExport(
 ): Promise<IncidentExportDocument | null> {
   if (!(await canPersonExportIncidentRecord(db, shopId, generatedByPersonId))) return null;
   const manifests = await getTripManifests(db, shopId, tripId);
-  if (!manifests || manifests.length === 0) return null;
+  const departure = manifests?.[0];
+  if (!manifests || !departure) return null;
 
   const recorders = alias(people, "recorders");
-  const [shop, readinessRows, generator, diverEventRows, crewEventRows, executedDiveRows] =
-    await Promise.all([
-      getShopById(db, shopId),
-      listTripReadiness(db, shopId, tripId, generatedAt),
-      db
-        .select({ fullName: people.fullName })
-        .from(people)
-        // diveday:allow-deleted-people: an incident document names who was there, removed since or not.
-        .where(and(eq(people.id, generatedByPersonId), eq(people.shopId, shopId)))
-        .limit(1),
-      // The full history, oldest first — not the latest-per-subject reduction
-      // the live manifest shows. An incident document is the audit trail.
-      db
-        .select({
-          event: rollCallEvents,
-          subject: people,
-          recorder: recorders,
-          heldAt: bookings.identityUnconfirmedAt,
-          bookedAs: bookings.identityBookedAs,
-        })
-        .from(rollCallEvents)
-        .innerJoin(bookings, eq(bookings.id, rollCallEvents.bookingId))
-        .innerJoin(people, eq(people.id, bookings.personId))
-        .innerJoin(recorders, eq(recorders.id, rollCallEvents.recordedByPersonId))
-        .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, tripId)))
-        // `seq` last, for a reason sharper here than anywhere else: this
-        // document is hashed, so two orderings of the same events produce two
-        // different SHA-256 integrity codes for one departure. A tie on
-        // transaction time would make the hash a coin toss.
-        .orderBy(
-          asc(rollCallEvents.occurredAt),
-          asc(rollCallEvents.createdAt),
-          asc(rollCallEvents.seq),
-        ),
-      db
-        .select({ event: rollCallCrewEvents, subject: people, recorder: recorders })
-        .from(rollCallCrewEvents)
-        .innerJoin(people, eq(people.id, rollCallCrewEvents.personId))
-        .innerJoin(recorders, eq(recorders.id, rollCallCrewEvents.recordedByPersonId))
-        .where(and(eq(rollCallCrewEvents.shopId, shopId), eq(rollCallCrewEvents.tripId, tripId)))
-        .orderBy(
-          asc(rollCallCrewEvents.occurredAt),
-          asc(rollCallCrewEvents.createdAt),
-          asc(rollCallCrewEvents.seq),
-        ),
-      listExecutedDives(db, shopId, tripId),
-    ]);
+  const [shop, generator, diverEventRows, crewEventRows, executedDiveRows] = await Promise.all([
+    getShopById(db, shopId),
+    db
+      .select({ fullName: people.fullName })
+      .from(people)
+      // diveday:allow-deleted-people: an incident document names who was there, removed since or not.
+      .where(and(eq(people.id, generatedByPersonId), eq(people.shopId, shopId)))
+      .limit(1),
+    // The full history, oldest first — not the latest-per-subject reduction
+    // the live manifest shows. An incident document is the audit trail.
+    db
+      .select({
+        event: rollCallEvents,
+        subject: people,
+        recorder: recorders,
+        heldAt: bookings.identityUnconfirmedAt,
+        bookedAs: bookings.identityBookedAs,
+      })
+      .from(rollCallEvents)
+      .innerJoin(bookings, eq(bookings.id, rollCallEvents.bookingId))
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .innerJoin(recorders, eq(recorders.id, rollCallEvents.recordedByPersonId))
+      .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, tripId)))
+      // `seq` last, for a reason sharper here than anywhere else: this
+      // document is hashed, so two orderings of the same events produce two
+      // different SHA-256 integrity codes for one departure. A tie on
+      // transaction time would make the hash a coin toss.
+      .orderBy(
+        asc(rollCallEvents.occurredAt),
+        asc(rollCallEvents.createdAt),
+        asc(rollCallEvents.seq),
+      ),
+    db
+      .select({ event: rollCallCrewEvents, subject: people, recorder: recorders })
+      .from(rollCallCrewEvents)
+      .innerJoin(people, eq(people.id, rollCallCrewEvents.personId))
+      .innerJoin(recorders, eq(recorders.id, rollCallCrewEvents.recordedByPersonId))
+      .where(and(eq(rollCallCrewEvents.shopId, shopId), eq(rollCallCrewEvents.tripId, tripId)))
+      .orderBy(
+        asc(rollCallCrewEvents.occurredAt),
+        asc(rollCallCrewEvents.createdAt),
+        asc(rollCallCrewEvents.seq),
+      ),
+    listExecutedDives(db, shopId, tripId),
+  ]);
   if (!shop) return null;
   const generatedByName = generator[0]?.fullName;
   if (!generatedByName) return null;
+  // Which signature governs, and whether it still stands, as of when the boat
+  // was due out (domain re-review 2026-10-16, item 3), the instant the
+  // builder states it at: never as of the printing, which moves.
+  const readinessRows = await listTripReadiness(
+    db,
+    shopId,
+    tripId,
+    new Date(
+      rosterCutoff(departure.trip, [
+        ...diverEventRows.map(({ event }) => event),
+        ...crewEventRows.map(({ event }) => event),
+      ]),
+    ),
+  );
 
   // A paper waiver and a certification review are accountable staff acts, not
   // anonymous completions. Resolve only the ids the governing evidence names,
@@ -195,12 +216,61 @@ export async function getIncidentExport(
   // manifest drops them: this document states the pairing as it stood for the
   // people who were aboard, and the trail below is where a cancelled member's
   // membership survives.
-  const [teamRows, teamEventRows, checklistItems, checklistChecks] = await Promise.all([
+  const [
+    teamRows,
+    teamEventRows,
+    checklistItems,
+    checklistChecks,
+    rosterRows,
+    reportRows,
+    boatSafety,
+    boatId,
+    sailedWithSnags,
+  ] = await Promise.all([
     listTripBuddyTeams(db, shopId, tripId),
     listTripBuddyTeamEvents(db, shopId, tripId),
     listChecklistItemsForTrip(db, shopId, tripId),
     latestPreDepartureChecksForTrip(db, shopId, tripId),
+    // Seats and crew places changed on this departure, as the shop's trail
+    // recorded them (safety sheet 2026-10-15, item 7); the builder keeps
+    // those from the boat being due out (`rosterCutoff`), which can be
+    // before the scheduled start. An erased line that named someone by
+    // record comes too, as a line naming nobody (auditor review 2026-10-16,
+    // item 12). `seq` breaks a tie on the instant: this document is hashed,
+    // so its order cannot be a coin toss.
+    db
+      .select({
+        code: activityEvents.code,
+        params: activityEvents.params,
+        occurredAt: activityEvents.occurredAt,
+      })
+      .from(activityEvents)
+      .where(
+        and(
+          eq(activityEvents.shopId, shopId),
+          eq(activityEvents.tripId, tripId),
+          inArray(activityEvents.code, [...ROSTER_CHANGE_CODES, ACTIVITY_REDACTED.code]),
+          // A line that names nobody by record, as a person or a seat, is a
+          // name erasure could not reach (security review 2026-10-16, F1):
+          // not printed.
+          or(isNotNull(activityEvents.subjectPersonId), isNotNull(activityEvents.bookingId)),
+        ),
+      )
+      .orderBy(asc(activityEvents.occurredAt), asc(activityEvents.seq)),
+    listDepartureLogIncidentReports(db, shopId, tripId, generatedByPersonId),
+    // The boat as it stood at the departure checkpoint (#2300).
+    departureBoatSafetySnapshot(db, shopId, tripId),
+    departureBoatId(db, shopId, tripId),
+    snagsOpenWhenSailed(db, shopId, tripId),
   ]);
+  // Everyone the export gate above admits may read this list; this is a second
+  // lock, so a gate that drifted wider fails closed rather than printing "no
+  // reports" (auditor review 2026-10-16, item 12).
+  if (reportRows === null) return null;
+  const rosterChanges = rosterRows.flatMap((row): IncidentRosterChangeInput[] => {
+    const change = rosterChangeFromActivity(row);
+    return change ? [change] : [];
+  });
   const buddyTeams: IncidentBuddyTeamInput[] = teamRows.map((team) => ({
     teamId: team.teamId,
     members: team.members.flatMap((member): IncidentBuddyTeamInput["members"][number][] =>
@@ -278,6 +348,14 @@ export async function getIncidentExport(
     })),
     buddyTeams,
     buddyTeamEvents,
+    rosterChanges,
+    // A list, never a report's contents (safety sheet 2026-10-15, item 5).
+    incidentReports: reportRows.map((report) => ({
+      ...report,
+      filedAt: report.filedAt?.toISOString() ?? null,
+      createdAt: report.createdAt.toISOString(),
+      deletedAt: report.deletedAt?.toISOString() ?? null,
+    })),
     preDepartureCheck: checklistItems.map((item) => {
       const check = checklistChecks.get(item.id);
       return {
@@ -287,6 +365,9 @@ export async function getIncidentExport(
           : undefined,
       };
     }),
+    sailedWithSnags,
+    boatSafety,
+    departureBoatId: boatId,
     generatedAt,
     generatedByName,
   });

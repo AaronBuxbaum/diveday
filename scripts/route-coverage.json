@@ -35,6 +35,7 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/ready/[token]/forms": {
+    "e2e": ["course-forms.spec.ts"],
     "visual": ["course-form-sign"]
   },
   "/s/[shopSlug]/embed/schedule": {
@@ -60,6 +61,7 @@
       "diver-medical-clearance-form",
       "diver-medical-not-cleared",
       "diver-profile",
+      "diver-profile-agency-listed",
       "diver-profile-deleted",
       "diver-profile-erase-refused",
       "diver-profile-imported",
@@ -98,6 +100,16 @@
   "/shop/[shopSlug]/orders/[id]": {
     "visual": ["order-detail", "order-detail-partly-refunded"]
   },
+  "/shop/[shopSlug]/orders/[id]/print/dispute": {
+    "e2e": ["dispute-sheet.spec.ts"],
+    "visual": ["order-dispute-sheet"]
+  },
+  "/shop/[shopSlug]/print/pass/[bookingId]": {
+    "e2e": ["shop-on-paper.spec.ts"]
+  },
+  "/shop/[shopSlug]/safety": {
+    "e2e": ["incident-reports.spec.ts"]
+  },
   "/shop/[shopSlug]/schedule/blowout/[tripId]": {
     "a11y": ["a11y.spec.ts"]
   },
@@ -131,5 +143,9 @@
   "/shop/[shopSlug]/trips/[id]/walk-in": {
     "visual": ["trip-walk-in", "trip-walk-in-diver", "trip-walk-in-notice"],
     "a11y": ["a11y.spec.ts"]
+  },
+  "/waivers/[token]/doctor": {
+    "e2e": ["waivers.spec.ts"],
+    "visual": ["waiver-doctor"]
   }
 }

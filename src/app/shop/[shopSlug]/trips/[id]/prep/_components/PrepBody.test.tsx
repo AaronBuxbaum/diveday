@@ -230,3 +230,20 @@ describe("a held seat on the Gear tab (issue #2144)", () => {
     expect(within(byDiver).getAllByText(t("tripPrep.heldSeatSizesWait")).length).toBeGreaterThan(0);
   });
 });
+
+/**
+ * **A boat at sea packs nothing more** (fourth review, item 16). "6 people
+ * missing rental sizes" is a question for the dock; the tanks and kit that
+ * went out stay, because they are what has to come back.
+ */
+describe("a boat that has left the dock", () => {
+  it("drops the missing-sizes prompt and keeps what went out", () => {
+    const { container, unmount } = renderPrep(everyPanelPrep());
+    const sizes = t("tripPrep.missingSizesHeading");
+    expect(within(container).queryByText(sizes)).not.toBeNull();
+    unmount();
+    const atSea = renderPrep(everyPanelPrep(), { sailed: true });
+    expect(within(atSea.container).queryByText(sizes)).toBeNull();
+    expect(within(atSea.container).getByRole("heading", { name: "Tanks" })).toBeTruthy();
+  });
+});

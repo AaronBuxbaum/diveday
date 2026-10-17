@@ -523,6 +523,66 @@ export function straightDoubleQuotes(value) {
 }
 
 /**
+ * Three periods where the house ellipsis `…` (U+2026) belongs.
+ *
+ * The apostrophe's drift, at a smaller volume: on 2026-10-13 the bundles said
+ * "…" 281 times and "..." five, every one of them a pending label ("Saving...",
+ * "Adding...") or a placeholder trailing off, and the Spanish copied all five.
+ * Both render, nobody notices one at a time, and Playwright matches them as
+ * different strings. Typography, so it sits beside the apostrophe rather than
+ * in `RULES`, and a third locale inherits it without naming it.
+ */
+export function threeDots(value) {
+  const found = [];
+  for (const match of value.matchAll(/\.{3}/g)) {
+    const before = value.slice(0, match.index).split(/\s+/).filter(Boolean).slice(-2);
+    const after = value
+      .slice(match.index + 3)
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2);
+    found.push({ rule: "ellipsis", text: `${before.join(" ")}...${after.join(" ")}`.trim() });
+  }
+  return found;
+}
+
+/**
+ * An exclamation mark in a diver's message (fifth-loop ideas, item 24,
+ * 2026-10-16).
+ *
+ * The diver bundle speaks in one plain voice: the dock time, the release, the
+ * recap. Four strings broke it ("Thanks for sharing!", "See you on the boat!",
+ * "See you in the water!" and the recap text) and read as a different writer
+ * on the one page the diver keeps. Scoped to `diver.json` alone: a staff
+ * string never carried the mark, and the marketing pages have their own shape
+ * rules. Spanish refuses the opening `¡` as well as the closing `!`.
+ *
+ * The one exception is the WhatsApp template body Meta reviews for each shop
+ * at sign-up (`notifications.whatsappTemplate.body`): its words are a
+ * registered template, changed only with a new template, never by a sweep.
+ */
+export const EXCLAMATION_ALLOWLIST = new Set(["notifications.whatsappTemplate.body"]);
+
+/** The bundle file the exclamation rule reads. */
+export const EXCLAMATION_BUNDLE = "diver.json";
+
+export function exclamations(value, key = "") {
+  if (EXCLAMATION_ALLOWLIST.has(key)) return [];
+  const found = [];
+  for (const match of value.matchAll(/[!¡]/g)) {
+    const before = value.slice(0, match.index).split(/\s+/).filter(Boolean).slice(-2);
+    const after = value
+      .slice(match.index + 1)
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2);
+    const text = `${before.join(" ")}${match[0]}${after.join(" ")}`.trim();
+    found.push({ rule: "exclamation", text });
+  }
+  return found;
+}
+
+/**
  * The four **shape** rules (2026-09-24, the voice decision — H-89 in
  * docs/product/human-decisions/README.md, "The builder's note" in docs/design/brand.md).
  *
@@ -562,6 +622,22 @@ export function straightDoubleQuotes(value) {
  * notices are the register docs/design/brand.md calls the divemaster's, where
  * a short sentence is the norm rather than a beat. The house-phrase rule is
  * per file and only ever compares those same namespaces.
+ *
+ * **Measured over the app bundles, and kept off them (2026-10-13, UX review
+ * item 38).** Run over every diver and staff key outside these scopes, the
+ * three shapes flagged 77 values. One sitting over the list rewrote fourteen
+ * whose short last sentence was a habit rather than the next action: four
+ * merge refusals in a row ending "Nothing was moved." now open "Not merged:",
+ * and "Check both.", "No undo.", "Pick another.", "Find them above." and the
+ * Settings foot's list-with-a-tail joined the sentence before them. The 63
+ * left are the register this scope exists for: a refusal's last sentence is
+ * what to do next ("Check the address.", "Use the template below.", "Nothing
+ * was lost." after a rate limit), a field-guide tip is an imperative, and the
+ * mirrored-pair rule reads an ICU plural's two branches as two clauses that
+ * mirror each other, which they do by construction. A ratchet over those
+ * would bank 63 honest strings as debt, so the shapes stay on the public
+ * pages; the typography rules (dash, apostrophe, quote, ellipsis) read every
+ * bundle.
  */
 export const SHAPE_SCOPES = ["marketing.", "switching.", "account.onboard.", "metadata."];
 
@@ -930,6 +1006,7 @@ export function findTells(value, locale, key = "") {
     ...proseDashes(value),
     ...straightApostrophes(value),
     ...straightDoubleQuotes(value),
+    ...threeDots(value),
     ...(inShapeScope(key) ? shapeTells(value) : []),
     ...implementationWords(value, locale, key),
   ];
@@ -1226,9 +1303,11 @@ export async function scanBundles() {
       const bundle = JSON.parse(await readFile(path.join(ROOT, file), "utf8"));
       const hits = [];
       const entries = [];
+      const diverBundle = path.basename(file) === EXCLAMATION_BUNDLE;
       walkValues(bundle, "", (key, value) => {
         entries.push({ key, value });
         for (const tell of findTells(value, locale, key)) hits.push({ key, ...tell });
+        if (diverBundle) for (const tell of exclamations(value, key)) hits.push({ key, ...tell });
       });
       hits.push(...housePhrases(entries, locale));
       if (hits.length > 0) {

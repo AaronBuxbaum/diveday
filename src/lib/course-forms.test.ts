@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TripRequirement, WaiverRecord } from "@/db/schema";
+import { readinessBlockerText } from "@/i18n/readiness-labels";
+import { staffTranslator } from "@/i18n/staff-messages";
 import {
   COURSE_FORMS_BLOCK_BOARDING,
   type CourseFormSignature,
@@ -10,6 +12,7 @@ import {
   outstandingCourseForms,
   type RequiredCourseForm,
 } from "./course-forms";
+import type { GuardianSigner } from "./guardian";
 import { aboardBlockerKind, BLOCKER_CATEGORY, calculateReadiness } from "./readiness";
 import { buildDiverChecklist } from "./readiness-summary";
 
@@ -38,8 +41,8 @@ const practices: RequiredCourseForm = {
 };
 
 const now = new Date("2026-10-08T15:00:00.000Z");
-const adult = { dateOfBirth: "1990-01-01", timezone: "America/New_York" };
-const minor = { dateOfBirth: "2012-05-01", timezone: "America/New_York" };
+const adult = { dateOfBirth: "1990-01-01", minorDeclared: false, timezone: "America/New_York" };
+const minor = { dateOfBirth: "2012-05-01", minorDeclared: false, timezone: "America/New_York" };
 
 function signed(overrides: Partial<CourseFormSignature> = {}): CourseFormSignature {
   return {
@@ -53,7 +56,11 @@ function signed(overrides: Partial<CourseFormSignature> = {}): CourseFormSignatu
   };
 }
 
-function owed(signatures: CourseFormSignature[], signer = adult, required = [release]) {
+function owed(
+  signatures: CourseFormSignature[],
+  signer: GuardianSigner = adult,
+  required = [release],
+) {
   return outstandingCourseForms({
     shopId: SHOP,
     bookingId: BOOKING,
@@ -104,13 +111,21 @@ describe("outstandingCourseForms — which forms an enrollment still owes", () =
 
   it("measures the age on the day the form was signed, not today", () => {
     // Signed the day before an eighteenth birthday, alone: still owed after it.
-    const turning = { dateOfBirth: "2008-10-08", timezone: "UTC" };
+    const turning = { dateOfBirth: "2008-10-08", minorDeclared: false, timezone: "UTC" };
     const dayBefore = new Date("2026-10-07T12:00:00.000Z");
     expect(owed([signed({ signedAt: dayBefore })], turning)).toEqual(["form-release"]);
   });
 
   it("reads an unknown date of birth as an adult (H-08's fail-open)", () => {
-    expect(owed([signed()], { dateOfBirth: null, timezone: "UTC" } as never)).toEqual([]);
+    expect(
+      owed([signed()], { dateOfBirth: null, minorDeclared: false, timezone: "UTC" } as never),
+    ).toEqual([]);
+  });
+
+  it("asks for the guardian on a seat its booker marked Under 18 with no date on file", () => {
+    expect(
+      owed([signed()], { dateOfBirth: null, minorDeclared: true, timezone: "UTC" } as never),
+    ).toEqual(["form-release"]);
   });
 
   it("clears a form signed at the version a started session began with", () => {
@@ -121,10 +136,125 @@ describe("outstandingCourseForms — which forms an enrollment still owes", () =
   });
 
   it("measures a paper copy's age on the date written on it, not the day it was recorded", () => {
-    const turning = { dateOfBirth: "2008-10-08", timezone: "UTC" };
+    const turning = { dateOfBirth: "2008-10-08", minorDeclared: false, timezone: "UTC" };
     // Recorded today, the student is eighteen; on the paper's date they were not.
     expect(owed([signed({ paperSignedOn: "2026-10-01" })], turning)).toEqual(["form-release"]);
     expect(owed([signed({ paperSignedOn: "2026-10-08" })], turning)).toEqual([]);
+  });
+});
+
+/**
+ * **A form for the youngest students only** (issue #2265, Aaron 2026-10-13):
+ * PADI's Youth Diving acknowledgment (10615) is asked of a student aged 11
+ * or younger on the session's first day, in the shop's zone, and of nobody
+ * older. A child whose birthday the shop does not know is asked.
+ */
+describe("outstandingCourseForms — a form bound to an age", () => {
+  const youth: RequiredCourseForm = {
+    shopId: SHOP,
+    formId: "form-youth",
+    versionId: "youth-v1",
+    version: 1,
+    title: "Youth Diving: Responsibility and Risks Acknowledgment",
+    position: 2,
+    maxAgeYears: 11,
+    sessionFirstDay: "2026-10-20",
+  };
+  const born = (dateOfBirth: string | null) => ({ ...adult, dateOfBirth });
+
+  it("asks a student who turns 12 the day after the session starts", () => {
+    expect(owed([], born("2014-10-21"), [youth])).toEqual([youth.formId]);
+  });
+
+  it("does not ask one who turned 12 that very morning, nor one the day before", () => {
+    expect(owed([], born("2014-10-20"), [youth])).toEqual([]);
+    expect(owed([], born("2014-10-19"), [youth])).toEqual([]);
+  });
+
+  it("never asks an adult on the same course, and still asks them the course's other forms", () => {
+    expect(owed([], adult, [release, youth])).toEqual([release.formId]);
+  });
+
+  it("asks a student whose birthday the shop does not know", () => {
+    expect(owed([], born(null), [youth])).toEqual([youth.formId]);
+  });
+
+  it("asks everyone a form with no bound", () => {
+    expect(owed([], adult, [release])).toEqual([release.formId]);
+  });
+
+  // Dive-domain review H6: a youth form is a minor's paper, so a guardian
+  // signs beside it whatever the record holds, and an unknown birthday is
+  // the fix the desk is told about.
+  it("asks a guardian beside a youth form, even with no birthday on file", () => {
+    expect(owed([signed({ formVersionId: youth.versionId })], born(null), [youth])).toEqual([
+      youth.formId,
+    ]);
+    expect(
+      owed([signed({ formVersionId: youth.versionId, guardianSignedAt: now })], born(null), [
+        youth,
+      ]),
+    ).toEqual([]);
+  });
+
+  it("names an unknown birthday as why a bounded form is asked", () => {
+    const gaps = (signer: GuardianSigner) =>
+      courseFormGaps({
+        shopId: SHOP,
+        bookingId: BOOKING,
+        personId: PERSON,
+        required: [youth, release],
+        signatures: [],
+        signer,
+      }).map(({ form, ageUnknown }) => [form.formId, ageUnknown]);
+    expect(gaps(born(null))).toEqual([
+      [release.formId, false],
+      [youth.formId, true],
+    ]);
+    expect(gaps(born("2016-01-01"))).toEqual([
+      [release.formId, false],
+      [youth.formId, false],
+    ]);
+    expect(gaps({ ...born(null), minorDeclared: true })).toEqual([
+      [release.formId, false],
+      [youth.formId, false],
+    ]);
+  });
+
+  it("tells the dock a birthday is missing beside the form it asks", () => {
+    const result = calculateReadiness({
+      requirement: { requiresWaiver: false, requiredSpecialties: [] } as unknown as TripRequirement,
+      waiver: null,
+      certifications: [],
+      now,
+      timezone: "America/New_York",
+      dateOfBirth: null,
+      courseForms: {
+        shopId: SHOP,
+        bookingId: BOOKING,
+        personId: PERSON,
+        required: [youth],
+        signatures: [],
+        timezone: "America/New_York",
+      },
+    });
+    expect(result.blockers).toContainEqual({
+      code: "course_form_unsigned",
+      params: { formTitle: youth.title, formMaxAge: 11 },
+    });
+  });
+
+  it("says the birthday is the fix, in every staff language", () => {
+    const blocker = {
+      code: "course_form_unsigned" as const,
+      params: { formTitle: "Youth form", formMaxAge: 11 },
+    };
+    expect(readinessBlockerText(staffTranslator("en-US"), blocker)).toBe(
+      "Youth form is for students 11 and under, and there’s no date of birth on file. Add it, or have it signed with a parent or guardian.",
+    );
+    expect(readinessBlockerText(staffTranslator("es-ES"), blocker)).toContain(
+      "fecha de nacimiento",
+    );
   });
 });
 

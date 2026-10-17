@@ -117,7 +117,11 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   // sampled then is the departure layout's, which passes without testing
   // anything.
   await expect(
-    page.getByRole("region", { name: /^Before you leave the dock:/ }).locator("details"),
+    // The checklist's own disclosure, not the snag notes inside its rows.
+    page
+      .getByRole("region", { name: /^Before you leave the dock:/ })
+      .locator("details")
+      .first(),
   ).not.toHaveAttribute("open");
   await expect.poll(async () => Math.abs((await listTop()) - listTopAtDeparture)).toBeLessThan(4);
   await page
@@ -754,6 +758,12 @@ test("a checkpoint with every diver counted stays open until the crew are called
   await expect(page.getByRole("button", { name: "Not boarded ☑️" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Roll call complete" })).toHaveCount(0);
   await expect(page.getByText(/1 person is not back aboard/)).toBeVisible();
+  // The report starts from the row that raised the alarm (safety sheet
+  // 2026-10-15, item 2), named for the diver, for the owner signed in here.
+  const startMissingReport = firstDiverDialog.getByRole("button", {
+    name: /^Start a missing diver report — /,
+  });
+  await expect(startMissingReport).toBeVisible();
   // Read back on the row, so a second crew member arriving at the alarm does
   // not type the same sentence again.
   await expect(
@@ -787,6 +797,8 @@ test("a checkpoint with every diver counted stays open until the crew are called
   await clearNotBack.click();
   await expect(awaitingEntry).toBeVisible();
   await expect(awaitingEntry).toContainText("1");
+  // Taken back, the row no longer offers a missing diver report.
+  await expect(startMissingReport).toHaveCount(0);
 
   // Crew reach it the same way — a divemaster who did not surface is the same
   // claim about the same kind of body.
@@ -804,6 +816,20 @@ test("a checkpoint with every diver counted stays open until the crew are called
   await expect(progressPanel.getByText(/1 crew member is not back aboard/)).toBeVisible();
   await expect(awaitingEntry).toBeVisible();
   await expect(page.getByRole("heading", { name: "Roll call complete" })).toHaveCount(0);
+
+  // The missing crew member's report starts from their own sheet too, and
+  // the report it opens leads straight back to this checkpoint (domain review
+  // 2026-10-16).
+  const crewReport = page
+    .getByRole("dialog")
+    .getByRole("button", { name: /^Start a missing diver report — / });
+  await crewReport.evaluate((button) => button.scrollIntoView({ block: "center" }));
+  await crewReport.click();
+  await expect(page).toHaveURL(
+    /\/incidents\/[0-9a-f-]{36}\?from=manifest&checkpoint=after_dive_\d+$/,
+  );
+  await page.getByRole("link", { name: "Back to manifest" }).click();
+  await expect(page).toHaveURL(/\/manifest\?checkpoint=after_dive_\d+$/);
 });
 
 test("the manifest offers a per-device push opt-in without asking for permission first", async ({
@@ -933,7 +959,7 @@ test("an owner adds and removes a line on the shop's own pre-departure checklist
   await expect(page.getByText("Test kit checked")).not.toBeVisible();
 });
 
-test("a crew member checks a pre-departure item on the live manifest, and a re-tap undoes it", async ({
+test("a crew member checks a pre-departure item on the live manifest, and two re-taps undo it", async ({
   page,
 }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -946,7 +972,11 @@ test("a crew member checks a pre-departure item on the live manifest, and a re-t
   await item.click();
   await expect(page.getByText(/Checked by .* · /)).toBeVisible();
 
-  // The same control, re-tapped, is the undo (ADR 20260824-pre-departure-safety-check).
+  // The same control is the undo (ADR 20260824-pre-departure-safety-check),
+  // but clearing a safety item takes a second tap (#2481): the first only asks.
+  await item.click();
+  await expect(item).toContainText("Tap again to clear");
+  await expect(item).toHaveAttribute("aria-pressed", "true");
   await item.click();
   await expect(page.getByText(/Checked by .* · /)).not.toBeVisible();
 });

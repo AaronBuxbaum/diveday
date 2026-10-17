@@ -2,7 +2,7 @@
  * Waivers: a release signed at the counter, attested by a staff member.
  * Imported through the `./waivers` barrel.
  */
-import { and, desc, eq, isNull, ne } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import {
@@ -13,15 +13,22 @@ import {
   isGuardianRelationship,
   signingDate,
 } from "@/lib/guardian";
+import { isHeldToMedical } from "@/lib/participant-types";
 import { personNamesMatch } from "@/lib/person-name";
 import { inPersonAttestationProvider, namesakeAttestationProvider } from "@/lib/signatures";
 import { computeWaiverIntegrityHash } from "@/lib/waiver-integrity";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
-import { isCompletedWaiverCurrent, isUnresolvedMedicalHold } from "@/lib/waivers";
+import {
+  bookingRecordLapsed,
+  isCompletedWaiverCurrent,
+  isUnresolvedMedicalHold,
+  waiverClockInstant,
+} from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
-import { bookings, people, trips, waiverRecords, waiverTemplates } from "./schema";
-import { shopTimezone } from "./waivers-templates";
+import { publishManifestEventsForPerson } from "./manifest-events";
+import { bookings, people, trips, waiverRecords } from "./schema";
+import { getCurrentWaiverTemplate, shopTimezone } from "./waivers-templates";
 
 export type InPersonWaiverOutcome =
   | { ok: true; recordId: string; alreadySigned: boolean }
@@ -130,6 +137,10 @@ type WaiverSigner = {
   fullName: string;
   /** For the guardian rule (`src/lib/guardian.ts`); null when the shop never asked. */
   dateOfBirth: string | null;
+  /** The seat's booker said "Under 18"; always false with no seat. */
+  minorDeclared: boolean;
+  /** The seat's trip and kind, so a lapse is read where the roster reads it (#2611); null with no seat. */
+  seat?: { startsAt: Date; endsAt: Date; heldToMedical: boolean };
 };
 
 async function bookingSigner(
@@ -143,7 +154,11 @@ async function bookingSigner(
       personId: bookings.personId,
       fullName: people.fullName,
       dateOfBirth: people.dateOfBirth,
+      minorDeclaredAt: bookings.minorDeclaredAt,
       tripStatus: trips.status,
+      tripStartsAt: trips.startsAt,
+      tripEndsAt: trips.endsAt,
+      participantType: bookings.participantType,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
     })
     .from(bookings)
@@ -170,6 +185,12 @@ async function bookingSigner(
     personId: booking.personId,
     fullName: booking.fullName,
     dateOfBirth: booking.dateOfBirth,
+    minorDeclared: booking.minorDeclaredAt !== null,
+    seat: {
+      startsAt: booking.tripStartsAt,
+      endsAt: booking.tripEndsAt,
+      heldToMedical: isHeldToMedical(booking.participantType),
+    },
   };
 }
 
@@ -206,6 +227,8 @@ async function personSigner(
     personId: person.id,
     fullName: person.fullName,
     dateOfBirth: person.dateOfBirth,
+    minorDeclared: false,
+    seat: undefined,
   };
 }
 
@@ -228,6 +251,13 @@ async function standingWaiverRecord(
     /** For the guardian rule: a minor's solo record is not "already done" (ADR 20260907-guardian-co-signature). */
     signer: GuardianSigner;
     now: Date;
+    /**
+     * The seat's trip, when a seat is the subject: its release is measured at
+     * the trip-scoped instant the roster uses (`waiverClockInstant`, issue
+     * #2611), so a release that runs out before the trip is replaced here
+     * instead of reported as "already signed".
+     */
+    seat?: { startsAt: Date; endsAt: Date; heldToMedical: boolean };
   },
 ) {
   if (input.bookingId) {
@@ -235,9 +265,16 @@ async function standingWaiverRecord(
       .select()
       .from(waiverRecords)
       .where(and(eq(waiverRecords.bookingId, input.bookingId), isNull(waiverRecords.supersededAt)));
+    const clockAt = input.seat ? waiverClockInstant({ now: input.now, ...input.seat }) : input.now;
     return current.find(
       (record) =>
         (record.status === "completed" || record.status === "medical_review") &&
+        !bookingRecordLapsed(
+          record,
+          input.templateGeneration,
+          clockAt,
+          input.seat?.heldToMedical ?? true,
+        ) &&
         !guardianSignatureMissing(record, input.signer),
     );
   }
@@ -341,7 +378,10 @@ export async function recordInPersonWaiver(
   const now = input.now ?? nowDate();
   if (!input.medicalAttested) return { ok: false, reason: "medical_attestation_required" };
   const bookingSubject = "bookingId" in input.subject ? input.subject.bookingId : null;
-  return db.transaction(async (tx): Promise<InPersonWaiverOutcome> => {
+  // Set only when this call wrote a new release, so the manifest events go out
+  // after the commit and not for an idempotent no-op (issue #2613).
+  let signedPersonId: string | null = null;
+  const outcome = await db.transaction(async (tx): Promise<InPersonWaiverOutcome> => {
     const attestedBy = await activeStaffAttestorId(tx, input.shopId, input.recordedByPersonId);
     if (!attestedBy) return { ok: false, reason: "staff_not_found" };
 
@@ -351,8 +391,16 @@ export async function recordInPersonWaiver(
     if (!signer.ok) return signer;
 
     const timezone = await shopTimezone(tx, input.shopId);
-    const guardianSigner: GuardianSigner = { dateOfBirth: signer.dateOfBirth, timezone };
-    const minor = guardianSignatureRequired(signer.dateOfBirth, signingDate(now, timezone));
+    const guardianSigner: GuardianSigner = {
+      dateOfBirth: signer.dateOfBirth,
+      minorDeclared: signer.minorDeclared,
+      timezone,
+    };
+    const minor = guardianSignatureRequired(
+      signer.dateOfBirth,
+      signingDate(now, timezone),
+      signer.minorDeclared,
+    );
     // Refused before anything is read or written, like the medical attestation
     // above: a paper release a minor signed alone is not a release the shop can
     // record as complete, and the crew's roster would say so the moment it was.
@@ -402,12 +450,7 @@ export async function recordInPersonWaiver(
       guardianRelationship = input.guardian.relationship;
     }
 
-    const [template] = await tx
-      .select()
-      .from(waiverTemplates)
-      .where(and(eq(waiverTemplates.shopId, input.shopId), isNull(waiverTemplates.deletedAt)))
-      .orderBy(desc(waiverTemplates.createdAt))
-      .limit(1);
+    const template = await getCurrentWaiverTemplate(tx, input.shopId);
     if (!template) return { ok: false, reason: "template_not_found" };
 
     const standing = await standingWaiverRecord(tx, {
@@ -417,6 +460,7 @@ export async function recordInPersonWaiver(
       templateGeneration: template.materialGeneration,
       signer: guardianSigner,
       now,
+      seat: signer.seat,
     });
     if (standing) return { ok: true, recordId: standing.id, alreadySigned: true };
     const evidence = inPersonAttestationProvider.capture({
@@ -427,20 +471,19 @@ export async function recordInPersonWaiver(
     if (!evidence) return { ok: false, reason: "invalid_signature" };
 
     // Retire this booking's live pending link so its bearer token can never
-    // complete a second record after the shop has recorded the paper copy.
-    // Person-scoped records leave other bookings' links alone: those are a
-    // different seat's paperwork, and a diver part-way through signing one
-    // online should not find it dead.
+    // complete a second record after the shop has recorded the paper copy, and
+    // the lapsed release the paper replaces (issue #2611: one that runs out
+    // before the trip is replaced like one that has run out), so a seat holds
+    // one live record, as `issueWaiverRequest` leaves it. Person-scoped records
+    // leave other bookings' links alone: those are a different seat's
+    // paperwork, and a diver part-way through signing one online should not
+    // find it dead.
     if (signer.bookingId) {
       await tx
         .update(waiverRecords)
         .set({ supersededAt: now, tokenSealed: null })
         .where(
-          and(
-            eq(waiverRecords.bookingId, signer.bookingId),
-            eq(waiverRecords.status, "pending"),
-            isNull(waiverRecords.supersededAt),
-          ),
+          and(eq(waiverRecords.bookingId, signer.bookingId), isNull(waiverRecords.supersededAt)),
         );
     }
 
@@ -485,6 +528,9 @@ export async function recordInPersonWaiver(
       .update(waiverRecords)
       .set({ integrityHash: computeWaiverIntegrityHash(record), integrityVersion: 1 })
       .where(eq(waiverRecords.id, record.id));
+    signedPersonId = record.personId;
     return { ok: true, recordId: record.id, alreadySigned: false };
   });
+  if (signedPersonId) await publishManifestEventsForPerson(db, input.shopId, signedPersonId);
+  return outcome;
 }

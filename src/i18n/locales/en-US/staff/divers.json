@@ -43,6 +43,16 @@
     }
   },
   "certifications": {
+    "drysuitSeenTitle": "Seen diving dry",
+    "drysuitSeenNote": "Recorded by {name} on {date}. Staff-observed, not a drysuit card: it quiets the roster’s drysuit reminder and changes nothing a trip requires.",
+    "drysuitSeenByUnknown": "a staff member",
+    "drysuitSeenHint": "Dives dry with no drysuit card. If you have watched them dive dry, record it here and the roster stops reminding you. It is not a card.",
+    "drysuitSeenNoteLabel": "What you saw",
+    "drysuitSeenNotePlaceholder": "e.g. Own drysuit, three shore dives with us in October",
+    "recordDrysuitSeen": "I’ve seen them dive dry",
+    "recordingDrysuitSeen": "Recording…",
+    "clearDrysuitSeen": "Clear",
+    "clearingDrysuitSeen": "Clearing…",
     "heading": "Certification records",
     "addCard": "Add certification",
     "agency": "Agency",
@@ -65,12 +75,35 @@
     "checkWithAgencyMemberSignIn": "Check with {agency} (member sign-in)",
     "searchAgencyPortal": "Search the {agency} portal",
     "checkedWithAgencyBy": "Checked with {agency} by {name} on {date}.",
+    "listedByAgency": "Listed on {agency}’s page.",
     "agencyCheck": {
       "checking": "Checking with {agency}…",
+      "checkCard": "Check {card} with {agency}",
       "matched": "{agency} shows this certification. Marked certified.",
+      "matchedConfirmed": "{agency} shows this certification. Confirmed.",
       "levelUnconfirmed": "{agency} found this diver, but not at this level.",
-      "noRecord": "{agency} has no match for this name.",
-      "unreadable": "Couldn’t read {agency}’s page."
+      "cardUnconfirmed": "{agency} found this diver, but not this certification.",
+      "limitedCard": "{agency} shows a Junior or limited card.",
+      "juniorUnder15": "{agency} shows a Junior card. Under 15, record it by hand.",
+      "namesake": "{agency} shows a diver by this name, but not with this {identity, select, card_number {card number} birth_date {birth date} other {birth date or card number}}.",
+      "noRecord": "{agency} has no match for this {identity, select, card_number {card number} birth_date {name and birth date} other {name}}.",
+      "noRecordCmas": "The CMAS portal doesn’t list this certification. Federations are still adding theirs, so ask the federation named on the card.",
+      "severalRecords": "{agency} lists more than one diver by this name.",
+      "unreadable": "Couldn’t read {agency}’s page.",
+      "captcha": "{agency} is asking if you’re human. Check on its page.",
+      "pageChanged": "{agency}’s page has changed. Check on its page.",
+      "unsupported": "This copy of the extension doesn’t check {agency}. Update it.",
+      "notFoundOnPage": "Couldn’t find {name} on {agency}’s page. Open it and look.",
+      "noAnswer": "DiveDay didn’t answer. Reload to see where this certification stands.",
+      "signedOut": "Sign in to the PADI Pros’ Site first, then check again.",
+      "listed": {
+        "lead": "{agency} also shows these certifications. Add them? Each waits for Mark certified.",
+        "leadFor": "{agency} also shows these certifications for {name}. Add them? Each waits for Mark certified.",
+        "add": "Add",
+        "adding": "Adding…",
+        "added": "Added.",
+        "failed": "Couldn’t add them. Reload to see this diver’s certifications."
+      }
     },
     "sightCard": "Verify certification record",
     "sightCardHint": "The diver told us this level. Enter the agency and number from the certification record you verified.",
@@ -100,7 +133,7 @@
     "noticeRestoreRefused": "Couldn’t restore that diver, because an active diver now uses their email. Change that email, then try again.",
     "removedToast": "Diver deleted.",
     "noticeErased": "Personal data erased. The signed release, the trips, and the payments stay on file with the diver’s details gone. This cannot be undone.",
-    "noticeErasedProcessorOwed": "Personal data erased here, but something at Stripe isn’t finished. Open Reports to see what’s left and clear it. Until then this diver isn’t fully erased.",
+    "noticeErasedProcessorOwed": "Personal data erased here, but something at Stripe isn’t finished. Open Settings to see what’s left and clear it. Until then this diver isn’t fully erased.",
     "noticeNotAuthorized": "Deleting or restoring a diver is limited to owners and managers.",
     "noticeInvalid": "Check the diver’s name, email, and phone number.",
     "newDiverTitle": "Add a diver",
@@ -123,13 +156,26 @@
     "confirmMatchesLastDive": "Last dive day here: {date}",
     "confirmMatchesNoDiveDay": "No dive days here yet",
     "confirmMatchesBorn": "Born {date}",
-    "confirmMatchesSubmit": "Create new diver anyway"
+    "confirmMatchesSubmit": "Create new diver anyway",
+    "partyOnFile": "Some names here read like people already on file. Choose for each one.",
+    "party": {
+      "add": "Add another person",
+      "person": "Person {n}",
+      "under18": "Under 18",
+      "under18Hint": "A parent or legal guardian signs the release with them.",
+      "dob": "Date of birth",
+      "dobHint": "Optional. It sets a junior diver’s depth limit.",
+      "remove": "Remove",
+      "removeFor": "Remove person {n}",
+      "useOnFile": "Use the record on file",
+      "newPerson": "New person"
+    }
   },
   "list": {
     "addDiverAction": "Add diver",
     "viewAllDivers": "All divers",
     "viewDivingToday": "Diving today",
-    "viewNeedsAttention": "Needs attention",
+    "viewNeedsAttention": "Needs you",
     "viewMissingContact": "Missing contact",
     "viewRemoved": "Deleted",
     "viewsAriaLabel": "Roster views",
@@ -157,7 +203,16 @@
     "letterOther": "#",
     "pagination": {
       "total": "{count, plural, one {# diver} other {# divers}}"
-    }
+    },
+    "viewNotBack": "Not back in 12 months",
+    "lastDivedGroup": "Most recent dive first",
+    "lastDived": "last dived {date}",
+    "neverDived": "no dives yet",
+    "sortLabel": "Sort:",
+    "sortName": "Name",
+    "sortLastDived": "Last dived",
+    "sortAriaLabel": "Roster order",
+    "downloadList": "Download this list (CSV)"
   },
   "header": {
     "noContactDetails": "No contact details yet",
@@ -166,6 +221,8 @@
     "fullNameLabel": "Full name",
     "emailLabel": "Email",
     "phoneLabel": "Phone",
+    "clearDateAdultAttested": "They’re 18 or older",
+    "clearDateAdultAttestedMinor": "They’re 18 or older. The date on file makes them {age}. Ticking this says that date was wrong.",
     "dateOfBirthLabel": "Date of birth",
     "adultAttestedHint": "18 or older, per {name}",
     "adultAttestedHintNoName": "18 or older, per staff",
@@ -176,7 +233,12 @@
     "emergencyContactPhoneLabel": "Emergency contact phone",
     "saving": "Saving…",
     "saveDetails": "Save details",
-    "visits": "{count, plural, one {# visit} other {# visits}}"
+    "visits": "{count, plural, one {# visit} other {# visits}}",
+    "visitsSince": "{count, plural, one {# visit} other {# visits}} since {since}",
+    "lastOut": "Last out {date}",
+    "spent": "{amount} spent",
+    "broughtFriends": "Brought {count, plural, one {# friend} other {# friends}}",
+    "packageBalance": "Package: {left} of {of, plural, one {# dive} other {# dives}} left"
   },
   "bookActivity": {
     "courseOrDiveLabel": "Departure",
@@ -185,7 +247,7 @@
     "bookActivityButton": "Book",
     "noOpenActivities": "No upcoming departure has a seat open.",
     "noEmailNote": "No email on file. Hand this diver their waiver link in person, or add an address to their record.",
-    "bookDeparture": "Book a departure"
+    "bookDeparture": "Add a booking"
   },
   "payments": {
     "shopPaymentFallback": "Shop payment"
@@ -292,7 +354,7 @@
     "description": "A parent or guardian who co-signed this diver’s release can ask for their email to be erased. Their name and signature stay on the release, and the release is marked as redacted.",
     "summary": "Erase {email}",
     "confirmLabel": "Type {email} to confirm",
-    "confirmHint": "Erased from every release this guardian co-signed here. No undo.",
+    "confirmHint": "Erased from every release this guardian co-signed here, and it cannot be undone.",
     "erasing": "Erasing…",
     "erase": "Erase email"
   },
@@ -373,6 +435,7 @@
     "waiverSigned": "Signed",
     "waiverMedicalReview": "Medical review",
     "waiverGoodUntil": "Good until {date}",
+    "waiverRunsOut": "Runs out {date}, before the trip. Sign again.",
     "waiverLastSigned": "Last signed {date}",
     "waiverGuardianMissing": "Signed {date} by the diver alone; a parent or guardian still has to sign",
     "waiverHeldSince": "Held since {date}",
@@ -388,8 +451,16 @@
     "waiverChannelUnavailable": "Not set up"
   },
   "notices": {
+    "drysuitExperienceRecorded": "Recorded. The roster stops reminding you about a drysuit card for this diver. No card was added.",
+    "drysuitExperienceCleared": "Cleared. The roster reminds you about a drysuit card for this diver again.",
+    "drysuitExperienceUnchanged": "Nothing changed. The record already said that.",
+    "drysuitExperienceNotAuthorized": "Only an instructor, assistant instructor, divemaster, manager or owner can record seeing someone dive dry. Clearing it is for whoever recorded it, a manager or the owner.",
+    "drysuitExperienceNoteRequired": "Not recorded. Say briefly what you saw, in 200 characters or fewer.",
+    "drysuitExperienceNotRecordable": "Not recorded. This is only for someone else who dives dry with no drysuit card on file. A card on file is confirmed instead.",
     "alreadyBooked": "This diver is already booked on that activity.",
     "booked": "Booked. Review it below, then create and send the invoice.",
+    "bookedConfirmed": "Booked, and their confirmation is on its way. Review it below, then create and send the invoice.",
+    "bookedConfirmedNoInvoice": "Booked, and their confirmation is on its way.",
     "bookedNoInvoice": "Booked.",
     "bookedWaiverUndelivered": "Booked, but their waiver wasn’t emailed. Open the trip’s Divers tab to send it or share the link.",
     "bookedIdentityUnconfirmed": "Booked, but the seat is held until you confirm it’s the same person. Open the trip’s Divers tab to confirm it.",
@@ -408,6 +479,8 @@
     "coursePrerequisite": "Mark the required certification as certified before booking this course.",
     "courseRatioFull": "This session is at its instructor-to-student ratio limit. Assign another instructor, or choose another activity.",
     "courseUnstaffed": "Assign an instructor before booking this course.",
+    "dateOfBirthAgeUnstated": "To clear the date of birth, select “They’re 18 or older”.",
+    "dateOfBirthCourseMinimumAge": "Keep the date of birth: they’re booked on a course with a minimum age.",
     "deleted": "Diver deleted.",
     "duplicate": "Another diver already uses that email in this shop.",
     "duplicateCard": "Another live certification at this shop already has that number. Check the number, or delete the certification that holds it.",
@@ -419,7 +492,8 @@
     "invalid": "Check the details and try again.",
     "medicalClearanceDateInFuture": "That evaluation date is in the future.",
     "medicalClearanceDateRequired": "Give the date on the physician’s evaluation.",
-    "medicalClearanceDateTooEarly": "That evaluation predates the answers it would clear, so it can’t stand for them.",
+    "medicalClearanceDateTooEarly": "That letter is dated before the referral it would answer. It can stand only if it is dated on or after the diver’s first referral and within a year, covers every condition they disclosed, and you tick that the physician evaluated their current condition.",
+    "medicalClearanceRecordedEarlierHeld": "Recorded from the earlier letter. The diver’s other seat is still held by that earlier referral. Record the letter against it too.",
     "medicalClearanceDocumentFailed": "That evaluation file couldn’t be stored.",
     "medicalClearanceEvidenceRequired": "Name the physician, or attach their evaluation.",
     "medicalClearanceOutcomeRequired": "Say what the physician decided.",
@@ -431,12 +505,12 @@
     "mergeAlreadyRemoved": "One of these records is deleted. Restore it before merging.",
     "mergeAnonymized": "These records cannot be merged because one has already been erased.",
     "mergeAssessmentChanged": "Something on these records changed since you opened this comparison. Read it again before merging. Nothing was moved.",
-    "mergeBookingConflict": "Both records hold a seat on the same departure, which usually means two people. Nothing was moved.",
-    "mergeBookingConflictOn": "Both records hold a seat on {departure}, which usually means two people. Nothing was moved.",
+    "mergeBookingConflict": "Not merged: both records hold a seat on the same departure, which usually means two people.",
+    "mergeBookingConflictOn": "Not merged: both records hold a seat on {departure}, which usually means two people.",
     "mergeDepartureUnderway": "One of these records is on a departure that is out now. Merge after the boat is back.",
-    "mergeDifferentPeopleUnacknowledged": "Check that these records are the same person before merging. Nothing was moved.",
+    "mergeDifferentPeopleUnacknowledged": "Not merged yet: confirm these records are the same person first.",
     "mergeInvalid": "Choose one of the possible duplicate records and try again.",
-    "mergeRecordConflict": "These records have conflicting history that cannot be combined safely. Nothing was moved.",
+    "mergeRecordConflict": "Not merged: these records have conflicting history that cannot be combined safely.",
     "mergeStaffRecord": "Staff or crew records cannot be merged with a diver record.",
     "merged": "Diver records merged. The selected record is now the survivor.",
     "mergedRecordMoved": "That record was merged into this one. Nothing was saved, so make the change here.",
@@ -455,6 +529,7 @@
     "noteDeleted": "Diver note deleted.",
     "paymentNotConnected": "Payments aren’t connected yet. Connect them to charge this diver.",
     "personSaved": "Diver details updated.",
+    "personSavedAdultAnswerUnused": "Saved. A date of birth is on file, so “They’re 18 or older” wasn’t used.",
     "profileSaved": "Rental fit profile saved.",
     "removedReadOnly": "Restore this diver before changing their details.",
     "restoreRefused": "Couldn’t restore this diver, because an active diver now uses their email. Change that email, then try again.",
@@ -469,7 +544,7 @@
     "waiverPaperRecorded": "Paper waiver recorded, signed and on file.",
     "guardianEmailErased": "Guardian’s email erased from every release at this shop that carried it. Each one is marked as redacted.",
     "guardianEmailMismatch": "The email you typed doesn’t match, so nothing was erased. Type it exactly as it appears above.",
-    "guardianEmailNotFound": "That email is no longer on this diver’s releases. Nothing was erased.",
+    "guardianEmailNotFound": "Nothing erased: that email is no longer on this diver’s releases.",
     "notAuthorizedGuardianEmail": "Erasing a guardian’s email is limited to the shop owner. Ask them to do it."
   },
   "export": {
@@ -501,6 +576,7 @@
       "verify": "Verify it",
       "addCard": "Add certification",
       "openBooking": "Open the booking",
+      "openCourseRoster": "Open the course roster",
       "sendWaiver": "Send the waiver",
       "collect": "Collect",
       "editContact": "Add one"
@@ -520,6 +596,8 @@
     "canceled": "canceled",
     "tripCalledOff": "trip called off",
     "noShow": "no-show",
+    "turnedAway": "seen at the desk, turned away{reason, select, medical {: medical} waiver {: waiver} card {: card} age {: age} identity {: identity} payment {: payment} other {}}",
+    "turnedAwayRemoved": "seen at the desk, turned away{reason, select, medical {: medical} waiver {: waiver} card {: card} age {: age} identity {: identity} payment {: payment} other {}}, then removed",
     "notCountedBack": "not counted back aboard",
     "showAll": "Show all {count}",
     "newInvoice": "New invoice"
@@ -540,7 +618,7 @@
   },
   "waiver": {
     "earlierRefusal": "A physician did not clear this person on {date} (earlier waiver).",
-    "viewRefusedRecord": "View signed record",
+    "viewRefusedRecord": "View the physician’s decision",
     "referralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file. Record one, or ask.",
     "viewReferralRecord": "View the referral",
     "openClearanceDocument": "Open the physician’s evaluation",

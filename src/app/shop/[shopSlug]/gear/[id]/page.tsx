@@ -46,8 +46,8 @@ import { uuidParam } from "@/lib/uuid";
 // The register's restore, not a second one: one act, one code path, and a tag
 // collision on the way back answers on the page that holds the fleet it hit.
 import { restoreGearItemAction } from "../actions";
-import { AboardBoatField, aboardText, gearUnitHull } from "./_components/AboardBoatField";
 import { GearItemNotes } from "./_components/GearItemNotes";
+import { aboardText, gearUnitHull, KindFacts } from "./_components/KindFacts";
 import { StatusCard } from "./_components/StatusCard";
 import {
   checkOutGearReservationFromUnitAction,
@@ -479,7 +479,7 @@ export default async function GearUnitPage({
                 <Field label={t("gear.form.purchasedOn")} hint={t("gear.form.optionalHint")}>
                   <DateField name="purchasedOn" defaultValue={item.purchasedOn ?? ""} />
                 </Field>
-                <AboardBoatField hull={hull} t={t} />
+                <KindFacts hull={hull} item={item} t={t} />
                 <FieldActions>
                   <SubmitButton
                     pendingLabel={t("gear.unit.details.saving")}
@@ -502,7 +502,7 @@ export default async function GearUnitPage({
             timeZone={shop.timezone}
           />
         ) : (
-          <StatusCard item={item} held={held} t={t} />
+          <StatusCard detail={detail} held={held} t={t} locale={locale} zone={shop.timezone} />
         )}
       </div>
     </main>

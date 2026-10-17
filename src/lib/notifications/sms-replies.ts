@@ -43,12 +43,14 @@ const START_WORDS = new Set(["START", "UNSTOP"]);
 const inboundSchema = z.object({
   originationNumber: z.string().min(1),
   messageBody: z.string(),
+  /** The number the diver texted: DiveDay's sender, which may one day be a shop's own. */
+  destinationNumber: z.string().min(1).optional(),
 });
 
 export type SmsReply =
   | { kind: "stop"; phone: string }
   | { kind: "start"; phone: string }
-  | { kind: "late"; phone: string }
+  | { kind: "late"; phone: string; destinationNumber: string | null }
   | { kind: "ignored" };
 
 /**
@@ -75,6 +77,13 @@ export function parseSmsReply(raw: string): SmsReply {
   if (STOP_WORDS.has(word)) return { kind: "stop", phone };
   if (START_WORDS.has(word)) return { kind: "start", phone };
   const keyword = parseReplyKeyword(inbound.data.messageBody);
-  if (keyword.kind === "intent" && keyword.intent === "late") return { kind: "late", phone };
+  if (keyword.kind === "intent" && keyword.intent === "late")
+    return {
+      kind: "late",
+      phone,
+      destinationNumber: inbound.data.destinationNumber
+        ? (smsRecipient(inbound.data.destinationNumber) ?? null)
+        : null,
+    };
   return { kind: "ignored" };
 }

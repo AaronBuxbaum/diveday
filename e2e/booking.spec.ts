@@ -1,5 +1,8 @@
+import { diverTranslator } from "../src/i18n/messages";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
+  bookASeatAndOpenThread,
   choosePartySize,
   createTrip,
   daysFromNow,
@@ -11,12 +14,17 @@ import {
   openTripActivity,
   openTripFromBoard,
   openTripMore,
+  payCheckoutThroughWebhook,
   rosterRow,
   saveDiveIntent,
   signInAsOwner,
   signOut,
   threadStatus,
 } from "./helpers";
+
+// Sentences come from the bundles by key, so a rewording does not break the walk.
+const diver = diverTranslator("en-US");
+const staff = staffTranslator("en-US");
 
 test.describe("staff", () => {
   signedInAsOwner();
@@ -61,7 +69,7 @@ test.describe("staff", () => {
     // the list locator above is scoped against, one step later in the flow.
     await page.waitForURL(/\/s\/blue-mantis\/trips\//);
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
-    await expect(page.getByText("6 spots left")).toBeVisible();
+    await expect(page.getByText("6 seats left")).toBeVisible();
     // Two spellings on purpose, one per job: the hero's "$120" is a price
     // being *scanned*, which drops minor units it does not have
     // (`formatMoneyScanned`, issue #769); the money block's "$120.00" is the
@@ -70,7 +78,7 @@ test.describe("staff", () => {
     // diver-views review, finding 3).
     await expect(page.getByText("$120", { exact: true })).toHaveCount(1);
     // Twice inside the card: the fare line's value and the total it sums to.
-    await expect(page.getByLabel("Grab a spot").getByText("$120.00", { exact: true })).toHaveCount(
+    await expect(page.getByLabel("Grab a seat").getByText("$120.00", { exact: true })).toHaveCount(
       2,
     );
     await choosePartySize(page, 2);
@@ -78,7 +86,7 @@ test.describe("staff", () => {
     await page.getByLabel("Email", { exact: true }).fill(`nora-${e2eNow().getTime()}@example.com`);
     await page.getByLabel("Diver 2 name").fill("Sam Quinn");
     await page.getByLabel("Diver 2 email").fill(`sam-${e2eNow().getTime()}@example.com`);
-    await page.getByRole("button", { name: "Book these spots" }).click();
+    await page.getByRole("button", { name: "Book 2 seats" }).click();
     // Booking lands on the diver's own readiness page, not a branch of the
     // trip page — one page after booking, and the one the confirmation email
     // links to (ADR 20260820-one-page-after-booking).
@@ -91,7 +99,7 @@ test.describe("staff", () => {
       page.getByRole("heading", { level: 1, name: "You’ve got a seat, Nora." }),
     ).toBeVisible();
     await expect(threadStatus(page)).toContainText("Next: sign your waiver.");
-    await expect(page.getByText("After you dive, your log entry is waiting here.")).toBeVisible();
+    await expect(page.getByText(diver("ready.logEntryWaiting"))).toBeVisible();
 
     // No email provider is configured in the e2e fleet, so nothing left the
     // building — and the page must not claim two emails are coming when they
@@ -118,7 +126,7 @@ test.describe("staff", () => {
     // Both named spots are held atomically.
     await page.goto("/s/blue-mantis");
     const card = page.locator("li").filter({ hasText: title });
-    await expect(card.getByText("4 spots left").filter({ visible: true })).toBeVisible();
+    await expect(card.getByText("4 seats left").filter({ visible: true })).toBeVisible();
 
     // Staff sees the diver on the roster. Today is a work queue, so open the trip
     // from the schedule (staff cards link straight to the management view). This
@@ -186,9 +194,7 @@ test.describe("staff", () => {
     await page.getByRole("checkbox", { name: "Conditions hold" }).check();
     await page.getByLabel("Conditions overview").fill("The captain is watching a passing squall.");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
-    await expect(page.getByRole("status")).toContainText(
-      "Crew prediction published. Divers will see it now.",
-    );
+    await expect(page.getByRole("status")).toContainText(staff("trips.notices.conditions"));
     await signOut(page);
 
     await page.goto(`/s/blue-mantis/trips/${tripId}`);
@@ -223,7 +229,7 @@ test.describe("staff", () => {
     // routed to the editable trip view, never the public booking form.
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);
-    await expect(page.getByRole("button", { name: "Book my spot" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Book my seat" })).toHaveCount(0);
     // The details form waits behind its Edit disclosure (summary-first Overview).
     await openTripAbout(page);
     await page.getByText("Edit details", { exact: true }).click();
@@ -257,7 +263,7 @@ test.describe("staff", () => {
 
     await page.goto(manageUrl);
     await page.getByRole("button", { name: "Reinstate trip" }).click();
-    await expect(page.getByRole("status")).toContainText("Back on");
+    await expect(page.getByRole("status")).toContainText("The trip is back on the schedule.");
     await page.goto(tripWeek);
     await expect(
       page.locator("[data-week-board]").getByRole("link", { name: renamed, exact: true }),
@@ -298,13 +304,13 @@ test.describe("staff", () => {
     await page.locator("li").filter({ hasText: title }).getByRole("link", { name: title }).click();
     await page.getByLabel("Name", { exact: true }).fill("Ines Marchetti");
     await page.getByLabel("Email", { exact: true }).fill(`ines-${e2eNow().getTime()}@example.com`);
-    await page.getByRole("button", { name: /^Book (this spot|these spots)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page).toHaveURL(/\/ready\//);
     // The consent grammar the ADR's budget rule 6 asks for: who sees it. The
     // second half of that line — how to change it — is gone, because this page
     // is where it is changed.
     const dayOf = await openThreadStep(page, "dayof");
-    await expect(dayOf.getByText("Your crew sees how many picked each, not who.")).toBeVisible();
+    await expect(dayOf.getByText(diver("booking.intent.audience"))).toBeVisible();
     await saveDiveIntent(page, "Small life and photos");
 
     await signInAsOwner(page);
@@ -317,7 +323,7 @@ test.describe("staff", () => {
     await page.getByRole("heading", { name: "Buddy teams" }).click();
     // The whole of what D23 gets: an aggregate on the team builder, with no
     // name in it and no suggested pairing.
-    const aboard = page.getByText(/^Aboard today:/);
+    const aboard = page.getByText(/^On the list today:/);
     await expect(aboard).toBeVisible();
     await expect(aboard).toContainText("1 looking for small life");
     await expect(aboard).not.toContainText("Ines");
@@ -341,7 +347,7 @@ test.describe("staff", () => {
     await page.locator("li").filter({ hasText: title }).getByRole("link", { name: title }).click();
     await page.getByLabel("Name", { exact: true }).fill("Ruth Okafor");
     await page.getByLabel("Email", { exact: true }).fill(`ruth-${e2eNow().getTime()}@example.com`);
-    await page.getByRole("button", { name: /^Book (this spot|these spots)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page).toHaveURL(/\/ready\//);
 
     // The offers mount on the *saved* answer, so they cannot be on screen
@@ -351,13 +357,13 @@ test.describe("staff", () => {
     await saveDiveIntent(page, "Getting comfortable again");
     const dayOf = await openThreadStep(page, "dayof");
     await expect(dayOf.getByText("Anything that would help?")).toBeVisible();
-    await expect(dayOf.getByText("None of these changes whether you can book.")).toBeVisible();
+    await expect(dayOf.getByText(diver("booking.reEntry.noGate"))).toBeVisible();
     await dayOf
       .getByRole("radio", { name: "A word with the divemaster before we get in." })
       .check();
-    await dayOf.getByRole("button", { name: "Save", exact: true }).last().click();
+    await dayOf.getByRole("button", { name: "Save day-of details" }).click();
     await expect(
-      page.getByRole("status").filter({ hasText: "The crew will look out for you" }),
+      page.getByRole("status").filter({ hasText: "Saved. The crew will see your answers" }),
     ).toBeVisible();
 
     // **The ask reaches the crew as a fact beside the name.** This assertion
@@ -392,12 +398,12 @@ test.describe("staff", () => {
     await page.locator("li").filter({ hasText: title }).getByRole("link", { name: title }).click();
     await page.getByLabel("Name", { exact: true }).fill("Tom Reyes");
     await page.getByLabel("Email", { exact: true }).fill(`tom-${e2eNow().getTime()}@example.com`);
-    await page.getByRole("button", { name: /^Book (this spot|these spots)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page).toHaveURL(/\/ready\//);
     await saveDiveIntent(page, "Getting comfortable again");
     // The question stands; the offers do not.
     const dayOf = await openThreadStep(page, "dayof");
-    await expect(dayOf.getByText("Your crew sees how many picked each, not who.")).toBeVisible();
+    await expect(dayOf.getByText(diver("booking.intent.audience"))).toBeVisible();
     await expect(page.getByText("Anything that would help?")).toHaveCount(0);
   });
 });
@@ -422,7 +428,7 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
   await expect(anyTripLink).toHaveAttribute("href", "/s/blue-mantis#last-minute-list");
   await anyTripLink.click();
   await expect(
-    page.getByRole("heading", { name: "Want a deal on a last-minute spot?" }),
+    page.getByRole("heading", { name: "Want a deal on a last-minute seat?" }),
   ).toBeVisible();
   await expect(page.getByText(/Already have one specific trip in mind/)).toBeVisible();
   await page.goBack();
@@ -496,7 +502,7 @@ test.describe("as owner", () => {
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name", { exact: true }).fill("Nora Quinn");
     await page.getByLabel("Email", { exact: true }).fill(email);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
 
     // A different name on the same inbox books trip B — reuses Nora's record.
@@ -513,7 +519,7 @@ test.describe("as owner", () => {
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name", { exact: true }).fill("Ben Quinn");
     await page.getByLabel("Email", { exact: true }).fill(email);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).toBeVisible();
 
     // Staff open trip B's roster: the diver is held on identity, not ready.
@@ -575,7 +581,7 @@ test("a tampered readiness token reveals nothing, and ?booking= no longer opens 
   await page.getByLabel("Name").fill("Casey Ford");
   await page.getByLabel("Email").fill(`casey-${e2eNow().getTime()}@example.com`);
   const tripUrl = page.url();
-  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page).toHaveURL(/\/ready\//);
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Casey/ })).toBeVisible();
 
@@ -593,7 +599,7 @@ test("a tampered readiness token reveals nothing, and ?booking= no longer opens 
   // and no unframed booking mints a `confirm` token in the first place.
   await page.goto(`${tripUrl}?booking=${realToken}`);
   await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).not.toBeVisible();
-  await expect(page.getByRole("heading", { name: "Grab a spot" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Grab a seat" })).toBeVisible();
 });
 
 /**
@@ -652,7 +658,7 @@ test("a dead departure link keeps the diver at the shop they were trying to reac
   const response = await page.goto(dead);
   expect(response?.status(), dead).toBe(404);
 
-  await expect(page.getByRole("heading", { name: "That page isn’t here any more" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "That page isn’t here" })).toBeVisible();
   // The shop's own chrome, from the namespace layout: whose page this is, and
   // the nav a diver can carry on browsing from.
   await expect(page.getByRole("banner").getByText("Blue Mantis Divers")).toBeVisible();
@@ -675,11 +681,64 @@ test("a mistyped page under a shop keeps the diver at that shop", async ({ page 
   const response = await page.goto(dead);
   expect(response?.status(), dead).toBe(404);
 
-  await expect(page.getByRole("heading", { name: "That page isn’t here any more" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "That page isn’t here" })).toBeVisible();
   await expect(page.getByRole("banner").getByText("Blue Mantis Divers")).toBeVisible();
   await expect(page.getByRole("link", { name: "Back to the homepage" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "See what’s coming up" })).toHaveAttribute(
     "href",
     "/s/blue-mantis",
   );
+});
+
+/**
+ * **A card payment at booking settles the seat** (ADR
+ * 20260721-checkout-at-booking). The booking form opens a Stripe Checkout and
+ * the seat is paid only when Stripe says so: a `checkout.session.completed`
+ * with `payment_status: "paid"` on the real webhook. This fleet has no Stripe
+ * key, so the form falls back to pay-later and `seed-booking-checkout` opens
+ * the checkout the form would have; the signed event does the rest.
+ *
+ * A shop of its own (ADR 20260815-per-test-private-shops): connecting a
+ * Stripe account is shop configuration.
+ */
+test("a diver's card payment at booking settles their Pay step", async ({
+  page,
+  request,
+  privateShop,
+}) => {
+  test.setTimeout(90_000);
+  const SHOP = privateShop.slug;
+  const email = "carla.card@example.com";
+
+  await page.goto(`/s/${SHOP}`);
+  await page.locator(`a[href^="/s/${SHOP}/trips/"]`).first().click();
+  await bookASeatAndOpenThread(page, "Carla Card", email);
+  const thread = page.url();
+  const pay = page.locator("li[data-thread-step='pay']");
+  // This departure does not gate on payment, so an unpaid seat shows no Pay
+  // step at all; money that settles earns one, done.
+  const settled = page.locator("li[data-thread-step='pay'][data-step-state='done']");
+  await expect(threadStatus(page)).toBeVisible();
+  await expect(settled).toHaveCount(0);
+
+  const connected = await request.post(
+    `/api/test/seed-stripe-account?slug=${encodeURIComponent(SHOP)}`,
+  );
+  expect(connected.ok()).toBe(true);
+  const opened = await request.post(
+    `/api/test/seed-booking-checkout?slug=${encodeURIComponent(SHOP)}&email=${encodeURIComponent(email)}`,
+  );
+  expect(opened.ok()).toBe(true);
+  const checkout = await opened.json();
+  expect(checkout.amountCents).toBeGreaterThan(0);
+
+  // Still unpaid: an open checkout is not a payment.
+  await page.goto(thread);
+  await expect(threadStatus(page)).toBeVisible();
+  await expect(settled).toHaveCount(0);
+
+  await payCheckoutThroughWebhook(request, checkout);
+
+  await page.goto(thread);
+  await expect(pay).toHaveAttribute("data-step-state", "done");
 });

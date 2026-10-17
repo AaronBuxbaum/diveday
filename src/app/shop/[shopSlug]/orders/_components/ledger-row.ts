@@ -1,14 +1,38 @@
-import type { ShopOrderListRow } from "@/db/orders";
+import type { LedgerRow } from "@/db/orders";
 import { ORDER_COLLECTION_KEYS, ORDER_STATUS_KEYS, ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents } from "@/lib/format";
 import type { OrderLedgerRow } from "./OrdersLedger";
 
-/** One order, worded and formatted for the day ledger (`OrdersLedger`). */
+/**
+ * One ledger row, worded and formatted for the day ledger (`OrdersLedger`):
+ * an order, or a seat a diver paid for online at booking (fourth UX review,
+ * item 18), which opens its departure, since it has no order record of its own.
+ */
 export function orderLedgerRow(
-  row: ShopOrderListRow,
+  row: LedgerRow,
   { t, locale, shopSlug }: { t: StaffTranslator; locale: string; shopSlug: string },
 ): OrderLedgerRow {
+  if (row.kind === "seat") {
+    const { seat } = row;
+    const seatAmount = formatMoneyCents(seat.amountCents, seat.currency, locale);
+    return {
+      id: seat.id,
+      href: `/shop/${shopSlug}/trips/${seat.trip.id}`,
+      linkLabel: t("orders.index.ledger.rowLabel", {
+        name: seat.person.fullName,
+        amount: seatAmount,
+      }),
+      diver: seat.person.fullName,
+      detail: seat.trip.title,
+      status:
+        seat.status === "paid"
+          ? null
+          : { word: t(ORDER_STATUS_KEYS[seat.status]), tone: ORDER_STATUS_TONES[seat.status] },
+      method: t("orders.index.ledger.paidAtBooking"),
+      amount: seatAmount,
+    };
+  }
   const amount = formatMoneyCents(row.order.totalCents, row.order.currency, locale);
   return {
     id: row.order.id,

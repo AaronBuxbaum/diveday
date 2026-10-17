@@ -1,6 +1,10 @@
-import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, ne } from "drizzle-orm";
-import { isStaff } from "@/lib/authz";
-import { type CalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
+import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { canManageWaiverTemplates, isStaff } from "@/lib/authz";
+import {
+  type CalendarDate,
+  calendarDateInTimezone,
+  isValidCalendarDate,
+} from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
   COURSE_FORM_INTEGRITY_VERSION_ERASED,
@@ -16,6 +20,7 @@ import {
   courseFormGaps,
   courseFormTextChanged,
   fillCourseFormText,
+  isYouthForm,
   normalizeCourseFormText,
   type RequiredCourseForm,
 } from "@/lib/course-forms";
@@ -35,7 +40,10 @@ import { hasReturned } from "@/lib/trips";
 import { loadActiveStaffRoles } from "./authz";
 import { verifyBookingCapability } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
+import { publishManifestEventsForPerson } from "./manifest-events";
 import {
+  activityEvents,
+  bookingCapabilities,
   bookings,
   courseFormRecords,
   courseFormRequirements,
@@ -48,7 +56,8 @@ import {
   tripAssignments,
   trips,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { resolveTrainingMarks, teachesSessionAsRostered } from "./training-mark-resolve";
+import { livePerson, liveTrip } from "./trips-live";
 
 /**
  * **Course forms**, the stateful half (ADR 20261008-course-forms). The rule
@@ -69,6 +78,8 @@ export type CourseFormSummary = {
   version: number;
   versionId: string;
   updatedAt: Date;
+  /** A medical statement: keeps blocking boarding whatever the switch says (#2337). */
+  medicalScreening: boolean;
 };
 
 /**
@@ -84,6 +95,7 @@ export async function listCourseForms(
   const rows = await db
     .select({
       id: courseForms.id,
+      medicalScreening: courseForms.medicalScreening,
       createdAt: courseForms.createdAt,
       versionId: courseFormVersions.id,
       version: courseFormVersions.version,
@@ -113,6 +125,7 @@ export async function listCourseForms(
       version: row.version,
       versionId: row.versionId,
       updatedAt: row.versionCreatedAt,
+      medicalScreening: row.medicalScreening,
     });
   }
   return [...current.values()].sort(
@@ -131,12 +144,18 @@ function byCodePoint(a: string, b: string): number {
 /** A new form, at version 1. */
 export async function createCourseForm(
   db: AppDb,
-  input: { shopId: string; title: string; body: string; actorPersonId: string },
+  input: {
+    shopId: string;
+    title: string;
+    body: string;
+    actorPersonId: string;
+    medicalScreening?: boolean;
+  },
 ): Promise<{ id: string }> {
   return db.transaction(async (tx) => {
     const [form] = await tx
       .insert(courseForms)
-      .values({ shopId: input.shopId })
+      .values({ shopId: input.shopId, medicalScreening: input.medicalScreening ?? false })
       .returning({ id: courseForms.id });
     if (!form) throw new Error("createCourseForm: insert returned no row");
     await tx.insert(courseFormVersions).values({
@@ -152,7 +171,7 @@ export async function createCourseForm(
 }
 
 export type SaveCourseFormOutcome =
-  | { ok: true; versioned: boolean }
+  | { ok: true; versioned: boolean; marked: boolean }
   | { ok: false; reason: "not_found" };
 
 /**
@@ -163,11 +182,19 @@ export type SaveCourseFormOutcome =
  */
 export async function saveCourseFormVersion(
   db: AppDb,
-  input: { shopId: string; formId: string; title: string; body: string; actorPersonId: string },
+  input: {
+    shopId: string;
+    formId: string;
+    title: string;
+    body: string;
+    actorPersonId: string;
+    /** Absent leaves the marker as it is. */
+    medicalScreening?: boolean;
+  },
 ): Promise<SaveCourseFormOutcome> {
   return db.transaction(async (tx) => {
     const [form] = await tx
-      .select({ id: courseForms.id })
+      .select({ id: courseForms.id, medicalScreening: courseForms.medicalScreening })
       .from(courseForms)
       .where(
         and(
@@ -191,8 +218,38 @@ export async function saveCourseFormVersion(
       title: normalizeCourseFormText(input.title),
       body: normalizeCourseFormText(input.body),
     };
+    // The marker is the form's identity, not its words: flipping it asks no
+    // student to sign again, so it never writes a version.
+    const marked =
+      input.medicalScreening !== undefined && input.medicalScreening !== form.medicalScreening;
+    if (marked) {
+      await tx
+        .update(courseForms)
+        .set({ medicalScreening: input.medicalScreening })
+        .where(and(eq(courseForms.id, form.id), eq(courseForms.shopId, input.shopId)));
+      // Not a version, so this line is the mark's whole history: who flipped a
+      // gate the boarding rail reads, and which way (issue #2337).
+      const [actor] = await tx
+        .select({ name: people.fullName })
+        .from(people)
+        .where(
+          and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId), livePerson()),
+        )
+        .limit(1);
+      await tx.insert(activityEvents).values({
+        shopId: input.shopId,
+        actorPersonId: input.actorPersonId,
+        code: "course_form_medical_changed",
+        params: {
+          actor: actor?.name ?? "",
+          form: next.title,
+          marked: input.medicalScreening ? "yes" : "no",
+        },
+        occurredAt: nowDate(),
+      });
+    }
     if (current && !courseFormTextChanged(current, next)) {
-      return { ok: true, versioned: false } as const;
+      return { ok: true, versioned: false, marked } as const;
     }
     await tx.insert(courseFormVersions).values({
       shopId: input.shopId,
@@ -202,7 +259,7 @@ export async function saveCourseFormVersion(
       body: next.body,
       createdByPersonId: input.actorPersonId,
     });
-    return { ok: true, versioned: true } as const;
+    return { ok: true, versioned: true, marked } as const;
   });
 }
 
@@ -267,18 +324,89 @@ export async function listCourseFormRequirements(
 }
 
 /**
+ * The age bound on each of a course's live form requirements that has one
+ * (issue #2265), by form id, for the course editor's box.
+ */
+export async function listCourseFormAgeBounds(
+  db: DbExecutor,
+  shopId: string,
+  courseId: string,
+): Promise<Map<string, number>> {
+  const rows = await db
+    .select({
+      formId: courseFormRequirements.formId,
+      maxAgeYears: courseFormRequirements.maxAgeYears,
+    })
+    .from(courseFormRequirements)
+    .where(
+      and(
+        eq(courseFormRequirements.shopId, shopId),
+        eq(courseFormRequirements.courseId, courseId),
+        isNull(courseFormRequirements.deletedAt),
+        isNotNull(courseFormRequirements.maxAgeYears),
+      ),
+    );
+  return new Map(
+    rows.flatMap((row) =>
+      row.maxAgeYears === null ? [] : [[row.formId, row.maxAgeYears] as const],
+    ),
+  );
+}
+
+/** The age bounds a course form requirement may carry: a child's age, never zero. */
+export const COURSE_FORM_MAX_AGE_MIN = 1;
+export const COURSE_FORM_MAX_AGE_MAX = 120;
+
+/**
  * Set the forms a course requires, in the order given. Ids that are not one
  * of this shop's live forms are refused as a whole rather than dropped — a
  * list the shop did not mean is worse than no change. A form taken off the
  * list is soft-deleted from it; one still on it keeps its row and takes its
  * new position.
+ *
+ * `maxAgeYears`, when given, is the whole answer for every listed form: a
+ * form it names is asked only of students at or under that age (issue
+ * #2265), and one it leaves out asks everyone. Absent, each kept row keeps
+ * its bound and a new one has none. A bound out of range is refused whole,
+ * and so is one on a medical-screening form, which every student answers.
+ *
+ * **Asking fewer students is taking a form off** (reviews of #2265, G1):
+ * dropping a form, putting a bound on a form everyone was asked, or lowering
+ * a bound. A writer without `mayNarrow` (an owner's or manager's call,
+ * `canPersonManageWaiverTemplates`) is refused all three; adding a form,
+ * raising a bound or clearing one asks more students, and stays open.
  */
 export async function setCourseFormRequirements(
   db: AppDb,
-  input: { shopId: string; courseId: string; formIds: readonly string[]; now?: Date },
-): Promise<{ ok: true } | { ok: false; reason: "not_found" | "unknown_form" }> {
+  input: {
+    shopId: string;
+    courseId: string;
+    formIds: readonly string[];
+    maxAgeYears?: ReadonlyMap<string, number>;
+    /** Whether this writer may ask fewer students (drop a form, add or lower a bound). */
+    mayNarrow: boolean;
+    now?: Date;
+  },
+): Promise<
+  | { ok: true }
+  | {
+      ok: false;
+      reason: "not_found" | "unknown_form" | "invalid_age" | "medical_bound" | "not_authorized";
+    }
+> {
   const now = input.now ?? nowDate();
   const formIds = [...new Set(input.formIds)];
+  const bounds = input.maxAgeYears;
+  if (
+    bounds &&
+    [...bounds.values()].some(
+      (age) =>
+        !Number.isInteger(age) || age < COURSE_FORM_MAX_AGE_MIN || age > COURSE_FORM_MAX_AGE_MAX,
+    )
+  ) {
+    return { ok: false, reason: "invalid_age" };
+  }
+  const boundOf = (formId: string) => (bounds ? { maxAgeYears: bounds.get(formId) ?? null } : {});
   return db.transaction(async (tx) => {
     const [course] = await tx
       .select({ id: courses.id })
@@ -288,7 +416,7 @@ export async function setCourseFormRequirements(
     if (!course) return { ok: false, reason: "not_found" } as const;
     if (formIds.length > 0) {
       const live = await tx
-        .select({ id: courseForms.id })
+        .select({ id: courseForms.id, medicalScreening: courseForms.medicalScreening })
         .from(courseForms)
         .where(
           and(
@@ -298,9 +426,16 @@ export async function setCourseFormRequirements(
           ),
         );
       if (live.length !== formIds.length) return { ok: false, reason: "unknown_form" } as const;
+      if (live.some((form) => form.medicalScreening && bounds?.has(form.id))) {
+        return { ok: false, reason: "medical_bound" } as const;
+      }
     }
     const existing = await tx
-      .select({ id: courseFormRequirements.id, formId: courseFormRequirements.formId })
+      .select({
+        id: courseFormRequirements.id,
+        formId: courseFormRequirements.formId,
+        maxAgeYears: courseFormRequirements.maxAgeYears,
+      })
       .from(courseFormRequirements)
       .where(
         and(
@@ -311,6 +446,15 @@ export async function setCourseFormRequirements(
       );
     const keep = new Set(formIds);
     const dropped = existing.filter((row) => !keep.has(row.formId)).map((row) => row.id);
+    if (!input.mayNarrow) {
+      const narrows = existing.some((row) => {
+        if (!keep.has(row.formId)) return true;
+        if (!bounds) return false;
+        const next = bounds.get(row.formId);
+        return next !== undefined && (row.maxAgeYears === null || next < row.maxAgeYears);
+      });
+      if (narrows) return { ok: false, reason: "not_authorized" } as const;
+    }
     if (dropped.length > 0) {
       await tx
         .update(courseFormRequirements)
@@ -323,12 +467,16 @@ export async function setCourseFormRequirements(
       if (id) {
         await tx
           .update(courseFormRequirements)
-          .set({ position })
+          .set({ position, ...boundOf(formId) })
           .where(eq(courseFormRequirements.id, id));
       } else {
-        await tx
-          .insert(courseFormRequirements)
-          .values({ shopId: input.shopId, courseId: course.id, formId, position });
+        await tx.insert(courseFormRequirements).values({
+          shopId: input.shopId,
+          courseId: course.id,
+          formId,
+          position,
+          ...boundOf(formId),
+        });
       }
     }
     return { ok: true } as const;
@@ -357,7 +505,10 @@ export async function setCourseFormRequirements(
  *
  * Callers run it in the transaction that created or synced the course. The
  * shop row is locked first, so two courses synced at once cannot both create
- * the same title.
+ * the same title. `for no key update`, not `for update`: the caller has just
+ * inserted a course naming this shop, which holds a `KEY SHARE` on the row, so
+ * two concurrent syncs upgrading to `update` would deadlock on one row (the
+ * story is in `self-declared-cards.ts`).
  */
 export async function attachStandardCourseForms(
   db: DbExecutor,
@@ -366,9 +517,20 @@ export async function attachStandardCourseForms(
     courseId: string;
     titles: readonly string[];
     offeredBefore?: readonly string[];
+    /**
+     * The age bound the template puts on a form, by its title (issue #2265):
+     * set on the requirement this attaches, never on one the shop already has.
+     */
+    maxAgeByTitle?: ReadonlyMap<string, number>;
   },
 ): Promise<{ created: number; attached: number }> {
   const titleKey = (title: string) => normalizeCourseFormText(title).toLocaleLowerCase("en-US");
+  const boundByTitle = new Map(
+    [...(input.maxAgeByTitle ?? new Map<string, number>())].map(([title, age]) => [
+      titleKey(title),
+      age,
+    ]),
+  );
   const offeredBefore = new Set((input.offeredBefore ?? []).map(titleKey));
   const titles = [...new Set(input.titles.map(normalizeCourseFormText))].filter(
     (title) => title !== "" && !offeredBefore.has(titleKey(title)),
@@ -378,20 +540,25 @@ export async function attachStandardCourseForms(
     .select({ id: shops.id })
     .from(shops)
     .where(eq(shops.id, input.shopId))
-    .for("update");
+    .for("no key update");
   const [course] = await db
     .select({ id: courses.id })
     .from(courses)
     .where(and(eq(courses.id, input.courseId), eq(courses.shopId, input.shopId)));
   if (!shop || !course) return { created: 0, attached: 0 };
 
-  const formByTitle = new Map(
-    (await listCourseForms(db, input.shopId)).map((form) => [titleKey(form.title), form.id]),
+  const shopForms = await listCourseForms(db, input.shopId);
+  const formByTitle = new Map(shopForms.map((form) => [titleKey(form.title), form.id]));
+  // A medical statement is everyone's: no template bound lands on one (G3).
+  const medicalForms = new Set(
+    shopForms.filter((form) => form.medicalScreening).map((form) => form.id),
   );
   const current = await db
     .select({
+      id: courseFormRequirements.id,
       formId: courseFormRequirements.formId,
       position: courseFormRequirements.position,
+      maxAgeYears: courseFormRequirements.maxAgeYears,
     })
     .from(courseFormRequirements)
     .where(
@@ -451,10 +618,28 @@ export async function attachStandardCourseForms(
       formByTitle.set(titleKey(title), formId);
       created += 1;
     }
-    if (required.has(formId) || declined.has(formId)) continue;
-    await db
-      .insert(courseFormRequirements)
-      .values({ shopId: input.shopId, courseId: course.id, formId, position });
+    const bound = medicalForms.has(formId) ? undefined : boundByTitle.get(titleKey(title));
+    if (required.has(formId)) {
+      // Asked of everyone already, and the template, new in this version,
+      // names an age for it (reviews G2/H5 of #2265): the agency's bound
+      // applies. A shop's own age on it stands.
+      const row = current.find((entry) => entry.formId === formId);
+      if (bound !== undefined && row && row.maxAgeYears === null) {
+        await db
+          .update(courseFormRequirements)
+          .set({ maxAgeYears: bound })
+          .where(eq(courseFormRequirements.id, row.id));
+      }
+      continue;
+    }
+    if (declined.has(formId)) continue;
+    await db.insert(courseFormRequirements).values({
+      shopId: input.shopId,
+      courseId: course.id,
+      formId,
+      position,
+      maxAgeYears: bound ?? null,
+    });
     required.add(formId);
     position += 1;
     attached += 1;
@@ -540,7 +725,10 @@ export async function requiredCourseFormsForTrips(
       tripId: trips.id,
       startsAt: trips.startsAt,
       formId: courseForms.id,
+      medicalScreening: courseForms.medicalScreening,
       position: courseFormRequirements.position,
+      maxAgeYears: courseFormRequirements.maxAgeYears,
+      timezone: shops.timezone,
       requiredSince: courseFormRequirements.createdAt,
       versionId: courseFormVersions.id,
       version: courseFormVersions.version,
@@ -552,6 +740,7 @@ export async function requiredCourseFormsForTrips(
     .innerJoin(courseFormRequirements, eq(courseFormRequirements.courseId, trips.courseId))
     .innerJoin(courseForms, eq(courseForms.id, courseFormRequirements.formId))
     .innerJoin(courseFormVersions, eq(courseFormVersions.formId, courseForms.id))
+    .innerJoin(shops, eq(shops.id, trips.shopId))
     .where(
       and(
         eq(trips.shopId, shopId),
@@ -597,6 +786,15 @@ export async function requiredCourseFormsForTrips(
       version: asked.version,
       title: asked.title,
       position: current.position,
+      ...(current.medicalScreening ? { medicalScreening: true } : {}),
+      // Measured on the session's first day in the shop's zone (issue #2265).
+      // A medical statement is everyone's, whatever a row says (G3).
+      ...(current.maxAgeYears !== null && !current.medicalScreening
+        ? {
+            maxAgeYears: current.maxAgeYears,
+            sessionFirstDay: calendarDateInTimezone(current.startsAt, current.timezone),
+          }
+        : {}),
       ...(alsoAccepted.length > 0 ? { alsoAccepted } : {}),
     });
     result.set(current.tripId, list);
@@ -657,7 +855,11 @@ type Enrollment = {
   personId: string;
   fullName: string;
   dateOfBirth: string | null;
+  /** The seat's booker said "Under 18" (`bookings.minor_declared_at`). */
+  minorDeclared: boolean;
   identityHeld: boolean;
+  /** The seat this was reached from when it is not the enrollment's own (a training mark). */
+  viaBookingId: string | null;
   tripId: string;
   tripTitle: string;
   startsAt: Date;
@@ -704,20 +906,22 @@ async function sessionInstructorNames(
   return [...new Set(names)].join(", ");
 }
 
-async function enrollmentFor(
-  db: DbExecutor,
-  shopId: string,
-  bookingId: string,
-): Promise<Enrollment | null> {
+/** One seat's row, as `enrollmentFor` reads it. Null when not a live diver seat of this shop. */
+async function enrollmentRow(db: DbExecutor, shopId: string, bookingId: string) {
   const [row] = await db
     .select({
       bookingId: bookings.id,
       personId: people.id,
       fullName: people.fullName,
       dateOfBirth: people.dateOfBirth,
+      minorDeclaredAt: bookings.minorDeclaredAt,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      participantType: bookings.participantType,
+      trainingEnrollmentBookingId: bookings.trainingEnrollmentBookingId,
+      trainingMarkedAt: bookings.trainingMarkedAt,
       tripId: trips.id,
       tripTitle: trips.title,
+      courseId: trips.courseId,
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
       timezone: shops.timezone,
@@ -734,6 +938,9 @@ async function enrollmentFor(
         eq(bookings.id, bookingId),
         eq(bookings.shopId, shopId),
         ne(bookings.status, "cancelled"),
+        // A snorkeler or a rider on a course session is not enrolled, and owes
+        // none of its forms (issue #2226).
+        eq(bookings.participantType, "diver"),
         eq(people.shopId, shopId),
         eq(trips.shopId, shopId),
         ne(trips.status, "cancelled"),
@@ -741,13 +948,22 @@ async function enrollmentFor(
       ),
     )
     .limit(1);
-  if (!row) return null;
+  return row ?? null;
+}
+
+async function toEnrollment(
+  db: DbExecutor,
+  shopId: string,
+  row: NonNullable<Awaited<ReturnType<typeof enrollmentRow>>>,
+): Promise<Enrollment> {
   return {
     bookingId: row.bookingId,
     personId: row.personId,
     fullName: row.fullName,
     dateOfBirth: row.dateOfBirth,
+    minorDeclared: row.minorDeclaredAt !== null,
     identityHeld: row.identityUnconfirmedAt !== null,
+    viaBookingId: null,
     tripId: row.tripId,
     tripTitle: row.tripTitle,
     startsAt: row.startsAt,
@@ -758,6 +974,85 @@ async function enrollmentFor(
       courseTitle: row.courseTitle ?? row.tripTitle,
       instructorNames: await sessionInstructorNames(db, shopId, row.tripId),
     },
+  };
+}
+
+/**
+ * Whether any link to this seat that opens its forms (`readiness`,
+ * `course_forms`) was revoked at or after `since`. A null `since` (no mark
+ * time to measure from) counts as taken back: fail closed.
+ */
+async function linksTakenBackSince(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+  since: Date | null,
+): Promise<boolean> {
+  if (!since) return true;
+  const [row] = await db
+    .select({ id: bookingCapabilities.id })
+    .from(bookingCapabilities)
+    .where(
+      and(
+        eq(bookingCapabilities.shopId, shopId),
+        eq(bookingCapabilities.bookingId, bookingId),
+        inArray(bookingCapabilities.purpose, ["readiness", "course_forms"]),
+        gte(bookingCapabilities.revokedAt, since),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
+}
+
+/**
+ * **The enrollment a booking's forms belong to.** A course seat is its own. A
+ * seat on an ordinary departure that staff marked as a training dive (issue
+ * #2275) resolves to the course seat its mark names, through the one resolver
+ * every reader shares (`resolveTrainingMarks`): the forms asked, the
+ * signatures read and the record written are all the enrollment's, so signing
+ * once covers both seats and a record never lands on the charter. A mark that
+ * no longer stands resolves to nothing, so nobody signs against it; boarding
+ * says `training_mark_invalid` instead. A hold on either seat holds the
+ * signing.
+ */
+async function enrollmentFor(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<Enrollment | null> {
+  const row = await enrollmentRow(db, shopId, bookingId);
+  if (!row) return null;
+  if (row.courseId !== null || row.trainingEnrollmentBookingId === null) {
+    return toEnrollment(db, shopId, row);
+  }
+  const state = (
+    await resolveTrainingMarks(db, shopId, [
+      {
+        bookingId,
+        enrollmentBookingId: row.trainingEnrollmentBookingId,
+        seat: {
+          personId: row.personId,
+          participantType: row.participantType,
+          onCourseSession: false,
+          departureStartsAt: row.startsAt,
+        },
+      },
+    ])
+  ).get(bookingId);
+  if (!state?.valid) return null;
+  const target = await enrollmentRow(db, shopId, state.enrollmentBookingId);
+  if (!target || target.courseId === null || target.personId !== row.personId) return null;
+  // Links the shop took back from the course seat since the mark (a repoint,
+  // a claim, a cancel) are not reopened through the charter's (security
+  // review U2). The course seat's own route stays the shop's to reissue.
+  if (await linksTakenBackSince(db, shopId, target.bookingId, row.trainingMarkedAt)) return null;
+  const enrollment = await toEnrollment(db, shopId, target);
+  return {
+    ...enrollment,
+    identityHeld: enrollment.identityHeld || row.identityUnconfirmedAt !== null,
+    viaBookingId: bookingId,
+    // Either seat's "Under 18" asks the guardian: one flag for both (fail closed).
+    minorDeclared: enrollment.minorDeclared || row.minorDeclaredAt !== null,
   };
 }
 
@@ -794,14 +1089,20 @@ export async function getCourseFormsForBooking(
       enrollment.tripId,
     ) ?? [];
   if (required.length === 0) return { enrollment, required, outstanding: [] };
-  const signatures = await courseFormSignaturesForBookings(db, shopId, [bookingId]);
+  // The enrollment's, never the asked-for seat's: a charter seat carrying a
+  // training mark reads the course seat's records (issue #2275).
+  const signatures = await courseFormSignaturesForBookings(db, shopId, [enrollment.bookingId]);
   const owed = courseFormGaps({
     shopId,
-    bookingId,
+    bookingId: enrollment.bookingId,
     personId: enrollment.personId,
     required,
     signatures,
-    signer: { dateOfBirth: enrollment.dateOfBirth, timezone: enrollment.timezone },
+    signer: {
+      dateOfBirth: enrollment.dateOfBirth,
+      minorDeclared: enrollment.minorDeclared,
+      timezone: enrollment.timezone,
+    },
   });
   if (owed.length === 0) return { enrollment, required, outstanding: [] };
   const bodies = await db
@@ -871,7 +1172,11 @@ async function guardianOwedFor(
   form: RequiredCourseForm,
   signedOn: CalendarDate,
 ): Promise<boolean> {
-  if (guardianSignatureRequired(enrollment.dateOfBirth, signedOn)) return true;
+  // A youth form is co-signed whatever the record holds (H6).
+  if (isYouthForm(form)) return true;
+  if (guardianSignatureRequired(enrollment.dateOfBirth, signedOn, enrollment.minorDeclared)) {
+    return true;
+  }
   const signatures = await courseFormSignaturesForBookings(db, shopId, [enrollment.bookingId]);
   return courseFormGaps({
     shopId,
@@ -879,7 +1184,11 @@ async function guardianOwedFor(
     personId: enrollment.personId,
     required: [form],
     signatures,
-    signer: { dateOfBirth: enrollment.dateOfBirth, timezone: enrollment.timezone },
+    signer: {
+      dateOfBirth: enrollment.dateOfBirth,
+      minorDeclared: enrollment.minorDeclared,
+      timezone: enrollment.timezone,
+    },
   }).some(({ gap }) => gap === "guardian_missing");
 }
 
@@ -915,11 +1224,13 @@ export async function signCourseForm(
     signedAt: now,
   });
   if (!evidence) return { ok: false, reason: "invalid_signature" };
-  return db.transaction(async (tx): Promise<SignCourseFormOutcome> => {
+  let signer: string | null = null;
+  const outcome = await db.transaction(async (tx): Promise<SignCourseFormOutcome> => {
     const enrollment = await enrollmentFor(tx, input.shopId, input.bookingId);
     if (!enrollment || enrollment.identityHeld || hasReturned(enrollment.endsAt, now)) {
       return { ok: false, reason: "unavailable" };
     }
+    signer = enrollment.personId;
     const required =
       (await requiredCourseFormsForTrips(tx, input.shopId, [enrollment.tripId], now)).get(
         enrollment.tripId,
@@ -976,6 +1287,23 @@ export async function signCourseForm(
       guardian,
     });
   });
+  await publishSigned(db, input.shopId, signer, outcome);
+  return outcome;
+}
+
+/**
+ * A new record clears a blocker on every seat this enrollment's forms are
+ * asked on — the course seat and any charter its training mark names (issue
+ * #2275) — so each of the student's manifests re-reads. After the commit.
+ */
+async function publishSigned(
+  db: AppDb,
+  shopId: string,
+  personId: string | null,
+  outcome: { ok: boolean; alreadySigned?: boolean },
+): Promise<void> {
+  if (!personId || !outcome.ok || outcome.alreadySigned) return;
+  await publishManifestEventsForPerson(db, shopId, personId);
 }
 
 type GuardianEvidence = {
@@ -1036,6 +1364,7 @@ async function insertRecord(
       formBody: fillCourseFormText(version.body, input.enrollment.context),
       courseTitle: input.enrollment.context.courseTitle,
       tripId: input.enrollment.tripId,
+      signedViaBookingId: input.enrollment.viaBookingId,
       instructorNames: input.enrollment.context.instructorNames,
       paperSignedOn: input.paperSignedOn,
       signedName: input.signedName,
@@ -1104,6 +1433,8 @@ export type PaperCourseFormOutcome =
       ok: false;
       reason:
         | "staff_not_found"
+        /** From a marked charter's row: neither a forms manager nor the session's instructor. */
+        | "not_authorized"
         | "guardian_name_matches_diver"
         /** The staffer did not confirm they hold the signed paper copy. */
         | "paper_copy_unconfirmed"
@@ -1144,13 +1475,31 @@ export async function recordPaperCourseForm(
 ): Promise<PaperCourseFormOutcome> {
   const now = input.now ?? nowDate();
   if (!input.paperCopyConfirmed) return { ok: false, reason: "paper_copy_unconfirmed" };
-  return db.transaction(async (tx): Promise<PaperCourseFormOutcome> => {
+  let student: string | null = null;
+  const outcome = await db.transaction(async (tx): Promise<PaperCourseFormOutcome> => {
     const roles = await loadActiveStaffRoles(tx, input.shopId, input.recordedByPersonId);
     if (!roles || !isStaff(roles)) return { ok: false, reason: "staff_not_found" };
     const enrollment = await enrollmentFor(tx, input.shopId, input.bookingId);
     // A held seat is not yet known to be this student's (#2082): a paper copy
     // recorded against it could be somebody else's signature.
     if (!enrollment || enrollment.identityHeld) return { ok: false, reason: "unavailable" };
+    // From a charter seat's row (a training mark, issue #2275), the staffer
+    // attests a course's form for a session that is not this departure's: the
+    // shop's forms manager, or the instructor someone else rostered on it
+    // (security review U4), as for clearing a mark with forms owed.
+    if (
+      enrollment.viaBookingId !== null &&
+      !canManageWaiverTemplates(roles) &&
+      !(await teachesSessionAsRostered(
+        tx,
+        input.shopId,
+        enrollment.tripId,
+        input.recordedByPersonId,
+      ))
+    ) {
+      return { ok: false, reason: "not_authorized" };
+    }
+    student = enrollment.personId;
     if (hasReturned(enrollment.endsAt, now)) return { ok: false, reason: "session_ended" };
     const today = signingDate(now, enrollment.timezone);
     let paperSignedOn: CalendarDate | null = null;
@@ -1215,6 +1564,8 @@ export async function recordPaperCourseForm(
       guardian,
     });
   });
+  await publishSigned(db, input.shopId, student, outcome);
+  return outcome;
 }
 
 /** How many students, on how many sessions, a change to forms reaches. */
@@ -1302,6 +1653,7 @@ export async function courseUpcomingEnrollment(
       and(
         eq(bookings.shopId, shopId),
         ne(bookings.status, "cancelled"),
+        eq(bookings.participantType, "diver"),
         eq(trips.shopId, shopId),
         eq(trips.courseId, courseId),
         ne(trips.status, "cancelled"),

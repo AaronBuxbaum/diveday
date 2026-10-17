@@ -5,13 +5,12 @@ import { JsonLd } from "@/components/JsonLd";
 import { PhoneFootBar } from "@/components/PhoneFootBar";
 import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
-import { TONE_PANEL_LG_CLASS } from "@/components/ui/card";
 import { getDb } from "@/db/client";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { checkoutMode } from "@/db/stripe-accounts";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { diverTranslator } from "@/i18n/messages";
-import { requestLocale } from "@/i18n/request";
+import { requestLocale, requestReaderUnits } from "@/i18n/request";
 import { auth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
@@ -37,15 +36,16 @@ import {
   WaitlistConfirmation,
 } from "./_components/BookingSections";
 import { CancelledTripLanding } from "./_components/CancelledTripLanding";
+import { ConditionsChangedNotice } from "./_components/ConditionsChangedNotice";
 import { ConditionsLine } from "./_components/ConditionsLine";
 import { bookingCourseFees } from "./_components/course-fees";
 import { crewLanguagesSentence } from "./_components/crew-languages";
 import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
-import { knownDiverFactLines } from "./_components/known-diver-lines";
+import { knownDiverPanelFor } from "./_components/known-diver-lines";
 import { fullTripAlternatives, worthALookList } from "./_components/other-boats";
 import { StaffPreviewBar } from "./_components/StaffPreviewBar";
 import { TripAlternatives } from "./_components/TripAlternatives";
-import { dayCoverPhoto, TripDayPlan } from "./_components/TripDayPlan";
+import { dayCoverPhoto, dayProfileFacts, TripDayPlan } from "./_components/TripDayPlan";
 import { TripHero } from "./_components/TripHero";
 import { pitchHasDoor, pitchOpensOnDoor, TripPitch } from "./_components/TripPitch";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
@@ -95,7 +95,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical },
-    robots: shopSearchListingRobots(shop.searchListingOptOutAt),
+    robots: shopSearchListingRobots(shop),
     openGraph: {
       ...openGraphSite,
       title,
@@ -174,6 +174,8 @@ export default async function TripDetailPage({
   // What this visitor's device asked for, falling back to the shop's own
   // default — DiveDay never asks (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
+  // The units this visitor thinks in, after the shop's (fifth-loop ideas, item 22).
+  const readerUnits = await requestReaderUnits(locale);
   // Every list price on this page is in the shop's own currency — a Cozumel
   // shop quotes pesos. Amounts a diver has already *paid* keep the currency
   // stored on their payment row instead (docs ADR 20260731-shop-currency).
@@ -200,6 +202,7 @@ export default async function TripDetailPage({
     paymentUrl,
     board,
     reviewAggregate,
+    run,
   } = await readTripPage(db, shop, {
     tripId,
     isEmbed,
@@ -239,21 +242,17 @@ export default async function TripDetailPage({
   const automatedForecast = crewPrediction
     ? Promise.resolve(null)
     : automatedForecastForDeparture(trip.diveSite, trip.startsAt);
-  const knownDiverPanel = knownDiver
-    ? {
-        name: knownDiver.fullName,
-        handoff: handoffToken ?? "",
-        blankHref: `${publicTripPath(shopSlug, tripId)}#book`,
-        lead: { fullName: knownDiver.fullName, email: knownDiver.email, phone: knownDiver.phone },
-        lines: knownDiverFactLines(knownDiver.facts, t, { locale, timeZone: shop.timezone }),
-      }
-    : null;
+  const knownDiverPanel = knownDiverPanelFor(knownDiver, t, {
+    handoff: handoffToken,
+    blankHref: `${publicTripPath(shopSlug, tripId)}#book`,
+    locale,
+    timeZone: shop.timezone,
+  });
   const diveBriefings = dayBriefings(tripDives, briefing.extras, t);
   const coverPhoto = dayCoverPhoto(diveBriefings);
-  // The dock-day rhythm's inputs (per-site bottom times, per-leg travel) are
-  // gone from this page with `PackingSection`: what to bring and when to be
-  // there is preparation, and preparation belongs to the thread the diver
-  // reaches after booking (ADR 20260827-the-divers-thread, decision 2).
+  // The dock-day rhythm's full run stays on the thread the diver reaches after
+  // booking (ADR 20260827-the-divers-thread, decision 2); "The day" carries its
+  // two ends in one line (fifth-loop ideas, item 19).
   const perDiverPriceCents = perDiverBookingPriceCents(trip, trip.course);
   const { stripeAccount, payAtBooking, offerCodeField } = payment;
   // The money lines the form's one block states, resolved here so the deposit
@@ -283,10 +282,11 @@ export default async function TripDetailPage({
         },
         siteRequirement,
       );
-  const requirementSentence = requirementSentenceFor(combinedRequirement, t, locale);
-  const readinessLink = readinessDoorPath(shopSlug, tripId, bookingToken);
+  const requirementSentence = requirementSentenceFor(combinedRequirement, t, locale, knownDiver);
 
   const inPast = hasSailed(trip.startsAt, now);
+  const logEntry = inPast ? undefined : { startsAt: trip.startsAt, isCourse: !!trip.course };
+  const hasDoor = pitchHasDoor(diveBriefings, publicCrew, !!logEntry);
   // Where this departure stands against the head count it needs, if it named
   // one. A departure that already sailed has nothing conditional left to
   // promise; a cancelled one returned far above this line, at the `status`
@@ -323,18 +323,17 @@ export default async function TripDetailPage({
         {structuredData ? <JsonLd data={structuredData} /> : null}
         <FlashParams params={["error", "pay"]} />
         {staffPreviewBar}
-        {/* **Two columns from `lg` up.** At 1280 the column was 528px wide in a
-            1280 window and the form stood about 1,500px down, the last thing
-            a diver reached. From `lg` the form and the contact line take a
-            25rem right-hand column level with the title, and the hero and the
-            reading run down the left at the 528px they always had, so nothing
-            in them (the pitch's tiles, their `sizes`) changes width. The
-            section stack below joins this grid as `contents`; its last row
-            is `1fr`, so a form taller than the reading stretches that row
-            rather than the gaps between sections. A phone keeps the one
-            column and the form terminal, as the source order does (ADR
-            20260827-the-divers-thread, decision 2 and its 2026-10-03
-            amendment). */}
+        {/* **Two columns from `lg` up.** At 1280 the column was 528px wide and
+            the form stood 1,500px down, the last thing a diver reached. From
+            `lg` the form and the contact line take a 25rem right-hand column
+            level with the title, and the hero and the reading run down the
+            left at the 528px they always had, so nothing in them (the pitch's
+            tiles, their `sizes`) changes width. The section stack below joins
+            this grid as `contents`; its last row is `1fr`, so a form taller
+            than the reading stretches that row rather than the gaps between
+            sections. A phone keeps the one column and the form terminal, as
+            the source order does (ADR 20260827-the-divers-thread, decision 2
+            and its 2026-10-03 amendment). */}
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
           <TripHero
             shop={shop}
@@ -345,6 +344,7 @@ export default async function TripDetailPage({
             shopSlug={shopSlug}
             coverPhoto={coverPhoto}
             minimumSeats={minimumSeats}
+            run={run}
             t={t}
           />
           {/* **One rhythm below the hero** (pixel-craft class 4, K-162;
@@ -371,20 +371,15 @@ export default async function TripDetailPage({
             {/* Its run closes itself, unless a pitch opens on its rule (pixel-craft class 6). */}
             <TripDayPlan
               briefings={diveBriefings}
-              nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew)}
+              nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew, !!logEntry)}
               sightings={briefing.seen}
+              siteReviews={briefing.siteReviews}
               shop={shop}
               locale={locale}
-              logEntry={inPast ? undefined : { startsAt: trip.startsAt, isCourse: !!trip.course }}
-              profile={{
-                rhythm: shop,
-                depthUnit: shop.depthUnit,
-                diveMode: trip.diveMode,
-                dayCount: meetingDays.length,
-              }}
+              profile={dayProfileFacts(shop, trip, meetingDays.length, readerUnits.depth)}
             />
             {/* **The bound** (ADR 20260904-reef-all-the-way-down, decision 1). The
-                route, the rest of the field guide, the moments strip, the shop's
+                route, the rest of the field guide, the shop's
                 site prose and the crew used to run down the page as five more
                 beats — 5,782px at 390 before a diver was offered a seat. They are
                 all still here, in this order, behind `TripPitch`'s one door. A
@@ -395,11 +390,13 @@ export default async function TripDetailPage({
                 close rather than a second rule a gap below it; with no door the
                 two stand a section apart. An empty block takes no room: its
                 margins collapse through it. */}
-            <div className={pitchHasDoor(diveBriefings, publicCrew) ? undefined : "space-y-10"}>
+            <div className={hasDoor ? undefined : "space-y-10"}>
               <TripPitch
                 briefings={diveBriefings}
                 crew={publicCrew}
                 locale={locale}
+                timeZone={shop.timezone}
+                logEntry={logEntry}
                 embed={isEmbed}
               />
               <ConditionsLine
@@ -409,6 +406,7 @@ export default async function TripDetailPage({
                 automatedForecast={automatedForecast}
                 crewLanguages={crewLanguagesLine}
                 locale={locale}
+                readerUnits={readerUnits}
               />
             </div>
             <TripChangeLedger
@@ -422,29 +420,21 @@ export default async function TripDetailPage({
               trip.conditionsUpdatedAt,
               confirmed.booking.conditionsBriefedAt,
             ) ? (
-              // Only a booked diver sees this, and a booking renders the booked
-              // moment on the `lg` rung below, so this panel is its `lg` twin.
-              <section
-                className={`${TONE_PANEL_LG_CLASS} border-warning/40 bg-warning/10`}
-                role="status"
-              >
-                <h2 className="font-semibold">{t("trip.conditionsChangedHeading")}</h2>
-                <p className="mt-1 text-sm text-muted">{t("trip.conditionsChangedBody")}</p>
-              </section>
+              <ConditionsChangedNotice locale={locale} />
             ) : null}
             <TripAlternatives alternatives={worthALookRows} locale={locale} />
 
             {/* The form, terminal — or whichever state stands in its place —
                 and the contact line under it: the right-hand column from `lg`. */}
             <div className="space-y-10 lg:col-start-2 lg:row-span-6 lg:row-start-1">
-              {confirmed ? (
+              {confirmed && bookingToken ? (
                 <EmbedBookedNotice
                   shop={shop}
                   shopSlug={shopSlug}
                   locale={locale}
                   trip={trip}
                   confirmed={confirmed}
-                  readinessLink={readinessLink}
+                  readinessLink={readinessDoorPath(shopSlug, tripId, bookingToken)}
                   mailState={mailState}
                   payNotice={pay}
                   paymentUrl={paymentUrl}
@@ -464,7 +454,6 @@ export default async function TripDetailPage({
                   shopSlug={shopSlug}
                   trip={bookingFormTrip(trip)}
                   tripRef={tripRef}
-                  remaining={remaining}
                   errorMessage={errorMessage}
                   contactEmail={shop.contactEmail}
                   contactPhone={shop.contactPhone}
@@ -492,6 +481,7 @@ export default async function TripDetailPage({
                     rentalPricing: shop.rentalPricing,
                     passThroughFee: parsePassThroughFee(shop.passThroughFee),
                     taxEnabled: shop.taxEnabled,
+                    deskPayment: shop.deskPayment,
                     courseFeeCents,
                     eLearningFeeCents,
                     ...checkoutSeatTerms(trip, trip.course),

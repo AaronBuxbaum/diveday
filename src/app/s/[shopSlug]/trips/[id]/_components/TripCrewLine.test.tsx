@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import type { PublicCrewMember } from "@/db/trips";
 import { TripCrewLine } from "./TripCrewLine";
 
@@ -90,5 +90,30 @@ describe("TripCrewLine", () => {
     expect(row).toHaveTextContent("Marcus");
     expect(row).toHaveTextContent("Divemaster");
     expect(row.textContent?.trim().endsWith("Divemaster")).toBe(true);
+  });
+
+  /**
+   * Fourth UX review, item 12: an instructor away on this departure's days is
+   * not promised. The diver reads the role and "to be confirmed", never the
+   * name, the languages, or why.
+   */
+  it("names no one who is away, only the role to be confirmed", () => {
+    render(
+      <TripCrewLine
+        crew={[member({ firstName: "Ana", tripRole: "instructor", away: true }), member()]}
+        locale="en-US"
+      />,
+    );
+    const [away, present] = screen.getAllByRole("listitem");
+    expect(away).toHaveTextContent("Instructor · to be confirmed");
+    expect(away).not.toHaveTextContent("Ana");
+    expect(away?.textContent).not.toMatch(/English|Spanish/);
+    expect(present).toHaveTextContent("Marcus");
+  });
+
+  it("says crew when the away member's job was left blank, in Spanish too", () => {
+    render(<TripCrewLine crew={[member({ tripRole: null, away: true })]} locale="es-ES" />);
+    expect(screen.getByRole("listitem")).toHaveTextContent(/· por confirmar$/);
+    expect(screen.getByRole("listitem")).not.toHaveTextContent("Marcus");
   });
 });

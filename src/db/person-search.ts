@@ -3,6 +3,16 @@ import { MIN_PHONE_SEARCH_DIGITS, phoneDigits } from "@/lib/person-fields";
 import { people } from "./schema";
 
 /**
+ * A typed needle as `like` reads it literally: `%`, `_` and the escape
+ * character itself each take Postgres's default `like` escape, a backslash.
+ * Unescaped, a lone `%` in a search box listed every person in the shop
+ * (security review of #2579).
+ */
+function escapeLikePattern(text: string): string {
+  return text.replace(/[\\%_]/g, "\\$&");
+}
+
+/**
  * **One predicate for "a staffer typed something into a box that looks for a
  * person".** Name, email, phone — the same three columns, compared the same
  * way, wherever the box is: the command palette (`src/db/search.ts`), the diver
@@ -101,7 +111,7 @@ import { people } from "./schema";
 export function personSearchMatch(rawQuery: string): SQL | undefined {
   const query = rawQuery.trim();
   if (!query) return undefined;
-  const like = `%${query}%`;
+  const like = `%${escapeLikePattern(query)}%`;
   const digits = phoneDigits(query);
   const phoneMatch =
     digits.length >= MIN_PHONE_SEARCH_DIGITS

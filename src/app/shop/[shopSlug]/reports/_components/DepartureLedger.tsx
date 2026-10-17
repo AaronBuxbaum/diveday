@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
-import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
+import { LedgerRow } from "@/components/ui/ledger";
+import type { StaffTranslator } from "@/i18n/staff-messages";
+import { formatShortDate } from "@/lib/format";
 
 /**
  * **The month's departures as a ledger** — ADR 20260827-the-shops-shelves,
@@ -42,6 +45,12 @@ export type DepartureRow = {
   seats: string;
   /** "3 crew" — never a cost; DiveDay does not know wages (issue #700). */
   crew: string;
+  /**
+   * What the departure took, net of tax ("$855", fifth loop, item 26): the
+   * month figure's own basis, so the rows add up to it. Absent when the page
+   * has no money for the row.
+   */
+  net?: string;
   /** Null for a departure nobody booked: no waivers to collect, so nothing to say. */
   waivers: DepartureWaivers | null;
 };
@@ -55,6 +64,7 @@ export type DepartureRow = {
 export const SEATS_COLUMN = "lg:w-32";
 export const CREW_COLUMN = "lg:w-24";
 export const WAIVERS_COLUMN = "lg:w-48";
+export const NET_COLUMN = "lg:w-24 lg:text-end";
 
 export function DepartureLedger({
   label,
@@ -98,6 +108,11 @@ export function DepartureLedger({
               <div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1 text-sm whitespace-nowrap text-muted tabular-nums lg:flex-nowrap lg:gap-x-6">
                 <span className={`shrink-0 ${SEATS_COLUMN}`}>{row.seats}</span>
                 <span className={`shrink-0 ${CREW_COLUMN}`}>{row.crew}</span>
+                {row.net !== undefined ? (
+                  <span className={`shrink-0 font-medium text-foreground ${NET_COLUMN}`}>
+                    {row.net}
+                  </span>
+                ) : null}
                 {row.waivers ? (
                   <span
                     className={`shrink-0 ${WAIVERS_COLUMN} ${
@@ -121,4 +136,62 @@ export function DepartureLedger({
       {pager}
     </section>
   );
+}
+
+/**
+ * The ledger's rows from a page of the month's trips. Every fact carries its
+ * own noun: a ledger row has no column header above it to borrow one from,
+ * which is also what lets the phone keep all three facts instead of hiding
+ * two behind a breakpoint.
+ */
+export function departureLedgerRows({
+  trips,
+  crewCounts,
+  netByTrip,
+  money,
+  shopSlug,
+  locale,
+  timeZone,
+  t,
+}: {
+  trips: readonly {
+    tripId: string;
+    title: string;
+    startsAt: Date;
+    capacity: number;
+    activeBookings: number;
+    waiverComplete: number;
+  }[];
+  crewCounts: ReadonlyMap<string, number>;
+  /** Each departure's net, read off the month's own trips (item 26). */
+  netByTrip?: ReadonlyMap<string, number>;
+  money?: (cents: number) => string;
+  shopSlug: string;
+  locale: string;
+  timeZone: string;
+  t: StaffTranslator;
+}): DepartureRow[] {
+  return trips.map((trip) => ({
+    tripId: trip.tripId,
+    href: `/shop/${shopSlug}/trips/${trip.tripId}`,
+    title: trip.title,
+    date: formatShortDate(trip.startsAt, locale, timeZone),
+    seats: t("reports.row.seats", { booked: trip.activeBookings, capacity: trip.capacity }),
+    crew: t("reports.row.crew", { count: crewCounts.get(trip.tripId) ?? 0 }),
+    ...(netByTrip && money ? { net: money(netByTrip.get(trip.tripId) ?? 0) } : {}),
+    // A departure nobody booked has no waivers to collect, so it says nothing
+    // about them. Otherwise the row says the one thing a staffer acts on: how
+    // many are still out, or that none are.
+    waivers:
+      trip.activeBookings > 0
+        ? trip.waiverComplete >= trip.activeBookings
+          ? { fact: t("reports.row.waiversAllIn"), outstanding: false }
+          : {
+              fact: t("reports.row.waiversToCollect", {
+                count: trip.activeBookings - trip.waiverComplete,
+              }),
+              outstanding: true,
+            }
+        : null,
+  }));
 }

@@ -4,15 +4,21 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SUB_TITLE_CLASS } from "@/components/ui/typography";
 
 export type TripPulseFact = {
-  /** The whole sentence — "1 person can’t board yet" — never a bare count. */
+  /** The whole sentence — "1 blocked" — never a bare count. */
   text: string;
   /**
    * Where the fix lives: the filtered roster, the prep list, the crew panel,
    * the trip-filtered Orders index. Never the page this strip is already on.
    */
   href: string;
-  /** Marks the facts that hold the boat up; the words already say so too. */
-  tone?: "danger";
+  /**
+   * `danger` marks the facts that hold the boat up; `warning` one that does
+   * not but should not read as plain work (nitrox with no verified card, issue
+   * #2549). The words already say so too.
+   */
+  /** A stable React key when two facts share a door (two Today rows open the prep list). */
+  key?: string;
+  tone?: "danger" | "warning";
 };
 
 /**
@@ -76,7 +82,11 @@ export function TripPulse({
               key={fact.href}
               href={fact.href}
               className={`inline-flex min-h-11 w-fit items-center text-base font-medium hover:underline ${
-                fact.tone === "danger" ? "text-danger" : "text-primary"
+                fact.tone === "danger"
+                  ? "text-danger"
+                  : fact.tone === "warning"
+                    ? "text-warning-strong"
+                    : "text-primary"
               }`}
             >
               {fact.text}

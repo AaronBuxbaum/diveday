@@ -7,9 +7,10 @@
 // from Context. So an ADR whose id is dated after CAP_FROM may hold at most WORD_CAP words,
 // HTML comments not counted; the older corpus is left as it is.
 //
-// The index: `docs/architecture/decisions/README.md` carries a generated table (id, title,
-// status, superseded-by), written by `node scripts/adr-index.mjs --write`. Before it a session
-// found an ADR with `ls | grep`.
+// The index: `docs/architecture/decisions/README.md` carries a generated two-column table (the
+// id, then the decision's opening words, struck through with "→ <successor>" once superseded),
+// written by `node scripts/adr-index.mjs --write`. Before it a session found an ADR with
+// `ls | grep`.
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";

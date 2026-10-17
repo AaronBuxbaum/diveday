@@ -1,6 +1,6 @@
 import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
-import { crewLanguageGap } from "@/lib/crew-languages";
+import { crewLanguageBriefings } from "@/lib/crew-languages";
 import {
   countInWaterCrew,
   lapsedRungs,
@@ -9,19 +9,17 @@ import {
 } from "@/lib/crew-roles";
 import { shopCrewTarget } from "@/lib/crew-schedule";
 import { divemasterRatioGap, inWaterDivemasterCount } from "@/lib/divemaster-ratio";
-import { rentalFitCompleteness } from "@/lib/rentals";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { summarizeTripDiveSites } from "@/lib/trip-dives";
 import { hasReturned } from "@/lib/trips";
 import { utcToWallTime } from "@/lib/zoned";
 import { canPersonConfigureTrips } from "./authz";
 import { tripBlowoutCause } from "./blowouts";
+import { type BoatWork, boatWorkFor, readBoatWork } from "./boat-work";
 import type { AppDb } from "./client";
 import { listDiveSites } from "./dive-sites";
 import { listDepartureBoardedByTrip } from "./manifests";
-import { countOpenTripOrders } from "./orders";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "./readiness";
-import { listTripPrepDivers } from "./rental-fit";
 import { ratingCredentialsByPerson } from "./staff-credentials";
 import { crewShiftCoverage } from "./staffing";
 import { boatClashes } from "./trips-clashes";
@@ -61,6 +59,8 @@ export type TripOverviewShop = {
   diversPerDivemaster: number;
   /** Whether the shop plans its crew here (`src/lib/crew-schedule.ts`). */
   crewScheduleEnabled: boolean;
+  /** The shop's own language, which every briefing is already in (item 48). */
+  defaultLocale: string;
 };
 
 export type TripOverview = Awaited<ReturnType<typeof getTripOverview>>;
@@ -122,6 +122,10 @@ export async function getTripOverview(
       mayConfigure && summary ? listOffCadenceSeriesTrips(db, shop.id, summary.id) : [],
   );
 
+  const pulseReadinessRead = pulseNeeded
+    ? Promise.resolve(shared?.readiness ?? listTripReadiness(db, shop.id, tripId))
+    : Promise.resolve([]);
+
   const [
     staff,
     crewAssignments,
@@ -135,9 +139,8 @@ export async function getTripOverview(
     blowoutCalled,
     diverLanguages,
     pulseReadiness,
-    pulsePrepDivers,
+    pulseWork,
     pulseBoardedByTrip,
-    pulseOpenOrders,
     crewEvidence,
     offCadence,
     clashes,
@@ -162,16 +165,19 @@ export async function getTripOverview(
     // blocked predicate, the prep list's own completeness rule, and the
     // manifest's own boarded reader — so the counts on this strip can never
     // disagree with the pages it links to.
-    pulseNeeded ? (shared?.readiness ?? listTripReadiness(db, shop.id, tripId)) : [],
-    pulseNeeded ? (shared?.prepDivers ?? listTripPrepDivers(db, shop.id, tripId)) : [],
+    pulseReadinessRead,
+    // The boat's work — sizes, nitrox, contacts, open orders — through the
+    // one reader Today's rows for this boat read (`./boat-work`), over the
+    // same seats, so the band and Today can never count it differently
+    // (third review, item 4).
+    pulseReadinessRead.then((rows) =>
+      pulseNeeded
+        ? readBoatWork(db, shop.id, new Map([[tripId, rows.map((row) => row.booking.id)]]))
+        : new Map<string, BoatWork>(),
+    ),
     pulseNeeded
       ? listDepartureBoardedByTrip(db, shop.id, [tripId])
       : new Map<string, Set<string>>(),
-    // …and the third question a staffer asks of an upcoming boat, after "can
-    // everyone board" and "can the packer pack": is anyone still owing money for
-    // it. `countOpenTripOrders` asks the Orders index's own question so this
-    // number and the filtered index the fact opens can never disagree.
-    pulseNeeded ? countOpenTripOrders(db, shop.id, tripId) : 0,
     crewEvidenceRead,
     offCadenceRead,
     // Who on this crew is on another departure whose hours overlap this one,
@@ -199,15 +205,18 @@ export async function getTripOverview(
   // How the boat stands, in the pulse's terms: who still can't board (the roster
   // chips' own rule) and whose rental fit the packer can't pack from yet (the
   // prep list's own rule).
+  const work = boatWorkFor(pulseWork, tripId);
   const pulse = {
     blocked: pulseReadiness.filter((row) => rosterRowIsBlocked(row.readiness)).length,
-    prepGaps: pulsePrepDivers.filter(
-      (diver) =>
-        rentalFitCompleteness(diver.fit, shop.rentalItems, diver.participantType).state !==
-        "complete",
-    ).length,
     boarded: pulseBoardedByTrip.get(tripId)?.size ?? 0,
-    openOrders: pulseOpenOrders,
+    /** The boat's work as counts, for `boatWorkItems` (src/lib/boat-work.ts). */
+    work: {
+      missingSize: work.missingSize.length,
+      kitUnasked: work.kitUnasked.length,
+      ungatedNitrox: work.ungatedNitrox.length,
+      missingContact: work.missingContact.length,
+      openOrders: work.openOrders,
+    },
   };
 
   const crewIds = crewAssignments.map((entry) => entry.personId);
@@ -243,7 +252,8 @@ export async function getTripOverview(
   // enough crew", also consumed by the staffing coverage list and the Today
   // queue — `over_ratio` is the visible nudge to fix a ratio-gated session before
   // sailing, never a retroactive block on the bookings already taken.
-  const crewGap = courseCrewGap({ course: trip.course, ...inWaterCrew, booked: trip.booked });
+  // Its students are its divers (G5 of #2226).
+  const crewGap = courseCrewGap({ course: trip.course, ...inWaterCrew, booked: trip.bookedDivers });
   // The shop's own target, measured off the same crew count and reported
   // separately from the two agency gates above — it applies to every departure,
   // course or fun dive, and it refuses nothing.
@@ -264,12 +274,18 @@ export async function getTripOverview(
   // English.
   // A shop that keeps no roster is not told nobody aboard speaks German: its
   // crew list is not where it records who sails.
-  const languageGap = shop.crewScheduleEnabled
-    ? crewLanguageGap({
-        crewSpokenLanguages: assignedCrew.map((entry) => entry.person.spokenLanguages),
-        diverLanguages,
+  // Which divers read each language, and who on this crew speaks it
+  // (fifth-loop ideas, item 48).
+  const languageBriefings = shop.crewScheduleEnabled
+    ? crewLanguageBriefings({
+        crew: assignedCrew.map((entry) => ({
+          name: entry.person.fullName,
+          languages: entry.person.spokenLanguages,
+        })),
+        divers: diverLanguages,
+        shopLanguage: (shop.defaultLocale ?? "").split("-")[0] ?? "",
       })
-    : ({ code: "none" } as const);
+    : { uncovered: [], covered: [] };
 
   // The other half of the shift <-> crew cross-link: whether each assigned crew
   // member actually has a working shift covering this sailing. `null` — the shop
@@ -314,7 +330,7 @@ export async function getTripOverview(
       lapsedCrew,
       crewGap,
       ratioGap,
-      languageGap,
+      languageBriefings,
       onShiftIds: shiftCoverage === null ? null : [...shiftCoverage],
       clashes,
     },

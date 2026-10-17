@@ -1,8 +1,13 @@
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { activityLine } from "@/i18n/activity-labels";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { MINIMUM_SEATS_DECISION_HOURS_DEFAULT, minimumSeatsDecisionAt } from "@/lib/minimum-seats";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
-import { getTripWithBooked } from "./trips";
+import { activityEvents, crewNotices } from "./schema";
+import { pagedShopActivity } from "./shop-activity";
+import { getTripWithBooked, listStaff, setTripCrew } from "./trips";
 import { createTrip } from "./trips-create";
 import {
   cancelDeparturesBelowMinimum,
@@ -199,6 +204,72 @@ describe("cancelDeparturesBelowMinimum", () => {
     const swept = result.cancelled.find((row) => row.tripId === trip.id);
     expect(swept).toMatchObject({ minimum: 4, booked: 2, shopId: shop.id });
     expect((await getTripWithBooked(db, shop.id, trip.id))?.status).toBe("cancelled");
+  });
+
+  // Issue #2284: the call-off is the system's, so its record names no person.
+  // A staffer named here would be read as the one who called it, and would not
+  // be told the boat they crew is off (a crew notice skips its own actor).
+  it("records the call-off as the system's, and tells every crew member", async () => {
+    const { db, shop } = ctx;
+    const trip = await departure(db, shop.id, { startsAt: TOMORROW, title: "Crewed and short" });
+    const crewIds = [...new Set((await listStaff(db, shop.id)).map((row) => row.person.id))];
+    await setTripCrew(db, shop.id, trip.id, crewIds.slice(0, 2));
+
+    await cancelDeparturesBelowMinimum(db, { now: NOW });
+    const notices = await db
+      .select({ personId: crewNotices.personId, actorPersonId: crewNotices.actorPersonId })
+      .from(crewNotices)
+      .where(and(eq(crewNotices.tripId, trip.id), eq(crewNotices.change, "called_off")));
+    expect(notices).toHaveLength(2);
+    for (const notice of notices) expect(notice.actorPersonId).toBeNull();
+  });
+
+  // Issue #2539: the staff trail says the system did it, and why, with no
+  // actor: a null actor and a system reason, held together by a check.
+  it("writes the call-off on the activity trail with a system reason and no actor", async () => {
+    const { db, shop } = ctx;
+    const trip = await departure(db, shop.id, { startsAt: TOMORROW, title: "Trail and short" });
+    await cancelDeparturesBelowMinimum(db, { now: NOW });
+    await cancelDeparturesBelowMinimum(db, { now: NOW });
+    const rows = await db
+      .select()
+      .from(activityEvents)
+      .where(and(eq(activityEvents.tripId, trip.id), eq(activityEvents.shopId, shop.id)));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      code: "departure_called_off_automatically",
+      actorPersonId: null,
+      systemReason: "minimum_not_met",
+      params: { reason: "minimum_not_met" },
+    });
+    // It reads as a sentence in both languages, with no name in it.
+    for (const [locale, words] of [
+      ["en-US", "Automatically called off: minimum not met"],
+      ["es-ES", "Cancelada automáticamente: no se alcanzó el mínimo"],
+    ] as const) {
+      expect(activityLine(staffTranslator(locale), rows[0] as never)).toBe(words);
+    }
+    // It shows on the shop's activity log with nobody named.
+    const log = await pagedShopActivity(db, shop.id, {});
+    expect(log.rows.find((row) => row.code === "departure_called_off_automatically")).toMatchObject(
+      { actorPersonId: null, actorName: null },
+    );
+  });
+
+  it("refuses an activity row with both an actor and a system reason, or neither", async () => {
+    const { db, shop } = ctx;
+    const trip = await departure(db, shop.id, { startsAt: TOMORROW, title: "Constraint" });
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("seeded staff missing");
+    const base = { shopId: shop.id, tripId: trip.id, code: "series_cancelled" };
+    await expect(db.insert(activityEvents).values(base)).rejects.toThrow();
+    await expect(
+      db.insert(activityEvents).values({
+        ...base,
+        actorPersonId: staff.person.id,
+        systemReason: "minimum_not_met",
+      }),
+    ).rejects.toThrow();
   });
 
   it("leaves the bookings alone, so the shop still knows who to tell", async () => {

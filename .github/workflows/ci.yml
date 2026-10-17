@@ -22,6 +22,14 @@ on:
   # comments in that job exist to prevent. Every pre-existing job therefore
   # carries `if: github.event_name != 'schedule'`, and those guards are load
   # bearing: deleting one puts that job on the nightly schedule.
+  # A run of main's head on request, read as a push to main: it compares
+  # against the previous commit and publishes this commit's snapshot. Its one
+  # caller is durations-refresh.yml, whose commit is pushed with the workflow
+  # token and so starts no `push` run (GitHub's rule against recursive runs);
+  # without this the next main run's baseline key named a commit that never
+  # published, and it compared against an older one (code review 2026-10-13,
+  # row 28). A dispatch is the exception to that rule.
+  workflow_dispatch:
   schedule:
     # 07:00 UTC — before the working day in the Americas, after it in Europe, so
     # a red nightly is read by a human rather than found stale the next evening.
@@ -45,7 +53,7 @@ concurrency:
   # regression blind repo-wide, on a green run. A per-commit group has nothing
   # to cancel against. The cost is that several main runs may overlap, which is
   # what those merges were asking for anyway.
-  group: ci-${{ github.event_name == 'schedule' && 'nightly' || github.event_name == 'push' && github.sha || github.ref }}
+  group: ci-${{ github.event_name == 'schedule' && 'nightly' || (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -66,14 +74,14 @@ jobs:
     # `!cancelled()`: a failed `changes` must not skip this job, which ran
     # unconditionally before it read the runner choice; it falls back to GitHub.
     if: ${{ !cancelled() && github.event_name != 'schedule' }}
-    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-latest"') }}
+    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-24.04"') }}
     timeout-minutes: 15
     permissions:
       contents: read
       # No `issues: read`: nothing in check:repo reads the tracker. The one guard
       # that does, check-follow-ups.mjs, runs in follow-ups.yml on a schedule.
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # `fetch-depth: 0` because two guards inside `check:repo` read the
           # commits this branch adds, and both resolve them from a merge base a
@@ -84,14 +92,32 @@ jobs:
           # release, which is the destructive-DDL gate silently not running.
           fetch-depth: 0
       - uses: ./.github/actions/setup
+      # The failing guards go to the job summary by name, and every guard's
+      # result to the `check-repo-results` artifact, so a catch rate per guard
+      # can be read across runs (scripts/repo-check-report.mjs).
       - run: pnpm check:repo
+        env:
+          CHECK_REPO_RESULTS: check-repo-results.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: check-repo-results
+          path: check-repo-results.json
+          if-no-files-found: ignore
+          retention-days: 90
       # The `guards` Vitest project — the src tests that read the repository's
       # own files and assert on their text — runs here, once per run, and
       # nowhere else: `unit-tests` excludes it (`--project '!guards'`), and
       # `unit-tests-docs` too. It needs no database and no PGlite template, and
       # this job runs on every pull request, docs-only included, so a guard over
       # a document still answers to a docs-only change.
-      - run: pnpm exec vitest run --project guards --reporter=dot
+      - run: pnpm exec vitest run --project guards --reporter=dot --reporter=./src/test/failed-files-reporter.ts
+      # Supply chain: no dependency carries a known high or critical advisory.
+      # The whole tree, not only production: dev tooling is what runs on the
+      # runners that hold the reg-suit keys and the deploy role. An advisory with
+      # no patched release is reviewed in pnpm-workspace.yaml's `auditConfig`.
+      - name: Dependencies have no unreviewed high advisory
+        run: pnpm audit --audit-level high
       # The body names the reviewer agents a safety-critical or security-sensitive diff needs
       # (scripts/check-pr-body.mjs; docs/agents/repo-checks.md#pr-body). The body is read live
       # so an edit counts on a re-run; without `pull-requests: read` that read fails and the
@@ -114,12 +140,12 @@ jobs:
     # `!cancelled()`: a failed `changes` must not skip this job, which ran
     # unconditionally before it read the runner choice; it falls back to GitHub.
     if: ${{ !cancelled() && github.event_name != 'schedule' }}
-    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-latest"') }}
+    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-24.04"') }}
     timeout-minutes: 15
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       - run: pnpm lint
 
@@ -130,12 +156,12 @@ jobs:
     # `!cancelled()`: a failed `changes` must not skip this job, which ran
     # unconditionally before it read the runner choice; it falls back to GitHub.
     if: ${{ !cancelled() && github.event_name != 'schedule' }}
-    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-latest"') }}
+    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-24.04"') }}
     timeout-minutes: 15
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       - run: pnpm typecheck
 
@@ -153,7 +179,7 @@ jobs:
     needs: changes
     if: github.event_name != 'schedule' && needs.changes.outputs.code == 'true'
     # The Mac when it is online (`changes`, scripts/ci-runner-pick.mjs).
-    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-latest"') }}
+    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-24.04"') }}
     timeout-minutes: 15
     permissions:
       contents: read
@@ -162,7 +188,7 @@ jobs:
       matrix:
         shard: [1, 2, 3, 4]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       # The migrated + demo-seeded PGlite snapshots every db-backed test
       # hydrates from (src/test/db-template.ts). Vitest's global setup builds
@@ -180,15 +206,18 @@ jobs:
       # the same key raced, and three logged "Unable to reserve cache" on
       # every miss.
       - id: pglite-template
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.cache/diveday
-          key: ${{ runner.os }}-${{ runner.arch }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', '!src/db/**/*.test.ts', '!src/db/**/*.test.tsx', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', '!src/db/**/*.test.ts', '!src/db/**/*.test.tsx', 'src/content/**', '!src/content/**/*.test.ts', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
       # Not `pnpm test -- ...`: pnpm/npm insert a literal `--` before forwarded
       # args when the target script is itself a bare command (`vitest run`),
       # so the underlying CLI sees `vitest run -- --reporter=dot --shard=…`
       # and drops everything after that `--` as unparsed — every shard then
       # silently runs the full suite instead of its 1/4 slice.
+      #
+      # The third reporter annotates each failed test file, so `pnpm verify:push` on the layer
+      # above can re-run exactly what is red here (src/test/failed-files-reporter.ts).
       #
       # The second reporter records each file's wall time into the artifact
       # below and prints the same map as one `diveday-test-durations:` log
@@ -202,21 +231,67 @@ jobs:
       # run once, in `repo-safeguards`, instead of a quarter of them in each
       # shard. They are bounded by reading the repository, not by test count,
       # so dealing them four ways bought nothing and cost each shard the walk.
-      - run: pnpm exec vitest run --project '!guards' --reporter=dot --reporter=./src/test/duration-reporter.ts --shard=${{ matrix.shard }}/4
+      #
+      # `--coverage.enabled` and the blob reporter feed `coverage-floors` below: v8 coverage of
+      # the eleven safety files `vitest.config.ts` names, carried in this shard's blob so that job
+      # can merge all four without running a test (test review 2026-10-14, decision 6).
+      - run: pnpm exec vitest run --project '!guards' --reporter=dot --reporter=./src/test/duration-reporter.ts --reporter=./src/test/failed-files-reporter.ts --reporter=blob --coverage.enabled --shard=${{ matrix.shard }}/4
         env:
           DIVEDAY_TEST_DURATIONS_OUT: test-durations/shard-${{ matrix.shard }}.json
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
           name: unit-durations-${{ matrix.shard }}
           path: test-durations/
           if-no-files-found: ignore
           retention-days: 30
-      - uses: actions/cache/save@v6
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: unit-blob-${{ matrix.shard }}
+          path: .vitest/blob/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: ${{ !cancelled() && matrix.shard == 1 && steps.pglite-template.outputs.cache-hit != 'true' }}
         with:
           path: node_modules/.cache/diveday
           key: ${{ steps.pglite-template.outputs.cache-primary-key }}
+
+  # Branch coverage on the safety-critical files may not drop (test review 2026-10-14, decision 6;
+  # ADR 20261015-coverage-and-mutation-testing). No second test run: the four shards above
+  # recorded coverage into their blob reports, and `--merge-reports` folds them into one
+  # json-summary, which `scripts/coverage-floors.mjs` holds to `scripts/coverage-floors.json`.
+  # A shard that failed still uploads its blob, but a red shard already fails the run, so this
+  # waits for all four to pass rather than reading a partial number as a fall.
+  coverage-floors:
+    name: Safety-file coverage floors
+    needs: unit-tests
+    if: ${{ !cancelled() && needs.unit-tests.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: unit-blob-*
+          path: .vitest/blob
+          merge-multiple: true
+      - run: pnpm exec vitest run --merge-reports --reporter=dot --coverage.enabled
+      - run: node scripts/coverage-floors.mjs coverage/coverage-summary.json
+      # The merged numbers, so a floor can be raised from them without a local full run:
+      # download this, then `node scripts/coverage-floors.mjs --write <path>`.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage-summary
+          path: coverage/coverage-summary.json
+          if-no-files-found: ignore
+          retention-days: 30
 
   unit-tests-docs:
     name: Unit tests that read docs
@@ -236,18 +311,18 @@ jobs:
     needs: changes
     if: github.event_name != 'schedule' && needs.changes.outputs.code != 'true'
     # The Mac when it is online (`changes`, scripts/ci-runner-pick.mjs).
-    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-latest"') }}
+    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-24.04"') }}
     timeout-minutes: 15
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       # Restore only: the same key as `unit-tests`, which is the job that saves it.
-      - uses: actions/cache/restore@v6
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.cache/diveday
-          key: ${{ runner.os }}-${{ runner.arch }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', '!src/db/**/*.test.ts', '!src/db/**/*.test.tsx', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', '!src/db/**/*.test.ts', '!src/db/**/*.test.tsx', 'src/content/**', '!src/content/**/*.test.ts', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
       - name: Run the unit files that read a document
         run: |
           mapfile -t files < <(git grep -lE "[\"'\`](\./)?(docs/|\.claude/|AGENTS\.md|CLAUDE\.md|README)|[\"'\`](docs|\.claude)[\"'\`]|\.md[\"'\`]" -- \
@@ -257,7 +332,7 @@ jobs:
             exit 1
           fi
           echo "${#files[@]} unit files quote a document path"
-          pnpm exec vitest run --project '!guards' --reporter=dot "${files[@]}"
+          pnpm exec vitest run --project '!guards' --reporter=dot --reporter=./src/test/failed-files-reporter.ts "${files[@]}"
 
   build:
     name: Build
@@ -265,12 +340,12 @@ jobs:
     # Nightly runs `real-postgres` only. A change that touches no code skips the
     # build, and with it every job that needs the build (`jobs:` above).
     if: github.event_name != 'schedule' && needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       # No `.next/cache` cache step here, deliberately. There used to be one,
       # keyed on `hashFiles('src/**')` with no restore-keys fallback, because a
@@ -297,7 +372,7 @@ jobs:
       - run: pnpm e2e:build
       # perf:budget reads the build manifest produced immediately above.
       - run: pnpm perf:budget
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: next-build
           path: .next/
@@ -307,10 +382,10 @@ jobs:
 
   playwright:
     name: Playwright shard ${{ matrix.shard }}/6
-    needs: build
+    needs: [build, changes]
     # Nightly runs `real-postgres` only.
     if: github.event_name != 'schedule'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
       contents: read
@@ -319,9 +394,9 @@ jobs:
       matrix:
         shard: [1, 2, 3, 4, 5, 6]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: next-build
           path: .next
@@ -363,15 +438,49 @@ jobs:
       # `--summary` every bin's weight to the job summary — which is where to
       # look first when one shard is slow again. An empty list is refused
       # here: `playwright test` with no file arguments runs every spec.
+      # `--skip` leaves out the path-gated pixel-probe spec when the `changes`
+      # job says nothing it tests changed; all six shards read the same output.
+      #
+      # A failed run whose log carries `browserActivity`'s renderer verdict
+      # ("wedged, not slow", e2e/fixtures.ts) gets exactly one `--last-failed`
+      # rerun of only the failed tests: the visual job's containment below,
+      # applied here (#2633, decided 2026-10-16). It is not a retry policy.
+      # The probe proves the browser stopped answering, which no app or spec
+      # code causes and a rerun cannot mask; every failure without the
+      # verdict stays red on the first attempt under `retries: 0`. The first
+      # attempt's JSON report is put back after the rerun for the budget and
+      # duration steps below, since the rerun's report holds only its few.
       - name: Run non-visual Playwright tests
+        env:
+          SKIP: ${{ needs.changes.outputs.pixel_probe == 'false' && 'e2e/pixel-probe.spec.ts' || '' }}
         run: |
-          mapfile -t spec_files < <(node scripts/e2e-shard.mjs --shard=${{ matrix.shard }}/6 --explain --summary="$GITHUB_STEP_SUMMARY")
+          set -o pipefail
+          mapfile -t spec_files < <(node scripts/e2e-shard.mjs --shard=${{ matrix.shard }}/6 --skip="${SKIP}" --explain --summary="$GITHUB_STEP_SUMMARY")
           if [ "${#spec_files[@]}" -eq 0 ]; then
             echo "::error::scripts/e2e-shard.mjs dealt this shard nothing; refusing to run every spec instead."
             exit 1
           fi
           echo "shard ${{ matrix.shard }}/6: ${#spec_files[@]} specs"
-          pnpm exec playwright test "${spec_files[@]}"
+          # The cert-check extension spec loads the real extension, which the
+          # headless shell cannot: only the shard dealt it pays for the full
+          # Chromium (e2e/agency-check-extension.spec.ts).
+          if printf '%s\n' "${spec_files[@]}" | grep -qx 'e2e/agency-check-extension.spec.ts'; then
+            pnpm exec playwright install chromium
+          fi
+          status=0
+          pnpm exec playwright test "${spec_files[@]}" 2>&1 | tee shard.log || status=$?
+          if [ "$status" -eq 0 ]; then
+            exit 0
+          fi
+          if ! grep -q "wedged, not slow" shard.log; then
+            exit 1
+          fi
+          echo "::warning title=Renderer wedge detected::A failed test's browser activity carries the renderer probe's 'wedged, not slow' verdict (the known unattributed Chromium hang). Rerunning only this shard's failed tests once; any other failure stays red. The wedge is logged above."
+          cp e2e-durations/results.json e2e-durations/first-attempt.json
+          rerun=0
+          pnpm exec playwright test --last-failed || rerun=$?
+          mv e2e-durations/first-attempt.json e2e-durations/results.json
+          exit "$rerun"
         # e2e/servers.ts's default (cpus/2, 2 workers on this runner's 4
         # cores) was pinned to E2E_WORKERS=1 with double the shards
         # (20260731-ci-parallelization-resources-build-concurrency.md)
@@ -425,7 +534,16 @@ jobs:
         # a layer at a time (.claude/skills/stacked-prs/SKILL.md). Workers
         # stay at 2: the oversubscription argued above is per runner, and
         # more shards do not change it.
-      - uses: actions/upload-artifact@v7
+        #
+        # Measured, main run 38789538486 (2026-10-15, a38f98bc), the first
+        # green run with six shards: Playwright 1-6 took 525, 549, 492, 528,
+        # 632 and 609 s (mean 556 s, spread 140 s), the eight visual shards
+        # 316 to 510 s (mean 419 s) and reg-suit 67 s. The Playwright shards are
+        # still the longest job, about 2 min behind the slowest visual shard,
+        # not the 7.5 min estimated above: the recorded durations undercount
+        # the specs added since they were seeded. Refresh them from this run
+        # before dealing a seventh bin.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: playwright-report-${{ matrix.shard }}
@@ -438,13 +556,19 @@ jobs:
       - name: e2e budgets
         if: always()
         run: node scripts/e2e-budget-report.mjs e2e-durations/results.json >> "$GITHUB_STEP_SUMMARY"
+      # The same report's worst rows, over 80% of their budget, as `::warning`
+      # annotations on the spec's line: the check run's annotations are read,
+      # a step summary is not (code review 2026-10-13, row 28).
+      - name: e2e tests near their budget
+        if: always()
+        run: node scripts/e2e-budget-report.mjs e2e-durations/results.json --annotate
       # This shard's per-spec durations, as a file in the artifact below and as
       # one `diveday-e2e-durations:` log line — the input
       # `scripts/e2e-durations.mjs merge` folds into scripts/e2e-durations.json.
       - name: Record e2e durations
         if: always()
         run: node scripts/e2e-durations.mjs record e2e-durations/results.json --kind=functional --out=e2e-durations/functional-${{ matrix.shard }}.json
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: e2e-durations-${{ matrix.shard }}
@@ -460,12 +584,13 @@ jobs:
   #   it always did: main's snapshot is the baseline every later commit and
   #   every branch cut from it compares against, and it is never narrowed.
   # - A pull request captures what its diff can reach plus a smoke set
-  #   (`scripts/visual-affected.mjs`: the e2e-affected walk of routes and
-  #   importers, read against each capture's own source), on as few shards as
-  #   that weighs, and `visual-report` copies every other surface from the
-  #   expected snapshot before the compare (`scripts/visual-fill.mjs`), so it
-  #   reads as unchanged and the published report is whole. A diff it cannot
-  #   bound (the harness, the seed, a stylesheet, a locale bundle, a config,
+  #   (`scripts/visual-affected.mjs`: the changed lines followed name by name
+  #   to the pages that read them, `scripts/symbol-reach.mjs`, read against each
+  #   capture's own source), on as few shards as that weighs, and
+  #   `visual-report` copies every other surface from the expected snapshot
+  #   before the compare (`scripts/visual-fill.mjs`), so it reads as unchanged
+  #   and the published report is whole. A diff it cannot bound (the harness,
+  #   the seed or what the seed runs, the schema, a stylesheet, a build config,
   #   this file) captures everything.
   #
   # The diff is taken against the fork point from the default branch, which is
@@ -476,7 +601,7 @@ jobs:
     name: Plan the visual captures
     needs: changes
     if: github.event_name != 'schedule' && needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -485,7 +610,7 @@ jobs:
       count: ${{ steps.plan.outputs.count }}
       shards: ${{ steps.plan.outputs.shards }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # The fork point from the default branch is in history, not in a
           # depth-1 checkout.
@@ -510,7 +635,7 @@ jobs:
           else
             node scripts/visual-affected.mjs --list visual-list.full.json --out visual-list.json --all --github-output
           fi
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: visual-list
           path: visual-list.json
@@ -542,7 +667,7 @@ jobs:
     # (`scripts/e2e-durations.json`, refreshed weekly from the
     # `visual-durations-<n>` artifacts below), and each shard runs its own
     # list with `--test-list`.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
       contents: read
@@ -552,9 +677,9 @@ jobs:
         # Eight on main; on a pull request as many as its captures weigh.
         shard: ${{ fromJSON(needs.visual-plan.outputs.shards) }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: next-build
           path: .next
@@ -592,7 +717,7 @@ jobs:
       # Every shard deals the one list `visual-plan` chose the same way, so the
       # lists partition it (the deal's own test, scripts/e2e-shard.test.mjs,
       # pins exactly-once). The job summary carries every bin's weight.
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: visual-list
       - name: Deal the visual captures
@@ -631,20 +756,20 @@ jobs:
           # that test's sequential captures, not something this env var
           # addresses.
           E2E_WORKERS: "1"
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: visual-durations-${{ matrix.shard }}
           path: e2e-durations/visual-${{ matrix.shard }}.json
           if-no-files-found: ignore
           retention-days: 30
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: visual-screenshots-${{ matrix.shard }}
           path: e2e/screenshots/
           if-no-files-found: error
           retention-days: 1
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: playwright-report-visual-${{ matrix.shard }}
@@ -675,7 +800,7 @@ jobs:
     # no snapshot to publish — and the next code commit's baseline resolves
     # past this one (`scripts/wait-for-baseline.mjs`).
     if: ${{ !cancelled() && github.event_name != 'schedule' && needs.changes.outputs.code == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Ten minutes for the compare, and nothing added on top of it. This used to
     # be 35, to contain the twenty a stacked layer could spend waiting for the
     # layer below to publish the baseline it was keyed to. Every layer is now
@@ -720,7 +845,7 @@ jobs:
       #
       # `fetch-depth: 0` because the expected key is a merge-base (or HEAD^),
       # and a shallow clone has neither.
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
@@ -762,7 +887,7 @@ jobs:
       # the next commit's baseline and reports the missing surfaces as new
       # forever after. The summary step below still runs on that path (its
       # `!cancelled()`) and says, in those words, that nothing was compared.
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: ${{ needs.visual.result == 'success' }}
         with:
           pattern: visual-screenshots-*
@@ -837,7 +962,7 @@ jobs:
       - name: Restore the baseline images
         id: baseline-cache
         if: ${{ needs.visual.result == 'success' && steps.keys.outcome == 'success' && env.REG_EXPECTED_KEY != '' }}
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .reg-baseline
           key: reg-baseline-${{ env.REG_EXPECTED_KEY }}
@@ -864,12 +989,12 @@ jobs:
       # snapshot is anyone's baseline, and a cache it writes is the only kind
       # every branch can read.
       - name: Keep this commit's images for the runs that compare against it
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.compare.outcome == 'success' }}
+        if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && steps.compare.outcome == 'success' }}
         run: |
           rm -rf .reg-baseline
           cp -R e2e/screenshots .reg-baseline
-      - uses: actions/cache/save@v6
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.compare.outcome == 'success' }}
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && steps.compare.outcome == 'success' }}
         continue-on-error: true
         with:
           path: .reg-baseline
@@ -958,7 +1083,7 @@ jobs:
       # has already skipped it, and pushes to main are never auto-cancelled
       # (`cancel-in-progress` is false for them, for this same reason).
       - name: Refuse to miss main's baseline silently
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.visual.result != 'success' || steps.keys.outcome != 'success') }}
+        if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && (needs.visual.result != 'success' || steps.keys.outcome != 'success') }}
         run: |
           echo "::error title=No visual baseline published for ${GITHUB_SHA}::The visual captures did not complete, or this run could not name the key to publish them under, so this commit published no S3 snapshot. Every branch cut from it resolves 0 baselines and reports every surface as new — visual regression is blind repo-wide until this is fixed. Re-run this run's failed jobs (Actions → this run → Re-run failed jobs); a green re-run publishes the snapshot and restores comparison. Do not publish a partial capture set to work around it: the missing surfaces would then read as new permanently."
           exit 1
@@ -1006,7 +1131,7 @@ jobs:
       # — so that step keeps the floor there and this one would only add a
       # second, vaguer annotation beside it.
       - name: Refuse a green check over nothing compared
-        if: ${{ !cancelled() && steps.summary.outcome != 'skipped' && steps.summary.outputs.compared != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && !(github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.visual.result != 'success' || steps.keys.outcome != 'success')) }}
+        if: ${{ !cancelled() && steps.summary.outcome != 'skipped' && steps.summary.outputs.compared != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && !((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && (needs.visual.result != 'success' || steps.keys.outcome != 'success')) }}
         run: |
           echo "::error title=Nothing was compared::The visual run published no usable report for this commit (verdict: ${VERDICT:-unknown}), so nothing is known about its pixels — this is not a clean run, and it is not a passing one either. Read the sticky diveday:visual-summary comment and the visual-report job log: the usual causes are a failed capture shard, absent REG_SUIT_* secrets, or a bucket mismatch. Re-run the failed jobs; a green re-run compares and publishes. Do not merge on a Changed: 0 that compared nothing."
           exit 1
@@ -1047,16 +1172,17 @@ jobs:
     # and this repo would rather read those than take a new supply-chain
     # dependency into every CI run to save them.
     if: github.event_name != 'schedule'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
     outputs:
       code: ${{ steps.filter.outputs.code }}
       db: ${{ steps.filter.outputs.db }}
+      pixel_probe: ${{ steps.filter.outputs.pixel_probe }}
       runner: ${{ steps.runner.outputs.runner }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # The diff below reaches back to the base commit, which a depth-1
           # checkout does not contain.
@@ -1110,8 +1236,24 @@ jobs:
             || ! git rev-parse --verify -q "${head}^{commit}" > /dev/null 2>&1; then
             echo "db=true" >> "$GITHUB_OUTPUT"
             echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "pixel_probe=true" >> "$GITHUB_OUTPUT"
             echo "Diff range '${base}...${head}' is unresolvable — running everything." >> "$GITHUB_STEP_SUMMARY"
             exit 0
+          fi
+          # `pixel_probe` — did this change touch what e2e/pixel-probe.spec.ts
+          # tests? It drives the `scripts/pixel-probe` tool against `setContent`
+          # fixtures, and reads no page: 50 tests and 103 s of every pull
+          # request for a developer tool (test review 2026-10-14). It runs when
+          # the tool, its spec, the stylesheet it measures, the browser or this
+          # file changed, and on every push to main.
+          probe_paths=$(git diff --name-only "${base}...${head}" -- \
+            scripts/pixel-probe e2e/pixel-probe.spec.ts e2e/fixtures.ts src/app/globals.css \
+            package.json pnpm-lock.yaml .github/workflows/ci.yml)
+          if [ -z "${BASE_REF}" ] || [ -n "${probe_paths}" ]; then
+            echo "pixel_probe=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "pixel_probe=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing pixel-probe tests changed — e2e/pixel-probe.spec.ts skipped." >> "$GITHUB_STEP_SUMMARY"
           fi
           # Three-dot, from the merge base: what this branch changed, not what
           # main did underneath it. Two dots would report every file main added
@@ -1180,7 +1322,7 @@ jobs:
     # one work: `needs:` on a skipped job would otherwise skip this one too, and
     # `changes` is deliberately skipped on the nightly.
     if: ${{ always() && (github.event_name == 'schedule' || needs.changes.outputs.db == 'true') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -1223,7 +1365,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Required, not tidiness. `migrations.postgres.test.ts` reconstructs
           # the previous release's `drizzle/` tree out of the object store via
@@ -1256,3 +1398,39 @@ jobs:
           # test at this container. One purpose-built variable keeps the blast
           # radius to the three files that ask for it by name (src/test/postgres.ts).
           DIVEDAY_TEST_POSTGRES_URL: postgres://postgres:postgres@localhost:5432/postgres
+
+  # The one check main's ruleset requires. A required check names a job, and
+  # most jobs here are skipped on a docs-only change or split into shards whose
+  # names move with the shard count, so none of them can be the required one.
+  # This job needs all of them and fails if any failed or was cancelled; a
+  # skipped job is a passed one, because `changes` decided it had nothing to do.
+  ci-result:
+    name: CI result
+    if: always() && github.event_name != 'schedule'
+    needs:
+      - repo-safeguards
+      - lint
+      - typecheck
+      - unit-tests
+      - unit-tests-docs
+      - build
+      - playwright
+      - visual-plan
+      - visual
+      - visual-report
+      - changes
+      - real-postgres
+      - coverage-floors
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Every job passed or was skipped
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "$RESULTS"
+          if echo "$RESULTS" | grep -qE '"(failure|cancelled)"'; then
+            echo "::error::A CI job failed or was cancelled."
+            exit 1
+          fi

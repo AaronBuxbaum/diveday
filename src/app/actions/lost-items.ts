@@ -7,6 +7,7 @@ import type { LostItemRowState } from "@/components/lost-found/LostItemRow";
 import { type AppDb, getDb } from "@/db/client";
 import { recordLostItem, setLostItemStatus, tellLostItemOwner } from "@/db/lost-items";
 import { getShopById } from "@/db/shops";
+import { parseForm, readForm, single, text } from "@/lib/form-parse";
 import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 
@@ -25,6 +26,8 @@ async function revalidateLostItems(db: AppDb, shopId: string, tripId: string) {
   revalidatePath(shopPath(shop.slug, "lost-found"));
 }
 
+const recordForm = z.object({ bookingId: text(), description: text() });
+
 export async function recordLostItemAction(
   tripId: string,
   _previous: RecordLostItemState | undefined,
@@ -32,14 +35,15 @@ export async function recordLostItemAction(
 ): Promise<RecordLostItemState> {
   const session = await requireStaffSession();
   if (!z.uuid().safeParse(tripId).success) return { status: "refused", reason: "invalid" };
-  const seat = String(formData.get("bookingId") ?? "");
+  const form = readForm(recordForm, formData);
+  const seat = form.bookingId;
   if (seat && !z.uuid().safeParse(seat).success) return { status: "refused", reason: "invalid" };
   const db = await getDb();
   const result = await recordLostItem(db, {
     shopId: session.user.shopId,
     tripId,
     bookingId: seat || null,
-    description: String(formData.get("description") ?? ""),
+    description: form.description,
     actorPersonId: session.user.personId,
   });
   if (!result.ok) return { status: "refused", reason: result.reason };
@@ -48,8 +52,8 @@ export async function recordLostItemAction(
 }
 
 const rowSchema = z.object({
-  itemId: z.uuid(),
-  intent: z.enum(["tell", "returned", "discarded", "open"]),
+  itemId: single(z.uuid()),
+  intent: single(z.enum(["tell", "returned", "discarded", "open"])),
 });
 
 /** One row's buttons: tell the owner, mark returned or discarded, or reopen. */
@@ -59,11 +63,8 @@ export async function lostItemRowAction(
   formData: FormData,
 ): Promise<LostItemRowState> {
   const session = await requireStaffSession();
-  const parsed = rowSchema.safeParse({
-    itemId: formData.get("itemId"),
-    intent: formData.get("intent"),
-  });
-  if (!parsed.success || !z.uuid().safeParse(tripId).success) {
+  const parsed = parseForm(rowSchema, formData);
+  if (!parsed.ok || !z.uuid().safeParse(tripId).success) {
     return { status: "refused", reason: "invalid" };
   }
   const db = await getDb();

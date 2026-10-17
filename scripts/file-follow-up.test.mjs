@@ -132,6 +132,26 @@ describe("parseFileArgs", () => {
     expect(parsed.labels).toEqual(["ready-for-human", "parked"]);
   });
 
+  it("files an idea under its own label, out of the inbox and the human queue", () => {
+    const parsed = parseFileArgs([...complete, "--idea", "--label", "enhancement"]);
+    expect(parsed.error).toBeUndefined();
+    expect(parsed.idea).toBe(true);
+    expect(parsed.labels).toEqual(["idea", "enhancement"]);
+  });
+
+  it("leaves a plain filing out of the idea shelf", () => {
+    expect(parseFileArgs(complete).idea).toBe(false);
+  });
+
+  it("refuses an idea that is really a question", () => {
+    const asked = complete.map((item) => (item === "improvement" ? "question" : item));
+    expect(parseFileArgs([...asked, "--idea"]).error).toMatch(/drop --idea/);
+  });
+
+  it("refuses --idea given twice", () => {
+    expect(parseFileArgs([...complete, "--idea", "--idea"]).error).toMatch(/--idea given twice/);
+  });
+
   it("refuses two flags both reading stdin", () => {
     const both = complete.map((item) => (item === "why.md" || item === "prompt.md" ? "-" : item));
     expect(parseFileArgs(both).error).toMatch(/only one flag can read stdin/);
@@ -434,13 +454,13 @@ describe("the refusal, at the process boundary", () => {
     expect(result.stderr).toMatch(/could not read --why/);
   });
 
-  it("refuses a title that starts with the same six words as an open issue", () => {
+  it("files a title that reads like an open issue, and names the twin to fold into", () => {
     setOpen([{ number: 2412, title: "Refuse a follow-up body the guard would reject sometimes" }]);
     const result = run(...argsFor());
     setOpen([]);
-    expect(result.status).toBe(1);
-    expect(result.filed).toBe(false);
-    expect(result.stderr).toMatch(/#2412 .* starts with the same words/);
+    expect(result.status).toBe(0);
+    expect(result.filed).toBe(true);
+    expect(result.stderr).toMatch(/#2412 .* reads like this one/);
   });
 
   it("refuses a needs-triage filing while the inbox is over its ceiling, unless over quota", () => {

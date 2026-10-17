@@ -1,6 +1,7 @@
+import type { ReactNode } from "react";
 import { issueBookingHandoff } from "@/db/booking-handoff";
 import type { AppDb } from "@/db/client";
-import { nextDiveForBooking } from "@/db/next-dive";
+import { type BookedDeparture, bookedDepartures, nextDiveForBooking } from "@/db/next-dive";
 import {
   MAX_RECAP_PHOTOS_PER_BOOKING,
   type RecapPageData,
@@ -13,6 +14,7 @@ import { tipPresetsMajor } from "@/db/tips";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
 import { DIVER_CERT_LEVEL_KEYS, NEXT_DIVE_REASON_KEYS } from "@/i18n/next-dive-labels";
+import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
 import { handoffHref } from "@/lib/booking-handoff";
 import type { BrandDisplayFontCode } from "@/lib/brand";
@@ -20,7 +22,13 @@ import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DiveRecordComparison } from "@/lib/dive-record";
 import type { FlySafeAnchor, FlySafeReason } from "@/lib/fly-safe";
-import { formatOrdinal, formatRelativeDay, formatShortDate, formatWeekdayTime } from "@/lib/format";
+import {
+  formatOrdinal,
+  formatRelativeDay,
+  formatShortDate,
+  formatTime,
+  formatWeekdayTime,
+} from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import type { NextDivePick } from "@/lib/next-dive";
 import type { PostcardImage } from "@/lib/postcard-image";
@@ -166,6 +174,18 @@ export type AfterStateProps = {
   /** The pick's booking page carrying this diver's own handoff, or null. */
   nextDiveHref?: string | null;
   /**
+   * **The seat this diver already holds next**, worded, in place of a pick
+   * (fifth-loop ideas, item 37): only a diver with nothing booked is offered a
+   * new boat. Null on `/recap`, which is written to be forwarded, so a stranger
+   * holding it is never told where the diver will be.
+   */
+  bookedNext?: { date: string; title: string; time: string } | null;
+  /**
+   * The diver's other days with the shop, as rows that each send a fresh link
+   * (H-132). Rendered only on `/ready`; `/recap` passes nothing.
+   */
+  yourDays?: ReactNode;
+  /**
    * **The buddy seat** (ADR 20260908-one-hand, decision 6, lever W): this
    * diver's own link to the shop, carrying a non-secret referral id, for them
    * to hand to a friend.
@@ -177,6 +197,13 @@ export type AfterStateProps = {
    * rather than before one.
    */
   buddyLinkUrl?: string | null;
+  /**
+   * Whether the photo door offers "Share with everyone on this boat". True
+   * only from `/ready/<token>`, whose upload verifies the readiness token; the
+   * recap link is forwardable for 180 days, so its photos stay on this recap
+   * (security review of layer r5-4, F3).
+   */
+  canShareWithBoat: boolean;
   /** The four recap actions, already bound to a signed recap token. */
   actions: {
     submitReview: (formData: FormData) => void | Promise<void>;
@@ -232,10 +259,30 @@ export async function buildAfterStateProps(input: {
    * (security review, 2026-09-06).
    */
   mintHandoff: boolean;
+  /**
+   * The link was mailed to the contact on file (`booking_capabilities.delivered`).
+   * `/recap` passes false. Only a delivered `/ready` link reads or says
+   * anything about the person's other bookings, or mints a handoff carrying
+   * their gear: a booking or claim redirect proved only a typed name and an
+   * address (security review r5-4, second pass, FIX 1).
+   */
+  delivered: boolean;
 }): Promise<AfterStateProps> {
-  const { db, data, bookingId, locale, t, params, actions, mintHandoff } = input;
+  const { db, data, bookingId, locale, t, params, actions } = input;
+  const personWide = input.mintHandoff && input.delivered;
   const { shop, trip } = data;
-  const [ownReview, nextDeparture, ownPulse, nextDive] = await Promise.all([
+  // On a delivered `/ready` link alone: a diver who already holds a later seat
+  // is offered nothing new (item 37) and is told which seat it is. Anywhere
+  // else the card does not depend on it. One read, beside the pick, for both.
+  const bookedRead = personWide
+    ? bookedDepartures(db, {
+        shopId: shop.id,
+        personId: data.personId,
+        now: nowDate(),
+        excludeTripId: trip.id,
+      })
+    : Promise.resolve<BookedDeparture[]>([]);
+  const [ownReview, nextDeparture, ownPulse, nextDive, booked] = await Promise.all([
     getReviewForBooking(db, bookingId),
     nextPublicDeparture(db, shop.id, locale, shop.timezone),
     getRecapPulseForBooking(db, bookingId),
@@ -253,8 +300,12 @@ export async function buildAfterStateProps(input: {
       dayShoutout: data.shoutout,
       daySiteNames: data.sites.map((site) => site.name),
       dayLensId: trip.lensId,
+      booked: bookedRead,
+      noneIfBooked: true,
     }),
+    bookedRead,
   ]);
+  const [firstBooked] = booked;
   const when = formatShortDate(trip.startsAt, locale, shop.timezone);
 
   return {
@@ -339,9 +390,20 @@ export async function buildAfterStateProps(input: {
     // 3): the next dive's link carries a ten-minute handoff minted from this
     // booking, so the page it opens arrives with this diver's facts folded.
     nextDiveHref:
-      nextDive && mintHandoff
+      nextDive && personWide
         ? await nextDiveHandoffHref(db, shop, bookingId, nextDive.tripId)
         : null,
+    bookedNext:
+      firstBooked && personWide
+        ? {
+            date: formatShortDate(firstBooked.startsAt, locale, shop.timezone),
+            title: firstBooked.title,
+            time: formatTime(firstBooked.startsAt, locale, shop.timezone),
+          }
+        : null,
+    // The readiness link's upload is the one that verifies a revocable token,
+    // and shares only from a delivered one (second pass, N-a).
+    canShareWithBoat: personWide,
     actions,
   };
 }
@@ -371,6 +433,14 @@ function postcardFor(input: {
     : data.sites.map((site) => site.name);
   const facts: PostcardImage["facts"] = [
     { label: t("recap.diverLabel"), value: data.diverName },
+    ...(data.course?.certification
+      ? [
+          {
+            label: t("recap.certifiedLabel"),
+            value: t(DIVER_CERTIFICATION_LEVEL_KEYS[data.course.certification.level]),
+          },
+        ]
+      : []),
     { label: t("recap.dateLabel"), value: when },
     ...(trip.boatName ? [{ label: t("recap.vesselLabel"), value: trip.boatName }] : []),
     ...(trip.crew.length > 0 ? [{ label: t("recap.crewLabel"), value: trip.crew.join(", ") }] : []),

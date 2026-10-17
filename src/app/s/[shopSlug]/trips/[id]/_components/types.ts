@@ -1,5 +1,4 @@
 import type { getBookingForTrip } from "@/db/bookings";
-import type { listPublishedDiveSiteMoments } from "@/db/dive-sites";
 import type { getBookingReadiness, getTripRequirements } from "@/db/readiness";
 import type { DiverRentalFit } from "@/db/rental-fit";
 import type { shopBySlugCached } from "@/db/shops-cached";
@@ -11,7 +10,7 @@ import type { fetchAutomatedMarineForecast } from "@/lib/marine-forecast";
 export type Shop = NonNullable<Awaited<ReturnType<typeof shopBySlugCached>>>;
 export type Trip = NonNullable<Awaited<ReturnType<typeof getTripWithBooked>>>;
 export type TripDive = Awaited<ReturnType<typeof listTripDives>>[number];
-/** One consecutive day a departure meets on — a `trip_schedule_days` row. */
+/** One day a departure meets on — a `trip_schedule_days` row. */
 export type TripMeetingDay = Awaited<ReturnType<typeof listTripScheduleDays>>[number];
 export type Confirmed = NonNullable<Awaited<ReturnType<typeof getBookingForTrip>>>;
 export type Readiness = Awaited<ReturnType<typeof getBookingReadiness>>;
@@ -28,12 +27,11 @@ export type DiveBriefing = TripDive & {
    * where the locale is known rather than handing raw rows down.
    */
   creatures: (MarineLifeCard & { id: string })[];
-  moments: Awaited<ReturnType<typeof listPublishedDiveSiteMoments>>;
 };
 
 /**
- * What the four briefing beats actually read: the place, its field guide and
- * its published moments — everything about *where* the day dives and nothing
+ * What the briefing beats actually read: the place and its field guide —
+ * everything about *where* the day dives and nothing
  * about the tank it is dived on.
  *
  * The beats take this rather than a whole {@link DiveBriefing} so the public
@@ -41,7 +39,7 @@ export type DiveBriefing = TripDive & {
  * without inventing a `trip_dives` row it has no trip for. A `DiveBriefing`
  * satisfies it, so the departure page passes its own list unchanged.
  */
-export type SiteBriefing = Pick<DiveBriefing, "diveSite" | "creatures" | "moments">;
+export type SiteBriefing = Pick<DiveBriefing, "diveSite" | "creatures">;
 
 /**
  * Every refusal this page's booking/waitlist/rental-fit/payment actions can
@@ -70,6 +68,7 @@ export type ErrorCode =
   | "fit"
   | "pay"
   | "waiver"
+  | "busy"
   | "rate_limited";
 
 export const ERROR_MESSAGE_KEYS: Record<ErrorCode, DiverMessageKey> = {
@@ -88,6 +87,9 @@ export const ERROR_MESSAGE_KEYS: Record<ErrorCode, DiverMessageKey> = {
   // on it from either surface reads one sentence, not two.
   waiver: "ready.waiverUnavailable",
   rate_limited: "common.rateLimited",
+  // The booking transaction waited its five seconds for a held boat and gave
+  // up (`isLockWaitRefusal`): a crowd, not a refusal, so it says to try again.
+  busy: "booking.errors.busy",
 };
 
 /** True for any string this page knows how to translate into an error notice. */

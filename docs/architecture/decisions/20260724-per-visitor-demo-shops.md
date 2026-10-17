@@ -77,3 +77,17 @@ Revisit if per-visitor minting proves abusable (tighten the aggregate cap, add a
 demo needs to outlive 7 days (make the window per-shop, or convert-to-trial on signup). If demos
 must ever hold private data, bind the demo session to the mint (a cookie/nonce) so only the minting
 visitor can role-switch in, rather than anyone with the slug.
+
+## Amendment 2026-10-16: the demo wears the visitor's shop name (H-131)
+
+The "Try the demo" door on Get set up asks, optionally, for the visitor's own shop name, and the
+demo's staff screens wear it: the shop nav, Today's greeting and the sample email preview. It is
+**never written to the database**. It lives in one signed cookie (`diveday_demo_name`, httpOnly,
+path `/shop`, seven days, HMAC keyed by HKDF from the auth secret, bound to the minted demo's shop
+id and to its own expiry; `src/lib/demo-shop-name.ts`), cleaned to 60 characters with control and
+format characters stripped (`cleanVisitorShopName`). So the name never reaches the storefront, a
+sent email, a search engine or another visitor, and the canonical `blue-mantis` demo never reads
+it. The "Demo shop" banner stays, and every demo shop's storefront is now `noindex`
+(`shopSearchListingRobots` reads `isDemo`), so a page wearing a real shop's name cannot be indexed
+as that shop. Leaving the field empty keeps the generated name, and an empty submit clears the
+cookie.

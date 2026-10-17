@@ -23,6 +23,30 @@ export const INCIDENT_HANDOVER_KINDS = [
 ] as const;
 export type IncidentHandoverKind = (typeof INCIDENT_HANDOVER_KINDS)[number];
 
+/**
+ * What kind of incident it was (batch 6, item 7). Keep aligned with the
+ * `incident_kind` pg enum. `missing_diver` is its own kind, apart from injury,
+ * and so is `fatality`: an insurer, a coastguard and a training agency each
+ * ask for a death first, and "injury, serious" does not say it (dive-domain
+ * review 20261014). `injury` covers illness too (DCS, a seasick faint).
+ */
+export const INCIDENT_KINDS = [
+  "injury",
+  "near_miss",
+  "equipment",
+  "missing_diver",
+  "fatality",
+  "other",
+] as const;
+export type IncidentKind = (typeof INCIDENT_KINDS)[number];
+
+/**
+ * How serious it was, in the crew's own judgement on the day: three words,
+ * never a clinical scale. Keep aligned with the `incident_severity` pg enum.
+ */
+export const INCIDENT_SEVERITIES = ["minor", "moderate", "serious"] as const;
+export type IncidentSeverity = (typeof INCIDENT_SEVERITIES)[number];
+
 export const INCIDENT_INVOLVEMENTS = ["affected", "witness", "responder"] as const;
 export type IncidentInvolvement = (typeof INCIDENT_INVOLVEMENTS)[number];
 
@@ -69,12 +93,25 @@ export function mayWriteIncidentReport(
   return mayReadIncidentReport(viewer, report);
 }
 
+/**
+ * Who may discard an unfiled draft, and who may set or release a legal hold: an
+ * owner, and nobody else (Aaron, 2026-10-13, issue #2391). Both take a report
+ * off the ordinary path (a draft out of sight, a report kept past its window),
+ * so they are the shop's accountable person's call, not the crew's or a
+ * manager's.
+ */
+export function mayDecideIncidentRecord(viewer: IncidentViewer): boolean {
+  return viewer.roles?.includes("owner") === true;
+}
+
 /** The fields a draft holds, as the database stores them. */
 export type IncidentDraftFields = {
   occurredAt: Date | null;
   diveSiteId: string | null;
   locationText: string | null;
   whatHappened: string | null;
+  kind: IncidentKind | null;
+  severity: IncidentSeverity | null;
   firstAidGiven: boolean | null;
   oxygenGiven: boolean | null;
   oxygenMinutes: number | null;
@@ -90,6 +127,8 @@ export type IncidentFilingGap =
   | "occurred_at"
   | "location"
   | "what_happened"
+  | "kind"
+  | "severity"
   | "first_aid"
   | "oxygen"
   | "emergency_services"
@@ -100,6 +139,8 @@ export function incidentFilingGaps(fields: IncidentDraftFields): IncidentFilingG
   if (fields.occurredAt === null) gaps.push("occurred_at");
   if (fields.diveSiteId === null && !fields.locationText?.trim()) gaps.push("location");
   if (!fields.whatHappened?.trim()) gaps.push("what_happened");
+  if (fields.kind === null) gaps.push("kind");
+  if (fields.severity === null) gaps.push("severity");
   if (fields.firstAidGiven === null) gaps.push("first_aid");
   if (fields.oxygenGiven === null) gaps.push("oxygen");
   if (fields.emergencyServicesCalled === null) gaps.push("emergency_services");
@@ -132,6 +173,12 @@ export function yesNo(value: FormValue): boolean | null {
   return null;
 }
 
+/** A code from a fixed list, or null for anything else, blank included. */
+function oneOf<T extends string>(list: readonly T[], value: FormValue): T | null {
+  const code = text(value);
+  return code !== null && (list as readonly string[]).includes(code) ? (code as T) : null;
+}
+
 function isHandoverKind(value: string): value is IncidentHandoverKind {
   return (INCIDENT_HANDOVER_KINDS as readonly string[]).includes(value);
 }
@@ -156,6 +203,8 @@ export function parseIncidentDraft(
     diveSiteId: FormValue;
     locationText: FormValue;
     whatHappened: FormValue;
+    kind: FormValue;
+    severity: FormValue;
     firstAidGiven: FormValue;
     oxygenGiven: FormValue;
     oxygenMinutes: FormValue;
@@ -200,6 +249,8 @@ export function parseIncidentDraft(
     diveSiteId: text(form.diveSiteId),
     locationText: text(form.locationText),
     whatHappened: text(form.whatHappened),
+    kind: oneOf(INCIDENT_KINDS, form.kind),
+    severity: oneOf(INCIDENT_SEVERITIES, form.severity),
     firstAidGiven: yesNo(form.firstAidGiven),
     oxygenGiven,
     oxygenMinutes,

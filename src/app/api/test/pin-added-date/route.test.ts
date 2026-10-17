@@ -3,7 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createDiver } from "@/db/divers";
 import { people, shops } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
+
+const ctx = fileScopedShopContext();
 
 /**
  * The merge preview's capture prints two records' "Added" dates, and both
@@ -39,13 +41,16 @@ afterEach(() => {
 
 describe("POST /api/test/pin-added-date", () => {
   it("stamps every live record of the name with the app's clock, and no one else", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
     await createDiver(db, {
       shopId: shop.id,
       fullName: "Priya Sharma",
       email: "priya.duplicate@example.com",
     });
+
+    // Rows added long ago, as the e2e database's seed leaves them.
+    await db.update(people).set({ createdAt: new Date("2020-01-01T00:00:00Z") });
 
     const response = await POST(pinRequest({ fullName: "Priya Sharma" }));
     expect(response.status).toBe(200);
@@ -67,9 +72,10 @@ describe("POST /api/test/pin-added-date", () => {
   }, 60_000);
 
   it("refuses a shop that is not the demo, and pins nothing", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     vi.mocked(getDb).mockResolvedValue(db);
     await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
+    await db.update(people).set({ createdAt: new Date("2020-01-01T00:00:00Z") });
 
     const response = await POST(pinRequest({ fullName: "Priya Sharma" }));
     expect(response.status).toBe(404);

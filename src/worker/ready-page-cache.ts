@@ -28,6 +28,15 @@
  *   that names none (a cancelled booking, a departure called off, a dead link)
  *   clears the copy instead of replacing it, and a `?cancelled=` landing
  *   forgets it outright.
+ *
+ * **A residual we accept** (issue #2478, decided 2026-10-16): a staff cancel
+ * or a blow-out (`src/db/blowouts.ts`) reaches the copy only when the diver
+ * next opens the link online. A phone that never does keeps showing the page
+ * until its date. A push could drop the copy, but divers have no push
+ * subscription (web push serves staff manifests, ADR 20260804-manifest-web-push)
+ * and a diver offline at the marina is the one phone a push cannot reach, so
+ * the date above is the bound. The e2e spec `e2e/ready-offline.spec.ts` pins
+ * the two ends: the copy shows offline, and a `?cancelled=` landing clears it.
  */
 
 import { READY_KEEP_UNTIL_META } from "@/lib/ready-offline";
@@ -49,7 +58,24 @@ export const READY_COPY_KEY = "/ready/kept-copy";
 const PATH_HASH_HEADER = "x-diveday-path-sha256";
 const KEEP_UNTIL_HEADER = "x-diveday-keep-until";
 
+/** Stands in for the bearer token in the stored body; not a legal token (wrong length). */
+const TOKEN_PLACEHOLDER = "__diveday_kept_token__";
+
+/**
+ * A party seat's claim link (`/claim/<token>`, relative or absolute) is a
+ * second bearer token on the page. The copy keeps no claim token at all, and
+ * serves this stand-in, a link that opens nothing, in its place: the real link
+ * is back once the page is read online again.
+ */
+const CLAIM_TOKEN_PATTERN = /\/claim\/[A-Za-z0-9_-]{43}/g;
+const CLAIM_REMOVED = "/claim/__diveday_claim_not_kept__";
+
 const KEEP_UNTIL_PATTERN = new RegExp(`<meta name="${READY_KEEP_UNTIL_META}" content="(\\d+)"`);
+
+/** The token in a readiness path (`/ready/<token>`). */
+function tokenOf(path: string): string {
+  return path.slice("/ready/".length);
+}
 
 async function pathHash(path: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(path));
@@ -97,8 +123,8 @@ export async function saveReadyPage(
 ): Promise<boolean> {
   if (!storable(response)) return false;
   // A body of its own, so the copy is complete before anything is replaced.
-  const body = await response.arrayBuffer();
-  const named = Number(new TextDecoder().decode(body).match(KEEP_UNTIL_PATTERN)?.[1] ?? Number.NaN);
+  const html = new TextDecoder().decode(await response.arrayBuffer());
+  const named = Number(html.match(KEEP_UNTIL_PATTERN)?.[1] ?? Number.NaN);
   const cache = await storage.open(READY_CACHE_NAME);
   if (!Number.isFinite(named) || named <= now) {
     await clearCopies(cache);
@@ -107,11 +133,16 @@ export async function saveReadyPage(
   const headers = new Headers(response.headers);
   headers.set(KEEP_UNTIL_HEADER, String(Math.min(named, now + READY_COPY_MAX_AGE_MS)));
   headers.set(PATH_HASH_HEADER, await pathHash(path));
-  const copy = new Response(body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
+  // The page's links carry the token; a same-origin script reading the stored
+  // body must not recover it (residual D1), so it is put back on the way out.
+  const copy = new Response(
+    html.replaceAll(tokenOf(path), TOKEN_PLACEHOLDER).replace(CLAIM_TOKEN_PATTERN, CLAIM_REMOVED),
+    {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    },
+  );
   await clearCopies(cache);
   await cache.put(READY_COPY_KEY, copy);
   return true;
@@ -132,7 +163,12 @@ export async function readyPageFallback(
     return undefined;
   }
   if (cached.headers.get(PATH_HASH_HEADER) !== (await pathHash(path))) return undefined;
-  return cached;
+  const html = (await cached.text()).replaceAll(TOKEN_PLACEHOLDER, tokenOf(path));
+  return new Response(html, {
+    status: cached.status,
+    statusText: cached.statusText,
+    headers: cached.headers,
+  });
 }
 
 /** Drop the kept copy if it is `path`'s: the seat it was for has just been cancelled. */

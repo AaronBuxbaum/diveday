@@ -3,7 +3,7 @@
  * guardian's co-signature, emergency contacts, and completing the release.
  * Imported through the `./waivers` barrel.
  */
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { readEmergencyContact } from "@/lib/contact";
 import {
@@ -19,8 +19,10 @@ import { computeWaiverIntegrityHash } from "@/lib/waiver-integrity";
 import { hashWaiverToken } from "@/lib/waiver-tokens";
 import { needsMedicalReview } from "@/lib/waivers";
 import type { AppDb, DbExecutor } from "./client";
+import { publishManifestEventsForPerson } from "./manifest-events";
 import type { DraftGuardian, MedicalAnswers } from "./schema";
 import { bookings, people, waiverRecords } from "./schema";
+import { seatMinorDeclared } from "./waiver-signing";
 import { shopTimezone } from "./waivers-templates";
 
 export type TokenWaiverState =
@@ -328,6 +330,8 @@ export async function saveBookingEmergencyContact(
      * Who is writing. A bearer link on a held seat (`identity_unconfirmed_at`)
      * may belong to someone other than the diver record it was matched to, so
      * it never writes onto that record until staff confirm who it is (#2082).
+     * Staff on a held seat write the seat's own contact (#2145), never the
+     * matched record's.
      */
     actor: "bearer" | "staff";
   },
@@ -344,7 +348,28 @@ export async function saveBookingEmergencyContact(
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
     .limit(1);
   if (!booking) return false;
-  if (input.actor === "bearer" && booking.identityUnconfirmedAt) return false;
+  if (booking.identityUnconfirmedAt) {
+    if (input.actor === "bearer") return false;
+    // **A held seat's contact is the seat's** (issue #2145): the matched
+    // record's next of kin may be somebody else's, so the desk's answer for
+    // the person in front of them goes on the booking and is shown in place
+    // of the withheld one. Nothing is written to the matched record.
+    const [held] = await db
+      .update(bookings)
+      .set({
+        heldEmergencyContactName: submitted.name,
+        heldEmergencyContactPhone: submitted.phone,
+      })
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          isNotNull(bookings.identityUnconfirmedAt),
+        ),
+      )
+      .returning({ id: bookings.id });
+    return Boolean(held);
+  }
   const [updated] = await db
     .update(people)
     .set(patch)
@@ -442,7 +467,13 @@ export async function completeWaiver(
   // the diver's age. Refused before the record is touched, like the name
   // mismatch above, so a family that missed the section keeps the link.
   const timezone = await shopTimezone(db, state.record.shopId);
-  const minor = guardianSignatureRequired(signer.dateOfBirth, signingDate(now, timezone));
+  const minor = guardianSignatureRequired(
+    signer.dateOfBirth,
+    signingDate(now, timezone),
+    // The booker's "Under 18" on this release's seat, read where the page
+    // reads it, so the two can never disagree about asking.
+    await seatMinorDeclared(db, state.record.shopId, state.record.bookingId),
+  );
   let guardian: ReturnType<typeof guardianEvidence> | null = null;
   if (minor) {
     if (!input.guardian) return { ok: false, reason: "guardian_required" };
@@ -527,6 +558,9 @@ export async function completeWaiver(
         });
       }
     }
+    // The release changes who the boat will board: open and primed manifests
+    // re-read (issue #2613).
+    await publishManifestEventsForPerson(db, state.record.shopId, state.record.personId);
     return { ok: true, status: completedStatus(saved.status), idempotent: false };
   }
 

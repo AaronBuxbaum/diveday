@@ -1,9 +1,14 @@
+import Link from "next/link";
+import { Suspense } from "react";
 import { EmptyState } from "@/components/EmptyState";
+import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { MonthMoneyDetail as Detail } from "@/db/report-lines";
 import { payoutSentence } from "@/i18n/payout-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { RevenueLine } from "@/lib/report-lines";
+import { shopPath } from "@/lib/staff-notices";
+import { MonthEndSection } from "./MonthEndSection";
 
 /** Each revenue line's name in the staff bundle. */
 export const BY_LINE_KEYS = {
@@ -82,11 +87,44 @@ export function MonthDetailLines({
 }
 
 /**
+ * **Who brought the month's buddy seats** (fifth-loop ideas, item 41):
+ * "Priya Sharma brought 2 friends". The referring diver is the shop's own, so
+ * unlike a partner slug the name is safe to show, and each name is the door to
+ * their record, where the owner thanks them. Nothing in a month with none.
+ */
+export function BuddyReferrerLines({
+  detail,
+  t,
+  shopSlug,
+}: {
+  detail: Detail;
+  t: StaffTranslator;
+  shopSlug: string;
+}) {
+  if (detail.buddyReferrers.length === 0) return null;
+  return (
+    <ul className="mt-1 flex flex-wrap justify-end gap-x-4 text-sm text-muted tabular-nums">
+      {detail.buddyReferrers.map((referrer) => (
+        <li key={referrer.personId}>
+          <Link
+            href={shopPath(shopSlug, "divers", referrer.personId)}
+            className={buttonClass({ variant: "link", size: "sm", flush: true })}
+          >
+            {t("reports.buddyReferrer", { name: referrer.fullName, count: referrer.friends })}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
  * **Where the money came from** (owner decision 2026-10-09). Plain text, one
  * line per source, no bars: the figures are the facts, and a line that came
  * to nothing is left out rather than read as $0. Its basis is the day the
  * money was paid, not the departures the Revenue figure is anchored to, so it
- * says so under its heading.
+ * says so under its heading. The month's money-out lines (refunded, discounted,
+ * Stripe fees) sit under it for the same reason: same basis.
  */
 export function MoneyByLine({
   detail,
@@ -97,7 +135,17 @@ export function MoneyByLine({
   t: StaffTranslator;
   money: (cents: number) => string;
 }) {
-  if (detail.lines.length === 0) return null;
+  const { refundedCents, discountedCents, stripeFeesCents, disputesLostCents } = detail.out;
+  const showFees = stripeFeesCents !== null && stripeFeesCents !== 0;
+  if (
+    detail.lines.length === 0 &&
+    refundedCents <= 0 &&
+    discountedCents <= 0 &&
+    disputesLostCents <= 0 &&
+    !showFees
+  ) {
+    return null;
+  }
   return (
     <section aria-labelledby="reports-by-line" className="mt-10">
       <h2 id="reports-by-line" className={SECTION_TITLE_CLASS}>
@@ -115,6 +163,32 @@ export function MoneyByLine({
           </div>
         ))}
       </dl>
+      {/* **What left the money above** (UX review 2026-10-11, item 17; issue
+          #2466): refunds, what discount codes took off, and Stripe's fees.
+          They share this section's basis, the day the money was paid, which is
+          why they sit here and not under the departure-basis Revenue figure.
+          Each only when there is something to say; a month whose payouts never
+          said what their fees were prints no fee line rather than $0. */}
+      {refundedCents > 0 ? (
+        <p className="mt-2 text-sm text-muted tabular-nums">
+          {t("reports.moneyOut.refunded", { amount: money(refundedCents) })}
+        </p>
+      ) : null}
+      {discountedCents > 0 ? (
+        <p className="mt-1 text-sm text-muted tabular-nums">
+          {t("reports.moneyOut.discounted", { amount: money(discountedCents) })}
+        </p>
+      ) : null}
+      {disputesLostCents > 0 ? (
+        <p className="mt-1 text-sm text-muted tabular-nums">
+          {t("reports.moneyOut.disputesLost", { amount: money(disputesLostCents) })}
+        </p>
+      ) : null}
+      {showFees ? (
+        <p className="mt-1 text-sm text-muted tabular-nums">
+          {t("reports.moneyOut.fees", { amount: money(stripeFeesCents) })}
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -155,49 +229,61 @@ export function QuietMonth({
  * #700 — the full-shop export is the right tool for a bookkeeper and the wrong
  * one for "just this month"). Tax used to be the sixth tile; it is a footnote
  * to net revenue, not a headline beside it.
- *
- * Then **what left the month's money** (UX review 2026-10-11, item 17):
- * refunds, what discount codes took off, and Stripe's fees. Quiet lines on the
- * tax line's pattern, each only when there is something to say; a month whose
- * payouts never said what their fees were prints no fee line rather than $0.
  */
 export function MonthFootnotes({
   taxCents,
   csvHref,
-  detail,
+  monthEnd,
   t,
   money,
 }: {
   taxCents: number;
   csvHref: string;
-  detail: Detail;
+  /**
+   * The month's other files (fifth loop, items 31 and 35): the crew sheet,
+   * all three as one zip, and the bookkeeper's address they go to on the 2nd.
+   */
+  monthEnd?: { shopSlug: string; month: string; locale: string; timeZone: string };
   t: StaffTranslator;
   money: (cents: number) => string;
 }) {
-  const { refundedCents, discountedCents, stripeFeesCents } = detail.out;
+  const link = "font-medium text-primary hover:underline";
   return (
     <>
       <p className="mt-3 text-end text-sm text-muted tabular-nums">
         {t("reports.taxLine", { amount: money(taxCents) })}
         {" · "}
-        <a href={csvHref} className="font-medium text-primary hover:underline">
+        <a href={csvHref} className={link}>
           {t("reports.downloadCsv")}
         </a>
+        {monthEnd ? (
+          <>
+            {" · "}
+            <a
+              href={`${shopPath(monthEnd.shopSlug, "settings", "export", "crew-sheet")}?month=${monthEnd.month}`}
+              className={link}
+            >
+              {t("reports.downloadCrewSheet")}
+            </a>
+            {" · "}
+            <a
+              href={`${shopPath(monthEnd.shopSlug, "reports", "download", "month-end")}?month=${monthEnd.month}`}
+              className={link}
+            >
+              {t("reports.downloadMonthEnd")}
+            </a>
+          </>
+        ) : null}
       </p>
-      {refundedCents > 0 ? (
-        <p className="mt-1 text-end text-sm text-muted tabular-nums">
-          {t("reports.moneyOut.refunded", { amount: money(refundedCents) })}
-        </p>
-      ) : null}
-      {discountedCents > 0 ? (
-        <p className="mt-1 text-end text-sm text-muted tabular-nums">
-          {t("reports.moneyOut.discounted", { amount: money(discountedCents) })}
-        </p>
-      ) : null}
-      {stripeFeesCents !== null && stripeFeesCents !== 0 ? (
-        <p className="mt-1 text-end text-sm text-muted tabular-nums">
-          {t("reports.moneyOut.fees", { amount: money(stripeFeesCents) })}
-        </p>
+      {monthEnd ? (
+        <Suspense fallback={null}>
+          <MonthEndSection
+            shopSlug={monthEnd.shopSlug}
+            locale={monthEnd.locale}
+            timeZone={monthEnd.timeZone}
+            t={t}
+          />
+        </Suspense>
       ) : null}
     </>
   );

@@ -2,9 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { seatNewDiverAction } from "@/app/actions/seat-diver";
+import { seatNewDiverAction, seatWalkInPartyAction } from "@/app/actions/seat-diver";
 import { SEAT_SURFACES, type SeatSurfaceId } from "@/app/actions/seat-diver-surfaces";
-import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/actions";
+import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions";
 import { getDb } from "@/db/client";
 import { createDiver, findSimilarDivers } from "@/db/divers";
 import { discardFormDraft } from "@/db/form-drafts";
@@ -17,11 +17,15 @@ import {
 } from "@/lib/person-fields";
 import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
+import { readWalkInParty } from "@/lib/walk-in-party";
 
 const newDiverContextForm = z.object({
   surface: z.string().optional(),
   tripId: z.string().optional(),
   waitlist: z.string().optional(),
+  // The date request a booking door was opened from; carried back so the seat
+  // that answers it can close it (third UX review, item 13).
+  request: z.string().optional(),
   force: z.string().optional(),
 });
 
@@ -70,6 +74,20 @@ export async function createDiverFormAction(formData: FormData) {
     redirect(buildNewDiverUrl(search));
   }
 
+  // **A walk-in family** (fifth loop, item 9): party rows, or a first person
+  // ticked "Under 18" or settled on the party's on-file prompt, send the whole
+  // form to the party seating, which runs its own on-file check over every
+  // name. A malformed party goes there too, to be refused rather than trimmed.
+  const party = readWalkInParty(formData.entries());
+  if (
+    activeSurface === "walk-in" &&
+    activeTripId &&
+    (party.rows.length > 0 || party.first.minor || party.first.match !== undefined || party.invalid)
+  ) {
+    await seatWalkInPartyAction(staff.user.shopSlug, formData);
+    return;
+  }
+
   if (!force) {
     const matches = await findSimilarDivers(activeDb, staff.user.shopId, parsed.data.fullName);
     if (matches.length > 0) {
@@ -81,6 +99,7 @@ export async function createDiverFormAction(formData: FormData) {
       if (activeSurface) search.surface = activeSurface;
       if (activeTripId) search.tripId = activeTripId;
       if (activeWaitlist) search.waitlist = "true";
+      if (context.request) search.request = context.request;
       redirect(buildNewDiverUrl(search));
     }
   }

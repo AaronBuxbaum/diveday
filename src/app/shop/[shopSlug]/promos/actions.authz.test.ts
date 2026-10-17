@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { shopPromoCodes } from "@/db/schema";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_CAPTAIN_EMAIL,
@@ -10,6 +10,8 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 /**
  * Discount codes move real money off the shop's own Stripe account, so they are
@@ -59,7 +61,7 @@ async function promoById(db: AppDb, promoId: string) {
 
 /** Seeded shop, its promo row, and both actors, with `getDb()` pointed at it. */
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   const promo = await seededPromo(db, shop.id);
   return {

@@ -14,7 +14,6 @@ import {
 import { getTodayWork } from "./today";
 import { pushRollCallRows } from "./today-roll-call-rows";
 import {
-  afterDiveRow,
   boardAtDeparture,
   HOUR,
   returnedTrip,
@@ -32,7 +31,13 @@ describe("pushRollCallRows", () => {
       rowsContext({
         boatsOut: { out: [], blocked: [] },
         rollCallGaps: [],
-        crewClashState: { departures: [], clashes: new Map(), crew: new Map(), divers: new Map() },
+        crewClashState: {
+          departures: [],
+          clashes: new Map(),
+          boatClashes: new Map(),
+          crew: new Map(),
+          divers: new Map(),
+        },
       }),
     );
     expect(actions).toEqual([]);
@@ -46,10 +51,80 @@ describe("pushRollCallRows", () => {
       rowsContext({
         boatsOut: { out: [], blocked: [] },
         rollCallGaps: [],
-        crewClashState: { departures: [], clashes: new Map(), crew: new Map(), divers: new Map() },
+        crewClashState: {
+          departures: [],
+          clashes: new Map(),
+          boatClashes: new Map(),
+          crew: new Map(),
+          divers: new Map(),
+        },
       }),
     );
     expect(actions).toEqual([earlier]);
+  });
+});
+
+/** Batch 6, item 6: the row for a count the owners were alerted about says so. */
+describe("pushRollCallRows after the stale-roll-call alert", () => {
+  const gap = {
+    tripId: "t-1",
+    title: "Two-Tank Reef",
+    startsAt: new Date("2026-07-21T12:00:00Z"),
+    endsAt: new Date("2026-07-21T16:00:00Z"),
+    capacity: 12,
+    priceCents: null,
+    reason: "after_dive_uncounted" as const,
+    diveNumber: 2,
+    uncounted: 2,
+    total: 8,
+    rosterSize: 8,
+    underway: false,
+    stale: false,
+  };
+  const rows = (alertedAt: Date | null, shoreAlertedAt: Date | null = null) => {
+    const actions: TodayAction[] = [];
+    pushRollCallRows(
+      actions,
+      rowsContext({
+        boatsOut: { out: [], blocked: [] },
+        rollCallGaps: [{ ...gap, alertedAt, shoreAlertedAt }],
+        crewClashState: {
+          departures: [],
+          clashes: new Map(),
+          boatClashes: new Map(),
+          crew: new Map(),
+          divers: new Map(),
+        },
+      }),
+    );
+    return actions;
+  };
+
+  it("names when the owners were alerted, in the shop's zone", () => {
+    const [row] = rows(new Date("2026-07-21T16:40:00Z"));
+    expect(row?.detail?.replace(/\s+/gu, " ")).toMatch(/Owners alerted: Jul 21, 12:40 PM EDT\.$/);
+  });
+
+  // Dive-domain re-review #7: whoever opens Today knows the shore contact
+  // heard too, so nobody rings them as if they had not.
+  it("names the shore contact beside the owners when the shore copy went too", () => {
+    const at = new Date("2026-07-21T16:40:00Z");
+    const [row] = rows(at, at);
+    expect(row?.detail?.replace(/\s+/gu, " ")).toMatch(
+      /Owners and shore contact alerted: Jul 21, 12:40 PM EDT\.$/,
+    );
+  });
+
+  it("names the shore contact alone when only the shore copy went", () => {
+    const [row] = rows(null, new Date("2026-07-21T16:40:00Z"));
+    expect(row?.detail?.replace(/\s+/gu, " ")).toMatch(
+      /Shore contact alerted: Jul 21, 12:40 PM EDT\.$/,
+    );
+  });
+
+  it("says nothing of an alert that has not gone", () => {
+    const [row] = rows(null);
+    expect(row?.detail).not.toContain("alerted");
   });
 });
 
@@ -154,6 +229,50 @@ describe("unclosed roll call (DOM-H3)", () => {
       const row = rollCallRow(work, trip.id, "missing_diver");
       expect(row?.detail).toContain("dive 1");
       expect(rollCallRow(work, trip.id, "after_dive_uncounted")).toBeUndefined();
+    });
+
+    /**
+     * The rule `listUnaccountedForByTrip` and `homewardCheckpointGap` keep: the
+     * latest after-dive checkpoint speaks for a seat (issue #2404). Missing after
+     * dive 1 and counted aboard after dive 2 is back, so Today does not keep the
+     * loudest row in the app up for a diver the crew have since counted. Still
+     * missing after dive 2, or nobody has counted them since, stays the row.
+     */
+    it("lets a later 'back aboard' for the same diver settle an earlier 'not back'", async () => {
+      const { db, shop } = ctx;
+      const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
+        endedHoursAgo: 2,
+        divers: 2,
+        plannedDives: 2,
+      });
+      await boardAtDeparture(db, { shopId: shop.id, tripId: trip.id, staffId, bookingIds });
+      const [wasMissing, other] = bookingIds;
+      if (!wasMissing || !other) throw new Error("fixture bookings missing");
+      const tap = (
+        bookingId: string,
+        checkpoint: "after_dive_1" | "after_dive_2",
+        status: "boarded" | "not_boarded",
+      ) =>
+        recordRollCall(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          bookingId,
+          recordedByPersonId: staffId,
+          status,
+          checkpoint,
+        });
+      await tap(wasMissing, "after_dive_1", "not_boarded");
+      await tap(other, "after_dive_1", "boarded");
+      await tap(other, "after_dive_2", "boarded");
+
+      // Nobody has counted them since: still the row.
+      const stillMissing = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      expect(rollCallRow(stillMissing, trip.id, "missing_diver")).toBeDefined();
+
+      await tap(wasMissing, "after_dive_2", "boarded");
+      const back = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      expect(rollCallRow(back, trip.id, "missing_diver")).toBeUndefined();
+      expect(rollCallRow(back, trip.id, "after_dive_uncounted")).toBeUndefined();
     });
 
     it("keeps saying so at a lower urgency once the trip is too old to settle on the dock", async () => {
@@ -663,6 +782,15 @@ describe("unclosed roll call (DOM-H3)", () => {
       await boardAtDeparture(db, { shopId: shop.id, tripId: trip.id, staffId, bookingIds });
       const [counted, pulled] = bookingIds;
       if (!counted || !pulled) throw new Error("fixture bookings missing");
+      // The second diver's seat was cancelled at the dock, before the boat
+      // left. Once it has (its time, a stage past Boarding, or any after-dive
+      // mark), a diver marked aboard cannot be removed (H-133), so the cancel
+      // comes before the first after-dive mark — they are off the manifest's
+      // roster, so there is nobody left uncounted.
+      const atTheDock = new Date(trip.startsAt.getTime() - 10 * 60 * 1000);
+      expect(await cancelBooking(db, shop.id, pulled, { now: atTheDock })).toMatchObject({
+        ok: true,
+      });
       await recordRollCall(db, {
         shopId: shop.id,
         tripId: trip.id,
@@ -671,13 +799,6 @@ describe("unclosed roll call (DOM-H3)", () => {
         status: "boarded",
         checkpoint: "after_dive_1",
       });
-      expect(
-        afterDiveRow(await getTodayWork(db, shop.id, shop.slug, shop.timezone), trip.id),
-      ).toBeDefined();
-
-      // The remaining diver's seat was cancelled — they are off the manifest's
-      // roster, so there is nobody left uncounted.
-      await cancelBooking(db, shop.id, pulled);
 
       const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
       expect(rollCallRows(work, trip.id)).toEqual([]);

@@ -3,14 +3,13 @@
     "recapSent": "Se enviaron los resúmenes que aún estaban pendientes.",
     "recapAttention": "Algunos resúmenes requieren atención. Abre la salida a la que pertenecen.",
     "recapHeld": "Los resúmenes quedan retenidos hasta que se corrija el pase de lista.",
-    "recapSendLimit": "Has enviado muchos resúmenes en esta hora. No salió nada; vuelve a intentarlo en un rato.",
     "recapNotReady": "Los resúmenes no se pueden enviar hasta cuatro horas después del final de la salida.",
     "recapLocked": "Este resumen ya se envió. Ya no se pueden cambiar la nota ni las fotos.",
-    "crewPhotoAdded": "Foto del equipo añadida a esta salida.",
+    "crewPhotoAdded": "Foto del equipo agregada a esta salida.",
     "crewPhotoRemoved": "Foto del equipo eliminada.",
     "crewPhotoLimit": "Esta salida ya tiene el máximo de fotos del equipo.",
     "crewPhotoUnsupported": "La carga de fotos todavía no está configurada para este centro.",
-    "crewPhotoFailed": "No se pudo añadir esa foto. Revisa el archivo e inténtalo de nuevo.",
+    "crewPhotoFailed": "No se pudo agregar esa foto. Revisa el archivo e inténtalo de nuevo.",
     "invalid": "Eso no se completó. Recarga la página e inténtalo de nuevo.",
     "unknownPerson": "Ese buceador no está en los registros de este centro, así que no se guardó nada."
   },
@@ -62,7 +61,7 @@
     "heading": "Fotos del equipo",
     "description": "Cada buceador de esta salida las recibe en su resumen.",
     "photoAlt": "Foto del equipo de esta salida",
-    "add": "Añadir una foto",
+    "add": "Agregar una foto",
     "adding": "Subiendo foto…",
     "remove": "Eliminar",
     "confirmRemove": "¿Eliminar esta foto del equipo de esta salida?",
@@ -73,7 +72,16 @@
   "takings": {
     "heading": "Lo que hizo hoy",
     "tips": "Y {amount} en propinas.",
+    "tipsOnBoat": "Y {amount} en propinas en {boat}.",
     "imported": "{count, plural, one {Incluye # registro importado que Stripe no ha confirmado.} other {Incluye # registros importados que Stripe no ha confirmado.}}",
     "boatTips": "{time} {boat}: {amount}"
+  },
+  "loadOut": {
+    "heading": "Para mañana, desde esta noche",
+    "tanks": "{total, plural, one {# tanque} other {# tanques}} por llenar ({air} de aire, {nitrox} de nitrox)",
+    "tanksAir": "{total, plural, one {# tanque} other {# tanques}} por llenar",
+    "pieces": "{count, plural, one {# pieza de alquiler} other {# piezas de alquiler}} por preparar",
+    "departures": "{count, plural, one {# salida} other {# salidas}}",
+    "print": "Imprimir mañana"
   }
 }

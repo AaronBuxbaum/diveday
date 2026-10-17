@@ -1,5 +1,17 @@
+import type { Page } from "@playwright/test";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, openTripAbout, openTripFromBoard, openTripMore } from "./helpers";
+import {
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  openTripAbout,
+  openTripAboutRow,
+  openTripFromBoard,
+  openTripMore,
+} from "./helpers";
+
+const staff = staffTranslator("en-US");
 
 signedInAsOwner();
 
@@ -105,6 +117,14 @@ test("a repeating trip is scheduled on two weekdays, stopped, and canceled as on
   ).toBeVisible();
   await moreAgain.getByRole("button", { name: "Yes, cancel every upcoming date" }).click();
   await expect(page.getByText(/Canceled every upcoming date and stopped the repeat/)).toBeVisible();
+
+  // Each date went through the cascade as a run that stopped, and its record
+  // says so in the heading and in the browser tab, not in weather words (#2460).
+  const tripId = new URL(tripUrl).pathname.split("/").pop();
+  await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
+  const runEnded = staff("blowout.record.titleRunEnded");
+  await expect(page.getByRole("heading", { level: 1, name: runEnded })).toBeVisible();
+  await expect(page).toHaveTitle(`${runEnded} — DiveDay`);
 });
 
 test("an open-ended run says it keeps going on the board's last month", async ({ page }) => {
@@ -140,4 +160,91 @@ test("an open-ended run says it keeps going on the board's last month", async ({
   await expect(
     page.getByRole("heading", { name: "Planning further out? Ask us for a day" }),
   ).toBeVisible();
+});
+
+/** The path of the one departure called `title` in the board week holding `date`. */
+async function tripPathOn(page: Page, date: string, title: string): Promise<string> {
+  await page.goto(`/shop/blue-mantis/schedule/board?week=${date}`);
+  await page.locator("[data-schedule-builder]").waitFor();
+  const href = await page
+    .locator("[data-week-board]")
+    .getByRole("link", { name: title, exact: true })
+    .first()
+    .getAttribute("href");
+  if (!href) throw new Error(`no ${title} on the board the week of ${date}`);
+  return href;
+}
+
+test("applying a series' standing crew reaches later dates, and spares one a crew member is busy on", async ({
+  page,
+}) => {
+  // A weekly run, a second departure of its own, two crew assignments, one
+  // apply, and three trip pages: the aggregate cost of a whole flow.
+  test.setTimeout(60_000);
+  const title = `Standing Crew ${e2eNow().getTime()}`;
+  const busy = `Busy Charter ${e2eNow().getTime()}`;
+  // Early and a day later than the demo shop's own runs would suggest: its
+  // courses and charters keep Marcus and Dana out from mid-morning, and the
+  // three-day course through Aug 1, so a mid-morning run lands on a clash.
+  const first = daysFromNow(5);
+  const second = daysFromNow(12);
+  const third = daysFromNow(19);
+
+  // A weekly run, open-ended: its dates a week apart are already on the board.
+  await page.goto("/shop/blue-mantis/schedule/board?add=full");
+  await page.getByLabel("What is it").fill(title);
+  await page.getByLabel("Date").fill(first);
+  await page.getByLabel("Departs").fill("05:00");
+  await page.getByLabel("Returns").fill("07:00");
+  await page.getByLabel("Seats").fill("6");
+  await page.getByLabel("How often").selectOption("1");
+  await page.getByRole("button", { name: "Put it on the board" }).click();
+  await expect(page.getByRole("status")).toContainText(title);
+
+  // Marcus is already out on another departure the same morning as the run's
+  // second date.
+  await createTrip(page, { title: busy, date: second, departsAt: "05:00", returnsAt: "07:00" });
+  await page.goto(await tripPathOn(page, second, busy));
+  await openTripAbout(page);
+  await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
+  await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
+
+  // The run's first date takes a two-person crew.
+  const firstPath = await tripPathOn(page, first, title);
+  await page.goto(firstPath);
+  await openTripAbout(page);
+  await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
+  for (const name of ["Marcus Webb", "Dana Reyes"]) {
+    await page.getByLabel("Assign crew").selectOption({ label: name });
+    await expect(page.getByRole("button", { name: `Unassign ${name}` })).toBeVisible();
+  }
+
+  // Apply the date's details with the crew box checked.
+  const more = await openTripMore(page);
+  await more.getByRole("button", { name: /^Apply this date.s details/ }).click();
+  await more.getByRole("checkbox", { name: /^Crew every upcoming date with/ }).check();
+  await more.getByRole("button", { name: "Yes, apply to every date" }).click();
+  // One date kept its own crew: the one Marcus is busy on.
+  await expect(page.getByRole("status")).toContainText(
+    staff("tripSeries.notices.seriesAppliedCrewPartialCount", { count: 1 }),
+  );
+
+  // The panel names the standing crew.
+  await openTripAbout(page);
+  await expect(page.locator("details#series")).toContainText("crew every date.");
+
+  // A later date carries the same crew.
+  await page.goto(await tripPathOn(page, third, title));
+  // A crewed row is settled, so it is shut: open it to read the names.
+  await openTripAboutRow(page, "Boat & crew");
+  await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Unassign Dana Reyes" })).toBeVisible();
+
+  // The date Marcus is busy on keeps its own crew, which is none.
+  await page.goto(await tripPathOn(page, second, title));
+  await openTripAbout(page);
+  await expect(page.getByLabel("Assign crew")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Unassign Dana Reyes" })).toHaveCount(0);
 });

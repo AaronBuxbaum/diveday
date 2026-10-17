@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FlashParams } from "@/components/FlashParams";
+import { KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
+import { keptTypedScope } from "@/components/kept-typed-scope";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -15,7 +17,7 @@ import {
   counterRentalWaiverStandings,
 } from "@/db/gear-counter-rentals";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
-import { gearItemKindLabel } from "@/i18n/gear-labels";
+import { gearItemKindLabel, tankFillOptions } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { isMinorOnDate } from "@/lib/age";
@@ -39,6 +41,7 @@ import { uuidParam } from "@/lib/uuid";
 import { InvoiceAddressFields } from "../../../orders/_components/InvoiceAddressFields";
 import { CounterRentalWaiverLine } from "../../_components/CounterRentalWaiverLine";
 import { createCounterRentalAction } from "../actions";
+import { COUNTER_RENTAL_FORM } from "../rental-form";
 import {
   CounterRentalCart,
   type PaymentChoice,
@@ -89,6 +92,7 @@ export default async function RentOutPage({
   const { shopSlug } = await params;
   const search = await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug);
+  const keptScope = keptTypedScope(shopSlug, session.user.personId);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
@@ -135,10 +139,13 @@ export default async function RentOutPage({
   const noticeText = notice
     ? notice.named && noticeUnit
       ? t(notice.named, { label: noticeUnit })
-      : t(notice.key)
+      : t(notice.key, notice.values)
     : undefined;
   const whoNotice = notice?.step === "who" || !person ? noticeText : undefined;
   const rentNotice = person && notice?.step === "rent" ? noticeText : undefined;
+  // A refusal of the rent step brings the bill back as it was sent (fifth
+  // loop, item 14); any other answer forgets it.
+  const rentRefused = rentNotice !== undefined && notice?.tone !== "success";
 
   const currency = toShopCurrency(shop.currency);
   const digits = currencyFractionDigits(currency);
@@ -219,6 +226,8 @@ export default async function RentOutPage({
       price: priceOf(unit.kind),
       priceAria: t("counterRentals.new.priceAria", { label: unit.label }),
       removeAria: t("counterRentals.new.removeAria", { label: unit.label }),
+      fillAria:
+        unit.kind === "tank" ? t("counterRentals.new.fillAria", { label: unit.label }) : null,
       order: blocked ? 2 : flagged ? 1 : 0,
     };
   };
@@ -318,6 +327,11 @@ export default async function RentOutPage({
             <input type="hidden" name="personId" value={person.id} />
             <input type="hidden" name="from" value={from} />
             <input type="hidden" name="until" value={until} />
+            <KeepTypedOnRefusal
+              form={COUNTER_RENTAL_FORM}
+              scope={keptScope}
+              restore={rentRefused}
+            />
             {fleetSize === 0 || byKind.length === 0 ? (
               <SectionCard title={t("counterRentals.new.gearHeading")}>
                 {fleetSize === 0 ? (
@@ -355,6 +369,7 @@ export default async function RentOutPage({
                   ) : null
                 }
                 notice={<FormStatus tone="danger">{rentNotice}</FormStatus>}
+                restoreKept={rentRefused ? keptScope : null}
                 words={{
                   gearHeading: t("counterRentals.new.gearHeading"),
                   kindsAria: t("counterRentals.new.kindsAria"),
@@ -370,6 +385,9 @@ export default async function RentOutPage({
                   },
                   submit: t("counterRentals.new.submit"),
                   submitting: t("counterRentals.new.submitting"),
+                  fillLabel: t("counterRentals.new.fillLabel"),
+                  fillOptions: tankFillOptions(t, t("counterRentals.new.fillChoose")),
+                  fillHint: t("counterRentals.new.fillHint"),
                 }}
               />
             )}

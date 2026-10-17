@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, isNull, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNull, lte, ne } from "drizzle-orm";
 import type { DiverLocale } from "@/i18n/settings";
 import { hashCapabilityToken } from "@/lib/booking-capabilities";
 import {
@@ -11,14 +11,18 @@ import {
 import { nowDate } from "@/lib/clock";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import { publicTripPath } from "@/lib/public-routes";
+import { type LastGear, type RentableItemKind, toRentableKinds } from "@/lib/rentals";
 import { issueBookingCapability, verifyBookingCapability } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import type { AppDb, DbExecutor } from "./client";
+import { diveDay } from "./dive-days";
+import { authorizesNitroxFill } from "./nitrox";
 import { sendAndRecordNotification } from "./notifications";
 import { getRentalFit } from "./rental-fit";
 import {
   bookingCapabilities,
   bookings,
+  nitroxCertifications,
   notificationDeliveries,
   people,
   shops,
@@ -49,6 +53,13 @@ export type KnownDiver = {
   email: string | null;
   phone: string | null;
   facts: KnownDiverFact[];
+  /**
+   * What their last trip with the shop carried, to start the gear step from
+   * (fifth-loop ideas, item 40): "as on your last trip". Null when it carried
+   * nothing, or there was no last trip. Nitrox only while their card still
+   * authorizes a fill.
+   */
+  lastGear: LastGear | null;
 };
 
 /** Mint a handoff for a booking's diver. Null for a booking that is not this shop's or is cancelled. */
@@ -108,12 +119,13 @@ export async function readKnownDiver(
     )
     .limit(1);
   if (!person) return null;
-  const [evidence, waivers, template, rentalFit, emergencyContact] = await Promise.all([
+  const [evidence, waivers, template, rentalFit, emergencyContact, lastGear] = await Promise.all([
     readCertificationEvidence(db, input.shopId, person.id),
     listSignedWaiversByPerson(db, input.shopId, [person.id]),
     getCurrentWaiverGeneration(db, input.shopId),
     getRentalFit(db, input.shopId, person.id),
     getEmergencyContactForPerson(db, input.shopId, person.id),
+    lastGearFor(db, { shopId: input.shopId, personId: person.id, now }),
   ]);
   return {
     bookingId: capability.bookingId,
@@ -129,7 +141,59 @@ export async function readKnownDiver(
       emergencyContact,
       now,
     }),
+    lastGear,
   };
+}
+
+/**
+ * The gear on a person's most recent sailed diver seat with the shop: the
+ * rental pieces its checkout charged for, and nitrox when that seat asked for
+ * it **and** their card still authorizes a fill (`authorizesNitroxFill`, the
+ * one predicate every fill gate shares). A ticked box on the next form is a
+ * starting point the diver can untick, never a fill decision.
+ */
+export async function lastGearFor(
+  db: DbExecutor,
+  input: { shopId: string; personId: string; now: Date },
+): Promise<LastGear | null> {
+  const [last] = await db
+    .select({ wantsNitrox: bookings.wantsNitrox, paidRentalKinds: bookings.paidRentalKinds })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.personId, input.personId),
+        eq(bookings.participantType, "diver"),
+        // A held seat's gear was chosen by whoever booked it, who may not be
+        // this person (#2082; security review r5-4, N3).
+        isNull(bookings.identityUnconfirmedAt),
+        diveDay(),
+        lte(trips.startsAt, input.now),
+      ),
+    )
+    .orderBy(desc(trips.startsAt), asc(trips.title), desc(bookings.id))
+    .limit(1);
+  if (!last) return null;
+  const rentedKinds = toRentableKinds(last.paidRentalKinds).filter(
+    (kind): kind is RentableItemKind => kind !== "nitrox",
+  );
+  let nitrox = false;
+  if (last.wantsNitrox) {
+    const [card] = await db
+      .select({ id: nitroxCertifications.id })
+      .from(nitroxCertifications)
+      .where(
+        and(
+          eq(nitroxCertifications.shopId, input.shopId),
+          eq(nitroxCertifications.personId, input.personId),
+          authorizesNitroxFill,
+        ),
+      )
+      .limit(1);
+    nitrox = Boolean(card);
+  }
+  return nitrox || rentedKinds.length > 0 ? { nitrox, rentedKinds } : null;
 }
 
 /**

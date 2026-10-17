@@ -3,8 +3,9 @@
   "instrument": {
     "hereOf": "<figure>{here}</figure> de {expected} aquí",
     "toCome": "{count} por llegar",
-    "cantBoard": "{count, plural, one {# persona todavía no puede embarcar} other {# personas todavía no pueden embarcar}}",
-    "notHere": "{count, plural, one {# persona no vino} other {# personas no vinieron}}"
+    "cantBoard": "{count, plural, one {# bloqueado} other {# bloqueados}}",
+    "notHere": "{count, plural, one {# persona no vino} other {# personas no vinieron}}",
+    "turnedAway": "{count, plural, one {# persona no pudo embarcar} other {# personas no pudieron embarcar}}"
   },
   "row": {
     "arrived": "Registrado",
@@ -24,13 +25,40 @@
     "waiting": "{count, plural, one {# buceador está esperando esta plaza} other {# buceadores están esperando esta plaza}}",
     "waitingDoor": "Abrir la lista de espera",
     "rebook": "No hay nadie esperando. Ofrécele otro día a {name}.",
-    "rebookDoor": "Añadirlo a {title}, {when}",
+    "rebookDoor": "Agregarlo a {title}, {when}",
     "offerSend": "Enviarle esta fecha por correo",
     "offerSending": "Enviando…",
     "offerAriaLabel": "Enviar a {name} una oferta para {title}, {when}",
     "nothing": "No hay nadie esperando y ninguna salida parecida tiene sitio para él.",
     "money": "Marcar que alguien no vino no cobra ni reembolsa nada.",
     "moneyDoor": "Abrir sus pedidos"
+  },
+  "turnAway": {
+    "door": "No embarca",
+    "legend": "Motivo",
+    "reason": {
+      "medical": "Médico",
+      "waiver": "Exención",
+      "card": "Certificación",
+      "age": "Edad",
+      "identity": "Identidad",
+      "payment": "Pago"
+    },
+    "consequence": "Registra que lo atendiste y no lo dejaste embarcar, y libera la plaza. Puedes volver a ponerlo mientras la plaza siga libre.",
+    "confirm": "Registrar que no embarca",
+    "confirming": "Registrando…",
+    "confirmAriaLabel": "Registrar que {name} no embarca",
+    "line": "Atendido en el mostrador, no embarcó{reason, select, medical {: médico} waiver {: exención} card {: certificación} age {: edad} identity {: identidad} payment {: pago} other {}}",
+    "badge": "No embarcó",
+    "money": "No se cobró ni se reembolsó nada. Abre su fila para mover la reserva a otra salida.",
+    "moneyRemove": "No se cobró ni se reembolsó nada. Abre su fila para quitar la reserva y reembolsarla a mano.",
+    "noWaitlist": "No hay nadie esperando esta plaza."
+  },
+  "sailedRebook": {
+    "booked": "Ya reservó: {when}",
+    "open": "Nada más reservado · {when} tiene {seats, plural, one {# plaza} other {# plazas}}",
+    "add": "Agregarlo",
+    "addAriaLabel": "Agregar a {name} a {title}, {when}"
   },
   "settledAllBoarded": "Todos embarcados",
   "settledSomeBoarded": "{count, plural, one {# embarcado} other {# embarcados}}",
@@ -52,6 +80,7 @@
     "offerOptedOut": "No se envió nada: desactivó los correos del centro. Avísale por teléfono de la fecha.",
     "offerNotSent": "No se envió nada: no hay correo registrado o el correo no está configurado. Avísale por teléfono de la fecha.",
     "offerSent": "Oferta enviada por correo. La persona reserva su plaza desde el enlace.",
+    "offerAlreadySent": "Ya se envió por correo en las últimas 24 horas. No se envió nada nuevo.",
     "notReady": "Algo ha cambiado y todavía no puede embarcar. Su fila dice qué lo impide.",
     "notBookable": "Esa reserva ya no está disponible para el check-in.",
     "alreadyCheckedIn": "Ese buceador ya había hecho el check-in.",
@@ -62,33 +91,43 @@
     "waiverGuardianName": "El nombre de la madre, padre o tutor es el mismo del buceador, así que esta exención mostraría a una sola persona firmando dos veces. Escribe ese nombre tal como aparece en su propia identificación, y si el registro del buceador es más corto que su identificación, corrige el registro. Si las dos de verdad son idénticas, marca la confirmación en este formulario y registra la exención.",
     "waiverIdentityUnconfirmed": "Esta plaza queda retenida hasta que alguien confirme de quién se trata, así que todavía no se puede registrar una exención en papel en su ficha. Confírmalo en su fila y luego registra la exención.",
     "waiverError": "No se pudo registrar esa exención en papel. Inténtalo de nuevo.",
-    "walkinAdded": "Añadido a la lista de este barco. Regístralo en su fila.",
-    "walkinAddedWaiverUndelivered": "Añadido a la lista de este barco, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
-    "walkinAddedIdentityUnconfirmed": "Añadido a la lista de este barco, pero la plaza queda retenida hasta que confirmes que es la misma persona. Confírmalo en su fila, aquí abajo, antes de que embarque.",
+    "walkinAdded": "Agregado a la lista de este barco. Regístralo en su fila.",
+    "walkinAddedConfirmed": "Agregado a la lista de este barco, y su confirmación va en camino.",
+    "walkinAddedWaiverUndelivered": "Agregado a la lista de este barco, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
+    "walkinAddedIdentityUnconfirmed": "Agregado a la lista de este barco, pero la plaza queda retenida hasta que confirmes que es la misma persona. Confírmalo en su fila, aquí abajo, antes de que embarque.",
     "walkinFull": "Ese barco está completo. Añádelo a la lista de espera.",
     "walkinAlready": "Ese buceador ya está en este barco.",
     "walkinCourseUnstaffed": "Esa es una sesión de curso sin instructor asignado. Asigna uno primero en la pestaña Detalles.",
     "walkinCoursePrerequisite": "Ese curso exige una titulación previa verificada que este buceador no tiene registrada.",
-    "walkinCourseRatioFull": "Esa sesión está en su límite de ratio instructor-alumno. Añade otro instructor o usa la lista de espera.",
+    "walkinCourseRatioFull": "Esa sesión está en su límite de ratio instructor-alumno. Agrega otro instructor o usa la lista de espera.",
     "walkinCourseMinAge": "Ese buceador está por debajo de la edad mínima del curso el día que se imparte, según la fecha de nacimiento registrada.",
     "walkinTripPrerequisite": "Las titulaciones de ese buceador no alcanzan lo que exigen este barco y sus sitios de buceo.",
     "walkinUnavailable": "Ese buceador no puede tomar una plaza en este barco ahora mismo.",
-    "walkinInvalid": "Escribe un nombre antes de añadir un walk-in.",
+    "walkinInvalid": "Escribe un nombre antes de agregar un walk-in.",
     "noShowAlreadyBoarded": "La tripulación embarcó a ese buceador, así que no se puede marcar que no buceó. Abre el manifiesto de la salida.",
     "noShowAlreadyMissingAfterDive": "La tripulación registró que ese buceador no volvió a bordo después de una inmersión. Llama al barco y abre el manifiesto de la salida.",
     "noShowAlreadyMarked": "Ese buceador ya está marcado como que no vino.",
     "noShowNotBooked": "Esa reserva se canceló, así que no hay nada que marcar.",
     "noShowTripCancelled": "Esa salida está cancelada, así que su lista de invitados no puede cambiar.",
     "noShowBeforeDeparture": "Ese barco todavía no ha salido, así que nadie lo ha perdido. Inténtalo de nuevo cuando salga.",
+    "turnAwayAlreadyBoarded": "La tripulación embarcó a ese buceador. Abre el manifiesto de la salida.",
+    "turnAwayAlreadyMarked": "Esa plaza ya está liberada.",
+    "turnAwaySailed": "El barco salió con ese buceador registrado. Abre el manifiesto de la salida.",
+    "turnAwayOutsideWindow": "Esa salida está fuera del horario del mostrador. Cambia la reserva desde su fila.",
+    "turnAwayNotBlocked": "Ya nada le impide embarcar. Regístralo en su lugar.",
+    "turnAwayReasonNotBlocking": "Su fila cambió. Elige un motivo que aparezca ahora.",
     "noShowWindowClosed": "Esa salida queda demasiado atrás para marcar que alguien no vino. Cambia la reserva desde su fila.",
     "noShowNotMarked": "Ese buceador no está marcado como que no vino.",
+    "noShowTurnedAwayDeparted": "Ese buceador no embarcó por decisión del mostrador y el barco ya salió, así que no puede volver a esta salida. Abre su fila para quitar la reserva.",
     "noShowTripFull": "La plaza liberada ya se ocupó, así que ese buceador no puede volver a esta salida.",
-    "noShowCourseRatioFull": "Esa sesión está en su límite de ratio instructor-alumno, así que ese buceador no puede volver a ella. Asigna otro instructor primero."
+    "noShowCourseRatioFull": "Esa sesión está en su límite de ratio instructor-alumno, así que ese buceador no puede volver a ella. Asigna otro instructor primero.",
+    "walkinPartyAdded": "Todo el grupo está en la lista de este barco. Regístralos en sus filas.",
+    "walkinPartyAddedWaiverUndelivered": "Todo el grupo está en la lista de este barco, pero no se enviaron sus exenciones por correo. Envíalas o comparte los enlaces desde sus filas de abajo. Un padre, madre o tutor firma con cada menor de 18 años."
   },
   "walkIn": {
     "title": "Walk-in",
     "tripLabel": "Barco",
-    "addToBoat": "Añadir al barco",
-    "addPersonAriaLabel": "Añadir a {name} a este barco"
+    "addToBoat": "Agregar al barco",
+    "addPersonAriaLabel": "Agregar a {name} a este barco"
   }
 }

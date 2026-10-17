@@ -7,12 +7,14 @@ import { fileScopedShopContext } from "@/test/db";
 import {
   consumeBookingHandoff,
   issueBookingHandoff,
+  lastGearFor,
   offerBookingHandoffByEmail,
   readKnownDiver,
 } from "./booking-handoff";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
-import { bookings, shops } from "./schema";
+import { createNitroxCertification } from "./nitrox";
+import { bookings, nitroxCertifications, shops } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -176,5 +178,84 @@ describe("booking handoff", () => {
       }),
     ).toBe("skipped");
     expect(sent).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * **"As on your last trip"** (fifth-loop ideas, item 40). The last sailed
+ * diver seat's paid gear comes across; its nitrox only while the diver's card
+ * still authorizes a fill, because a ticked box must never stand in for one.
+ */
+describe("lastGearFor", () => {
+  it("carries the last trip's paid gear, and nitrox only with a card that authorizes a fill", async () => {
+    const { db, shop, trip, bookingId } = await fixture();
+    await db
+      .update(bookings)
+      .set({ wantsNitrox: true, paidRentalKinds: ["bcd", "regulator"] })
+      .where(eq(bookings.id, bookingId));
+    const [seat] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    if (!seat) throw new Error("seat missing");
+    const after = new Date(trip.endsAt.getTime() + 24 * 60 * 60 * 1000);
+    const read = () => lastGearFor(db, { shopId: shop.id, personId: seat.personId, now: after });
+
+    expect(await read()).toEqual({ nitrox: false, rentedKinds: ["bcd", "regulator"] });
+
+    const card = await createNitroxCertification(db, {
+      shopId: shop.id,
+      personId: seat.personId,
+      agency: "padi",
+      identifier: "PADI-NX-40",
+    });
+    if (!card) throw new Error("card not created");
+    await db
+      .update(nitroxCertifications)
+      .set({ status: "verified" })
+      .where(eq(nitroxCertifications.id, card.id));
+    expect(await read()).toEqual({ nitrox: true, rentedKinds: ["bcd", "regulator"] });
+  });
+
+  it("reads nothing before the trip has sailed, or from a canceled seat", async () => {
+    const { db, shop, trip, bookingId } = await fixture();
+    await db
+      .update(bookings)
+      .set({ paidRentalKinds: ["bcd"] })
+      .where(eq(bookings.id, bookingId));
+    const [seat] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    if (!seat) throw new Error("seat missing");
+    expect(
+      await lastGearFor(db, { shopId: shop.id, personId: seat.personId, now: NOW }),
+    ).toBeNull();
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
+    const after = new Date(trip.endsAt.getTime() + 24 * 60 * 60 * 1000);
+    expect(
+      await lastGearFor(db, { shopId: shop.id, personId: seat.personId, now: after }),
+    ).toBeNull();
+  });
+
+  it("reads nothing from a held seat, whose gear was chosen by whoever booked it (security review r5-4, N3)", async () => {
+    const { db, shop, trip, bookingId } = await fixture();
+    await db
+      .update(bookings)
+      .set({
+        paidRentalKinds: ["bcd"],
+        identityUnconfirmedAt: NOW,
+        identityBookedAs: "S. M.",
+      })
+      .where(eq(bookings.id, bookingId));
+    const [seat] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    if (!seat) throw new Error("seat missing");
+    const after = new Date(trip.endsAt.getTime() + 24 * 60 * 60 * 1000);
+    expect(
+      await lastGearFor(db, { shopId: shop.id, personId: seat.personId, now: after }),
+    ).toBeNull();
   });
 });

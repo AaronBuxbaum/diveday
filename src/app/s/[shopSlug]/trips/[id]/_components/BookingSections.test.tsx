@@ -177,7 +177,7 @@ describe("BookSpotSection — the money says itself once", () => {
     expect(screen.queryByText(/\$/)).not.toBeInTheDocument();
   });
 
-  it("still calls itself Grab a spot, because the party still defaults to one", () => {
+  it("still calls itself Grab a seat, because the party still defaults to one", () => {
     // The SPEC allows a plural heading *if and only if* the count defaults
     // above 1. It does not, so no second heading key exists — the plural was
     // never a design preference, only a consequence.
@@ -198,7 +198,7 @@ describe("BookSpotSection — the money says itself once", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "Grab a spot" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Grab a seat" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "1 diver" })).toBeChecked();
   });
 
@@ -533,7 +533,7 @@ describe("TripFullSection — the shop's own better answer", () => {
     tripId: "trip-2",
     title: "Palancar Reef Two-Tank",
     href: "/s/reef-shop/trips/trip-2",
-    when: { weekday: "Thu", day: "7", month: "Aug" },
+    when: "Thu, Aug 7",
     reason: "same_site" as const,
   };
 
@@ -543,7 +543,6 @@ describe("TripFullSection — the shop's own better answer", () => {
         shopSlug="reef-shop"
         trip={trip({ booked: 8 })}
         tripRef={tripRef}
-        remaining={0}
         alternatives={alternatives}
       />,
     );
@@ -555,13 +554,41 @@ describe("TripFullSection — the shop's own better answer", () => {
     expect(link).toHaveAttribute("href", "/s/reef-shop/trips/trip-2");
     // Why, not just what: an unexplained list of other boats tells a diver
     // nothing they could not get from the schedule link above it.
-    expect(screen.getByText("Same site, Thu 7 Aug")).toBeInTheDocument();
+    expect(screen.getByText("Same site, Thu, Aug 7")).toBeInTheDocument();
   });
 
   it("says which are the same course, and which merely the same place", () => {
     renderFull([{ ...alternative, reason: "same_course" }]);
-    expect(screen.getByText("Same course, Thu 7 Aug")).toBeInTheDocument();
+    expect(screen.getByText("Same course, Thu, Aug 7")).toBeInTheDocument();
     expect(screen.queryByText(/Same site/)).toBeNull();
+  });
+
+  // The header's run line names the run's next date whatever its seats; this
+  // one is the next with room, and says so (dive-domain review r4-4, F2).
+  it("names the run's next date with room as that, on a full repeating boat (fourth review, item 31)", () => {
+    renderFull([{ ...alternative, reason: "same_run" }]);
+    expect(screen.getByText("Next date with room, Thu, Aug 7")).toBeInTheDocument();
+  });
+
+  // Two joiners from one couple, each "party of 2", read as four seats of
+  // demand (dive-domain review r4-4, N8). One line says one of them is enough.
+  it("says one joiner is enough for the whole party", () => {
+    renderFull();
+    expect(
+      screen.getByText("One of you is enough: join once for the whole group."),
+    ).toBeInTheDocument();
+  });
+
+  it("lets a party wait together, asking only the lead's details (fourth review, item 34)", () => {
+    renderFull();
+    // Up to the boat's eight seats, not the none that are left.
+    const size = screen.getByRole("combobox", { name: "Number of divers" });
+    expect(size.querySelectorAll("option")).toHaveLength(8);
+    fireEvent.change(size, { target: { value: "2" } });
+    expect(size).toHaveValue("2");
+    expect(size).toHaveAttribute("name", "partySize");
+    expect(screen.getAllByRole("textbox", { name: /name/i })).toHaveLength(1);
+    expect(screen.queryByText("Diver 2")).toBeNull();
   });
 
   it("states who the trip is for inside the wait-list form (UX audit #25)", () => {
@@ -570,7 +597,6 @@ describe("TripFullSection — the shop's own better answer", () => {
         shopSlug="reef-shop"
         trip={trip({ booked: 8 })}
         tripRef={tripRef}
-        remaining={0}
         requirement="This charter is for divers with Advanced Open Water or higher."
       />,
     );

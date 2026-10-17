@@ -3,21 +3,32 @@ import { type CarriedPreparation, carriedPreparation } from "@/lib/carried-prepa
 import { nowDate } from "@/lib/clock";
 import { type CourseLearningMaterial, readLearningMaterials } from "@/lib/courses";
 import { seatListPriceCents, withinCancellationWindow } from "@/lib/deposits";
+import type { DeskPayment } from "@/lib/desk-payment";
 import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
+import { seatIsHeld } from "@/lib/no-show";
 import { publicAppUrl } from "@/lib/notifications";
 import type { ParticipantType } from "@/lib/participant-types";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
+import { publicCoursePath } from "@/lib/public-routes";
 import { type ReEntryAsk, reEntryWindowOpen } from "@/lib/re-entry";
+import { noCertificationStands } from "@/lib/readiness";
 import type { RentalPricing } from "@/lib/rentals";
 import { canSayRunningLate, runningLateShown } from "@/lib/running-late";
 import { hasSailed } from "@/lib/trips";
+import { type DiveDayMilestone, diveDayMilestone } from "@/lib/visit-milestones";
 import { shopWaiverStatus } from "@/lib/waivers";
-import { offerableWelcomeCue, type WelcomeCue } from "@/lib/welcome-cue";
+import {
+  type OfferableWelcomeCue,
+  offerableWelcomeCue,
+  type WelcomeHello,
+} from "@/lib/welcome-cue";
+import { heldAtTheDoor } from "./aboard-at-sea";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
-import { hasActiveRefresherCourse } from "./courses";
+import { firstActiveIntroCourse, hasActiveRefresherCourse } from "./courses";
 import { getHelpRequestForBooking, type HelpRequest } from "./help-requests";
+import { hasMoveAsk } from "./inbound-messages";
 import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingPayment } from "./payments";
 import { type BookingReadinessDetail, getBookingReadinessDetail } from "./readiness";
@@ -30,9 +41,9 @@ import {
 } from "./rental-fit";
 import { bookings, certifications, people, shops, trips } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
-import { getTripWithBooked } from "./trips";
+import { getTripWithBookedOnce } from "./trips";
 import { getCurrentWaiverGeneration, listSignedWaiversByPerson } from "./waivers";
-import { welcomeCueInputsByBooking } from "./welcome-cues";
+import { diveDayCountForSeat, welcomeCueInputsByBooking } from "./welcome-cues";
 
 /**
  * **What `/ready` says in the first paint after a booking**, and nothing else
@@ -75,11 +86,22 @@ export type BookedCard = {
   pickup: { time: string | null; location: string | null };
   bookingCancelled: boolean;
   departureCancelled: boolean;
+  /** This seat is the diver's 10th, 25th, 50th or 100th boat with the shop (H-128), or null. */
+  milestone: DiveDayMilestone | null;
 };
 
 export async function getBookedCard(
   db: AppDb,
-  { shopId, bookingId }: { shopId: string; bookingId: string },
+  {
+    shopId,
+    bookingId,
+    delivered,
+  }: {
+    shopId: string;
+    bookingId: string;
+    /** The link was mailed to the contact on file; only then is a count said. */
+    delivered: boolean;
+  },
 ): Promise<BookedCard | null> {
   const [row] = await db
     .select({
@@ -106,8 +128,17 @@ export async function getBookedCard(
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
     .limit(1);
-  if (!row) return null;
+  // A seat the desk released is not one the card may claim (layer 3 review,
+  // dde-1 F2): no card, and the full path answers with its own.
+  if (!row || row.status === "no_show") return null;
   const identityHeld = row.identityUnconfirmedAt !== null;
+  // A held seat speaks for a record staff have not matched to whoever booked
+  // (#2082), and a booking redirect proved only a typed name and address
+  // (security review r5-4, second pass, N-c): neither is told a count.
+  const milestone =
+    identityHeld || !delivered
+      ? null
+      : diveDayMilestone(await diveDayCountForSeat(db, shopId, bookingId));
   return {
     shop: {
       name: row.shopName,
@@ -121,6 +152,7 @@ export async function getBookedCard(
     pickup: { time: row.pickupTime, location: row.hotelPickupLocation },
     bookingCancelled: row.status === "cancelled",
     departureCancelled: row.tripStatus !== "scheduled",
+    milestone,
   };
 }
 
@@ -159,17 +191,20 @@ export type ReadyPageData = {
     rentalPricing: RentalPricing;
     /** Minutes before departure the shop wants divers at the dock — the same figure the night-before email's arrival line uses. */
     dockCallMinutes: number;
+    /** How the desk takes money, said after a figure owed there (fifth-loop ideas, item 21). */
+    deskPayment: DeskPayment | null;
   };
   trip: {
     id: string;
     plannedDives: number;
     /**
-     * Only what the nitrox gate needs, never the whole catalog row: whether a
+     * Only what the gear step needs, never the whole catalog row: whether a
      * session of this course may run on enriched air (`nitroxAvailableOn`,
-     * src/lib/rentals.ts). Null on an ordinary charter, which the gate reads
-     * as "the shop's answer is the whole answer".
+     * src/lib/rentals.ts), and whether its rental gear is part of the course
+     * fee, which takes the prices off the sizes form. Null on an ordinary
+     * charter, which the gate reads as "the shop's answer is the whole answer".
      */
-    course: { nitroxCompatible: boolean } | null;
+    course: { nitroxCompatible: boolean; gearIncluded: boolean } | null;
     /**
      * What this seat costs on this departure (`seatListPriceCents`): the fare
      * for its participant type, or null on an unpriced trip. The thread's
@@ -258,6 +293,13 @@ export type ReadyPageData = {
    * almost always, and the query behind it only runs then.
    */
   refresherCourseOffered: boolean;
+  /**
+   * Present when this seat's level gate is unmet because the diver said "I'm
+   * not certified yet" (`certification_not_yet`, third UX review item 23): the
+   * try-it course (`is_intro_course`) the certification step points them at,
+   * null when the shop publishes none. Null on every other seat.
+   */
+  certificationNotYet: { introCourse: { title: string; href: string } | null } | null;
   reEntryOffersOpen: boolean;
   nitroxCardVerified: boolean;
   /**
@@ -272,11 +314,29 @@ export type ReadyPageData = {
   helpRequest: HelpRequest | null;
   /** True when the shop can actually take a card for this trip right now. */
   canPay: boolean;
+  /** The shop runs hotel pickups, so Day-of details asks about one (fourth UX review, item 8). */
+  offersHotelPickup: boolean;
+  /** Lunch is served aboard, so Day-of details asks for a lunch preference (ideas item 56). */
+  lunchAboard: boolean;
+  /** This diver's lunch preference; null when nothing. */
+  dietaryNote: string | null;
+  /**
+   * This seat is priced, unpaid, and the page cannot take a card for it: the
+   * money is owed at the shop, and `/ready` says how much, the party's unclaimed
+   * seats included (fourth UX review, item 5).
+   */
+  owesAtShop: boolean;
   /**
    * What this seat is (ADR 20261007-participant-types): its price is its own,
    * and a snorkeler or a rider is not asked a diver's questions.
    */
   participantType: ParticipantType;
+  /**
+   * The seat may owe course forms: it is on a course session, or staff marked
+   * it as a training dive for a course seat (issue #2275), whose forms are
+   * then signed on the enrollment.
+   */
+  asksCourseForms: boolean;
   /**
    * What cancelling right now would do to any payment already captured —
    * shown before the diver commits, mirroring `refundBookingOnCancellation`'s
@@ -305,6 +365,20 @@ export type ReadyPageData = {
    */
   canCancelBooking: boolean;
   /**
+   * The desk saw this diver and turned them away (H-135), rather than marking
+   * them not here. After the departure the page says the shop could not take
+   * them, never that they did not make it. The category is not carried: the
+   * diver was there, and a bearer link is no place to print it.
+   */
+  turnedAway: boolean;
+  /**
+   * The desk released this seat (turned away, or marked not here). Before
+   * the day is over the page says only that the shop released it and to talk
+   * to the desk, with no category, and draws no checklist, payment or
+   * running-late control (layer 3 review, dde-1 F2).
+   */
+  seatReleased: boolean;
+  /**
    * **"Add a seat"** (UX review 2026-10-11, item 13): this booking may lead a
    * party seat added from the page. The same moment a seat may be released
    * (`canCancelBooking`), never on a held seat, and never on a party member's
@@ -313,6 +387,14 @@ export type ReadyPageData = {
    */
   canAddSeat: boolean;
   /**
+   * **"Pay for this seat"** (issue #2474): this booking leads a party and the
+   * page could open a checkout for a seat it added. A fact about the lead and
+   * the shop only (a live seat on a departure still ahead, a connected
+   * account, a held identity that is not); which seats are owed is
+   * `PartySeatClaim.payable`.
+   */
+  canPayPartySeats: boolean;
+  /**
    * **"Running late"** (J3). `open` is `canSayRunningLate` for this seat now —
    * booked, not checked in, from the night-before brief until a scheduled
    * departure has sailed — and `saidAt` is when the diver already said
@@ -320,6 +402,16 @@ export type ReadyPageData = {
    * open and nothing has been said, and the said line while it is open after.
    */
   runningLate: { open: boolean; saidAt: Date | null };
+  /**
+   * **"Ask to move"** (H-126). Past the free-cancellation window, or on a
+   * trip with none, a paid cancel returns nothing right away, so the diver
+   * may ask the shop for another date instead: `open` while that ask could be
+   * made — a paid seat the diver may still release, not held, on their own
+   * booking — and `asked` while one about this departure stands
+   * (`hasMoveAsk`), so the page says so rather than offering it twice. Null
+   * everywhere else. The move itself is staff's.
+   */
+  moveAsk: "open" | "asked" | null;
   /**
    * **The departure itself was called off** — `trips.status`, not the
    * booking's.
@@ -337,9 +429,11 @@ export type ReadyPageData = {
    * gap — regardless of whether they have said yes. Null means there is nothing
    * to offer and the question is not asked at all.
    */
-  welcomeOffer: WelcomeCue | null;
+  welcomeOffer: OfferableWelcomeCue | null;
   /** Whether they have said yes. Their own answer, on their own link. */
   welcomeShared: boolean;
+  /** What they chose to add to the hello (#2425); null without a yes. */
+  welcomeHello: WelcomeHello | null;
   /**
    * What this course asks a student to work through before day 1 (ADR
    * 20261008-course-learning-materials), read through `readLearningMaterials`
@@ -368,14 +462,18 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       personId: bookings.personId,
       wantsNitrox: bookings.wantsNitrox,
       participantType: bookings.participantType,
+      trainingEnrollmentBookingId: bookings.trainingEnrollmentBookingId,
       lastDivedBand: bookings.lastDivedBand,
       welcomeSharedAt: bookings.welcomeSharedAt,
+      welcomeHello: bookings.welcomeHello,
       courseMaterialsDoneAt: bookings.courseMaterialsDoneAt,
       diveIntent: bookings.diveIntent,
       reEntryAsk: bookings.reEntryAsk,
       hotelPickupLocation: bookings.hotelPickupLocation,
+      dietaryNote: bookings.dietaryNote,
       pickupTime: bookings.pickupTime,
       status: bookings.status,
+      turnedAwayAt: bookings.turnedAwayAt,
       runningLateAt: bookings.runningLateAt,
       bookingCreatedAt: bookings.createdAt,
       carriedFactsConfirmedAt: bookings.carriedFactsConfirmedAt,
@@ -395,18 +493,23 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       rentalItems: shops.rentalItems,
       rentalPricing: shops.rentalPricing,
       dockCallMinutes: shops.dockCallMinutes,
+      offersHotelPickup: shops.offersHotelPickup,
+      deskPayment: shops.deskPayment,
       personEmail: people.email,
       personLocale: people.locale,
       emergencyContactName: people.emergencyContactName,
       emergencyContactPhone: people.emergencyContactPhone,
+      noCertificationDeclaredAt: people.noCertificationDeclaredAt,
+      noCertificationClearedAt: people.noCertificationClearedAt,
       tripStartsAt: trips.startsAt,
       tripCourseId: trips.courseId,
+      tripLunchAboard: trips.lunchAboard,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     // diveday:allow-deleted-trips: the window and course columns only; the
-    // trip itself is read through `getTripWithBooked`, which keeps `liveTrip()`.
+    // trip itself is read through `getTripWithBookedOnce`, which keeps `liveTrip()`.
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(eq(bookings.id, bookingId))
     .limit(1);
@@ -426,6 +529,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
   const [
     trip,
     refresherCourseOffered,
+    introCourse,
     materialsDoneElsewhere,
     rentalFit,
     helpRequest,
@@ -435,9 +539,13 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     nitroxOnFile,
     welcomeInputs,
     fitConfirmation,
+    moveAskStands,
   ] = await Promise.all([
-    getTripWithBooked(db, row.shopId, row.tripId),
+    getTripWithBookedOnce(db, row.shopId, row.tripId),
     reEntryOffersOpen ? hasActiveRefresherCourse(db, row.shopId) : false,
+    // Only for a diver whose "I'm not certified yet" stands: the one door the
+    // certification step opens for them (third UX review, item 23).
+    noCertificationStands(row) ? firstActiveIntroCourse(db, row.shopId) : null,
     // Someone marked this student's materials done on another departure of the
     // same course; asked only when this seat carries no mark of its own.
     row.courseMaterialsDoneAt === null && row.tripCourseId !== null
@@ -454,20 +562,30 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     getShopStripeAccount(db, row.shopId),
     verifiedNitroxPersonIds(db, row.shopId),
     nitroxCardOnFilePersonIds(db, row.shopId),
-    // The same reader the manifest uses, so "first time with us" means the
+    // The same reader the manifest uses, so "First dive with us" means the
     // same thing on the diver's own page as it does under their name at the
     // rail (issue #1182).
-    welcomeCueInputsByBooking(db, row.shopId, row.tripId, now),
+    welcomeCueInputsByBooking(db, row.shopId, row.tripId, now, { diveDayCounts: false }),
     // Recall, not inference: who kept this diver's fit after a previous trip.
     // Read here rather than folded into `getRentalFit`'s row, because the
     // staffer's name comes from a join this page is the only caller of.
     fitConfirmationForDiver(db, row.shopId, row.personId),
+    // Whether an ask to move stands (H-126), read here with the rest rather
+    // than after the cancel check it is used behind: that was two round trips
+    // more for every seat past the free window. A seat that cannot be
+    // released, or whose identity is held, never shows it.
+    row.status === "booked" &&
+    !hasSailed(row.tripStartsAt, now) &&
+    row.identityUnconfirmedAt === null
+      ? hasMoveAsk(db, row.shopId, bookingId, row.tripId)
+      : false,
   ]);
   if (!trip) return null;
   return {
     row,
     trip,
     refresherCourseOffered,
+    introCourse,
     reEntryOffersOpen,
     rentalFit,
     helpRequest,
@@ -478,6 +596,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     welcomeInputs,
     fitConfirmation,
     materialsDoneElsewhere,
+    moveAskStands,
   };
 }
 
@@ -501,6 +620,7 @@ export async function getReadyPageData(
     row,
     trip,
     refresherCourseOffered,
+    introCourse,
     reEntryOffersOpen,
     rentalFit,
     helpRequest,
@@ -511,6 +631,7 @@ export async function getReadyPageData(
     welcomeInputs,
     fitConfirmation,
     materialsDoneElsewhere,
+    moveAskStands,
   } = page;
   // `partly_refunded` settles too, or this page would invite a diver who has
   // already paid — and been handed part of it back — to pay the full price a
@@ -522,8 +643,16 @@ export async function getReadyPageData(
   // This seat's own price: a snorkeler is never asked for the dive fare
   // (ADR 20261007-participant-types).
   const perDiverPriceCents = seatListPriceCents(trip, trip.course, row.participantType);
+  // **Only a seat the diver still holds is payable** (layer 3 review, dde-2
+  // #1): a seat the desk released may already be resold, and a capture on it
+  // is money for a place the diver no longer has. `startBookingCheckout`
+  // refuses it server-side as well.
   const canPay = Boolean(
-    perDiverPriceCents && !settled && canAcceptPayments(stripeAccount) && publicAppUrl(),
+    seatIsHeld(row.status) &&
+      perDiverPriceCents &&
+      !settled &&
+      canAcceptPayments(stripeAccount) &&
+      publicAppUrl(),
   );
 
   // `captured`, not `settled`: a waived booking has no money to give back, so
@@ -538,14 +667,41 @@ export async function getReadyPageData(
         : "forfeit"
       : "no_policy";
 
-  const canCancelBooking = row.status === "booked" && !hasSailed(trip.startsAt, now);
   const identityHeld = row.identityUnconfirmedAt !== null;
+  const canCancelBooking =
+    row.status === "booked" &&
+    !hasSailed(trip.startsAt, now) &&
+    // Counted aboard a boat past its time: `selfCancelBooking` refuses it (H-133).
+    !(
+      await heldAtTheDoor(db, {
+        shopId: row.shopId,
+        tripId: row.tripId,
+        startsAt: trip.startsAt,
+        now,
+        bookingIds: [bookingId],
+      })
+    ).has(bookingId);
   // **A lead the page could charge pays before adding anyone** (security
   // review of layer 8, D3). The link is shared by design, so without this a
   // holder could add unpaid seats until the boat read full. Settled, or a
   // page that takes no payment here (pay at the dock), opens the door.
   const canAddSeat =
     canCancelBooking && !identityHeld && row.partyLeadBookingId === null && (settled || !canPay);
+  // Past the free window, or with no window at all, a paid cancel returns
+  // nothing right away: the diver may ask the shop to move them instead.
+  const moveAskable =
+    canCancelBooking &&
+    !identityHeld &&
+    (cancelPreview === "forfeit" || cancelPreview === "no_policy");
+  const moveAsk: ReadyPageData["moveAsk"] = moveAskable ? (moveAskStands ? "asked" : "open") : null;
+
+  const canPayPartySeats =
+    canCancelBooking &&
+    !identityHeld &&
+    row.partyLeadBookingId === null &&
+    canAcceptPayments(stripeAccount) &&
+    Boolean(publicAppUrl()) &&
+    Boolean(row.personEmail);
 
   return {
     detail,
@@ -566,11 +722,14 @@ export async function getReadyPageData(
       rentalItems: row.rentalItems,
       rentalPricing: row.rentalPricing,
       dockCallMinutes: row.dockCallMinutes,
+      deskPayment: row.deskPayment,
     },
     trip: {
       id: row.tripId,
       plannedDives: trip.plannedDives,
-      course: trip.course ? { nitroxCompatible: trip.course.nitroxCompatible } : null,
+      course: trip.course
+        ? { nitroxCompatible: trip.course.nitroxCompatible, gearIncluded: trip.course.gearIncluded }
+        : null,
       seatPriceCents: perDiverPriceCents,
     },
     person: {
@@ -588,11 +747,21 @@ export async function getReadyPageData(
     fitConfirmation: identityHeld ? null : fitConfirmation,
     wantsNitrox: row.wantsNitrox,
     participantType: row.participantType,
+    asksCourseForms: Boolean(trip.course) || row.trainingEnrollmentBookingId !== null,
     lastDivedBand: row.lastDivedBand,
     diveIntent: row.diveIntent,
     reEntryAsk: row.reEntryAsk,
     reEntryOffersOpen,
     refresherCourseOffered,
+    certificationNotYet:
+      !identityHeld &&
+      detail.readiness.blockers.some((blocker) => blocker.code === "certification_not_yet")
+        ? {
+            introCourse: introCourse
+              ? { title: introCourse.title, href: publicCoursePath(row.slug, introCourse.slug) }
+              : null,
+          }
+        : null,
     nitroxCardVerified: !identityHeld && nitroxVerified.has(row.personId),
     nitroxCardOnFile: !identityHeld && nitroxOnFile.has(row.personId),
     rentalFit: identityHeld ? null : toDiverRentalFit(rentalFit),
@@ -600,9 +769,17 @@ export async function getReadyPageData(
     hotelPickupLocation: row.hotelPickupLocation,
     pickupTime: row.pickupTime,
     canPay,
+    offersHotelPickup: row.offersHotelPickup,
+    lunchAboard: row.tripLunchAboard,
+    dietaryNote: row.dietaryNote,
+    owesAtShop: Boolean(perDiverPriceCents) && !settled && !canPay,
     cancelPreview,
     canCancelBooking,
+    turnedAway: row.status === "no_show" && row.turnedAwayAt !== null,
+    seatReleased: row.status === "no_show",
     canAddSeat,
+    moveAsk,
+    canPayPartySeats,
     runningLate: {
       open: canSayRunningLate({
         bookingStatus: row.status,
@@ -618,10 +795,12 @@ export async function getReadyPageData(
     // have consented. The staff surfaces read the consented one.
     welcomeOffer: offerableWelcomeCue({
       lastDivedAt: welcomeInputs.get(bookingId)?.lastDivedAt ?? null,
+      nonDiver: welcomeInputs.get(bookingId)?.nonDiver ?? false,
       tripEndsAt: trip.endsAt,
       now,
     }),
     welcomeShared: row.welcomeSharedAt !== null,
+    welcomeHello: row.welcomeSharedAt !== null ? row.welcomeHello : null,
     learningMaterials: readLearningMaterials(trip.course?.learningMaterials),
     courseMaterialsDone: row.courseMaterialsDoneAt !== null || materialsDoneElsewhere,
     courseStarted: trip.startsAt.getTime() <= now.getTime(),
@@ -676,7 +855,11 @@ export async function carriedPreparationForDiver(
     waiver: shopWaiverStatus({
       personSignedWaivers: signedWaivers.get(input.personId) ?? [],
       currentTemplateVersion: waiverTemplate?.materialGeneration ?? null,
-      signer: signer ? { dateOfBirth: signer.dateOfBirth, timezone: signer.timezone } : undefined,
+      // Person-scoped, so no seat's "Under 18" is in hand: the next booking
+      // carries its own, and its readiness asks for the co-signature then.
+      signer: signer
+        ? { dateOfBirth: signer.dateOfBirth, minorDeclared: false, timezone: signer.timezone }
+        : undefined,
     }),
     certifications: levelCards,
     hasRentalFit: input.hasRentalFit,

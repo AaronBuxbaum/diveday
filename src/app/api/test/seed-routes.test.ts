@@ -111,6 +111,15 @@ const routes: SeedRoute[] = [
     },
   },
   {
+    slug: "seed-booking-checkout",
+    // Past the guard it reads its query first: no slug is a 400 before the
+    // database is touched, so the 400 is the signal it got through. It opens a
+    // booking checkout the e2e harness then pays through the signed webhook.
+    expectPastTheGuard: async (response) => {
+      expect(response.status).toBe(400);
+    },
+  },
+  {
     slug: "seed-open-package-invoice",
     // Past the guard it reads its query first: no slug is a 400 before the
     // database is touched, so the 400 is the signal it got through. It raises
@@ -175,6 +184,26 @@ const routes: SeedRoute[] = [
     // deployment would put a sighting nobody made onto a real diver's keepsake,
     // over a shop's name. Reaching the database is what proves the guard let it
     // through.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
+    slug: "seed-certified-recap",
+    // Issues a verified card from a course session, the record a diver's next
+    // booking is admitted on, so a route answering on a misconfigured
+    // deployment would put a credential nobody issued onto a real diver.
+    // Reaching the database is what proves the guard let it through.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
+    slug: "seed-unworded-course-form",
+    // Adds a form to a course's requirements, which every student enrolled
+    // from then on is asked for, so a route answering on a misconfigured
+    // deployment would change what a real shop's divers must sign. Reaching
+    // the database is what proves the guard let it through.
     expectPastTheGuard: async () => {
       expect(getDb).toHaveBeenCalled();
     },

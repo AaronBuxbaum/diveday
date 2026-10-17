@@ -45,7 +45,7 @@ test.describe("staff", () => {
   test("a flagged diver keeps their count but loses the size, and is named for a check-in fit", async ({
     page,
   }) => {
-    // The seed flags one diver on today's reef trip — no XL BCD left. Read the
+    // The seed flags one diver on today's reef trip — no size 12 boots. Read the
     // card's href rather than clicking: the schedule list streams in, and
     // reading page.url() after a click races that render.
     const tripPath = await tripPathByTitle(page, SHOP, "Two-Tank Reef — Molasses & French");
@@ -53,7 +53,7 @@ test.describe("staff", () => {
 
     const fitSection = page.getByRole("region", { name: "Fit these divers at check-in" });
     await expect(fitSection).toBeVisible();
-    await expect(fitSection).toContainText("No XL BCD left");
+    await expect(fitSection).toContainText("No size 12 boots on the shelf");
 
     // Their stated XL size must not appear as something to pull — laying out a
     // substitute size is exactly what the flag exists to prevent...
@@ -378,7 +378,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     await page.getByLabel("Name").fill(diverName);
     await page.getByLabel("Email").fill(`late-bloomer-${stamp}@example.com`);
     await acceptAgeAttestation(page);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     // The confirmation heading greets by first name only ("...boat, Late!").
     await expect(
       page.getByRole("heading", {

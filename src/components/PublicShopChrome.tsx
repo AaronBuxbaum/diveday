@@ -68,6 +68,7 @@ export function PublicShopHeader({
        schedule's sticky day headers, pinned at `top-0`, spent every scroll
        hidden underneath it. */
     <ChromeBar
+      stackedOnPhone
       leading={
         /* A truncating span inside, which the name did not need while the row
            could wrap onto a second line: the bar is one fixed-height row now,
@@ -76,7 +77,8 @@ export function PublicShopHeader({
            `text-overflow` has nothing to act on inside a flex container. */
         <Link
           href={publicSchedulePath(shop.slug)}
-          className="font-brand-display flex min-h-11 min-w-0 items-center text-base font-semibold tracking-tight sm:text-lg"
+          // diveday:allow-type-ramp: the shop name is a wordmark, not a heading
+          className="font-brand-display flex min-h-11 min-w-0 items-center text-lg font-semibold tracking-tight"
         >
           <span className="truncate">{shop.name}</span>
         </Link>

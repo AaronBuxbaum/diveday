@@ -10,7 +10,7 @@
       "beAtDock": "Preséntate en el muelle a las {time}",
       "whereHeading": "Adónde ir",
       "landmark": "Referencia: {landmark}",
-      "parking": "Aparcamiento: {parking}"
+      "parking": "Estacionamiento: {parking}"
     },
     "counterCard": {
       "heading": "¿Primera vez? Escanea esto.",
@@ -27,6 +27,8 @@
     "oxygenKept": "El equipo de oxígeno se guarda en",
     "firstAidKept": "El botiquín se guarda en",
     "lastChecked": "Última revisión",
-    "oxygenPressure": "Presión del O2"
+    "oxygenPressure": "Presión del O2",
+    "kitRegister": "Registro: {kits} a bordo de {boat}",
+    "kitRegisterServiced": "Registro: {kits} a bordo de {boat}; mantenimiento del equipo de oxígeno: {date}"
   }
 }

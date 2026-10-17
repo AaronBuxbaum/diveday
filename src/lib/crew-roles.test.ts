@@ -10,6 +10,7 @@ import {
   lapsedRungs,
   lastDayOfDeparture,
   narrowedByLapse,
+  rolesMissingCredential,
   rungLostToLapse,
   standingRatingsBesideJob,
   TRIP_CREW_ROLES,
@@ -565,5 +566,39 @@ describe("divesOnTrip", () => {
   ] as const)("falls back to the standing roles %j with no job rostered", (shopRoles, wet) => {
     expect(divesOnTrip({ tripRole: null, shopRoles })).toBe(wet);
     expect(divesOnTrip({ shopRoles })).toBe(wet);
+  });
+});
+
+/** Issue #2548: the credential kinds that answer a role, one map for the report and the card. */
+describe("rolesMissingCredential", () => {
+  it("answers a captain only with a captain's license", () => {
+    expect(rolesMissingCredential(["captain"], ["instructor_rating", "first_aid_cpr"])).toEqual([
+      "captain",
+    ]);
+    expect(rolesMissingCredential(["captain"], ["captains_licence"])).toEqual([]);
+  });
+
+  it("lets a higher rating answer a lower in-water role, never the reverse", () => {
+    expect(rolesMissingCredential(["divemaster"], ["instructor_rating"])).toEqual([]);
+    expect(rolesMissingCredential(["divemaster"], ["assistant_instructor_rating"])).toEqual([]);
+    expect(rolesMissingCredential(["assistant_instructor"], ["divemaster_rating"])).toEqual([
+      "assistant_instructor",
+    ]);
+    expect(rolesMissingCredential(["instructor"], ["assistant_instructor_rating"])).toEqual([
+      "instructor",
+    ]);
+  });
+
+  it("never lets insurance, first aid, oxygen or other answer a role", () => {
+    const nonRatings = ["liability_insurance", "first_aid_cpr", "oxygen_provider", "other"];
+    expect(rolesMissingCredential(["instructor", "divemaster", "captain"], nonRatings)).toEqual([
+      "instructor",
+      "divemaster",
+      "captain",
+    ]);
+  });
+
+  it("ignores a role no credential can answer", () => {
+    expect(rolesMissingCredential(["crew", "owner", "diver"], [])).toEqual([]);
   });
 });

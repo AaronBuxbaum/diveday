@@ -402,7 +402,7 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
 describe("an emergency contact on a held seat", () => {
   // Issue #2082: a held seat may be a different human from the matched person,
   // so its bearer links must neither read nor overwrite that person's contact.
-  // Staff, who can see who is standing at the counter, still can.
+  // Staff write the seat's own contact instead (issue #2145).
   async function heldSeat(given?: Awaited<ReturnType<typeof waiverContext>>) {
     const ctx = given ?? (await waiverContext());
     await ctx.db
@@ -465,10 +465,20 @@ describe("an emergency contact on a held seat", () => {
         actor: "staff",
       }),
     ).toBe(true);
+    // Staff write the seat's own contact (issue #2145), never the matched
+    // person's: they may be somebody else's next of kin.
     await expect(contactOnFile(db, booking.personId)).resolves.toEqual({
-      name: "Staff Entered",
-      phone: "555-0124",
+      name: "Kept Contact",
+      phone: "555-0099",
     });
+    const [seat] = await db
+      .select({
+        name: bookings.heldEmergencyContactName,
+        phone: bookings.heldEmergencyContactPhone,
+      })
+      .from(bookings)
+      .where(eq(bookings.id, booking.id));
+    expect(seat).toEqual({ name: "Staff Entered", phone: "555-0124" });
   });
 
   // A held seat is issued no link and signs nothing now (issue #2125), so a

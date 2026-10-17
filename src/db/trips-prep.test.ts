@@ -128,7 +128,11 @@ async function aWantedPick(ctx: Awaited<ReturnType<typeof context>>) {
   const prep = await prepFor(ctx);
   for (const row of prep.assignmentRows) {
     for (const need of row.wanted) {
-      const unit = prep.freeByKind.get(need.kind)?.[0];
+      // The row's own proposal when it has one: a confirmed proposal is kept
+      // only while it is still what the rules propose (domain review F3).
+      const unit =
+        prep.proposals.get(proposalKey(row.diver.bookingId, need.kind)) ??
+        prep.freeByKind.get(need.kind)?.[0];
       if (unit) return { bookingId: row.diver.bookingId, gearItemId: unit.id };
     }
   }

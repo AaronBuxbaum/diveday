@@ -17,6 +17,7 @@ import { diverGuardianRelationshipOptions } from "@/i18n/guardian-labels";
 import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";
+import { isYouthForm } from "@/lib/course-forms";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { signCourseFormFromReady } from "../paperwork-actions";
 
@@ -113,7 +114,13 @@ export default async function CourseFormsPage({
   // either way the guardian's half is what this page collects.
   const guardianRequired =
     form.gap === "guardian_missing" ||
-    guardianSignatureRequired(enrollment.dateOfBirth, signingDate(nowDate(), enrollment.timezone));
+    // A youth form is co-signed whatever the record holds (H6).
+    isYouthForm(form) ||
+    guardianSignatureRequired(
+      enrollment.dateOfBirth,
+      signingDate(nowDate(), enrollment.timezone),
+      enrollment.minorDeclared,
+    );
   const errorKey = error && Object.hasOwn(ERRORS, error) ? ERRORS[error] : undefined;
 
   const signBlock = (

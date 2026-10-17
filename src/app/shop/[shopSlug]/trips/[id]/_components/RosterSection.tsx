@@ -1,10 +1,17 @@
 import type { ReactNode } from "react";
+import { AgencyCheckAll } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckAll";
+import { AgencyCheckHost } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckHost";
+import {
+  agencyCheckAllCopy,
+  agencyCheckCopies,
+} from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
+import { DecompressionReminder } from "@/components/DecompressionReminder";
 import { ScrollToHash } from "@/components/ScrollToHash";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMarkColumn } from "@/components/ui/StatusMark";
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
+import { needsDecompressionCardReminder } from "@/lib/decompression-reminder";
 import { signingDate } from "@/lib/guardian";
 import { RosterAllClear } from "./RosterAllClear";
 import { RosterGroup, RosterGroupBand } from "./RosterGroupBand";
@@ -75,12 +82,11 @@ export function RosterSection({
   actions: RosterActions;
   slots?: RosterSlots;
 }) {
-  const { locale, shopTimezone, booked, capacity, compact = false } = trip;
-  const showSummaryHeading = trip.showSummaryHeading ?? true;
+  const { locale, shopTimezone } = trip;
   const { waitingGroup, invitedGroup, addDiverGroup, arrival, record } = slots;
   const { roster } = rows;
   const t = staffTranslator(locale);
-  const controls = waiverControls(t);
+  const controls = waiverControls(t, { rehearsal: trip.rehearsal });
   const groups = groupRoster({
     t,
     rows,
@@ -89,7 +95,19 @@ export function RosterSection({
     controls,
     record,
   });
-  const { stillToClear, ready, here, notHere, hereMeta, blockedCount, sharedFacts } = groups;
+  const { stillToClear, ready, here, notHere, hereMeta, blockedCount, sharedFacts, sailedMeta } =
+    groups;
+  // A record never asks for action, so a finished departure carries no reminder.
+  const showsDecompressionReminder =
+    !record &&
+    needsDecompressionCardReminder({
+      exceedsNoDecoLimits: trip.exceedsNoDecoLimits,
+      seats: roster.map(({ booking }) => ({
+        participantType: booking.participantType,
+        released: booking.status === "no_show",
+      })),
+      divingCrew: trip.divingCrew,
+    });
   // A record never celebrates a clearance: there was nothing left to clear.
   const showAllClear = roster.length > 0 && !record;
   const context: RosterRowContext = {
@@ -99,6 +117,8 @@ export function RosterSection({
     actions,
     arrival,
     record: Boolean(record),
+    countedAboardBlocked: record?.countedAboardBlocked,
+    recordBelow: record?.below,
     sharedAdvisoryTexts: groups.sharedAdvisoryTexts,
     waiverControls: controls,
     paymentStatusCopy: rosterPaymentStatusCopy(t),
@@ -111,37 +131,39 @@ export function RosterSection({
   };
 
   const hasTail = waitingGroup != null || invitedGroup != null || addDiverGroup != null;
-  return (
+  // This departure's cards the browser extension can check, in roster order:
+  // the whole of what its "Check all" may touch (H-105). Held seats are never
+  // in the map (`getTripGuests`).
+  const agencyCards = actions.agencyCheckAction
+    ? roster.flatMap(({ person }) => rows.agencyCheckCardsByPerson?.get(person.id) ?? [])
+    : [];
+  const section = (
     <section
       id="roster"
-      aria-label={showSummaryHeading ? undefined : t("trips.roster.heading")}
-      // Compact is the departure page, whose `space-y-10` spaces this
-      // (K-262); a roster rendered outside that stack keeps its own step.
-      className={`${compact ? "" : "mt-10"} scroll-mt-24`}
+      aria-label={t("trips.roster.heading")}
+      // The departure page's `space-y-10` spaces this (K-262).
+      className="scroll-mt-24"
     >
       {arrival?.instrument ? (
         <div className="mb-10">{arrival.instrument(groups.deskWorkOpen)}</div>
       ) : null}
-      {showSummaryHeading ? (
-        <div>
-          <h2 className={SECTION_TITLE_CLASS}>
-            {t("trips.roster.heading")}{" "}
-            <span className="font-normal text-muted tabular-nums">
-              {t("trips.roster.bookedOfCapacity", { booked, capacity })}
-            </span>
-          </h2>
-          {/* The moment the last blocker clears. Nothing renders until an
-            action on this page moves the count to zero — see RosterAllClear
-            for why that has to be decided in the browser rather than here.
-            Held back on an empty roster: "everyone is cleared" about nobody
-            is not a finished thing. */}
-          {showAllClear ? (
-            <RosterAllClear blockedCount={blockedCount} label={t("trips.roster.allClear")} />
-          ) : null}
+      {/* The departure page's H1 heads this tab. The moment the last blocker
+          clears, nothing renders until an action on this page moves the count to
+          zero — see RosterAllClear for why that has to be decided in the browser
+          rather than here. Held back on an empty roster: "everyone is cleared"
+          about nobody is not a finished thing. */}
+      {showAllClear ? (
+        <RosterAllClear blockedCount={blockedCount} label={t("trips.roster.allClear")} />
+      ) : null}
+      {showsDecompressionReminder ? (
+        <div className="mb-10">
+          <DecompressionReminder text={t("trips.roster.decompressionReminder")} />
         </div>
       ) : null}
-      {!showSummaryHeading && showAllClear ? (
-        <RosterAllClear blockedCount={blockedCount} label={t("trips.roster.allClear")} />
+      {actions.agencyCheckAction ? (
+        <div>
+          <AgencyCheckAll cards={agencyCards} copy={agencyCheckAllCopy(t, agencyCards.length)} />
+        </div>
       ) : null}
       {roster.length > 0 || hasTail ? (
         // One ledger, not a stack of cards: everyone this departure is about,
@@ -152,7 +174,7 @@ export function RosterSection({
         <div
           className={sectionCardClass({
             padding: "none",
-            className: `${compact ? "" : "mt-5"} overflow-hidden`,
+            className: "overflow-hidden",
           })}
         >
           {/* Inside the card, so mounting proves the rows a deep link scrolls
@@ -162,14 +184,28 @@ export function RosterSection({
           {/* The record's groups (UX review 2026-10-10, item 10): empty
               unless the departure is finished, and then the only ones. */}
           <RosterSeatGroup
+            label={t("trips.roster.groupUnaccounted")}
+            entries={groups.unaccounted}
+            settled={false}
+            context={context}
+          />
+          <RosterSeatGroup
             label={t("trips.roster.groupSailed")}
             entries={groups.sailed}
             settled
             context={context}
-          />
+          >
+            {sailedMeta ? <span className="text-xs text-muted">{sailedMeta}</span> : null}
+          </RosterSeatGroup>
           <RosterSeatGroup
             label={t("trips.roster.groupDidNotSail")}
             entries={groups.didNotSail}
+            settled={false}
+            context={context}
+          />
+          <RosterSeatGroup
+            label={t("trips.roster.groupTurnedAway")}
+            entries={record ? groups.turnedAway : []}
             settled={false}
             context={context}
           />
@@ -242,6 +278,12 @@ export function RosterSection({
             settled={false}
             context={context}
           />
+          <RosterSeatGroup
+            label={t("trips.roster.groupTurnedAway")}
+            entries={record ? [] : groups.turnedAway}
+            settled={false}
+            context={context}
+          />
           {waitingGroup}
           {invitedGroup}
           {/* One box, so `#add-diver` holds the form its links and specs
@@ -260,5 +302,18 @@ export function RosterSection({
         </div>
       ) : null}
     </section>
+  );
+  // The check's state lives above the rows, so a row whose card has just been
+  // certified keeps its outcome and its Undo through the refresh (H-105).
+  return actions.agencyCheckAction ? (
+    <AgencyCheckHost
+      action={actions.agencyCheckAction}
+      addListedAction={actions.agencyListedAction}
+      copies={agencyCheckCopies(t)}
+    >
+      {section}
+    </AgencyCheckHost>
+  ) : (
+    section
   );
 }

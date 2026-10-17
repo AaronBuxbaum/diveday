@@ -20,8 +20,8 @@
   "removeStandout": "Quitar de destacadas",
   "emptyHeading": "Todavía no hay reseñas",
   "emptyDetail": "A los buceadores se les pide una en su página de resumen después de una salida.",
-  "emptyReviewLinkBody": "Aquí no hay nada que activar. Una reseña llega cuando un buceador abre su resumen. Lo que sí decides tú es adónde van después.",
-  "emptyReviewLinkAction": "Configurar tu enlace de reseñas",
+  "emptyReviewLinkLabel": "Cuando un buceador te deje una reseña, llévalo a:",
+  "emptyReviewLinkSave": "Guardar",
   "rating": "{rating} sobre 5 estrellas",
   "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
   "hide": "Ocultar",
@@ -48,9 +48,9 @@
   "aggregate": "media de {rating} en {count, plural, one {# reseña publicada} other {# reseñas publicadas}}",
   "aggregateMonth": "este mes {rating} de {count, plural, one {# reseña} other {# reseñas}}",
   "group": {
-    "waiting": "Esperando tu revisión — {count}",
-    "published": "Publicadas — {count}",
-    "hidden": "Ocultas — {count}"
+    "waiting": "Pendiente · {count}",
+    "published": "Publicadas · {count}",
+    "hidden": "Ocultas · {count}"
   },
   "publishAll": "{count, plural, =2 {Publicar ambas} other {Publicar las #}}",
   "republish": "Volver a publicar",
@@ -79,5 +79,12 @@
     "empty": "Escribe una respuesta antes de guardar.",
     "tooLong": "La respuesta admite hasta {max, plural, one {# carácter} other {# caracteres}}.",
     "notAnswerable": "Solo una reseña publicada con texto admite respuesta."
+  },
+  "narrow": {
+    "label": "Mostrar reseñas",
+    "all": "Todas",
+    "low": "3 estrellas o menos",
+    "comment": "Con comentario",
+    "none": "Ninguna reseña coincide con esta vista."
   }
 }

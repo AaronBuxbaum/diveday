@@ -63,7 +63,15 @@ Evaluate, in order of severity:
    one. Flag at most one per review; delight stays rationed.
 
 Report the holistic answers first, then the probe verdicts when you were given a report, then
-findings ordered by severity: principle violated, where (screenshot name or file:line), concrete
-fix. Be specific enough that the fix needs no follow-up questions. If a surface is genuinely good,
-say what makes it work in one sentence — future reviews calibrate on it. Do not edit files; you are
-the reviewer.
+findings ordered by severity. Each finding carries its evidence or is not reported:
+
+- **The line it violates**: the principle in `docs/design/principles.md` or
+  `docs/design/pixel-craft.md`, the ADR, or the path-scoped rule, by number, heading or id.
+- **A concrete failing case**: the screenshot name or file:line, the viewport and the state that
+  shows it, or a measurement from the probe — enough that the implementer can reproduce it.
+- **A label**: **confirmed** (visible in a screenshot or a crop you read) or **possible** (inferred
+  from code you could not see rendered).
+
+Then the concrete fix, specific enough that it needs no follow-up questions. Taste with no line
+behind it is out of scope. If a surface is genuinely good, say what makes it work in one sentence —
+future reviews calibrate on it. Do not edit files; you are the reviewer.

@@ -1,23 +1,30 @@
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
+import { leftAboardOpen } from "@/lib/trip-phase";
+import type { TripStage } from "@/lib/trip-stages";
 import { hasSailed } from "@/lib/trips";
 import { addDockRiderAction } from "../dock-rider-actions";
 import { DockRiderForm } from "./DockRiderForm";
+import { dockRiderDoorOpen } from "./dock-rider-door";
 import { LostItemsSection } from "./LostItemsSection";
 
 /**
  * **The dock's own two jobs** (batch 4), under the crew list on the Boat tab.
  * Before the boat leaves: add somebody who turned up to ride along (D6), at
- * the departure checkpoint only, and only until the crew says the boat has
- * left. After it sails: what the crew found aboard (J2). The two never show
- * together, because the one is over before the other begins.
+ * the departure checkpoint only, only until the crew says the boat has left,
+ * and never on a cancelled departure (`dockRiderDoorOpen`). After it sails:
+ * what the crew found aboard (J2). The two never show together, because the
+ * one is over before the other begins. "Left aboard" waits for "Heading in"
+ * (`leftAboardOpen`; fourth review, item 16): while the boat is still diving,
+ * a form for what was found after the trip is a question nobody can answer.
  */
 export function DockDesk({
   t,
   shopId,
   tripId,
   isDeparture,
-  startsAt,
+  trip,
+  timeZone,
   stage,
   seats,
 }: {
@@ -25,12 +32,17 @@ export function DockDesk({
   shopId: string;
   tripId: string;
   isDeparture: boolean;
-  startsAt: Date;
-  stage: { stage: string } | null;
+  trip: { startsAt: Date; endsAt: Date; cancelled?: boolean };
+  /** The shop's zone, which says which day a crew word was said on. */
+  timeZone: string;
+  /** The crew's newest word, whatever its age (`latestTripStage`). */
+  stage: { stage: TripStage; recordedAt: Date } | null;
   seats: readonly { bookingId: string; fullName: string }[];
 }) {
-  const sailed = hasSailed(startsAt, nowDate());
-  const atTheDock = isDeparture && !sailed && (!stage || stage.stage === "boarding");
+  const now = nowDate();
+  const cancelled = trip.cancelled === true;
+  const sailed = hasSailed(trip.startsAt, now);
+  const atTheDock = dockRiderDoorOpen({ isDeparture, sailed, stage, cancelled });
   return (
     <>
       {atTheDock ? (
@@ -71,7 +83,7 @@ export function DockDesk({
         t={t}
         shopId={shopId}
         tripId={tripId}
-        sailed={sailed}
+        open={leftAboardOpen({ ...trip, now, timeZone, stage, cancelled })}
         seats={seats.map((seat) => ({ bookingId: seat.bookingId, name: seat.fullName }))}
       />
     </>

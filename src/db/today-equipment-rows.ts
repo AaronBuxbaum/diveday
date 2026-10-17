@@ -175,19 +175,21 @@ export function pushEquipmentRows(actions: TodayAction[], ctx: TodayRowsContext)
       subject: row.boatName,
       context: when,
       departure: { tripId: trip.id, label: `${trip.title} · ${when}` },
-      detail: row.notices.map((notice) => boatSafetyNoticeText(t, notice)).join(" · "),
+      detail: row.notices.map((notice) => boatSafetyNoticeText(t, locale, notice)).join(" · "),
       actionLabel: openBoatCheckActionText(t),
       href: `/shop/${shopSlug}/trips/${trip.id}/manifest`,
       dueAt: trip.startsAt,
     });
   }
   for (const row of boatSafety.errands) {
-    const detail = row.notices.map((notice) => boatSafetyNoticeText(t, notice)).join(" · ");
+    const detail = row.notices.map((notice) => boatSafetyNoticeText(t, locale, notice)).join(" · ");
     actions.push(
       row.subject === "boat"
         ? {
             id: `boat-safety:boat:${row.boatId}`,
-            kind: row.expired ? "boat_safety_expired" : "boat_papers_due",
+            // A lapsed paper is danger ink (H-136): loud, and still nothing
+            // refuses a departure for it.
+            kind: row.expired ? "boat_papers_lapsed" : "boat_papers_due",
             urgency: row.expired ? "now" : "later",
             subject: row.name,
             context: null,

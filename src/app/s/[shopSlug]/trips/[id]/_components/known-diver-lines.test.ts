@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
 import { formatShortDate } from "@/lib/format";
-import { knownDiverFactLines } from "./known-diver-lines";
+import { knownDiverFactLines, knownDiverPanelFor } from "./known-diver-lines";
 
 const t = diverTranslator("en-US");
 const where = { locale: "en-US" as const, timeZone: "America/New_York" };
@@ -24,5 +24,36 @@ describe("knownDiverFactLines", () => {
       }),
     );
     expect(lines[1]).toBe(t("booking.knownDiver.contact", { name: "Asha Sharma" }));
+  });
+});
+
+describe("knownDiverPanelFor", () => {
+  const input = { handoff: null, blankHref: "/s/blue-mantis/trips/t-1#book", ...where };
+
+  it("is no panel when the handoff named nobody", () => {
+    expect(knownDiverPanelFor(null, t, input)).toBeNull();
+  });
+
+  it("carries the diver, their facts and the gear they took last time", () => {
+    const lastGear = { kinds: ["bcd" as const], nitrox: true };
+    const panel = knownDiverPanelFor(
+      {
+        fullName: "Ana Ruiz",
+        email: "ana@example.com",
+        phone: null,
+        facts: [{ kind: "waiver", keptAt }],
+        lastGear,
+      } as never,
+      t,
+      input,
+    );
+    expect(panel).toMatchObject({
+      name: "Ana Ruiz",
+      handoff: "",
+      blankHref: input.blankHref,
+      lead: { fullName: "Ana Ruiz", email: "ana@example.com", phone: null },
+      lastGear,
+    });
+    expect(panel?.lines).toHaveLength(1);
   });
 });

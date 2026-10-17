@@ -1,4 +1,4 @@
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import type { PublicCrewMember } from "@/db/trips";
 import { languageNameIn } from "@/i18n/language-labels";
 import { diverTranslator } from "@/i18n/messages";
@@ -60,13 +60,23 @@ export function TripCrewLine({
             // and nothing else here needs the id.
             // biome-ignore lint/suspicious/noArrayIndexKey: see above
             <li key={index}>
-              <span className="font-medium text-foreground">{member.firstName}</span>
-              {member.tripRole ? ` · ${t(`trip.crewRole.${member.tripRole}`)}` : ""}
-              {/* The languages are the reason a diver reads this line at all,
+              {member.away ? (
+                // Away on this departure's days (item 12): the role stays,
+                // the name and languages go, so nobody is promised.
+                t("trip.crewToBeConfirmed", {
+                  role: t(`trip.crewRole.${member.tripRole ?? "crew"}`),
+                })
+              ) : (
+                <>
+                  <span className="font-medium text-foreground">{member.firstName}</span>
+                  {member.tripRole ? ` · ${t(`trip.crewRole.${member.tripRole}`)}` : ""}
+                  {/* The languages are the reason a diver reads this line at all,
                   so they are stated even when the roster left the job blank. */}
-              {languages.length > 0
-                ? ` · ${cachedListFormat(locale, { style: "long", type: "conjunction" }).format(languages)}`
-                : ""}
+                  {languages.length > 0
+                    ? ` · ${cachedListFormat(locale, { style: "long", type: "conjunction" }).format(languages)}`
+                    : ""}
+                </>
+              )}
             </li>
           );
         })}

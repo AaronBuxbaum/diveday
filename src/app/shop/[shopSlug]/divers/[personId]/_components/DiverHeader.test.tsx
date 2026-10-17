@@ -13,6 +13,7 @@ vi.mock("@/app/actions/seat-diver", () => ({ seatExistingDiverAction: vi.fn() })
 afterEach(cleanup);
 
 const t = staffTranslator("en-US");
+const NO_STANDING = { visits: 0, since: null, lastOut: null, spent: null, friends: 0 };
 type HeaderStatus = ComponentProps<typeof DiverHeader>["status"];
 
 function diver(): DiverProfile {
@@ -33,7 +34,7 @@ function diver(): DiverProfile {
 
 function renderHeader({
   status,
-  book = <span>Book a departure</span>,
+  book = <span>Add a booking</span>,
 }: {
   status?: HeaderStatus;
   book?: ComponentProps<typeof DiverHeader>["book"];
@@ -43,7 +44,8 @@ function renderHeader({
       diver={diver()}
       shopSlug="blue-mantis"
       t={t}
-      visits={0}
+      standing={NO_STANDING}
+      locale="en-US"
       book={book}
       status={status}
     />,
@@ -69,12 +71,12 @@ describe("the diver's phone number", () => {
 
 /**
  * **One act in the masthead** (ADR 20261001-logbook, decision 2). Edit details
- * sat beside Book a departure as a second dropdown; it is the record's first
+ * sat beside Add a booking as a second dropdown; it is the record's first
  * file group now (`DiverDetailsGroup`), so the header's only disclosure is
  * Book's own picker.
  */
 describe("DiverHeader actions", () => {
-  it("carries Book a departure and nothing beside it", () => {
+  it("carries Add a booking and nothing beside it", () => {
     const book = (
       <BookActivity
         diver={diver()}
@@ -115,5 +117,61 @@ describe("DiverHeader actions", () => {
     expect(picker).toHaveClass("min-h-12");
     expect(picker).not.toHaveClass("min-h-11");
     expect(submit).toHaveClass("min-h-12", "text-base");
+  });
+});
+
+/** "Package: 7 of 10 dives left" (fourth UX review, item 20). */
+describe("the package line", () => {
+  it("says how many of the package's dives are left", () => {
+    const { getByText } = render(
+      <DiverHeader
+        diver={diver()}
+        shopSlug="blue-mantis"
+        t={t}
+        standing={NO_STANDING}
+        locale="en-US"
+        packages={{ left: 7, of: 10 }}
+      />,
+    );
+    expect(getByText("Package: 7 of 10 dives left")).toBeInTheDocument();
+  });
+
+  it("says nothing for a diver with no package", () => {
+    const { container } = renderHeader();
+    expect(container.textContent).not.toContain("Package:");
+  });
+});
+
+/**
+ * **Who this person is to the shop, in one line** (fifth-loop ideas, item 36).
+ * Each fact stands alone and says nothing when there is nothing to say.
+ */
+describe("the standing line", () => {
+  it("says visits since when, last out, money kept and friends brought", () => {
+    const { container } = render(
+      <DiverHeader
+        diver={diver()}
+        shopSlug="blue-mantis"
+        t={t}
+        locale="en-US"
+        standing={{
+          visits: 23,
+          since: "2024-03-02",
+          lastOut: "2026-09-30",
+          spent: { cents: 214_000, currency: "usd" },
+          friends: 2,
+        }}
+      />,
+    );
+    const text = container.textContent ?? "";
+    expect(text).toContain("23 visits since Mar 2024");
+    expect(text).toMatch(/Last out Sep\s30, 2026/);
+    expect(text).toContain("$2,140.00 spent");
+    expect(text).toContain("Brought 2 friends");
+  });
+
+  it("says none of it for someone new, or money to a reader who may not see it", () => {
+    const { container } = renderHeader();
+    expect(container.textContent).not.toMatch(/visit|Last out|spent|Brought/);
   });
 });

@@ -8,10 +8,14 @@
     "test-sent": "Prueba de Zapier entregada.",
     "invalid": "Revisa los datos y elige al menos un evento.",
     "not-configured": "Esa integración todavía no está disponible.",
-    "not-authorized": "Solo un propietario o gerente puede cambiar las integraciones.",
     "failed": "La integración no pudo completar esa solicitud. Inténtalo de nuevo o vuelve a conectarla.",
     "encryption-key-unset": "Esta instancia de DiveDay aún no está preparada para guardar credenciales de forma segura, así que no se guardó nada.",
-    "encryption-key-invalid": "La clave de cifrado de esta instancia de DiveDay está mal configurada, así que no se guardó nada."
+    "encryption-key-invalid": "La clave de cifrado de esta instancia de DiveDay está mal configurada, así que no se guardó nada.",
+    "earlier-sent": "{count, plural, one {# evento puesto} other {# eventos puestos}} en cola de envío, del más antiguo al más reciente.",
+    "earlier-partial": "Primer lote en cola. {count, plural, one {Queda # evento} other {Quedan # eventos}} por enviar. Vuelve a enviar para ponerlos en cola.",
+    "earlier-none": "No quedaba nada por enviar.",
+    "earlier-not-owner": "Solo el propietario puede enviar pagos anteriores.",
+    "earlier-invalid": "Elige un proveedor conectado y una fecha de inicio."
   },
   "status": {
     "connected": "Conectada",
@@ -83,5 +87,19 @@
     "testing": "Enviando prueba…",
     "notConnected": "Todavía no hay un Catch Hook de Zapier conectado.",
     "eventsDescription": "Elige qué eventos de pedidos debe recibir este Zap."
+  },
+  "earlier": {
+    "heading": "Enviar pagos anteriores",
+    "description": "Entrega a un proveedor conectado los pagos con tarjeta, las propinas y los reembolsos de antes de conectarlo. No sale nada hasta que confirmes, y se omite lo que ya tiene.",
+    "providerLabel": "Enviar a",
+    "sinceLabel": "Desde",
+    "sinceDescription": "Un día en {timezone}. Todo lo completado ese día o después.",
+    "preview": "Vista previa",
+    "previewing": "Revisando…",
+    "previewLine": "Desde el {date}: {checkouts, plural, one {# pago} other {# pagos}}, {tips, plural, one {# propina} other {# propinas}} y {refunds, plural, one {# reembolso} other {# reembolsos}} no han llegado a {provider}.",
+    "previewNothing": "Nada desde el {date} está pendiente de enviar a {provider}.",
+    "caution": "Llegan a {provider} como asientos nuevos, del más antiguo al más reciente. Si ese periodo está cerrado en tu contabilidad, no los envíes.",
+    "confirm": "Enviar a {provider}",
+    "confirming": "Poniendo en cola…"
   }
 }

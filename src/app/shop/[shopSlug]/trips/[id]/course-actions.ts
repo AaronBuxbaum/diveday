@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { isCardKind, setCardProcessed } from "@/db/agency-processing";
 import { getDb } from "@/db/client";
+import { tellCourseCertified } from "@/db/course-certified";
 import { type PaperCourseFormOutcome, recordPaperCourseForm } from "@/db/course-forms";
 import { recordCourseMaterialsDone } from "@/db/course-materials";
 import { recordCourseNextStep } from "@/db/course-next-step";
@@ -12,8 +14,10 @@ import {
   issueShopCertification,
   issueShopNitroxCertification,
   issueShopSpecialtyCertification,
+  studentOnSeat,
 } from "@/db/readiness";
 import { diveSpecialty } from "@/db/schema";
+import { nowDate } from "@/lib/clock";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { formValue, readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -36,6 +40,8 @@ import { requireRosterBooking, tripPath } from "./roster-booking";
 const courseRosterForm = z.object({
   award: text(),
   bookingId: text(),
+  cardKind: text(),
+  certificationId: text(),
   done: formValue(),
   formId: text(),
   guardianName: text(),
@@ -63,9 +69,10 @@ export async function certifyDiverFromRosterAction(
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = fields.bookingId;
-  const personId = fields.personId;
   const award = fields.award;
-  if (!uuidParam(tripId) || !uuidParam(bookingId) || !uuidParam(personId) || !award) redirect(back);
+  if (!uuidParam(tripId) || !uuidParam(bookingId) || !uuidParam(fields.personId) || !award) {
+    redirect(back);
+  }
   const db = await getDb();
   // The row posts its own booking; one from another departure of this shop is
   // not this roster's to certify from.
@@ -76,6 +83,14 @@ export async function certifyDiverFromRosterAction(
   // the booking gate trusts. Refused before any writer is reached, for all
   // three kinds of card.
   if ((await courseCertifiesOnTrip(db, s.user.shopId, tripId)) === "not_a_certifying_course") {
+    revalidateAndRedirect(back, noticeUrl(back, "certify-failed", { bid: bookingId }));
+  }
+  // **The card lands on the student this seat holds** (reviews G4/Y2 of
+  // #2226): the person is read from the diver's seat, shop- and trip-scoped,
+  // never from the posted `personId`. A snorkeler or a rider is not a
+  // student, and a held seat certifies nobody; a forged post is refused.
+  const personId = await studentOnSeat(db, s.user.shopId, tripId, bookingId);
+  if (!personId || personId !== fields.personId) {
     revalidateAndRedirect(back, noticeUrl(back, "certify-failed", { bid: bookingId }));
   }
   const issued = { shopId: s.user.shopId, personId, tripId, issuedByPersonId: s.user.personId };
@@ -100,6 +115,22 @@ export async function certifyDiverFromRosterAction(
         : null;
   if (!level && !specialty && award !== "nitrox") redirect(back);
 
+  // **The student hears it** (third UX review, item 14): a new level card is
+  // the course's peak, and until now it was silent. Only a card this tap
+  // wrote, so a repeat tap sends nothing; a specialty or nitrox card waits for
+  // the physical card and is not news yet. Best-effort: the card stands
+  // whatever the mail does.
+  if (level && written) {
+    await tellCourseCertified(db, {
+      shopId: s.user.shopId,
+      personId,
+      tripId,
+      certificationId: written.id,
+      level,
+      recordedAt: written.issuedByShopAt ?? written.createdAt,
+    });
+  }
+
   revalidateAndRedirect(
     back,
     noticeUrl(
@@ -108,6 +139,36 @@ export async function certifyDiverFromRosterAction(
       { bid: bookingId },
     ),
   );
+}
+
+/**
+ * **"Processed with PADI"** (fifth-loop ideas, item 46): tick a card this
+ * session issued as submitted to its agency, or take the tick back. Any live
+ * staffer may, as with the materials tick; the stamp names who. Scoped to a
+ * card this session issued, so a posted id from elsewhere changes nothing.
+ */
+export async function markCardProcessedAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const fields = readForm(courseRosterForm, formData);
+  const back = tripPath(shopSlug, tripId);
+  const s = (await requireShopSurface(shopSlug)).session;
+  const certificationId = fields.certificationId;
+  const kind = fields.cardKind;
+  if (!uuidParam(tripId) || !uuidParam(certificationId) || !isCardKind(kind)) redirect(back);
+  const db = await getDb();
+  const saved = await setCardProcessed(db, {
+    shopId: s.user.shopId,
+    kind,
+    certificationId,
+    actorPersonId: s.user.personId,
+    processed: fields.done === "true",
+    now: nowDate(),
+    tripId,
+  });
+  revalidateAndRedirect(back, saved ? back : noticeUrl(back, "invalid"));
 }
 
 /**
@@ -208,6 +269,7 @@ const PAPER_COURSE_FORM_NOTICE: Record<
   invalid_signature: "course-form-unavailable",
   name_mismatch: "course-form-unavailable",
   staff_not_found: "not-authorized",
+  not_authorized: "not-authorized",
   guardian_required: "course-form-guardian",
   guardian_invalid: "course-form-guardian",
   guardian_name_matches_diver: "course-form-namesake",

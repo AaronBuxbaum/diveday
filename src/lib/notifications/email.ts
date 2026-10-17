@@ -1,3 +1,4 @@
+import { deskPaymentSentence } from "@/i18n/desk-payment-labels";
 import type { DiverTranslator } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
 import { reminderActionText } from "@/i18n/reminder-labels";
@@ -7,6 +8,7 @@ import { type CalendarDate, calendarDateInTimezone, formatCalendarDate } from "@
 import { COURSE_INQUIRY_EXPERIENCE_KEYS, type CourseInquiryExperience } from "@/lib/course-inquiry";
 import { type CourseLearningMaterial, isLearningMaterialLink } from "@/lib/courses";
 import type { DemoRoleId } from "@/lib/demo-roles";
+import type { DeskPayment } from "@/lib/desk-payment";
 import { type FlySafeResult, flySafeMessageKey } from "@/lib/fly-safe";
 import {
   formatDateTimeTz,
@@ -58,6 +60,8 @@ type BookingConfirmationEmailInput = {
   calendarUrl?: string;
   /** This seat's money as the booking form showed it. */
   money?: ConfirmationMoney;
+  /** What the party's card checkout settled, as Stripe reported it (#2447). */
+  partyPaid?: { amountCents: number; currency: string; seats: number };
   /** When free cancellation closes, in the shop's zone. */
   freeCancellationUntil?: Date;
 };
@@ -71,10 +75,15 @@ type MeetingPoint = {
   mapQuery?: string | null;
 };
 
-/** A seat's money, minor units and an ISO currency (`seatMoneyTerms`). */
-type ConfirmationMoney =
-  | { due: "at_shop" | "online"; amountCents: number; currency: string }
-  | { due: "deposit"; depositCents: number; balanceCents: number; currency: string };
+/**
+ * A seat's money, or the party's (`seats` > 1), minor units and an ISO
+ * currency (`seatMoneyTerms`, `partyMoneyTerms`).
+ */
+type ConfirmationMoney = (
+  | { due: "at_shop"; amountCents: number; currency: string; deskPayment?: DeskPayment }
+  | { due: "online"; amountCents: number; currency: string }
+  | { due: "deposit"; depositCents: number; balanceCents: number; currency: string }
+) & { seats?: number };
 
 type WaiverRequestEmailInput = {
   locale: DiverLocale;
@@ -114,7 +123,7 @@ type ReadinessLinkEmailInput = {
   readinessUrl: string;
   expiresAt: Date;
   timezone: string;
-  purpose?: "course_forms";
+  purpose?: "course_forms" | "other_day" | "log_entry";
 };
 
 type WaitlistInviteEmailInput = {
@@ -129,6 +138,14 @@ type WaitlistInviteEmailInput = {
   bookingUrl: string;
   /** Self-serve opt-out of `waitlist_invite`/`trip_recap` courtesy email. */
   unsubscribeUrl: string;
+  /** How many seats the waiting party asked for (fourth review, item 34); one when absent. */
+  partySize?: number;
+  /**
+   * The run's date the diver waited for, when the nightly roll moved them to
+   * this one (fourth review, item 31): the invite then says that date filled
+   * and this one has room, rather than offering a date they never asked for.
+   */
+  sailedStartsAt?: Date;
 };
 
 type TripInvitationEmailInput = {
@@ -142,6 +159,8 @@ type TripInvitationEmailInput = {
   bookingUrl: string;
   /** Present on the cold, staff-initiated invitation only (`direct_trip_invitation`). */
   unsubscribeUrl?: string;
+  /** A course session's prerequisite note, in the shop's words. */
+  prerequisiteNote?: string;
 };
 
 type LastMinuteDealEmailInput = {
@@ -521,6 +540,8 @@ export type BookingCancelledEmailInput = {
   money:
     | { story: "none" | "forfeit" | "shop_will_follow_up" }
     | { story: "refunded"; amountCents: number; currency: string };
+  /** A party lead's cancel: seats that went with it and seats that stayed booked. */
+  party?: { cancelled: number; stayed: number };
   scheduleUrl: string;
 };
 
@@ -555,11 +576,21 @@ export function bookingCancelledEmail(input: BookingCancelledEmailInput): Notifi
         : input.money.story === "shop_will_follow_up"
           ? t("notifications.bookingCancelled.moneyFollowUp", { shopName: input.shopName })
           : null;
+  // A lead's party, said in counts: the seats that went with theirs, and,
+  // separately, the ones that stay booked because their own diver has them.
+  const partyLines = [
+    input.party && input.party.cancelled > 0
+      ? t("notifications.bookingCancelled.partyCancelled", { count: input.party.cancelled })
+      : null,
+    input.party && input.party.stayed > 0
+      ? t("notifications.bookingCancelled.partyStayed", { count: input.party.stayed })
+      : null,
+  ].filter((line): line is string => line !== null);
   const findAnother = t("notifications.bookingCancelled.findAnother");
   return {
     subject: t("notifications.bookingCancelled.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n${money ? `\n${money}\n` : ""}\n${findAnother}:\n${input.scheduleUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${money ? `<p>${escapeHtml(money)}</p>` : ""}${emailButton(input.scheduleUrl, findAnother)}`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n${partyLines.map((line) => `\n${line}\n`).join("")}${money ? `\n${money}\n` : ""}\n${findAnother}:\n${input.scheduleUrl}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${partyLines.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}${money ? `<p>${escapeHtml(money)}</p>` : ""}${emailButton(input.scheduleUrl, findAnother)}`,
   };
 }
 
@@ -707,19 +738,49 @@ function confirmationMoneyLine(
   input: { locale: DiverLocale; startsAt: Date; timezone: string },
 ): string {
   const amount = (cents: number) => formatMoneyCents(cents, money.currency, input.locale);
+  // A lead holding several seats hears the party's figure, the one the form
+  // showed above the button (fourth UX review, item 5).
+  const party = (money.seats ?? 1) > 1;
+  const seats = money.seats ?? 1;
   if (money.due === "deposit") {
-    return t("notifications.bookingConfirmation.moneyDeposit", {
-      deposit: amount(money.depositCents),
-      balance: amount(money.balanceCents),
-      date: formatShortDate(input.startsAt, input.locale, input.timezone),
-    });
+    return t(
+      party
+        ? "notifications.bookingConfirmation.moneyPartyDeposit"
+        : "notifications.bookingConfirmation.moneyDeposit",
+      {
+        seats,
+        deposit: amount(money.depositCents),
+        balance: amount(money.balanceCents),
+        date: formatShortDate(input.startsAt, input.locale, input.timezone),
+      },
+    );
   }
-  return t(
+  if (party) {
+    const partyLine = t(
+      money.due === "online"
+        ? "notifications.bookingConfirmation.moneyPartyOnline"
+        : "notifications.bookingConfirmation.moneyPartyAtShop",
+      { seats, amount: amount(money.amountCents) },
+    );
+    return withDeskPayment(t, partyLine, money);
+  }
+  const line = t(
     money.due === "online"
       ? "notifications.bookingConfirmation.moneyOnline"
       : "notifications.bookingConfirmation.moneyAtShop",
     { amount: amount(money.amountCents) },
   );
+  return withDeskPayment(t, line, money);
+}
+
+/**
+ * "Your seat: $95.00, due at the shop. Pay by card or cash when you arrive."
+ * (fifth-loop ideas, item 21): how the desk takes money, after a figure owed
+ * there, when the shop has said.
+ */
+function withDeskPayment(t: DiverTranslator, line: string, money: ConfirmationMoney): string {
+  const desk = money.due === "at_shop" ? deskPaymentSentence(t, money.deskPayment) : null;
+  return desk ? `${line} ${desk}` : line;
 }
 
 /** The diver's outstanding items as one bullet list, or empty when nothing's left. */
@@ -949,6 +1010,16 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
   // 5): what they pay and where, and until when they can walk away for free.
   const terms = [
     input.money ? confirmationMoneyLine(t, input.money, input) : null,
+    input.partyPaid
+      ? t("notifications.bookingConfirmation.partyPaid", {
+          seats: input.partyPaid.seats,
+          amount: formatMoneyCents(
+            input.partyPaid.amountCents,
+            input.partyPaid.currency,
+            input.locale,
+          ),
+        })
+      : null,
     input.freeCancellationUntil
       ? t("trip.freeCancellationUntil", {
           when: formatDateTimeTz(input.freeCancellationUntil, input.locale, input.timezone),
@@ -976,22 +1047,33 @@ export function waitlistInviteEmail(input: WaitlistInviteEmailInput): Notificati
   const date = formatShortDate(input.startsAt, input.locale, input.timezone);
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
+  const seats = Math.max(1, input.partySize ?? 1);
 
-  const body = t("notifications.waitlistInvite.body", {
-    tripTitle: input.tripTitle,
-    shopName: input.shopName,
-  });
-  const bodyHtml = t("notifications.waitlistInvite.body", {
-    tripTitle: `<strong>${title}</strong>`,
-    shopName: escapeHtml(input.shopName),
-  });
+  // A rolled lead hears why the date moved; a party hears its count; anyone
+  // else, that a seat opened.
+  const bodyFor = (tripTitle: string) =>
+    input.sailedStartsAt
+      ? t("notifications.waitlistInvite.rolledBody", {
+          sailed: formatShortDate(input.sailedStartsAt, input.locale, input.timezone),
+          date,
+          seats,
+          tripTitle,
+        })
+      : seats > 1
+        ? t("notifications.waitlistInvite.bodyParty", { seats, tripTitle })
+        : t("notifications.waitlistInvite.body", { tripTitle, shopName: input.shopName });
+  const body = bodyFor(input.tripTitle);
+  const bodyHtml = bodyFor(`<strong>${title}</strong>`);
   const claim = t("notifications.waitlistInvite.claim");
   const footer = t("notifications.waitlistInvite.footer");
   const unsubscribe = t("notifications.common.courtesyUnsubscribe", { shopName: input.shopName });
   const unsubscribeUrl = escapeHtml(input.unsubscribeUrl);
 
   return {
-    subject: t("notifications.waitlistInvite.subject", { tripTitle: input.tripTitle }),
+    subject:
+      seats > 1
+        ? t("notifications.waitlistInvite.subjectParty", { seats, tripTitle: input.tripTitle })
+        : t("notifications.waitlistInvite.subject", { tripTitle: input.tripTitle }),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${date}\n${time}\n\n${claim}:\n${input.bookingUrl}\n\n${footer}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
     html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${emailButton(input.bookingUrl, t("notifications.waitlistInvite.claimLink"))}<p>${footer}</p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
   };
@@ -1013,6 +1095,12 @@ export function tripInvitationEmail(input: TripInvitationEmailInput): Notificati
   });
   const note = t("notifications.tripInvitation.note");
   const link = t("notifications.tripInvitation.link");
+  const prerequisite = input.prerequisiteNote
+    ? t("notifications.tripInvitation.prerequisite", { note: input.prerequisiteNote })
+    : null;
+  const prerequisiteHtml = input.prerequisiteNote
+    ? `<p>${t("notifications.tripInvitation.prerequisite", { note: escapeHtml(input.prerequisiteNote) })}</p>`
+    : "";
   const greeting = t("notifications.common.greeting", { firstName });
   const greetingHtml = t("notifications.common.greeting", {
     firstName: escapeHtml(firstName),
@@ -1036,8 +1124,8 @@ export function tripInvitationEmail(input: TripInvitationEmailInput): Notificati
       shopName: input.shopName,
       tripTitle: input.tripTitle,
     }),
-    text: `${[greeting, body, `${date} · ${time}`, note, `${link}:`, input.bookingUrl].join("\n\n")}${unsubscribeText}`,
-    html: `<p>${greetingHtml}</p><p>${bodyHtml}</p><p><strong>${date}</strong><br>${time}</p><p>${note}</p>${emailButton(input.bookingUrl, link)}${unsubscribeHtml}`,
+    text: `${[greeting, body, `${date} · ${time}`, ...(prerequisite ? [prerequisite] : []), note, `${link}:`, input.bookingUrl].join("\n\n")}${unsubscribeText}`,
+    html: `<p>${greetingHtml}</p><p>${bodyHtml}</p><p><strong>${date}</strong><br>${time}</p>${prerequisiteHtml}<p>${note}</p>${emailButton(input.bookingUrl, link)}${unsubscribeHtml}`,
   };
 }
 
@@ -1218,6 +1306,8 @@ type TripRescheduledEmailInput = {
   /** Present only when the meeting point moved with the time. */
   meetingPoint?: MeetingPoint;
   readinessUrl?: string;
+  /** The seat moved to another departure, rather than the departure moving. */
+  seatMovedAt?: Date;
 };
 
 /**
@@ -1230,28 +1320,42 @@ export function tripRescheduledEmail(input: TripRescheduledEmailInput): Notifica
   const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
   const title = escapeHtml(input.tripTitle);
   const when = whenLines(t, input);
+  // Only the meeting point moved (#2443): the same message without the old
+  // time, led by the place.
+  // A seat moved to another departure is never a place-only notice.
+  const placeOnly =
+    !input.seatMovedAt && input.previousStartsAt.getTime() === input.startsAt.getTime();
   const previous = formatDateTimeTz(input.previousStartsAt, input.locale, input.timezone);
-  const was = t("notifications.tripRescheduled.was", { when: previous });
-  const body = t("notifications.tripRescheduled.body", { tripTitle: input.tripTitle });
-  const bodyHtml = t("notifications.tripRescheduled.body", {
-    tripTitle: `<strong>${title}</strong>`,
-  });
+  const was = placeOnly ? null : t("notifications.tripRescheduled.was", { when: previous });
+  const bodyKey = input.seatMovedAt
+    ? "notifications.tripRescheduled.seatBody"
+    : placeOnly
+      ? "notifications.tripRescheduled.placeBody"
+      : "notifications.tripRescheduled.body";
+  const body = t(bodyKey, { tripTitle: input.tripTitle });
+  const bodyHtml = t(bodyKey, { tripTitle: `<strong>${title}</strong>` });
   const dockNote =
     input.dockCallMinutes === undefined
       ? null
       : t("notifications.tripReminder.dockNote", {
           dock: dockCallPhrase(t, input.dockCallMinutes),
         });
-  const movedToo = input.meetingPoint ? t("notifications.tripRescheduled.meetingPointMoved") : null;
+  const movedToo =
+    input.meetingPoint && !placeOnly ? t("notifications.tripRescheduled.meetingPointMoved") : null;
   const where = meetingPointSection(t, input.meetingPoint);
-  const cantMakeIt = t("notifications.tripRescheduled.cantMakeIt");
+  const cantMakeIt = placeOnly ? null : t("notifications.tripRescheduled.cantMakeIt");
   const seeWhatsLeft = t("notifications.common.seeWhatsLeft");
   const readyText = input.readinessUrl ? `\n\n${seeWhatsLeft}:\n${input.readinessUrl}\n` : "\n";
   const readyHtml = input.readinessUrl ? emailButton(input.readinessUrl, seeWhatsLeft) : "";
   return {
-    subject: t("notifications.tripRescheduled.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${when.text}\n${was}${dockNote ? `\n\n${dockNote}` : ""}${movedToo ? `\n\n${movedToo}` : ""}${where.text}\n\n${cantMakeIt}${readyText}`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${when.html}<p style="opacity: 0.8;">${escapeHtml(was)}</p>${dockNote ? `<p>${escapeHtml(dockNote)}</p>` : ""}${movedToo ? `<p>${escapeHtml(movedToo)}</p>` : ""}${where.html}<p>${escapeHtml(cantMakeIt)}</p>${readyHtml}`,
+    subject: t(
+      placeOnly
+        ? "notifications.tripRescheduled.placeSubject"
+        : "notifications.tripRescheduled.subject",
+      { tripTitle: input.tripTitle },
+    ),
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${when.text}${was ? `\n${was}` : ""}${dockNote ? `\n\n${dockNote}` : ""}${movedToo ? `\n\n${movedToo}` : ""}${where.text}${cantMakeIt ? `\n\n${cantMakeIt}` : ""}${readyText}`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${when.html}${was ? `<p style="opacity: 0.8;">${escapeHtml(was)}</p>` : ""}${dockNote ? `<p>${escapeHtml(dockNote)}</p>` : ""}${movedToo ? `<p>${escapeHtml(movedToo)}</p>` : ""}${where.html}${cantMakeIt ? `<p>${escapeHtml(cantMakeIt)}</p>` : ""}${readyHtml}`,
   };
 }
 
@@ -1362,6 +1466,7 @@ type NewAccountAlertEmailInput = {
   ownerEmail: string;
   shopName: string;
   shopSlug: string;
+  nameFlagged?: true;
 };
 
 /**
@@ -1375,11 +1480,17 @@ export function newAccountAlertEmail(input: NewAccountAlertEmailInput): Notifica
   const email = escapeHtml(input.ownerEmail);
   const shop = escapeHtml(input.shopName);
   const slug = escapeHtml(input.shopSlug);
+  // The name matched the brand and trust-word list (#2450): its mail goes out
+  // as plain DiveDay until somebody looks and clears it.
+  const flag =
+    "Name flagged for review: this shop's mail is sent as plain DiveDay until a human clears it.";
+  const flagText = input.nameFlagged ? `${flag}\n` : "";
+  const flagHtml = input.nameFlagged ? `<p>${flag}</p>` : "";
 
   return {
     subject: `New shop: ${input.shopName}`,
-    text: `${input.ownerName} (${input.ownerEmail}) just created "${input.shopName}" (/shop/${input.shopSlug}).\n`,
-    html: `<p><strong>${owner}</strong> (${email}) just created <strong>${shop}</strong> (<code>/shop/${slug}</code>).</p>`,
+    text: `${input.ownerName} (${input.ownerEmail}) just created "${input.shopName}" (/shop/${input.shopSlug}).\n${flagText}`,
+    html: `<p><strong>${owner}</strong> (${email}) just created <strong>${shop}</strong> (<code>/shop/${slug}</code>).</p>${flagHtml}`,
   };
 }
 
@@ -1909,6 +2020,29 @@ export function guardianReleaseCopyEmail(input: GuardianReleaseCopyEmailInput): 
  * page's job, one tap away — restating it here would be a second surface to
  * keep in step with readiness and it would go stale in the diver's inbox.
  */
+const READINESS_LINK_WORDS = {
+  rescue: {
+    subject: "notifications.readinessLink.subject",
+    body: "notifications.readinessLink.body",
+    openLink: "notifications.readinessLink.openLink",
+  },
+  course_forms: {
+    subject: "notifications.courseFormsLink.subject",
+    body: "notifications.courseFormsLink.body",
+    openLink: "notifications.courseFormsLink.openLink",
+  },
+  other_day: {
+    subject: "notifications.otherDayLink.subject",
+    body: "notifications.otherDayLink.body",
+    openLink: "notifications.otherDayLink.openLink",
+  },
+  log_entry: {
+    subject: "notifications.logEntryLink.subject",
+    body: "notifications.logEntryLink.body",
+    openLink: "notifications.logEntryLink.openLink",
+  },
+} as const;
+
 export function readinessLinkEmail(input: ReadinessLinkEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
@@ -1916,18 +2050,9 @@ export function readinessLinkEmail(input: ReadinessLinkEmailInput): Notification
   // The course-forms send is the same link for a different reason: the release
   // is signed and the course's forms are not (ADR 20261008-course-forms), so it
   // must not tell the diver a link of theirs expired.
-  const words =
-    input.purpose === "course_forms"
-      ? ({
-          subject: "notifications.courseFormsLink.subject",
-          body: "notifications.courseFormsLink.body",
-          openLink: "notifications.courseFormsLink.openLink",
-        } as const)
-      : ({
-          subject: "notifications.readinessLink.subject",
-          body: "notifications.readinessLink.body",
-          openLink: "notifications.readinessLink.openLink",
-        } as const);
+  // `other_day` and `log_entry` are the diver asking for another of their days
+  // from one booking's page (H-132), so neither says anything expired either.
+  const words = READINESS_LINK_WORDS[input.purpose ?? "rescue"];
   const body = t(words.body, {
     shopName: input.shopName,
     tripTitle: input.tripTitle,

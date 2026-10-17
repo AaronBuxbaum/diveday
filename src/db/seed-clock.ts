@@ -102,6 +102,12 @@ export function hoursFromNow(hours: number, from = nowDate()): Date {
 /** The earliest local hour today's seeded departure leaves: after the dawn boat docks. */
 export const DEMO_DAY_FIRST_SAILING_HOUR = 9;
 
+/** The desk's own day, for the cast who crew nothing when today's boat sails at night. */
+export const DEMO_DESK_DAY = {
+  opens: { hour: 9, minute: 0 },
+  closes: { hour: 17, minute: 0 },
+} as const;
+
 /**
  * The first-light boat's local wall times (`DEMO_COMPLETED_TRIP_TITLE`,
  * `seed-more-trips.ts`), named once so the crew's shift (`demoTodayShifts`)
@@ -141,6 +147,22 @@ export function demoTodayDepartureStart(
   return new Date(Math.min(now.getTime() + 60 * 1000, midnight.getTime() - 1000));
 }
 
+/**
+ * The latest local wall time a day boat leaves, in minutes after midnight
+ * (issue #2440). A demo seeded in the shop's evening has no day-boat slot left
+ * today, and `demoTodayDepartureStart` still has to put a boat on today's
+ * board, so it sails late; past this time it is named as the night dive it
+ * would be (`nameDemoNightDeparture`, `seed-trips.ts`) rather than read as a
+ * two-tank reef trip leaving at 11:30 PM.
+ */
+export const DEMO_DAY_LAST_SAILING_MINUTE = 20 * 60;
+
+/** Whether a departure starting at `startsAt` leaves after the day boats do, in shop time. */
+export function sailsAfterDayBoats(startsAt: Date, timeZone: string = DEMO_SHOP_TIMEZONE): boolean {
+  const wall = utcToWallTime(startsAt, timeZone);
+  return wall.hour * 60 + wall.minute > DEMO_DAY_LAST_SAILING_MINUTE;
+}
+
 /** How long today's seeded departure runs, dock to dock (`seed-trips.ts`). */
 export const DEMO_TODAY_DEPARTURE_MS = 3.5 * 60 * 60 * 1000;
 
@@ -166,24 +188,39 @@ export function demoTodayShift(
 }
 
 /**
- * **Every shift one member of the demo cast works today.** Everyone gets the
- * shift around today's departure (`demoTodayShift`). The dawn boat's crew
- * (`dawnCrew`: the captain, the divemaster and the assistant who crew it) also
- * work from an hour before it sails to an hour after it docks, 4:30 to 9:30;
- * the shared shift never starts before 8:00, so without this the staffing week
- * flagged the demo's own crew on a boat they were not rostered for
- * (dive-domain review of the demo layer). Where the two touch or overlap they
- * are one shift, because nobody clocks out at 8:00 to clock back in at 8:00.
+ * **Every shift one member of the demo cast works today.** The crew (`crew`:
+ * the captain, the divemaster and the assistant, who crew both the dawn boat
+ * and today's departure) work the shift around today's departure
+ * (`demoTodayShift`), and from an hour before the dawn boat sails to an hour
+ * after it docks, 4:30 to 9:30; the shared shift never starts before 8:00, so
+ * without this the staffing week flagged the demo's own crew on a boat they
+ * were not rostered for (dive-domain review of the demo layer). Where the two
+ * touch or overlap they are one shift, because nobody clocks out at 8:00 to
+ * clock back in at 8:00.
+ *
+ * Everyone else works the same shift around today's departure by day, and the
+ * desk's own day when that departure is a night boat: a demo seeded in the
+ * evening put the owner and both instructors, who crew nothing, on a
+ * "10:30 PM – 12:00 AM" shift beside the crew (UX review 2026-10-13, item 40).
  */
 export function demoTodayShifts(
   now = nowDate(),
   timeZone: string = DEMO_SHOP_TIMEZONE,
-  { dawnCrew }: { dawnCrew: boolean },
+  { crew }: { crew: boolean },
 ): { startsAt: Date; endsAt: Date }[] {
   const shared = demoTodayShift(now, timeZone);
-  if (!dawnCrew) return [shared];
+  const sails = demoTodayDepartureStart(now, timeZone);
+  const day = utcToWallTime(sails, timeZone);
+  if (!crew) {
+    if (!sailsAfterDayBoats(sails, timeZone)) return [shared];
+    return [
+      {
+        startsAt: wallTimeToUtc({ ...day, ...DEMO_DESK_DAY.opens }, timeZone),
+        endsAt: wallTimeToUtc({ ...day, ...DEMO_DESK_DAY.closes }, timeZone),
+      },
+    ];
+  }
   const hour = 60 * 60 * 1000;
-  const day = utcToWallTime(demoTodayDepartureStart(now, timeZone), timeZone);
   const dawn = {
     startsAt: new Date(
       wallTimeToUtc({ ...day, ...DEMO_DAWN_BOAT.sails }, timeZone).getTime() - hour,
@@ -199,4 +236,39 @@ export function demoTodayShifts(
     ];
   }
   return [dawn, shared];
+}
+
+/** The desk's day, shop-local: open at 8 AM, last signature by 6 PM. */
+const DESK_OPENS_HOUR = 8;
+const DESK_CLOSES_HOUR = 18;
+
+/**
+ * **A signature a staffer recorded happened while the desk was open** (fifth
+ * loop, section 6). `signedAtFor`'s day 0 is "a few minutes ago", which is a
+ * fine time for a diver to sign at home and a false one for a release the
+ * counter took on paper: a demo opened just after midnight printed "signed
+ * Oct 13, 11:24 PM. Recorded by staff from an in-person signature." on the
+ * departure log an insurer reads. The history back-fill's paper releases,
+ * signed the evening before, had the same fault. An instant outside desk hours moves back to
+ * the last hour the desk was open, keeping its minute and its tie-breaking
+ * millisecond, so it stays in the past and stays unique.
+ */
+export function withinDeskHours(instant: Date, timeZone: string = DEMO_SHOP_TIMEZONE): Date {
+  const wall = utcToWallTime(instant, timeZone);
+  if (wall.hour >= DESK_OPENS_HOUR && wall.hour < DESK_CLOSES_HOUR) return instant;
+  const day =
+    wall.hour < DESK_OPENS_HOUR
+      ? utcToWallTime(new Date(instant.getTime() - DAY_MS), timeZone)
+      : wall;
+  const closing = wallTimeToUtc(
+    {
+      year: day.year,
+      month: day.month,
+      day: day.day,
+      hour: DESK_CLOSES_HOUR - 1,
+      minute: wall.minute,
+    },
+    timeZone,
+  );
+  return new Date(closing.getTime() + (instant.getTime() % 1_000));
 }

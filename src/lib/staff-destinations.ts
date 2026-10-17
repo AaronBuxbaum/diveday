@@ -70,6 +70,7 @@ export type StaffSection =
   | "divers"
   | "inbox"
   | "money"
+  | "safety"
   | "courses"
   | "gear"
   | "settings";
@@ -85,6 +86,7 @@ export const STAFF_NAV_SECTIONS = [
   { section: "divers", id: "divers" },
   { section: "inbox", id: "inbox" },
   { section: "money", id: "orders" },
+  { section: "safety", id: "safety" },
   { section: "courses", id: "courses" },
   { section: "gear", id: "gear" },
   { section: "settings", id: "settings" },
@@ -276,6 +278,8 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // (batch 4, J2). Filed with the board because every item belongs to a
   // departure, and each departure's Boat tab is where it was written down.
   // Ungated: whoever is at the counter when the diver comes back hands it over.
+  // Today's "things waiting to go home" row is its door from the shop home
+  // while anything waits (fifth loop, item 7), built from this entry.
   { id: "lostFound", suffix: "/lost-found", section: "schedule", inPalette: true },
   // Everything a diver says to the shop is one section: messages, days asked
   // for, and reviews. Each is ungated — the
@@ -289,16 +293,11 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // them and the discounts that shaped them.
   { id: "orders", suffix: "/orders", section: "money", inPalette: true },
   { id: "reports", suffix: "/reports", section: "money", inPalette: true, gate: "reports" },
-  // The month's safety beside its money (ADR 20261012-incident-reports): the
-  // same owner/manager gate, and the longer path wins it from Reports.
-  {
-    id: "safety",
-    suffix: "/reports/safety",
-    section: "money",
-    inPalette: true,
-    gate: "reports",
-  },
   { id: "promoCodes", suffix: "/promos", section: "money", inPalette: true, gate: "reports" },
+  // The month's safety and its incident reports (ADR 20261012-incident-reports)
+  // are a place of their own, not a tab of Money: incidents are not money. The
+  // same owner/manager gate as Reports, since it reads the same record.
+  { id: "safety", suffix: "/safety", section: "safety", inPalette: true, gate: "reports" },
   { id: "courses", suffix: "/courses", section: "courses", inPalette: true },
   // The rental fleet (ADR 20260815-minimal-gear-register) and the bench beside
   // it (ADR 20261008-gear-work-orders). Ungated: gear is any-staff work
@@ -352,7 +351,7 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
 export const STAFF_SECTION_TABS = {
   gear: ["gear", "workOrders"],
   inbox: ["inbox", "requests", "reviews"],
-  money: ["orders", "promoCodes", "reports", "safety"],
+  money: ["orders", "promoCodes", "reports"],
 } as const satisfies Partial<Record<StaffSection, readonly StaffDestinationId[]>>;
 
 export type TabbedStaffSection = keyof typeof STAFF_SECTION_TABS;

@@ -4,9 +4,18 @@ import { sectionCardClass } from "@/components/ui/card";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { ForgivingInput } from "@/components/ui/ForgivingInput";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
-import { controlClass, DateField, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import {
+  ChoiceRow,
+  controlClass,
+  DateField,
+  Field,
+  FieldActions,
+  FieldGrid,
+} from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { maxPlausibleBirthDate } from "@/lib/age";
+import { ageOnDate, isMinorOnDate, maxPlausibleBirthDate } from "@/lib/age";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import type { DiverStatusRow } from "@/lib/diver-status";
 import { savePersonAction } from "../details-actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
@@ -18,7 +27,7 @@ import type { DiverProfile } from "./shared";
  * **Contact details, as the record's first file group** (ADR 20261001-logbook,
  * decision 2: one page shape, at most one primary action).
  *
- * The editor was a second dropdown button beside Book a departure. It is a door
+ * The editor was a second dropdown button beside Add a booking. It is a door
  * like the waiver and the gear now, and its summary is the one fact a crew
  * needs from it on the day: who to call.
  *
@@ -146,8 +155,14 @@ export function DiverDetailsGroup({
             copy={forgivingCopy(t)}
           />
         </Field>
-        <Field label={t("divers.header.dateOfBirthLabel")} hint={dateOfBirthHint(t, diver)}>
+        <Field
+          label={t("divers.header.dateOfBirthLabel")}
+          hint={dateOfBirthHint(t, diver)}
+          htmlFor="diver-date-of-birth"
+          error={formStatus?.field === "diver-date-of-birth" ? formStatus.text : undefined}
+        >
           <DateField
+            id="diver-date-of-birth"
             name="dateOfBirth"
             // Mirrors the server-side plausibility bound so a mistyped year
             // is caught in the field, not by a redirect to `?notice=invalid`.
@@ -156,6 +171,15 @@ export function DiverDetailsGroup({
             defaultValue={diver.person.dateOfBirth ?? ""}
           />
         </Field>
+        {/* Issue #2167: emptying a stored date takes the staffer's "18 or
+            older" in the same save, or the guardian rule and the minimum-age
+            gate would read a known minor as an adult. Only offered while a
+            date is on file, since that is the only save that reads it. */}
+        {diver.person.dateOfBirth ? (
+          <ChoiceRow type="checkbox" name="adultAttested" value="yes" className="col-span-full">
+            {clearDateAnswerLabel(t, diver.person.dateOfBirth, timezone)}
+          </ChoiceRow>
+        ) : null}
         {/* Task 144 — Today used to tell staff to "ask at the counter" and
             link to a roster with nowhere to type it in. This and the
             roster's per-diver card are the two staff entry points; both
@@ -224,6 +248,18 @@ export function DiverDetailsGroup({
  * with no date, who said the diver is 18 or older (H-100). That answer is what
  * the guardian rule reads until a date is typed here, so it says whose it is.
  */
+/**
+ * The box that clears a stored date. The answer overrides the date, so when
+ * that date makes the diver a minor today, the box says the age on file and
+ * what ticking it claims (dive-domain review of #2167).
+ */
+function clearDateAnswerLabel(t: StaffTranslator, dateOfBirth: string, timezone: string): string {
+  const today = calendarDateInTimezone(nowDate(), timezone);
+  return isMinorOnDate(dateOfBirth, today)
+    ? t("divers.header.clearDateAdultAttestedMinor", { age: ageOnDate(dateOfBirth, today) })
+    : t("divers.header.clearDateAdultAttested");
+}
+
 function dateOfBirthHint(t: StaffTranslator, diver: DiverProfile): string {
   if (diver.person.dateOfBirth || !diver.person.adultAttestedAt) {
     return t("divers.header.optionalHint");

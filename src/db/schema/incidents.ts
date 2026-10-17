@@ -11,6 +11,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { bookings } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { diveSites } from "./dive-sites";
 import { trips } from "./trips";
@@ -42,6 +43,28 @@ export const incidentHandoverKind = pgEnum("incident_handover_kind", [
   "other",
 ]);
 
+/**
+ * **What kind of incident it was** (batch 6, item 7; ADR
+ * 20261012-incident-reports, amendment 2026-10-14). A missing diver is its own
+ * kind, not an injury: it is the one an insurer and a coastguard ask about
+ * first. A fatality is its own kind too; `injury` reads "Injury or illness".
+ * Null on a draft nobody has answered yet; filing needs it.
+ */
+export const incidentKind = pgEnum("incident_kind", [
+  "injury",
+  "near_miss",
+  "equipment",
+  "missing_diver",
+  "fatality",
+  "other",
+]);
+
+/**
+ * **How serious it was**, in the crew's own judgement on the day — three
+ * words, never a clinical scale. Null until answered; filing needs it.
+ */
+export const incidentSeverity = pgEnum("incident_severity", ["minor", "moderate", "serious"]);
+
 /** How a person was part of the incident. */
 export const incidentInvolvement = pgEnum("incident_involvement", [
   "affected",
@@ -66,6 +89,8 @@ export const incidentReports = pgTable(
     diveSiteId: uuid("dive_site_id").references(() => diveSites.id),
     locationText: text("location_text"),
     whatHappened: text("what_happened"),
+    kind: incidentKind("kind"),
+    severity: incidentSeverity("severity"),
     /**
      * The three yes/no answers stay **null until answered**: an insurer reads
      * "no oxygen" and "nobody said" as different facts, so neither is assumed.
@@ -81,14 +106,65 @@ export const incidentReports = pgTable(
     createdByPersonId: uuid("created_by_person_id")
       .notNull()
       .references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
     filedAt: timestamp("filed_at", { withTimezone: true }),
     filedByPersonId: uuid("filed_by_person_id").references(() => people.id),
+    /**
+     * **A mistaken draft, discarded** (soft, like every delete): an owner took
+     * it off the departure's Details tab and the Reports Safety tab. Only a
+     * draft can be discarded, and the database says so below; a filed report
+     * is amend-only. Who and when are on the departure's activity trail, which
+     * carries no report content.
+     */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /**
+     * **A legal hold**, set and cleared by an owner: the seven-year retention
+     * prune skips a held report until it is released (ADR
+     * 20261012-incident-reports, amendment 2026-10-15). A held report cannot be
+     * discarded.
+     */
+    legalHoldAt: timestamp("legal_hold_at", { withTimezone: true }),
+    /**
+     * **The missing-diver alert's lease** (H-142, decided 2026-10-16): stamped
+     * when a pass took the report to tell the owners, so two passes never send
+     * at once. It is a lease, not the proof of a send: a pass that crashed
+     * leaves it stamped, and once it is older than the lease the next pass
+     * takes the report again. A send that did not reach every owner gives it
+     * back at once. `missing_alert_sent_at` is what says the owners were told
+     * (`sendMissingDiverAlerts`). Null on every other kind, and on a report not
+     * yet filed.
+     */
+    missingAlertedAt: timestamp("missing_alerted_at", { withTimezone: true }),
+    /**
+     * When every active owner's email for a filed missing-diver report was
+     * sent. Null until then; the report page says "Not reached yet" while it is.
+     */
+    missingAlertSentAt: timestamp("missing_alert_sent_at", { withTimezone: true }),
+    /** Who discarded the draft, named beside it on the departure log. */
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
   },
   (table) => [
-    index("incident_reports_shop_trip_idx").on(table.shopId, table.tripId, table.createdAt),
+    index("incident_reports_shop_trip_idx")
+      .on(table.shopId, table.tripId, table.createdAt)
+      .where(sql`${table.deletedAt} is null`),
+    // Today's "not filed" line reads the shop's live drafts, oldest first.
+    index("incident_reports_live_drafts_idx")
+      .on(table.shopId, table.createdAt)
+      .where(sql`${table.status} = 'draft' and ${table.deletedAt} is null`),
+    check(
+      "incident_reports_deleted_by_whom",
+      sql`(${table.deletedAt} is null) = (${table.deletedByPersonId} is null)`,
+    ),
     index("incident_reports_shop_occurred_idx").on(table.shopId, table.occurredAt),
+    check(
+      "incident_reports_only_a_draft_is_discarded",
+      sql`${table.deletedAt} is null or ${table.status} = 'draft'`,
+    ),
+    check(
+      "incident_reports_a_held_report_is_kept",
+      sql`${table.legalHoldAt} is null or ${table.deletedAt} is null`,
+    ),
     check(
       "incident_reports_oxygen_minutes",
       sql`${table.oxygenMinutes} is null or (${table.oxygenGiven} is true and ${table.oxygenMinutes} between 1 and 1440)`,
@@ -131,7 +207,7 @@ export const incidentReportPeople = pgTable(
     personId: uuid("person_id").references(() => people.id),
     outsiderName: text("outsider_name"),
     involvement: incidentInvolvement("involvement").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("incident_report_people_report_idx").on(table.reportId, table.createdAt),
@@ -166,7 +242,7 @@ export const incidentReportAddenda = pgTable(
     authorPersonId: uuid("author_person_id")
       .notNull()
       .references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("incident_report_addenda_report_idx").on(table.reportId, table.createdAt),

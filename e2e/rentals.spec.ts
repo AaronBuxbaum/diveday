@@ -19,7 +19,7 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // Frozen-clock suffix (not Date.now()) so the shared demo People list the visual
   // suite screenshots stays pixel-stable across runs.
   await page.getByLabel("Email").fill(`rin+${e2eNow().getTime()}@example.com`);
-  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Rin/ })).toBeVisible();
 
   // Per-piece prices show next to the gear, and the default fit — every core
@@ -48,8 +48,8 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // card, and since ADR 20260821-the-ready-page-asks-once the section does not
   // exist until the card that makes it real does — asking a diver whether they
   // want enriched air, and then refusing to fill it, was a question with no
-  // answer. The per-dive surcharge and the "What is Nitrox?" hover-over went
+  // answer. The per-dive surcharge and the "About Nitrox" hover-over went
   // with it. `e2e/nitrox.spec.ts` owns the other side, where a card exists.
   await expect(fit.getByText(/per dive/)).toHaveCount(0);
-  await expect(fit.getByRole("button", { name: "What is Nitrox?" })).toHaveCount(0);
+  await expect(fit.getByRole("button", { name: "About Nitrox" })).toHaveCount(0);
 });

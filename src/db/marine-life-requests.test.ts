@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { recordMarineLifeRequest } from "./marine-life-requests";
 import { marineLifeRequests, people } from "./schema";
+
+const ctx = fileScopedShopContext();
 
 /**
  * The field guide only shows species DiveDay carries, so a shop outside the
@@ -19,7 +21,7 @@ describe("marine-life requests", () => {
   const requests = () => db.select().from(marineLifeRequests);
 
   beforeEach(async () => {
-    const context = await seededShopContext();
+    const context = ctx;
     db = context.db;
     shopId = context.shop.id;
     const [person] = await db.select({ id: people.id }).from(people).limit(1);

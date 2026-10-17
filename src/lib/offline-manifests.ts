@@ -4,10 +4,10 @@ import { type ArrivalStatus, latestArrival } from "./arrival";
 import type { BoatSafetySection } from "./boat-safety";
 import type { CalendarDate } from "./calendar-date";
 import { nowDate } from "./clock";
-import type { EmergencyReference } from "./emergency-reference";
+import type { DepartureEmergencyReference } from "./emergency-reference";
 // Dependency-free too (type-only imports), for the same reason.
 import { withholdHeldSeatParticulars } from "./held-seat";
-import type { TripManifest } from "./manifests";
+import type { TrainingMarkCleared, TripManifest } from "./manifests";
 // Same reasoning as the roll-call import above: dependency-free, so a value
 // import here is safe for the service worker to carry.
 import { latestPreDepartureCheck, type PreDepartureCheckStatus } from "./pre-departure-check";
@@ -128,7 +128,7 @@ export type OfflineManifestPayload = {
      * signal would throw during render, with no `error.tsx` under
      * `/offline-manifest` to catch it. It fails toward silence instead.
      */
-    emergencyReference?: EmergencyReference;
+    emergencyReference?: DepartureEmergencyReference;
   };
   /**
    * The shop's own pre-departure safety line, and the last known answer to
@@ -160,6 +160,25 @@ export type OfflineManifestPayload = {
    * renders no section.
    */
   boatSafety?: BoatSafetySection;
+  /**
+   * **The boat's open snags** (fifth-loop ideas, item 1): what an earlier crew
+   * handed on and what this one wrote, as the live check worded them at the
+   * save, so the 5:15 crew on a marina connection reads them before they sail.
+   * Words, not codes, for the reason `boatSafety` gives; read-only here, since
+   * answering one is a write the server must check. Optional and additive: a
+   * copy with none carries no field and renders no section.
+   */
+  snags?: {
+    heading: string;
+    items: Array<{
+      /** "Radio check: VHF crackles on 16": the line and the crew's words. */
+      line: string;
+      /** "Noted by Sal Moretti, …". */
+      notedBy: string;
+      /** "Ana Ruiz found it still there, …", when a later crew looked. */
+      stillThere?: string;
+    }>;
+  };
   manifests: Array<
     Omit<TripManifest, "trip" | "divers" | "crew" | "completeness"> & {
       trip: Omit<TripManifest["trip"], "startsAt" | "endsAt"> & {
@@ -292,6 +311,13 @@ export type OfflineManifestPayload = {
            * additive like `participantType`; absent says nothing.
            */
           | "bookedAs"
+          /**
+           * The lunch note (item 56, dive-domain review B1): the crew who
+           * hand out lunch read the dock copy, not Prep. A meal preference,
+           * already staff-only like the rest of this record; optional and
+           * additive, so no record-version bump.
+           */
+          | "dietaryNote"
         > & {
           /**
            * **The counter's own answer, and the reason the dock copy can take
@@ -324,6 +350,13 @@ export type OfflineManifestPayload = {
            * before it has none, and the view also reads the identity blocker.
            */
           identityWithheld?: true;
+          /**
+           * Beside `identityWithheld` only: the contact the desk recorded for
+           * the person on the held seat (issue #2145), in a field of its own
+           * so the view never reads `emergencyContact*` for it (H7, Y3).
+           * Optional and additive (no record-version bump).
+           */
+          heldEmergencyContact?: { name: string; phone: string };
           /**
            * **The desk released this seat** (`notHere`, issue #1209) — the
            * other thing the counter can say about a booking, and the one a
@@ -359,6 +392,16 @@ export type OfflineManifestPayload = {
            * looked like before the counter could say it.
            */
           notHere?: boolean;
+          /**
+           * **The desk saw this diver and turned them away** (H-135; layer 3
+           * review, dde-1 F3): set only beside `notHere`, which it refines.
+           * Without it the dock copy badged a turned-away diver "Not here", the
+           * opposite statement about a person the desk stood in front of.
+           * Optional and additive, like `notHere` (no record-version bump):
+           * absent reads as the plain write-off, which is what every copy
+           * saved before it said.
+           */
+          turnedAway?: true;
           /**
            * **The diver's own "running late"** (#2319), as an ISO instant:
            * when they said it, and nothing else — no channel, no message.
@@ -416,6 +459,21 @@ export type OfflineManifestPayload = {
             ridingNotClearedOn?: CalendarDate;
             ridingReferredOn?: CalendarDate;
           };
+          /**
+           * **A training mark that stands on this seat** (issue #2275): the
+           * course the dive counts toward and whether an instructor was on the
+           * crew when the copy was saved — the live manifest's fact and
+           * warning, never a blocker. Optional and additive, no version bump;
+           * absent on every other seat.
+           */
+          trainingDive?: { courseTitle: string; instructorAboard: boolean };
+          /**
+           * A staffer cleared this seat's training mark with its course forms
+           * unsigned, by name when the shop still has one: the crew boarding
+           * from this copy sees who decided, as on the live manifest.
+           * Optional and additive, no version bump; absent otherwise.
+           */
+          trainingMarkCleared?: TrainingMarkCleared;
           /** Dropped at save time; the dock does not need it (kept for shape parity). */
           email: null;
           /**
@@ -873,10 +931,13 @@ export function serializeManifests(
   }> = [],
   /** The worded boat section (`boatSafetySection`), or null for a boat with nothing to say. */
   boatSafety: BoatSafetySection | null = null,
+  /** The boat's open snags, worded; absent or empty carries none. */
+  snags?: OfflineManifestPayload["snags"],
 ): OfflineManifestPayload {
   return {
     shop,
     ...(boatSafety ? { boatSafety } : {}),
+    ...(snags && snags.items.length > 0 ? { snags } : {}),
     checklist: {
       items: checklist.map((item) => ({
         id: item.id,
@@ -943,18 +1004,25 @@ export function serializeManifests(
         bookingId: diver.bookingId,
         fullName: diver.fullName,
         ...(diver.identityWithheld ? { identityWithheld: true as const } : {}),
+        ...(diver.identityWithheld && diver.heldEmergencyContact
+          ? { heldEmergencyContact: diver.heldEmergencyContact }
+          : {}),
         emergencyContactName: diver.emergencyContactName,
         emergencyContactPhone: diver.emergencyContactPhone,
         rentalFit: diver.rentalFit,
         nitroxRequested: diver.nitroxRequested,
         participantType: diver.participantType,
         bookedAs: diver.bookedAs,
+        ...(diver.dietaryNote ? { dietaryNote: diver.dietaryNote } : {}),
         checkedIn: diver.checkedIn,
         notHere: diver.notHere,
+        ...(diver.notHere && diver.turnedAway ? { turnedAway: true as const } : {}),
         ...(diver.runningLateAt ? { runningLateAt: diver.runningLateAt.toISOString() } : {}),
         // Dates only, and absent when there is nothing to warn about: see the
         // allow-list type above.
         ...offlineMedicalWarnings(diver.medicalWaiver, shop.timezone, diver.riderMedicalHold),
+        ...(diver.trainingDive ? { trainingDive: diver.trainingDive } : {}),
+        ...(diver.trainingMarkCleared ? { trainingMarkCleared: diver.trainingMarkCleared } : {}),
         // Names only, never a teammate's booking or person id — the dock copy
         // displays teams and must stay unable to compute divergence from a
         // snapshot.

@@ -9,11 +9,17 @@ import {
   activityEvents,
   orders,
   reviewModerationEvents,
+  shops,
   tripChangeEvents,
   tripReviews,
   trips,
 } from "./schema";
-import { listShopActivityPeople, pagedShopActivity, recordShopActivity } from "./shop-activity";
+import {
+  listShopActivityPeople,
+  pagedShopActivity,
+  recordShopActivity,
+  recordShopActivityWithin,
+} from "./shop-activity";
 import { getTripRoster, listStaff, upcomingTripsWithCounts, updateTrip } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -98,6 +104,43 @@ describe("recordShopActivity", () => {
     });
   });
 
+  it("files counter money on the order, the method in the code, under money", async () => {
+    // Recording payment at the counter stops Stripe collecting for good, so
+    // the owner can see which staffer did it (security review of layer r4-3).
+    const { db, shop } = ctx;
+    const { seat, owner } = await bookedSeat(db, shop.id);
+    const [order] = await db
+      .insert(orders)
+      .values({
+        shopId: shop.id,
+        personId: seat.person.id,
+        createdByPersonId: owner.id,
+        currency: "usd",
+        totalCents: 34000,
+        collection: "card_machine",
+      })
+      .returning();
+    if (!order) throw new Error("order not written");
+
+    for (const code of ["order_paid_cash", "order_paid_card_machine"] as const) {
+      expect(
+        await recordShopActivity(db, {
+          shopId: shop.id,
+          actorPersonId: owner.id,
+          write: { code, orderId: order.id },
+        }),
+      ).toBe(true);
+    }
+    const log = await linesBy(db, shop.id, owner.id, "money");
+    for (const code of ["order_paid_cash", "order_paid_card_machine"]) {
+      expect(log.rows.find((row) => row.code === code)).toMatchObject({
+        orderId: order.id,
+        subjectPersonId: seat.person.id,
+        params: { actor: owner.fullName },
+      });
+    }
+  });
+
   it("writes nothing about another shop's seat, order or departure, or for an outsider", async () => {
     const { db, shop } = ctx;
     const { trip, seat, owner } = await bookedSeat(db, shop.id);
@@ -144,6 +187,25 @@ describe("recordShopActivity", () => {
         write: { code: "order_refunded", orderId: owner.id },
       }),
     ).toBe(false);
+  });
+
+  it("leaves the edit committed when the line inside its savepoint fails (#2396)", async () => {
+    const { db, shop } = ctx;
+    const { owner } = await bookedSeat(db, shop.id);
+    const name = `Activity savepoint ${owner.id.slice(0, 8)}`;
+    await db.transaction(async (tx) => {
+      await tx.update(shops).set({ name }).where(eq(shops.id, shop.id));
+      // An actor who is no one: the line's insert is refused inside its own
+      // savepoint, and the transaction around it must carry on.
+      const written = await recordShopActivityWithin(tx, {
+        shopId: shop.id,
+        actorPersonId: "00000000-0000-4000-8000-000000000000",
+        write: { code: "order_refunded", orderId: owner.id },
+      });
+      expect(written).toBe(false);
+    });
+    const [after] = await db.select({ name: shops.name }).from(shops).where(eq(shops.id, shop.id));
+    expect(after?.name).toBe(name);
   });
 
   it("files a moved line when the details form changes a departure's time, and none otherwise (#2313)", async () => {
@@ -411,5 +473,102 @@ describe("erasure", () => {
       .from(activityEvents)
       .where(eq(activityEvents.bookingId, seat.booking.id));
     for (const row of theirs) expect(row).toMatchObject(ACTIVITY_REDACTED);
+  });
+
+  /**
+   * Issue #2315: an `order_refunded` line is about the staffer who refunded,
+   * and names the customer only by `subject_person_id`. Erasing the customer
+   * takes that pointer and nothing else, so the log still says who refunded.
+   */
+  it("keeps who refunded an erased customer's order, and drops the customer", async () => {
+    const { db, shop } = ctx;
+    const { seat, owner } = await bookedSeat(db, shop.id);
+    const [order] = await db
+      .insert(orders)
+      .values({
+        shopId: shop.id,
+        personId: seat.person.id,
+        createdByPersonId: owner.id,
+        currency: "usd",
+        totalCents: 9000,
+        collection: "cash",
+      })
+      .returning();
+    if (!order) throw new Error("order not written");
+    await recordShopActivity(db, {
+      shopId: shop.id,
+      actorPersonId: owner.id,
+      write: { code: "order_refunded", orderId: order.id },
+    });
+    // A stray customer-identifying value on the same line goes too.
+    await db
+      .update(activityEvents)
+      .set({ params: { actor: owner.fullName, diver: seat.person.fullName } })
+      .where(and(eq(activityEvents.orderId, order.id), eq(activityEvents.code, "order_refunded")));
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: seat.person.id,
+      actorPersonId: owner.id,
+    });
+    expect(erased.ok).toBe(true);
+
+    const [row] = await db
+      .select()
+      .from(activityEvents)
+      .where(and(eq(activityEvents.orderId, order.id), eq(activityEvents.shopId, shop.id)));
+    expect(row).toMatchObject({
+      code: "order_refunded",
+      actorPersonId: owner.id,
+      subjectPersonId: null,
+      params: { actor: owner.fullName },
+    });
+    expect(JSON.stringify(row?.params)).not.toContain(seat.person.fullName);
+    const log = await linesBy(db, shop.id, owner.id, "money");
+    expect(log.rows.find((line) => line.orderId === order.id)).toMatchObject({
+      code: "order_refunded",
+      actorName: owner.fullName,
+      subjectPersonId: null,
+    });
+  });
+
+  it("still redacts a refund line the erased person wrote themselves", async () => {
+    const { db, shop } = ctx;
+    const { seat, owner } = await bookedSeat(db, shop.id);
+    const [order] = await db
+      .insert(orders)
+      .values({
+        shopId: shop.id,
+        personId: owner.id,
+        createdByPersonId: owner.id,
+        currency: "usd",
+        totalCents: 4000,
+        collection: "cash",
+      })
+      .returning();
+    if (!order) throw new Error("order not written");
+    // Written by hand: no path lets a diver refund, but the sweep must not
+    // depend on that.
+    await db.insert(activityEvents).values({
+      shopId: shop.id,
+      orderId: order.id,
+      actorPersonId: seat.person.id,
+      subjectPersonId: seat.person.id,
+      code: "order_refunded",
+      params: { actor: seat.person.fullName },
+    });
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: seat.person.id,
+      actorPersonId: owner.id,
+    });
+    expect(erased.ok).toBe(true);
+
+    const [row] = await db
+      .select()
+      .from(activityEvents)
+      .where(and(eq(activityEvents.orderId, order.id), eq(activityEvents.shopId, shop.id)));
+    expect(row).toMatchObject(ACTIVITY_REDACTED);
   });
 });

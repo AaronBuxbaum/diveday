@@ -12,11 +12,10 @@ export const READY_NOTICES: Record<
 > = {
   "pay-paid": { tone: "success", key: "ready.paymentReceived" },
   "error-waiver": { tone: "danger", key: "ready.waiverUnavailable" },
-  // The diver's own words to the crew, now its own row and its own save
-  // (issue 627) rather than the last field of the gear form.
-  "saved-note": { tone: "success", key: "ready.noteSaved" },
-  "error-note": { tone: "danger", key: "ready.noteUnavailable" },
   "error-pay": { tone: "danger", key: "ready.paymentUnavailable" },
+  // Back from the checkout a party lead opened for a seat they added (#2474).
+  "pay-seat-paid": { tone: "success", key: "seatClaim.seatPaidNotice" },
+  "error-seat-pay": { tone: "danger", key: "seatClaim.payUnavailable" },
   "pay-cancelled": { tone: "neutral", key: "ready.paymentCancelled" },
   // The code typed at booking had nothing left, so no payment page opened; the
   // seat is held and the Pay step below takes the full fare.
@@ -33,9 +32,6 @@ export const READY_NOTICES: Record<
   // diver taps Save and is told nothing. The failure path was louder than the
   // success path until this row existed.
   "saved-fit": { tone: "success", key: "ready.fitSaved" },
-  // Landing here fresh off a successful seat claim (docs ADR
-  // 20260804-seat-claim-links) — the one moment to say whose page this now is.
-  "saved-claimed": { tone: "success", key: "seatClaim.claimedNotice" },
   // "Add a seat" (UX review 2026-10-11, item 13). Each refusal names its door:
   // the boat is full, the shop has to check who is coming, the group is at the
   // one-booking cap, or the name box was empty.
@@ -45,6 +41,9 @@ export const READY_NOTICES: Record<
   "error-seat-ask-shop": { tone: "danger", key: "seatClaim.addAskShop" },
   "error-seat-party-full": { tone: "danger", key: "seatClaim.addPartyFull" },
   "error-seat-name": { tone: "danger", key: "seatClaim.addNameMissing" },
+  // "Sign Mia's waiver" (H-124) refused: the seat was claimed, the release
+  // signed, or the boat left between the render and the tap. One answer.
+  "error-minor-waiver": { tone: "danger", key: "seatClaim.minorWaiverUnavailable" },
   // A card the diver typed in. "Added", never "verified": a staff review is
   // what makes it count, and the copy says so rather than implying the
   // checklist row has cleared.
@@ -52,12 +51,18 @@ export const READY_NOTICES: Record<
   // The number is already on file here — most often their own card, entered
   // twice. Nothing to fix, so this is neutral rather than an error.
   "saved-cert-known": { tone: "neutral", key: "ready.certKnown" },
+  "saved-not-yet": { tone: "success", key: "ready.certNotYetSaved" },
+  "saved-not-yet-card": { tone: "neutral", key: "ready.certNotYetCardOnFile" },
   "error-cert": { tone: "danger", key: "ready.certInvalid" },
   // `selfCancelBooking` refused — the seat flipped to checked-in, or the boat
   // sailed, between this page rendering and the tap. The four refusal reasons
   // are deliberately never distinguished to a diver (a booking-state oracle is
   // still a leak); the shop's number is on the card below.
   "error-cancel": { tone: "danger", key: "ready.cancelUnavailable" },
+  // "Ask to move" (H-126): filed in the shop's Inbox, or refused because the
+  // seat is no longer one that can be asked about. The shop's number is below.
+  "saved-move-ask": { tone: "success", key: "ready.moveAsk.sent" },
+  "error-move-ask": { tone: "danger", key: "ready.moveAsk.unavailable" },
   // "Running late" tapped on a seat that is no longer open (J3): checked in,
   // or the boat's time has passed since the page loaded.
   "error-late": { tone: "danger", key: "ready.lateUnavailable" },
@@ -80,22 +85,12 @@ export const READY_NOTICES: Record<
   // other box. The waiver's sentence, not a second one — the two forms are the
   // same two boxes, and this page already borrows that section's labels.
   "error-contact-pair": { tone: "danger", key: "waiver.errorContactPair" },
-  "saved-last-dived": { tone: "success", key: "ready.lastDivedSaved" },
-  "error-last-dived": { tone: "danger", key: "ready.lastDivedUnavailable" },
-  // "What's this dive for?" and D18's offers below it. Both redirected with
-  // `?saved=`/`?error=` codes that had no row here from the day the question
-  // landed, so a diver who tapped Save was told nothing either way — the same
-  // silent-failure gap `saved-fit` and `saved-changes` exist to close.
-  "saved-dive-intent": { tone: "success", key: "ready.intentSaved" },
-  "error-dive-intent": { tone: "danger", key: "ready.intentUnavailable" },
-  "saved-re-entry-ask": { tone: "success", key: "ready.reEntrySaved" },
-  "error-re-entry-ask": { tone: "danger", key: "ready.reEntryUnavailable" },
-  "saved-help": { tone: "success", key: "ready.helpRequestSent" },
-  "error-help": { tone: "danger", key: "ready.helpRequestUnavailable" },
+  // Day-of details, one form and one Save (third UX review, item 24): the
+  // recency band, the intent, D18's offers, the note, the pickup, the help
+  // request and the welcome word answer together, so they confirm together.
+  "saved-day-of": { tone: "success", key: "ready.dayOfSaved" },
+  "error-day-of": { tone: "danger", key: "ready.dayOfUnavailable" },
+  // A help request the crew has already handled is theirs now; the rest of
+  // the form saved.
   "error-help-handled": { tone: "neutral", key: "ready.helpRequestHandled" },
-  // The welcome word (issue #1182). A refusal and no success notice: the
-  // block's own line says what the answer now is, so a banner would be the
-  // second confirmation. The refusal never says *which* of the two reasons it
-  // was, for the same reason the cancel one does not.
-  "error-welcome": { tone: "danger", key: "ready.welcomeUnavailable" },
 };

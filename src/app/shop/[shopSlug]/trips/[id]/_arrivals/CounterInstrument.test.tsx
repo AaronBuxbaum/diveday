@@ -16,7 +16,7 @@ function renderInstrument(overrides: Partial<React.ComponentProps<typeof Counter
       cantBoard={2}
       cleared={false}
       figure={<span>7 of 10 here</span>}
-      remainder="3 to come · 2 can’t board yet"
+      remainder="3 to come · 2 blocked"
       clearedLabel="Everyone’s checked in"
       {...overrides}
     />,
@@ -27,7 +27,7 @@ describe("the counter instrument", () => {
   it("leads with the count and says the remainder beside it", () => {
     renderInstrument();
     expect(screen.getByText("7 of 10 here")).toBeInTheDocument();
-    expect(screen.getByText("3 to come · 2 can’t board yet")).toBeInTheDocument();
+    expect(screen.getByText("3 to come · 2 blocked")).toBeInTheDocument();
   });
 
   /**

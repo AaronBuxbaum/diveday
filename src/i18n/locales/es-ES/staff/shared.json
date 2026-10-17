@@ -1,5 +1,10 @@
 {
+  "limits": {
+    "sendLimit": "Has enviado {thing, select, replies {muchas respuestas} recaps {muchos resúmenes} invites {muchas invitaciones} other {muchos mensajes}} en esta hora. No salió nada; vuelve a intentarlo en un rato.",
+    "ownerOrManager": "Solo un propietario o gerente puede {act, select, whatsapp {cambiar los ajustes de WhatsApp} integrations {cambiar las integraciones} backup {cambiar los ajustes de respaldo} questionnaire {leer el cuestionario completo} invoice {enviar una factura} bill {enviar una factura} courseForm {quitar un formulario de un curso} other {hacer esto}}."
+  },
   "operationalWindow": {},
+  "padiChecksOff": "La verificación con PADI está desactivada en este centro. Un propietario o un gerente puede activarla en Ajustes, Reservas y exenciones.",
   "skipToContent": "Saltar al contenido principal",
   "notFound": {
     "heading": "No pudimos encontrar esa página",
@@ -17,7 +22,7 @@
   "imageInput": {
     "tooMany": "{count, plural, one {Elige hasta # foto por vez.} other {Elige hasta # fotos por vez.}}",
     "wrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",
-    "tooBigSuffix": ": supera los {maxMb} MB, prueba con una foto más pequeña.",
+    "tooBigSuffix": ": supera los {maxMb}\u00a0MB, prueba con una foto más pequeña.",
     "choose": "Elige una foto",
     "chooseAnother": "Elige otra foto",
     "chooseOthers": "Elige otras fotos"
@@ -51,13 +56,14 @@
     "outcomeNotCleared": "No autorizado",
     "evaluatedOnLabel": "Fecha de la evaluación médica",
     "physicianNameLabel": "Médico",
-    "evidenceHint": "Su nombre, o adjunta la evaluación abajo. Una de las dos.",
+    "evidenceHint": "Su nombre, la evaluación de abajo, o ambos.",
     "documentLabel": "Formulario de evaluación médica",
     "documentHint": "Una imagen o un PDF del formulario firmado.",
     "documentChoose": "Elige un archivo",
     "documentChooseAnother": "Elige otro archivo",
     "recording": "Registrando…",
-    "confirm": "Registrar la respuesta"
+    "confirm": "Registrar la respuesta",
+    "earlierLetterConfirm": "Marca si esta carta tiene fecha anterior a la última derivación: el médico evaluó su estado actual, no solo la derivación firmada el {date}."
   },
   "waiverSend": {
     "sending": "Enviando…",
@@ -83,7 +89,8 @@
     "errors": "No se pudo enviar a {names}. Revisa la reserva en el listado.",
     "confirmResend": "Sí, reenviar",
     "neverMind": "Cancelar",
-    "emptySelection": "Marca al menos un buceador y envía la exención a toda la selección."
+    "emptySelection": "Marca al menos un buceador y envía la exención a toda la selección.",
+    "unnamedDiver": "Un buceador"
   },
   "connectivity": {
     "online": "En línea",
@@ -93,7 +100,7 @@
   },
   "capacity": {
     "full": "Completo",
-    "spotsLeft": "{count, plural, one {queda # plaza} other {quedan # plazas}}",
+    "seatsLeft": "{count, plural, one {queda # plaza} other {quedan # plazas}}",
     "certificateCap": "Certificado: {sellable} de {stated} plazas"
   },
   "compass": {
@@ -110,6 +117,8 @@
     "meters": "m",
     "feet": "ft"
   },
+  "depthRange": "{min}–{max} {unit}",
+  "depthSingle": "{max} {unit}",
   "temperature": {
     "celsius": "°C",
     "fahrenheit": "°F"
@@ -135,9 +144,12 @@
     "meetingPoint": "Punto de encuentro: {label}",
     "conditionsHeading": "Condiciones",
     "dayTitle": "Paquete del día",
+    "dayTitleTomorrow": "Paquete de mañana",
     "daySubtitle": "{count, plural, one {# salida} other {# salidas}} · {date}",
     "dayEmpty": "Hoy no hay salidas.",
-    "dayDoor": "Imprimir el día"
+    "dayEmptyTomorrow": "Mañana no hay salidas.",
+    "dayDoor": "Imprimir el día",
+    "dayDoorTomorrow": "Imprimir mañana"
   },
   "commandPalette": {
     "search": "Buscar",
@@ -147,7 +159,7 @@
     "emptyShort": "Escribe para buscar personas y salidas, o ve directo a una página.",
     "emptyNoMatches": "Sin resultados. Prueba un nombre, correo o título de salida.",
     "groupDivers": "Buceadores",
-    "addDiver": "Añadir buceador",
+    "addDiver": "Agregar buceador",
     "groupTrips": "Salidas",
     "groupDiveSites": "Sitios de buceo",
     "groupCourses": "Cursos",
@@ -155,6 +167,8 @@
     "groupGear": "Equipo",
     "groupSession": "Sesión",
     "groupGoTo": "Ir a",
+    "groupRecent": "Recientes",
+    "groupToday": "Hoy",
     "goToBoarding": "Embarque — el barco de hoy",
     "goToOfflineRollCall": "Abrir pase de lista sin conexión",
     "hintMove": "para moverte",
@@ -169,13 +183,13 @@
       "dayNothing": "Todavía no hay nada en el tablero",
       "dayCounts": "{departures, plural, one {# salida} other {# salidas}} · {divers, plural, one {# buceador} other {# buceadores}}",
       "openDay": "Abrir el {day} en el tablero",
-      "addDeparture": "Añadir una salida",
+      "addDeparture": "Agregar una salida",
       "departureSeats": "{booked} de {capacity} reservadas · {blocked, plural, =0 {todos listos} one {# bloqueado} other {# bloqueados}}"
     }
   },
   "tripAdmission": {
     "level": "Esta salida exige {level}. La titulación más alta registrada de este buceador es {held}. Si tiene la certificación de {level}, añádela a su ficha; si no, resérvale una salida acorde a su nivel o el curso de {level}.",
-    "levelNoCard": "Esta salida exige {level} y nada en la ficha de este buceador llega a ese nivel. Añade su certificación de {level} si la tiene; si no, resérvale una salida acorde a su nivel o el curso de {level}.",
+    "levelNoCard": "Esta salida exige {level} y nada en la ficha de este buceador llega a ese nivel. Agrega su certificación de {level} si la tiene; si no, resérvale una salida acorde a su nivel o el curso de {level}.",
     "cards": "{count, plural, one {Esta salida exige la certificación {list}. No hay ninguna en la ficha de este buceador.} other {Esta salida exige las certificaciones {list}. No hay ninguna de ellas en la ficha de este buceador.}}",
     "nitrox": "Nitrox",
     "generic": "Las titulaciones registradas de este buceador no alcanzan lo que exigen esta salida y sus sitios de buceo."
@@ -205,6 +219,8 @@
       "waiverNotSent": "Exención sin firmar. Aún no se ha enviado.",
       "waiverPending": "Exención sin firmar. Enlace enviado.",
       "waiverExpired": "El enlace de la exención caducó; emite uno nuevo.",
+      "waiverLapsed": "La exención firmada caducó; envía un enlace nuevo.",
+      "waiverRunsOut": "La exención caduca antes de la salida; envía un enlace nuevo.",
       "medicalReview": "Una respuesta médica necesita el visto bueno de un médico antes de bucear.",
       "medicalNotCleared": "Un médico no autorizó a esta persona a bucear.",
       "guardianSignatureMissing": "Firmada por un menor sin acompañante. Falta la firma de su madre, padre o tutor legal; envía un enlace nuevo de la exención.",
@@ -214,6 +230,7 @@
       "certificationInsufficient": "Sin la certificación para esta salida. Requiere {level} o superior.",
       "certificationInsufficientHeld": "Sin la certificación para esta salida. Requiere {level} o superior, y la certificación más alta registrada es {held}.",
       "certificationInTraining": "Aún sin certificación {level}. Inscrito en un curso que termina antes de esta salida; esto se resuelve cuando el instructor lo certifique.",
+      "certificationNotYet": "Dice que todavía no tiene certificación. Esta salida pide {level} o superior, así que ponte en contacto antes del día.",
       "specialtyMissing": "Se requiere la especialidad {specialty}; no hay certificación registrada.",
       "specialtyPending": "La certificación de especialidad {specialty} espera verificación del personal.",
       "specialtyImportUnconfirmed": "La certificación de especialidad {specialty} llegó en una importación y un miembro del personal debe confirmarla antes de esta inmersión.",
@@ -225,7 +242,9 @@
       "paymentRefunded": "El pago fue reembolsado; cobra antes de embarcar.",
       "readinessUnavailable": "La información de preparación no está disponible. No embarques a este buceador hasta verificarlo.",
       "courseFormUnsigned": "Formulario del curso sin firmar: {form}.",
-      "courseFormGuardianMissing": "{form} necesita la firma de su madre, padre o tutor legal."
+      "courseFormAgeUnknown": "{form} es para alumnos de {maxAge} años o menos, y no consta su fecha de nacimiento. Añádela, o que lo firme con su madre, padre o tutor.",
+      "courseFormGuardianMissing": "{form} necesita la firma de su madre, padre o tutor legal.",
+      "trainingMarkInvalid": "La marca de inmersión de formación ya no corresponde a su plaza del curso. Quítala en el listado."
     }
   },
   "shopNav": {
@@ -243,7 +262,7 @@
     "today": "Hoy",
     "divers": "Buceadores",
     "board": "Agenda",
-    "addBooking": "Añadir una reserva",
+    "addBooking": "Agregar una reserva",
     "staffing": "Turnos de la tripulación",
     "lostFound": "Objetos perdidos",
     "diveSites": "Sitios de buceo",
@@ -274,6 +293,7 @@
     "divers": "Buceadores",
     "inbox": "Mensajes",
     "money": "Dinero",
+    "safety": "Seguridad",
     "courses": "Cursos",
     "gear": "Equipo",
     "settings": "Ajustes",
@@ -339,6 +359,7 @@
       "eyebrow": "Manifiestos sin conexión",
       "headingWithTrips": "Guardado en este dispositivo",
       "headingEmpty": "Todavía no hay ningún manifiesto guardado en este teléfono",
+      "readFailedHeading": "No se pudieron abrir los manifiestos guardados en este teléfono",
       "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
       "expiredViewOnly": "Caducado — solo lectura",
       "emptyHint": "Abre el manifiesto de una salida mientras tengas conexión y se guarda aquí.",
@@ -351,6 +372,8 @@
       "eyebrow": "Manifiesto sin conexión",
       "emptyHeading": "Todavía no hay nada guardado en este teléfono",
       "emptyHint": "Mientras aún tengas señal, abre el manifiesto en vivo de la salida: mantiene al día la copia de este dispositivo.",
+      "readFailedHeading": "No se pudo abrir la copia guardada en este teléfono",
+      "readFailedHint": "Recarga esta página una vez. Si sigue sin abrirse, usa el manifiesto impreso.",
       "removedOtherShopHeading": "Esa copia guardada se eliminó",
       "removedOtherShopMessage": "En esta tablet hay otro centro con la sesión iniciada.",
       "removedOtherShopHint": "Esta salida la guardó otro centro, así que su copia se eliminó de esta tablet cuando cambió el centro con la sesión iniciada aquí. Su pase de lista debe registrarse en el manifiesto en vivo de ese centro.",
@@ -369,8 +392,8 @@
       "someNotBoarded": "Todos tienen un resultado, con {count, plural, one {# marcado como no embarcado} other {# marcados como no embarcados}}. Confirma que están localizados antes de continuar.",
       "crewHeading": "Tripulación a bordo",
       "crewAllAccountedFor": "{assigned, plural, one {# tripulante, contabilizado.} other {Los # tripulantes, contabilizados.}}",
-      "crewNoneAssigned": "No hay tripulación asignada a esta salida, así que no hay a quién pasar lista. La tripulación se añade en la lista de tripulación de la salida, que necesita cobertura: este control sigue abierto hasta entonces.",
-      "crewNoneAboard": "Toda la tripulación de esta salida figura en tierra, así que nadie a bordo está en la lista de tripulación. Quien saliera se añade en la lista de tripulación de la salida, que necesita cobertura: este control sigue abierto hasta entonces.",
+      "crewNoneAssigned": "No hay tripulación asignada a esta salida, así que no hay a quién pasar lista. La tripulación se agrega en la lista de tripulación de la salida, que necesita cobertura: este control sigue abierto hasta entonces.",
+      "crewNoneAboard": "Toda la tripulación de esta salida figura en tierra, así que nadie a bordo está en la lista de tripulación. Quien saliera se agrega en la lista de tripulación de la salida, que necesita cobertura: este control sigue abierto hasta entonces.",
       "crewNotBackAboard": "{count, plural, one {# tripulante no ha vuelto a bordo.} other {# tripulantes no han vuelto a bordo.}} Este control sigue abierto.",
       "crewOlderCopy": "{count, plural, one {A # tripulante no se le puede pasar lista en esta copia guardada} other {A # tripulantes no se les puede pasar lista en esta copia guardada}} porque se guardó antes de que el pase de lista de tripulación funcionara sin conexión. Actualiza la copia la próxima vez que tengas cobertura o regístralos en el manifiesto en vivo.",
       "buddyReadOnlyHere": "Las parejas de buceo se muestran tal como se guardaron. Si alguien de la pareja está a bordo se registra en el pase de lista en vivo, y esta copia no lo sigue.",
@@ -378,6 +401,7 @@
       "readyBadge": "Listo cuando se guardó",
       "blockedBadge": "Bloqueado cuando se guardó",
       "notHereBadge": "Marcado “no vino” cuando se guardó",
+      "turnedAwayBadge": "Marcado “no embarcó” cuando se guardó",
       "statePendingSuffix": "· esperando para enviarse",
       "emergencyContact": "Contacto de emergencia",
       "notOnFile": "Sin datos registrados",
@@ -405,7 +429,8 @@
       },
       "checklist": {
         "heading": "Antes de salir del muelle",
-        "checkedLabel": "Verificado — presiona para quitar la marca",
+        "checkedLabel": "Verificado — presiona dos veces para quitar la marca",
+        "confirmClear": "Presiona otra vez para quitar la marca",
         "uncheckedLabel": "Sin verificar — presiona para marcarlo"
       },
       "counter": {
@@ -442,7 +467,7 @@
       "boots": "Escarpines",
       "maskFins": "Máscara y aletas",
       "weights": "Lastre",
-      "diveComputer": "Ordenador de buceo",
+      "diveComputer": "Computadora de buceo",
       "gopro": "GoPro",
       "drysuit": "Traje seco",
       "hood": "Capucha",
@@ -458,11 +483,12 @@
     "itemDrysuitGlovesWithSize": "{item} {size}: traje seco, ¿húmedos o secos?",
     "itemDrysuitWeightCheck": "{item}: traje seco, verificar el lastre en el agua",
     "itemNoLongerRented": "{item} (el centro ya no alquila esto)",
+    "itemSizeMissing": "{item} (falta la talla)",
     "notRecorded": "No hay equipo registrado, aún no se ha preguntado",
     "ownKit": "Trae su propio equipo",
     "needsStaffFit": "Necesita ajuste del personal en el check-in",
     "needsStaffFitWithNote": "Necesita ajuste del personal — {note}",
-    "drysuitCardMissing": "Bucea con traje seco y no hay certificación de traje seco en su ficha. No es un bloqueo: pregunta por su experiencia con traje seco o programa una orientación antes de la primera inmersión.",
+    "drysuitCardMissing": "Bucea con traje seco y no hay certificación de traje seco en su ficha. No es un bloqueo: pregunta por su experiencia con traje seco (si lo has visto bucear con traje seco, anótalo en su ficha) o programa una orientación antes de la primera inmersión.",
     "drysuitCardUnconfirmed": "Bucea con traje seco y su certificación de traje seco está sin confirmar. No es un bloqueo: confírmala en su ficha o programa una orientación antes de la primera inmersión."
   },
   "rollCallCheckpoint": {
@@ -481,7 +507,9 @@
   "buddyTeam": {
     "with": "Pareja: {names}",
     "separatedDock": "Compañero aún no a bordo",
-    "separatedAfterDive": "Compañero sin regresar a bordo"
+    "separatedAfterDive": "Compañero sin regresar a bordo",
+    "separatedDockNamed": "{name} aún no a bordo",
+    "separatedAfterDiveNamed": "{name} sin regresar a bordo"
   },
   "payments": {
     "connect": "Conectar pagos"
@@ -517,14 +545,21 @@
     "never": "nunca"
   },
   "welcomeCue": {
-    "firstTrip": "primera vez con nosotros",
-    "returning": "de vuelta tras {years, plural, one {# año} other {# años}}",
+    "firstTrip": "Primera inmersión con nosotros",
+    "firstTime": "Primera vez con nosotros",
+    "returning": "De vuelta tras {years, plural, one {# año} other {# años}}",
+    "milestone": "{ordinal} día de buceo con nosotros",
     "dockLine": "Saluda a {name}: {card}.",
     "dockLineNoCard": "Saluda a {name}.",
-    "dockLineSays": "Saluda a {name}: dice {level}."
+    "dockLineSays": "Saluda a {name}: dice {level}.",
+    "hello": {
+      "firstOceanDive": "Su primera inmersión en mar abierto.",
+      "celebrating": "Celebra algo.",
+      "nervous": "Con algo de nervios."
+    }
   },
   "diveIntent": {
-    "aboardToday": "Hoy a bordo: {list}",
+    "onTheList": "En la lista de hoy: {list}",
     "easingBack": "{count} volviendo a tomar confianza",
     "smallLife": "{count} buscando vida pequeña",
     "aWreck": "{count} con ganas de un naufragio",
@@ -548,11 +583,15 @@
     "told": "{count, plural, one {Avisamos del nuevo horario a # buceador.} other {Avisamos del nuevo horario a # buceadores.}}",
     "someMissed": "{count, plural, one {No pudimos avisar a # buceador por correo ni por mensaje.} other {No pudimos avisar a # buceadores por correo ni por mensaje.}}",
     "notTold": "Sin avisar. Los buceadores siguen con el horario anterior.",
+    "tellingPlace": "{count, plural, one {Avisando del nuevo punto de encuentro a # buceador…} other {Avisando del nuevo punto de encuentro a # buceadores…}}",
+    "toldPlace": "{count, plural, one {Avisamos del nuevo punto de encuentro a # buceador.} other {Avisamos del nuevo punto de encuentro a # buceadores.}}",
+    "notToldPlace": "Sin avisar. Los buceadores siguen con el punto de encuentro anterior.",
     "tellThem": "Avisarles"
   },
   "formDraft": {
     "pickedUp": "Retomado del mostrador, {time}.",
-    "startOver": "Empezar de nuevo"
+    "startOver": "Empezar de nuevo",
+    "unsavedSection": "Sin guardar"
   },
   "identityCheck": {
     "reasonSharedEmail": "Reservó como {bookedAs} con el correo de {name}. Confirma quién es.",
@@ -573,12 +612,26 @@
     "sameNameSeats": "{count, plural, one {Pasar también la plaza retenida reservada como {bookedAs} en {departures}} other {Pasar también las plazas retenidas reservadas como {bookedAs} en {departures}}}",
     "sameNameDeparture": "{trip} ({date}, {time})",
     "split": "Crear su propia ficha",
-    "splitting": "Creando…"
+    "splitting": "Creando…",
+    "another": "Otra ficha existente",
+    "anotherLegend": "Pasar esta plaza a",
+    "anotherNote": "La plaza sigue retenida hasta que confirmes que es esa persona.",
+    "openRecord": "Abrir ficha",
+    "repoint": "Pasar a esta ficha",
+    "repointing": "Moviendo…"
+  },
+  "boatWork": {
+    "missingSize": "{count} sin talla",
+    "kitUnasked": "{count} sin preguntar por su equipo",
+    "ungatedNitrox": "{count, plural, one {# buceador quiere nitrox y recibe aire} other {# buceadores quieren nitrox y reciben aire}} a menos que se verifique una certificación antes de que salga el barco",
+    "missingContact": "{count, plural, one {# persona no tiene} other {# personas no tienen}} contacto de emergencia",
+    "openOrders": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}"
   },
   "payouts": {
     "paid": "Pago de {amount} a tu banco el {date}, por lo cobrado del {from} al {to}",
     "paidOneDay": "Pago de {amount} a tu banco el {date}, por lo cobrado el {from}",
     "paidNoSpan": "Pago de {amount} a tu banco el {date}",
+    "canceled": "Se canceló un pago de {amount} previsto para el {date}.",
     "failed": "Falló un pago de {amount} previsto para el {date}. Revisa la cuenta bancaria en Stripe."
   }
 }

@@ -1,13 +1,21 @@
 import { and, asc, count, eq, gte, inArray, isNull, lt, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { type SafetyMonth, summarizeSafetyMonth } from "@/lib/safety-report";
+import {
+  type SafetyCrewMember,
+  type SafetyMonth,
+  type SafetyYear,
+  summarizeSafetyMonth,
+  summarizeSafetyYear,
+} from "@/lib/safety-report";
 import { hasReturned } from "@/lib/trips";
+import { shopMonthBounds } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import {
   activityEvents,
   bookings,
   people,
+  personRoles,
   rollCallCrewEvents,
   rollCallEvents,
   staffCredentials,
@@ -44,6 +52,7 @@ export async function getSafetyMonth(
         startsAt: trips.startsAt,
         endsAt: trips.endsAt,
         plannedDives: trips.plannedDives,
+        diveMode: trips.diveMode,
       })
       .from(trips)
       .where(
@@ -101,7 +110,11 @@ export async function getSafetyMonth(
         ),
     () =>
       db
-        .select({ tripId: tripAssignments.tripId, personId: tripAssignments.personId })
+        .select({
+          tripId: tripAssignments.tripId,
+          personId: tripAssignments.personId,
+          tripRole: tripAssignments.tripRole,
+        })
         .from(tripAssignments)
         .innerJoin(people, eq(people.id, tripAssignments.personId))
         .where(and(inArray(tripAssignments.tripId, tripIds), eq(people.shopId, shopId))),
@@ -146,13 +159,14 @@ export async function getSafetyMonth(
   ]);
 
   const crewIds = [...new Set(crew.map((row) => row.personId))];
-  const [credentials, names] = crewIds.length
+  const [credentials, names, shopRoleRows] = crewIds.length
     ? await queryAll(db, [
         () =>
           db
             .select({
               personId: staffCredentials.personId,
               kind: staffCredentials.kind,
+              issuedAt: staffCredentials.issuedAt,
               renewsAt: staffCredentials.renewsAt,
             })
             .from(staffCredentials)
@@ -169,8 +183,15 @@ export async function getSafetyMonth(
             .from(people)
             // diveday:allow-deleted-people: names for crew already on these trips; removed or not, they were aboard.
             .where(and(eq(people.shopId, shopId), inArray(people.id, crewIds))),
+        // The standing roles, which name the job when the roster does not.
+        () =>
+          db
+            .select({ personId: personRoles.personId, role: personRoles.role })
+            .from(personRoles)
+            .innerJoin(people, eq(people.id, personRoles.personId))
+            .where(and(eq(people.shopId, shopId), inArray(personRoles.personId, crewIds))),
       ])
-    : [[], []];
+    : [[], [], []];
 
   const bookingsByTrip = new Map<string, string[]>();
   for (const row of roster) {
@@ -178,10 +199,20 @@ export async function getSafetyMonth(
     list.push(row.bookingId);
     bookingsByTrip.set(row.tripId, list);
   }
-  const crewByTrip = new Map<string, string[]>();
+  const shopRolesByPerson = new Map<string, string[]>();
+  for (const row of shopRoleRows) {
+    const list = shopRolesByPerson.get(row.personId) ?? [];
+    list.push(row.role);
+    shopRolesByPerson.set(row.personId, list);
+  }
+  const crewByTrip = new Map<string, SafetyCrewMember[]>();
   for (const row of crew) {
     const list = crewByTrip.get(row.tripId) ?? [];
-    list.push(row.personId);
+    list.push({
+      personId: row.personId,
+      tripRole: row.tripRole,
+      shopRoles: shopRolesByPerson.get(row.personId) ?? [],
+    });
     crewByTrip.set(row.tripId, list);
   }
 
@@ -193,8 +224,9 @@ export async function getSafetyMonth(
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
       plannedDives: trip.plannedDives,
+      diveMode: trip.diveMode,
       bookingIds: bookingsByTrip.get(trip.id) ?? [],
-      crewIds: crewByTrip.get(trip.id) ?? [],
+      crew: crewByTrip.get(trip.id) ?? [],
     })),
     diverEvents,
     crewEvents,
@@ -202,4 +234,28 @@ export async function getSafetyMonth(
     personNames: new Map(names.map((row) => [row.id, row.fullName])),
     certOverrides,
   });
+}
+
+/**
+ * **The Safety year** (fifth loop, item 33; dive-domain review F1): each month
+ * of `year` read as its own month view reads it, folded by
+ * `summarizeSafetyYear`, so the year is the sum of the twelve pages it
+ * stands for. Months after `now` have nothing back and are not read. One
+ * month at a time: twelve reads of one shop, never concurrent on one
+ * executor.
+ */
+export async function getSafetyYear(
+  db: DbExecutor,
+  shopId: string,
+  year: number,
+  timeZone: string,
+  now: Date = nowDate(),
+): Promise<SafetyYear> {
+  const months: SafetyMonth[] = [];
+  for (let month = 1; month <= 12; month++) {
+    const { from, to } = shopMonthBounds({ year, month }, timeZone);
+    if (from >= now) break;
+    months.push(await getSafetyMonth(db, shopId, from, to, timeZone, now));
+  }
+  return summarizeSafetyYear(months);
 }

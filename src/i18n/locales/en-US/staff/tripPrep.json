@@ -1,4 +1,10 @@
 {
+  "lunch": {
+    "heading": "Lunch",
+    "count": "Lunch for {count}",
+    "note": "{name}: {note}",
+    "answered": "{answered} of {asked} left a lunch note"
+  },
   "diverCount": "{count, plural, one {# diver} other {# divers}}",
   "crewCount": "{count, plural, one {# diving crew member} other {# diving crew}}",
   "diveCount": "{count, plural, one {# dive} other {# dives}}",
@@ -51,7 +57,7 @@
   "emptyHeading": "Nothing to pack yet",
   "emptyAction": "Open the divers list",
   "rentalKitEmptyOwnKitHeading": "No gear to pull",
-  "rentalKitEmptyNeedsSortingHeading": "No gear to pull — yet",
+  "rentalKitEmptyNeedsSortingHeading": "No gear to pull yet",
   "rentalKitEmptyAction": "Open the divers list",
   "hotelPickupsHeading": "Hotel Pickups",
   "hotelPickupsCount": "{count, plural, one {# pickup} other {# pickups}}",

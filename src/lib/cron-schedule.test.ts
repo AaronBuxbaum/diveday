@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { BOOKKEEPER_CRON_CRONTAB } from "./bookkeeper";
 import { CREW_NOTICE_CRON_CRONTAB } from "./crew-notices";
 import {
   DAILY_TICK_CRONTAB,
@@ -45,6 +46,11 @@ describe("the daily tick", () => {
   it("matches the deployed hourly schedule for /api/cron/weekly-digest", () => {
     const digest = vercelCrons().find((cron) => cron.path === "/api/cron/weekly-digest");
     expect(digest?.schedule).toBe(WEEKLY_DIGEST_CRON_CRONTAB);
+  });
+
+  it("matches the deployed schedule for /api/cron/bookkeeper", () => {
+    const pass = vercelCrons().find((cron) => cron.path === "/api/cron/bookkeeper");
+    expect(pass?.schedule).toBe(BOOKKEEPER_CRON_CRONTAB);
   });
 
   it("matches the deployed hourly schedule for /api/cron/crew-notices", () => {
@@ -96,6 +102,36 @@ describe("the daily tick", () => {
     expect(new Set(sorted).size).toBe(sorted.length);
     for (let index = 1; index < sorted.length; index += 1) {
       expect(sorted[index] - sorted[index - 1]).toBeLessThan(5);
+    }
+  });
+
+  /**
+   * **The dailies and the nightlies ride the same wake** (code review
+   * 2026-10-13b, item 36). The assertion above saw the hourlies only, so five
+   * dailies sat on `:00` beside `minimum-seats` (two cold starts in one
+   * minute, the shape the hourlies had just left), and the three 03:xx
+   * nightlies woke the database three separate times. Every entry, whatever
+   * its cadence, takes a minute nothing else in its hour fires on, and every
+   * minute in an hour sits within five of the one before it from `:00`, so an
+   * hour wakes the compute once.
+   */
+  it("gives every pass in an hour its own minute, all inside one wake", () => {
+    const hoursOf = (field: string) =>
+      field === "*" ? Array.from({ length: 24 }, (_, hour) => hour) : field.split(",").map(Number);
+    for (let hour = 0; hour < 24; hour += 1) {
+      const minutes = vercelCrons()
+        .filter((cron) => hoursOf(cron.schedule.split(" ")[1]).includes(hour))
+        .flatMap((cron) => cron.schedule.split(" ")[0].split(","))
+        .map(Number)
+        .sort((a, b) => a - b);
+      expect(new Set(minutes).size, `hour ${hour}: ${minutes.join(", ")}`).toBe(minutes.length);
+      expect(minutes[0]).toBe(0);
+      for (let index = 1; index < minutes.length; index += 1) {
+        expect(
+          minutes[index] - minutes[index - 1],
+          `hour ${hour}: ${minutes.join(", ")}`,
+        ).toBeLessThan(5);
+      }
     }
   });
 
@@ -184,19 +220,19 @@ describe("the daily tick", () => {
 describe("nextDailyTickAtOrAfter", () => {
   it("returns today's tick when the instant is before it", () => {
     expect(nextDailyTickAtOrAfter(new Date("2026-08-06T09:15:00.000Z")).toISOString()).toBe(
-      "2026-08-06T14:00:00.000Z",
+      "2026-08-06T14:07:00.000Z",
     );
   });
 
   it("returns the instant itself when it lands exactly on a tick", () => {
-    expect(nextDailyTickAtOrAfter(new Date("2026-08-06T14:00:00.000Z")).toISOString()).toBe(
-      "2026-08-06T14:00:00.000Z",
+    expect(nextDailyTickAtOrAfter(new Date("2026-08-06T14:07:00.000Z")).toISOString()).toBe(
+      "2026-08-06T14:07:00.000Z",
     );
   });
 
   it("rolls to tomorrow's tick one millisecond after today's", () => {
-    expect(nextDailyTickAtOrAfter(new Date("2026-08-06T14:00:00.001Z")).toISOString()).toBe(
-      "2026-08-07T14:00:00.000Z",
+    expect(nextDailyTickAtOrAfter(new Date("2026-08-06T14:07:00.001Z")).toISOString()).toBe(
+      "2026-08-07T14:07:00.000Z",
     );
   });
 
@@ -215,10 +251,10 @@ describe("nextDailyTickAtOrAfter", () => {
 
   it("rolls across a month and a year boundary", () => {
     expect(nextDailyTickAtOrAfter(new Date("2026-01-31T20:00:00.000Z")).toISOString()).toBe(
-      "2026-02-01T14:00:00.000Z",
+      "2026-02-01T14:07:00.000Z",
     );
     expect(nextDailyTickAtOrAfter(new Date("2026-12-31T20:00:00.000Z")).toISOString()).toBe(
-      "2027-01-01T14:00:00.000Z",
+      "2027-01-01T14:07:00.000Z",
     );
   });
 

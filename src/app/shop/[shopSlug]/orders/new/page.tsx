@@ -281,6 +281,7 @@ export default async function NewOrderPage({
                     type="text"
                     name={`description-${i}`}
                     defaultValue={rowDefault?.description}
+                    aria-label={t("orders.new.lineItemDescriptionAria", { number: i + 1 })}
                     placeholder={t("orders.new.lineItemDescriptionPlaceholder")}
                     maxLength={200}
                     className={controlClass}

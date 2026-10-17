@@ -56,7 +56,7 @@ cites an invoice.
 | AWS Secrets Manager | 1.20 | Three secrets at $0.40; `infra/lib/infra-stack.ts` §16 |
 | Neon | 0 | Free tier; **suspends** past 300 CU-hours, which is the one ceiling that is an outage rather than an invoice |
 | Sentry, Meta, Stripe | 0 | Free tiers and per-transaction |
-| GitHub Actions | 0 | The repository is public, so runner minutes are free. They cost **wall-clock**: the workflow's nineteen jobs sit one under the twenty-concurrent-job cap, and a run that starts while another is in flight queues behind it — a green main run on 2026-08-31 waited ten minutes for a runner before its first job started |
+| GitHub Actions | 0 | The repository is public, so runner minutes are free. They cost **wall-clock**: one run of the workflow is 24 to 26 jobs (four unit shards and the Playwright and visual shards), more than the twenty-concurrent-job cap on its own, and a run that starts while another is in flight queues behind it — a green main run on 2026-08-31 waited ten minutes for a runner before its first job started |
 
 So the bill is about **$64 a month**, of which $45 is AWS and $25 of that is a support plan. It was
 described here as $22–24 until 2026-09-10.

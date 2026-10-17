@@ -4,8 +4,9 @@ import Link from "next/link";
 import { type ReactNode, useRef } from "react";
 import { PrintButton } from "@/components/PrintButton";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
-import { GroupLabel, groupLabelClass } from "@/components/ui/ledger";
+import { GroupLabel, groupLabelClass } from "@/components/ui/group-label";
 import { MENU_PANEL, menuRowClass } from "@/components/ui/menu";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
@@ -14,6 +15,8 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
 import { fill } from "@/i18n/fill";
 import { isUsualCrew, mostCommonCrew } from "@/lib/usual-crew";
 import { isSoldOut, seatFill } from "@/lib/week-seats";
+import type { WeekAsk } from "./builder-types";
+import { CopyLastYear, LastYearTally, type LastYearWeekView } from "./CopyLastYear";
 import { WEEK_DAY_GRID_CLASS, WEEK_EMPTY_DAY_CLASS, WEEK_ROW_BOX_CLASS } from "./week-geometry";
 import { weekRows } from "./week-rows";
 
@@ -45,6 +48,11 @@ export type WeekDeparture = {
   /** No price has ever been set — the quieter of the two marks a departure carries. */
   unpriced: boolean;
   /**
+   * A rehearsal departure (ADR 20261012-rehearsal-departures): it wears its
+   * own mark in the flag's slot and is never asked for a price (#2395).
+   */
+  rehearsal: boolean;
+  /**
    * The boat is back and somebody on its list was never counted (DOM-H3) —
    * **the loudest thing this board can say**, and it outranks the price flag
    * rather than stacking with it. It renders in both compositions or the
@@ -52,6 +60,12 @@ export type WeekDeparture = {
    * nobody has accounted for.
    */
   rollCallOpen: { diveNumber: number; uncounted: number } | null;
+  /**
+   * "Marcus Webb away Sat, Oct 17 – Sun, Oct 18" (fourth review, item 12):
+   * rostered people who said they are away on a day this departure meets,
+   * preformatted. Absent or null when nobody is.
+   */
+  crewAway?: string | null;
   /** "{title}, {day} {time}" — what names this departure to a screen reader. */
   ref: string;
 };
@@ -127,7 +141,7 @@ export type WeekDay = {
 };
 
 /** Everything the week grid needs, assembled server-side. */
-export type BuilderWeek = {
+export type BuilderWeek = LastYearWeekView & {
   ariaLabel: string;
   /** "Aug 24 – 30, 2026". */
   rangeLabel: string;
@@ -168,17 +182,6 @@ export type BuilderWeek = {
   askedCount: string;
 };
 
-/** One day the divers asked for, and the act that answers it. */
-export type WeekAsk = {
-  dateIso: string;
-  /** "Wed, Sep 2 · four people" — the date and the heads, already pluralised. */
-  lead: string;
-  /** Who asked, in the reader's own list grammar. */
-  who: string;
-  /** The builder, opened on that day with these leads carried forward. */
-  href: string;
-};
-
 /**
  * The words the week needs, named once so the three components that draw a
  * row cannot take three different subsets of them.
@@ -196,6 +199,7 @@ export type WeekBoardCopy = {
   noPriceSet: string;
   noPriceSetAria: string;
   noPriceSetAll: string;
+  rehearsal: string;
   rollCallOpen: string;
   rollCallOpenAria: string;
   /** What a day with nothing on it says, because a blank row is just a gap. */
@@ -615,6 +619,15 @@ function WeekBoat({
               )}
             </p>
           ) : null}
+          {/* **Rostered and away** (fourth review, item 12), on boats and
+              course bars alike and whatever the usual crew: the staffing
+              week's warning, said where the departure is planned. */}
+          {departure.crewAway ? (
+            <p className="mt-0.5 flex items-start gap-1.5 text-sm font-medium text-warning">
+              <DiveDayIcon name="warning" className="mt-0.5 size-3.5 shrink-0" />
+              <span>{departure.crewAway}</span>
+            </p>
+          ) : null}
           {/* One slot, one grammar: an open head count outranks a missing
               price rather than stacking two marks on one row. */}
           {departure.rollCallOpen ? (
@@ -623,6 +636,10 @@ function WeekBoat({
               shopSlug={shopSlug}
               copy={copy}
             />
+          ) : departure.rehearsal ? (
+            <Badge size="sm" className="mt-1">
+              {copy.rehearsal}
+            </Badge>
           ) : departure.unpriced && !sailed ? (
             <PriceFlag departure={departure} shopSlug={shopSlug} copy={copy} />
           ) : null}
@@ -774,6 +791,7 @@ export function WeekBoard({
           <p data-week-seat-tally="" className="text-sm text-muted tabular-nums">
             {week.seatTally}
           </p>
+          <LastYearTally text={week.lastYearTally} />
           {/* The week a shop pins by the dock: beside the range it prints.
               Desk-sized only: on a phone it would push the tally onto a
               line of its own, and nobody prints the schedule from one. */}
@@ -811,7 +829,7 @@ export function WeekBoard({
                   className="border-b border-border"
                 >
                   <div className={WEEK_DAY_GRID_CLASS}>
-                    <h3 className="py-2">
+                    <h2 className="py-2">
                       <span className="sr-only">
                         {fill(copy.quietDays, { first: first.label, last: last.label })}
                       </span>
@@ -821,7 +839,7 @@ export function WeekBoard({
                       >
                         {first.weekday}–{last.weekday}
                       </span>
-                    </h3>
+                    </h2>
                     <div className="min-w-0">
                       <div className={WEEK_EMPTY_DAY_CLASS}>
                         <p className="text-sm text-muted">{copy.noBoats}</p>
@@ -895,7 +913,7 @@ export function WeekBoard({
                     first departure's time beside it. Stacked from `sm` up, the
                     weekday and its numeral made every day two lines tall, and
                     an empty day twice the height of the one line it says. */}
-                  <h3
+                  <h2
                     id={`week-day-${day.dateIso}`}
                     className="sticky top-(--chrome-h) z-10 self-start bg-background py-2"
                   >
@@ -923,7 +941,7 @@ export function WeekBoard({
                         {day.dayNumber}
                       </span>
                     </span>
-                  </h3>
+                  </h2>
                   <div className="min-w-0">
                     {/* More departures than hulls, or one hull in two places —
                       the question the board exists to answer, on the day it is
@@ -1034,6 +1052,7 @@ export function WeekBoard({
 
       {/* A week of empty rows and no way forward is a dead end. One line, and
           it is a link to the week that has something in it. */}
+      <CopyLastYear copy={canConfigure ? week.copyLastYear : null} shopSlug={shopSlug} />
       {week.nextDeparture ? (
         <p className="px-2 py-6 text-sm text-muted">
           <Link href={week.nextDeparture.href} scroll={false} className="hover:underline">

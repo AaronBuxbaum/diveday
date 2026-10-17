@@ -7,12 +7,13 @@ import {
   gte,
   ilike,
   inArray,
-  isNotNull,
   isNull,
   lt,
+  ne,
   or,
   sql,
 } from "drizzle-orm";
+import { unionAll } from "drizzle-orm/pg-core";
 import { isStaff } from "@/lib/authz";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -25,12 +26,14 @@ import {
   isUsableInvoiceCustomerAddress,
 } from "@/lib/payments/invoicing";
 import { canPersonManageOrders, loadActiveStaffRoles } from "./authz";
-import type { AppDb, DbExecutor } from "./client";
+import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { grantPackageEntitlementsForPaidOrder } from "./dive-packages";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
 import { type OffsetPage, offsetPage, PAGE_SIZE } from "./paging";
 import {
+  awaitingStripeReconciliation,
   idempotencyKeyFor,
+  markPaymentOperationUnanswered,
   recordPaymentOperationStripeObject,
   resolvePaymentOperation,
   STALE_AFTER_MS,
@@ -59,6 +62,7 @@ import {
   personRoles,
   trips,
 } from "./schema";
+import { type SeatPaymentRow, seatLedgerEntries, seatPaymentsByIds } from "./seat-payments";
 import {
   canAcceptPayments,
   demoShopBillingAddress,
@@ -372,6 +376,12 @@ async function issueOrder(
     // on the customer/items/invoice Stripe already created (CR-005).
     idempotencyKey: idempotencyKeyFor(intent.id),
   });
+  if (result.status === "unanswered") {
+    // The invoice may exist at Stripe: left `started`, marked, so the stuck
+    // queue shows it to a human instead of a closed `failed` row hiding it.
+    await markPaymentOperationUnanswered(db, intent.id);
+    return { ok: false, reason: "stripe_failed" };
+  }
   if (result.status !== "created") {
     await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
     return { ok: false, reason: "stripe_failed" };
@@ -491,8 +501,31 @@ const COUNTER_COLLECTIONS: ReadonlySet<string> = new Set<CounterCollection>([
   "card_machine",
 ]);
 
-/** The line kinds a counter order may carry. */
-const COUNTER_LINE_KINDS: ReadonlySet<string> = new Set(["rental"]);
+/**
+ * How an open invoice can be settled outside Stripe: the counter's two ways,
+ * and a resort guest's **room charge** (fifth-loop ideas, item 57), which the
+ * hotel collects and settles with the shop monthly.
+ */
+export type OpenOrderCollection = CounterCollection | "room_charge";
+
+const OPEN_ORDER_COLLECTIONS: ReadonlySet<string> = new Set<OpenOrderCollection>([
+  ...(COUNTER_COLLECTIONS as ReadonlySet<CounterCollection>),
+  "room_charge",
+]);
+
+/** Longest room number and hotel name a room charge keeps. */
+export const ROOM_NUMBER_MAX = 20;
+export const ROOM_HOTEL_MAX = 80;
+
+/** The room a charge went to: a number, and the hotel when the shop serves several. */
+export type RoomCharge = { number: string; hotel: string | null };
+
+/**
+ * The line kinds a counter order may carry: a rental, and the parts and labor
+ * of a bench job paid at pickup (`recordWorkOrderCounterPayment`), which bills
+ * as `other` exactly as its Stripe bill does.
+ */
+const COUNTER_LINE_KINDS: ReadonlySet<string> = new Set(["rental", "other"]);
 
 /**
  * Record money a shop has already taken at the counter, in cash or on its own
@@ -616,6 +649,272 @@ export async function recordCounterOrder(
   return { ok: true, order };
 }
 
+export type RecordPaymentOnOrderOutcome =
+  | { ok: true; order: Order }
+  | {
+      ok: false;
+      /**
+       * - `invalid` — no such open invoice here, a method that is not counter
+       *   money, or a caller who is not staff.
+       * - `stripe_refused` — Stripe would not mark the invoice paid, most often
+       *   because the diver paid it online meanwhile; Refresh shows which.
+       * - `stripe_unknown` — Stripe did not answer (timed out, threw, 5xx), so
+       *   it may have marked the invoice. The claim stands: Stripe's echo
+       *   finishes it if the mark landed, and it goes stale if it did not. The
+       *   staffer checks the order rather than tapping again.
+       * - `claim_held` — another tap's claim on this invoice is still waiting
+       *   on Stripe.
+       * - `not_configured` — no Stripe key to tell Stripe with.
+       */
+      reason: "invalid" | "stripe_refused" | "stripe_unknown" | "claim_held" | "not_configured";
+    };
+
+/**
+ * **Record payment: cash / card machine** on an open order (fourth UX review,
+ * item 19; ADR 20261009-counter-payments, amended 2026-10-14). Felix walks in
+ * and pays the $340 balance the shop invoiced him; the order is still a
+ * Stripe invoice, and nothing could record that the money came over the
+ * counter.
+ *
+ * **Claim, then Stripe, then the row** (the shape `claimOrderRefund` gives a
+ * refund). Under the row's lock, an open invoice is *claimed*: its
+ * `collection` becomes the counter method while it stays `open`, and that
+ * commits before Stripe is called. Then the invoice is marked paid out of
+ * band, so Stripe stops asking the diver for it. Then, under the lock again,
+ * the claim is finished: `amount_paid_cents` is the total and `paid_at` is
+ * now. If Stripe refuses (most often because the diver paid online a moment
+ * earlier) the claim is given back and nothing is recorded. If Stripe does not
+ * answer, the claim is left standing: it may have marked the invoice, and
+ * giving the row back to Stripe collection would let the echo book the cash
+ * as a Stripe payment. The echo finishes it, or it goes stale.
+ *
+ * The claim is what makes Stripe's own echo safe. The `invoice.paid` the mark
+ * sends back can arrive before the mark's HTTP call returns; it finds the row
+ * claimed and finishes the counter settlement itself rather than booking the
+ * cash as a Stripe payment (`applyInvoicePaid`), and this call then reads the
+ * row it finished. A diver's own online payment arriving during the claim
+ * waits instead (Stripe delivers it again), because Stripe is about to refuse
+ * the mark. The claim is `counter_claimed_at`; one older than `STALE_AFTER_MS`
+ * belonged to a call that died and may be taken again. The mark carries one
+ * idempotency key per order, so a retake replays the first call.
+ *
+ * The Stripe ids stay, so diver erasure still files the Stripe customer's
+ * deletion request; every Stripe operation refuses the order from here on
+ * (`stripeInvoiceOf`), as it does any counter order. The booking the order was
+ * raised for is marked paid, as a settled invoice marks it, with the method as
+ * the seat's provider so the roster says it was paid at the counter. **Any
+ * active staff member may record one**, like any counter money (H-06); the
+ * caller asks for the money step-up and writes the activity line.
+ */
+export async function recordPaymentOnOpenOrder(
+  db: AppDb,
+  input: {
+    shopId: string;
+    orderId: string;
+    actorPersonId: string;
+    collection: OpenOrderCollection;
+    /** Required for, and only for, a room charge. */
+    room?: RoomCharge | null;
+  },
+  invoicing: InvoicingProvider = invoicingProviderFromEnvironment(),
+): Promise<RecordPaymentOnOrderOutcome> {
+  const invalid = { ok: false, reason: "invalid" } as const;
+  if (!OPEN_ORDER_COLLECTIONS.has(input.collection)) return invalid;
+  const room = input.collection === "room_charge" ? (input.room ?? null) : null;
+  if (input.collection === "room_charge") {
+    if (!room?.number || room.number.length > ROOM_NUMBER_MAX) return invalid;
+    if ((room.hotel?.length ?? 0) > ROOM_HOTEL_MAX) return invalid;
+  }
+  const roles = await loadActiveStaffRoles(db, input.shopId, input.actorPersonId);
+  if (!roles || !isStaff(roles)) return invalid;
+
+  const now = nowDate();
+  const claimed = await db.transaction(async (tx) => {
+    const [current] = await tx
+      .select()
+      .from(orders)
+      .where(and(eq(orders.id, input.orderId), eq(orders.shopId, input.shopId)))
+      .for("update");
+    if (current?.status !== "open" || current.stripePaymentIntentId !== null) return null;
+    if (current.counterClaimedAt !== null && !isStaleCounterClaim(current, now)) return "held";
+    if (current.collection !== "stripe_invoice" && current.counterClaimedAt === null) return null;
+    const [row] = await tx
+      .update(orders)
+      .set({
+        collection: input.collection,
+        roomNumber: room?.number ?? null,
+        roomHotel: room?.hotel || null,
+        counterClaimedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(orders.id, current.id))
+      .returning();
+    return row ?? null;
+  });
+  if (claimed === "held") return { ok: false, reason: "claim_held" };
+  // A claim keeps the Stripe ids, so they are still there to tell Stripe with.
+  if (!claimed?.stripeAccountId || !claimed.stripeInvoiceId) return invalid;
+
+  let marked: Awaited<ReturnType<InvoicingProvider["markInvoicePaidOutOfBand"]>>;
+  try {
+    marked = await invoicing.markInvoicePaidOutOfBand(
+      claimed.stripeAccountId,
+      claimed.stripeInvoiceId,
+      `order:${claimed.id}:paid_out_of_band`,
+    );
+  } catch (error) {
+    // No answer to trust: Stripe may have marked it. Same as `unknown`.
+    log("order.counter_mark_threw", "warn", {
+      orderId: claimed.id,
+      shopId: claimed.shopId,
+      error: error instanceof Error ? error.name : "unknown",
+    });
+    marked = { status: "unknown" };
+  }
+  if (marked.status === "refused" || marked.status === "not_configured") {
+    await releaseCounterClaim(db, claimed);
+    return {
+      ok: false,
+      reason: marked.status === "not_configured" ? "not_configured" : "stripe_refused",
+    };
+  }
+  const answered = marked.status === "paid";
+
+  const settled = await db.transaction(async (tx) => {
+    const [current] = await tx.select().from(orders).where(eq(orders.id, claimed.id)).for("update");
+    if (!current || current.collection !== input.collection) return null;
+    // Stripe's echo got here first and finished the claim.
+    if (current.status === "paid") return current;
+    if (current.status !== "open") return null;
+    // Unanswered: the claim stands for the echo, or for its horizon.
+    if (!answered) return "unanswered" as const;
+    if (current.counterClaimedAt?.getTime() !== claimed.counterClaimedAt?.getTime()) return null;
+    return settleCounterClaim(tx, current, input.collection);
+  });
+  if (settled === "unanswered") {
+    log("order.counter_mark_unanswered", "warn", { orderId: claimed.id, shopId: claimed.shopId });
+    return { ok: false, reason: "stripe_unknown" };
+  }
+  if (!settled) {
+    // Stripe holds the invoice paid and the row moved on without us. Logged,
+    // never thrown; the page reads the order as it now stands.
+    log("order.counter_settle_lost_race", "warn", { orderId: claimed.id, shopId: claimed.shopId });
+    return invalid;
+  }
+  return { ok: true, order: settled };
+}
+
+/**
+ * True for an `open` order claimed for counter money (`recordPaymentOnOpenOrder`)
+ * whose claim is older than the refund claim's horizon: the call that made it
+ * died between the claim and Stripe's answer.
+ */
+function isStaleCounterClaim(order: Order, now: Date): boolean {
+  return (
+    order.status === "open" &&
+    order.counterClaimedAt !== null &&
+    order.counterClaimedAt.getTime() < now.getTime() - STALE_AFTER_MS
+  );
+}
+
+/**
+ * Give a counter claim back to Stripe collection: Stripe refused the mark, or
+ * the claim went stale. Only that claim (its method and its stamp), and only
+ * while it is still open; a row that moved on, or was claimed again, is left
+ * as it is.
+ */
+async function releaseCounterClaim(db: DbExecutor, claimed: Order): Promise<void> {
+  if (claimed.counterClaimedAt === null) return;
+  await db
+    .update(orders)
+    .set({
+      collection: "stripe_invoice",
+      roomNumber: null,
+      roomHotel: null,
+      counterClaimedAt: null,
+      updatedAt: nowDate(),
+    })
+    .where(
+      and(
+        eq(orders.id, claimed.id),
+        eq(orders.status, "open"),
+        eq(orders.collection, claimed.collection),
+        eq(orders.counterClaimedAt, claimed.counterClaimedAt),
+      ),
+    );
+}
+
+/**
+ * Finish a counter claim on a locked, `open` row: paid in full, now, by the
+ * claimed method, with the seat and package entitlements following and
+ * `order.paid` queued. One path for both finishers: `recordPaymentOnOpenOrder`
+ * and Stripe's out-of-band echo (`applyInvoicePaid`).
+ */
+async function settleCounterClaim(
+  tx: AppTransaction,
+  current: Order,
+  collection: OrderCollection,
+): Promise<Order | null> {
+  const now = nowDate();
+  const [updated] = await tx
+    .update(orders)
+    .set({
+      status: "paid",
+      amountPaidCents: current.totalCents,
+      paidAt: now,
+      counterClaimedAt: null,
+      updatedAt: now,
+    })
+    .where(and(eq(orders.id, current.id), eq(orders.collection, collection)))
+    .returning();
+  if (!updated) return null;
+  if (updated.bookingId) {
+    await setBookingPaymentIfNotFinal(tx, {
+      shopId: updated.shopId,
+      bookingId: updated.bookingId,
+      status: "paid",
+      amountCents: updated.totalCents,
+      currency: updated.currency,
+      provider: collection,
+      // The invoice id, as a settled invoice writes it: Reports matches a
+      // seat's payment to the order that paid it by this reference.
+      providerRef: updated.stripeInvoiceId,
+      operation: "order_settled",
+    });
+  }
+  await grantPackageEntitlementsForPaidOrder(tx, {
+    shopId: updated.shopId,
+    orderId: updated.id,
+    purchasedAt: now,
+  });
+  await enqueueOrderIntegrationEvent(tx, {
+    shopId: updated.shopId,
+    orderId: updated.id,
+    eventType: "order.paid",
+    idempotencyKey: `order:${updated.id}:paid`,
+    status: updated.status,
+    amountPaidCents: updated.amountPaidCents,
+    refundedCents: updated.refundedCents,
+  });
+  return updated;
+}
+
+/**
+ * A paid counter order that never reached Stripe: the only kind
+ * `voidCounterOrder` takes back, and the only kind the order page offers Void
+ * on. A counter-settled invoice keeps its Stripe ids, and Stripe cannot un-pay
+ * it (ADR 20261009-counter-payments).
+ */
+export function isVoidableCounterOrder(
+  order: Pick<Order, "collection" | "status" | "stripeInvoiceId">,
+): boolean {
+  return (
+    order.collection !== "stripe_invoice" &&
+    order.status === "paid" &&
+    order.stripeInvoiceId === null
+  );
+}
+
 export type VoidCounterOrderOutcome =
   | { ok: true; order: Order }
   | { ok: false; reason: "not_authorized" | "not_found" | "not_voidable" };
@@ -630,6 +929,13 @@ export type VoidCounterOrderOutcome =
  * column, drops it. Only a `paid` counter order qualifies; a Stripe invoice is
  * voided through Stripe (`voidOrder`) and refunded through Stripe
  * (`refundOrder`).
+ *
+ * **Not an invoice settled at the counter** (`recordPaymentOnOpenOrder`): that
+ * one did reach Stripe, which holds the invoice paid out of band and has no
+ * way to un-pay it. Voiding it here would leave the books disagreeing with
+ * Stripe and the diver's hosted invoice reading paid, with no Stripe path
+ * left to collect through. `isVoidableCounterOrder` is the rule the page reads
+ * too, so the button is never offered on one.
  */
 export async function voidCounterOrder(
   db: AppDb,
@@ -638,16 +944,28 @@ export async function voidCounterOrder(
   if (!(await canPersonManageOrders(db, input.shopId, input.actorPersonId))) {
     return { ok: false, reason: "not_authorized" };
   }
+  return voidPaidCounterOrder(db, input.shopId, input.orderId);
+}
+
+/**
+ * The void itself, with no role check: `voidCounterOrder` after its
+ * owner/manager gate, and the bench's undo of a counter order a second tap
+ * recorded a moment ago and lost the race to link (`recordWorkOrderCounterPayment`),
+ * which is the system correcting itself rather than anyone's decision.
+ */
+export async function voidPaidCounterOrder(
+  db: AppDb,
+  shopId: string,
+  orderId: string,
+): Promise<VoidCounterOrderOutcome> {
   return db.transaction(async (tx): Promise<VoidCounterOrderOutcome> => {
     const [current] = await tx
       .select()
       .from(orders)
-      .where(and(eq(orders.id, input.orderId), eq(orders.shopId, input.shopId)))
+      .where(and(eq(orders.id, orderId), eq(orders.shopId, shopId)))
       .for("update");
     if (!current) return { ok: false, reason: "not_found" };
-    if (current.collection === "stripe_invoice" || current.status !== "paid") {
-      return { ok: false, reason: "not_voidable" };
-    }
+    if (!isVoidableCounterOrder(current)) return { ok: false, reason: "not_voidable" };
     const now = nowDate();
     const [updated] = await tx
       .update(orders)
@@ -940,6 +1258,14 @@ export type ShopOrderFilter = {
    * invoice, a gear sale) is therefore on no trip and never matches.
    */
   tripId?: string;
+  /**
+   * Which of the booking's seats the orders sit on (issue #2550). `live` is a
+   * seat still on the boat (anything but cancelled, the set the roster and the
+   * boat's work count); `cancelled` is an order left on a seat that was
+   * released, which may still need a refund or a void. Unset is both, the
+   * shop's complete ledger. An order with no booking is on neither.
+   */
+  seats?: "live" | "cancelled";
   /** Inclusive lower bound on `created_at`. */
   from?: Date;
   /** Exclusive upper bound on `created_at`, so a whole day/month reads as `[from, to)`. */
@@ -955,7 +1281,7 @@ export type ShopOrderFilter = {
  * index it opens has to show those same two rows, which only holds while both
  * ask the database the same question.
  */
-function shopOrderWhere(shopId: string, filter: ShopOrderFilter) {
+export function shopOrderWhere(shopId: string, filter: ShopOrderFilter) {
   const conditions = [eq(orders.shopId, shopId)];
   if (filter.status) conditions.push(eq(orders.status, filter.status));
   if (filter.personId) conditions.push(eq(orders.personId, filter.personId));
@@ -971,6 +1297,8 @@ function shopOrderWhere(shopId: string, filter: ShopOrderFilter) {
     if (matches) conditions.push(matches);
   }
   if (filter.tripId) conditions.push(eq(bookings.tripId, filter.tripId));
+  if (filter.seats === "live") conditions.push(ne(bookings.status, "cancelled"));
+  if (filter.seats === "cancelled") conditions.push(eq(bookings.status, "cancelled"));
   if (filter.from) conditions.push(gte(orders.createdAt, filter.from));
   if (filter.to) conditions.push(lt(orders.createdAt, filter.to));
   return and(...conditions);
@@ -1073,6 +1401,16 @@ export async function listShopOrders(
 export type ShopOrderListRow = Awaited<ReturnType<typeof listShopOrders>>["rows"][number];
 
 /**
+ * One row of the Money ledger: an order, or a seat a diver paid for online at
+ * booking (fourth UX review, item 18; `src/db/seat-payments.ts`). Both are
+ * money the shop took, and a ledger that listed only one of them disagreed
+ * with Reports by the shop's main revenue stream.
+ */
+export type LedgerRow =
+  | ({ kind: "order" } & ShopOrderListRow)
+  | { kind: "seat"; seat: SeatPaymentRow };
+
+/**
  * One shop-local day of the order ledger: the rows that landed on this page,
  * and the two facts the day's header owns for all of them.
  */
@@ -1080,13 +1418,13 @@ export type OrdersDayGroup = {
   /** The shop-local calendar day. */
   day: CalendarDate;
   /** This day's rows *on this page*, newest first. */
-  orders: ShopOrderListRow[];
-  /** Every order this day holds under the active filter — not just this page's. */
+  orders: LedgerRow[];
+  /** Every row this day holds under the active filter — not just this page's. */
   count: number;
   /**
    * What the day is worth under the active filter — the whole day's, never the
-   * page slice's — in minor units, **one entry per currency the day's orders
-   * were actually charged in**, largest first.
+   * page slice's — in minor units, **one entry per currency the day's money
+   * was actually charged in**, largest first.
    *
    * Almost always exactly one: a shop declares a single `shops.currency` (ADR
    * 20260731-shop-currency) and every new row takes it. But that setting is
@@ -1113,32 +1451,61 @@ function byLargest(a: { currency: string; cents: number }, b: { currency: string
 }
 
 /**
- * **The order index, grouped into the days its rows belong to** — ADR
+ * Every entry of the ledger under the filter, orders and seat payments as one
+ * list: the kind, the id, the instant it belongs to, the name it sorts by, and
+ * what it is worth. Paging, the total and the day subtotals all read this one
+ * union, so they can never disagree about which rows exist.
+ */
+function ledgerEntries(db: DbExecutor, shopId: string, filter: ShopOrderFilter) {
+  const orderEntries = db
+    .select({
+      kind: sql<"order" | "seat">`'order'`.as("kind"),
+      id: sql<string>`${orders.id}`.as("id"),
+      at: sql<Date>`${orders.createdAt}`.as("at"),
+      personName: sql<string>`${people.fullName}`.as("person_name"),
+      currency: sql<string>`${orders.currency}`.as("currency"),
+      // `status = 'void'` contributes 0; everything else contributes what is
+      // left after refunds.
+      netCents:
+        sql<number>`case when ${orders.status} = 'void' then 0 else ${orders.totalCents} - ${orders.refundedCents} end`.as(
+          "net_cents",
+        ),
+    })
+    .from(orders)
+    .innerJoin(people, eq(people.id, orders.personId))
+    .leftJoin(bookings, eq(bookings.id, orders.bookingId))
+    .leftJoin(trips, eq(trips.id, bookings.tripId))
+    .where(shopOrderWhere(shopId, filter));
+  return unionAll(orderEntries, seatLedgerEntries(db, shopId, filter)).as("ledger_entries");
+}
+
+/**
+ * **The Money ledger, grouped into the days its rows belong to** — ADR
  * 20260827-clearwater-surface-language, decision 7. The day owns the date and
  * the day's count and subtotal; a row is a diver, a departure, and an amount,
  * and never repeats what its group already said.
  *
+ * A row is an order or a seat paid online at booking (`LedgerRow`), read
+ * through one union (`ledgerEntries`) and then filled in by kind, one query
+ * per kind whatever the page size.
+ *
  * Three things are worth knowing about the arithmetic, because they are what
  * make a group header honest:
  *
- * - **The page still slices rows, not days.** `listShopOrders` is unchanged
- *   underneath, so "Page 3 of 8" counts orders exactly as it always did and
- *   every existing deep link still lands where it did. Groups are how this
- *   page's rows are *drawn*, not a second pagination unit.
+ * - **The page slices rows, not days.** "Page 3 of 8" counts ledger rows, and
+ *   groups are how this page's rows are *drawn*, not a second pagination unit.
  * - **A day's count and subtotal cover the whole day**, computed by one
- *   aggregate over the same `shopOrderWhere` and the same joins as the rows —
- *   the pager-scope rule of ADR 20260803-one-pagination-model, applied to a
- *   subtotal instead of a total. A day split by a page boundary therefore
- *   states the same subtotal on both pages, and the second one says
- *   `continued` so a reader is never told the same money twice as if it were
- *   new.
+ *   aggregate over the same union as the rows — the pager-scope rule of ADR
+ *   20260803-one-pagination-model, applied to a subtotal instead of a total.
+ *   A day split by a page boundary therefore states the same subtotal on both
+ *   pages, and the second one says `continued` so a reader is never told the
+ *   same money twice as if it were new.
  * - **The subtotal is the money, not the sum of the printed amounts.** A void
  *   order contributes nothing and a refunded one contributes its net, because
  *   the question a shop asks a day's foot is "what came in". A row still
- *   prints the order's own total — the exceptional status beside it is what
- *   says why the column and the subtotal disagree, and the order record is
- *   where the split is spelled out. Revenue proper is the monthly report's,
- *   not this ledger's.
+ *   prints its own amount — the exceptional status beside it is what says why
+ *   the column and the subtotal disagree. Revenue proper is the monthly
+ *   report's, not this ledger's.
  *
  * The days are sliced out of the aggregate by cumulative count rather than by
  * re-deriving each row's local day in JavaScript: the aggregate and the rows
@@ -1152,13 +1519,34 @@ export async function pagedOrdersByDay(
   timeZone: string,
   filter: ShopOrderFilter = {},
   page: { page?: number; pageSize?: number } = {},
-): Promise<{ groups: OrdersDayGroup[]; page: OffsetPage<ShopOrderListRow> }> {
+): Promise<{ groups: OrdersDayGroup[]; page: OffsetPage<LedgerRow> }> {
+  const entries = ledgerEntries(db, shopId, filter);
   // `::text` on the bound zone, not decoration: `AT TIME ZONE` has both a
   // `text` and an `interval` overload, and an untyped parameter leaves Postgres
   // to pick between them.
-  const localDay = sql<string>`to_char(${orders.createdAt} at time zone ${timeZone}::text, 'YYYY-MM-DD')`;
+  const localDay = sql<string>`to_char(${entries.at} at time zone ${timeZone}::text, 'YYYY-MM-DD')`;
   const [paged, perCurrency] = await queryAll(db, [
-    () => listShopOrders(db, shopId, filter, page),
+    () =>
+      offsetPage({
+        page: page.page,
+        pageSize: page.pageSize ?? ORDER_PAGE_SIZE,
+        countRows: async () => {
+          const [counted] = await db.select({ total: count() }).from(entries);
+          return counted?.total ?? 0;
+        },
+        fetchRows: (offset, limit) =>
+          db
+            .select({ kind: entries.kind, id: entries.id })
+            .from(entries)
+            // The diver's name, then the id, break ties on the non-unique
+            // timestamp: the id so a row can never land on two pages (or on
+            // none) just because it shares a second with its neighbour, the
+            // name first so a frozen test clock does not hand the order to a
+            // random uuid (issue #1762).
+            .orderBy(desc(entries.at), asc(entries.personName), desc(entries.id))
+            .limit(limit)
+            .offset(offset),
+      }),
     () =>
       db
         .select({
@@ -1166,32 +1554,18 @@ export async function pagedOrdersByDay(
           // Grouped alongside the day, never summed across: a stored amount is
           // an integer count of *this* currency's minor units, and ¥ and $ do
           // not even share an exponent.
-          currency: orders.currency,
+          currency: entries.currency,
           count: count(),
-          // `status = 'void'` contributes 0; everything else contributes what is
-          // left after refunds. `coalesce` because an empty group sums to null.
-          subtotalCents: sql<
-            number | string
-          >`coalesce(sum(case when ${orders.status} = 'void' then 0 else ${orders.totalCents} - ${orders.refundedCents} end), 0)`,
+          subtotalCents: sql<number | string>`coalesce(sum(${entries.netCents}), 0)`,
         })
-        .from(orders)
-        .innerJoin(people, eq(people.id, orders.personId))
-        .leftJoin(bookings, eq(bookings.id, orders.bookingId))
-        .leftJoin(trips, eq(trips.id, bookings.tripId))
-        .where(shopOrderWhere(shopId, filter))
-        // **By ordinal, not by re-emitting the expression.** Writing
-        // `localDay` a second and third time *looks* like it makes the three
-        // clauses agree by construction, and it is how this was first written
-        // — but drizzle binds a fresh placeholder on every embed, so the select
-        // reads `$1` where the group-by reads `$3`. Postgres matches a
-        // grouped expression to a selected one structurally, and `$1` is not
-        // `$3`, so it refused the whole query: *column "orders.created_at"
-        // must appear in the GROUP BY clause* (42803), pointing at a GROUP BY
-        // that plainly contains it. `1` is the one form that cannot drift from
-        // the column it names.
+        .from(entries)
+        // **By ordinal, not by re-emitting the expression.** drizzle binds a
+        // fresh placeholder on every embed, so a select reading `$1` and a
+        // group-by reading `$3` are different expressions to Postgres (42803).
         .groupBy(sql`1`, sql`2`)
         .orderBy(sql`1 desc`, sql`2`),
   ]);
+  const rows = await ledgerRowsFor(db, shopId, paged.rows);
 
   // Back to one entry per day. Ordered by the day descending above, so the
   // insertion order here *is* the render order and nothing re-sorts by a date
@@ -1209,42 +1583,42 @@ export async function pagedOrdersByDay(
   for (const day of dayTotals) day.subtotals.sort(byLargest);
 
   const offset = (paged.page - 1) * paged.pageSize;
-  const end = offset + paged.rows.length;
+  const end = offset + rows.length;
   const groups: OrdersDayGroup[] = [];
   let taken = 0;
   let cursor = 0;
   for (const day of dayTotals) {
-    const dayCount = Number(day.count);
     const start = cursor;
-    const stop = cursor + dayCount;
+    const stop = cursor + day.count;
     cursor = stop;
     if (stop <= offset) continue;
     if (start >= end) break;
     const slice = Math.min(stop, end) - Math.max(start, offset);
     groups.push({
       day: day.day,
-      orders: paged.rows.slice(taken, taken + slice),
-      count: dayCount,
+      orders: rows.slice(taken, taken + slice),
+      count: day.count,
       subtotals: day.subtotals,
       continued: start < offset,
     });
     taken += slice;
   }
-  // Only reachable if a row was written between the two queries above, which
+  // Only reachable if a row was written between the queries above, which
   // would shift every day's count under the slice arithmetic. The leftover
   // rows are still this page's rows and still have to render, so they take the
-  // day they were created on and a subtotal covering only themselves — a
-  // momentary undercount beats a page that silently drops orders.
-  if (taken < paged.rows.length) {
-    const rest = paged.rows.slice(taken);
-    const day = calendarDateInTimezone(rest[0]?.order.createdAt ?? nowDate(), timeZone);
+  // day they belong to and a subtotal covering only themselves — a momentary
+  // undercount beats a page that silently drops money.
+  if (taken < rows.length) {
+    const rest = rows.slice(taken);
+    const first = rest[0];
+    const at = first ? ledgerRowAt(first) : nowDate();
     const subtotals = new Map<string, number>();
     for (const row of rest) {
-      const net = row.order.status === "void" ? 0 : row.order.totalCents - row.order.refundedCents;
-      subtotals.set(row.order.currency, (subtotals.get(row.order.currency) ?? 0) + net);
+      const { currency, cents } = ledgerRowNet(row);
+      subtotals.set(currency, (subtotals.get(currency) ?? 0) + cents);
     }
     groups.push({
-      day,
+      day: calendarDateInTimezone(at, timeZone),
       orders: rest,
       count: rest.length,
       subtotals: [...subtotals].map(([currency, cents]) => ({ currency, cents })).sort(byLargest),
@@ -1252,7 +1626,58 @@ export async function pagedOrdersByDay(
     });
   }
 
-  return { groups, page: paged };
+  return { groups, page: { ...paged, rows } };
+}
+
+function ledgerRowAt(row: LedgerRow): Date {
+  return row.kind === "order" ? row.order.createdAt : row.seat.paidAt;
+}
+
+function ledgerRowNet(row: LedgerRow): { currency: string; cents: number } {
+  if (row.kind === "seat") {
+    return { currency: row.seat.currency, cents: row.seat.amountCents - row.seat.refundedCents };
+  }
+  const { order } = row;
+  return {
+    currency: order.currency,
+    cents: order.status === "void" ? 0 : order.totalCents - order.refundedCents,
+  };
+}
+
+/**
+ * The page's entries, filled in by kind in the union's order: one query for
+ * the orders and one for the seat payments, whatever the page size.
+ */
+async function ledgerRowsFor(
+  db: DbExecutor,
+  shopId: string,
+  entries: readonly { kind: "order" | "seat"; id: string }[],
+): Promise<LedgerRow[]> {
+  const orderIds = entries.filter((entry) => entry.kind === "order").map((entry) => entry.id);
+  const seatIds = entries.filter((entry) => entry.kind === "seat").map((entry) => entry.id);
+  const [orderRows, seats] = await queryAll(db, [
+    // Both reads run whatever the page holds, so a page costs the same however
+    // its rows divide between the kinds (`query-budgets.test.ts`).
+    () =>
+      db
+        .select({ order: orders, person: people, trip: trips })
+        .from(orders)
+        .innerJoin(people, eq(people.id, orders.personId))
+        .leftJoin(bookings, eq(bookings.id, orders.bookingId))
+        // diveday:allow-deleted-trips: an order names the departure it was raised for, deleted or not.
+        .leftJoin(trips, eq(trips.id, bookings.tripId))
+        .where(and(eq(orders.shopId, shopId), inArray(orders.id, orderIds))),
+    () => seatPaymentsByIds(db, shopId, seatIds),
+  ]);
+  const byOrderId = new Map(orderRows.map((row) => [row.order.id, row]));
+  return entries.flatMap((entry): LedgerRow[] => {
+    if (entry.kind === "seat") {
+      const seat = seats.get(entry.id);
+      return seat ? [{ kind: "seat", seat }] : [];
+    }
+    const row = byOrderId.get(entry.id);
+    return row ? [{ kind: "order", ...row }] : [];
+  });
 }
 
 /**
@@ -1264,6 +1689,11 @@ export async function pagedOrdersByDay(
  * the *same* question that index answers under `?tripId=…&status=open` — one
  * `shopOrderWhere`, one set of joins — so the strip can never claim work the
  * page it opens does not show.
+ *
+ * Seats still on the boat only, by default: the count is the boat's work, and
+ * an open order on a cancelled seat is a refund or a void to decide, not a
+ * payment to chase. The index shows those under their own line
+ * (`seats: "cancelled"`, issue #2550), never dropped from the ledger.
  *
  * `open` and nothing else. Stripe's `open` is precisely "invoiced, not yet
  * paid"; `void`/`uncollectible` are settled decisions and `refunded` money
@@ -1279,8 +1709,38 @@ export async function countOpenTripOrders(
   db: DbExecutor,
   shopId: string,
   tripId: string,
+  seats: "live" | "cancelled" = "live",
 ): Promise<number> {
-  return countTripOrders(db, shopId, tripId, "open");
+  return countTripOrders(db, shopId, tripId, "open", seats);
+}
+
+/**
+ * Open orders on the given seats, in one read keyed by their departure: the
+ * boat's work (`src/db/boat-work.ts`) asks it for every departure on Today and
+ * for the one the trip page opens, so the two can never count a boat's open
+ * orders differently. Keyed by seat rather than by trip so it counts the same
+ * seats as the boat's other work, which leaves out a cancelled seat's unpaid
+ * invoice (layer 1 review, finding 3). One `shopOrderWhere`, the index's own
+ * joins; a trip with none is absent from the map.
+ */
+export async function countOpenOrdersBySeat(
+  db: DbExecutor,
+  shopId: string,
+  bookingIds: readonly string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (bookingIds.length === 0) return counts;
+  const rows = await db
+    .select({ tripId: bookings.tripId, total: count() })
+    .from(orders)
+    .innerJoin(people, eq(people.id, orders.personId))
+    .innerJoin(bookings, eq(bookings.id, orders.bookingId))
+    .where(
+      and(shopOrderWhere(shopId, { status: "open" }), inArray(orders.bookingId, [...bookingIds])),
+    )
+    .groupBy(bookings.tripId);
+  for (const row of rows) if (row.tripId) counts.set(row.tripId, row.total);
+  return counts;
 }
 
 /**
@@ -1295,13 +1755,35 @@ export async function countTripOrders(
   shopId: string,
   tripId: string,
   status: OrderStatus,
+  seats?: "live" | "cancelled",
 ): Promise<number> {
   const [counted] = await db
     .select({ total: count() })
     .from(orders)
     .innerJoin(people, eq(people.id, orders.personId))
     .leftJoin(bookings, eq(bookings.id, orders.bookingId))
-    .where(shopOrderWhere(shopId, { status, tripId }));
+    .where(shopOrderWhere(shopId, { status, tripId, seats }));
+  return counted?.total ?? 0;
+}
+
+/**
+ * How many orders a filter lists, ignoring the page: the Orders index's line
+ * for the other half of a departure's seats ("2 more on cancelled seats")
+ * counts with the filter the list is read with, so the number and the rows
+ * behind its link agree (issue #2550).
+ */
+export async function countShopOrders(
+  db: DbExecutor,
+  shopId: string,
+  filter: ShopOrderFilter,
+): Promise<number> {
+  const [counted] = await db
+    .select({ total: count() })
+    .from(orders)
+    .innerJoin(people, eq(people.id, orders.personId))
+    .leftJoin(bookings, eq(bookings.id, orders.bookingId))
+    .leftJoin(trips, eq(trips.id, bookings.tripId))
+    .where(shopOrderWhere(shopId, filter));
   return counted?.total ?? 0;
 }
 
@@ -1475,6 +1957,11 @@ async function applyOrderUpdate(
     refundOperation?: PaymentEventOperation;
     hostedInvoiceUrl?: string | null;
     invoicePdfUrl?: string | null;
+    /**
+     * Write nothing unless the locked row is still a Stripe invoice: a counter
+     * claim (`recordPaymentOnOpenOrder`) taken since the caller read it wins.
+     */
+    onlyStripeInvoice?: boolean;
   },
   /** Set `noop` when this call wrote nothing: no new refund to record, or a refused transition. */
   noop?: { noop: boolean },
@@ -1482,6 +1969,10 @@ async function applyOrderUpdate(
   return db.transaction(async (tx) => {
     const [current] = await tx.select().from(orders).where(eq(orders.id, order.id)).for("update");
     if (!current) return null;
+    if (patch.onlyStripeInvoice && current.collection !== "stripe_invoice") {
+      if (noop) noop.noop = true;
+      return current;
+    }
 
     // Resolved against `current`, inside the lock. Clamped so a provider
     // reporting more than the order still holds cannot drive
@@ -1677,7 +2168,96 @@ function accountMatches(
   return expectedAccountId === undefined || expectedAccountId === rowAccountId;
 }
 
+/**
+ * What an `invoice.paid` did to the order that owns the invoice.
+ *
+ * - `settled` — Stripe collected it: the order is paid (or already was).
+ * - `counter` — the money came over the counter (`recordPaymentOnOpenOrder`).
+ *   Nothing on the event applies to it, a PaymentIntent least of all; when the
+ *   event is the out-of-band echo of a claim still in flight, this finished it.
+ * - `deferred` — a counter claim is in flight and this is not its echo: the
+ *   diver paid online in the same moment. Stripe is about to refuse the mark
+ *   and the claim will be given back, so the event waits to be delivered again.
+ * - `not_found` — no order here holds this invoice, or the event's account is
+ *   not the order's.
+ */
+export type InvoicePaidOutcome =
+  | { status: "settled"; order: Order }
+  | { status: "counter"; order: Order }
+  | { status: "deferred" }
+  | { status: "not_found" };
+
 /** Called from the Stripe webhook: marks the order that owns this invoice paid and cascades to its booking. */
+export async function applyInvoicePaid(
+  db: AppDb,
+  input: {
+    stripeInvoiceId: string;
+    amountPaidCents: number;
+    expectedAccountId?: string;
+    taxCents?: number | null;
+    /** The invoice's `paid_out_of_band`: true on the echo of a counter mark. */
+    paidOutOfBand?: boolean;
+  },
+  /** Set on the one re-read after a claim changed hands under this call. */
+  reread = false,
+): Promise<InvoicePaidOutcome> {
+  const [found] = await db
+    .select()
+    .from(orders)
+    .where(eq(orders.stripeInvoiceId, input.stripeInvoiceId))
+    .limit(1);
+  if (!found) return { status: "not_found" };
+  if (!accountMatches(input.expectedAccountId, found.stripeAccountId)) {
+    log("order.paid_account_mismatch", "error", {
+      orderId: found.id,
+      shopId: found.shopId,
+      expectedAccountId: input.expectedAccountId,
+      orderAccountId: found.stripeAccountId,
+    });
+    return { status: "not_found" };
+  }
+  let order = found;
+  if (order.collection === "stripe_invoice") {
+    const paid = await applyOrderUpdate(db, order, {
+      status: "paid",
+      amountPaidCents: input.amountPaidCents,
+      onlyStripeInvoice: true,
+      ...(input.taxCents === null || input.taxCents === undefined
+        ? {}
+        : { taxCents: input.taxCents }),
+    });
+    if (!paid) return { status: "not_found" };
+    if (paid.collection === "stripe_invoice") return { status: "settled", order: paid };
+    // Claimed for counter money since the read above.
+    order = paid;
+  }
+  if (order.status !== "open") return { status: "counter", order };
+  if (!input.paidOutOfBand) {
+    if (reread || !isStaleCounterClaim(order, nowDate())) return { status: "deferred" };
+    // The call that claimed it died before Stripe answered; Stripe says the
+    // diver paid. Give the claim back and book what Stripe collected.
+    await releaseCounterClaim(db, order);
+    return applyInvoicePaid(db, input, true);
+  }
+  const finished = await db.transaction(async (tx) => {
+    const [current] = await tx.select().from(orders).where(eq(orders.id, order.id)).for("update");
+    if (!current) return null;
+    if (current.status !== "open" || current.collection === "stripe_invoice") return current;
+    return settleCounterClaim(tx, current, current.collection);
+  });
+  if (!finished) return { status: "not_found" };
+  if (finished.collection === "stripe_invoice") {
+    // Given back in between; read once more, as Stripe money.
+    return reread ? { status: "deferred" } : applyInvoicePaid(db, input, true);
+  }
+  return { status: "counter", order: finished };
+}
+
+/**
+ * {@link applyInvoicePaid} for a caller that wants the order: the row as it
+ * now stands, or null when no order here holds the invoice or the event must
+ * wait.
+ */
 export async function markOrderPaidByInvoiceId(
   db: AppDb,
   stripeInvoiceId: string,
@@ -1685,26 +2265,13 @@ export async function markOrderPaidByInvoiceId(
   expectedAccountId?: string,
   taxCents?: number | null,
 ): Promise<Order | null> {
-  const [order] = await db
-    .select()
-    .from(orders)
-    .where(eq(orders.stripeInvoiceId, stripeInvoiceId))
-    .limit(1);
-  if (!order) return null;
-  if (!accountMatches(expectedAccountId, order.stripeAccountId)) {
-    log("order.paid_account_mismatch", "error", {
-      orderId: order.id,
-      shopId: order.shopId,
-      expectedAccountId,
-      orderAccountId: order.stripeAccountId,
-    });
-    return null;
-  }
-  return applyOrderUpdate(db, order, {
-    status: "paid",
+  const outcome = await applyInvoicePaid(db, {
+    stripeInvoiceId,
     amountPaidCents,
-    ...(taxCents === null || taxCents === undefined ? {} : { taxCents }),
+    expectedAccountId,
+    taxCents,
   });
+  return outcome.status === "settled" || outcome.status === "counter" ? outcome.order : null;
 }
 
 /**
@@ -1723,6 +2290,9 @@ export async function recordOrderPaymentIntent(
     .where(
       and(
         eq(orders.stripeInvoiceId, input.stripeInvoiceId),
+        // Never a counter order, whatever the caller read: the money did not
+        // come through Stripe, and the row's constraint forbids it anyway.
+        eq(orders.collection, "stripe_invoice"),
         isNull(orders.stripePaymentIntentId),
         ...(input.expectedAccountId === undefined
           ? []
@@ -1994,7 +2564,9 @@ async function claimOrderRefund(
     // removes that backstop and is what makes this check load-bearing rather
     // than belt-and-braces (issue #699 security review). It belongs on the
     // stuck-payment-operations panel, where a human reconciles it against the
-    // Stripe dashboard, never behind a button that reverses more money.
+    // Stripe dashboard, never behind a button that reverses more money. The
+    // same goes for one marked unanswered: the refund was sent, no answer came
+    // back, and Stripe may have made it (`UNANSWERED_BY_STRIPE`).
     const [settledByStripe] = await tx
       .select({ id: paymentOperationIntents.id })
       .from(paymentOperationIntents)
@@ -2004,7 +2576,7 @@ async function claimOrderRefund(
           eq(paymentOperationIntents.orderId, order.id),
           eq(paymentOperationIntents.kind, "refund"),
           eq(paymentOperationIntents.status, "started"),
-          isNotNull(paymentOperationIntents.stripeObjectId),
+          awaitingStripeReconciliation(),
         ),
       )
       .limit(1);
@@ -2070,6 +2642,12 @@ export async function refundOrder(
     idempotencyKeyFor(intent.id),
     options.amountCents,
   );
+  if (result.status === "unanswered") {
+    // Never `failed`: the reversal may exist, and a failed intent is one
+    // `claimOrderRefund` would retry past with a fresh idempotency key.
+    await markPaymentOperationUnanswered(db, intent.id);
+    return { status: "needs_reconciliation" };
+  }
   if (result.status !== "refunded") {
     await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
     return { status: "failed" };

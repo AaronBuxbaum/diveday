@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { findTransactionFanOut } from "./check-db-concurrency.mjs";
+import {
+  findMisplacedRealServerSuites,
+  findParentUpdateLocks,
+  findTransactionFanOut,
+} from "./check-db-concurrency.mjs";
 
 const lines = (findings) => findings.map((finding) => finding.line);
 
@@ -207,5 +211,95 @@ describe("the scanner's own blind spots", () => {
     `);
 
     expect(findings).toEqual([]);
+  });
+});
+
+describe("a real-Postgres suite", () => {
+  const suite = `
+    import { describePostgres, postgresTestDb } from "@/test/postgres";
+    describePostgres("races", () => {
+      it("serializes", async () => {
+        const pg = await postgresTestDb();
+      });
+    });
+  `;
+
+  it("is refused in a file the real-postgres job never selects", () => {
+    // The 2026-10-13 shape: seat-locks.test.ts held two describePostgres races
+    // that skipped in every unit shard and were never picked up by the job.
+    expect(lines(findMisplacedRealServerSuites("src/db/seat-locks.test.ts", suite))).toEqual([
+      2, 3, 5,
+    ]);
+  });
+
+  it("is refused outside src/db even with the right suffix", () => {
+    expect(
+      lines(findMisplacedRealServerSuites("src/lib/thing.postgres.test.ts", suite)),
+    ).toHaveLength(3);
+  });
+
+  it("leaves alone a *.postgres.test.ts in src/db, and the harness that defines it", () => {
+    expect(findMisplacedRealServerSuites("src/db/seat-locks.postgres.test.ts", suite)).toEqual([]);
+    expect(findMisplacedRealServerSuites("src/test/postgres.ts", suite)).toEqual([]);
+  });
+
+  it("leaves alone a comment that names it", () => {
+    const comment = `
+      // describePostgres lives in seat-locks.postgres.test.ts
+      /**
+       * See postgresTestDb.
+       */
+    `;
+    expect(findMisplacedRealServerSuites("src/db/seat-locks.test.ts", comment)).toEqual([]);
+  });
+});
+
+describe("a lock on a shops or people row", () => {
+  it("is refused for update, on one line or across a chain", () => {
+    const findings = findParentUpdateLocks(`
+      await tx.select({ id: shops.id }).from(shops).where(eq(shops.id, id)).for("update");
+      const [person] = await tx
+        .select({ id: people.id })
+        .from(people)
+        .where(eq(people.id, personId))
+        .limit(1)
+        .for("update");
+    `);
+    expect(lines(findings)).toEqual([2, 8]);
+  });
+
+  it("leaves alone no key update, and a lock on any other table", () => {
+    const findings = findParentUpdateLocks(`
+      await tx.select().from(shops).where(eq(shops.id, id)).for("no key update");
+      await tx.select().from(bookings).where(eq(bookings.id, id)).for("update");
+    `);
+    expect(findings).toEqual([]);
+  });
+
+  it("does not reach past the statement's end into the next one", () => {
+    const findings = findParentUpdateLocks(`
+      const shop = await tx.select().from(shops).where(eq(shops.id, id));
+      await tx.select().from(trips).where(eq(trips.id, tripId)).for("update");
+    `);
+    expect(findings).toEqual([]);
+  });
+
+  it("accepts a stated reason inside the statement, and only a stated one", () => {
+    const reasoned = findParentUpdateLocks(`
+      const locked = await tx
+        .select()
+        .from(people)
+        // diveday:allow-update-lock: the merge repoints every key at the survivor.
+        .for("update");
+    `);
+    expect(reasoned).toEqual([]);
+    const bare = findParentUpdateLocks(`
+      const locked = await tx
+        .select()
+        .from(people)
+        // diveday:allow-update-lock:
+        .for("update");
+    `);
+    expect(lines(bare)).toEqual([6]);
   });
 });

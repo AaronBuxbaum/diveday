@@ -10,8 +10,8 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
-import { canPersonCallDayBlowout } from "@/db/authz";
-import { type BlowoutDiverState, getTripBlowout } from "@/db/blowouts";
+import { canPersonCallDayBlowout, canPersonRefund } from "@/db/authz";
+import type { BlowoutDiverState } from "@/db/blowouts";
 import type { PaymentStatus } from "@/db/schema";
 import { getTripRoster, getTripWithBooked } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
@@ -20,10 +20,13 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { callBlowoutAction, resumeBlowoutAction } from "./actions";
+import { HeldRefundsCard } from "./_components/HeldRefundsCard";
+import { blowoutTitleKey, readBlowout } from "./_lib/title";
+import { callBlowoutAction, releaseBlowoutRefundsAction, resumeBlowoutAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -34,11 +37,27 @@ import { callBlowoutAction, resumeBlowoutAction } from "./actions";
 // 20260804-instant-navigation.
 export const instant = true;
 
-// One title for the confirm and for either cause on the record: a run's
-// cancellation is not weather (review, 2026-10-12).
-export const metadata: Metadata = {
-  title: "Departure called off — DiveDay",
-};
+/**
+ * Runtime metadata on an instant route. It reads the record only behind
+ * `requireShopSurface`, as the page does: a title read before the tenant gate
+ * would tell a stranger whether a guessed departure was called off (the lesson
+ * of issue 1569). The page's own request reads keep the route dynamic, so the
+ * title streams with the body and the static shell still paints first.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ shopSlug: string; tripId: string }>;
+}): Promise<Metadata> {
+  const { shopSlug, tripId } = await params;
+  if (!uuidParam(tripId)) notFound();
+  const { db, shop } = await requireShopSurface(shopSlug);
+  const [locale, blowout] = await Promise.all([
+    requestLocale(shop.defaultLocale),
+    readBlowout(db, shop.id, tripId),
+  ]);
+  return { title: `${staffTranslator(locale)(blowoutTitleKey(blowout))} — DiveDay` };
+}
 
 /**
  * Between an offered departure's title and its date, glued to the title by a
@@ -51,6 +70,8 @@ const NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey
   resumed: { tone: "success", key: "blowout.notices.resumed" },
   departed: { tone: "danger", key: "blowout.notices.departed" },
   error: { tone: "danger", key: "blowout.notices.error" },
+  "refunds-released": { tone: "success", key: "blowout.notices.refundsReleased" },
+  "refund-not-authorized": { tone: "danger", key: "blowout.notices.refundNotAuthorized" },
 };
 
 const PAYMENT_KEY: Record<PaymentStatus, StaffMessageKey> = {
@@ -95,11 +116,12 @@ export default async function BlowoutPage({
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
   const { db, shop, session } = await requireShopSurface(shopSlug);
-  const [locale, trip, blowout, canCallDay] = await Promise.all([
+  const [locale, trip, blowout, canCallDay, mayRefund] = await Promise.all([
     requestLocale(shop.defaultLocale),
     getTripWithBooked(db, shop.id, tripId),
-    getTripBlowout(db, shop.id, tripId),
+    readBlowout(db, shop.id, tripId),
     canPersonCallDayBlowout(db, shop.id, session.user.personId),
+    canPersonRefund(db, shop.id, session.user.personId),
   ]);
   if (!trip) notFound();
   const t = staffTranslator(locale);
@@ -116,13 +138,7 @@ export default async function BlowoutPage({
       // (principle 10, issue #823).
       eyebrow={t("trips.surfaces.trip")}
       eyebrowHref={tripPath}
-      title={
-        blowout
-          ? blowout.cause === "run_ended"
-            ? t("blowout.record.titleRunEnded")
-            : t("blowout.record.title")
-          : t("blowout.confirm.title")
-      }
+      title={t(blowoutTitleKey(blowout))}
       meta={
         <div className="flex flex-col gap-1 text-sm text-muted">
           <span className="font-medium text-foreground">{trip.title}</span>
@@ -157,7 +173,9 @@ export default async function BlowoutPage({
         </div>
         <SectionCard as="div" padding="lg" className="max-w-2xl">
           <p className="text-sm">{t("blowout.confirm.lead", { tripTitle: trip.title })}</p>
-          <p className="mt-3 text-sm text-muted">{t("blowout.confirm.moneyNote")}</p>
+          <p className="mt-3 text-sm text-muted">
+            {t(mayRefund ? "blowout.confirm.moneyNote" : "blowout.confirm.moneyNoteHeld")}
+          </p>
           {departed || !canCallDay ? null : (
             // The whole morning is usually what the weather closes (ADR
             // 20261009-day-weather-call); calling the boats one at a time
@@ -239,6 +257,12 @@ export default async function BlowoutPage({
       <div className="mt-6">
         {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
       </div>
+      <HeldRefundsCard
+        count={divers.filter((diver) => isCapturedPaymentStatus(diver.paymentStatus)).length}
+        mayRefund={mayRefund}
+        releaseAction={releaseBlowoutRefundsAction.bind(null, shopSlug, tripId)}
+        t={t}
+      />
       <div className="grid gap-4 sm:grid-cols-3">
         <ShopStat
           label={t("blowout.record.notified")}

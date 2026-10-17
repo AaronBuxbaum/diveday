@@ -26,6 +26,7 @@ export function OfflineManifestList({
   list,
   message,
   discardNotice,
+  readFailed = false,
 }: {
   t: OfflineManifestTranslator;
   shellVersionCopy: ComponentProps<typeof OfflineShellVersionBanner>["copy"];
@@ -33,6 +34,11 @@ export function OfflineManifestList({
   list: OfflineManifestEnvelope[] | null;
   message: string;
   discardNotice: ReactNode;
+  /**
+   * The store read threw (dive-domain review D4): copies may well exist, so
+   * the page says it could not open them, never that nothing is saved.
+   */
+  readFailed?: boolean;
 }) {
   const savedTrips = list ?? [];
   // Derived once, for the header's count, the header's shop name and the rows
@@ -77,7 +83,9 @@ export function OfflineManifestList({
         title={
           savedTrips.length > 0
             ? t("shared.offlineManifest.list.headingWithTrips")
-            : t("shared.offlineManifest.list.headingEmpty")
+            : readFailed
+              ? t("shared.offlineManifest.list.readFailedHeading")
+              : t("shared.offlineManifest.list.headingEmpty")
         }
         description={oneShopName ?? undefined}
         meta={
@@ -176,7 +184,9 @@ export function OfflineManifestList({
             <DiveDayIcon name="empty" className="size-5 text-primary" />
           </div>
           <p className="mx-auto mt-4 max-w-md text-muted">
-            {t("shared.offlineManifest.list.emptyHint")}
+            {readFailed
+              ? t("shared.offlineManifest.single.readFailedHint")
+              : t("shared.offlineManifest.list.emptyHint")}
           </p>
           {/* A door, not a dead end (UX review 2026-10-10, item 33). `/shop`
               lands a signed-in staffer on their own Today (`src/proxy.ts`)

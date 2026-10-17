@@ -79,6 +79,11 @@ export {
   listFitAdjustedReturns,
   listGearDueBack,
   listOverdueGearReservations,
+  listTripUnitsToCheckIn,
+  returnTripGearUnit,
+  TRIP_UNIT_RETURN_OUTCOMES,
+  type TripUnitReturnOutcome,
+  type TripUnitToCheckIn,
 } from "./gear-returns";
 export {
   type GearServiceEventRow,

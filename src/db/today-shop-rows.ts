@@ -1,14 +1,20 @@
 import {
   failedPhotoDeletionDetailText,
+  incidentDraftStartedWhen,
+  incidentReportUnfiledSubjectText,
   mediaDeletionKindText,
   openDataSettingsActionText,
   openInboxActionText,
+  openIncidentReportActionText,
   openOrderActionText,
   openOrdersActionText,
+  openPaymentSettingsActionText,
   openReviewsActionText,
   openTripActionText,
   paymentDisputeDetailText,
   paymentDisputeSubjectText,
+  paymentsRestrictedDetailText,
+  paymentsRestrictedSubjectText,
   reviewsPendingSubjectText,
   stuckOperationKindText,
   stuckPaymentOperationDetailText,
@@ -22,8 +28,8 @@ import type { TodayRowsContext } from "./today-rows-context";
  * The rows about the shop rather than one departure: the payment rows' invoice controls, the owner's platform chores, reviews awaiting moderation and unanswered messages.
  */
 export function pushShopRows(actions: TodayAction[], ctx: TodayRowsContext): void {
-  const { shopSlug, timeZone, locale, t } = ctx;
-  const { opsAlerts, reviewsAwaiting, unanswered, openOrders } = ctx.wave;
+  const { shopSlug, timeZone, locale, t, now } = ctx;
+  const { opsAlerts, reviewsAwaiting, unanswered, openOrders, unfiledIncidentDrafts } = ctx.wave;
   // A payment row only gets the inline "copy link"/"resend invoice" control
   // once we know the booking was actually invoiced through Stripe: a diver
   // who owes at the counter has no invoice to act on, and a shop with no
@@ -55,7 +61,26 @@ export function pushShopRows(actions: TodayAction[], ctx: TodayRowsContext): voi
   // Orders, deletions to Settings' Data group — and each row's `href` points at
   // wherever its panel now is.
   if (opsAlerts) {
-    const [stuckOperations, pendingDeletions, owedRefunds, openDisputes] = opsAlerts;
+    const [stuckOperations, pendingDeletions, owedRefunds, openDisputes, restrictedSince] =
+      opsAlerts;
+
+    // Stripe turned card payments off (batch 6 item 8). One row while they
+    // stay off: bookings already fall back to paying at the shop, so this is
+    // the standing reminder that the owner has something to answer in
+    // Stripe, beside the one email they got when it happened.
+    if (restrictedSince) {
+      actions.push({
+        id: "payments-restricted",
+        kind: "payments_restricted",
+        urgency: "now",
+        subject: paymentsRestrictedSubjectText(t),
+        context: null,
+        detail: paymentsRestrictedDetailText(t, formatShortDate(restrictedSince, locale, timeZone)),
+        actionLabel: openPaymentSettingsActionText(t),
+        href: `/shop/${shopSlug}/settings#money`,
+        dueAt: null,
+      });
+    }
 
     // A diver's bank is taking a charge back (ADR
     // 20261009-stripe-reversals-reach-diveday). One row per undecided dispute,
@@ -163,6 +188,33 @@ export function pushShopRows(actions: TodayAction[], ctx: TodayRowsContext): voi
     )) {
       actions.push(owed);
     }
+  }
+
+  // Incident reports started and never filed (safety sheet 2026-10-15, item
+  // 3): an injury written up on the boat can sit as a private draft while the
+  // insurer's notice window runs, and drafts showed only on the trip page and
+  // the Safety tab. One line for all of them, naming who started the oldest and
+  // when, and opening that draft. The wave reads them for owners and managers
+  // only (`listUnfiledIncidentDrafts`), the two roles that may already read
+  // every report; undated, like every row here.
+  const oldestDraft = unfiledIncidentDrafts[0];
+  if (oldestDraft) {
+    actions.push({
+      id: "incident-reports:unfiled",
+      kind: "incident_report_unfiled",
+      urgency: "now",
+      subject: incidentReportUnfiledSubjectText(t, {
+        count: unfiledIncidentDrafts.length,
+        name: oldestDraft.createdByName,
+        ...incidentDraftStartedWhen(oldestDraft.createdAt, now, locale, timeZone),
+      }),
+      context: null,
+      // The count, the writer and the day are the row.
+      detail: "",
+      actionLabel: openIncidentReportActionText(t),
+      href: `/shop/${shopSlug}/trips/${oldestDraft.tripId}/incidents/${oldestDraft.id}`,
+      dueAt: null,
+    });
   }
 
   // Reviews waiting on moderation. This used to be a count badge on a nav row;

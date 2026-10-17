@@ -122,7 +122,7 @@ export class EmailStack extends cdk.Stack {
       // Bounce and complaint notifications arrive through the configuration
       // set's SNS destination above and land on the notification row and the
       // shop's dashboard. SES's default is to *also* forward each one as an
-      // email to the sender address, which is noreply@ses.dive.day: a mailbox
+      // email to the sender address, which is notifications@ses.dive.day: a mailbox
       // nobody reads, on a subdomain that receives no mail. Off, so the one
       // record of a bounce is the one the app keeps.
       feedbackForwarding: false,
@@ -204,6 +204,10 @@ export class EmailStack extends cdk.Stack {
           id: "expire-inbound-mail",
           enabled: true,
           expiration: cdk.Duration.days(INBOUND_MAIL_RETENTION_DAYS),
+          // SES writes each message in one PUT, so this should never match.
+          // It is here so a part left by anything else is not billed forever,
+          // invisible to `aws s3 ls`, as every other bucket already guards.
+          abortIncompleteMultipartUploadAfter: cdk.Duration.days(1),
         },
       ],
     });

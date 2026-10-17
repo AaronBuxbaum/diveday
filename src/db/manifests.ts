@@ -19,17 +19,27 @@ import {
   RETRACTION_SUPERSEDED,
   type RollCallCheckpoint,
   type RollCallRecord,
+  rollCallCheckpointOrdinal,
   rollCallCheckpoints,
   rollCallNoteAllowed,
   standingResultMeansSailed,
   type TripManifest,
 } from "@/lib/manifests";
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
+import type { ParticipantType } from "@/lib/participant-types";
+import { seatRefusal } from "@/lib/participant-types";
+import {
+  type CountedAboardBlocked,
+  type ReadinessSnapshot,
+  readinessSnapshotOf,
+} from "@/lib/roll-call-readiness";
 import { runningLateShown } from "@/lib/running-late";
+import type { TrainingMarkState } from "@/lib/training-mark";
 import { medicalWaiverMark } from "@/lib/waivers";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
+import { captureDepartureBoatSafety } from "./boat-safety";
 import { listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { listTripGearAssignments } from "./gear";
@@ -49,8 +59,10 @@ import {
 } from "./schema";
 import { lockSeatDeparture } from "./seat-locks";
 import { getShopById } from "./shops";
+import { resolveTrainingMarks } from "./training-mark-resolve";
 import { crewClashes } from "./trips-crew";
 import { liveTrip } from "./trips-live";
+import { heldSeatCounts, sellableCapacity } from "./trips-queries";
 import { getTripWithBooked } from "./trips-record";
 import { getTripRoster } from "./trips-roster";
 import { welcomeCueInputsByBooking } from "./welcome-cues";
@@ -554,6 +566,162 @@ async function standingAfterDiveResults(db: DbExecutor, shopId: string, tripIds:
 }
 
 /**
+ * **The seats the crew have recorded not back aboard and not counted since**,
+ * by trip (issue #2404): the divers a departure page must not call finished.
+ *
+ * A seat is in the set when its newest word at some after-dive checkpoint is
+ * `not_boarded` ("did not come back") and no later after-dive checkpoint has
+ * its newest word `boarded`. The latest checkpoint speaks, the rule
+ * `homewardCheckpointGap` and Today's missing-diver row (`listRollCallGaps`,
+ * `src/db/today.ts`) keep too: a diver missing after dive 1 and counted aboard
+ * after dive 2 is back, and one missing after dive 1 whom nobody has counted
+ * since is still not.
+ *
+ * - **Newest event per seat and checkpoint wins, and a newest `cleared` drops
+ *   that checkpoint out**, so a mis-tapped "not back" the crew retracted, or a
+ *   correction to `boarded`, leaves nobody here. The same supersession every
+ *   roll-call reader in this file applies.
+ * - **The dock is never read.** A `not_boarded` there means "never left"
+ *   (`standingResultMeansSailed`), benign, and never carried forward as
+ *   missing.
+ * - **A cancelled booking is nobody**, the guard the siblings carry.
+ * - **Divers only.** Missing crew is the crew roll call's
+ *   (`listDepartureCrewRollCallByTrip`) and still raises its own row.
+ *
+ * One grouped query for the trips asked about, never one per seat.
+ */
+export async function listUnaccountedForByTrip(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Map<string, Set<string>>> {
+  const byTrip = new Map<string, Set<string>>();
+  if (tripIds.length === 0) return byTrip;
+  const rows = await db
+    .select({
+      tripId: rollCallEvents.tripId,
+      bookingId: rollCallEvents.bookingId,
+      checkpoint: rollCallEvents.checkpoint,
+      status: rollCallEvents.status,
+    })
+    .from(rollCallEvents)
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
+    )
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        inArray(rollCallEvents.tripId, [...tripIds]),
+        ne(rollCallEvents.checkpoint, "departure"),
+      ),
+    )
+    .orderBy(
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
+    );
+  // Newest first, so the first row seen per seat and checkpoint is that
+  // checkpoint's standing result; a `cleared` newest drops it out.
+  const seen = new Set<string>();
+  const latest = new Map<string, { tripId: string; missing: number; back: number }>();
+  for (const row of rows) {
+    const key = `${row.bookingId}\u0000${row.checkpoint}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    // The query already dropped the departure checkpoint; anything that is not
+    // an after-dive one has no ordinal and is not read.
+    if (row.status === "cleared" || !row.checkpoint.startsWith("after_dive_")) continue;
+    const ordinal = rollCallCheckpointOrdinal(row.checkpoint as RollCallCheckpoint);
+    if (!Number.isFinite(ordinal)) continue;
+    const seat = latest.get(row.bookingId) ?? { tripId: row.tripId, missing: 0, back: 0 };
+    if (row.status === "not_boarded") seat.missing = Math.max(seat.missing, ordinal);
+    else seat.back = Math.max(seat.back, ordinal);
+    latest.set(row.bookingId, seat);
+  }
+  for (const [bookingId, seat] of latest) {
+    if (seat.missing <= seat.back) continue;
+    const unaccounted = byTrip.get(seat.tripId) ?? new Set<string>();
+    unaccounted.add(bookingId);
+    byTrip.set(seat.tripId, unaccounted);
+  }
+  return byTrip;
+}
+
+/**
+ * **The seats counted aboard while blocked**, per departure and booking, for a
+ * finished departure's record (issue #2414): "Sailed · counted aboard at after
+ * dive 1 while blocked: no certification on file".
+ *
+ * Read off the snapshot each `boarded` event keeps (`readiness_status`), never
+ * recomputed: readiness today says nothing about readiness at the rail. A
+ * record, not a gate; nothing refuses or allows anything on it.
+ *
+ * - **Only a standing word counts.** The newest event per seat and checkpoint
+ *   wins, so a count the crew corrected to `not_boarded` or retracted
+ *   (`cleared`) leaves nothing here, the supersession every roll-call reader
+ *   applies.
+ * - **The earliest checkpoint a seat was counted blocked at** is the one said,
+ *   in checkpoint order, so the line names where the trouble started.
+ * - **A cancelled booking is nobody.**
+ *
+ * One grouped query for the trips asked about.
+ */
+export async function listCountedAboardBlockedByTrip(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Map<string, Map<string, CountedAboardBlocked>>> {
+  const byTrip = new Map<string, Map<string, CountedAboardBlocked>>();
+  if (tripIds.length === 0) return byTrip;
+  const rows = await db
+    .select({
+      tripId: rollCallEvents.tripId,
+      bookingId: rollCallEvents.bookingId,
+      checkpoint: rollCallEvents.checkpoint,
+      status: rollCallEvents.status,
+      readinessStatus: rollCallEvents.readinessStatus,
+      readinessBlockers: rollCallEvents.readinessBlockers,
+    })
+    .from(rollCallEvents)
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, rollCallEvents.bookingId), ne(bookings.status, "cancelled")),
+    )
+    .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, [...tripIds])))
+    .orderBy(
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
+    );
+  const seen = new Set<string>();
+  const earliest = new Map<
+    string,
+    { ordinal: number; tripId: string; blocked: CountedAboardBlocked }
+  >();
+  for (const row of rows) {
+    const key = `${row.bookingId}\u0000${row.checkpoint}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (row.status !== "boarded" || row.readinessStatus !== "blocked") continue;
+    const ordinal = rollCallCheckpointOrdinal(row.checkpoint as RollCallCheckpoint);
+    const held = earliest.get(row.bookingId);
+    if (held && held.ordinal <= ordinal) continue;
+    earliest.set(row.bookingId, {
+      ordinal,
+      tripId: row.tripId,
+      blocked: { checkpoint: row.checkpoint, blockers: row.readinessBlockers ?? [] },
+    });
+  }
+  for (const [bookingId, { tripId, blocked }] of earliest) {
+    const seats = byTrip.get(tripId) ?? new Map<string, CountedAboardBlocked>();
+    seats.set(bookingId, blocked);
+    byTrip.set(tripId, seats);
+  }
+  return byTrip;
+}
+
+/**
  * **One seat's own departure result**, for the diver's own page rather than a
  * staff roster: `boarded`, `not_boarded`, or null where the crew recorded
  * nothing at all.
@@ -864,6 +1032,14 @@ export async function listDepartureBoardedBookingIds(
  * accidentally edit out of sync. Every active booking starts from the trip
  * roster and is joined with the shared readiness, fit, and roll-call records.
  */
+/** A standing training mark as the manifest prints it; null for none, or one that no longer stands. */
+function trainingDiveOf(
+  mark: TrainingMarkState | undefined,
+  instructorAboard: boolean,
+): TripManifest["divers"][number]["trainingDive"] {
+  return mark?.valid ? { courseTitle: mark.enrollmentCourseTitle, instructorAboard } : null;
+}
+
 export async function getTripManifests(
   db: AppDb,
   shopId: string,
@@ -945,6 +1121,52 @@ export async function getTripManifests(
   const riderHoldByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, row.riderMedicalHold] as const),
   );
+  // Who cleared a training mark while its course forms were still owed (issue
+  // #2275): that clear relaxed a boarding block, so the crew sees who did it.
+  // Read only when such a seat is aboard.
+  const clearedByIds = [
+    ...new Set(
+      roster
+        .map(({ booking }) => booking.trainingClearedByPersonId)
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const clearedByName = new Map(
+    clearedByIds.length === 0
+      ? []
+      : (
+          await db
+            .select({ id: people.id, name: people.fullName })
+            .from(people)
+            // diveday:allow-deleted-people: who cleared the mark, kept as history.
+            .where(and(eq(people.shopId, shopId), inArray(people.id, clearedByIds)))
+        ).map((row) => [row.id, row.name] as const),
+  );
+  // The training marks that stand on this departure (issue #2275), through the
+  // one resolver every reader shares, and whether an instructor is on its crew
+  // now: the manifest names the course a dive counts toward and warns when
+  // nobody aboard teaches it. Read only when a marked seat is aboard.
+  const trainingMarks = await resolveTrainingMarks(
+    db,
+    shopId,
+    roster.flatMap(({ booking, person }) =>
+      booking.trainingEnrollmentBookingId === null
+        ? []
+        : [
+            {
+              bookingId: booking.id,
+              enrollmentBookingId: booking.trainingEnrollmentBookingId,
+              seat: {
+                personId: person.id,
+                participantType: booking.participantType as ParticipantType,
+                onCourseSession: trip.courseId !== null,
+                departureStartsAt: trip.startsAt,
+              },
+            },
+          ],
+    ),
+  );
+  const instructorAboard = crew.some((member) => member.roles.includes("instructor"));
   // Buddy teams, reduced to the members who are actually aboard. A member
   // whose seat was since cancelled stays listed (and dissolvable) on the teams
   // panel, but is dropped here: a cancelled seat is nobody (ADR
@@ -1010,8 +1232,15 @@ export async function getTripManifests(
     // path refuses, so this is the only place the boat being over gets said.
     // Capped at the boat's certificate (#2321): over the certificate is over.
     capacity: trip.sellableCapacity,
+    // The certificate itself, so the head count can say when the people the
+    // crew counted aboard pass it (batch 6, item 2).
+    certifiedPassengers: trip.certifiedPassengers,
+    certifiedTotalPersons: trip.certifiedTotalPersons,
     // Printed beside souls on board, so a practice sheet is never read as a boat.
     isRehearsal: trip.isRehearsal,
+    exceedsNoDecoLimits: trip.exceedsNoDecoLimits,
+    // The dock-rider form stays shut on a cancelled departure (#2394).
+    cancelled: trip.status === "cancelled",
   };
   const diverInputs = roster.map(({ booking, person }) => {
     return {
@@ -1027,7 +1256,19 @@ export async function getTripManifests(
       emergencyContactPhone: person.emergencyContactPhone,
       readiness: readinessByBooking.get(booking.id),
       identityClaim: booking.identityUnconfirmedAt
-        ? { bookedAs: booking.identityBookedAs, matchedBy: booking.identityMatchedBy }
+        ? {
+            bookedAs: booking.identityBookedAs,
+            matchedBy: booking.identityMatchedBy,
+            // The desk's contact for the person on the seat (issue #2145),
+            // shown in place of the matched record's, which is withheld.
+            heldEmergencyContact:
+              booking.heldEmergencyContactName && booking.heldEmergencyContactPhone
+                ? {
+                    name: booking.heldEmergencyContactName,
+                    phone: booking.heldEmergencyContactPhone,
+                  }
+                : null,
+          }
         : undefined,
       // The shop's own catalog. Without it the rail and the offline snapshot
       // read a dropped piece as an ordinary piece to fetch, and size a
@@ -1042,21 +1283,42 @@ export async function getTripManifests(
       nitroxRequested: booking.wantsNitrox && certified.has(person.id),
       medicalWaiver: medicalByBooking.get(booking.id) ?? null,
       riderMedicalHold: riderHoldByBooking.get(booking.id) ?? null,
-      // Null/false whenever the shop holds no date of birth, so the captain's
-      // list stays quiet rather than showing "unknown" down the whole boat.
+      trainingDive: trainingDiveOf(trainingMarks.get(booking.id), instructorAboard),
+      trainingMarkCleared: booking.trainingClearedAt
+        ? {
+            reason: booking.trainingClearedReason ?? "forms_owed",
+            byName: booking.trainingClearedByPersonId
+              ? (clearedByName.get(booking.trainingClearedByPersonId) ?? null)
+              : null,
+          }
+        : null,
+      // Null whenever the shop holds no date of birth, so the captain's list
+      // stays quiet rather than showing "unknown" down the whole boat.
       age: person.dateOfBirth ? ageOnDate(person.dateOfBirth, tripDate) : null,
-      minor: person.dateOfBirth ? isMinorOnDate(person.dateOfBirth, tripDate) : false,
+      // A date of birth decides; with none, the seat's "Under 18" stamp does,
+      // the same rule as the roster's Minor badge (roster-seat.ts).
+      minor: person.dateOfBirth
+        ? isMinorOnDate(person.dateOfBirth, tripDate)
+        : Boolean(booking.minorDeclaredAt),
       birthday: birthdayCallout(person.dateOfBirth, tripDate),
       // Null unless the diver said so, and null again an hour after this boat
       // is home — the whole expiry lives in `welcomeCueFor`, so nothing here
       // has to remember to stop rendering it.
       welcomeCue: welcomeCueFor({
-        ...(welcomeInputs.get(booking.id) ?? { sharedAt: null, lastDivedAt: null }),
+        ...(welcomeInputs.get(booking.id) ?? {
+          sharedAt: null,
+          lastDivedAt: null,
+          nonDiver: false,
+          diveDayCount: null,
+        }),
         tripEndsAt: trip.endsAt,
       }),
       depthAdvisory: depthByBooking.get(booking.id),
       hotelPickupLocation: booking.hotelPickupLocation,
       pickupTime: booking.pickupTime,
+      // The lunch note (item 56): where the crew actually look, as well as
+      // Prep. A meal preference for the galley, never an allergy record.
+      dietaryNote: booking.dietaryNote,
       // The diver's own "running late" (#2319), cleared from an arrived or
       // released seat the way the arrivals list clears it.
       runningLateAt: runningLateShown({
@@ -1069,6 +1331,9 @@ export async function getTripManifests(
       // released at the desk. The row stays — `getTripRoster` keeps every
       // non-cancelled booking on purpose — and now says so.
       notHere: booking.status === "no_show",
+      // Seen at the desk and refused (H-135), which the row says apart from a
+      // diver who never came.
+      turnedAway: booking.status === "no_show" && booking.turnedAwayAt !== null,
       buddyTeam: teamByBooking.get(booking.id) ?? null,
     };
   });
@@ -1221,6 +1486,12 @@ export type RecordRollCallOutcome =
         | "booking_unavailable"
         | "staff_not_found"
         | "not_ready"
+        /**
+         * Boarded at departure on a seat the desk turned away and has since
+         * sold: taking it back would put the boat over its capacity (layer 3
+         * re-review, dde-3 #6). After-dive head counts are never refused.
+         */
+        | "boat_full"
         | "invalid_checkpoint"
         | "newer_event_exists"
         /**
@@ -1381,7 +1652,12 @@ async function reclaimReleasedSeat(
   const standing = await standingArrivalStatus(tx, input.shopId, input.tripId, input.bookingId);
   const [updated] = await tx
     .update(bookings)
-    .set({ status: standing === "arrived" ? "checked_in" : "booked" })
+    // A seat back on the boat is not turned away (`bookings_turned_away_is_released`).
+    .set({
+      status: standing === "arrived" ? "checked_in" : "booked",
+      turnedAwayReason: null,
+      turnedAwayAt: null,
+    })
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.status, "no_show")))
     .returning({ id: bookings.id });
   if (!updated) return;
@@ -1459,13 +1735,47 @@ async function pauseRecapOnMissingAfterDive(
  * who is aboard and who came back. The blow-out refuses such a trip outright
  * (`setUpTripBlowout`); this is the other side of the same rule. The id is
  * bound as a value so the subqueries cannot match another trip's rows.
+ *
+ * An offline tap made before the cancel (`offlineOccurredAt` earlier than
+ * `cancelled_at`) is taken too: the crew counted with no signal while the
+ * departure was still on, and its sync must not lose that count (records
+ * review 8). A live write, or an offline one made after the cancel, is not.
  */
-function scheduledOrCountingHeads(tripId: string) {
+function scheduledOrCountingHeads(tripId: string, offlineOccurredAt: Date | null = null) {
   return or(
     eq(trips.status, "scheduled"),
+    offlineOccurredAt
+      ? sql`${trips.cancelledAt} > ${offlineOccurredAt.toISOString()}::timestamptz`
+      : undefined,
     sql`exists (select 1 from ${rollCallEvents} where ${rollCallEvents.tripId} = ${tripId})`,
     sql`exists (select 1 from ${rollCallCrewEvents} where ${rollCallCrewEvents.tripId} = ${tripId})`,
   );
+}
+
+/**
+ * **Whether this trip's roll call takes writes**, asked with the writers' own
+ * predicate (`scheduledOrCountingHeads`) so the manifest never draws a control
+ * the writer would refuse, nor hides one it would accept (#2285). False for a
+ * trip that is not this shop's.
+ */
+export async function rollCallOpenOnTrip(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.id, tripId),
+        eq(trips.shopId, shopId),
+        scheduledOrCountingHeads(tripId),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
 }
 
 export async function recordRollCall(
@@ -1492,10 +1802,11 @@ export async function recordRollCall(
     occurredAt?: Date;
   },
 ): Promise<RecordRollCallOutcome> {
+  // One instant for the event and the boat snapshot it keeps (#2300).
+  const occurredAt = input.occurredAt ?? nowDate();
   const outcome = await db.transaction(async (tx): Promise<RecordRollCallOutcome> => {
     const checkpoint = input.checkpoint ?? "departure";
     const source = input.source ?? "live";
-    const occurredAt = input.occurredAt ?? nowDate();
     const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
     if (!staffId) return { ok: false, reason: "staff_not_found" };
 
@@ -1530,7 +1841,13 @@ export async function recordRollCall(
         id: bookings.id,
         status: bookings.status,
         personId: bookings.personId,
+        participantType: bookings.participantType,
+        turnedAwayAt: bookings.turnedAwayAt,
         plannedDives: trips.plannedDives,
+        shopId: trips.shopId,
+        boatId: trips.boatId,
+        capacity: trips.capacity,
+        diverCapacity: trips.diverCapacity,
       })
       .from(bookings)
       .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -1540,7 +1857,7 @@ export async function recordRollCall(
           eq(bookings.shopId, input.shopId),
           eq(bookings.tripId, input.tripId),
           ne(bookings.status, "cancelled"),
-          scheduledOrCountingHeads(input.tripId),
+          scheduledOrCountingHeads(input.tripId, source === "offline" ? occurredAt : null),
         ),
       )
       .limit(1)
@@ -1605,9 +1922,46 @@ export async function recordRollCall(
     // head count of bodies on the boat: a diver whose card was pulled or payment
     // reversed mid-trip is still aboard, and refusing to record them present
     // would corrupt the one number that says nobody was left in the water.
-    if (input.status === "boarded" && checkpoint === "departure") {
-      const readiness = await getBookingReadiness(tx, input.shopId, booking.id);
-      if (readiness?.status !== "ready") return { ok: false, reason: "not_ready" };
+    //
+    // The same reading is what the event keeps (issue #2414): a `boarded` event
+    // carries what readiness said at that moment, so a record can say "counted
+    // aboard while blocked" after the card is later verified. Written, never
+    // read to gate; every other status stores nothing.
+    let readinessSnapshot: ReadinessSnapshot | null = null;
+    if (input.status === "boarded") {
+      if (checkpoint === "departure") {
+        const readiness = await getBookingReadiness(tx, input.shopId, booking.id);
+        if (readiness?.status !== "ready") return { ok: false, reason: "not_ready" };
+        readinessSnapshot = readinessSnapshotOf(readiness);
+        // A seat the desk turned away and then sold is not the crew's to take
+        // back at the gangway: "Boat full. See the desk." (dde-3 #6). Counted
+        // under the departure lock taken above, as `undoBookingNoShow` counts.
+        // Only here: after a dive the body is on the boat, and the reclaim
+        // below stays unrefusable.
+        if (booking.status === "no_show" && booking.turnedAwayAt !== null) {
+          const held = await heldSeatCounts(tx, input.shopId, input.tripId);
+          const capacity = await sellableCapacity(tx, booking);
+          if (seatRefusal(booking.participantType, { ...booking, capacity }, held)) {
+            return { ok: false, reason: "boat_full" };
+          }
+        }
+      } else {
+        // The snapshot is a record, so a failed read costs the record and not
+        // the count: a savepoint, so even a failed query leaves the transaction
+        // usable for the insert below (issue #2414 review).
+        try {
+          const readiness = await tx.transaction((savepoint) =>
+            getBookingReadiness(savepoint, input.shopId, booking.id),
+          );
+          readinessSnapshot = readiness ? readinessSnapshotOf(readiness) : null;
+        } catch (error) {
+          log("roll_call.readiness_snapshot_skipped", "error", {
+            tripId: input.tripId,
+            checkpoint,
+            error: error instanceof Error ? error.message : "unknown",
+          });
+        }
+      }
     }
 
     const [event] = await tx
@@ -1630,6 +1984,8 @@ export async function recordRollCall(
             checkpoint,
           }),
         ),
+        readinessStatus: readinessSnapshot?.status ?? null,
+        readinessBlockers: readinessSnapshot?.blockers ?? null,
         occurredAt,
       })
       .returning({ id: rollCallEvents.id });
@@ -1673,6 +2029,12 @@ export async function recordRollCall(
   // through this one function; see ADR 20260726-manifest-push-refresh).
   if (outcome.ok && !outcome.duplicate) {
     await publishManifestEvent(db, input.shopId, input.tripId);
+    // The boat's papers and kit as the boat leaves (#2300), for the departure
+    // log once the live section is gone. After the commit, and never throws.
+    if ((input.checkpoint ?? "departure") === "departure") {
+      // As of the tap, not the sync: an offline count made before sailing keeps the boat.
+      await captureDepartureBoatSafety(db, input.shopId, input.tripId, occurredAt);
+    }
   }
   logOfflineRetractionSignals(input, outcome);
   return outcome;
@@ -1750,10 +2112,11 @@ export async function recordCrewRollCall(
     occurredAt?: Date;
   },
 ): Promise<RecordCrewRollCallOutcome> {
+  // One instant for the event and the boat snapshot it keeps (#2300).
+  const occurredAt = input.occurredAt ?? nowDate();
   const outcome = await db.transaction(async (tx): Promise<RecordCrewRollCallOutcome> => {
     const checkpoint = input.checkpoint ?? "departure";
     const source = input.source ?? "live";
-    const occurredAt = input.occurredAt ?? nowDate();
 
     const staffId = await activeStaffRecorderId(tx, input.shopId, input.recordedByPersonId);
     if (!staffId) return { ok: false, reason: "staff_not_found" };
@@ -1792,7 +2155,7 @@ export async function recordCrewRollCall(
           liveTrip(),
           eq(trips.id, input.tripId),
           eq(trips.shopId, input.shopId),
-          scheduledOrCountingHeads(input.tripId),
+          scheduledOrCountingHeads(input.tripId, source === "offline" ? occurredAt : null),
         ),
       )
       .limit(1)
@@ -2000,6 +2363,12 @@ export async function recordCrewRollCall(
   // it raises none.
   if (outcome.ok && !outcome.duplicate) {
     await publishManifestEvent(db, input.shopId, input.tripId);
+    // The boat's papers and kit as the boat leaves (#2300), for the departure
+    // log once the live section is gone. After the commit, and never throws.
+    if ((input.checkpoint ?? "departure") === "departure") {
+      // As of the tap, not the sync: an offline count made before sailing keeps the boat.
+      await captureDepartureBoatSafety(db, input.shopId, input.tripId, occurredAt);
+    }
   }
   logOfflineRetractionSignals(input, outcome);
   return outcome;

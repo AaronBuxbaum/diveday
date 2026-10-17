@@ -1,6 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
+  bookASeatAndOpenThread,
   counterPath,
   createTrip,
   daysFromNow,
@@ -43,6 +44,8 @@ function deskRow(page: Page, name: string): Locator {
 const CHECKED_IN_BAND = /^Checked in · \d+$/;
 /** A finished departure's record band for the seats the roll call counted aboard. */
 const SAILED_BAND = /^Sailed · \d+$/;
+/** Its band for the seats the roll call turned away at the dock. */
+const DID_NOT_SAIL_BAND = /^Didn’t sail · \d+$/;
 
 /** A seeded boat still ahead of the frozen clock and inside the counter's window. */
 const OPEN_BOAT = "Two-Tank Reef — Molasses & French";
@@ -164,11 +167,13 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
 
   // A boat that is home is read rather than worked: its Divers tab is the
   // record, every seat filed by the crew's roll call (UX review 2026-10-10,
-  // item 10). The seeded dawn boat boarded everyone, so they all stand under
+  // item 10). The seeded dawn boat carried only divers readiness cleared
+  // (#2415; UX review 2026-10-13, item 40), so every seat stands under
   // "Sailed", and nothing of the live counter is drawn: no count, no taps,
-  // nothing still to clear.
+  // nothing still to clear. "Didn't sail" is the uncounted-seat capture's.
   await page.goto(counterPath("blue-mantis", sailedId));
   await expect(page.getByRole("heading", { name: SAILED_BAND })).toBeVisible();
+  await expect(page.getByRole("heading", { name: DID_NOT_SAIL_BAND })).toHaveCount(0);
   await expect(page.getByText(/^\d+ of \d+ here$/)).toHaveCount(0);
   await expect(page.getByRole("heading", { name: CHECKED_IN_BAND })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /^Still to clear/ })).toHaveCount(0);
@@ -177,6 +182,36 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
   ).toHaveCount(0);
   // Nobody can be seated on a boat that has left, so its door is not drawn.
   await expect(page.getByRole("link", { name: "Add as a walk-in" })).toHaveCount(0);
+});
+
+/**
+ * **The all-clear never paints over a diver who cannot board** (#2410). A
+ * diver checked in at the counter whose release is then taken back is
+ * `checked_in` and blocked at once: the counter keeps them under "Still to
+ * clear", says somebody can't board yet, and draws no "Everyone's checked in".
+ * The rule is unit-tested in `CounterInstrument.test.tsx`; this is the browser.
+ */
+test("a checked-in diver who is blocked again stays still to clear", async ({ page, request }) => {
+  const seeded = await request.post("/api/test/seed-trouble-states?checkedInBlocked=1");
+  expect(seeded.ok()).toBe(true);
+  const { checkedInBlocked } = (await seeded.json()) as {
+    checkedInBlocked?: { tripId: string; personName: string };
+  };
+  if (!checkedInBlocked) throw new Error("seed-trouble-states made no checked-in blocked diver");
+  const { tripId, personName } = checkedInBlocked;
+
+  await page.goto(counterPath("blue-mantis", tripId));
+  await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
+  const stillToClear = page.getByRole("heading", { name: /^Still to clear · \d+$/ });
+  await expect(stillToClear).toBeVisible();
+  await expect(
+    stillToClear
+      .locator("xpath=following::ul[1]")
+      .getByRole("link", { name: personName, exact: true }),
+  ).toBeVisible();
+  await expect(deskRow(page, personName).getByText("Blocked", { exact: true })).toBeVisible();
+  await expect(page.getByText(/\d+ blocked$/).first()).toBeVisible();
+  await expect(page.getByText("Everyone’s checked in")).toHaveCount(0);
 });
 
 test("a counter walk-in books straight onto a boat with no email required", async ({ page }) => {
@@ -207,6 +242,40 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
     page.getByText("Added to this boat’s list, but their waiver wasn’t emailed."),
   ).toBeVisible();
   await expect(deskRow(page, "Walk-in Test Diver")).toHaveCount(1);
+});
+
+/**
+ * **A walk-in family in one pass** (fifth loop, item 9): the same form takes
+ * the rest of the party, each with an "Under 18" tick, and seats them all
+ * together on the boat.
+ */
+test("a counter walk-in family is seated together from one form", async ({ page }) => {
+  const tripId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
+  const counter = counterPath("blue-mantis", tripId);
+  await page.goto(counter);
+  const find = page.getByRole("searchbox", { name: "Find a returning diver" });
+  await find.fill("Zzyzx No Such Diver");
+  await find.press("Enter");
+  await page.getByRole("link", { name: "Add as a walk-in" }).click();
+  await page.waitForURL(/\/divers\/new\?.*surface=walk-in/);
+
+  await page.getByLabel("Full name").first().fill("Quillon Brightwater");
+  await page.getByRole("button", { name: "Add another person" }).click();
+  const second = page.getByRole("group", { name: "Person 2" });
+  await second.getByLabel("Full name").fill("Mia Brightwater");
+  await second.getByLabel(/Under 18/).check();
+  await page.getByRole("button", { name: "Add another person" }).click();
+  await page
+    .getByRole("group", { name: "Person 3" })
+    .getByLabel("Full name")
+    .fill("Odo Brightwater");
+  await page.getByRole("button", { name: "Add to boat" }).click();
+
+  await expect(page).toHaveURL(counter);
+  await expect(page.getByText(/^Everyone is on this boat’s list, together/)).toBeVisible();
+  for (const name of ["Quillon Brightwater", "Mia Brightwater", "Odo Brightwater"]) {
+    await expect(deskRow(page, name)).toHaveCount(1);
+  }
 });
 
 /**
@@ -291,6 +360,20 @@ test("the walk-in form explains an invalid submission", async ({ page }) => {
   await expect(page.getByRole("alert").filter({ hasText: "Enter a name" })).toContainText(
     "Enter a name before adding a walk-in.",
   );
+});
+
+// The counter's paper pass prints one diver's name for a stranger's pocket
+// (shop-on-paper.spec.ts prints a real one). A booking id the shop does not
+// hold, or one that is not an id at all, prints nothing: the not-found
+// backstop, and not one line of a pass. Read by what renders, not by status:
+// the segment's `loading.tsx` has the 200 on the wire before `notFound()`.
+test("a pass for a booking the shop does not hold prints nothing", async ({ page }) => {
+  for (const id of ["00000000-0000-4000-8000-0000000000ff", "not-a-booking"]) {
+    await page.goto(`/shop/blue-mantis/print/pass/${id}`);
+    await expect(page.getByRole("heading", { name: "We couldn’t find that page" })).toBeVisible();
+    await expect(page.locator(".paper-sheet")).toHaveCount(0);
+    await expect(page.getByText("Show this at the counter, or say your name.")).toHaveCount(0);
+  }
 });
 
 test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ page }) => {
@@ -646,7 +729,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   // predicate the booking transaction enforces — and the sale itself runs
   // through `createBooking`, not through anything this ticket added.
   await page.goto(walkIn);
-  await expect(page.getByText(/0\/1 booked/)).toBeVisible();
+  await expect(page.getByText(/0 of 1 booked/)).toBeVisible();
   const findSecond = page.getByRole("searchbox", { name: "Search by name, email, or phone" });
   await findSecond.fill("Diego Alvarez");
   await findSecond.press("Enter");
@@ -657,6 +740,113 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   // Odile's row is still here, and still hers: a released seat sold on is not
   // a deleted booking, and the crew reading this boat gets both facts.
   await expect(page.getByRole("heading", { name: "Not here · 1" })).toBeVisible();
+});
+
+/**
+ * **"Turned away" at the desk** (safety sheet 2026-10-15, item 6; H-135): a
+ * diver the desk saw and would not board is recorded as that, with the reason
+ * from their own row, and the seat is free before the boat leaves — where
+ * "Not here" is still closed.
+ */
+test("the desk turns a blocked diver away before the boat leaves, says why, and frees the seat", async ({
+  page,
+}) => {
+  const title = `Turned Away ${e2eNow().getTime()}`;
+  // 09:45 against the frozen 09:30: still ahead, so "Not here" is closed.
+  await createTrip(page, {
+    title,
+    date: daysFromNow(0),
+    departsAt: "09:45",
+    returnsAt: "12:00",
+    capacity: 1,
+  });
+  const tripId = await seededTripId(page, "blue-mantis", title);
+  const counter = counterPath("blue-mantis", tripId);
+
+  // Odile Marchand is carded and booked on nothing (`src/db/seed-cert-gates.ts`),
+  // so on this boat she is blocked on the release alone.
+  await page.goto(`${counter}/walk-in`);
+  const findDiver = page.getByRole("searchbox", { name: "Search by name, email, or phone" });
+  await findDiver.fill("Odile Marchand");
+  await findDiver.press("Enter");
+  await page.getByRole("button", { name: "Add Odile Marchand to this boat" }).click();
+  await page.waitForURL(new RegExp(`/trips/${tripId}\\?notice=walkin-added`));
+
+  await page.goto(counter);
+  const odile = deskRow(page, "Odile Marchand");
+  await expect(odile).toHaveCount(1);
+  await expect(odile.getByText("Not here", { exact: true })).toHaveCount(0);
+
+  // The door, its one reason already chosen, and one confirm.
+  await odile.getByText("Turn away…", { exact: true }).click();
+  await expect(odile.getByRole("radio", { name: "Waiver" })).toBeChecked();
+  await expect(odile.getByRole("radio", { name: "Medical" })).toHaveCount(0);
+  await odile.getByRole("button", { name: "Turn Odile Marchand away" }).click();
+
+  // Its own group and its own words, never "Not here".
+  await expect(page.getByRole("heading", { name: "Turned away · 1" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Not here/ })).toHaveCount(0);
+  const released = deskRow(page, "Odile Marchand");
+  await expect(released.getByText("Seen at the desk, turned away: waiver")).toBeVisible();
+  // The one money door that works is the move on their own row (layer 3
+  // review, dde-2 #3): no new booking, no orders link that holds no refund.
+  await expect(
+    released.getByText(/^Nothing was charged or refunded\. Open their row/),
+  ).toBeVisible();
+  await expect(released.getByRole("link", { name: "Open their orders" })).toHaveCount(0);
+  await expect(released.getByRole("button", { name: /refund|charge/i })).toHaveCount(0);
+  await expect(
+    released.getByRole("button", { name: "Put Odile Marchand back on this boat’s list" }),
+  ).toBeVisible();
+
+  // The seat is free at once.
+  await page.goto(`${counter}/walk-in`);
+  await expect(page.getByText(/0 of 1 booked/)).toBeVisible();
+});
+
+/**
+ * **The diver's own page after the desk turned them away** (layer 3 review,
+ * dde-1 F2 and dde-2 #1). Before the boat leaves, the link that walked them
+ * through the checklist and the Pay step says one thing: the shop released
+ * the seat, talk to the desk. No reason, no Pay, no checklist.
+ */
+test("a diver turned away before the boat leaves is told the seat was released, and offered nothing to pay", async ({
+  page,
+  browser,
+  workerBaseURL,
+}) => {
+  const title = `Released Seat ${e2eNow().getTime()}`;
+  const name = `Rhea ${e2eNow().getTime()}`;
+  // Tomorrow morning: inside the desk's 36-hour reach, and still bookable.
+  await createTrip(page, {
+    title,
+    date: daysFromNow(1),
+    departsAt: "09:00",
+    returnsAt: "12:00",
+    capacity: 4,
+  });
+  const tripId = await seededTripId(page, "blue-mantis", title);
+
+  const diverContext = await browser.newContext({ baseURL: workerBaseURL });
+  const diver = makeActivitySafe(await diverContext.newPage());
+  await diver.goto(`/s/blue-mantis/trips/${tripId}`);
+  await bookASeatAndOpenThread(diver, name);
+  const readyPath = new URL(diver.url()).pathname;
+
+  await page.goto(counterPath("blue-mantis", tripId));
+  const row = deskRow(page, name);
+  await row.getByText("Turn away…", { exact: true }).click();
+  await row.getByRole("radio").first().check();
+  await row.getByRole("button", { name: `Turn ${name} away` }).click();
+  await expect(page.getByRole("heading", { name: "Turned away · 1" })).toBeVisible();
+
+  await diver.goto(readyPath);
+  await expect(
+    diver.getByRole("heading", { name: "The shop released your seat on this departure" }),
+  ).toBeVisible();
+  await expect(diver.getByText("Talk to the desk.")).toBeVisible();
+  await expect(diver.getByRole("button", { name: /pay/i })).toHaveCount(0);
+  await diverContext.close();
 });
 
 /**
@@ -695,4 +885,30 @@ test("a phone number read off a diver's record finds their seat at the counter",
   await match.click();
   await page.waitForURL(/\/trips\/[0-9a-f-]{36}#booking-[0-9a-f-]+$/);
   await expect(deskRow(page, "Priya Sharma")).toBeVisible();
+});
+
+/**
+ * **Today's search falls through to the shop** (fifth loop, item 12): a name
+ * that is on file but not arriving today says so, and opens their record,
+ * rather than answering with nothing.
+ */
+test("Today's arrival search says who is on file but not arriving today", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/divers/new");
+  await page.getByLabel("Full name").fill("Zephyrine Quayside");
+  await page.getByRole("button", { name: "Add diver" }).click();
+  await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);
+
+  await page.goto("/shop/blue-mantis");
+  // The search names itself on the page, not only to a screen reader.
+  await expect(page.getByRole("heading", { name: "Find an arriving diver" })).toBeVisible();
+  const search = page.getByRole("searchbox", { name: "Find an arriving diver" });
+  await expect(search).toHaveAttribute("data-hydrated", "true");
+  await search.fill("Zephyrine Quayside");
+  await search.press("Enter");
+
+  const elsewhere = page.getByTestId("arrival-elsewhere");
+  await expect(elsewhere.getByText("Not arriving today.")).toBeVisible();
+  await expect(elsewhere.getByText("Zephyrine Quayside has nothing booked.")).toBeVisible();
+  await elsewhere.getByRole("link", { name: "Open Zephyrine Quayside’s record" }).click();
+  await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);
 });

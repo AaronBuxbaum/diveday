@@ -47,18 +47,37 @@ describe("dock-day rhythm", () => {
     expect(beats(timeline)).toEqual([
       "arrive",
       "briefing",
+      // The ride out belongs to the departure (below); only a run between
+      // sites is a beat of its own.
       "departure",
-      // Numbered by the dive it delivers to, now that a departure has one run
-      // per leg rather than a single ride out.
-      "boatRide1",
       "dive1",
       "surfaceInterval1",
       "dive2",
       "return",
     ]);
     // 20 min out, 45 min under, 60 min on the surface: dive two starts at 2:05.
-    expect(timeline[6]?.at.toISOString()).toBe("2026-07-18T14:05:00.000Z");
+    expect(timeline[5]?.at.toISOString()).toBe("2026-07-18T14:05:00.000Z");
+  });
+
+  it("folds the ride out into the departure, so one minute is one row", () => {
+    // "7:00 AM Departure" over "7:00 AM Ride out to the site" read as two
+    // things at once (third UX review, item 29).
+    const timeline = dockDayTimeline(start, rhythm(), end, 2);
+    const departure = timeline.find(({ step }) => step === "departure");
+    expect(departure?.rideMinutes).toBe(20);
+    expect(new Set(timeline.map(({ at }) => at.getTime())).size).toBe(timeline.length);
+    expect(timeline.find(({ step }) => step === "dive")?.at.toISOString()).toBe(
+      "2026-07-18T12:20:00.000Z",
+    );
     expect(timeline.at(-1)?.at).toEqual(end);
+  });
+
+  it("names no ride when the day stops at the dock", () => {
+    const docks = dockDayTimeline(start, rhythm());
+    expect(docks.find(({ step }) => step === "departure")?.rideMinutes).toBeUndefined();
+    // Nor when the first dive does not fit the window the shop sold.
+    const tight = dockDayTimeline(start, rhythm(), new Date("2026-07-18T12:10:00Z"), 2);
+    expect(tight.find(({ step }) => step === "departure")?.rideMinutes).toBeUndefined();
   });
 
   it("gives a one-dive trip no surface interval", () => {
@@ -295,7 +314,6 @@ describe("a departure's own legs", () => {
       "arrive",
       "briefing",
       "departure",
-      "boatRide1",
       "dive1",
       "boatRide2",
       "dive2",
@@ -309,7 +327,7 @@ describe("a departure's own legs", () => {
     // Same site twice, or a walk-in entry: `0` is an answer here, so the ride
     // out drops rather than falling back to the shop's twenty minutes.
     const timeline = dockDayTimeline(start, rhythm(), end, 2, undefined, [0]);
-    expect(beats(timeline)).not.toContain("boatRide1");
+    expect(timeline.find(({ step }) => step === "departure")?.rideMinutes).toBeUndefined();
     expect(diveAt(timeline, 1)).toBe(start.toISOString());
   });
 
@@ -324,14 +342,7 @@ describe("a departure's own legs", () => {
     const timeline = dockDayTimeline(start, rhythm(), short, 2, undefined, [120, 120]);
     // The second run is walked back off the tail with the dive it existed for,
     // rather than sitting at the end as a boat that set off and gave up.
-    expect(beats(timeline)).toEqual([
-      "arrive",
-      "briefing",
-      "departure",
-      "boatRide1",
-      "dive1",
-      "return",
-    ]);
+    expect(beats(timeline)).toEqual(["arrive", "briefing", "departure", "dive1", "return"]);
     expect(timeline.every(({ at }) => at <= short)).toBe(true);
   });
 });
@@ -354,6 +365,32 @@ describe("booking delight planning", () => {
     );
   });
 
+  it("reads depth off the recorded numbers, not off prose the shop may have typed in another unit", () => {
+    // 30 m is where an Open Water ceiling ends; the deepest point speaks for the site.
+    expect(
+      siteFit({ difficultyLevel: null, depthRange: null, currentNote: null, maxDepthMeters: 30 })
+        .tone,
+    ).toBe("demanding");
+    // 100 ft typed by a feet shop is 30.48 m.
+    expect(
+      siteFit({ difficultyLevel: null, depthRange: null, currentNote: null, maxDepthMeters: 30.48 })
+        .tone,
+    ).toBe("demanding");
+    expect(
+      siteFit({ difficultyLevel: null, depthRange: null, currentNote: null, maxDepthMeters: 18 })
+        .tone,
+    ).toBe("unknown");
+    // A chosen difficulty still outranks the number.
+    expect(
+      siteFit({
+        difficultyLevel: "beginner",
+        depthRange: null,
+        currentNote: null,
+        maxDepthMeters: 40,
+      }).tone,
+    ).toBe("welcoming");
+  });
+
   it("takes the shop's chosen difficulty over what the free text hints", () => {
     // The regression the code half of this change exists for: the sniff reads
     // text the shop wrote for another purpose, and a gentle reef whose current
@@ -366,6 +403,15 @@ describe("booking delight planning", () => {
         currentNote: "watch the deep channel on the swim back",
       }).tone,
     ).toBe("welcoming");
+    // A site recorded just under 30 m whose kept note crosses it still reads demanding.
+    expect(
+      siteFit({
+        difficultyLevel: null,
+        depthRange: "20–30 m",
+        currentNote: null,
+        maxDepthMeters: 29.7,
+      }).tone,
+    ).toBe("demanding");
     // …and with no level chosen, the sniff still has the last word.
     expect(
       siteFit({
@@ -411,6 +457,17 @@ describe("booking delight planning", () => {
     expect(packingConfidence([], null, false).provided).toEqual(["tanksAndWeights"]);
   });
 
+  it("names the scuba unit on a course whose fee includes the gear, and leaves personal gear to bring (ideas item 16)", () => {
+    const packing = packingConfidence(["Towel"], null, false, true);
+    expect(packing.provided).toEqual(["scubaUnit", "instructorBriefing"]);
+    expect(packing.bringPersonal).toEqual(["mask", "fins", "snorkel", "boots"]);
+    expect(packing.bring).toEqual(["Towel"]);
+  });
+
+  it("asks nobody to bring personal gear on an ordinary departure", () => {
+    expect(packingConfidence(["Towel"], null).bringPersonal).toEqual([]);
+  });
+
   it("turns a water temperature into the suit most divers want", () => {
     // A reading is a number a diver has to translate; this is the
     // translation. Bands are the ordinary recreational rule of thumb, read
@@ -437,5 +494,32 @@ describe("booking delight planning", () => {
     const booked = new Date("2026-07-18T10:00:00Z");
     expect(conditionsChangedSinceBooking(new Date("2026-07-18T11:00:00Z"), booked)).toBe(true);
     expect(conditionsChangedSinceBooking(booked, booked)).toBe(false);
+  });
+});
+
+/**
+ * **Autumn fall-back day, America/New_York, 2026-11-01** (issue #2614): the
+ * dock-day beats are instants, so a departure in the repeated 01:00 hour lays
+ * them out in elapsed minutes before it, not wall-clock minutes.
+ */
+describe("dock-day rhythm on the fall-back day", () => {
+  it("puts the arrival an elapsed dock call before a 01:15 EST departure", () => {
+    // 01:15 EST is the second pass through the hour; 60 elapsed minutes before
+    // is 01:15 EDT, not 00:15 EDT.
+    const start = new Date("2026-11-01T06:15:00.000Z");
+    const [arrive] = dockDayTimeline(start, rhythm({ dockCallMinutes: 60 }));
+    expect(arrive?.step).toBe("arrive");
+    expect(arrive?.at.toISOString()).toBe("2026-11-01T05:15:00.000Z");
+  });
+
+  it("keeps the water half in elapsed minutes across the change", () => {
+    // Sails 01:30 EDT; the dive-two beat lands 2h05 after, on the far side of
+    // the change: 05:30Z + 2h05 = 07:35Z = 02:35 EST (wall-clock arithmetic
+    // would say 03:35).
+    const start = new Date("2026-11-01T05:30:00.000Z");
+    const end = new Date("2026-11-01T10:30:00.000Z");
+    const timeline = dockDayTimeline(start, rhythm(), end, 2);
+    const dive2 = timeline.find((beat) => beat.step === "dive" && beat.number === 2);
+    expect(dive2?.at.toISOString()).toBe("2026-11-01T07:35:00.000Z");
   });
 });

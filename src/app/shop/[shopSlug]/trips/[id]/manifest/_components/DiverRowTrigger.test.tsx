@@ -32,8 +32,8 @@ afterEach(cleanup);
  * a dive is still not to go in the water.
  */
 describe("the rider's riding-only capsule", () => {
-  const NOT_CLEARED = "Physician did not clear: riding only";
-  const REFERRAL = "Medical referral open: riding only";
+  const NOT_CLEARED = "Riding only: MD said no";
+  const REFERRAL = "Riding only: referred";
   const notCleared = {
     kind: "not_cleared",
     at: new Date("2026-08-20T12:00:00.000Z"),
@@ -172,14 +172,14 @@ describe("the welcome word", () => {
 
   it("says nothing about a diver who consented to nothing", () => {
     const { container } = renderList({ divers: [diver()] });
-    expect(container.textContent).not.toContain("first time with us");
+    expect(container.textContent).not.toContain("First dive with us");
   });
 
   it("renders as muted text under the name, at 16px", () => {
     const { container } = renderList({
       divers: [diver({ welcomeCue: { kind: "first_trip" } })],
     });
-    const line = welcomeLine(container, "first time with us");
+    const line = welcomeLine(container, "First dive with us");
     expect(line).toBeDefined();
     // `text-base`, not the 12.5px the canvas drew: this is a safety surface,
     // where the licence to trade legibility for restraint stops.
@@ -191,7 +191,7 @@ describe("the welcome word", () => {
     const { container } = renderList({
       divers: [diver({ welcomeCue: { kind: "returning", years: 3 } })],
     });
-    const line = welcomeLine(container, "back after 3 years");
+    const line = welcomeLine(container, "Back after 3 years");
     expect(line).toBeDefined();
     // A `Badge` is a pill: rounded-full, a tint fill, a border. None of those.
     expect(line?.className).not.toMatch(/rounded-full|bg-\w+-tint|border/);
@@ -208,7 +208,7 @@ describe("the welcome word", () => {
         }),
       ],
     });
-    expect(welcomeLine(container, "first time with us")).toBeDefined();
+    expect(welcomeLine(container, "First dive with us")).toBeDefined();
     expect(container.textContent).toContain("Birthday today");
   });
 });
@@ -293,5 +293,41 @@ describe("DiverRowTrigger, drawn on its own", () => {
     );
     expect(container.textContent?.replace(/\s/g, " ")).toContain("Running late, said 7:42 AM");
     expect(container.querySelector(".basis-full")?.className).toContain("sm:self-start");
+  });
+});
+
+/**
+ * **"Checked in at the desk" on the row** (fourth review, item 15): the two
+ * the desk checked in read apart from the eight still to come without a tap
+ * on each name, in the welcome word's quiet clothes, and the boarding tap is
+ * exactly where it was.
+ */
+describe("the desk's check-in is on the dock row", () => {
+  const CHECKED_IN: Record<TestLocale, string> = {
+    "en-US": "Checked in at the desk",
+    "es-ES": "Ya se registró en el mostrador",
+  };
+
+  it.each(["en-US", "es-ES"] as const)(
+    "shows it under the name without opening the sheet, in %s",
+    (locale: TestLocale) => {
+      renderList({ locale, checkpoint: "departure", divers: [diver({ checkedIn: true })] });
+      const row = screen.getByRole("listitem");
+      const trigger = within(row).getByRole("button", { name: /Meera Iyer/ });
+      const line = within(trigger).getByText(CHECKED_IN[locale]);
+      expect(line.className).toContain("text-muted");
+      expect(line.className).not.toMatch(/rounded-full|bg-\w+-tint|border/);
+      expect(
+        within(row).getByRole("button", { name: TRANSLATORS[locale]("manifest.markBoarded") }),
+      ).toBeVisible();
+    },
+  );
+
+  it("says nothing for a diver still to come, or once the crew has boarded them", () => {
+    renderList({
+      checkpoint: "departure",
+      divers: [diver(), diver({ bookingId: "b-2", checkedIn: true, rollCall: boardedAt() })],
+    });
+    expect(screen.queryByText(CHECKED_IN["en-US"])).toBeNull();
   });
 });

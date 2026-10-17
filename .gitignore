@@ -13,6 +13,9 @@
 
 # testing
 /coverage
+/.vitest/
+/reports/mutation/
+/.stryker-tmp/
 
 # next.js
 /.next/
@@ -90,3 +93,7 @@ public/manifest-sw.js
 # session hooks' refusal tally (scripts/hook-log.mjs)
 /.claude/.hook-log
 /.claude/.follow-up-log
+
+# `pnpm content:photos candidates` contact sheets, looked at and thrown away.
+/.content-review/
+/dist/

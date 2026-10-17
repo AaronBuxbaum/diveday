@@ -22,6 +22,7 @@ export function LearningMaterialsSection({
 }) {
   return (
     <EditorSection
+      unsavedTag={t("shared.formDraft.unsavedSection")}
       id={section.id}
       label={section.label}
       as="fieldset"

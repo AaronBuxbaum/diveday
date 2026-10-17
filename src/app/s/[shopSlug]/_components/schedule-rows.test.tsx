@@ -29,9 +29,25 @@ const listed = [
     endsAt: new Date("2026-07-26T16:00:00Z"),
     capacity: 6,
     booked: 0,
-    course: { title: "Open Water", slug: "open-water" },
+    course: {
+      title: "Open Water",
+      slug: "open-water",
+      priceCents: null,
+      eLearningPriceCents: null,
+    },
     lensId: null,
     priceCents: null,
+  },
+  {
+    id: "t3",
+    title: "Nitrox Diver, classroom & two dives",
+    startsAt: new Date("2026-07-27T12:00:00Z"),
+    endsAt: new Date("2026-07-27T16:00:00Z"),
+    capacity: 6,
+    booked: 0,
+    course: { title: "Nitrox", slug: "nitrox", priceCents: 30_000, eLearningPriceCents: 4_500 },
+    lensId: null,
+    priceCents: 15_000,
   },
 ] as unknown as UpcomingTrips;
 
@@ -93,9 +109,17 @@ describe("weekLedgerRows", () => {
     expect(course?.price).toBeNull();
   });
 
+  it("prices a course session with the course total the booking charges (fourth UX review, item 2)", () => {
+    // The trip row's own $150 is not what checkout asks for; fee plus
+    // eLearning is, so the schedule says $345 (H-125).
+    const nitrox = rows()[2];
+    expect(nitrox?.price).toContain("345");
+    expect(nitrox?.price).not.toContain("150");
+  });
+
   it("marks, never removes, a departure above the stated level", () => {
     const marked = rows({ above: ["t1"] });
-    expect(marked).toHaveLength(2);
+    expect(marked).toHaveLength(3);
     expect(marked[0]?.aboveLevel).toBe(t("schedule.filters.aboveLevelChip"));
     expect(marked[1]?.aboveLevel).toBeNull();
   });

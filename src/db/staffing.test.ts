@@ -5,7 +5,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { bookings, courses, people, personRoles, staffShifts, tripAssignments } from "./schema";
-import { createStaffShift, crewShiftCoverage, getStaffingView } from "./staffing";
+import { createStaffShift, crewShiftCoverage, getStaffingView, tripMeetings } from "./staffing";
 import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -801,6 +801,12 @@ describe("staffing view", () => {
       .find((entry) => entry.person.id === instructor.person.id)
       ?.crewingTrips.find((trip) => trip.tripId === run.id);
     expect(crewing?.meetings.map((meeting) => meeting.startsAt)).toEqual([day1, day2]);
+
+    // Keyed by the asking shop as well as the ids (security review, note 1):
+    // another shop's ids read nothing, even handed in directly.
+    expect((await tripMeetings(db, shop.id, [run.id])).get(run.id)).toHaveLength(2);
+    const otherShop = "00000000-0000-4000-8000-000000000000";
+    expect((await tripMeetings(db, otherShop, [run.id])).size).toBe(0);
   });
 
   /**

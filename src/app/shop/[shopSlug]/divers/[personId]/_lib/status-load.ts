@@ -1,6 +1,6 @@
 import type { AppDb } from "@/db/client";
 import { getDiverProfile } from "@/db/divers";
-import { getBookingReadiness } from "@/db/readiness";
+import { getBookingsReadiness } from "@/db/readiness";
 import { nowDate } from "@/lib/clock";
 import {
   bookingIsAhead,
@@ -15,8 +15,8 @@ import type { DiverProfile } from "../_components/shared";
  * The database half of the status ledger: read the readiness of the departure
  * this diver is next on, and hand it to the pure {@link buildDiverStatus}.
  *
- * `getBookingReadiness` is the existing entry the Today queue and the manifest
- * read — `listTripReadiness` composed with `getTripSiteRequirement` — so this
+ * `getBookingsReadiness` is the batched form of the entry the Today queue and
+ * the manifest read — the same `listTripsReadiness` pipeline — so this
  * page can never disagree with the boat about who is cleared. There is
  * deliberately no second detector here (ADR 20260827-people-not-lists).
  */
@@ -32,12 +32,17 @@ export async function diverStatusRows(
   const ahead = diver.bookings
     .filter((entry) => bookingIsAhead(entry, now))
     .sort((a, b) => a.trip.startsAt.getTime() - b.trip.startsAt.getTime());
-  const measured = await Promise.all(
-    ahead.map(async (entry) => ({
-      entry,
-      readiness: await getBookingReadiness(db, shopId, entry.booking.id),
-    })),
+  // One batched read for every departure ahead, not one roster read per seat
+  // (issue #2058): a diver on a long package would otherwise pay for each.
+  const byBooking = await getBookingsReadiness(
+    db,
+    shopId,
+    ahead.map((entry) => entry.booking.id),
   );
+  const measured = ahead.map((entry) => ({
+    entry,
+    readiness: byBooking.get(entry.booking.id) ?? null,
+  }));
   const readiness = measured.find(({ entry }) => entry === next)?.readiness ?? null;
   return buildDiverStatus(diver, readiness, {
     now,

@@ -31,6 +31,7 @@ export const DESK_EVENT_KINDS = [
   "arrival",
   "seat_taken",
   "seat_released",
+  "seat_turned_away",
   "now_diving",
   "now_snorkeling",
   "now_riding",

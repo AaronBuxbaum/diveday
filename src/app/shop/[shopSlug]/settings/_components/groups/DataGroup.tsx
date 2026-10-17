@@ -64,6 +64,14 @@ const PROCESSOR_ERASURE_TARGET_KEYS: Record<ProcessorErasureTarget, StaffMessage
     "settings.main.dataJobs.erasureTarget.stripe_checkout_session_snapshot",
 };
 
+/** The one step each kind of row still needs, said on the row (desk review of #1721, F5). */
+const PROCESSOR_ERASURE_TODO_KEYS: Record<ProcessorErasureTarget, StaffMessageKey> = {
+  stripe_customer: "settings.main.dataJobs.processorErasures.todo.stripe_customer",
+  stripe_invoice_snapshot: "settings.main.dataJobs.processorErasures.todo.stripe_invoice_snapshot",
+  stripe_checkout_session_snapshot:
+    "settings.main.dataJobs.processorErasures.todo.stripe_checkout_session_snapshot",
+};
+
 /**
  * Why an erasure is still owed, in shop words (issue #1865). The row's
  * `last_error` is Stripe's own English and stays in the ledger; the panel
@@ -188,9 +196,10 @@ export async function DataGroup({
       offers what can actually act on each: a customer delete DiveDay makes
       itself gets "Retry" (the nightly tick also retries it), while an
       invoice snapshot has no API behind it at all and can only be closed by
-      an owner attesting they filed Stripe's data-deletion request. The panel
-      shows the `cus_…`/`in_…` handle and nothing else — the diver's identity
-      is exactly what erasure already removed here.
+      an owner attesting they filed Stripe's data-deletion request. Each row
+      says its own one step (desk review of #1721, F5). The panel shows the
+      `cus_…`/`in_…` handle and nothing else — the diver's identity is exactly
+      what erasure already removed here.
     */}
       {owedProcessorErasures.length > 0 ? (
         <section
@@ -226,6 +235,7 @@ export async function DataGroup({
                       ]}
                     />
                   </p>
+                  <p className="text-sm">{t(PROCESSOR_ERASURE_TODO_KEYS[obligation.target])}</p>
                   {/* Only an owner may close an erasure, so a manager's
                       item is its words alone, with no empty row under it. */}
                   {canErase ? (

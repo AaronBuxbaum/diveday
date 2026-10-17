@@ -18,6 +18,7 @@ describe("SiteDiveFields", () => {
     for (const name of [
       "difficulty",
       "depthRange",
+      "minDepth",
       "maxDepth",
       "expectedBottomTime",
       "currentNote",
@@ -51,5 +52,37 @@ describe("SiteDiveFields", () => {
       "advanced",
     ]);
     expect(select.value).toBe("advanced");
+  });
+
+  /** The range is two numbers in the shop's unit, never prose that can name the other one (#2426). */
+  it("enters the shallow end beside the maximum, both in the shop's own unit", () => {
+    render(
+      <SiteDiveFields
+        t={t}
+        depthUnit="feet"
+        values={{ ...STORED, depthMinMeters: 6.096, maxDepthMeters: 18.288 }}
+      />,
+    );
+    expect((field("minDepth") as HTMLInputElement).value).toBe("20");
+    expect((field("maxDepth") as HTMLInputElement).value).toBe("60");
+    expect(document.body.textContent).toContain("Shallowest depth (feet)");
+    expect(document.body.textContent).toContain("Maximum depth (feet)");
+    cleanup();
+    render(<SiteDiveFields t={t} depthUnit="meters" />);
+    expect(document.body.textContent).toContain("Shallowest depth (meters)");
+  });
+
+  it("keeps the shop's own words as a note that asks for no unit", () => {
+    render(
+      <SiteDiveFields
+        t={t}
+        depthUnit="feet"
+        values={{ ...STORED, depthRange: "shallow ledge to the wall" }}
+      />,
+    );
+    const note = field("depthRange") as HTMLInputElement;
+    expect(note.value).toBe("shallow ledge to the wall");
+    expect(note.placeholder).toBe("");
+    expect(document.body.textContent).toContain("Depth note");
   });
 });

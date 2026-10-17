@@ -80,6 +80,22 @@
  * review of code review 2026-10-13 (layer B), which moved it here from the
  * out-of-scope list.
  *
+ * **`trip_change_events` and `review_moderation_events` are deliberately
+ * unbounded too.** The first is who changed a departure's plan and how (its
+ * meeting point, its conditions); the second is who published or hid a
+ * review and why. The shop activity log reads both as the record itself
+ * (PR #2310), and the moderation trail is also what answers "how much of this
+ * shop's record has been suppressed?" for as long as the reviews it describes
+ * are shown (ADR 20260813-review-moderation-has-a-floor). A window would leave
+ * a departure or a review the shop still has with a hole in its history and
+ * free almost nothing: both grow with the shop's own departures and reviews,
+ * not with traffic. Both hold free text a staffer typed (a meeting point's
+ * label, a moderator's `reason_note`), which can name a diver, so erasure
+ * redacts what names them (`scrubDepartureChangeTrail` and `scrubReviews` in
+ * `src/db/anonymize.ts`); the staffer who acted is a `people` reference
+ * resolved live, so erasure reaches them without a row moving. Chosen by the product owner, 2026-10-13, over the `activity_events`
+ * window (issue #2316).
+ *
  * **`notification_send_queue` empties its own rows of personal data, and the
  * window below only bounds what is left.** It holds a rendered outbound
  * message, a recipient and a subject's address and phone while a row is being
@@ -101,12 +117,15 @@
  * `roll_call_crew_events`, `booking_arrival_events`, `buddy_team_events`,
  * `trip_stage_events`, `pre_departure_check_events` (argued above). Equipment evidence:
  * `gear_service_events` (argued above). Records of who changed what on a
- * departure or a ticket, read as the record itself: `trip_change_events`,
+ * departure, a review or a ticket, read as the record itself:
+ * `trip_change_events`, `review_moderation_events` (argued above),
  * `work_order_events`. Queues and obligations deleted by their own work:
- * `held_sends` (its own sweep, `src/db/held-sends.ts`),
- * `media_deletion_attempts` and `processor_erasure_obligations` (deleted when
- * discharged). Signed evidence H-02 has not ruled on: `waiver_records` and
- * the course-form records.
+ * `held_sends` (its own sweep, `src/db/held-sends.ts`) and
+ * `media_deletion_attempts`. Kept as the record of an erasure's outside work:
+ * `processor_erasure_obligations`, which nothing prunes; a discharged row is
+ * the attestation (ADR 20260803-processor-erasure-obligations). Signed
+ * evidence H-02 has not ruled on: `waiver_records` and the course-form
+ * records.
  */
 
 import { DAY_MS } from "@/lib/clock";
@@ -136,6 +155,7 @@ export type RetainedTable =
   | "account_tokens"
   | "account_sessions"
   | "shop_contact_email_confirmation_tokens"
+  | "shop_shore_alert_tokens"
   | "booking_capabilities"
   | "booking_payment_events"
   | "push_subscriptions"
@@ -174,6 +194,8 @@ export const UNBOUNDED_BY_DECISION: readonly string[] = [
   "roll_call_crew_events",
   "booking_arrival_events",
   "pre_departure_check_events",
+  "trip_change_events",
+  "review_moderation_events",
 ];
 
 /**
@@ -265,6 +287,15 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * table forever.
    */
   shop_contact_email_confirmation_tokens: 90,
+  /**
+   * A year from `created_at` (H-118 review): the shore contact's confirmation
+   * links and the stop link every roll-call alert carries. A stop link never
+   * expires on its own, because an opt-out that stops working leaves somebody
+   * unable to stop the mail; a year is longer than any shop goes between
+   * alerts, and each alert brings a fresh one. The rows hold the address, so
+   * they do not sit forever either.
+   */
+  shop_shore_alert_tokens: 365,
   /**
    * The same 90 days past `expires_at` again (H-82, issue #1726): a booking
    * link — readiness, confirm, claim, handoff, course forms — is a hashed
@@ -424,16 +455,31 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
 };
 
 /**
- * The most rows one prune pass may delete per table. A bound, not a target:
- * the pass runs weekly (`vercel.json`, Sundays 03:30 UTC), so a table that is
- * over its window by more than this converges over a few weeks rather than
- * trying to delete a decade of backlog inside one function invocation's time
- * limit; at 5,000 rows a week a table that gains more than that each week
- * never converges, and the `capped` outcome is the signal to raise this. Raising it trades
- * convergence speed for the risk of a run that outlives the platform's
- * function ceiling and is killed halfway.
+ * The most rows one prune **batch** may delete from a table: a bound per
+ * statement pair, not per run. The weekly run (`vercel.json`, Sundays 03:30
+ * UTC) keeps taking batches from a table still over its window until it is
+ * inside it or the run's time budget is spent (`PRUNE_TIME_BUDGET_MS`,
+ * `src/db/retention.ts`), so a backlog drains in one run rather than at 5,000
+ * rows a week. A table still `capped` when the budget runs out logs
+ * `cron_retention.prune_capped`, which alarms: the backlog then exceeds about 45
+ * seconds of deletes, and the fix is a faster arm or a more frequent run.
  */
 export const PRUNE_BATCH_LIMIT = 5_000;
+
+/**
+ * **A lunch note is cleared this many days after its boat sailed** (fifth-loop
+ * ideas, item 56; security review N5). Its one purpose is that day's galley,
+ * and a diver's own words about what they eat say something about their
+ * health or faith, so the column is nulled rather than kept with the booking.
+ * Not a row prune: the booking itself stays. The window leaves room for a
+ * dispute about the day and for the trip's own record to be read back.
+ */
+export const DIETARY_NOTE_RETENTION_DAYS = 30;
+
+/** The departure start before which a seat's lunch note is cleared. */
+export function dietaryNoteCutoff(now: Date): Date {
+  return new Date(now.getTime() - DIETARY_NOTE_RETENTION_DAYS * DAY_MS);
+}
 
 /** The instant before which rows of `table` are eligible for deletion. */
 export function retentionCutoff(table: RetainedTable, now: Date): Date {

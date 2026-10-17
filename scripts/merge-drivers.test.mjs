@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -6,7 +7,13 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { DRIVERS, install, mergeJson, mergeRatchetText } from "./merge-drivers.mjs";
+import {
+  DRIVERS,
+  install,
+  mergeDurationsText,
+  mergeJson,
+  mergeRatchetText,
+} from "./merge-drivers.mjs";
 
 const SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), "merge-drivers.mjs");
 
@@ -54,6 +61,39 @@ describe("mergeRatchetText", () => {
   });
 });
 
+describe("mergeDurationsText", () => {
+  it("takes the larger duration, keeps both sides' files, and sorts like merge-test-durations", () => {
+    const base = JSON.stringify({ "src/b.test.ts": 100, "src/gone.test.ts": 5 });
+    const ours = JSON.stringify({ "src/b.test.ts": 300, "src/Z.test.ts": 1 });
+    const theirs = JSON.stringify({
+      "src/b.test.ts": 200,
+      "src/gone.test.ts": 5,
+      "src/a.test.ts": 7,
+    });
+    const text = mergeDurationsText(base, ours, theirs);
+    // Code-unit order ("Z" before "a"), as `merge-test-durations.mjs` writes it, so a merge
+    // does not reorder the file; a file one side pruned stays pruned.
+    expect(text).toBe(
+      `${JSON.stringify({ "src/Z.test.ts": 1, "src/a.test.ts": 7, "src/b.test.ts": 300 }, null, 2)}\n`,
+    );
+  });
+});
+
+describe("the repository's .gitattributes", () => {
+  const attributes = readFileSync(path.join(path.dirname(SCRIPT), "..", ".gitattributes"), "utf8");
+
+  // 2026-10-13: layer merges stopped on scripts/test-durations.json, which had no driver.
+  it("gives scripts/test-durations.json a driver", () => {
+    expect(attributes).toMatch(/^scripts\/test-durations\.json merge=diveday-durations$/m);
+  });
+
+  it("names only drivers that install defines", () => {
+    const named = [...attributes.matchAll(/merge=([\w-]+)/g)].map((match) => match[1]);
+    expect(named.length).toBeGreaterThan(0);
+    for (const id of named) expect(DRIVERS).toHaveProperty(id);
+  });
+});
+
 /** A throwaway repo whose two branches both edit the generated files, then merge. */
 async function conflictedRepo() {
   const root = await mkdtemp(path.join(tmpdir(), "diveday-merge-drivers-"));
@@ -67,9 +107,13 @@ async function conflictedRepo() {
   await mkdir(path.join(root, "scripts"), { recursive: true });
   await writeFile(
     path.join(root, ".gitattributes"),
-    "scripts/ratchets.json merge=diveday-ratchets\nindex.md merge=diveday-generated\n",
+    "scripts/ratchets.json merge=diveday-ratchets\nindex.md merge=diveday-generated\nscripts/test-durations.json merge=diveday-durations\n",
   );
-  const write = async (ratchets, index) => {
+  const write = async (ratchets, index, durations = { "a.test.ts": 10, "b.test.ts": 20 }) => {
+    await writeFile(
+      path.join(root, "scripts/test-durations.json"),
+      `${JSON.stringify(durations, null, 2)}\n`,
+    );
     await writeFile(
       path.join(root, "scripts/ratchets.json"),
       `${JSON.stringify(ratchets, null, 2)}\n`,
@@ -83,12 +127,14 @@ async function conflictedRepo() {
   await write(
     { "//": "n", "page-length": { "a.tsx": 490, "b.tsx": 450 } },
     "# Index\n\n- one\n- theirs\n",
+    { "a.test.ts": 15, "b.test.ts": 20 },
   );
   git("commit", "-qm", "theirs");
   git("checkout", "-q", "main");
   await write(
     { "//": "n", "page-length": { "a.tsx": 480, "b.tsx": 440 } },
     "# Index\n\n- one\n- ours\n",
+    { "a.test.ts": 10, "b.test.ts": 25 },
   );
   git("commit", "-qm", "ours");
   return { root, git };
@@ -101,6 +147,10 @@ describe("the drivers inside a real git merge", () => {
     const ratchets = JSON.parse(await readFile(path.join(root, "scripts/ratchets.json"), "utf8"));
     expect(ratchets["page-length"]).toEqual({ "a.tsx": 490, "b.tsx": 440 });
     expect(await readFile(path.join(root, "index.md"), "utf8")).toBe("# Index\n\n- one\n- ours\n");
+    const durations = JSON.parse(
+      await readFile(path.join(root, "scripts/test-durations.json"), "utf8"),
+    );
+    expect(durations).toEqual({ "a.test.ts": 15, "b.test.ts": 25 });
     expect(git("status", "--porcelain")).toBe("");
   });
 });

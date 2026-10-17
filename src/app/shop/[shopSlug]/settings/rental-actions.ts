@@ -143,12 +143,14 @@ export async function saveRentalTermsAction(formData: FormData) {
  * sits in the Rental gear group beside the rental terms and asks the same two
  * gates.
  */
+const regulatorServiceForm = z.object({ regulatorServiceMonths: formValue() });
+
 export async function saveRegulatorServiceAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
   await settingsBlock(session);
   await paymentSettingsBlock(session);
-  const months = Number(formData.get("regulatorServiceMonths"));
+  const months = Number(readForm(regulatorServiceForm, formData).regulatorServiceMonths);
   if (!isCustomerRegulatorServiceMonths(months)) {
     redirect(noticeUrl(settings, "regulator-service-invalid", { saved: "regulatorService" }));
   }

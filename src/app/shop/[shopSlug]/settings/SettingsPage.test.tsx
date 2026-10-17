@@ -7,13 +7,13 @@ import { tapTargetLinkClass } from "@/components/ui/button";
 import { type Fact, FactLine } from "@/components/ui/FactLine";
 import { InsetGroup } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
-import { mediaDeletionAttempts, processorErasureObligations, shops } from "@/db/schema";
+import { boats, mediaDeletionAttempts, processorErasureObligations, shops } from "@/db/schema";
 import { getShopBySlug, setShopDivingOptions } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   ariaLabelsIn,
   findElements,
@@ -26,6 +26,8 @@ import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
 import { CounterQrCard } from "./CounterQrCard";
 import { SETTINGS_RAIL_ROWS, type SectionId, settingsSectionFragment } from "./settings-groups";
+
+const ctx = fileScopedShopContext();
 
 // Same mocking shape as ./embed/page.test.tsx: the page is invoked directly,
 // outside Next's request scope, so the three things that only exist inside one
@@ -58,7 +60,7 @@ const SHOP_SLUG = "blue-mantis";
  * the lookup and a made-up role set would disagree with what the row says.
  */
 async function sessionFor(role: Role): Promise<{ db: AppDb; session: DiveDaySession }> {
-  const db: AppDb = await seededTestDb();
+  const db: AppDb = ctx.db;
   const shop = await getShopBySlug(db, SHOP_SLUG);
   if (!shop) throw new Error("demo shop missing");
   const member = (await listShopStaff(db, shop.id)).find((staff) => staff.roles.includes(role));
@@ -286,6 +288,18 @@ async function oweErasure(
   });
 }
 
+/** Every string anywhere in a rendered tree, props included, joined. */
+function everyString(node: unknown, seen = new Set<unknown>()): string {
+  if (typeof node === "string") return node;
+  if (!node || typeof node !== "object" || seen.has(node)) return "";
+  seen.add(node);
+  if (Array.isArray(node)) return node.map((child) => everyString(child, seen)).join("\n");
+  const props = (node as { props?: Record<string, unknown> }).props;
+  return Object.values(props ?? (node as Record<string, unknown>))
+    .map((value) => everyString(value, seen))
+    .join("\n");
+}
+
 describe("the data-compliance queues in the Data group", () => {
   it("renders neither panel when the shop owes nothing", async () => {
     // The calm state, and the whole reason these could move off a page nobody
@@ -343,6 +357,21 @@ describe("the data-compliance queues in the Data group", () => {
     );
     expect(ariaLabelsIn(element)).toContain(ERASURE_PANEL);
     expect(hiddenInputNamesIn(element).filter((name) => name === "obligationId")).toHaveLength(1);
+  });
+
+  /**
+   * Desk review of #1721, F5: one paragraph explained every kind at once.
+   * Each row now carries the one step its own target needs.
+   */
+  it("tells each row the one step its own kind needs", async () => {
+    const element = await renderSettings("owner", async (db, session) => {
+      await oweErasure(db, session, "stripe_customer");
+      await oweErasure(db, session, "stripe_invoice_snapshot");
+    });
+    const texts = everyString(element);
+    expect(texts).toContain("Retries on its own tonight, or retry now.");
+    expect(texts).toContain("File a data-deletion request with Stripe, then mark it done.");
+    expect(texts).not.toContain("also deletes their Stripe customer");
   });
 
   it("shows a manager the owed erasure but no button to close it", async () => {
@@ -479,6 +508,23 @@ describe("the diving options a shop runs", () => {
     // now, not a form in a row: a list of hulls each carrying a Save and a
     // Delete is a page, and the hub is a directory.
     expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/settings/boats`);
+  });
+
+  it("names the boats still missing a call sign and MMSI on the fleet's door (review B1)", async () => {
+    const doorNote = (element: unknown) =>
+      findElements<{ href: string; note?: string }>(
+        element,
+        settingsRowsModule.SettingsDoorRow,
+      ).find((door) => door.props.href === `/shop/${SHOP_SLUG}/settings/boats`)?.props.note;
+    // The seeded fleet carries both facts, so the door states nothing extra.
+    expect(doorNote(await renderSettings("owner"))).toBeUndefined();
+    const element = await renderSettings("owner", async (db, session) => {
+      await db
+        .update(boats)
+        .set({ callSign: null, mmsi: null })
+        .where(eq(boats.shopId, session.user.shopId));
+    });
+    expect(doorNote(element)).toMatch(/^\d+ boats have no call sign or MMSI$/);
   });
 
   it("asks for the divemaster target beside the crew schedule switch", async () => {

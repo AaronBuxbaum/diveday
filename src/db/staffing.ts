@@ -1,14 +1,9 @@
 import { and, asc, count, eq, gt, inArray, isNull, lt, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { HOUR_MS, nowDate } from "@/lib/clock";
-import { courseCrewGap } from "@/lib/course-ratios";
 import type { InWaterCrewCount } from "@/lib/crew-roles";
-import {
-  DEFAULT_DIVERS_PER_DIVEMASTER,
-  divemasterRatioGap,
-  inWaterDivemasterCount,
-} from "@/lib/divemaster-ratio";
-import { type StaffGapCode, staffGapForCourseGap, type TripMeeting } from "@/lib/staffing-week";
+import { DEFAULT_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
+import { crewGapFor, type StaffGapCode, type TripMeeting } from "@/lib/staffing-week";
 import type { AppDb } from "./client";
 import { courseCrewCountsByTrip, NO_SUPERVISION } from "./course-crew-counts";
 import {
@@ -302,7 +297,7 @@ export async function getStaffingView(
   // here can tell which days of it a person is committed to — the same reason
   // `weekBoard` joins these rows (src/db/trips-queries.ts). A departure with no
   // rows at all meets once, on its own window, which is every ordinary boat.
-  const meetingsByTrip = await tripMeetings(db, [...tripMap.keys()]);
+  const meetingsByTrip = await tripMeetings(db, shopId, [...tripMap.keys()]);
   const meetingsFor = (trip: typeof trips.$inferSelect): TripMeeting[] =>
     meetingsByTrip.get(trip.id) ?? [{ startsAt: trip.startsAt, endsAt: trip.endsAt }];
 
@@ -356,78 +351,17 @@ export async function getStaffingView(
   // count *is* the list's length.
   const gapTrips: StaffingGapTrip[] = [];
   // The one decision this walk makes, for one departure and one count — asked
-  // of both claims below (issue #1853).
-  const gapCodeFor = (entry: TripEntry, counts: InWaterCrewCount): StaffGapCode | null => {
-    // The agency training ratio first, exactly as Today orders them: a course
-    // session missing its instructor is the more precise fact, and firing the
-    // shop's own target underneath it would name one gap in two vocabularies.
-    const courseGap = courseCrewGap({
+  // of both claims below (issue #1853). Today's crew rows ask the same
+  // function (`crewGapFor`, issue #2482), so the two cannot disagree.
+  const gapCodeFor = (entry: TripEntry, counts: InWaterCrewCount): StaffGapCode | null =>
+    crewGapFor({
       course: entry.course,
-      instructorCount: counts.instructorCount,
-      assistantCount: counts.assistantCount,
+      counts,
       booked: entry.booked,
-    });
-    // Then the shop's own target, which reaches every departure it runs rather
-    // than only the courses — and which owns the two exemptions this walk used
-    // to miss: a self-guided departure, and one with nobody booked. Computed
-    // before the course gap is placed rather than after, because the zero-crew
-    // case below outranks it and needs this answer to know whether it applies.
-    const ratioGap = divemasterRatioGap({
-      // Divers only (ADR 20261007-participant-types): the ratio is a
-      // scuba-guiding ratio, and a snorkeler or a rider is not supervised
-      // underwater. Capacity and headcount still count everyone.
-      divers: entry.bookedDivers,
-      divemasterCount: inWaterDivemasterCount(counts),
+      bookedDivers: entry.bookedDivers,
       diversPerDivemaster,
       selfGuided: entry.trip.selfGuided,
-    });
-    // **No divemaster outranks the instructor gap** (issue #1338). A
-    // course session with no crew at all satisfies both rules, and issue #732
-    // settled that a departure carries one row — but #732's rule is about the
-    // *count*, not about which code wins, and the course gap winning outright
-    // meant an empty boat read as "Course needs instructor". A staffer takes
-    // that to mean a divemaster is already on it. Since #1125 shortened the
-    // chip to those three words there is no sentence beside it to correct the
-    // inference.
-    //
-    // `divemasterRatioGap` decides, rather than `inWaterDivemasterCount(counts)
-    // === 0` read directly, because the count alone is true of cases where
-    // "No crew" would be wrong: a self-guided departure wants no supervisor,
-    // and one with nobody booked has no one to supervise. Both still say
-    // "Course needs instructor", which is the honest and actionable fact for
-    // them — a session with no instructor cannot take an enrolment however
-    // empty it is.
-    //
-    // Which of the two zero-crew codes is the course/fun-dive split, and it is
-    // read off `courseGap` rather than off `entry.course` so the two cannot
-    // disagree: with nobody in the water `instructorCount` is 0, so
-    // `courseCrewGap` returns `no_instructor` for exactly the sessions that
-    // have a course attached. `uncrewed_course` says both words, because "No
-    // crew" alone would send a manager looking for any divemaster and only an
-    // instructor closes a course gap.
-    //
-    // Two things this walk is safe because of, neither previously written
-    // down. Neither ratio code — `over_ratio` nor `over_intro_ratio` — can be
-    // suppressed here: both require `instructorCount >= 1`
-    // (src/lib/course-ratios.ts), which forces a non-zero in-water count, so
-    // the branch below cannot be reached with either.
-    // And the shop's own `diversPerDivemaster` cannot route a departure
-    // between these rows: with divers aboard and nobody in the water,
-    // `ceil(divers / ratio) >= 1` across the whole legal range, so
-    // `under_target` always holds and only the two exemptions decide.
-    if (ratioGap.code === "under_target" && ratioGap.divemasterCount === 0) {
-      return courseGap.code === "no_instructor" ? "uncrewed_course" : "uncrewed_departure";
-    }
-    // Through the mapper, not `courseGap.code`: the code the chip renders has
-    // to keep the intro cap apart from the entry-level one, and placing the
-    // raw code threw `ratio` away (issue #1339, `staffGapForCourseGap`).
-    const courseGapCode = staffGapForCourseGap(courseGap);
-    if (courseGapCode) return courseGapCode;
-    if (ratioGap.code === "none") return null;
-    // Short of the shop's target but not empty — the zero case returned above,
-    // so this is Today's quieter of the two words by construction.
-    return "crew_below_target";
-  };
+    }).code;
   for (const entry of tripMap.values()) {
     if (entry.trip.endsAt < sailedBefore) continue;
     const counts = crewCounts.get(entry.trip.id) ?? NO_SUPERVISION;
@@ -469,8 +403,15 @@ export async function getStaffingView(
  * given a synthetic entry: the caller already holds the trip row and its own
  * window is the honest fallback, and inventing one here would hide a trip
  * whose rows were never written.
+ *
+ * Joined to `trips` on the asking shop (security review, note 1): its callers
+ * already pass only their own shop's ids, and this keeps it so for the next.
  */
-async function tripMeetings(db: AppDb, tripIds: string[]): Promise<Map<string, TripMeeting[]>> {
+export async function tripMeetings(
+  db: AppDb,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Map<string, TripMeeting[]>> {
   const byTrip = new Map<string, TripMeeting[]>();
   if (tripIds.length === 0) return byTrip;
   const rows = await db
@@ -480,7 +421,8 @@ async function tripMeetings(db: AppDb, tripIds: string[]): Promise<Map<string, T
       endsAt: tripScheduleDays.endsAt,
     })
     .from(tripScheduleDays)
-    .where(inArray(tripScheduleDays.tripId, tripIds))
+    .innerJoin(trips, and(eq(trips.id, tripScheduleDays.tripId), eq(trips.shopId, shopId)))
+    .where(inArray(tripScheduleDays.tripId, [...tripIds]))
     .orderBy(asc(tripScheduleDays.tripId), asc(tripScheduleDays.dayNumber));
   for (const row of rows) {
     const windows = byTrip.get(row.tripId) ?? [];
@@ -514,24 +456,30 @@ export async function crewShiftCoverage(
   // shop schedule shifts" is a fact about the shop, and a week nobody entered
   // shifts for at a shop that does schedule them is exactly when the warning
   // is earned.
-  const usesShifts = await db
+  // The probe and the window read need nothing from one another, so they go
+  // out together: one round trip, not two (#2487). With no one rostered there
+  // is nothing to cover, so only the probe runs.
+  const probe = db
     .select({ personId: staffShifts.personId })
     .from(staffShifts)
     .where(eq(staffShifts.shopId, shopId))
     .limit(1);
+  const covering =
+    personIds.length === 0
+      ? Promise.resolve([] as Array<{ personId: string }>)
+      : db
+          .select({ personId: staffShifts.personId })
+          .from(staffShifts)
+          .where(
+            and(
+              eq(staffShifts.shopId, shopId),
+              inArray(staffShifts.personId, [...personIds]),
+              lt(staffShifts.startsAt, trip.endsAt),
+              gt(staffShifts.endsAt, trip.startsAt),
+            ),
+          );
+  const [usesShifts, rows] = await Promise.all([probe, covering]);
   if (usesShifts.length === 0) return null;
-  if (personIds.length === 0) return new Set();
-  const rows = await db
-    .select({ personId: staffShifts.personId })
-    .from(staffShifts)
-    .where(
-      and(
-        eq(staffShifts.shopId, shopId),
-        inArray(staffShifts.personId, [...personIds]),
-        lt(staffShifts.startsAt, trip.endsAt),
-        gt(staffShifts.endsAt, trip.startsAt),
-      ),
-    );
   return new Set(rows.map((row) => row.personId));
 }
 

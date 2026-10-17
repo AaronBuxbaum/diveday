@@ -3,13 +3,24 @@ import { connection } from "next/server";
 import { EntryDone, EntryShell } from "@/components/account/EntryShell";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import {
+  checkBookkeeperConfirmation,
+  isBookkeeperToken,
+  wasBookkeeperConfirmed,
+} from "@/db/bookkeeper";
 import { getDb } from "@/db/client";
 import {
   checkShopContactEmailConfirmation,
   wasShopContactEmailConfirmed,
 } from "@/db/shop-contact-email";
+import {
+  checkShoreAlertConfirmation,
+  isShoreAlertToken,
+  wasShoreAlertConfirmed,
+} from "@/db/shore-alert-tokens";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { nowDate } from "@/lib/clock";
 import { confirmContactEmail } from "./actions";
 
 export const metadata: Metadata = {
@@ -24,6 +35,13 @@ export const metadata: Metadata = {
  * clicked (same reasoning as `/verify/[token]`). The button's own submit is
  * what consumes it, and the success state is read back from the token row --
  * never from a query flag a caller could forge.
+ *
+ * The same page confirms a shore contact's address (H-118): the link a shop's
+ * saved shore address receives before any roll-call alert goes to it. Its
+ * token lives in its own table, so the page tries the front desk's resolvers
+ * and then the shore contact's, as `/unsubscribe/[token]` does for its kinds.
+ * The bookkeeper's link (item 35, security review B1) is the third: the
+ * month-end files go nowhere until the inbox they go to says yes here.
  */
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
@@ -54,15 +72,7 @@ export default async function ConfirmContactPage({
   }
 
   const check = await checkShopContactEmailConfirmation(db, { token });
-  if (!check) {
-    return (
-      <EntryDone
-        glyph="expired"
-        title={t("contactConfirm.unavailableTitle")}
-        text={t("contactConfirm.unavailableText")}
-      />
-    );
-  }
+  if (!check) return <ShoreConfirmation token={token} t={t} />;
 
   // One question, one button — a panel around a single control is chrome
   // (docs/design/principles.md #10), so the shell renders none.
@@ -79,6 +89,109 @@ export default async function ConfirmContactPage({
       <form action={confirmContactEmail.bind(null, token)}>
         <SubmitButton pendingLabel={t("contactConfirm.confirming")} className={buttonClass()}>
           {t("contactConfirm.submit")}
+        </SubmitButton>
+      </form>
+    </EntryShell>
+  );
+}
+
+/** The shore contact's link (H-118): the same three states, in its own words. */
+async function ShoreConfirmation({
+  token,
+  t,
+}: {
+  token: string;
+  t: ReturnType<typeof diverTranslator>;
+}) {
+  const db = await getDb();
+  const confirmed = await wasShoreAlertConfirmed(db, { token });
+  if (confirmed) {
+    return (
+      <EntryDone
+        glyph="done"
+        title={t("shoreConfirm.confirmedTitle", { shopName: confirmed.shopName })}
+        text={t("shoreConfirm.confirmedText", { shopName: confirmed.shopName })}
+      />
+    );
+  }
+  const check = await checkShoreAlertConfirmation(db, { token });
+  if (!check) {
+    const shore = await isShoreAlertToken(db, { token });
+    if (!shore) return <BookkeeperConfirmation token={token} t={t} />;
+    return (
+      <EntryDone
+        glyph="expired"
+        title={t(shore ? "shoreConfirm.unavailableTitle" : "contactConfirm.unavailableTitle")}
+        text={t(shore ? "shoreConfirm.unavailableText" : "contactConfirm.unavailableText")}
+      />
+    );
+  }
+  return (
+    <EntryShell
+      wordmark
+      panel={false}
+      title={t("shoreConfirm.title", { shopName: check.shopName })}
+      description={t("shoreConfirm.description", {
+        shopName: check.shopName,
+        email: check.email,
+      })}
+    >
+      <form action={confirmContactEmail.bind(null, token)}>
+        <SubmitButton pendingLabel={t("shoreConfirm.confirming")} className={buttonClass()}>
+          {t("shoreConfirm.submit")}
+        </SubmitButton>
+      </form>
+    </EntryShell>
+  );
+}
+
+/** The bookkeeper's link (item 35, security review B1): the same three states. */
+async function BookkeeperConfirmation({
+  token,
+  t,
+}: {
+  token: string;
+  t: ReturnType<typeof diverTranslator>;
+}) {
+  const db = await getDb();
+  const confirmed = await wasBookkeeperConfirmed(db, { token });
+  if (confirmed) {
+    return (
+      <EntryDone
+        glyph="done"
+        title={t("bookkeeperConfirm.confirmedTitle")}
+        text={t("bookkeeperConfirm.confirmedText", { shopName: confirmed.shopName })}
+      />
+    );
+  }
+  const check = await checkBookkeeperConfirmation(db, { token, now: nowDate() });
+  if (!check) {
+    const bookkeeper = await isBookkeeperToken(db, { token });
+    return (
+      <EntryDone
+        glyph="expired"
+        title={t(
+          bookkeeper ? "bookkeeperConfirm.unavailableTitle" : "contactConfirm.unavailableTitle",
+        )}
+        text={t(
+          bookkeeper ? "bookkeeperConfirm.unavailableText" : "contactConfirm.unavailableText",
+        )}
+      />
+    );
+  }
+  return (
+    <EntryShell
+      wordmark
+      panel={false}
+      title={t("bookkeeperConfirm.title", { shopName: check.shopName })}
+      description={t("bookkeeperConfirm.description", {
+        shopName: check.shopName,
+        email: check.email,
+      })}
+    >
+      <form action={confirmContactEmail.bind(null, token)}>
+        <SubmitButton pendingLabel={t("bookkeeperConfirm.confirming")} className={buttonClass()}>
+          {t("bookkeeperConfirm.submit")}
         </SubmitButton>
       </form>
     </EntryShell>

@@ -30,7 +30,7 @@ cannot see it.
 | Password-reset request | `src/app/forgot-password/actions.ts` | IP **and** requested email, checked concurrently | `RATE_LIMITS.passwordResetRequestByIp` (5/hour) + `RATE_LIMITS.passwordResetRequestByEmail` (3/15min) |
 | "Can't find your link?" request | `src/app/s/[shopSlug]/actions.ts` `requestFindMyBookingAction` (IP) + `src/db/find-my-booking.ts` `sendFindMyBookingLinks` (email) | IP, checked synchronously; requested email, checked only once at least one matching booking actually needs a fresh mint | `RATE_LIMITS.findMyBookingByIp` (5/hour) + `RATE_LIMITS.findMyBookingByEmail` (3/15min) |
 | Account-token actions (verify, reset submit, invite accept, unsubscribe confirm) | `src/app/verify/[token]/actions.ts`, `reset-password/[token]/actions.ts`, `invite/[token]/actions.ts`, `unsubscribe/[token]/actions.ts` | IP, checked before the token is looked up | `RATE_LIMITS.accountTokenAction` (20/hour) |
-| RFC 8058 one-click unsubscribe | `src/app/unsubscribe/[token]/one-click/route.ts` | capability token, checked before the token is looked up | `RATE_LIMITS.oneClickUnsubscribe` (10/hour) |
+| RFC 8058 one-click unsubscribe | `src/app/unsubscribe/[token]/one-click/route.ts` | IP, then capability token, both checked before the token is looked up | `RATE_LIMITS.oneClickUnsubscribeByIp` (300/hour) + `RATE_LIMITS.oneClickUnsubscribe` (10/hour); the IP bucket is generous because mail providers POST from shared addresses |
 | Second factor (TOTP or recovery code): step-up, enable, disable | `src/app/shop/[shopSlug]/settings/security/actions.ts` | signed-in account **and** IP | `RATE_LIMITS.secondFactorByAccount` (5/15min) + `RATE_LIMITS.secondFactorByIp` (20/15min) |
 | Recap photo upload | `src/app/recap/[token]/actions.ts` | IP **and** booking (post-verification) | `RATE_LIMITS.recapUploadByIp` (30/hour) + `RATE_LIMITS.recapUploadByToken` (10/hour) |
 | Post-trip tip checkout | same file, `startTipAction` | IP **and** booking | `RATE_LIMITS.tipStart` (10/hour), spent on both dimensions |
@@ -42,6 +42,7 @@ cannot see it.
 | Last-minute-list join | `src/app/s/[shopSlug]/actions.ts` | IP, **and** the address any certification claim is *about* | `RATE_LIMITS.lastMinuteListJoin` (10/hour) + `RATE_LIMITS.declarationByPerson` (5/hour) |
 | Buying a dive package online | `src/app/s/[shopSlug]/packages/actions.ts` | IP **and** the shop plus the email typed | `RATE_LIMITS.packagePurchaseByIp` (10/hour) + `RATE_LIMITS.packagePurchaseByEmail` (5/hour) |
 | Course inquiry | `src/app/s/[shopSlug]/courses/[slug]/actions.ts` | IP | `RATE_LIMITS.courseInquiry` (10/hour) |
+| Course inquiry's acknowledgment to the diver | `src/app/actions/inquiry.ts` | recipient address, across every shop | `RATE_LIMITS.courseInquiryAck` (2/day) — drops the send, never the request |
 | Self-registration (the counter QR) | `src/app/s/[shopSlug]/register/actions.ts` | IP | `RATE_LIMITS.selfRegisterByIp` (10/hour) |
 | Self-registration (the counter QR) | `src/app/s/[shopSlug]/register/actions.ts` | shop | `RATE_LIMITS.selfRegisterByShop` (120/hour) |
 | Self-registration's waiver mail | `src/app/s/[shopSlug]/register/actions.ts` | recipient address | `RATE_LIMITS.selfRegisterEmailByRecipient` (3/hour) — drops the send, never the registration |
@@ -53,11 +54,13 @@ cannot see it.
 | Saving the arrival card from the readiness link | `src/app/s/[shopSlug]/trips/[id]/arrival-card/route.ts` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) — a GET that mints a capability row per request, so an unthrottled loop by anyone holding a forwarded readiness link would grow the table and retire the code the diver already printed |
 | Waiver draft/complete | `src/app/waivers/[token]/page.tsx` | IP | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Emailing a fresh waiver link from a dead one | `src/app/waivers/[token]/actions.ts` | IP, **and** the booking whose inbox receives it | `RATE_LIMITS.capabilityAction` (60/hour) + `RATE_LIMITS.waiverLinkResendByBooking` (5/hour) |
+| Unlocking the answers on the doctor's page with a date of birth | `src/app/waivers/[token]/doctor/actions.ts` | IP, **and** the diver (the held release's person), the second **failing closed** on a store error; plus a lifetime ceiling of `DOCTOR_UNLOCK_FAILURE_LIMIT` (20) wrong dates counted on the record (`waiver_records.doctor_unlock_failures`), after which the answers stay locked for the rest of the hold and `doctor_answers.locked_out` is logged | `RATE_LIMITS.capabilityAction` (60/hour) + `RATE_LIMITS.doctorAnswersByPerson` (5/15min) |
 | Adding a seat from the readiness link | `src/app/ready/[token]/booking-actions.ts` `addSeatFromReady` | IP, **and** the booking the seats join (spent only once the page has decided the lead may add one) | `RATE_LIMITS.booking` (10/hour) + `RATE_LIMITS.readyAddSeatByBooking` (10/hour) — the link is shared by design, so the booking bucket stops one link sprayed from many addresses from filling the boat |
 | Emailing a fresh trip-prep link from a dead one | `src/app/ready/[token]/booking-actions.ts` | IP, **and** the booking whose inbox receives it | `RATE_LIMITS.capabilityAction` (60/hour) + `RATE_LIMITS.readinessLinkResendByBooking` (5/hour) |
+| Emailing a fresh link to one of the diver's other days from "Your days" on `/ready` | `src/app/ready/[token]/your-days-actions.ts` | IP, **and** the booking whose inbox receives it, **and** the diver: every row mails the same person | `RATE_LIMITS.capabilityAction` (60/hour) + `RATE_LIMITS.readinessLinkResendByBooking` (5/hour) + `RATE_LIMITS.yourDayLinkByPerson` (5/hour) |
 | Seat-claim link | `src/app/claim/[token]/actions.ts` | IP | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Address autocomplete in shop settings | `src/app/shop/[shopSlug]/settings/shop-actions.ts` | signed-in staff member | `RATE_LIMITS.addressLookup` (120/hour) |
-| A fresh waiver link from the roster | `src/app/shop/[shopSlug]/trips/[id]/actions.ts` `sendNewWaiverAction` | signed-in staff member | `RATE_LIMITS.staffSendByActor` (60/hour) — refused with the `send-limit` notice |
+| A fresh waiver link from the roster | `src/app/shop/[shopSlug]/trips/[id]/roster-waiver-actions.ts` `sendNewWaiverAction` | signed-in staff member | `RATE_LIMITS.staffSendByActor` (60/hour) — refused with the `send-limit` notice |
 | Replying to a diver | `src/app/shop/[shopSlug]/divers/[personId]/details-actions.ts` `replyToDiverAction` | signed-in staff member | `RATE_LIMITS.staffSendByActor` (60/hour) — refused with the `reply-send-limit` notice |
 | Inviting a staff member, or resending the invite | `src/app/shop/[shopSlug]/settings/team/actions.ts` `inviteStaffAction` / `resendInviteAction` | signed-in staff member, one bucket per action | `RATE_LIMITS.staffSendByActor` (60/hour) — refused with the `send-limit` notice |
 | Resending an invoice | `src/app/actions/invoices.ts` `resendInvoiceAction` | signed-in staff member | `RATE_LIMITS.staffSendByActor` (60/hour) — refused with the `rate_limited` reason |
@@ -65,6 +68,7 @@ cannot see it.
 | A note to everyone on a departure | `src/app/shop/[shopSlug]/trips/[id]/departure-note-actions.ts` `holdDepartureNoteAction` | signed-in staff member | `RATE_LIMITS.staffSendByActor` (60/hour) — refused with the `rate_limited` reason |
 | Core Web Vitals beacon | `src/app/api/vitals/route.ts` | IP | `RATE_LIMITS.webVitalsBeacon` (300/hour) |
 | CSP violation report | `src/app/api/csp-report/route.ts` | IP | `RATE_LIMITS.cspReport` (120/hour) |
+| Failed cert check's page-shape report | `src/app/actions/agency-check-report.ts` | staffer, shop | `RATE_LIMITS.agencyCheckReportByPerson` (30/hour), `RATE_LIMITS.agencyCheckReportByShop` (120/hour) |
 
 Five notes the table can't carry:
 

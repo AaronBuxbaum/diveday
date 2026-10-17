@@ -10,7 +10,7 @@ const DIVES = [
   { diveNumber: 2, line: "Dive 2 · French Reef" },
 ];
 
-function plan(dives = DIVES) {
+function plan(dives: readonly { diveNumber: number; line: string; lastTime?: string }[] = DIVES) {
   return render(<TripPlanSection heading="The plan" dives={dives} />);
 }
 
@@ -21,9 +21,37 @@ describe("TripPlanSection", () => {
     expect(lines).toEqual(["Dive 1 · Molasses Reef", "Dive 2 · French Reef"]);
   });
 
+  it("says the site's last visit under its dive, and nothing for one never dived", () => {
+    // Fifth-loop ideas, item 6: the captain's memory of the reef, on the plan.
+    const { container } = plan([
+      { ...DIVES[0], lastTime: "Molasses Reef: moved to French Reef last time (Mon, Oct 12)." },
+      DIVES[1],
+    ]);
+    const lines = [...container.querySelectorAll("li")].map((node) => node.textContent);
+    expect(lines).toEqual([
+      "Dive 1 · Molasses ReefMolasses Reef: moved to French Reef last time (Mon, Oct 12).",
+      "Dive 2 · French Reef",
+    ]);
+  });
+
   it("renders nothing at all when the day has no planned dives", () => {
     const { container } = plan([]);
     expect(container.firstElementChild).toBeNull();
+  });
+
+  it("says where the boat meets before the dives, even on a day with none planned", () => {
+    // UX review 2026-10-13, item 18: the crew read "The meeting point moved."
+    // on the strip above, and no staff page said where it had moved to.
+    const meeting = { label: "Where we meet", line: "Slip 4, the east dock · 1 Harbor Rd" };
+    const { container } = render(
+      <TripPlanSection heading="The plan" dives={DIVES} meeting={meeting} />,
+    );
+    const lines = [...container.querySelectorAll("li")].map((node) => node.textContent);
+    expect(lines[0]).toBe("Where we meetSlip 4, the east dock · 1 Harbor Rd");
+    expect(lines).toHaveLength(3);
+    cleanup();
+    const bare = render(<TripPlanSection heading="The plan" dives={[]} meeting={meeting} />);
+    expect(bare.container.querySelectorAll("li")).toHaveLength(1);
   });
 
   it("keeps the plan off the printed sheet", () => {

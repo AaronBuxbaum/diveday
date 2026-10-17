@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { Badge } from "@/components/ui/badge";
+import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import { listDiveSites } from "@/db/dive-sites";
 import {
@@ -20,13 +22,17 @@ import { uuidParam } from "@/lib/uuid";
 import {
   addIncidentAddendumAction,
   addIncidentPersonAction,
+  discardIncidentDraftAction,
   fileIncidentReportAction,
   removeIncidentPersonAction,
   saveIncidentDraftAction,
+  setIncidentLegalHoldAction,
 } from "../actions";
+import { IncidentDiscard, IncidentLegalHold } from "./_components/IncidentDecisions";
 import { IncidentDraftForm } from "./_components/IncidentDraftForm";
 import { IncidentPeople } from "./_components/IncidentPeople";
 import { IncidentAddenda, IncidentFiling, IncidentRecord } from "./_components/IncidentRecord";
+import { manifestReturnHref } from "./_components/manifest-return";
 import { INCIDENT_NOTICES } from "./_components/notices";
 
 // Every trips/[id] sibling paints from its own `loading.tsx` (ADR
@@ -52,7 +58,7 @@ export default async function IncidentReportPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; id: string; reportId: string }>;
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; from?: string; checkpoint?: string }>;
 }) {
   const { shopSlug, id: tripId, reportId } = await params;
   if (!uuidParam(tripId) || !uuidParam(reportId)) notFound();
@@ -63,7 +69,9 @@ export default async function IncidentReportPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const tz = shop.timezone;
-  const { notice: noticeParam } = await searchParams;
+  const search = await searchParams;
+  const { notice: noticeParam } = search;
+  const backToManifest = manifestReturnHref(shopSlug, tripId, search);
   const definition = noticeFromParam(noticeParam, INCIDENT_NOTICES);
   const notice = definition
     ? { form: definition.form, tone: definition.tone, text: t(definition.key) }
@@ -111,6 +119,17 @@ export default async function IncidentReportPage({
         }
         description={description}
       />
+      {/* Opened from the manifest's "Start a missing diver report": the roll
+          call is still running, so the way back to it is the first thing
+          under the title (domain review 2026-10-16). */}
+      {backToManifest ? (
+        <Link
+          href={backToManifest}
+          className={buttonClass({ variant: "secondary", className: "print:hidden" })}
+        >
+          {t("incidents.missingDiver.backToManifest")}
+        </Link>
+      ) : null}
       {/* Filing turns the form into a record, so its answer has no form left
           to stand in: it is the page's. */}
       <FormStatus tone={pageNotice?.tone}>{pageNotice?.text}</FormStatus>
@@ -150,8 +169,17 @@ export default async function IncidentReportPage({
       {editing ? (
         <IncidentFiling
           gaps={incidentFilingGaps(report.fields)}
+          missingDiver={report.fields.kind === "missing_diver"}
           action={fileIncidentReportAction.bind(null, shopSlug, tripId, reportId)}
           notice={noticeForForm(notice, "file")}
+          t={t}
+        />
+      ) : null}
+
+      {report.mayDecide && report.status === "draft" ? (
+        <IncidentDiscard
+          action={discardIncidentDraftAction.bind(null, shopSlug, tripId, reportId)}
+          notice={noticeForForm(notice, "discard")}
           t={t}
         />
       ) : null}
@@ -167,6 +195,21 @@ export default async function IncidentReportPage({
               : null
           }
           notice={noticeForForm(notice, "addenda")}
+          t={t}
+        />
+      ) : null}
+
+      {report.mayDecide && report.status === "filed" ? (
+        <IncidentLegalHold
+          held={report.legalHold}
+          action={setIncidentLegalHoldAction.bind(
+            null,
+            shopSlug,
+            tripId,
+            reportId,
+            !report.legalHold,
+          )}
+          notice={noticeForForm(notice, "hold")}
           t={t}
         />
       ) : null}

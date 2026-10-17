@@ -7,18 +7,31 @@ vi.mock("../actions", () => {
     [
       "addBuddyTeamMemberAction",
       "addManifestPrivateNoteAction",
+      "answerSnagAction",
       "crewRollCallAction",
       "dissolveBuddyTeamAction",
       "formBuddyTeamAction",
       "markTripCaughtUpAction",
+      "noteSnagAction",
       "preDepartureCheckAction",
       "removeBuddyTeamMemberAction",
       "rollCallAction",
       "saveExecutedDiveAction",
       "setTripStageAction",
+      "teamUpPartiesAction",
     ].map((name) => [name, named(name)]),
   );
 });
+
+vi.mock("../../incidents/actions", () => ({
+  startMissingDiverReportAction: {
+    bind: (_: unknown, shopSlug: unknown, tripId: unknown) => ({
+      name: "startMissingDiverReportAction",
+      shopSlug,
+      tripId,
+    }),
+  },
+}));
 
 const context = { shopSlug: "blue-mantis", tripId: "trip-1", checkpoint: "after_dive_1" } as const;
 
@@ -27,6 +40,10 @@ describe("bindManifestActions", () => {
     const actions = bindManifestActions(context);
     expect(actions.rollCall).toEqual({ name: "rollCallAction", context });
     expect(actions.saveExecutedDive).toEqual({ name: "saveExecutedDiveAction", context });
+    expect(actions.buddyTeams.teamUpPartiesAction).toEqual({
+      name: "teamUpPartiesAction",
+      context,
+    });
     expect(actions.buddyTeams.formBuddyTeamAction).toEqual({
       name: "formBuddyTeamAction",
       context,
@@ -40,9 +57,21 @@ describe("bindManifestActions", () => {
       actions.addPrivateNote,
       actions.markTripCaughtUp,
       actions.preDepartureCheck,
+      actions.noteSnag,
+      actions.answerSnag,
       actions.setTripStage,
     ]) {
       expect((action as unknown as { context: unknown }).context).toEqual(narrow);
     }
+  });
+
+  it("binds the missing diver report only for a reader who may start a report", () => {
+    expect(bindManifestActions(context).startMissingDiverReport).toBeNull();
+    expect(
+      bindManifestActions(context, { mayStartIncidentReport: false }).startMissingDiverReport,
+    ).toBeNull();
+    expect(
+      bindManifestActions(context, { mayStartIncidentReport: true }).startMissingDiverReport,
+    ).toEqual({ name: "startMissingDiverReportAction", shopSlug: "blue-mantis", tripId: "trip-1" });
   });
 });

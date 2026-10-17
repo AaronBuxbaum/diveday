@@ -16,19 +16,25 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Adventure Diver
 - Agency
 - Agency check
+- Agency check of a card
+- Agency-listed certification
 - Assistant Instructor (AI)
 - Bundled nitrox
 - C-card
 - Card sighting
 - Certification summary
+- Certifications issued here
+- Check all (agency)
 - Claimed certification
 - Clearing a declared-uncertified stamp
 - CMAS
 - Confirm to clear
+- Course ladder
 - Declared uncertified
 - Depth ceiling
 - Depth marker
 - Depth unit
+- DiveChek check
 - DSD (Discover Scuba Diving)
 - eLearning check
 - Entry-level in-water ratio
@@ -40,10 +46,14 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Intro-session in-water ratio
 - Junior certification
 - Levels
+- Minimum extension version
 - Minor
 - Other agency
+- PADI checks
 - PADI Scuba Diver
+- Page-shape report
 - Prior visit
+- Processed with the agency
 - RAID
 - Readiness
 - Refresher / ReActivate
@@ -55,6 +65,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Target diver:divemaster ratio
 - Temperature unit
 - Trip admission
+- Try the checks
 - Verified certification
 
 ## Day of the dive
@@ -62,15 +73,19 @@ fails while it is stale. Grep the domain files for a term; this index says which
 [glossary/day-of-the-dive.md](glossary/day-of-the-dive.md)
 
 - Arrival card
+- Back from the boat
 - Blow-out
 - Change ledger
 - Conditions hold
+- Day load-out
 - Day-of help request
 - Departure note
 - Dock line
 - Dock rider
+- Last time line
 - Lost item
 - Saved trip-prep copy
+- Snag
 - Staff note
 
 ## Modeling notes
@@ -84,6 +99,8 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Identity match key
 - Level vs. specialty
 - Merge (two diver records)
+- Processor erasure obligation
+- Re-point a held seat
 - Remove vs. erase (a diver)
 - Seat left behind
 - Split off a held seat
@@ -94,26 +111,42 @@ fails while it is stale. Grep the domain files for a term; this index says which
 [glossary/money.md](glossary/money.md)
 
 - Billing standing
+- Booking lead time
 - Cancellation notice
 - Card dispute
+- Checkout sale / tip sale
 - Dashboard refund
+- Desk payment
+- Dive (package unit)
+- Dives owed on packages
 - Failed refund
 - First paid month
 - Free term
+- Month-end email
+- Owed
 - Paid after close
+- Paid mark
+- Party payment
 - Pass-through fee
+- Payments restricted
 - Payout
+- Room charge
+- Sailed / Still to sail
+- Stale package invoice
 - Subscription (DiveDay billing)
 
 ## Operations
 
 [glossary/operations.md](glossary/operations.md)
 
+- 30-day invite cooldown
 - Activation milestone
 - After-state
 - Arrival event
 - Arrival lookup
 - Arrivals window
+- Ask to move
+- At sea
 - Automated cancellation refund
 - Automated marine outlook
 - Back on the water
@@ -121,6 +154,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Backup destination
 - Blocked / Ready
 - Boarding
+- Boat at departure
 - Boat clash
 - Boat mode
 - Boat papers
@@ -129,9 +163,11 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Buddy team
 - Cancellation window
 - Certificate passenger limit
+- Certificate total-persons limit
 - Check-in
 - Close-out
 - Connected Stripe account
+- Counter hand-off
 - Counter self-registration
 - Course catalog copy
 - Course form
@@ -140,11 +176,14 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Courtesy message
 - Crew clash
 - Crew gap
+- Crew month line
 - Crew news
 - Crew roll-call event
 - Crew schedule
 - Crew warning
 - DAN
+- Days at sea
+- Decompression card reminder
 - Default course page
 - Delivery receipt
 - Demo mode
@@ -152,14 +191,16 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Deposit
 - Desk hours
 - Didn't sail
+- Dietary note
+- Discarded draft
 - Dive briefing
 - Dive day
 - Dive day (north star)
 - Dive record
 - Dive site
-- Diver moment
 - Diver seats
 - Dock call time
+- Doctor's page
 - Emergency contact
 - Emergency reference
 - Export bundle
@@ -167,19 +208,28 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - First-timer track
 - Held
 - Horizon
+- Hotel pickup
 - Implausible-station advisory
 - Imported payment history
 - Imported waiver acceptance
 - In-water certified assistant
+- Inbox seat
+- Incident kind
 - Incident report
 - Instruction fee / e-learning fee
 - Integrity-sealed waiver
+- Invite suggestion
 - Invoice
 - Last-minute deal
 - Last-minute list
 - Learning materials
+- Legal hold
+- Lunch aboard
 - Manifest
+- Medical hold
 - Medical questionnaire
+- Meeting point
+- Milestone
 - Milestone stamp
 - Minor unit
 - Monday email
@@ -198,6 +248,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Paper / in-person signature
 - Paper pass
 - Participant type
+- Party / Came together
 - Payment event
 - Per-trip crew role
 - Physician clearance
@@ -207,6 +258,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Prerequisite note
 - Private session / private course
 - Progression order
+- Radio identity
 - Reconciliation
 - Rehearsal
 - Reminder cadence
@@ -223,54 +275,78 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Safety kit
 - Sailed
 - Salvage offer
+- Saved answer
+- Seat
 - Seat claim
 - Seat held
+- Seat move
 - Seat release
 - Self-guided departure
 - Set-up request
 - Settled total
 - Setup link
+- Shared photo
 - Shop currency
 - Shop day scan
+- Shore alert contact
 - Sign once
 - Skipped occurrence
 - SMS channel
+- Snorkel-suitable
 - Snorkeler
 - Souls on board
 - Staff invite
+- Stale roll call
 - Standing crew
+- Standing line
 - Station acknowledgement
 - Station echo
 - STOP list
+- The record
+- Thin boat
 - Tide window
+- Tight turnaround
 - Tip
 - Touch guard
+- Training mark
 - Transactional notification
 - Trip / charter
 - Trip packet
 - Trip phase
 - Trip series
 - Trip stage
+- Turned away
 - Unaccounted for
 - Wait list
+- Wait-list party
+- Wait-list roll
 - Waiver / release
 - Waiver activity
 - Waiver completion
+- Weather day
+- Week totals
 - WhatsApp sender
 - Working shift
+- Your days
 - Your week
 
 ## Records and evidence
 
 [glossary/records-and-evidence.md](glossary/records-and-evidence.md)
 
+- Coverage denominator
 - Day profile
+- Dispute sheet
+- Dive area
 - Earliest flight
 - Executed dive
 - Field guide
 - Marine-life catalog
 - Material generation
 - Observed species
+- Photo ledger
+- Safety year
+- Sailed with no crew on record
 - Sighting
 - Staff credential
 - Supervision claim
@@ -292,17 +368,20 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Demand signal
 - Diver profile
 - Dives dry
+- Drysuit experience seen
 - Gear proposal
 - Gear register
 - Gear register groups
 - Gear reservation
 - Gear unit
+- Gear-included course
 - Gear-request override
 - Late (work order)
 - Needs staff fit
 - Nitrox / EANx
 - Nitrox request
 - Nitrox-compatible course
+- Nitrox-designated regulator
 - Private staff note
 - Ready message
 - Rental catalog
@@ -316,6 +395,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Technician
 - The bench
 - Trip prep list
+- Wetsuit for the day
 - Work done record
 - Work order
 

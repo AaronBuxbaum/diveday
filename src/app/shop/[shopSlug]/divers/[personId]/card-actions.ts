@@ -3,8 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { certificationForAgencyCheck, isAgencyCheckedCard } from "@/db/agency-check";
 import type { AppDb } from "@/db/client";
+import {
+  clearDrysuitExperienceSeen,
+  type RecordDrysuitExperienceOutcome,
+  recordDrysuitExperienceSeen,
+} from "@/db/drysuit-experience";
 import {
   createNitroxCertification,
   deleteNitroxCertification,
@@ -30,13 +34,13 @@ import {
 } from "@/db/readiness";
 import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
-import { judgeAgencyPage, PAGE_TEXT_MAX_LENGTH } from "@/lib/agency-check";
 import { isPlausibleCardNumber } from "@/lib/card-number";
-import { formValue, readForm, text } from "@/lib/form-parse";
+import { formValue, readForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { unreviewedCardState } from "@/lib/readiness";
 import { noticeUrl } from "@/lib/staff-notices";
-import { uuidParam } from "@/lib/uuid";
 import { backTo, requireDiverActionContext, successUrl } from "./action-helpers";
+import { cardForm, cardIdFromForm } from "./card-form";
 
 // The pg enum itself, not a copy of it: a card the column accepts is a card the
 // form must accept, and a hand-kept list is what let CMAS/RAID/GUE be refused
@@ -86,46 +90,6 @@ const sightingSchema = z.object({
  * like any other, never trusted from the row it is about to overwrite.
  */
 const levelSightingSchema = sightingSchema.extend({ level: levelSchema });
-
-/**
- * Every field the card forms post, each read as `FormData.get` read it: the
- * schemas above, and the review rules below, are what narrow them.
- */
-const cardForm = z.object({
-  agency: formValue(),
-  card: text(),
-  cardType: formValue(),
-  certificationId: text(),
-  identifier: formValue(),
-  intent: formValue(),
-  pageText: formValue(),
-  sightedAgency: formValue(),
-  sightedIdentifier: formValue(),
-  sightedLevel: formValue(),
-});
-
-/**
- * The card a submit names, narrowed to something a `uuid` column can actually
- * be compared against — or `undefined`, which every caller below already
- * handles as "no card named" and answers with its own refusal.
- *
- * Five actions took this straight off the form and put it in
- * `eq(certifications.id, …)`. **Postgres does not coerce a malformed uuid
- * literal — it raises**, so a signed-in staffer editing the posted value turned
- * a delete, a restore or a review into a **500** where that action's own
- * "invalid" belongs one line later. Tenant isolation was never the exposure
- * (every one of those queries is narrowed by `shopId` either way); a staff
- * surface answering a typo with a stack trace instead of a sentence is.
- *
- * It is the same rule and the same helper `pnpm check:repo` already enforces on
- * dynamic route segments (`scripts/check-uuid-segments.mjs`); that script can
- * only see paths, and an id posted in a hidden field reaches the identical
- * query.
- */
-function cardIdFromForm(formData: FormData): string | undefined {
-  const fields = readForm(cardForm, formData);
-  return uuidParam(fields.certificationId);
-}
 
 /**
  * Whether this submit carried a card sighting whose **number** is the thing
@@ -398,6 +362,73 @@ export async function clearNoCertificationAction(
 }
 
 /**
+ * A staffer recording that they have seen this diver dive dry (issue #2136).
+ * Clears the roster's drysuit-card advisory and nothing else; it is not a card.
+ * Staff-only: this record's actions are the only writer, and the writer itself
+ * re-checks roles, the note and the diver (domain review A4, security X2).
+ */
+const drysuitExperienceForm = z.object({ note: formValue() });
+
+export async function recordDrysuitExperienceAction(
+  shopSlug: string,
+  personId: string,
+  formData: FormData,
+) {
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
+  personId = context.personId;
+  const { base, db, staff } = context;
+  const { note } = readForm(drysuitExperienceForm, formData);
+  const outcome = await recordDrysuitExperienceSeen(db, {
+    shopId: staff.user.shopId,
+    personId,
+    byPersonId: staff.user.personId,
+    note: typeof note === "string" ? note : "",
+  });
+  revalidateAndRedirect(base, backTo(base, drysuitRecordNotice(outcome)));
+}
+
+function drysuitRecordNotice(outcome: RecordDrysuitExperienceOutcome) {
+  if (outcome.ok) return "drysuit-experience-recorded";
+  switch (outcome.reason) {
+    case "already_recorded":
+      return "drysuit-experience-unchanged";
+    case "not_authorized":
+      return "drysuit-experience-not-authorized";
+    case "note_required":
+      return "drysuit-experience-note-required";
+    case "not_found":
+    case "self":
+    case "not_recordable":
+      return "drysuit-experience-not-recordable";
+  }
+}
+
+/**
+ * Take a "seen diving dry" back; the advisory returns to the roster. The
+ * recorder's, or an owner's or manager's (security review X3).
+ */
+export async function clearDrysuitExperienceAction(
+  shopSlug: string,
+  personId: string,
+  _formData: FormData,
+) {
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
+  personId = context.personId;
+  const { base, db, staff } = context;
+  const outcome = await clearDrysuitExperienceSeen(db, {
+    shopId: staff.user.shopId,
+    personId,
+    byPersonId: staff.user.personId,
+  });
+  const notice = outcome.ok
+    ? "drysuit-experience-cleared"
+    : outcome.reason === "not_authorized"
+      ? "drysuit-experience-not-authorized"
+      : "drysuit-experience-unchanged";
+  revalidateAndRedirect(base, backTo(base, notice));
+}
+
+/**
  * Delete a level card. It is a soft-archive: the card leaves the diver's list
  * and stops counting toward readiness, but the row is kept for safety history
  * (ADR 20260719-crud-archive-semantics). Replaces the old "needs correction" flow.
@@ -525,7 +556,12 @@ export type MarkCertifiedResult =
        * taken back (see `unreviewedCardState`), so a toast is never offered
        * with an Undo the server would refuse.
        */
-      undo?: { certificationId: string; cardType: CardType };
+      undo?: {
+        certificationId: string;
+        cardType: CardType;
+        /** The review this Undo reverses, as the ISO instant (issue #2612): a later review makes it stale. */
+        reviewedAt: string;
+      };
     }
   | { ok: false; reason: "invalid" | "sighting-required" | "duplicate-card" | "not-undoable" };
 
@@ -568,12 +604,19 @@ export async function markCertifiedAction(
   const input = { shopId: staff.user.shopId, certificationId };
 
   if (fields.intent === "undo") {
+    // The Undo reverses the review it was offered for and no other (issue
+    // #2612). A post that names no instant, or a nonsense one, reverses nothing.
+    const offered = typeof fields.reviewedAt === "string" ? new Date(fields.reviewedAt) : null;
+    if (!offered || Number.isNaN(offered.getTime())) {
+      return { ok: false, reason: "not-undoable" };
+    }
+    const undoInput = { ...input, reviewedAt: offered };
     const undone =
       cardType.data === "level"
-        ? await unreviewCertification(db, input)
+        ? await unreviewCertification(db, undoInput)
         : cardType.data === "specialty"
-          ? await unreviewSpecialtyCertification(db, input)
-          : await unreviewNitroxCertification(db, input);
+          ? await unreviewSpecialtyCertification(db, undoInput)
+          : await unreviewNitroxCertification(db, undoInput);
     revalidatePath(base);
     return undone.ok ? { ok: true, effect: "undone" } : { ok: false, reason: "not-undoable" };
   }
@@ -610,96 +653,11 @@ export async function markCertifiedAction(
     // An imported card was already `verified` on arrival; this tap confirmed
     // it rather than certifying it, and the two must not claim the same thing.
     effect: card.importedAt ? "confirmed" : "certified",
+    // Only a review its Undo can take back: never a sighting, nor a card an
+    // agency check listed where the agency numbers each card.
     undo:
-      card.selfDeclaredAt || card.issuedByShopAt
-        ? undefined
-        : { certificationId, cardType: cardType.data },
+      unreviewedCardState(card).ok && card.reviewedAt
+        ? { certificationId, cardType: cardType.data, reviewedAt: card.reviewedAt.toISOString() }
+        : undefined,
   };
-}
-
-/**
- * What a check with the agency did, for the control that asked. A value, not a
- * redirect, for the same reason as {@link MarkCertifiedResult}.
- */
-export type AgencyCheckResult =
-  | null
-  | {
-      ok: true;
-      /** The agency's page named this diver at this level, and the card is certified. */
-      verdict: "match";
-      undo?: { certificationId: string };
-    }
-  | { ok: true; verdict: "undone" }
-  | {
-      ok: true;
-      /** The diver is on the page, this level is not: the staffer reads it. */
-      verdict: "level_unconfirmed";
-      evidence: string;
-    }
-  | { ok: true; verdict: "no_record" | "unreadable" }
-  | { ok: false; reason: "invalid" | "not-undoable" };
-
-/**
- * **Certify a card from the agency's own page** (H-105).
- *
- * The DiveDay browser extension, in the staffer's own browser, typed this
- * diver into the agency's lookup page and handed back the page's text. The
- * verdict is decided here, from the card and diver as the database holds them
- * (`certificationForAgencyCheck`), never from anything the browser claims, and
- * `judgeAgencyPage` is narrow: only the diver's name beside the claimed
- * level's own wording certifies. Anything else returns a verdict and writes
- * nothing. A match certifies through the ordinary review, stamped
- * `agencyCheckedAt` with the agency's matching words as the note, and is
- * undone the way a one-tap review is.
- */
-export async function agencyCheckAction(
-  shopSlug: string,
-  personId: string,
-  _previous: AgencyCheckResult,
-  formData: FormData,
-): Promise<AgencyCheckResult> {
-  const fields = readForm(cardForm, formData);
-  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
-  personId = context.personId;
-  const { base, db, staff } = context;
-  const certificationId = cardIdFromForm(formData);
-  if (!certificationId) return { ok: false, reason: "invalid" };
-  const shopId = staff.user.shopId;
-
-  if (fields.intent === "undo") {
-    // Only the review a check made, on this diver: never a sighting or a
-    // one-tap review, which have their own Undo.
-    if (!(await isAgencyCheckedCard(db, { shopId, personId, certificationId }))) {
-      return { ok: false, reason: "not-undoable" };
-    }
-    const undone = await unreviewCertification(db, { shopId, certificationId });
-    revalidatePath(base);
-    return undone.ok ? { ok: true, verdict: "undone" } : { ok: false, reason: "not-undoable" };
-  }
-
-  const pageText = fields.pageText;
-  if (typeof pageText !== "string") return { ok: false, reason: "invalid" };
-  const card = await certificationForAgencyCheck(db, { shopId, personId, certificationId });
-  if (!card) return { ok: false, reason: "invalid" };
-  const judged = judgeAgencyPage({
-    ...card.query,
-    level: card.level,
-    pageText: pageText.slice(0, PAGE_TEXT_MAX_LENGTH),
-  });
-  if (judged.verdict === "level_unconfirmed") {
-    return { ok: true, verdict: "level_unconfirmed", evidence: judged.evidence };
-  }
-  if (judged.verdict !== "match") return { ok: true, verdict: judged.verdict };
-
-  const outcome = await reviewCertification(db, {
-    shopId,
-    certificationId,
-    status: "verified",
-    reviewedByPersonId: staff.user.personId,
-    reviewNote: judged.evidence,
-    agencyChecked: true,
-  });
-  revalidatePath(base);
-  if (!outcome.ok) return { ok: false, reason: "invalid" };
-  return { ok: true, verdict: "match", undo: { certificationId } };
 }

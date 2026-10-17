@@ -34,6 +34,10 @@ export type AvailableGearUnit = {
   kind: GearItemKind;
   label: string;
   size: string | null;
+  /** A regulator kept for enriched air (issue #2207); null for every other kind. */
+  nitroxDesignated: boolean | null;
+  /** A wetsuit's thickness in millimetres (issue #2206); null when not said and on every other kind. */
+  thicknessMm: number | null;
   /**
    * The unit's most urgent clock, so the picker can say "service overdue"
    * in the option itself. Informing at the moment of the decision, never
@@ -160,6 +164,8 @@ export async function listAvailableGearUnits(
       kind: gearItems.kind,
       label: gearItems.label,
       size: gearItems.size,
+      nitroxDesignated: gearItems.nitroxDesignated,
+      thicknessMm: gearItems.thicknessMm,
     })
     .from(gearItems)
     .where(
@@ -249,6 +255,8 @@ export type TripGearAssignment = {
   status: GearItemStatus;
   /** What the technician wrote when they pulled it, if anything. */
   serviceNote: string | null;
+  /** A wetsuit's whole-mm thickness, to compare with the day's (domain review F3). */
+  thicknessMm: number | null;
 };
 
 /** Open assignments for one departure's roster, keyed by booking. */
@@ -271,6 +279,7 @@ export async function listTripGearAssignments(
       checkedOutAt: gearReservations.checkedOutAt,
       status: gearItems.status,
       serviceNote: gearItems.serviceNote,
+      thicknessMm: gearItems.thicknessMm,
     })
     .from(gearReservations)
     .innerJoin(bookings, eq(bookings.id, gearReservations.bookingId))

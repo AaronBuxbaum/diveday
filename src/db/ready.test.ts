@@ -12,6 +12,7 @@ import {
   createBooking,
   setBookingLastDived,
 } from "./bookings";
+import { recordMoveAsk } from "./inbound-messages";
 import { setBookingPayment } from "./payments";
 import {
   createCertification,
@@ -21,9 +22,17 @@ import {
 } from "./readiness";
 import { carriedPreparationForDiver, getBookedCard, getReadyPageData } from "./ready";
 import { getRentalFit, toDiverRentalFit } from "./rental-fit";
-import { bookings, people, shops, waiverRecords } from "./schema";
+import {
+  bookings,
+  people,
+  priorVisits,
+  rollCallEvents,
+  shops,
+  trips as tripTable,
+  waiverRecords,
+} from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff, setTripStatus, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver } from "./waivers";
 import { issueWaiverRequest } from "./waivers-requests";
 
@@ -107,6 +116,22 @@ describe("getReadyPageData", () => {
   // page renders it from — and `canCancelBooking` has to agree with
   // `selfCancelBooking`'s own pre-checks exactly, or the page offers a button
   // that can only come back refused.
+  /** Fourth UX review, item 5: a priced, unpaid seat with no card to take is owed at the shop. */
+  it("marks a priced seat the page cannot charge as owed at the shop, and a paid one not", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    expect((await getReadyPageData(db, bookingId))?.owesAtShop).toBe(true);
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      currency: "usd",
+      amountCents: 12_000,
+      provider: "cash",
+      providerRef: null,
+    });
+    expect((await getReadyPageData(db, bookingId))?.owesAtShop).toBe(false);
+  });
+
   /** UX review 2026-10-11, item 13: the page draws "Add a seat" only where it can work. */
   it("offers a seat to add on a booking that may lead one, never on a party member's seat", async () => {
     const { db, shop, bookingId } = await unpaidBooking();
@@ -119,6 +144,36 @@ describe("getReadyPageData", () => {
     if (!added.ok) throw new Error("add failed");
     expect((await getReadyPageData(db, bookingId))?.canAddSeat).toBe(true);
     expect((await getReadyPageData(db, added.bookingId))?.canAddSeat).toBe(false);
+  });
+
+  /**
+   * Layer 3 review (dde-2 #1, dde-1 F2): a seat the desk released before the
+   * boat left is not the diver's to pay for or prepare. Without this, a diver
+   * turned away for payment at 07:00 pays at 07:10 for a seat the shop has
+   * already sold, and the page walks them through the checklist to the boat.
+   */
+  it("neither charges for nor prepares a seat the desk released", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    await upsertShopStripeAccount(db, shop.id, "acct_ready_released");
+    await setShopStripeAccountStatus(db, "acct_ready_released", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    const held = await getReadyPageData(db, bookingId);
+    expect(held?.canPay).toBe(true);
+    expect(held?.seatReleased).toBe(false);
+    await db
+      .update(bookings)
+      .set({ status: "no_show", turnedAwayAt: nowDate(), turnedAwayReason: "payment" })
+      .where(eq(bookings.id, bookingId));
+    const released = await getReadyPageData(db, bookingId);
+    expect(released?.canPay).toBe(false);
+    expect(released?.seatReleased).toBe(true);
+    expect(released?.turnedAway).toBe(true);
+    // Erasure-shaped: the fact without the category still reads turned away.
+    await db.update(bookings).set({ turnedAwayReason: null }).where(eq(bookings.id, bookingId));
+    expect((await getReadyPageData(db, bookingId))?.turnedAway).toBe(true);
   });
 
   /**
@@ -137,6 +192,8 @@ describe("getReadyPageData", () => {
     const owing = await getReadyPageData(db, bookingId);
     expect(owing?.canPay).toBe(true);
     expect(owing?.canAddSeat).toBe(false);
+    // A page that can take the card is not money owed at the shop.
+    expect(owing?.owesAtShop).toBe(false);
 
     await setBookingPayment(db, {
       shopId: shop.id,
@@ -203,6 +260,70 @@ describe("getReadyPageData", () => {
     expect(data?.cancelPreview).not.toBe("unpaid");
   });
 
+  /**
+   * H-126: "Ask to move" is offered exactly when a cancel would forfeit what
+   * was paid, and says it was asked once it has been.
+   */
+  it("offers Ask to move only past the free window on a paid seat, then says it was asked", async () => {
+    const { db, shop, open, bookingId } = await unpaidBooking();
+    // Unpaid: a cancel costs nothing, so there is nothing to ask instead.
+    expect((await getReadyPageData(db, bookingId))?.moveAsk).toBeNull();
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      currency: "usd",
+      amountCents: 12_000,
+      provider: "stripe",
+      providerRef: "pi_move_ask",
+    });
+    // Inside a generous window the cancel refunds.
+    await db.update(tripTable).set({ cancellationWindowHours: 1 }).where(eq(tripTable.id, open.id));
+    expect((await getReadyPageData(db, bookingId))?.cancelPreview).toBe("refund");
+    expect((await getReadyPageData(db, bookingId))?.moveAsk).toBeNull();
+    // A window wider than the time left: the cancel forfeits.
+    await db
+      .update(tripTable)
+      .set({ cancellationWindowHours: 24 * 365 })
+      .where(eq(tripTable.id, open.id));
+    const past = await getReadyPageData(db, bookingId);
+    expect(past?.cancelPreview).toBe("forfeit");
+    expect(past?.moveAsk).toBe("open");
+    await recordMoveAsk(db, { shopId: shop.id, bookingId, now: nowDate() });
+    expect((await getReadyPageData(db, bookingId))?.moveAsk).toBe("asked");
+    // A held seat is owed nothing (#2125).
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate() })
+      .where(eq(bookings.id, bookingId));
+    expect((await getReadyPageData(db, bookingId))?.moveAsk).toBeNull();
+  });
+
+  /**
+   * Dive-domain review N1 of layer r4-1: a paid seat at a shop with no
+   * cancellation window refunds nothing right away either, so the diver may
+   * ask to move instead there too.
+   */
+  it("offers Ask to move on a paid seat when the trip has no cancellation window", async () => {
+    const { db, shop, open, bookingId } = await unpaidBooking();
+    await setBookingPayment(db, {
+      shopId: shop.id,
+      bookingId,
+      status: "paid",
+      currency: "usd",
+      amountCents: 12_000,
+      provider: "stripe",
+      providerRef: "pi_move_ask_no_policy",
+    });
+    await db
+      .update(tripTable)
+      .set({ cancellationWindowHours: null })
+      .where(eq(tripTable.id, open.id));
+    const data = await getReadyPageData(db, bookingId);
+    expect(data?.cancelPreview).toBe("no_policy");
+    expect(data?.moveAsk).toBe("open");
+  });
+
   it("withdraws the cancel once the seat is checked in", async () => {
     const { db, bookingId } = await unpaidBooking();
     await db.update(bookings).set({ status: "checked_in" }).where(eq(bookings.id, bookingId));
@@ -225,6 +346,26 @@ describe("getReadyPageData", () => {
     const pastBuffer = new Date(open.startsAt.getTime() + 60 * 60 * 1000);
     expect((await getReadyPageData(db, bookingId, midBuffer))?.canCancelBooking).toBe(true);
     expect((await getReadyPageData(db, bookingId, pastBuffer))?.canCancelBooking).toBe(false);
+  });
+
+  it("withdraws the cancel inside the late hour once the dock counted the diver aboard (H-133)", async () => {
+    // `selfCancelBooking` refuses this seat (`aboardAtSeaBookingIds`), so the
+    // page must not offer it.
+    const { db, shop, open, bookingId } = await unpaidBooking();
+    const midBuffer = new Date(open.startsAt.getTime() + 20 * 60 * 1000);
+    expect((await getReadyPageData(db, bookingId, midBuffer))?.canCancelBooking).toBe(true);
+    const [recorder] = await listStaff(db, shop.id);
+    if (!recorder) throw new Error("seeded staff missing");
+    await db.insert(rollCallEvents).values({
+      shopId: shop.id,
+      tripId: open.id,
+      bookingId,
+      recordedByPersonId: recorder.person.id,
+      status: "boarded",
+      checkpoint: "departure",
+      occurredAt: new Date(open.startsAt.getTime() + 5 * 60 * 1000),
+    });
+    expect((await getReadyPageData(db, bookingId, midBuffer))?.canCancelBooking).toBe(false);
   });
 
   it("reads a waived booking as owing no refund, since there is no money to give back", async () => {
@@ -462,7 +603,7 @@ describe("carriedPreparationForDiver", () => {
 describe("getBookedCard", () => {
   it("states the masthead's facts exactly as the full loader does", async () => {
     const { db, shop, bookingId } = await unpaidBooking();
-    const card = await getBookedCard(db, { shopId: shop.id, bookingId });
+    const card = await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true });
     const data = await getReadyPageData(db, bookingId);
     if (!card || !data) throw new Error("expected both reads to resolve");
     expect(card.trip).toEqual({
@@ -491,11 +632,49 @@ describe("getBookedCard", () => {
   it("says when the seat or the departure is gone, so the page can decline the fast path", async () => {
     const { db, shop, open, bookingId } = await unpaidBooking();
     await cancelBooking(db, shop.id, bookingId);
-    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.bookingCancelled).toBe(true);
+    expect(
+      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))?.bookingCancelled,
+    ).toBe(true);
     await setTripStatus(db, shop.id, open.id, "cancelled");
-    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.departureCancelled).toBe(
-      true,
+    expect(
+      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))
+        ?.departureCancelled,
+    ).toBe(true);
+  });
+
+  // H-128: the diver's side of a regular's milestone, said on the booked moment.
+  it("names a milestone boat, counting the shop's imported visits, and only that boat", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    expect(
+      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))?.milestone,
+    ).toBeNull();
+    const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    if (!seat) throw new Error("seat missing");
+    await db.insert(priorVisits).values(
+      Array.from({ length: 9 }, (_, index) => ({
+        shopId: shop.id,
+        personId: seat.personId,
+        visitedOn: `2024-0${index + 1}-10`,
+        dedupeKey: `ready-milestone-${index}`,
+        importedAt: nowDate(),
+      })),
     );
+    expect(
+      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))?.milestone,
+    ).toBe(10);
+    // A booking redirect proved only a typed name and address: no count of
+    // that record's days on it (security review r5-4, second pass, N-c).
+    expect(
+      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: false }))?.milestone,
+    ).toBeNull();
+    // A held seat speaks for a record nobody has matched yet: no count of it.
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "N. Q." })
+      .where(eq(bookings.id, bookingId));
+    expect(
+      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))?.milestone,
+    ).toBeNull();
   });
 
   it("greets a held identity by the name it was booked as, never the matched record's", async () => {
@@ -504,7 +683,9 @@ describe("getBookedCard", () => {
       .update(bookings)
       .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "N. Q." })
       .where(eq(bookings.id, bookingId));
-    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.greetingName).toBe("N. Q.");
+    expect(
+      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))?.greetingName,
+    ).toBe("N. Q.");
   });
 
   /**
@@ -564,7 +745,7 @@ describe("getBookedCard", () => {
       expect.objectContaining({ code: "certification_insufficient" }),
     );
 
-    const card = await getBookedCard(db, { shopId: shop.id, bookingId });
+    const card = await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true });
     expect(card?.bookingCancelled).toBe(false);
     for (const locale of DIVER_LOCALES) {
       const heading = diverTranslator(locale)("booking.confirmedHeading", {
@@ -586,6 +767,7 @@ describe("getBookedCard", () => {
       await getBookedCard(db, {
         shopId: shop.id,
         bookingId: "00000000-0000-4000-8000-000000000000",
+        delivered: true,
       }),
     ).toBeNull();
   });
@@ -593,7 +775,11 @@ describe("getBookedCard", () => {
   it("resolves nothing for a booking under another shop, whatever id the caller holds", async () => {
     const { db, bookingId } = await unpaidBooking();
     expect(
-      await getBookedCard(db, { shopId: "00000000-0000-4000-8000-000000000000", bookingId }),
+      await getBookedCard(db, {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        bookingId,
+        delivered: true,
+      }),
     ).toBeNull();
   });
 });

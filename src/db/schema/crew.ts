@@ -12,6 +12,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { appNowTimestamp } from "./columns";
 import { certificationStatus, people, shops } from "./core";
 import { tripSeries, trips } from "./trips";
 
@@ -63,8 +64,8 @@ export const staffCredentials = pgTable(
     reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     index("staff_credentials_shop_person_idx").on(table.shopId, table.personId),
@@ -125,6 +126,17 @@ export const tripAssignments = pgTable(
      * must never be able to mint a credential.
      */
     tripRole: tripAssignmentRole("trip_role"),
+    /**
+     * Who put this person on the boat in this role: set by each crew writer
+     * from its actor, and again whenever the role changes; null for a seed or
+     * a system pass, and for every row written before the column existed. A
+     * gate that trusts the roster to say who teaches a session (clearing a
+     * training mark with forms owed, issue #2275) reads it, so nobody can
+     * roster themselves into that trust.
+     */
+    assignedByPersonId: uuid("assigned_by_person_id").references(() => people.id, {
+      onDelete: "set null",
+    }),
   },
   (table) => [
     primaryKey({ columns: [table.tripId, table.personId] }),
@@ -132,6 +144,7 @@ export const tripAssignments = pgTable(
     // person first; the primary key leads with the trip (code review
     // 2026-10-11, item 27).
     index("trip_assignments_person_idx").on(table.personId),
+    index("trip_assignments_assigned_by_idx").on(table.assignedByPersonId),
   ],
 );
 
@@ -184,7 +197,7 @@ export const staffShifts = pgTable(
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
     note: text("note"),
     createdByPersonId: uuid("created_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("staff_shifts_shop_starts_idx").on(table.shopId, table.startsAt),
@@ -234,7 +247,7 @@ export const crewAvailabilityBlocks = pgTable(
     createdByPersonId: uuid("created_by_person_id")
       .notNull()
       .references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
@@ -282,12 +295,12 @@ export const crewAssignmentRequests = pgTable(
     personId: uuid("person_id")
       .notNull()
       .references(() => people.id),
-    requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
+    requestedAt: appNowTimestamp("requested_at").notNull(),
     decision: crewRequestDecision("decision"),
     decidedAt: timestamp("decided_at", { withTimezone: true }),
     /** The owner or manager who answered. */
     decidedByPersonId: uuid("decided_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
@@ -378,7 +391,7 @@ export const crewNotices = pgTable(
     previousStartsAt: timestamp("previous_starts_at", { withTimezone: true }),
     /** Who made the change; null when no person did (a seed, a system pass). */
     actorPersonId: uuid("actor_person_id").references(() => people.id, { onDelete: "set null" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     settledAt: timestamp("settled_at", { withTimezone: true }),
     /** Set with `settled_at`: what the pass did with this row. */
     outcome: crewNoticeOutcome("outcome"),

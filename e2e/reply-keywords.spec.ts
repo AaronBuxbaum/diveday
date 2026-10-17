@@ -63,7 +63,7 @@ test.describe("reply keywords", () => {
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name").fill("Nora Quinn");
     await page.getByLabel("Email").fill(email);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
 
     // The first `C`. Nothing is cancelled by it, by design.
@@ -79,7 +79,12 @@ test.describe("reply keywords", () => {
     await page.goto("/shop/blue-mantis/inbox");
     const row = page.getByRole("listitem").filter({ hasText: "Nora Quinn" }).first();
     await expect(row.getByText("Asked to cancel")).toBeVisible();
-    await row.getByRole("link", { name: "Open the record for Nora Quinn" }).click();
+    // The row names the seat she holds (fourth review, item 32) as its own link
+    // above the row's door, so the door is opened at its corner, clear of it.
+    await expect(row.getByRole("link", { name: new RegExp(`^Booked on ${title}`) })).toBeVisible();
+    await row
+      .getByRole("link", { name: "Open the record for Nora Quinn" })
+      .click({ position: { x: 4, y: 4 } });
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/divers\//);
 
     // The confirmation, in the diver's own thread — and the departure named in
@@ -148,7 +153,7 @@ test.describe("reply keywords", () => {
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name").fill("Ivan Petrov");
     await page.getByLabel("Email").fill(email);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Ivan/ })).toBeVisible();
 
     // A message that happens to contain the word: read as prose, not a command.
@@ -170,7 +175,7 @@ test.describe("reply keywords", () => {
 
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/inbox");
-    const waiting = page.getByRole("heading", { name: /Waiting on you/ });
+    const waiting = page.getByRole("heading", { name: /Needs you/ });
     await expect(waiting).toBeVisible();
     await expect(page.getByText("Asked to move")).toBeVisible();
 

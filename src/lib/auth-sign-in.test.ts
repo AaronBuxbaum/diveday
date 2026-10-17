@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { beginTotpEnrollment, enableTotp } from "@/db/account-security";
 import type { AppDb } from "@/db/client";
 import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
-import { accountSessions, userAccounts } from "@/db/schema";
+import { accountSecurity, accountSessions, userAccounts } from "@/db/schema";
 import { totpCode } from "@/lib/totp";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
+
+const ctx = fileScopedShopContext();
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
@@ -31,7 +33,7 @@ const OWNER = DEV_STAFF_LOGINS.owner;
  * a refusal that still mints a session is the failure that matters.
  */
 async function harness() {
-  const db = await seededTestDb();
+  const db = ctx.db;
   vi.mocked(getDb).mockResolvedValue(db);
   const auth = createAuth(db);
   const [account] = await db
@@ -64,6 +66,8 @@ describe("signing in with DiveDay credentials", () => {
     const answer = await signIn(OWNER);
 
     expect(Object.keys(answer.user).sort()).toEqual(["email", "id", "name"]);
+    // The shop the sign-in lands on, named by the server: a staff session's own.
+    expect(answer.shopSlug).toBe("blue-mantis");
     expect(JSON.stringify(answer)).not.toMatch(/hashed|password/i);
     expect(await sessionsFor(db, account.id)).toBe(before + 1);
   });
@@ -98,13 +102,33 @@ describe("signing in with DiveDay credentials", () => {
   });
 
   describe("with a second factor enabled", () => {
+    /** Enrolled earlier: the enrolment code's step has passed, so its record is cleared. */
     async function enrolled() {
       const h = await harness();
       const started = await beginTotpEnrollment(h.db, h.account.id);
       if (!started) throw new Error("enrollment needs a sealing key");
       expect(await enableTotp(h.db, h.account.id, totpCode(started.secret))).toBe(true);
+      await h.db
+        .update(accountSecurity)
+        .set({ lastTotpStep: null })
+        .where(eq(accountSecurity.userAccountId, h.account.id));
       return { ...h, secret: started.secret };
     }
+
+    /** The code typed to turn two-factor on spends its step, so it cannot also sign in. */
+    it("refuses the code that just turned two-factor on", async () => {
+      const h = await harness();
+      const started = await beginTotpEnrollment(h.db, h.account.id);
+      if (!started) throw new Error("enrollment needs a sealing key");
+      const code = totpCode(started.secret);
+      expect(await enableTotp(h.db, h.account.id, code)).toBe(true);
+      const before = await sessionsFor(h.db, h.account.id);
+
+      await expect(h.signIn({ ...OWNER, totpCode: code })).rejects.toMatchObject({
+        message: "invalid_two_factor",
+      });
+      expect(await sessionsFor(h.db, h.account.id)).toBe(before);
+    });
 
     it("asks for the code, and refuses a wrong one, opening nothing either time", async () => {
       const { db, account, signIn } = await enrolled();

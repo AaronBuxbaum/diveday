@@ -1,12 +1,58 @@
+import { and, asc, eq, gt, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { inTrainingBefore } from "@/lib/in-training";
 import type { NextDiveCandidate, NextDivePick } from "@/lib/next-dive";
 import { pickNextDive } from "@/lib/next-dive";
 import { decideTripAdmission } from "@/lib/trip-admission";
+import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { readCertificationEvidence } from "./certification-evidence";
+import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb } from "./client";
 import { tripRequirementSummaries } from "./readiness";
+import { bookings, trips as tripTable } from "./schema";
 import { getTripLens } from "./trip-lenses";
 import { pagedUpcomingTripsWithCounts } from "./trips";
+import { liveTrip } from "./trips-live";
+
+/** A departure this diver already holds a seat on, soonest first. */
+export type BookedDeparture = { tripId: string; title: string; startsAt: Date };
+
+/**
+ * **The departures this diver is already booked on**, still to sail, soonest
+ * first: a live, scheduled departure with a seat of theirs that is not
+ * cancelled and not held (fifth-loop ideas, item 37). The recap never offers one of these as "your
+ * next dive", and a diver who holds one is told so instead of being sold
+ * another seat.
+ */
+export async function bookedDepartures(
+  db: AppDb,
+  input: { shopId: string; personId: string; now: Date; excludeTripId?: string },
+): Promise<BookedDeparture[]> {
+  return db
+    .select({ tripId: tripTable.id, title: tripTable.title, startsAt: tripTable.startsAt })
+    .from(bookings)
+    .innerJoin(
+      tripTable,
+      and(eq(tripTable.id, bookings.tripId), eq(tripTable.shopId, input.shopId)),
+    )
+    .where(
+      and(
+        eq(bookings.shopId, input.shopId),
+        eq(bookings.personId, input.personId),
+        ne(bookings.status, "cancelled"),
+        // A held seat matched this person on a guess (glossary **Held seat**):
+        // it is neither announced to them nor allowed to suppress their offer.
+        isNull(bookings.identityUnconfirmedAt),
+        eq(tripTable.status, "scheduled"),
+        liveTrip(),
+        // Not yet sailed, the late-arrival buffer included: the same window
+        // the candidates below are drawn from.
+        gt(tripTable.startsAt, new Date(input.now.getTime() - DEPARTURE_BUFFER_MS)),
+        input.excludeTripId ? ne(tripTable.id, input.excludeTripId) : undefined,
+      ),
+    )
+    .orderBy(asc(tripTable.startsAt), asc(tripTable.title), asc(tripTable.id));
+}
 
 /**
  * How far down the board one recap looks. Enough for a reason to fire, small
@@ -35,7 +81,7 @@ export const NEXT_DIVE_CANDIDATE_WINDOW = 12;
  * diver cleared *right now*", and an unsigned waiver for a trip three weeks out
  * is not a reason to stop suggesting it.
  *
- * **The evidence is read once.** Twelve candidates would otherwise mean
+ * **The evidence is read once**, the diver's course seats with it. Twelve candidates would otherwise mean
  * thirty-six certification queries for one keepsake, and the answer is the same
  * every time — it is a fact about the diver, not about the trip.
  *
@@ -64,26 +110,50 @@ export async function nextDiveForBooking(
      * matching candidate is wearing that very row.
      */
     dayLensId: string | null;
+    /**
+     * The person's own later seats, already in flight from the caller, so one
+     * read serves the pick and the caller's "You're booked" line; an empty
+     * list on a link that may not read them, so the pick does not change with
+     * them (security review r5-4, second pass, FIX 1). Absent, the pick reads
+     * them itself.
+     */
+    booked?: Promise<readonly BookedDeparture[]>;
+    /** No pick at all for a person who holds a later seat (item 37). */
+    noneIfBooked?: boolean;
     now?: Date;
   },
 ): Promise<NextDivePick | null> {
   const now = input.now ?? nowDate();
-  const { trips } = await pagedUpcomingTripsWithCounts(db, input.shopId, {
-    publicOnly: true,
-    hasSpace: true,
-    limit: NEXT_DIVE_CANDIDATE_WINDOW,
-    now,
-  });
-  const upcoming = trips.filter((trip) => trip.id !== input.justDivedTripId);
+  const [{ trips }, booked] = await Promise.all([
+    pagedUpcomingTripsWithCounts(db, input.shopId, {
+      publicOnly: true,
+      hasSpace: true,
+      limit: NEXT_DIVE_CANDIDATE_WINDOW,
+      now,
+    }),
+    input.booked ?? bookedDepartures(db, { shopId: input.shopId, personId: input.personId, now }),
+  ]);
+  if (input.noneIfBooked && booked.length > 0) return null;
+  // **Never a seat they already hold** (fifth-loop ideas, item 37): offering
+  // Sana "Back to Molasses Reef" on a departure she is booked on reads as the
+  // shop not knowing her.
+  const bookedIds = new Set(booked.map((trip) => trip.tripId));
+  const upcoming = trips.filter(
+    (trip) => trip.id !== input.justDivedTripId && !bookedIds.has(trip.id),
+  );
   if (upcoming.length === 0) return null;
 
-  const [requirements, evidence, dayLens] = await Promise.all([
+  const [requirements, evidence, courseSeats, dayLens] = await Promise.all([
     tripRequirementSummaries(
       db,
       input.shopId,
       upcoming.map((trip) => trip.id),
     ),
     readCertificationEvidence(db, input.shopId, input.personId),
+    // The diver's course seats, read once like the cards: a departure after a
+    // course they are booked on is suggested exactly as the booking door would
+    // sell it (issue #2058).
+    listCourseSeatsInTraining(db, input.shopId, [input.personId]),
     // One read, and only for a day that wears a lens at all: every candidate
     // the rule can fire on shares this exact row, so there is no per-candidate
     // name to fetch. A lens the shop has since deleted resolves to null and the
@@ -102,7 +172,10 @@ export async function nextDiveForBooking(
       // `getTripSiteRequirement` produce one trip at a time.
       requirement: null,
       siteRequirement,
-      evidence,
+      evidence: {
+        ...evidence,
+        levelsInTraining: inTrainingBefore(courseSeats, trip, now).map((course) => course.level),
+      },
       // A course session's admission rule is the course's own, enforced in the
       // booking transaction. The itinerary's gate must not be read here for the
       // reason `TripAdmissionInput.courseSession` gives in full: continuing

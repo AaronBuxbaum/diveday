@@ -1,14 +1,16 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { diveSites } from "@/db/schema";
+import { diveSites, shops } from "@/db/schema";
 import { shopPath } from "@/lib/staff-notices";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 /**
  * The new-site form's action. It was an inline closure in `page.tsx` that no
@@ -36,7 +38,7 @@ const { requireStaffSession } = await import("@/lib/session");
 const { createDiveSiteAction } = await import("./actions");
 
 async function signedIn() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   const personId = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
   vi.mocked(requireStaffSession).mockResolvedValue(
@@ -57,6 +59,7 @@ function siteForm(overrides: Record<string, string> = {}): FormData {
     marineLifeDescription: "",
     difficulty: "",
     depthRange: "",
+    minDepth: "",
     maxDepth: "",
     expectedBottomTime: "",
     currentNote: "",
@@ -92,6 +95,26 @@ describe("createDiveSiteAction", () => {
     expect(to).toBe(`${back}/${site?.id}`);
     expect(site?.forecastLatitude).toBeCloseTo(25.123);
     expect(site?.planningNoteByPersonId).toBe(personId);
+  });
+
+  it("stores the depth range as two numbers in metres, whatever unit the shop typed", async () => {
+    const { db, shop } = await signedIn();
+    const name = `Depth ${crypto.randomUUID().slice(0, 8)}`;
+    await db.update(shops).set({ depthUnit: "feet" }).where(eq(shops.id, shop.id));
+
+    await redirectedTo(() =>
+      createDiveSiteAction({}, siteForm({ name, minDepth: "20", maxDepth: "60" })),
+    );
+
+    const [site] = await db
+      .select()
+      .from(diveSites)
+      .where(and(eq(diveSites.shopId, shop.id), eq(diveSites.name, name)));
+    expect(site?.depthMinMeters).toBeCloseTo(6.096, 3);
+    expect(site?.maxDepthMeters).toBeCloseTo(18.288, 3);
+    // The shallow end alone is refused in place, nothing written.
+    const refused = await createDiveSiteAction({}, siteForm({ name: `${name} b`, minDepth: "20" }));
+    expect(refused.errorCode).toBe("depthRangeInvalid");
   });
 
   it("answers a form that does not parse in place, carrying the submission back", async () => {

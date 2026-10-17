@@ -129,6 +129,34 @@ An unsigned required form then adds the `course_form_unsigned` blocker (or
 on the roster as a warning line, but no student turns Blocked. `trip-admission.ts` never reads the
 switch.
 
+**A medical statement blocks whatever the switch says** (issue #2337, decided by the owner,
+2026-10-13). `course_forms.medical_screening` marks a form as one; an owner or manager ticks it on
+the form beside its words. The marker belongs to the form's identity, so ticking it writes no new
+version and asks no student to sign again. It is a *statement* (signature only, no answers screened), never the glossary's **Medical questionnaire**. A save that names no marker leaves it as it is, the form posts an explicit `unmarked` when the box is clear, and every flip writes a `course_form_medical_changed` activity line naming the staffer. Readiness raises `course_form_unsigned` for such a form
+even with the switch at `false`, because the dive medical always blocks and a medical statement pasted
+into a course form must not quietly become a warning. The roster's warning line leaves a marked
+form out, since its blocker line already names it. No standard template is marked: the shipped
+forms are releases and safe-practices statements, and DiveDay ships no medical wording.
+
+**An age bound on a requirement** (amended 2026-10-16, issue #2265, Aaron 2026-10-13, option 1):
+`course_form_requirements.max_age_years`, nullable, set beside each ticked form in the course
+editor. A bounded form is asked only of a student at or under the age on the session's first day,
+in the shop's zone (`courseFormAskedOf`), and of a student whose date of birth is not on file,
+because a missed youth acknowledgment is the failure nobody catches at the dock. Asking fewer
+students is taking a form off, so putting a bound on a form everyone was asked, or lowering one, is
+the owner's or manager's call like dropping a form (`canPersonManageWaiverTemplates`), refused in
+the action and in `setCourseFormRequirements`; raising or clearing a bound is open. A
+medical-screening form takes no bound, and one written anyway is ignored: every student answers it. It is not the
+guardian rule (18, or the local age of majority), which still governs who co-signs any other form;
+a form bounded at 17 or under is a minor's paper and always takes a guardian beside the student
+(`isYouthForm`, dive-domain review H6). A form asked only because no date of birth is on file says
+so on its blocker line (`formMaxAge`), so the dock reads the birthday as a fix. A student whose
+adulthood a staffer attested without a date (H-100) is still asked a youth form: it fails closed,
+and the date of birth is how the desk clears it (agency review G7; a product call noted for Aaron,
+who may rule that the attestation answers it). A template's
+standard form may carry the bound; Open Water's carries PADI's Youth Diving: Responsibility and
+Risks Acknowledgment (10615) at 11.
+
 **Parity with releases:**
 
 - Export: the shop export carries all four tables, and a diver export carries that diver's records.
@@ -169,5 +197,7 @@ switch.
   The shop export checks every seal as it writes `course_form_records.csv` (`integrity_check`).
 - The prep page's sign step offers the forms door whenever the enrollment owes a form, whatever
   the switch says, so warn-only still has a way in besides the direct link the send delivers.
-- Training dives that ride a regular charter, and handing one device round a family to sign, are
-  not modelled here; both are filed as a follow-up.
+- Training dives that ride a regular charter are the training mark of ADR
+  20261012-course-forms-on-charters-and-counter (issue #2275): the charter seat reads and writes
+  the enrollment's records, so "signed per booking" still means the course seat. Handing one
+  device round a family to sign is that ADR's second, still Proposed, decision.

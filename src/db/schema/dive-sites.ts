@@ -15,6 +15,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import type { DiveSiteTemplateUndo } from "@/lib/dive-site-template-sync";
+import { appNowTimestamp } from "./columns";
 import { certificationLevel, type diveSpecialty, people, shops } from "./core";
 
 /**
@@ -150,12 +151,31 @@ export const diveSites = pgTable(
     /** How demanding the site is; the briefing prints a translated label for it. */
     difficultyLevel: diveSiteDifficulty("difficulty_level"),
     /**
-     * Free-text prose for the briefing ("6–12 m", "shallow ledge to 18"). Kept
-     * alongside `max_depth_meters` rather than replaced by it: it carries shape
-     * and nuance a single number can't, and it is what the diver-facing site
-     * card has always shown.
+     * **Whether a snorkeler gets anything out of this site** (issue #2214): a
+     * shallow reef garden yes, a 30 m wall in a current no. Null is "the shop
+     * has not said", which is most sites and is never read as no. It only ever
+     * raises a warning on a departure that opens snorkeler seats; it never
+     * refuses one, because the captain picks the site on the day. Not inferred
+     * from depth: a shallow site can still be wrong for a surface swimmer.
+     */
+    snorkelSuitable: boolean("snorkel_suitable"),
+    /**
+     * The shop's own words about depth, shown only where a site has no recorded
+     * depth ("shallow ledge to 18"). The numbers are `depth_min_meters` and
+     * `max_depth_meters`, which every briefing renders in the shop's unit; this
+     * is the note the migration could not read a range out of, and what the
+     * shop adds that a number cannot carry.
      */
     depthRange: text("depth_range"),
+    /**
+     * The shallow end of the site's depth range, in metres, beside
+     * `max_depth_meters` as the deep end. Null means the shop recorded only a
+     * deepest point (or nothing). Metres whatever the shop's `depth_unit`, and
+     * floating-point for the same reason: 20 ft is 6.096 m and must read 20 back.
+     * It advises like the maximum and never gates. A range needs its deep end,
+     * and the shallow end cannot sit below it (CHECK below).
+     */
+    depthMinMeters: doublePrecision("depth_min_meters"),
     /**
      * The site's deepest point, in metres — the one number a certification
      * ceiling can actually be compared against (H-08). Null means the shop
@@ -188,7 +208,7 @@ export const diveSites = pgTable(
     /**
      * Which fit reading the briefing shows above the facts table — "Welcoming
      * dive" or "Best with recent experience". Null means *derive it* from
-     * `difficulty_level`/`depth_range`/`current_note` (`siteFit`, src/lib/diver-planning.ts),
+     * `difficulty_level`/`max_depth_meters`/`depth_range`/`current_note` (`siteFit`, src/lib/diver-planning.ts),
      * which is what every site did before this column existed and is still the
      * ordinary case.
      *
@@ -319,7 +339,7 @@ export const diveSites = pgTable(
     planningNote: text("planning_note"),
     planningNoteAt: timestamp("planning_note_at", { withTimezone: true }),
     planningNoteByPersonId: uuid("planning_note_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("dive_sites_shop_name_unique").on(table.shopId, table.name),
@@ -345,6 +365,13 @@ export const diveSites = pgTable(
     // Null (the shop's own number applies) or a real duration — never zero,
     // for the same reason `shops_bottom_time_minutes_positive` exists.
     check(
+      "dive_sites_depth_range_ordered",
+      sql`${table.depthMinMeters} is null
+        or (${table.depthMinMeters} >= 0
+          and ${table.maxDepthMeters} is not null
+          and ${table.depthMinMeters} <= ${table.maxDepthMeters})`,
+    ),
+    check(
       "dive_sites_expected_bottom_time_positive",
       sql`${table.expectedBottomTimeMinutes} is null or ${table.expectedBottomTimeMinutes} > 0`,
     ),
@@ -364,7 +391,7 @@ export const globalDiveSites = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     slug: text("slug").notNull().unique(),
     currentVersion: integer("current_version").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [index("global_dive_sites_slug_idx").on(table.slug)],
 );
@@ -400,7 +427,12 @@ export type GlobalDiveSiteBriefing = {
   difficulty?: string;
   /** How demanding the site is, as a `dive_site_difficulty` code. */
   difficultyLevel?: (typeof diveSiteDifficulty.enumValues)[number];
+  /** Whether snorkelers get anything out of the site; absent when the template does not know. */
+  snorkelSuitable?: boolean;
+  /** The shop's note; the numbers below carry the range. Absent on versions published since 2026-10-16. */
   depthRange?: string;
+  /** The shallow end in metres, beside `maxDepthMeters`. */
+  depthMinMeters?: number;
   maxDepthMeters?: number;
   expectedBottomTimeMinutes?: number;
   currentNote?: string;
@@ -426,7 +458,7 @@ export const globalDiveSiteVersions = pgTable(
       .references(() => globalDiveSites.id),
     version: integer("version").notNull(),
     briefing: jsonb("briefing").$type<GlobalDiveSiteBriefing>().notNull(),
-    publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
+    publishedAt: appNowTimestamp("published_at").notNull(),
   },
   (table) => [
     uniqueIndex("global_dive_site_versions_unique").on(table.globalDiveSiteId, table.version),
@@ -511,12 +543,18 @@ export const marineLifeRequests = pgTable(
     query: text("query").notNull(),
     /** Which site they were writing when they hit the wall, for context. */
     diveSiteId: uuid("dive_site_id").references(() => diveSites.id, { onDelete: "set null" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [index("marine_life_requests_created_idx").on(table.createdAt)],
 );
 
-/** Staff-moderated, opt-in moments from prior divers. */
+/**
+ * **Retired, still declared** (issue #2330). Nothing reads or writes this
+ * table any more: the public strip, its reader, its export file and its seed
+ * are gone. It stays declared, with no migration dropping it, so a release
+ * still running the old reader during a deploy finds its table (security
+ * review X1). A later release drops it once no running code can read it.
+ */
 export const diveSiteMoments = pgTable(
   "dive_site_moments",
   {
@@ -530,7 +568,7 @@ export const diveSiteMoments = pgTable(
     caption: text("caption").notNull(),
     imageUrl: text("image_url"),
     isPublished: boolean("is_published").notNull().default(false),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("dive_site_moments_site_published_idx").on(table.diveSiteId, table.isPublished),

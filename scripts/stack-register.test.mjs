@@ -1,6 +1,13 @@
 import { expect, it, describe as suite } from "vitest";
 
-import { chainThrough, describe, MAX_LAYERS, planRegistration, run } from "./stack-register.mjs";
+import {
+  chainThrough,
+  describe,
+  FORK_MARKER,
+  MAX_LAYERS,
+  planRegistration,
+  run,
+} from "./stack-register.mjs";
 
 /**
  * The registrar acts unattended on every pull request event, so both halves of
@@ -194,6 +201,57 @@ suite("run", () => {
     const forked = [...chain3, pr(4, "l4", "l2")];
     const { call, calls } = fake({ pulls: forked });
     expect(await run(env, call)).toMatch(/forks and is not a stack/);
+    expect(calls.some((c) => c.method === "POST" && c.pathname.endsWith("/stacks"))).toBe(false);
+  });
+
+  it("comments once on the refused layer, naming both tips (#2587)", async () => {
+    const forked = [...chain3, pr(4, "l4", "l2")];
+    const { call, calls } = fake({ pulls: forked });
+    await run({ ...env, STACK_PULL_REQUEST: "4" }, call);
+    const posts = calls.filter((c) => c.method === "POST");
+    expect(posts).toHaveLength(1);
+    expect(posts[0].pathname).toBe("/repos/owner/repo/issues/4/comments");
+    expect(posts[0].body.body).toContain("#3 (`l3`) and #4 (`l4`)");
+    expect(posts[0].body.body).toContain(FORK_MARKER);
+  });
+
+  it("posts a number, not a branch name, when the name is not plainly one", async () => {
+    const forked = [...chain3, pr(4, "l4$(id)", "l2")];
+    const { call, calls } = fake({ pulls: forked });
+    await run({ ...env, STACK_PULL_REQUEST: "4" }, call);
+    const body = calls.find((c) => c.method === "POST").body.body;
+    expect(body).toContain("#3 (`l3`) and #4 (#4)");
+    expect(body).not.toContain("$(id)");
+  });
+
+  it("leaves a fork's pull request out of the chain", async () => {
+    const fromFork = {
+      ...pr(4, "l4", "l2"),
+      head: { ref: "l4", repo: { full_name: "someone/else" } },
+      base: { ref: "l2", repo: { full_name: "owner/repo" } },
+    };
+    const { call } = fake({ pulls: [...chain3, fromFork] });
+    expect(await run({ ...env, STACK_PULL_REQUEST: "4" }, call)).toMatch(
+      /not an open pull request/,
+    );
+  });
+
+  it("does not comment twice on the same layer", async () => {
+    const forked = [...chain3, pr(4, "l4", "l2")];
+    const calls = [];
+    const call = async (pathname, init = {}) => {
+      calls.push({ method: init.method ?? "GET" });
+      if (pathname.includes("/pulls?")) return pathname.includes("page=1") ? forked : [];
+      if (pathname.includes("/comments")) return [{ body: `${FORK_MARKER} already said` }];
+      return [];
+    };
+    await run({ ...env, STACK_PULL_REQUEST: "4" }, call);
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+  });
+
+  it("says nothing about a cycle or a twin head, which nobody can fix by rebasing", async () => {
+    const { call, calls } = fake({ pulls: [pr(1, "a", "b"), pr(2, "b", "a")] });
+    await run({ ...env, STACK_PULL_REQUEST: "1" }, call);
     expect(calls.some((c) => c.method === "POST")).toBe(false);
   });
 

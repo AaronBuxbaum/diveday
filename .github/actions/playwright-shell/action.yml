@@ -5,7 +5,15 @@ description: >
 runs:
   using: composite
   steps:
-    - uses: actions/cache@v6
+    # The runner image goes in the key (`ImageOS` is `ubuntu24` on
+    # `ubuntu-24.04`), because `runner.os` says only "Linux": a browser
+    # downloaded on one image must not be restored onto the next, and the
+    # visual baselines are rendered by whatever this cache hands back.
+    # scripts/check-runner-image.mjs holds the key to it.
+    - id: image
+      run: echo "os=${ImageOS:?the hosted runner sets ImageOS}" >> "$GITHUB_OUTPUT"
+      shell: bash
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ~/.cache/ms-playwright
         # `-shell` on the key, not just the command, deliberately forces a
@@ -16,6 +24,6 @@ runs:
         # headed binary this fleet never launches until the cache aged out
         # on its own. See e2e/browser.ts for why only the shell is needed —
         # every launch here is headless.
-        key: ${{ runner.os }}-playwright-shell-${{ hashFiles('pnpm-lock.yaml') }}
+        key: ${{ steps.image.outputs.os }}-playwright-shell-${{ hashFiles('pnpm-lock.yaml') }}
     - run: pnpm exec playwright install --only-shell chromium
       shell: bash

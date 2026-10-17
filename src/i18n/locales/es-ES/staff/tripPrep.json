@@ -1,4 +1,10 @@
 {
+  "lunch": {
+    "heading": "Almuerzo",
+    "count": "Almuerzo para {count}",
+    "note": "{name}: {note}",
+    "answered": "{answered} de {asked} dejaron una nota para el almuerzo"
+  },
   "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
   "crewCount": "{count, plural, one {# tripulante que bucea} other {# tripulantes que bucean}}",
   "diveCount": "{count, plural, one {# inmersión} other {# inmersiones}}",
@@ -51,7 +57,7 @@
   "emptyHeading": "Todavía no hay nada que preparar",
   "emptyAction": "Abrir la lista de buceadores",
   "rentalKitEmptyOwnKitHeading": "No hay equipo que preparar",
-  "rentalKitEmptyNeedsSortingHeading": "No hay equipo que preparar — todavía",
+  "rentalKitEmptyNeedsSortingHeading": "Todavía no hay equipo que preparar",
   "rentalKitEmptyAction": "Abrir la lista de buceadores",
   "hotelPickupsHeading": "Recogidas en hoteles",
   "hotelPickupsCount": "{count, plural, one {# recogida} other {# recogidas}}",

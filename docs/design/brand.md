@@ -161,6 +161,15 @@ Color rules:
 > refuses the straight one with **no ICU exemption** — unlike `'`, a `"` carries no meaning to ICU, so
 > no value needs it and the rule landed at zero.
 
+> **Settled 2026-10-13:** the ellipsis is `…` (U+2026), never three periods, in every bundle and
+> every locale. Five pending labels and placeholders ("Saving...", "Adding...") said it the other way
+> against 281 that did not, and the Spanish copied all five. `pnpm check:voice` refuses `...`, and it
+> landed at zero.
+
+> **Settled 2026-10-16:** a diver's message never ends in an exclamation mark. "See you on the boat."
+> reads as the same writer as the dock time above it; "See you on the boat!" does not. `pnpm check:voice`
+> refuses `!` and `¡` in `diver.json`, except the WhatsApp template body Meta reviews.
+
 
 The current product type system is:
 

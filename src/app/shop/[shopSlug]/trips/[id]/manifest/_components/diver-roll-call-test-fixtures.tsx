@@ -60,19 +60,24 @@ export function renderList({
   divers,
   checkpoint = "after_dive_1",
   locale = ENGLISH,
+  exceedsNoDecoLimits,
+  crew = [],
 }: {
   divers: TripManifest["divers"];
   checkpoint?: RollCallCheckpoint;
   /** Both locales, for the copy this list is the on-screen guarantee for. */
   locale?: TestLocale;
+  exceedsNoDecoLimits?: boolean;
+  crew?: TripManifest["crew"];
 }) {
   return render(
     <DiverRollCall
       context={{
         divers,
-        crew: [],
+        crew,
         checkpoint,
         isDeparture: checkpoint === "departure",
+        exceedsNoDecoLimits,
         shopSlug: "blue-mantis",
         tripId: "00000000-0000-4000-8000-0000000000ff",
         locale,
@@ -80,6 +85,7 @@ export function renderList({
         notesByBooking: new Map(),
         rollCallAction: vi.fn(async () => ({ ok: true }) as const),
         addPrivateNoteAction: vi.fn(async () => undefined) as never,
+        startMissingDiverReport: null,
         rollCallButtonCopy: () => ({ errorRefusal: "Try again", blockedMessage: "Still blocked" }),
         buddyTeamLabel: () => null,
         t: TRANSLATORS[locale],
@@ -123,6 +129,7 @@ export function diverContext(overrides: Partial<DiverRollCallContext> = {}): Div
     notesByBooking: new Map(),
     rollCallAction: vi.fn(async () => ({ ok: true }) as const),
     addPrivateNoteAction: vi.fn(async () => undefined) as never,
+    startMissingDiverReport: null,
     rollCallButtonCopy: () => ({ errorRefusal: "Try again", blockedMessage: "Still blocked" }),
     buddyTeamLabel: () => null,
     t,

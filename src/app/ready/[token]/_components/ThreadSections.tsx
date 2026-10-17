@@ -13,14 +13,21 @@ import type { listTripChangeEvents } from "@/db/trip-change-events";
 import type { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
-import { claimLinkPath } from "@/lib/booking-capabilities";
-import { formatShortDate } from "@/lib/format";
-import { publicAppUrl } from "@/lib/notifications";
+import { type PlannedFlySafe, plannedFlySafeMessageKey } from "@/lib/fly-safe";
+import { formatPlannedDateTimeTz, formatShortDate } from "@/lib/format";
 import { publicTripArrivalCardPath } from "@/lib/public-routes";
-import { addSeatFromReady, cancelMyBookingAction } from "../booking-actions";
+import {
+  addSeatFromReady,
+  askToMoveAction,
+  cancelMyBookingAction,
+  payForPartySeatFromReady,
+} from "../booking-actions";
+import { signMinorWaiverAction } from "../party-actions";
 import { CourseMaterials } from "./CourseMaterials";
 import { CANCEL_PREVIEW_KEY } from "./cancel-notices";
-import { PartySection } from "./PartySection";
+import { MoveAsk } from "./MoveAsk";
+import { PartyCancelPlan, partyCancelSeats } from "./PartyCancelPlan";
+import { PartySection, partyClaimSeats } from "./PartySection";
 import { RunningLate } from "./RunningLate";
 
 /** What the thread's streamed reads hand the sections under the spine. */
@@ -37,6 +44,8 @@ export type ReadyThreadSectionsContext = {
   partySeatClaims: Awaited<ReturnType<typeof issuePartySeatClaims>>;
   /** "Everyone's set — see you at the dock." The rule is `partyIsAllSet`'s. */
   partyAllSet: boolean;
+  /** When to fly home, as a plan (fifth-loop ideas, item 18); null when nothing honest can be said. */
+  flySafePlan: PlannedFlySafe | null;
 };
 
 /**
@@ -58,20 +67,10 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
     publicCrew,
     partySeatClaims,
     partyAllSet,
+    flySafePlan,
   } = context;
-  const { detail, shop } = data;
-  const claimOrigin = publicAppUrl();
-  const partySeats = partySeatClaims.map((seat) => ({
-    bookingId: seat.bookingId,
-    seatName: seat.seatName,
-    claimed: seat.claimed,
-    waiverSigned: seat.waiverSigned,
-    claimUrl: seat.claim
-      ? claimOrigin
-        ? new URL(claimLinkPath(seat.claim.token), `${claimOrigin}/`).toString()
-        : claimLinkPath(seat.claim.token)
-      : null,
-  }));
+  const { detail } = data;
+  const partySeats = partyClaimSeats(partySeatClaims);
   // Dive 1 first, in the dive plan's own order: where a site names its own
   // time in the water, that is what the day's rhythm counts rather than the
   // shop-wide default (src/lib/diver-planning.ts).
@@ -82,6 +81,10 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
   const legTravelTimes = tripDives.map(({ dive }) => dive.travelMinutes);
 
   const cancelPreviewKey = CANCEL_PREVIEW_KEY[data.cancelPreview];
+  // A lead's cancel takes their unclaimed seats with it; the confirm says
+  // which go and which stay before the tap (batch 6 item 10).
+  const partyCancel = partyCancelSeats(partySeatClaims);
+  const hasParty = partyCancel.goes.length + partyCancel.stays.length > 0;
 
   return (
     <>
@@ -115,10 +118,6 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
             sites={tripDives
               .map(({ diveSite }) => diveSite?.name)
               .filter((name): name is string => Boolean(name))}
-            // The same dock call the masthead names, so the card says it
-            // too (issue #2034) — and the same exception: a diver being
-            // collected from their hotel is told the pickup, not the dock.
-            dockCallMinutes={data.pickupTime ? null : shop.dockCallMinutes}
             downloadHref={`${publicTripArrivalCardPath(fullShop.slug, fullTrip.id)}?booking=${encodeURIComponent(
               token,
             )}`}
@@ -138,6 +137,8 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
           seats={partySeats}
           allSet={partyAllSet}
           addSeatAction={data.canAddSeat ? addSeatFromReady.bind(null, token) : null}
+          signWaiverAction={data.identityHeld ? undefined : signMinorWaiverAction.bind(null, token)}
+          payAction={data.canPayPartySeats ? payForPartySeatFromReady.bind(null, token) : null}
           t={t}
         />
         {/* What to put in the bag. Below the spine — which carries the gear
@@ -164,6 +165,19 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
             locale={locale}
           />
         ) : null}
+        {/* When to fly home, said before the dive rather than only on the
+                recap after it (fifth-loop ideas, item 18): a visitor books the
+                flight before the boat sails. A sentence, not a panel, like the
+                recap's: it informs and never gates. */}
+        {flySafePlan ? (
+          <p data-testid="ready-fly-safe-plan" className="text-base">
+            {t(`ready.${plannedFlySafeMessageKey(flySafePlan.reason)}`, {
+              shopName: detail.shop.name,
+              when: formatPlannedDateTimeTz(flySafePlan.from, locale, detail.shop.timezone),
+              count: flySafePlan.hours,
+            })}
+          </p>
+        ) : null}
         {/* Where the day ends up (UX review 2026-10-10, item 35): the recap's
                 log entry is the keepsake this same link turns into once the
                 boat is home, and nothing on the page said so. One line and a
@@ -188,6 +202,16 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
           // there is a refund to preview, and the form's own `mt-3` stood
           // "Cancel my spot" 36px under the rule without one (K-156).
           <section className={`flex flex-col gap-3 ${THREAD_FOOT_SECTION_CLASS}`}>
+            {/* Past the free window, the ask comes before the forfeit (H-126). */}
+            {data.moveAsk ? (
+              <MoveAsk
+                state={data.moveAsk}
+                shopName={detail.shop.name}
+                shopPhone={fullShop?.contactPhone ?? null}
+                action={askToMoveAction.bind(null, token)}
+                t={t}
+              />
+            ) : null}
             {cancelPreviewKey ? (
               <p className="text-base text-muted">{t(cancelPreviewKey)}</p>
             ) : null}
@@ -199,11 +223,23 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
                 triggerLabel={t("ready.cancelSpot")}
                 triggerClassName={buttonClass({ variant: "danger", size: "sm" })}
                 message={[
-                  t("ready.cancelConfirm", { trip: detail.trip.title }),
-                  cancelPreviewKey ? t(cancelPreviewKey) : null,
+                  t(hasParty ? "ready.cancelConfirmParty" : "ready.cancelConfirm", {
+                    trip: detail.trip.title,
+                  }),
+                  hasParty ? null : cancelPreviewKey ? t(cancelPreviewKey) : null,
                 ]
                   .filter(Boolean)
                   .join(" ")}
+                extra={
+                  hasParty ? (
+                    <PartyCancelPlan
+                      seats={partyCancel}
+                      preview={cancelPreviewKey ? t(cancelPreviewKey) : null}
+                      locale={locale}
+                      t={t}
+                    />
+                  ) : undefined
+                }
                 confirmLabel={t("ready.cancelConfirmButton")}
                 cancelLabel={t("ready.neverMind")}
                 pendingLabel={t("ready.cancelling")}

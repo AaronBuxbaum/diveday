@@ -17,6 +17,11 @@ const WEEK_DAYS = 7;
  * Today already badges the boat they crew today ("You're crewing"); this is
  * the Sunday-night question, answered without the owner's staffing page or
  * an iCalendar feed. Renders nothing for a reader rostered on nothing.
+ *
+ * **Any role with an assignment** (fourth review, item 14): an instructor
+ * rostered on Thursday's wreck charter never saw it, because the strip was the
+ * boat lens's. Whoever holds the assignment reads it here, less what "Your
+ * sessions" above already lists.
  */
 export async function YourWeek({
   db,
@@ -27,6 +32,7 @@ export async function YourWeek({
   locale,
   now,
   diversPerDivemaster,
+  listedTripIds = [],
 }: {
   db: AppDb;
   shopId: string;
@@ -36,11 +42,21 @@ export async function YourWeek({
   locale: string;
   now: Date;
   diversPerDivemaster: number;
+  /** Departures the page already lists for this reader ("Your sessions"), said once. */
+  listedTripIds?: readonly string[];
 }) {
   const from = shopDayBounds(now, timeZone).to;
   const wall = utcToWallTime(from, timeZone);
   const to = wallTimeToUtc(addCalendarDays({ ...wall, hour: 0, minute: 0 }, WEEK_DAYS), timeZone);
-  const lines = await crewWeekFor(db, { shopId, personId, from, to, diversPerDivemaster, now });
+  const lines = await crewWeekFor(db, {
+    shopId,
+    personId,
+    from,
+    to,
+    diversPerDivemaster,
+    now,
+    excludeTripIds: listedTripIds,
+  });
   if (lines.length === 0) return null;
   const t = staffTranslator(locale);
   return (
@@ -83,8 +99,18 @@ export function YourWeekList({
               </p>
               <p className="mt-0.5 text-sm text-muted tabular-nums">
                 {formatShortDate(line.startsAt, locale, timeZone)} ·{" "}
-                {formatTime(line.startsAt, locale, timeZone)} ·{" "}
-                {line.tripRole ? staffRoleLabel(t, line.tripRole) : t("today.yourWeek.roleUnset")}
+                {line.crewCall
+                  ? t(
+                      line.crewCall.source === "shift"
+                        ? "today.yourWeek.atTheDock"
+                        : "today.yourWeek.diversAtTheDock",
+                      {
+                        dock: formatTime(line.crewCall.at, locale, timeZone),
+                        leaves: formatTime(line.startsAt, locale, timeZone),
+                      },
+                    )
+                  : formatTime(line.startsAt, locale, timeZone)}{" "}
+                · {line.tripRole ? staffRoleLabel(t, line.tripRole) : t("today.yourWeek.roleUnset")}
               </p>
               {line.gap ? (
                 <p

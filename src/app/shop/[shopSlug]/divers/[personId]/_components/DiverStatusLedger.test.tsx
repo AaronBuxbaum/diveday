@@ -105,6 +105,24 @@ describe("an open item", () => {
     expect(screen.getByRole("link", { name: "Collect" })).toHaveAttribute("href", "#the-story");
   });
 
+  it("sends a card an ended course should have produced to that session's roster (issue 2058)", () => {
+    renderLedger([
+      {
+        kind: "certification",
+        tone: "danger",
+        sentence: {
+          blocker: { code: "certification_missing", params: { endedCourseTripId: "aow" } },
+        },
+        action: { labelKey: "divers.status.acts.openCourseRoster", target: "open_course_roster" },
+        courseTripId: "aow",
+      },
+    ]);
+    expect(screen.getByRole("link", { name: "Open the course roster" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/aow",
+    );
+  });
+
   /**
    * **Away from the record, a fragment is a dead link.**
    *

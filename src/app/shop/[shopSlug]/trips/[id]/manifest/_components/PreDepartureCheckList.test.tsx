@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
-import { cleanup, render } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
-import { PreDepartureCheckList, type PreDepartureCheckListCopy } from "./PreDepartureCheckList";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CLEAR_CONFIRM_MIN_GAP_MS, CLEAR_CONFIRM_TIMEOUT_MS } from "@/lib/pre-departure-check";
+import {
+  type PreDepartureCheckAction,
+  PreDepartureCheckList,
+  type PreDepartureCheckListCopy,
+  type PreDepartureCheckListItem,
+} from "./PreDepartureCheckList";
 
 afterEach(cleanup);
 
@@ -11,6 +18,15 @@ const copy: PreDepartureCheckListCopy = {
   errorRefusal: "That check did not save.",
   checkedLabel: "Checked",
   uncheckedLabel: "Not checked",
+  confirmClear: "Tap again to clear",
+  snagsHeading: "Open on this boat",
+  snagFixed: "Fixed",
+  snagStillThere: "Still there",
+  snagSaving: "Saving…",
+  noteProblem: "Note a problem",
+  noteLabel: "What’s wrong?",
+  noteSave: "Save note",
+  noteRefused: "Write what’s wrong, up to 280 characters.",
 };
 
 const items = [
@@ -160,5 +176,175 @@ describe("the pre-departure check's label", () => {
     expect(caption).toHaveClass("text-sm");
     expect(caption).not.toHaveClass("text-xs");
     expect(caption).not.toHaveClass("opacity-80");
+  });
+});
+
+/**
+ * **Checking is one tap; clearing is two** (#2481). A brushed button in a
+ * pocket or a wet hand on a moving deck must not clear "Emergency oxygen kit
+ * aboard" unnoticed, so the first tap on a checked item only asks.
+ */
+describe("clearing a checked item", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function setup() {
+    const action = vi.fn<PreDepartureCheckAction>(async () => ({ ok: true }));
+    render(<PreDepartureCheckList action={action} items={items} copy={copy} atDeparture />);
+    const oxygen = () => screen.getByRole("button", { name: /Emergency oxygen kit aboard/ });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    return { action, oxygen, user };
+  }
+  /** The pause a deliberate second tap takes; a bounce never does. */
+  const pause = (ms = CLEAR_CONFIRM_MIN_GAP_MS) => act(() => vi.advanceTimersByTimeAsync(ms));
+
+  it("checks an unchecked item in one tap", async () => {
+    const { action, user } = setup();
+    await user.click(screen.getByRole("button", { name: /Radio check done/ }));
+    await waitFor(() => expect(action).toHaveBeenCalledOnce());
+    const formData = action.mock.calls[0]?.[1];
+    expect(formData?.get("checklistItemId")).toBe("radio");
+    expect(formData?.get("status")).toBe("checked");
+  });
+
+  it("does not clear a checked item on one tap, and says what the next tap does", async () => {
+    const { action, oxygen, user } = setup();
+    await user.click(oxygen());
+    await pause();
+    expect(action).not.toHaveBeenCalled();
+    expect(oxygen()).toHaveTextContent("Tap again to clear");
+    // Announced, since a changed button name is not.
+    expect(screen.getAllByRole("status").map((status) => status.textContent)).toContain(
+      "Tap again to clear",
+    );
+  });
+
+  it("clears it on the second tap", async () => {
+    const { action, oxygen, user } = setup();
+    await user.click(oxygen());
+    await pause();
+    await user.click(oxygen());
+    await waitFor(() => expect(action).toHaveBeenCalledOnce());
+    const formData = action.mock.calls[0]?.[1];
+    expect(formData?.get("checklistItemId")).toBe("oxygen");
+    expect(formData?.get("status")).toBe("cleared");
+  });
+
+  it("ignores a bounced double tap: two taps 50ms apart only ask", async () => {
+    const { action, oxygen } = setup();
+    fireEvent.click(oxygen());
+    await pause(50);
+    fireEvent.click(oxygen());
+    await pause();
+    expect(action).not.toHaveBeenCalled();
+    // The bounce did not spend the ask: a deliberate tap now clears.
+    expect(oxygen()).toHaveTextContent("Tap again to clear");
+  });
+
+  it("stands down when the tap goes elsewhere, so a later stray tap only asks again", async () => {
+    const { action, oxygen, user } = setup();
+    await user.click(oxygen());
+    await pause();
+    fireEvent.blur(oxygen());
+    expect(oxygen()).not.toHaveTextContent("Tap again to clear");
+    await user.click(oxygen());
+    expect(action).not.toHaveBeenCalled();
+  });
+
+  it("stands down on Escape", async () => {
+    const { action, oxygen, user } = setup();
+    await user.click(oxygen());
+    await pause();
+    fireEvent.keyDown(oxygen(), { key: "Escape" });
+    expect(oxygen()).not.toHaveTextContent("Tap again to clear");
+    expect(action).not.toHaveBeenCalled();
+  });
+
+  it("ignores a held Enter key, so one press cannot ask and then clear", async () => {
+    const { action, oxygen } = setup();
+    // A browser repeats keydown while Enter is held, and each repeat clicks a
+    // focused button: the first asks, one past the gap would submit the clear.
+    expect(fireEvent.keyDown(oxygen(), { key: "Enter", repeat: true })).toBe(false);
+    // The first press is the browser's to turn into a click.
+    expect(fireEvent.keyDown(oxygen(), { key: "Enter" })).toBe(true);
+    expect(action).not.toHaveBeenCalled();
+  });
+
+  it("stands down by itself if left asking", async () => {
+    const { action, oxygen } = setup();
+    fireEvent.click(oxygen());
+    await pause();
+    expect(oxygen()).toHaveTextContent("Tap again to clear");
+    await pause(CLEAR_CONFIRM_TIMEOUT_MS);
+    expect(oxygen()).not.toHaveTextContent("Tap again to clear");
+    expect(action).not.toHaveBeenCalled();
+  });
+});
+
+describe("the boat's snags (fifth-loop ideas, item 1)", () => {
+  const carried = [
+    {
+      id: "snag-1",
+      line: "Radio check done: VHF crackles on 16",
+      note: "VHF crackles on 16",
+      notedBy: "Noted by Sal Moretti, 5:16 AM",
+      printLine: "Open: Radio check done: VHF crackles on 16 (Noted by Sal Moretti, 5:16 AM)",
+    },
+  ];
+  const snagActions = { note: vi.fn(async () => null), answer: vi.fn(async () => null) };
+
+  it("stands an earlier crew's snag above the list, with Fixed and Still there", () => {
+    render(
+      <PreDepartureCheckList
+        action={vi.fn()}
+        items={items}
+        copy={copy}
+        atDeparture={false}
+        carried={carried}
+        snagActions={snagActions}
+      />,
+    );
+    const group = screen.getByRole("region", { name: "Open on this boat" });
+    expect(group).toHaveTextContent("Radio check done: VHF crackles on 16");
+    expect(group).toHaveTextContent("Noted by Sal Moretti, 5:16 AM");
+    expect(screen.getByRole("button", { name: "Fixed" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Still there" })).toBeInTheDocument();
+    // The sheet the boat carries says it too.
+    expect(screen.getByText(carried[0]?.printLine ?? "")).toBeInTheDocument();
+  });
+
+  it("offers Note a problem under every line only where a snag can be written", () => {
+    const { rerender } = render(
+      <PreDepartureCheckList
+        action={vi.fn()}
+        items={items}
+        copy={copy}
+        atDeparture
+        snagActions={snagActions}
+      />,
+    );
+    expect(screen.getAllByText("Note a problem")).toHaveLength(items.length);
+    rerender(<PreDepartureCheckList action={vi.fn()} items={items} copy={copy} atDeparture />);
+    expect(screen.queryByText("Note a problem")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Open on this boat" })).toBeNull();
+  });
+
+  it("keeps this crew's own note under its line with Fixed alone", () => {
+    render(
+      <PreDepartureCheckList
+        action={vi.fn()}
+        items={[{ ...(items[1] as PreDepartureCheckListItem), snags: carried }]}
+        copy={copy}
+        atDeparture
+        snagActions={snagActions}
+      />,
+    );
+    expect(screen.getByText("VHF crackles on 16")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fixed" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Still there" })).toBeNull();
   });
 });

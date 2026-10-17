@@ -5,7 +5,7 @@
     "day": "{date} — {groups, plural, one {# grupo} other {# grupos}} · {divers, plural, one {# buceador} other {# buceadores}}",
     "noDate": "Sin fecha concreta: {count, plural, one {# petición} other {# peticiones}}"
   },
-  "addDeparture": "Añadir una salida",
+  "addDeparture": "Agregar una salida",
   "flexible": "Flexible",
   "flexibleAround": "Pidió el {date} y puede moverse unos días",
   "alternateOf": "Primera opción: {date}",
@@ -25,5 +25,14 @@
   },
   "pagination": {
     "total": "{count, plural, one {# petición} other {# peticiones}}"
+  },
+  "markDone": "Marcar como resuelta",
+  "reopen": "Reabrir",
+  "reply": "Responder",
+  "replySubject": "Tu petición a {shopName}",
+  "done": {
+    "heading": "Resueltas: {count, plural, one {# petición} other {# peticiones}}",
+    "booked": "Reservada el {date}",
+    "marked": "Resuelta el {date}"
   }
 }

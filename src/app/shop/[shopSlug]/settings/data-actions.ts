@@ -6,7 +6,7 @@ import { canPersonErasePersonalData, canPersonManageShopSettings } from "@/db/au
 import { getDb } from "@/db/client";
 import { retryMediaDeletion } from "@/db/media-deletions";
 import { dischargeProcessorErasure, retryProcessorErasure } from "@/db/processor-erasure";
-import { readForm, text } from "@/lib/form-parse";
+import { parseForm, readForm, single, text } from "@/lib/form-parse";
 import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 
@@ -44,7 +44,16 @@ import { shopPath } from "@/lib/staff-notices";
  * -------------------------------------------------------------------------- */
 
 const attemptForm = z.object({ attemptId: text() });
-const obligationForm = z.object({ obligationId: text() });
+/**
+ * A uuid or nothing: a hand-made post with anything else is refused here,
+ * quietly, rather than reaching Postgres as a failed uuid comparison.
+ */
+const obligationForm = z.object({ obligationId: single(z.uuid()) });
+
+function obligationIdFrom(formData: FormData): string | null {
+  const parsed = parseForm(obligationForm, formData);
+  return parsed.ok ? parsed.data.obligationId : null;
+}
 
 /**
  * The "Retry" for a stuck provider delete (CR-012) — same owner/manager weight
@@ -75,7 +84,7 @@ export async function retryProcessorErasureAction(formData: FormData) {
   const session = await requireStaffSession();
   const db = await getDb();
   if (!(await canPersonErasePersonalData(db, session.user.shopId, session.user.personId))) return;
-  const { obligationId } = readForm(obligationForm, formData);
+  const obligationId = obligationIdFrom(formData);
   if (!obligationId) return;
   await retryProcessorErasure(db, session.user.shopId, obligationId);
   revalidatePath(shopPath(session.user.shopSlug, "settings"));
@@ -98,7 +107,7 @@ export async function dischargeProcessorErasureAction(formData: FormData) {
   const session = await requireStaffSession();
   const db = await getDb();
   if (!(await canPersonErasePersonalData(db, session.user.shopId, session.user.personId))) return;
-  const { obligationId } = readForm(obligationForm, formData);
+  const obligationId = obligationIdFrom(formData);
   if (!obligationId) return;
   await dischargeProcessorErasure(db, {
     shopId: session.user.shopId,

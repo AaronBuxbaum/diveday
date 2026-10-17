@@ -9,6 +9,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { gearServiceKind } from "./gear";
 import { orders } from "./payments";
@@ -103,8 +104,8 @@ export const customerGearNotices = pgTable(
     channel: customerGearNoticeChannel("channel"),
     /** The staffer who pressed Resend; null on a notice the app sent on its own. */
     sentByPersonId: uuid("sent_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
     /**
      * The order these were written in, which `created_at` cannot answer for
      * two sends inside one instant (a Resend pressed straight after the
@@ -146,7 +147,7 @@ export const workOrderBills = pgTable(
       .notNull()
       .references(() => orders.id),
     createdByPersonId: uuid("created_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /** Insertion order: which bill is the ticket's latest, even inside one second. */
     seq: bigserial("seq", { mode: "number" }).notNull(),
   },
@@ -175,8 +176,8 @@ export const customerGearReminderSettings = pgTable(
       .references(() => customerGearItems.id, { onDelete: "cascade" }),
     remindersOffAt: timestamp("reminders_off_at", { withTimezone: true }),
     changedByPersonId: uuid("changed_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("customer_gear_reminder_settings_item_unique").on(table.customerGearItemId),

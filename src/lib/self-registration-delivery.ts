@@ -1,4 +1,5 @@
 import { nowMs } from "./clock";
+import { canReceiveText } from "./phone-line-type";
 import {
   checkRateLimit,
   RATE_LIMITS,
@@ -15,6 +16,8 @@ export type SelfRegistrationDelivery =
   /** The shop's daily text cap is spent: a burst worth a look, logged at warn. */
   | "shop_text_cap"
   | "no_contact"
+  /** A home number on a line that is not a mobile: premium, shared-cost, a landline (issue #2289). */
+  | "not_mobile"
   | AnonymousTextRefusal;
 
 /**
@@ -29,7 +32,9 @@ export type SelfRegistrationDelivery =
  *   pointed at a stranger's inbox.
  * - **Text**, for a diver who gave only a phone: billed to the shop per
  *   message, so first the gate (`anonymousTextRecipient`: the shop's own
- *   calling code, never a demo shop), then a bucket per number in E.164 shared
+ *   calling code, never a demo shop), then the line type (`canReceiveText`:
+ *   a mobile line, never a premium range or a landline, issue #2289), then a
+ *   bucket per number in E.164 shared
  *   by every shop, then the shop's daily cap. The number is checked before the
  *   shop, so a number already refused never spends one of the shop's texts.
  */
@@ -54,6 +59,7 @@ export async function selfRegistrationReleaseDelivery(
 
   const text = anonymousTextRecipient(contact.phone, shop);
   if (text.refused) return text.refused;
+  if (!canReceiveText(text.recipient)) return "not_mobile";
   const byNumber = await take(
     rateLimitKey("self-register-text", text.recipient),
     RATE_LIMITS.selfRegisterTextByRecipient,

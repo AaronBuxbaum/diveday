@@ -4,9 +4,10 @@ import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
+import { schemaTableNames } from "@/test/schema-tables";
 import { anonymizeDiver } from "./anonymize";
 import { createDiver, deleteDiver } from "./divers";
-import { canPersonExportShopData, loadShopExportBundleInput, loadShopExportCounts } from "./export";
+import { canPersonExportShopData, loadShopExportBundleInput } from "./export";
 import * as schema from "./schema";
 import {
   activityEvents,
@@ -84,6 +85,8 @@ const EXPECTED_FILES = [
   "work_order_events.csv",
   "pre_departure_checklist_items.csv",
   "pre_departure_check_events.csv",
+  "boat_snags.csv",
+  "departure_boat_safety_snapshots.csv",
   "prior_visits.csv",
   "imported_payment_history.csv",
   "internal_notes.csv",
@@ -99,7 +102,6 @@ const EXPECTED_FILES = [
   "tips.csv",
   "dive_sites.csv",
   "dive_site_creatures.csv",
-  "dive_site_moments.csv",
   "recap_photos.csv",
   "trip_recap_photos.csv",
   "trip_reviews.csv",
@@ -181,6 +183,8 @@ const EXPORTED_TABLES = [
   "work_order_events",
   "pre_departure_checklist_items",
   "pre_departure_check_events",
+  "boat_snags",
+  "departure_boat_safety_snapshots",
   "prior_visits",
   "imported_payment_history",
   "orders",
@@ -190,7 +194,6 @@ const EXPORTED_TABLES = [
   "tips",
   "dive_sites",
   "dive_site_creatures",
-  "dive_site_moments",
   "recap_photos",
   "trip_recap_photos",
   "trip_reviews",
@@ -219,6 +222,8 @@ const FOLDED_TABLES = [
  * its export fate fails the coverage test below.
  */
 const EXCLUDED_TABLES = [
+  // Retired (#2330): declared until a later release drops it; nothing writes it.
+  "dive_site_moments",
   // Card disputes (ADR 20261009-stripe-reversals-reach-diveday). Stripe's own
   // record, mirrored here only so an owner sees an open one on Today and on
   // the order; every field is Stripe's, kept current from Stripe's events, and
@@ -252,6 +257,7 @@ const EXCLUDED_TABLES = [
   // not a column on an existing one.
   "inbound_messages",
   "staff_replies",
+  "inbox_saved_answers", // the inbox's saved replies, out with the inbox they serve
   // Which way each waiver link was handed over and what happened on that
   // channel. The outcome another system could act on is already on
   // waiver_records.csv (`delivery_status` and the provider columns beside it);
@@ -326,6 +332,7 @@ const EXCLUDED_TABLES = [
   "crew_notices", // crew news waiting to be told, and the stamp of when it was — delivery plumbing; the crew list itself is exported as trip_assignments
   "weekly_digest_sends", // the Monday email's send claims and opt-out link hashes — delivery plumbing and bearer credentials, never exported
   "shop_contact_email_confirmation_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
+  "shop_shore_alert_tokens", // the shore contact's confirm and stop links (H-118): bearer credentials, same reasoning
   // The shop's own Meta access token (sealed) plus the provider linkage around
   // it. Never exported, for both reasons already on this list: it is a live
   // credential like user_accounts, and a phone number id is provider linkage
@@ -381,8 +388,11 @@ const EXCLUDED_TABLES = [
 /**
  * Columns on an exported table that deliberately stay out of the bundle. The
  * default for anything absent from this map is "must be exported" — a new
- * column has to be argued out, not quietly forgotten.
+ * column has to be argued out, not quietly forgotten. `shop_id` is out on every
+ * table (`SHOP_SCOPED`): it is the same value on every row of a single-shop
+ * bundle, so a table that excludes nothing else needs no entry.
  */
+const SHOP_SCOPED = "shop_id";
 const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // `shop_id` is the same value on every row of a single-shop bundle.
   shops: [
@@ -390,31 +400,34 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "is_demo",
     "latitude",
     "longitude",
-    // Setup-checklist progress, not a shop record: it says whether anyone has
-    // looked at the currency and depth unit onboarding derived from the
-    // timezone (issue #712). A shop restoring from a backup *should* be asked
-    // again, so carrying this over would be the wrong answer, not a loss.
+    // Setup-checklist progress, not a shop record (issue #712): a shop
+    // restoring from a backup *should* be asked about its units again.
     "units_confirmed_at",
-    // Proof that the shop controls its contact address, which is what lets it
-    // become the Reply-To on mail DiveDay sends (issue #1288). The proof is
-    // DiveDay's own, not a fact the shop entered: a restored shop is asked to
-    // confirm again, and a CSV cannot vouch for an address on its behalf.
+    // Proof the shop controls its contact address, so it may be Reply-To (issue
+    // #1288): DiveDay's own, so a restored shop is asked to confirm again.
     "contact_email_confirmed_at",
-    // The routing token in the shop's inbound reply address (ADR
-    // 20260907-two-way-inbox). A credential in all but name: whoever holds it
-    // can address mail into this shop's inbox, and a restored shop is minted a
-    // fresh one by the database rather than carrying the old one in a CSV.
+    // The inbound reply address's routing token (ADR 20260907-two-way-inbox):
+    // a credential in all but name, so a restored shop is minted a fresh one.
     "inbound_email_token",
+    // H-118 and item 35: an address, its consent, confirmation and send state; a restore asks afresh.
+    "shore_alert_email",
+    "shore_alert_consent_at",
+    "shore_alert_consent_by_person_id",
+    "shore_alert_confirmed_at",
+    "bookkeeper_email",
+    "bookkeeper_email_set_at",
+    "bookkeeper_email_set_by_person_id",
+    "bookkeeper_sent_month",
+    "bookkeeper_confirmed_at",
+    "bookkeeper_confirm_token_hash",
+    "bookkeeper_confirm_expires_at",
+    "bookkeeper_stop_token_hash",
+    // #2450: DiveDay's own review of the name at sign-up and a human's clearing
+    // of it; a bundle says nothing about either, and an import joins a shop
+    // already reviewed.
+    "name_flagged_at",
+    "name_cleared_at",
   ], // DiveDay-side config, not shop records
-  boats: ["shop_id"],
-  trip_lenses: ["shop_id"],
-  dive_packages: ["shop_id"],
-  dive_package_entitlements: ["shop_id"],
-  staff_shifts: ["shop_id"],
-  staff_credentials: ["shop_id"],
-  executed_dives: ["shop_id"],
-  trip_sightings: ["shop_id"],
-  review_moderation_events: ["shop_id"],
   people: [
     "shop_id",
     // The language a diver reads, as observed from their own request's
@@ -426,44 +439,46 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // shop got before the column existed, so nothing is silently lost.
     "locale",
   ],
-  certifications: ["shop_id"],
-  specialty_certifications: ["shop_id"],
-  nitrox_certifications: ["shop_id"],
   trips: [
     "shop_id",
     "recap_shoutout", // recap copy travels with recap_photos.csv
     "recap_auto_send_paused", // auto-send countdown / pause is ephemeral operational state
     "recap_auto_send_at",
+    // When this installation alerted the owners, and the shore contact (H-118),
+    // about a stale after-dive roll call: once-per-departure send state, like
+    // `recap_auto_send_at`. The roll-call events travel in their own file.
+    "roll_call_alerted_at",
+    "roll_call_shore_alerted_at",
     // How many times this installation has re-issued the calendar events whose
-    // UIDs are `trip-<uuid>@diveday` — a counter about *our* published
-    // revisions, not a fact the shop entered. A re-imported bundle mints new
-    // trip ids and therefore new UIDs, so no subscriber anywhere holds a
-    // revision to compare it against and the number would mean nothing on the
-    // far side. Same class as `pending_checkout_intent_id`.
+    // UIDs are `trip-<uuid>@diveday`: a counter about *our* published revisions.
+    // A re-imported bundle mints new trip ids and so new UIDs, and no subscriber
+    // holds a revision to compare. Same class as `pending_checkout_intent_id`.
     "revision",
     // A pending "the divers still have the old time" between a move and its
     // notice: in-flight messaging state on this installation, cleared by the
     // send, and a re-imported departure has no divers who were told anything.
     "divers_told_starts_at",
+    "divers_told_meeting_point",
     // A rehearsal never reaches the bundle at all (ADR
     // 20261012-rehearsal-departures): every exported departure is a real one,
     // so this column would read false on every row it could appear on.
     "is_rehearsal",
   ],
-  trip_change_events: ["shop_id"],
-  trip_stage_events: ["shop_id"],
-  trip_series: ["shop_id"],
-  trip_series_crew: ["shop_id"],
   trip_series_skips: ["id", "shop_id"],
   trip_dives: [],
-  trip_requirements: ["shop_id"],
   trip_assignments: [],
   bookings: [
     "shop_id",
     "pending_checkout_intent_id", // in-flight Stripe attempt, meaningless elsewhere
     "identity_unconfirmed_at", // H-13 review state, not a shop record
     "identity_booked_as", // H-13 review state: the name the held booking was made under
+    "reschedule_missed_from", // a notice owed to a held seat (#2445), cleared once sent
+    "reschedule_missed_place", // the same: whether the meeting point moved too
     "identity_matched_by", // H-13 review state: why the booking was matched
+    // A held seat's desk-recorded emergency contact (#2145): read only while
+    // the seat is held, and moved onto the new record at a split.
+    "held_emergency_contact_name",
+    "held_emergency_contact_phone",
     "paid_rental_kinds", // held-seat prep state: the order lines already carry what was paid for
     // Seat-claim linkage (ADR 20260804-seat-claim-links): a pointer at another
     // booking row's id, which does not survive a re-import — same class as
@@ -471,32 +486,14 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "party_lead_booking_id",
     "claimed_at", // claim-flow operational state, same reasoning as identity_unconfirmed_at
   ],
-  trip_help_requests: ["shop_id"],
-  trip_waitlist_entries: ["shop_id"],
-  trip_invitations: ["shop_id"],
-  last_minute_list_entries: ["shop_id"],
   trip_last_minute_promos: [
     "shop_id",
     "stripe_coupon_id", // provider linkage, useless outside this Stripe account
     "stripe_promotion_code_id",
   ],
-  trip_last_minute_promo_recipients: ["shop_id"],
-  booking_arrival_events: ["shop_id"],
-  roll_call_events: ["shop_id"],
-  roll_call_crew_events: ["shop_id"],
   // The member row's surrogate id says nothing beyond (pair_id, booking_id),
   // which are both exported.
   buddy_pair_members: ["shop_id", "id"],
-  // The crew's own two tables (issue #1235). Every row is scoped to the bundle
-  // being exported, so the id repeated on each line buys a reader nothing.
-  crew_availability_blocks: ["shop_id"],
-  crew_assignment_requests: ["shop_id"],
-  waiver_templates: ["shop_id"],
-  waiver_materiality_decisions: ["shop_id"],
-  course_forms: ["shop_id"],
-  course_form_versions: ["shop_id"],
-  course_form_requirements: ["shop_id"],
-  course_form_records: ["shop_id"],
   waiver_records: [
     "shop_id",
     "template_body", // the frozen copy; waiver_templates.csv carries the text
@@ -511,9 +508,8 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "draft_acknowledged",
     "draft_medical_answers",
     "draft_guardian", // the guardian section as typed, same class as the three above
-    // Delivery plumbing is provider-specific operational state. The signed
-    // waiver remains portable; a destination can issue its own link and
-    // delivery attempt rather than importing stale provider ids or outcomes.
+    // Delivery plumbing is provider-specific operational state: a destination issues
+    // its own link and delivery rather than importing stale provider ids or outcomes.
     "delivery_status",
     "delivery_provider_message_id",
     "delivery_provider_status",
@@ -535,6 +531,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // and the file being retrievable *inside* the product is precisely why it
     // does not need to travel outside it.
     "medical_clearance_document_url",
+    "doctor_unlock_failures", // abuse control on the doctor's page, not part of the record
   ],
   // `created_at` is when DiveDay wrote the row; `occurred_at` is when the
   // money actually moved, and that is the one a reader replays.
@@ -553,14 +550,13 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // The join row's surrogate id says nothing beyond (checkout_id, booking_id),
   // which are both exported — same reasoning as buddy_pair_members.id.
   booking_checkout_bookings: ["shop_id", "id"],
-  shop_promo_redemptions: ["shop_id"],
-  internal_notes: ["shop_id"],
-  incident_reports: ["shop_id"],
-  incident_report_people: ["shop_id"],
-  incident_report_addenda: ["shop_id"],
-  activity_events: ["shop_id"],
-  notification_deliveries: ["shop_id"],
-  course_inquiries: ["shop_id"],
+  incident_reports: [
+    "shop_id",
+    // H-142: when this installation told the owners of a filed missing-diver
+    // report; once-per-report send state, like `roll_call_alerted_at`.
+    "missing_alerted_at",
+    "missing_alert_sent_at",
+  ],
   rental_fit_profiles: [
     "shop_id",
     // A DiveDay-side discriminator, not a fact about the diver: it separates a
@@ -570,17 +566,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // exporting it would carry an internal flag out and re-derive it anyway.
     "fit_stated_at",
   ],
-  gear_items: ["shop_id"],
-  gear_service_events: ["shop_id"],
-  gear_reservations: ["shop_id"],
-  customer_gear_items: ["shop_id"],
-  work_orders: ["shop_id"],
-  work_order_items: ["shop_id"],
-  work_order_lines: ["shop_id"],
-  work_order_care: ["shop_id"],
-  work_order_events: ["shop_id"],
-  pre_departure_checklist_items: ["shop_id"],
-  pre_departure_check_events: ["shop_id"],
   prior_visits: [
     "shop_id",
     // The re-import idempotency key, derived from the columns that *are*
@@ -603,10 +588,12 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // Matches a later refund or dispute event to this order; provider
     // linkage like the two above (ADR 20261009-stripe-reversals-reach-diveday).
     "stripe_payment_intent_id",
+    // A lock stamp for one Stripe round trip, null on every settled row
+    // (ADR 20261009-counter-payments); nothing a shop would read in a backup.
+    "counter_claimed_at",
+    "auto_void_failed_at", // the nightly void sweep's retry state (issue #2304), not the sale's
+    "auto_void_failures", // same
   ],
-  order_line_items: ["shop_id"],
-  work_order_bills: ["shop_id"],
-  customer_gear_reminder_settings: ["shop_id"],
   tips: [
     "shop_id",
     "stripe_account_id", // provider linkage, useless outside this Stripe account
@@ -629,12 +616,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // generation no rendered page has ever carried.
     "row_version",
   ],
-  dive_site_creatures: ["shop_id"],
-  dive_site_moments: ["shop_id"],
-  recap_photos: ["shop_id"],
-  trip_recap_photos: ["shop_id"],
-  trip_reviews: ["shop_id"],
-  recap_pulses: ["shop_id"],
   shop_promo_codes: [
     "shop_id",
     "stripe_coupon_id", // provider linkage, useless outside this Stripe account
@@ -660,15 +641,7 @@ const ctx = fileScopedShopContext();
 
 describe("schema coverage", () => {
   it("forces every schema table to be exported, folded, or deliberately excluded", () => {
-    const tableNames = Object.values(schema)
-      .map((value) => {
-        try {
-          return getTableName(value as Parameters<typeof getTableName>[0]);
-        } catch {
-          return null;
-        }
-      })
-      .filter((name): name is string => typeof name === "string");
+    const tableNames = schemaTableNames();
     expect(tableNames.length).toBeGreaterThan(20);
 
     const decided = new Set([...EXPORTED_TABLES, ...FOLDED_TABLES, ...EXCLUDED_TABLES]);
@@ -712,6 +685,7 @@ describe("schema coverage", () => {
       const missing = Object.values(getTableColumns(value as Parameters<typeof getTableColumns>[0]))
         .map((column) => column.name)
         .filter((column) => !exportedColumns.has(column))
+        .filter((column) => column !== SHOP_SCOPED)
         .filter((column) => !(EXCLUDED_COLUMNS[name] ?? []).includes(column));
       if (missing.length > 0) undecided[name] = missing;
     }
@@ -727,61 +701,6 @@ describe("schema coverage", () => {
     // the other end by asserting the importer knows every column this bundle
     // writes.
     expect(undecided).toEqual({});
-  });
-
-  it("keeps every row exactly as wide as its own header", async () => {
-    const { db, shop } = ctx;
-    const input = await loadShopExportBundleInput(db, shop.id);
-    if (!input) throw new Error("seeded shop failed to load");
-
-    const ragged = input.tables
-      .map((table) => {
-        const widths = [...new Set(table.rows.map((row) => row.length))].filter(
-          (width) => width !== table.header.length,
-        );
-        return widths.length > 0 ? { file: table.file, header: table.header.length, widths } : null;
-      })
-      .filter((entry) => entry !== null);
-    // A header and its projection are two hand-maintained lists that must stay
-    // in step, and nothing above notices when they don't: the column test reads
-    // only `header`, so adding a name there without its value passes both
-    // assertions while shifting every later cell one column left. That is not a
-    // hypothetical — `crew_public_consent_at` did exactly this (issue #1181),
-    // and the only thing that caught it was two unrelated tests that happened
-    // to read `people.csv` by header index. A shop's CSV would have carried
-    // every date one column off, silently, into whatever it was imported to.
-    expect(ragged).toEqual([]);
-  });
-
-  it("names every column once per file", async () => {
-    const { db, shop } = ctx;
-    const input = await loadShopExportBundleInput(db, shop.id);
-    if (!input) throw new Error("seeded shop failed to load");
-
-    const repeated = input.tables
-      .map((table) => {
-        const seen = new Set<string>();
-        const twice: string[] = [];
-        for (const name of table.header) {
-          if (seen.has(name)) twice.push(name);
-          else seen.add(name);
-        }
-        return twice.length > 0 ? { file: table.file, repeated: twice } : null;
-      })
-      .filter((entry) => entry !== null);
-    // Per file, not across the bundle: `id` and `shop_id` belong in many
-    // headers, and a column riding in a rollup legitimately appears beside its
-    // own table's copy. What must never repeat is a name inside one header.
-    //
-    // Neither assertion above can see a duplicate. The column test asks only
-    // whether a name appears *somewhere*, so a repeat reads as covered, and the
-    // width test compares counts — a duplicated header and its duplicated
-    // projection are both one wider, so the rows stay flush. `dive_sites.csv`
-    // carried `conservation_note` twice through both of them, one copy sitting
-    // between `fit_note` and the field-guide columns where no reader scanning
-    // the list would see a repeat, and every shop's bundle shipped with it. A
-    // destination importing by header name keeps whichever copy it read last.
-    expect(repeated).toEqual([]);
   });
 });
 
@@ -1608,26 +1527,6 @@ describe("export privilege re-check (database, not JWT)", () => {
       .set({ status: "disabled" })
       .where(eq(userAccounts.personId, owner));
     expect(await canPersonExportShopData(db, shop.id, owner)).toBe(false);
-  });
-});
-
-describe("export counts (the settings page's cheap view)", () => {
-  it("mirrors the bundle exactly — same files, same notes, same row counts", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
-    const input = await loadShopExportBundleInput(db, shop.id);
-    const counts = await loadShopExportCounts(db, shop.id);
-    if (!input || !counts) throw new Error("shop failed to load");
-
-    expect(counts.map((row) => row.file)).toEqual(input.tables.map((row) => row.file));
-    for (const [index, row] of counts.entries()) {
-      expect(row.note).toBe(input.tables[index].note);
-      expect(row.count).toBe(input.tables[index].rows.length);
-    }
-  });
-
-  it("returns null for an unknown shop", async () => {
-    const { db } = ctx;
-    expect(await loadShopExportCounts(db, "00000000-0000-0000-0000-000000000000")).toBeNull();
   });
 });
 

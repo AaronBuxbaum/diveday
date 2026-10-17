@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
-import { ridingOnlyMedicalSentences } from "@/i18n/manifest-labels";
+import { ridingOnlyMedicalSentences, trainingDiveLines } from "@/i18n/manifest-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
@@ -82,6 +82,7 @@ export function DiverFacts({
   const ridingOnly = ridingOnlyMedicalSentences(t, warningDays, (day) =>
     formatCalendarDate(day, locale),
   );
+  const training = trainingDiveLines(t, diver);
   const pickup = diver.hotelPickupLocation ? (
     <p>
       <span className="font-bold">{t("manifest.hotelPickupLabel")}</span>
@@ -95,9 +96,21 @@ export function DiverFacts({
     // Said, on screen and on paper alike, rather than "Not on file": a held
     // seat with no contact reads as a diver who has none, which is a wrong
     // fact. The confirm control is ashore, on the Divers tab (issue #1690).
+    // The one contact a held seat carries is the one the desk recorded for
+    // the person on it (issue #2145), never the matched record's.
     return (
       <div className={`grid gap-2 text-base${columns === 2 ? " sm:grid-cols-2" : ""}`}>
         <p className="text-muted">{t("manifest.identityWithheldDetails")}</p>
+        {/* Its own field, never `emergencyContact*` (H7, Y3). */}
+        {diver.heldEmergencyContact ? (
+          <p>
+            <span className="font-bold">{t("manifest.heldEmergencyContactLabel")}</span>
+            <span className="mt-0.5 block text-muted">
+              {diver.heldEmergencyContact.name} ·{" "}
+              <span className="whitespace-nowrap">{diver.heldEmergencyContact.phone}</span>
+            </span>
+          </p>
+        ) : null}
         {pickup}
       </div>
     );
@@ -155,9 +168,28 @@ export function DiverFacts({
         </p>
       ) : null}
       {pickup}
+      {diver.dietaryNote ? (
+        <p>
+          <span className="font-bold">{t("manifest.dietaryNoteLabel")}</span>
+          <span className="mt-0.5 block text-muted break-words">{diver.dietaryNote}</span>
+        </p>
+      ) : null}
       {ridingOnly.length > 0 ? (
         <p className="font-medium text-warning-strong">
           {ridingOnly.map((line) => (
+            <span key={line} className="block">
+              {line}
+            </span>
+          ))}
+        </p>
+      ) : null}
+      {/* A training dive (issue #2275): the course it counts toward, then
+          the warnings — no instructor aboard, or a mark cleared with its
+          course forms unsigned, naming who decided. */}
+      {training.fact ? <p>{training.fact}</p> : null}
+      {training.warnings.length > 0 ? (
+        <p className="font-medium text-warning-strong">
+          {training.warnings.map((line) => (
             <span key={line} className="block">
               {line}
             </span>

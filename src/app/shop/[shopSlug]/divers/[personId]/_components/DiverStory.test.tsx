@@ -108,6 +108,16 @@ describe("one seat, one row", () => {
     expect(screen.getAllByRole("listitem")[1]?.textContent).toContain("Blown-out charter");
   });
 
+  // Fourth review, item 45: the same relative day the Inbox says.
+  it("names tomorrow's boat Tomorrow and keeps a date further out", () => {
+    const tomorrow = booking("b-t", "Tomorrow’s reef", new Date("2026-07-19T13:00:00.000Z"));
+    renderStory(diver({ bookings: [tomorrow, AHEAD] }));
+    const row = (title: string) =>
+      screen.getAllByRole("listitem").find((item) => item.textContent?.includes(title));
+    expect(row("Tomorrow’s reef")?.textContent).toMatch(/^Tomorrow/);
+    expect(row("Saturday reef charter")?.textContent).toMatch(/^Sat, Jul\s25/);
+  });
+
   it("opens the manifest while a departure is ahead, and the trip once it is behind", () => {
     renderStory(diver({ bookings: [AHEAD, BEHIND] }));
     expect(screen.getByRole("link", { name: "Saturday reef charter" })).toHaveAttribute(

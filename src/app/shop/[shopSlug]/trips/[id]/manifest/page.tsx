@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { BoatSafetyNotices } from "@/components/BoatSafetyNotices";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
@@ -8,7 +8,8 @@ import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { scopedHash, scopedId } from "@/lib/element-id";
+import { scopedHash } from "@/lib/element-id";
+import { emergencyReferenceForDeparture } from "@/lib/emergency-reference";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
@@ -19,6 +20,7 @@ import { tripTabsCopy } from "../_components/trip-tabs-copy";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { bindManifestActions } from "./_components/bound-actions";
 import { buddyBuilderView } from "./_components/buddy-builder-view";
+import { CancelledRollCallBanner } from "./_components/CancelledRollCallBanner";
 import { CatchUpStrip } from "./_components/CatchUpStrip";
 import { CheckpointSwitch } from "./_components/CheckpointSwitch";
 import { CrewRollCall } from "./_components/CrewRollCall";
@@ -42,9 +44,9 @@ import { offlineManifestPayload } from "./_components/offline-payload";
 import { openCheckpoint } from "./_components/open-checkpoint";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
 import {
-  PrintedKitBlanks,
-  PrintedMissingProcedure,
+  PrintedBoatPaper,
   printedBoatProcedureCopy,
+  printedKitRegister,
 } from "./_components/PrintedBoatProcedure";
 import { PrintedSoulsOnBoard } from "./_components/PrintedSoulsOnBoard";
 import { personTrailIndex } from "./_components/person-trail";
@@ -57,6 +59,7 @@ import { SummaryPanel } from "./_components/SummaryPanel";
 import { seenGroupView } from "./_components/seen-group-view";
 import { stageStripProps } from "./_components/stage-strip-props";
 import { TripPlanSection } from "./_components/TripPlanSection";
+import { tripPlanRows } from "./_components/trip-plan-rows";
 import type { ManifestActionContext } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -120,30 +123,35 @@ export default async function TripManifestPage({
   const {
     completeManifests,
     buddyTeamsList,
+    partyPlan,
     bookingNotes,
     diverNotes,
-    checklistItems,
-    checklistChecks,
+    boatCheck,
     plannedDives,
     executedDives,
     liveDiveSites,
     catchUp,
     diveIntents,
-    stage,
+    stageStrip,
+    meetingPoint,
+    vessel,
+    kitRecord,
+    siteHistory,
+    cancelled,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
+    mayStartIncidentReport,
   } = await readManifestPage(db, shop.id, tripId, session.user.personId);
   const { catalogSpecies, speciesBySite } = manifestSpecies(locale, fieldGuides);
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
-  const boatSafety = await departureBoatSafetySection(db, shop, departureManifest, t);
+  const boatSafety = await departureBoatSafetySection(db, shop, departureManifest, t, locale);
 
-  const { checkpoints, checkpoint, isDeparture, manifest } = openCheckpoint(
-    completeManifests,
-    departureManifest,
-    requestedCheckpoint,
-  );
+  const opened = openCheckpoint(completeManifests, departureManifest, requestedCheckpoint);
+  // A checkpoint this plan lacks leaves the address bar, never opening the dock (#2508).
+  if ("stale" in opened) redirect(shopPath(shopSlug, "trips", tripId, "manifest"));
+  const { checkpoint, isDeparture, manifest } = opened;
   const todayTrailBySubject = personTrailIndex(completeManifests, locale, shop.timezone, t);
   // One definition, shared with the offline copy: divers *and* crew (DOM-H1,
   // ADR 20260804-crew-roll-call-is-per-person). This used to be written inline
@@ -154,7 +162,7 @@ export default async function TripManifestPage({
   const rollCallComplete = completeness.complete;
 
   const actionContext: ManifestActionContext = { shopSlug, tripId, checkpoint };
-  const actions = bindManifestActions(actionContext);
+  const actions = bindManifestActions(actionContext, { mayStartIncidentReport });
   const seen = seenGroupView({
     checkpoint,
     actionContext,
@@ -169,18 +177,18 @@ export default async function TripManifestPage({
   });
   const catchUpStrip = catchUpStripView(catchUp, locale, shop.timezone, t);
   const checklist = preDepartureCheckView({
-    checklistItems,
-    checklistChecks,
+    ...boatCheck,
+    snagActions: vessel ? { note: actions.noteSnag, answer: actions.answerSnag } : undefined,
     locale,
     timeZone: shop.timezone,
     t,
   });
-  const buddyBuilder = buddyBuilderView({ manifest, buddyTeamsList, buddyError, locale, t });
-  const { buddyTeamLabel } = buddyBuilder;
+  const buddy = buddyBuilderView({ manifest, buddyTeamsList, buddyError, partyPlan, locale, t });
   const notesByBooking = manifestNoteThreads(bookingNotes, diverNotes);
   const { crewRollCallButtonCopy, rollCallButtonCopy } = rollCallCopies(t, shopSlug, tripId);
   const emergencyCopy = emergencyReferenceCopy(t);
-  const printedProcedureCopy = printedBoatProcedureCopy(t);
+  // This departure's own boat on every copy of the card, the shop line only without one (item 11).
+  const emergencyReference = emergencyReferenceForDeparture(shop.emergencyReference, vessel);
 
   return (
     <div className="boat-mode">
@@ -193,7 +201,7 @@ export default async function TripManifestPage({
           page used to hand-roll its own, so switching to the Manifest redrew
           the top of the page for no reason a reader could act on.
           Deliberately without the seats badge the others carry: the whole body
-          below is a live head count, and a "3 spots left" pill above a roll
+          below is a live head count, and a "3 seats left" pill above a roll
           call reading "6 of 9 aboard" invites reading the seat count as a
           boarding count. */}
       <TripPageHeader
@@ -203,12 +211,10 @@ export default async function TripManifestPage({
         trip={manifest.trip}
         locale={locale}
         timeZone={shop.timezone}
-        // No description line. "Divers and crew, with emergency contacts, at
-        // every checkpoint" was a caption describing the page under a tab
-        // that already names it — the checkpoint nav and the panel below say
-        // what to do, and the per-row "Contact & gear" summaries carry the
-        // emergency-contact discoverability it was keeping alive (the
-        // copy-restraint question, applied 2026-08-21).
+        // No description line: "Divers and crew, with emergency contacts, at
+        // every checkpoint" captioned a page its tab already names; the
+        // checkpoint nav and the panel below say what to do, and the per-row
+        // summaries carry the contacts (copy-restraint, 2026-08-21).
         // Printing is an Overall-tab action. The manifest is the live dock
         // surface; keeping a second current-page printer here made it unclear
         // whether staff were getting the full packet or only this tab.
@@ -223,7 +229,7 @@ export default async function TripManifestPage({
               className="mt-0"
               headingId="emergency-reference-phone-heading"
               inOverlay
-              reference={shop.emergencyReference}
+              reference={emergencyReference}
               copy={emergencyCopy}
             />
           </ManifestMoreMenu>
@@ -233,7 +239,8 @@ export default async function TripManifestPage({
           reading of where the boat is, and a second one above it would be the
           same fact twice. */}
       <TripTabs shopSlug={shopSlug} tripId={tripId} current="boat" copy={tripTabsCopy(t)} />
-      <PrintedSoulsOnBoard manifest={manifest} t={t} />
+      <CancelledRollCallBanner state={cancelled} t={t} />
+      <PrintedSoulsOnBoard manifest={manifest} vesselName={vessel?.name ?? null} t={t} />
       {/* **The catch-up strip**, under the masthead and above the instrument,
           exactly where the canvas draws it (ADR 20260904-reef-all-the-way-down
           slice 16d). It renders nothing when there is nothing new, and nothing
@@ -268,14 +275,14 @@ export default async function TripManifestPage({
       {/* **Where the boat is** — ADR 20260904-reef-all-the-way-down, decision
           2, Budget rule 4. Directly under the panel that counts the people
           aboard, because it is the same question asked of the boat rather than
-          of the roster, and because the crew taps it at the rail. No drawing,
-          no coral and no motion: this is a safety surface, and the boat that
-          drifts on the home and the storefront is deliberately not here. */}
+          of the roster, and because the crew taps it at the rail. A safety
+          surface: no drawing, no coral, no motion (`StageStrip`). */}
       <StageStrip
         action={actions.setTripStage}
         {...stageStripProps(t, {
-          trip: departureManifest.trip,
-          stage,
+          manifests: completeManifests,
+          shopSlug,
+          ...stageStrip,
           now: nowDate(),
           timeZone: shop.timezone,
           locale,
@@ -283,7 +290,7 @@ export default async function TripManifestPage({
       />
 
       <CheckpointSwitch
-        checkpoints={checkpoints}
+        manifests={completeManifests}
         checkpoint={checkpoint}
         shopSlug={shopSlug}
         tripId={tripId}
@@ -292,10 +299,9 @@ export default async function TripManifestPage({
 
       {/* **Every section from the boat check down, at one gap** (K-189). Each
           used to bring its own top margin — `mt-5`, `mt-8`, `mt-9` and back —
-          so sections of one kind stepped 21 to 42px apart, and "Buddy teams"
-          opened 64px under the plan. One `space-y-10` holds them and none
-          carries a margin (docs/design/forms-and-controls.md); `mt-5` is the
-          boat check's own step under the checkpoint switch it belongs to. */}
+          so sections of one kind stepped 21 to 42px apart. One `space-y-10` holds
+          them and none carries a margin (docs/design/forms-and-controls.md); `mt-5`
+          is the boat check's own step under the checkpoint switch. */}
       <div className="mt-5 space-y-10">
         {/* One line, under the checkpoint switch: the boat check happens once
             before the boat leaves rather than once per dive, so it is the last
@@ -308,9 +314,8 @@ export default async function TripManifestPage({
         <PreDepartureCheckList
           idPrefix={idPrefix}
           action={actions.preDepartureCheck}
-          items={checklist.items}
           atDeparture={isDeparture}
-          copy={checklist.copy}
+          {...checklist}
         />
         {/* The page's job, as high as it can go: the divers, immediately under
             the panel that counts them. It used to be the *last* section, below
@@ -324,6 +329,7 @@ export default async function TripManifestPage({
             crew: manifest.crew,
             checkpoint,
             isDeparture,
+            exceedsNoDecoLimits: manifest.trip.exceedsNoDecoLimits,
             shopSlug,
             tripId,
             locale,
@@ -331,17 +337,18 @@ export default async function TripManifestPage({
             notesByBooking,
             todayTrailByBooking: todayTrailBySubject,
             rollCallAction: actions.rollCall,
+            rollCallClosed: cancelled === "closed",
             addPrivateNoteAction: actions.addPrivateNote,
+            startMissingDiverReport: actions.startMissingDiverReport,
             rollCallButtonCopy,
-            buddyTeamLabel,
+            buddyTeamLabel: buddy.buddyTeamLabel,
             t,
           }}
         />
 
-        {/* Crew close the checkpoint (DOM-H1) — they come straight after the
-            divers, not before them: the divers are the head count's heart, and
-            a two-person crew list ahead of nine divers read as the page's
-            subject. */}
+        {/* Crew close the checkpoint (DOM-H1) — straight after the divers, not
+            before them: the divers are the head count's heart, and a two-person
+            crew list ahead of nine divers read as the page's subject. */}
         <CrewRollCall
           crew={manifest.crew}
           idPrefix={idPrefix}
@@ -354,8 +361,10 @@ export default async function TripManifestPage({
           timezone={shop.timezone}
           todayTrailBySubject={todayTrailBySubject}
           crewRollCallAction={actions.crewRollCall}
+          rollCallClosed={cancelled === "closed"}
           crewRollCallButtonCopy={crewRollCallButtonCopy}
-          buddyTeamLabel={buddyTeamLabel}
+          startMissingReport={actions.startMissingDiverReport}
+          buddyTeamLabel={buddy.buddyTeamLabel}
           t={t}
         />
         <DockDesk
@@ -363,8 +372,9 @@ export default async function TripManifestPage({
           shopId={shop.id}
           tripId={tripId}
           isDeparture={isDeparture}
-          startsAt={departureManifest.trip.startsAt}
-          stage={stage}
+          trip={departureManifest.trip}
+          timeZone={shop.timezone}
+          stage={stageStrip.stage}
           seats={manifest.divers}
         />
 
@@ -376,15 +386,7 @@ export default async function TripManifestPage({
           <TripPlanSection
             idPrefix={idPrefix}
             heading={t("manifest.planChange.heading")}
-            dives={plannedDives.map(({ dive, diveSite }) => ({
-              diveNumber: dive.diveNumber,
-              line: diveSite
-                ? t("manifest.planChange.diveRow", {
-                    number: dive.diveNumber,
-                    site: diveSite.name,
-                  })
-                : t("manifest.planChange.diveRowNoSite", { number: dive.diveNumber }),
-            }))}
+            {...tripPlanRows(t, shop, plannedDives, meetingPoint, siteHistory, locale)}
           />
         ) : null}
 
@@ -418,24 +420,13 @@ export default async function TripManifestPage({
             (ADR 20260827-the-departure-is-two-working-surfaces, decision 2). The
             printed manifest is the fallback under the fallback, so its complete
             copy is rendered outside either interactive disclosure below. */}
-        <div className="hidden print:block">
-          {/* The boat card's two parts that printed nowhere once it was cut
-              (issue #2035): the missing-diver procedure above the numbers it
-              sends the crew to, and the kit blanks under them. */}
-          <PrintedMissingProcedure
-            copy={printedProcedureCopy}
-            headingId={scopedId(idPrefix, "missing-procedure-print-heading")}
-          />
-          <EmergencyReferenceCard
-            headingId={scopedId(idPrefix, "emergency-reference-print-heading")}
-            reference={shop.emergencyReference}
-            copy={emergencyCopy}
-          />
-          <PrintedKitBlanks
-            copy={printedProcedureCopy}
-            headingId={scopedId(idPrefix, "kit-blanks-print-heading")}
-          />
-        </div>
+        <PrintedBoatPaper
+          idPrefix={idPrefix}
+          reference={emergencyReference}
+          emergencyCopy={emergencyCopy}
+          copy={printedBoatProcedureCopy(t)}
+          kitRegister={printedKitRegister(kitRecord, t, locale)}
+        />
         {/* Buddy teams are dock/desk prep, not mid-roll-call work: grouping
             people happens before the boat leaves, while the lists above are
             worked at the rail. Below the lists, still expanded — the teams
@@ -445,7 +436,7 @@ export default async function TripManifestPage({
           defaultOpen={buddies === "open"}
           intentLine={staffDiveIntentLine(t, diveIntents, locale)}
           buddyTeamsList={buddyTeamsList}
-          {...buddyBuilder.panel}
+          {...buddy.panel}
           {...actions.buddyTeams}
           t={t}
         />
@@ -457,23 +448,21 @@ export default async function TripManifestPage({
             20260827-the-departure-is-two-working-surfaces puts device settings in
             the "ashore, not here" tier.
 
-            The disclosure belongs to `OfflineManifestManager` rather than to a
-            wrapper here, and that is load-bearing: the summary line keeps the
-            connectivity chip and the freshness pill on screen, because a stale
-            copy that looks current is the failure mode this whole mechanism
-            exists to prevent — and the component that computes that state is the
-            only thing that can render it. The rest of the group rides in as its
-            children. */}
+            The disclosure belongs to `OfflineManifestManager` rather than to a wrapper here, and
+            that is load-bearing: the summary line keeps the connectivity chip and the freshness
+            pill on screen, because a stale copy that looks current is the failure mode this whole
+            mechanism exists to prevent — and the component that computes that state is the only
+            thing that can render it. The rest of the group rides in as its children. */}
         <OfflineManifestManager
           idPrefix={idPrefix}
           locale={locale}
           payload={offlineManifestPayload({
             completeManifests,
-            shop,
+            shop: { ...shop, emergencyReference },
             shopSlug,
-            checklistItems,
-            checklistChecks,
+            ...boatCheck,
             boatSafety,
+            locale,
             t,
           })}
           copy={offlineManifestManagerCopy(t)}
@@ -490,7 +479,7 @@ export default async function TripManifestPage({
         <EmergencyReferenceCard
           className="mt-0"
           headingId="emergency-reference-desktop-heading"
-          reference={shop.emergencyReference}
+          reference={emergencyReference}
           copy={emergencyCopy}
         />
       </ManifestMoreMenu>

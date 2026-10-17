@@ -17,9 +17,18 @@ export const BUILDER_NOTICE_KEYS: Record<
   added: { tone: "success", key: "schedule.notices.added" },
   moved: { tone: "success", key: "schedule.notices.moved" },
   copied: { tone: "success", key: "schedule.notices.copied" },
+  // Item 53: the departure copied, its crew refused as a whole.
+  "copied-no-crew": { tone: "warning", key: "schedule.notices.copiedNoCrew" },
+  // Last year's week, copied onto an empty one (fifth loop, item 30).
+  "week-copied": { tone: "success", key: "schedule.notices.weekCopied" },
+  "week-not-empty": { tone: "warning", key: "schedule.notices.weekNotEmpty" },
+  "nothing-to-copy": { tone: "warning", key: "schedule.notices.nothingToCopy" },
   removed: { tone: "success", key: "schedule.notices.removed" },
   invalid: { tone: "danger", key: "schedule.notices.invalid" },
   "end-before-start": { tone: "danger", key: "schedule.notices.endBeforeStart" },
+  // A course's named days, out of order or past six weeks (third UX review, item 10).
+  "days-out-of-order": { tone: "danger", key: "schedule.notices.daysOutOfOrder" },
+  "days-span-repeat": { tone: "danger", key: "schedule.notices.daysSpanRepeat" },
   "not-authorized": { tone: "danger", key: "schedule.notices.notAuthorized" },
   "not-found": { tone: "danger", key: "schedule.notices.notFound" },
   "not-scheduled": { tone: "warning", key: "schedule.notices.notScheduled" },
@@ -46,6 +55,9 @@ export function builderNoticeMessage(
   key: StaffMessageKey,
   count: string | undefined,
 ): string {
+  if (key === "schedule.notices.weekCopied") {
+    return st(key, { count: count && /^\d{1,4}$/.test(count) ? Number.parseInt(count, 10) : 0 });
+  }
   if (key === "schedule.notices.capacityAboveCertificate" && count && /^\d{1,4}$/.test(count)) {
     return st("schedule.notices.capacityAboveCertificateCount", {
       count: Number.parseInt(count, 10),

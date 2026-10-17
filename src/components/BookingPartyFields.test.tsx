@@ -43,6 +43,19 @@ describe("BookingPartyFields", () => {
     expect(screen.getByRole("textbox", { name: "Diver 2 email" })).toBeRequired();
   });
 
+  it("asks each member 'Under 18', posts it per seat and says what it means once ticked", () => {
+    renderDiver(<BookingPartyFields maxPartySize={2} />);
+    fireEvent.click(screen.getByRole("radio", { name: "2 divers" }));
+    const boxes = screen.getAllByRole("checkbox", { name: /^Under 18/ });
+    expect(boxes.map((box) => box.getAttribute("name"))).toEqual(["minor-0", "minor-1"]);
+    expect(screen.queryByText("A parent or guardian signs the waiver too.")).toBeNull();
+
+    fireEvent.click(boxes[1] as HTMLElement);
+    expect(boxes[1]).toBeChecked();
+    expect(boxes[0]).not.toBeChecked();
+    expect(screen.getByText("A parent or guardian signs the waiver too.")).toBeInTheDocument();
+  });
+
   it("asks nothing about anybody's diving", () => {
     // The per-diver certification question lived here between 2026-08-20 and
     // 2026-08-27; `/ready/<token>` asks the diver whose booking it is instead

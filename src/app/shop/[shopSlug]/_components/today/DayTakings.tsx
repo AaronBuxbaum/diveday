@@ -1,4 +1,4 @@
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import { FIGURE_CLASS } from "@/components/ui/typography";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { DayTakings as DayTakingsReading } from "@/lib/closeout";
@@ -64,6 +64,7 @@ export function DayTakings({
   timeZone: string;
   t: StaffTranslator;
 }) {
+  const onlyBoat = takings.boatTips.length === 1 ? takings.boatTips[0] : undefined;
   return (
     <section aria-labelledby="day-takings-label">
       <GroupLabel as="h2" id="day-takings-label">
@@ -81,15 +82,20 @@ export function DayTakings({
           section every night. */}
       {takings.tipsCents !== 0 ? (
         <p className="mt-1 text-sm text-muted tabular-nums">
-          {t("closeout.takings.tips", {
-            amount: formatReportMoney(takings.tipsCents, currency, locale),
-          })}
+          {onlyBoat
+            ? t("closeout.takings.tipsOnBoat", {
+                amount: formatReportMoney(takings.tipsCents, currency, locale),
+                boat: onlyBoat.label,
+              })
+            : t("closeout.takings.tips", {
+                amount: formatReportMoney(takings.tipsCents, currency, locale),
+              })}
         </p>
       ) : null}
       {/* **Which boat the tips came off** (UX review 2026-10-11, item 18): a
           diver tips "the crew", and this is where the crew of each boat can
-          see it. Only when two or more boats were tipped; with one, the
-          sentence above already says it all. */}
+          see it. Two or more boats list each; with one, the sentence above
+          names it (issue #2469). */}
       {takings.boatTips.length > 1 ? (
         <ul className="mt-1 text-sm text-muted tabular-nums">
           {takings.boatTips.map((boat) => (

@@ -1,41 +1,35 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { routeSource } from "@/test/route-source";
 
 /**
  * **What the thread page is, and what it stopped being** — ADR
  * 20260827-the-divers-thread, decision 3 and decision 6, pinned as rules.
  *
- * The page it replaced was 1,828 lines: nine checklist rows of which five were
- * inline forms open at once, a progress bar whose own copy admitted it could
- * never fill, and the booking's status stated four times in one screenful (an
- * earned moment, an emails line, a receipt panel, and the checklist's own
- * "Almost there" sentence). Every assertion below is one of those defects,
- * written so it cannot come back.
+ * Only the rules about which token, state and read each part of the page
+ * answers to stay here; its layout and order are the visual suite's.
  *
  * It reads the route's source because the thing being pinned is a *server*
  * page's composition: there is no render to inspect without a database, a
  * request, a shop and a live capability token, and an e2e spec that scrolls
  * the real page cannot say *why* a section is where it is. Same shape as
  * `src/app/s/[shopSlug]/trips/[id]/page.composition.test.ts` and
- * `src/i18n/provider-coverage.test.ts`, for the same reason.
+ * `scripts/check-intl-providers.mjs`, for the same reason.
  */
 
-const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
+const SOURCE = component("page.tsx");
 /** The after-dive reads the page asks first (code review 2026-10-13, item 29). */
-const AFTER_DIVE_READS = readFileSync(join(__dirname, "_components/after-dive-reads.ts"), "utf8");
+const AFTER_DIVE_READS = component("after-dive-reads.ts");
+/** The after-state's doors, bound (security review r5-4, F3). */
+const AFTER_STATE_ACTIONS = component("after-state-actions.ts");
 
 /**
  * The source of a file the page composes, read by name: under the route's
  * `_components/`, or under `src/components/`. A section that moves out of the
  * page moves its pins with it by changing only the name passed here.
  */
+/** The route's source, wherever a split put it (`src/test/route-source.ts`). */
 function component(file: string): string {
-  try {
-    return readFileSync(join(__dirname, "_components", file), "utf8");
-  } catch {
-    return readFileSync(join(__dirname, "..", "..", "..", "components", file), "utf8");
-  }
+  return routeSource(import.meta.dirname, file);
 }
 
 /** Where a marker first appears in the route's source, or -1. */
@@ -50,20 +44,12 @@ function countOf(marker: string): number {
 
 const MASTHEAD = component("ReadyMasthead.tsx");
 
-/** The thread's own boundary: the last one in the file, inside `DiverReadinessPage`. */
-const THREAD_SUSPENSE = "<Suspense fallback={<ReadyThreadBodySkeleton />}>{threadBody}</Suspense>";
-
 /**
  * The sections under the spine, composed by the page as one `<ThreadSections>`
  * and spelled in their own file. The order and spacing rules below read them
  * there, with the same markers they read in the page before the split.
  */
 const SECTIONS = component("ThreadSections.tsx");
-
-/** Where a marker first appears in the sections' source, or -1. */
-function sectionPositionOf(marker: string): number {
-  return SECTIONS.indexOf(marker);
-}
 
 /** How many times it appears across the page and its sections. */
 function threadCountOf(marker: string): number {
@@ -83,38 +69,6 @@ describe("the confirmation paints before the thread", () => {
   const page = positionOf("export default async function ReadyTokenPage");
   const readyThread = positionOf("async function DiverReadinessPage(");
 
-  it("paints the booked card from the booking's own row, before any of the thread's reads", () => {
-    expect(page).toBeGreaterThan(-1);
-    expect(readyThread).toBeGreaterThan(page);
-    // From the verified capability on: the dead-link branches above it read
-    // what they need to name a shop, and are not the first paint after a booking.
-    const fastPath = SOURCE.slice(
-      positionOf("const { bookingId, shopId: capabilityShopId } = capability;"),
-      readyThread,
-    );
-    expect(fastPath).toContain("await getBookedCard(db, { shopId: capabilityShopId, bookingId })");
-    // The card is the shell's header; the rest is a streamed child under it.
-    const opening = fastPath.indexOf("<ReadyBookedPage");
-    expect(opening).toBeGreaterThan(-1);
-    expect(fastPath.slice(opening)).toContain(
-      "<Suspense fallback={<ReadyThreadBodySkeleton />}>{thread}</Suspense>",
-    );
-    expect(fastPath.indexOf("<DiverReadinessPage")).toBeGreaterThan(-1);
-    // Inside the booked page, the card is the shell's header.
-    const shell = MASTHEAD.slice(MASTHEAD.indexOf("export function ReadyBookedPage"));
-    expect(shell.indexOf("header={")).toBeLessThan(shell.indexOf("<ReadyBookedHeader"));
-    expect(shell.indexOf("<ReadyBookedHeader")).toBeLessThan(shell.indexOf("{children}"));
-    for (const read of [
-      "getReadyPageData(",
-      "issuePartySeatClaims(",
-      "resolvePaymentReceipt(",
-      "listTripDives(",
-      "countSpendableDives(",
-    ]) {
-      expect(fastPath).not.toContain(read);
-    }
-  });
-
   it("declines the fast path wherever a terminal card could apply", () => {
     const fastPath = SOURCE.slice(page, readyThread);
     for (const guard of [
@@ -125,286 +79,43 @@ describe("the confirmation paints before the thread", () => {
       expect(fastPath).toContain(guard);
     }
   });
+});
 
-  it("keeps the thread's reads inside the promise its own boundary renders", () => {
-    const body = positionOf("const threadBody = (async () => {");
-    expect(body).toBeGreaterThan(readyThread);
-    const suspense = positionOf(THREAD_SUSPENSE);
-    expect(suspense).toBeGreaterThan(body);
-    const thread = SOURCE.slice(body, suspense);
-    for (const read of [
-      "issuePartySeatClaims(",
-      "resolvePaymentReceipt(",
-      "listTripDives(",
-      "countSpendableDives(",
+/**
+ * **No terminal card nests inside the booked shell** (#2429). Under the booked
+ * header the stream may only render what sits under it; a terminal card (it
+ * paints its own `<main>`) would stack a second main beneath "You've got a
+ * seat". Every such return must go through `alone(...)`, or the cancelled
+ * branch's explicit exit, both of which leave for the plain URL when
+ * `underBookedHeader` is set.
+ */
+describe("a terminal card under the booked header", () => {
+  const body = SOURCE.slice(positionOf("async function DiverReadinessPage("));
+  const beforeThread = body.slice(0, body.indexOf("const notice = noticeFromParam("));
+
+  it("leaves for the plain /ready URL instead of rendering its own main", () => {
+    expect(beforeThread).toContain("const alone = terminalCardIn(underBookedHeader, token)");
+    const helper = component("terminal-card.ts");
+    expect(helper).toContain("redirect(readinessLinkPath(token))");
+    expect(helper).toContain("underBookedHeader ? leave() : card");
+  });
+
+  it("returns none of the terminal cards bare", () => {
+    for (const card of [
+      "<UnavailableReadyLink",
+      "<HeldAfterDiveCard",
+      "<RecapWaitingCard",
+      "<NoShowCard",
+      "<DiverIntlProvider",
     ]) {
-      expect(SOURCE.slice(readyThread, body)).not.toContain(read);
-      expect(thread).toContain(read);
+      const bare = beforeThread.split(`return ${card}`).length - 1;
+      expect(bare, card).toBe(0);
     }
-    expect(positionOf("<ThreadSpine")).toBeGreaterThan(body);
-  });
-
-  it("never leaves the page between starting the thread and rendering it", () => {
-    // `threadBody` starts running when it is built (it mints party claim
-    // tokens and refreshes a Stripe checkout), so an early return or throw
-    // after it would run those effects for a page that never shows them and
-    // drop the promise unhandled. At the function's own indent, the only exit
-    // after the promise is the final render, and it carries the boundary.
-    const body = positionOf("const threadBody = (async () => {");
-    const bodyEnd = SOURCE.indexOf("\n  })();", body);
-    const finalReturn = positionOf("  return underBookedHeader ? (");
-    expect(bodyEnd).toBeGreaterThan(body);
-    expect(finalReturn).toBeGreaterThan(positionOf(THREAD_SUSPENSE));
-    const exits = SOURCE.slice(bodyEnd, finalReturn).match(/\n {2}(return|throw)\b/g) ?? [];
-    expect(exits).toEqual([]);
-    expect(SOURCE.slice(finalReturn).match(/\n {2}(return|throw)\b/g) ?? []).toEqual([]);
-  });
-});
-
-describe("the thread page's order", () => {
-  it("runs status, spine, where to go, party, packing, then the rare acts", () => {
-    const status = positionOf("<ThreadStatus");
-    const spine = positionOf("<ThreadSpine");
-    const sections = positionOf("<ThreadSections");
-    const arrival = sectionPositionOf("<TripArrivalCard");
-    const party = sectionPositionOf("<PartySection");
-    const packing = sectionPositionOf("<PackingSection");
-    const cancel = sectionPositionOf("<InlineConfirm");
-
-    for (const marker of [status, spine, sections, arrival, party, packing, cancel]) {
-      expect(marker).toBeGreaterThan(-1);
-    }
-    expect(status).toBeLessThan(spine);
-    expect(spine).toBeLessThan(sections);
-    expect(arrival).toBeLessThan(party);
-    expect(party).toBeLessThan(packing);
-    expect(packing).toBeLessThan(cancel);
-  });
-
-  /**
-   * **The shop is said once, in "Where to go"** (2026-09-17 design review).
-   *
-   * The page used to end on a "Your dive shop" card carrying the address, the
-   * phone, the email and a map link that `TripArrivalCard` had already given
-   * further up — the same four facts twice on one scroll. One card carries
-   * them now, and it is the one the diver opens the page for.
-   */
-  it("states the shop's address, contact and map in one card", () => {
-    expect(threadCountOf("<ShopCard")).toBe(0);
-    expect(threadCountOf("<TripArrivalCard")).toBe(1);
-    // The one map on the page rides that card rather than a second panel.
-    expect(threadCountOf("googleMapEmbedUrl")).toBe(0);
-    expect(threadCountOf("showMap")).toBe(1);
-  });
-});
-
-/**
- * **One inset down the thread's column.** "Where to go" (`TripArrivalCard`)
- * and "Anything changed" (`TripChangeLedger`) are `md` cards; the party panel
- * under them was `lg`, so "Your group's seats" started 4px right of "Where to
- * go" above it — 41 against 37 at 390, 401 against 397 at 1280 — and the
- * coral booked card at the top of the column 8px right, at 45 and 405 (K-52,
- * TOKEN-2-07). Each panel was consistent with itself; the column was not.
- */
-describe("the thread column's cards", () => {
-  it("share the md inset", () => {
-    for (const name of ["TripArrivalCard", "TripChangeLedger", "PartyClaimPanel"]) {
-      const source = component(`${name}.tsx`);
-      expect(source.includes("<SectionCard"), `${name} renders a SectionCard`).toBe(true);
-      expect(
-        /<SectionCard\b[^>]*?\bpadding="(?!md")/.test(source),
-        `${name} steps off the column's inset`,
-      ).toBe(false);
-    }
-  });
-
-  it("opens the page with the booked card rather than stacking it among them", () => {
-    // It used to head the column of cards at their `md` inset (K-52), under a
-    // masthead that had already said the departure and the date. Since UX
-    // review 2026-10-10, item 34, it *is* the opening, at the moment rung the
-    // recap's "Welcome back" opens on, and the page's `<h1>`.
-    expect(SOURCE).not.toContain("<EarnedMoment");
-    const moments = MASTHEAD.match(/<EarnedMoment\b[\s\S]*?>/g) ?? [];
-    expect(moments).toHaveLength(1);
-    expect(moments[0]).toContain('as="h1"');
-    expect(moments[0]).not.toContain('inset="card"');
-  });
-});
-
-/**
- * **One rhythm under the spine.** The sections after it each brought their
- * own top margin — the arrival card 32px, the crew line 24, the change ledger
- * 24, the party panel 32, the packing list and the cancel door 40 — so the
- * column stepped 32, 24, 40, 40 down one scroll (K-233). The page sets the
- * gap once, `space-y-10`, and the sections carry none of their own.
- */
-describe("the thread's sections under the spine", () => {
-  const RUN = '<div className="mt-10 space-y-10">';
-  const RUN_SECTIONS = [
-    "<TripArrivalCard",
-    "<TripCrewLine",
-    "<TripChangeLedger",
-    "<PartySection",
-    "<PackingSection",
-    "<InlineConfirm",
-  ];
-
-  it("stand in one space-y-10 run after the spine", () => {
-    expect(threadCountOf(RUN)).toBe(1);
-    expect(positionOf("<ThreadSections")).toBeGreaterThan(positionOf("<ThreadSpine"));
-    const run = sectionPositionOf(RUN);
-    expect(run).toBeGreaterThan(-1);
-    for (const section of RUN_SECTIONS) {
-      expect(sectionPositionOf(section), section).toBeGreaterThan(run);
-    }
-  });
-
-  it("carry no top margin of their own", () => {
-    for (const section of RUN_SECTIONS.slice(0, 5)) {
-      const start = sectionPositionOf(section);
-      expect(start, section).toBeGreaterThan(-1);
-      const tag = SECTIONS.slice(start, SECTIONS.indexOf("/>", start));
-      expect(tag, section).not.toMatch(/className="[^"]*\bmt-/);
-    }
-    const door = SECTIONS.lastIndexOf("<section", sectionPositionOf("<InlineConfirm"));
-    const doorTag = SECTIONS.slice(door, SECTIONS.indexOf(">", door));
-    expect(doorTag).not.toMatch(/\bmt-\d/);
-  });
-
-  it("leave no door open for one: the arrival card and the party panel take no className", () => {
-    // This page was the only caller that passed either one, and all it ever
-    // passed was the top margin the run now owns (K-233 review). A prop no
-    // caller uses is an invitation to put that margin back.
-    for (const name of ["TripArrivalCard", "PartyClaimPanel"]) {
-      const source = component(`${name}.tsx`);
-      const start = source.indexOf(`export function ${name}(`);
-      expect(start, name).toBeGreaterThan(-1);
-      const props = source.slice(start, source.indexOf("}) {", start));
-      expect(props, name).not.toMatch(/\bclassName\b/);
-    }
-  });
-});
-
-/**
- * **The cancel door opens 24px under its rule, preview or not.** The form
- * carried `mt-3` to clear the refund preview above it, which renders only
- * when there is a refund to preview — so with none, "Cancel my spot" stood
- * 36px under the rule where the section asks for 24 (K-156). The gap now
- * lives between the two children, and exists only when both do.
- */
-describe("the cancel door", () => {
-  const door = () => {
-    const start = SECTIONS.lastIndexOf("<section", sectionPositionOf("<InlineConfirm"));
-    expect(start).toBeGreaterThan(-1);
-    return SECTIONS.slice(start, SECTIONS.indexOf("</section>", start));
-  };
-
-  it("spaces the preview and the form by a gap, never by the form's own margin", () => {
-    const section = door();
-    expect(section.slice(0, section.indexOf(">"))).toContain("flex flex-col gap-3");
-    const form = section.slice(
-      section.indexOf("<form"),
-      section.indexOf(">", section.indexOf("<form")),
-    );
-    expect(form).not.toMatch(/className="[^"]*\bmt-/);
-  });
-
-  it("sits under its rule at the thread's one hairline-section inset", () => {
-    expect(door().slice(0, door().indexOf(">"))).toContain("THREAD_FOOT_SECTION_CLASS");
-  });
-});
-
-/**
- * **Day-of details' select rows.** Each is a question with its Save beside it
- * from `sm` and under it on a phone.
- */
-describe("day-of details", () => {
-  // Its own component since the route grew past its line budget; the rules
-  // are the same, read where the forms now live.
-  const DAY_OF = component("DayOfDetails.tsx");
-  /** The source of the form posting to `action`, from `<form` to `</form>`. */
-  const formFor = (action: string) => {
-    const at = DAY_OF.indexOf(action);
-    const start = DAY_OF.lastIndexOf("<form", at);
-    return DAY_OF.slice(start, DAY_OF.indexOf("</form>", at));
-  };
-
-  it("keeps who sees the intent answer with the question, above the next rule", () => {
-    // It was a child of its own in the `divide-y` stack, so a rule fell
-    // between it and "What's this dive for?" and it read as the start of the
-    // next question (K-469).
-    const intent = formFor("saveDiveIntentFromReady.bind(null, token)");
-    expect(intent).toContain('t("booking.intent.audience")');
-    expect(DAY_OF.split('t("booking.intent.audience")').length - 1).toBe(1);
-    expect(countOf('t("booking.intent.audience")')).toBe(0);
-    // …and it describes the select it is about, not only sits near it.
-    const id = /<p id="([^"]+)"[^>]*>\s*\{t\("booking\.intent\.audience"\)\}/.exec(intent)?.[1];
-    expect(id).toBeTruthy();
-    expect(intent).toContain(`aria-describedby="${id}"`);
-  });
-
-  it("keeps each select row's Save at its own width on a phone", () => {
-    // Below `sm` the row is `flex-col`, which stretches a direct child across
-    // the column: these two Saves ran 350px wide beside siblings as wide as
-    // their words (K-470). Wrapped, like the rest of the page's Saves.
-    for (const action of [
-      "saveDiveRecencyFromReady.bind(null, token)",
-      "saveDiveIntentFromReady.bind(null, token)",
-    ]) {
-      const form = formFor(action);
-      expect(form.split("<SubmitButton").length - 1, action).toBe(1);
-      // The wrapper as the Save's own parent element, opened right before it
-      // and closed right after it: the word `<div>` in the comment above the
-      // Save is not a wrapper, and would outlive one that was taken away.
-      expect(form, action).toMatch(/<div>\s*<SubmitButton\b[\s\S]*?<\/SubmitButton>\s*<\/div>/);
-    }
-  });
-});
-
-describe("status is said once", () => {
-  it("renders exactly one status statement", () => {
-    expect(countOf("<ThreadStatus")).toBe(1);
-  });
-
-  it("carries no progress bar", () => {
-    // "A bar that cannot fill is not rendered" (decision 6). The figure counts
-    // only steps a diver can finish, and a bar beside it would draw what the
-    // two words next to it already say.
-    expect(SOURCE).not.toContain("progressbar");
-    expect(SOURCE).not.toContain("progress-wave-fill");
-  });
-
-  it("carries no receipt panel and no emails line", () => {
-    // Both folded into their steps: the receipt's figure is the Pay step's
-    // settled line, and the emails line was a third statement of the same
-    // status. `EmbedBookedNotice` still carries the emails line where it is
-    // the *only* thing the reader gets.
-    expect(SOURCE).not.toContain("PaymentReceiptPanel");
-    expect(SOURCE).not.toContain("booking.emailsOnTheWay");
-  });
-});
-
-describe("the coral budget", () => {
-  it("renders one earned moment, and only on ?booked=1", () => {
-    expect(countOf("<ReadyBookedPage")).toBe(1);
-    expect(MASTHEAD.split("<EarnedMoment").length - 1).toBe(1);
-    expect(MASTHEAD.split("<ReadyBookedHeader").length - 1).toBe(1);
-    // The card is read only on `justBooked`, and nothing else opens it:
-    // `?booked=1` is flashed straight back out of the URL, so reopening the
-    // link three days later replays nothing.
-    expect(SOURCE).toContain(
-      "const found = justBooked\n    ? await getBookedCard(db, { shopId: capabilityShopId, bookingId })\n    : null;",
-    );
-    expect(SOURCE).toContain("if (!card) return thread;");
-  });
-
-  it("settles the all-set state into the status head rather than a second moment", () => {
-    // The page used to fire a *second* `EarnedMoment` for `ready`, so a diver
-    // arriving from a reminder with nothing left got a coral panel that
-    // celebrates what the waiver page already celebrated. One moment does not
-    // fire twice (decision 6).
-    expect(SOURCE).not.toContain("ready.allSetHeading}\n            title");
-    expect(SOURCE).toContain("settled={spine.done === spine.countable}");
+    // The cancelled notice is only reached after the explicit exit.
+    expect(beforeThread).toContain("return alone(null) ?? cancelledNoticeForReady(");
+    expect(beforeThread).not.toContain("return cancelledNoticeForReady(");
+    // And the after-dive state is wrapped.
+    expect(beforeThread).toContain("return alone(\n      <DiverIntlProvider");
   });
 });
 
@@ -418,17 +129,6 @@ describe("the coral budget", () => {
  * it deliberately did not bring with it.
  */
 describe("anything changed", () => {
-  it("composes one panel, inside the spine's step bodies", () => {
-    expect(countOf("<ChangedFacts")).toBe(1);
-    // Inside `stepBody`, so it is one step of the thread rather than a second
-    // panel beside it — and after the one status statement, which is still the
-    // only thing on the page that says how far along the diver is.
-    expect(positionOf("<ThreadStatus")).toBeGreaterThan(-1);
-    expect(positionOf("const stepBody")).toBeLessThan(positionOf("<ChangedFacts"));
-    expect(positionOf("<ChangedFacts")).toBeLessThan(positionOf("<ThreadStatus"));
-    expect(countOf("<ThreadStatus")).toBe(1);
-  });
-
   it("binds each door to its own token-scoped action", () => {
     for (const action of [
       "confirmCarriedFactsFromReady.bind(null, token)",
@@ -446,29 +146,6 @@ describe("anything changed", () => {
     const panel = SOURCE.slice(positionOf("<ChangedFacts"), positionOf('case "dayof"'));
     expect(panel).not.toContain("saveDiveRecencyFromReady");
     expect(panel).not.toContain("saveNoteFromReady");
-  });
-
-  it("spends no coral and prints no observed fact", () => {
-    // The thread's three moments are booked, paperwork done and welcome home;
-    // "you confirmed your sizes" is none of them.
-    expect(countOf("<EarnedMoment")).toBe(0);
-    expect(MASTHEAD.split("<EarnedMoment").length - 1).toBe(1);
-    // Only a recap may print Observed as what happened (Budget rule 5).
-    expect(SOURCE).not.toContain('kind="observed"');
-  });
-});
-
-describe("what the thread no longer carries", () => {
-  it("renders no dive-briefing deck", () => {
-    // "What you'll see" is the trip page's pitch (`TripDayPlan`/`TripLookFor`)
-    // and, after the boat is home, the keepsake's. What to *bring* is prep,
-    // and prep is what this page is for.
-    expect(SOURCE).not.toContain("DiveBriefingsSection");
-    expect(SOURCE).not.toContain("listDiveSiteBriefingExtras");
-  });
-
-  it("still carries the packing list", () => {
-    expect(SECTIONS).toContain("<PackingSection");
   });
 });
 
@@ -489,17 +166,6 @@ describe("after the dive", () => {
     const after = positionOf("<AfterState");
     expect(after).toBeGreaterThan(-1);
     expect(after).toBeLessThan(positionOf("<ThreadStatus"));
-  });
-
-  it("switches on the shared rule rather than a literal of its own", () => {
-    // Both timings live in `src/lib/thread-steps.ts` — the standing one-hour
-    // late-arrival buffer and the four-hour recap floor. A literal
-    // `60 * 60 * 1000` here is how "has it sailed" and "is it over" drift an
-    // hour apart.
-    expect(AFTER_DIVE_READS).toContain("isAfterTheDive({ endsAt, boarded })");
-    expect(SOURCE).toContain("endsAt: detail.trip.endsAt,");
-    expect(SOURCE).not.toContain("60 * 60 * 1000");
-    expect(AFTER_DIVE_READS).not.toContain("60 * 60 * 1000");
   });
 
   it("asks the crew's own roll call before it says anybody dived", () => {
@@ -568,50 +234,26 @@ describe("after the dive", () => {
     );
   });
 
-  it("names the shop on each of its live-token dead ends", () => {
-    // A cancelled departure and a no-show are not expired links: the token
-    // verified, the shop is already in scope, and the reader's question is
-    // *who do I ask*. Issue #801 gave the expired branch the shop's name and
-    // contact details for exactly that reason; these two named nobody.
-    // One now, not two: the cancelled-departure card moved into the
-    // `!capability` block, where the shop is not yet in scope and it builds its
-    // own contact object from the booking it resolved. The others are the
-    // no-show, the held seat's card, and a recap that waits while somebody on
-    // the boat is not back aboard (issue #2123); the first two's words live in
-    // `_components/AfterDiveDoors.tsx`.
-    expect(countOf("shop={shopContact}")).toBe(3);
-    expect(SOURCE).toContain("<NoShowCard shop={shopContact} t={t} />");
-    expect(SOURCE).toContain("<RecapWaitingCard shop={shopContact} t={t} />");
-    const doors = component("AfterDiveDoors.tsx");
-    expect(doors).toContain('t("recap.noShowHeading")');
-    // And never the pair of sentences it replaced — "This readiness link isn't
-    // available" over "This booking didn't sail" — both false for this reader.
-    expect(SOURCE).not.toContain('t("recap.didNotDiveBody")');
-  });
-
   it("binds the recap actions to a recap token, never to this page's own", () => {
     // `/ready`'s token is a bearer capability that can cancel the booking and
     // move its refund; the recap actions verify a *recap* token, and the two
     // are domain-separated on purpose (src/lib/recap-links.ts). Widening
     // either side would hand a review form the power to release a seat.
-    expect(SOURCE).toContain("signRecapToken(bookingId)");
+    expect(SOURCE).toContain("readyAfterStateProps({");
+    expect(AFTER_STATE_ACTIONS).toContain("actions: afterStateActions(token, input.bookingId)");
+    expect(AFTER_STATE_ACTIONS).toContain("signRecapToken(bookingId)");
     for (const action of ["submitReviewAction", "uploadRecapPhotoAction", "startTipAction"]) {
-      expect(SOURCE).not.toContain(`${action}.bind(null, token)`);
+      expect(AFTER_STATE_ACTIONS).not.toContain(`${action}.bind(null, token)`);
     }
   });
-});
 
-/**
- * **The boat's line** — ADR 20260904-reef-all-the-way-down, Budget rule 4,
- * slice 16c.
- */
-describe("the boat's line on the thread", () => {
-  it("stands above the status, once, and does not become a second status", () => {
-    expect(countOf("<BoatStageLine")).toBe(1);
-    expect(positionOf("<BoatStageLine")).toBeLessThan(positionOf("<ThreadStatus"));
-    // The page states status exactly once, and this is a fact about the boat
-    // rather than a second claim about the booking.
-    expect(countOf("<ThreadStatus")).toBe(1);
+  it("uploads a recap photo through this page's own token, the one door that may share it", () => {
+    // Security review of layer r5-4, F3: the forwardable recap link never
+    // publishes to the boat; the readiness link's upload verifies its token.
+    expect(AFTER_STATE_ACTIONS).toContain(
+      "uploadPhoto: uploadRecapPhotoFromReadyAction.bind(null, token)",
+    );
+    expect(AFTER_STATE_ACTIONS).not.toContain("uploadRecapPhotoAction");
   });
 });
 
@@ -660,7 +302,7 @@ describe("a held seat's greeting", () => {
     // The booked card greets `getBookedCard`'s name, which applies the held
     // rule itself (src/db/ready.test.ts holds it to the full loader's).
     expect(MASTHEAD).toContain("greetingName={card.greetingName}");
-    expect(MASTHEAD).toContain('greetingName.split(" ")[0]');
+    expect(MASTHEAD).toContain("firstNameOf(greetingName,");
     expect(SOURCE).toContain("justBooked && person.email && !data.identityHeld ? (");
     expect(countOf("detail.person.fullName")).toBe(1);
   });
@@ -675,15 +317,12 @@ describe("a held seat's greeting", () => {
  */
 describe("a held seat after the dive", () => {
   it("answers with its own card before the recap is read", () => {
-    const held = positionOf("if (data.identityHeld) return <HeldAfterDiveCard");
+    const held = positionOf("if (data.identityHeld) return alone(<HeldAfterDiveCard");
     expect(held).toBeGreaterThan(-1);
     expect(held).toBeLessThan(positionOf("await afterDive.recap()"));
     // The recap starts early beside the roll call (code review 2026-10-13,
     // item 29), but never for a held seat.
-    const AFTER_DIVE_READS = readFileSync(
-      join(__dirname, "_components/after-dive-reads.ts"),
-      "utf8",
-    );
+    const AFTER_DIVE_READS = component("after-dive-reads.ts");
     expect(AFTER_DIVE_READS).toContain(
       "const speculate = boatIsHome && !input.identityHeld && isAfterTheDive({ endsAt });",
     );
@@ -694,34 +333,42 @@ describe("a held seat after the dive", () => {
   });
 });
 
+/**
+ * **A released seat before the day is over** (layer 3 review, dde-1 F2 and
+ * dde-2 #1). A diver the desk turned away at 07:00 used to hold a page that
+ * still walked them through the checklist and the Pay step to the boat. The
+ * page says the shop released the seat and to talk to the desk, before any of
+ * the prep page is composed, and after the after-dive branch, which owns the
+ * finished day.
+ */
+describe("a seat the desk released", () => {
+  it("answers with its own card before the prep page, after the finished day", () => {
+    const released = positionOf("if (data.seatReleased) return releasedSeat(");
+    expect(released).toBeGreaterThan(positionOf("if (afterDive.afterTheDive)"));
+    expect(released).toBeLessThan(positionOf("<ThreadStatus"));
+  });
+
+  /**
+   * Layer 3 re-review (dde-3 #7): a party's lead turned away at the desk still
+   * holds the links their party claims seats with. The card keeps the panel.
+   */
+  it("keeps the lead's party claim panel on the released card", () => {
+    expect(SOURCE).toContain(
+      "if (data.seatReleased) return releasedSeat(db, shop.id, bookingId, locale, shopContact, t);",
+    );
+    expect(component("AfterDiveDoors.tsx")).toMatch(
+      /issuePartySeatClaims\(db, \{ shopId, leadBookingId: bookingId \}\)[\s\S]*?<ReleasedSeatCard[\s\S]*?<PartyClaimPanel/,
+    );
+  });
+});
+
 /** UX review 2026-10-11, item 13: "Add a seat" lives with the group's seats, and only when allowed. */
 describe("adding a seat from the diver's page", () => {
-  const PARTY_SECTION = component("PartySection.tsx");
-
   it("hands the party section the action only when the booking may lead a seat", () => {
     // The party section is one of the sections under the spine (ThreadSections).
     expect(SECTIONS).toMatch(
       /<PartySection[^>]*addSeatAction=\{data\.canAddSeat \? addSeatFromReady\.bind\(null, token\) : null\}/,
     );
     expect(threadCountOf("<AddSeat")).toBe(0);
-  });
-
-  it("draws the control inside the party section, after the seats", () => {
-    const section = PARTY_SECTION.indexOf('<div id="party-seats"');
-    const panel = PARTY_SECTION.indexOf("<PartyClaimPanel");
-    const control = PARTY_SECTION.indexOf("{addSeatAction ? <AddSeat action={addSeatAction}");
-    expect(section).toBeGreaterThan(-1);
-    expect(panel).toBeGreaterThan(section);
-    expect(control).toBeGreaterThan(panel);
-  });
-});
-
-/** Security review of layer 8, D2: the phone keeps the live page only until the trip is over. */
-describe("the phone's copy of the page", () => {
-  it("is dated by the live page itself, through the control that keeps it", () => {
-    expect(SOURCE).toMatch(
-      /<ReadyOfflineCopy\s+offlineNote=\{[^}]+\}\s+keepUntil=\{readyCopyKeepUntil\(detail\.trip\)\}/,
-    );
-    expect(SOURCE.match(/<ReadyOfflineCopy\b/g)).toHaveLength(1);
   });
 });

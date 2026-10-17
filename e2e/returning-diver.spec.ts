@@ -15,7 +15,7 @@ test("a device that just booked prefills the next booking form, with a one-tap w
   await page.getByLabel("Name").fill("Marco Reyes");
   await page.getByLabel("Email").fill("marco@example.com");
   await acceptAgeAttestation(page);
-  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Marco/ })).toBeVisible();
 
   // A second, unrelated trip's booking form now prefills the lead diver from
@@ -49,7 +49,7 @@ test("the embed widget never prefills or remembers a booker", async ({ page }) =
   await page.getByLabel("Name").fill("Sal Moretti");
   await page.getByLabel("Email").fill("sal@example.com");
   await acceptAgeAttestation(page);
-  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Sal/ })).toBeVisible();
 
   const stored = await page.evaluate(() => localStorage.getItem("diveday:returning-diver:v1"));

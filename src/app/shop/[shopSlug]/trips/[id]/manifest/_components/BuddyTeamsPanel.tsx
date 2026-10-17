@@ -5,7 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
 import { controlClass, Field, FormStatus } from "@/components/ui/form";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripBuddyTeam } from "@/db/buddy-pairs";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -46,6 +46,8 @@ export function BuddyTeamsPanel({
   unteamedDivers,
   buddyErrorText,
   buddyErrorForm,
+  partyLines = null,
+  teamUpPartiesAction,
   formBuddyTeamAction,
   addBuddyTeamMemberAction,
   removeBuddyTeamMemberAction,
@@ -85,6 +87,19 @@ export function BuddyTeamsPanel({
    * no single home, so it stays at the top of the panel's forms.
    */
   buddyErrorForm: "builder" | "panel" | null;
+  /**
+   * "Came together: … / Came alone: …" over the divers still to team, and how
+   * many parties one tap would team (fifth-loop ideas, item 50). Null when no
+   * two of them booked together.
+   */
+  partyLines?: {
+    together: string;
+    alone: string | null;
+    /** One line per party the tap leaves for the divemaster, with why. */
+    left: string[];
+    teamable: number;
+  } | null;
+  teamUpPartiesAction?: (formData: FormData) => Promise<void>;
   formBuddyTeamAction: (formData: FormData) => Promise<void>;
   addBuddyTeamMemberAction: (formData: FormData) => Promise<void>;
   removeBuddyTeamMemberAction: (formData: FormData) => Promise<void>;
@@ -147,6 +162,29 @@ export function BuddyTeamsPanel({
             budget's rule 8). It informs a conversation and decides nothing —
             a team that ignores it still forms. */}
         {intentLine ? <p className="mt-2 text-sm text-muted">{intentLine}</p> : null}
+        {/* Who booked together, from the party on each seat (item 50): what
+            the divemaster pairs from. One tap teams each party of two or
+            three; a bigger party, and everyone who came alone, stays theirs
+            to pair. A suggestion the crew confirms, never automatic. */}
+        {partyLines ? (
+          <div className="mt-2 text-sm text-muted">
+            <p>{partyLines.together}</p>
+            {partyLines.alone ? <p>{partyLines.alone}</p> : null}
+            {partyLines.left.map((line) => (
+              <p key={line}>{line}</p>
+            ))}
+            {partyLines.teamable > 0 && teamUpPartiesAction ? (
+              <form action={teamUpPartiesAction} className="mt-2">
+                <SubmitButton
+                  pendingLabel={t("manifest.buddyTeamUpParties")}
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                >
+                  {t("manifest.buddyTeamUpParties")}
+                </SubmitButton>
+              </form>
+            ) : null}
+          </div>
+        ) : null}
         <FormStatus className="mt-2">{panelError}</FormStatus>
         {/* No empty state when there are no teams. The one this used to render
             — a 200px dashed card reading "No buddy teams yet. Tick two or more
@@ -283,12 +321,12 @@ export function BuddyTeamsPanel({
                     <li>
                       <form action={dissolveBuddyTeamAction} className="flex">
                         <input type="hidden" name="teamId" value={team.teamId} />
-                        <button
-                          type="submit"
+                        <SubmitButton
+                          pendingLabel={t("manifest.buddyDissolve")}
                           className={buttonClass({ variant: "danger-ghost", size: "sm" })}
                         >
                           {t("manifest.buddyDissolve")}
-                        </button>
+                        </SubmitButton>
                       </form>
                     </li>
                   </ul>
@@ -331,9 +369,12 @@ export function BuddyTeamsPanel({
                           </optgroup>
                         </select>
                       </Field>
-                      <button type="submit" className={buttonClass({ variant: "secondary" })}>
+                      <SubmitButton
+                        pendingLabel={t("manifest.buddyAddMemberSubmit")}
+                        className={buttonClass({ variant: "secondary" })}
+                      >
                         {t("manifest.buddyAddMemberSubmit")}
-                      </button>
+                      </SubmitButton>
                     </form>
                   ) : null}
                 </li>
@@ -390,9 +431,12 @@ export function BuddyTeamsPanel({
                 single tick is a worded refusal beside the button that earned
                 it, not a floating line at the top of the panel. */}
                 <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-                  <button type="submit" className={buttonClass()}>
+                  <SubmitButton
+                    pendingLabel={t("manifest.buddyFormSubmit")}
+                    className={buttonClass()}
+                  >
                     {t("manifest.buddyFormSubmit")}
-                  </button>
+                  </SubmitButton>
                   <FormStatus>{builderError}</FormStatus>
                 </div>
               </fieldset>

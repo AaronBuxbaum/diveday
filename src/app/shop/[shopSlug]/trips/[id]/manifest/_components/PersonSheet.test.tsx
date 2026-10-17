@@ -34,6 +34,15 @@ describe("PersonSheet", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("publishes data-hydrated once React owns the trigger", () => {
+    render(<PersonSheet {...props} />);
+
+    expect(screen.getByRole("button", { name: "Open details for Meera Iyer" })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
+  });
+
   it("opens a labeled bottom sheet without joining the roll-call mark", () => {
     render(
       <div>

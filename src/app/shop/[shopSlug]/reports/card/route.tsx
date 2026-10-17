@@ -9,6 +9,7 @@ import { nowDate } from "@/lib/clock";
 import { allowSvgRasterization } from "@/lib/og-rasterizer";
 import { requireShopSurface } from "@/lib/session";
 import { summarizeShopYear } from "@/lib/shop-year";
+import { utcToWallTime } from "@/lib/zoned";
 
 /**
  * **Print the card** (ADR 20260908-one-hand, decision 6, lever T) — the shop's
@@ -22,17 +23,25 @@ import { summarizeShopYear } from "@/lib/shop-year";
  * A shop with no departures this year has no card: the page hides the act, and
  * a hand-typed URL gets a 404 rather than an image of four zeroes.
  */
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ shopSlug: string }> },
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ shopSlug: string }> }) {
   const { shopSlug } = await params;
   const { db, shop } = await requireShopSurface(shopSlug, {
     allow: canPersonViewShopReports,
     refusal: { notice: "reports-not-authorized" },
   });
   const now = nowDate();
-  const year = summarizeShopYear(await getShopYear(db, shop.id, { timeZone: shop.timezone, now }));
+  // `?year=` prints a past year the page's year switch opened (fifth loop,
+  // item 25); four digits and no later than this year, or this year.
+  const asked = new URL(request.url).searchParams.get("year");
+  const thisYear = utcToWallTime(now, shop.timezone).year;
+  const requested = asked && /^\d{4}$/.test(asked) ? Number(asked) : thisYear;
+  const year = summarizeShopYear(
+    await getShopYear(db, shop.id, {
+      timeZone: shop.timezone,
+      now,
+      year: requested <= thisYear ? requested : thisYear,
+    }),
+  );
   if (!year.hasActivity) {
     return new NextResponse(null, { status: 404, headers: { "Cache-Control": "no-store" } });
   }

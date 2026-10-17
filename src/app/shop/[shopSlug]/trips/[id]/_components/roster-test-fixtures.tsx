@@ -1,7 +1,9 @@
 // i18n-exempt-file: test fixture; only the roster's tests import it, and its names are seeded data.
 import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
+import type { AboardHold } from "@/db/aboard-at-sea";
 import type { SameNameHeldSeat } from "@/db/bookings";
+import type { SameNamePerson } from "@/db/identity-repoint";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -9,7 +11,12 @@ import { signingDate } from "@/lib/guardian";
 import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
 import type { RosterRowContext } from "./RosterRow";
 import { type RosterArrival, RosterSection } from "./RosterSection";
-import { type RosterRecord, rosterPaymentStatusCopy, waiverControls } from "./roster-model";
+import {
+  type RosterRecord,
+  rosterPaymentStatusCopy,
+  type SeatMove,
+  waiverControls,
+} from "./roster-model";
 import { type RosterSeat, rosterSeat } from "./roster-seat";
 import type {
   NitroxByBooking,
@@ -39,6 +46,7 @@ export function entry(
     reEntryAsk?: "deck_word" | "easy_first_dive" | "refresher_course";
     identityBookedAs?: string;
     identityMatchedBy?: "shared_email" | "picked_name";
+    participantType?: "diver" | "snorkeler" | "rider";
   } = {},
 ): RosterEntry {
   return {
@@ -52,6 +60,7 @@ export function entry(
       pickupTime: null,
       identityBookedAs: over.identityBookedAs ?? null,
       identityMatchedBy: over.identityMatchedBy ?? null,
+      participantType: over.participantType ?? "diver",
     } as unknown as RosterEntry["booking"],
     person: {
       id: `p-${id}`,
@@ -105,7 +114,6 @@ export type RosterFixtureOptions = {
   readiness: ReadinessByBooking;
   waivers: WaiverByBooking;
   rentalFit?: RentalFitByBooking;
-  compact?: boolean;
   addDiverGroup?: ReactNode;
   paymentsConnected?: boolean;
   canManageOrders?: boolean;
@@ -113,11 +121,20 @@ export type RosterFixtureOptions = {
   arrival?: RosterArrival;
   record?: RosterRecord;
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
+  sameNamePeople?: ReadonlyMap<string, ReadonlyArray<SameNamePerson>>;
+  dependentCharters?: ReadonlyMap<string, ReadonlyArray<{ title: string; startsAt: Date }>>;
   heldSeatLastDiveDay?: ReadonlyMap<string, Date | null>;
   packageDivesByBooking?: ReadonlyMap<string, number>;
   splitAsksDateOfBirth?: boolean;
   /** Present means this is a course session's roster, with a Certify control. */
   certifyDefaultLevel?: "open_water" | "advanced_open_water" | null;
+  /** "Move to another departure", when the page offers it. */
+  moveSeat?: SeatMove;
+  /** Seats marked aboard a boat that has left, whose Remove refuses (H-133). */
+  aboardAtSea?: ReadonlyMap<string, AboardHold>;
+  /** The departure is marked as past no-decompression limits. */
+  exceedsNoDecoLimits?: boolean;
+  divingCrew?: boolean;
 };
 
 function rosterProps({
@@ -125,7 +142,6 @@ function rosterProps({
   readiness,
   waivers,
   rentalFit,
-  compact = false,
   addDiverGroup,
   paymentsConnected = false,
   canManageOrders = true,
@@ -133,10 +149,16 @@ function rosterProps({
   arrival,
   record,
   sameNameHeldSeats,
+  sameNamePeople,
+  dependentCharters,
   heldSeatLastDiveDay,
   packageDivesByBooking,
   splitAsksDateOfBirth,
   certifyDefaultLevel,
+  moveSeat,
+  aboardAtSea,
+  exceedsNoDecoLimits,
+  divingCrew,
 }: RosterFixtureOptions) {
   return {
     trip: {
@@ -155,7 +177,8 @@ function rosterProps({
       canManageOrders,
       splitAsksDateOfBirth,
       certifyDefaultLevel,
-      compact,
+      exceedsNoDecoLimits,
+      divingCrew,
     },
     rows: {
       roster,
@@ -165,19 +188,26 @@ function rosterProps({
       nitroxByBooking: new Map() as NitroxByBooking,
       notesByBooking: new Map(),
       sameNameHeldSeats,
+      sameNamePeople,
+      dependentCharters,
       heldSeatLastDiveDay,
       packageDivesByBooking,
+      aboardAtSea,
     },
     actions: {
       markRosterWaiverInPersonAction: noRefusal,
       markPaymentAction: noop,
+      previewPartyPaymentAction: noop,
+      markPartyPaidAction: noop,
       removeBookingAction: noop,
       confirmIdentityAction: noop,
       splitIdentityAction: noop,
+      repointIdentityAction: noop,
       addNoteAction: noop,
       deleteNoteAction: noop,
       saveEmergencyContactAction: noop,
       certifyDiverAction: certifyDefaultLevel === undefined ? undefined : noop,
+      moveSeat,
     },
     slots: { addDiverGroup, arrival, record },
   };

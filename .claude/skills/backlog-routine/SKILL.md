@@ -29,232 +29,33 @@ either build it or say why you are not.
 
 ## The loop
 
-1. **Start from the main everyone else has been merging into.** `git fetch origin main` before
-   every ticket, not once at the top of the session. This routine's own pull requests merge while it
-   is still running — five of seven did in one session, one of them inside the minute a stack was
-   being registered — so a branch cut from the `origin/main` you fetched an hour ago starts life
-   behind, conflicts with work that is already in, and reads its own merged changes as somebody
-   else's diff. Fetching costs a second; not fetching costs a rebase.
-2. **Read what GitHub says about the pull requests you already opened**, in the same breath:
+Each step in full, with its commands and incidents: [loop.md](loop.md).
 
-   ```sh
-   gh pr list --author '@me' --state open --json number,title,mergeable,statusCheckRollup
-   gh pr checks <n>          # for any that reports a failure
-   ```
+1. **Fetch.** `git fetch origin main` before every ticket, not once per session.
+2. **Read what GitHub says about the pull requests you already opened** (REST: `gh api`, never
+   `gh pr`): checks and review threads. A red check on your own branch is fixed now, on the branch
+   that owns the defect (`reg` excepted: explain each diff image). Answer every open review thread:
+   fixed, declined with a reason, or filed. An open `automation/durations-refresh` pull request gets
+   an empty commit, a push and a merge once green.
+3. **Pick** from `ready-for-agent` (REST), skipping `in-progress`; a claim `pnpm gates` reports
+   **stale** is free to take.
+4. **Refuse the ones that are not yours**: a *Blocked by* a human decision gets `ready-for-human`
+   and a comment saying why.
+5. **Claim**: `in-progress` and the `## Claim` comment naming this ticket's own layer as `Branch:`.
+6. **Check the premise before building it**: reproduce it first; when it does not survive, say so
+   in the PR and the issue, and build what the evidence supports.
+7. **Cut the branch from the previous ticket's, commit once, open the draft PR** ([stack.md](stack.md)),
+   then build it.
+8. **Verify**: `pnpm check:repo`, `pnpm lint`, `pnpm typecheck`, the specs `pnpm e2e:affected`
+   names, `pnpm verify:push --quick` before the push; look at every surface you changed; read each visual
+   diff against its image (`pnpm visual:report --commit <sha>`).
+9. **Finish the PR** (body, position line, diff explanation, `Closes #n` under "## Follow-ups
+   filed"), `gh pr ready` it, and **go back to step 1** without summarising or asking.
 
-   CI takes about ten minutes and you opened that pull request before you started the last ticket,
-   so **its answer arrives while you are not looking.** A red check on your own branch is your work
-   — the same rule as any failing test — and it does not become someone else's by being one ticket
-   behind you. Two of one session's pull requests went red this way: a spec asserting the old 404
-   wording, and a spec measuring a scroll position one frame early. Both were the change working;
-   both would have shipped as somebody else's mystery if nothing had circled back.
+## Reference
 
-   Fix it now, before the next ticket, and **on the branch that owns the defect** — which in a stack
-   is often not the layer the failure was reported on. See *When a lower layer goes red* below. The
-   exception is a `reg` failure, which is the visual report and belongs to the human — read every
-   diff image, explain each one in the pull request, and carry on
-   ([visual-triage](../visual-triage/SKILL.md)).
-
-   **An open `automation/durations-refresh` pull request gets an empty commit and a merge.** The
-   weekly refresh (`.github/workflows/durations-refresh.yml`) commits the recorded shard durations
-   straight to `main` and opens that pull request only when the push was refused. A pull request
-   opened with the workflow token starts no CI, so it waits unchecked until someone pushes:
-   `gh pr list --head automation/durations-refresh --state open`; if one is there, check it out,
-   `git commit --allow-empty -m "Run CI on the durations refresh"`, push, and merge it once green.
-   The diff is two JSON files the next run's shards are dealt by; there is nothing to review.
-
-   **Read the review comments in the same pass, not only the checks.** `sourcery-ai` reviews every
-   pull request here within minutes of it opening, and Aaron's comments
-   land whenever he gets to them — all of it arrives while you are building the next ticket, which
-   is exactly why this step exists:
-
-   ```sh
-   gh pr view <n> --comments
-   ```
-
-   Answer each open thread before the next ticket: fix and reply with the commit, decline with the
-   reason, or file a `needs-triage` issue and put the number in the thread. A bot does not know this
-   repository's rules and will confidently propose changes `pnpm check:repo` refuses — check before
-   acting (AGENTS.md's Hard rules). A thread you never read is a pull request that is not done, and
-   under this routine nobody else is coming back for it.
-3. **Pick.** `gh api "repos/AaronBuxbaum/diveday/issues?labels=ready-for-agent&state=open&per_page=100"`
-   (REST; `gh issue` is GraphQL and refused in cloud sessions), skipping anything already
-   labelled `in-progress`. Read `pnpm gates`' "Claimed — in flight" section first: a claim it
-   reports **stale** is a dead session, not a reservation, so that work is free to take.
-4. **Refuse the ones that are not yours.** If the body carries a *Blocked by* section naming a
-   human decision — what a waiver version number asserts, which unit a package sells in — do not
-   build it. Relabel `ready-for-human`, say why in a comment, pick another. Three of the queue's
-   issues were in that state and each said so in its own words.
-5. **Claim.** Add `in-progress`, post the `## Claim` comment
-   ([issue-tracker.md](../../../docs/agents/issue-tracker.md)) naming **this ticket's own layer**
-   as `Branch:`. A stack here spans several unrelated tickets, so each carries its own claim; one
-   claim covering several layers is only for a chain built for a single issue.
-6. **Check the premise before building it.** Roughly half of these tickets describe something that
-   is no longer true, or true for a different reason. Reproduce it first — render the page, read the
-   *compiled* CSS, run the query, count the call sites. Recent examples: "turning the contrast rule
-   on would paint CI red" (it found 23 nodes and one mechanism), "any nav tap discards the form"
-   (Activity keeps three routes; the real loss is invisible eviction), "eight surfaces disagree with
-   their nav label" (four already agreed, through a duplicate message key). When the premise does
-   not survive, say so in the PR **and** the issue, and build what the evidence supports.
-7. **Cut the branch, commit once, open the draft PR and extend the stack** (below), then build it.
-8. **Verify.** The local gate green (`pnpm check:repo`, `pnpm lint`, `pnpm typecheck`,
-   the specs `pnpm e2e:affected` names; the whole `pnpm check` runs on CI), `pnpm verify:push`
-   before the push, and *look at* every surface you changed, in light (both schemes only for colour work).
-   Read each visual diff against the actual image before writing a word about it —
-   `pnpm visual:report --commit <sha>` writes the PNGs.
-9. **Finish the PR you already opened** at step 7 — body, position line, diff explanation, and
-   `Closes #n` under "## Follow-ups filed" for the ticket you claimed — and `gh pr ready` it. **Then go back to step 1** — fetch, re-read the queue, take the next one. Do
-   not summarise, do not ask whether to continue, and do not wait for the pull request you just
-   opened to merge: it is the human's to merge, and the next ticket does not depend on it.
-
-## One stack, not one branch per ticket
-
-Cut each ticket's branch from the **previous ticket's branch**, not from `main`, even when the work
-is unrelated:
-
-```sh
-git fetch origin main                                  # every ticket, before anything else
-
-# first layer of a fresh stack, or any ticket whose predecessor has already merged
-git checkout -b claude/<slug-1> origin/main
-# every layer after it, while the one below is still open
-git checkout -b claude/<slug-2> claude/<slug-1>
-
-# at the layer's FIRST commit, not when the ticket is finished:
-git push -u origin claude/<slug-2>
-# then open its pull request as a draft, with `base` set to claude/<slug-1>
-```
-
-**Open the pull request when you cut the branch.** A draft with one commit and a placeholder body is
-the point; the body catches up at step 7. Every failure this routine has hit with stacks lived in the
-gap between cutting a branch and opening its pull request.
-
-**There is no registration step and nothing to wait for.** `.github/workflows/stack.yml` sees the
-pull request event and registers the chain as a stack on a runner — a session cannot reach that
-endpoint at all, which is what quietly stopped this working for nine days (ADR
-[20260907-a-runner-registers-the-stack](../../../docs/architecture/decisions/20260907-a-runner-registers-the-stack.md)).
-Anything telling you to run `gh stack link` or `gh api --method POST .../stacks` yourself is written
-for a workstation.
-
-**Why, concretely.** Thirteen branches cut from one `main` in a single session all edited
-`AGENTS.md`'s `check:repo` row, a `docs/design/*.md` section, and a section of `scripts/ratchets.json`. Every
-one conflicted with every other, and resolving them afterwards by hand is the same merge done
-thirteen times with none of the context that produced it. On a stack each layer already contains the
-layers below, so those files merge **once, while the change is being written**.
-
-It also removes the ratchet problem: a baseline written on layer 4 already counts layer 3's work, so
-`--absorb` is for genuine merges from outside the stack rather than for your own previous ticket.
-
-Every PR body names its position, because a reviewer arriving from a notification has no other way
-to find the bottom:
-
-> Layer 4 of 6 — based on `claude/<slug-3>` (#883). Above: `claude/<slug-5>` (#886).
-> Review and merge bottom-up.
-
-**A ticket that moves pixels is a layer like any other.** Stacking used to stop at rendered
-surfaces; Aaron lifted that on 2026-08-23, because backlog tickets are mostly rendered surfaces and
-the restriction was disqualifying the ordinary case. What it costs is a re-read, never a missed
-regression — see [stacked-prs](../stacked-prs/SKILL.md) and ADR
-[20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md).
-
-None of this is particular to the backlog any more: **stack everything, across threads, and run one
-PR's CI at a time** is the repository-wide shape (AGENTS.md's *Parallel work*, the `stacked-prs`
-skill; stacking since 2026-08-23, the CI half since 2026-10-12). This routine states it in
-its own terms because it is where the habit is most load-bearing, not because it is the only place
-it applies.
-
-Read that skill before the first stack. Three things from it that bite here, and the third is the
-new one:
-
-- **Rebase a layer before reading its visual report.** A stale parent makes other people's merged
-  work show up as your diff — 39 of 60 surfaces on one measured PR.
-- **A cascading rebase moves a layer's baseline to a commit no CI run has published under**, and the
-  pipeline now handles that itself: a stacked layer's `visual-report` waits up to 20 minutes for the
-  layer below to publish before comparing (issue #909). Read the sticky `diveday:visual-summary`
-  comment on **every** layer anyway — if nothing resolved, the wait gave up and that layer's counts
-  mean nothing.
-- **A layer in that state is not triaged, and not merged on a count of zero.** The layer below's
-  `visual`/`visual-report` jobs are red or were still running twenty minutes on: fix those, re-run
-  this layer's, and read the refreshed comment. Zero changed with zero baselines is the failure, not
-  the pass.
-
-### When a stack is the wrong shape
-
-**Not because the base can vanish.** This section used to say to measure the merge cadence first,
-because twice in one session a base branch merged and was deleted while its next layer's PR body was
-still being written, and `gh pr create --base` then failed with "No commits between … Base ref must
-be a branch". Measured on 2026-08-23 (ADR
-[20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md)):
-that is an artifact of opening the pull request at the *end* of a layer's work. A layer whose pull
-request exists at its first commit is retargeted by GitHub the moment its base merges. Open early
-and fast merges cost nothing.
-
-**The fetch decides the shape.** After `git fetch origin main`, look at where the previous ticket's
-branch is: merged, and the next ticket cuts from the refreshed `origin/main` with no stack at all —
-which is the common case when the human is merging as fast as this routine builds. Still open, and
-the next ticket stacks on it, because anything else means resolving the same conflict twice.
-
-**Nothing argues against depth.** A stack has no length limit, and a routine that runs for hours
-should expect a long one: ticket twelve stacks on ticket eleven exactly the way ticket two stacked
-on ticket one. Every layer runs the whole CI gate (ADR 20261003-every-stack-layer-runs-ci; the
-**stacked-prs** skill), so a deep stack costs runners, and that is the accepted price of every
-layer's green meaning it was tested. Push one layer, let its run finish, then the next: concurrent
-runs cancel each other. The stack restarts when the one below it **merges**, not at a layer count.
-
-**A fix that is not the ticket goes on its own branch off `main`**, not into the stack — an
-unordered crew query found while triaging a diff, a race in a spec you did not touch. It should be
-able to merge without waiting for the layers beneath it.
-
-### When a lower layer goes red
-
-Moving on while CI runs is the point — you should be building layer 3 while layer 2 is still being
-checked. What that buys has to be paid for by **going back down when the answer arrives**. Step 2 of
-the loop is where you find out; this is what to do about it.
-
-**Fix it on the layer that owns the defect, never on the one you happen to be standing on.** A
-Playwright failure reported on layer 3 usually belongs to layer 2 or 1, because every layer's CI runs
-the layers beneath it. Patching it at the top makes the red layer merge broken and merge *first* — a
-stack merges bottom-up, so a fix above the defect is a fix that arrives after it.
-
-Three questions, in this order, and only the third is ever "write a fix":
-
-1. **Is the layer stale rather than wrong?** `git fetch origin main`, then
-   `git merge-base --is-ancestor <suspect-commit> origin/<branch>`. A stack cut before a fix landed
-   on `main` carries the bug the whole way up, and the answer is a **rebase of the bottom, cascaded**
-   — not a commit on the red layer. A worked case: a whole three-layer stack was cut minutes before
-   the fix for `add-diver.spec.ts`'s scroll assertion merged, so layer 2 failed on a spec nobody in
-   that stack had touched, and patching that spec would have conflicted with the fix already in
-   `main`.
-2. **Which layer introduced it?** `git log -S'<the failing thing>' --oneline origin/main..HEAD`, or
-   read the failing assertion and ask which layer's change it describes. Check that layer's own pull
-   request too: if it is red for the same reason, you have your answer.
-3. **Then fix it there**, on that branch, and cascade — GitHub does it server-side for a
-   registered stack; by hand it is:
-
-```sh
-git checkout claude/<slug-1> && git rebase origin/main && git push --force-with-lease
-git checkout claude/<slug-2> && git rebase claude/<slug-1> && git push --force-with-lease
-git checkout claude/<slug-3> && git rebase claude/<slug-2> && git push --force-with-lease
-```
-
-**Commit whatever you are holding before you go down.** The top layer's work in progress belongs in
-a WIP commit on its own branch — never `git stash`, which is one shared slot several sessions can
-collide in (AGENTS.md's *Parallel work*).
-
-**Then come back up and carry on.** The interruption ends when the lower layer is pushed and its
-checks are running again; do not sit and watch them, and do not re-verify the layers above by hand.
-Every layer re-runs CI from scratch above a rebase, which is what tells you.
-
-**One thing a cascading rebase costs you: the visual baselines.** Each layer's key moves to a commit
-no CI run has published under, so `reg` can report *every* surface as new rather than changed. Read
-the sticky `diveday:visual-summary` comment on **every** layer afterwards — if nothing resolved,
-that layer's counts mean nothing and there is no diff there to approve or explain
-([stacked-prs](../stacked-prs/SKILL.md)).
-
-**An unexpected visual diff is the same procedure.** Ask which layer painted those pixels before
-writing a word about them: read the images, find the layer whose change explains them, and if none
-does, that is a bug to fix at its own layer rather than a diff to approve
-([visual-triage](../visual-triage/SKILL.md)).
+- [loop.md](loop.md) — every step in full: the REST commands, the durations-refresh PR, reading review threads, refusing human-blocked tickets, checking the premise.
+- [stack.md](stack.md) — cutting each ticket's branch from the previous one, the PR body's position line, visual reports on a stack, *When a stack is the wrong shape*, and *When a lower layer goes red*.
 
 ## What ends a turn
 
@@ -265,9 +66,9 @@ message).
   ready and stop; do not work around it.
 - **Ask GitHub what is open at the moment you write it down, never your own memory of opening it.**
   These merge fast: one session's closing message listed seven pull requests as awaiting review and
-  every one of them had already merged — the human went looking for them and found nothing. One
-  `gh pr list --author '@me' --state open` immediately before writing the summary is the whole fix,
-  and the same command tells you whether anything of yours is red.
+  every one of them had already merged — the human went looking for them and found nothing.
+  Reading the open pull requests for your own login (step 2's REST list) immediately before writing
+  the summary is the whole fix, and step 2's check-runs read tells you whether anything is red.
 - **Anything you notice and do not do** becomes a `needs-triage` issue written for a reader with
   none of your context — not a line in the closing message. **At most ten per run**
   ([issue-tracker.md](../../../docs/agents/issue-tracker.md)'s Rules say what to do past ten).

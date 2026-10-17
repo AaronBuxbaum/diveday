@@ -49,6 +49,8 @@ export function SignStepActions({
       (code) =>
         code === "waiver_pending" ||
         code === "waiver_expired" ||
+        code === "waiver_lapsed" ||
+        code === "waiver_runs_out" ||
         code === "guardian_signature_missing",
     );
   const formsOwed =
@@ -66,7 +68,7 @@ export function SignStepActions({
             {t(
               waiverCode === "waiver_pending"
                 ? "ready.signWaiver"
-                : // Expired and guardian-missing both end in the same act, and
+                : // Expired, lapsed and guardian-missing all end in the same act, and
                   // "Get a fresh waiver link" is what each one's own copy has
                   // already told the reader to do.
                   "ready.freshWaiverLink",

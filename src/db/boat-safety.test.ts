@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { departureBoatSafety, departureBoatSafetyFor, todayBoatSafety } from "./boat-safety";
+import {
+  departureBoatSafety,
+  departureBoatSafetyFor,
+  departureKitRecord,
+  todayBoatSafety,
+} from "./boat-safety";
 import { createBoat, deleteBoat, getBoatById, updateBoat } from "./boats";
 import type { AppDb } from "./client";
 import {
@@ -18,6 +23,8 @@ const ctx = fileScopedShopContext();
 const TODAY = "2026-10-09";
 const PAPERS_CLEAR = {
   certifiedPassengers: null,
+  certifiedTotalPersons: null,
+  coiExpiresOn: null,
   inspectionDueOn: null,
   registrationExpiresOn: null,
   insuranceExpiresOn: null,
@@ -68,6 +75,8 @@ describe("boat papers", () => {
     const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Paper Hull", 12, null, {
       certifiedPassengers: 14,
+      certifiedTotalPersons: null,
+      coiExpiresOn: null,
       inspectionDueOn: "2027-03-01",
       registrationExpiresOn: "2027-01-31",
       insuranceExpiresOn: null,
@@ -182,8 +191,37 @@ describe("aboard a boat", () => {
 });
 
 const BOOKED = (booked: number) => ({ booked, boarded: 0 });
+const NO_CREW = { assigned: 0, boarded: 0 };
 
 describe("departureBoatSafety", () => {
+  // #2302: total persons and the certificate's own expiry, read off the hull.
+  it("counts the crew against total persons, and says the certificate's expiry", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Persons Hull", 10, null, {
+      ...PAPERS_CLEAR,
+      certifiedPassengers: 10,
+      certifiedTotalPersons: 12,
+      coiExpiresOn: "2026-10-05",
+    });
+    const safety = await departureBoatSafety(db, shop.id, {
+      boatId: boat.id,
+      passengers: BOOKED(10),
+      crew: { assigned: 3, boarded: 0 },
+      onDate: TODAY,
+    });
+    expect(safety?.notices).toEqual([
+      { code: "over_total_persons", persons: 13, limit: 12, counted: false },
+      { code: "paper", paper: "coi", dueOn: "2026-10-05", expired: true, days: 4 },
+    ]);
+    const twoCrew = await departureBoatSafety(db, shop.id, {
+      boatId: boat.id,
+      passengers: BOOKED(10),
+      crew: { assigned: 2, boarded: 0 },
+      onDate: TODAY,
+    });
+    expect(twoCrew?.notices.map((notice) => notice.code)).toEqual(["paper"]);
+  });
+
   it("speaks for this hull's kit and papers, and nobody else's", async () => {
     const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Check Hull", 14, null, {
@@ -226,6 +264,7 @@ describe("departureBoatSafety", () => {
     const safety = await departureBoatSafety(db, shop.id, {
       boatId: boat.id,
       passengers: BOOKED(13),
+      crew: NO_CREW,
       onDate: TODAY,
     });
     expect(safety?.boatName).toBe("Check Hull");
@@ -252,6 +291,7 @@ describe("departureBoatSafety", () => {
         await departureBoatSafety(db, shop.id, {
           boatId: boat.id,
           passengers: BOOKED(2),
+          crew: NO_CREW,
           onDate: TODAY,
         })
       )?.notices.filter((notice) => notice.code === "kit_missing");
@@ -286,6 +326,7 @@ describe("departureBoatSafety", () => {
     const safety = await departureBoatSafety(db, shop.id, {
       boatId: boat.id,
       passengers: BOOKED(2),
+      crew: NO_CREW,
       onDate: TODAY,
     });
     expect(safety?.notices.some((notice) => notice.code === "kit_missing")).toBe(false);
@@ -299,6 +340,7 @@ describe("departureBoatSafety", () => {
     const safety = await departureBoatSafety(db, shop.id, {
       boatId: boat.id,
       passengers: BOOKED(2),
+      crew: NO_CREW,
       onDate: TODAY,
     });
     expect(safety?.notices).toEqual([
@@ -313,6 +355,7 @@ describe("departureBoatSafety", () => {
       await departureBoatSafety(db, shop.id, {
         boatId: null,
         passengers: BOOKED(4),
+        crew: NO_CREW,
         onDate: TODAY,
       }),
     ).toBeNull();
@@ -325,6 +368,7 @@ describe("departureBoatSafety", () => {
       await departureBoatSafety(db, shop.id, {
         boatId: theirs.id,
         passengers: BOOKED(4),
+        crew: NO_CREW,
         onDate: TODAY,
       }),
     ).toBeNull();
@@ -406,6 +450,23 @@ describe("todayBoatSafety", () => {
     );
   });
 
+  // Dive-domain review D3: every role sees a lapsed certificate on the departure.
+  it("raises a lapsed certificate or inspection on a departure sailing today", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Lapsed Hull", 14, null, {
+      ...PAPERS_CLEAR,
+      coiExpiresOn: "2026-10-01",
+      insuranceExpiresOn: "2026-10-01",
+    });
+    const { departures } = await todayBoatSafety(db, shop.id, {
+      todayLocal: TODAY,
+      departures: [{ tripId: "trip-lapsed", boatId: boat.id }],
+    });
+    expect(departures.find((row) => row.boatId === boat.id)?.notices).toEqual([
+      expect.objectContaining({ code: "paper", paper: "coi", expired: true }),
+    ]);
+  });
+
   it("forgets a boat the shop deleted", async () => {
     const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Sold Hull", 14, null, {
@@ -456,6 +517,7 @@ describe("departureBoatSafetyFor", () => {
         timeZone: ZONE,
         now: NOW,
         passengers: { booked: 2, boarded: 0 },
+        crew: NO_CREW,
       });
     };
 
@@ -466,5 +528,101 @@ describe("departureBoatSafetyFor", () => {
       expect.objectContaining({ code: "kit_clock", expired: true, days: 5 }),
     ]);
     expect(await read("2026-10-08T12:00:00Z")).toBeNull();
+  });
+
+  it("says insurance good today ends before a later departure, not that it ended", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Policy Hull", 14, null, {
+      ...PAPERS_CLEAR,
+      insuranceExpiresOn: "2026-10-15",
+    });
+    const trip = await departure(db, shop.id, boat.id, "2026-10-20T12:00:00Z");
+    const safety = await departureBoatSafetyFor(db, shop.id, {
+      tripId: trip.id,
+      startsAt: trip.startsAt,
+      timeZone: ZONE,
+      now: NOW,
+      passengers: { booked: 2, boarded: 0 },
+      crew: { assigned: 0, boarded: 0 },
+    });
+    expect(safety?.notices).toEqual([
+      expect.objectContaining({ code: "paper", expired: true, beforeDeparture: true }),
+    ]);
+  });
+});
+
+describe("the kit record the printed packet reads (fourth review, item 17)", () => {
+  async function departureOn(db: AppDb, shopId: string, boatId: string | null) {
+    const [trip] = await db
+      .insert(trips)
+      .values({
+        shopId,
+        title: "Two-Tank Reef",
+        startsAt: new Date("2026-10-17T12:00:00Z"),
+        endsAt: new Date("2026-10-17T16:00:00Z"),
+        capacity: 10,
+        boatId,
+      })
+      .returning();
+    if (!trip) throw new Error("trip insert failed");
+    return trip;
+  }
+
+  it("names the in-service kit aboard the departure's own boat and its last check", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Mantis I", 12);
+    const other = await createBoat(db, shop.id, "Mantis II", 14);
+    const o2 = await kit(db, shop.id, { kind: "o2_kit", label: "O2 Kit A", aboardBoatId: boat.id });
+    await kit(db, shop.id, { kind: "first_aid_kit", label: "Trauma bag", aboardBoatId: boat.id });
+    // The other hull's kit and a kit on the bench never reach this boat's sheet.
+    await kit(db, shop.id, { kind: "o2_kit", label: "O2 Kit B", aboardBoatId: other.id });
+    const pulled = await kit(db, shop.id, {
+      kind: "o2_kit",
+      label: "O2 Kit C",
+      aboardBoatId: boat.id,
+    });
+    await setGearItemStatus(db, {
+      shopId: shop.id,
+      gearItemId: pulled.id,
+      status: "needs_service",
+    });
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: o2.id,
+      kind: "service",
+      servicedOn: "2026-09-30",
+      nextDueOn: "2027-09-30",
+    });
+    // A cylinder's hydro test or visual inspection is not a kit service, so a
+    // newer one never stands in for the date (review F2).
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: o2.id,
+      kind: "hydro_test",
+      servicedOn: "2026-10-05",
+      nextDueOn: "2031-10-05",
+    });
+    const trip = await departureOn(db, shop.id, boat.id);
+
+    expect(await departureKitRecord(db, shop.id, trip.id)).toEqual({
+      boatName: "Mantis I",
+      oxygenKits: ["O2 Kit A"],
+      firstAidKits: ["Trauma bag"],
+      oxygenServicedOn: "2026-09-30",
+    });
+  });
+
+  it("answers nothing for a departure on no boat, so the packet keeps its blanks", async () => {
+    const { db, shop } = ctx;
+    const trip = await departureOn(db, shop.id, null);
+    expect(await departureKitRecord(db, shop.id, trip.id)).toBeNull();
+  });
+
+  it("never reads another shop's departure", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Mantis I", 12);
+    const trip = await departureOn(db, shop.id, boat.id);
+    const other = await otherShop(db);
+    expect(await departureKitRecord(db, other.id, trip.id)).toBeNull();
   });
 });

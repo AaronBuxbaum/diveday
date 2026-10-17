@@ -3,7 +3,6 @@
     "recapSent": "Any still-outstanding recaps were sent.",
     "recapAttention": "Some recaps need attention. Open the departure they belong to.",
     "recapHeld": "Recaps are held until the roll call is corrected.",
-    "recapSendLimit": "You have sent a lot of recaps this hour. Nothing went out; try again in a little while.",
     "recapNotReady": "Recaps cannot be sent until four hours after the departure ends.",
     "recapLocked": "This recap has been sent. Its note and photos can no longer be changed.",
     "crewPhotoAdded": "Crew photo added to this departure.",
@@ -73,7 +72,16 @@
   "takings": {
     "heading": "What today made",
     "tips": "And {amount} in tips.",
+    "tipsOnBoat": "And {amount} in tips on {boat}.",
     "imported": "{count, plural, one {Includes # imported record Stripe has not confirmed.} other {Includes # imported records Stripe has not confirmed.}}",
     "boatTips": "{time} {boat}: {amount}"
+  },
+  "loadOut": {
+    "heading": "Tomorrow from tonight",
+    "tanks": "{total, plural, one {# tank} other {# tanks}} to fill ({air} air, {nitrox} nitrox)",
+    "tanksAir": "{total, plural, one {# tank} other {# tanks}} to fill",
+    "pieces": "{count, plural, one {# rental piece} other {# rental pieces}} to pick",
+    "departures": "{count, plural, one {# departure} other {# departures}}",
+    "print": "Print tomorrow"
   }
 }

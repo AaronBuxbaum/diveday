@@ -12,9 +12,12 @@
     "moved": "Moved.",
     "movedGearReleased": "Moved. {count, plural, one {# gear assignment} other {# gear assignments}} released. Reassign on the prep page.",
     "copied": "Copied.",
+    "copiedNoCrew": "Copied, without the crew: one of them is on another boat then, or the course needs an instructor. Add them on the Crew schedule.",
     "removed": "Taken off the board.",
     "invalid": "That didn’t save. Check the date, times, and seats, then try again.",
     "endBeforeStart": "The trip has to end after it starts. Check the times.",
+    "daysOutOfOrder": "Each day’s date has to be the day after the one before it.",
+    "daysSpanRepeat": "A repeating departure has to finish before the next one starts. Shorten its days or repeat it less often.",
     "notAuthorized": "Building the board is limited to owners, managers, and instructors.",
     "notFound": "That departure is no longer on the board.",
     "notScheduled": "A canceled trip can’t be moved. Reinstate it from its own page first.",
@@ -25,7 +28,10 @@
     "capacityAboveBoat": "That capacity is above what the assigned boat holds.",
     "rehearsalRepeats": "A rehearsal is a single departure. Untick Repeat, or leave Rehearsal off.",
     "capacityAboveCertificate": "That capacity is above the passenger limit on the boat’s certificate.",
-    "capacityAboveCertificateCount": "{count, plural, one {The boat’s certificate allows # passenger. Pick a capacity no higher.} other {The boat’s certificate allows # passengers. Pick a capacity no higher.}}"
+    "capacityAboveCertificateCount": "{count, plural, one {The boat’s certificate allows # passenger. Pick a capacity no higher.} other {The boat’s certificate allows # passengers. Pick a capacity no higher.}}",
+    "weekCopied": "{count, plural, one {Copied # departure from last year. Add its crew from its page.} other {Copied # departures from last year. Add their crew from each one’s page.}}",
+    "weekNotEmpty": "This week already has departures, so nothing was copied.",
+    "nothingToCopy": "Last year’s departures for this week have already passed, so nothing was copied."
   },
   "builder": {
     "ariaLabel": "Schedule builder",
@@ -88,6 +94,8 @@
     "impactBoatClash": "{boat} is already out on {departure} at that time.",
     "impactCrewClash": "{name} is already rostered on {departure} at that time.",
     "impactCrewAway": "{name} has told you they are away then.",
+    "impactTurnaroundBoat": "Tight turnaround: {boat} has {minutes} min between this and {departure}.",
+    "impactTurnaroundCrew": "Tight turnaround: {name} has {minutes} min between this and {departure}, from another meeting point.",
     "impactToldOne": "{count} diver has already been told this date. Moving it tells them the new one.",
     "impactToldOther": "{count} divers have already been told this date. Moving it tells them the new one.",
     "impactGearOne": "{count} reserved unit travels with it; anything the new dates already have spoken for is released.",
@@ -97,7 +105,8 @@
     "impactWindowOne": "Cancellations close {count} hour before it departs.",
     "impactWindowOther": "Cancellations close {count} hours before it departs.",
     "copyTo": "Copy to",
-    "copyDescription": "Same dive, same seats, same price, with no divers and no crew.",
+    "copyDescription": "Same dive, same seats, same price, with no divers.",
+    "copySameCrew": "Same crew",
     "departureTime": "Departure time",
     "copying": "Copying…",
     "copyIt": "Copy it",
@@ -119,6 +128,7 @@
     "selfGuidedHint": "Buddy pairs go in without a guide, so DiveDay stops asking you to roster one.",
     "daysLabel": "How many days",
     "daysDescription": "Most departures are one day. A course weekend or a liveaboard that meets the same hours on consecutive days is a single trip: one roster, one set of waivers, one crew.",
+    "meetingDayLabel": "Day {number}",
     "payAtBookingLegend": "Pay at booking",
     "payAtBookingDescription": "Optional. When the trip is priced and the shop takes card payments, divers pay online as they book. Leave the deposit blank to charge the full fare up front.",
     "depositLabel": "Deposit per diver",
@@ -179,7 +189,12 @@
     "noBoats": "No boats",
     "quietDays": "{first} to {last}",
     "runsDays": "{days, plural, one {# day} other {# days}}",
-    "sailed": "Sailed"
+    "sailed": "Sailed",
+    "crewAway": "{name} away {dates}",
+    "lastYearTally": "Same week last year: {taken} of {total}",
+    "lastYearLine": "Last year this week: {count, plural, one {# departure} other {# departures}}.",
+    "lastYearCopy": "Copy them here",
+    "lastYearCopying": "Copying…"
   },
   "addBooking": "Add a booking"
 }

@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   pgEnum,
@@ -11,6 +12,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { bookings, lastMinuteListEntries } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { trips } from "./trips";
 
@@ -43,7 +45,7 @@ export const lastMinuteListUnsubscribeTokens = pgTable(
       .notNull()
       .references(() => lastMinuteListEntries.id),
     tokenHash: text("token_hash").notNull().unique(),
-    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+    issuedAt: appNowTimestamp("issued_at").notNull(),
   },
   (table) => [
     index("last_minute_list_unsubscribe_tokens_token_hash_idx").on(table.tokenHash),
@@ -75,7 +77,7 @@ export const personCourtesyEmailUnsubscribeTokens = pgTable(
       .notNull()
       .references(() => people.id),
     tokenHash: text("token_hash").notNull().unique(),
-    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+    issuedAt: appNowTimestamp("issued_at").notNull(),
   },
   (table) => [
     index("person_courtesy_email_unsubscribe_tokens_token_hash_idx").on(table.tokenHash),
@@ -107,9 +109,53 @@ export const shopContactEmailConfirmationTokens = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     usedAt: timestamp("used_at", { withTimezone: true }),
     supersededAt: timestamp("superseded_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [index("shop_contact_email_confirmation_tokens_shop_idx").on(table.shopId)],
+);
+
+/**
+ * **The shore contact's two links** (H-118 review): `confirm`, the one-time
+ * link a saved address receives before any alert goes to it, and `stop`, the
+ * link every alert carries that takes the address off the shop.
+ *
+ * A confirm link has the same lifecycle as the front-desk address's
+ * (`shopContactEmailConfirmationTokens`): a fresh mint supersedes the
+ * outstanding one, consuming is one-time, it expires, and it confirms only
+ * while the shop still names the address it was minted for. A stop link is
+ * minted per alert and never expires (an expired opt-out leaves somebody
+ * unable to stop the mail, the reasoning the unsubscribe tokens above give);
+ * using it clears the shop's shore contact only while the shop still names
+ * the address it was sent to, and doing so twice is the same as once. Rows
+ * age out with H-02's retention prune.
+ *
+ * `email` is lower-cased: the address the link vouches for, and the handle an
+ * erasure sweeps it by.
+ */
+export const shopShoreAlertTokens = pgTable(
+  "shop_shore_alert_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    purpose: text("purpose").$type<"confirm" | "stop">().notNull(),
+    email: text("email").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    /** A confirm link's deadline; a stop link has none. */
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    supersededAt: timestamp("superseded_at", { withTimezone: true }),
+    createdAt: appNowTimestamp("created_at").notNull(),
+  },
+  (table) => [
+    index("shop_shore_alert_tokens_shop_idx").on(table.shopId),
+    check("shop_shore_alert_tokens_purpose", sql`${table.purpose} in ('confirm', 'stop')`),
+    check(
+      "shop_shore_alert_tokens_expiry",
+      sql`(${table.purpose} = 'confirm') = (${table.expiresAt} is not null)`,
+    ),
+  ],
 );
 
 /** Latest outbound-email state per booking and notification purpose. */
@@ -211,7 +257,7 @@ export const notificationDeliveries = pgTable(
     sendErrorCode: text("send_error_code"),
     sendError: text("send_error"),
     attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("notification_deliveries_booking_kind_unique").on(table.bookingId, table.kind),
@@ -249,7 +295,7 @@ export const notificationDeliveryAttempts = pgTable(
     /** True when a staff member re-triggered the send from the dashboard. */
     isRetry: boolean("is_retry").notNull().default(false),
     attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("notification_delivery_attempts_booking_kind_idx").on(table.bookingId, table.kind),
@@ -385,8 +431,8 @@ export const notificationSendQueue = pgTable(
     httpStatus: integer("http_status"),
     errorCode: text("error_code"),
     lastError: text("last_error"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     index("notification_send_queue_due_idx").on(
@@ -416,7 +462,17 @@ export const notificationRateLimitState = pgTable("notification_rate_limit_state
  * number through End User Messaging — so the day that lands it is a webhook
  * and not a migration.
  */
-export const inboundChannel = pgEnum("inbound_channel", ["email", "sms", "whatsapp"]);
+export const inboundChannel = pgEnum("inbound_channel", [
+  "email",
+  "sms",
+  "whatsapp",
+  /**
+   * The diver's own booking page (`/ready/[token]`): an "Ask to move" past the
+   * free-cancellation window (H-126). Nothing to answer *on* — the shop calls
+   * or writes back from the record — so a reply composer never targets it.
+   */
+  "page",
+]);
 
 /**
  * What a one-word reply turned out to be asking for (ADR
@@ -499,6 +555,13 @@ export const inboundMessages = pgTable(
      */
     keywordIntent: inboundKeywordIntent("keyword_intent"),
     /**
+     * The seat this message is about, when the diver said so rather than the
+     * Inbox inferring it (H-126): an "Ask to move" from the booking page names
+     * its booking. Null on every message that arrived by email or WhatsApp,
+     * whose seat is still read off the diver's open bookings.
+     */
+    bookingId: uuid("booking_id").references(() => bookings.id),
+    /**
      * Whether the channel vouched for `from_address` (#2311): WhatsApp
      * always, email only when SES's DMARC or aligned SPF check passed — the
      * same answer that decides whether the message may be matched to a diver
@@ -516,9 +579,14 @@ export const inboundMessages = pgTable(
      */
     spamFlagged: boolean("spam_flagged").notNull().default(false),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("inbound_messages_person_id_idx").on(table.personId),
     uniqueIndex("inbound_messages_channel_provider_message_unique").on(
       table.channel,
       table.providerMessageId,
@@ -587,11 +655,50 @@ export const staffReplies = pgTable(
     sendError: text("send_error"),
     sentAt: timestamp("sent_at", { withTimezone: true }).notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("staff_replies_person_id_idx").on(table.personId),
     index("staff_replies_shop_person_sent_idx").on(table.shopId, table.personId, table.sentAt),
     index("staff_replies_inbound_message_idx").on(table.inboundMessageId),
+  ],
+);
+
+/**
+ * **A saved answer** (fifth loop, item 15): words the desk sends often enough
+ * to keep, like where to park or whether the shop rents 5mm in a women's
+ * medium. The composer offers each as a chip above the reply box, and "Save
+ * this answer" after a sent reply writes one, so the list grows from real
+ * replies rather than from a settings page nobody opens.
+ *
+ * The shop's own words, like a template: a short title for the chip and the
+ * body, with `{name}` and `{trip}` markers the composer fills from the diver's
+ * record. One saved from a sent reply has that diver's name, email addresses
+ * and phone numbers taken out before it is written, and keeps
+ * `source_person_id`: the words still came from a reply to them, so erasing
+ * that diver deletes the answer too. Deleting is soft, like every delete.
+ */
+export const inboxSavedAnswers = pgTable(
+  "inbox_saved_answers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    /** The diver whose reply the words were saved from; null for one the shop wrote itself. */
+    sourcePersonId: uuid("source_person_id").references(() => people.id),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: appNowTimestamp("created_at").notNull(),
+  },
+  (table) => [
+    index("inbox_saved_answers_shop_idx").on(table.shopId, table.createdAt),
+    index("inbox_saved_answers_source_person_idx").on(table.shopId, table.sourcePersonId),
   ],
 );
 
@@ -658,10 +765,10 @@ export const shopWhatsappAccounts = pgTable(
      */
     templateName: text("template_name").notNull(),
     templateLanguage: text("template_language").notNull(),
-    connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
+    connectedAt: appNowTimestamp("connected_at").notNull(),
     /** Set by the settings page's test send, so staff can see the connection was proven, not just saved. */
     verifiedAt: timestamp("verified_at", { withTimezone: true }),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("shop_whatsapp_accounts_phone_number_unique").on(table.phoneNumberId),
@@ -731,7 +838,7 @@ export const pushSubscriptions = pgTable(
      * would not survive a serverless invocation. Null until the first push.
      */
     lastPushedAt: timestamp("last_pushed_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // A device has at most one subscription per trip, and re-subscribing (the

@@ -82,7 +82,7 @@ test("the crew taps what they saw and the tally counts it", async ({ page }) => 
   // spend four round trips to reach the same section.
   await page.context().setOffline(true);
   await expect(seen.getByRole("status")).toContainText(
-    "Offline — a tap will not save until the boat has bars",
+    "Offline: a tap will not save until the boat has bars",
   );
   // The chips stay tappable under it: the browser's flag is not reachability,
   // and a dead chip on a wet deck reads as a broken app rather than a missing

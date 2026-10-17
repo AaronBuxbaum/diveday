@@ -131,7 +131,7 @@ describe("the feature screens' words", () => {
     [
       "BookingCardFallback",
       BookingCardFallback,
-      ["Grab a spot", "Number of divers", "Book and pay"],
+      ["Grab a seat", "Number of divers", "Book and pay"],
     ],
     [
       "StorefrontFallback",
@@ -202,7 +202,7 @@ describe("the feature screens' words", () => {
     [
       "ScheduleWeekFallback",
       ScheduleWeekFallback,
-      ["Dos tanques de tarde", "nadie todavía", "Añadir"],
+      ["Dos tanques de tarde", "nadie todavía", "Agregar"],
     ],
   ] as const)("%s speaks Spanish", (_name, Mock, words) => {
     render(<Mock locale="es-ES" />);

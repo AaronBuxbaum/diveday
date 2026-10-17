@@ -254,3 +254,13 @@ Decision 8 erased the guardian's address only with the diver's own data. A paren
 
 **The name stays.** The guardian's name, relationship, method and both timestamps are who signed and when, and the release is the shop's evidence of that. They go only with the diver's own erasure, as decision 8 says. H-82 called this seal "v3"; by the time it was built v3 meant a refiled release, so it is v4.
 
+
+## Amendment 2026-10-13 — the booker's "Under 18" stands in for a missing date of birth (H-113)
+
+The rule failed open on a missing date of birth, and the public form asks nobody one, so a child a
+parent booked online signed alone. The public party form now asks "Under 18" per diver, stamped on
+the **seat** (`bookings.minor_declared_at`), never on the person: the form is anonymous and may only
+mark the seat it creates. `guardianSignatureRequired(dateOfBirth, signedOn, minorDeclared)` lets a
+date on file decide and, with none, reads the stamp. `GuardianSigner.minorDeclared` is required, so
+every writer and reader answers it; the ones with no seat in hand (the diver record's standing, a
+counter rental, a canceled day's carried preparation) answer `false`. It gates nothing at the sale.

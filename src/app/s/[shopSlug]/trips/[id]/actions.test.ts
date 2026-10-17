@@ -1,4 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { and, eq, inArray } from "drizzle-orm";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { verifyBookingCapability } from "@/db/booking-capabilities";
+import type { AppDb } from "@/db/client";
+import { bookingCapabilities, bookings, certifications, people } from "@/db/schema";
+import { createTrip } from "@/db/trips-create";
+import { HOUR_MS, nowDate } from "@/lib/clock";
+import { fileScopedShopContext } from "@/test/db";
 
 /**
  * **The public booking form asks nothing about anybody's diving, and this
@@ -13,12 +20,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * does not — here, one that writes a self-declared certification onto a
  * **named person's** record from an anonymous page.
  *
- * That is what these cover. A POST carrying every field the old form posted
- * must reach `createBookingParty` with no declaration on it, must not turn the
- * gate advisory on its behalf, and must cost the submitter exactly one token
- * however many claims it carries. The bucket mechanics themselves are
- * `src/lib/rate-limit.test.ts`'s.
+ * The real action on a real database. Only the framework edge (`next/*`), the
+ * request's IP and locale are stubbed; `createBookingParty` is the real one,
+ * wrapped in a spy so a test can also read what the action asked of it, and
+ * the rate limiter is spied the same way so a test can count tokens. The
+ * bucket mechanics themselves are `src/lib/rate-limit.test.ts`'s.
  */
+
+const ctx = fileScopedShopContext();
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({
@@ -26,19 +35,21 @@ vi.mock("next/navigation", () => ({
     throw new Error(`REDIRECT:${path}`);
   }),
 }));
-vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({}) as never) }));
-vi.mock("@/db/shops", () => ({ getShopBySlug: vi.fn() }));
-vi.mock("@/db/trips", () => ({ getTripWithBooked: vi.fn() }));
-vi.mock("@/db/bookings", () => ({
-  createBookingParty: vi.fn(),
-  getBookingForTrip: vi.fn(),
+vi.mock("next/server", () => ({ after: vi.fn() }));
+// `bookSpot` reads the partner-referral cookie (issue #1285); an empty jar is
+// the ordinary booking nobody referred.
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(async () => ({ get: () => undefined })),
+  headers: vi.fn(async () => new Headers()),
 }));
-vi.mock("@/db/checkouts", () => ({ startBookingCheckout: vi.fn() }));
-vi.mock("@/db/buddy-referrals", () => ({
-  resolveBuddyReferral: vi.fn(async () => null),
-  recordBuddyReferral: vi.fn(),
-}));
-vi.mock("@/db/booking-capabilities", () => ({ issueBookingCapability: vi.fn(async () => null) }));
+vi.mock("@/db/client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/client")>();
+  return { ...actual, getDb: vi.fn() };
+});
+vi.mock("@/db/bookings", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/bookings")>();
+  return { ...actual, createBookingParty: vi.fn(actual.createBookingParty) };
+});
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 // The locale is read off the request's cookies, which do not exist here. The
 // words themselves stay real, so an error message that stopped resolving would
@@ -48,40 +59,35 @@ vi.mock("@/i18n/request", () => ({
   requestFirstHandLocale: vi.fn(async () => "en-US" as const),
 }));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
-// `bookSpot` reads the partner-referral cookie (issue #1285), and there is no
-// request scope here for `cookies()` to find. An empty jar rather than a
-// planted value: these tests are about what the *declaration* fields do, and a
-// booking nobody referred is the ordinary case they were written against.
-vi.mock("next/headers", () => ({
-  cookies: vi.fn(async () => ({ get: () => undefined })),
-}));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
   return { ...actual, checkRateLimit: vi.fn(async () => ({ allowed: true, retryAfterMs: 0 })) };
 });
 
-const { getShopBySlug } = await import("@/db/shops");
-const { getTripWithBooked } = await import("@/db/trips");
+const { getDb } = await import("@/db/client");
+const { redirect } = await import("next/navigation");
 const { createBookingParty } = await import("@/db/bookings");
 const { checkRateLimit, RATE_LIMITS } = await import("@/lib/rate-limit");
 const { bookSpot } = await import("./actions");
 
-const SHOP_ID = "8a1f0c2e-1111-4222-8333-444444444444";
-const TRIP_ID = "9b2e1d3f-5555-4666-8777-888888888888";
-
-/** A shop with nothing priced, so the gear/checkout branches stay out of the way. */
-const shop = { id: SHOP_ID, slug: "blue-mantis", rentalPricing: null, rentalItems: [] };
-/** A free departure: no per-diver price means no Stripe lookup and no gear step. */
-const trip = {
-  id: TRIP_ID,
-  courseId: null,
-  course: null,
-  plannedDives: 2,
-  priceCents: null,
-  // Three days out on the suite's frozen clock, so D18's window is open unless
-  // a test moves it.
-  startsAt: new Date("2026-07-24T13:30:00.000Z"),
-};
+/**
+ * A free departure three days out on the suite's frozen clock: no per-diver
+ * price means no Stripe lookup and no gear step, and D18's window is open.
+ */
+async function freeDeparture(db: AppDb, shopId: string, capacity = 12) {
+  vi.mocked(getDb).mockResolvedValue(db);
+  const now = nowDate();
+  const trip = await createTrip(db, {
+    shopId,
+    title: "Free Two-Tank",
+    startsAt: new Date(now.getTime() + 72 * HOUR_MS),
+    endsAt: new Date(now.getTime() + 76 * HOUR_MS),
+    capacity,
+    plannedDives: 2,
+  });
+  if (!trip) throw new Error("test trip could not be created");
+  return trip.id;
+}
 
 /**
  * One submission. `level` is written into the field name the form used to
@@ -103,30 +109,46 @@ function submission(
   return form;
 }
 
+/** Run the action; a successful booking ends in a redirect, which the mock throws. */
+async function post(shopSlug: string, tripId: string, form: FormData) {
+  try {
+    return await bookSpot({ shopSlug, tripId, embed: false }, {}, form);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("REDIRECT:")) return null;
+    throw error;
+  }
+}
+
+/** The seats on `tripId`, each with the email of the person it is for. */
+async function seats(db: AppDb, tripId: string) {
+  return db
+    .select({
+      personId: bookings.personId,
+      email: people.email,
+      diveIntent: bookings.diveIntent,
+      reEntryAsk: bookings.reEntryAsk,
+      minorDeclaredAt: bookings.minorDeclaredAt,
+    })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(eq(bookings.tripId, tripId));
+}
+
 function bookingRateLimitCalls(): number {
   return vi.mocked(checkRateLimit).mock.calls.filter(([, config]) => config === RATE_LIMITS.booking)
     .length;
 }
 
-const ref = (tripId: string) => ({ shopSlug: "blue-mantis", tripId, embed: false });
-
-beforeEach(() => {
-  vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, retryAfterMs: 0 });
-  vi.mocked(getShopBySlug).mockResolvedValue(shop as never);
-  vi.mocked(getTripWithBooked).mockResolvedValue(trip as never);
-  vi.mocked(createBookingParty).mockResolvedValue({
-    ok: false,
-    reason: "trip_unavailable",
-    failedIndex: -1,
-  } as never);
-});
 afterEach(() => vi.clearAllMocks());
 
 describe("the booking form's certification fields", () => {
   it("carries no declaration into the booking, however many a post claims", async () => {
-    await bookSpot(
-      ref(TRIP_ID),
-      {},
+    const { db, shop } = ctx;
+    const tripId = await freeDeparture(db, shop.id);
+
+    await post(
+      shop.slug,
+      tripId,
       submission([
         { email: "booker@example.com", level: "rescue", agency: "padi", number: "RS-1" },
         { email: "victim@example.com", level: "instructor", agency: "ssi", number: "IN-2" },
@@ -136,42 +158,64 @@ describe("the booking form's certification fields", () => {
     const [, requests] = vi.mocked(createBookingParty).mock.calls[0] ?? [];
     expect(requests).toHaveLength(2);
     for (const request of requests ?? []) {
-      // Nothing an anonymous submitter typed reaches `recordSelfDeclaredCards`.
       expect(request.declared).toBeUndefined();
       // And the gate is not softened on the strength of an answer nobody gave:
       // `advise` was earned by the form warning a diver as they answered.
       expect(request.admissionGate).toBeUndefined();
     }
+    // Both seats exist, and nothing an anonymous submitter typed reached a
+    // card on either person's record.
+    const booked = await seats(db, tripId);
+    expect(booked.map((seat) => seat.email).sort()).toEqual([
+      "booker@example.com",
+      "victim@example.com",
+    ]);
+    const cards = await db
+      .select({ id: certifications.id })
+      .from(certifications)
+      .where(
+        and(
+          eq(certifications.shopId, shop.id),
+          inArray(
+            certifications.personId,
+            booked.map((seat) => seat.personId),
+          ),
+        ),
+      );
+    expect(cards).toEqual([]);
   });
 
   it("costs one token per submission, not one per claim", async () => {
     // The count-scaled charge existed to price the declaration writes a
     // booking could make. With none to write, what is left is the protection
     // against repeated empty submissions.
-    await bookSpot(
-      ref(TRIP_ID),
-      {},
-      submission([
-        { email: "one@example.com", level: "rescue" },
-        { email: "two@example.com", level: "rescue" },
-        { email: "three@example.com", level: "rescue" },
-        { email: "four@example.com", level: "rescue" },
-        { email: "five@example.com", level: "rescue" },
-        { email: "six@example.com", level: "rescue" },
-      ]),
+    const { db, shop } = ctx;
+    const tripId = await freeDeparture(db, shop.id);
+
+    await post(
+      shop.slug,
+      tripId,
+      submission(
+        ["one", "two", "three", "four", "five", "six"].map((name) => ({
+          email: `${name}@example.com`,
+          level: "rescue",
+        })),
+      ),
     );
 
     expect(bookingRateLimitCalls()).toBe(1);
   });
 
   it("still refuses a submission the per-IP bucket has run out for", async () => {
-    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, retryAfterMs: 1_000 });
+    const { db, shop } = ctx;
+    const tripId = await freeDeparture(db, shop.id);
+    vi.mocked(checkRateLimit).mockResolvedValueOnce({ allowed: false, retryAfterMs: 1_000 });
 
-    const state = await bookSpot(ref(TRIP_ID), {}, submission([{ email: "spray@example.com" }]));
+    const state = await post(shop.slug, tripId, submission([{ email: "spray@example.com" }]));
 
-    expect(state.error).toBeTruthy();
+    expect(state?.error).toBeTruthy();
     // Refused before the seats are taken, not after.
-    expect(createBookingParty).not.toHaveBeenCalled();
+    expect(await seats(db, tripId)).toEqual([]);
   });
 });
 
@@ -181,24 +225,45 @@ describe("the booking form's certification fields", () => {
  *
  * "What's this dive for?" and the three offers under it were posted from this
  * form and written onto the lead's row until both moved to `/ready/<token>`,
- * which asks them after the sale, of the diver whose seat it is. What is left
- * worth pinning is that a hand-crafted post carrying either field is *ignored*
- * rather than refused or, worse, written: this form is anonymous, so a
- * fabricated answer must never reach a booking and must never cost anybody a
- * seat either.
+ * which asks them after the sale, of the diver whose seat it is. A
+ * hand-crafted post carrying either field is *ignored* rather than refused or,
+ * worse, written: this form is anonymous, so a fabricated answer must never
+ * reach a booking and must never cost anybody a seat either.
  */
 describe("what this dive is for, and what would help", () => {
   it("ignores both fields when a hand-crafted post carries them", async () => {
+    const { db, shop } = ctx;
+    const tripId = await freeDeparture(db, shop.id);
     const form = submission([{ email: "booker@example.com" }]);
     form.set("diveIntent", "easing_back");
     form.set("reEntryAsk", "deck_word");
 
-    const state = await bookSpot(ref(TRIP_ID), {}, form);
+    const state = await post(shop.slug, tripId, form);
 
-    expect(state.fieldErrors).toBeUndefined();
-    const [, requests] = vi.mocked(createBookingParty).mock.calls[0] ?? [];
-    expect(requests?.[0]?.diveIntent).toBeUndefined();
-    expect(requests?.[0]?.reEntryAsk).toBeUndefined();
+    expect(state?.fieldErrors).toBeUndefined();
+    const [seat] = await seats(db, tripId);
+    expect(seat).toMatchObject({ diveIntent: null, reEntryAsk: null });
+  });
+});
+
+/**
+ * **"Under 18", per member** (decision 2026-10-13, after H-21): the box beside
+ * a member's name reaches that member's seat and no other.
+ */
+describe("the Under 18 box", () => {
+  it("marks only the seat whose box was ticked", async () => {
+    const { db, shop } = ctx;
+    const tripId = await freeDeparture(db, shop.id);
+    const form = submission([{ email: "parent@example.com" }, { email: "kid@example.com" }]);
+    form.set("minor-1", "on");
+
+    await post(shop.slug, tripId, form);
+
+    const booked = await seats(db, tripId);
+    const marked = Object.fromEntries(
+      booked.map((seat) => [seat.email, seat.minorDeclaredAt !== null]),
+    );
+    expect(marked).toEqual({ "parent@example.com": false, "kid@example.com": true });
   });
 });
 
@@ -209,25 +274,66 @@ describe("what this dive is for, and what would help", () => {
  */
 describe("the already-booked refusal", () => {
   it("hands back the address of the member already on the list", async () => {
-    vi.mocked(createBookingParty).mockResolvedValue({
-      ok: false,
-      reason: "already_booked",
-      failedIndex: 1,
-    } as never);
+    const { db, shop } = ctx;
+    const tripId = await freeDeparture(db, shop.id);
+    await post(shop.slug, tripId, submission([{ email: "repeat@example.com" }]));
 
-    const state = await bookSpot(
-      ref(TRIP_ID),
-      {},
+    const state = await post(
+      shop.slug,
+      tripId,
       submission([{ email: "lead@example.com" }, { email: "repeat@example.com" }]),
     );
 
-    expect(state.alreadyBookedEmail).toBe("repeat@example.com");
-    expect(state.fieldErrors?.["email-1"]).toBeTruthy();
+    expect(state?.alreadyBookedEmail).toBe("repeat@example.com");
+    expect(state?.fieldErrors?.["email-1"]).toBeTruthy();
   });
 
   it("hands back no address for any other refusal", async () => {
-    const state = await bookSpot(ref(TRIP_ID), {}, submission([{ email: "lead@example.com" }]));
-    expect(state.error).toBeTruthy();
-    expect(state.alreadyBookedEmail).toBeUndefined();
+    // A full departure: the one seat is taken, so the next party is refused
+    // for want of room, not for a repeat.
+    const { db, shop } = ctx;
+    const tripId = await freeDeparture(db, shop.id, 1);
+    await post(shop.slug, tripId, submission([{ email: "first@example.com" }]));
+
+    const state = await post(shop.slug, tripId, submission([{ email: "lead@example.com" }]));
+
+    expect(state?.error).toBeTruthy();
+    expect(state?.alreadyBookedEmail).toBeUndefined();
+  });
+});
+
+/**
+ * **The page a booking lands on is not the page the email carries** (security
+ * review of layer r5-4, F1). Whoever submits the form proved only that they
+ * know a name and an address, so the link handed to their browser is minted
+ * undelivered, and "Your days" (every other seat that person holds) waits for
+ * the confirmation email's own link, which only the inbox on file receives.
+ */
+describe("the readiness link after booking", () => {
+  it("redirects on an undelivered link and mails a delivered one", async () => {
+    const { db, shop } = ctx;
+    const tripId = await freeDeparture(db, shop.id);
+
+    await post(shop.slug, tripId, submission([{ email: "regular@example.com" }]));
+
+    const landing = vi
+      .mocked(redirect)
+      .mock.calls.map(([path]) => String(path))
+      .find((path) => path.startsWith("/ready/"));
+    const token = landing?.slice("/ready/".length).split("?")[0];
+    if (!token) throw new Error("the booking did not land on /ready");
+    const opened = await verifyBookingCapability(db, { token, purpose: "readiness" });
+    expect(opened?.delivered).toBe(false);
+
+    const links = await db
+      .select({ delivered: bookingCapabilities.delivered })
+      .from(bookingCapabilities)
+      .where(
+        and(
+          eq(bookingCapabilities.bookingId, opened?.bookingId ?? ""),
+          eq(bookingCapabilities.purpose, "readiness"),
+        ),
+      );
+    expect(links.map((link) => link.delivered).sort()).toEqual([false, true]);
   });
 });

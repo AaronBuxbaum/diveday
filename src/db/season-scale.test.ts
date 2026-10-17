@@ -2,11 +2,13 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seasonStartInstant } from "@/lib/season";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { bookings, people, shops, trips } from "./schema";
 import { seasonScale } from "./season-scale";
 import { createTrip } from "./trips";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **The season's scale** — ADR 20260904-reef-all-the-way-down, Budget rule 3.
@@ -21,7 +23,7 @@ const NOW = new Date("2026-07-21T13:30:00.000Z");
 const SEASON = seasonStartInstant(NOW, ZONE, { month: 1, day: 1 });
 
 async function freshShop(slug: string) {
-  const db = await seededTestDb();
+  const db = ctx.db;
   const [shop] = await db
     .insert(shops)
     .values({ name: `Shop ${slug}`, slug, timezone: ZONE })

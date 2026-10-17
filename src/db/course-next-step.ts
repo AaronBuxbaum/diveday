@@ -1,7 +1,7 @@
 import { and, eq, isNotNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
-import { bookings, trips } from "./schema";
+import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /** The longest a next step may be — one thing to do, not a lesson plan. */
@@ -89,4 +89,52 @@ export async function courseNextStepsByBooking(
       ),
     );
   return new Map(rows.flatMap((row) => (row.note ? [[row.bookingId, row.note] as const] : [])));
+}
+
+/**
+ * **The note one student reads while the session is still running** (third
+ * UX review, item 15). The recap prints the same words once the boat is home;
+ * this is the read `/ready` makes before then, so "Practice mask clearing
+ * before Sunday" written after day one reaches the student before Sunday.
+ *
+ * Scoped by shop and booking, a live course session only, and null unless
+ * there are words and an instructor of this shop wrote them.
+ *
+ * **Signed with the crew public name**, the name that instructor agreed to
+ * show divers, never `full_name`: that is one free-text box the shop fills in,
+ * and it is not what anybody agreed to put in front of a student. An
+ * instructor who shows divers no name still wrote the words, so they are kept
+ * and `byName` is null: the note is then "from your instructor".
+ */
+export async function courseNextStepForBooking(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+): Promise<{ words: string; byName: string | null } | null> {
+  const [row] = await db
+    .select({
+      words: bookings.courseNextStep,
+      byName: people.crewPublicName,
+      consentAt: people.crewPublicConsentAt,
+    })
+    .from(bookings)
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
+    .innerJoin(
+      people,
+      and(eq(people.id, bookings.courseNextStepByPersonId), eq(people.shopId, shopId)),
+    )
+    .where(
+      and(
+        eq(bookings.id, bookingId),
+        eq(bookings.shopId, shopId),
+        isNotNull(trips.courseId),
+        isNotNull(bookings.courseNextStep),
+        liveTrip(),
+      ),
+    )
+    .limit(1);
+  const words = row?.words?.trim();
+  if (!row || !words) return null;
+  const byName = (row.consentAt && row.byName?.trim()) || null;
+  return { words, byName };
 }

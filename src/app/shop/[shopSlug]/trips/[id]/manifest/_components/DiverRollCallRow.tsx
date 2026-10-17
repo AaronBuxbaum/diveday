@@ -55,6 +55,7 @@ export function DiverRollCallRow({
     todayTrailByBooking,
     rollCallAction,
     rollCallButtonCopy,
+    rollCallClosed,
     buddyTeamLabel,
     t,
   } = context;
@@ -164,7 +165,7 @@ export function DiverRollCallRow({
           mark={
             rowState.notBackAboard ? (
               <RollCallMark state="notBack" />
-            ) : boardingControlShown ? (
+            ) : boardingControlShown && !rollCallClosed ? (
               <RollCallMarkButton
                 kind="diver"
                 subjectId={diver.bookingId}
@@ -177,8 +178,12 @@ export function DiverRollCallRow({
               />
             ) : (
               // No tap, but still what was recorded: aboard or
-              // ashore before the held ring (review of #1840).
-              <RollCallMark state={rollCallMarkState(rowState, { blockedAtDock: true })} />
+              // ashore before the held ring (review of #1840). The ring only
+              // where the dock withheld the tap, never on a closed roll call
+              // (dive-domain review D8).
+              <RollCallMark
+                state={rollCallMarkState(rowState, { blockedAtDock: !boardingControlShown })}
+              />
             )
           }
           trigger={
@@ -188,6 +193,7 @@ export function DiverRollCallRow({
               capsule={capsule}
               typeBadge={typeBadge}
               lateAt={state.lateAt}
+              checkedInAtDesk={state.checkedInAtDesk}
               locale={locale}
               timezone={timezone}
               t={t}

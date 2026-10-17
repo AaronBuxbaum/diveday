@@ -8,12 +8,16 @@
   "numbersLabel": "Los números de este mes",
   "comparison": {
     "yearAgo": "{trend}frente a {baseline} en {month}",
-    "previousMonthFallback": "{trend}frente a {baseline} en {month} (todavía sin datos del año pasado)"
+    "previousMonthFallback": "{trend}frente a {baseline} en {month} (todavía sin datos del año pasado)",
+    "yearAgoToDate": "{trend}frente a {baseline} en {month} al {day}"
   },
   "downloadCsv": "Descargar CSV",
   "taxLine": "Impuestos cobrados {amount}",
   "metrics": {
     "revenueLabel": "Ingresos netos",
+    "revenueBasis": "De las salidas de este mes",
+    "revenueBasisWithCounter": "De las salidas de este mes, más {amount} en el mostrador",
+    "revenueCounter": "Más {amount} en el mostrador.",
     "revenueDetailWithImported": "Pagos y depósitos de salidas actuales después del impuesto de Stripe, más {count, plural, one {# registro importado del origen sin verificar} other {# registros importados del origen sin verificar}}: {payments} en pagos y {refunds} en reembolsos.",
     "bookingsLabel": "Plazas",
     "bookingsThisMonth": "{count, plural, one {# salida} other {# salidas}} en el calendario hasta ahora",
@@ -25,7 +29,8 @@
     "waiversAllIn": "Toda la documentación está en regla",
     "revenueViewOrders": "Ver pedidos",
     "tipsLabel": "Propinas",
-    "tipsDetail": "{count, plural, =0 {Sin propinas en las salidas de este mes} one {# propina, para que el centro la pase a la tripulación} other {# propinas, para que el centro las pase a la tripulación}}"
+    "tipsDetail": "{count, plural, =0 {Sin propinas en las salidas de este mes} one {# propina, para que el centro la pase a la tripulación} other {# propinas, para que el centro las pase a la tripulación}}",
+    "split": "Zarpado {sailed} · Por zarpar {toSail}"
   },
   "noTripsFuture": "Todavía no hay nada reservado para este mes.",
   "noTripsPast": "Ninguna salida zarpó este mes.",
@@ -76,12 +81,27 @@
     "sitesCount": "{count, plural, one {# sitio} other {# sitios}}",
     "siteTimes": "{count, plural, one {# vez} other {# veces}}",
     "sitesRest": "{count, plural, one {# sitio más} other {# sitios más}} · {dives, plural, one {# inmersión entre todos} other {# inmersiones entre todos}}",
-    "empty": "Todavía no ha zarpado ninguna salida este año."
+    "empty": "Todavía no ha zarpado ninguna salida este año.",
+    "money": {
+      "label": "El dinero del año",
+      "taxLabel": "Impuestos cobrados",
+      "revenueDetail": "De las salidas que ya zarparon",
+      "downloadYear": "Descargar el año (CSV)",
+      "tipsDetail": "{count, plural, =0 {Aún sin propinas este año} one {# propina, para la tripulación} other {# propinas, para la tripulación}}"
+    },
+    "chooseYear": "Elegir un año",
+    "rangeWhole": "{year} · del 1 de enero al 31 de diciembre · {zone}",
+    "lastYearToDate": "{value, number} a esta fecha en {year}",
+    "lastYearWhole": "{value, number} en {year}",
+    "weatherDays": "{days, plural, one {# día con una cancelación por clima} other {# días con una cancelación por clima}}, {departures, plural, one {# salida cancelada} other {# salidas canceladas}}",
+    "certifiedHere": "Certificaciones emitidas aquí: {count, number}",
+    "certifiedLevel": "{count, number} {level}"
   },
   "buddySeats": "{count, plural, one {# plaza llegó} other {# plazas llegaron}} desde el enlace de un buceador",
+  "buddyReferrer": "{name} trajo {count, plural, one {# amigo} other {# amigos}}",
   "byLine": {
     "heading": "Ingresos por línea",
-    "caption": "Por el día del cobro, sin impuestos ni reembolsos",
+    "caption": "Cobrado este mes, sea cual sea la salida, sin impuestos ni reembolsos",
     "courses": "Cursos",
     "funDives": "Inmersiones y salidas",
     "rentals": "Alquileres",
@@ -95,9 +115,52 @@
   "moneyOut": {
     "refunded": "Reembolsado {amount} de los cobros de este mes",
     "discounted": "Los códigos de descuento restaron {amount}",
-    "fees": "Comisiones de Stripe {amount}, en lo pagado a tu banco este mes"
+    "fees": "Comisiones de Stripe {amount}, en lo pagado a tu banco este mes",
+    "disputesLost": "Las disputas de tarjeta perdidas este mes devolvieron {amount} al banco"
+  },
+  "emptySeats": {
+    "heading": "Salidas que zarparon con plazas vacías",
+    "summary": "{departures, plural, one {# salida zarpó} other {# salidas zarparon}} con {seats, plural, one {# plaza} other {# plazas}} sin vender",
+    "row": "{title}, {date}",
+    "seats": "{count, plural, one {# plaza} other {# plazas}}"
   },
   "payouts": {
     "heading": "Pagado a tu banco"
-  }
+  },
+  "tipsShare": "{name} {amount}",
+  "downloadCrewSheet": "Descargar la hoja de la tripulación",
+  "weather": {
+    "month": "El clima canceló {departures, plural, one {# salida} other {# salidas}}: {divers, plural, one {# buceador} other {# buceadores}}, {refunded} reembolsados, {moved} con otra fecha."
+  },
+  "byBoat": {
+    "heading": "Por barco",
+    "facts": "{days, plural, one {# día de salida} other {# días de salida}} · {percent} % lleno"
+  },
+  "byKind": {
+    "heading": "Por tipo de salida",
+    "course": "Cursos",
+    "other": "Otras"
+  },
+  "leadTime": {
+    "heading": "Con cuánta anticipación se venden las salidas",
+    "caption": "Plazas en salidas de los últimos 12 meses",
+    "line": "Salidas del {weekday}: la mitad de las plazas se vende {days, plural, =0 {el mismo día} one {con # día o más de anticipación} other {con # días o más de anticipación}} · {percent} % en los últimos tres días"
+  },
+  "downloadMonthEnd": "Descargar archivos de fin de mes",
+  "bookkeeper": {
+    "label": "Correo del contador",
+    "description": "El día 2 de cada mes, el informe, los pedidos y la hoja de tripulación del mes anterior se envían a esta dirección. Déjalo vacío para desactivarlo.",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "saved": "Guardado. Los archivos salen el día 2.",
+    "cleared": "Desactivado. No se enviarán archivos de fin de mes.",
+    "invalid": "Eso no es un correo electrónico. Revísalo y guarda de nuevo.",
+    "confirmationSent": "Guardado. Enviamos un enlace de confirmación a esa dirección; no se envía nada hasta que se use.",
+    "confirmationNotSent": "Guardado, pero el enlace de confirmación no se pudo enviar ahora. Guarda de nuevo más tarde para reenviarlo.",
+    "setBy": "Puesto por {name}, {date}.",
+    "setByGone": "Puesto el {date} por alguien que ya no está en el equipo.",
+    "waiting": "Esperando a que {email} confirme; no se envía nada hasta entonces.",
+    "setterLapsed": "Esa persona ya no puede exportar los datos del centro, así que no se envía nada. Guarda la dirección de nuevo para mantenerla, o cámbiala."
+  },
+  "tipsSplit": "A partes iguales: {shares}"
 }

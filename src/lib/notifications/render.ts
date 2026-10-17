@@ -1,8 +1,15 @@
 import { diverTranslator } from "@/i18n/messages";
 import { isDiverLocale } from "@/i18n/settings";
 import { escapeHtml } from "@/lib/html";
+import {
+  bookkeeperConfirmationEmail,
+  bookkeeperMonthEndEmail,
+  bookkeeperNoticeEmail,
+} from "./bookkeeper-email";
+import { courseCertifiedEmail } from "./course-certified";
+import { courseInquiryReceivedEmail } from "./course-inquiry-received";
 import { crewScheduleChangeEmail } from "./crew-emails";
-import { deskAfterHoursEmail } from "./desk-emails";
+import { deskAfterHoursEmail, stripePaymentsRestrictedEmail } from "./desk-emails";
 import { departureNoteEmail, lostItemEmail } from "./desk-notes";
 import {
   bookingCancelledEmail,
@@ -38,7 +45,16 @@ import {
   welcomeEmail,
   wrapEmailHtml,
 } from "./email";
+import { incidentMissingDiverEmail } from "./incident-emails";
 import type { Notification } from "./kinds";
+import { partyPaymentReceiptEmail } from "./party-payment-receipt";
+import {
+  rollCallStaleEmail,
+  rollCallStaleShoreEmail,
+  shoreAlertConfirmationEmail,
+  shoreAlertStoppedEmail,
+} from "./roll-call-emails";
+import { seatAlreadyHeldEmail } from "./seat-already-held";
 import { shopVoiceOf } from "./shop-voice";
 import { weeklyDigestEmail } from "./weekly-digest-email";
 import { gearServiceDueEmail, workOrderReadyEmail } from "./work-order-emails";
@@ -142,7 +158,29 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "gear_service_due") return gearServiceDueEmail(notification);
   if (notification.kind === "crew_schedule_change") return crewScheduleChangeEmail(notification);
   if (notification.kind === "desk_after_hours") return deskAfterHoursEmail(notification);
+  if (notification.kind === "stripe_payments_restricted") {
+    return stripePaymentsRestrictedEmail(notification);
+  }
+  if (notification.kind === "roll_call_stale") return rollCallStaleEmail(notification);
+  if (notification.kind === "roll_call_stale_shore") return rollCallStaleShoreEmail(notification);
+  if (notification.kind === "incident_missing_diver")
+    return incidentMissingDiverEmail(notification);
+  if (notification.kind === "shore_alert_stopped") return shoreAlertStoppedEmail(notification);
+  if (notification.kind === "shore_alert_confirmation") {
+    return shoreAlertConfirmationEmail(notification);
+  }
   if (notification.kind === "departure_note") return departureNoteEmail(notification);
   if (notification.kind === "lost_item_found") return lostItemEmail(notification);
+  if (notification.kind === "seat_already_held") return seatAlreadyHeldEmail(notification);
+  if (notification.kind === "party_payment_receipt") return partyPaymentReceiptEmail(notification);
+  if (notification.kind === "course_certified") return courseCertifiedEmail(notification);
+  if (notification.kind === "bookkeeper_month_end") return bookkeeperMonthEndEmail(notification);
+  if (notification.kind === "bookkeeper_confirmation") {
+    return bookkeeperConfirmationEmail(notification);
+  }
+  if (notification.kind === "bookkeeper_notice") return bookkeeperNoticeEmail(notification);
+  if (notification.kind === "course_inquiry_received") {
+    return courseInquiryReceivedEmail(notification);
+  }
   return passwordChangedEmail(notification);
 }

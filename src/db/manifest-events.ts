@@ -1,9 +1,14 @@
-import { sql } from "drizzle-orm";
+import { and, asc, eq, gte, ne, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { Client } from "pg";
+import { DAY_MS, nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
+import { hasSailed } from "@/lib/trips";
 import type { AppDb } from "./client";
 import { withExplicitSslMode } from "./connection-string";
 import { pushManifestChanged } from "./push-subscriptions";
+import { bookings, trips } from "./schema";
+import { liveTrip } from "./trips-live";
 
 export type ManifestEvent = { shopId: string; tripId: string };
 type Listener = ManifestEvent & { onEvent: () => void };
@@ -327,6 +332,49 @@ export async function publishManifestEvent(
   shopId: string,
   tripId: string,
 ): Promise<void> {
+  await publishOne(db, shopId, tripId);
+  // A charter seat marked as a training dive (issue #2275) is asked the forms
+  // of a seat on this departure, and boards on whether that seat still holds:
+  // whatever changed here can change what the charter's manifest says.
+  for (const charterId of await chartersMarkedOn(db, shopId, tripId)) {
+    await publishOne(db, shopId, charterId);
+  }
+}
+
+/** The most charters one departure's change signals; a real course has a handful. */
+const MAX_MARKED_CHARTERS_PER_CHANGE = 25;
+
+/**
+ * The other departures holding a seat whose training mark names a seat on
+ * this one, at this shop. Never throws: an empty list only leaves those
+ * manifests on their own poll.
+ */
+async function chartersMarkedOn(db: AppDb, shopId: string, tripId: string): Promise<string[]> {
+  const enrollment = alias(bookings, "enrollment");
+  try {
+    const rows = await db
+      .selectDistinct({ id: bookings.tripId })
+      .from(bookings)
+      .innerJoin(enrollment, eq(enrollment.id, bookings.trainingEnrollmentBookingId))
+      .where(
+        and(
+          eq(bookings.shopId, shopId),
+          eq(enrollment.shopId, shopId),
+          eq(enrollment.tripId, tripId),
+          ne(bookings.tripId, tripId),
+        ),
+      )
+      // diveday:allow-time-id-order: a capped list of ids to republish to, never shown to anyone.
+      .orderBy(asc(bookings.tripId))
+      .limit(MAX_MARKED_CHARTERS_PER_CHANGE);
+    return rows.map((row) => row.id);
+  } catch {
+    return [];
+  }
+}
+
+/** {@link publishManifestEvent} for one departure alone. */
+async function publishOne(db: AppDb, shopId: string, tripId: string): Promise<void> {
   try {
     if (!process.env.DATABASE_URL) {
       dispatch({ shopId, tripId });
@@ -349,4 +397,64 @@ export async function publishManifestEvent(
   // and its own coalescing window is what keeps a burst of writes from
   // becoming a burst of notifications.
   await pushManifestChanged(db, shopId, tripId);
+}
+
+/**
+ * The most departures one person-level change signals. A diver booked on more
+ * live, unsailed departures than this is not a real booking pattern, and each
+ * one is a NOTIFY and a coalesced push, so the fan-out has a ceiling inside the
+ * push transport's budget (ADR 20260804-manifest-push-transport).
+ */
+const MAX_DEPARTURES_PER_PERSON_CHANGE = 25;
+
+/**
+ * Raise "trip X's roll call changed" for **every live, unsailed departure this
+ * person holds a seat on**, because something about *them* changed rather than
+ * about one trip: a card review or its undo, a sighting, a nitrox review, a
+ * waiver completed or superseded (issue #2613).
+ *
+ * A manifest open on the dock tablet, or primed offline, reads a diver as
+ * cleared from evidence a staffer may since have taken back; the crew boards
+ * from that screen. The event carries nothing about readiness. It only tells
+ * the devices to re-read, so a stale clearance cannot outlive the next
+ * refresh. One query, then one {@link publishManifestEvent} per trip.
+ *
+ * Never throws, like {@link publishManifestEvent}: the evidence write has
+ * already committed, and a publish that never arrives only leaves the
+ * subscribers on their own poll. Call it after the write commits, never inside
+ * its transaction.
+ */
+export async function publishManifestEventsForPerson(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+  now: Date = nowDate(),
+): Promise<void> {
+  let departures: string[];
+  try {
+    const rows = await db
+      .selectDistinct({ id: trips.id, startsAt: trips.startsAt })
+      .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .where(
+        and(
+          eq(bookings.shopId, shopId),
+          eq(bookings.personId, personId),
+          ne(bookings.status, "cancelled"),
+          eq(trips.shopId, shopId),
+          eq(trips.status, "scheduled"),
+          liveTrip(),
+          // A day of slack under "now": the exact sailed test is `hasSailed`,
+          // applied below, so the buffer has one spelling.
+          gte(trips.startsAt, new Date(now.getTime() - DAY_MS)),
+        ),
+      )
+      // diveday:allow-time-id-order: a capped list of ids to republish to, never shown to anyone.
+      .orderBy(asc(trips.startsAt), asc(trips.id))
+      .limit(MAX_DEPARTURES_PER_PERSON_CHANGE);
+    departures = rows.filter((row) => !hasSailed(row.startsAt, now)).map((row) => row.id);
+  } catch {
+    return;
+  }
+  for (const tripId of departures) await publishManifestEvent(db, shopId, tripId);
 }

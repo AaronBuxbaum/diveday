@@ -15,6 +15,7 @@ import {
 } from "drizzle-orm";
 import { sellableSeats } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
+import type { DepthUnit } from "@/lib/depth-units";
 import {
   type DiveSiteDifficulty,
   parseDiveSiteDifficulty,
@@ -34,6 +35,7 @@ import {
 } from "@/lib/dive-site-template-sync";
 import type { DiveMode } from "@/lib/diver-planning";
 import type { CertificationLevel } from "@/lib/readiness";
+import { briefingInUnit } from "@/lib/site-prose-units";
 import type { TidePreference } from "@/lib/tides";
 import type { AppDb, DbExecutor } from "./client";
 import { isMarineLifeSlug, type MarineLifeSlug } from "./marine-life-catalog";
@@ -44,7 +46,6 @@ import {
   type DiveSiteFitTone,
   type DiveSpecialty,
   diveSiteCreatures,
-  diveSiteMoments,
   diveSites,
   globalDiveSites,
   globalDiveSiteVersions,
@@ -84,7 +85,13 @@ export type DiveSiteInput = {
   marineLifeDescription?: string;
   /** How demanding the site is, as a code (`src/lib/dive-site-difficulty.ts`). */
   difficultyLevel?: DiveSiteDifficulty | null;
+  /** Whether snorkelers get anything out of the site; null/undefined is "not said". */
+  snorkelSuitable?: boolean | null;
+
+  /** The shop's own words about depth; the two numbers below carry the range. */
   depthRange?: string;
+  /** The shallow end in metres; needs `maxDepthMeters`, never above it (src/lib/dive-site-depth.ts). */
+  depthMinMeters?: number | null;
   /** Canonical metres, whatever unit the shop typed it in (src/lib/depth-units.ts). */
   maxDepthMeters?: number | null;
   /** This site's own time in the water; null/undefined leaves the shop's figure standing. */
@@ -484,6 +491,7 @@ export async function createDiveSite(db: DbExecutor, input: DiveSiteInput) {
       marineLife: input.marineLife || null,
       marineLifeDescription: input.marineLifeDescription || null,
       difficultyLevel: input.difficultyLevel ?? null,
+      snorkelSuitable: input.snorkelSuitable ?? null,
       depthRange: input.depthRange || null,
       expectedBottomTimeMinutes: input.expectedBottomTimeMinutes ?? null,
       currentNote: input.currentNote || null,
@@ -586,11 +594,13 @@ export async function updateDiveSite(
       marineLife: input.marineLife || null,
       marineLifeDescription: input.marineLifeDescription || null,
       difficultyLevel: input.difficultyLevel ?? null,
+      snorkelSuitable: input.snorkelSuitable ?? null,
       depthRange: input.depthRange || null,
       // `?? null` rather than `|| null`: 0 is not a real site depth, but the
       // distinction still matters — an omitted field clears the column, which
       // is how a shop takes a depth back off a site.
       maxDepthMeters: input.maxDepthMeters ?? null,
+      depthMinMeters: input.depthMinMeters ?? null,
       expectedBottomTimeMinutes: input.expectedBottomTimeMinutes ?? null,
       currentNote: input.currentNote || null,
       divePlan: input.divePlan || null,
@@ -737,8 +747,10 @@ export async function copyDiveSite(db: AppDb, shopId: string, siteId: string, na
     marineLife: source.marineLife ?? undefined,
     marineLifeDescription: source.marineLifeDescription ?? undefined,
     difficultyLevel: source.difficultyLevel,
+    snorkelSuitable: source.snorkelSuitable,
     depthRange: source.depthRange ?? undefined,
     maxDepthMeters: source.maxDepthMeters,
+    depthMinMeters: source.depthMinMeters,
     expectedBottomTimeMinutes: source.expectedBottomTimeMinutes,
     currentNote: source.currentNote ?? undefined,
     divePlan: source.divePlan ?? undefined,
@@ -803,34 +815,8 @@ export async function replaceDiveSiteCreatures(
   );
 }
 
-export async function listPublishedDiveSiteMoments(db: AppDb, shopId: string, siteId: string) {
-  return db
-    .select()
-    .from(diveSiteMoments)
-    .where(
-      and(
-        eq(diveSiteMoments.shopId, shopId),
-        eq(diveSiteMoments.diveSiteId, siteId),
-        eq(diveSiteMoments.isPublished, true),
-      ),
-    )
-    .orderBy(asc(diveSiteMoments.createdAt));
-}
-
-/**
- * Creatures and published moments for several sites at once, grouped by site.
- *
- * The public trip page renders a briefing per dive, and asking per site cost it
- * two round trips per dive — six on a three-tank day, on the page a diver hits
- * straight from a marketing link. Two queries cover any number of dives.
- */
 /**
  * Each site's stored field guide, for several sites at once.
- *
- * Split out of {@link listDiveSiteBriefingExtras} when the after-state needed
- * the guides without the moments (issue #1192): that helper answers the public
- * briefing, which wants both, and a caller that wants one should not pay for
- * the other on a page a diver opens from a text message.
  *
  * Rows come back in their saved order, grouped by site. A site with no guide is
  * simply absent from the map rather than present and empty — "this site has
@@ -852,37 +838,19 @@ export async function listSiteFieldGuides(db: AppDb, shopId: string, siteIds: st
   return bySite;
 }
 
+/**
+ * The field guide for several sites at once, grouped by site: what the public
+ * briefing reads for every dive on a day, in one query rather than one per
+ * dive, on the page a diver hits straight from a marketing link.
+ */
 export async function listDiveSiteBriefingExtras(
   db: AppDb,
   shopId: string,
   siteIds: string[],
 ): Promise<{
   creatures: Map<string, Awaited<ReturnType<typeof listDiveSiteCreatures>>>;
-  moments: Map<string, Awaited<ReturnType<typeof listPublishedDiveSiteMoments>>>;
 }> {
-  const unique = [...new Set(siteIds)];
-  if (unique.length === 0) return { creatures: new Map(), moments: new Map() };
-
-  const [creatures, momentRows] = await Promise.all([
-    listSiteFieldGuides(db, shopId, unique),
-    db
-      .select()
-      .from(diveSiteMoments)
-      .where(
-        and(
-          eq(diveSiteMoments.shopId, shopId),
-          inArray(diveSiteMoments.diveSiteId, unique),
-          eq(diveSiteMoments.isPublished, true),
-        ),
-      )
-      .orderBy(asc(diveSiteMoments.createdAt)),
-  ]);
-
-  const moments = new Map<string, typeof momentRows>();
-  for (const row of momentRows) {
-    moments.set(row.diveSiteId, [...(moments.get(row.diveSiteId) ?? []), row]);
-  }
-  return { creatures, moments };
+  return { creatures: await listSiteFieldGuides(db, shopId, siteIds) };
 }
 
 /** How many published site templates the "Common dive sites" catalog shows per page. */
@@ -920,9 +888,18 @@ export async function listGlobalDiveSiteTemplates(
   options: {
     page?: number;
     limit?: number;
-    shopCoordinates?: { latitude: number; longitude: number } | null;
+    /**
+     * The reading shop: the nearest templates first when it has a location,
+     * and every measure in its own depth unit (fourth review, item 46), as the
+     * import will land it.
+     */
+    shop?: { latitude: number | null; longitude: number | null; depthUnit: DepthUnit };
   } = {},
 ): Promise<GlobalDiveSiteTemplatePage> {
+  const shopCoordinates =
+    options.shop?.latitude != null && options.shop.longitude != null
+      ? { latitude: options.shop.latitude, longitude: options.shop.longitude }
+      : null;
   const currentVersionJoin = and(
     eq(globalDiveSiteVersions.globalDiveSiteId, globalDiveSites.id),
     eq(globalDiveSiteVersions.version, globalDiveSites.currentVersion),
@@ -939,9 +916,9 @@ export async function listGlobalDiveSiteTemplates(
       return counted?.total ?? 0;
     },
     fetchRows: async (offset, limit) => {
-      const order = options.shopCoordinates
+      const order = shopCoordinates
         ? asc(
-            sql<number>`((${globalDiveSiteVersions.briefing}->>'forecastLatitude')::numeric - ${options.shopCoordinates.latitude}) * ((${globalDiveSiteVersions.briefing}->>'forecastLatitude')::numeric - ${options.shopCoordinates.latitude}) + ((${globalDiveSiteVersions.briefing}->>'forecastLongitude')::numeric - ${options.shopCoordinates.longitude}) * ((${globalDiveSiteVersions.briefing}->>'forecastLongitude')::numeric - ${options.shopCoordinates.longitude})`,
+            sql<number>`((${globalDiveSiteVersions.briefing}->>'forecastLatitude')::numeric - ${shopCoordinates.latitude}) * ((${globalDiveSiteVersions.briefing}->>'forecastLatitude')::numeric - ${shopCoordinates.latitude}) + ((${globalDiveSiteVersions.briefing}->>'forecastLongitude')::numeric - ${shopCoordinates.longitude}) * ((${globalDiveSiteVersions.briefing}->>'forecastLongitude')::numeric - ${shopCoordinates.longitude})`,
           )
         : asc(globalDiveSites.slug);
 
@@ -955,8 +932,9 @@ export async function listGlobalDiveSiteTemplates(
     },
   });
 
+  const unit = options.shop?.depthUnit;
   return {
-    templates: paged.rows,
+    templates: unit ? paged.rows.map((row) => templateInUnit(row, unit)) : paged.rows,
     page: paged.page,
     pageCount: paged.pageCount,
     pageSize: paged.pageSize,
@@ -1005,6 +983,8 @@ export async function countGlobalDiveSiteTemplates(db: AppDb): Promise<number> {
 export async function getGlobalDiveSiteTemplate(
   db: AppDb,
   slug: string,
+  /** The reading shop: the preview reads in its unit, as the import will land. */
+  shop?: { depthUnit: DepthUnit },
 ): Promise<GlobalDiveSiteTemplateRow | null> {
   const [row] = await db
     .select({ template: globalDiveSites, version: globalDiveSiteVersions })
@@ -1018,7 +998,19 @@ export async function getGlobalDiveSiteTemplate(
     )
     .where(eq(globalDiveSites.slug, slug))
     .limit(1);
-  return row ?? null;
+  if (!row) return null;
+  return shop ? templateInUnit(row, shop.depthUnit) : row;
+}
+
+/** A template row whose briefing reads in the given unit (`briefingInUnit`). */
+function templateInUnit(
+  row: GlobalDiveSiteTemplateRow,
+  unit: DepthUnit,
+): GlobalDiveSiteTemplateRow {
+  return {
+    ...row,
+    version: { ...row.version, briefing: briefingInUnit(row.version.briefing, unit) },
+  };
 }
 
 /**
@@ -1114,8 +1106,10 @@ export async function getDiveSiteTemplateUpdate(
     ...site,
     creatures: creatures.map((creature) => creature.catalogSlug ?? "").filter(isMarineLifeSlug),
   });
-  const baseline = diveSiteTemplateSnapshot(baselineRow.briefing);
-  const latestSnapshot = diveSiteTemplateSnapshot(latest.briefing);
+  // In the shop's unit, as its row was imported (fourth review, item 46).
+  const unit = await shopDepthUnit(db, shopId);
+  const baseline = diveSiteTemplateSnapshot(briefingInUnit(baselineRow.briefing, unit));
+  const latestSnapshot = diveSiteTemplateSnapshot(briefingInUnit(latest.briefing, unit));
   return {
     templateName: latest.briefing.name,
     currentVersion: site.sourceTemplateVersion,
@@ -1180,8 +1174,9 @@ export async function pullDiveSiteTemplateUpdates(
       ...site,
       creatures: creatures.map((creature) => creature.catalogSlug ?? "").filter(isMarineLifeSlug),
     });
-    const baseline = diveSiteTemplateSnapshot(baselineRow.briefing);
-    const latestSnapshot = diveSiteTemplateSnapshot(latest.briefing);
+    const unit = await shopDepthUnit(tx, shopId);
+    const baseline = diveSiteTemplateSnapshot(briefingInUnit(baselineRow.briefing, unit));
+    const latestSnapshot = diveSiteTemplateSnapshot(briefingInUnit(latest.briefing, unit));
     const diff = diveSiteTemplateDiff(currentSnapshot, baseline, latestSnapshot);
     const merged = mergedDiveSiteTemplateSnapshot(currentSnapshot, baseline, latestSnapshot, mode);
     const [updated] = await tx
@@ -1199,7 +1194,8 @@ export async function pullDiveSiteTemplateUpdates(
         marineLife: merged.marineLife,
         marineLifeDescription: merged.marineLifeDescription,
         difficultyLevel: merged.difficultyLevel,
-        depthRange: merged.depthRange,
+        snorkelSuitable: merged.snorkelSuitable,
+        depthMinMeters: merged.depthMinMeters,
         maxDepthMeters: merged.maxDepthMeters,
         expectedBottomTimeMinutes: merged.expectedBottomTimeMinutes,
         currentNote: merged.currentNote,
@@ -1253,7 +1249,8 @@ export async function undoDiveSiteTemplateUpdate(db: AppDb, shopId: string, site
         marineLife: undo.snapshot.marineLife,
         marineLifeDescription: undo.snapshot.marineLifeDescription,
         difficultyLevel: undo.snapshot.difficultyLevel,
-        depthRange: undo.snapshot.depthRange,
+        snorkelSuitable: undo.snapshot.snorkelSuitable,
+        depthMinMeters: undo.snapshot.depthMinMeters ?? null,
         maxDepthMeters: undo.snapshot.maxDepthMeters,
         expectedBottomTimeMinutes: undo.snapshot.expectedBottomTimeMinutes,
         currentNote: undo.snapshot.currentNote,
@@ -1425,6 +1422,16 @@ export async function listDiveSitesForSitemap(
     );
 }
 
+/** How this shop reads depth, for the catalog's measures (`briefingInUnit`). */
+async function shopDepthUnit(db: DbExecutor, shopId: string): Promise<DepthUnit> {
+  const [shop] = await db
+    .select({ depthUnit: shops.depthUnit })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  return shop?.depthUnit ?? "meters";
+}
+
 export async function importGlobalDiveSiteTemplate(db: AppDb, shopId: string, templateId: string) {
   const [row] = await db
     .select({ template: globalDiveSites, version: globalDiveSiteVersions })
@@ -1439,7 +1446,9 @@ export async function importGlobalDiveSiteTemplate(db: AppDb, shopId: string, te
     .where(eq(globalDiveSites.id, templateId))
     .limit(1);
   if (!row) return null;
-  const briefing = row.version.briefing;
+  // Every measure in the shop's own unit (fourth review, item 46): the copy is
+  // the shop's words from here on, and a feet shop's words say feet.
+  const briefing = briefingInUnit(row.version.briefing, await shopDepthUnit(db, shopId));
   // `creatureSlugs` names catalog rows rather than repeating their words, so it
   // is not a site column — it is resolved here into the shop's own field-guide
   // rows, which the shop then edits like anything else it typed.

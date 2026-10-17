@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { bookings, orders, people, tips } from "./schema";
 import {
   findStripePaymentTarget,
@@ -9,9 +9,11 @@ import {
   recordTipPaymentIntent,
 } from "./stripe-payment-targets";
 
+const ctx = fileScopedShopContext();
+
 /** A paid invoiced order on `acct_demo`, with no PaymentIntent recorded yet. */
 async function seededOrder() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
   if (!person) throw new Error("seeded person missing");
   const [order] = await db
@@ -95,7 +97,7 @@ describe("findStripePaymentTarget", () => {
   });
 
   it("answers none for a charge DiveDay never raised", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const { lookup } = lookupAnswering({ status: "none" });
     expect(
       await findStripePaymentTarget(
@@ -107,7 +109,7 @@ describe("findStripePaymentTarget", () => {
   });
 
   it("throws when Stripe cannot be asked, so the webhook is retried rather than dropped", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const { lookup } = lookupAnswering({ status: "failed" });
     await expect(
       findStripePaymentTarget(
@@ -119,7 +121,7 @@ describe("findStripePaymentTarget", () => {
   });
 
   it("knows a tip's charge for what it is, and never asks Stripe about it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [booking] = await db.select().from(bookings).where(eq(bookings.shopId, shop.id)).limit(1);
     if (!booking) throw new Error("seeded booking missing");
     await db.insert(tips).values({
@@ -151,7 +153,7 @@ describe("findStripePaymentTarget", () => {
   });
 
   it("remembers a tip Stripe names, so the next event is local", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [booking] = await db.select().from(bookings).where(eq(bookings.shopId, shop.id)).limit(1);
     if (!booking) throw new Error("seeded booking missing");
     await db.insert(tips).values({

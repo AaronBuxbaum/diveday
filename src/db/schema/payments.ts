@@ -13,6 +13,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { bookings, tripLastMinutePromos } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { trips } from "./trips";
 
@@ -86,7 +87,7 @@ export const shopPromoCodes = pgTable(
     stripeCouponId: text("stripe_coupon_id"),
     stripePromotionCodeId: text("stripe_promotion_code_id"),
     createdByPersonId: uuid("created_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("shop_promo_codes_shop_created_idx").on(table.shopId, table.createdAt),
@@ -146,7 +147,7 @@ export const shopPromoRedemptions = pgTable(
      * total for.
      */
     amountChargedCents: integer("amount_charged_cents").notNull(),
-    redeemedAt: timestamp("redeemed_at", { withTimezone: true }).notNull().defaultNow(),
+    redeemedAt: appNowTimestamp("redeemed_at").notNull(),
   },
   (table) => [
     uniqueIndex("shop_promo_redemptions_checkout_unique").on(table.checkoutId),
@@ -198,7 +199,7 @@ export const divePackages = pgTable(
      */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdByPersonId: uuid("created_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("dive_packages_shop_idx")
@@ -259,7 +260,7 @@ export const divePackageEntitlements = pgTable(
      * cannot retroactively shorten a package somebody already bought.
      */
     expiresAt: timestamp("expires_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // The hot read: "how many dives does this diver have left?"
@@ -304,6 +305,13 @@ export const paymentStatus = pgEnum("payment_status", [
   "refunded",
 ]);
 
+/**
+ * How money a staffer marked by hand changed hands (batch 6 item 1, H-decision
+ * on the roster's Paid mark). Only ever set on a manual mark: a provider's row
+ * says what it is through `provider`. A code, never a sentence.
+ */
+export const manualPaymentMethod = pgEnum("manual_payment_method", ["cash", "card", "other"]);
+
 /** One current payment row per booking. Amounts are minor units (cents). */
 export const bookingPayments = pgTable(
   "booking_payments",
@@ -322,8 +330,21 @@ export const bookingPayments = pgTable(
     provider: text("provider"),
     providerRef: text("provider_ref"),
     note: text("note"),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Cash, card on the shop's own terminal, or anything else — set by a
+     * staffer's manual mark that took money, null on every provider write and
+     * on a mark that recorded none (a write-off, or a status moved back).
+     */
+    method: manualPaymentMethod("method"),
+    /**
+     * The staffer whose manual mark wrote this state. Null on a provider
+     * write. Attribution, not diver history: a merge leaves it where it is.
+     */
+    recordedByPersonId: uuid("recorded_by_person_id").references(() => people.id, {
+      onDelete: "set null",
+    }),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("booking_payments_booking_unique").on(table.bookingId),
@@ -461,8 +482,14 @@ export const bookingPaymentEvents = pgTable(
     operation: paymentEventOperation("operation").notNull(),
     /** Whatever note the mutation carried; null when it carried none. */
     note: text("note"),
+    /** `booking_payments.method` as this transition wrote it. */
+    method: manualPaymentMethod("method"),
+    /** The staffer whose manual mark made this transition; null for a provider write. */
+    recordedByPersonId: uuid("recorded_by_person_id").references(() => people.id, {
+      onDelete: "set null",
+    }),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     /**
@@ -510,10 +537,19 @@ export const shopStripeAccounts = pgTable(
      * elsewhere (orders, checkouts, invoicing) is still deferred (task 35).
      */
     defaultCurrency: text("default_currency").notNull().default("usd"),
-    connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * When Stripe turned card payments off on an account that had them on
+     * (`account.updated` with `charges_enabled` false), until it turns them
+     * back on. Set by one conditional update, so the owner's email goes once
+     * per change of state however many times Stripe delivers the event. Null
+     * for an account that never had payments on (still onboarding): that is
+     * Settings' story, not an alarm.
+     */
+    paymentsRestrictedAt: timestamp("payments_restricted_at", { withTimezone: true }),
+    connectedAt: appNowTimestamp("connected_at").notNull(),
     /** Set on an OAuth deauthorize webhook; a later reconnect clears it. */
     disconnectedAt: timestamp("disconnected_at", { withTimezone: true }),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [uniqueIndex("shop_stripe_accounts_stripe_account_unique").on(table.stripeAccountId)],
 );
@@ -545,13 +581,21 @@ export const orderStatus = pgEnum("order_status", [
  * How an order's money was taken (ADR 20261009-counter-payments).
  * `stripe_invoice` is the ordinary path: a Stripe invoice on the shop's
  * connected account, settled by webhook. `cash` and `card_machine` are paid at
- * the counter outside Stripe and recorded already paid; such an order carries
- * no Stripe ids, and every Stripe operation refuses it.
+ * the counter outside Stripe and recorded paid; such an order carries no
+ * Stripe ids unless it settled an invoice already sent, and every Stripe
+ * operation refuses it either way.
  */
 export const orderCollection = pgEnum("order_collection", [
   "stripe_invoice",
   "cash",
   "card_machine",
+  /**
+   * Charged to a hotel guest's room (fifth-loop ideas, item 57; ADR
+   * 20261009-counter-payments, amended 2026-10-16): the resort's front desk
+   * collects it and settles with the shop monthly. Counter money like cash,
+   * with the room number, and the hotel when the shop names one.
+   */
+  "room_charge",
 ]);
 
 /**
@@ -651,10 +695,35 @@ export const orders = pgTable(
     paidAt: timestamp("paid_at", { withTimezone: true }),
     voidedAt: timestamp("voided_at", { withTimezone: true }),
     refundedAt: timestamp("refunded_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * When an open invoice was claimed for counter money and Stripe has not yet
+     * answered the out-of-band mark (`recordPaymentOnOpenOrder`). Set with the
+     * claim, cleared when the claim is settled or given back; a stamp older
+     * than `STALE_AFTER_MS` belonged to a call that died.
+     */
+    counterClaimedAt: timestamp("counter_claimed_at", { withTimezone: true }),
+    /** The room a `room_charge` order was charged to, as the front desk names it. */
+    roomNumber: text("room_number"),
+    /** The hotel holding that room, when the shop names one. */
+    roomHotel: text("room_hotel"),
+    /**
+     * When the nightly sweep last tried and failed to void this unpaid public
+     * package invoice, and how many times it has (issue #2304). Null and zero
+     * on every order it has not refused; a refused one waits a few nights
+     * before the next try, so a few invoices Stripe will never void cannot
+     * fill the sweep's batch (`src/db/stale-package-invoices.ts`).
+     */
+    autoVoidFailedAt: timestamp("auto_void_failed_at", { withTimezone: true }),
+    autoVoidFailures: integer("auto_void_failures").notNull().default(0),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("orders_person_id_idx").on(table.personId),
     uniqueIndex("orders_stripe_invoice_unique").on(table.stripeInvoiceId),
     index("orders_stripe_payment_intent_idx").on(table.stripePaymentIntentId),
     index("orders_shop_status_idx").on(table.shopId, table.status),
@@ -668,13 +737,36 @@ export const orders = pgTable(
     // half that was scanning every order the shop has ever written.
     index("orders_description_trgm_idx").using("gin", sql`${table.description} gin_trgm_ops`),
     check("orders_total_nonnegative", sql`${table.totalCents} >= 0`),
+    check(
+      "orders_room_charge_names_room",
+      // `::text`, so the check never names the enum value it is created with:
+      // Postgres refuses a new enum value used in the transaction that adds it.
+      sql`(${table.collection}::text = 'room_charge') = (${table.roomNumber} is not null)`,
+    ),
+    check(
+      "orders_room_hotel_only_on_room_charge",
+      sql`${table.roomHotel} is null or ${table.collection}::text = 'room_charge'`,
+    ),
     check("orders_pass_through_nonnegative", sql`${table.passThroughCents} >= 0`),
     check("orders_tax_nonnegative", sql`${table.taxCents} >= 0`),
     check("orders_amount_paid_nonnegative", sql`${table.amountPaidCents} >= 0`),
     check("orders_refunded_nonnegative", sql`${table.refundedCents} >= 0`),
+    check("orders_auto_void_failures_nonnegative", sql`${table.autoVoidFailures} >= 0`),
+    /**
+     * A Stripe invoice carries all three ids. Money taken at the counter
+     * carries none, or, when it settled an invoice already sent (fourth UX
+     * review, item 19), that invoice's three ids and never a PaymentIntent:
+     * Stripe took no card for it. The ids stay so diver erasure still files
+     * the Stripe customer's deletion request (`src/db/anonymize.ts`).
+     */
     check(
       "orders_stripe_ids_match_collection",
-      sql`(${table.collection} = 'stripe_invoice' and ${table.stripeAccountId} is not null and ${table.stripeCustomerId} is not null and ${table.stripeInvoiceId} is not null) or (${table.collection} <> 'stripe_invoice' and ${table.stripeAccountId} is null and ${table.stripeCustomerId} is null and ${table.stripeInvoiceId} is null and ${table.stripePaymentIntentId} is null)`,
+      sql`(${table.collection} = 'stripe_invoice' and ${table.stripeAccountId} is not null and ${table.stripeCustomerId} is not null and ${table.stripeInvoiceId} is not null) or (${table.collection} <> 'stripe_invoice' and ${table.stripePaymentIntentId} is null and ((${table.stripeAccountId} is null and ${table.stripeCustomerId} is null and ${table.stripeInvoiceId} is null) or (${table.stripeAccountId} is not null and ${table.stripeCustomerId} is not null and ${table.stripeInvoiceId} is not null)))`,
+    ),
+    /** A counter claim exists only on an open invoice whose method is counter money. */
+    check(
+      "orders_counter_claim_open",
+      sql`${table.counterClaimedAt} is null or (${table.status} = 'open' and ${table.collection} <> 'stripe_invoice' and ${table.stripeInvoiceId} is not null)`,
     ),
   ],
 );
@@ -711,7 +803,7 @@ export const stripeWebhookEvents = pgTable(
     /** The connected account the event happened on; null for platform-only events. */
     account: text("account"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
-    receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+    receivedAt: appNowTimestamp("received_at").notNull(),
     /**
      * When this event's handling was claimed. Non-null means "claimed, and
      * treat every redelivery as a duplicate"; null means the delivery was
@@ -724,7 +816,7 @@ export const stripeWebhookEvents = pgTable(
      * existing rows): those events were all handled successfully under the
      * old model, and a migration must not silently re-open them to redelivery.
      */
-    claimedAt: timestamp("claimed_at", { withTimezone: true }).defaultNow(),
+    claimedAt: appNowTimestamp("claimed_at"),
   },
   (table) => [
     index("stripe_webhook_events_account_type_idx").on(table.account, table.type, table.occurredAt),
@@ -926,7 +1018,7 @@ export const bookingCheckouts = pgTable(
      */
     paidAfterCloseAt: timestamp("paid_after_close_at", { withTimezone: true }),
     paidAfterCloseCents: integer("paid_after_close_cents"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("booking_checkouts_stripe_session_unique").on(table.stripeSessionId),
@@ -1045,9 +1137,10 @@ export const bookingCheckoutBookings = pgTable(
  * is not recorded at all. While `closed_at` is null the owner sees a Today row
  * with the amount and the evidence deadline.
  *
- * Informs, never moves money: a lost dispute is Stripe taking the funds back,
- * which the shop sees in its own Stripe balance; nothing here rewrites the
- * order or the seat.
+ * Never moves money and never rewrites the order or the seat. A dispute the
+ * shop lost is written as a reversal line of its own (`reversed_at`, issue
+ * #2292): the order still says what was paid, and the order page and Reports'
+ * money out show what the bank took back.
  */
 export const paymentDisputes = pgTable(
   "payment_disputes",
@@ -1073,12 +1166,19 @@ export const paymentDisputes = pgTable(
     /** Set once the dispute is decided (won, lost, or a warning closed). */
     closedAt: timestamp("closed_at", { withTimezone: true }),
     /**
+     * The reversal line (issue #2292): when the dispute closed `lost`, so its
+     * amount left the shop's money. Set by the first lost close and never
+     * cleared or moved, so a replayed close writes no second reversal. Null
+     * for every dispute not lost.
+     */
+    reversedAt: timestamp("reversed_at", { withTimezone: true }),
+    /**
      * The `created` time of the newest event applied. An older event delivered
      * late never overwrites a newer one — Stripe does not promise order.
      */
     lastEventAt: timestamp("last_event_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("payment_disputes_stripe_dispute_unique").on(table.stripeDisputeId),
@@ -1098,15 +1198,16 @@ export const paymentDisputes = pgTable(
 /**
  * **A Stripe payout**: money Stripe moved from a shop's connected account to
  * its bank, one row per Stripe payout, kept current by the `payout.paid` and
- * `payout.failed` webhooks (ADR 20261012-payouts-reach-diveday).
+ * `payout.failed` and `payout.canceled` webhooks (ADR 20261012-payouts-reach-diveday).
  *
  * This is the line that ties Reports to the bank statement: "Paid out $1,842
  * on Oct 3, covering Sep 27 to Oct 1". The amount, currency and arrival date
  * are Stripe's own, verbatim off the event. `covered_from`/`covered_to` and
  * `fee_cents` are a summary of the payout's balance transactions, asked of
- * Stripe once when the payout is paid and never at render; null means Stripe
- * did not say (a manual payout, which Stripe will not itemize, or a read that
- * was refused), never zero.
+ * Stripe once, after the paid webhook has answered, and never at render; null means Stripe
+ * did not say (a read that was refused), never zero. A manual or instant
+ * payout, which Stripe will not itemize, has a fee from its own balance
+ * transaction and no span.
  *
  * Informs, never moves money. A failed payout is Stripe's to retry and the
  * shop's to fix in its own Stripe account; DiveDay only says so.
@@ -1136,8 +1237,8 @@ export const stripePayouts = pgTable(
     feeCents: integer("fee_cents"),
     /** The `created` time of the newest event applied; an older one never overwrites it. */
     lastEventAt: timestamp("last_event_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
@@ -1185,7 +1286,7 @@ export const stripeRefundFailures = pgTable(
     failureReason: text("failure_reason"),
     owedUntilRefundedCents: integer("owed_until_refunded_cents").notNull(),
     failedAt: timestamp("failed_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("stripe_refund_failures_refund_unique").on(table.stripeRefundId),
@@ -1246,7 +1347,7 @@ export const tips = pgTable(
     amountCents: integer("amount_cents").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     completedAt: timestamp("completed_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("tips_stripe_session_unique").on(table.stripeSessionId),
@@ -1272,7 +1373,7 @@ export const orderLineItems = pgTable(
     description: text("description").notNull(),
     quantity: integer("quantity").notNull().default(1),
     unitAmountCents: integer("unit_amount_cents").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("order_line_items_order_idx").on(table.orderId),
@@ -1350,8 +1451,16 @@ export const paymentOperationIntents = pgTable(
     tripPromoId: uuid("trip_promo_id").references(() => tripLastMinutePromos.id),
     /** The Stripe object id once known, even if the local finalize write then failed. */
     stripeObjectId: text("stripe_object_id"),
+    /**
+     * Set only on a parked unattributed reversal (`parkStripeReversal`, issue
+     * #2293): the money a dashboard refund on a party checkout took that no
+     * seat carries yet. Staff match it to seats from the Orders index; each
+     * match takes what the seat held off this figure, and the row resolves at
+     * zero. Null on every other intent.
+     */
+    amountCents: integer("amount_cents"),
     errorMessage: text("error_message"),
-    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    startedAt: appNowTimestamp("started_at").notNull(),
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
   },
   (table) => [
@@ -1382,6 +1491,10 @@ export const paymentOperationIntents = pgTable(
     check(
       "payment_operation_intents_single_promo",
       sql`${table.promoCodeId} is null or ${table.tripPromoId} is null`,
+    ),
+    check(
+      "payment_operation_intents_amount_nonnegative",
+      sql`${table.amountCents} is null or ${table.amountCents} >= 0`,
     ),
   ],
 );
@@ -1457,7 +1570,7 @@ export const importedPaymentHistory = pgTable(
     dedupeKey: text("dedupe_key").notNull(),
     /** Always set — this table only receives imports, never hand-created payments. */
     importedAt: timestamp("imported_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("imported_payment_history_shop_person_idx").on(
@@ -1493,6 +1606,7 @@ export type BookingPayment = typeof bookingPayments.$inferSelect;
 export type PaymentStatus = (typeof paymentStatus.enumValues)[number];
 
 export type PaymentEventOperation = (typeof paymentEventOperation.enumValues)[number];
+export type ManualPaymentMethod = (typeof manualPaymentMethod.enumValues)[number];
 
 export type ShopStripeAccount = typeof shopStripeAccounts.$inferSelect;
 

@@ -5,6 +5,7 @@ import {
   boatSafetyNoticeTone,
   type MustCarryKitKind,
 } from "@/lib/boat-safety";
+import { formatCalendarDate } from "@/lib/calendar-date";
 import type { GearServiceKind } from "@/lib/gear";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
@@ -17,6 +18,10 @@ import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
  * Total over every clock that can carry a date, so a new clock is a compile
  * error here rather than a raw code on a manifest. `note` never reaches a
  * notice (it has no clock) and borrows the printed-date wording if it ever did.
+ *
+ * A lapsed paper names the day it ran out, "Hull insurance ended Oct 8, 2026",
+ * rather than a count of days since: the date is what the owner checks the
+ * policy against (H-136). A calendar date, so it has no zone to name.
  */
 const KIT_KEYS: Record<GearServiceKind, { due: StaffMessageKey; expired: StaffMessageKey }> = {
   aed_pads: { due: "boatSafety.kit.aedPads.due", expired: "boatSafety.kit.aedPads.expired" },
@@ -35,18 +40,29 @@ const KIT_KEYS: Record<GearServiceKind, { due: StaffMessageKey; expired: StaffMe
   o2_clean: { due: "boatSafety.kit.o2Clean.due", expired: "boatSafety.kit.o2Clean.expired" },
 };
 
-const PAPER_KEYS: Record<BoatPaper, { due: StaffMessageKey; expired: StaffMessageKey }> = {
+const PAPER_KEYS: Record<
+  BoatPaper,
+  { due: StaffMessageKey; expired: StaffMessageKey; beforeDeparture: StaffMessageKey }
+> = {
+  coi: {
+    due: "boatSafety.paper.coi.due",
+    expired: "boatSafety.paper.coi.expired",
+    beforeDeparture: "boatSafety.paper.coi.beforeDeparture",
+  },
   inspection: {
     due: "boatSafety.paper.inspection.due",
     expired: "boatSafety.paper.inspection.expired",
+    beforeDeparture: "boatSafety.paper.inspection.beforeDeparture",
   },
   registration: {
     due: "boatSafety.paper.registration.due",
     expired: "boatSafety.paper.registration.expired",
+    beforeDeparture: "boatSafety.paper.registration.beforeDeparture",
   },
   insurance: {
     due: "boatSafety.paper.insurance.due",
     expired: "boatSafety.paper.insurance.expired",
+    beforeDeparture: "boatSafety.paper.insurance.beforeDeparture",
   },
 };
 
@@ -60,8 +76,12 @@ export function boatSafetyHeadingText(t: StaffTranslator, boatName: string): str
   return t("boatSafety.heading", { boatName });
 }
 
-/** One notice, as one sentence. */
-export function boatSafetyNoticeText(t: StaffTranslator, notice: BoatSafetyNotice): string {
+/** One notice, as one sentence. `locale` dates a lapsed paper. */
+export function boatSafetyNoticeText(
+  t: StaffTranslator,
+  locale: string,
+  notice: BoatSafetyNotice,
+): string {
   switch (notice.code) {
     case "over_certificate":
       return t(
@@ -71,11 +91,20 @@ export function boatSafetyNoticeText(t: StaffTranslator, notice: BoatSafetyNotic
           limit: notice.limit,
         },
       );
+    case "over_total_persons":
+      return t(
+        notice.counted
+          ? "boatSafety.overTotalPersons.aboard"
+          : "boatSafety.overTotalPersons.booked",
+        { persons: notice.persons, limit: notice.limit },
+      );
     case "kit_missing":
       return t(MISSING_KEYS[notice.kind]);
     case "paper": {
       const keys = PAPER_KEYS[notice.paper];
-      return t(notice.expired ? keys.expired : keys.due, { days: notice.days });
+      if (!notice.expired) return t(keys.due, { days: notice.days });
+      const date = formatCalendarDate(notice.dueOn, locale);
+      return t(notice.beforeDeparture ? keys.beforeDeparture : keys.expired, { date });
     }
     case "kit_clock": {
       const keys = KIT_KEYS[notice.clock];
@@ -96,13 +125,14 @@ export function boatSafetyNoticeText(t: StaffTranslator, notice: BoatSafetyNotic
  */
 export function boatSafetySection(
   t: StaffTranslator,
+  locale: string,
   safety: { boatName: string; notices: readonly BoatSafetyNotice[] } | null,
 ): BoatSafetySection | null {
   if (!safety || safety.notices.length === 0) return null;
   return {
     heading: boatSafetyHeadingText(t, safety.boatName),
     lines: safety.notices.map((notice) => ({
-      text: boatSafetyNoticeText(t, notice),
+      text: boatSafetyNoticeText(t, locale, notice),
       tone: boatSafetyNoticeTone(notice),
     })),
   };

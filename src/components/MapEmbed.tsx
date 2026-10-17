@@ -45,8 +45,12 @@ export function MapEmbed({
 }) {
   const iframeHeightClass = showAttribution ? "h-[calc(100%+4rem)]" : "h-[calc(100%+8rem)]";
 
+  // `bg-surface-sunken` is the ground under the frame (issue #2013): the iframe
+  // paints over it once loaded, and until then, or for good where the host is
+  // blocked, the route still has a surface rather than white or the browser's
+  // error page.
   return (
-    <div className={`relative overflow-hidden ${className}`}>
+    <div className={`relative overflow-hidden bg-surface-sunken ${className}`}>
       {/* The size is declared, not inferred from opposing insets. An `<iframe>`
           is a *replaced* element, so an `auto` width resolves to its intrinsic
           300×150 and the box is then over-constrained — CSS drops `right` and

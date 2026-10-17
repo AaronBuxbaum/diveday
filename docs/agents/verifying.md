@@ -44,11 +44,12 @@ afternoon on 2026-09-05: slice 16g's four columns, 16i's `recap_pulses` table an
 `addressed_by_person_id`, and 16j-B's two `person_id` columns. Every one of those agents had run
 the documented local gate correctly.
 
-An import-graph run (`vitest related`, the pre-push gate's step 4) catches all four, which is why it is a
-pre-push step rather than a mid-iteration convenience. Know its cost before you start it: the schema sits
+An import-graph run (`vitest related`) catches all four, and the pre-push gate's full unit run (step 3)
+does too, which is why the full run is a pre-push step rather than a mid-iteration convenience. Know an
+import-graph run's cost before you start one mid-iteration: the schema sits
 in nearly every import chain (every module under `src/db/schema/` is reached through its `index.ts`), so a diff touching it selects the **whole** suite — 9,391 of 9,391
 entries, measured 2026-09-06 — and on a stack the diff against `origin/main` is every layer
-beneath you, so that is a floor rather than a ceiling. That run belongs to CI. When you touched
+beneath you, so that is a floor rather than a ceiling. That run belongs to the pre-push gate. When you touched
 a file under `src/db/schema/`, name the four by path instead:
 
 The command is step 3 of the verify skill's checklist: 40 tests, about a minute, and it catches
@@ -66,7 +67,7 @@ cancelled, and 90 failed jobs inside them. Classified from their annotations and
 | 23 unit | tests that read source from disk (`form.test.tsx`, `button.test.ts`, `EntryShell.test.tsx`, the erasure and rehearsal coverage scans), and the export snapshot after a seed change | yes, but `vitest --changed` cannot select a test that imports nothing it checks |
 | 9 safeguards | the `guards` Vitest project (`eyebrow-way-up`, `focus-ring`), and four pull request bodies | yes; no local step ran either |
 | 2 typecheck | fixtures a merge from the layer below broke | yes; the layer's checks had run before the merge |
-| 5 visual, 2 reg-suit | one capture that timed out on a moved heading | by a filtered capture run |
+| 5 visual, 2 reg-suit | one capture that timed out on a moved heading | yes: the gate runs the captures a diff names, in light mode (`selectCaptures`, `scripts/e2e-affected.mjs`) |
 | 2 build | Google Fonts unreachable at build time | no: infrastructure |
 
 So the problem was never flakiness. A stacked change that breaks a spec breaks it on every layer
@@ -74,24 +75,41 @@ above it, which is how one deleted sentence became twelve red Playwright shards.
 
 `pnpm verify:push` (`scripts/verify-push.mjs`) runs the local half of every row above against
 the layer below (`stackBase` in `scripts/e2e-affected.mjs`; `origin/main` off a stack), stops at
-the first red step, and writes a stamp naming HEAD into the git directory:
+the first red step, and writes a stamp naming HEAD into the git directory (keyed by sha in the
+common git dir too, so a push from any worktree finds it):
 
 1. `pnpm regen` (with the export snapshot when seed, schema or export changed), then a clean
    tree: a generated file the diff left stale is committed, not discovered by CI.
 2. `pnpm lint`, `pnpm typecheck`, `check:repo`, and the `guards` project (seconds).
-3. Every `src/` test that reads files from disk, 157 of them, about two and a half minutes.
-4. `vitest related` over the changed code files, which follows imports as `--changed` does but
-   without Vitest's `forceRerunTriggers` (any `package.json` edit makes `--changed` all 1,490
-   files); after a schema edit, the named coverage guards instead, because the schema reaches
-   the whole suite.
-5. The Playwright specs `pnpm e2e:affected` selects, after an `e2e:build` it reuses while
+3. The whole unit suite, as CI's four shards (`--project '!guards' --shard=n/4`), one step each.
+   Until 2026-10-15 this was every `src/` test that reads files from disk plus `vitest related`
+   over the changed code, and every other unit test was CI's first run; Aaron chose "run
+   everything" over that saving. CI runs the four shards in about six minutes each.
+4. The Playwright specs `pnpm e2e:affected` selects, after an `e2e:build` it reuses while
    nothing the build reads has changed (the tree minus tests, `e2e/` and docs, so a commit that
    only fixes a spec reuses it). *Strong*: specs the diff edits or whose helper it edits, specs
    quoting text the diff removed (a locale value, JSX text, a seed literal), and specs visiting a
-   route whose own directory the diff edits. *Reach*: specs visiting a route whose page imports an
-   edited module, or a hub route (one more than ten specs visit), run narrowest first while they
-   stay inside five recorded CI-minutes and the whole selection inside fifteen; the rest are named
-   and left to CI. A diff of only unit tests runs no spec and builds nothing.
+   route whose own directory the diff edits. *Smoke*: five tests (`SMOKE`: booking, a waiver,
+   check-in, roll call offline, sign-in), run as `file:line` whenever the app changed. *Reach*:
+   specs visiting a route the diff's changed names reach (`scripts/symbol-reach.mjs`, name by
+   name rather than file by file), or a hub route (one more than ten specs visit), ranked by how
+   much of the diff's vocabulary a spec names, then narrowest first. Every selected spec runs, in
+   steps of 25: until 2026-10-15 a time budget left the rest to CI, and on #2619 that was 30 of
+   129, one of which went red there. The run uses as many Playwright workers as the box has free
+   compute for, and no more (Aaron, 2026-10-15): `max(1, min(floor((cores - one-minute load) /
+   3), cores/2))`, read before each step and printed with it; an `E2E_WORKERS` you set wins. Three
+   cores per worker because each brings its own Next server and Chromium: on an idle four-core
+   cloud container two workers timed out on specs CI passes (`readiness.spec.ts:131`,
+   `diver-merge.spec.ts:42`), and one passed them, so CI's 15-second test ceiling stays the bar
+   ([why](#why-a-spec-times-out-here-and-not-on-ci): the per-test reset, measured). The
+   container's older fallback Chromium, which the run names once, is not the cause: a Playwright
+   pinned to that same browser failed identically. A diff of only unit tests runs no spec and builds nothing.
+   `--commit <sha>` replays one commit; over 104 commits the median reach fell from 65 specs to
+   19 with the name walk.
+
+A green run ends with **"Not run here"**, also recorded as `notRunHere` in the stamp: the
+Playwright specs the diff neither names nor reaches, and the visual captures it does not name (the ones it names run, in light mode, after the specs; dark mode and the reg-suit comparison stay CI's). CI runs those first, so a report says "verify:push green",
+never "all tests pass locally".
 
 Replayed against the commits that broke specs on 2026-10-11 and 2026-10-12, the selection ran
 the broken spec in five of six: the sightings disclaimer, the reviews count, the dive-site editor
@@ -105,8 +123,92 @@ layer below is a new commit and needs a new run, which is the typecheck row. The
 reason written in front of the command, `DIVEDAY_PUSH_UNVERIFIED="<why>" git push …`, for the
 two cases the verify skill allows. Each one is logged with its reason and the sha to
 `.claude/.hook-log` (`recordOverride` in `scripts/hook-log.mjs`), and the next session's opening
-line counts them, so an escape hatch used every day shows up as a number. A spec that is red on the base too is still named: run it on
-the base, say so in the PR, and push with the reason.
+line counts them, so an escape hatch used every day shows up as a number.
+
+### The quick run, and fixing forward
+
+On 2026-10-16 Aaron called time on the full run as the default: "stop the pattern of waiting for
+the full validations on these, just batch up work into single large PRs and stack them, adapting
+when CI fails". On a four-core cloud container the full run took most of an hour for a change
+that reached many routes, and every thread behind it in the stack queue waited too.
+
+So `pnpm verify:push --quick` is the run a push expects. It keeps steps 1 and 2 above (regen and
+a clean tree, lint, typecheck, `check:repo`, the `guards` project: the typecheck-after-a-merge
+and safeguards rows, in minutes) and replaces 3 and 4 with `vitest related` over the changed
+files, which also runs a changed test file itself, plus the unit files the base is red on. No
+e2e build, no browser. Its stamp says `"mode": "quick"` and its `notRunHere` names what it left
+to CI: the unit tests the diff does not import (the source-reading scans among them) and every
+Playwright spec. The guard accepts either stamp and still refuses a commit with none, an
+override whose reason blames the base, and a push that forks the stack.
+
+The trade is explicit: CI is now the first to run the browser for most pushes, and a red job is
+the next commit on the same layer, worked as soon as it comes back. The base-CI read below runs
+in both modes, so a quick run on a red base still refuses until the base's named unit files pass
+here or `--base-red` names them; a red Playwright job on the base is CI's to confirm. The full
+run is still there for a change where the browser's answer is worth the hour before CI's.
+
+### Why a spec times out here and not on CI
+
+Measured 2026-10-17 on a four-core cloud container (Intel Xeon at 2.8 GHz) on a built server,
+for #2624 and #2568. **The per-test `/api/test/reset` is the cost, not cold routes.** It restores
+the demo schedule with about 830 statements (303 selects, 258 inserts, 158 updates, 110 deletes,
+the deletes 1.8 s of it) and costs 3.9 to 5.3 s of single-core server CPU on every run, wall
+time matching CPU time, so it is compute and not waiting. It is a test-scoped fixture, so it is
+billed to the test's 15 s budget, and with the sign-in it leaves the body 6 to 8.5 s:
+
+| Run (load average) | Fixture setup | of which reset | Body before the 15 s ceiling | Result |
+| --- | --- | --- | --- | --- |
+| `readiness.spec.ts:131` ×4, 1 worker (3 to 6) | 6.6 to 8.3 s | 4.5 to 4.9 s | 7.0 to 8.7 s | 4 of 4 timed out |
+| `readiness.spec.ts:131` ×4, 2 workers (6 to 12) | 9.0 to 9.7 s | 5.1 to 5.6 s | 5.7 to 6.3 s | 4 of 4 timed out |
+| `manifest.spec.ts` "plan changed", "transposed" ×6, 1 worker (5 to 16) | 6.3 to 8.9 s | 4.4 to 5.3 s | 6.6 to 9.0 s | 5 of 12 timed out |
+
+A warmed route answers in 10 to 250 ms, so widening `e2e/global-setup.ts`'s warm-up list buys
+nothing. CI records 45.4 s for all eight `readiness.spec.ts` tests, about 5.7 s a test with its
+reset, so its runners do the same work several times faster; their per-request timings could not
+be read from here (job logs and artifacts are refused). The `?checkpoint=after_dive_1` RSC request
+#2568 saw abort does too in these runs, answered 200 in 35 ms, and the page reaches the
+checkpoint: noise, as #2332 found for the Divers request. Neither manifest test has failed on CI
+in the 300 failed CI runs from 2026-09-05 to 2026-10-16 (1,348 failure annotations read).
+
+So a local timeout in a spec that pays a reset and a long walk, with no other error before
+"Test timeout of 15000ms exceeded", is this container's CPU; CI's ceiling stays the bar and the
+timeout is not raised. Check the trace's `Before Hooks` step before debugging the body: past
+6 s, it is this. A cheaper reset is the fix that would move it.
+
+### A red base
+
+The gate as first built had one hole, and on 2026-10-14 it was the whole of what went red. Main
+went red at d5014c5f1, a dependency bump pushed straight to `main` with no PR (lint, and PGlite
+0.5.10 hanging in `close()` on two unit shards). Every layer that merged main inherited it, and
+the override's commonest reason became "red on main, not mine": #2594 pushed that way, and #2608
+pushed past a worktree stamp the guard could not yet see. A push on a red base is certain to be
+red, on that layer and on every layer above it, and each of those layers then pushes again to
+merge the fix. Since 19:49 that day, eight CI runs started across six open PRs, most of them
+merges from below.
+
+So `verify:push` reads the layer below's latest CI before anything else (`scripts/base-ci.mjs`):
+
+- **Green**: one line, and on.
+- **Still running**: a note. If it goes red, this layer is red with it; read it again before
+  merging it a second time.
+- **Red**: Lint, Typecheck and Repository safeguards are answered by the gate's own steps, so a
+  green run here is the fix carried. A red unit or Playwright job adds the test files its
+  annotations name to this run (the unit shards annotate each failed file through
+  `src/test/failed-files-reporter.ts`; Playwright annotates each failed spec), and the stamp
+  means they passed here. A red job that names no file is refused until the author reads its log
+  and names the files: `pnpm verify:push --base-red <file…>`, which then run here too. Visual
+  capture and reg-suit are left out: a push approves those (**visual-triage**). So is every run
+  the base got from an event a PR never runs on (a schedule or the Run workflow button: CodeQL,
+  Simulate a day, Follow-ups): its red is not something this layer inherits or can fix.
+- **Unreadable** (no `gh`, no network): a line saying so, and on. The gate fails open; CI still
+  answers.
+
+The stamp records what it found (`baseCi`). The fix for a red base goes where the break is when
+that layer is still open (its owner, through the coordinator), or rides in this layer when it
+cannot wait; either way, nothing is pushed red on purpose. `scripts/guard-push.mjs` refuses an
+override whose reason says the red came from elsewhere ("red on main", "not mine", "inherited",
+"flake", "pre-existing"), and names the base check instead. The override is left for its two
+cases: work saved before the container is reclaimed, and a question only CI can answer.
 
 The PR body rows are a separate gate: `scripts/guard-pr-body.mjs` runs `check-pr-body.mjs`
 before the GitHub MCP creates or edits a pull request.

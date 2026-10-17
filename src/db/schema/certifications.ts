@@ -9,6 +9,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { appNowTimestamp } from "./columns";
 import {
   certificationAgency,
   certificationLevel,
@@ -215,15 +216,38 @@ export const certifications = pgTable(
      * path. Set only alongside `issuedByShopAt`.
      */
     issuedByPersonId: uuid("issued_by_person_id").references(() => people.id),
+    /**
+     * **When the shop told the agency about this card** (fifth-loop ideas,
+     * item 46): the instructor's "Processed with PADI" after Certify. It
+     * records the shop's own act and issues nothing; the agency's card still
+     * comes from the agency. Set only on a card the shop issued.
+     */
+    processedWithAgencyAt: timestamp("processed_with_agency_at", { withTimezone: true }),
+    /** The staff member who ticked it; set only alongside `processedWithAgencyAt`. */
+    processedByPersonId: uuid("processed_by_person_id").references(() => people.id),
     /** Soft-archive: a deleted card keeps its row for safety history but drops
      * out of every readiness/roster read (ADR 20260719-crud-archive-semantics). */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /** Staff member who removed the card, when the removal was accountable. */
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("certifications_person_id_idx").on(table.personId),
     index("certifications_shop_person_idx").on(table.shopId, table.personId),
+    // Partial: almost every card is never processed here, and a merge or a
+    // demo cascade probes this foreign key (`people-fk-indexes.test.ts`).
+    index("certifications_processed_by_person_idx")
+      .on(table.processedByPersonId)
+      .where(sql`${table.processedByPersonId} is not null`),
+    check(
+      "certifications_processed_only_when_issued",
+      sql`${table.processedWithAgencyAt} is null or ${table.issuedByShopAt} is not null`,
+    ),
     // Partial on the live rows only, so archiving a card frees its number for
     // re-entry (e.g. a renewed card carrying the same identifier).
     // Case-insensitive so "ab1234" and "AB1234" can't create two live rows
@@ -336,6 +360,16 @@ export const specialtyCertifications = pgTable(
     /** See certifications.reviewedByPersonId. */
     reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
     /**
+     * **The agency's own page said so** — the twin of
+     * `certifications.agencyCheckedAt` (H-105, ADR
+     * 20261008-cert-check-extension), read there. Set when the review that
+     * certified this card was a check the DiveDay browser extension ran on the
+     * agency's lookup page and the page listed this specialty for this diver;
+     * `reviewNote` then holds the agency's words, and Undo clears the stamp
+     * with the rest of the review. Null for every other review.
+     */
+    agencyCheckedAt: timestamp("agency_checked_at", { withTimezone: true }),
+    /**
      * Import provenance, mirroring `certifications.importedAt` — an imported
      * specialty card lands `verified` and flagged
      * (ADR 20260725-import-specialty-cards). It diverges from a ladder card in
@@ -405,14 +439,42 @@ export const specialtyCertifications = pgTable(
     }),
     /** The live staff member whose tap issued this card. Set only alongside `issuedByShopAt`. */
     issuedByPersonId: uuid("issued_by_person_id").references(() => people.id),
+    /**
+     * When the shop told the agency about this card: the same stamp as
+     * `certifications.processedWithAgencyAt` (item 46, dive-domain review F4).
+     * Set only on a card the shop issued.
+     */
+    processedWithAgencyAt: timestamp("processed_with_agency_at", { withTimezone: true }),
+    /** The staff member who ticked it; set only alongside `processedWithAgencyAt`. */
+    processedByPersonId: uuid("processed_by_person_id").references(() => people.id),
+    /**
+     * **The agency check that listed this card** (layer 3 of ADR
+     * 20261008-cert-check-extension): the level card whose match found it on
+     * the same agency page, set only when a staffer added it from that offer.
+     * Three things read it. The row's "Listed on PADI's page." says the review
+     * note is the agency's words, not a staffer's. The level check's Undo
+     * archives the still-pending rows it spawned. And a row it marks with no
+     * number (an agency that numbers each card, the page showing none) is
+     * confirmed through the card sighting, never the one tap.
+     */
+    listedFromCertificationId: uuid("listed_from_certification_id").references(
+      () => certifications.id,
+    ),
     /** Soft-archive, mirroring `certifications.deletedAt`. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /** Staff member who removed the card, when the removal was accountable. */
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("specialty_certifications_shop_person_idx").on(table.shopId, table.personId),
+    index("specialty_certifications_processed_by_person_idx")
+      .on(table.processedByPersonId)
+      .where(sql`${table.processedByPersonId} is not null`),
+    check(
+      "specialty_certifications_processed_only_when_issued",
+      sql`${table.processedWithAgencyAt} is null or ${table.issuedByShopAt} is not null`,
+    ),
     // Case-insensitive like certifications_shop_agency_identifier_unique (CR-009),
     // but keyed on the **specialty** as well — an agency number identifies the
     // *diver*, not the card (docs/product/glossary.md, "C-card": agency, level,
@@ -438,7 +500,9 @@ export const specialtyCertifications = pgTable(
     // gate waits for somebody to look at the card).
     //
     // The self-declared exemption is unchanged and is conditioned on `pending`
-    // for the same reason.
+    // for the same reason. So is the third: a card an agency check listed
+    // (`listedFromCertificationId`) at an agency that numbers each card, whose
+    // page showed none. Its confirm is the card sighting, which writes one.
     //
     // `is not null` leads, and is not redundant with the length test: a CHECK
     // passes when its expression is TRUE *or NULL*, and `length(btrim(NULL))`
@@ -447,7 +511,7 @@ export const specialtyCertifications = pgTable(
     // afternoon-long bug the level card's own comment records.
     check(
       "specialty_certifications_identifier_present_unless_unsighted",
-      sql`(${table.identifier} is not null and length(btrim(${table.identifier}, E' \\t\\n\\r\\f\\v')) > 0) or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending') or (${table.issuedByShopAt} is not null and ${table.status} = 'pending')`,
+      sql`(${table.identifier} is not null and length(btrim(${table.identifier}, E' \\t\\n\\r\\f\\v')) > 0) or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending') or (${table.issuedByShopAt} is not null and ${table.status} = 'pending') or (${table.listedFromCertificationId} is not null and ${table.status} = 'pending')`,
     ),
   ],
 );
@@ -518,7 +582,7 @@ export const priorVisits = pgTable(
     dedupeKey: text("dedupe_key").notNull(),
     /** Always set — every row here arrived by import, never by hand. */
     importedAt: timestamp("imported_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("prior_visits_shop_person_idx").on(table.shopId, table.personId, table.visitedOn),
@@ -556,6 +620,16 @@ export const nitroxCertifications = pgTable(
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
     /** See certifications.reviewedByPersonId. */
     reviewedByPersonId: uuid("reviewed_by_person_id").references(() => people.id),
+    /**
+     * **The agency's own page said so** — the twin of
+     * `certifications.agencyCheckedAt` (H-105, ADR
+     * 20261008-cert-check-extension), read there. Set when the review that
+     * certified this card was a check the DiveDay browser extension ran on the
+     * agency's lookup page and the page listed this nitrox card for this diver;
+     * `reviewNote` then holds the agency's words, and Undo clears the stamp
+     * with the rest of the review. Null for every other review.
+     */
+    agencyCheckedAt: timestamp("agency_checked_at", { withTimezone: true }),
     /**
      * Import provenance, mirroring `certifications.importedAt` — an imported
      * nitrox card lands `verified` (flagged) awaiting a staff confirm
@@ -599,14 +673,42 @@ export const nitroxCertifications = pgTable(
     }),
     /** The live staff member whose tap issued this card. Set only alongside `issuedByShopAt`. */
     issuedByPersonId: uuid("issued_by_person_id").references(() => people.id),
+    /**
+     * When the shop told the agency about this card: the same stamp as
+     * `certifications.processedWithAgencyAt` (item 46, dive-domain review F4).
+     * Set only on a card the shop issued.
+     */
+    processedWithAgencyAt: timestamp("processed_with_agency_at", { withTimezone: true }),
+    /** The staff member who ticked it; set only alongside `processedWithAgencyAt`. */
+    processedByPersonId: uuid("processed_by_person_id").references(() => people.id),
+    /**
+     * **The agency check that listed this card** (layer 3 of ADR
+     * 20261008-cert-check-extension): the level card whose match found it on
+     * the same agency page, set only when a staffer added it from that offer.
+     * Three things read it. The row's "Listed on PADI's page." says the review
+     * note is the agency's words, not a staffer's. The level check's Undo
+     * archives the still-pending rows it spawned. And a row it marks with no
+     * number (an agency that numbers each card, the page showing none) is
+     * confirmed through the card sighting, never the one tap.
+     */
+    listedFromCertificationId: uuid("listed_from_certification_id").references(
+      () => certifications.id,
+    ),
     /** Soft-archive, mirroring `certifications.deletedAt`. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /** Staff member who removed the card, when the removal was accountable. */
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("nitrox_certifications_shop_person_idx").on(table.shopId, table.personId),
+    index("nitrox_certifications_processed_by_person_idx")
+      .on(table.processedByPersonId)
+      .where(sql`${table.processedByPersonId} is not null`),
+    check(
+      "nitrox_certifications_processed_only_when_issued",
+      sql`${table.processedWithAgencyAt} is null or ${table.issuedByShopAt} is not null`,
+    ),
     // Case-insensitive, mirroring certifications_shop_agency_identifier_unique (CR-009).
     //
     // **Some agencies issue no standalone nitrox card.** RAID and GUE bundle
@@ -627,7 +729,7 @@ export const nitroxCertifications = pgTable(
     // why leading with the length test alone silently accepts a NULL.
     check(
       "nitrox_certifications_identifier_present_unless_self_declared",
-      sql`(${table.identifier} is not null and length(btrim(${table.identifier}, E' \\t\\n\\r\\f\\v')) > 0) or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending') or (${table.issuedByShopAt} is not null and ${table.status} = 'pending')`,
+      sql`(${table.identifier} is not null and length(btrim(${table.identifier}, E' \\t\\n\\r\\f\\v')) > 0) or (${table.selfDeclaredAt} is not null and ${table.status} = 'pending') or (${table.issuedByShopAt} is not null and ${table.status} = 'pending') or (${table.listedFromCertificationId} is not null and ${table.status} = 'pending')`,
     ),
   ],
 );

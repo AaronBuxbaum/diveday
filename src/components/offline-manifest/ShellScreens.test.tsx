@@ -25,6 +25,7 @@ describe("OfflineNoSavedTrip", () => {
         t={t}
         message="Nothing here"
         removedForOtherShop={null}
+        readFailed={false}
         discardNotice={null}
       />,
     );
@@ -32,11 +33,38 @@ describe("OfflineNoSavedTrip", () => {
       screen.getByRole("heading", { name: t("shared.offlineManifest.single.emptyHeading") }),
     ).toBeTruthy();
     expect(screen.getByRole("status").textContent).toBe("Nothing here");
+    expect(screen.queryByText(t("shared.offlineManifest.single.readFailedHint"))).toBeNull();
+  });
+
+  it("says the copy could not be opened when the store read failed (issue 2637)", () => {
+    render(
+      <OfflineNoSavedTrip
+        t={t}
+        message="Could not read"
+        removedForOtherShop={null}
+        readFailed
+        discardNotice={null}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: t("shared.offlineManifest.single.readFailedHeading") }),
+    ).toBeTruthy();
+    expect(screen.queryByText(t("shared.offlineManifest.single.emptyHeading"))).toBeNull();
+    expect(screen.queryByText(t("shared.offlineManifest.single.emptyHint"))).toBeNull();
+    expect(screen.getByText(t("shared.offlineManifest.single.readFailedHint"))).toBeTruthy();
+    // The error line stays.
+    expect(screen.getByRole("status").textContent).toBe("Could not read");
   });
 
   it("names the cross-shop purge instead of claiming nothing was ever saved", () => {
     render(
-      <OfflineNoSavedTrip t={t} message="Nothing here" removedForOtherShop discardNotice={null} />,
+      <OfflineNoSavedTrip
+        t={t}
+        message="Nothing here"
+        removedForOtherShop
+        readFailed={false}
+        discardNotice={null}
+      />,
     );
     expect(
       screen.getByRole("heading", {

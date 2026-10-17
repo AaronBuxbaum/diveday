@@ -109,6 +109,12 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // nothing on this end for them to tap — a dead end for a link that ages out
   // in a week on a booking made months ahead.
   waiver_expired: "action",
+  // "action", like `waiver_expired`: the diver signed once and the readiness
+  // page mints the fresh link they sign again on.
+  waiver_lapsed: "action",
+  // "action", like `waiver_lapsed`: the readiness page mints the fresh link
+  // the diver signs again on, today, while the old release still stands.
+  waiver_runs_out: "action",
   medical_review: "waiting",
   // "waiting", like the hold it settles: there has never been anything here for
   // the diver to do, and a refusal is the one state where that is most
@@ -121,6 +127,8 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // The student signs it on this very page (ADR 20261008-course-forms).
   course_form_unsigned: "action",
   course_form_guardian_missing: "action",
+  // The shop fixes its own mark; the diver has nothing to do.
+  training_mark_invalid: "waiting",
   certification_missing: "action",
   certification_pending: "waiting",
   // "action", not "waiting": the diver said a level and nobody has seen a card,
@@ -131,6 +139,9 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // "waiting": the diver's part is finishing the course they are booked on,
   // and the card is the instructor's to issue.
   certification_in_training: "waiting",
+  // "waiting": the diver has answered. What is left is the shop's call
+  // before the day, and nothing on this page can make it.
+  certification_not_yet: "waiting",
   specialty_missing: "action",
   specialty_pending: "waiting",
   // "waiting", not "action": the card is on file and came across in the shop's
@@ -272,6 +283,10 @@ export function buildDiverChecklist(
 export const REMINDER_ACTION_CODES = [
   "waiver_pending",
   "waiver_expired",
+  // As `waiver_expired`: the reminder links the readiness page, never a
+  // waiver token, and that page mints the fresh link.
+  "waiver_lapsed",
+  "waiver_runs_out",
   // Signed on the readiness page the reminder links to; no token of its own
   // ever rides in the message (ADR 20261008-course-forms).
   "course_form_unsigned",

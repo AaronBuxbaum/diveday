@@ -137,3 +137,29 @@ describe("the course editor's loading header", () => {
     expect(meta?.firstElementChild).toHaveClass("h-5");
   });
 });
+
+/**
+ * **Below `lg` the skeleton is the folded editor** (issue #2437): the loaded
+ * course and dive-site editors open one section and fold the rest, 2,300px
+ * against the 7,400 and 8,000 of three open sections' worth of fields, so the
+ * skeleton draws one open section and a ~90px stub per folded header. From
+ * `lg` up nothing folds, and the stubs are not drawn.
+ */
+describe("an editor's loading skeleton on a phone", () => {
+  it.each(SKELETONS)(
+    "draws %s as one open section and a stub for every other, 90px each",
+    (_name, Skeleton, sections) => {
+      const { container } = render(<Skeleton />);
+      const stubs = [...container.querySelectorAll("[data-folded-stub]")];
+      expect(stubs).toHaveLength(sections() - 1);
+      for (const stub of stubs) {
+        expect(stub).toHaveClass("h-22.5", "lg:hidden");
+      }
+      // The open placeholders after the first are for the desktop only.
+      const sectionsDrawn = [...container.querySelectorAll(".max-lg\\:hidden")].filter(
+        (element) => !element.className.includes("lg:sticky"),
+      );
+      expect(sectionsDrawn).toHaveLength(2);
+    },
+  );
+});

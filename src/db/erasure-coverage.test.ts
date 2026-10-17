@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { and, eq, getTableName, isNull } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
+import { schemaTableNameOf } from "@/test/schema-tables";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
 import { EXPORT_TABLES, type ExportTableRead } from "./export-tables";
@@ -14,6 +15,8 @@ import {
   personRoles,
   processorErasureTarget,
 } from "./schema";
+
+const ctx = fileScopedShopContext({ history: true });
 
 /**
  * The structural guard on the erasure path (`src/db/anonymize.ts`, ADR
@@ -205,12 +208,9 @@ function erasureWriteSites(): { written: Set<string>; unresolved: string[] } {
   const unresolved: string[] = [];
   for (const match of source.matchAll(/\.(?:update|delete)\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\)/g)) {
     const identifier = match[1] as string;
-    const value = (schema as Record<string, unknown>)[identifier];
-    try {
-      written.add(getTableName(value as Parameters<typeof getTableName>[0]));
-    } catch {
-      unresolved.push(identifier);
-    }
+    const name = schemaTableNameOf(identifier);
+    if (name) written.add(name);
+    else unresolved.push(identifier);
   }
   return { written, unresolved };
 }
@@ -224,13 +224,9 @@ function erasureHardDeleteOrder(): string[] {
   const source = stripCommentsAndStrings(readFileSync("src/db/anonymize.ts", "utf8"));
   const order: string[] = [];
   for (const match of source.matchAll(/\.delete\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\)/g)) {
-    const value = (schema as Record<string, unknown>)[match[1] as string];
-    try {
-      const name = getTableName(value as Parameters<typeof getTableName>[0]);
-      if (!order.includes(name)) order.push(name);
-    } catch {
-      // Resolved and reported by `erasureWriteSites`; not this function's job.
-    }
+    // An unresolved one is reported by `erasureWriteSites`; not this function's job.
+    const name = schemaTableNameOf(match[1] as string);
+    if (name && !order.includes(name)) order.push(name);
   }
   return order;
 }
@@ -311,8 +307,6 @@ const ERASURE_KEEPS: Record<string, string> = {
     "that a staff member's Monday email went out for a week — a date, a delivery status and a token hash. Only staff receive it, and the erasure refuses anyone holding a staff role",
 
   // --- the shop's own objects, holding nobody ------------------------------
-  trips:
-    "a departure: its site, its times, its capacity and the arrival words a shop wrote for everyone who books it",
   trip_dives: "the dives inside a departure, by site and order",
   trip_requirements:
     "the gates a departure sets — a certification level, specialties, whether a waiver is needed",
@@ -321,9 +315,11 @@ const ERASURE_KEEPS: Record<string, string> = {
     "the shop’s photographs of a departure, uploaded by a staff member and attached to the trip rather than to anyone on it. A photo *of* a diver is `recap_photos`, which the erasure deletes and queues for blob deletion",
   dive_sites: "a place, its briefing and its conditions",
   dive_site_creatures: "which catalog species a site lists",
-  dive_site_moments: "the shop’s own photographs of a site and their captions",
+  dive_site_moments: "retired (#2330): the shop’s own site photographs, dropped later",
   dive_packages: "the shop’s price list of multi-dive packages",
   pre_departure_checklist_items: "the shop’s own checklist lines",
+  departure_boat_safety_snapshots:
+    "a boat’s papers and kit notices as the boat left — the shop’s own hull and units, nobody aboard",
   gear_items: "the shop’s own units: a serial number, a size, a service note about the unit",
   shop_promo_codes: "a discount the shop published, its window and its ceiling",
   trip_last_minute_promos:
@@ -340,13 +336,12 @@ const ERASURE_KEEPS: Record<string, string> = {
   executed_dives:
     "what the crew recorded about a dive that ran — depth, time, conditions, and why the plan changed",
   gear_service_events: "a technician's record of servicing a unit",
+  boat_snags:
+    "a crew member's note about a problem on a boat, and who later found it still there or fixed",
   pre_departure_check_events:
     "a crew member ticking a checklist line before a departure, and their note about the line",
   trip_stage_events: "the crew moving a departure through its stages",
-  trip_change_events: "what changed on a departure, before and after, and who changed it",
   trip_blowouts: "who called a departure off, and when",
-  review_moderation_events:
-    "a moderator's action on a review and their reason for it. The review's own words are on `trip_reviews`, which the erasure redacts",
   marine_life_requests: "a staff member’s search for a species DiveDay does not carry",
   integration_oauth_states:
     "a single-use OAuth handshake bound to the staff member who started it and expiring in minutes",
@@ -392,9 +387,11 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
 
   // The shop's own record of itself. A diver is not on any of these.
   shops:
-    "the business: its name, its front-desk address and phone, its timezone and its own words. Erasing a diver does not touch the shop they dived with",
+    "the business: its name, its front-desk address and phone, its timezone and its own words. Erasing a diver does not touch the shop they dived with, except the shore contact's alert address (H-118) and the bookkeeper's month-end address with its confirmation and link (item 35), which the erasure clears when either is the diver's",
   shop_contact_email_confirmation_tokens:
     "the front-desk address's own proof of ownership (issue #1288) — the shop’s address, not a diver’s",
+  shop_shore_alert_tokens:
+    "the shore contact's confirm and stop links (H-118). No key to a person, but the address can be a diver's: the erasure sweeps the rows by `email`, beside the shop's own `shore_alert_email`",
   shop_whatsapp_accounts:
     "the shop’s own WhatsApp sender: a number, a template and sealed credentials",
   shop_stripe_accounts: "the shop’s Connect account and what it is enabled for",
@@ -404,8 +401,7 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
     "what the shop pays DiveDay: Stripe ids on DiveDay’s own account, a status and a few dates. The business is the customer, never a diver",
   shop_integrations: "a provider connection the shop made, and the sealed credentials behind it",
   shop_backup_destinations: "where the shop sends its own backups, and the sealed key to get there",
-  shop_backup_deliveries:
-    "whether one of those bundles arrived; a period key, a byte count and a status",
+  shop_backup_deliveries: "whether one of those bundles arrived: a period key, byte count, status",
   boats: "the shop’s vessels",
   courses: "the shop’s course catalog, copied from a template and then its own",
   waiver_templates:
@@ -414,7 +410,7 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   course_form_requirements: "which course asks for which form, and from when",
   trip_lenses: "the shop’s own word for a kind of day",
   trip_series:
-    "the cadence a repeating departure is generated from. Its instances are ordinary `trips` rows",
+    "the cadence a repeating departure is generated from. Its instances are ordinary `trips` rows; its title is renamed with them when an erased diver's own charter carries their name",
   trip_series_skips:
     "a date the shop took out of that cadence, so the nightly roll does not put it back",
 
@@ -435,8 +431,7 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
 
   // Plumbing: provider coordination and delivery ledgers, holding no person.
   notification_rate_limit_state: "provider coordination keyed by ceiling and period",
-  stripe_webhook_events:
-    "the platform's delivery ledger, pruned by retention; it carries no payload",
+  stripe_webhook_events: "the platform's delivery ledger, pruned by retention; no payload",
   sms_opt_outs:
     "a phone number that replied STOP, and nothing else. Keeping it after an erasure is what keeps the promise: removing it would let a later booking with that number text someone who said stop",
   media_deletion_attempts:
@@ -507,10 +502,10 @@ const WRITTEN_VIA_HELPER: Record<string, string> = {
  * - `ledger` — the obligation record's own column, not a source for it.
  * - `copy` — points at an object already censused under the table that owns it.
  *   The obligation is raised there, and raising a second would double-count.
- * - `elsewhere` — an object at a system the ledger does not reach at all: a
- *   messaging provider, an accounting integration, the shop's previous
- *   software. Whether erasure should reach any of them is issue #1721; each
- *   entry says what happens to the column here in the meantime.
+ * - `elsewhere` — an object at a system the ledger deliberately does not reach:
+ *   a messaging provider, an accounting integration, the shop's previous
+ *   software. Each entry says why, and what happens to the column instead;
+ *   ADR 20260803-processor-erasure-obligations, "Widened 2026-10-17".
  * - `none` — the net's over-reach. Caught by a segment, not a handle.
  *
  * A `person` entry must also name the ledger target it raises, and that target
@@ -672,38 +667,32 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
   },
   "orders.invoice_pdf_url": { held: "copy", why: "the same invoice, as a PDF" },
 
-  // --- at a system the obligation ledger does not reach (issue #1721) ------
+  // --- at a system the obligation ledger deliberately does not reach -------
   "notification_deliveries.provider_message_id": {
     held: "elsewhere",
-    why: "SES's or Twilio's handle on a message that carried this diver's name and address. The erasure clears the prose beside it (`provider_detail`, `send_error`) and keeps the handle, because it is the shop's evidence that a message went; nothing is owed against the copy the provider keeps",
+    why: "SES's, SNS's or Meta's handle on a message that carried this diver's name. The erasure clears the prose beside it (`provider_detail`, `send_error`) and keeps the handle as the shop's evidence that a message went. A `wamid.` embeds the recipient's number, so it is rewritten to `wamid.` plus its SHA-256. Nothing is owed against the provider's copy: Meta keeps a Cloud API message at most 30 days, and SES and SNS keep no copy a shop can reach (ADR)",
   },
-  "notification_delivery_attempts.provider_message_id": {
-    held: "elsewhere",
-    why: "the same handle on the append-only twin, kept for the same reason",
-  },
+  "notification_delivery_attempts.provider_message_id": { held: "elsewhere", why: "as above" },
   "notification_send_queue.provider_message_id": {
     held: "elsewhere",
     why: "the same handle on a send that was still queued. The row itself is deleted by the address and number sweeps, so this one usually goes with it",
   },
   "inbound_messages.provider_message_id": {
     held: "elsewhere",
-    why: "the provider's handle on a message the *diver* sent in. `body`, `subject` and `from_address` are redacted here; the provider's copy is not reached, and this column is `notNull` so there is nothing to clear it to",
+    why: "the provider's handle on a message the *diver* sent in. `body`, `subject` and `from_address` are redacted here; the provider's copy is not reached. `notNull`, so a `wamid.` is rewritten as on notification_deliveries rather than cleared",
   },
   "staff_replies.provider_message_id": {
     held: "elsewhere",
-    why: "the provider's handle on the shop's answer to that message, whose body and recipient are redacted here",
+    why: "the provider's handle on the shop's answer to that message, whose body and recipient are redacted here; a `wamid.` is rewritten as on notification_deliveries",
   },
   "waiver_deliveries.provider_message_id": {
     held: "elsewhere",
-    why: "the provider's handle on the message carrying a waiver link. `detail` beside it is nulled; the sent message is not chased",
+    why: "the provider's handle on the message carrying a waiver link. `detail` beside it is nulled, a `wamid.` is rewritten as on notification_deliveries, and the sent message is not chased",
   },
-  "waiver_records.delivery_provider_message_id": {
-    held: "elsewhere",
-    why: "the same handle denormalized onto the record it delivered",
-  },
+  "waiver_records.delivery_provider_message_id": { held: "elsewhere", why: "as above" },
   "integration_sync_records.external_id": {
     held: "elsewhere",
-    why: "the QuickBooks or Xero object a diver was synced to, kept deliberately so a second Customer is not created for someone already synced (issue #1015). Nothing here is chased at the provider, and deleting one may not even be possible while its invoices reference it",
+    why: "the QuickBooks or Xero object a diver was synced to: the map from a DiveDay row to the provider's own object. The row copies no details, but the Customer it names holds the diver's name and contact details at the provider, and erasure does not reach it. Kept so a second Customer is not created for someone already synced (`OUTSIDE_CLOSURE_REASONS` above, issue #1015). The books are the shop's to keep, and deleting a Customer may not be possible while its invoices reference it. Nothing is owed (ADR)",
   },
   "imported_payment_history.stripe_reference": {
     held: "elsewhere",
@@ -980,7 +969,7 @@ describe("erasure coverage", () => {
    * fixture never fires every branch, which is why the sweep above is static.
    */
   it("writes no table the sweep above cannot see", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = ctx;
     const [owner] = await db
       .select({ id: people.id })
       .from(people)

@@ -10,8 +10,15 @@ import { everyPanelPrep, prepFor, t, tokens, viewOf } from "./prep-test-fixtures
 
 afterEach(cleanup);
 
-function renderAssignments(prep: TripPrep, { cancelled = false }: { cancelled?: boolean } = {}) {
-  return render(<PrepAssignments view={viewOf(prep, { cancelled })} />);
+function renderAssignments(
+  prep: TripPrep,
+  {
+    cancelled = false,
+    sailed = false,
+    home = false,
+  }: { cancelled?: boolean; sailed?: boolean; home?: boolean } = {},
+) {
+  return render(<PrepAssignments view={viewOf(prep, { cancelled, sailed, home })} />);
 }
 
 /**
@@ -32,6 +39,8 @@ describe("proposed units on the Gear tab", () => {
       size,
       serviceState: { state: "no_clock" } as GearServiceState,
       serviceConcern: false,
+      nitroxDesignated: null,
+      thicknessMm: null,
     });
     const proposed = {
       ...unit("u3", "BCD #3", "L"),
@@ -99,6 +108,16 @@ describe("proposed units on the Gear tab", () => {
     expect(screen.getByRole("button", { name: "Assign the proposed unit" })).toBeInTheDocument();
   });
 
+  /**
+   * **A boat at sea picks nothing more** (fourth review, item 16): "2 pieces
+   * still to pick" and "Assign all" are the dock's instructions.
+   */
+  it("asks for no picking once the boat has left the dock", () => {
+    renderAssignments(withProposal(), { sailed: true });
+    expect(screen.queryByText(/still to pick/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Assign the proposed unit" })).toBeNull();
+  });
+
   it("proposes nothing on a departure that is not going", () => {
     renderAssignments(withProposal(), { cancelled: true });
     expect(screen.queryByText("Proposed: BCD #3 · L")).toBeNull();
@@ -121,6 +140,8 @@ describe("a diver flagged for a staff fit on the Gear tab", () => {
       size: null,
       serviceState: { state: "no_clock" } as GearServiceState,
       serviceConcern: false,
+      nitroxDesignated: null,
+      thicknessMm: null,
     };
     return {
       ...base,
@@ -328,5 +349,44 @@ describe("a diver holding a counter rental over the departure", () => {
   it("says nothing on a row with no counter rental", () => {
     const { container } = renderAssignments(everyPanelPrep());
     expect(within(container).queryByText(/on a counter rental/)).toBeNull();
+  });
+});
+
+/**
+ * **One way home per unit** (fifth-loop ideas, item 5): once the boat is home,
+ * "Back from the boat" asks per unit, so the per-diver set return and the
+ * hand-over give way to it.
+ */
+describe("the set controls once the boat is home", () => {
+  function outPrep(checkedOut: boolean): TripPrep {
+    const base = everyPanelPrep();
+    const [row] = base.assignmentRows;
+    if (!row) throw new Error("fixture row missing");
+    return {
+      ...base,
+      assignmentRows: [
+        {
+          ...row,
+          handedOver: checkedOut,
+          assigned: row.assigned.map((unit) => ({
+            ...unit,
+            checkedOutAt: checkedOut ? new Date("2026-09-01T11:00:00Z") : null,
+          })),
+        },
+      ],
+    };
+  }
+
+  it("offers the set return while the boat is out, and not once it is home", () => {
+    renderAssignments(outPrep(true), { sailed: true });
+    expect(screen.getByRole("button", { name: t("gear.prep.returnAllGood") })).toBeTruthy();
+    cleanup();
+    renderAssignments(outPrep(true), { sailed: true, home: true });
+    expect(screen.queryByRole("button", { name: t("gear.prep.returnAllGood") })).toBeNull();
+  });
+
+  it("offers no hand-over once the boat is home", () => {
+    renderAssignments(outPrep(false), { sailed: true, home: true });
+    expect(screen.queryByRole("button", { name: t("gear.prep.handOver") })).toBeNull();
   });
 });

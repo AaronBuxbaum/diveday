@@ -5,6 +5,10 @@ addresses (`aaron@`, `legal@`) work. Decision and rationale:
 [20260726-hosted-mailboxes-for-platform-mail](../architecture/decisions/20260726-hosted-mailboxes-for-platform-mail.md)
 and [20260803-ses-sole-email-provider](../architecture/decisions/20260803-ses-sole-email-provider.md).
 
+Shop mail sends as `"{Shop} via DiveDay" <notifications@ses.dive.day>` (`DEFAULT_SENDER` in
+`src/lib/notifications/ses.ts`); the SES identity is the whole `ses.dive.day` domain, so no
+per-address verification is needed. Replies go to the shop through `Reply-To`.
+
 AWS SES is the only email provider (Resend has been removed entirely). Two AWS-side steps are still
 outstanding and both are genuinely manual: the production-access request and the DKIM/MAIL FROM DNS
 records. Credential minting is not among them any more — `cdk deploy` mints the sender key and
@@ -127,7 +131,7 @@ with the `diveday-admin` profile, `<old>` the region mail is leaving and `<new>`
 | Variable | Enables | Without it |
 | --- | --- | --- |
 | `SES_AWS_REGION` / `SES_AWS_ACCESS_KEY_ID` / `SES_AWS_SECRET_ACCESS_KEY` | Sending | Nothing sends |
-| `SES_FROM_EMAIL` | The sender on every outbound email | Nothing sends |
+| `SES_FROM_EMAIL` | A fork's own sender on every outbound email | Mail sends from `DEFAULT_SENDER`, `DiveDay <notifications@ses.dive.day>`; set it empty to turn sending off |
 | `SES_SNS_TOPIC_ARN` | `/api/webhooks/ses` | The endpoint answers 503; a bounce stays invisible |
 
 ## Sending to divers
@@ -255,7 +259,7 @@ link, a reminder) carries the `Reply-To` and nothing else.
 
 Bounce and complaint feedback reaches the app **only** through the SNS event destination below: the
 identity's email feedback forwarding is off (`feedbackForwarding: false` in the stack), so SES does
-not also mail each bounce to `noreply@ses.dive.day`, a mailbox nobody reads. The configuration set
+not also mail each bounce to `notifications@ses.dive.day`, a mailbox nobody reads. The configuration set
 publishes its own reputation metrics beside the account-level ones the two alarms read, so when the
 account rate moves the graph says whether it was DiveDay's mail.
 
@@ -385,7 +389,7 @@ Who we are
 DiveDay is built and operated by Aaron Buxbaum (aaron@dive.day), a US sole proprietor. The whole product already runs on this AWS account (S3, Lambda, CloudWatch, SNS, deployed with CDK); SES is the last piece. Privacy policy: https://dive.day/privacy (names AWS as our email processor and how long delivery records are kept). Terms: https://dive.day/terms.
 
 What we send, and when
-All mail is branded as the dive shop and sent from noreply@ses.dive.day. Every message is to one person about one event.
+All mail is branded as the dive shop and sent from notifications@ses.dive.day. Every message is to one person about one event.
 1. About a booking the diver has (the large majority of volume): booking confirmation when the seat is booked; waiver link when the shop requests a waiver; reminders 7 days and 24 hours before departure; weather hold or cancellation, and cancellation for not reaching the minimum number of divers, only to divers booked on that trip; a copy of the signed release to a parent who co-signed a minor's waiver.
 2. Links a person asked for: a replacement trip-prep link when theirs expired; a booking link with their saved details when they type their address into a shop's booking form; their own diver page when shop staff send it from the diver's record.
 3. Account mail to shop staff: welcome, email verification, password reset, password-changed notice, staff invitation; and to the shop itself, a course inquiry from its public page and a confirmation of its front-desk address.
@@ -633,11 +637,13 @@ Both alignment paths are relaxed by default, so `mail.ses.dive.day` (envelope) a
 
 ## When mail doesn't arrive
 
+A failed send's row keeps the AWS error's name and HTTP status, never SES's message, because that message can quote a recipient's address (issue #2531). The resource ARN the 403 rows below turn on is in that message: read it by repeating the send with the AWS CLI under the `diveday-ses-sender` user, which prints it.
+
 | Symptom | Look at |
 | --- | --- |
 | Endpoint returns 503 | `SES_SNS_TOPIC_ARN` unset |
 | Endpoint returns 400 | An unverified SNS signature, a `TopicArn` mismatch, or a malformed message |
-| Nothing sends, no error | `SES_AWS_*`/`SES_FROM_EMAIL` unset or invalid — check the shop dashboard for `not_configured` rows |
+| Nothing sends, no error | `SES_AWS_*` unset or invalid, or `SES_FROM_EMAIL` set empty — check the shop dashboard for `not_configured` rows |
 | Sends fail `403 AccessDeniedException` and the resource ARN is the **configuration set** (`configuration-set/diveday-transactional-email`) | The sender user is missing that resource — redeploy the stack. A send is authorized against every SES resource it touches, and the config set is attached to the identity, so it is on every send; CDK's `grantSendEmail` adds the identity ARN alone, so the stack now grants the config set explicitly alongside it. Nothing else masks this one: it fails even to the mailbox simulator, since it has nothing to do with the recipient |
 | Sends fail `403 AccessDeniedException` on `ses:SendEmail`, and the resource ARN is a **personal mailbox** (`identity/someone@gmail.com`) | Still in sandbox mode. Read the ARN before assuming it's the sender: a pre-verified sandbox *recipient* is an identity too, and it becomes a resource the send is authorized against. The stack grants `diveday-ses-sender` the `ses.dive.day` domain identity and nothing else (`sesEmailIdentity.grantSendEmail`), so a send to a pre-verified recipient is denied on the recipient's identity even though the From address is fine — which is exactly what the step-5 "book a seat with your own Gmail address" test does. **Production access is the fix** (step 2 above): out of the sandbox there is no recipient identity to authorize against. Don't widen the IAM policy to paper over it — the grant is deliberately narrow and the sandbox is temporary |
 | Sends fail `403 AccessDeniedException` and the resource ARN is the **sender** | `SES_FROM_EMAIL` is off `ses.dive.day` — the only identity the sender user was granted. Point it at an address on that domain and redeploy |

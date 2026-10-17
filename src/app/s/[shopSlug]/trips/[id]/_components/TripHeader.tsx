@@ -27,6 +27,7 @@ export function TripHeader({
   locale,
   embed,
   showMeetingPoint = true,
+  runLine = null,
 }: {
   shop: Shop;
   trip: Trip;
@@ -36,7 +37,7 @@ export function TripHeader({
    */
   showMeetingPoint?: boolean;
   /**
-   * Every consecutive day this departure meets on, in order. One entry is an
+   * Every day this departure meets on, in order. One entry is an
    * ordinary single-day trip; more is an Open Water weekend or a liveaboard,
    * and until now the diver was never told: the hero printed day one's date and
    * time range and stopped, so a three-day course read as a Tuesday morning and
@@ -55,6 +56,12 @@ export function TripHeader({
    * the one place the brand block earns its keep.
    */
   embed: boolean;
+  /**
+   * A repeating departure's run, already worded: "Runs every Saturday · next
+   * Sat, Oct 24" (fourth review, item 35), so a regular sees the habit under
+   * the date. Null for a one-off, or a run with no later date.
+   */
+  runLine?: string | null;
 }) {
   // Every figure in the hero is a list price, so it follows the shop's own
   // currency (docs ADR 20260731-shop-currency) — never a hardcoded "usd".
@@ -142,6 +149,7 @@ export function TripHeader({
               {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
             </p>
           )}
+          {runLine ? <p className="mt-1 text-sm text-muted">{runLine}</p> : null}
           {showMeetingPoint && trip.meetingPointLabel ? (
             <p className="mt-2 text-sm font-medium text-muted">
               {trip.meetingPointAddress

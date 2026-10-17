@@ -1,11 +1,16 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
+  counterPath,
   HELD_SEND_TIMEOUT_MS,
   manifestRow,
+  openRosterDetails,
   openTripFromBoard,
   openTripTab,
   seededTripId,
 } from "./helpers";
+
+const staff = staffTranslator("en-US");
 
 /**
  * The departure desk (batch 4): somebody added at the dock (D6), a note to
@@ -96,9 +101,40 @@ test("the crew records something left aboard and the shop hands it back", async 
   await expect(item).toContainText(owner);
   await expect(item.getByRole("button", { name: `Tell ${owner}` })).toBeVisible();
 
-  await page.goto("/shop/blue-mantis/lost-found");
+  // **Today gives Lost and found its door** (fifth loop, item 7): one row
+  // while anything waits, counted, opening the list.
+  await page.goto("/shop/blue-mantis");
+  const waiting = page.getByRole("link", { name: "Open lost and found" });
+  await expect(waiting).toHaveAttribute("href", "/shop/blue-mantis/lost-found");
+  await expect(page.getByText(/^\d+ things? waiting to go home$/)).toBeVisible();
+  await waiting.click();
+  await page.waitForURL("**/shop/blue-mantis/lost-found");
   const row = page.getByTestId("lost-item").filter({ hasText: "Blue mask, seat 4" });
   await expect(row).toContainText(SAILED);
   await row.getByRole("button", { name: "Returned" }).click();
   await expect(page.getByText("Nothing is waiting to go home.")).toBeVisible();
+});
+
+/**
+ * H-133: a diver the crew marked aboard a boat that has left cannot be taken
+ * off the roster. The dawn boat is home with its sailed seats boarded, so a
+ * sailed row's Remove says why and offers no confirm; the seat stays.
+ */
+test("Remove on a diver marked aboard a boat that has left says why and changes nothing", async ({
+  page,
+}) => {
+  const tripId = await seededTripId(page, "blue-mantis", SAILED);
+  await page.goto(counterPath("blue-mantis", tripId));
+  await page.getByRole("heading", { name: /^Sailed · \d+$/ }).waitFor();
+  const remove = /^\s*Remove booking\s*$/;
+  const row = page
+    .locator('#roster li[id^="booking-"]')
+    .filter({ has: page.locator("summary", { hasText: remove }) })
+    .first();
+  await openRosterDetails(row);
+  await row.locator("summary", { hasText: remove }).click();
+  // The sentence after the diver's name, from the bundle.
+  const why = staff("trips.roster.removeAboard", { name: "" }).trim();
+  await expect(row.getByRole("status").filter({ hasText: why })).toBeVisible();
+  await expect(row.getByRole("button", { name: "Yes, remove booking" })).toHaveCount(0);
 });

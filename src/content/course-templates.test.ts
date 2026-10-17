@@ -20,12 +20,17 @@ describe("standard course forms", () => {
     }
   });
 
-  it("asks Open Water for the release and the safe-practices statement, and continuing education for its one document", () => {
+  it("asks Open Water for the release, the safe-practices statement and the youth acknowledgment, and continuing education for its one document", () => {
     const products = (slug: string) =>
       (COURSE_TEMPLATES.find((template) => template.slug === slug)?.standardForms ?? []).map(
         (form) => form.source.productNumber,
       );
-    expect(products("open-water-diver")).toEqual(["10072", "10060"]);
+    expect(products("open-water-diver")).toEqual(["10072", "10060", "10615"]);
+    // The youth acknowledgment is for 10- and 11-year-olds only (issue #2265).
+    const youth = COURSE_TEMPLATES.find(
+      (template) => template.slug === "open-water-diver",
+    )?.standardForms?.find((form) => form.source.productNumber === "10615");
+    expect(youth?.maxAgeYears).toBe(11);
     expect(products("advanced-open-water-diver")).toEqual(["10038"]);
     expect(products("rescue-diver")).toEqual(["10038"]);
     // No list where the manual names none DiveDay could read (issue #2264),
@@ -123,5 +128,23 @@ describe("COURSE_TEMPLATES depth markers", () => {
         ).toBeLessThanOrEqual(limit);
       }
     }
+  });
+});
+
+describe("SDI templates", () => {
+  it("gate at SDI's own floor, Open Water Scuba Diver, where the ladder can say it", () => {
+    // SDI asks Open Water Scuba Diver for Rescue, Deep and Wreck; its Advanced
+    // Adventure Diver is built from those dives. An Advanced gate told an SDI
+    // Open Water diver the agency wanted more and to phone instead of book.
+    for (const slug of ["sdi-rescue-diver", "sdi-deep-diver", "sdi-wreck-diver"]) {
+      const template = COURSE_TEMPLATES.find((entry) => entry.slug === slug);
+      expect(template?.minimumCertificationLevel, slug).toBe("open_water");
+      const note = template?.content.prerequisiteNote ?? "";
+      expect(note, slug).toContain("SDI Open Water Scuba Diver or equivalent");
+      expect(note, slug).not.toMatch(/Advanced Adventure|between Open Water and Advanced/);
+    }
+    expect(
+      COURSE_TEMPLATES.find((entry) => entry.slug === "sdi-rescue-diver")?.content.prerequisiteNote,
+    ).toContain("SDI Open Water Scuba Diver or equivalent, plus current CPR and first aid");
   });
 });

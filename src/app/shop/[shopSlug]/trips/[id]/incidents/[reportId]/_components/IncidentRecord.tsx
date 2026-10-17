@@ -3,6 +3,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { Field, FormStatus, textareaClassFor } from "@/components/ui/form";
 import type { IncidentReportView } from "@/db/incident-reports";
+import { INCIDENT_KIND_KEYS, INCIDENT_SEVERITY_KEYS } from "@/i18n/incident-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { INCIDENT_TEXT_MAX, type IncidentFilingGap } from "@/lib/incident-reports";
@@ -50,11 +51,28 @@ export function IncidentRecord({
   return (
     <SectionCard>
       <dl className="-my-3 divide-y divide-border">
+        {report.ownersAlert ? (
+          <Row label={t("incidents.read.ownersAlerted")}>
+            {report.ownersAlert.sentAt ? (
+              at(report.ownersAlert.sentAt)
+            ) : (
+              <span className="font-semibold text-warning-strong">
+                {t("incidents.read.ownersNotReached")}
+              </span>
+            )}
+          </Row>
+        ) : null}
         <Row label={t("incidents.read.when")}>
           {fields.occurredAt ? at(fields.occurredAt) : notWritten}
         </Row>
         <Row label={t("incidents.read.where")}>{where || notWritten}</Row>
         <Row label={t("incidents.form.whatHappened")}>{fields.whatHappened ?? notWritten}</Row>
+        <Row label={t("incidents.form.kind")}>
+          {fields.kind ? t(INCIDENT_KIND_KEYS[fields.kind]) : notWritten}
+        </Row>
+        <Row label={t("incidents.form.severity")}>
+          {fields.severity ? t(INCIDENT_SEVERITY_KEYS[fields.severity]) : notWritten}
+        </Row>
         <Row label={t("incidents.form.firstAid")}>{yesNo(fields.firstAidGiven)}</Row>
         <Row label={t("incidents.form.oxygen")}>
           {fields.oxygenGiven && fields.oxygenMinutes !== null
@@ -85,17 +103,25 @@ export function IncidentRecord({
 /** Filing: what is still missing, and the one button. */
 export function IncidentFiling({
   gaps,
+  missingDiver,
   action,
   notice,
   t,
 }: {
   gaps: readonly IncidentFilingGap[];
+  /** The draft says a diver is missing: filing tells the owners at once. */
+  missingDiver: boolean;
   action: () => Promise<void>;
   notice: FormNotice | undefined;
   t: StaffTranslator;
 }) {
   return (
     <SectionCard title={t("incidents.file.title")} description={t("incidents.file.description")}>
+      {missingDiver ? (
+        <p className="mb-4 text-sm font-semibold text-warning-strong">
+          {t("incidents.file.missingDiverWarning")}
+        </p>
+      ) : null}
       {gaps.length > 0 ? (
         <div className="mb-4">
           <p className="text-sm font-medium">{t("incidents.file.needs")}</p>

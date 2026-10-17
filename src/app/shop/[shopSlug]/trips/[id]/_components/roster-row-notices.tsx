@@ -33,7 +33,6 @@ export type RowNoticesInput = Pick<
   | "refusalRetired"
   | "identityUnconfirmed"
   | "showsPersonDetail"
-  | "hasEmergencyContact"
   | "holdOpen"
 >;
 
@@ -53,14 +52,12 @@ export function rowNotices(seat: RowNoticesInput) {
     refusalRetired,
     identityUnconfirmed,
     showsPersonDetail,
-    hasEmergencyContact,
     holdOpen,
   } = seat;
   const emergencyContactBlock = (
     <SeatEmergencyContact
       bookingId={booking.id}
-      person={person}
-      hasEmergencyContact={hasEmergencyContact}
+      contact={{ name: person.emergencyContactName, phone: person.emergencyContactPhone }}
       holdOpen={holdOpen}
       t={t}
       saveEmergencyContactAction={saveEmergencyContactAction}
@@ -178,6 +175,21 @@ export function rowNotices(seat: RowNoticesInput) {
     heldSeatBlockers(readiness.blockers).length < readiness.blockers.length;
   return {
     emergencyContactBlock,
+    // A held seat's own contact (issue #2145): the person on the seat may not
+    // be the matched record's, so the desk writes theirs onto the booking.
+    heldEmergencyContactBlock: identityUnconfirmed ? (
+      <SeatEmergencyContact
+        bookingId={booking.id}
+        contact={{
+          name: booking.heldEmergencyContactName ?? null,
+          phone: booking.heldEmergencyContactPhone ?? null,
+        }}
+        held
+        holdOpen={holdOpen}
+        t={t}
+        saveEmergencyContactAction={saveEmergencyContactAction}
+      />
+    ) : null,
     reEntryNote,
     recencyText,
     linkAction,

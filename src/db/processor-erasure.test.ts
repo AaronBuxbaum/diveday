@@ -136,6 +136,32 @@ describe("recording processor erasure obligations", () => {
     expect(await listOwedProcessorErasures(db, shop.id)).toHaveLength(1);
   });
 
+  // Security review of #1721, F2: an entry dropped for naming no account is an
+  // erasure that reports finished while Stripe still holds the object, so the
+  // drop must not be silent. The target and the ids, never the handle.
+  it("says so when it drops an entry that names no account", async () => {
+    const { db, shop, ownerId } = await twoShops();
+    const lines: string[] = [];
+    setLogSink((line) => lines.push(line));
+    try {
+      expect(
+        await recordProcessorErasureObligations(db, {
+          shopId: shop.id,
+          personId: ownerId,
+          targets: [CUSTOMER("cus_nowhere", " ")],
+        }),
+      ).toEqual([]);
+    } finally {
+      setLogSink(null);
+    }
+    const warned = lines.find((line) => line.includes("processor_erasure_target_dropped"));
+    expect(warned).toBeDefined();
+    expect(warned).toContain(shop.id);
+    expect(warned).toContain(ownerId);
+    expect(warned).toContain("stripe_customer");
+    expect(warned).not.toContain("cus_nowhere");
+  });
+
   it("keeps one shop's obligations out of another's, even on the same handle", async () => {
     const { db, shop, ownerId, otherShop, otherPerson } = await twoShops();
     await recordProcessorErasureObligations(db, {

@@ -2,9 +2,11 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import {
-  countBoatDepartures,
+  countBoatsWithoutRadioIdentity,
+  countDeparturesByBoat,
   createBoat,
   deleteBoat,
+  departureVessels,
   getBoatById,
   getBoatForHistory,
   listBoats,
@@ -157,7 +159,7 @@ describe("deleting a boat", () => {
   it("counts the departures a delete would touch, so the confirm can say", async () => {
     const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Sea Fox", 8);
-    expect(await countBoatDepartures(db, shop.id, boat.id)).toBe(0);
+    expect((await countDeparturesByBoat(db, shop.id)).get(boat.id) ?? 0).toBe(0);
 
     const rows = await db
       .select({ id: trips.id })
@@ -167,7 +169,11 @@ describe("deleting a boat", () => {
     for (const row of rows) {
       await db.update(trips).set({ boatId: boat.id }).where(eq(trips.id, row.id));
     }
-    expect(await countBoatDepartures(db, shop.id, boat.id)).toBe(rows.length);
+    // One read for the whole fleet (code review 2026-10-13b, item 36): the
+    // settings page used to count one hull at a time.
+    const counts = await countDeparturesByBoat(db, shop.id);
+    expect(counts.get(boat.id)).toBe(rows.length);
+    expect([...counts.keys()]).not.toContain(null);
   });
 
   it("refuses to delete the same hull twice, keeping the date it was retired", async () => {
@@ -199,8 +205,13 @@ describe("deleting a boat", () => {
  */
 describe("updateBoatWithinCertificate", () => {
   const NOW = new Date("2030-05-01T12:00:00.000Z");
-  const papers = (certifiedPassengers: number | null) => ({
+  const papers = (
+    certifiedPassengers: number | null,
+    certifiedTotalPersons: number | null = null,
+  ) => ({
     certifiedPassengers,
+    certifiedTotalPersons,
+    coiExpiresOn: null,
     inspectionDueOn: null,
     registrationExpiresOn: null,
     insuranceExpiresOn: null,
@@ -236,6 +247,90 @@ describe("updateBoatWithinCertificate", () => {
     if (!trip) throw new Error("trip not created");
     return boat;
   }
+
+  // #2302: total persons, crew included, beside the passenger limit.
+  it("saves a total-persons limit and the certificate's own expiry", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Persons Hull", 6);
+    const saved = await updateBoatWithinCertificate(db, {
+      shopId: shop.id,
+      boatId: boat.id,
+      name: "Persons Hull",
+      capacity: 6,
+      description: null,
+      papers: { ...papers(10, 12), coiExpiresOn: "2031-02-28" },
+      timeZone: "America/New_York",
+      now: NOW,
+    });
+    expect(saved).toMatchObject({
+      ok: true,
+      boat: { certifiedPassengers: 10, certifiedTotalPersons: 12, coiExpiresOn: "2031-02-28" },
+    });
+  });
+
+  it("refuses more passengers than persons and writes nothing", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Typo Hull", 6);
+    const refused = await updateBoatWithinCertificate(db, {
+      shopId: shop.id,
+      boatId: boat.id,
+      name: "Typo Hull",
+      capacity: 6,
+      description: null,
+      papers: papers(14, 12),
+      timeZone: "America/New_York",
+      now: NOW,
+    });
+    expect(refused).toEqual({
+      ok: false,
+      reason: "certificate",
+      refusal: { code: "passengers_above_total_persons", passengers: 14, limit: 12 },
+    });
+    expect(await getBoatById(db, shop.id, boat.id)).toMatchObject({
+      certifiedPassengers: null,
+      certifiedTotalPersons: null,
+    });
+  });
+
+  // Dive-domain review D2: more seats than persons is a typo at save. The
+  // sale is untouched (Aaron, 2026-10-13); only the boat row is refused.
+  it("refuses saving more seats than total persons, and keeps the boat as it was", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Spanish Hull", 6);
+    expect(
+      await updateBoatWithinCertificate(db, {
+        shopId: shop.id,
+        boatId: boat.id,
+        name: "Spanish Hull",
+        capacity: 20,
+        description: null,
+        papers: papers(null, 12),
+        timeZone: "America/New_York",
+        now: NOW,
+      }),
+    ).toEqual({
+      ok: false,
+      reason: "certificate",
+      refusal: { code: "seats_above_total_persons", capacity: 20, limit: 12 },
+    });
+    expect(await getBoatById(db, shop.id, boat.id)).toMatchObject({
+      capacity: 6,
+      certifiedTotalPersons: null,
+    });
+  });
+
+  // One refused statement per test: it aborts the test's transaction.
+  it("is refused by the table itself when passengers pass persons", async () => {
+    const { db, shop } = ctx;
+    await expect(
+      createBoat(db, shop.id, "Constraint Hull", 6, null, papers(14, 12)),
+    ).rejects.toThrow();
+  });
+
+  it("is refused by the table itself for a total of nobody", async () => {
+    const { db, shop } = ctx;
+    await expect(createBoat(db, shop.id, "Zero Hull", 6, null, papers(null, 0))).rejects.toThrow();
+  });
 
   it("refuses a certificate below a departure's seats and leaves the hull as it was", async () => {
     const { db, shop } = ctx;
@@ -275,5 +370,106 @@ describe("updateBoatWithinCertificate", () => {
     const boat = await createBoat(db, shop.id, "Certified Hull", 6);
     await deleteBoat(db, shop.id, boat.id);
     expect(await save(db, shop.id, boat.id, 4, null)).toEqual({ ok: false, reason: "not_found" });
+  });
+});
+
+describe("the boat a departure sails on, for its emergency card (fourth review, item 11)", () => {
+  async function departureOn(boatId: string | null) {
+    const { db, shop } = ctx;
+    const startsAt = new Date("2026-10-17T12:00:00Z");
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Two-Tank Reef",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 3600 * 1000),
+      capacity: 10,
+      plannedDives: 2,
+      priceCents: 9500,
+      diveMode: "boat",
+      boatId,
+    });
+    if (!trip) throw new Error("trip creation failed");
+    return trip;
+  }
+
+  it("names each departure's own hull with its call sign and MMSI", async () => {
+    const { db, shop } = ctx;
+    const one = await createBoat(db, shop.id, "Mantis I", 12, null, {
+      certifiedPassengers: null,
+      certifiedTotalPersons: null,
+      coiExpiresOn: null,
+      inspectionDueOn: null,
+      registrationExpiresOn: null,
+      insuranceExpiresOn: null,
+      callSign: "WDM2201",
+      mmsi: "338055502",
+    });
+    const two = await createBoat(db, shop.id, "Mantis II", 14);
+    const onOne = await departureOn(one.id);
+    const onTwo = await departureOn(two.id);
+    const onNone = await departureOn(null);
+
+    const vessels = await departureVessels(db, shop.id, [onOne.id, onTwo.id, onNone.id]);
+    expect(vessels.get(onOne.id)).toEqual({
+      name: "Mantis I",
+      callSign: "WDM2201",
+      mmsi: "338055502",
+    });
+    expect(vessels.get(onTwo.id)).toEqual({ name: "Mantis II", callSign: null, mmsi: null });
+    // No boat: the card falls back to the shop's own vessel line.
+    expect(vessels.has(onNone.id)).toBe(false);
+  });
+
+  it("still names a hull the shop has since deleted", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Old Hull", 8);
+    const trip = await departureOn(boat.id);
+    await deleteBoat(db, shop.id, boat.id);
+    expect((await departureVessels(db, shop.id, [trip.id])).get(trip.id)?.name).toBe("Old Hull");
+  });
+
+  it("counts the live boats with neither a call sign nor an MMSI (review B1)", async () => {
+    const { db, shop } = ctx;
+    const before = await countBoatsWithoutRadioIdentity(db, shop.id);
+    const papers = {
+      certifiedPassengers: null,
+      certifiedTotalPersons: null,
+      coiExpiresOn: null,
+      inspectionDueOn: null,
+      registrationExpiresOn: null,
+      insuranceExpiresOn: null,
+    };
+    await createBoat(db, shop.id, "Bare", 8);
+    await createBoat(db, shop.id, "Call sign only", 8, null, { ...papers, callSign: "WDM9" });
+    await createBoat(db, shop.id, "MMSI only", 8, null, { ...papers, mmsi: "338055509" });
+    const gone = await createBoat(db, shop.id, "Deleted bare", 8);
+    await deleteBoat(db, shop.id, gone.id);
+    expect(await countBoatsWithoutRadioIdentity(db, shop.id)).toBe(before + 1);
+    expect(await countBoatsWithoutRadioIdentity(db, "00000000-0000-4000-8000-000000000000")).toBe(
+      0,
+    );
+  });
+
+  it("answers nothing about another shop's departure", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Mantis I", 12);
+    const trip = await departureOn(boat.id);
+    const vessels = await departureVessels(db, "00000000-0000-4000-8000-000000000000", [trip.id]);
+    expect(vessels.size).toBe(0);
+  });
+
+  it("refuses an MMSI that is not nine digits at the column", async () => {
+    const { db, shop } = ctx;
+    await expect(
+      createBoat(db, shop.id, "Typo", 8, null, {
+        certifiedPassengers: null,
+        certifiedTotalPersons: null,
+        coiExpiresOn: null,
+        inspectionDueOn: null,
+        registrationExpiresOn: null,
+        insuranceExpiresOn: null,
+        mmsi: "33805550",
+      }),
+    ).rejects.toThrow();
   });
 });

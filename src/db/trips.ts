@@ -122,7 +122,9 @@ export {
   bookedDiverLanguages,
   getShopTripTitle,
   getTripDiveSitesPeek,
+  getTripMeetingPointFields,
   getTripWithBooked,
+  getTripWithBookedOnce,
   listTripDives,
   listTripScheduleDays,
   type PublicCrewMember,
@@ -145,8 +147,11 @@ export {
   listTripDiverContacts,
 } from "./trips-roster";
 export {
+  type CopyWeekOutcome,
+  copyWeekFromYearBefore,
   type DeleteTripOutcome,
   deleteTrip,
+  departuresWeekBefore,
   duplicateTrip,
   type MoveTripOutcome,
   moveTrip,

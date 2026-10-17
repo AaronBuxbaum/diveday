@@ -71,6 +71,23 @@ describe("the diver record's notice", () => {
     );
   });
 
+  it("says the diver was told when a later-day booking's confirmation went out (fourth UX review, item 3)", () => {
+    expect(resolve({ notice: "booked-confirmed", canRaiseInvoice: true })?.text).toBe(
+      t("divers.notices.bookedConfirmed"),
+    );
+    expect(resolve({ notice: "booked-confirmed" })?.text).toBe(
+      t("divers.notices.bookedConfirmedNoInvoice"),
+    );
+  });
+
+  it("says a saved form's “18 or older” went unused because a date is on file (#2167)", () => {
+    expect(resolve({ notice: "person-saved-adult-answer-unused" })).toMatchObject({
+      form: "details",
+      tone: "warning",
+      text: t("divers.notices.personSavedAdultAnswerUnused"),
+    });
+  });
+
   it("carries a card id only on a notice that names a box", () => {
     expect(resolve({ notice: "card-number-implausible", card: "card-1" })).toMatchObject({
       field: "sighted-identifier",

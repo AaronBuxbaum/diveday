@@ -223,6 +223,29 @@ describe("a boat carrying more than it seats says so", () => {
 });
 
 /**
+ * Batch 6, item 2: more passengers aboard than the certificate allows. The
+ * count itself says it, and the seats line stands down so the boat is not told
+ * the same overload twice in two sets of words.
+ */
+describe("a boat carrying more than its certificate allows says so on the count", () => {
+  it("names the limit beside the count and drops the seats line", () => {
+    renderPanel({
+      summary: summary({ boarded: 13, overCapacity: 1 }),
+      overCertificate: { aboard: 13, limit: 12 },
+    });
+    const line = screen.getByText("Certificate allows 12 passengers");
+    expect(line.closest("section")).not.toBeNull();
+    expect(screen.getByRole("progressbar")).toHaveClass("border-danger");
+    expect(screen.queryByText(/aboard beyond the seats this boat has/)).toBeNull();
+  });
+
+  it("says nothing about the certificate within it", () => {
+    renderPanel({ overCertificate: null });
+    expect(screen.queryByText(/Certificate allows/)).toBeNull();
+  });
+});
+
+/**
  * **The denominator is bodies to expect, not rows on paper** (#1209,
  * `dive-domain-expert` review 20260911).
  *
@@ -347,6 +370,7 @@ describe("the panel's chips and the roll call's rows are one jump", () => {
             notesByBooking: new Map(),
             rollCallAction: vi.fn(async () => ({ ok: true }) as const),
             addPrivateNoteAction: vi.fn(async () => undefined) as never,
+            startMissingDiverReport: null,
             rollCallButtonCopy: () => ({
               errorRefusal: "Try again",
               blockedMessage: "Still blocked",
@@ -424,6 +448,7 @@ describe("the panel's chips and the roll call's rows are one jump", () => {
               notesByBooking: new Map(),
               rollCallAction: vi.fn(async () => ({ ok: true }) as const),
               addPrivateNoteAction: vi.fn(async () => undefined) as never,
+              startMissingDiverReport: null,
               rollCallButtonCopy: () => ({
                 errorRefusal: "Try again",
                 blockedMessage: "Still blocked",

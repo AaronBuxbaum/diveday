@@ -112,8 +112,8 @@ export function shopAddressPartsOf(shop: {
   };
 }
 
-type MeetingPointShopRow = Parameters<typeof shopAddressPartsOf>[0] & { name: string };
-type MeetingPointTripRow = {
+export type MeetingPointShopRow = Parameters<typeof shopAddressPartsOf>[0] & { name: string };
+export type MeetingPointTripRow = {
   meetingPointLabel: string | null;
   meetingPointAddress: string | null;
   arrivalLandmark: string | null;
@@ -133,4 +133,15 @@ export function meetingPointOfRows(
     arrivalLandmark: trip.arrivalLandmark,
     arrivalParkingNote: trip.arrivalParkingNote,
   });
+}
+
+/**
+ * The meeting point as one staff line — "Slip 4, the east dock · 12 Ocean
+ * Way, Key Largo" — the place, then its address when it has one. Staff pages
+ * that state where the boat meets (the Details tab's About rows, the
+ * manifest's plan) read this, so the crew never knows less than the diver
+ * about the dock (UX review 2026-10-13, item 18).
+ */
+export function meetingPointLine(point: MeetingPoint): string {
+  return point.address ? `${point.label} · ${point.address}` : point.label;
 }

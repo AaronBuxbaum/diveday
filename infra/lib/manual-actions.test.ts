@@ -165,7 +165,10 @@ describe("the synthesized stack", () => {
     // carried one each, and both users are gone -- no consumer was ever wired
     // up, so they were two live access keys and two rotation-list entries for
     // nothing.
-    expect(denials).toHaveLength(2);
+    //
+    // Three since #2543: GitHubActionsRegSuitRole carries the same unscoped deny
+    // as the diff role, so the bucket-scoped CI role can never read a secret.
+    expect(denials).toHaveLength(3);
     const deployRoleDeny = denials.find((statement) => statement.includes("NotResource"));
     expect(deployRoleDeny, "the deploy role's deny must be scoped via NotResource").toBeDefined();
     expect(deployRoleDeny).toContain("CredentialsEnvDocument");

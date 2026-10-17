@@ -1,19 +1,21 @@
-import { and, eq, exists, gt, isNull, or, sql } from "drizzle-orm";
+import { and, eq, exists, gt, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { cache } from "react";
 import type { BrandBadgeCode, BrandDisplayFontCode } from "@/lib/brand";
-import type { CalendarDate } from "@/lib/calendar-date";
+import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
+import type { DeskPayment } from "@/lib/desk-payment";
 import type { DockDayRhythm } from "@/lib/diver-planning";
 import type { EmergencyReference } from "@/lib/emergency-reference";
 import type { ShopCurrency } from "@/lib/money";
 import type { RentalPricing } from "@/lib/rentals";
 import type { SeasonStart } from "@/lib/season";
 import { SHOP_FEATURE_COLUMNS, type ShopFeature } from "@/lib/shop-features";
+import type { ShoreAlertContact } from "@/lib/shore-alert-contact";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { CustomerRegulatorServiceMonths } from "@/lib/work-orders";
 import type { AppDb } from "./client";
-import { courses, divePackages, orders, shops, trips } from "./schema";
+import { courses, divePackages, orders, people, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -71,8 +73,30 @@ export async function listShopsForSitemap(db: AppDb): Promise<{ slug: string; na
 }
 
 /**
+ * The shops a diver can pick from on `/find-your-booking` (fourth review,
+ * item 50): the same listed scope as the sitemap, so a shop that said no to
+ * search is not named here either, with the town that tells two Reef Lines
+ * apart. Name order, which is how a diver scans for theirs.
+ */
+export async function listShopsForDiverPicker(
+  db: AppDb,
+): Promise<{ slug: string; name: string; locality: string | null; region: string | null }[]> {
+  return db
+    .select({
+      slug: shops.slug,
+      name: shops.name,
+      locality: shops.addressLocality,
+      region: shops.addressRegion,
+    })
+    .from(shops)
+    .where(listedShopScope(db))
+    .orderBy(shops.name);
+}
+
+/**
  * **What "a listed shop" means, in one place** — the three conditions above,
- * as a `where` fragment. The sitemap and `llms.txt` both read through it,
+ * as a `where` fragment. The sitemap, `llms.txt` and the diver's shop picker
+ * all read through it,
  * so a shop that said no to search is absent from every public list DiveDay
  * publishes on its behalf, and a third reader cannot quietly widen the scope.
  */
@@ -165,6 +189,32 @@ export async function setShopReopensOn(db: AppDb, shopId: string, reopensOn: Cal
   return shop ?? null;
 }
 
+/**
+ * The nightly roll's sweep of "Back on the water" dates that have passed.
+ * `offSeason` already ignores a past date, so a diver sees nothing wrong, but
+ * Settings would keep showing last season's date as if it were current. A date
+ * is passed once it is before the shop's own today, in the shop's zone; the day
+ * itself is not. Returns how many shops were cleared.
+ */
+export async function clearPassedReopensOn(db: AppDb, now: Date = nowDate()): Promise<number> {
+  const dated = await db
+    .select({ id: shops.id, reopensOn: shops.reopensOn, zone: shops.timezone })
+    .from(shops)
+    .where(isNotNull(shops.reopensOn));
+  const passed = dated
+    .filter(
+      (shop) => shop.reopensOn !== null && shop.reopensOn < calendarDateInTimezone(now, shop.zone),
+    )
+    .map((shop) => shop.id);
+  if (passed.length === 0) return 0;
+  const cleared = await db
+    .update(shops)
+    .set({ reopensOn: null })
+    .where(inArray(shops.id, passed))
+    .returning({ id: shops.id });
+  return cleared.length;
+}
+
 /** Turns Stripe Tax on or off for charges created after this setting is saved. */
 export async function setShopTaxEnabled(db: AppDb, shopId: string, taxEnabled: boolean) {
   const [shop] = await db.update(shops).set({ taxEnabled }).where(eq(shops.id, shopId)).returning();
@@ -210,6 +260,65 @@ export async function setShopEmergencyReference(
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;
+}
+
+/**
+ * **A human clears a flagged shop name** (issue #2450): the shop's mail goes
+ * back to "{Shop} via DiveDay". Stamps the clearing rather than erasing the
+ * flag, so a later rename that matches again (a newer flag) holds again. Null
+ * for a shop that does not exist; clearing a shop that was never flagged is
+ * harmless.
+ */
+export async function clearShopNameReview(db: AppDb, shopId: string, now: Date = nowDate()) {
+  const [shop] = await db
+    .update(shops)
+    .set({ nameClearedAt: now })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
+ * The shore contact's address, the consent recorded for it and whether its
+ * inbox confirmed it (H-118), as `nextShoreAlertContact` decided them. The
+ * columns move together; the table's checks refuse any other shape.
+ */
+export async function setShopShoreAlertContact(
+  db: AppDb,
+  shopId: string,
+  contact: ShoreAlertContact,
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({
+      shoreAlertEmail: contact.email,
+      shoreAlertConsentAt: contact.consentAt,
+      shoreAlertConsentByPersonId: contact.consentByPersonId,
+      shoreAlertConfirmedAt: contact.confirmedAt,
+    })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
+ * Who recorded the shore contact's consent, as Settings says it ("Recorded
+ * … by Dana"): the person's name as the row holds it today, inside this shop
+ * only, removed staff included (the record stays theirs). Null when nobody is
+ * on file or the id is not this shop's.
+ */
+export async function shoreAlertConsentRecorderName(
+  db: AppDb,
+  shop: { id: string; shoreAlertConsentByPersonId: string | null },
+): Promise<string | null> {
+  if (!shop.shoreAlertConsentByPersonId) return null;
+  const [row] = await db
+    .select({ name: people.fullName })
+    .from(people)
+    // diveday:allow-deleted-people: provenance names whoever recorded it.
+    .where(and(eq(people.id, shop.shoreAlertConsentByPersonId), eq(people.shopId, shop.id)))
+    .limit(1);
+  return row?.name ?? null;
 }
 
 /**
@@ -325,6 +434,51 @@ export async function markShopUnitsConfirmed(db: AppDb, shopId: string, now = no
 
 export async function setShopDockDayRhythm(db: AppDb, shopId: string, rhythm: DockDayRhythm) {
   const [shop] = await db.update(shops).set(rhythm).where(eq(shops.id, shopId)).returning();
+  return shop ?? null;
+}
+
+/**
+ * Whether the shop runs hotel pickups (fourth UX review, item 8). Only then
+ * does `/ready` ask a diver "Want a pickup?".
+ */
+export async function setShopOffersHotelPickup(db: AppDb, shopId: string, offers: boolean) {
+  const [shop] = await db
+    .update(shops)
+    .set({ offersHotelPickup: offers })
+    .where(eq(shops.id, shopId))
+    .returning({ id: shops.id, offersHotelPickup: shops.offersHotelPickup });
+  return shop ?? null;
+}
+
+/**
+ * Sets the shop's minimum turnaround between departures, in minutes (issue
+ * #2141). Advice for the schedule builder's Move panel only; the route narrows
+ * the value through `parseMinTurnaroundMinutes`, and the table's CHECK holds
+ * the same bounds.
+ */
+export async function setShopMinTurnaround(db: AppDb, shopId: string, minutes: number) {
+  const [shop] = await db
+    .update(shops)
+    .set({ minTurnaroundMinutes: minutes })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
+ * How the shop takes money at the desk (fifth-loop ideas, item 21), or null
+ * to say nothing. Read wherever a seat is "due at the shop".
+ */
+export async function setShopDeskPayment(
+  db: AppDb,
+  shopId: string,
+  deskPayment: DeskPayment | null,
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({ deskPayment })
+    .where(eq(shops.id, shopId))
+    .returning({ id: shops.id, deskPayment: shops.deskPayment });
   return shop ?? null;
 }
 

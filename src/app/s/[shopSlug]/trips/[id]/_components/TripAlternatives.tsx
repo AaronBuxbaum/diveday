@@ -1,4 +1,5 @@
-import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
+import { LedgerRow } from "@/components/ui/ledger";
 import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import type { PartOfDay, WorthALookReason } from "@/lib/worth-a-look";
 

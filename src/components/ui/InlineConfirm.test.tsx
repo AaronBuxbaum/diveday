@@ -38,7 +38,7 @@ function renderInForm(onSubmit: () => void) {
     >
       <InlineConfirm
         message="Cancel your spot on Reef Dive? This can’t be undone. You’re still inside the free-cancellation window, so what you paid comes back to you."
-        triggerLabel="Cancel my spot"
+        triggerLabel="Cancel my seat"
         confirmLabel="Yes, cancel my spot"
         cancelLabel="Never mind"
         pendingLabel="Cancelling…"
@@ -54,11 +54,11 @@ describe("InlineConfirm", () => {
     const onSubmit = vi.fn();
     renderInForm(onSubmit);
 
-    expect(screen.getByRole("button", { name: "Cancel my spot" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel my seat" })).toBeInTheDocument();
     expect(screen.queryByText(/free-cancellation window/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Yes, cancel my spot" })).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Cancel my spot" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel my seat" }));
     // Arming is a local state flip, not a submit — the trigger is a
     // type="button", so clicking it alone must never post the form.
     expect(onSubmit).not.toHaveBeenCalled();
@@ -68,10 +68,10 @@ describe("InlineConfirm", () => {
     const onSubmit = vi.fn();
     renderInForm(onSubmit);
 
-    await userEvent.click(screen.getByRole("button", { name: "Cancel my spot" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel my seat" }));
 
     expect(screen.getByText(/free-cancellation window/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Cancel my spot" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel my seat" })).not.toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
 
     await userEvent.click(screen.getByRole("button", { name: "Yes, cancel my spot" }));
@@ -82,10 +82,10 @@ describe("InlineConfirm", () => {
     const onSubmit = vi.fn();
     renderInForm(onSubmit);
 
-    await userEvent.click(screen.getByRole("button", { name: "Cancel my spot" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel my seat" }));
     await userEvent.click(screen.getByRole("button", { name: "Never mind" }));
 
-    expect(screen.getByRole("button", { name: "Cancel my spot" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel my seat" })).toBeInTheDocument();
     expect(screen.queryByText(/free-cancellation window/)).not.toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
@@ -130,7 +130,7 @@ describe("InlineConfirm", () => {
     const onSubmit = vi.fn();
     const { rerender } = renderInForm(onSubmit);
 
-    await userEvent.click(screen.getByRole("button", { name: "Cancel my spot" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel my seat" }));
     expect(screen.getByText(/free-cancellation window/)).toBeInTheDocument();
 
     // Simulate a navigate-away-and-back: the pathname changes and this
@@ -147,7 +147,7 @@ describe("InlineConfirm", () => {
       >
         <InlineConfirm
           message="Cancel your spot on Reef Dive? This can’t be undone. You’re still inside the free-cancellation window, so what you paid comes back to you."
-          triggerLabel="Cancel my spot"
+          triggerLabel="Cancel my seat"
           confirmLabel="Yes, cancel my spot"
           cancelLabel="Never mind"
           pendingLabel="Cancelling…"
@@ -157,7 +157,7 @@ describe("InlineConfirm", () => {
       </form>,
     );
 
-    expect(screen.getByRole("button", { name: "Cancel my spot" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel my seat" })).toBeInTheDocument();
     expect(screen.queryByText(/free-cancellation window/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Yes, cancel my spot" })).not.toBeInTheDocument();
   });

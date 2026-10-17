@@ -101,6 +101,39 @@ describe("saveReadyPage and readyPageFallback", () => {
     expect([...(kept?.headers.values() ?? [])].join(" ")).not.toContain(TOKEN);
   });
 
+  /** The page's own links carry the token; the stored body must not (D1, residual). */
+  it("keeps a body that names the token only with the placeholder, and puts the token back", async () => {
+    const body = `<a href="/ready/${TOKEN}/forms">Forms</a><p>${TOKEN}</p>`;
+    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW);
+
+    const kept = store.caches.get(READY_CACHE_NAME)?.values().next().value;
+    const stored = await kept?.clone().text();
+    expect(stored).not.toContain(TOKEN);
+    expect(stored).toContain("__diveday_kept_token__");
+
+    const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1000);
+    const text = await served?.text();
+    expect(text).toContain(`href="/ready/${TOKEN}/forms"`);
+    expect(text).toContain(`<p>${TOKEN}</p>`);
+    expect(text).not.toContain("__diveday_kept_token__");
+    expect(await readyPageFallback(store.storage, `/ready/${OTHER}`, NOW + 1000)).toBeUndefined();
+  });
+
+  /** A party seat's claim link is a second bearer token; the copy keeps none of it. */
+  it("keeps no party claim token in the stored body", async () => {
+    const claim = "C".repeat(43);
+    const body = `<a href="/claim/${claim}">Seat</a><input value="https://dive.day/claim/${claim}"/>`;
+    await saveReadyPage(store.storage, `/ready/${TOKEN}`, page(body), NOW);
+
+    const kept = store.caches.get(READY_CACHE_NAME)?.values().next().value;
+    const stored = await kept?.clone().text();
+    expect(stored).not.toContain(claim);
+    expect(stored).toContain("/claim/__diveday_claim_not_kept__");
+
+    const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW + 1000);
+    expect(await served?.text()).not.toContain(claim);
+  });
+
   /**
    * D2: a copy does not outlive the trip it is for (the page names the day
    * after the boat is due back), and a page that names no day (a cancelled
@@ -118,7 +151,9 @@ describe("saveReadyPage and readyPageFallback", () => {
       await saveReadyPage(
         store.storage,
         path,
-        new Response("<p>Cancelled</p>", { headers: { "content-type": "text/html" } }),
+        new Response("<p>Cancelled</p>", {
+          headers: { "content-type": "text/html" },
+        }),
         NOW,
       ),
     ).toBe(false);

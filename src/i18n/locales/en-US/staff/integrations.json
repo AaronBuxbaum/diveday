@@ -8,10 +8,14 @@
     "test-sent": "Zapier test hook delivered.",
     "invalid": "Check the details and choose at least one event.",
     "not-configured": "That integration isn’t available yet.",
-    "not-authorized": "Only an owner or manager can change integrations.",
     "failed": "The integration could not complete that request. Try again, or reconnect it.",
     "encryption-key-unset": "This DiveDay instance is not set up to store credentials securely yet, so nothing was saved.",
-    "encryption-key-invalid": "This DiveDay instance’s encryption key is misconfigured, so nothing was saved."
+    "encryption-key-invalid": "This DiveDay instance’s encryption key is misconfigured, so nothing was saved.",
+    "earlier-sent": "{count, plural, one {# event} other {# events}} queued for delivery, oldest first.",
+    "earlier-partial": "Queued the first batch. {count, plural, one {# event is} other {# events are}} still waiting. Send again to queue them.",
+    "earlier-none": "Nothing was left to send.",
+    "earlier-not-owner": "Only the owner can send earlier checkouts.",
+    "earlier-invalid": "Choose a connected provider and a start date."
   },
   "status": {
     "connected": "Connected",
@@ -83,5 +87,19 @@
     "testing": "Sending test hook…",
     "notConnected": "No Zapier Catch Hook is connected yet.",
     "eventsDescription": "Choose which order events this Zap should receive."
+  },
+  "earlier": {
+    "heading": "Send earlier checkouts",
+    "description": "Hand a connected provider the card checkouts, tips and refunds from before it was connected. Nothing goes out until you confirm, and anything it already has is skipped.",
+    "providerLabel": "Send to",
+    "sinceLabel": "Start from",
+    "sinceDescription": "A day in {timezone}. Everything completed on or after it.",
+    "preview": "Preview",
+    "previewing": "Checking…",
+    "previewLine": "Since {date}: {checkouts, plural, one {# checkout} other {# checkouts}}, {tips, plural, one {# tip} other {# tips}} and {refunds, plural, one {# refund} other {# refunds}} have not reached {provider}.",
+    "previewNothing": "Nothing since {date} is waiting to be sent to {provider}.",
+    "caution": "They arrive in {provider} as new entries, oldest first. If that period is closed in your books, do not send them.",
+    "confirm": "Send to {provider}",
+    "confirming": "Queuing…"
   }
 }

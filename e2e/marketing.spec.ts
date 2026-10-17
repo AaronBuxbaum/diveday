@@ -65,8 +65,16 @@ test("the homepage hero offers one demo door, and states the price at it", async
   // doors, so the count is of things a visitor can actually act on.
   const heroSection = page.getByRole("main").locator("section").first();
   await expect(heroSection.locator("button:not([disabled])")).toHaveCount(1);
-  await expect(heroSection.getByRole("link")).toHaveCount(1);
-  await expect(heroSection.getByRole("link")).toHaveAttribute("href", "/get-set-up?from=home-hero");
+  // The shop's budget is counted without the one line for a diver (fourth
+  // review, item 50): a sentence for the reader who landed here by mistake,
+  // not a door for the shop deciding. It is pinned to exactly one link with
+  // one destination, so it cannot grow into a second budget.
+  const diverDoor = heroSection.getByRole("link", { name: "Find your booking", exact: true });
+  await expect(diverDoor).toHaveCount(1);
+  await expect(diverDoor).toHaveAttribute("href", "/find-your-booking");
+  const shopLinks = heroSection.getByRole("link").filter({ hasNotText: "Find your booking" });
+  await expect(shopLinks).toHaveCount(1);
+  await expect(shopLinks).toHaveAttribute("href", "/get-set-up?from=home-hero");
 
   // The flat price reaches the first screen as a *sentence*
   // (docs/product/marketing-review-20260827.md, "The price reaches the first
@@ -1664,6 +1672,14 @@ test("the legal pages are published, honest about what is unsettled, and reachab
   for (const processor of ["Stripe", "AWS", "Meta", "Vercel", "Neon", "Sentry", "Google"]) {
     await expect(page.getByRole("term").filter({ hasText: processor }).first()).toBeVisible();
   }
+
+  // The Chrome Web Store listing's privacy URL is /privacy#extension
+  // (extension/store/listing.md): the anchor is a published address.
+  const extension = page.locator("section#extension");
+  await expect(extension.getByRole("heading", { level: 2 })).toHaveText(
+    "The certification-check extension",
+  );
+  await expect(extension.getByRole("term").filter({ hasText: "What it never does" })).toBeVisible();
 
   // The retention windows are RETENTION_DAYS as prose. If that constant moves,
   // this copy is part of that change. "Attempts", not "outcomes": the 400-day

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { canPersonManageShopSettings } from "@/db/authz";
-import { countBoatDepartures, listBoats } from "@/db/boats";
+import { countDeparturesByBoat, listBoats } from "@/db/boats";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -61,6 +61,7 @@ export default async function BoatsSettingsPage({
     notice?: string;
     boat?: string;
     capacity?: string;
+    passengers?: string;
     limit?: string;
     count?: string;
     dates?: string;
@@ -77,14 +78,13 @@ export default async function BoatsSettingsPage({
 
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const shopBoats = await listBoats(db, session.user.shopId);
   // **How much history each hull carries**, so the confirm can say so before a
-  // shop taps Delete. Sequential rather than a fan-out: this reads through the
-  // same executor and a shop's fleet is a handful of rows.
-  const boatDepartures = new Map<string, number>();
-  for (const boat of shopBoats) {
-    boatDepartures.set(boat.id, await countBoatDepartures(db, session.user.shopId, boat.id));
-  }
+  // shop taps Delete: one grouped read beside the fleet, where it used to be
+  // one count per hull after it.
+  const [shopBoats, boatDepartures] = await Promise.all([
+    listBoats(db, session.user.shopId),
+    countDeparturesByBoat(db, session.user.shopId),
+  ]);
   const banner = noticeFromParam(notice, boatNoticeMessages(t));
   // H-107's refusal is a field error on the row it is about, not a banner.
   const certificateError = boatCertificateError(t, query, locale);
@@ -96,7 +96,9 @@ export default async function BoatsSettingsPage({
 
   return (
     <main className={settingsPaneClass()}>
-      <FlashParams params={["notice", "boat", "capacity", "limit", "count", "dates"]} />
+      <FlashParams
+        params={["notice", "boat", "capacity", "passengers", "limit", "count", "dates"]}
+      />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}
@@ -123,45 +125,44 @@ export default async function BoatsSettingsPage({
                       className="flex flex-1 flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-3 w-full"
                     >
                       <input type="hidden" name="boatId" value={boat.id} />
-                      <div className="flex-1 w-full">
-                        <input
-                          name="name"
-                          type="text"
-                          required
-                          defaultValue={boat.name}
-                          placeholder={t("boats.nameLabel")}
-                          aria-label={t("boats.nameLabel")}
-                          className={controlClass}
-                        />
-                      </div>
-                      <div className="w-full sm:w-32 flex items-center gap-2">
-                        <input
-                          name="capacity"
-                          type="number"
-                          required
-                          min={1}
-                          defaultValue={boat.capacity}
-                          placeholder={t("boats.capacityLabel")}
-                          aria-label={t("boats.capacityLabel")}
-                          aria-invalid={error ? true : undefined}
-                          aria-describedby={error?.id}
-                          className={`${controlClass} tabular-nums`}
-                        />
-                      </div>
-                      {/* A textarea, because the value is a sentence of up to
-                        200 characters: a one-line box cut the seed's 72 at
-                        its padding edge, mid-word (K-446). It grows with its
-                        text and never shows fewer than two lines. */}
-                      <div className="w-full sm:basis-full">
-                        <textarea
-                          name="description"
-                          rows={2}
-                          maxLength={200}
-                          defaultValue={boat.description ?? ""}
-                          placeholder={t("boats.descriptionLabel")}
-                          aria-label={t("boats.descriptionLabel")}
-                          className={textareaClassFor(2)}
-                        />
+                      {/* Captioned like the add form below (third review #36):
+                        capacity is a safety number, and a bare "14" beside
+                        the certificate's limit read as either. */}
+                      <div className="grid w-full grid-cols-1 gap-3 sm:basis-full sm:grid-cols-2">
+                        <Field label={t("boats.nameLabel")}>
+                          <input
+                            name="name"
+                            type="text"
+                            required
+                            defaultValue={boat.name}
+                            className={controlClass}
+                          />
+                        </Field>
+                        <Field label={t("boats.capacityLabel")}>
+                          <input
+                            name="capacity"
+                            type="number"
+                            required
+                            min={1}
+                            defaultValue={boat.capacity}
+                            aria-invalid={error ? true : undefined}
+                            aria-describedby={error?.id}
+                            className={`${controlClass} tabular-nums`}
+                          />
+                        </Field>
+                        {/* A textarea, because the value is a sentence of up to
+                          200 characters: a one-line box cut the seed's 72 at
+                          its padding edge, mid-word (K-446). It grows with its
+                          text and never shows fewer than two lines. */}
+                        <Field label={t("boats.descriptionLabel")} className="sm:col-span-2">
+                          <textarea
+                            name="description"
+                            rows={2}
+                            maxLength={200}
+                            defaultValue={boat.description ?? ""}
+                            className={textareaClassFor(2)}
+                          />
+                        </Field>
                       </div>
                       <BoatPaperFields
                         boat={boat}
@@ -178,7 +179,7 @@ export default async function BoatsSettingsPage({
                           {error.text}
                         </p>
                       ) : null}
-                      <BoatPaperFacts boat={boat} t={t} todayLocal={todayLocal} />
+                      <BoatPaperFacts boat={boat} t={t} todayLocal={todayLocal} locale={locale} />
                       {/* **Save and Delete on one line**, in the update form's
                         own action row rather than a form of their own apart.
                         The confirm posts to the delete through `formAction`,
@@ -255,8 +256,7 @@ export default async function BoatsSettingsPage({
               no values to read a box by, and its placeholders were its only
               labels: the 128px capacity box read "Capacity (se" and the
               description lost twenty characters of its own at 390 (K-145).
-              Captions; a row above keeps its placeholders because its values say what each box
-              holds. */}
+              Captions, the same ones the rows above carry. */}
           <AddPanel title={t("boats.createTitle")}>
             <FieldGrid
               as="form"

@@ -104,6 +104,7 @@ describe("GET /api/cron/retention — reporting", () => {
   beforeEach(() => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -146,7 +147,7 @@ describe("GET /api/cron/retention — reporting", () => {
     );
   });
 
-  it("names the tables still draining under the batch cap", async () => {
+  it("names the tables still over their window when the time budget ran out, on the alarmed line", async () => {
     vi.mocked(pruneExpiredRecords).mockResolvedValue({
       outcomes: [
         {
@@ -162,6 +163,14 @@ describe("GET /api/cron/retention — reporting", () => {
     } as never);
     await GET(cronRequest(`Bearer ${secret}`));
     expect(summaryLine()).toEqual(expect.objectContaining({ tablesCapped: "activity_events" }));
+    const warned = vi.mocked(console.warn).mock.calls.map((call) => JSON.parse(String(call[0])));
+    expect(warned).toEqual([
+      expect.objectContaining({
+        event: "cron_retention.prune_capped",
+        level: "warn",
+        tablesCapped: "activity_events",
+      }),
+    ]);
   });
 
   // A partial pass answers 500 so the scheduler's invocation log and Sentry

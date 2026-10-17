@@ -2,13 +2,14 @@
   "emptyHeading": "Nada todavía",
   "emptyDetail": "Las respuestas a los correos y mensajes de WhatsApp que envías llegan aquí.",
   "group": {
-    "waiting": "Esperan tu respuesta · {count}",
+    "waiting": "Pendiente · {count}",
     "answered": "Resueltos"
   },
   "channel": {
     "email": "Correo",
     "whatsapp": "WhatsApp",
-    "sms": "SMS"
+    "sms": "SMS",
+    "page": "Página de reserva"
   },
   "unknownSender": "Remitente desconocido",
   "keyword": {
@@ -18,6 +19,21 @@
     "late": "Llega tarde"
   },
   "attachments": "{count, plural, one {# archivo adjunto, sigue con quien lo envió} other {# archivos adjuntos, siguen con quien los envió}}",
+  "seat": "Reservó {trip}, {when}",
+  "nearStamp": "{day}, {time}",
+  "nearSeat": "{day} a las {time}",
+  "move": "Mover a otra salida",
+  "moveFor": "Mover la plaza de {name} en {trip} a otra salida",
+  "moveSeat": "Mover {trip}, {when}",
+  "moveSeatFor": "Mover la plaza de {name} en {trip}, {when}, a otra salida",
+  "late": {
+    "action": "Marcar que llega tarde",
+    "actionFor": "Marcar que {name} llega tarde a {trip}",
+    "marked": "En el manifiesto: llega tarde, avisó a las {time}",
+    "actionTrip": "Marcar que llega tarde a {trip}",
+    "actionForSeat": "Marcar que {name} llega tarde a {trip}, {when}",
+    "markedFor": "En el manifiesto de {trip}: llega tarde, avisó a las {time}"
+  },
   "openRecord": "Abrir la ficha de {name}",
   "delete": {
     "action": "Eliminar",
@@ -40,6 +56,7 @@
     "heading": "Conversación",
     "summary": "{count, plural, one {# mensaje} other {# mensajes}}",
     "received": "{name} · {date}",
+    "askedToMove": "{name} pidió cambiar esta plaza desde su página de reserva · {date}",
     "sent": "{name} respondió · {date}",
     "sentAutomatically": "Enviado automáticamente · {date}",
     "sendFailed": "Este no les llegó.",
@@ -60,14 +77,36 @@
     "emptyBody": "Escribe una respuesta antes de enviar.",
     "tooLong": "Es más larga de lo que admite una respuesta. Recórtala y envíala otra vez.",
     "notFound": "Ese mensaje ya no está en esta ficha.",
-    "sendLimit": "Has enviado muchas respuestas en esta hora. No salió nada; vuelve a intentarlo en un rato.",
     "channelUnsupported": "DiveDay todavía no puede responder un SMS.",
     "noReplyAddress": "No hay ninguna dirección a la que responder.",
     "cannotBeSent": "Esta respuesta no se puede enviar tal como está. No salió nada, y volver a intentarlo no cambiará eso.",
     "whatsappWindowClosed": "WhatsApp acepta una respuesta escrita durante 24 horas después del último mensaje del buceador. El suyo es más antiguo.",
     "whatsappNotConnected": "Para responder por WhatsApp hace falta el remitente que conectas en Ajustes.",
     "notAuthorized": "Tu cuenta ya no puede responder a los buceadores en este centro. Pide a un propietario o gerente que revise tu acceso.",
+    "lateMarked": "Marcado: llega tarde. La lista y el manifiesto lo muestran.",
+    "lateClosed": "Ese lugar ya no admite el aviso: hizo el check-in, se canceló o el barco ya salió.",
     "deleted": "Mensaje eliminado.",
-    "gone": "Ese mensaje ya no está en la bandeja."
+    "gone": "Ese mensaje ya no está en la bandeja.",
+    "answerSaved": "Guardada. Ya está sobre el cuadro de respuesta, en la ficha de cada buceador.",
+    "answerDuplicate": "Esa respuesta ya está guardada.",
+    "answersFull": "{count, plural, one {Guardas # respuesta.} other {Guardas # respuestas.}} Elimina una en Mensajes para hacer sitio.",
+    "answerDeleted": "Respuesta guardada eliminada.",
+    "answerRestored": "Respuesta guardada recuperada.",
+    "answerGone": "Esa respuesta guardada ya no está."
+  },
+  "savedAnswers": {
+    "heading": "Respuestas guardadas",
+    "empty": "Envía una respuesta desde la ficha de un buceador y elige Guardar esta respuesta. Aparecerá aquí y sobre cada cuadro de respuesta.",
+    "markersHint": "'{name}' se convierte en el nombre del buceador, y '{trip}' en su próxima salida reservada.",
+    "save": "Guardar esta respuesta",
+    "saving": "Guardando…",
+    "delete": "Eliminar",
+    "deleteFor": "Eliminar {title}",
+    "deleting": "Eliminando…",
+    "deletedHeading": "Eliminadas",
+    "restore": "Recuperar",
+    "restoreFor": "Recuperar {title}",
+    "restoring": "Recuperando…",
+    "tripFill": "{title}, {date}, {time}"
   }
 }

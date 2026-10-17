@@ -1,16 +1,42 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { watchRollCallTouches } from "@/components/roll-call-touch-guard";
 import type { OfflineTripControls } from "./offline-manifest/controls";
 import { OfflineManifestList } from "./offline-manifest/ManifestList";
 import { offlineRecorders } from "./offline-manifest/recorders";
-import { OfflineNoSavedTrip, OfflineOpeningScreen } from "./offline-manifest/ShellScreens";
+import {
+  OfflineManifestSkeleton,
+  OfflineNoSavedTrip,
+  OfflineOpeningScreen,
+} from "./offline-manifest/ShellScreens";
 import { DiscardedRecordsNotice, translatorForThisDevice } from "./offline-manifest/shared";
 import { OfflineTripScreen } from "./offline-manifest/TripScreen";
 import { offlineTripView } from "./offline-manifest/trip-view";
 import { useSavedManifest } from "./offline-manifest/use-saved-manifest";
 
+const subscribeNever = () => () => {};
+
+/**
+ * **Words only once the device's language is known.** The words on this page
+ * come from `navigator.language`, which the server does not have: it rendered
+ * the default language, and a phone set to Spanish then hydrated Spanish over
+ * English text, a hydration mismatch React answers by throwing the server's
+ * markup away (#418). So the server and the hydrating render both draw the
+ * wordless skeleton, and the screen with words mounts on the render right
+ * after hydration, with the device's language from its first render on. One
+ * mount, one translator: the store read below never runs in one language and
+ * then again in another.
+ */
 export function OfflineManifestView() {
+  const onThisDevice = useSyncExternalStore(
+    subscribeNever,
+    () => true,
+    () => false,
+  );
+  return onThisDevice ? <OfflineManifestScreen /> : <OfflineManifestSkeleton />;
+}
+
+function OfflineManifestScreen() {
   // A palm or spray on the glass is not a mark (roll-call-touch-guard).
   useEffect(() => watchRollCallTouches(), []);
   // Memoized so `reconcile`/`reconcileList` below (and the effect that reruns
@@ -37,6 +63,7 @@ export function OfflineManifestView() {
     message,
     setMessage,
     storeRead,
+    storeReadFailed,
     discarded,
     acknowledgeDiscarded,
     reconcile,
@@ -75,9 +102,8 @@ export function OfflineManifestView() {
     <DiscardedRecordsNotice t={t} records={discarded} onAcknowledge={acknowledgeDiscarded} />
   );
 
-  // Before the store has been read — which includes every server render, since
-  // the effect above only runs in the browser — say what is actually true and
-  // nothing more. See `storeRead` above for why this branch sits ahead of the
+  // Before the store has been read, say what is actually true and nothing
+  // more. See `storeRead` above for why this branch sits ahead of the
   // `tripId` split rather than inside either side of it: it must not depend on
   // the URL, because the cached shell is one document replayed for all of them.
   if (!storeRead) {
@@ -92,6 +118,7 @@ export function OfflineManifestView() {
         list={list}
         message={message}
         discardNotice={discardNotice}
+        readFailed={storeReadFailed}
       />
     );
   }
@@ -108,6 +135,7 @@ export function OfflineManifestView() {
         t={t}
         message={message}
         removedForOtherShop={removedForOtherShop}
+        readFailed={storeReadFailed}
         discardNotice={discardNotice}
       />
     );

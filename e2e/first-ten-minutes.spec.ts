@@ -88,6 +88,9 @@ test("a brand-new shop is bookable within the four-screen budget, and is shown t
   await expect(page.getByText(/^“Two-Tank Morning Reef” is on the board\. /)).toBeVisible();
   await expect(page.getByText(`/s/${unique}`)).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible();
+  // The checklist went with the first departure, but its release step did not
+  // (fourth UX review, item 21): divers still sign DiveDay's sample.
+  await expect(page.getByRole("link", { name: "Read the release" })).toBeVisible();
 
   // The budget: every screen the owner had to touch, counted honestly.
   expect(screens, `owner screens walked: ${screens.join(" → ")}`).toHaveLength(SCREEN_BUDGET);
@@ -96,13 +99,13 @@ test("a brand-new shop is bookable within the four-screen budget, and is shown t
   await page.getByRole("link", { name: "See it the way your divers will" }).click();
   await page.waitForURL(new RegExp(`/s/${unique}$`));
   await expect(page.getByText("Two-Tank Morning Reef").first()).toBeVisible();
-  await expect(page.getByText("12 spots left").first()).toBeVisible();
+  await expect(page.getByText("12 seats left").first()).toBeVisible();
 
   // All the way to the seat: the trip page offers a real booking form.
   await page.locator(`a[href*="/s/${unique}/trips/"]`).first().click();
   await page.waitForURL(new RegExp(`/s/${unique}/trips/`));
   await expect(
-    page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }),
+    page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }),
   ).toBeVisible();
 });
 
@@ -215,6 +218,6 @@ test("a shop with a departure today is not treated as a shop with no departures"
   // reach here. It hangs off no boat, and it ranks in the one "Needs you" list, in the
   // open (ADR 20260827-clearwater-surface-language, decision 4).
   await expect(page.getByRole("heading", { level: 2, name: "Needs you" })).toBeVisible();
-  await expect(page.getByText(/guessed from your timezone/)).toBeVisible();
+  await expect(page.getByText(/picked for where you are/)).toBeVisible();
   await expect(page.getByRole("link", { name: /Open units/ })).toBeVisible();
 });

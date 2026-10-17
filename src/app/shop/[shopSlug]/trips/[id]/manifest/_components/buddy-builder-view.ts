@@ -1,4 +1,5 @@
-import type { listTripBuddyTeams } from "@/db/buddy-pairs";
+import type { listTripBuddyTeams, PartyTeamPlan } from "@/db/buddy-pairs";
+import { partyLeftReasonText } from "@/i18n/buddy-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { ManifestBuddyTeam, TripManifest } from "@/lib/manifests";
@@ -13,11 +14,17 @@ export function buddyBuilderView({
   manifest,
   buddyTeamsList,
   buddyError,
+  partyPlan,
   locale,
   t,
 }: {
   /** This checkpoint's manifest, held seats already withheld. */
   manifest: TripManifest;
+  /**
+   * Who came together, which parties one tap may team, and which it leaves
+   * and why (`planPartyTeams`, item 50): the button and the action read one plan.
+   */
+  partyPlan: PartyTeamPlan;
   buddyTeamsList: Awaited<ReturnType<typeof listTripBuddyTeams>>;
   /** The refusal code the last buddy action redirected with, if any. */
   buddyError: string | undefined;
@@ -77,9 +84,48 @@ export function buddyBuilderView({
       ? "builder"
       : "panel"
     : null;
+  // **Who came together, and who came alone** (fifth-loop ideas, item 50):
+  // the divers still to team, grouped by the party they booked in. A line to
+  // build from, never a pairing made for anyone. Every name is the plan's own
+  // seat, the one "Team up each party" reads (dive-domain review of layer
+  // r5-4, second pass, N7), so the lines and the tap cannot disagree.
+  const nameOf = (bookingId: string) => partyPlan.names.get(bookingId) ?? "";
+  const together = [...partyPlan.teamable, ...partyPlan.left.map((party) => party.bookingIds)];
+  const groupList = cachedListFormat(locale, { type: "unit", style: "short" });
+  const partyLines =
+    together.length === 0
+      ? null
+      : {
+          together: t("manifest.buddyCameTogether", {
+            parties: groupList.format(together.map((ids) => teamNameList.format(ids.map(nameOf)))),
+          }),
+          alone:
+            partyPlan.alone.length === 0
+              ? null
+              : t("manifest.buddyCameAlone", {
+                  names: groupList.format(partyPlan.alone.map(nameOf)),
+                }),
+          // Each party the tap leaves, said with its reason (dive-domain
+          // review of layer r5-4, BLOCK 1): a junior, an intro dive, a family.
+          left: partyPlan.left.map(({ bookingIds, reason }) =>
+            t("manifest.buddyPartyLeft", {
+              names: teamNameList.format(bookingIds.map(nameOf)),
+              reason: partyLeftReasonText(t, reason),
+            }),
+          ),
+          /** Parties "Team up each party" would make a team of: the action's own plan. */
+          teamable: partyPlan.teamable.length,
+        };
   return {
     buddyTeamLabel,
     /** Named as `BuddyTeamsPanel` takes them, so the page hands them on whole. */
-    panel: { unteamedDivers, diverOptions, crewOptions, buddyErrorText, buddyErrorForm },
+    panel: {
+      unteamedDivers,
+      diverOptions,
+      crewOptions,
+      buddyErrorText,
+      buddyErrorForm,
+      partyLines,
+    },
   };
 }

@@ -1,10 +1,13 @@
 import { and, eq } from "drizzle-orm";
 import { cache } from "react";
 import {
+  canAddDiver,
+  canBackfillIntegrations,
   canCallDayBlowout,
   canConfigureTrips,
   canDeleteDiver,
   canErasePersonalData,
+  canExportDisputeSheet,
   canExportIncidentRecord,
   canManageBilling,
   canManageMessagingSettings,
@@ -26,6 +29,7 @@ import {
   canViewShopActivity,
   type Role,
 } from "@/lib/authz";
+import { rolesMayActOnKind, type TodayActionKind } from "@/lib/today";
 import type { DbExecutor } from "./client";
 import { people, personRoles, userAccounts } from "./schema";
 import { livePerson } from "./trips-live";
@@ -132,6 +136,18 @@ async function canPerson(
   return roles !== null && predicate(roles);
 }
 
+/**
+ * Live DB-checked: may this person act on a Today row of this kind (its
+ * `KIND_AUDIENCE`)? What Today hides from a role, the action behind it refuses
+ * (issue #2134), read from the database, never from the session's cached roles.
+ */
+export const canPersonActOnKind = (
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+  kind: TodayActionKind,
+) => canPerson(db, shopId, personId, (roles) => rolesMayActOnKind(kind, roles));
+
 /** Live DB-checked companions of the H-14 predicates (src/lib/authz.ts). */
 export const canPersonManagePaymentSettings = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManagePaymentSettings);
@@ -139,6 +155,10 @@ export const canPersonManagePaymentSettings = (db: DbExecutor, shopId: string, p
 /** Live DB-checked companion of the owner-only billing gate (src/lib/authz.ts). */
 export const canPersonManageBilling = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManageBilling);
+
+/** Live DB-checked companion of the owner-only integration backfill gate (src/lib/authz.ts). */
+export const canPersonBackfillIntegrations = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canBackfillIntegrations);
 
 export const canPersonManageMessagingSettings = (
   db: DbExecutor,
@@ -161,6 +181,10 @@ export const canPersonViewShopActivity = (db: DbExecutor, shopId: string, person
  */
 export const canPersonManageOrders = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManageOrders);
+
+/** Live DB-checked companion of the dispute-sheet gate (src/lib/authz.ts). */
+export const canPersonExportDisputeSheet = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canExportDisputeSheet);
 
 export const canPersonManageWaiverTemplates = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManageWaiverTemplates);
@@ -187,6 +211,10 @@ export const canPersonManageRentalSettings = (db: DbExecutor, shopId: string, pe
     personId,
     (roles) => canManageShopSettings(roles) && canManagePaymentSettings(roles),
   );
+
+/** Live DB-checked companion of the add-a-diver gate, which every staff role holds (src/lib/authz.ts). */
+export const canPersonAddDiver = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canAddDiver);
 
 export const canPersonDeleteDiver = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canDeleteDiver);

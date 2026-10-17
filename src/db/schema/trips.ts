@@ -15,6 +15,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { PLAN_CHANGE_REASONS } from "@/lib/plan-change";
+import { appNowTimestamp } from "./columns";
 import { certificationLevel, type diveSpecialty, people, shops } from "./core";
 import { courses } from "./courses";
 import { diveSites } from "./dive-sites";
@@ -105,7 +106,7 @@ export const tripSeries = pgTable(
      * (`rollAllSeriesForward`). Written on every attempt, including a failed one.
      */
     lastRolledAt: timestamp("last_rolled_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("trip_series_shop_idx").on(table.shopId),
@@ -141,7 +142,7 @@ export const tripSeriesSkips = pgTable(
       .references(() => tripSeries.id),
     /** Shop-local calendar date, `YYYY-MM-DD` — the cadence slot being closed. */
     occurrenceDate: text("occurrence_date").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("trip_series_skips_slot_idx").on(table.seriesId, table.occurrenceDate),
@@ -186,18 +187,49 @@ export const boats = pgTable(
      */
     certifiedPassengers: integer("certified_passengers"),
     /**
-     * The boat's three paper clocks, each a shop-local calendar date (no
-     * instant in it): when the next safety inspection is due, when the
-     * registration runs out, and when the hull insurance does. Nullable each,
+     * **Total persons aboard, crew included**, when the certificate prints that
+     * limit too (#2302). Some flag states, Spain among them, print only this
+     * one number. Optional and independent of `certifiedPassengers`: a shop
+     * whose certificate carries only a passenger figure is never asked for it.
+     *
+     * Checked at the manifest, never at the point of sale: the pre-departure
+     * check says when the people booked, or counted aboard, plus the crew pass
+     * it (`boatSafetyNotices`). The booking transaction counts seats exactly
+     * as before (Aaron, 2026-10-13).
+     */
+    certifiedTotalPersons: integer("certified_total_persons"),
+    /**
+     * The boat's paper clocks, each a shop-local calendar date (no instant in
+     * it): when the next safety inspection is due, when the registration runs
+     * out, and when the hull insurance does (and `coiExpiresOn` below). Nullable each,
      * and each informs ahead of time: 90 days for the inspection, 60 for the
      * other two (`src/lib/boat-safety.ts`). Stored on the boat rather than as events because the shop
      * renews a document by typing the next date over the last one; the
      * history of a paper is the paper itself.
      */
     inspectionDueOn: date("inspection_due_on"),
+    /**
+     * When the certificate itself runs out (#2302): a Certificate of Inspection
+     * carries its own expiry, years apart from the annual inspection above,
+     * and either lapsing grounds a passenger vessel. Same shape and same
+     * 90-day horizon as the inspection.
+     */
+    coiExpiresOn: date("coi_expires_on"),
     registrationExpiresOn: date("registration_expires_on"),
     insuranceExpiresOn: date("insurance_expires_on"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * **The boat's radio identity** (fourth review, item 11): its call sign and
+     * its MMSI, the two facts a coastguard asks for after the name. Held per
+     * hull because a shop with two boats has two of each: the packet's
+     * emergency card printed one shop-wide vessel line on every departure, so
+     * a boat sailing on Mantis I read Mantis II's MMSI. Optional each; a
+     * departure on no boat, or on one with neither, falls back to the shop's
+     * own vessel line (`emergencyReferenceForDeparture`). The MMSI is nine
+     * digits (ITU-R M.585); the call sign is stored upper-cased.
+     */
+    callSign: text("call_sign"),
+    mmsi: text("mmsi"),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /**
      * Deleting a hull stamps this and leaves the row (ADR
      * 20260820-every-delete-is-soft). It has to: `trips.boat_id` is
@@ -220,6 +252,18 @@ export const boats = pgTable(
     check(
       "boats_certified_passengers_positive",
       sql`${table.certifiedPassengers} is null or ${table.certifiedPassengers} between 1 and 999`,
+    ),
+    // An MMSI is nine digits; anything else read over the radio is a wrong number.
+    check("boats_mmsi_nine_digits", sql`${table.mmsi} is null or ${table.mmsi} ~ '^[0-9]{9}$'`),
+    check(
+      "boats_certified_total_persons_positive",
+      sql`${table.certifiedTotalPersons} is null or ${table.certifiedTotalPersons} between 1 and 999`,
+    ),
+    // Passengers are some of the persons aboard: more passengers than persons
+    // is a typo, refused at save too (`boatSeatsRefusal`).
+    check(
+      "boats_certified_passengers_within_total",
+      sql`${table.certifiedPassengers} is null or ${table.certifiedTotalPersons} is null or ${table.certifiedPassengers} <= ${table.certifiedTotalPersons}`,
     ),
   ],
 );
@@ -251,7 +295,7 @@ export const tripLenses = pgTable(
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     /** Also the rail's order: the order the shop wrote its own vocabulary in. */
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /**
      * Deleting a lens stamps this and leaves the row (ADR
      * 20260820-every-delete-is-soft), because `trips.lens_id` points at it and
@@ -347,6 +391,15 @@ export const trips = pgTable(
      * by a constraint about something else.
      */
     diverCapacity: integer("diver_capacity"),
+    /**
+     * **The wetsuit the boat is running today, in millimetres** (issue #2206;
+     * Aaron 2026-10-13), set on the departure's details beside the dive plan.
+     * Per departure rather than per season because the cold-snap day is the
+     * one that matters. Null is "not said", and then the Gear tab proposes no
+     * wetsuit at all: a staffer picks one, as before. It proposes, it never
+     * gates (`proposeRentalUnits`).
+     */
+    wetsuitThicknessMm: integer("wetsuit_thickness_mm"),
     /** Drives the after-dive roll-call checkpoints; recreational charters are commonly two-tank. */
     plannedDives: integer("planned_dives").notNull().default(2),
     /**
@@ -356,7 +409,8 @@ export const trips = pgTable(
      * a dive that took stops, so `flySafeFrom` (src/lib/fly-safe.ts) answers
      * nothing for a departure carrying it and the recap says nothing about
      * flying. Defaults to no, so a shop that never sets it keeps the ordinary
-     * sentence; it changes no gate, no ratio and no manifest.
+     * sentence. It changes no gate and no ratio; the roster and the roll call show
+     * one reminder line to check technical cards when a diver is booked (H-144).
      */
     exceedsNoDecoLimits: boolean("exceeds_no_deco_limits").notNull().default(false),
     /** Per-diver price; null means unpriced — an order made from this trip needs a manual amount. */
@@ -429,6 +483,13 @@ export const trips = pgTable(
     /** Crew weather/conditions caution: the trip remains visible, but bookings pause for a final call. */
     conditionsHold: boolean("conditions_hold").notNull().default(false),
     isPrivate: boolean("is_private").notNull().default(false),
+    /**
+     * **Lunch is served aboard** (fifth-loop ideas, item 56): a long day boat
+     * feeds its divers. Only then does the diver's day-of form ask for a lunch
+     * preference, and Prep and the paper day count lunches and list the
+     * notes. Off by default; a two-tank morning feeds nobody.
+     */
+    lunchAboard: boolean("lunch_aboard").notNull().default(false),
     /**
      * **This departure is meant to run without an in-water guide, and the shop
      * says so.**
@@ -523,6 +584,15 @@ export const trips = pgTable(
      */
     diversToldStartsAt: timestamp("divers_told_starts_at", { withTimezone: true }),
     /**
+     * **Whether the meeting point has moved since the divers were last told**
+     * (#2446), kept beside `divers_told_starts_at` for the same reason: the
+     * "Tell them" notice after an Undo reads it here, and a posted form field
+     * is never trusted for what the notice says. ORed in by each move that
+     * holds a notice, cleared with `divers_told_starts_at` when a notice is
+     * sent or the divers' time is current again.
+     */
+    diversToldMeetingPoint: boolean("divers_told_meeting_point").notNull().default(false),
+    /**
      * Set when staff delete an empty departure (ADR 20260820-every-delete-is-soft).
      *
      * `deleteTrip` still refuses a departure with any roster, wait-list entry or
@@ -555,7 +625,23 @@ export const trips = pgTable(
      * src/db/rehearsals.ts).
      */
     isRehearsal: boolean("is_rehearsal").notNull().default(false),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * **When the stale-roll-call alert went out for this departure** (batch
+     * 6, item 6; `sendStaleRollCallAlerts`, src/db/roll-call-alerts.ts): an
+     * after-dive roll call still open half an hour after the boat was due
+     * back. The hourly pass claims it with a conditional update, so the alert
+     * goes once per departure however many passes see the count still open.
+     * Null until then, and for ever on a departure whose count closed in time.
+     */
+    rollCallAlertedAt: timestamp("roll_call_alerted_at", { withTimezone: true }),
+    /**
+     * **When the shop's shore contact was told** (H-118): the same alert's
+     * shore copy, claimed on its own so a failed shore send is tried again on
+     * the next pass and a delivery ashore never reads as "Owners alerted".
+     * Null until then, and for ever on a shop with no confirmed shore contact.
+     */
+    rollCallShoreAlertedAt: timestamp("roll_call_shore_alerted_at", { withTimezone: true }),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("trips_shop_starts_idx").on(table.shopId, table.startsAt),
@@ -563,6 +649,12 @@ export const trips = pgTable(
     // already leaves private departures out leaves it out too, by construction.
     check("trips_rehearsal_is_private", sql`not ${table.isRehearsal} or ${table.isPrivate}`),
     index("trips_series_starts_idx").on(table.seriesId, table.startsAt),
+    // Foreign keys a query filters on (#2492): a course's departures
+    // (progression, materials, forms) and a hull's upcoming departures (the
+    // certificate edit locks them, the clash check reads them). Other
+    // reads scope by `shop_id` first and ride the shop/starts_at indexes.
+    index("trips_course_starts_idx").on(table.courseId, table.startsAt),
+    index("trips_boat_starts_idx").on(table.boatId, table.startsAt),
     // Partial, over the live rows only: every listing read carries
     // `deleted_at is null`, and a deleted departure is rare enough that
     // indexing the tombstones alongside them would pay for nothing.
@@ -610,6 +702,11 @@ export const trips = pgTable(
     check(
       "trips_snorkeler_price_nonnegative",
       sql`${table.snorkelerPriceCents} is null or ${table.snorkelerPriceCents} >= 0`,
+    ),
+    // `WETSUIT_THICKNESS_MM` in src/lib/gear.ts, which the details form reads.
+    check(
+      "trips_wetsuit_thickness_mm_range",
+      sql`${table.wetsuitThicknessMm} is null or ${table.wetsuitThicknessMm} between 1 and 10`,
     ),
     check(
       "trips_rider_price_nonnegative",
@@ -685,11 +782,13 @@ export const tripDives = pgTable(
      * treating it as absent.
      */
     travelMinutes: integer("travel_minutes"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("trip_dives_trip_number_unique").on(table.tripId, table.diveNumber),
     index("trip_dives_trip_idx").on(table.tripId, table.diveNumber),
+    // "Which departures dive this site" (dive-sites.ts), a read by site alone.
+    index("trip_dives_dive_site_idx").on(table.diveSiteId),
     // The same bounds `DOCK_DAY_LIMITS.boatRideMinutes` puts on the shop-wide
     // figure this falls back to (src/lib/diver-planning.ts), so an import or a
     // hand-written fix cannot write a leg the form would have refused.
@@ -778,10 +877,15 @@ export const executedDives = pgTable(
     recordedByPersonId: uuid("recorded_by_person_id").references(() => people.id),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("executed_dives_recorded_by_person_id_idx").on(table.recordedByPersonId),
     uniqueIndex("executed_dives_trip_number_live_unique")
       .on(table.tripId, table.diveNumber)
       .where(sql`${table.deletedAt} is null`),
@@ -831,8 +935,8 @@ export const tripRequirements = pgTable(
     requiresNitrox: boolean("requires_nitrox").notNull().default(false),
     /** Whether a diver must have paid (or a deposit/waiver) to board. */
     requiresPayment: boolean("requires_payment").notNull().default(false),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [index("trip_requirements_shop_idx").on(table.shopId)],
 );
@@ -901,10 +1005,10 @@ export const tripSightings = pgTable(
       .notNull()
       .references(() => people.id),
     /** When the first tap landed; `updated_at` moves with every later one. */
-    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
+    recordedAt: appNowTimestamp("recorded_at").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     // The tally's identity: one live row per species per site per departure, so

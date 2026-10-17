@@ -77,7 +77,7 @@ describe("a diver in a drysuit with no drysuit card", () => {
 
     expect(
       screen.getByText(
-        "Dives dry with no drysuit certification on file. Not a block: ask about their drysuit experience, or plan an orientation before the first dive.",
+        "Dives dry with no drysuit certification on file. Not a block: ask about their drysuit experience (if you have seen them dive dry, record it on their record), or plan an orientation before the first dive.",
       ),
     ).toBeInTheDocument();
     // The advisory is not a blocker, so the seat is still cleared.
@@ -167,7 +167,7 @@ describe("an earlier physician refusal under a cleared release", () => {
     expect(line).toBeVisible();
     expect(line.textContent).toMatch(/Aug\s1 \(earlier waiver\)/);
     const link = within(line.closest("li") as HTMLElement).getByRole("link", {
-      name: "View signed record",
+      name: "View the physician’s decision",
     });
     expect(link).toHaveAttribute("href", "/shop/blue-mantis/divers/p-r/waivers/w-refused");
   });

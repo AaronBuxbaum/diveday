@@ -1,18 +1,30 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import type { AgencyCheckQuery } from "@/lib/agency-check";
 import {
   CHECK_REQUEST_TYPE,
   CHECK_RESULT_TYPE,
   CHECK_TIMEOUT_MS,
+  DRY_RUN_REQUEST_TYPE,
   ELEARNING_REQUEST_TYPE,
   EXTENSION_MARKER_ATTRIBUTE,
   EXTENSION_MESSAGE_SOURCE,
   EXTENSION_READY_EVENT,
   type ExtensionCheckReply,
+  type ExtensionDryRun,
+  type ExtensionHello,
+  type ExtensionPresence,
+  extensionFailure,
+  extensionPresence,
   extensionVersion,
+  HELLO_REQUEST_TYPE,
+  PADI_SESSION_REQUEST_TYPE,
   PAGE_MESSAGE_SOURCE,
+  type PadiSession,
+  parseExtensionDryRun,
+  parseExtensionHello,
+  parsePadiSession,
 } from "@/lib/cert-check-extension";
 import type { ElearningQuery } from "@/lib/elearning-check";
 
@@ -27,16 +39,23 @@ function subscribe(onChange: () => void): () => void {
 }
 
 /**
- * Whether the DiveDay browser extension is in this browser. Always false on
- * the server and on the first client render, so the agency's plain link is
- * what paints first and what stays when there is no extension.
+ * Whether this browser has the DiveDay extension, and which copy: absent, or
+ * a version older than `MIN_EXTENSION_VERSION`, or current. Absent on the
+ * server and on the first client render, so the agency's plain link is what
+ * paints first.
+ */
+export function useCertCheckExtensionPresence(): ExtensionPresence {
+  const version = useSyncExternalStore(subscribe, extensionVersion, () => null);
+  return useMemo(() => extensionPresence(version), [version]);
+}
+
+/**
+ * Whether a check can be handed to the extension here: it is in this browser
+ * and current. An older copy is treated as absent, so the agency's plain link
+ * is what the staffer gets until it is updated.
  */
 export function useCertCheckExtension(): boolean {
-  return useSyncExternalStore(
-    subscribe,
-    () => extensionVersion() !== null,
-    () => false,
-  );
+  return useCertCheckExtensionPresence().state === "current";
 }
 
 let nextRequest = 0;
@@ -51,15 +70,51 @@ export function requestElearningPage(query: ElearningQuery): Promise<ExtensionCh
   return requestPage(ELEARNING_REQUEST_TYPE, query);
 }
 
-function requestPage(type: string, query: object): Promise<ExtensionCheckReply> {
+async function requestPage(type: string, query: object): Promise<ExtensionCheckReply> {
+  const data = await requestExtension(type, query, CHECK_TIMEOUT_MS);
+  if (!data) return { ok: false, reason: "timeout" };
+  if (data.ok === true && typeof data.pageText === "string") {
+    return { ok: true, pageText: data.pageText };
+  }
+  // A fixed code, never the page's words: "signed_out" is how a page behind
+  // the shop's own sign-in says to sign in first. A page's shape comes only
+  // if it parses as form words (`page-shape.ts`).
+  return extensionFailure(data);
+}
+
+/** Ask which copy of the extension is here, or null when none answers in a moment. */
+export async function requestExtensionHello(): Promise<ExtensionHello | null> {
+  const data = await requestExtension(HELLO_REQUEST_TYPE, {}, 3_000);
+  return data ? parseExtensionHello(data) : null;
+}
+
+/** "Try the checks": fill one agency's sample page in the extension, sending nothing anywhere. */
+export async function requestDryRun(agency: string): Promise<ExtensionDryRun> {
+  const data = await requestExtension(DRY_RUN_REQUEST_TYPE, { agency }, 15_000);
+  return data ? parseExtensionDryRun(data) : { ok: false, reason: "timeout" };
+}
+
+/** "Try the checks": whether a PADI Pros' Site tab in this browser is signed in. */
+export async function requestPadiSession(): Promise<PadiSession | null> {
+  const data = await requestExtension(PADI_SESSION_REQUEST_TYPE, {}, 10_000);
+  return data ? parsePadiSession(data) : null;
+}
+
+/**
+ * One request to the extension and its answer, as the extension's own words
+ * still to be read (each caller parses what it expects), or null when nothing
+ * answered in time.
+ */
+function requestExtension(
+  type: string,
+  query: object,
+  timeoutMs: number,
+): Promise<Record<string, unknown> | null> {
   nextRequest += 1;
   const requestId = `check-${nextRequest}-${Math.random().toString(36).slice(2)}`;
   return new Promise((resolve) => {
-    const timer = window.setTimeout(
-      () => finish({ ok: false, reason: "timeout" }),
-      CHECK_TIMEOUT_MS,
-    );
-    function finish(reply: ExtensionCheckReply) {
+    const timer = window.setTimeout(() => finish(null), timeoutMs);
+    function finish(reply: Record<string, unknown> | null) {
       window.clearTimeout(timer);
       window.removeEventListener("message", onMessage);
       resolve(reply);
@@ -75,11 +130,7 @@ function requestPage(type: string, query: object): Promise<ExtensionCheckReply> 
       ) {
         return;
       }
-      if (data.ok === true && typeof data.pageText === "string") {
-        finish({ ok: true, pageText: data.pageText });
-      } else {
-        finish({ ok: false, reason: "fill_failed" });
-      }
+      finish(data);
     }
     window.addEventListener("message", onMessage);
     window.postMessage(

@@ -18,6 +18,13 @@ import {
   isDemoSeatFor,
   signDemoSeat,
 } from "@/lib/demo-seat";
+import {
+  DEMO_SHOP_NAME_COOKIE,
+  DEMO_SHOP_NAME_COOKIE_CLEAR,
+  DEMO_SHOP_NAME_COOKIE_PATH,
+  DEMO_SHOP_NAME_MAX_AGE_SECONDS,
+  signDemoShopName,
+} from "@/lib/demo-shop-name";
 import { eventSource } from "@/lib/funnel";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { isQuietDemoDevice, QUIET_DEMO_COOKIE } from "@/lib/quiet-demo-device";
@@ -69,6 +76,27 @@ async function takeDemoSeat(shopId: string): Promise<void> {
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: DEMO_SEAT_MAX_AGE_SECONDS,
+  });
+}
+
+/**
+ * Dress this browser's demo in the shop name the visitor typed at the door
+ * (H-131), or take off a name an earlier demo wore when this one was given
+ * none. Staff screens and the email preview read it; the storefront never does.
+ */
+async function wearVisitorShopName(shopId: string, typed: unknown): Promise<void> {
+  const jar = await cookies();
+  const value = signDemoShopName(shopId, typed);
+  if (!value) {
+    jar.delete(DEMO_SHOP_NAME_COOKIE_CLEAR);
+    return;
+  }
+  jar.set(DEMO_SHOP_NAME_COOKIE, value, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: DEMO_SHOP_NAME_COOKIE_PATH,
+    maxAge: DEMO_SHOP_NAME_MAX_AGE_SECONDS,
   });
 }
 
@@ -142,7 +170,10 @@ export async function enterDemoAction(formData?: FormData) {
   if (!quiet) after(() => announceDemoEntry({ slug, role, source }));
 
   const shop = await getShopBySlug(db, slug);
-  if (shop) await takeDemoSeat(shop.id);
+  if (shop) {
+    await takeDemoSeat(shop.id);
+    await wearVisitorShopName(shop.id, formData?.get("shopName"));
+  }
 
   // The diver pick previews the customer view — the public schedule needs no
   // sign-in at all, so it skips straight there instead of minting a session.

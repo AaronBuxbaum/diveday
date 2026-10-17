@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { orders, paymentDisputes, people } from "@/db/schema";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   SEEDED_CAPTAIN_EMAIL,
   SEEDED_OWNER_EMAIL,
@@ -9,9 +9,11 @@ import {
 } from "@/test/staff-session";
 import { loadOrderHeader } from "./order-header";
 
+const ctx = fileScopedShopContext();
+
 /** A seeded paid order with an undecided dispute on it. */
 async function disputedOrder() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
   if (!person) throw new Error("seeded person missing");
   const [order] = await db
@@ -68,6 +70,27 @@ describe("loadOrderHeader's dispute", () => {
       personId: captain,
     });
     expect(dispute).toBeNull();
+  });
+});
+
+describe("loadOrderHeader's lost disputes (issue 2292)", () => {
+  it("shows a lost dispute's reversal to an owner and nothing to crew", async () => {
+    const { db, shop, order } = await disputedOrder();
+    await db
+      .update(paymentDisputes)
+      .set({
+        status: "lost",
+        closedAt: new Date("2026-10-12T00:00:00Z"),
+        reversedAt: new Date("2026-10-12T00:00:00Z"),
+      })
+      .where(eq(paymentDisputes.stripeDisputeId, "dp_banner"));
+    const input = { shopId: shop.id, orderId: order.id };
+    const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    const captain = await seededStaffPersonId(db, shop.id, SEEDED_CAPTAIN_EMAIL);
+    expect((await loadOrderHeader(db, { ...input, personId: owner })).lostDisputes).toMatchObject([
+      { amountCents: 5_000 },
+    ]);
+    expect((await loadOrderHeader(db, { ...input, personId: captain })).lostDisputes).toEqual([]);
   });
 });
 

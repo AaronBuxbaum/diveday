@@ -86,6 +86,25 @@ export const GEAR_SERVICE_KINDS = [
 export type GearServiceKind = (typeof GEAR_SERVICE_KINDS)[number];
 
 /**
+ * **A wetsuit's thickness, in whole millimetres** (issue #2206): the bounds
+ * the unit form and the departure's details form accept, and the database's
+ * own check constraints on `gear_items.thickness_mm` and
+ * `trips.wetsuit_thickness_mm` repeat. Skins and 0.5 mm suits are not
+ * thermal protection anyone proposes by thickness; nothing rents thicker
+ * than a 10 mm.
+ */
+export const WETSUIT_THICKNESS_MM = { min: 1, max: 10 } as const;
+
+/** A posted thickness narrowed to whole millimetres in range, or null. */
+export function parseWetsuitThicknessMm(value: unknown): number | null {
+  if (typeof value !== "string" || value.trim() === "") return null;
+  const mm = Number(value.trim());
+  return Number.isInteger(mm) && mm >= WETSUIT_THICKNESS_MM.min && mm <= WETSUIT_THICKNESS_MM.max
+    ? mm
+    : null;
+}
+
+/**
  * Fleet display order. The four shared kinds before mask/fins keep the prep
  * list's own order
  * (`KIND_ORDER` in dive-prep.ts) so the register and the packing list read
@@ -281,10 +300,30 @@ const LIFE_SUPPORT_KINDS: ReadonlySet<GearItemKind> = new Set([
 /**
  * The units a diver breathes or ascends by. A hand pick of one with a lapsed
  * service clock or an open concern asks the staffer to assign it anyway, in
- * so many words (dive-domain review of issue #2215).
+ * so many words (dive-domain review of issue #2215). Not
+ * `PULL_STARTS_TICKED_KINDS`, on purpose: a dive computer is here because the
+ * desk must knowingly hand out a doubtful one, while a cylinder is there
+ * because one with a valve problem must come off the rack.
  */
 export function gearKindIsLifeSupport(kind: GearItemKind): boolean {
   return LIFE_SUPPORT_KINDS.has(kind);
+}
+
+const PULL_STARTS_TICKED_KINDS: ReadonlySet<GearItemKind> = new Set(["regulator", "bcd", "tank"]);
+
+/**
+ * Whether "Pull for service" starts ticked when one unit comes off the boat
+ * with a problem (dive-domain review of fifth-loop item 5): on for what a
+ * diver breathes from or floats by (regulator, BCD, cylinder), so a short rack
+ * at 7 AM does not hand out the regulator somebody wrote "inflator sticks"
+ * against; off for the rest, where a scratched mask is no reason to empty the
+ * wall. The set pane's armful keeps every box unticked. Not
+ * `LIFE_SUPPORT_KINDS`, on purpose: a cylinder with a valve problem must come
+ * off the rack, while a doubtful dive computer is a rental the desk can
+ * re-assign knowingly, so it starts unticked.
+ */
+export function pullStartsTicked(kind: GearItemKind): boolean {
+  return PULL_STARTS_TICKED_KINDS.has(kind);
 }
 
 /**
@@ -700,4 +739,47 @@ export function serviceConcernStillOpen(
         (event.servicedOn === lastReturn.returnedOn &&
           event.createdAt.getTime() >= lastReturn.returnedAt.getTime())),
   );
+}
+
+/**
+ * **A concern returned while the unit is already on the bench** (#2540). A
+ * set return that flags a unit already pulled leaves the technician's note
+ * alone (`pullReturnedUnitsForService`), so the concern would otherwise live
+ * only in the rental history further down the page. The status card names
+ * each one, newest first, while the unit is off the wall: a service-concern
+ * return with words that no later service answered, and not already the
+ * unit's own note. "Later" is the rule `serviceConcernStillOpen` keeps: a
+ * service on a later day, or on the same day recorded at or after the return.
+ */
+export function benchReturnConcerns(
+  item: { status: "in_service" | "needs_service"; serviceNote: string | null },
+  reservations: ReadonlyArray<{
+    returnOutcome: GearReturnOutcome | null;
+    returnNote: string | null;
+    returnedAt: Date | null;
+  }>,
+  history: ReadonlyArray<{ servicedOn: CalendarDate; kind: GearServiceKind; createdAt: Date }>,
+  timeZone: string,
+): { note: string; returnedOn: CalendarDate }[] {
+  if (item.status !== "needs_service") return [];
+  // A condition note answers no concern; any real work on the unit does.
+  const work = history.filter((event) => event.kind !== "note");
+  const answered = (returnedOn: CalendarDate, returnedAt: Date) =>
+    work.some(
+      (event) =>
+        event.servicedOn > returnedOn ||
+        (event.servicedOn === returnedOn && event.createdAt.getTime() >= returnedAt.getTime()),
+    );
+  const ownNote = item.serviceNote?.trim() ?? "";
+  return reservations
+    .flatMap((reservation) => {
+      const note = reservation.returnNote?.trim() ?? "";
+      if (reservation.returnOutcome !== "service_concern" || !reservation.returnedAt) return [];
+      if (note === "" || note === ownNote) return [];
+      const returnedOn = calendarDateInTimezone(reservation.returnedAt, timeZone);
+      if (answered(returnedOn, reservation.returnedAt)) return [];
+      return [{ note, returnedOn, at: reservation.returnedAt.getTime() }];
+    })
+    .sort((a, b) => b.at - a.at)
+    .map(({ note, returnedOn }) => ({ note, returnedOn }));
 }

@@ -3,7 +3,9 @@ import {
   cancellationDeadline,
   checkoutCharge,
   checkoutSeatTerms,
+  partyMoneyTerms,
   refundOnCancellation,
+  seatBalanceOwedCents,
   seatListPriceCents,
   seatMoneyTerms,
   withinCancellationWindow,
@@ -157,10 +159,19 @@ describe("checkoutSeatTerms", () => {
     });
   });
 
-  it("offers no other seat on a departure that prices none, or on a course session", () => {
+  it("offers no other seat on a departure that prices none", () => {
     const plain = { ...trip, snorkelerPriceCents: null, riderPriceCents: null };
     expect(checkoutSeatTerms(plain, null).otherSeatOffers).toEqual([]);
-    expect(checkoutSeatTerms({ ...trip, courseId: "course-1" }, null).otherSeatOffers).toEqual([]);
+    expect(checkoutSeatTerms({ ...plain, courseId: "course-1" }, null).otherSeatOffers).toEqual([]);
+  });
+
+  // Issue #2226: a course session sells the snorkeler and rider seats it prices.
+  it("offers a course session's priced other seats too", () => {
+    expect(
+      checkoutSeatTerms({ ...trip, courseId: "course-1" }, null).otherSeatOffers.map(
+        (offer) => offer.type,
+      ),
+    ).toEqual(["snorkeler", "rider"]);
   });
 
   it("quotes no deposit on a departure that takes none", () => {
@@ -205,6 +216,68 @@ describe("seatMoneyTerms (ux review 2026-10-11, item 5)", () => {
   it("has nothing to say about an unpriced seat", () => {
     expect(
       seatMoneyTerms({ priceCents: null, depositCents: null }, null, "diver", true),
+    ).toBeNull();
+  });
+});
+
+describe("seatBalanceOwedCents", () => {
+  it("owes the whole seat before anything is paid", () => {
+    expect(seatBalanceOwedCents(9_500, null)).toBe(9_500);
+    expect(seatBalanceOwedCents(9_500, { status: "unpaid", amountCents: null })).toBe(9_500);
+  });
+
+  it("owes the seat less the deposit once the deposit is in", () => {
+    expect(seatBalanceOwedCents(9_500, { status: "deposit_paid", amountCents: 5_400 })).toBe(4_100);
+  });
+
+  it("owes nothing once the seat is settled, waived or refunded", () => {
+    for (const status of ["paid", "waived", "refunded", "partly_refunded"]) {
+      expect(seatBalanceOwedCents(9_500, { status, amountCents: 9_500 })).toBeNull();
+    }
+  });
+
+  it("says nothing for an unpriced seat, or a deposit that covered it", () => {
+    expect(seatBalanceOwedCents(null, null)).toBeNull();
+    expect(seatBalanceOwedCents(0, null)).toBeNull();
+    expect(seatBalanceOwedCents(5_000, { status: "deposit_paid", amountCents: 5_000 })).toBeNull();
+  });
+});
+
+describe("partyMoneyTerms (fourth UX review, item 5)", () => {
+  const trip = { priceCents: 9_500, depositCents: null, snorkelerPriceCents: 4_000 };
+
+  it("sums the seats the lead holds into one figure owed at the shop", () => {
+    expect(partyMoneyTerms(trip, null, ["diver", "diver", "diver"], false)).toEqual({
+      due: "at_shop",
+      amountCents: 28_500,
+      seats: 3,
+    });
+  });
+
+  it("prices each seat by what it is: a snorkeler pays the snorkeler fare", () => {
+    expect(partyMoneyTerms(trip, null, ["diver", "snorkeler"], true)).toEqual({
+      due: "online",
+      amountCents: 13_500,
+      seats: 2,
+    });
+  });
+
+  it("splits what is taken now from the balance when any seat takes a deposit", () => {
+    expect(
+      partyMoneyTerms({ ...trip, depositCents: 2_500 }, null, ["diver", "diver"], true),
+    ).toEqual({ due: "deposit", depositCents: 5_000, balanceCents: 14_000, seats: 2 });
+  });
+
+  it("counts only priced seats, and says nothing when none is priced", () => {
+    expect(
+      partyMoneyTerms({ ...trip, snorkelerPriceCents: null }, null, ["diver", "snorkeler"], false),
+    ).toEqual({
+      due: "at_shop",
+      amountCents: 9_500,
+      seats: 1,
+    });
+    expect(
+      partyMoneyTerms({ priceCents: null, depositCents: null }, null, ["diver"], false),
     ).toBeNull();
   });
 });

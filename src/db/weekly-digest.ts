@@ -13,15 +13,19 @@ import {
 import type { WeeklyDigestEmailSection } from "@/lib/notifications/kinds";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { shopPath } from "@/lib/staff-notices";
+import type { TodayActionKind } from "@/lib/today";
 import {
   type DigestWeeks,
   digestWeeks,
   isWeeklyDigestDue,
   NO_LAST_WEEK,
+  NO_SAFETY,
+  noMoney,
   overdueTodayActions,
   WEEKLY_DIGEST_SECTION_PATHS,
   type WeeklyDigestFactGrades,
   type WeeklyDigestSection,
+  weakestDeparture,
   weeklyDigestGrade,
   weeklyDigestSections,
   weeklyDigestWanted,
@@ -29,11 +33,13 @@ import {
 import { inHorizonReadiness } from "./blockers";
 import type { AppDb, DbExecutor } from "./client";
 import { sendNotification } from "./notifications";
+import { readOwed } from "./owed";
 import { getMonthlyReport } from "./reporting";
 import { readReviewsAwaitingModeration } from "./reviews";
 import {
   bookings,
   courseInquiries,
+  incidentReports,
   people,
   personRoles,
   shops,
@@ -43,6 +49,7 @@ import {
   weeklyDigestSends,
 } from "./schema";
 import { getTodayWork } from "./today";
+import { tripIdsNeverSentLastMinuteDeal, tripIdsSuitedToADeal } from "./trip-promos";
 import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
@@ -64,6 +71,8 @@ export type WeeklyDigestShop = {
   timezone: string;
   defaultLocale: string;
   diversPerDivemaster: number;
+  /** The shop's one currency: every `*_cents` the money section states is in it. */
+  currency: string;
 };
 
 export type WeeklyDigestRecipient = {
@@ -180,11 +189,11 @@ async function countReviewsReceived(
 }
 
 /**
- * Date requests still waiting on a boat: every one asking for a day from
- * today on, plus the ones that named no day and came in since last Monday.
- * A request has no "answered" state (the staff list is the whole shop's,
- * unfiltered), so a named day that has passed is the only honest sign one is
- * no longer waiting, and an undated one is news for a week.
+ * Date requests still waiting on a boat: every one not marked done
+ * (`handledAt`, the stamp every staff reader of requests filters on; fourth UX
+ * review, item 24) that asks for a day from today on, plus the undated ones
+ * that came in since last Monday. A named day that has passed is no longer
+ * waiting either, and an undated one is news for a week.
  */
 async function countDateRequestsWaiting(
   db: DbExecutor,
@@ -198,6 +207,7 @@ async function countDateRequestsWaiting(
     .where(
       and(
         eq(courseInquiries.shopId, shopId),
+        isNull(courseInquiries.handledAt),
         or(
           sql`greatest(${courseInquiries.preferredDate}, ${courseInquiries.alternateDate}) >= ${today}`,
           and(
@@ -211,6 +221,41 @@ async function countDateRequestsWaiting(
   return row?.n ?? 0;
 }
 
+/** Incident reports filed in the window: the safety line's third fact (item 24). */
+async function countIncidentsFiled(
+  db: DbExecutor,
+  shopId: string,
+  from: Date,
+  to: Date,
+): Promise<number> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(incidentReports)
+    .where(
+      and(
+        eq(incidentReports.shopId, shopId),
+        eq(incidentReports.status, "filed"),
+        gte(incidentReports.filedAt, from),
+        lt(incidentReports.filedAt, to),
+      ),
+    );
+  return row?.n ?? 0;
+}
+
+/** The Today rows the safety line counts: a roll call still open, a boat with no crew. */
+const ROLL_CALL_KINDS: ReadonlySet<TodayActionKind> = new Set<TodayActionKind>([
+  "roll_call_missing_diver",
+  "roll_call_missing_crew",
+  "roll_call_unfinished",
+  "roll_call_crew_unfinished",
+  "roll_call_departure_open",
+  "roll_call_not_started",
+]);
+const UNCREWED_KINDS: ReadonlySet<TodayActionKind> = new Set<TodayActionKind>([
+  "uncrewed_departure",
+  "uncrewed_course",
+]);
+
 /**
  * Everything the email could say about this shop at `now`, in both grades
  * (`WeeklyDigestFactGrades`): read once per shop, picked per recipient by
@@ -223,13 +268,21 @@ export async function readWeeklyDigestFacts(
 ): Promise<{ weeks: DigestWeeks; grades: WeeklyDigestFactGrades }> {
   const weeks = digestWeeks(now, shop.timezone);
 
-  const lastWeekReport = await getMonthlyReport(
-    db,
-    shop.id,
-    weeks.lastWeek.startUtc,
-    weeks.lastWeek.endUtc,
-    { timeZone: shop.timezone },
-  );
+  // Last week and the same week a year before (fifth loop, item 29), read
+  // the one way so the two figures cannot be on different bases. 364 days
+  // keeps the weekdays aligned: Monday to Monday.
+  const yearBefore = (date: Date) => new Date(date.getTime() - 364 * 86_400_000);
+  const reportOpts = { timeZone: shop.timezone, currency: shop.currency };
+  const [lastWeekReport, yearAgoReport] = await Promise.all([
+    getMonthlyReport(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc, reportOpts),
+    getMonthlyReport(
+      db,
+      shop.id,
+      yearBefore(weeks.lastWeek.startUtc),
+      yearBefore(weeks.lastWeek.endUtc),
+      reportOpts,
+    ),
+  ]);
 
   // One readiness pass, shared with Today below so the two cannot disagree.
   const evidence = await inHorizonReadiness(db, shop.id, now);
@@ -263,21 +316,51 @@ export async function readWeeklyDigestFacts(
       includeOpsAlerts,
       evidence,
       shop.diversPerDivemaster,
+      undefined,
+      // The email never reads the streamed wind rows; no forecast request.
+      false,
     );
   const [reportsToday, staffToday] = await Promise.all([todayQueue(true), todayQueue(false)]);
 
-  const [bookingsMade, reviewsReceived, awaiting, dateRequestsWaiting] = await Promise.all([
+  const [
+    bookingsMade,
+    reviewsReceived,
+    awaiting,
+    dateRequestsWaiting,
+    owed,
+    incidents,
+    neverSentDeal,
+    suitedToADeal,
+  ] = await Promise.all([
     countBookingsMade(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
     countReviewsReceived(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
     readReviewsAwaitingModeration(db, shop.id),
     countDateRequestsWaiting(db, shop.id, weeks, weeks.weekOf),
+    readOwed(db, shop, now),
+    countIncidentsFiled(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
+    tripIdsNeverSentLastMinuteDeal(
+      db,
+      shop.id,
+      thisWeekTrips.map((trip) => trip.id),
+    ),
+    tripIdsSuitedToADeal(
+      db,
+      shop.id,
+      thisWeekTrips.map((trip) => trip.id),
+    ),
   ]);
+  // Only a scheduled public boat departure is worth a deal (review N7).
+  const dealCandidates = new Set([...neverSentDeal].filter((id) => suitedToADeal.has(id)));
+  // Today's own rows, counted rather than detected twice (item 24).
+  const countKinds = (kinds: ReadonlySet<TodayActionKind>) =>
+    reportsToday.actions.filter((action) => kinds.has(action.kind)).length;
 
   const shared = {
     thisWeek: {
       departures: thisWeekTrips.length,
       seatsFilled: thisWeekTrips.reduce((sum, trip) => sum + trip.booked, 0),
       seats: thisWeekTrips.reduce((sum, trip) => sum + trip.capacity, 0),
+      weakest: null,
     },
     waiversOutstanding: { divers: owingDivers.size, departures: owingTrips.size },
     reviews: { received: reviewsReceived, awaitingModeration: awaiting.count },
@@ -288,6 +371,11 @@ export async function readWeeklyDigestFacts(
     grades: {
       reports: {
         ...shared,
+        // The boat worth a deal is a money call, so it is the Reports grade's.
+        thisWeek: {
+          ...shared.thisWeek,
+          weakest: weakestDeparture(thisWeekTrips, dealCandidates, now),
+        },
         lastWeek: {
           bookingsMade,
           departures: lastWeekReport.trips.length,
@@ -295,11 +383,35 @@ export async function readWeeklyDigestFacts(
           seats: lastWeekReport.trips.reduce((sum, trip) => sum + trip.capacity, 0),
         },
         overdueTodayItems: overdueTodayActions(reportsToday.actions, now),
+        // Reports' own figures for last week's departures, so the email and
+        // the Reports page cannot disagree about what the week took.
+        money: {
+          revenueCents: lastWeekReport.revenueCents,
+          // Quiet until the shop sailed that week a year ago.
+          lastYearRevenueCents: yearAgoReport.trips.length > 0 ? yearAgoReport.revenueCents : null,
+          tipsCents: lastWeekReport.tipsCents,
+          owed: {
+            orderCents: owed.orders.cents,
+            orderCount: owed.orders.count,
+            seatCents: owed.seats.cents,
+            seatCount: owed.seats.count,
+          },
+          currency: shop.currency,
+        },
+        gearServiceDue: countKinds(new Set<TodayActionKind>(["gear_service_due"])),
+        safety: {
+          openRollCalls: countKinds(ROLL_CALL_KINDS),
+          uncrewed: countKinds(UNCREWED_KINDS),
+          incidents,
+        },
       },
       staff: {
         ...shared,
         lastWeek: NO_LAST_WEEK,
         overdueTodayItems: overdueTodayActions(staffToday.actions, now),
+        money: noMoney(shop.currency),
+        gearServiceDue: 0,
+        safety: NO_SAFETY,
       },
     },
   };
@@ -323,10 +435,23 @@ export function digestSectionsWithLinks(
   origin: string,
   shopSlug: string,
 ): WeeklyDigestEmailSection[] {
-  return sections.map((section) => ({
-    ...section,
-    url: `${origin}${shopPath(shopSlug, ...WEEKLY_DIGEST_SECTION_PATHS[section.kind])}`,
-  }));
+  return sections.map((section) => {
+    const url = `${origin}${shopPath(shopSlug, ...WEEKLY_DIGEST_SECTION_PATHS[section.kind])}`;
+    if (section.kind !== "this_week") return { ...section, url };
+    const { weakest, ...rest } = section;
+    return {
+      ...rest,
+      url,
+      // The trip's own deal form, as Today's open-seats row links it.
+      weakest: weakest && {
+        title: weakest.title,
+        startsAt: weakest.startsAt,
+        booked: weakest.booked,
+        capacity: weakest.capacity,
+        url: `${origin}${shopPath(shopSlug, "trips", weakest.tripId)}?view=details#last-minute-deal`,
+      },
+    };
+  });
 }
 
 /** Where a staffer changes their own answer. */
@@ -544,6 +669,7 @@ export async function sendDueWeeklyDigests(
       timezone: shops.timezone,
       defaultLocale: shops.defaultLocale,
       diversPerDivemaster: shops.diversPerDivemaster,
+      currency: shops.currency,
     })
     .from(shops)
     .where(eq(shops.isDemo, false));

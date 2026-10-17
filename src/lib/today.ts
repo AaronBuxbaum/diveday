@@ -13,13 +13,16 @@ import {
 } from "@/i18n/today-labels";
 import { HOUR_MS } from "@/lib/clock";
 import { formatMoneyCents } from "@/lib/format";
+import type { AgencyCheckableCard } from "./agency-check-queue";
 import type { Role } from "./authz";
 import type { DiveIntentCount } from "./dive-intent";
+import { cachedCollator } from "./intl-cache";
 import type { CrewIncompleteReason } from "./manifests";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 import type { SeasonStart } from "./season";
 import type { TripStageReading } from "./trip-stages";
 import { hasReturned, hasSailed } from "./trips";
+import type { WelcomeCue } from "./welcome-cue";
 import { utcToWallTime } from "./zoned";
 
 /**
@@ -76,12 +79,15 @@ export type TodayActionKind =
   | "dive_prep"
   | "help_request"
   | "nitrox_gate"
+  | "emergency_card_blank"
   | "high_wind_alert"
   | "instructor_missing"
   | "uncrewed_course"
   | "uncrewed_departure"
+  | "boat_clash"
   | "crew_clash"
   | "crew_clash_sailed"
+  | "crew_away"
   | "crew_below_target"
   | "waitlist_seat"
   | "last_minute_fill"
@@ -91,6 +97,7 @@ export type TodayActionKind =
   | "failed_photo_deletion"
   | "owed_refund"
   | "payment_dispute"
+  | "payments_restricted"
   | "reviews_pending"
   | "unanswered_messages"
   | "gear_overdue"
@@ -98,12 +105,15 @@ export type TodayActionKind =
   | "gear_service_due"
   | "boat_safety_kit"
   | "boat_papers_due"
+  | "boat_papers_lapsed"
   | "boat_safety_expired"
+  | "boat_snag"
+  | "incident_report_unfiled"
   | "work_order_late"
   | "work_order_uncollected"
   | "staff_credential_due"
   | "units_unconfirmed"
-  | "say_hello"
+  | "lost_items_waiting"
   | "rental_fit_confirm";
 
 /**
@@ -188,7 +198,17 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // of the two boats will sail without them, so it sits beside the zero-crew
   // row rather than with the advisory ones; it ranks just under it because the
   // boat it names does have somebody rostered, and the fix is one call.
+  // **Two departures on one hull at once** (H-80, issue #2135). The same fault
+  // as the crew clash seen from the boat, and the move that makes one usually
+  // makes the other, so it sits just above it: a hull cannot sail twice, a
+  // person at least can be swapped.
+  boat_clash: 11.25,
   crew_clash: 11.5,
+  // **Rostered on a departure and away on a day it meets** (fourth review,
+  // item 12). The person told the shop; the roster did not hear. Just under a
+  // clash: a clash is the roster contradicting itself, this is the roster
+  // contradicting somebody's note, and both are one call to fix.
+  crew_away: 11.6,
   // A course session short of its instructor with somebody else in the water.
   // It refuses a sale (`course_unstaffed`, src/db/bookings.ts) and no
   // certification can be issued from it, which is why it is not merely
@@ -202,13 +222,28 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // dock count and desk chore: it is about the minutes after somebody is hurt
   // in the water, and it is fixed before the lines come off, not after.
   boat_safety_kit: 13.5,
+  // **The shop's emergency card has no number on it** (fifth loop, item 3),
+  // with a boat sailing inside the 48 hours the offline manifest is saved in.
+  // Beside the boat's own kit: both are about the minutes after somebody is
+  // hurt, and both are fixed ashore before the lines come off.
+  emergency_card_blank: 13.6,
   high_wind_alert: 14,
+  // **A boat's paper has lapsed** (H-136): hull insurance, registration or the
+  // safety inspection past its date — the fact that makes a claim uncovered.
+  // Loud, under the kit and the weather, and still never a gate.
+  boat_papers_lapsed: 14.5,
   // The dock-side counts. An unfinished *departure* count is paperwork — the
   // boat is home and nobody was ever unaccounted for in the water — so it
   // deliberately sits far below the after-dive kinds above. Collapsing the
   // two into one row is what turns the red row into wallpaper (DOM-H3).
   roll_call_departure_open: 15,
   roll_call_not_started: 16,
+  // **An incident report started and never filed** (safety sheet 2026-10-15,
+  // item 3): somebody was hurt or nearly was, and the record sits as a private
+  // draft while the insurer's notice window runs. Nobody is in the water, so it
+  // ranks under every roll-call and boarding row; a written account of the
+  // worst day outranks the desk's chores and every money row below.
+  incident_report_unfiled: 16.5,
   dive_prep: 17,
   help_request: 18,
   payment: 18,
@@ -237,6 +272,10 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // answer it (ADR 20261009-stripe-reversals-reach-diveday). Level with the
   // owed refund: both are money with somebody waiting on the shop.
   payment_dispute: 26,
+  // Stripe turned the shop's card payments off (batch 6 item 8). Level with
+  // the other money rows: nobody is in danger, but every booking from now on
+  // is a seat paid for at the shop until the owner answers Stripe.
+  payments_restricted: 26,
   // A diver wrote and nobody has written back (ADR 20260907-two-way-inbox).
   // Above the reviews queue and below the money rows: somebody asked the shop
   // a question and is waiting on the answer, which is more than a review asks
@@ -251,13 +290,17 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   gear_overdue: 29,
   gear_due_back: 30,
   gear_service_due: 31,
-  // The owner's boat errands (roadmap N-08, N-10): a paper inside its window,
-  // escalating to `boat_safety_expired` once it lapses, and kit that ran out
+  // The owner's boat errands (roadmap N-08, N-10): a paper inside its window
+  // (a lapsed one is `boat_papers_lapsed`, ranked with the boat's kit), and kit that ran out
   // ashore or on a boat not sailing today. Never a boarding blocker — the dock
   // decides — so they ride with the register's rows, ahead of the bench clock
   // because a dead AED pad is the boat's, not a rental's.
   boat_safety_expired: 31,
   boat_papers_due: 31.5,
+  // **A snag the crew wrote against a boat's checklist** (fifth-loop ideas,
+  // item 1): the radio that crackles, the ladder bolt. The owner's errand
+  // beside the boat's papers; the crew read it on the boat check itself.
+  boat_snag: 31.6,
   // The bench's two rows (ADR 20261008-work-order-follow-up). Below the
   // register's own chase list: a customer's regulator a day past its promise
   // is a phone call to make, not a unit missing from the racks, and a ticket
@@ -272,10 +315,9 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // trip before opening the Units row would never be asked again, and currency
   // decides what a diver's card is charged in (issue #835).
   units_unconfirmed: 35,
-  // Below even that, and rightly: nothing has gone wrong and nothing is owed.
-  // It is a courtesy the desk can pay if the morning allows, so it never
-  // outranks a thing somebody has to do (issue #1182).
-  say_hello: 36,
+  // **Something found aboard is waiting to go home** (fifth loop, item 7). A
+  // courtesy the desk pays when the owner walks in; nothing has gone wrong.
+  lost_items_waiting: 36,
   // Lower still, because it is a question about *yesterday's* boat rather than
   // anything today wants: a unit came home in a size the fit does not record,
   // and the shop may keep it or leave it (issue #1174, D14).
@@ -409,7 +451,11 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   ],
   // The crew rows' audience: the divemaster and captain at the rail are as
   // likely to notice they are on two boats as the office is to fix it.
+  boat_clash: ["owner", "manager", "instructor", "assistant_instructor", "divemaster", "captain"],
   crew_clash: ["owner", "manager", "instructor", "assistant_instructor", "divemaster", "captain"],
+  // The clash's audience, for the clash's reason: the person away is as likely
+  // to read it as the office that fixes it.
+  crew_away: ["owner", "manager", "instructor", "assistant_instructor", "divemaster", "captain"],
   crew_clash_sailed: [
     "owner",
     "manager",
@@ -467,6 +513,7 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   failed_photo_deletion: ["owner", "manager"],
   owed_refund: ["owner", "manager"],
   payment_dispute: ["owner", "manager"],
+  payments_restricted: ["owner", "manager"],
   reviews_pending: ["owner", "manager"],
   // Every staff role, since the inbox stopped carrying a gate of its own on
   // 2026-09-10 (issues #1505/#1518). A row pointing at a page its reader
@@ -515,7 +562,13 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   // owner's errand, and the row's link is Settings. The crew read the same
   // facts on the departure's own pre-departure check.
   boat_papers_due: ["owner", "manager"],
+  boat_papers_lapsed: ["owner", "manager"],
   boat_safety_expired: ["owner", "manager"],
+  // The owner's and the captain's: one gets it fixed, the other skippers it.
+  boat_snag: ["owner", "manager", "captain"],
+  // The two roles that may read every report (`canReadEveryIncidentReport`):
+  // the line names who started a draft, so nobody else is told of it.
+  incident_report_unfiled: ["owner", "manager"],
   gear_service_due: [
     "owner",
     "manager",
@@ -547,9 +600,11 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   ],
   staff_credential_due: ["owner", "manager"],
   units_unconfirmed: ["owner", "manager"],
-  // Every staff role: the person who says hello is whoever is at the dock when
-  // the diver walks up, which is as often the captain as the owner.
-  say_hello: [
+  // The card is the owner's to fill in (Settings > Emergency reference).
+  emergency_card_blank: ["owner", "manager"],
+  // Whoever is at the counter when the diver comes back hands it over, which
+  // is why Lost and found is ungated (`staff-destinations.ts`).
+  lost_items_waiting: [
     "owner",
     "manager",
     "instructor",
@@ -573,7 +628,13 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
 
 /**
  * Filters the action queue for the viewer's roles, taking the union for multi-role staff.
- * Owners and managers see everything with zero withheld.
+ * Owners and managers see everything.
+ *
+ * **What is withheld is not counted** (third review, item 5). A captain's
+ * Today used to open on "22 jobs for the front desk", a number about rows the
+ * role cannot see or act on, 60px above the fold of rows it can ("1 more for
+ * other boats and the desk"). Two desk numbers on one screen; the one that
+ * stays is the one the reader can open.
  *
  * **No roles means no viewer, not an empty audience.** Every surface that
  * renders this queue passes `session.user.roles`, which `requireStaffSession`
@@ -583,25 +644,15 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
 export function filterActionsForRoles(
   actions: readonly TodayAction[],
   roles?: readonly Role[],
-): { visibleActions: TodayAction[]; withheldCount: number } {
+): TodayAction[] {
   if (!roles || roles.length === 0 || roles.includes("owner") || roles.includes("manager")) {
-    return { visibleActions: [...actions], withheldCount: 0 };
+    return [...actions];
   }
   const roleSet = new Set(roles);
-  const visibleActions: TodayAction[] = [];
-  let withheldCount = 0;
-
-  for (const action of actions) {
+  return actions.filter((action) => {
     const audience = KIND_AUDIENCE[action.kind];
-    const canSee = audience ? audience.some((r) => roleSet.has(r)) : true;
-    if (canSee) {
-      visibleActions.push(action);
-    } else {
-      withheldCount += 1;
-    }
-  }
-
-  return { visibleActions, withheldCount };
+    return audience ? audience.some((r) => roleSet.has(r)) : true;
+  });
 }
 
 /**
@@ -635,8 +686,12 @@ export const ACTION_KIND_META = {
   uncrewed_course: { tone: "warning" },
   // Warning both: a clash is a roster that contradicts itself, not a person
   // somebody has said is missing — that is `roll_call_missing_crew`'s danger.
+  boat_clash: { tone: "warning" },
   crew_clash: { tone: "warning" },
   crew_clash_sailed: { tone: "warning" },
+  // Warning, as the staffing week draws it on the person's chip: informs,
+  // never gates (ADR 20260902-crew-requests-and-blackouts).
+  crew_away: { tone: "warning" },
   nitrox_gate: { tone: "warning" },
   high_wind_alert: { tone: "warning" },
   dive_prep: { tone: "neutral" },
@@ -653,6 +708,7 @@ export const ACTION_KIND_META = {
   failed_photo_deletion: { tone: "warning" },
   owed_refund: { tone: "warning" },
   payment_dispute: { tone: "warning" },
+  payments_restricted: { tone: "warning" },
   reviews_pending: { tone: "neutral" },
   // Neutral: somebody is waiting on an answer, which is the day's work
   // rather than a thing that has gone wrong.
@@ -666,10 +722,15 @@ export const ACTION_KIND_META = {
   // a boat that sails today. It gates nothing — roll call and boarding go on —
   // but it is the one boat row nobody should scroll past.
   boat_safety_kit: { tone: "danger" },
-  // Neutral while a paper is only coming due; warning once it has run out,
-  // or once kit the boat is meant to carry has.
+  // Neutral while a paper is only coming due; danger once it has run out
+  // (H-136); warning once kit the boat is meant to carry has.
   boat_papers_due: { tone: "neutral" },
+  boat_papers_lapsed: { tone: "danger" },
   boat_safety_expired: { tone: "warning" },
+  // Warning: something on the boat is wrong, and it informs, never gates.
+  boat_snag: { tone: "warning" },
+  // Warning: an account of a bad day is unfinished, not a person in danger.
+  incident_report_unfiled: { tone: "warning" },
   // Warning: the shop gave its word on a day and the day has gone. Ready and
   // not collected is the customer's errand, not the shop's failure.
   work_order_late: { tone: "warning" },
@@ -678,9 +739,10 @@ export const ACTION_KIND_META = {
   // Neutral, not warning: the shop is trading on a derived default that is
   // probably right. It wants confirming, not alarming about.
   units_unconfirmed: { tone: "neutral" },
-  // Neutral, and there is no other honest tone: a warning-coloured row about
-  // greeting somebody would read as a thing that has gone wrong.
-  say_hello: { tone: "neutral" },
+  // Warning: a crew may reach for the card in the worst minute and find it empty.
+  emergency_card_blank: { tone: "warning" },
+  // Neutral: a mask waiting for its owner is not a problem.
+  lost_items_waiting: { tone: "neutral" },
   // Neutral: a question about a size is not a problem, and a warning-toned row
   // asking whether to keep a wetsuit size would read as gear trouble.
   rental_fit_confirm: { tone: "neutral" },
@@ -889,6 +951,14 @@ export type TodayAction = {
    */
   rentalFit?: { reservationId: string };
   /**
+   * A lone diver whose headline is a card still waiting for its check
+   * (`certification_pending`): who, so the shop home can offer the agency check
+   * from the row (H-105). `cards` is empty as the queue words the row and filled
+   * by the read (`withAgencyChecks`, `src/db/today.ts`); a row whose diver holds
+   * no card the extension can check has none.
+   */
+  agencyCheck?: { personId: string; cards: readonly AgencyCheckableCard[] };
+  /**
    * The staff member a staff row is about (`staff_credential_due`), so the crew
    * lens can keep a reader's own row open rather than fold it with the desk's.
    */
@@ -898,13 +968,16 @@ export type TodayAction = {
 };
 
 /**
- * The four blocker codes a one-tap send actually resolves. A minor's solo
- * signature is the fourth: the issue path refuses to count that record as
- * standing, so the tap supersedes it and mints a link that asks for both
- * signatures (ADR 20260907-guardian-co-signature).
+ * The blocker codes a one-tap send actually resolves. A minor's solo
+ * signature is one: the issue path refuses to count that record as standing,
+ * so the tap supersedes it and mints a link that asks for both signatures
+ * (ADR 20260907-guardian-co-signature). A lapsed release is another, for the
+ * same reason: it no longer stands, so the tap mints a fresh link.
  */
 const WAIVER_CODES = new Set<ReadinessBlockerCode>([
   "waiver_not_sent",
+  "waiver_lapsed",
+  "waiver_runs_out",
   "waiver_pending",
   "waiver_expired",
   "guardian_signature_missing",
@@ -932,6 +1005,8 @@ export const BLOCKER_ACTIONS: Record<
   // record or a conversation with the family, never a change to the trip.
   under_minimum_age: { kind: "certification", target: "diver" },
   waiver_not_sent: { kind: "waiver", target: "trip" },
+  waiver_lapsed: { kind: "waiver", target: "trip" },
+  waiver_runs_out: { kind: "waiver", target: "trip" },
   waiver_pending: { kind: "waiver", target: "trip" },
   waiver_expired: { kind: "waiver", target: "trip" },
   // **The diver, not the departure**, since #1252 gave the hold a door: the
@@ -949,10 +1024,13 @@ export const BLOCKER_ACTIONS: Record<
   // The roster is where a paper copy is recorded and the link is sent.
   course_form_unsigned: { kind: "waiver", target: "trip" },
   course_form_guardian_missing: { kind: "waiver", target: "trip" },
+  // The mark is fixed or cleared on the departure's own roster.
+  training_mark_invalid: { kind: "waiver", target: "trip" },
   certification_missing: { kind: "certification", target: "diver" },
   certification_pending: { kind: "certification", target: "diver" },
   certification_self_declared: { kind: "certification", target: "diver" },
   certification_insufficient: { kind: "certification", target: "diver" },
+  certification_not_yet: { kind: "certification", target: "diver" },
   certification_in_training: { kind: "certification", target: "diver" },
   specialty_missing: { kind: "certification", target: "diver" },
   specialty_pending: { kind: "certification", target: "diver" },
@@ -1176,6 +1254,14 @@ export function diverBlockerAction(
     href: destination.href,
     ...(sendsWaiver ? { waiver: { bookingIds: [input.bookingId] } } : {}),
     ...(kind === "payment" ? { payment: { bookingId: input.bookingId } } : {}),
+    // Never on a held seat (H-13): the human on this booking may not be the
+    // one whose cards are on file, so nobody checks that person's card from
+    // here until a staffer confirms who it is. Said outright, not left to
+    // which blocker heads the row.
+    ...(blocker.code === "certification_pending" &&
+    !input.blockers.some((each) => each.code === "identity_unconfirmed")
+      ? { agencyCheck: { personId: input.personId, cards: [] } }
+      : {}),
     dueAt: input.startsAt,
   };
 }
@@ -1504,7 +1590,12 @@ export type SpineDeparture = {
   courseTitle: string | null;
   boatName: string | null;
   priceCents: number | null;
+  /** The stated seats. */
   capacity: number;
+  /** The seats on sale under the boat's certificate (`sellableSeats`); open seats count against it. */
+  sellableCapacity: number;
+  /** A practice departure (ADR 20261012-rehearsal-departures); the card says so (#2395). */
+  rehearsal: boolean;
   booked: number;
   boarded: number;
   blocked: number;
@@ -1534,6 +1625,14 @@ export type SpineDeparture = {
    * never a pairing. Nothing about ranking or `assembleDaySpine` reads it.
    */
   intents?: readonly DiveIntentCount[];
+  /**
+   * **Who to say hello to** (issue #1182; fifth loop, item 10): today's divers
+   * who shared that this is their first trip with the shop, or that they are
+   * back after a long gap. A line on the card, never a Needs you row: a
+   * greeting has no done state, so a row for it was a job nobody could finish.
+   * Empty, the card says nothing.
+   */
+  welcome?: readonly { name: string; cue: WelcomeCue }[];
 };
 
 /**
@@ -1560,8 +1659,8 @@ export type DaySpine = {
   desk: TodayAction[];
   /** The collapsed Tomorrow disclosure's body and count. */
   tomorrow: { stations: DayStation[]; jobs: number };
-  /** The rest of the horizon, as one count behind a link to the board. */
-  week: { jobs: number };
+  /** The rest of the horizon: a count, and the rows behind it, opened in place. */
+  week: { jobs: number; rows: TodayAction[] };
 };
 
 /** Tone first: danger, then warning, then everything quiet. */
@@ -1591,9 +1690,45 @@ export function sortStationRows(actions: readonly TodayAction[]): TodayAction[] 
     if (due !== 0) return due;
     const severity = KIND_SEVERITY[a.kind] - KIND_SEVERITY[b.kind];
     if (severity !== 0) return severity;
-    return a.subject.localeCompare(b.subject);
+    // Two rows alike in everything but their boat (two 2:30 PM departures each
+    // short the same sizes) read in their boat's order, never in the order the
+    // queue happened to build them (issue #2788).
+    return (
+      CLOCK_COLLATOR.compare(a.subject, b.subject) ||
+      CLOCK_COLLATOR.compare(a.departure?.label ?? "", b.departure?.label ?? "") ||
+      CLOCK_COLLATOR.compare(a.departure?.tripId ?? "", b.departure?.tripId ?? "") ||
+      CLOCK_COLLATOR.compare(a.id, b.id)
+    );
   });
 }
+
+/**
+ * **Clock order for departures, total** (issue #2788): start minute, then title,
+ * then boat name (when the caller can name it), then id. Two boats at the same minute read by title before id because ids
+ * are minted fresh by every seed, so an id tiebreak alone swaps them from one
+ * run to the next. Every "which of these comes first" on Today — the spine's
+ * stations, and which of two clashing departures says the clash — reads this
+ * one order, so the row and the station it files under always agree.
+ */
+export function departureClockOrder<T extends { startsAt: Date; title: string }>(
+  idOf: (departure: T) => string,
+  boatOf: (departure: T) => string | null | undefined = () => null,
+): (a: T, b: T) => number {
+  return (a, b) =>
+    clockMinute(a.startsAt) - clockMinute(b.startsAt) ||
+    CLOCK_COLLATOR.compare(a.title, b.title) ||
+    CLOCK_COLLATOR.compare(boatOf(a) ?? "", boatOf(b) ?? "") ||
+    CLOCK_COLLATOR.compare(idOf(a), idOf(b));
+}
+
+/**
+ * The one collator every departure tiebreak reads, fixed to a locale so the
+ * server and the spine agree whatever the runtime's default is (issue #2788).
+ */
+const CLOCK_COLLATOR = cachedCollator("en");
+
+/** The clock minute a departure leaves in: "the 2:30 PM" is every boat inside it. */
+const clockMinute = (at: Date): number => Math.floor(at.getTime() / 60_000);
 
 /** What `assembleDaySpine` needs of one `getTodayWork` result. */
 export type SpineWork = {
@@ -1659,13 +1794,10 @@ function stationFor(departure: SpineDeparture, rows: readonly TodayAction[]): Da
  * a clock.
  */
 export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpine {
-  // Two boats at the same minute read by title before id: ids are minted
-  // fresh by every seed, so an id tiebreak alone swaps the two cards from one
-  // run to the next.
-  const byClock = (a: SpineDeparture, b: SpineDeparture) =>
-    a.startsAt.getTime() - b.startsAt.getTime() ||
-    a.title.localeCompare(b.title) ||
-    a.tripId.localeCompare(b.tripId);
+  const byClock = departureClockOrder<SpineDeparture>(
+    (departure) => departure.tripId,
+    (departure) => departure.boatName,
+  );
   const todayDepartures = [...today.departures].sort(byClock);
   const tomorrowDepartures = [...tomorrow.departures].sort(byClock);
 
@@ -1698,13 +1830,13 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
     stationFor(departure, rowsByTrip.get(departure.tripId) ?? []),
   );
 
-  const weekJobs = today.actions.filter(
+  const weekRows = today.actions.filter(
     (action) =>
       action.departure &&
       !stationed.has(action.departure.tripId) &&
       !out.has(action.departure.tripId) &&
       !AFTER_DIVE_ROLL_CALL_KINDS.has(action.kind),
-  ).length;
+  );
 
   return {
     stations,
@@ -1713,7 +1845,7 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
       stations: tomorrowStations,
       jobs: tomorrowStations.reduce((total, station) => total + station.rows.length, 0),
     },
-    week: { jobs: weekJobs },
+    week: { jobs: weekRows.length, rows: sortStationRows(weekRows) },
   };
 }
 
@@ -1842,7 +1974,8 @@ export type NeedsYouLens = {
  * - `count` is the list's own number: the lead rows, the drafts, and the
  *   payments row when it is not folded.
  * - `next` is the next boat that has not sailed, and `dueBeforeNext` is how
- *   many of the lead rows are about it — the sentence's number. Once every
+ *   many of the lead rows are about it, or about any boat leaving at the same
+ *   minute — the sentence's number. Once every
  *   boat is away the sentence says `count`.
  * - `boatsClear` is {@link todaysBoatsAreClear}.
  */
@@ -1880,8 +2013,19 @@ export function readNeedsYou(spine: DaySpine, lens: NeedsYouLens): NeedsYouReadi
   const folded = crewsToday && (rest.length > 0 || paymentsRows > 0) ? rest : null;
   const count = lead.length + (lens.drafts ?? 0) + (folded ? 0 : paymentsRows);
   const next = spine.stations.find((station) => !hasSailed(station.startsAt, lens.now)) ?? null;
+  // The sentence names a time, not a boat: every boat leaving at that minute
+  // is "the 2:30 PM", so the count is theirs together and cannot change with
+  // which of two same-minute boats sorted first (issue #2788).
+  const nextTripIds = new Set(
+    next
+      ? spine.stations
+          .filter((station) => clockMinute(station.startsAt) === clockMinute(next.startsAt))
+          .map((station) => station.tripId)
+      : [],
+  );
   const dueBeforeNext = next
-    ? lead.filter((action) => action.departure?.tripId === next.tripId).length
+    ? lead.filter((action) => action.departure != null && nextTripIds.has(action.departure.tripId))
+        .length
     : count;
   return {
     lead,
@@ -1961,3 +2105,44 @@ export function factOfScaleFor(input: {
 
 /** Every hundredth diver, which is the ADR's own number. */
 const FACT_OF_SCALE_EVERY = 100;
+
+/**
+ * **Needs you, one heading per boat** (fifth loop, item 11). The list read
+ * "3:00 PM · Two-Tank Reef" under each of seven rows; grouped, the boat is said
+ * once and each row is its own sentence. Groups keep the ranked list's order:
+ * a boat's group sits where its most pressing row stood, and the rows inside it
+ * keep their rank. Rows bound to no departure follow every boat as the desk's
+ * group (`departure: null`), whatever their rank, because they are not about a
+ * boat leaving at a time.
+ */
+export type NeedsYouGroup = {
+  departure: { tripId: string; label: string } | null;
+  rows: TodayAction[];
+};
+
+export function groupByDeparture(rows: readonly TodayAction[]): NeedsYouGroup[] {
+  const boats = new Map<string, NeedsYouGroup>();
+  const desk: TodayAction[] = [];
+  for (const row of rows) {
+    if (!row.departure) {
+      desk.push(row);
+      continue;
+    }
+    const group = boats.get(row.departure.tripId);
+    if (group) group.rows.push(row);
+    else boats.set(row.departure.tripId, { departure: row.departure, rows: [row] });
+  }
+  const groups = [...boats.values()];
+  return desk.length > 0 ? [...groups, { departure: null, rows: desk }] : groups;
+}
+
+/**
+ * Whether any of these roles is in a kind's Today audience. The server-side
+ * twin of `filterActionsForRoles`, for an action that does what a row offers:
+ * what Today hides from a role, the action behind it refuses (issue #2134).
+ * Unlike the filter, an empty list is nobody, not everybody.
+ */
+export function rolesMayActOnKind(kind: TodayActionKind, roles: readonly Role[]): boolean {
+  const audience = KIND_AUDIENCE[kind];
+  return roles.some((role) => audience.includes(role));
+}

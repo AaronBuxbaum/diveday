@@ -41,9 +41,31 @@ export const unitLine = (
     size: string | null;
     serviceState: { state: string };
     serviceConcern?: boolean;
+    nitroxDesignated?: boolean | null;
+    thicknessMm?: number | null;
   },
+  /**
+   * The row is an approved nitrox diver's (`nitroxTanksApproved`). A regulator
+   * the shop keeps for enriched air says so on every row (issue #2207): plainly
+   * here, and as a caution on an air diver's row, so a designated set cannot go
+   * out on air unnoticed (domain review A2/F7). It informs, never refuses.
+   */
+  forNitroxDiver = false,
 ) =>
-  [unit.size ? `${unit.label} · ${unit.size}` : unit.label, ...careNotes(t, unit)]
+  [
+    unit.size ? `${unit.label} · ${unit.size}` : unit.label,
+    // A wetsuit's thickness, so a staffer picking by hand sees the 3 mm from
+    // the 7 mm without reading it off a tag (issue #2206).
+    unit.thicknessMm ? t("gear.prep.optionThickness", { mm: unit.thicknessMm }) : null,
+    unit.nitroxDesignated === true
+      ? t(
+          forNitroxDiver
+            ? "gear.prep.optionNitroxDesignated"
+            : "gear.prep.optionNitroxDesignatedOnAir",
+        )
+      : null,
+    ...careNotes(t, unit),
+  ]
     .filter(Boolean)
     .join(" · ");
 /**
@@ -69,6 +91,49 @@ export const careLine = (
   ]
     .filter(Boolean)
     .join(" · ");
+
+/**
+ * An assigned wetsuit that is not the day's thickness (domain review F3): a
+ * hand pick, or a suit assigned before the day's thickness was set or changed.
+ * Says the day's figure; null on a match, on no day's thickness, or another kind.
+ */
+export function suitMismatchLine(
+  t: StaffTranslator,
+  unit: { kind: string; thicknessMm: number | null },
+  dayThicknessMm: number | null,
+): string | null {
+  if (unit.kind !== "wetsuit" || dayThicknessMm === null) return null;
+  return unit.thicknessMm === dayThicknessMm
+    ? null
+    : t("gear.prep.notDaysThickness", { mm: dayThicknessMm });
+}
+
+/**
+ * Whether a diver's assignment row has nothing left to do (issue #2435), so a
+ * phone may fold it to "All N assigned": every piece they wanted is on a unit,
+ * the set has been handed over, and nothing on the row asks for a person —
+ * no staff-fit flag, no counter rental to say, no unit with a care line.
+ * Anything short of that stays open, and so does a row holding nothing.
+ */
+export function assignmentRowIsSettled(
+  t: StaffTranslator,
+  row: {
+    assigned: Parameters<typeof careLine>[1][];
+    wanted: readonly unknown[];
+    needsStaffFit: unknown;
+    handedOver: boolean;
+    counterHeld: readonly unknown[];
+  },
+): boolean {
+  return (
+    row.assigned.length > 0 &&
+    row.wanted.length === 0 &&
+    row.needsStaffFit === null &&
+    row.counterHeld.length === 0 &&
+    row.handedOver &&
+    row.assigned.every((unit) => careLine(t, unit) === "")
+  );
+}
 
 /**
  * The size a staffer pulls, or the honest reason there isn't one — null when

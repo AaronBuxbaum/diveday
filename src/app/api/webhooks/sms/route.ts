@@ -2,6 +2,7 @@ import { getDb } from "@/db/client";
 import { applyProviderEmailEvent } from "@/db/notifications";
 import { markPhoneRunningLate } from "@/db/running-late";
 import { recordSmsKeyword } from "@/db/sms-opt-outs";
+import { shopForSmsSender } from "@/db/sms-sender";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { parseSmsDeliveryEvent } from "@/lib/notifications/sms-events";
@@ -11,6 +12,7 @@ import {
   readWebhookPayload,
   verifySnsMessage,
 } from "@/lib/notifications/sns";
+import { logWebhookRefusal } from "@/lib/webhook-refusal";
 
 /**
  * SMS delivery receipts (docs ADR 20260802-sms-delivery-receipts), and the
@@ -34,8 +36,10 @@ export async function POST(request: Request) {
   if (payload === null) return new Response(null, { status: 400 });
 
   const verification = await verifySnsMessage(payload, process.env.SMS_SNS_TOPIC_ARN);
-  if (verification.status === "not_configured") return new Response(null, { status: 503 });
-  if (verification.status !== "verified") return new Response(null, { status: 400 });
+  if (verification.status !== "verified") {
+    logWebhookRefusal("sms", verification.status);
+    return new Response(null, { status: verification.status === "not_configured" ? 503 : 400 });
+  }
 
   const { message } = verification;
 
@@ -54,9 +58,12 @@ export async function POST(request: Request) {
   if (reply.kind === "late") {
     // The signed envelope's own time, as for STOP: "said 7:42" is when the
     // diver sent it, not when a retried delivery reached us.
-    const outcome = await markPhoneRunningLate(await getDb(), {
+    const db = await getDb();
+    const outcome = await markPhoneRunningLate(db, {
       phone: reply.phone,
       now: new Date(message.Timestamp),
+      // The shop whose number was texted, or null on the shared sender (#2320).
+      shopId: await shopForSmsSender(db, reply.destinationNumber),
     });
     // The number and the booking stay out of the log line.
     log("sms_webhook.reply_applied", "info", { kind: reply.kind, outcome: outcome.status });

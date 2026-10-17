@@ -7,10 +7,12 @@ import { useDialogBehaviour } from "./useDialogBehaviour";
 afterEach(cleanup);
 
 function Harness({
+  exitMs = 0,
   lockScroll = false,
   onClose,
   withTrigger = false,
 }: {
+  exitMs?: number;
   lockScroll?: boolean;
   onClose?: () => void;
   withTrigger?: boolean;
@@ -26,7 +28,7 @@ function Harness({
     },
     containerRef: ref,
     triggerRef: withTrigger ? triggerRef : undefined,
-    exitMs: 0,
+    exitMs,
     lockScroll,
   });
   return (
@@ -107,5 +109,29 @@ describe("useDialogBehaviour", () => {
     fireEvent.click(trigger);
     fireEvent.click(screen.getByRole("button", { name: "Inside" }));
     expect(trigger).toHaveFocus();
+  });
+
+  it("takes the panel out of the tab order, and the page, for as long as it plays its exit", async () => {
+    vi.useFakeTimers();
+    try {
+      render(<Harness exitMs={200} />);
+      fireEvent.click(screen.getByRole("button", { name: "Open" }));
+      expect(screen.getByRole("dialog")).not.toHaveAttribute("inert");
+
+      fireEvent.click(screen.getByRole("button", { name: "Inside" }));
+      // Still mounted — the exit animation is playing — but nothing in it can be reached. A Tab
+      // pressed in this window used to land in the vanishing panel, which the command palette
+      // portals to the very end of the document.
+      const closing = document.querySelector('[role="dialog"]');
+      expect(closing).toHaveAttribute("inert");
+      expect(closing).toHaveAttribute("aria-modal", "true");
+
+      await act(async () => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(document.querySelector('[role="dialog"]')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

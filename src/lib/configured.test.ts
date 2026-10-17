@@ -43,7 +43,7 @@ describe("the compiled constants", () => {
   it("names a sender SES can actually parse", () => {
     // The exact shape #517 proved SES needs: a display name and a real
     // `<local@domain>` after it, with no stray quote characters.
-    expect(DEFAULT_SENDER).toBe("DiveDay <noreply@ses.dive.day>");
+    expect(DEFAULT_SENDER).toBe("DiveDay <notifications@ses.dive.day>");
     expect(DEFAULT_SENDER).toMatch(/^[^"']+<[^@\s"']+@[^@\s"']+\.[A-Za-z]{2,}>$/);
   });
 

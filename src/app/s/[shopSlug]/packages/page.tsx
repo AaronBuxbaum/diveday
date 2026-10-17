@@ -35,7 +35,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical },
-    robots: shopSearchListingRobots(shop.searchListingOptOutAt),
+    robots: shopSearchListingRobots(shop),
     openGraph: { ...openGraphSite, title, description, url: canonical },
   };
 }
@@ -88,20 +88,24 @@ export default async function PublicPackagesPage({
     facts: [
       t("packages.dives", { count: pkg.diveCount }),
       t("packages.perDive", { amount: money(Math.round(pkg.priceCents / pkg.diveCount)) }),
+      // A dive is one tank (H-123): said on the card, where the $200 is decided.
+      t("packages.diveIsATank"),
       pkg.scope === "all" ? t("packages.scopeAll") : t("packages.scopeFunDives"),
+      // Whether the card runs out is part of a few-hundred-dollar decision, so it is said
+      // either way (third UX review, item 28).
       pkg.validUntil
         ? t("packages.useBy", { date: formatCalendarDate(pkg.validUntil, locale) })
-        : null,
-    ]
-      .filter(Boolean)
-      .join(" · "),
+        : t("packages.noExpiry"),
+    ].join(" · "),
   }));
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       {/* No eyebrow: the public nav already marks Packages current, as it
           does Courses. */}
-      <ShopPageHeader title={t("packages.title")} />
+      {/* What a package is, said once above the first card: the sentence
+          lived only in the meta description (third UX review, item 28). */}
+      <ShopPageHeader title={t("packages.title")} description={t("packages.intro")} />
       <DiverIntlProvider
         locale={locale}
         timeZone={shop.timezone ?? "UTC"}

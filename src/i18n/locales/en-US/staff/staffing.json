@@ -45,6 +45,13 @@
     "removing": "Removing…",
     "saving": "Saving…",
     "add": "Add a credential",
+    "noneOnFile": "No credentials on file",
+    "missing": {
+      "instructor": "No instructor rating on file",
+      "assistant_instructor": "No assistant instructor rating on file",
+      "divemaster": "No divemaster rating on file",
+      "captain": "No captain’s license on file"
+    },
     "kinds": {
       "instructor_rating": "Instructor rating",
       "assistant_instructor_rating": "Assistant Instructor rating",
@@ -61,6 +68,7 @@
     "awaySaved": "Saved. The shop can see those days on the week.",
     "credentialDeleted": "Credential removed.",
     "credentialInvalid": "That credential could not be saved. Check the staff member and dates.",
+    "credentialRenewalRequired": "Instructor and divemaster ratings need a renewal date.",
     "credentialReviewed": "Credential review updated.",
     "credentialSaved": "Credential added.",
     "invalid": "Check the shift date and times, then try again.",
@@ -90,6 +98,8 @@
     "assignAria": "Assign crew to {trip}",
     "away": "Away",
     "awayConflict": "Away {dates}",
+    "continuedFrom": "from {day}",
+    "continuedUntil": "until {time} · from {day}",
     "crewClash": "Also rostered on {departure}",
     "crewing": "Crewing",
     "deciding": "Saving…",
@@ -100,6 +110,7 @@
     "person": "Person",
     "previous": "Previous week",
     "ratingLapsed": "A crew rating isn’t current",
+    "personTotals": "{days, plural, one {# day} other {# days}} · {boats, plural, one {# boat} other {# boats}} · {hours} h",
     "request": "Ask for this one",
     "requestApproved": "Approved",
     "requestAria": "Ask to work {trip}",

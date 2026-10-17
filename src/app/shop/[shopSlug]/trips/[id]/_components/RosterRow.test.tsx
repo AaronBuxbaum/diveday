@@ -78,9 +78,12 @@ function contextFor(status: "ready" | "blocked"): RosterRowContext {
     actions: {
       markRosterWaiverInPersonAction: async () => PAPER_WAIVER_IDLE,
       markPaymentAction: noop,
+      previewPartyPaymentAction: noop,
+      markPartyPaidAction: noop,
       removeBookingAction: noop,
       confirmIdentityAction: noop,
       splitIdentityAction: noop,
+      repointIdentityAction: noop,
       addNoteAction: noop,
       deleteNoteAction: noop,
       saveEmergencyContactAction: noop,
@@ -276,5 +279,82 @@ describe("RosterRow learning materials", () => {
     );
     expect(screen.queryByText("Materials not done")).toBeNull();
     expect(doneField(container)).toBeUndefined();
+  });
+});
+
+/**
+ * **Mark the party paid** is drawn on a lead's seat only while two or more
+ * seats of the party still owe money and none was paid online (issue #2605).
+ */
+describe("RosterRow party payment", () => {
+  const friend = {
+    booking: { ...seat.booking, id: "b-2", partyLeadBookingId: "b-1" },
+    person: { ...seat.person, id: "p-2", fullName: "Ada Osei" },
+  } as unknown as RosterEntry;
+
+  function partyContext(options: { friendOwes?: number | null; friendProvider?: string | null }) {
+    const context = contextFor("ready");
+    const row = (provider: string | null) => ({
+      readiness: { status: "ready", blockers: [] },
+      paymentStatus: "unpaid",
+      paymentProvider: provider,
+      depthAdvisory: null,
+    });
+    const marks = (owed: number | null) => ({
+      shopCurrency: "usd",
+      balanceOwedCents: owed,
+      mark: null,
+    });
+    context.trip.requiresPayment = true;
+    context.rows.roster = [seat, friend];
+    context.rows.readinessByBooking = new Map([
+      ["b-1", row(null)],
+      ["b-2", row(options.friendProvider ?? null)],
+    ]) as unknown as ReadinessByBooking;
+    context.rows.paymentMarksByBooking = new Map([
+      ["b-1", marks(12_000)],
+      ["b-2", marks(options.friendOwes === undefined ? 12_000 : options.friendOwes)],
+    ]);
+    return context;
+  }
+
+  it("is offered on the lead's seat with the party's total", () => {
+    render(
+      <ul>
+        <RosterRow entry={seat} settled={false} context={partyContext({})} />
+      </ul>,
+    );
+    expect(screen.getByTestId("party-payment")).toBeInTheDocument();
+    expect(
+      screen.getByText("2 seats in this party still owe $240.00 together."),
+    ).toBeInTheDocument();
+  });
+
+  it("is not offered on a party member's own seat", () => {
+    render(
+      <ul>
+        <RosterRow entry={friend} settled={false} context={partyContext({})} />
+      </ul>,
+    );
+    expect(screen.queryByTestId("party-payment")).toBeNull();
+  });
+
+  it("is not offered when only one seat owes, or when a seat that owes was paid online", () => {
+    const { rerender } = render(
+      <ul>
+        <RosterRow entry={seat} settled={false} context={partyContext({ friendOwes: null })} />
+      </ul>,
+    );
+    expect(screen.queryByTestId("party-payment")).toBeNull();
+    rerender(
+      <ul>
+        <RosterRow
+          entry={seat}
+          settled={false}
+          context={partyContext({ friendProvider: "stripe" })}
+        />
+      </ul>,
+    );
+    expect(screen.queryByTestId("party-payment")).toBeNull();
   });
 });

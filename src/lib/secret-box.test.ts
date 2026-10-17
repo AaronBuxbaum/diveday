@@ -1,6 +1,11 @@
 import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { openSecret, sealSecret, secretKeyFromEnvironment } from "./secret-box";
+import {
+  openSecret,
+  openSecretWithKeyring,
+  sealSecret,
+  secretKeyFromEnvironment,
+} from "./secret-box";
 
 const key = randomBytes(32);
 const base64Key = key.toString("base64");
@@ -64,7 +69,7 @@ describe("sealSecret / openSecret", () => {
 describe("secretKeyFromEnvironment", () => {
   it("reads a 32-byte base64 key", () => {
     const result = secretKeyFromEnvironment({ SECRET_ENCRYPTION_KEY: base64Key });
-    expect(result).toEqual({ status: "ok", key });
+    expect(result).toEqual({ status: "ok", key: { current: key, previous: null } });
   });
 
   it("treats an absent key as unset, not an error — the channel is simply dormant", () => {
@@ -76,6 +81,7 @@ describe("secretKeyFromEnvironment", () => {
     const short = randomBytes(16).toString("base64");
     expect(secretKeyFromEnvironment({ SECRET_ENCRYPTION_KEY: short })).toEqual({
       status: "invalid",
+      variable: "SECRET_ENCRYPTION_KEY",
       reason: "wrong_length",
     });
   });
@@ -83,7 +89,72 @@ describe("secretKeyFromEnvironment", () => {
   it("names a value that is not base64 at all", () => {
     expect(secretKeyFromEnvironment({ SECRET_ENCRYPTION_KEY: "!!!!" })).toEqual({
       status: "invalid",
+      variable: "SECRET_ENCRYPTION_KEY",
       reason: "not_base64",
     });
+  });
+});
+
+/**
+ * Rotation (row 8 of the 2026-10-13 review): a key swapped in one step leaves
+ * every value sealed under the old one unreadable, which for two-factor
+ * secrets is a lockout. The previous key opens; only the current one seals.
+ */
+describe("key rotation", () => {
+  const previous = randomBytes(32);
+  const rotated = secretKeyFromEnvironment({
+    SECRET_ENCRYPTION_KEY: base64Key,
+    SECRET_ENCRYPTION_KEY_PREVIOUS: previous.toString("base64"),
+  });
+  if (rotated.status !== "ok") throw new Error("a rotated keyring reads");
+  const keyring = rotated.key;
+
+  it("opens a value sealed under the previous key, and says so", () => {
+    const sealed = sealSecret("old-token", previous);
+    expect(openSecret(sealed, keyring)).toBe("old-token");
+    expect(openSecretWithKeyring(sealed, keyring)).toEqual({
+      plaintext: "old-token",
+      sealedWithPrevious: true,
+    });
+  });
+
+  it("seals under the current key only, so dropping the previous key loses nothing new", () => {
+    const sealed = sealSecret("new-token", keyring);
+    expect(openSecret(sealed, key)).toBe("new-token");
+    expect(openSecret(sealed, previous)).toBeNull();
+    expect(openSecretWithKeyring(sealed, keyring)?.sealedWithPrevious).toBe(false);
+  });
+
+  it("still refuses a value sealed under neither key", () => {
+    expect(openSecret(sealSecret("token", randomBytes(32)), keyring)).toBeNull();
+  });
+
+  it("ignores a previous key equal to the current one", () => {
+    expect(
+      secretKeyFromEnvironment({
+        SECRET_ENCRYPTION_KEY: base64Key,
+        SECRET_ENCRYPTION_KEY_PREVIOUS: base64Key,
+      }),
+    ).toEqual({ status: "ok", key: { current: key, previous: null } });
+  });
+
+  it("names a mis-pasted previous key instead of quietly failing what it should open", () => {
+    expect(
+      secretKeyFromEnvironment({
+        SECRET_ENCRYPTION_KEY: base64Key,
+        SECRET_ENCRYPTION_KEY_PREVIOUS: randomBytes(16).toString("base64"),
+      }),
+    ).toEqual({
+      status: "invalid",
+      variable: "SECRET_ENCRYPTION_KEY_PREVIOUS",
+      reason: "wrong_length",
+    });
+  });
+
+  it("treats a previous key without a current one as unset: nothing can seal", () => {
+    expect(
+      secretKeyFromEnvironment({ SECRET_ENCRYPTION_KEY_PREVIOUS: previous.toString("base64") })
+        .status,
+    ).toBe("unset");
   });
 });

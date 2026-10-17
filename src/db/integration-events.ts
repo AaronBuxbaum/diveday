@@ -1,7 +1,10 @@
 import { and, asc, desc, eq, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { allocateSettledTotal } from "@/lib/payments/settlement";
 import type { DbExecutor } from "./client";
 import {
+  bookingCheckoutBookings,
+  bookingCheckouts,
   bookings,
   type IntegrationEvent,
   integrationDeliveries,
@@ -10,6 +13,7 @@ import {
   orders,
   people,
   shopIntegrations,
+  tips,
   trips,
 } from "./schema";
 
@@ -31,6 +35,16 @@ import {
 export type OrderIntegrationCustomer = { id: string; name: string; email: string | null };
 
 export type OrderIntegrationPayload = {
+  /**
+   * What sold (batch 6 item 9, ADR 20261014-checkouts-reach-integrations):
+   * a staff `order`, a diver's online booking `checkout`, or a post-dive
+   * `tip`. All three travel as `order.*` events in one shape, so every
+   * adapter and every shop's existing subscription carries them unchanged.
+   * Absent on an event queued before checkouts and tips joined, which was
+   * always an order.
+   */
+  source?: "order" | "checkout" | "tip";
+  /** The sold thing's id: an order's, a checkout's or a tip's, by `source`. */
   orderId: string;
   customer: { id: string } | OrderIntegrationCustomer;
   status: string;
@@ -50,7 +64,26 @@ export type OrderIntegrationPayload = {
   }>;
 };
 
-function eventIsSubscribed(settings: unknown, eventType: string): boolean {
+/**
+ * The idempotency keys of the money events, in one place so the live write
+ * path and the owner's backfill (`integration-backfill.ts`) can never
+ * disagree about what "already sent" means.
+ */
+export const checkoutPaidKey = (checkoutId: string) => `checkout:${checkoutId}:paid`;
+export const checkoutRefundKey = (checkoutId: string, refundedCents: number) =>
+  `checkout:${checkoutId}:refund:${refundedCents}`;
+export const tipPaidKey = (tipId: string) => `tip:${tipId}:paid`;
+
+/**
+ * Fan an event out to one integration only, at a chosen time. The backfill's
+ * choice (issue #2606): the owner picked this provider, and another one that
+ * has its own closed periods must not hear about it. `nextAttemptAt` is what
+ * the queue orders by, so spacing it by a millisecond per event sends oldest
+ * first.
+ */
+export type OnlyIntegration = { id: string; nextAttemptAt: Date };
+
+export function eventIsSubscribed(settings: unknown, eventType: string): boolean {
   if (!settings || typeof settings !== "object" || Array.isArray(settings)) return false;
   const eventTypes = (settings as { eventTypes?: unknown }).eventTypes;
   return Array.isArray(eventTypes) && eventTypes.includes(eventType);
@@ -96,6 +129,7 @@ async function loadOrderIntegrationPayload(
     );
 
   return {
+    source: "order",
     orderId: row.order.id,
     // Identity by reference only — see OrderIntegrationCustomer above.
     customer: { id: row.person.id },
@@ -121,11 +155,13 @@ export async function enqueueIntegrationEvent(
     entityId: string;
     idempotencyKey: string;
     payload: Record<string, unknown>;
+    onlyIntegration?: OnlyIntegration;
   },
 ): Promise<IntegrationEvent | null> {
+  const { onlyIntegration, ...eventValues } = input;
   const [inserted] = await db
     .insert(integrationEvents)
-    .values(input)
+    .values(eventValues)
     .onConflictDoNothing({
       target: [integrationEvents.shopId, integrationEvents.idempotencyKey],
     })
@@ -157,6 +193,7 @@ export async function enqueueIntegrationEvent(
         // "connected" alone would keep queuing orders for a provider the shop
         // took away last month.
         isNull(shopIntegrations.deletedAt),
+        ...(onlyIntegration ? [eq(shopIntegrations.id, onlyIntegration.id)] : []),
       ),
     );
   for (const integration of integrations) {
@@ -168,6 +205,7 @@ export async function enqueueIntegrationEvent(
         integrationId: integration.id,
         eventId: event.id,
         status: "pending",
+        ...(onlyIntegration ? { nextAttemptAt: onlyIntegration.nextAttemptAt } : {}),
       })
       .onConflictDoNothing({
         target: [integrationDeliveries.integrationId, integrationDeliveries.eventId],
@@ -198,6 +236,201 @@ export async function enqueueOrderIntegrationEvent(
     entityId: input.orderId,
     idempotencyKey: input.idempotencyKey,
     payload: payload as unknown as Record<string, unknown>,
+  });
+}
+
+/**
+ * **A diver's online booking checkout, as one sale** (batch 6 item 9, H-120).
+ * One receipt per checkout, never per seat: the party lead paid once, so the
+ * books get one sale naming them, with the fare, the gear and the
+ * pass-through fees on lines of their own. Tax is not a line, as on an order.
+ * Lines are Stripe's settled figure split back across what was asked, so a
+ * code's discount lands on every line it discounted and the lines sum to what
+ * the shop received, less tax.
+ *
+ * Null for a checkout that never completed or belongs to a rehearsal
+ * departure, which never reaches an integration (ADR
+ * 20261012-rehearsal-departures).
+ */
+async function loadCheckoutIntegrationPayload(
+  db: DbExecutor,
+  shopId: string,
+  checkoutId: string,
+  overrides: Partial<Pick<OrderIntegrationPayload, "status" | "refundCents">> = {},
+): Promise<OrderIntegrationPayload | null> {
+  const [row] = await db
+    .select({ checkout: bookingCheckouts, tripTitle: trips.title, isRehearsal: trips.isRehearsal })
+    .from(bookingCheckouts)
+    // diveday:allow-rehearsal: read only to refuse; a rehearsal's checkout never reaches an integration.
+    .innerJoin(trips, and(eq(trips.id, bookingCheckouts.tripId), eq(trips.shopId, shopId)))
+    .where(and(eq(bookingCheckouts.shopId, shopId), eq(bookingCheckouts.id, checkoutId)))
+    .limit(1);
+  if (!row || row.isRehearsal || row.checkout.status !== "completed") return null;
+  const { checkout } = row;
+
+  const seats = await db
+    .select({
+      bookingId: bookingCheckoutBookings.bookingId,
+      personId: bookings.personId,
+      partyLeadBookingId: bookings.partyLeadBookingId,
+      createdAt: bookings.createdAt,
+      tripCents: bookingCheckoutBookings.tripCents,
+      gearCents: bookingCheckoutBookings.gearCents,
+      passThroughCents: bookingCheckoutBookings.passThroughCents,
+    })
+    .from(bookingCheckoutBookings)
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),
+    )
+    .where(
+      and(
+        eq(bookingCheckoutBookings.shopId, shopId),
+        eq(bookingCheckoutBookings.checkoutId, checkoutId),
+      ),
+    )
+    // diveday:allow-time-id-order: the seats are summed into lines nobody sees per seat; order only picks a fallback lead.
+    .orderBy(asc(bookings.createdAt), asc(bookings.id));
+  // The party lead is the one seat that points at no lead; a checkout of one
+  // seat is its own lead either way.
+  const lead = seats.find((seat) => seat.partyLeadBookingId === null) ?? seats[0];
+  if (!lead) return null;
+
+  const asked = {
+    fare: seats.reduce((sum, seat) => sum + (seat.tripCents ?? checkout.amountPerDiverCents), 0),
+    gear: seats.reduce((sum, seat) => sum + seat.gearCents, 0),
+    passThrough: seats.reduce((sum, seat) => sum + seat.passThroughCents, 0),
+  };
+  const settledCents = checkout.settledTotalCents ?? checkout.totalCents;
+  const netCents = Math.max(0, settledCents - (checkout.taxCents ?? 0));
+  const split = allocateSettledTotal(
+    [
+      { key: "fare", askedCents: asked.fare },
+      { key: "gear", askedCents: asked.gear },
+      { key: "pass_through", askedCents: asked.passThrough },
+    ],
+    netCents,
+  );
+  // Words for an accountant's ledger, not a person's screen: the departure's
+  // own title, as the order adapters already write "DiveDay order …".
+  const describe: Record<string, string> = {
+    fare: checkout.isDeposit ? `${row.tripTitle} (deposit)` : row.tripTitle,
+    gear: `${row.tripTitle} (gear)`,
+    pass_through: `${row.tripTitle} (fees collected for others)`,
+  };
+  const lineItems = (["fare", "gear", "pass_through"] as const).flatMap((kind) => {
+    const cents = split.get(kind) ?? 0;
+    return cents > 0
+      ? [
+          {
+            id: `${checkoutId}:${kind}`,
+            kind: kind === "fare" && checkout.isDeposit ? "deposit" : kind,
+            description: describe[kind] ?? row.tripTitle,
+            quantity: 1,
+            unitAmountCents: cents,
+          },
+        ]
+      : [];
+  });
+
+  return {
+    source: "checkout",
+    orderId: checkout.id,
+    customer: { id: lead.personId },
+    status: overrides.status ?? (checkout.refundedCents > 0 ? "partly_refunded" : "paid"),
+    currency: checkout.currency,
+    totalCents: settledCents,
+    amountPaidCents: settledCents,
+    refundedCents: checkout.refundedCents,
+    ...(overrides.refundCents === undefined ? {} : { refundCents: overrides.refundCents }),
+    description: row.tripTitle,
+    createdAt: (checkout.completedAt ?? checkout.createdAt).toISOString(),
+    lineItems,
+  };
+}
+
+/** A completed checkout's sale (`order.paid`) or one refund against it (`order.refunded`). */
+export async function enqueueCheckoutIntegrationEvent(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    checkoutId: string;
+    eventType: "order.paid" | "order.refunded";
+    idempotencyKey: string;
+    status?: string;
+    refundCents?: number;
+    onlyIntegration?: OnlyIntegration;
+  },
+): Promise<IntegrationEvent | null> {
+  const payload = await loadCheckoutIntegrationPayload(db, input.shopId, input.checkoutId, {
+    ...(input.status === undefined ? {} : { status: input.status }),
+    ...(input.refundCents === undefined ? {} : { refundCents: input.refundCents }),
+  });
+  if (!payload) return null;
+  return enqueueIntegrationEvent(db, {
+    shopId: input.shopId,
+    eventType: input.eventType,
+    entityType: "checkout",
+    entityId: input.checkoutId,
+    idempotencyKey: input.idempotencyKey,
+    payload: payload as unknown as Record<string, unknown>,
+    ...(input.onlyIntegration ? { onlyIntegration: input.onlyIntegration } : {}),
+  });
+}
+
+/**
+ * **A post-dive tip, as a sale of its own** (batch 6 item 9, H-120): income
+ * on one line, named as a tip, from the diver who left it. A tip has its own
+ * Stripe checkout, days after the booking's, so it is its own receipt rather
+ * than a line added to a sale the books already closed.
+ */
+export async function enqueueTipIntegrationEvent(
+  db: DbExecutor,
+  input: { shopId: string; tipId: string; onlyIntegration?: OnlyIntegration },
+): Promise<IntegrationEvent | null> {
+  const [row] = await db
+    .select({
+      tip: tips,
+      personId: bookings.personId,
+      tripTitle: trips.title,
+      isRehearsal: trips.isRehearsal,
+    })
+    .from(tips)
+    .innerJoin(bookings, and(eq(bookings.id, tips.bookingId), eq(bookings.shopId, input.shopId)))
+    // diveday:allow-rehearsal: read only to refuse; a rehearsal's tip never reaches an integration.
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, input.shopId)))
+    .where(and(eq(tips.shopId, input.shopId), eq(tips.id, input.tipId)))
+    .limit(1);
+  if (!row || row.isRehearsal || row.tip.status !== "paid") return null;
+  const payload: OrderIntegrationPayload = {
+    source: "tip",
+    orderId: row.tip.id,
+    customer: { id: row.personId },
+    status: "paid",
+    currency: row.tip.currency,
+    totalCents: row.tip.amountCents,
+    amountPaidCents: row.tip.amountCents,
+    refundedCents: 0,
+    description: row.tripTitle,
+    createdAt: (row.tip.completedAt ?? row.tip.createdAt).toISOString(),
+    lineItems: [
+      {
+        id: `${row.tip.id}:tip`,
+        kind: "tip",
+        description: `Tip: ${row.tripTitle}`,
+        quantity: 1,
+        unitAmountCents: row.tip.amountCents,
+      },
+    ],
+  };
+  return enqueueIntegrationEvent(db, {
+    shopId: input.shopId,
+    eventType: "order.paid",
+    entityType: "tip",
+    entityId: row.tip.id,
+    idempotencyKey: tipPaidKey(row.tip.id),
+    payload: payload as unknown as Record<string, unknown>,
+    ...(input.onlyIntegration ? { onlyIntegration: input.onlyIntegration } : {}),
   });
 }
 

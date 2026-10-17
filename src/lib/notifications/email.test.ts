@@ -515,9 +515,7 @@ describe("tripReminderEmail", () => {
       pickupTime: "07:15",
       hotelPickupLocation: "Sunset Palms Resort",
     });
-    expect(email.text).toContain(
-      "Your morning pickup is scheduled for 07:15 at Sunset Palms Resort.",
-    );
+    expect(email.text).toContain("Your pickup is at 07:15 from Sunset Palms Resort.");
     expect(email.text).not.toContain("Aim to be at the dock by");
   });
 
@@ -1346,7 +1344,7 @@ describe("where to go (ux review 2026-10-11, items 4 and 27)", () => {
     const email = bookingConfirmationEmail({ ...base, locale: "es-ES", meetingPoint });
     expect(email.text).toContain("Adónde ir");
     expect(email.text).toContain("Referencia: Blue awning");
-    expect(email.text).toContain("Aparcamiento: Free lot");
+    expect(email.text).toContain("Estacionamiento: Free lot");
     expect(email.text).toContain("Abrir en mapas");
   });
 });
@@ -1387,9 +1385,49 @@ describe("the confirmation's terms (ux review 2026-10-11, item 5)", () => {
     ).toMatch(/Tu plaza: .*120.*, con tarjeta en línea\./);
   });
 
+  it("says the party's figure once when the lead holds several seats (fourth UX review, item 5)", () => {
+    expect(
+      bookingConfirmationEmail({
+        ...base,
+        money: { due: "at_shop", amountCents: 28_500, currency: "usd", seats: 3 },
+      }).text,
+    ).toContain("3 seats: $285.00, due at the shop.");
+    expect(
+      bookingConfirmationEmail({
+        ...base,
+        locale: "es-ES",
+        money: { due: "at_shop", amountCents: 28_500, currency: "usd", seats: 3 },
+      }).text,
+    ).toMatch(/3 plazas: .*285.*, a pagar en el centro\./);
+  });
+
+  it("states what the party paid by card, under the seat's own line (#2447)", () => {
+    const email = bookingConfirmationEmail({
+      ...base,
+      money: { due: "online", amountCents: 12_000, currency: "usd" },
+      partyPaid: { amountCents: 63_180, currency: "usd", seats: 4 },
+    });
+    expect(email.text).toContain(
+      "Your seat: $120.00, by card online.\nPaid by card for 4 seats: $631.80.",
+    );
+    expect(
+      bookingConfirmationEmail({
+        ...base,
+        partyPaid: { amountCents: 14_750, currency: "usd", seats: 1 },
+      }).text,
+    ).toContain("Paid by card: $147.50.");
+    expect(
+      bookingConfirmationEmail({
+        ...base,
+        locale: "es-ES",
+        partyPaid: { amountCents: 63_180, currency: "usd", seats: 4 },
+      }).text,
+    ).toMatch(/Pagado con tarjeta por 4 plazas: .*631,80/);
+  });
+
   it("says nothing of money, window or calendar when there is none", () => {
     const email = bookingConfirmationEmail(base);
-    expect(email.text).not.toContain("Your seat");
+    expect(email.text).not.toContain("Your seat:");
     expect(email.text).not.toContain("Free cancellation");
     expect(email.text).not.toContain("Add to calendar");
   });
@@ -1433,5 +1471,24 @@ describe("tripRescheduledEmail (ux review 2026-10-11, item 1)", () => {
   it("names no dock on a course session", () => {
     const { dockCallMinutes: _omit, ...course } = moved;
     expect(tripRescheduledEmail(course).text).not.toContain("dock");
+  });
+
+  // #2443: only the meeting point moved, so there is no old time to give.
+  it("leads with the place when only the meeting point moved", () => {
+    const email = tripRescheduledEmail({ ...moved, previousStartsAt: base.startsAt, meetingPoint });
+    expect(email.subject).toBe("New meeting point for Two-Tank Reef");
+    expect(email.text).toContain("We moved where we meet for Two-Tank Reef. The time is the same.");
+    expect(email.text).toContain("Where to go\nNorth Pier");
+    expect(email.text).not.toContain("It was");
+    expect(email.text).not.toContain("somewhere new, too");
+    expect(email.text).not.toContain("new time");
+    const spanish = tripRescheduledEmail({
+      ...moved,
+      previousStartsAt: base.startsAt,
+      meetingPoint,
+      locale: "es-ES",
+    });
+    expect(spanish.subject).toBe("Nuevo punto de encuentro para Two-Tank Reef");
+    expect(spanish.text).not.toContain("Antes era");
   });
 });

@@ -44,9 +44,16 @@ trip-row lock, never as a pre-check.
   zero as settled. An unpriced seat stays blocked until staff record or waive payment, as a diver's
   would.
 - **Divers only where it is diving.** A buddy team takes divers only (`not_a_diver`). Nitrox is a
-  diver's (check constraint `bookings_nitrox_is_a_divers`). A course session takes divers only
-  (`participant_type_unavailable`), since recording a student as a rider to get aboard would falsify
-  the record the crew reads at the rail.
+  diver's (check constraint `bookings_nitrox_is_a_divers`). A course session's students are
+  divers: enrollment is a diver's seat, and recording a student as a rider to get aboard would
+  falsify the record the crew reads at the rail. Amended 2026-10-13 (issue #2226): a course
+  session also sells snorkeler and rider seats where the shop names a price for them, from either
+  door (an unpriced one is refused even to staff, `participant_type_unavailable`). Such a seat is a
+  passenger: it is asked none of the course's card, age, ratio or form gates, counts against the
+  boat but never against the students' ratio (every reader of it: the sale, a move, an undo, a
+  no-show's undo, an offer, the wait list, and the crew-gap rows), is never counted as in training, gets no Certify, materials or next-step controls, and is sent no course words. A
+  type change on a course session never takes a student out of diving and never puts a passenger
+  into it; snorkeler and rider swap only at a priced type.
 - **Gear by type.** A rider gets no rental step, packing line or tank. A snorkeler is offered and
   packed surface kit only (mask and fins, wetsuit, hood and gloves, camera), with no tank and no fit
   to chase.
@@ -67,8 +74,13 @@ trip-row lock, never as a pre-check.
   and a paid seat whose new type lists higher is saved with a notice that the difference is owed
   and a `balance_owed` desk event. Leaving diving releases the seat's unclaimed gear-register
   reservations for the kinds the new type does not use. No change is accepted once the departure is
-  home or cancelled, and joining the dive is refused from the departure time on (not the selling
-  grace of `hasSailed`). Leaving it stays open between dives.
+  home or cancelled. Out on the water a seat may change either way (amended 2026-10-13, issue
+  #2225): the partner who rode dive 1 may dive the second tank. At sea the person is already
+  aboard, so joining the dive asks the boarding gate itself, whatever the rail recorded, and
+  "Change anyway" does not apply there (dive-domain review, H1): a seat that would not be cleared
+  to board as a diver stays what it is (`boarded_not_ready`). Before departure the card check and
+  role-gated "Change anyway" stand, with the boarding re-check for a seat recorded boarded. A change
+  made after the time on the board says so on the trail line ("after departure").
 - **The original type is kept.** `bookings.booked_as` records the type the seat was booked as and
   never changes. Every writer states it, and the column has no default, so an insert that forgets it
   fails to compile. A default of diver was the expand half of expand/contract, kept for the one

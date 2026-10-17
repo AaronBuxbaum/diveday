@@ -8,11 +8,16 @@ afterEach(cleanup);
 
 const renderField = (initial: string | null = null) =>
   render(
-    <BrandColorField initial={initial} pickerLabel="Pick a color" placeholder="Brand color" />,
+    <BrandColorField
+      initial={initial}
+      label="Brand color"
+      pickerLabel="Pick a color"
+      placeholder={DIVEDAY_BRAND_COLOR}
+    />,
   );
 
 const picker = () => screen.getByLabelText("Pick a color") as HTMLInputElement;
-const hexField = () => screen.getByPlaceholderText("Brand color") as HTMLInputElement;
+const hexField = () => screen.getByRole("textbox", { name: "Brand color" }) as HTMLInputElement;
 
 /** What Save stores for a typed value: the server's own normalization. */
 const saved = (typed: string) => parseBrandColor(typed).value;
@@ -26,6 +31,12 @@ const saved = (typed: string) => parseBrandColor(typed).value;
  * `src/app` is refused by `check:tokens`.
  */
 describe("BrandColorField", () => {
+  it("names the hex field, the one the form submits, by more than its placeholder", () => {
+    renderField();
+    expect(hexField().getAttribute("name")).toBe("brandColor");
+    expect(hexField().getAttribute("aria-label")).toBe("Brand color");
+  });
+
   it("previews a hex pasted without the #", () => {
     renderField();
     fireEvent.change(hexField(), { target: { value: "FF8800" } });

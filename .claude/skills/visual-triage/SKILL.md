@@ -7,7 +7,7 @@ description: Triage reg-suit visual-regression differences locally or in CI, dec
 
 reg-suit baselines live in AWS S3 under `reg-publish-s3-plugin`, keyed by full commit sha. A test run captures actual images under `.reg/actual`, compares them against the baseline downloaded from S3 for this commit's *base* — the fork point from `main`, stacked pull request or not (ADR 20260919-stack-ci-cancels-superseded-layers) — and uploads the results/reports. Which commit that is, is stated rather than inferred: `scripts/reg-suit-keys.mjs` computes both keys and `pnpm visual:compare` puts them in the environment `regconfig.json` reads (ADR 20260821-stacked-pull-requests). Set `REG_EXPECTED_KEY` yourself to compare against a commit of your choosing.
 
-Baselines are captured on CI's `ubuntu-latest` runners (ADR 20260730-linux-ci-runners). Running
+Baselines are captured on CI's `ubuntu-24.04` runners (ADR 20260730-linux-ci-runners; `RUNNER_IMAGE` in `scripts/check-runner-image.mjs`). Running
 `pnpm visual` on macOS re-renders every screenshot through a different font stack and reports most
 of the suite as changed — that is the platform, not your diff. Triage from the CI report unless you
 are on Linux.
@@ -17,118 +17,21 @@ that blocks browser downloads falls back to its own pre-installed build, which r
 differently (ADR 20260730-pinned-browser-visual-determinism). `pnpm e2e:browser-check` prints which
 browser it resolved — if it says "falling back", your local diff is not comparable to the baseline.
 
-## Start at the PR comment
+## Before the first image
 
-On a pull request the `visual-report` job posts one sticky comment (marker `diveday:visual-summary`,
-edited in place on each push) with the counts, the names of the changed/new/deleted surfaces, and
-the exact `pnpm visual:report` command for that commit. Read it before anything else — it usually
-tells you whether the diff is confined to the surfaces you touched. It never fails the build; the
-enforcement is you (ADR 20260802-visual-diff-pr-comment).
-
-Two things it says that reg-suit's own `reg-suit[bot]` comment and `reg` status cannot, because
-their payload is counts only:
-
-- **Which surfaces moved**, so triage can start without opening a browser.
-- **Whether anything was compared at all.** A headline of `NOTHING WAS COMPARED` means reg-suit
-  downloaded zero baseline images and reported every screenshot as *new* rather than diffed — the
-  changed count is then a meaningless zero (ADR 20260729-reg-suit-visual-regression). Treat that run
-  as *unknown*, never as clean, and fix the baseline resolution before reading anything into it.
-  A run that really did compare says "no differences across N compared surface(s)" instead.
-
-If the comment says no report was published, `reg-suit run` never got far enough to publish one —
-read the `visual-report` job log rather than assuming the pixels held still.
-
-**On any branch, the baseline is your own parent commit — not current `main`.** A branch cut a few
-days ago is compared against the world as it was then, so every PR that merged in between shows up
-in *your* report as changed pixels. That is not a subtle effect: a branch cut four PRs back came
-back with 102 changed surfaces of which **66 belonged to other people**, and the four "new, no
-baseline" items were another PR's brand-new captures. Triaging that honestly means opening diffs
-for surfaces you never touched and attributing each one, which is slow and easy to get wrong in the
-generous direction.
-
-So **rebase onto current `main` before triaging**, and let CI re-run. The report then contains your
-pixels and nothing else, which is the only version of it you can actually account for. If you
-cannot rebase yet — `main` is red, or the fix is still in review — say so in the PR and attribute
-the inherited surfaces explicitly by naming the PR each one came from; a reviewer cannot tell them
-apart from yours by looking.
-
-**A pull request captures what its diff can reach, not everything.** `visual-plan` in `ci.yml`
-(`scripts/visual-affected.mjs`) picks the captures whose test visits a route the diff reaches,
-through its pages, layouts and importers, plus a smoke set; every other surface is copied from the
-baseline before the compare (`scripts/visual-fill.mjs`), so it reads as passed, and the sticky
-comment says how many were captured. A diff it cannot bound (the e2e harness, the seed or schema,
-a stylesheet, a locale bundle, `public/`, a config, `ci.yml`) captures everything, and the push to
-`main` always captures everything and is the only baseline. If a surface you expected to move
-reads as passed, the selection missed it: add the `visual-all` label to the pull request and push
-again, and file what it missed.
-
-**On a stacked pull request, read that comment on every layer.** A layer's baseline is its fork
-point from `main`, like any branch's (`scripts/reg-suit-keys.mjs`, ADR
-20260919-stack-ci-cancels-superseded-layers), so its diff carries every surface the layers below it
-changed as well as its own. Name the layer each inherited diff came from before approving it. That
-is the decided key, not a fallback: do not try to point reg-suit at the layer below.
-
-To see one layer's own slice, compare its captures to the layer below's instead of to a baseline:
-
-```bash
-pnpm visual:layers --from <layer-below-head> --to <this-layer-head> --download
-```
-
-It reads each commit's published `actual/` captures by ETag over HTTP `HEAD` (no image downloads,
-about a minute for the suite), lists the ones whose bytes differ, and with `--download` fetches both
-images of each into `.reg-report/layers/` and states the geometry change or the pixel count, largest
-channel delta and box. On #1948, layer 4 of four, the report said 336 changed and the layer had
-moved 4. Both commits must have published captures (every layer runs CI, ADR
-20261003-every-stack-layer-runs-ci); it says so when one did not. A reading aid, never a gate.
-
-**Across pushes, compare names, not counts.** The sticky comment lists what *entered* and *left*
-the changed set since the head it last reported on, computed from both commits' `out.json`. To do it
-by hand between two heads, as sets (`comm` needs both sides sorted; `-13` is what entered, `-23`
-what left):
-
-```bash
-pnpm visual:report --commit <old> && pnpm visual:report --commit <new>
-moved() { grep -E '^## .+ \((changed|new|deleted)\)$' ".reg-report/$1/REPORT.md" | sed -E 's/^## //; s/ \([a-z]+\)$//' | sort; }
-comm -13 <(moved <old>) <(moved <new>)   # entered the changed set
-comm -23 <(moved <old>) <(moved <new>)   # left it
-```
-
-A count that falls by one can hide four leaving and three entering; one of those three on #1922 was
-a nondeterministic capture that would have become the next baseline.
-
-## Fetching the report as an agent
-
-`reg-suit` prints an `index.html` report link, but that page is a client-rendered SPA — its body is
-literally `<div id="app"></div>` until JS runs, so a text-only fetch (WebFetch, `curl` without a
-browser) sees nothing. Never try to read that link directly. Instead:
-
-```bash
-pnpm visual:report                      # current HEAD's commit
-pnpm visual:report --commit <sha>       # a specific commit (e.g. a PR's head, from CI logs)
-pnpm visual:report --all                # also pull passed items, not just changed/new/deleted
-```
-
-This pulls `out.json` and the relevant `expected`/`actual`/`diff` PNGs straight from the same public
-S3 bucket (`regconfig.json`'s `reg-publish-s3-plugin` — no AWS credentials needed, the bucket is
-public-read) into `.reg-report/<commit>/`, alongside a `REPORT.md` listing each changed/new/deleted
-item with the local paths to its images. Read `REPORT.md`, then open each PNG path with `Read` — it
-renders images directly, which is the actual point: raw pixels beat any text description of them.
-This works from a fresh checkout without ever running Playwright locally, as long as CI has already
-published a report for that commit.
-
-`REPORT.md` leads with the same verdict headline as the PR comment, above the counts, and prints how
-many baseline images were downloaded — so a run that compared nothing cannot read as a clean one
-here either. Beside those counts it says how many changed captures **moved geometry**, and each
-item's section states its expected and actual dimensions and the signed height delta. Read those
-before opening a single image: `unchanged` means the pixels moved inside a stable box, and a height
-delta means the surface itself got taller or shorter.
+Read the sticky `diveday:visual-summary` comment first ([pr-comment.md](pr-comment.md)). The
+baseline is your branch's parent commit, not current `main`, so **rebase onto current `main`
+before triaging** or attribute each inherited surface to the PR it came from. On a stacked PR read
+the comment on every layer, name the layer each inherited diff came from, and use
+`pnpm visual:layers` for one layer's own slice. A surface you expected to move that reads as passed
+was not selected: add the `visual-all` label and push again.
 
 ## Triage loop
 
 1. Read the code and route/state changes before opening images.
 2. On a PR, read the sticky visual summary comment first — if it says nothing was compared, stop and
    fix that; a zero there is not evidence.
-3. Get the report — `pnpm visual:report` against the commit under review (see above), or run the
+3. Get the report — `pnpm visual:report` against the commit under review ([fetching.md](fetching.md)), or run the
    full local comparison on Linux:
    ```bash
    pnpm visual
@@ -139,47 +42,11 @@ delta means the surface itself got taller or shorter.
    - **Regression:** the image reveals an unintended layout/content/state change. Fix the source, rerun comparison, and verify the diff is gone.
    - **Unclear:** do not merge and ask for a decision.
 
-## Mapping and stability
+## Reference
 
-Visual specs are organized in `e2e/visual.spec.ts`. If a diff appears without a relevant code change, check `DIVEDAY_CLOCK`, browser version, fonts, and the deterministic PGlite reset. Do not mask a moving element to make the diff disappear.
-
-Read the *shape* of a no-code-change diff before assuming a baseline moved:
-
-- **Glyphs everywhere, layout identical** (element positions and image heights unchanged) — a
-  rendering-input change, not a code change. The browser is pinned to the lockfile now, so the
-  suspects are, in order: a `@playwright/test` bump, a change to `DETERMINISTIC_RENDERING_ARGS` in
-  `e2e/browser.ts`, or the runner image's emoji/fallback fonts (Geist is self-hosted and pinned).
-- **Confined to one element, with everything around it identical** — a capture that shot too early.
-  Wait on something the surface only renders when it is done, not a `@media` or a moving element.
-- **A solid blank stripe, or a whole screenful of nothing** — the capture gave up on a wait rather
-  than the page rendering wrong. `paintWholeDocument` bounds every wait it owns and shoots anyway,
-  which is deliberate: a stall costs one capture's sharpness, not the run. Every bound that fires
-  warns to the shard's log with the surface URL, so **read the `visual:` lines in the "Capture
-  visual regression screenshots" job output before reading the pixels** — they name which wait gave
-  up (frames, image decode, the whole scroll-through pass, the fonts) and, for a driver-side stall,
-  whether the renderer answered a trivial `evaluate` afterwards. A stripe with a matching warning is
-  a harness stall to re-run, never a baseline to bank; a stripe with *no* warning is a real finding.
-- **Anything reflows** — a real layout change. Read it as a finding even if it arrived inside a
-  larger rebaseline.
-
-`regconfig.json` sets `enableAntialias`, so a diff that survives to the report is not "just
-antialiasing". It deliberately does **not** set `matchingThreshold` — the comparison runs at
-reg-cli's default of `0`, meaning any per-pixel difference counts. Loosening that is not triage: if
-a diff is noise, the renderer is the thing to fix.
-
-### A capture can have two causes at once
-
-The trap is assuming one. A capture changes because the **baseline is stale** — somebody else's
-merged work moved the surface and your branch inherited it — *and* because **your branch moved it
-too**. Both at once is the ordinary case on a stack, and a name shared with a sibling pull request's
-report proves only the first. It never explains the capture, and treating it as if it did is how
-work gets filed as somebody else's noise: on PR #1484 six changed captures were reported as the
-PR's own when twenty-two were, and sixteen of them carried the feature's own 121px block.
-
-The geometry line is what separates the two. Identical growth across both reports points at the
-shared baseline; growth that differs — or a delta where the sibling reads `unchanged` — is this
-branch's own and yours to explain. `unchanged` on both sides means neither moved the box, so the
-difference is pixel content: a colour, a glyph, a photo that decoded differently, never a reflow.
+- [pr-comment.md](pr-comment.md) — the sticky `diveday:visual-summary` comment in full: `NOTHING WAS COMPARED`, the parent-commit baseline, rebasing before triage, what a PR captures (`visual-all`), and `pnpm visual:layers` for a stacked layer.
+- [fetching.md](fetching.md) — getting the report and its images from a session.
+- [mapping.md](mapping.md) — attributing a diff to code, unstable captures, and a capture with two causes.
 
 ## Handoff
 

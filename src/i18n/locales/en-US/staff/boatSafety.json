@@ -4,22 +4,34 @@
     "booked": "{passengers, plural, one {# person} other {# people}} booked; the boat’s certificate allows {limit}.",
     "aboard": "{passengers, plural, one {# passenger} other {# passengers}} aboard; the boat’s certificate allows {limit}."
   },
+  "overTotalPersons": {
+    "booked": "{persons, plural, one {# person} other {# people}} booked or named as crew; the certificate allows {limit} in all.",
+    "aboard": "{persons, plural, one {# person} other {# people}} aboard, crew included; the certificate allows {limit} in all."
+  },
   "missing": {
     "o2Kit": "No emergency oxygen aboard",
     "aed": "No AED aboard"
   },
   "paper": {
+    "coi": {
+      "due": "Boat certificate expires {days, plural, =0 {today} one {in # day} other {in # days}}",
+      "expired": "Boat certificate expired {date}",
+      "beforeDeparture": "Boat certificate expires {date}, before this departure"
+    },
     "inspection": {
       "due": "Next safety inspection due {days, plural, =0 {today} one {in # day} other {in # days}}",
-      "expired": "Safety inspection overdue by {days, plural, one {# day} other {# days}}"
+      "expired": "Safety inspection was due {date}",
+      "beforeDeparture": "Safety inspection due {date}, before this departure"
     },
     "registration": {
       "due": "Registration expires {days, plural, =0 {today} one {in # day} other {in # days}}",
-      "expired": "Registration expired {days, plural, one {# day ago} other {# days ago}}"
+      "expired": "Registration ended {date}",
+      "beforeDeparture": "Registration ends {date}, before this departure"
     },
     "insurance": {
       "due": "Insurance expires {days, plural, =0 {today} one {in # day} other {in # days}}",
-      "expired": "Insurance expired {days, plural, one {# day ago} other {# days ago}}"
+      "expired": "Hull insurance ended {date}",
+      "beforeDeparture": "Hull insurance ends {date}, before this departure"
     }
   },
   "kit": {

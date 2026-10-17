@@ -1,13 +1,27 @@
 import type { Metadata } from "next";
+import { SubmitButton } from "@/components/SubmitButton";
+import { buttonClass } from "@/components/ui/button";
+import { ChoiceFieldset, ChoiceRow, FieldActions, FieldGrid } from "@/components/ui/form";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { listSiteBottomTimeOverrides } from "@/db/dive-sites";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { DeskPayment } from "@/lib/desk-payment";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
-import { DockDayForm } from "../_components/editors/BoatsSitesEditors";
+import { DockDayForm, TurnaroundForm } from "../_components/editors/BoatsSitesEditors";
 import { SettingsEditorPage } from "../_components/SettingsEditorPage";
 import { dockDayNoticeMessages } from "../sub-page-notices";
+import { saveDeskPaymentAction } from "./desk-payment-actions";
+import { saveHotelPickupAction } from "./pickup-actions";
+
+/** The four answers, in the order a shop most often has them; "" is "Don't say". */
+const DESK_PAYMENT_CHOICES = [
+  { code: "card_and_cash", label: "settings.main.deskPayment.card_and_cash" },
+  { code: "card", label: "settings.main.deskPayment.card" },
+  { code: "cash", label: "settings.main.deskPayment.cash" },
+  { code: "", label: "settings.main.deskPayment.none" },
+] as const satisfies ReadonlyArray<{ code: DeskPayment | ""; label: string }>;
 
 // See the sibling settings sub-pages (ADR 20260804-instant-navigation).
 export const instant = true;
@@ -60,6 +74,66 @@ export default async function DockDaySettingsPage({
         t={t}
         siteBottomTimeOverrides={siteBottomTimeOverrides}
       />
+      {/* Whether `/ready` asks a diver about a pickup at all (fourth UX
+          review, item 8): most shops run none, so it is off until a shop
+          says it does. Part of the same dock day, so it lives on this page. */}
+      <FieldGrid
+        as="form"
+        action={saveHotelPickupAction}
+        columns={1}
+        className="mt-8 border-t border-border pt-6"
+      >
+        <ChoiceRow
+          name="offersHotelPickup"
+          type="checkbox"
+          defaultChecked={shop.offersHotelPickup}
+          className="text-sm"
+        >
+          <span className="block font-medium">{t("settings.main.pickup.label")}</span>
+          <span className="block text-xs text-muted">{t("settings.main.pickup.description")}</span>
+        </ChoiceRow>
+        <FieldActions>
+          <SubmitButton
+            pendingLabel={t("settings.main.pickup.submitting")}
+            className={buttonClass({ variant: "secondary" })}
+          >
+            {t("settings.main.pickup.submit")}
+          </SubmitButton>
+        </FieldActions>
+      </FieldGrid>
+      <TurnaroundForm shop={shop} t={t} />
+      {/* How divers pay at the desk (fifth-loop ideas, item 21): one sentence
+          after every "due at the shop", so a visitor brings cash or a card. */}
+      <FieldGrid
+        as="form"
+        action={saveDeskPaymentAction}
+        columns={1}
+        className="mt-8 border-t border-border pt-6"
+      >
+        <ChoiceFieldset legend={t("settings.main.deskPayment.legend")} bodyClassName="grid gap-1">
+          <p className="text-xs text-muted">{t("settings.main.deskPayment.description")}</p>
+          {DESK_PAYMENT_CHOICES.map(({ code, label }) => (
+            <ChoiceRow
+              key={code || "none"}
+              name="deskPayment"
+              type="radio"
+              value={code}
+              defaultChecked={(shop.deskPayment ?? "") === code}
+              className="text-sm"
+            >
+              {t(label)}
+            </ChoiceRow>
+          ))}
+        </ChoiceFieldset>
+        <FieldActions>
+          <SubmitButton
+            pendingLabel={t("settings.main.deskPayment.submitting")}
+            className={buttonClass({ variant: "secondary" })}
+          >
+            {t("settings.main.deskPayment.submit")}
+          </SubmitButton>
+        </FieldActions>
+      </FieldGrid>
     </SettingsEditorPage>
   );
 }

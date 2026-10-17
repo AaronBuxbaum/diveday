@@ -49,3 +49,61 @@ describe("YearReport", () => {
     expect(margined).toEqual([]);
   });
 });
+
+/** The year's money and its CSV (fourth UX review, item 25). */
+describe("the year's money", () => {
+  it("shows net revenue, tax and tips, and the year's file", () => {
+    render(
+      <YearReport
+        year={YEAR}
+        money={{
+          report: { revenueCents: 1_250_000, taxCents: 87_500, tipsCents: 64_000, tipCount: 31 },
+          currency: "usd",
+          csvHref: "/shop/blue-mantis/reports/download?year=2026",
+        }}
+        locale="en-US"
+        shopSlug="blue-mantis"
+        t={t}
+      />,
+    );
+    const money = screen.getByRole("region", { name: "The year’s money" });
+    expect(money).toHaveTextContent("Net revenue");
+    expect(money).toHaveTextContent("$12,500");
+    expect(money).toHaveTextContent("Tax collected");
+    expect(money).toHaveTextContent("$875");
+    expect(money).toHaveTextContent("31 tips, for the crew");
+    expect(screen.getByRole("link", { name: "Download the year (CSV)" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/reports/download?year=2026",
+    );
+  });
+
+  it("draws no money row when it is not given one", () => {
+    render(<YearReport year={YEAR} locale="en-US" shopSlug="blue-mantis" t={t} />);
+    expect(screen.queryByRole("region", { name: "The year’s money" })).toBeNull();
+  });
+});
+
+/** Last year beside the figures, and the year's lines (fifth loop, items 25, 27, 32). */
+describe("last year and the year's lines", () => {
+  it("sets last year's figure under this year's, and the lines under the sentence", () => {
+    render(
+      <YearReport
+        year={YEAR}
+        lastYear={{ divers: "291 by this date in 2025", boats: "39 by this date in 2025" }}
+        lines={[
+          "4 days with a weather call, 6 departures called off",
+          "Certifications issued here: 34 · 22 Open Water",
+        ]}
+        locale="en-US"
+        shopSlug="blue-mantis"
+        t={t}
+      />,
+    );
+    const figures = screen.getByRole("region", { name: t("reports.year.numbersLabel") });
+    expect(figures).toHaveTextContent("291 by this date in 2025");
+    expect(figures).toHaveTextContent("39 by this date in 2025");
+    expect(screen.getByText("Certifications issued here: 34 · 22 Open Water")).toBeTruthy();
+    expect(screen.getByText("4 days with a weather call, 6 departures called off")).toBeTruthy();
+  });
+});

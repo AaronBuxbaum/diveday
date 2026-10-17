@@ -1,7 +1,9 @@
-import { and, asc, count, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   type InboundChannel,
+  MOVE_ASK_NOTE_MAX_LENGTH,
+  moveAskProviderId,
   normalizeEmailAddress,
   normalizePhoneAddress,
   phoneMatches,
@@ -10,7 +12,14 @@ import {
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { queryAll } from "./query-helpers";
-import { inboundMessages, notificationDeliveries, people, shops, staffReplies } from "./schema";
+import {
+  bookings,
+  inboundMessages,
+  notificationDeliveries,
+  people,
+  shops,
+  staffReplies,
+} from "./schema";
 
 /**
  * The shop inbox's readers and writers (ADR 20260907-two-way-inbox).
@@ -222,6 +231,120 @@ async function recordMatchedInboundMessage(
     .onConflictDoNothing({ target: [inboundMessages.channel, inboundMessages.providerMessageId] })
     .returning({ id: inboundMessages.id });
   return inserted ? { status: "recorded", id: inserted.id, personId } : { status: "duplicate" };
+}
+
+/**
+ * **A diver asks to move a seat** (H-126). Past the free-cancellation window a
+ * cancel forfeits the money, so the booking page offers "Ask to move" instead:
+ * a request, not a move. It lands in the Inbox as a `page` message naming the
+ * booking, with the diver's optional note as its words, and staff decide —
+ * moving a paid seat stays staff-side.
+ *
+ * The booking is read inside the shop and must belong to a live diver; the
+ * address recorded is the one on file, so the row says who to call. One ask
+ * per booking and departure (`moveAskProviderId`): a repeat while it stands
+ * is `already`, never a second row. Once staff answered or deleted it, or the
+ * seat moved (`moveBooking` answers it), it no longer stands, and asking
+ * again files it anew: the same row for the same departure, unanswered again
+ * with the new words and time, so it is never swallowed.
+ */
+export async function recordMoveAsk(
+  db: DbExecutor,
+  input: { shopId: string; bookingId: string; note?: string | null; now: Date },
+): Promise<{ status: "recorded"; id: string } | { status: "already" } | { status: "not_found" }> {
+  const [seat] = await db
+    .select({
+      personId: people.id,
+      email: people.email,
+      phone: people.phone,
+      tripId: bookings.tripId,
+    })
+    .from(bookings)
+    .innerJoin(
+      people,
+      and(
+        eq(people.id, bookings.personId),
+        eq(people.shopId, input.shopId),
+        isNull(people.deletedAt),
+        isNull(people.anonymizedAt),
+      ),
+    )
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  if (!seat) return { status: "not_found" };
+  const note = truncateInboundBody(input.note ?? "").slice(0, MOVE_ASK_NOTE_MAX_LENGTH);
+  const fromAddress = normalizeEmailAddress(seat.email) ?? normalizePhoneAddress(seat.phone) ?? "";
+  const [filed] = await db
+    .insert(inboundMessages)
+    .values({
+      shopId: input.shopId,
+      personId: seat.personId,
+      channel: "page",
+      fromAddress,
+      body: note,
+      receivedAt: input.now,
+      providerMessageId: moveAskProviderId(input.bookingId, seat.tripId),
+      keywordIntent: "move",
+      bookingId: input.bookingId,
+      // The bearer link vouched for who this is, as WhatsApp vouches for a
+      // number: it is a diver waiting, and counts as one.
+      senderAuthenticated: true,
+    })
+    .onConflictDoUpdate({
+      target: [inboundMessages.channel, inboundMessages.providerMessageId],
+      set: {
+        personId: seat.personId,
+        fromAddress,
+        body: note,
+        receivedAt: input.now,
+        answeredAt: null,
+        deletedAt: null,
+      },
+      // Only an ask that no longer stands is filed anew; a standing one is
+      // left exactly as the diver first wrote it.
+      setWhere: or(isNotNull(inboundMessages.answeredAt), isNotNull(inboundMessages.deletedAt)),
+    })
+    .returning({ id: inboundMessages.id });
+  return filed ? { status: "recorded", id: filed.id } : { status: "already" };
+}
+
+/**
+ * Whether this booking's diver has an ask to move it standing (H-126): one
+ * about the departure the seat is on now, not answered and not deleted.
+ *
+ * A caller that already holds the seat's row passes its `tripId` (read under
+ * `shopId`), and the departure is not looked up again.
+ */
+export async function hasMoveAsk(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+  knownTripId?: string,
+): Promise<boolean> {
+  const tripId =
+    knownTripId ??
+    (
+      await db
+        .select({ tripId: bookings.tripId })
+        .from(bookings)
+        .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+        .limit(1)
+    )[0]?.tripId;
+  if (!tripId) return false;
+  const [row] = await db
+    .select({ id: inboundMessages.id })
+    .from(inboundMessages)
+    .where(
+      and(
+        eq(inboundMessages.shopId, shopId),
+        eq(inboundMessages.channel, "page"),
+        eq(inboundMessages.providerMessageId, moveAskProviderId(bookingId, tripId)),
+        isNull(inboundMessages.answeredAt),
+        isNull(inboundMessages.deletedAt),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
 }
 
 /** The shop a reply-to token names, or null for a token nobody holds. */

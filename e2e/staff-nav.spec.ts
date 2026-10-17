@@ -6,7 +6,7 @@ import { mintOnboardFormPath } from "./setup-link";
  * 20261001-logbook, decision 1.
  *
  * A labelled sidebar from `lg` up and a bottom tab bar below it: Today,
- * Schedule, Divers, Inbox, Money, Courses and Gear when the shop uses them,
+ * Schedule, Divers, Inbox, Money, Safety, Courses and Gear when the shop uses them,
  * and Settings at the foot. The search is a shortcut to the same places, never
  * the only door, and **a gated section is absent rather than shown and
  * refused** (ADR 20260724-role-gated-surfaces-hide-not-explain).
@@ -49,6 +49,7 @@ test.describe("owner", () => {
       "Divers",
       "Inbox",
       "Money",
+      "Safety",
       "Courses",
       "Gear",
       "Settings",
@@ -58,6 +59,11 @@ test.describe("owner", () => {
     // boats".
     await expect(nav.getByRole("link", { name: /^Today/ })).toHaveAttribute("aria-current", "page");
 
+    // **The sidebar owns its own hydration** (#2332): it streams under a
+    // boundary apart from the Search trigger the fixture waits on, and a row
+    // pressed before React redraws it can be lost, the dead Divers tap seen on
+    // CI. Its own flag, not a wider timeout or a second click.
+    await expect(nav).toHaveAttribute("data-hydrated", "true");
     const divers = nav.getByRole("link", { name: "Divers", exact: true });
     await divers.click();
     await expect(page).toHaveURL(/\/divers$/);
@@ -273,8 +279,8 @@ test.describe("owner", () => {
     for (const [suffix, title, tab, tabs] of [
       ["/inbox", "Inbox", "Messages", ["Messages", "Date requests", "Reviews"]],
       ["/requests", "Inbox", "Date requests", ["Messages", "Date requests", "Reviews"]],
-      ["/orders", "Money", "Orders", ["Orders", "Discounts", "Reports", "Safety"]],
-      ["/reports", "Money", "Reports", ["Orders", "Discounts", "Reports", "Safety"]],
+      ["/orders", "Money", "Orders", ["Orders", "Discounts", "Reports"]],
+      ["/reports", "Money", "Reports", ["Orders", "Discounts", "Reports"]],
     ] as const) {
       await page.goto(`/shop/blue-mantis${suffix}`);
       await expect(page.getByRole("heading", { level: 1, name: title }), suffix).toBeVisible();
@@ -361,6 +367,7 @@ test.describe("the phone", () => {
       "Divers",
       "Inbox",
       "Money",
+      "Safety",
       "Courses",
       "Gear",
       "Settings",

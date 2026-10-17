@@ -162,6 +162,13 @@ export const CERTIFICATIONS_CSV = sharedFile<ShopRow<"certificationRows">>({
     { header: "issued_by_shop_at", in: "shop", value: (row) => row.issuedByShopAt },
     { header: "issued_from_trip_id", in: "shop", value: (row) => row.issuedFromTripId },
     { header: "issued_by_person_id", in: "shop", value: (row) => row.issuedByPersonId },
+    // The shop's own record that it told the agency (item 46).
+    {
+      header: "processed_with_agency_at",
+      in: "shop",
+      value: (row) => row.processedWithAgencyAt,
+    },
+    { header: "processed_by_person_id", in: "shop", value: (row) => row.processedByPersonId },
     { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
     { header: "deleted_by_person_id", in: "shop", value: (row) => row.deletedByPersonId },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
@@ -199,6 +206,25 @@ export const SPECIALTY_CERTIFICATIONS_CSV = sharedFile<ShopRow<"specialtyRows">>
         row.reviewedByPersonId ? personName.get(row.reviewedByPersonId) : null,
     },
     { header: "reviewed_by_person_id", in: "shop", value: (row) => row.reviewedByPersonId },
+    // The agency's own page, read through the DiveDay browser extension
+    // (H-105, as certifications.csv above): review_note then holds its words.
+    { header: "agency_checked_at", in: "both", value: (row) => row.agencyCheckedAt },
+    // The level card whose agency check listed this one (layer 3 of ADR
+    // 20261008-cert-check-extension): review_note then holds the agency's
+    // words, not a staffer's. Another provenance stamp, and it travels for
+    // the same reason as the others.
+    {
+      header: "listed_from_certification_id",
+      in: "shop",
+      value: (row) => row.listedFromCertificationId,
+    },
+    // The shop's own record that it told the agency (item 46), as on certifications.csv.
+    {
+      header: "processed_with_agency_at",
+      in: "shop",
+      value: (row) => row.processedWithAgencyAt,
+    },
+    { header: "processed_by_person_id", in: "shop", value: (row) => row.processedByPersonId },
     { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
     { header: "deleted_by_person_id", in: "shop", value: (row) => row.deletedByPersonId },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
@@ -235,10 +261,29 @@ export const NITROX_CERTIFICATIONS_CSV = sharedFile<ShopRow<"nitroxRows">>({
         row.reviewedByPersonId ? personName.get(row.reviewedByPersonId) : null,
     },
     { header: "reviewed_by_person_id", in: "shop", value: (row) => row.reviewedByPersonId },
+    // The agency's own page, read through the DiveDay browser extension
+    // (H-105, as certifications.csv above): review_note then holds its words.
+    { header: "agency_checked_at", in: "both", value: (row) => row.agencyCheckedAt },
     { header: "imported_at", in: "both", value: (row) => row.importedAt },
     { header: "imported_from_label", in: "both", value: (row) => row.importedFromLabel },
     // Same reason as the level card's — see certifications.csv above.
     { header: "self_declared_at", in: "both", value: (row) => row.selfDeclaredAt },
+    // The level card whose agency check listed this one (layer 3 of ADR
+    // 20261008-cert-check-extension): review_note then holds the agency's
+    // words, not a staffer's. Another provenance stamp, and it travels for
+    // the same reason as the others.
+    {
+      header: "listed_from_certification_id",
+      in: "shop",
+      value: (row) => row.listedFromCertificationId,
+    },
+    // The shop's own record that it told the agency (item 46), as on certifications.csv.
+    {
+      header: "processed_with_agency_at",
+      in: "shop",
+      value: (row) => row.processedWithAgencyAt,
+    },
+    { header: "processed_by_person_id", in: "shop", value: (row) => row.processedByPersonId },
     { header: "deleted_at", in: "both", value: (row) => row.deletedAt },
     { header: "deleted_by_person_id", in: "shop", value: (row) => row.deletedByPersonId },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
@@ -275,6 +320,14 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
       value: (row, { personName }) => personName.get(row.personId),
     },
     { header: "status", in: "both", value: (row) => row.status },
+    // Why the desk turned this diver away, on a released seat (H-135): a
+    // category from the seat's own blockers, never the evidence. Blank on a
+    // plain no-show, which is the other statement `no_show` makes. The
+    // diver's own export carries it too: it is a record about them.
+    { header: "turned_away_reason", in: "both", value: (row) => row.turnedAwayReason },
+    // When the desk turned them away: the fact, which erasure keeps while it
+    // clears the category (layer 3 review, dde-2 #4).
+    { header: "turned_away_at", in: "both", value: (row) => row.turnedAwayAt },
     // Diver, snorkeler or rider (ADR 20261007-participant-types): what
     // this seat was for, and which gates it was asked to clear; and
     // what it was sold as, which differs when staff changed it.
@@ -332,6 +385,9 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
     // as `last_dived_band` above — and a shop that moved its data would
     // otherwise be asking every one of them again.
     { header: "welcome_shared_at", in: "shop", value: (row) => row.welcomeSharedAt },
+    // What the same diver chose to add to the hello (issue #2425): a code,
+    // present only while the consent above is.
+    { header: "welcome_hello", in: "shop", value: (row) => row.welcomeHello },
     // The diver answering "nothing has changed" about the sizes, gas
     // and emergency contact the shop already holds (ADR
     // 20260904-reef-all-the-way-down, D15). Same class as the two
@@ -347,6 +403,10 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
     // made on this seat, in the same class as the two above.
     // "Running late" (J3): a statement the diver made, so it is theirs.
     { header: "running_late_at", in: "both", value: (row) => row.runningLateAt },
+    // The booker's "Under 18" on this seat (decision 2026-10-13): what
+    // asked for a guardian's co-signature on the release, so it travels
+    // with the release it explains.
+    { header: "minor_declared_at", in: "both", value: (row) => row.minorDeclaredAt },
     // The instructor's own words to this student, and who wrote them
     // (issues #1196, #1205). The student read it on their recap; a
     // shop moving its data takes the sentence with it.
@@ -365,7 +425,31 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
       in: "shop",
       value: (row) => row.courseMaterialsDoneByPersonId,
     },
-    { header: "hotel_pickup_location", in: "shop", value: (row) => row.hotelPickupLocation },
+    // A training mark: the course seat this charter seat's dive counted
+    // toward, who marked it, and a clear made with course forms owed
+    // (issue #2275). The forms themselves stay on the enrollment.
+    {
+      header: "training_enrollment_booking_id",
+      in: "shop",
+      value: (row) => row.trainingEnrollmentBookingId,
+    },
+    { header: "training_marked_at", in: "shop", value: (row) => row.trainingMarkedAt },
+    {
+      header: "training_marked_by_person_id",
+      in: "shop",
+      value: (row) => row.trainingMarkedByPersonId,
+    },
+    { header: "training_cleared_at", in: "shop", value: (row) => row.trainingClearedAt },
+    {
+      header: "training_cleared_by_person_id",
+      in: "shop",
+      value: (row) => row.trainingClearedByPersonId,
+    },
+    { header: "training_cleared_reason", in: "shop", value: (row) => row.trainingClearedReason },
+    // Where to collect the diver, and their lunch preference (item 56):
+    // statements the diver made, so they are theirs as well.
+    { header: "hotel_pickup_location", in: "both", value: (row) => row.hotelPickupLocation },
+    { header: "dietary_note", in: "both", value: (row) => row.dietaryNote },
     { header: "pickup_time", in: "shop", value: (row) => row.pickupTime },
     {
       header: "payment_status",
@@ -413,6 +497,8 @@ export const WAITLIST_ENTRIES_CSV = sharedFile<ShopRow<"waitlistRows">>({
       in: "shop",
       value: (row, { personName }) => personName.get(row.personId),
     },
+    // The seats this lead waits for, themselves included (fourth review, item 34).
+    { header: "party_size", in: "both", value: (row) => row.partySize },
     { header: "invited_at", in: "both", value: (row) => row.invitedAt },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
   ],
@@ -459,6 +545,7 @@ export const TRIP_INVITATIONS_CSV = sharedFile<ShopRow<"invitationRows">>({
       value: (row, { personName }) => personName.get(row.createdByPersonId),
     },
     { header: "invited_at", in: "both", value: (row) => row.invitedAt },
+    { header: "emailed_at", in: "both", value: (row) => row.emailedAt },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
   ],
   shop: {
@@ -545,6 +632,7 @@ export const BOOKING_PAYMENT_EVENTS_CSV = sharedFile<ShopRow<"paymentEventRows">
     { header: "provider", in: "both", value: (row) => row.provider },
     { header: "provider_ref", in: "shop", value: (row) => row.providerRef },
     { header: "operation", in: "both", value: (row) => row.operation },
+    { header: "method", in: "both", value: (row) => row.method },
     { header: "note", in: "shop", value: (row) => row.note },
     { header: "occurred_at", in: "both", value: (row) => row.occurredAt },
   ],
@@ -679,6 +767,15 @@ export const ROLL_CALL_EVENTS_CSV = sharedFile<ShopRow<"rollCallRows">>({
       value: (row, { personName }) => personName.get(row.recordedByPersonId),
     },
     { header: "note", in: "shop", value: (row) => row.note },
+    // What readiness said when a diver was counted aboard (issue #2414): the
+    // evidence behind "counted aboard while blocked", which is recomputed live
+    // and so cannot be rebuilt afterwards. Codes only, `;`-joined.
+    { header: "readiness_status", in: "both", value: (row) => row.readinessStatus },
+    {
+      header: "readiness_blockers",
+      in: "both",
+      value: (row) => row.readinessBlockers?.map((blocker) => blocker.code).join(";") ?? null,
+    },
     { header: "occurred_at", in: "both", value: (row) => row.occurredAt },
     { header: "created_at", in: "shop", value: (row) => row.createdAt },
   ],
@@ -915,6 +1012,8 @@ export const COURSE_FORM_RECORDS_CSV = sharedFile<ShopRow<"courseFormRecordRows"
     { header: "form_version", in: "both", value: (row) => row.formVersion },
     { header: "course_title", in: "both", value: (row) => row.courseTitle },
     { header: "trip_id", in: "both", value: (row) => row.tripId },
+    // The charter seat a training-dive signature came through (issue #2275).
+    { header: "signed_via_booking_id", in: "both", value: (row) => row.signedViaBookingId },
     { header: "instructor_names", in: "both", value: (row) => row.instructorNames },
     { header: "paper_signed_on", in: "both", value: (row) => row.paperSignedOn },
     { header: "signed_name", in: "both", value: (row) => row.signedName },
@@ -1055,6 +1154,13 @@ export const GEAR_RESERVATIONS_CSV = sharedFile<ShopRow<"gearReservationRows">>(
     { header: "return_outcome", in: "shop", value: (row) => row.returnOutcome },
     { header: "return_note", in: "shop", value: (row) => row.returnNote },
     { header: "dives_logged", in: "shop", value: (row) => row.divesLogged },
+    { header: "fill_o2_percent", in: "both", value: (row) => row.fillO2Percent },
+    { header: "fill_recorded_at", in: "both", value: (row) => row.fillRecordedAt },
+    {
+      header: "fill_recorded_by_person_id",
+      in: "shop",
+      value: (row) => row.fillRecordedByPersonId,
+    },
     { header: "released_at", in: "both", value: (row) => row.releasedAt },
     { header: "released_by_person_id", in: "shop", value: (row) => row.releasedByPersonId },
     {
@@ -1358,6 +1464,8 @@ export const ORDERS_CSV = sharedFile<ShopRow<"orderRows">>({
     { header: "source", in: "both", value: (row) => row.source },
     { header: "status", in: "both", value: (row) => row.status },
     { header: "collection", in: "both", value: (row) => row.collection },
+    { header: "room_number", in: "both", value: (row) => row.roomNumber },
+    { header: "room_hotel", in: "both", value: (row) => row.roomHotel },
     { header: "currency", in: "both", value: (row) => row.currency },
     { header: "total_cents", in: "both", value: (row) => row.totalCents },
     { header: "pass_through_cents", in: "shop", value: (row) => row.passThroughCents },
@@ -1439,6 +1547,7 @@ export const RECAP_PHOTOS_CSV = sharedFile<ShopRow<"recapPhotoRows">>({
     { header: "trip_id", in: "shop", value: (row) => row.tripId },
     { header: "image_url", in: "both", value: (row) => row.imageUrl },
     { header: "caption", in: "both", value: (row) => row.caption },
+    { header: "shared_with_boat_at", in: "both", value: (row) => row.sharedWithBoatAt },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
   ],
   shop: {
@@ -1566,6 +1675,10 @@ export const COURSE_INQUIRIES_CSV = sharedFile<ShopRow<"inquiryRows">>({
     { header: "divers", in: "shop", value: (row) => row.divers },
     { header: "message", in: "both", value: (row) => row.message },
     { header: "created_at", in: "both", value: (row) => row.createdAt },
+    // When the shop closed the request, and how: `booked` when a seat answered
+    // it, `done` when staff marked it. The shop's bookkeeping, not the diver's.
+    { header: "handled_at", in: "shop", value: (row) => row.handledAt },
+    { header: "handled_as", in: "shop", value: (row) => row.handledAs },
   ],
   shop: { rows: ({ inquiryRows }) => inquiryRows, note: EXPORT_FILE_NOTES["course_inquiries.csv"] },
   diver: {

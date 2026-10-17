@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useEffect, useEffectEvent, useId, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -18,12 +18,14 @@ import type { GearItemKind } from "@/lib/gear";
 import { currencySymbol, majorToMinor } from "@/lib/money";
 import {
   CONFIRM_FIELD_PREFIX,
+  FILL_FIELD_PREFIX,
   PAYMENT_FIELD,
   PRICE_FIELD_PREFIX,
   type RentalPayment,
   SET_PRICE_FIELD,
   UNIT_FIELD,
 } from "../../rental-form";
+import { readKeptCart } from "./kept-cart";
 
 export type PickerUnit = {
   id: string;
@@ -40,6 +42,8 @@ export type PickerUnit = {
   price: string;
   priceAria: string;
   removeAria: string;
+  /** A tank's fill menu label; null for every other kind, which takes no fill. */
+  fillAria: string | null;
 };
 
 export type PaymentChoice = { value: RentalPayment; label: string; hint?: string };
@@ -57,6 +61,10 @@ export type CartWords = {
   items: { one: string; other: string };
   submit: string;
   submitting: string;
+  /** A tank's gas (#2257): the menu's visible label, its choices, and the card rule. */
+  fillLabel: string;
+  fillOptions: { value: string; label: string }[];
+  fillHint: string;
 };
 
 /**
@@ -110,6 +118,7 @@ export function CounterRentalCart({
   invoiceExtras,
   words,
   notice,
+  restoreKept = null,
 }: {
   groups: { kind: GearItemKind; kindLabel: string; units: PickerUnit[] }[];
   coreKinds: GearItemKind[];
@@ -124,6 +133,13 @@ export function CounterRentalCart({
   invoiceExtras: ReactNode;
   words: CartWords;
   notice: ReactNode;
+  /**
+   * The page came back with this form's refusal: put back the picks, prices
+   * and payment this tab just submitted (fifth loop, item 14), so the staffer
+   * swaps the one unit that was refused rather than building the bill again.
+   * The kept form's scope (`keptTypedScope`) when it did, else null.
+   */
+  restoreKept?: string | null;
 }) {
   const billId = useId();
   const [kind, setKind] = useState<GearItemKind | undefined>(groups[0]?.kind);
@@ -133,6 +149,19 @@ export function CounterRentalCart({
   const [payment, setPayment] = useState<RentalPayment | null>(null);
 
   const byId = new Map(groups.flatMap((group) => group.units.map((unit) => [unit.id, unit])));
+
+  const restore = useEffectEvent(() => {
+    if (!restoreKept) return;
+    const kept = readKeptCart(restoreKept, (id) => byId.has(id));
+    if (!kept) return;
+    if (kept.ids.length > 0) setPickedIds(kept.ids);
+    setPrices(kept.prices);
+    if (kept.setFigure !== undefined) setSetFigure(kept.setFigure);
+    if (kept.payment) setPayment(kept.payment);
+  });
+  useEffect(() => {
+    if (restoreKept) restore();
+  }, [restoreKept]);
   const picked = pickedIds.flatMap((id) => byId.get(id) ?? []);
   const asSet =
     setPrice !== null &&
@@ -322,6 +351,14 @@ export function CounterRentalCart({
                         </svg>
                       </button>
                     </div>
+                    {unit.fillAria ? (
+                      <TankFillField
+                        unitId={unit.id}
+                        aria={unit.fillAria}
+                        hintId={`${billId}-fill-hint`}
+                        words={words}
+                      />
+                    ) : null}
                     {unit.confirmLabel ? (
                       <ChoiceRow
                         type="checkbox"
@@ -334,6 +371,11 @@ export function CounterRentalCart({
                   </li>
                 );
               })}
+              {picked.some((unit) => unit.fillAria !== null) && (
+                <li id={`${billId}-fill-hint`} className="py-2 text-sm text-muted">
+                  {words.fillHint}
+                </li>
+              )}
               <li className="flex min-h-12 items-center gap-3 pt-3">
                 <p className="flex-1 font-medium">{words.total}</p>
                 <p className={FIGURE_INLINE_CLASS}>{total}</p>
@@ -385,5 +427,43 @@ export function CounterRentalCart({
         </SubmitButton>
       </StickyFormActions>
     </>
+  );
+}
+
+/**
+ * A tank's gas (#2257): a menu, never a typed figure, so nothing is rounded
+ * into a different mix. Required, opening on a placeholder nobody can submit
+ * (domain review F1); the writer refuses a tank with no gas, and EANx without
+ * a nitrox card.
+ */
+function TankFillField({
+  unitId,
+  aria,
+  hintId,
+  words,
+}: {
+  unitId: string;
+  aria: string;
+  hintId: string;
+  words: Pick<CartWords, "fillLabel" | "fillOptions">;
+}) {
+  return (
+    <label className="flex min-h-11 items-center gap-3 text-sm">
+      <span className="text-muted">{words.fillLabel}</span>
+      <select
+        name={`${FILL_FIELD_PREFIX}${unitId}`}
+        defaultValue=""
+        required
+        aria-label={aria}
+        aria-describedby={hintId}
+        className={`${controlClass.replace("w-full", "")} w-40`}
+      >
+        {words.fillOptions.map((option) => (
+          <option key={option.value} value={option.value} disabled={option.value === ""}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

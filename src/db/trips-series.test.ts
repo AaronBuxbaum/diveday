@@ -1,8 +1,11 @@
+import type { PGlite } from "@electric-sql/pglite";
 import { and, eq, isNull } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/pglite";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { calendarDateWeekday } from "@/lib/calendar-date";
+import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-timing";
 import { EVERY_WEEKDAY, weekdaySetFrom } from "@/lib/recurrence";
-import { fileScopedShopContext, type seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeCheckout, fakeEmail } from "@/test/fakes";
 import { callTripBlowout, getTripBlowout } from "./blowouts";
 import { createBookingParty } from "./bookings";
@@ -11,8 +14,8 @@ import { getBookingPayment, setBookingPayment } from "./payments";
 import {
   bookings,
   courses,
-  crewNotices,
   people,
+  rollCallCrewEvents,
   rollCallEvents,
   tripRequirements,
   tripSeries,
@@ -23,7 +26,6 @@ import { createTripLens } from "./trip-lenses";
 import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
-  cancelOffCadenceSeriesTrips,
   createTrip,
   createTripSeries,
   deleteTrip,
@@ -59,6 +61,7 @@ import {
 const TZ = "America/New_York";
 const SUN = 0;
 const MON = 1;
+const TUE = 2;
 const WED = 3;
 const THU = 4;
 const SAT = 6;
@@ -158,6 +161,16 @@ describe("recurring trip series (in-memory PGlite)", () => {
         .from(tripRequirements)
         .where(eq(tripRequirements.tripId, trip.id));
       expect(reqs).toHaveLength(1);
+      // The same gates the one-at-a-time insert wrote: waiver on, and a
+      // course-less day's Open Water baseline (code review 2026-10-13b, item 40).
+      expect(reqs[0]).toMatchObject({
+        shopId: shop.id,
+        requiresWaiver: true,
+        minimumCertificationLevel: "open_water",
+        requiredSpecialties: [],
+        requiresNitrox: false,
+        requiresPayment: false,
+      });
     }
 
     const summary = await getTripSeriesSummary(db, shop.id, firstInstance.id);
@@ -551,6 +564,53 @@ describe("recurring trip series (in-memory PGlite)", () => {
     expect(untouched?.plannedDives).toBe(2);
   });
 
+  it("skips a sibling whose only after-dive history is a crew roll call", async () => {
+    // Batch 6, item 5: the series floor reads crew results too.
+    const { db, shop } = ctx;
+    const now = at("2030-08-15T00:00:00.000Z");
+    const result = await createTripSeries(
+      db,
+      seriesInput({
+        shopId: shop.id,
+        title: "Tuesday Wall",
+        capacity: 10,
+        anchorDate: "2030-09-03",
+        weekdays: weekdaySetFrom([TUE]),
+        endsOn: "2030-09-10",
+        template: {
+          startsAt: at("2030-09-03T11:00:00.000Z"),
+          endsAt: at("2030-09-03T15:00:00.000Z"),
+        },
+      }),
+    );
+    if (!result) throw new Error("series not created");
+    const [source, sailed] = result.trips;
+    if (!source || !sailed) throw new Error("expected two instances");
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("seed staff missing");
+    await db.insert(rollCallCrewEvents).values({
+      shopId: shop.id,
+      tripId: sailed.id,
+      personId: staff.person.id,
+      recordedByPersonId: staff.person.id,
+      status: "boarded",
+      checkpoint: "after_dive_2",
+      occurredAt: now,
+    });
+
+    await updateTrip(db, shop.id, source.id, {
+      title: source.title,
+      startsAt: source.startsAt,
+      endsAt: source.endsAt,
+      capacity: source.capacity,
+      plannedDives: 1,
+    });
+
+    const applied = await applyDetailsToFutureSeries(db, shop.id, result.series.id, source.id, now);
+    expect(applied).toEqual({ updated: 0, skipped: 1 });
+    expect((await getTripWithBooked(db, shop.id, sailed.id))?.plannedDives).toBe(2);
+  });
+
   it("cancels every upcoming date at once, leaves past dates alone, and stops the repeat", async () => {
     const { db, shop } = ctx;
     const now = at("2030-08-15T00:00:00.000Z");
@@ -817,57 +877,6 @@ describe("recurring trip series (in-memory PGlite)", () => {
     });
   });
 
-  // Issue #2284: cancelling a run is a staffer's act, not a system pass, so
-  // its call-off news names them, and (like every crew notice) the staffer
-  // who did it is not told about their own act.
-  it("names the staffer who cancelled the run, in both of a series' call-offs", async () => {
-    const { db, shop } = ctx;
-    const now = at("2030-09-30T12:00:00.000Z");
-    const staffIds = [...new Set((await listStaff(db, shop.id)).map((row) => row.person.id))];
-    const [actorId, otherId] = staffIds;
-    if (!actorId || !otherId) throw new Error("seed staff missing");
-    const actor = { id: actorId };
-    const other = { id: otherId };
-    const calledOff = async (tripId: string) =>
-      db
-        .select({ personId: crewNotices.personId, actorPersonId: crewNotices.actorPersonId })
-        .from(crewNotices)
-        .where(and(eq(crewNotices.tripId, tripId), eq(crewNotices.change, "called_off")));
-
-    const offCadence = await createTripSeries(
-      db,
-      seriesInput({ shopId: shop.id, weekdays: weekdaySetFrom([WED, SAT]) }),
-    );
-    if (!offCadence) throw new Error("series not created");
-    await updateSeriesCadence(
-      db,
-      shop.id,
-      offCadence.series.id,
-      { intervalWeeks: 1, weekdays: weekdaySetFrom([SAT]), endsOn: null },
-      now,
-    );
-    const [orphan] = await listOffCadenceSeriesTrips(db, shop.id, offCadence.series.id, now);
-    if (!orphan) throw new Error("expected an off-cadence date");
-    await setTripCrew(db, shop.id, orphan.id, [actor.id, other.id]);
-    await cancelOffCadenceSeriesTrips(db, shop.id, offCadence.series.id, now, {
-      actorPersonId: actor.id,
-    });
-    expect(await calledOff(orphan.id)).toEqual([{ personId: other.id, actorPersonId: actor.id }]);
-
-    const whole = await createTripSeries(db, seriesInput({ shopId: shop.id }));
-    if (!whole) throw new Error("series not created");
-    const upcoming = whole.trips.find((trip) => trip.startsAt > now);
-    if (!upcoming) throw new Error("expected an upcoming date");
-    await setTripCrew(db, shop.id, upcoming.id, [actor.id, other.id]);
-    await cancelFutureSeriesTrips(db, {
-      shopId: shop.id,
-      seriesId: whole.series.id,
-      calledByPersonId: actor.id,
-      now,
-    });
-    expect(await calledOff(upcoming.id)).toEqual([{ personId: other.id, actorPersonId: actor.id }]);
-  });
-
   it("stops and restarts a repeat without disturbing the dates already on the board", async () => {
     const { db, shop } = ctx;
     const now = at("2030-09-07T12:00:00.000Z");
@@ -976,41 +985,6 @@ describe("recurring trip series (in-memory PGlite)", () => {
     const booked = stale.find((trip) => trip.id === wednesday.id);
     // The head count is the whole reason this is an offer and not a side effect.
     expect(booked?.booked).toBe(1);
-  });
-
-  it("cancels the orphaned dates only when asked, and leaves the ones that sailed", async () => {
-    const { db, shop } = ctx;
-    const now = at("2030-09-30T12:00:00.000Z");
-    const result = await createTripSeries(
-      db,
-      seriesInput({ shopId: shop.id, weekdays: weekdaySetFrom([WED, SAT]) }),
-    );
-    if (!result) throw new Error("series not created");
-    // A Wednesday that has already departed by `now` — history, never a
-    // schedule edit to make.
-    const pastWednesday = result.trips.find(
-      (trip) =>
-        trip.startsAt < now &&
-        trip.seriesOccurrenceDate &&
-        calendarDateWeekday(trip.seriesOccurrenceDate) === WED,
-    );
-    if (!pastWednesday) throw new Error("expected a departed Wednesday");
-
-    await updateSeriesCadence(
-      db,
-      shop.id,
-      result.series.id,
-      { intervalWeeks: 1, weekdays: weekdaySetFrom([SAT]), endsOn: null },
-      now,
-    );
-    const cancelled = await cancelOffCadenceSeriesTrips(db, shop.id, result.series.id, now);
-    expect(cancelled).toBeGreaterThan(0);
-    expect(await listOffCadenceSeriesTrips(db, shop.id, result.series.id, now)).toEqual([]);
-    expect((await getTripWithBooked(db, shop.id, pastWednesday.id))?.status).toBe("scheduled");
-    // Cancelled, not deleted: every one is reinstatable from its own page.
-    expect(await occurrenceDatesOf(db, result.series.id)).toContain(
-      pastWednesday.seriesOccurrenceDate,
-    );
   });
 
   it("keeps the phase when the interval changes — the anchor never moves", async () => {
@@ -1772,3 +1746,40 @@ describe("what keeps running past the public board's last month (2026-10-12)", (
     );
   });
 });
+
+/**
+ * **A daily run over the horizon is written in batches, not one departure at
+ * a time** (code review 2026-10-13b, item 40). Each departure used to be its
+ * own chain of four inserts, so the schedule builder's "repeat daily" waited
+ * on about 480 statements in a row; the nightly roll did the same per run.
+ */
+describe("what materializing a run sends", () => {
+  it("writes 120 daily departures in a bounded number of statements", async () => {
+    const { db: plain, shop } = await seededShopContext();
+    const db = drizzle({
+      client: plain.$client as PGlite,
+      logger: queryTimingLogger,
+    }) as unknown as typeof plain;
+    const { result, stats } = await withQueryStats(() =>
+      createTripSeries(
+        db,
+        seriesInput({
+          shopId: shop.id,
+          weekdays: EVERY_WEEKDAY,
+          anchorDate: "2030-09-07",
+          endsOn: "2031-01-04",
+        }),
+      ),
+    );
+    if (!result) throw new Error("series not created");
+    expect(result.trips).toHaveLength(120);
+    // Every one still gets its dives, its day and its requirement row.
+    expect(await listTripScheduleDays(plain, shop.id, result.trips.at(-1)?.id ?? "")).toHaveLength(
+      1,
+    );
+    expect(stats.queries).toBeLessThanOrEqual(MATERIALIZE_CEILING);
+  });
+});
+
+// Measured 2026-10-13: 489 statements one departure at a time, 17 batched.
+const MATERIALIZE_CEILING = 17;

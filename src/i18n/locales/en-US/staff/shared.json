@@ -1,5 +1,10 @@
 {
+  "limits": {
+    "sendLimit": "You have sent a lot of {thing, select, replies {replies} recaps {recaps} invites {invites} other {messages}} this hour. Nothing went out; try again in a little while.",
+    "ownerOrManager": "Only an owner or manager can {act, select, whatsapp {change WhatsApp settings} integrations {change integrations} backup {change backup settings} questionnaire {read the full questionnaire} invoice {send an invoice} bill {send a bill} courseForm {take a form off a course} other {do this}}."
+  },
   "operationalWindow": {},
+  "padiChecksOff": "PADI checks are off for this shop. An owner or manager can turn them on in Settings, Bookings & waivers.",
   "skipToContent": "Skip to main content",
   "notFound": {
     "heading": "We couldn’t find that page",
@@ -17,7 +22,7 @@
   "imageInput": {
     "tooMany": "{count, plural, one {Choose up to # photo at a time.} other {Choose up to # photos at a time.}}",
     "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
-    "tooBigSuffix": ": that’s over {maxMb} MB, so try a smaller photo.",
+    "tooBigSuffix": ": that’s over {maxMb}\u00a0MB, so try a smaller photo.",
     "choose": "Choose a photo",
     "chooseAnother": "Choose a different photo",
     "chooseOthers": "Choose different photos"
@@ -51,13 +56,14 @@
     "outcomeNotCleared": "Not cleared",
     "evaluatedOnLabel": "Date of the physician’s evaluation",
     "physicianNameLabel": "Physician",
-    "evidenceHint": "Their name, or attach the evaluation below. One or the other.",
+    "evidenceHint": "Their name, the evaluation below, or both.",
     "documentLabel": "Physician’s evaluation form",
     "documentHint": "An image or PDF of the signed form.",
     "documentChoose": "Choose a file",
     "documentChooseAnother": "Choose a different file",
     "recording": "Recording…",
-    "confirm": "Record the answer"
+    "confirm": "Record the answer",
+    "earlierLetterConfirm": "Tick if this letter is dated before the latest referral: the physician evaluated their current condition, not only the referral signed {date}."
   },
   "waiverSend": {
     "sending": "Sending…",
@@ -83,7 +89,8 @@
     "errors": "Couldn’t send to {names}. Open the roster to check the booking.",
     "confirmResend": "Yes, resend",
     "neverMind": "Never mind",
-    "emptySelection": "Tick at least one diver, then send the waiver to the whole selection."
+    "emptySelection": "Tick at least one diver, then send the waiver to the whole selection.",
+    "unnamedDiver": "A diver"
   },
   "connectivity": {
     "online": "Online",
@@ -93,7 +100,7 @@
   },
   "capacity": {
     "full": "Full",
-    "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}",
+    "seatsLeft": "{count, plural, one {# seat left} other {# seats left}}",
     "certificateCap": "Certificate: {sellable} of {stated} seats"
   },
   "compass": {
@@ -110,6 +117,8 @@
     "meters": "m",
     "feet": "ft"
   },
+  "depthRange": "{min}–{max} {unit}",
+  "depthSingle": "{max} {unit}",
   "temperature": {
     "celsius": "°C",
     "fahrenheit": "°F"
@@ -135,9 +144,12 @@
     "meetingPoint": "Meeting point: {label}",
     "conditionsHeading": "Conditions",
     "dayTitle": "Day packet",
+    "dayTitleTomorrow": "Tomorrow’s packet",
     "daySubtitle": "{count, plural, one {# departure} other {# departures}} · {date}",
     "dayEmpty": "No departures today.",
-    "dayDoor": "Print the day"
+    "dayEmptyTomorrow": "No departures tomorrow.",
+    "dayDoor": "Print the day",
+    "dayDoorTomorrow": "Print tomorrow"
   },
   "commandPalette": {
     "search": "Search",
@@ -155,6 +167,8 @@
     "groupGear": "Gear",
     "groupSession": "Session",
     "groupGoTo": "Go to",
+    "groupRecent": "Recent",
+    "groupToday": "Today",
     "goToBoarding": "Boarding — today’s boat",
     "goToOfflineRollCall": "Open offline roll call",
     "hintMove": "to move",
@@ -205,6 +219,8 @@
       "waiverNotSent": "Waiver not signed. Not sent yet.",
       "waiverPending": "Waiver not signed. Link sent.",
       "waiverExpired": "Waiver link expired; issue a fresh link.",
+      "waiverLapsed": "Signed waiver lapsed; send a fresh link.",
+      "waiverRunsOut": "Waiver runs out before the trip; send a fresh link.",
       "medicalReview": "A medical answer needs a doctor’s sign-off before this diver dives.",
       "medicalNotCleared": "A physician did not clear this diver to dive.",
       "guardianSignatureMissing": "Signed by a minor alone. A parent or guardian has to sign too; send a fresh waiver link.",
@@ -214,6 +230,7 @@
       "certificationInsufficient": "Not certified for this trip. It needs {level} or higher.",
       "certificationInsufficientHeld": "Not certified for this trip. It needs {level} or higher, and the highest certified card on file is {held}.",
       "certificationInTraining": "Not yet certified {level}. Booked on a course that finishes before this trip; this clears when the instructor certifies them.",
+      "certificationNotYet": "Says they’re not certified yet. This trip needs {level} or higher, so get in touch before the day.",
       "specialtyMissing": "{specialty} specialty is required; no certification is on file.",
       "specialtyPending": "{specialty} specialty certification is waiting for staff verification.",
       "specialtyImportUnconfirmed": "{specialty} specialty certification came across in an import, and a staffer needs to confirm it before this dive.",
@@ -225,7 +242,9 @@
       "paymentRefunded": "Payment was refunded; collect payment before boarding.",
       "readinessUnavailable": "Readiness evidence is unavailable. Do not board this diver until it is checked.",
       "courseFormUnsigned": "Course form not signed: {form}.",
-      "courseFormGuardianMissing": "{form} needs a parent or guardian’s signature."
+      "courseFormAgeUnknown": "{form} is for students {maxAge} and under, and there’s no date of birth on file. Add it, or have it signed with a parent or guardian.",
+      "courseFormGuardianMissing": "{form} needs a parent or guardian’s signature.",
+      "trainingMarkInvalid": "Training mark no longer fits its course seat. Clear it on the roster."
     }
   },
   "shopNav": {
@@ -274,6 +293,7 @@
     "divers": "Divers",
     "inbox": "Inbox",
     "money": "Money",
+    "safety": "Safety",
     "courses": "Courses",
     "gear": "Gear",
     "settings": "Settings",
@@ -339,6 +359,7 @@
       "eyebrow": "Offline manifests",
       "headingWithTrips": "Saved on this device",
       "headingEmpty": "No manifest saved on this phone yet",
+      "readFailedHeading": "Couldn’t open this phone’s saved manifests",
       "diverCount": "{count, plural, one {# diver} other {# divers}}",
       "expiredViewOnly": "Expired — view only",
       "emptyHint": "Open a departure’s manifest while online and it is kept here.",
@@ -351,6 +372,8 @@
       "eyebrow": "Offline manifest",
       "emptyHeading": "Nothing saved on this phone yet",
       "emptyHint": "While you still have signal, open the trip’s live manifest. It keeps this device’s copy current on its own.",
+      "readFailedHeading": "Couldn’t open this phone’s saved copy",
+      "readFailedHint": "Reload this page once. If it still won’t open, use the printed manifest.",
       "removedOtherShopHeading": "That saved copy has been removed",
       "removedOtherShopMessage": "A different shop is signed in on this tablet.",
       "removedOtherShopHint": "This trip was saved by a different shop, so its copy was removed from this tablet when the shop signed in here changed. Roll call for it has to be recorded on that shop’s own live manifest.",
@@ -378,6 +401,7 @@
       "readyBadge": "Ready when saved",
       "blockedBadge": "Blocked when saved",
       "notHereBadge": "Not here when saved",
+      "turnedAwayBadge": "Turned away when saved",
       "statePendingSuffix": "· waiting to send",
       "emergencyContact": "Emergency contact",
       "notOnFile": "Not on file",
@@ -405,7 +429,8 @@
       },
       "checklist": {
         "heading": "Before you leave the dock",
-        "checkedLabel": "Checked — press to clear",
+        "checkedLabel": "Checked — press twice to clear",
+        "confirmClear": "Tap again to clear",
         "uncheckedLabel": "Not checked — press to mark checked"
       },
       "counter": {
@@ -458,11 +483,12 @@
     "itemDrysuitGlovesWithSize": "{item} {size}: drysuit, wet or dry?",
     "itemDrysuitWeightCheck": "{item}: drysuit, weight check in the water",
     "itemNoLongerRented": "{item} (shop no longer rents this)",
+    "itemSizeMissing": "{item} (size missing)",
     "notRecorded": "No fit on file, not asked yet",
     "ownKit": "Own kit",
     "needsStaffFit": "Needs staff fit at check-in",
     "needsStaffFitWithNote": "Needs staff fit — {note}",
-    "drysuitCardMissing": "Dives dry with no drysuit certification on file. Not a block: ask about their drysuit experience, or plan an orientation before the first dive.",
+    "drysuitCardMissing": "Dives dry with no drysuit certification on file. Not a block: ask about their drysuit experience (if you have seen them dive dry, record it on their record), or plan an orientation before the first dive.",
     "drysuitCardUnconfirmed": "Dives dry, and their drysuit certification is not confirmed. Not a block: confirm it on their record, or plan an orientation before the first dive."
   },
   "rollCallCheckpoint": {
@@ -481,7 +507,9 @@
   "buddyTeam": {
     "with": "Buddy team: {names}",
     "separatedDock": "Buddy not aboard yet",
-    "separatedAfterDive": "Buddy not back aboard"
+    "separatedAfterDive": "Buddy not back aboard",
+    "separatedDockNamed": "{name} not aboard yet",
+    "separatedAfterDiveNamed": "{name} not back aboard"
   },
   "payments": {
     "connect": "Connect payments"
@@ -517,14 +545,21 @@
     "never": "never"
   },
   "welcomeCue": {
-    "firstTrip": "first time with us",
-    "returning": "back after {years, plural, one {# year} other {# years}}",
+    "firstTrip": "First dive with us",
+    "firstTime": "First time with us",
+    "returning": "Back after {years, plural, one {# year} other {# years}}",
+    "milestone": "{ordinal} dive day with us",
     "dockLine": "Say hello to {name}: {card}.",
     "dockLineNoCard": "Say hello to {name}.",
-    "dockLineSays": "Say hello to {name}: says {level}."
+    "dockLineSays": "Say hello to {name}: says {level}.",
+    "hello": {
+      "firstOceanDive": "First ocean dive.",
+      "celebrating": "Celebrating something.",
+      "nervous": "A little nervous."
+    }
   },
   "diveIntent": {
-    "aboardToday": "Aboard today: {list}",
+    "onTheList": "On the list today: {list}",
     "easingBack": "{count} getting comfortable again",
     "smallLife": "{count} looking for small life",
     "aWreck": "{count} hoping for a wreck",
@@ -548,11 +583,15 @@
     "told": "{count, plural, one {Told # diver the new time.} other {Told # divers the new time.}}",
     "someMissed": "{count, plural, one {# diver could not be reached by email or text.} other {# divers could not be reached by email or text.}}",
     "notTold": "Not told. The divers still have the old time.",
+    "tellingPlace": "{count, plural, one {Telling # diver the new meeting point…} other {Telling # divers the new meeting point…}}",
+    "toldPlace": "{count, plural, one {Told # diver the new meeting point.} other {Told # divers the new meeting point.}}",
+    "notToldPlace": "Not told. The divers still have the old meeting point.",
     "tellThem": "Tell them"
   },
   "formDraft": {
     "pickedUp": "Picked up from the desk, {time}.",
-    "startOver": "Start over"
+    "startOver": "Start over",
+    "unsavedSection": "Unsaved"
   },
   "identityCheck": {
     "reasonSharedEmail": "Booked as {bookedAs} with {name}’s email. Confirm who this is.",
@@ -573,12 +612,26 @@
     "sameNameSeats": "{count, plural, one {Also move the held seat booked as {bookedAs} on {departures}} other {Also move the held seats booked as {bookedAs} on {departures}}}",
     "sameNameDeparture": "{trip} ({date}, {time})",
     "split": "Give them their own record",
-    "splitting": "Creating…"
+    "splitting": "Creating…",
+    "another": "Another diver on file",
+    "anotherLegend": "Move this seat to",
+    "anotherNote": "The seat stays held until you confirm it’s them.",
+    "openRecord": "Open record",
+    "repoint": "Move to this diver",
+    "repointing": "Moving…"
+  },
+  "boatWork": {
+    "missingSize": "{count} missing a size",
+    "kitUnasked": "{count} not asked about kit",
+    "ungatedNitrox": "{count, plural, one {# diver wants nitrox and gets air} other {# divers want nitrox and get air}} unless a card is verified before the boat leaves",
+    "missingContact": "{count, plural, one {# person has} other {# people have}} no emergency contact",
+    "openOrders": "{count, plural, one {# order} other {# orders}} awaiting payment"
   },
   "payouts": {
     "paid": "Paid out {amount} on {date}, covering {from} to {to}",
     "paidOneDay": "Paid out {amount} on {date}, covering {from}",
     "paidNoSpan": "Paid out {amount} on {date}",
+    "canceled": "A payout of {amount} due {date} was canceled.",
     "failed": "A payout of {amount} due {date} failed. Check the bank account in Stripe."
   }
 }

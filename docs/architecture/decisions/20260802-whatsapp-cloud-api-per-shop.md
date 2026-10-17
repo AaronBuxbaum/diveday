@@ -145,7 +145,11 @@ Two facts about the WhatsApp Cloud API constrain the design further:
   says so and refuses to store anything; everything else in DiveDay runs unchanged. Set it with
   `openssl rand -base64 32`. Rotating it without re-sealing existing rows silently degrades every
   connected shop to SMS rather than erroring — deliberate (a reminder cron must not die over a key
-  change), but it means rotation needs a re-seal step, documented in the runbook.
+  change), but it means rotation needs a re-seal step, documented in the runbook. *Amended
+  2026-10-13:* the key now also seals two-factor secrets, so a one-step rotation locks staff out.
+  Rotation is two-key instead: `SECRET_ENCRYPTION_KEY_PREVIOUS` opens what the old key sealed, and
+  values are re-sealed as they are next written
+  ([infrastructure runbook](../../engineering/infrastructure-runbook.md#rotating-the-secret-sealing-key)).
 - **`SmsDelivery` is now an alias of the shared `CourtesyDelivery`**, so both text adapters report the
   same shape and either can be recorded through `recordNotificationDelivery` unchanged.
 - **A phone-only diver's tracked delivery may now carry a `wamid`** rather than an SNS message id.

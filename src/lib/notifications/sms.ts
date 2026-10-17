@@ -1,5 +1,6 @@
 import { PublishCommand, SNSClient } from "@aws-sdk/client-sns";
 import { z } from "zod";
+import { thrownErrorToken } from "@/lib/error-token";
 import { log } from "@/lib/log";
 import type { CourtesyDelivery } from "./courtesy";
 
@@ -88,6 +89,12 @@ const SNS_THROTTLE_CODES = new Set(["Throttling", "ThrottlingException", "Thrott
  * type — the same shape `sesErrorInfo` (`./index.ts`) classifies, reused here
  * rather than duplicated since both adapters read the identical AWS SDK
  * exception contract.
+ *
+ * **No provider text** (issue #2531). An SNS message can quote the number it
+ * refused (`Invalid parameter: PhoneNumber Reason: +1...`), and this result is
+ * both logged and stored as the send's failure detail. The AWS error's name is
+ * already `errorCode`; a throw that never reached AWS keeps its cause's code
+ * or its class (`thrownErrorToken`), never its message.
  */
 function snsErrorInfo(error: unknown): {
   retryable: boolean;
@@ -100,7 +107,7 @@ function snsErrorInfo(error: unknown): {
     ? (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode
     : undefined;
   const errorCode = isAwsException && error instanceof Error ? error.name : "network_error";
-  const detail = error instanceof Error ? error.message.slice(0, 500) : undefined;
+  const detail = isAwsException ? undefined : thrownErrorToken(error);
   const retryable =
     !isAwsException ||
     httpStatus === undefined ||

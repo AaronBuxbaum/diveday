@@ -1,9 +1,12 @@
+import { ownerOrManagerWords } from "@/i18n/shared-sentences";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import type { NoticeTone } from "@/lib/staff-notices";
 
 /** Where a refusal belongs: beside the person step, or beside the submit. */
 type NoticeDefinition = {
   key: StaffMessageKey;
+  /** The values `key` takes, for a shared sentence (`src/i18n/shared-sentences.ts`). */
+  values?: Record<string, string>;
   step: "who" | "rent";
   /** The same sentence naming the unit, when the refusal carries one (`?unit=`). */
   named?: StaffMessageKey;
@@ -38,11 +41,15 @@ export const RENT_OUT_NOTICES: Record<string, NoticeDefinition> = {
   },
   "not-certified": { key: "counterRentals.new.notice.notCertified", step: "who" },
   "no-drysuit-card": { key: "counterRentals.new.notice.noDrysuitCard", step: "who" },
+  "no-nitrox-card": { key: "counterRentals.new.notice.noNitroxCard", step: "rent" },
+  "fill-invalid": { key: "counterRentals.new.notice.fillInvalid", step: "rent" },
+  "fill-not-tank": { key: "counterRentals.new.notice.fillNotTank", step: "rent" },
+  "fill-missing": { key: "counterRentals.new.notice.fillMissing", step: "rent" },
   "card-recorded": { key: "counterRentals.new.notice.cardRecorded", step: "who", tone: "success" },
   "card-duplicate": { key: "counterRentals.new.notice.cardDuplicate", step: "who" },
   "card-not-recorded": { key: "counterRentals.new.notice.cardNotRecorded", step: "who" },
   "card-invalid": { key: "counterRentals.new.notice.cardInvalid", step: "who" },
-  "not-authorized": { key: "counterRentals.new.notice.notAuthorized", step: "rent" },
+  "not-authorized": { ...ownerOrManagerWords("invoice"), step: "rent" },
   "payment-not-connected": { key: "counterRentals.new.notice.paymentNotConnected", step: "rent" },
   "needs-email": { key: "counterRentals.new.notice.needsEmail", step: "rent" },
   "needs-payment": { key: "counterRentals.new.notice.needsPayment", step: "rent" },

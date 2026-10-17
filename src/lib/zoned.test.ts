@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addCalendarDays,
   parseWallTime,
+  sameMomentYearBefore,
   shiftInstantByCalendarDays,
   shiftInstantByWallTimeDelta,
   utcToWallTime,
@@ -245,5 +246,19 @@ describe("parseWallTime", () => {
     expect(parseWallTime("2026-13-01", "07:30")).toBeNull();
     expect(parseWallTime("2026-07-18", "24:00")).toBeNull();
     expect(parseWallTime("", "")).toBeNull();
+  });
+});
+
+describe("sameMomentYearBefore", () => {
+  it("is the same wall-clock moment a year earlier in the shop's zone", () => {
+    const now = new Date("2026-10-14T16:00:00Z"); // noon in New York
+    expect(sameMomentYearBefore(now, "America/New_York").toISOString()).toBe(
+      "2025-10-14T16:00:00.000Z",
+    );
+  });
+
+  it("steps February 29 back to the 28th", () => {
+    const leap = new Date("2028-02-29T17:00:00Z");
+    expect(sameMomentYearBefore(leap, "UTC").toISOString()).toBe("2027-02-28T17:00:00.000Z");
   });
 });

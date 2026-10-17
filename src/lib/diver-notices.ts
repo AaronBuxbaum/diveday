@@ -1,7 +1,9 @@
 import type { DiverMergeRefusal } from "@/db/diver-merge";
 import type { SendStaffReplyRefusal } from "@/db/staff-reply";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
+import { sendLimitWords } from "@/i18n/shared-sentences";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { SAVED_ANSWERS_MAX } from "@/lib/saved-answers";
 import { type FormNotice, type NoticeCodeOf, noticeFromParam } from "@/lib/staff-notices";
 import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 
@@ -38,6 +40,8 @@ type DiverNoticeDefinition = {
   tone: "success" | "danger" | "warning";
   /** Absent only when `silent` is — nothing renders, so there is nothing to say. */
   key?: StaffMessageKey;
+  /** The values `key` takes, for a shared sentence (`src/i18n/shared-sentences.ts`). */
+  values?: Record<string, string>;
   field?: string;
   /**
    * A pure "it worked" outcome the surface already shows on its own: a
@@ -147,6 +151,40 @@ const NOTICE_KEYS: DiverNoticeMap = {
     tone: "warning",
     key: "divers.notices.noCertificationNothingToClear",
   },
+  // A staffer's "seen diving dry" (#2136). `"page"` because the row that holds
+  // the control swaps between its two states on success.
+  "drysuit-experience-recorded": {
+    form: "page",
+    tone: "success",
+    key: "divers.notices.drysuitExperienceRecorded",
+  },
+  "drysuit-experience-cleared": {
+    form: "page",
+    tone: "success",
+    key: "divers.notices.drysuitExperienceCleared",
+  },
+  // A double tap or replay: the record already says what the staffer wanted.
+  "drysuit-experience-unchanged": {
+    form: "page",
+    tone: "warning",
+    key: "divers.notices.drysuitExperienceUnchanged",
+  },
+  // Refusals from the writer itself (domain review A4, security review X2/X3).
+  "drysuit-experience-not-authorized": {
+    form: "page",
+    tone: "danger",
+    key: "divers.notices.drysuitExperienceNotAuthorized",
+  },
+  "drysuit-experience-note-required": {
+    form: "page",
+    tone: "warning",
+    key: "divers.notices.drysuitExperienceNoteRequired",
+  },
+  "drysuit-experience-not-recordable": {
+    form: "page",
+    tone: "warning",
+    key: "divers.notices.drysuitExperienceNotRecordable",
+  },
   // A staff account that has since been demoted, removed or disabled, still
   // holding a valid token. Every mutation on this page re-reads live roles for
   // the same reason.
@@ -164,6 +202,14 @@ const NOTICE_KEYS: DiverNoticeMap = {
 
   // Details editor.
   "person-saved": { form: "details", tone: "success", key: "divers.notices.personSaved" },
+  // Issue #2167: "They're 18 or older" ticked beside a date that was kept or
+  // typed. The date answers the age, so the tick is dropped, and said so.
+  "person-saved-adult-answer-unused": {
+    form: "details",
+    tone: "warning",
+    key: "divers.notices.personSavedAdultAnswerUnused",
+    field: "diver-date-of-birth",
+  },
   "not-authorized-details": {
     form: "details",
     tone: "danger",
@@ -175,6 +221,19 @@ const NOTICE_KEYS: DiverNoticeMap = {
     key: "divers.notices.duplicate",
     // The refusal is about one box, so it renders on that box.
     field: "diver-email",
+  },
+  // Issue #2167: a stored date of birth emptied without "They're 18 or older".
+  "date-of-birth-age-unstated": {
+    form: "details",
+    tone: "danger",
+    key: "divers.notices.dateOfBirthAgeUnstated",
+    field: "diver-date-of-birth",
+  },
+  "date-of-birth-course-minimum-age": {
+    form: "details",
+    tone: "danger",
+    key: "divers.notices.dateOfBirthCourseMinimumAge",
+    field: "diver-date-of-birth",
   },
   "removed-read-only": {
     form: "details",
@@ -205,6 +264,14 @@ const NOTICE_KEYS: DiverNoticeMap = {
     form: "waiver",
     tone: "success",
     key: "divers.notices.medicalClearanceRecorded",
+  },
+  // Recorded from a letter dated before the referral it answers, while another
+  // live seat is still held by the earlier referral (issue #2616). A warning:
+  // the answer is on the record, and the desk has one more to record.
+  "medical-clearance-recorded-earlier-held": {
+    form: "waiver",
+    tone: "warning",
+    key: "divers.notices.medicalClearanceRecordedEarlierHeld",
   },
   // The other answer (issue #1283). Not a success tone: nothing good happened
   // to this diver, and a green tick under "the doctor said no" would read as
@@ -333,7 +400,7 @@ const NOTICE_KEYS: DiverNoticeMap = {
   "reply-body-too-long": { form: "reply", tone: "danger", key: "inbox.notices.tooLong" },
   "reply-message-not-found": { form: "reply", tone: "danger", key: "inbox.notices.notFound" },
   // Refused by the per-staff send bound (`RATE_LIMITS.staffSendByActor`).
-  "reply-send-limit": { form: "reply", tone: "warning", key: "inbox.notices.sendLimit" },
+  "reply-send-limit": { form: "reply", tone: "warning", ...sendLimitWords("replies") },
   "reply-channel-unsupported": {
     form: "reply",
     tone: "danger",
@@ -343,6 +410,10 @@ const NOTICE_KEYS: DiverNoticeMap = {
   // There *is* an address; the reply cannot be built into something sendable,
   // so nothing was attempted and a retry would do the same thing again.
   "reply-cannot-be-sent": { form: "reply", tone: "danger", key: "inbox.notices.cannotBeSent" },
+  // "Save this answer" under a sent reply (fifth loop, item 15).
+  "answer-saved": { form: "reply", tone: "success", key: "inbox.notices.answerSaved" },
+  "answer-duplicate": { form: "reply", tone: "warning", key: "inbox.notices.answerDuplicate" },
+  "answers-full": { form: "reply", tone: "warning", key: "inbox.notices.answersFull" },
   "reply-whatsapp-window-closed": {
     form: "reply",
     tone: "danger",
@@ -421,6 +492,8 @@ const NOTICE_KEYS: DiverNoticeMap = {
   // Book an activity. Every code below is emitted only by the seating path, so
   // none of them needs an explicit `?form=` to find its way home.
   booked: { form: "book", tone: "success", key: "divers.notices.booked" },
+  // Booked for a later day, and the diver was sent the confirmation.
+  "booked-confirmed": { form: "book", tone: "success", key: "divers.notices.bookedConfirmed" },
   "booked-waiver-undelivered": {
     form: "book",
     tone: "warning",
@@ -474,6 +547,7 @@ const NOTICE_KEYS: DiverNoticeMap = {
     tone: "danger",
     key: "divers.notices.bookingInvalid",
   },
+  "seat-busy": { form: "book", tone: "danger", key: "seatDiver.busy" },
 
   // Removal, restore, erasure — each beside its own control.
   deleted: { form: "remove", tone: "success", key: "divers.notices.deleted" },
@@ -710,9 +784,13 @@ export function resolveDiverNotice({
         ? tripAdmissionRefusalText(t, refusal, locale)
         : notice === "booked" && !canRaiseInvoice
           ? t("divers.notices.bookedNoInvoice")
-          : notice === "merge-booking-conflict" && conflictDeparture
-            ? t("divers.notices.mergeBookingConflictOn", { departure: conflictDeparture })
-            : t(banner.key as StaffMessageKey),
+          : notice === "booked-confirmed" && !canRaiseInvoice
+            ? t("divers.notices.bookedConfirmedNoInvoice")
+            : notice === "merge-booking-conflict" && conflictDeparture
+              ? t("divers.notices.mergeBookingConflictOn", { departure: conflictDeparture })
+              : notice === "answers-full"
+                ? t("inbox.notices.answersFull", { count: SAVED_ANSWERS_MAX })
+                : t(banner.key as StaffMessageKey, banner.values),
     code: notice,
     link: notice === undefined ? undefined : NOTICE_LINKS[notice],
     field: banner.field,

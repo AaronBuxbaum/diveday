@@ -17,9 +17,11 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { CERTIFICATION_AGENCIES } from "@/lib/certification-options";
+import { DESK_PAYMENTS } from "@/lib/desk-payment";
 import type { EmergencyReference } from "@/lib/emergency-reference";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 import type { SpokenLanguageTag } from "@/lib/spoken-languages";
+import { appNowTimestamp } from "./columns";
 
 /**
  * The tenant and the person: `shops`, `people` and their roles, the login on
@@ -55,6 +57,9 @@ export const brandDisplayFont = pgEnum("brand_display_font", [
  * (src/lib/temperature-units.ts).
  */
 export const temperatureUnit = pgEnum("temperature_unit", ["celsius", "fahrenheit"]);
+
+/** How a shop takes money at the desk (src/lib/desk-payment.ts). */
+export const deskPayment = pgEnum("desk_payment", DESK_PAYMENTS);
 
 export const shops = pgTable(
   "shops",
@@ -190,6 +195,16 @@ export const shops = pgTable(
      */
     publicYearEnabled: boolean("public_year_enabled").notNull().default(false),
     /**
+     * **PADI checks (beta)**: "Check with PADI" (DiveChek) on a pending PADI
+     * card and the PADI eLearning check on a course roster, both run by the
+     * DiveDay extension in a staffer's browser signed in to the PADI Pros'
+     * Site under the shop's own membership (H-121, H-106). Off by default and
+     * the shop's own opt-in: the membership and its terms are the shop's, and
+     * neither check has been tried against the live site yet (#2259). Off
+     * keeps the "(member sign-in)" link (`src/lib/agency-check.ts`).
+     */
+    padiChecksEnabled: boolean("padi_checks_enabled").notNull().default(false),
+    /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's
      * personal one — nullable because a shop that has not chosen one must not
@@ -310,12 +325,105 @@ export const shops = pgTable(
       .notNull()
       .default({ lines: [], vessel: "", shoreContact: "", plan: "" }),
     /**
+     * **The shore contact's address for a stale roll call** (H-118, decided
+     * 2026-10-15): the one person outside the shop's accounts who hears when an
+     * after-dive roll call is still open after the boat was due back
+     * (`sendStaleRollCallAlerts`, `src/db/roll-call-alerts.ts`). Email only.
+     *
+     * Beside `emergency_reference.shoreContact`, never instead of it: that is
+     * free text a crew reads in an emergency, and this is an address DiveDay
+     * sends to. An address is stored only with the consent the staff member
+     * recorded for it — when, and who — and the check below holds the pair
+     * together, so clearing the address clears the consent and no address
+     * without one can exist (`nextShoreAlertContact`,
+     * `src/lib/shore-alert-contact.ts`). The person id carries no foreign key,
+     * the same as `people.adult_attested_by_person_id`: it is provenance, and
+     * a `shops -> people` key would turn the demo cascade into a cycle.
+     */
+    shoreAlertEmail: text("shore_alert_email"),
+    shoreAlertConsentAt: timestamp("shore_alert_consent_at", { withTimezone: true }),
+    shoreAlertConsentByPersonId: uuid("shore_alert_consent_by_person_id"),
+    /**
+     * When the shore contact proved the address is theirs and agreed, by the
+     * link DiveDay sent to it (H-118 review; the same proof the front-desk
+     * address takes, issue #1288). Null until then, and cleared with any
+     * change of address: the shop's tick says they agreed, this says the
+     * inbox did. Nothing is sent to the address before it is set
+     * (`shoreAlertRecipient`), and the link in every alert that stops them
+     * clears all four columns.
+     */
+    shoreAlertConfirmedAt: timestamp("shore_alert_confirmed_at", { withTimezone: true }),
+    /**
+     * **The bookkeeper's address for the month-end email** (fifth loop, item
+     * 35; ADR 20261016-bookkeeper-month-end-email): on the 2nd of each month
+     * the previous month's report, orders and crew sheet go here as three CSV
+     * attachments. Off while null. Like the shore contact's, it is an address
+     * outside the shop's accounts, so it is stored only with who set it and
+     * when (the check below holds the three together), set only by an owner
+     * or manager behind the export step-up.
+     *
+     * `bookkeeper_sent_month` is the claim: the `YYYY-MM` last mailed, moved
+     * forward in the same statement that decides to send, so two passes of
+     * the hourly job cannot both send one month. Cleared with the address, so
+     * a new address starts from the next month due.
+     */
+    bookkeeperEmail: text("bookkeeper_email"),
+    bookkeeperEmailSetAt: timestamp("bookkeeper_email_set_at", { withTimezone: true }),
+    bookkeeperEmailSetByPersonId: uuid("bookkeeper_email_set_by_person_id"),
+    bookkeeperSentMonth: text("bookkeeper_sent_month"),
+    /**
+     * **The bookkeeper confirmed this inbox is theirs** (security review B1,
+     * on the shore contact's model, H-118): no file leaves until it is set.
+     * The link that sets it is single-purpose and expiring, held here as a
+     * hash: it can only confirm the address the shop names now, because any
+     * change of address clears all three columns. The hash stays after use so
+     * the page can read the link back as confirmed.
+     */
+    bookkeeperConfirmedAt: timestamp("bookkeeper_confirmed_at", { withTimezone: true }),
+    bookkeeperConfirmTokenHash: text("bookkeeper_confirm_token_hash"),
+    bookkeeperConfirmExpiresAt: timestamp("bookkeeper_confirm_expires_at", {
+      withTimezone: true,
+    }),
+    /**
+     * **The stop link in the latest month-end email** (security review N1),
+     * as a hash: minted with each month's claim, so only the newest email's
+     * link works, and it stops only the address it went to, since any change
+     * of address clears it. Kept after a stop so the page can say "stopped".
+     */
+    bookkeeperStopTokenHash: text("bookkeeper_stop_token_hash"),
+    /**
+     * **A shop name that could pass for a brand or an institution** (issue
+     * #2450, decided 2026-10-16): set when the name matched the denylist in
+     * `src/lib/shop-name-review.ts` at sign-up (or a rename). While it is set
+     * and `name_cleared_at` is not newer, the shop's mail leaves under the plain
+     * "DiveDay" display name instead of "{Shop} via DiveDay"
+     * (`shopNameUnderReview`). A human clearing it stamps `name_cleared_at`; a
+     * later flag (another matching name) is newer than the clearing and holds
+     * again. Neither stops a shop signing up or sending.
+     */
+    nameFlaggedAt: timestamp("name_flagged_at", { withTimezone: true }),
+    nameClearedAt: timestamp("name_cleared_at", { withTimezone: true }),
+    /**
      * How many minutes before departure divers are asked to be at the dock. The
      * shop's real muster time varies (gear setup, cert check, briefing), so it is
      * configurable rather than a hardcoded "30 minutes" in every confirmation and
      * reminder. Defaults to 30.
      */
     dockCallMinutes: integer("dock_call_minutes").notNull().default(30),
+    /**
+     * Whether the shop runs hotel pickups (fourth UX review item 8). Off by
+     * default, because most shops do not: `/ready` asked every diver at every
+     * shop "Want a morning pickup?", a promise the shop never made. Only a
+     * shop that says it offers them has the question asked.
+     */
+    offersHotelPickup: boolean("offers_hotel_pickup").notNull().default(false),
+    /**
+     * How the shop takes money at the desk: card, cash, or both (fifth-loop
+     * ideas, item 21). Null until the shop says, and then nothing is added to
+     * "due at the shop". Read by the booking form's money block, the booking
+     * confirmation and `/ready`'s money line.
+     */
+    deskPayment: deskPayment("desk_payment"),
     /**
      * The rest of the shop's dock-day rhythm, in minutes (src/lib/diver-planning.ts).
      * Before these columns existed the whole day was inferred from
@@ -333,6 +441,15 @@ export const shops = pgTable(
     boatRideMinutes: integer("boat_ride_minutes").notNull().default(20),
     bottomTimeMinutes: integer("bottom_time_minutes").notNull().default(45),
     surfaceIntervalMinutes: integer("surface_interval_minutes").notNull().default(60),
+    /**
+     * The shortest gap the shop wants between one departure due back and the
+     * next leaving on the same hull, or with a crew member who leaves from a
+     * different meeting point — the time to unload, rinse, refill, refuel and
+     * board the next group (issue #2141, Aaron's decision (b), 2026-10-13).
+     * The schedule builder's Move panel names a closer departure as advice; it
+     * never refuses a move and never changes H-80's clash. Zero turns it off.
+     */
+    minTurnaroundMinutes: integer("min_turnaround_minutes").notNull().default(30),
     /**
      * Where the shop's season starts — the denominator behind the home's one
      * fact of scale (ADR 20260904-reef-all-the-way-down, decision 2, Budget
@@ -434,11 +551,48 @@ export const shops = pgTable(
     brandBadges: jsonb("brand_badges").$type<string[]>().notNull().default([]),
     latitude: doublePrecision("latitude"),
     longitude: doublePrecision("longitude"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("shops_inbound_email_token_unique").on(table.inboundEmailToken),
+    uniqueIndex("shops_bookkeeper_confirm_token_hash_unique").on(table.bookkeeperConfirmTokenHash),
+    uniqueIndex("shops_bookkeeper_stop_token_hash_unique").on(table.bookkeeperStopTokenHash),
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
+    // H-118: an address DiveDay sends to exists only with its recorded consent.
+    check(
+      "shops_shore_alert_consent",
+      sql`(${table.shoreAlertEmail} is null and ${table.shoreAlertConsentAt} is null
+        and ${table.shoreAlertConsentByPersonId} is null)
+        or (${table.shoreAlertEmail} is not null and ${table.shoreAlertConsentAt} is not null
+        and ${table.shoreAlertConsentByPersonId} is not null)`,
+    ),
+    // Item 35: the bookkeeper's address exists only with who set it and when.
+    check(
+      "shops_bookkeeper_email_provenance",
+      sql`(${table.bookkeeperEmail} is null and ${table.bookkeeperEmailSetAt} is null
+        and ${table.bookkeeperEmailSetByPersonId} is null)
+        or (${table.bookkeeperEmail} is not null and ${table.bookkeeperEmailSetAt} is not null
+        and ${table.bookkeeperEmailSetByPersonId} is not null)`,
+    ),
+    // A confirmation, or a link to give one, exists only for an address on file.
+    check(
+      "shops_bookkeeper_confirmation_has_address",
+      sql`${table.bookkeeperEmail} is not null
+        or (${table.bookkeeperConfirmedAt} is null and ${table.bookkeeperConfirmTokenHash} is null)`,
+    ),
+    check(
+      "shops_bookkeeper_confirm_token_expiry",
+      sql`(${table.bookkeeperConfirmTokenHash} is null) = (${table.bookkeeperConfirmExpiresAt} is null)`,
+    ),
+    check(
+      "shops_bookkeeper_sent_month_shape",
+      sql`${table.bookkeeperSentMonth} is null or ${table.bookkeeperSentMonth} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'`,
+    ),
+    // A confirmation vouches for an address; there is none without one.
+    check(
+      "shops_shore_alert_confirmed_has_address",
+      sql`${table.shoreAlertConfirmedAt} is null or ${table.shoreAlertEmail} is not null`,
+    ),
     check(
       "shops_customer_regulator_service_months_choice",
       sql`${table.customerRegulatorServiceMonths} in (12, 24)`,
@@ -486,6 +640,10 @@ export const shops = pgTable(
     check("shops_boat_ride_minutes_nonnegative", sql`${table.boatRideMinutes} >= 0`),
     check("shops_bottom_time_minutes_positive", sql`${table.bottomTimeMinutes} > 0`),
     check("shops_surface_interval_minutes_nonnegative", sql`${table.surfaceIntervalMinutes} >= 0`),
+    check(
+      "shops_min_turnaround_minutes_range",
+      sql`${table.minTurnaroundMinutes} >= 0 and ${table.minTurnaroundMinutes} <= 240`,
+    ),
     // Bounded at both ends, matching `parseDiversPerDivemaster` in the settings
     // action. A DB constraint looser than the action it backs lets any other
     // caller persist a number the surfaces will not honour (`coderabbitai`);
@@ -682,6 +840,29 @@ export const people = pgTable(
      */
     noCertificationClearedByPersonId: uuid("no_certification_cleared_by_person_id"),
     /**
+     * When a staff member recorded that they have seen this diver dive dry
+     * (issue #2136, Aaron 2026-10-13). Clears the roster's drysuit-card
+     * advisory (`checkDrysuitCard`) and nothing else: it is **not a card**,
+     * never reaches `specialty_certifications`, `calculateReadiness` or
+     * admission, and a site or trip that requires the `drysuit` specialty
+     * still refuses without one. Staff-only: no diver-facing writer, and
+     * `/ready` never sets it. Null means nobody has recorded it.
+     */
+    drysuitExperienceSeenAt: timestamp("drysuit_experience_seen_at", { withTimezone: true }),
+    /**
+     * Who recorded `drysuit_experience_seen_at`. Not a typed FK for the same
+     * self-reference reason as `no_certification_cleared_by_person_id`. Set
+     * and cleared together with the column above.
+     */
+    drysuitExperienceSeenByPersonId: uuid("drysuit_experience_seen_by_person_id"),
+    /**
+     * What the staffer saw, in their words: the suit, where, when (domain
+     * review A4). Required by the writer, 1 to 200 characters, and set and
+     * cleared with the two columns above. The record and each clear also
+     * leave an append-only line on the diver's activity trail (A5).
+     */
+    drysuitExperienceSeenNote: text("drysuit_experience_seen_note"),
+    /**
      * The language this diver reads, captured from the `Accept-Language` of a
      * request they made themselves (a public booking, a waiver signature) and
      * preferred over the shop's `default_locale` when DiveDay emails or texts
@@ -826,7 +1007,7 @@ export const people = pgTable(
     mergedIntoPersonId: uuid("merged_into_person_id").references((): AnyPgColumn => people.id),
     mergedAt: timestamp("merged_at", { withTimezone: true }),
     mergedByPersonId: uuid("merged_by_person_id").references((): AnyPgColumn => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("people_shop_idx").on(table.shopId),
@@ -1078,7 +1259,7 @@ export const userAccounts = pgTable(
      * one email, and a quiet night sends at most one per interval.
      */
     afterHoursPingedAt: timestamp("after_hours_pinged_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /**
      * better-auth's core `user` model requires an `updatedAt`; nothing in
      * this app reads it (our own writers below don't set it, and we never
@@ -1086,7 +1267,7 @@ export const userAccounts = pgTable(
      * as stale as `createdAt` unless a future better-auth-owned write path
      * starts touching it.
      */
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("user_accounts_email_unique").on(table.email),

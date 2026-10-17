@@ -1041,3 +1041,181 @@ describe("a hidden course at the edge", () => {
     expect(existence.asked).toEqual([{ kind: "course", shopSlug: SHOP, courseSlug: COURSE }]);
   });
 });
+
+/**
+ * **The shop home answers to no query any more.**
+ *
+ * `?view=` chose between the urgency and by-departure renderings of one work
+ * queue, and `?page=` paged the second of them. The home is a single
+ * chronological spine now (ADR 20260827-clearwater-surface-language, decision
+ * 4), so neither selects anything — and a bookmark carrying one must land on
+ * the page rather than on a URL that quietly means nothing.
+ *
+ * It happens at the edge because that is the only layer that can answer a real
+ * **308**: under `cacheComponents` a redirect thrown from a page body answers
+ * 200 with the hop resolving inside the streamed payload, which a browser
+ * follows and a bookmark manager, a crawler and a `curl` do not.
+ */
+describe("proxy retired-query redirects", () => {
+  it("308s the shop home's ?view= and ?page= away, keeping everything else", async () => {
+    for (const [from, to] of [
+      ["/shop/blue-mantis?view=departures", "/shop/blue-mantis"],
+      ["/shop/blue-mantis?view=urgency&page=3", "/shop/blue-mantis"],
+      ["/shop/blue-mantis?page=2", "/shop/blue-mantis"],
+      ["/shop/blue-mantis?view=departures&created=Reef", "/shop/blue-mantis?created=Reef"],
+    ] as const) {
+      const res = await run(request(from));
+      expect(res.status, from).toBe(308);
+      // Absolute, because Next's middleware adapter parses this header through
+      // `NextURL` and a relative value there has no base to resolve against —
+      // it throws and the request answers 500. The origin is the request's
+      // own, which is what stops the hop pinning a visitor to whichever host
+      // the proxy happened to resolve (the trap `/blockers` documents).
+      const location = new URL(res.headers.get("location") ?? "", "http://x");
+      expect(location.origin, from).toBe(new URL(request(from).url).origin);
+      expect(`${location.pathname}${location.search}`, from).toBe(to);
+    }
+  });
+
+  it("leaves a home with no retired query, and every page below it, alone", async () => {
+    // `?page=` is a live parameter on plenty of staff lists — the strip is the
+    // home's own, not a rule about the word.
+    for (const path of [
+      "/shop/blue-mantis",
+      "/shop/blue-mantis?created=Reef",
+      "/shop/blue-mantis/orders?page=2",
+      "/shop/blue-mantis/divers?view=all",
+    ]) {
+      expect((await run(request(path))).status, path).not.toBe(308);
+    }
+  });
+});
+
+/**
+ * **The offline manifests have no shop in their address** (#2433). The page is
+ * `/offline-manifest`, outside the staff shell on purpose, since it has to open
+ * with no network and no session. A staffer who types the shape every other
+ * staff page has got a staff 404, at exactly the moment they were thinking
+ * about being offline. The edge sends that shape to the real page.
+ */
+describe("the staff-shaped offline manifest address", () => {
+  it("308s /shop/<slug>/offline-manifest to /offline-manifest, keeping its query", async () => {
+    for (const [from, to] of [
+      ["/shop/blue-mantis/offline-manifest", "/offline-manifest"],
+      ["/shop/blue-mantis/offline-manifest/", "/offline-manifest"],
+      ["/shop/another-shop/offline-manifest?trip=abc", "/offline-manifest?trip=abc"],
+    ] as const) {
+      const res = await run(request(from));
+      expect(res.status, from).toBe(308);
+      const location = new URL(res.headers.get("location") ?? "", "http://x");
+      expect(location.origin, from).toBe(new URL(request(from).url).origin);
+      expect(`${location.pathname}${location.search}`, from).toBe(to);
+    }
+  });
+
+  it("leaves every other address with the words in it alone", async () => {
+    for (const path of [
+      "/offline-manifest",
+      "/shop/blue-mantis/offline-manifest/extra",
+      "/shop/blue-mantis/trips/abc/offline-manifest",
+      "/shop/offline-manifest",
+      "/s/blue-mantis/offline-manifest",
+    ]) {
+      expect((await run(request(path))).headers.get("location") ?? "", path).not.toMatch(
+        /\/offline-manifest$/,
+      );
+    }
+  });
+});
+
+describe("the partner referral cookie (issue #1285)", () => {
+  /**
+   * A real top-level navigation. `SameSite` does not stop a cross-site
+   * `Set-Cookie` — it governs what is *sent*, not what is stored — so an
+   * `<img src="…?utm_source=partner&utm_campaign=rival">` on any page would
+   * otherwise plant an attribution on every visitor it has. `Sec-Fetch-*` is
+   * browser-set and unforgeable by page script, so a document navigation is
+   * the one shape that mints.
+   */
+  const NAVIGATION = { "sec-fetch-dest": "document", "sec-fetch-mode": "navigate" };
+
+  function setCookie(res: Response): string | null {
+    return res.headers.get("set-cookie");
+  }
+
+  it("remembers the partner a storefront visit arrived through, bound to that shop", async () => {
+    const res = await run(
+      request("/s/blue-mantis?utm_source=partner&utm_medium=referral&utm_campaign=coral-sands", {
+        ...NAVIGATION,
+      }),
+    );
+    const cookie = setCookie(res);
+    // The shop is *in the value*: one cookie covers the whole /s/ namespace, so
+    // the booking action has to be able to tell whose link minted it.
+    expect(cookie).toContain("diveday_ref=blue-mantis%3Acoral-sands");
+    // HttpOnly so the page cannot steer what the booking action reads; scoped
+    // to /s/ so it is never sent up with a staff request.
+    expect(cookie).toContain("HttpOnly");
+    expect(cookie).toContain("Path=/s/");
+    // Never cached: the value is a pure function of the URL, but only a cache
+    // that keys on the query string can be trusted to keep it that way.
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+  });
+
+  it("writes nothing at all for an ordinary storefront visit", async () => {
+    expect(setCookie(await run(request("/s/blue-mantis", { ...NAVIGATION })))).toBeNull();
+    expect(
+      setCookie(
+        await run(
+          request("/s/blue-mantis?utm_source=newsletter&utm_campaign=spring", { ...NAVIGATION }),
+        ),
+      ),
+    ).toBeNull();
+  });
+
+  it("refuses to mint on anything but a document navigation", async () => {
+    const link = "/s/blue-mantis?utm_source=partner&utm_campaign=rival-hotel";
+    // What an <img> on a hostile page produces. X-Frame-Options refuses an
+    // iframe only *after* the response and its headers were processed, so the
+    // refusal has to happen here.
+    expect(
+      setCookie(
+        await run(request(link, { "sec-fetch-dest": "image", "sec-fetch-mode": "no-cors" })),
+      ),
+    ).toBeNull();
+    expect(
+      setCookie(
+        await run(request(link, { "sec-fetch-dest": "iframe", "sec-fetch-mode": "navigate" })),
+      ),
+    ).toBeNull();
+    expect(
+      setCookie(await run(request(link, { "sec-fetch-dest": "empty", "sec-fetch-mode": "cors" }))),
+    ).toBeNull();
+    // No headers at all — an old browser or a non-browser client. Mints nothing
+    // rather than falling back to trusting it.
+    expect(setCookie(await run(request(link)))).toBeNull();
+  });
+
+  it("never writes one outside the diver-facing namespace", async () => {
+    expect(
+      setCookie(
+        await run(
+          request("/shop/blue-mantis?utm_source=partner&utm_campaign=x", { ...NAVIGATION }),
+        ),
+      ),
+    ).toBeNull();
+    expect(
+      setCookie(await run(request("/?utm_source=partner&utm_campaign=x", { ...NAVIGATION }))),
+    ).toBeNull();
+  });
+
+  it("stores the slug, never what the URL happened to say", async () => {
+    const res = await run(
+      request(
+        "/s/blue-mantis?utm_source=partner&utm_campaign=%3Cscript%3Ealert(1)%3C%2Fscript%3E",
+        { ...NAVIGATION },
+      ),
+    );
+    expect(setCookie(res)).toContain("diveday_ref=blue-mantis%3Ascript-alert-1-script");
+  });
+});

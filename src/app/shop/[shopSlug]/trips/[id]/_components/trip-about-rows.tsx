@@ -11,17 +11,27 @@ import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-label
 // shell and its own reads are the only ones the reader waits on. See ADR
 // 20260804-instant-navigation.
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { depthInUnit } from "@/lib/depth-units";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
 import { formatShortDate, weekdayNames } from "@/lib/format";
 import { hasCrewPrediction } from "@/lib/marine-forecast";
+import { meetingPointLine, meetingPointOfRows } from "@/lib/meeting-point";
 import { toShopCurrency } from "@/lib/money";
 import type { requireShopSurface } from "@/lib/session";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
-import { temperatureUnitFor } from "@/lib/temperature-units";
+import {
+  type TemperatureUnit,
+  temperatureInUnit,
+  temperatureUnitFor,
+} from "@/lib/temperature-units";
+import { laterMeetingDates } from "@/lib/trip-days";
 import { clearConditionsAction, saveConditionsAction } from "../conditions-actions";
 import { updateTripCrewAction } from "../crew-actions";
 import { saveDetails } from "../details-actions";
-import { cancelOffCadenceSeriesAction, updateSeriesCadenceAction } from "../series-actions";
+import {
+  cancelOffCadenceSeriesAction as cancelOffCadence,
+  updateSeriesCadenceAction,
+} from "../series-actions";
 import { saveRequirementsAction } from "../terms-actions";
 import { ConditionsOutlookSlot, ConditionsSection } from "./ConditionsSection";
 import { CrewSection } from "./CrewSection";
@@ -55,6 +65,7 @@ export type TripAboutRowsContext = {
   /** A retime's held reschedule notice, on the save that set it going. */
   held?: string;
   tell?: string;
+  refundsHeld?: boolean;
 };
 
 /** The names of the staff assigned to this departure, in the shop's staff order. */
@@ -62,6 +73,44 @@ export function assignedCrewNames(overview: TripOverview): string[] {
   return overview.staff
     .filter((entry) => overview.crew.crewIds.includes(entry.person.id))
     .map((entry) => entry.person.fullName);
+}
+
+/**
+ * The crew's published read as the Conditions row's facts, in the shop's own
+ * units: their sentence, the surface, the water and the visibility. The water
+ * is half of what a diver dresses for (fourth review, item 54).
+ */
+function crewConditionFacts(
+  trip: {
+    conditionsSummary: string | null;
+    surfaceConditions: string | null;
+    waterTemperatureC: number | null;
+    visibilityMeters: number | null;
+  },
+  depthUnit: DepthUnit,
+  temperatureUnit: TemperatureUnit,
+  t: StaffTranslator,
+): string[] {
+  return [
+    trip.conditionsSummary,
+    trip.surfaceConditions,
+    trip.waterTemperatureC !== null
+      ? t("trips.conditions.waterFact", {
+          value: `${temperatureInUnit(trip.waterTemperatureC, temperatureUnit)} ${t(
+            temperatureUnit === "fahrenheit"
+              ? "shared.temperature.fahrenheit"
+              : "shared.temperature.celsius",
+          )}`,
+        })
+      : null,
+    trip.visibilityMeters !== null
+      ? t("trips.conditions.visibilityFact", {
+          value: `${depthInUnit(trip.visibilityMeters, depthUnit)} ${t(
+            depthUnit === "feet" ? "shared.depth.feet" : "shared.depth.meters",
+          )}`,
+        })
+      : null,
+  ].filter((part): part is string => Boolean(part));
 }
 
 /**
@@ -108,8 +157,6 @@ export function tripAboutRows(context: TripAboutRowsContext) {
   } = overview;
   const { crewIds, tripRoleByPerson, crewGap, onShiftIds, clashes } = crew;
   const { ratingLapsedNote, languageGapNote, underTargetNote, overRatioWarning } = crewNotes;
-  // One notice per About row, resolved once: a refusal that lands inside a
-  // closed row is a form the staffer cannot see failed.
   const detailsStatus = noticeForForm(tripNotice, "details");
   const conditionsStatus = noticeForForm(tripNotice, "conditions");
   const requirementsStatus = noticeForForm(tripNotice, "requirements");
@@ -142,17 +189,8 @@ export function tripAboutRows(context: TripAboutRowsContext) {
         ]
           .filter((part): part is string => Boolean(part))
           .join(" · ") || t("trips.requirements.summaryNoneRequired");
-  const conditionParts = [
-    trip.conditionsSummary,
-    trip.surfaceConditions,
-    trip.visibilityMeters !== null
-      ? t("trips.conditions.visibilityFact", {
-          value: `${depthInUnit(trip.visibilityMeters, shop.depthUnit)} ${t(
-            shop.depthUnit === "feet" ? "shared.depth.feet" : "shared.depth.meters",
-          )}`,
-        })
-      : null,
-  ].filter((part): part is string => Boolean(part));
+  const temperatureUnit = temperatureUnitFor(shop);
+  const conditionParts = crewConditionFacts(trip, shop.depthUnit, temperatureUnit, t);
   // The tide stands in for the at-rest line only when there is nothing else:
   // "No conditions yet" beside a known slack would be the summary
   // contradicting its own panel. It never joins a line that already has the
@@ -229,6 +267,11 @@ export function tripAboutRows(context: TripAboutRowsContext) {
             startWall,
             endWall,
             dayCount: Math.max(1, scheduleDays.length),
+            // The later days' own dates when the run has gaps (third UX
+            // review, item 10), so a save keeps a course's weekends apart.
+            laterDates: laterMeetingDates(
+              scheduleDays.map((day) => calendarDateInTimezone(day.startsAt, shop.timezone)),
+            ),
             locale,
             currency: toShopCurrency(shop.currency),
             boats: shopBoats.map((boat) => ({ id: boat.id, name: boat.name })),
@@ -236,9 +279,19 @@ export function tripAboutRows(context: TripAboutRowsContext) {
             hasBoatDiving: shop.hasBoatDiving,
             hasShoreDiving: shop.hasShoreDiving,
             hasPoolDiving: shop.hasPoolDiving,
+            rentalItems: shop.rentalItems,
           }}
         />
       ) : undefined,
+    },
+    // **Where the boat meets** (UX review 2026-10-13, item 18): the diver's
+    // `/ready` and every message say it, and until this no staff page did —
+    // it lived only as two fields inside the plan's editor, which is still
+    // where it changes. The shop's own door when the departure names none.
+    {
+      id: "meeting",
+      label: t("trips.about.meetingPoint"),
+      value: meetingPointLine(meetingPointOfRows(shop, trip)),
     },
     {
       id: "conditions",
@@ -274,13 +327,13 @@ export function tripAboutRows(context: TripAboutRowsContext) {
           trip={trip}
           locale={locale}
           timezone={shop.timezone}
-          temperatureUnit={temperatureUnitFor(shop)}
+          temperatureUnit={temperatureUnit}
           depthUnit={shop.depthUnit}
           outlook={
             <ConditionsOutlookSlot
               locale={locale}
               timezone={shop.timezone}
-              temperatureUnit={temperatureUnitFor(shop)}
+              temperatureUnit={temperatureUnit}
               depthUnit={shop.depthUnit}
               automatedForecast={automatedForecast}
               tideLines={tideLines}
@@ -315,7 +368,7 @@ export function tripAboutRows(context: TripAboutRowsContext) {
         />
       ) : undefined,
     },
-    ...participantTermsRows({ trip, shop, locale, tripNotice, canConfigure, shopSlug }),
+    ...participantTermsRows({ ...overview, shop, locale, tripNotice, shopSlug }),
     // **On every departure, whatever the crew schedule says**: who
     // is aboard is manifest data (the crew roll call, the souls-on-
     // board count), not planning (ADR 20261005-crew-schedule-is-a-setting).
@@ -431,12 +484,8 @@ export function tripAboutRows(context: TripAboutRowsContext) {
             weekdayNames={weekdayNames(locale)}
             status={seriesStatus}
             cadenceAction={updateSeriesCadenceAction.bind(null, shopSlug, tripId, series.id)}
-            cancelOffCadenceAction={cancelOffCadenceSeriesAction.bind(
-              null,
-              shopSlug,
-              tripId,
-              series.id,
-            )}
+            cancelOffCadenceAction={cancelOffCadence.bind(null, shopSlug, tripId, series.id)}
+            refundsHeld={context.refundsHeld}
             locale={locale}
           />
         ) : undefined,

@@ -87,7 +87,7 @@ describe("participant types", () => {
     expect(participantPriceCents(trip, "rider")).toBe(2500);
   });
 
-  it("offers a seat publicly only where the shop named its price, and never on a course", () => {
+  it("offers a seat publicly only where the shop named its price, a course session too", () => {
     expect(
       offeredParticipantTypes({ priceCents: 100, snorkelerPriceCents: null, riderPriceCents: 0 }),
     ).toEqual(["diver", "rider"]);
@@ -96,6 +96,14 @@ describe("participant types", () => {
         priceCents: 100,
         snorkelerPriceCents: 50,
         riderPriceCents: 0,
+        courseId: "c",
+      }),
+    ).toEqual(["diver", "snorkeler", "rider"]);
+    expect(
+      offeredParticipantTypes({
+        priceCents: 100,
+        snorkelerPriceCents: null,
+        riderPriceCents: null,
         courseId: "c",
       }),
     ).toEqual(["diver"]);

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { isTripDayCount, MAX_TRIP_DAYS, tripMeetingDays } from "./trip-days";
+import {
+  isTripDayCount,
+  laterMeetingDates,
+  MAX_MEETING_DAY_GAP_DAYS,
+  MAX_TRIP_DAYS,
+  MAX_TRIP_SPAN_DAYS,
+  meetingDaysFor,
+  tripMeetingDays,
+} from "./trip-days";
 import type { WallTime } from "./zoned";
 
 const wall = (
@@ -87,5 +95,100 @@ describe("tripMeetingDays", () => {
     expect(isTripDayCount(1)).toBe(true);
     expect(isTripDayCount(MAX_TRIP_DAYS)).toBe(true);
     expect(tripMeetingDays(window, MAX_TRIP_DAYS)).toHaveLength(MAX_TRIP_DAYS);
+  });
+});
+
+/**
+ * **A date per day** (third UX review, item 10): an Open Water course that
+ * meets Sat/Sun, Sat/Sun, Sat is one trip with five named days, not three
+ * trips that share a title.
+ */
+describe("meetingDaysFor", () => {
+  const saturday = { start: wall(2026, 10, 24, 8, 0), end: wall(2026, 10, 24, 16, 0) };
+
+  it("is the consecutive run when no dates are named", () => {
+    expect(meetingDaysFor(saturday, 2)).toEqual({ ok: true, days: tripMeetingDays(saturday, 2) });
+  });
+
+  it("puts day one's window on every named date that follows the day before it", () => {
+    const result = meetingDaysFor(saturday, 3, ["2026-10-25", "2026-10-26"]);
+    expect(result.ok && result.days.map((d) => [d.start, d.end])).toEqual([
+      [wall(2026, 10, 24, 8, 0), wall(2026, 10, 24, 16, 0)],
+      [wall(2026, 10, 25, 8, 0), wall(2026, 10, 25, 16, 0)],
+      [wall(2026, 10, 26, 8, 0), wall(2026, 10, 26, 16, 0)],
+    ]);
+  });
+
+  /**
+   * Today, the open roll call, check-in and boarding read a departure's day as
+   * its one `startsAt`..`endsAt` window. A course on Saturday and the Saturday
+   * two weeks on would read as a boat on the water with an open roll call for
+   * the thirteen days between, and would not be today's departure on its second
+   * day. Until those read the meeting days, a departure's days run back to back.
+   */
+  it("refuses a gap between meeting days, a two-week one included", () => {
+    expect(MAX_MEETING_DAY_GAP_DAYS).toBe(1);
+    expect(meetingDaysFor(saturday, 2, ["2026-11-07"])).toEqual({
+      ok: false,
+      reason: "days_out_of_order",
+    });
+    expect(meetingDaysFor(saturday, 3, ["2026-10-25", "2026-10-31"])).toEqual({
+      ok: false,
+      reason: "days_out_of_order",
+    });
+    expect(meetingDaysFor(saturday, 2, ["2026-10-26"])).toEqual({
+      ok: false,
+      reason: "days_out_of_order",
+    });
+  });
+
+  it("keeps a window that ends after midnight ending the morning after its own date", () => {
+    const night = { start: wall(2026, 10, 24, 20, 0), end: wall(2026, 10, 25, 1, 0) };
+    const result = meetingDaysFor(night, 2, ["2026-10-25"]);
+    expect(result.ok && result.days[1]).toEqual({
+      start: wall(2026, 10, 25, 20, 0),
+      end: wall(2026, 10, 26, 1, 0),
+    });
+  });
+
+  it("refuses dates out of order, on day one, or far past it, with a sentence of their own", () => {
+    expect(meetingDaysFor(saturday, 2, ["2026-10-24"])).toEqual({
+      ok: false,
+      reason: "days_out_of_order",
+    });
+    expect(meetingDaysFor(saturday, 3, ["2026-10-31", "2026-10-25"])).toEqual({
+      ok: false,
+      reason: "days_out_of_order",
+    });
+    expect(meetingDaysFor(saturday, 2, ["2026-10-23"])).toEqual({
+      ok: false,
+      reason: "days_out_of_order",
+    });
+    // Six weeks stays the outer bound for the day gaps open again.
+    expect(meetingDaysFor(saturday, 2, ["2026-12-06"])).toEqual({
+      ok: false,
+      reason: "days_out_of_order",
+    });
+    expect(MAX_TRIP_SPAN_DAYS).toBe(42);
+  });
+
+  it("refuses a list that disagrees with the count, or a day that does not exist", () => {
+    expect(meetingDaysFor(saturday, 3, ["2026-10-25"])).toEqual({ ok: false, reason: "invalid" });
+    expect(meetingDaysFor(saturday, 2, ["2026-02-31"])).toEqual({ ok: false, reason: "invalid" });
+    expect(meetingDaysFor(saturday, 0)).toEqual({ ok: false, reason: "invalid" });
+  });
+});
+
+describe("laterMeetingDates", () => {
+  it("says nothing for consecutive days, which the count already says", () => {
+    expect(laterMeetingDates(["2026-10-24", "2026-10-25", "2026-10-26"])).toEqual([]);
+    expect(laterMeetingDates(["2026-10-24"])).toEqual([]);
+  });
+
+  it("names every later day once the run has a gap", () => {
+    expect(laterMeetingDates(["2026-10-24", "2026-10-25", "2026-10-31"])).toEqual([
+      "2026-10-25",
+      "2026-10-31",
+    ]);
   });
 });

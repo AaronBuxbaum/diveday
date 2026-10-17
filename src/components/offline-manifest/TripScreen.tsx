@@ -5,11 +5,9 @@ import { OfflineShellVersionBanner } from "@/components/OfflineShellVersionBanne
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { RollCallTouchCue } from "@/components/RollCallTouchCue";
 import { SkipLink } from "@/components/SkipLink";
-import { buttonClass } from "@/components/ui/button";
-import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
-import { rollCallCheckpoints } from "@/lib/manifests";
-import { OfflineChecklist } from "./Checklist";
+import { OfflineChecklist, OfflineSnags } from "./Checklist";
+import { OfflineCheckpointNav } from "./CheckpointNav";
 import { OfflineCounter } from "./Counter";
 import type { OfflineTripControls } from "./controls";
 import { OfflineRollCallSection } from "./RollCallSection";
@@ -33,8 +31,8 @@ export function OfflineTripScreen({
   discardNotice: ReactNode;
   reconcile: () => Promise<void>;
 }) {
-  const { envelope, manifest, checkpoint } = view;
-  const { t, setCheckpoint } = controls;
+  const { envelope } = view;
+  const { t } = controls;
 
   return (
     <main
@@ -68,6 +66,8 @@ export function OfflineTripScreen({
             heading: t("manifest.emergency.heading"),
             empty: t("manifest.emergency.empty"),
             vesselLabel: t("manifest.emergency.vesselLabel"),
+            callSignLabel: t("manifest.emergency.callSignLabel"),
+            mmsiLabel: t("manifest.emergency.mmsiLabel"),
             shoreContactLabel: t("manifest.emergency.shoreContactLabel"),
             planLabel: t("manifest.emergency.planLabel"),
           }}
@@ -83,6 +83,9 @@ export function OfflineTripScreen({
         {envelope.snapshot.boatSafety ? (
           <BoatSafetyNotices className="mt-6" {...envelope.snapshot.boatSafety} />
         ) : null}
+        {/* What the last crew said about this hull, above the check it was
+          written against, as the live page carries it. */}
+        <OfflineSnags view={view} />
         <OfflineChecklist view={view} controls={controls} />
 
         {/* **The desk, with no signal** (ADR
@@ -95,28 +98,7 @@ export function OfflineTripScreen({
           step toward a queue answering the second. */}
         <OfflineCounter view={view} controls={controls} />
 
-        {/* `max-sm:[&>*]:grow`, the rule `ShopPageHeader` gives its doors: on
-            a phone each wrapped row of checkpoints fills as one band, rather
-            than leaving "After dive 2" alone and short on a row of its own. */}
-        <nav
-          className="mt-6 flex flex-wrap items-center gap-3 pb-1 max-sm:[&>*]:grow"
-          aria-label={t("shared.offlineManifest.single.checkpointNavAria")}
-        >
-          {rollCallCheckpoints(manifest.trip.plannedDives).map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setCheckpoint(value)}
-              className={buttonClass({
-                variant: value === checkpoint ? "primary" : "secondary",
-                size: "boat",
-                className: "shrink-0",
-              })}
-            >
-              {rollCallCheckpointText(t, value)}
-            </button>
-          ))}
-        </nav>
+        <OfflineCheckpointNav view={view} controls={controls} />
 
         <OfflineRollCallSection view={view} controls={controls} />
 

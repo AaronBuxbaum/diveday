@@ -11,8 +11,11 @@
 // Does not modify any of the underlying check-*.mjs scripts; it only spawns them.
 
 import { spawn } from "node:child_process";
+import { appendFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { checkRepoRecord, checkRepoSummary } from "./repo-check-report.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -22,8 +25,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // within this many seconds instead of hanging the whole `pnpm check` — and everything that
 // shells out to it — forever with no diagnosis.
 //
-// None of them reads the network. `check-follow-ups.mjs`, the one that did (`gh issue list`), ran
-// here until 2026-10-07 and made the live tracker a property of every branch: one malformed
+// None of them reads the network. `check-follow-ups.mjs`, the one that does (it lists the live
+// tracker through `scripts/tracker.mjs`), ran here until 2026-10-07 and made the live tracker a property of every branch: one malformed
 // issue (#2036) turned every open pull request red. It now runs on a schedule
 // (.github/workflows/follow-ups.yml) and as `pnpm check:follow-ups`.
 const CHECK_TIMEOUT_MS = 90_000;
@@ -36,6 +39,7 @@ const checks = [
   ["tinted-ink", "check-tinted-ink.mjs"],
   ["type-ramp", "check-type-ramp.mjs"],
   ["page-length", "check-page-length.mjs"],
+  ["form-controls", "check-form-controls.mjs"],
   ["voice", "check-voice.mjs"],
   ["logical-properties", "check-logical-properties.mjs"],
   ["db-concurrency", "check-db-concurrency.mjs"],
@@ -48,6 +52,7 @@ const checks = [
   ["context-budget", "check-context-budget.mjs"],
   ["e2e-fixtures", "check-e2e-fixtures.mjs"],
   ["e2e-hygiene", "check-e2e-hygiene.mjs"],
+  ["critical-journeys", "check-critical-journeys.mjs"],
   ["route-coverage", "check-route-coverage.mjs"],
   ["loading-skeletons", "check-loading-skeletons.mjs"],
   ["uuid-segments", "check-uuid-segments.mjs"],
@@ -55,6 +60,7 @@ const checks = [
   ["scroll-preservation", "check-scroll-preservation.mjs"],
   ["exit-curves", "check-exit-curves.mjs"],
   ["shop-word", "check-shop-word.mjs"],
+  ["seat-word", "check-seat-word.mjs"],
   ["capability-runbook", "check-capability-runbook.mjs"],
   ["rental-fit-caps", "check-rental-fit-caps.mjs"],
   ["icu-plurals", "check-icu-plurals.mjs"],
@@ -63,6 +69,7 @@ const checks = [
   ["event-scope", "check-event-scope.mjs"],
   ["slug-actions", "check-slug-actions.mjs"],
   ["env-reads", "check-env-reads.mjs"],
+  ["action-pins", "check-action-pins.mjs"],
   ["trip-revision", "check-trip-revision.mjs"],
   ["time-id-order", "check-time-id-order.mjs"],
   ["departure-buffer", "check-departure-buffer.mjs"],
@@ -78,8 +85,15 @@ const checks = [
   ["critical-text", "check-critical-text.mjs"],
   ["ci-change-detection", "check-ci-change-detection.mjs"],
   ["node-version", "check-node-version.mjs"],
+  ["runner-image", "check-runner-image.mjs"],
   ["closing-keywords", "check-closing-keywords.mjs"],
   ["sentry-imports", "check-sentry-imports.mjs"],
+  ["tenant-gates", "check-tenant-gates.mjs"],
+  ["instant", "check-instant.mjs"],
+  ["shop-reads", "check-shop-reads.mjs"],
+  ["redirect-slugs", "check-redirect-slugs.mjs"],
+  ["capability-refusals", "check-capability-refusals.mjs"],
+  ["intl-providers", "check-intl-providers.mjs"],
 ];
 
 function runCheck(label, scriptFile) {
@@ -140,6 +154,19 @@ for (const result of results) {
     if (result.stdout) console.error(result.stdout);
     if (result.stderr) console.error(result.stderr);
   }
+}
+
+// On CI: the failing guards by name in the job summary, and every guard's result as JSON for
+// the `check-repo-results` artifact (`scripts/repo-check-report.mjs`).
+if (process.env.GITHUB_STEP_SUMMARY) {
+  appendFileSync(process.env.GITHUB_STEP_SUMMARY, checkRepoSummary(results));
+}
+if (process.env.CHECK_REPO_RESULTS) {
+  const record = checkRepoRecord(results, {
+    sha: process.env.GITHUB_SHA ?? "",
+    ref: process.env.GITHUB_REF ?? "",
+  });
+  writeFileSync(process.env.CHECK_REPO_RESULTS, `${JSON.stringify(record, null, 2)}\n`);
 }
 
 if (anyFailed) {

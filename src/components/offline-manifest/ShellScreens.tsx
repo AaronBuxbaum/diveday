@@ -4,9 +4,35 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages";
 
 /**
- * Before the store has been read — every server render included — the shell
- * says what is actually true and nothing more (`useSavedManifest`'s
- * `storeRead`).
+ * The page's shape with no words in it: the eyebrow and title the view opens
+ * with, then a few hairline rows where the saved copies land. In `boat-mode`
+ * like the view, so the page does not change colour when the real one
+ * arrives. It is the segment's `loading.tsx`, the static shell's `<Suspense>`
+ * fallback, and what the view draws until it knows the device's language
+ * (`OfflineManifestView`).
+ */
+export function OfflineManifestSkeleton() {
+  return (
+    <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+      <div className="animate-pulse">
+        <div className="h-4 w-32 rounded bg-surface-sunken" />
+        <div className="mt-2 h-9 w-64 max-w-full rounded bg-surface-sunken" />
+        <div className="mt-8">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="border-t border-border py-4 last:border-b">
+              <div className="h-5 w-56 max-w-full rounded bg-surface-sunken" />
+              <div className="mt-2 h-4 w-40 max-w-full rounded bg-surface-sunken" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </main>
+  );
+}
+
+/**
+ * Before the store has been read, the shell says what is actually true and
+ * nothing more (`useSavedManifest`'s `storeRead`).
  */
 export function OfflineOpeningScreen({
   t,
@@ -31,18 +57,22 @@ export function OfflineOpeningScreen({
 }
 
 /**
- * A `?trip=` with no saved copy: never saved here, or taken away by the
- * cross-shop purge, which this names rather than claiming nothing was saved.
+ * A `?trip=` with no saved copy on screen: never saved here, taken away by the
+ * cross-shop purge, or held but unreadable. The last two are named rather than
+ * claiming nothing was saved.
  */
 export function OfflineNoSavedTrip({
   t,
   message,
   removedForOtherShop,
+  readFailed,
   discardNotice,
 }: {
   t: OfflineManifestTranslator;
   message: string;
   removedForOtherShop: boolean | null;
+  /** The store read threw (#2637): a copy may be there and failed to open. */
+  readFailed: boolean;
   discardNotice: ReactNode;
 }) {
   // "Nothing saved on this phone yet" is a claim about this device having
@@ -53,6 +83,12 @@ export function OfflineNoSavedTrip({
   // to someone else's shop. `removedForOtherShop === null` means nothing was
   // lost at all: a `?trip=` this device simply never saved, which is exactly
   // what the plain empty state is for.
+  //
+  // A read that threw is the same mistake the other way round (#2637): the
+  // copy may be on this phone and only failed to open, and a captain who reads
+  // "nothing saved" stops looking for it. So it gets its own heading and the
+  // two things worth trying, and the error line beneath stays.
+  const unreadable = readFailed && !removedForOtherShop;
   return (
     <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
       {discardNotice}
@@ -61,11 +97,13 @@ export function OfflineNoSavedTrip({
         title={
           removedForOtherShop
             ? t("shared.offlineManifest.single.removedOtherShopHeading")
-            : t("shared.offlineManifest.single.emptyHeading")
+            : unreadable
+              ? t("shared.offlineManifest.single.readFailedHeading")
+              : t("shared.offlineManifest.single.emptyHeading")
         }
         meta={
           <p className="text-muted" role="status">
-            {removedForOtherShop === null
+            {removedForOtherShop === null || unreadable
               ? message
               : removedForOtherShop
                 ? t("shared.offlineManifest.single.removedOtherShopMessage")
@@ -83,7 +121,9 @@ export function OfflineNoSavedTrip({
         <p className="mx-auto mt-4 max-w-md text-muted">
           {removedForOtherShop
             ? t("shared.offlineManifest.single.removedOtherShopHint")
-            : t("shared.offlineManifest.single.emptyHint")}
+            : unreadable
+              ? t("shared.offlineManifest.single.readFailedHint")
+              : t("shared.offlineManifest.single.emptyHint")}
         </p>
       </div>
     </main>

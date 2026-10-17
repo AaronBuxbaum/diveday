@@ -5,7 +5,15 @@ import { fileScopedShopContext } from "@/test/db";
 import { createBoat, deleteBoat } from "./boats";
 import type { AppDb } from "./client";
 import { listDiveSites } from "./dive-sites";
-import { bookings, people, rollCallEvents, shops, userAccounts } from "./schema";
+import {
+  bookings,
+  people,
+  rollCallCrewEvents,
+  rollCallEvents,
+  shops,
+  trips,
+  userAccounts,
+} from "./schema";
 import { listTripChangeEvents } from "./trip-change-events";
 import {
   createTrip,
@@ -105,6 +113,39 @@ describe("trip records (in-memory PGlite)", () => {
       priceCents: null,
     });
     expect((await getTripWithBooked(db, shop.id, priced.id))?.priceCents).toBeNull();
+  });
+
+  // Issue #2206: the day's wetsuit, set, left alone by a patch that does not
+  // carry it, cleared, and refused by the database outside 1–10 mm.
+  it("stores the day's wetsuit thickness, leaves it on a patch that does not say, and clears it", async () => {
+    const { db, shop } = ctx;
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "February wreck — 7 mm day",
+      startsAt: new Date("2030-02-03T13:00:00.000Z"),
+      endsAt: new Date("2030-02-03T17:00:00.000Z"),
+      capacity: 10,
+    });
+    if (!trip) throw new Error("trip not created");
+    expect(trip.wetsuitThicknessMm).toBeNull();
+    const base = {
+      title: trip.title,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      capacity: trip.capacity,
+      plannedDives: trip.plannedDives,
+    };
+    await updateTrip(db, shop.id, trip.id, { ...base, wetsuitThicknessMm: 7 });
+    expect((await getTripWithBooked(db, shop.id, trip.id))?.wetsuitThicknessMm).toBe(7);
+    await updateTrip(db, shop.id, trip.id, base);
+    expect((await getTripWithBooked(db, shop.id, trip.id))?.wetsuitThicknessMm).toBe(7);
+    await updateTrip(db, shop.id, trip.id, { ...base, wetsuitThicknessMm: null });
+    expect((await getTripWithBooked(db, shop.id, trip.id))?.wetsuitThicknessMm).toBeNull();
+    await expect(
+      db.transaction((tx) =>
+        tx.update(trips).set({ wetsuitThicknessMm: 11 }).where(eq(trips.id, trip.id)),
+      ),
+    ).rejects.toThrow();
   });
 
   it("stores an optional meeting point and lets staff clear it back to null (issue #704)", async () => {
@@ -329,6 +370,61 @@ describe("trip records (in-memory PGlite)", () => {
       endsAt: reef.endsAt,
       capacity: reef.capacity,
       plannedDives: 2,
+    });
+    expect(accepted.ok).toBe(true);
+  });
+
+  it("refuses to drop planned dives below a checkpoint with only a crew roll call recorded", async () => {
+    // Batch 6, item 5. The floor used to read the diver table alone, so a
+    // crew member counted after dive 2 — the divemaster who went back down —
+    // could be orphaned by lowering the plan to one dive.
+    const { db, shop } = ctx;
+    const reef = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (t) => t.title === "Two-Tank Reef — Molasses & French",
+    );
+    if (!reef) throw new Error("expected seeded reef trip missing");
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("expected seeded staff missing");
+    await db.insert(rollCallCrewEvents).values({
+      shopId: shop.id,
+      tripId: reef.id,
+      personId: staff.person.id,
+      recordedByPersonId: staff.person.id,
+      status: "not_boarded",
+      checkpoint: "after_dive_2",
+      occurredAt: nowDate(),
+    });
+
+    const refused = await updateTrip(db, shop.id, reef.id, {
+      title: reef.title,
+      startsAt: reef.startsAt,
+      endsAt: reef.endsAt,
+      capacity: reef.capacity,
+      plannedDives: 1,
+    });
+    expect(refused).toEqual({
+      ok: false,
+      reason: "planned_dives_below_history",
+      detail: { recordedDiveCount: 2 },
+    });
+    expect((await getTripWithBooked(db, shop.id, reef.id))?.plannedDives).toBe(reef.plannedDives);
+
+    // A crew result that was undone is no history: the floor lifts.
+    await db.insert(rollCallCrewEvents).values({
+      shopId: shop.id,
+      tripId: reef.id,
+      personId: staff.person.id,
+      recordedByPersonId: staff.person.id,
+      status: "cleared",
+      checkpoint: "after_dive_2",
+      occurredAt: new Date(nowDate().getTime() + 1000),
+    });
+    const accepted = await updateTrip(db, shop.id, reef.id, {
+      title: reef.title,
+      startsAt: reef.startsAt,
+      endsAt: reef.endsAt,
+      capacity: reef.capacity,
+      plannedDives: 1,
     });
     expect(accepted.ok).toBe(true);
   });

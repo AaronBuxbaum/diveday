@@ -28,7 +28,7 @@ describe("stripePayoutSummaryLookup", () => {
       }),
     );
     const lookup = stripePayoutSummaryLookup({ secretKey: "sk_test_x" }, fetchImpl as never);
-    expect(await lookup.summarize("acct_1", "po_1")).toEqual({
+    expect(await lookup.summarize("acct_1", "po_1", { automatic: true })).toEqual({
       status: "summarized",
       coveredFrom: new Date(SEP_27 * 1000),
       coveredTo: new Date(OCT_1 * 1000),
@@ -56,7 +56,7 @@ describe("stripePayoutSummaryLookup", () => {
         }),
       );
     const lookup = stripePayoutSummaryLookup({ secretKey: "sk_test_x" }, fetchImpl);
-    expect(await lookup.summarize("acct_1", "po_1")).toMatchObject({
+    expect(await lookup.summarize("acct_1", "po_1", { automatic: true })).toMatchObject({
       status: "summarized",
       coveredFrom: new Date(SEP_27 * 1000),
       feeCents: 300,
@@ -74,7 +74,9 @@ describe("stripePayoutSummaryLookup", () => {
       }),
     );
     const lookup = stripePayoutSummaryLookup({ secretKey: "sk_test_x" }, fetchImpl as never);
-    expect(await lookup.summarize("acct_1", "po_1")).toEqual({ status: "unavailable" });
+    expect(await lookup.summarize("acct_1", "po_1", { automatic: true })).toEqual({
+      status: "unavailable",
+    });
     expect(fetchImpl).toHaveBeenCalledTimes(MAX_PAYOUT_SUMMARY_PAGES);
   });
 
@@ -86,12 +88,50 @@ describe("stripePayoutSummaryLookup", () => {
       }),
     );
     const lookup = stripePayoutSummaryLookup({ secretKey: "sk_test_x" }, fetchImpl as never);
-    expect(await lookup.summarize("acct_1", "po_1")).toEqual({
+    expect(await lookup.summarize("acct_1", "po_1", { automatic: true })).toEqual({
       status: "summarized",
       coveredFrom: null,
       coveredTo: null,
       feeCents: 0,
     });
+  });
+
+  it("reads a manual payout's own balance transaction for its fee, with no span", async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({
+        has_more: false,
+        data: [{ id: "txn_po", type: "payout", created: OCT_3, fee: 150 }],
+      }),
+    );
+    const lookup = stripePayoutSummaryLookup({ secretKey: "sk_test_x" }, fetchImpl as never);
+    expect(await lookup.summarize("acct_1", "po_1", { automatic: false })).toEqual({
+      status: "summarized",
+      coveredFrom: null,
+      coveredTo: null,
+      feeCents: 150,
+    });
+    const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://api.stripe.com/v1/balance_transactions?source=po_1&limit=100");
+    expect(init.headers).toMatchObject({ "Stripe-Account": "acct_1" });
+  });
+
+  it("records no fee for a manual payout whose balance transaction Stripe does not show", async () => {
+    const empty = vi.fn(async () => jsonResponse({ has_more: false, data: [] }));
+    expect(
+      await stripePayoutSummaryLookup({ secretKey: "sk_test_x" }, empty as never).summarize(
+        "acct_1",
+        "po_1",
+        { automatic: false },
+      ),
+    ).toEqual({ status: "unavailable" });
+    const busy = vi.fn(async () => jsonResponse({ error: {} }, 503));
+    expect(
+      await stripePayoutSummaryLookup({ secretKey: "sk_test_x" }, busy as never).summarize(
+        "acct_1",
+        "po_1",
+        { automatic: false },
+      ),
+    ).toEqual({ status: "failed" });
   });
 
   it.each([
@@ -102,17 +142,23 @@ describe("stripePayoutSummaryLookup", () => {
   ] as const)("a %i answers %s", async (httpStatus, expected) => {
     const fetchImpl = vi.fn(async () => jsonResponse({ error: {} }, httpStatus));
     const lookup = stripePayoutSummaryLookup({ secretKey: "sk_test_x" }, fetchImpl as never);
-    expect(await lookup.summarize("acct_1", "po_1")).toEqual({ status: expected });
+    expect(await lookup.summarize("acct_1", "po_1", { automatic: true })).toEqual({
+      status: expected,
+    });
   });
 
   it("a thrown request or an unreadable body is a retry, not a summary", async () => {
     const thrown = stripePayoutSummaryLookup({ secretKey: "sk_test_x" }, (async () => {
       throw new TypeError("network");
     }) as never);
-    expect(await thrown.summarize("acct_1", "po_1")).toEqual({ status: "failed" });
+    expect(await thrown.summarize("acct_1", "po_1", { automatic: true })).toEqual({
+      status: "failed",
+    });
     const garbledFetch = vi.fn(async () => jsonResponse({ nope: true }));
     const garbled = stripePayoutSummaryLookup({ secretKey: "sk_test_x" }, garbledFetch as never);
-    expect(await garbled.summarize("acct_1", "po_1")).toEqual({ status: "failed" });
+    expect(await garbled.summarize("acct_1", "po_1", { automatic: true })).toEqual({
+      status: "failed",
+    });
   });
 });
 
@@ -120,12 +166,14 @@ describe("payoutSummaryLookupFromEnvironment", () => {
   it("asks nothing without a key, or with a key of the other mode", async () => {
     const fetchImpl = vi.fn();
     expect(
-      await payoutSummaryLookupFromEnvironment({}, fetchImpl).summarize("acct_1", "po_1"),
+      await payoutSummaryLookupFromEnvironment({}, fetchImpl).summarize("acct_1", "po_1", {
+        automatic: true,
+      }),
     ).toEqual({ status: "unavailable" });
     expect(
       await payoutSummaryLookupFromEnvironment({ STRIPE_SECRET_KEY: "sk_live_abc" }, fetchImpl, {
         livemode: false,
-      }).summarize("acct_1", "po_1"),
+      }).summarize("acct_1", "po_1", { automatic: true }),
     ).toEqual({ status: "unavailable" });
     expect(fetchImpl).not.toHaveBeenCalled();
   });

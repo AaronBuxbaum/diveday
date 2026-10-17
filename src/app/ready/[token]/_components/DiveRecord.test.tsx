@@ -26,6 +26,7 @@ function RecordOf({ context }: { context: AfterStateProps }) {
       visitCount={context.visitCount}
       siteMark={context.siteMark}
       postcard={context.postcard}
+      course={context.course}
     />
   );
 }
@@ -224,5 +225,43 @@ describe("the dive-day number", () => {
     render(<RecordOf context={props({ visitCount: 10 })} />);
     expect(screen.getByTestId(AFTER_STATE_TEST_IDS.stamp)).toBeInTheDocument();
     expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.visitLine)).toBeNull();
+  });
+});
+
+/**
+ * **The certifying session says so on the record** (fourth review, item 55),
+ * and only from the card the shop issued from it: no card, no line.
+ */
+describe("the certified line", () => {
+  it("names the level the shop recorded from this session", () => {
+    const context = props();
+    render(
+      <RecordOf
+        context={{
+          ...context,
+          course: {
+            title: "Open Water Diver",
+            nextStep: null,
+            certification: { level: "open_water", issuedAt: new Date(0) },
+          },
+        }}
+      />,
+    );
+    const line = screen.getByTestId(AFTER_STATE_TEST_IDS.certified);
+    expect(line.textContent).toContain("recap.certifiedLabel");
+    expect(line.textContent).toContain("course.certificationLevels.openWater");
+  });
+
+  it("says nothing about a session that issued no card", () => {
+    const context = props();
+    render(
+      <RecordOf
+        context={{
+          ...context,
+          course: { title: "Open Water Diver", nextStep: null, certification: null },
+        }}
+      />,
+    );
+    expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.certified)).toBeNull();
   });
 });

@@ -32,9 +32,11 @@ test.describe("as captain", () => {
     expect(stamps.length).toBeGreaterThan(0);
     expect(stamps).toEqual([...stamps].sort());
 
-    // A captain's station rows withhold clerical and commercial work, and the
-    // withheld line keeps its place under the summary sentence.
-    await expect(page.getByText(/jobs? for the front desk/)).toBeVisible();
+    // A captain's station rows withhold clerical and commercial work, and say
+    // nothing about how much (third review, item 5): the one desk number on
+    // the page is the fold of rows the captain can open.
+    await expect(page.getByText(/jobs? for the front desk/)).toHaveCount(0);
+    await expect(page.getByText(/more for other boats and the desk/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Send waiver" })).toHaveCount(0);
   });
 });
@@ -47,7 +49,7 @@ test.describe("as divemaster", () => {
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis");
     await expect(page.getByText("You’re crewing", { exact: false }).first()).toBeVisible();
-    await expect(page.getByText(/jobs? for the front desk/)).toBeVisible();
+    await expect(page.getByText(/jobs? for the front desk/)).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Send waiver" })).toHaveCount(0);
   });
 });
@@ -69,14 +71,13 @@ test.describe("as instructor", () => {
 test.describe("as owner", () => {
   signedInAs("owner");
 
-  test("an owner keeps the whole-shop Today with no lens and no withheld notice", {
+  test("an owner keeps the whole-shop Today with no lens", {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(STAFF_DAY_HEADING);
     await expect(page.getByRole("heading", { name: "Your sessions" })).toHaveCount(0);
     await expect(page.getByText("You’re crewing")).toHaveCount(0);
-    await expect(page.getByText(/jobs? for the front desk/)).toHaveCount(0);
     // And no view control, on any lens: the two views the switch chose between
     // are gone, and the clock decides the order.
     await expect(page.getByRole("navigation", { name: "How to read the queue" })).toHaveCount(0);

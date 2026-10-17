@@ -53,6 +53,15 @@ import { readSessionCookieCache } from "@/lib/session-cookie-cache";
 
 const STAFF_PREFIX = "/shop";
 
+/**
+ * `/shop/<slug>/offline-manifest` — the staff-shaped address of a page that is
+ * not under the staff shell (#2433). The saved manifests live at
+ * `/offline-manifest`, with no shop and no session, because they have to open
+ * with no network; a staffer who types the shape every other staff page has
+ * is sent there rather than to a staff 404.
+ */
+const STAFF_SHAPED_OFFLINE_MANIFEST_PATH = /^\/shop\/[^/]+\/offline-manifest\/?$/;
+
 /** `/shop/<slug>` exactly — the shop home, and nothing below it. */
 const SHOP_HOME_PATH = /^\/shop\/[^/]+\/?$/;
 
@@ -104,6 +113,16 @@ type CachedSessionSnapshot = {
  */
 async function authGateResponse(req: NextRequest): Promise<Response | undefined> {
   const { pathname } = req.nextUrl;
+  // **Before the auth gate, unlike the retired-query strip below**: the page
+  // this lands on is public and reads only what this device saved, so a
+  // signed-out staffer belongs there too, not at sign-in. The slug is not
+  // read, so the hop says nothing about which shops exist. Absolute and built
+  // from `req.nextUrl`, as every redirect here is (see the strip below).
+  if (STAFF_SHAPED_OFFLINE_MANIFEST_PATH.test(pathname)) {
+    const url = new URL(req.nextUrl);
+    url.pathname = "/offline-manifest";
+    return NextResponse.redirect(url, 308);
+  }
   const hasSession = getSessionCookie(req) !== null;
   // The same reader the server-side session read asks whether the cache is
   // warm (`src/lib/session-cookie-cache.ts`), so the two cannot disagree.

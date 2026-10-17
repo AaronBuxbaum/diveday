@@ -1,15 +1,18 @@
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import type { AppDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import type { StaffMember } from "@/db/staff-accounts";
 import { STAFF_MESSAGES } from "@/i18n/staff-messages";
 import type { DiveDaySession } from "@/lib/auth";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { findElements } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 // Same mocking shape as ../embed/page.test.tsx: the page is invoked directly,
 // outside Next's request scope, so the three things that only exist inside one
@@ -83,8 +86,8 @@ function rowTree(row: ReactElement<StaffRowProps>, member: StaffMember = row.pro
   return render({ ...row.props, member });
 }
 
-async function renderTeam() {
-  const db: AppDb = await seededTestDb();
+async function renderTeam(searchParams: Record<string, string> = {}) {
+  const db: AppDb = ctx.db;
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error("demo shop missing");
   const personId = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
@@ -101,7 +104,7 @@ async function renderTeam() {
   });
   return TeamSettingsPage({
     params: Promise.resolve({ shopSlug: "blue-mantis" }),
-    searchParams: Promise.resolve({}),
+    searchParams: Promise.resolve(searchParams),
   });
 }
 
@@ -120,6 +123,24 @@ describe("the page's section headings", () => {
     ).filter((h2) => h2.props.children === heading);
     expect(headings).toHaveLength(1);
     expect(headings[0]?.props.className).toBe(LEAD_TITLE_CLASS);
+  });
+});
+
+/**
+ * Both invite sends redirect with `send-limit` past the hourly cap (#2491).
+ * The resend comes from a roster row and the invite from the form, so the
+ * refusal is the page's banner: the one place both land in view.
+ */
+describe("the send-limit refusal", () => {
+  it("shows a banner saying nothing went out", async () => {
+    const text =
+      "You have sent a lot of invites this hour. Nothing went out; try again in a little while.";
+    const banners = findElements<{ tone?: string; children?: unknown }>(
+      await renderTeam({ notice: "send-limit" }),
+      StaffNoticeBanner,
+    );
+    expect(banners.map((banner) => banner.props.children)).toEqual([text]);
+    expect(banners[0]?.props.tone).toBe("warning");
   });
 });
 

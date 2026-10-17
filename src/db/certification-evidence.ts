@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { TripAdmissionEvidence } from "@/lib/trip-admission";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
@@ -65,4 +65,66 @@ export async function readCertificationEvidence(
     specialtyCertifications: specialtyRows,
     nitroxCertifications: nitroxRows,
   };
+}
+
+/**
+ * **Many divers' live cert evidence at this shop, in three statements**: the
+ * same three tables and the same `deleted_at` filters as
+ * {@link readCertificationEvidence}, over a list of people, keyed by person.
+ * A person with no rows gets empty lists, which is what the one-person read
+ * returns for them. For a surface that weighs a list of candidates against
+ * one departure (the invite suggestions), so a list of nine costs what a list
+ * of one does instead of three reads each, one diver after another.
+ */
+export async function readCertificationEvidenceFor(
+  tx: DbExecutor,
+  shopId: string,
+  personIds: readonly string[],
+): Promise<Map<string, TripAdmissionEvidence>> {
+  const byPerson = new Map<string, TripAdmissionEvidence>();
+  if (personIds.length === 0) return byPerson;
+  const ids = [...new Set(personIds)];
+  const [certificationRows, specialtyRows, nitroxRows] = await queryAll(tx, [
+    () =>
+      tx
+        .select()
+        .from(certifications)
+        .where(
+          and(
+            eq(certifications.shopId, shopId),
+            inArray(certifications.personId, ids),
+            isNull(certifications.deletedAt),
+          ),
+        ),
+    () =>
+      tx
+        .select()
+        .from(specialtyCertifications)
+        .where(
+          and(
+            eq(specialtyCertifications.shopId, shopId),
+            inArray(specialtyCertifications.personId, ids),
+            isNull(specialtyCertifications.deletedAt),
+          ),
+        ),
+    () =>
+      tx
+        .select()
+        .from(nitroxCertifications)
+        .where(
+          and(
+            eq(nitroxCertifications.shopId, shopId),
+            inArray(nitroxCertifications.personId, ids),
+            isNull(nitroxCertifications.deletedAt),
+          ),
+        ),
+  ]);
+  for (const id of ids) {
+    byPerson.set(id, {
+      certifications: certificationRows.filter((row) => row.personId === id),
+      specialtyCertifications: specialtyRows.filter((row) => row.personId === id),
+      nitroxCertifications: nitroxRows.filter((row) => row.personId === id),
+    });
+  }
+  return byPerson;
 }

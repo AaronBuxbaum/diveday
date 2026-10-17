@@ -1,4 +1,4 @@
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
@@ -49,6 +49,8 @@ export function SummaryPanel({
   notBackAboardDivers,
   notBackAboardCrew,
   blockedAtDock = { undecided: 0, aboard: 0 },
+  overCertificate = null,
+  overTotalPersons = null,
   t,
 }: {
   /** Scopes this section's element ids to one departure — see `scopedId`. */
@@ -94,6 +96,15 @@ export function SummaryPanel({
    * Read at the departure checkpoint only.
    */
   blockedAtDock?: { undecided: number; aboard: number };
+  /**
+   * Passengers counted aboard past the boat's certificate
+   * (`passengersAboveCertificateAboard`, src/lib/boat-safety.ts), or null. The
+   * head count wears it; the seats line below stands down while it does,
+   * because the certificate is the lower of the two numbers and the graver.
+   */
+  overCertificate?: { aboard: number; limit: number } | null;
+  /** Everyone aboard, crew included, past total persons (dive-domain review D2). */
+  overTotalPersons?: { aboard: number; limit: number } | null;
   t: StaffTranslator;
 }) {
   // Who among the named crew is still unaccounted for at this checkpoint. Read
@@ -285,6 +296,8 @@ export function SummaryPanel({
             blockedAboard={isDeparture ? blockedAtDock.aboard : 0}
             t={t}
             people={summary.byType ? hasNonDivers(summary.byType) : false}
+            overCertificate={overCertificate}
+            overTotalPersons={overTotalPersons}
           />
         </div>
         {/* Who the people are, when they are not all divers (ADR
@@ -363,7 +376,7 @@ export function SummaryPanel({
             a captain scrolling the roster must not be able to push it off the
             top of the screen. It counts divers the crew have recorded aboard,
             never roster rows, so it can only ever be about the boat. */}
-        {summary.overCapacity > 0 ? (
+        {summary.overCapacity > 0 && !overCertificate ? (
           <p className="mt-2 text-base font-bold text-danger" role="status">
             {t("manifest.overCapacityLine", { count: summary.overCapacity })}
           </p>

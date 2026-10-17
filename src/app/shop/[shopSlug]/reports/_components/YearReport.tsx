@@ -1,9 +1,12 @@
 import { EmptyState } from "@/components/EmptyState";
-import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
+import { tapTargetLinkClass } from "@/components/ui/button";
+import { GroupLabel } from "@/components/ui/group-label";
+import { LedgerRow } from "@/components/ui/ledger";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { formatMonthDay, monthNames, shortMonthNames } from "@/lib/format";
+import { formatReportMoney, type MonthlyReport } from "@/lib/reporting";
 import type { ShopYearCell, ShopYearSummary } from "@/lib/shop-year";
 import { shopPath } from "@/lib/staff-notices";
 import { type MonthFigure, MonthFigures } from "./MonthFigures";
@@ -27,13 +30,36 @@ import { YearStrip } from "./YearStrip";
  */
 const SITES_SHOWN = 5;
 
+/**
+ * **The year's money** (fourth UX review, item 25): net revenue, tax and tips
+ * for the departures that have sailed this year, the figures an owner pages
+ * ten months to add in January. Already formatted; the CSV is twelve month
+ * rows of the same.
+ */
+export type YearMoney = {
+  report: Pick<MonthlyReport, "revenueCents" | "taxCents" | "tipsCents" | "tipCount">;
+  currency: string;
+  csvHref: string;
+};
+
 export function YearReport({
   year,
+  lastYear,
+  lines = [],
+  money,
   locale,
   shopSlug,
   t,
 }: {
   year: ShopYearSummary;
+  /**
+   * Last year's figure under this year's, already worded ("291 by this date
+   * in 2025"; fifth loop, item 25). Absent until the shop has a second season.
+   */
+  lastYear?: { divers?: string; boats?: string };
+  /** Quiet lines under the figures: the weather days, the cards issued here. */
+  lines?: readonly string[];
+  money?: YearMoney;
   locale: string;
   shopSlug: string;
   t: StaffTranslator;
@@ -43,7 +69,10 @@ export function YearReport({
   }
 
   const months = monthNames(locale);
-  const monthMarkers = monthMarkersFor(year.strip, shortMonthNames(locale));
+  const monthMarkers = monthMarkersFor(year.strip, shortMonthNames(locale)).map((marker) => ({
+    ...marker,
+    href: `${shopPath(shopSlug, "reports")}?month=${marker.key}`,
+  }));
   // The day without its year: the page's own header already names the year,
   // and "Jun 22, 2026" inside a sentence about 2026 says it twice.
   const busiestDayLabel = year.busiestDay
@@ -67,6 +96,7 @@ export function YearReport({
       label: t("reports.year.figures.diversLabel"),
       value: String(year.divers),
       detail: t("reports.year.figures.diversDetail", { count: year.daysAtSea }),
+      comparison: lastYear?.divers,
     },
     {
       key: "boats",
@@ -83,6 +113,7 @@ export function YearReport({
               )
               .join(" · ")
           : undefined,
+      comparison: lastYear?.boats,
     },
     {
       key: "busiest",
@@ -128,6 +159,14 @@ export function YearReport({
         {quietestMonthLabel ? ` ${t("reports.year.quietest", { month: quietestMonthLabel })}` : ""}
       </p>
 
+      {lines.length > 0 ? (
+        <ul data-year-lines="" className="mt-3 space-y-1 text-sm text-muted tabular-nums">
+          {lines.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      ) : null}
+
       {/* **One rhythm between the sections, and the stack owns it.** The strip
           used to take `mt-8`, the figures nothing, and the sites
           `mt-10`, so the pixel probe measured 0 then 40px between them and the
@@ -140,6 +179,7 @@ export function YearReport({
             cells={year.strip}
             months={monthMarkers}
             copy={{
+              monthsLabel: t("reports.chooseMonth"),
               day: (cell: ShopYearCell) =>
                 cell.boats > 0
                   ? t("reports.year.stripDay", {
@@ -156,6 +196,42 @@ export function YearReport({
         </section>
 
         <MonthFigures label={t("reports.year.numbersLabel")} figures={figures} columns={4} />
+
+        {money ? (
+          <div>
+            <MonthFigures
+              label={t("reports.year.money.label")}
+              columns={3}
+              figures={[
+                {
+                  key: "revenue",
+                  label: t("reports.metrics.revenueLabel"),
+                  value: formatReportMoney(money.report.revenueCents, money.currency, locale),
+                  detail: t("reports.year.money.revenueDetail"),
+                },
+                {
+                  key: "tax",
+                  label: t("reports.year.money.taxLabel"),
+                  value: formatReportMoney(money.report.taxCents, money.currency, locale),
+                },
+                {
+                  key: "tips",
+                  label: t("reports.metrics.tipsLabel"),
+                  value: formatReportMoney(money.report.tipsCents, money.currency, locale),
+                  detail: t("reports.year.money.tipsDetail", { count: money.report.tipCount }),
+                },
+              ]}
+            />
+            <p className="mt-3 text-end text-sm">
+              <a
+                href={money.csvHref}
+                className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
+              >
+                {t("reports.year.money.downloadYear")}
+              </a>
+            </p>
+          </div>
+        ) : null}
 
         {shownSites.length > 0 ? (
           <section aria-labelledby="year-sites">

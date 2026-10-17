@@ -56,7 +56,9 @@ export type SiteFieldValues = {
   marineLife: string | null;
   marineLifeDescription: string | null;
   difficultyLevel: DiveSiteDifficulty | null;
+  snorkelSuitable: boolean | null;
   depthRange: string | null;
+  depthMinMeters: number | null;
   maxDepthMeters: number | null;
   expectedBottomTimeMinutes: number | null;
   currentNote: string | null;
@@ -388,6 +390,7 @@ export function SiteFields({
             description={parts.description}
             as={parts.grouped ? "fieldset" : "section"}
             lead={index === 0}
+            unsavedTag={t("shared.formDraft.unsavedSection")}
           >
             {parts.body}
           </EditorSection>

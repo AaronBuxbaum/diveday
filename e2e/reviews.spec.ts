@@ -1,15 +1,21 @@
 import type { Page } from "@playwright/test";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
+import { diverTranslator } from "../src/i18n/messages";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { signInAsOwner } from "./helpers";
+
+// Sentences come from the bundles by key, so a rewording does not break the walk.
+const diver = diverTranslator("en-US");
+const staff = staffTranslator("en-US");
 
 /**
  * The verified-review loop end to end (docs ADR 20260729-verified-diver-reviews):
  * a diver rates from their own recap link, staff moderate what carries words,
  * and only released reviews reach the public schedule.
  *
- * The staff half reads as a worklist: three groups, "Waiting on you" first, and
+ * The staff half reads as a worklist: three groups, "Needs you" first, and
  * the group header is the only place a review's state is written (ADR
  * 20260827-people-not-lists, decision 3). So "is this review published?" is
  * asked here as "which group is it in?" — the pill it used to wear is gone, and
@@ -81,9 +87,7 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
   await page.getByRole("radio", { name: "4 out of 5 stars" }).check();
   await page.getByLabel("Anything you’d tell another diver?").fill(comment);
   await page.getByRole("button", { name: "Leave my review" }).click();
-  await expect(
-    page.getByText("Thanks. The shop will read your words before they go up."),
-  ).toBeVisible();
+  await expect(page.getByText(diver("reviews.savedPending"))).toBeVisible();
 
   // Unmoderated words are not on the shop's public page.
   await page.goto("/s/blue-mantis");
@@ -94,11 +98,11 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
   const card = page.locator("li").filter({ hasText: comment }).filter({ visible: true });
   // The group says it is waiting; the row does not repeat it.
   await expect(
-    group(page, /^Waiting on you/)
+    group(page, /^Needs you/)
       .locator("li")
       .filter({ hasText: comment }),
   ).toHaveCount(1);
-  await expect(card.getByText("Waiting on you")).toHaveCount(0);
+  await expect(card.getByText("Needs you")).toHaveCount(0);
 
   // **Neither of these taps throws the staffer back to the top of the list.**
   //
@@ -139,7 +143,7 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
       .filter({ hasText: comment }),
   ).toHaveCount(1);
   await expect(
-    group(page, /^Waiting on you/)
+    group(page, /^Needs you/)
       .locator("li")
       .filter({ hasText: comment }),
   ).toHaveCount(0);
@@ -222,7 +226,7 @@ test.describe("as owner, reviews list", () => {
     // No filter to reach for: the worklist leads the page, so a staffer opening
     // Reviews is already looking at everything waiting on them.
     await page.goto("/shop/blue-mantis/reviews");
-    const waiting = group(page, /^Waiting on you/)
+    const waiting = group(page, /^Needs you/)
       .locator("li")
       .filter({ hasText: "A warm, patient crew and a brilliant final drift over the reef." })
       .filter({ visible: true });
@@ -279,7 +283,7 @@ test("a weekend's held reviews can be cleared in one pass, not one button at a t
   // waiting group *is* the selection, and its header carries the one act that
   // clears it (ADR 20260827-people-not-lists, decision 3). "Publish both" at
   // two, "Publish all N" above that.
-  const waitingGroup = group(page, /^Waiting on you/);
+  const waitingGroup = group(page, /^Needs you/);
   const waitingRows = waitingGroup.locator("li");
   await expect(waitingRows.first()).toBeVisible();
   const count = await waitingRows.count();
@@ -291,7 +295,7 @@ test("a weekend's held reviews can be cleared in one pass, not one button at a t
   });
   await clearAll.click();
 
-  const outcome = page.getByText(`${count} reviews published to your schedule page.`);
+  const outcome = page.getByText(staff("reviews.notice.publishedManyOther", { count }));
   await expect(outcome).toBeVisible();
   // Nothing is waiting any more, so the group and the act it carried are both
   // gone — which is exactly the case that used to swallow this sentence whole.
@@ -354,7 +358,7 @@ test.describe("as owner, the worklist leads", () => {
    */
   test("puts what is waiting above what is already published", async ({ page }) => {
     await page.goto("/shop/blue-mantis/reviews");
-    const waitingEl = await group(page, /^Waiting on you/).elementHandle();
+    const waitingEl = await group(page, /^Needs you/).elementHandle();
     const publishedEl = await group(page, /^Published/).elementHandle();
     const order = await page.evaluate(
       (nodes) => {
@@ -452,7 +456,7 @@ test("the public review count opens all reviews without trip names", async ({ pa
   await expect(heading).toHaveClass(/text-\[2\.5rem\]/);
   // Every star given, then the written ones (UX review 2026-10-10, item 17).
   await expect(page.getByText(/^\d+ ratings · \d+ reviews$/)).toHaveCount(1);
-  await expect(page.getByText("Read what divers who were on the boat said")).toHaveCount(0);
+  await expect(page.getByText(diver("reviews.allDescription"))).toHaveCount(0);
   await expect(page.getByText("Two-Tank Reef — Molasses & French")).toHaveCount(0);
   await expect(
     page.getByText("Vis was unreal and the crew found us a turtle on the second tank."),

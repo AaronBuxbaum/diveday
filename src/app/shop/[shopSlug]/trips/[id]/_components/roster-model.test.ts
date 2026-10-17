@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
 import {
   groupRoster,
   PAYMENT_STATUSES_ALL,
   PAYMENT_STATUSES_RECORDING_ONLY,
   type RosterArrival,
   rosterPaymentStatusCopy,
+  seatMoveForRow,
   waiverControls,
 } from "./roster-model";
 import type { ReadinessByBooking, RosterEntry, WaiverByBooking } from "./types";
@@ -185,8 +187,15 @@ describe("groupRoster", () => {
     dock: Record<string, "boarded" | "not_boarded">,
     afterDive: string[] = [],
     rollCallTaken = Object.keys(dock).length > 0,
+    unaccounted: string[] = [],
   ) {
-    return { dock: new Map(Object.entries(dock)), afterDive: new Set(afterDive), rollCallTaken };
+    return {
+      dock: new Map(Object.entries(dock)),
+      afterDive: new Set(afterDive),
+      rollCallTaken,
+      unaccounted: new Set(unaccounted),
+      countedAboardBlocked: new Map<string, CountedAboardBlocked>(),
+    };
   }
 
   function recordGroupsFor(seats: RosterEntry[], record: ReturnType<typeof recordOf>) {
@@ -229,6 +238,47 @@ describe("groupRoster", () => {
     expect(ids(groups.sailed)).toEqual(["aboard", "pickedUp", "chase"]);
     expect(groups.didNotSail).toEqual([]);
     expect(groups.uncounted).toEqual([]);
+  });
+
+  it("in the record, a seat said missing and not counted back is its own group, ahead of Sailed", () => {
+    const groups = recordGroupsFor(
+      [seat("aboard"), seat("missing"), seat("ashore")],
+      // `missing` boarded at the dock and has a standing after-dive result
+      // (the "not back" word itself), so only `unaccounted` keeps it out of Sailed.
+      recordOf(
+        { aboard: "boarded", missing: "boarded", ashore: "not_boarded" },
+        ["missing"],
+        true,
+        ["missing"],
+      ),
+    );
+    expect(ids(groups.unaccounted)).toEqual(["missing"]);
+    expect(ids(groups.sailed)).toEqual(["aboard"]);
+    expect(ids(groups.didNotSail)).toEqual(["ashore"]);
+  });
+
+  it("in the record, says once how many who sailed were counted aboard while blocked", () => {
+    const record = {
+      ...recordOf({ a: "boarded", b: "boarded", c: "not_boarded" }, ["a"]),
+      countedAboardBlocked: new Map<string, CountedAboardBlocked>([
+        ["a", { checkpoint: "after_dive_1", blockers: [{ code: "certification_missing" }] }],
+        // Not a sailed seat: never counted in the sailed band's fact.
+        ["c", { checkpoint: "after_dive_1", blockers: [{ code: "certification_missing" }] }],
+      ]),
+    };
+    const groups = recordGroupsFor([seat("a"), seat("b"), seat("c")], record);
+    expect(ids(groups.sailed)).toEqual(["a", "b"]);
+    expect(groups.sailedMeta).toBe("1 counted aboard while blocked");
+  });
+
+  it("in the record, says nothing about blocking when nobody was counted aboard blocked", () => {
+    const groups = recordGroupsFor([seat("a")], recordOf({ a: "boarded" }));
+    expect(groups.sailedMeta).toBeUndefined();
+  });
+
+  it("in the record, a diver nobody has said missing is never unaccounted", () => {
+    const groups = recordGroupsFor([seat("a")], recordOf({ a: "boarded" }));
+    expect(groups.unaccounted).toEqual([]);
   });
 
   it("in the record, a dock not-boarded outranks a later count, as the evening's does", () => {
@@ -336,5 +386,53 @@ describe("the roster's worded controls", () => {
     expect(PAYMENT_STATUSES_RECORDING_ONLY).not.toContain("waived");
     expect(PAYMENT_STATUSES_RECORDING_ONLY).not.toContain("refunded");
     expect(PAYMENT_STATUSES_ALL).not.toContain("partly_refunded");
+  });
+});
+
+/**
+ * **A rehearsal's waiver link was never sent** (#2395). Every message about a
+ * rehearsal is held, and its waiver links are handed over in person, so the
+ * roster never says "Waiver sent" for one; it says the link was held.
+ */
+describe("waiverControls on a rehearsal", () => {
+  it("says an open link was held, not sent, and still offers it", () => {
+    const control = waiverControls(t, { rehearsal: true }).awaiting_signature;
+    expect(control.label).toBe("Held: rehearsal");
+    expect(control.action).toBe("resend");
+    expect(waiverControls(t).awaiting_signature.label).toBe("Waiver sent");
+  });
+});
+
+/**
+ * Layer 3 review (dde-2 #3): the desk sends staff to "Move" for a diver it
+ * turned away, so the door is on that row, before and after the boat leaves;
+ * a plain no-show or an arrived seat still has none.
+ */
+describe("seatMoveForRow", () => {
+  const move = (departed: boolean, started = departed) => ({
+    action: () => {},
+    targets: [{ id: "t", label: "T", seatsLeft: 1 }],
+    departed,
+    started,
+  });
+  const booking = (status: string, turnedAwayAt: Date | null = null) => ({ status, turnedAwayAt });
+
+  it("moves a booked seat only while the boat is in", () => {
+    expect(seatMoveForRow(booking("booked"), move(false))).toBeDefined();
+    expect(seatMoveForRow(booking("booked"), move(true))).toBeUndefined();
+  });
+
+  /** dde-3 #4+#5: until the scheduled start, not the sailing buffer. */
+  it("moves a turned-away seat only before the boat's scheduled start", () => {
+    const turnedAway = booking("no_show", new Date("2026-10-16T07:00:00Z"));
+    expect(seatMoveForRow(turnedAway, move(false))).toBeDefined();
+    expect(seatMoveForRow(turnedAway, move(false, true))).toBeUndefined();
+    expect(seatMoveForRow(turnedAway, move(true))).toBeUndefined();
+  });
+
+  it("never moves a plain no-show or an arrived seat", () => {
+    expect(seatMoveForRow(booking("no_show"), move(false))).toBeUndefined();
+    expect(seatMoveForRow(booking("checked_in"), move(false))).toBeUndefined();
+    expect(seatMoveForRow(booking("booked"), undefined)).toBeUndefined();
   });
 });

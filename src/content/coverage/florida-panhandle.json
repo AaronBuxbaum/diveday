@@ -1,0 +1,1126 @@
+{
+  "area": "florida-panhandle",
+  "method": "Counted 2026-10-14 from Escambia to Gulf County (Pensacola, Navarre, Destin/Fort Walton Beach, Grayton Beach, Panama City, Mexico Beach). A site is counted when it is named on at least two independent lists: the Florida Panhandle Shipwreck Trail, the Reef Smart Northwest Florida guidebook contents, operator site lists (MBT Divers, Niuhi, H2O Below, Emerald Coast Scuba, ScubaTech, Panama City Dive Center), tourism-board dive pages, the FL underwater preserves, and the FWC artificial-reef dataset, which counts only alongside an operator, trail or guide list. The Destin-Fort Walton Beach reef pages and FWC both publish the county's own deployments, so together they count as one list. Snorkel-only beach reefs and sites on one list are recorded as excluded.",
+  "sources": [
+    "https://floridapanhandledivetrail.com/",
+    "https://mbtdivers.com/dive-sites/inshore-sites",
+    "https://mbtdivers.com/dive-sites/mid-shore-sites",
+    "https://mbtdivers.com/dive-sites/off-shore-sites",
+    "https://mbtdivers.com/dive-sites/specialty-offshore-dives",
+    "https://mbtdivers.com/dive-sites/shore-dive-sites",
+    "https://mbtdivers.com/dive-sites/uss-oriskany",
+    "https://niuhidivecharters.com/dive-sites",
+    "https://niuhidivecharters.com/dive-sites/page/2",
+    "https://niuhidivecharters.com/wreck-diving-pensacola",
+    "https://niuhidivecharters.com/natural-bottom",
+    "https://www.visitpensacola.com/things-to-do/outdoors/scuba-diving/types-of-diving-in-pensacola/",
+    "https://app.advcollective.com/local-experts/explore-pensacola-wrecks-and-rigs-with-h2o-below-dive-charters",
+    "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+    "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12",
+    "https://museumsinthesea.fpan.us/",
+    "https://www.divedestin.net/deep-water-wrecks",
+    "https://www.divedestin.net/underwater-museum-of-arts",
+    "https://www.scubatechdestin.com/",
+    "https://pcdivecenter.com/popular-dive-sites",
+    "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+    "https://www.destinfwb.com/blog/best-places-to-scuba-dive-in-destin-fort-walton-beach/",
+    "https://destinfwb.com/blog/best-dive-spots-for-beginning-divers",
+    "https://www.visitpanamacitybeach.com/things-to-do/diving/",
+    "https://destinationpanamacity.com/florida-panhandle-shipwreck-trail/"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "USS Oriskany (Oriskany Memorial Reef, Great Carrier Reef)",
+      "template": "uss-oriskany",
+      "position": [30.04257, -87.00662],
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://mbtdivers.com/dive-sites/uss-oriskany",
+        "https://niuhidivecharters.com/dive-sites",
+        "https://www.visitpensacola.com/things-to-do/outdoors/scuba-diving/types-of-diving-in-pensacola/",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://app.advcollective.com/local-experts/explore-pensacola-wrecks-and-rigs-with-h2o-below-dive-charters",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "USS Massachusetts",
+      "template": "uss-massachusetts",
+      "position": [30.29658, -87.312],
+      "listedBy": [
+        "https://museumsinthesea.fpan.us/preserves/uss-massachusetts",
+        "https://mbtdivers.com/dive-sites/inshore-sites"
+      ]
+    },
+    {
+      "name": "Three Coal Barges (Three Barges)",
+      "template": "three-coal-barges",
+      "position": [30.29121, -87.2213],
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://mbtdivers.com/dive-sites/inshore-sites",
+        "https://niuhidivecharters.com/dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Joe Patti Barge (Joe Patti Memorial Reef)",
+      "template": "joe-patti-barge",
+      "position": [30.28882, -87.22925],
+      "listedBy": [
+        "https://mbtdivers.com/dive-sites/inshore-sites",
+        "https://niuhidivecharters.com/dive-sites",
+        "https://www.visitpensacola.com/things-to-do/outdoors/scuba-diving/types-of-diving-in-pensacola/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Tex Edwards Barge",
+      "template": "tex-edwards-barge",
+      "position": [30.26896, -87.16928],
+      "listedBy": [
+        "https://mbtdivers.com/dive-sites/mid-shore-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Joseph L. Meek Liberty Ship (Pensacola Liberty Ship)",
+      "template": "joseph-l-meek-liberty-ship",
+      "position": [30.27306, -87.15956],
+      "listedBy": [
+        "https://mbtdivers.com/dive-sites/mid-shore-sites",
+        "https://niuhidivecharters.com/wreck-diving-pensacola",
+        "https://app.advcollective.com/local-experts/explore-pensacola-wrecks-and-rigs-with-h2o-below-dive-charters",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "San Pablo (Russian Freighter)",
+      "template": "san-pablo-russian-freighter",
+      "position": [30.18888, -87.21761],
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://mbtdivers.com/dive-sites/mid-shore-sites",
+        "https://niuhidivecharters.com/wreck-diving-pensacola",
+        "https://www.visitpensacola.com/things-to-do/outdoors/scuba-diving/types-of-diving-in-pensacola/",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://app.advcollective.com/local-experts/explore-pensacola-wrecks-and-rigs-with-h2o-below-dive-charters",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Tug Ocean Wind (Ocean Winds)",
+      "template": "tug-ocean-wind",
+      "position": [30.18324, -87.20028],
+      "listedBy": [
+        "https://mbtdivers.com/dive-sites/mid-shore-sites",
+        "https://www.visitpensacola.com/things-to-do/outdoors/scuba-diving/types-of-diving-in-pensacola/",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Pete Tide II",
+      "template": "pete-tide-ii",
+      "position": [30.14599, -87.23366],
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://mbtdivers.com/dive-sites/mid-shore-sites",
+        "https://niuhidivecharters.com/wreck-diving-pensacola",
+        "https://www.visitpensacola.com/things-to-do/outdoors/scuba-diving/types-of-diving-in-pensacola/",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://app.advcollective.com/local-experts/explore-pensacola-wrecks-and-rigs-with-h2o-below-dive-charters",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Chevron Rig (Chevron Platform)",
+      "template": "chevron-rig-pensacola",
+      "position": [30.07073, -87.0353],
+      "listedBy": [
+        "https://mbtdivers.com/dive-sites/off-shore-sites",
+        "https://app.advcollective.com/local-experts/explore-pensacola-wrecks-and-rigs-with-h2o-below-dive-charters",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "YDT-14 (USS Phoebus)",
+      "template": "ydt-14",
+      "position": [30.08848, -87.16036],
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://mbtdivers.com/dive-sites/off-shore-sites",
+        "https://niuhidivecharters.com/dive-sites",
+        "https://www.visitpensacola.com/things-to-do/outdoors/scuba-diving/types-of-diving-in-pensacola/",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "YDT-15 (USS Suitland)",
+      "template": "ydt-15",
+      "position": [30.08778, -87.15916],
+      "listedBy": [
+        "https://mbtdivers.com/dive-sites/off-shore-sites",
+        "https://niuhidivecharters.com/dive-sites",
+        "https://www.visitpensacola.com/things-to-do/outdoors/scuba-diving/types-of-diving-in-pensacola/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Avocet",
+      "template": "avocet-dredge",
+      "position": [29.97281, -87.21005],
+      "listedBy": [
+        "https://mbtdivers.com/dive-sites/off-shore-sites",
+        "https://niuhidivecharters.com/dive-sites/page/2",
+        "https://www.visitpensacola.com/things-to-do/outdoors/scuba-diving/types-of-diving-in-pensacola/",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://app.advcollective.com/local-experts/explore-pensacola-wrecks-and-rigs-with-h2o-below-dive-charters",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Antares",
+      "template": "antares-freighter",
+      "position": [30.0098, -87.12958],
+      "listedBy": [
+        "https://mbtdivers.com/dive-sites/off-shore-sites",
+        "https://niuhidivecharters.com/dive-sites/page/2",
+        "https://www.visitpensacola.com/things-to-do/outdoors/scuba-diving/types-of-diving-in-pensacola/",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Tenneco Rig (Tenneco Platform)",
+      "template": "tenneco-rig",
+      "position": [29.99521, -87.0853],
+      "listedBy": [
+        "https://mbtdivers.com/dive-sites/off-shore-sites",
+        "https://niuhidivecharters.com/dive-sites/page/2",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Knicklebine Barge (Nicklebein Barge)",
+      "template": "knicklebine-barge",
+      "position": [30.03283, -87.19158],
+      "listedBy": [
+        "https://www.visitpensacola.com/things-to-do/outdoors/scuba-diving/types-of-diving-in-pensacola/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Brass Wreck",
+      "template": null,
+      "listedBy": [
+        "https://niuhidivecharters.com/dive-sites/page/2",
+        "https://www.visitpensacola.com/things-to-do/outdoors/scuba-diving/types-of-diving-in-pensacola/",
+        "https://app.advcollective.com/local-experts/explore-pensacola-wrecks-and-rigs-with-h2o-below-dive-charters"
+      ]
+    },
+    {
+      "name": "Tug Born Again (Born Again Tugboat)",
+      "template": "tug-born-again",
+      "position": [30.13683, -87.23683],
+      "listedBy": [
+        "https://niuhidivecharters.com/dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "PC Barge (P.C. Barge)",
+      "template": "pc-barge",
+      "position": [30.18685, -87.23444],
+      "listedBy": [
+        "https://niuhidivecharters.com/wreck-diving-pensacola",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Oops Barge",
+      "template": "oops-barge",
+      "position": [30.22054, -87.2332],
+      "listedBy": [
+        "https://niuhidivecharters.com/wreck-diving-pensacola",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Navy Barge (Navy Camel Barge, Pensacola)",
+      "template": "navy-barge-panama-city",
+      "position": [30.18656, -87.24606],
+      "listedBy": [
+        "https://niuhidivecharters.com/wreck-diving-pensacola",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "LuLu",
+      "template": "lulu-wreck",
+      "position": [29.992, -87.55062],
+      "listedBy": [
+        "https://mbtdivers.com/dive-sites/specialty-offshore-dives",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://app.advcollective.com/local-experts/explore-pensacola-wrecks-and-rigs-with-h2o-below-dive-charters"
+      ]
+    },
+    {
+      "name": "New Venture (Fairfield New Venture)",
+      "template": "new-venture-wreck",
+      "position": [29.90087, -87.54827],
+      "listedBy": [
+        "https://mbtdivers.com/dive-sites/specialty-offshore-dives",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://app.advcollective.com/local-experts/explore-pensacola-wrecks-and-rigs-with-h2o-below-dive-charters"
+      ]
+    },
+    {
+      "name": "Timber Holes",
+      "template": null,
+      "listedBy": [
+        "https://niuhidivecharters.com/natural-bottom",
+        "https://www.destinfwb.com/blog/best-places-to-scuba-dive-in-destin-fort-walton-beach/"
+      ]
+    },
+    {
+      "name": "Fort Pickens Jetty",
+      "template": "fort-pickens-jetty",
+      "listedBy": [
+        "https://mbtdivers.com/dive-sites/shore-dive-sites",
+        "https://niuhidivecharters.com/dive-sites",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf"
+      ]
+    },
+    {
+      "name": "Park East Gulf-Side Reef (Portofino Reef, Park East Snorkel Reef)",
+      "template": "park-east-snorkel-reef",
+      "listedBy": [
+        "https://mbtdivers.com/dive-sites/shore-dive-sites",
+        "https://niuhidivecharters.com/dive-sites",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf"
+      ]
+    },
+    {
+      "name": "Park West and Captain Bob Quarles Reefs",
+      "template": "park-west-quarles-reef",
+      "listedBy": [
+        "https://mbtdivers.com/dive-sites/shore-dive-sites",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf"
+      ]
+    },
+    {
+      "name": "Casino Beach Snorkel Reef",
+      "template": "casino-beach-snorkel-reef",
+      "listedBy": [
+        "https://mbtdivers.com/dive-sites/shore-dive-sites",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf"
+      ]
+    },
+    {
+      "name": "Perdido Key Reef (Perdido Key Snorkel Reef)",
+      "template": "perdido-key-snorkel-reef",
+      "listedBy": [
+        "https://mbtdivers.com/dive-sites/shore-dive-sites",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf"
+      ]
+    },
+    {
+      "name": "Navarre Gulf-Side Reef (Navarre Beach Marine Sanctuary)",
+      "template": "navarre-gulf-side-reef",
+      "listedBy": [
+        "https://mbtdivers.com/dive-sites/shore-dive-sites",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf"
+      ]
+    },
+    {
+      "name": "SS United States",
+      "template": null,
+      "listedBy": [
+        "https://www.scubatechdestin.com/",
+        "https://niuhidivecharters.com/dive-sites",
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/"
+      ]
+    },
+    {
+      "name": "Miss Louise (Crystal Beach Tug)",
+      "template": "miss-louise-tug",
+      "position": [30.37143, -86.42193],
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://www.scubatechdestin.com/",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://destinfwb.com/blog/best-dive-spots-for-beginning-divers",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Thomas Heyward Liberty Ship (Thomas Hayward, Destin Liberty Ship)",
+      "template": "thomas-heyward-liberty-ship",
+      "position": [30.30626, -86.6037],
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://www.scubatechdestin.com/",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "M/V Janet",
+      "template": "mv-janet-tug",
+      "position": [30.26399, -86.38508],
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Chepanoc (Starfish Reef)",
+      "template": "chepanoc-tug",
+      "position": [30.14722, -86.62687],
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://www.divedestin.net/deep-water-wrecks",
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Belize Queen (Bob Reay Reef)",
+      "template": "belize-queen-bob-reay-reef",
+      "position": [30.14669, -86.67293],
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Mohawk Chief",
+      "template": "mohawk-chief-tug",
+      "position": [30.14678, -86.71791],
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Tugboat Zuess",
+      "template": "tugboat-zuess",
+      "position": [30.15703, -86.7415],
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Eglin LCM-8 (Eglin Reef #1, Eglin Landing Craft)",
+      "template": "eglin-lcm-8",
+      "position": [30.26528, -86.386],
+      "listedBy": [
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Monica Lee Tugboat",
+      "template": "monica-lee-tugboat",
+      "position": [30.15569, -86.3704],
+      "listedBy": [
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "White Hill Ledge (White Hill Reef)",
+      "template": null,
+      "listedBy": [
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://www.destinfwb.com/blog/best-places-to-scuba-dive-in-destin-fort-walton-beach/"
+      ]
+    },
+    {
+      "name": "Mac's Reef",
+      "template": "macs-reef-destin",
+      "listedBy": [
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://destinfwb.com/blog/best-dive-spots-for-beginning-divers"
+      ]
+    },
+    {
+      "name": "Destin Jetties (East Pass Jetty)",
+      "template": "destin-east-jetty",
+      "listedBy": [
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://destinfwb.com/blog/best-dive-spots-for-beginning-divers"
+      ]
+    },
+    {
+      "name": "USAF Big Dawg",
+      "template": "usaf-big-dawg",
+      "position": [30.15078, -86.57373],
+      "listedBy": [
+        "https://www.divedestin.net/deep-water-wrecks",
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "R/V Manta",
+      "template": "rv-manta",
+      "position": [30.14383, -86.6532],
+      "listedBy": [
+        "https://www.divedestin.net/deep-water-wrecks",
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "M/V Spirit of Norfolk",
+      "template": "spirit-of-norfolk",
+      "position": [30.13235, -86.66147],
+      "listedBy": [
+        "https://www.divedestin.net/deep-water-wrecks",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "M/V Courageous",
+      "template": "mv-courageous",
+      "position": [30.11148, -86.55502],
+      "listedBy": [
+        "https://www.divedestin.net/deep-water-wrecks",
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "M/V Deep Stim III",
+      "template": "deep-stim-iii",
+      "position": [30.05058, -86.29597],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "M/V Nekton Pilot (Ted Forsgren)",
+      "template": "nekton-pilot",
+      "position": [30.07403, -86.3081],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "M/V Nekton Rorqual (Ted Forsgren)",
+      "template": "nekton-rorqual",
+      "position": [30.07182, -86.33065],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "R/V Dolphin",
+      "template": "rv-dolphin",
+      "position": [30.12723, -86.40218],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "M/V Brannon",
+      "template": "mv-brannon",
+      "position": [30.127, -86.39185],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "S/V Dylan",
+      "template": "sv-dylan",
+      "position": [30.1269, -86.39115],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "M/V Miss Joann",
+      "template": "mv-miss-joann",
+      "position": [30.12688, -86.39152],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "AJ's / Carey Ricks Memorial",
+      "template": null,
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/"
+      ]
+    },
+    {
+      "name": "M/V Fantasea (Alex and Anna Jernigan Fantasea Reef)",
+      "template": "mv-fantasea",
+      "position": [30.2398, -86.5049],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "M/V Skippin Sue",
+      "template": "mv-skippin-sue",
+      "position": [30.2442, -86.50392],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "RMS Atlantis",
+      "template": "rms-atlantis",
+      "position": [30.24218, -86.51012],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "RMS Cyclops",
+      "template": "rms-cyclops",
+      "position": [30.34713, -86.43732],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Sea Barb Paddlewheel (Okaloosa Reef Odyssey)",
+      "template": "sea-barb-paddlewheel",
+      "position": [30.14883, -86.6768],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "AJ's Blackbeard (Flying Eagle)",
+      "template": "ajs-blackbeard-flying-eagle",
+      "position": [30.139, -86.56495],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "M/V Deborah",
+      "template": "mv-deborah",
+      "position": [30.12519, -86.58986],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "M/V Monarch Countess",
+      "template": "mv-monarch-countess",
+      "position": [30.10582, -86.75837],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Joseph E. Brown Liberty Ship (J. Brown Liberty Ship)",
+      "template": "joseph-e-brown-liberty-ship",
+      "position": [30.21304, -86.80583],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Underwater Museum of Art (UMA, Grayton Beach)",
+      "template": "underwater-museum-of-art-grayton",
+      "listedBy": [
+        "https://www.divedestin.net/underwater-museum-of-arts",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf"
+      ]
+    },
+    {
+      "name": "Black Bart",
+      "template": "black-bart-wreck",
+      "position": [30.06064, -85.82319],
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://www.visitpanamacitybeach.com/things-to-do/diving/",
+        "https://destinationpanamacity.com/florida-panhandle-shipwreck-trail/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "USS Strength",
+      "template": "uss-strength",
+      "position": [30.03238, -85.70853],
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://www.visitpanamacitybeach.com/things-to-do/diving/",
+        "https://destinationpanamacity.com/florida-panhandle-shipwreck-trail/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "USS Chippewa",
+      "template": "uss-chippewa",
+      "position": [29.96126, -85.80773],
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://www.visitpanamacitybeach.com/things-to-do/diving/",
+        "https://destinationpanamacity.com/florida-panhandle-shipwreck-trail/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "USS Accokeek",
+      "template": "uss-accokeek",
+      "position": [29.97458, -85.86525],
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://www.visitpanamacitybeach.com/things-to-do/diving/",
+        "https://destinationpanamacity.com/florida-panhandle-shipwreck-trail/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "FAMI Tugs (Twin Tugs)",
+      "template": "fami-tugs",
+      "position": [29.96871, -85.85435],
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://www.visitpanamacitybeach.com/things-to-do/diving/",
+        "https://destinationpanamacity.com/florida-panhandle-shipwreck-trail/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "El Dorado",
+      "template": "el-dorado-wreck",
+      "position": [29.97613, -85.84145],
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://www.visitpanamacitybeach.com/things-to-do/diving/",
+        "https://destinationpanamacity.com/florida-panhandle-shipwreck-trail/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "SS Tarpon",
+      "template": "ss-tarpon",
+      "listedBy": [
+        "https://museumsinthesea.fpan.us/preserves/ss-tarpon",
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf"
+      ]
+    },
+    {
+      "name": "SS Empire Mica",
+      "template": "empire-mica",
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf"
+      ]
+    },
+    {
+      "name": "Red Sea Tugboat",
+      "template": "red-sea-tug",
+      "position": [30.01596, -85.70005],
+      "listedBy": [
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Jeff-A Hovercraft (Hovercraft LLCAT)",
+      "template": "jeff-a-hovercraft",
+      "position": [30.07081, -85.81208],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Chickasaw Tug",
+      "template": "chickasaw-tug",
+      "position": [30.08206, -85.77938],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "B.J. Putnam",
+      "template": "bj-putnam",
+      "position": [29.93019, -85.83488],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Grey Ghost",
+      "template": "grey-ghost-tug",
+      "position": [30.04714, -86.0926],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "B&B Barge (B & B Reef)",
+      "template": "b-and-b-reef",
+      "position": [30.08213, -85.71463],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "PCMI Barge",
+      "template": "pcmi-barge",
+      "position": [30.11384, -85.82546],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Dan Barge",
+      "template": "dan-barge",
+      "position": [30.08063, -85.73071],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Century Barge (Century/Cobia Barge)",
+      "template": "century-barge",
+      "position": [29.97358, -85.82653],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Navy Barge (Panama City)",
+      "template": "navy-barge-pensacola",
+      "position": [30.08333, -85.73233],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Loss Pontoon",
+      "template": "loss-pontoon",
+      "position": [30.08279, -85.73526],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Wet & Wild Spot (Wet and Wild Site)",
+      "template": "wet-and-wild-reef",
+      "position": [30.08954, -85.7367],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "DuPont Bridge Span #1",
+      "template": "dupont-bridge-span-1",
+      "position": [29.98188, -85.85194],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "DuPont Bridge Span #3",
+      "template": "dupont-bridge-span-3",
+      "position": [29.97529, -85.84165],
+      "listedBy": [
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Hathaway Bridge Span #5 (Fontainbleau)",
+      "template": "hathaway-span-5",
+      "position": [30.16411, -85.89688],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Hathaway Bridge Span #12 (Midway Site)",
+      "template": "hathaway-span-12",
+      "position": [30.03468, -85.73155],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Hathaway Bridge Span #14 (Warsaw Site)",
+      "template": "hathaway-span-14",
+      "position": [30.07151, -85.8146],
+      "listedBy": [
+        "https://pcdivecenter.com/popular-dive-sites",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ]
+    },
+    {
+      "name": "Vamar",
+      "template": "vamar-wreck",
+      "listedBy": [
+        "https://floridapanhandledivetrail.com/",
+        "https://museumsinthesea.fpan.us/preserves/vamar"
+      ]
+    },
+    {
+      "name": "Paradise Hole",
+      "template": null,
+      "listedBy": ["https://niuhidivecharters.com/natural-bottom"],
+      "excluded": "one list only (Niuhi natural-bottom page)"
+    },
+    {
+      "name": "Greens Hole",
+      "template": null,
+      "listedBy": ["https://niuhidivecharters.com/natural-bottom"],
+      "excluded": "one list only (Niuhi natural-bottom page)"
+    },
+    {
+      "name": "Alabama Point Jetties",
+      "template": null,
+      "listedBy": [
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf"
+      ],
+      "excluded": "Alabama shore site (Orange Beach), outside the Florida Panhandle; one list"
+    },
+    {
+      "name": "Navarre Sound-Side West and East Reefs",
+      "template": null,
+      "listedBy": [
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf"
+      ],
+      "excluded": "one list only; sound-side snorkel reefs"
+    },
+    {
+      "name": "Okaloosa and Walton snorkel reef network (Beach Access #2/#4/#6, Beasley Park, Henderson Park East/West, Pompano Street, Crab Trap, Dolphin/Seahorse/Turtle/Grouper snorkel reefs)",
+      "template": null,
+      "listedBy": [
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf",
+        "https://destinfwb.com/blog/best-dive-spots-for-beginning-divers"
+      ],
+      "excluded": "snorkel reefs in 10-20 ft off the beach, not run as scuba sites"
+    },
+    {
+      "name": "Norriego Point",
+      "template": null,
+      "listedBy": [
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf"
+      ],
+      "excluded": "one list only (Reef Smart)"
+    },
+    {
+      "name": "Destin Bridge Rubble",
+      "template": null,
+      "listedBy": [
+        "https://www.destinfwb.com/blog/best-places-to-scuba-dive-in-destin-fort-walton-beach/",
+        "https://destinfwb.com/blog/best-dive-spots-for-beginning-divers"
+      ],
+      "excluded": "only the Destin-Fort Walton Beach tourism/reef-program pages list it; no operator or guide list found"
+    },
+    {
+      "name": "Barrel Barge",
+      "template": null,
+      "position": [30.36391, -86.60145],
+      "listedBy": [
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://www.destinfwb.com/blog/best-places-to-scuba-dive-in-destin-fort-walton-beach/",
+        "https://destinfwb.com/blog/best-dive-spots-for-beginning-divers",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ],
+      "excluded": "official lists only (county reef program pages and FWC); no operator list found"
+    },
+    {
+      "name": "Brown Barge (Butler Barge, Fort Walton Barge)",
+      "template": null,
+      "position": [30.35895, -86.5937],
+      "listedBy": [
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ],
+      "excluded": "official lists only (county reef program and FWC); no operator list found"
+    },
+    {
+      "name": "Eglin Barge (Air Force Barge)",
+      "template": null,
+      "position": [30.35414, -86.49301],
+      "listedBy": [
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ],
+      "excluded": "official lists only (county reef program and FWC); no operator list found"
+    },
+    {
+      "name": "Burgess Barge",
+      "template": null,
+      "position": [30.15408, -86.74448],
+      "listedBy": [
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ],
+      "excluded": "official lists only (county reef program and FWC)"
+    },
+    {
+      "name": "M/V Angelina B",
+      "template": null,
+      "position": [30.12303, -86.61143],
+      "listedBy": [
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ],
+      "excluded": "official lists only (county reef program and FWC)"
+    },
+    {
+      "name": "M/V Prewitt",
+      "template": null,
+      "position": [30.06154, -86.30783],
+      "listedBy": [
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ],
+      "excluded": "official lists only (county reef program and FWC); bottom 132 ft"
+    },
+    {
+      "name": "M/V Miss Nellie",
+      "template": null,
+      "position": [30.13183, -86.29183],
+      "listedBy": [
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ],
+      "excluded": "official lists only (county reef program and FWC)"
+    },
+    {
+      "name": "Walton Hopper Barge",
+      "template": null,
+      "position": [30.32809, -86.38165],
+      "listedBy": [
+        "https://www.destinfwb.com/explore/eco-tourism/artificial-reefs/3d-models/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ],
+      "excluded": "official lists only (county reef program and FWC)"
+    },
+    {
+      "name": "Amberjack Rocks, Shoreline Reef, Long Reef, Triplets, Airplane Rock (Destin natural ledges)",
+      "template": null,
+      "listedBy": [
+        "https://www.destinfwb.com/blog/best-places-to-scuba-dive-in-destin-fort-walton-beach/"
+      ],
+      "excluded": "named only on the Destin-Fort Walton Beach tourism blog among checked lists"
+    },
+    {
+      "name": "Black Pearl",
+      "template": null,
+      "position": [30.10575, -85.83183],
+      "listedBy": [
+        "https://www.visitpanamacitybeach.com/things-to-do/diving/",
+        "https://gis.myfwc.com/mapping/rest/services/Open_Data/Artificial_Reef_Locations_in_Florida/MapServer/12"
+      ],
+      "excluded": "deployed Nov 2025 by the Panama City Beach tourism board; only that board and FWC list it so far"
+    },
+    {
+      "name": "Stage I and Stage II towers (Panama City)",
+      "template": null,
+      "listedBy": ["https://pcdivecenter.com/popular-dive-sites"],
+      "excluded": "one list only (Panama City Dive Center)"
+    },
+    {
+      "name": "St. Andrews Jetty",
+      "template": null,
+      "listedBy": [
+        "https://reefsmartguides.com/wp-content/uploads/2021/05/Northwest-Florida-sample-guidebook.pdf"
+      ],
+      "excluded": "one dive list only (Reef Smart); tourism pages name the park, not a dive site"
+    },
+    {
+      "name": "Panama City near-shore sites named only by Panama City Dive Center (Twin Barges, Blow Up Barge, Murphy's Barge, Atlantis, Navy Trash Pile, J&B Reef, Long Beach Barge, Warsaw Hole, Commander, Bridge Span #1)",
+      "template": null,
+      "listedBy": ["https://pcdivecenter.com/popular-dive-sites"],
+      "excluded": "one list only and no FWC match by name"
+    }
+  ]
+}

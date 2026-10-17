@@ -75,6 +75,18 @@ const RULES = [
     says: 'the waiver is "la exención", and the noun is feminine — every article and adjective reaching back to it moves with it (la, una, esta, firmada, archivada)',
   },
   {
+    id: "waiver",
+    // The English word itself, which the 2026-10-14 review found in the
+    // request email ("Completa tu waiver para {tripTitle}"), the reminder and
+    // the import wizard: 7 diver strings and 9 staff ones, all written after
+    // the README settled the word.
+    //
+    // Word-bounded, so `Smartwaiver` (a competitor's name in the switching
+    // guide) and `waiver_records.csv` (a file a shop really downloads) pass.
+    pattern: /\bwaivers?\b/i,
+    says: 'the waiver is "la exención" in Spanish too: "Completa tu exención", "Exención firmada". The English word survives only inside a proper name or a file name',
+  },
+  {
     id: "dive-site",
     // "Three terms were live for the same row in `dive_sites`" and the
     // 2026-08-05 sweep settled `sitio de buceo`. Both losing spellings were
@@ -233,6 +245,62 @@ const RULES = [
     pattern: /\bregistros? de llegadas?\b|\bllegada y registro\b/i,
     says: 'check-in is "el check-in" (the feature, the phase, "Llegada y check-in"); the tap on a row stays "Registrar"',
   },
+  {
+    id: "sign-up",
+    // README's vocabulary table — "apuntarse (a una lista)" -> "inscribirse /
+    // anotarse". The 2026-10-14 review found "Apuntándote…" on the wait-list
+    // button one line under "Anótate en la lista de espera".
+    //
+    // Only the reflexive shapes, because the plain verb is innocent and in the
+    // bundles: a backup endpoint "apunta a una dirección privada", the field
+    // guide says "apunta tu luz" and "no le apuntes la luz a los ojos".
+    pattern:
+      /\bap[uú]nt(?:a(?:r|ndo)?|á(?:ndo)?)?(?:me|te|se|nos)\b|\b(?:me|te|se|nos)\s+ap[uú]nt\w*/i,
+    says: 'joining a list is "anotarse" ("Anótate", "Anotándote…", "Anotarme en la lista de espera"). "Apuntarse" reads as Spain',
+  },
+  {
+    id: "computer",
+    // README's vocabulary table — "ordenador (de buceo)" -> "computadora (de
+    // buceo)", in the table since the first sweep and unguarded until
+    // 2026-10-13, when six strings still said "Ordenador de buceo": the rental
+    // kit list a diver fills in, the diver record's gear line, the counter's
+    // refusal.
+    //
+    // Enumerated, not a stem: `ordenada` and `ordenado` (sorted) are innocent
+    // and a list-sorting string will want them.
+    pattern: /\bordenador(es)?\b/i,
+    says: 'a dive computer is "la computadora de buceo", and a desktop is "una computadora". "Ordenador" reads as Spain',
+  },
+  {
+    id: "parking",
+    // README's vocabulary table, added 2026-10-13 with this rule: four strings
+    // said "Aparcamiento", among them the printed pass a diver holds and the
+    // trip editor's parking note.
+    pattern: /\baparca(mientos?|r)\b/i,
+    says: 'parking is "el estacionamiento" ("Estacionamiento: {parking}"). "Aparcamiento" reads as Spain',
+  },
+  {
+    id: "mobile",
+    // README's vocabulary table, added 2026-10-13 with this rule: the SMS
+    // consent line every diver reads under the phone field said "número de
+    // móvil", and so did the privacy page.
+    //
+    // Word-initial on purpose: `inmóvil` (a barracuda holding still in the
+    // field guide) and `automóvil` carry the letters and are not the phone.
+    pattern: /\bm[oó]vil(es)?\b/i,
+    says: 'a mobile phone is "el celular" ("número de celular", "Celular o fijo"). "Móvil" reads as Spain',
+  },
+  {
+    id: "add",
+    // Issue #2564: the add action is "agregar" in Latin American Spanish;
+    // "añadir" reads as Spain. Stem-matched so every form is caught (añade,
+    // añadido, añadiendo, añadirlo).
+    //
+    // Word-initial on purpose: `bañador` (a swimsuit, in the packing lists)
+    // contains `ñad` and is not the verb.
+    pattern: /\bañad/i,
+    says: 'adding is "agregar" ("Agregar buzo", "agregado"). "Añadir" reads as Spain',
+  },
 ];
 
 /**
@@ -242,6 +310,30 @@ const RULES = [
  * write the reason as if defending it.
  */
 const allowed = new Map([]);
+
+/**
+ * The string without its ICU case keys: a bare word right before a `{`, inside
+ * an argument (`{reason, select, waiver {…}}`). Text outside every brace keeps
+ * its words, so "tu waiver {tripTitle}" is still read whole.
+ */
+function withoutCaseKeys(text) {
+  let out = "";
+  let depth = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (depth > 0 && /[A-Za-z_]/.test(char) && /[{}\s,]/.test(text[i - 1] ?? "")) {
+      const key = /^[\w-]+(?=\s*\{)/.exec(text.slice(i));
+      if (key) {
+        i += key[0].length - 1;
+        continue;
+      }
+    }
+    if (char === "{") depth += 1;
+    if (char === "}") depth = Math.max(0, depth - 1);
+    out += char;
+  }
+  return out;
+}
 
 /** Every offending value in one parsed bundle, with the count of strings read. */
 export function findSettledTerms(bundle, { relative = "" } = {}) {
@@ -259,9 +351,12 @@ export function findSettledTerms(bundle, { relative = "" } = {}) {
     if (typeof node !== "string") return;
     strings += 1;
     const reported = new Set();
+    // An ICU `select` case key (`waiver {: exención}`) is a code the reader
+    // never sees, so it is read with its keys taken out.
+    const read = withoutCaseKeys(node);
     for (const rule of rules) {
       if (rule.keys && !rule.keys.test(keyPath)) continue;
-      if (reported.has(rule.id) || !rule.pattern.test(node)) continue;
+      if (reported.has(rule.id) || !rule.pattern.test(read)) continue;
       if (allowed.has(`${relative}:${keyPath}:${rule.id}`)) continue;
       reported.add(rule.id);
       violations.push({ keyPath, text: node, rule: rule.id, says: rule.says });

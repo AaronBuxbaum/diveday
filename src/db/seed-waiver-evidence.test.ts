@@ -2,8 +2,10 @@ import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DAY_MS, nowMs } from "@/lib/clock";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
+import { utcToWallTime } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
 import { waiverRecords } from "./schema";
+import { DEMO_SHOP_TIMEZONE, withinDeskHours } from "./seed-clock";
 import { listWaiverIntegrityAudit } from "./waivers";
 
 /**
@@ -82,5 +84,44 @@ describe("seeded waiver evidence", () => {
       expect(record.completedAt?.getTime()).toBe(record.signedAt.getTime());
       expect(record.createdAt.getTime()).toBeLessThanOrEqual(record.signedAt.getTime());
     }
+  });
+});
+
+describe("withinDeskHours", () => {
+  const zone = "America/New_York";
+
+  it("keeps a signature the desk took while open", () => {
+    const tenAm = new Date("2026-10-13T14:00:00.000Z");
+    expect(withinDeskHours(tenAm, zone)).toEqual(tenAm);
+  });
+
+  it("moves a late-evening signature back to the last open hour that day", () => {
+    // 11:24 PM EDT on Oct 13, the time the dawn log printed.
+    const late = new Date("2026-10-14T03:24:00.007Z");
+    expect(withinDeskHours(late, zone).toISOString()).toBe("2026-10-13T21:24:00.007Z");
+  });
+
+  it("moves a before-opening signature back to the evening before", () => {
+    const early = new Date("2026-10-14T10:05:00.000Z"); // 6:05 AM EDT
+    expect(withinDeskHours(early, zone).toISOString()).toBe("2026-10-13T21:05:00.000Z");
+  });
+});
+
+describe("staff-recorded signatures", () => {
+  it("fall in desk hours, not near midnight", async () => {
+    const { records } = await evidence();
+    const staffRecorded = records.filter(
+      (record) =>
+        record.signatureMethod === "in_person" || record.signatureMethod === "in_person_attested",
+    );
+    expect(staffRecorded.length).toBeGreaterThan(0);
+    const outside = staffRecorded
+      .filter((record) => record.signedAt && record.signedAt.getTime() >= nowMs() - 21 * DAY_MS)
+      .map((record) => record.signedAt as Date)
+      .filter((signedAt) => {
+        const { hour } = utcToWallTime(signedAt, DEMO_SHOP_TIMEZONE);
+        return hour < 8 || hour >= 18;
+      });
+    expect(outside).toEqual([]);
   });
 });

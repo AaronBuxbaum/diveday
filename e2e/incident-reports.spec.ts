@@ -25,6 +25,7 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   // A blank draft cannot be filed, and says what it still needs.
   const filing = page.getByRole("region", { name: "File the report" });
   await expect(filing.getByText("Whether oxygen was given")).toBeVisible();
+  await expect(filing.getByText("How serious it was")).toBeVisible();
   await expect(filing.getByRole("button", { name: "File report" })).toBeDisabled();
 
   // The account, in the shop's own zone.
@@ -34,6 +35,9 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   await page
     .getByLabel("What happened")
     .fill("Diver surfaced from 18 m short of breath after a fast ascent. Brought aboard.");
+  // What sort of thing it was, and how bad (ADR 20261014-incident-kind-severity).
+  await page.getByLabel("What kind of incident").selectOption({ label: "Injury or illness" });
+  await page.getByLabel("How serious").selectOption({ label: "Moderate" });
   const care = page.getByRole("region", { name: "Care given" });
   await care.getByRole("group", { name: "Was first aid given?" }).getByLabel("Yes").check();
   await care.getByRole("group", { name: "Was oxygen given?" }).getByLabel("Yes").check();
@@ -46,6 +50,13 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   await page.getByLabel("Who took over care").selectOption({ label: "Stayed with the crew" });
   await page.getByRole("button", { name: "Save draft" }).click();
   await expect(page.getByText("Draft saved.")).toBeVisible();
+
+  // Unfiled, it is one line on the owner's Today, and the line opens it.
+  const reportPath = new URL(page.url()).pathname;
+  await page.goto("/shop/blue-mantis");
+  await expect(page.getByText(/1 incident report not filed, started today by /)).toBeVisible();
+  await page.getByRole("link", { name: "Open report" }).click();
+  await page.waitForURL((url) => url.pathname === reportPath);
 
   // A diver, named by their seat on this departure.
   const people = page.getByRole("region", { name: "People involved" });
@@ -62,6 +73,8 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   await expect(page.getByText("Report filed.")).toBeVisible();
   await expect(page.getByText("Yes, for 20 minutes")).toBeVisible();
   await expect(page.getByText("Stayed with the crew")).toBeVisible();
+  await expect(page.getByText("Injury or illness", { exact: true })).toBeVisible();
+  await expect(page.getByText("Moderate", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Save draft" })).toHaveCount(0);
 
   // Anything learned later is a dated note, never an edit.
@@ -74,11 +87,33 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   // The month's Safety tab lists it, beside the money.
   await page.goto("/shop/blue-mantis/reports");
   await page.getByRole("link", { name: "Safety" }).click();
-  await page.waitForURL(/\/reports\/safety/);
+  await page.waitForURL(/\/shop\/blue-mantis\/safety/);
+  // The demo crew have no credential on file, and the tab says so rather than
+  // reading a clean zero (third review, item 2).
+  await expect(page.getByText(/Nothing on file for their role on \d+ of/)).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Crew who sailed with no credential for their role on file" }),
+  ).toBeVisible();
   const listed = page
     .getByRole("region", { name: "Incident reports" })
     .getByRole("link", { name: /Two-Tank Reef/ });
   await expect(listed).toBeVisible();
+  await expect(listed).toContainText("Injury or illness");
+  await expect(listed).toContainText("Moderate");
   await listed.click();
   await expect(page.getByText("Diver called at 18:00: discharged, feeling fine.")).toBeVisible();
+
+  // A draft started by mistake is deleted by the owner (ADR
+  // 20261015-incident-draft-discard-and-hold): it leaves the departure's list,
+  // and the log still says it existed, and who deleted it.
+  const tripPath = reportPath.replace(/\/incidents\/[0-9a-f-]+$/, "");
+  await page.goto(`${tripPath}?view=details`);
+  await section.getByRole("button", { name: "Report an incident" }).click();
+  await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
+  await page.getByRole("button", { name: "Delete draft" }).click();
+  await page.getByRole("button", { name: "Yes, delete the draft" }).click();
+  await page.waitForURL((url) => url.pathname === tripPath);
+  await expect(section.getByText("Draft", { exact: true })).toHaveCount(0);
+  await page.goto(`${tripPath}/log`);
+  await expect(page.getByText(/^Draft started by .+, deleted unfiled by .+ on /)).toBeVisible();
 });

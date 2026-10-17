@@ -72,6 +72,7 @@ describe("the staff destination registry", () => {
       "divers",
       "inbox",
       "money",
+      "safety",
       "courses",
       "gear",
       "settings",
@@ -165,8 +166,8 @@ describe("permission gating", () => {
     // The activity log (D5) takes the settings gate: owner and manager reading.
     expect(gated).toEqual([
       "reports",
-      "safety",
       "promoCodes",
+      "safety",
       "waivers",
       "team",
       "activity",
@@ -229,6 +230,7 @@ describe("what each consumer derives", () => {
       ["divers", "divers"],
       ["inbox", "inbox"],
       ["money", "orders"],
+      ["safety", "safety"],
       ["courses", "courses"],
       ["gear", "gear"],
       ["settings", "settings"],
@@ -237,6 +239,16 @@ describe("what each consumer derives", () => {
     for (const { section, destination } of staffNavSections(owner, everything)) {
       expect(destination.section, destination.id).toBe(section);
     }
+  });
+
+  it("keeps Safety on the Reports gate: absent for crew, lit by its own path for the owner", () => {
+    expect(staffNavSections(crew, everything).map((entry) => entry.section)).not.toContain(
+      "safety",
+    );
+    expect(staffNavSections(owner, everything).map((entry) => entry.section)).toContain("safety");
+    expect(
+      currentStaffDestination("/shop/blue-mantis/safety", "/shop/blue-mantis", owner)?.id,
+    ).toBe("safety");
   });
 
   it("leaves Courses and Gear out for a shop that teaches nothing and keeps no fleet", () => {
@@ -258,7 +270,8 @@ describe("what each consumer derives", () => {
     expect(bySection("schedule")).toEqual(["board", "addBooking", "staffing", "lostFound"]);
     expect(bySection("divers")).toEqual(["divers"]);
     expect(bySection("inbox")).toEqual(["inbox", "requests", "reviews"]);
-    expect(bySection("money")).toEqual(["orders", "reports", "safety", "promoCodes"]);
+    expect(bySection("money")).toEqual(["orders", "reports", "promoCodes"]);
+    expect(bySection("safety")).toEqual(["safety"]);
     expect(bySection("courses")).toEqual(["courses"]);
     expect(bySection("gear")).toEqual(["gear", "workOrders", "newWorkOrder", "rentOut"]);
     expect(bySection("settings")).toEqual([

@@ -1,28 +1,9 @@
 allowBuilds:
   '@parcel/watcher': true
-  '@sentry/cli': true
   '@swc/core': true
   esbuild: true
-  msw: true
 
 minimumReleaseAge: 0
-
-# Security overrides for transitive dependencies (`pnpm audit`).
-# Each one lifts a pinned or stale copy to a patched release in the *same*
-# major, so the parent's API contract is unchanged; anything that would need a
-# major jump is deliberately not here. The selectors name the vulnerable range
-# so an already-patched copy elsewhere in the tree is left alone. Delete a line
-# once its parent ships the fix itself.
-#   next-devtools-mcp: @modelcontextprotocol/sdk (pinned 1.25.2 upstream)
-#   aws-rum-web: uuid. The one exception to "same major": @aws-rum/web-core
-#   3.2.1 (the latest) pins uuid ^9 and imports only `v4`, which 11.x keeps
-#   with the same signature and the same CJS + ESM entry points.
-#   reg-suit (dev): tmp, two advisories patched in 0.2.6. Its `braces`
-#   advisory has no patched release reported, so it has no line here.
-overrides:
-  '@modelcontextprotocol/sdk@<1.31.0': ^1.31.0
-  'tmp@<0.2.6': ^0.2.6
-  'uuid@<11.1.1': ^11.1.1
 
 patchedDependencies:
   '@vercel/analytics@2.0.1': patches/@vercel__analytics@2.0.1.patch
