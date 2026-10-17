@@ -3042,7 +3042,7 @@ export async function setBookingDietaryNote(
           db
             .select({ id: trips.id })
             .from(trips)
-            .where(and(eq(trips.shopId, input.shopId), eq(trips.lunchAboard, true))),
+            .where(and(eq(trips.shopId, input.shopId), eq(trips.lunchAboard, true), liveTrip())),
         ),
       ),
     )

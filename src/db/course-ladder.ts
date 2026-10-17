@@ -20,7 +20,7 @@ import type { DbExecutor } from "./client";
 import { listCatalogInProgressionOrder } from "./courses";
 import { physicianReferrals, recentlyInvitedPeople } from "./invite-suggestions";
 import { queryAll } from "./query-helpers";
-import { bookings, certifications, courses, people, trips, waiverRecords } from "./schema";
+import { bookings, certifications, courses, people, trips } from "./schema";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 import { liveBookingJoin, tripBoatCertifiedPassengers } from "./trips-queries";
 
