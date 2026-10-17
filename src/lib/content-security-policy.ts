@@ -1,7 +1,7 @@
 import { MAP_REACHABILITY_PROBE } from "./maps";
 
 /**
- * The app's Content-Security-Policy, in two halves.
+ * The app's Content-Security-Policy.
  *
  * Until 2026-08-24 the entire CSP was `frame-ancestors 'none'` — clickjacking
  * protection and nothing else. No `default-src`, no `script-src`, no
@@ -17,23 +17,13 @@ import { MAP_REACHABILITY_PROBE } from "./maps";
  * that makes a future `dangerouslySetInnerHTML` a bug rather than a session
  * compromise.
  *
- * ## Two headers, deliberately
+ * ## One enforced header
  *
- * {@link enforcedPolicy} carries only what has been *measured* not to break
- * anything, and every directive in it closes a real class on its own:
- * `object-src 'none'` (plugin-hosted script), `base-uri 'self'` (a `<base>`
- * injection repoints every relative script URL on the page), `form-action`
- * (form-hijack exfiltration), and the existing `frame-ancestors`.
- *
- * {@link reportOnlyPolicy} carries the full policy — the one to enforce next —
- * so a deployed environment reports what it would have blocked before anything
- * is actually blocked. That sequencing is the point: a CSP that breaks Stripe's
- * redirect or the offline manifest's service worker in production, on a boat,
- * is worse than no CSP.
- *
- * `frame-ancestors` is deliberately absent from the report-only half. CSP2
- * specifies it as ignored in a report-only policy, so including it buys nothing
- * and costs a console warning on every page load.
+ * {@link enforcedPolicy} is the whole policy, sent as `Content-Security-Policy`
+ * (ADR 20260824-content-security-policy). It carries `report-uri`/`report-to`,
+ * so a page it breaks produces a `security.csp_violation` line rather than
+ * failing silently: a CSP that breaks Stripe's redirect or the offline
+ * manifest's service worker in production, on a boat, is worse than no CSP.
  *
  * ## Why `script-src` still carries `'unsafe-inline'`
  *
@@ -66,23 +56,6 @@ import { MAP_REACHABILITY_PROBE } from "./maps";
  * 20260824-content-security-policy for the full reasoning and what would
  * reopen it.
  */
-
-/**
- * When the full policy started shipping as report-only, and the date by which
- * somebody must have read the evidence and either promoted it or said why not.
- *
- * Report-only is a measuring phase, not a resting state: every day it lasts,
- * the full policy protects nothing. The evidence is the `CspViolations` metric
- * (`security.csp_violation` lines, `infra/lib/observability.ts`), which lives
- * in CloudWatch and not in this repository, so no test can read it. What a test
- * can do is refuse to let the phase outlive its review date unnoticed:
- * `content-security-policy.test.ts` fails on the wall clock once
- * {@link REPORT_ONLY_REVIEW_BY} has passed. Promoting moves directives into
- * {@link enforcedPolicy} (ADR 20260824-content-security-policy); keeping
- * report-only longer moves the review date, with the reason in the commit.
- */
-export const REPORT_ONLY_SINCE = "2026-08-24";
-export const REPORT_ONLY_REVIEW_BY = "2026-11-01";
 
 /** Where a violating browser posts its report. Same-origin, so no CORS. */
 export const CSP_REPORT_PATH = "/api/csp-report";
@@ -134,8 +107,7 @@ const MEDIA_IMAGE_HOSTS = ["https://*.s3.amazonaws.com", "https://*.cloudfront.n
  * a domain DiveDay owns -- `mediaDomainName` in cdk.json, S11b of
  * `infra/lib/infra-stack.ts` -- and `MEDIA_PUBLIC_URL_BASE` becomes
  * `https://media.dive.day`, which matches nothing in this policy. Every course
- * photo, dive-site image, shop logo and recap picture would then be blocked by
- * the report-only policy first and by the enforced one the day it is enforced:
+ * photo, dive-site image, shop logo and recap picture would then be blocked:
  * a CSP failure that looks like a broken CDN and reads, in the console, like a
  * mistake in the alias.
  *
@@ -217,9 +189,8 @@ const MAP_PROBE_IMAGE_SOURCE = MAP_REACHABILITY_PROBE;
  * Sentry's ingest, as a belt to the tunnel's braces. `next.config.ts` sets
  * `tunnelRoute: "/monitoring"`, so the browser SDK posts same-origin and
  * `'self'` already covers it — but the tunnel is a build-time rewrite and a
- * misconfiguration would silently take error reporting with it, which is
- * exactly the failure a report-only pass exists to surface rather than to
- * cause.
+ * misconfiguration would silently take error reporting with it, and an
+ * enforced policy would then cause that failure rather than surface it.
  */
 const SENTRY_INGEST_HOSTS = ["https://*.ingest.sentry.io", "https://*.ingest.us.sentry.io"];
 
@@ -348,40 +319,18 @@ function serialize(directives: (readonly [string, readonly string[]] | [string])
     .join("; ");
 }
 
-/**
- * The half that is enforced today: directives measured not to break anything,
- * each closing a class on its own. `frame-ancestors` is the pre-existing
- * clickjacking guard, unchanged in behaviour.
- *
- * Carries `report-uri`/`report-to` too, and that is deliberate rather than
- * copied from the report-only half by habit: this is the header that can
- * actually break a real page, so it is also the header whose breakage must be
- * audible. A report-only violation is a rehearsal; an enforced one is the
- * thing the ADR's "worse than no CSP" warning is about, and it must produce a
- * `security.csp_violation` line the same way.
- */
 const GOOGLE_FONTS_STYLESHEET_HOST = "https://fonts.googleapis.com";
 const GOOGLE_FONTS_FILE_HOST = "https://fonts.gstatic.com";
 
-export function enforcedPolicy(options: CspOptions): string {
-  return serialize([
-    ["object-src", ["'none'"]],
-    ["base-uri", ["'self'"]],
-    // Every form in this app posts to a Server Action on its own origin; the
-    // Stripe hosts are there for the 303 that follows one. See
-    // {@link STRIPE_FORM_HOSTS}.
-    ["form-action", ["'self'", ...STRIPE_FORM_HOSTS]],
-    ...(options.denyFraming ? ([["frame-ancestors", ["'none'"]]] as const) : []),
-    ["report-uri", [CSP_REPORT_PATH]],
-    ["report-to", [REPORT_GROUP]],
-  ]);
-}
-
 /**
- * The half that only reports: the policy to enforce once a deployed
- * environment has confirmed it blocks nothing real.
+ * The policy, as sent in `Content-Security-Policy`.
+ *
+ * Carries `report-uri`/`report-to`, deliberately: this header can break a real
+ * page, so its breakage must be audible. A blocked load is the thing the ADR's
+ * "worse than no CSP" warning is about, and it must produce a
+ * `security.csp_violation` line.
  */
-export function reportOnlyPolicy(options: CspOptions): string {
+export function enforcedPolicy(options: CspOptions): string {
   const scriptSrc = [
     "'self'",
     "'unsafe-inline'",
@@ -429,16 +378,28 @@ export function reportOnlyPolicy(options: CspOptions): string {
         ...(options.metaSignup ? META_SIGNUP_CONNECT_HOSTS : []),
       ],
     ],
-    ["frame-src", [...MAP_FRAME_HOSTS, ...(options.metaSignup ? META_SIGNUP_CONNECT_HOSTS : [])]],
+    // `'self'` for the staff embed generator's live preview
+    // (settings/embed/EmbedGenerator.tsx), which frames this app's own
+    // `?embed=1` page; `frame-src` does not fall back to `default-src`'s
+    // `'self'` once it is set.
+    [
+      "frame-src",
+      ["'self'", ...MAP_FRAME_HOSTS, ...(options.metaSignup ? META_SIGNUP_CONNECT_HOSTS : [])],
+    ],
     // The offline-manifest service worker, and the blob workers Next may spawn.
     ["worker-src", ["'self'", "blob:"]],
     ["manifest-src", ["'self'"]],
     ["media-src", ["'self'", "blob:"]],
+    // Plugin-hosted script.
     ["object-src", ["'none'"]],
+    // A `<base>` injection repoints every relative script URL on the page.
     ["base-uri", ["'self'"]],
+    // Every form in this app posts to a Server Action on its own origin; the
+    // Stripe hosts are there for the 303 that follows one. See
+    // {@link STRIPE_FORM_HOSTS}.
     ["form-action", ["'self'", ...STRIPE_FORM_HOSTS]],
-    // `frame-ancestors` is omitted on purpose — CSP2 specifies it as ignored in
-    // a report-only policy, so it would only produce a console warning.
+    // Clickjacking. Dropped only for the embed exception (`denyFraming`).
+    ...(options.denyFraming ? ([["frame-ancestors", ["'none'"]]] as const) : []),
     ["report-uri", [CSP_REPORT_PATH]],
     ["report-to", [REPORT_GROUP]],
   ]);

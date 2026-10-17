@@ -16,7 +16,6 @@ import {
   type CspOptions,
   enforcedPolicy,
   reportingEndpointsHeader,
-  reportOnlyPolicy,
 } from "@/lib/content-security-policy";
 import { COURSE_PREVIEW_PARAM, coursePreviewIsValid } from "@/lib/course-preview-gate";
 import { classifyDatabaseFailure } from "@/lib/db-failure";
@@ -843,9 +842,7 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
     metaSignup: WHATSAPP_SETTINGS_PATH.test(req.nextUrl.pathname),
     development: process.env.NODE_ENV === "development" || process.env.DIVEDAY_E2E === "1",
   };
-  const enforced = enforcedPolicy(cspOptions);
-  if (enforced.length > 0) res.headers.set("Content-Security-Policy", enforced);
-  res.headers.set("Content-Security-Policy-Report-Only", reportOnlyPolicy(cspOptions));
+  res.headers.set("Content-Security-Policy", enforcedPolicy(cspOptions));
   res.headers.set("Reporting-Endpoints", reportingEndpointsHeader());
   return res;
 }

@@ -82,7 +82,7 @@ const reportingApiSchema = z.array(
 );
 
 export type CspViolation = {
-  /** The directive that would have blocked it, e.g. `connect-src`. */
+  /** The directive that blocked it, e.g. `connect-src`. */
   directive: string;
   /**
    * Where the blocked thing came from, as an origin — or one of the keywords a
@@ -97,7 +97,10 @@ export type CspViolation = {
    * apart from one in a third-party script.
    */
   source: string;
-  /** `report` for the report-only header, `enforce` for the enforced one. */
+  /**
+   * `enforce` when the browser blocked it. `report` is the spec's other value,
+   * for a report-only header, which this app does not send.
+   */
   disposition: "enforce" | "report";
 };
 
@@ -107,7 +110,7 @@ function bounded(value: string, max = 120): string {
 }
 
 /**
- * Every directive this policy's own two builders can name
+ * Every directive this policy's own builder can name
  * (`content-security-policy.ts`), plus the handful CSP3 defines that this app
  * does not currently emit but a future policy change might — `child-src`,
  * `script-src-elem`, `script-src-attr`, `style-src-elem`, `style-src-attr`,

@@ -468,7 +468,7 @@ describe("the public namespace's edge refusal", () => {
       `/s/blue-mantis/trips/${TRIP_ID}`,
     );
     expect(res.headers.get("X-Frame-Options")).toBe("DENY");
-    expect(res.headers.get("Content-Security-Policy-Report-Only")).toBeTruthy();
+    expect(res.headers.get("Content-Security-Policy")).toContain("default-src 'self'");
   });
 
   it("leaves a URL that names something completely alone", async () => {
@@ -1043,21 +1043,33 @@ describe("a hidden course at the edge", () => {
 });
 
 describe("proxy CSP handling", () => {
-  it("allows unsafe-eval in report-only policy during e2e runs", async () => {
+  it("enforces the whole policy and sends no report-only header", async () => {
+    const res = await run(request("/shop/blue-mantis/divers"));
+    const csp = res.headers.get("Content-Security-Policy") ?? "";
+    expect(csp).toContain("script-src 'self' 'unsafe-inline'");
+    expect(csp).toContain("frame-ancestors 'none'");
+    // Breakage stays audible: an enforced block still reports.
+    expect(csp).toContain("report-uri /api/csp-report");
+    expect(res.headers.get("Reporting-Endpoints")).toBe('csp="/api/csp-report"');
+    expect(res.headers.get("Content-Security-Policy-Report-Only")).toBeNull();
+  });
+
+  it("allows unsafe-eval in the enforced policy during e2e runs", async () => {
     vi.stubEnv("DIVEDAY_E2E", "1");
     vi.stubEnv("NODE_ENV", "production");
     const res = await run(request("/shop/blue-mantis/divers"));
-    const reportOnly = res.headers.get("Content-Security-Policy-Report-Only") ?? "";
-    expect(reportOnly).toContain("'unsafe-eval'");
+    const csp = res.headers.get("Content-Security-Policy") ?? "";
+    expect(csp).toContain("'unsafe-eval'");
     vi.unstubAllEnvs();
   });
 
-  it("keeps unsafe-eval out of report-only policy in production when not in e2e", async () => {
+  it("keeps unsafe-eval out of the enforced policy in production when not in e2e", async () => {
     vi.stubEnv("DIVEDAY_E2E", "");
     vi.stubEnv("NODE_ENV", "production");
     const res = await run(request("/shop/blue-mantis/divers"));
-    const reportOnly = res.headers.get("Content-Security-Policy-Report-Only") ?? "";
-    expect(reportOnly).not.toContain("'unsafe-eval'");
+    const csp = res.headers.get("Content-Security-Policy") ?? "";
+    expect(csp).toContain("script-src");
+    expect(csp).not.toContain("'unsafe-eval'");
     vi.unstubAllEnvs();
   });
 });
