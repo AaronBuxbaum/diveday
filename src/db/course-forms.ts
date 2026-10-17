@@ -40,6 +40,7 @@ import { hasReturned } from "@/lib/trips";
 import { loadActiveStaffRoles } from "./authz";
 import { verifyBookingCapability } from "./booking-capabilities";
 import type { AppDb, DbExecutor } from "./client";
+import { publishManifestEventsForPerson } from "./manifest-events";
 import {
   activityEvents,
   bookings,
@@ -1186,11 +1187,13 @@ export async function signCourseForm(
     signedAt: now,
   });
   if (!evidence) return { ok: false, reason: "invalid_signature" };
-  return db.transaction(async (tx): Promise<SignCourseFormOutcome> => {
+  let signer: string | null = null;
+  const outcome = await db.transaction(async (tx): Promise<SignCourseFormOutcome> => {
     const enrollment = await enrollmentFor(tx, input.shopId, input.bookingId);
     if (!enrollment || enrollment.identityHeld || hasReturned(enrollment.endsAt, now)) {
       return { ok: false, reason: "unavailable" };
     }
+    signer = enrollment.personId;
     const required =
       (await requiredCourseFormsForTrips(tx, input.shopId, [enrollment.tripId], now)).get(
         enrollment.tripId,
@@ -1247,6 +1250,23 @@ export async function signCourseForm(
       guardian,
     });
   });
+  await publishSigned(db, input.shopId, signer, outcome);
+  return outcome;
+}
+
+/**
+ * A new record clears a blocker on every seat this enrollment's forms are
+ * asked on — the course seat and any charter its training mark names (issue
+ * #2275) — so each of the student's manifests re-reads. After the commit.
+ */
+async function publishSigned(
+  db: AppDb,
+  shopId: string,
+  personId: string | null,
+  outcome: { ok: boolean; alreadySigned?: boolean },
+): Promise<void> {
+  if (!personId || !outcome.ok || outcome.alreadySigned) return;
+  await publishManifestEventsForPerson(db, shopId, personId);
 }
 
 type GuardianEvidence = {
@@ -1415,13 +1435,15 @@ export async function recordPaperCourseForm(
 ): Promise<PaperCourseFormOutcome> {
   const now = input.now ?? nowDate();
   if (!input.paperCopyConfirmed) return { ok: false, reason: "paper_copy_unconfirmed" };
-  return db.transaction(async (tx): Promise<PaperCourseFormOutcome> => {
+  let student: string | null = null;
+  const outcome = await db.transaction(async (tx): Promise<PaperCourseFormOutcome> => {
     const roles = await loadActiveStaffRoles(tx, input.shopId, input.recordedByPersonId);
     if (!roles || !isStaff(roles)) return { ok: false, reason: "staff_not_found" };
     const enrollment = await enrollmentFor(tx, input.shopId, input.bookingId);
     // A held seat is not yet known to be this student's (#2082): a paper copy
     // recorded against it could be somebody else's signature.
     if (!enrollment || enrollment.identityHeld) return { ok: false, reason: "unavailable" };
+    student = enrollment.personId;
     if (hasReturned(enrollment.endsAt, now)) return { ok: false, reason: "session_ended" };
     const today = signingDate(now, enrollment.timezone);
     let paperSignedOn: CalendarDate | null = null;
@@ -1486,6 +1508,8 @@ export async function recordPaperCourseForm(
       guardian,
     });
   });
+  await publishSigned(db, input.shopId, student, outcome);
+  return outcome;
 }
 
 /** How many students, on how many sessions, a change to forms reaches. */

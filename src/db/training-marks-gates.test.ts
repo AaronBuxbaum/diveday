@@ -6,10 +6,13 @@ import {
   markSeat,
   seatBlockerCodes,
 } from "@/test/training-mark-context";
-import { signCourseForm } from "./course-forms";
+import { cancelBooking } from "./bookings";
+import { recordPaperCourseForm, signCourseForm } from "./course-forms";
+import { subscribeManifestEvents } from "./manifest-events";
 import { bookings, people, tripAssignments } from "./schema";
 import { clearTrainingDive } from "./training-marks";
 import { changeTripCrew } from "./trips-crew";
+import { moveTrip } from "./trips-schedule";
 
 // The review round on #2275's build: each gate a reviewer found open.
 const fileCtx = fileScopedShopContext();
@@ -109,6 +112,77 @@ describe("training marks — the gates the build review closed (in-memory PGlite
       await markSeat(ctx);
       expect(await roster(ctx, ctx.owner, "instructor")).toBe(true);
       expect(await clear(ctx)).toEqual({ ok: true, changed: true });
+    });
+  });
+
+  describe("tells the charter's manifest when the enrollment behind its mark changes", () => {
+    type Ctx = Awaited<ReturnType<typeof charterContext>>;
+    async function charterEvents(ctx: Ctx, act: () => Promise<unknown>) {
+      let events = 0;
+      const stop = subscribeManifestEvents(ctx.shop.id, ctx.charter.id, () => {
+        events += 1;
+      });
+      try {
+        await act();
+      } finally {
+        stop();
+      }
+      return events;
+    }
+
+    it("when the course seat is canceled", async () => {
+      const ctx = await charterContext();
+      await markSeat(ctx);
+      expect(
+        await charterEvents(ctx, () => cancelBooking(ctx.db, ctx.shop.id, ctx.course.bookingId)),
+      ).toBeGreaterThan(0);
+    });
+
+    it("when the session moves", async () => {
+      const ctx = await charterContext();
+      await markSeat(ctx);
+      expect(
+        await charterEvents(ctx, async () =>
+          expect(
+            await moveTrip(
+              ctx.db,
+              ctx.shop.id,
+              ctx.course.tripId,
+              new Date(ctx.course.startsAt.getTime() - 2 * 60 * 60 * 1000),
+              { actorPersonId: ctx.owner },
+            ),
+          ).toMatchObject({ ok: true }),
+        ),
+      ).toBeGreaterThan(0);
+    });
+
+    it("when a form is signed or recorded on paper", async () => {
+      const ctx = await charterContext();
+      await markSeat(ctx);
+      expect(
+        await charterEvents(ctx, () =>
+          signCourseForm(ctx.db, {
+            shopId: ctx.shop.id,
+            bookingId: ctx.course.bookingId,
+            formVersionId: ctx.form.versionId as string,
+            signerName: ctx.course.fullName,
+            agreed: true,
+          }),
+        ),
+      ).toBeGreaterThan(0);
+      const other = await charterContext();
+      await markSeat(other);
+      expect(
+        await charterEvents(other, () =>
+          recordPaperCourseForm(other.db, {
+            shopId: other.shop.id,
+            bookingId: other.course.bookingId,
+            formId: other.form.id,
+            recordedByPersonId: other.owner,
+            paperCopyConfirmed: true,
+          }),
+        ),
+      ).toBeGreaterThan(0);
     });
   });
 });

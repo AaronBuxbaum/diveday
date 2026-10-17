@@ -19,6 +19,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { flushUrgentCrewNotices, recordCrewCalledOff, recordCrewTimeMoved } from "./crew-notices";
 import { recordDeskEvent } from "./desk-events";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
+import { publishManifestEvent } from "./manifest-events";
 import { rearmTripReminders } from "./reminder-rearm";
 import { recordedRollCallRows } from "./roll-call-history";
 import type { Trip } from "./schema";
@@ -509,6 +510,7 @@ export async function updateTrip(
   patch: TripPatch,
 ): Promise<UpdateTripOutcome> {
   let timeMoved = false;
+  let timesChanged = false;
   const outcome = await db.transaction(async (tx): Promise<UpdateTripOutcome> => {
     const plannedDives = normalizedDiveCount(patch.plannedDives);
     if (!plannedDives) return { ok: false, reason: "invalid" };
@@ -742,6 +744,7 @@ export async function updateTrip(
     const timesMoved =
       existing.startsAt.getTime() !== patch.startsAt.getTime() ||
       existing.endsAt.getTime() !== patch.endsAt.getTime();
+    timesChanged = timesMoved;
     if (timesMoved && patch.changeActorPersonId) {
       await recordShopActivityWithin(tx, {
         shopId,
@@ -753,6 +756,8 @@ export async function updateTrip(
   });
   // Late news goes now, not on the hour (`flushUrgentCrewNotices`).
   if (timeMoved) await flushUrgentCrewNotices(db, { shopId, tripIds: [tripId] });
+  // Its manifest, and any charter whose training mark rests on its times.
+  if (timesChanged) await publishManifestEvent(db, shopId, tripId);
   return outcome;
 }
 
