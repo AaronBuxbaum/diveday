@@ -14,6 +14,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { PARTICIPANT_TYPES } from "@/lib/participant-types";
+import { TURN_AWAY_REASONS } from "@/lib/turn-away";
 import { people, shops } from "./core";
 import { courseInquiries } from "./courses";
 import { trips } from "./trips";
@@ -37,6 +38,14 @@ export const bookingStatus = pgEnum("booking_status", [
   "cancelled",
   "no_show",
 ]);
+
+/**
+ * **Why the desk turned a diver away** (safety sheet 2026-10-15, item 6;
+ * H-135): one category from that seat's own readiness blockers, never the
+ * evidence behind it. Kept in step with `TURN_AWAY_REASONS` in
+ * `src/lib/turn-away.ts`.
+ */
+export const turnAwayReason = pgEnum("turn_away_reason", TURN_AWAY_REASONS);
 
 /**
  * **What this person is doing on the boat** (ADR 20261007-participant-types).
@@ -258,6 +267,28 @@ export const bookings = pgTable(
     pickupTime: text("pickup_time"),
     status: bookingStatus("status").notNull().default("booked"),
     /**
+     * **The desk saw this diver and turned them away**, and why: one category
+     * from the seat's own blockers (`turnAwayReasons`, src/lib/turn-away.ts).
+     * Set with `status = 'no_show'` by `turnBookingAway` (src/db/turn-away.ts),
+     * which frees the seat exactly as a no-show does; null on a plain "Not
+     * here", which records that the diver did not arrive.
+     *
+     * A category only — never a medical answer or a card's details. The check
+     * below keeps it off any seat that holds a place on the boat, so every
+     * writer that puts a released seat back clears it. Erasure clears it too
+     * (`medical` is health-adjacent) and keeps `turned_away_at`.
+     */
+    turnedAwayReason: turnAwayReason("turned_away_reason"),
+    /**
+     * **When the desk turned this diver away** (layer 3 review, 2026-10-16):
+     * the fact, apart from its category, so erasure can clear the reason and
+     * the record still never reads "did not arrive". Set with the reason by
+     * `turnBookingAway`; cleared with it by every writer that puts the seat
+     * back. A turned-away seat later removed keeps it ("turned away, then
+     * removed"); a split keeps it and clears only the reason.
+     */
+    turnedAwayAt: timestamp("turned_away_at", { withTimezone: true }),
+    /**
      * **The diver said they are running late** (J3): the instant they tapped
      * "Running late" on `/ready` or replied LATE to a shop message
      * (`src/db/running-late.ts`). Null is the ordinary state. The first
@@ -466,6 +497,18 @@ export const bookings = pgTable(
     check(
       "bookings_course_materials_done_attributed",
       sql`(${table.courseMaterialsDoneAt} is null) = (${table.courseMaterialsDoneByPersonId} is null)`,
+    ),
+    // A turn-away on a seat that is on the boat is a record contradicting itself:
+    // only a released seat (or one given up since) can carry it.
+    check(
+      "bookings_turned_away_is_released",
+      sql`${table.turnedAwayAt} is null or ${table.status} in ('no_show', 'cancelled')`,
+    ),
+    // A reason with no turn-away is a category about nothing. The reverse is
+    // allowed: erasure clears the category and keeps the fact.
+    check(
+      "bookings_turned_away_reason_has_time",
+      sql`${table.turnedAwayReason} is null or ${table.turnedAwayAt} is not null`,
     ),
     index("bookings_trip_idx").on(table.tripId),
     /** Backs the diver-record lookups (getDiverProfile, payment/booking history joins). */

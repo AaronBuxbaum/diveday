@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { HeldAfterDiveCard, NoShowCard } from "@/app/ready/[token]/_components/AfterDiveDoors";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
 import { cancelledNoticeForReady } from "@/app/ready/[token]/_components/CancelledNotice";
@@ -74,6 +73,7 @@ import {
   type ThreadStep,
   theBoatIsHome,
 } from "@/lib/thread-steps";
+import { HeldAfterDiveCard, NoShowCard, releasedSeat } from "./_components/AfterDiveDoors";
 import { readAfterTheDive } from "./_components/after-dive-reads";
 import { UnavailableReadyLink } from "./_components/ExpiredLink";
 import { confirmCarriedFactsFromReady, saveTanksFromReady } from "./gear-actions";
@@ -214,16 +214,13 @@ async function DiverReadinessPage({
   }
 
   /**
-   * The shop's own published identity, in the shape the two terminal notices
-   * below hand to `ExpiredLinkCard`. A live token has already resolved the
-   * shop, and a diver holding a phone on a day that went wrong needs somebody
-   * to ask (issue #801).
+   * The shop's own published identity, in the shape the terminal notices below
+   * hand to `ExpiredLinkCard`. A live token has already resolved the shop, and
+   * a diver holding a phone on a day that went wrong needs somebody to ask
+   * (issue #801).
    */
-  const shopContact = {
-    name: detail.shop.name,
-    contactEmail: shop.contactEmail,
-    contactPhone: shop.contactPhone,
-  };
+  const { contactEmail, contactPhone } = shop;
+  const shopContact = { name: detail.shop.name, contactEmail, contactPhone };
 
   /**
    * **After the dive, the same link** (ADR 20260827-the-divers-thread,
@@ -260,7 +257,7 @@ async function DiverReadinessPage({
     const recapState = await afterDive.recap();
     if (recapState.kind === "waiting") return alone(<RecapWaitingCard shop={shopContact} t={t} />);
     const recap = recapState.kind === "recap" ? recapState.data : null;
-    if (!recap) return alone(<NoShowCard shop={shopContact} t={t} />);
+    if (!recap) return alone(<NoShowCard shop={shopContact} t={t} turnedAway={data.turnedAway} />);
     const recapToken = signRecapToken(bookingId);
     const after = await buildAfterStateProps({
       db,
@@ -289,6 +286,7 @@ async function DiverReadinessPage({
       </DiverIntlProvider>,
     );
   }
+  if (data.seatReleased) return releasedSeat(db, shop.id, bookingId, locale, shopContact, t);
 
   const notice = noticeFromParam(
     saved ? `saved-${saved}` : error ? `error-${error}` : pay ? `pay-${pay}` : undefined,

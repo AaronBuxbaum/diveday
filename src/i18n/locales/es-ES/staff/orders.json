@@ -116,7 +116,7 @@
       "paymentInFlight": "Se está registrando un pago de este pedido. Revisa el pedido en un minuto antes de volver a intentarlo."
     },
     "recordPayment": {
-      "label": "Registrar pago:",
+      "label": "Registrar pago",
       "recording": "Registrando…"
     }
   },

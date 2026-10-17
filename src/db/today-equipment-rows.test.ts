@@ -1,8 +1,8 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
+import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
-import type { TodayAction } from "@/lib/today";
+import { ACTION_KIND_META, type TodayAction } from "@/lib/today";
 import { fileScopedShopContext } from "@/test/db";
 import { createBoat } from "./boats";
 import { createGearItem, recordGearService, reserveGearUnit, returnGearReservation } from "./gear";
@@ -349,12 +349,16 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
       detail: "AED Papers Hull: pads expired 3 days ago",
       href: `/shop/${shop.slug}/gear/${aed.item.id}`,
     });
-    expect(work.actions.find((a) => a.id === `boat-safety:boat:${hull.id}`)).toMatchObject({
-      kind: "boat_safety_expired",
+    // A lapsed paper is danger ink, named by its date (H-136), and gates nothing.
+    const lapsed = work.actions.find((a) => a.id === `boat-safety:boat:${hull.id}`);
+    expect(lapsed).toMatchObject({
+      kind: "boat_papers_lapsed",
+      urgency: "now",
       subject: "Papers Hull",
-      detail: "Insurance expired 2 days ago",
+      detail: `Hull insurance ended ${formatCalendarDate(shiftCalendarDate(today, -2), "en-US")}`,
       href: `/shop/${shop.slug}/settings/boats`,
     });
+    expect(lapsed && ACTION_KIND_META[lapsed.kind].tone).toBe("danger");
     // Safety kit never rides the register's bench-clock row: one dead AED,
     // one row.
     expect(work.actions.some((a) => a.id === `gear-service:${aed.item.id}`)).toBe(false);

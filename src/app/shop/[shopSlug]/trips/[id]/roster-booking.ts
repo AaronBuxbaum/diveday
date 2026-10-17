@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
-import { getShopBookingTripId } from "@/db/bookings";
+import { cancelBooking, getShopBookingTripId } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
-import { shopPath } from "@/lib/staff-notices";
+import { revalidateAndRedirect } from "@/lib/navigation";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 
 /**
@@ -45,4 +46,31 @@ export async function requireRosterBooking(
   back: string,
 ): Promise<void> {
   if (!(await isRosterBooking(db, shopId, tripId, bookingId))) redirect(back);
+}
+
+/**
+ * **Take a seat off the roster, or say why not.** A diver marked aboard a boat
+ * that has left is refused (H-133): back to the row with
+ * `booking-remove-aboard`, or `booking-remove-uncounted` for a seat nobody
+ * counted at the dock, and nothing changed — no email, no refund, no trail
+ * line. Otherwise the seat is cancelled, the trail names `actorPersonId`, and this returns what it was before,
+ * which decides whether the diver is told.
+ */
+export async function removeSeat(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  back: string,
+  actorPersonId: string,
+) {
+  // The trail's "who took this diver off the manifest?" line is written in
+  // the removal's own transaction, named by record (security review
+  // 2026-10-16, F1).
+  const cancelled = await cancelBooking(db, shopId, bookingId, { trail: { actorPersonId } });
+  if (!cancelled.ok && cancelled.reason === "aboard_at_sea") {
+    const notice =
+      cancelled.hold === "uncounted" ? "booking-remove-uncounted" : "booking-remove-aboard";
+    revalidateAndRedirect(back, noticeUrl(back, notice, { bid: bookingId }));
+  }
+  return cancelled.ok ? cancelled.booking.previousStatus : "cancelled";
 }

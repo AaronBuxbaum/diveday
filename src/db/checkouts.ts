@@ -1,7 +1,8 @@
-import { and, asc, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { checkoutCharge, seatCheckoutCharge } from "@/lib/deposits";
 import { log } from "@/lib/log";
+import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { isDiver, type ParticipantType } from "@/lib/participant-types";
 import { parsePassThroughFee, passThroughTotalCents } from "@/lib/pass-through-fee";
 import { capturedPaymentStatuses } from "@/lib/payment-source";
@@ -190,7 +191,9 @@ export async function startBookingCheckout(
         inArray(bookings.id, input.bookingIds),
         eq(bookings.shopId, input.shopId),
         eq(bookings.tripId, input.tripId),
-        ne(bookings.status, "cancelled"),
+        // Only a seat the diver still holds is charged: a released one (turned
+        // away, not here) may already be resold (layer 3 review, dde-2 #1).
+        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
       ),
     );
   if (bookingRows.length !== input.bookingIds.length) return { ok: false, reason: "invalid" };
@@ -1082,6 +1085,40 @@ export async function recordCheckoutPaymentIntent(
     )
     .returning({ id: bookingCheckouts.id });
   return updated !== undefined;
+}
+
+/**
+ * **Withdraw every pending checkout quoting this seat**, for a writer that has
+ * just released it (the desk's "Turned away" and "Not here"; layer 3 re-review,
+ * dde-3 #3). The caller holds the seat's lock, the order every checkout-retiring
+ * writer takes (issue #2335). A tab completed afterwards lands as paid after
+ * close (`markCheckoutPaidBySessionId`), money for a person to refund, never a
+ * payment booked to a seat the shop may have sold.
+ */
+export async function expirePendingCheckoutsForBooking(
+  tx: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<void> {
+  const linked = tx
+    .select({ id: bookingCheckoutBookings.checkoutId })
+    .from(bookingCheckoutBookings)
+    .where(
+      and(
+        eq(bookingCheckoutBookings.shopId, shopId),
+        eq(bookingCheckoutBookings.bookingId, bookingId),
+      ),
+    );
+  await tx
+    .update(bookingCheckouts)
+    .set({ status: "expired" })
+    .where(
+      and(
+        eq(bookingCheckouts.shopId, shopId),
+        eq(bookingCheckouts.status, "pending"),
+        inArray(bookingCheckouts.id, linked),
+      ),
+    );
 }
 
 /**

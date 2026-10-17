@@ -1,5 +1,6 @@
 import type { ArrivalOfflineRefusal, CheckInOutcome, UndoCheckInOutcome } from "@/db/check-in";
 import type { MarkNoShowOutcome, UndoNoShowOutcome } from "@/db/no-show";
+import type { TurnAwayOutcome } from "@/db/turn-away";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { type FormNotice, type NoticeCodeOf, noticeFromParam } from "@/lib/staff-notices";
 
@@ -25,9 +26,11 @@ type CheckInRefusal = Extract<CheckInOutcome, { ok: false }>["reason"];
 type UndoRefusal = Extract<UndoCheckInOutcome, { ok: false }>["reason"];
 type MarkNoShowRefusal = Extract<MarkNoShowOutcome, { ok: false }>["reason"];
 type UndoNoShowRefusal = Extract<UndoNoShowOutcome, { ok: false }>["reason"];
+type TurnAwayRefusal = Extract<TurnAwayOutcome, { ok: false }>["reason"];
 type DeskNoticeCode = NoticeCodeOf<
   | Exclude<CheckInRefusal | Exclude<UndoRefusal, "not_checked_in">, ArrivalOfflineRefusal>
   | `no_show_${MarkNoShowRefusal | UndoNoShowRefusal}`
+  | `turn_away_${TurnAwayRefusal}`
 >;
 
 export type DeskNotice = {
@@ -88,6 +91,31 @@ export const DESK_NOTICES: DeskNoticeMap = {
   "no-show-course-ratio-full": { tone: "danger", key: "checkIn.notice.noShowCourseRatioFull" },
   "no-show-not-found": { tone: "danger", key: "checkIn.notice.notFound" },
   "no-show-staff-not-found": { tone: "danger", key: "checkIn.notice.staffNotFound" },
+  // The desk turned this diver away and the boat's start has passed (dde-3 #2).
+  "no-show-turned-away-departed": {
+    tone: "warning",
+    key: "checkIn.notice.noShowTurnedAwayDeparted",
+  },
+  // "Turned away" (H-135). The roll-call refusals come first for the reason
+  // the no-show's do; the rest say what changed on the row since it was drawn.
+  "turn-away-already-boarded": { tone: "danger", key: "checkIn.notice.turnAwayAlreadyBoarded" },
+  "turn-away-already-missing-after-dive": {
+    tone: "danger",
+    key: "checkIn.notice.noShowAlreadyMissingAfterDive",
+  },
+  "turn-away-already-marked": { tone: "neutral", key: "checkIn.notice.turnAwayAlreadyMarked" },
+  // The boat left with this diver checked in (layer 3 review, dde-1 F1).
+  "turn-away-sailed": { tone: "danger", key: "checkIn.notice.turnAwaySailed" },
+  "turn-away-not-booked": { tone: "neutral", key: "checkIn.notice.noShowNotBooked" },
+  "turn-away-trip-cancelled": { tone: "neutral", key: "checkIn.notice.noShowTripCancelled" },
+  "turn-away-outside-window": { tone: "warning", key: "checkIn.notice.turnAwayOutsideWindow" },
+  "turn-away-not-blocked": { tone: "warning", key: "checkIn.notice.turnAwayNotBlocked" },
+  "turn-away-reason-not-blocking": {
+    tone: "warning",
+    key: "checkIn.notice.turnAwayReasonNotBlocking",
+  },
+  "turn-away-not-found": { tone: "danger", key: "checkIn.notice.notFound" },
+  "turn-away-staff-not-found": { tone: "danger", key: "checkIn.notice.staffNotFound" },
   // "Email them this date" on the no-show panel (UX review 2026-10-11, item 14):
   // whether the offer left, and when it did not, the reason that sends the
   // staffer to the phone instead.

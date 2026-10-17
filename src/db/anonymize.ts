@@ -267,8 +267,9 @@ const REGEX_METACHARACTERS = /[\\^$.|?*+()[\]{}]/g;
  * The same rendering also *escapes* — a quote becomes `\"`, a backslash `\\` —
  * while the pattern is built from the name as stored, so `Bea "Bee" Ochoa`
  * would have slipped past it. That is not a near-miss: a `recordTripActivity`
- * row carries no booking and no subject, so this pass is the **only** handle on
- * it, and her name would have stood in the trail after her own erasure.
+ * row other than a roster change (which names its subject, security review
+ * 2026-10-16) carries no booking and no subject, so this pass is the **only**
+ * handle on it, and her name would have stood in the trail after her own erasure.
  *
  * `jsonb_each_text` answers both at once. It hands back each value **decoded**,
  * so keys are out of scope and JSON escaping never enters the comparison
@@ -1105,6 +1106,12 @@ async function scrubBookingRows(
         // with their date of birth. The release keeps the fact that a guardian
         // co-signed, which is the evidence; this only said why it was asked.
         minorDeclaredAt: null,
+        // Why the desk turned them away is a category, but "medical" is still a
+        // health fact about this person; it goes with them. *That* the desk
+        // turned them away stays (`turnedAwayAt`, untouched here), so the
+        // released seat never reads "did not arrive" afterwards (layer 3
+        // review, dde-2 #4); it is the shop's own record, like the status.
+        turnedAwayReason: null,
         // The instructor's next step is prose about this named student — "book
         // your deep dive with Marcus before the card arrives" — so it goes
         // with them (issues #1196, #1205). All three columns together, or the

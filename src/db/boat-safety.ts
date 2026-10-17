@@ -12,7 +12,7 @@ import {
   type SafetyKitUnit,
   safetyKitNotices,
 } from "@/lib/boat-safety";
-import type { CalendarDate } from "@/lib/calendar-date";
+import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import type { GearItemKind } from "@/lib/gear";
 import type { DbExecutor } from "./client";
 import { latestServiceClocks } from "./gear";
@@ -98,6 +98,8 @@ export async function departureBoatSafety(
     boatId: string | null;
     passengers: { booked: number; boarded: number };
     onDate: CalendarDate;
+    /** The shop's own date, when `onDate` is a later departure's. */
+    today?: CalendarDate;
   },
 ): Promise<DepartureBoatSafety | null> {
   if (!input.boatId) return null;
@@ -118,6 +120,7 @@ export async function departureBoatSafety(
       kindsOnRegister: kindsOf(kit),
       passengers: input.passengers,
       onDate: input.onDate,
+      today: input.today,
     }),
   };
 }
@@ -252,6 +255,7 @@ export async function departureBoatSafetyFor(
     boatId: await departureBoatId(db, shopId, input.tripId),
     passengers: input.passengers,
     onDate,
+    today: calendarDateInTimezone(input.now, input.timeZone),
   });
 }
 

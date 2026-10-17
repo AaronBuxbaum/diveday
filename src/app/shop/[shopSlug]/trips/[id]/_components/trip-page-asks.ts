@@ -21,9 +21,8 @@ import type { TripPageSearchParams } from "./trip-search-params";
 export function tripPageNotices(
   input: Parameters<typeof resolveTripNotice>[0] & { t: StaffTranslator },
 ) {
-  const { notice, count, form, gate, tripId, locale, t } = input;
-  const tripNotice: FormNotice | undefined =
-    resolveTripNotice({ notice, count, form, gate, tripId, locale }) ?? deskFormNotice(notice, t);
+  const { notice, t } = input;
+  const tripNotice: FormNotice | undefined = resolveTripNotice(input) ?? deskFormNotice(notice, t);
   return {
     tripNotice,
     lifecycleStatus: noticeForForm(tripNotice, "lifecycle"),

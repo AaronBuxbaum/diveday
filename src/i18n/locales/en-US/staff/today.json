@@ -97,7 +97,9 @@
     "gearServiceDue": "Gear service",
     "boatSafetyKit": "Safety kit",
     "boatPapersDue": "Papers due",
+    "boatPapersLapsed": "Papers lapsed",
     "boatSafetyExpired": "Safety expired",
+    "incidentReportUnfiled": "Incident report",
     "workOrderLate": "Late repair",
     "workOrderUncollected": "Repair not collected",
     "staffCredentialDue": "Credential",
@@ -198,6 +200,7 @@
     "rollCallShoreAlerted": "Shore contact alerted: {time}."
   },
   "actionLabel": {
+    "openIncidentReport": "Open report",
     "openRollCall": "Open roll call",
     "openPrepList": "Open prep list",
     "openTrip": "Open trip",
@@ -257,6 +260,9 @@
     "disputeDetailNoDeadline": "{amount} disputed. Answer it in Stripe.",
     "restrictedSubject": "Card payments are off",
     "restrictedDetail": "Stripe paused them on {when}. Divers pay at the shop until Stripe turns them back on."
+  },
+  "incidentReportUnfiled": {
+    "subject": "{count, plural, one {# incident report not filed, started {day, select, date {on {when}} other {{when}}} by {name}.} other {# incident reports not filed, the oldest started {day, select, date {on {when}} other {{when}}} by {name}.}}"
   },
   "reviewsPending": {
     "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you."

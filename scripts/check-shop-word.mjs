@@ -300,6 +300,30 @@ const RULES = [
  */
 const allowed = new Map([]);
 
+/**
+ * The string without its ICU case keys: a bare word right before a `{`, inside
+ * an argument (`{reason, select, waiver {…}}`). Text outside every brace keeps
+ * its words, so "tu waiver {tripTitle}" is still read whole.
+ */
+function withoutCaseKeys(text) {
+  let out = "";
+  let depth = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (depth > 0 && /[A-Za-z_]/.test(char) && /[{}\s,]/.test(text[i - 1] ?? "")) {
+      const key = /^[\w-]+(?=\s*\{)/.exec(text.slice(i));
+      if (key) {
+        i += key[0].length - 1;
+        continue;
+      }
+    }
+    if (char === "{") depth += 1;
+    if (char === "}") depth = Math.max(0, depth - 1);
+    out += char;
+  }
+  return out;
+}
+
 /** Every offending value in one parsed bundle, with the count of strings read. */
 export function findSettledTerms(bundle, { relative = "" } = {}) {
   const violations = [];
@@ -316,9 +340,12 @@ export function findSettledTerms(bundle, { relative = "" } = {}) {
     if (typeof node !== "string") return;
     strings += 1;
     const reported = new Set();
+    // An ICU `select` case key (`waiver {: exención}`) is a code the reader
+    // never sees, so it is read with its keys taken out.
+    const read = withoutCaseKeys(node);
     for (const rule of rules) {
       if (rule.keys && !rule.keys.test(keyPath)) continue;
-      if (reported.has(rule.id) || !rule.pattern.test(node)) continue;
+      if (reported.has(rule.id) || !rule.pattern.test(read)) continue;
       if (allowed.has(`${relative}:${keyPath}:${rule.id}`)) continue;
       reported.add(rule.id);
       violations.push({ keyPath, text: node, rule: rule.id, says: rule.says });

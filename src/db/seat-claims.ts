@@ -12,6 +12,7 @@ import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
+import { type AboardHold, heldAtTheDoor } from "./aboard-at-sea";
 import {
   type IssuedCapability,
   mintBookingCapabilities,
@@ -719,6 +720,19 @@ export async function issuePartySeatClaims(
       ),
     )
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
+  // A seat counted aboard a boat past its time stays with the crew, as
+  // `cancelUnclaimedPartySeats` keeps it (H-133).
+  const onLeadTrip = rows.filter((row) => row.booking.tripId === row.leadTripId);
+  const onLead = onLeadTrip[0];
+  const held = onLead
+    ? await heldAtTheDoor(db, {
+        shopId: input.shopId,
+        tripId: onLead.booking.tripId,
+        startsAt: onLead.trip.startsAt,
+        now,
+        bookingIds: onLeadTrip.map((row) => row.booking.id),
+      })
+    : new Map<string, AboardHold>();
   // Every unclaimed seat's link in a fixed number of statements, not one
   // round trip per seat (#2488): a party of six costs the same as a party of one.
   const claimable = rows.filter((row) => claimableNow(row.booking, row.trip, now));
@@ -767,7 +781,10 @@ export async function issuePartySeatClaims(
       participantType: row.booking.participantType,
       signForMinor: door === "sign",
       minorNote: door === "send_link" || door === "physician" ? door : null,
-      cancelsWithLead: partySeatGoesWithLead(row.booking) && row.booking.tripId === row.leadTripId,
+      cancelsWithLead:
+        partySeatGoesWithLead(row.booking) &&
+        row.booking.tripId === row.leadTripId &&
+        !held.has(row.booking.id),
       payable:
         row.booking.claimedAt === null &&
         row.booking.tripId === row.leadTripId &&

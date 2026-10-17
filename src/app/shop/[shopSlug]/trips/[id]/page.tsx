@@ -188,6 +188,8 @@ export default async function ManageTripPage({
     gate,
     tripId,
     locale,
+    bid,
+    roster: guests.roster,
     t,
   });
 

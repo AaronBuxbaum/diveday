@@ -52,6 +52,7 @@
     "materialsNotACourse": "This departure isn’t a course session, so it has no learning materials.",
     "saved": "Changes saved.",
     "cancelled": "Trip canceled. It’s off the public schedule.",
+    "cancelUnderway": "This departure is underway or has left, so it wasn’t canceled.",
     "reinstated": "The trip is back on the schedule.",
     "crew": "Crew updated.",
     "crewConflict": "Crew wasn’t changed. Someone is already assigned during this time, or the course would fall below its teaching ratio.",
@@ -81,6 +82,7 @@
     "waitlistCarryUnavailable": "That departure is not taking seats.",
     "bookingRemovedRefundManual": "Booking canceled. A refund is owed but must be issued by hand (counter payment, or Stripe isn’t connected). Refund from the diver’s payments.",
     "bookingRemovedRefundFailed": "Booking canceled, but the automatic refund didn’t go through. Issue it from the diver’s payments.",
+    "bookingRemovedTurnedAway": "Booking canceled. They were turned away at the desk, so nothing was refunded. If the shop owes them, refund it by hand.",
     "bookingRemovedRefundReview": "Booking canceled. The payment record and Stripe disagree on what was captured, so review the diver’s payments before issuing any refund.",
     "bookingRemovedRefundInProgress": "Booking canceled. A refund for this seat is already going through.",
     "bookingRemovedRefundReconcile": "Booking canceled. An earlier refund reached Stripe but wasn’t recorded here. Reconcile it in Stripe before issuing another.",
@@ -534,6 +536,7 @@
     "groupReady": "Ready",
     "groupCheckedIn": "Checked in",
     "groupNotHere": "Not here",
+    "groupTurnedAway": "Turned away",
     "groupStillToClear": "Still to clear",
     "groupSailed": "Sailed",
     "groupDidNotSail": "Didn’t sail",
@@ -601,6 +604,8 @@
     "sendNewWaiverMessage": "Emails {name} a new waiver. They stay blocked until they sign it. The physician’s answer stays on file.",
     "refundEligibleUntil": "Refund-eligible until {date}",
     "removeBooking": "Remove booking",
+    "removeAboard": "{name} sailed on this departure, so the booking stays. To give money back, refund their order.",
+    "removeUncounted": "Nobody counted {name} at the dock, so the boat may have carried them. If they didn’t come, mark them Not boarded on the manifest, then remove the booking.",
     "moveSeat": "Move to another departure",
     "moveSeatTo": "Departure",
     "moveSeatSubmit": "Move",
@@ -697,7 +702,8 @@
   },
   "rollCall": {
     "errorRefusal": "That didn’t save. Recheck your connection or tap again.",
-    "stillBlocked": "Diver is still blocked. <tripLink>Open Trip to resolve the blocker</tripLink>, then try again."
+    "stillBlocked": "Diver is still blocked. <tripLink>Open Trip to resolve the blocker</tripLink>, then try again.",
+    "boatFull": "Boat full. See the desk."
   },
   "guests": {
     "demandSignal": "Unmet demand",

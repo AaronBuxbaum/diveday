@@ -383,6 +383,7 @@
       "readyBadge": "Listo cuando se guardó",
       "blockedBadge": "Bloqueado cuando se guardó",
       "notHereBadge": "Marcado “no vino” cuando se guardó",
+      "turnedAwayBadge": "Marcado “no embarcó” cuando se guardó",
       "statePendingSuffix": "· esperando para enviarse",
       "emergencyContact": "Contacto de emergencia",
       "notOnFile": "Sin datos registrados",

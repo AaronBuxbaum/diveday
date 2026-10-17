@@ -97,7 +97,9 @@
     "gearServiceDue": "Mantenimiento",
     "boatSafetyKit": "Equipo de seguridad",
     "boatPapersDue": "Documentos por vencer",
+    "boatPapersLapsed": "Documentos vencidos",
     "boatSafetyExpired": "Seguridad vencida",
+    "incidentReportUnfiled": "Informe de incidente",
     "workOrderLate": "Reparación atrasada",
     "workOrderUncollected": "Reparación sin recoger",
     "staffCredentialDue": "Credencial",
@@ -198,6 +200,7 @@
     "rollCallShoreAlerted": "Contacto en tierra avisado: {time}."
   },
   "actionLabel": {
+    "openIncidentReport": "Abrir informe",
     "openRollCall": "Abrir recuento",
     "openPrepList": "Abrir lista de preparación",
     "openTrip": "Abrir salida",
@@ -257,6 +260,9 @@
     "disputeDetailNoDeadline": "{amount} en disputa. Respóndela en Stripe.",
     "restrictedSubject": "Los pagos con tarjeta están desactivados",
     "restrictedDetail": "Stripe los pausó el {when}. Los buceadores pagan en el centro hasta que Stripe los reactive."
+  },
+  "incidentReportUnfiled": {
+    "subject": "{count, plural, one {# informe de incidente sin presentar, empezado {day, select, relative {{when}} other {el {when}}} por {name}.} other {# informes de incidente sin presentar; el más antiguo lo empezó {name} {day, select, relative {{when}} other {el {when}}}.}}"
   },
   "reviewsPending": {
     "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión."

@@ -1,4 +1,4 @@
-# H-123: Which roles may trigger a cancellation that refunds money?
+# H-139: Which roles may trigger a cancellation that refunds money?
 
 - **Status:** Implemented
 - **Human owner:** Product owner

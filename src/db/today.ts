@@ -61,6 +61,7 @@ import {
 } from "./gear";
 import { listTodayHelpRequests } from "./help-requests";
 import { countUnansweredMessages } from "./inbound-messages";
+import { listUnfiledIncidentDrafts } from "./incident-reports";
 import { listActiveLastMinuteWindows } from "./last-minute-list";
 import {
   listBoardedAtAnyCheckpointByTrip,
@@ -1566,6 +1567,8 @@ async function readTodayWave(
     bookingIdsByTrip: Map<string, string[]>;
     includeOpsAlerts: boolean;
     personId: string | undefined;
+    /** The signed-in reader, for the rows only some roles may see (re-checked live). */
+    viewerPersonId: string | undefined;
     owingBookingIds: string[];
     noOpenOrders: Map<string, { id: string; hostedInvoiceUrl: string | null }>;
   },
@@ -1581,6 +1584,7 @@ async function readTodayWave(
     bookingIdsByTrip,
     includeOpsAlerts,
     personId,
+    viewerPersonId,
     owingBookingIds,
     noOpenOrders,
   } = input;
@@ -1621,6 +1625,7 @@ async function readTodayWave(
     workOrdersNeedingAttention,
     crewedAssignments,
     openOrders,
+    unfiledIncidentDrafts,
     crewAway,
   ] = await Promise.all([
     // Each booking's latest departure result, not just a head count. The card
@@ -1773,6 +1778,11 @@ async function readTodayWave(
             ? openOrdersForBookings(db, shopId, owingBookingIds)
             : noOpenOrders,
         ),
+    // Incident reports started and never filed (safety sheet 2026-10-15, item
+    // 3): read for a named reader only, and answered for owners and managers
+    // only (`listUnfiledIncidentDrafts` re-reads their roles). A caller reading
+    // the shop's whole day with nobody behind it (the digest) gets none.
+    viewerPersonId ? listUnfiledIncidentDrafts(db, shopId, viewerPersonId) : [],
     // Who is rostered on a departure ahead and said they are away on a day it
     // meets (fourth review, item 12): the `crew_away` rows.
     crewAwayByTrip(
@@ -1816,6 +1826,7 @@ async function readTodayWave(
     workOrdersNeedingAttention,
     crewedAssignments,
     openOrders,
+    unfiledIncidentDrafts,
     crewAway,
   };
 }
@@ -1876,6 +1887,12 @@ export async function getTodayWork(
    * request goes out and `highWind` resolves to `[]`. Defaults true.
    */
   withForecast = true,
+  /**
+   * The signed-in reader, for the one row whose reading depends on who they
+   * are rather than their JWT's roles: the unfiled incident reports, owners
+   * and managers only, re-checked live. Omitted, that row is never raised.
+   */
+  viewerPersonId?: string,
 ): Promise<TodayWork> {
   // The one horizon every readiness surface shares (src/lib/operational-window.ts).
   const { to: horizon } = operationalWindow(now);
@@ -1938,6 +1955,7 @@ export async function getTodayWork(
       bookingIdsByTrip,
       includeOpsAlerts,
       personId,
+      viewerPersonId,
       owingBookingIds,
       noOpenOrders,
     }),

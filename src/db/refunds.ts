@@ -50,7 +50,16 @@ export type CancellationRefundOutcome =
   /** Nothing was captured (unpaid, waived, or already refunded). */
   | { status: "unpaid" }
   /** Refund is owed but can't be automated here — staff must issue it. */
-  | { status: "manual"; reason: "not_stripe" | "not_connected" | "not_refundable" }
+  /**
+   * Refund is owed, or may be, but can't be automated here — staff must issue
+   * it. `turned_away`: the desk turned this diver away before the seat was
+   * removed (H-135), so the diver's cancellation window does not apply and
+   * whether the fare is moved, refunded or kept is a person's call.
+   */
+  | {
+      status: "manual";
+      reason: "not_stripe" | "not_connected" | "not_refundable" | "turned_away";
+    }
   /**
    * Another refund of this same seat is already at Stripe. Refused *locally*
    * rather than sent as a second reversal — see {@link claimBookingRefund}.
@@ -384,7 +393,7 @@ export async function refundBookingOnCancellation(
   const now = input.now ?? nowDate();
 
   const [row] = await db
-    .select({ trip: trips })
+    .select({ trip: trips, turnedAwayAt: bookings.turnedAwayAt })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
@@ -404,6 +413,14 @@ export async function refundBookingOnCancellation(
     async (tx, payment) => {
       if (!isCapturedPaymentStatus(payment?.status)) {
         return { proceed: false, outcome: { status: "unpaid" } };
+      }
+      // **Turned away, then removed** (layer 3 review, dde-2 #2): the diver
+      // did not cancel, so their cancellation window is not the rule. A
+      // "past the window, non-refundable" here would be a forfeit nobody
+      // decided. Nothing moves automatically; the order is where a person
+      // moves, refunds or keeps it.
+      if (row.turnedAwayAt) {
+        return { proceed: false, outcome: { status: "manual", reason: "turned_away" } };
       }
 
       const decision = refundOnCancellation(row.trip, payment.amountCents ?? 0, now);
@@ -533,7 +550,7 @@ export type ShopCancellationRefundOutcome =
   /** Stripe was asked to refund and failed; staff should retry. */
   | { status: "failed" }
   /**
-   * The caller who cancelled may not move money (H-123), so the capture stays
+   * The caller who cancelled may not move money (H-139), so the capture stays
    * where it is and a refund holder releases it
    * ({@link refundBookingsForShopCancelledTrip}). The diver is told it is owed.
    */
@@ -667,7 +684,7 @@ export async function refundBookingOnShopCancellation(
 
 /**
  * What a shop cancellation does with a seat's money when the person who called
- * it off may not refund (H-123): nothing moves, and a captured seat reads
+ * it off may not refund (H-139): nothing moves, and a captured seat reads
  * `queued`. Everything else reads exactly as {@link refundBookingOnShopCancellation}
  * would answer it, so the diver's mail is right for an unpaid seat, a package
  * dive and a seat already refunded. The queue itself is the derivable list of

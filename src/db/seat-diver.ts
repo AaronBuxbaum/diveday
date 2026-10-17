@@ -17,7 +17,7 @@ import type { AppDb } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { publishManifestEvent } from "./manifest-events";
 import { sendCourseSeatConfirmation, sendStaffSeatingConfirmation } from "./notifications";
-import { recordTripActivity, type TripActivityEntry } from "./operations";
+import { recordSeatChange, type SeatChangeCode } from "./operations";
 import { shops, trips } from "./schema";
 import { type SendRescheduleNoticesOptions, sendSeatMoveNotice } from "./trip-rescheduled";
 import { liveTrip } from "./trips-live";
@@ -204,17 +204,17 @@ export type SeatDiverResult =
  * A walk-in and a booked seat are the same insert with different stories behind
  * them, and the trail is where a shop reads the difference back. The words are
  * picked where the trail is rendered (issue #1655) — this only says which
- * sentence, and the one name it needs.
+ * sentence; `recordSeatChange` reads the name off the seat.
  */
-function activityEntry(entry: SeatDiverEntry, personName: string): TripActivityEntry {
+function activityCode(entry: SeatDiverEntry): SeatChangeCode {
   switch (entry) {
     case "walk_in":
-      return { code: "seat_added_walk_in", diver: personName };
+      return "seat_added_walk_in";
     // A rider the crew added at the boat (`src/db/dock-rider.ts`).
     case "dock":
-      return { code: "rider_added_at_dock", diver: personName };
+      return "rider_added_at_dock";
     case "roster":
-      return { code: "seat_added", diver: personName };
+      return "seat_added";
   }
 }
 
@@ -350,14 +350,16 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
     }
   }
 
-  // `outcome.personName` rather than whatever was typed: the identity path
-  // submits no name at all, and the hand-entry path may have matched an
-  // existing person by email whose name on file is the one the crew knows.
-  await recordTripActivity(db, {
+  // Named off the seat rather than whatever was typed: the identity path
+  // submits no name at all, and a held seat reads as it was booked (issue
+  // #2128). After the seat commits, not inside it: `createBooking` is every
+  // door's insert, and this is the one consequence path for staff seating.
+  await recordSeatChange(db, {
     shopId: input.shopId,
     tripId: input.tripId,
     actorPersonId: input.actorPersonId,
-    entry: activityEntry(input.entry, outcome.personName),
+    bookingId: outcome.bookingId,
+    code: activityCode(input.entry),
   });
 
   // "Lina Costa took a seat." on the manifest's catch-up strip (issue #1202).
@@ -435,7 +437,8 @@ export type MoveSeatResult =
  * owes** (ADR 20261013-staff-move-a-seat). The move itself is one transaction
  * (`moveBooking`); after it commits, in the order a person would want: the new
  * departure's waiver if it asks for one the seat does not hold, the diver told
- * the new time, both trails, and both manifests refreshed. Each consequence is
+ * the new time, and both manifests refreshed. Both trails' lines are written
+ * inside the move itself. Each consequence is
  * best-effort: the seat has moved whatever the mail does.
  */
 export async function moveSeat(
@@ -484,18 +487,6 @@ export async function moveSeat(
     notice = "failed";
   }
 
-  await recordTripActivity(db, {
-    shopId: input.shopId,
-    tripId: moved.fromTripId,
-    actorPersonId: input.actorPersonId,
-    entry: { code: "seat_moved_away", diver: moved.personName },
-  });
-  await recordTripActivity(db, {
-    shopId: input.shopId,
-    tripId: moved.toTripId,
-    actorPersonId: input.actorPersonId,
-    entry: { code: "seat_moved_here", diver: moved.personName },
-  });
   await publishManifestEvent(db, input.shopId, moved.fromTripId);
   await publishManifestEvent(db, input.shopId, moved.toTripId);
   return { ...moved, waiver, notice };

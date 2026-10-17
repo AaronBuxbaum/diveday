@@ -226,7 +226,9 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           >
             {t("trips.guests.scheduleAnotherDeparture")}
           </Link>
-          {actions.carryWaitlistAction && actions.moveSeat?.targets.length ? (
+          {actions.carryWaitlistAction &&
+          actions.moveSeat?.targets.length &&
+          !actions.moveSeat.departed ? (
             <CarryWaitlistForm
               action={actions.carryWaitlistAction}
               targets={actions.moveSeat.targets}
@@ -270,6 +272,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           agencyCheckCardsByPerson: guests.agencyCheckCardsByPerson,
           courseMaterialsDoneByPerson: guests.courseMaterialsDoneByPerson,
           sameNameHeldSeats: guests.sameNameHeldSeats,
+          aboardAtSea: guests.aboardAtSea,
           heldSeatLastDiveDay: guests.heldSeatLastDiveDay,
           packageDivesByBooking: guests.packageDivesByBooking,
           paymentMarksByBooking: guests.paymentMarksByBooking,

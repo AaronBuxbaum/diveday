@@ -125,7 +125,7 @@
   gone. A row the crew recorded as not boarded keeps it. **It gates nothing** and it is not a **no-show**: the
   diver still has to arrive, and a diver who said it and never came is still the desk's call.
 - **No-show** — one staffer's recorded statement that a booked diver did not come. The status is
-  `bookings.status = "no_show"`, written only by `markBookingNoShow` (`src/db/no-show.ts`), behind
+  `bookings.status = "no_show"`, written by `markBookingNoShow` (`src/db/no-show.ts`), behind
   the Divers tab's "Not here" disclosure (inside the arrivals window, on any row the gate allows, blocked or not) and its confirm tap. **It is not the three things it is most easily mistaken
   for.** Not a **cancellation**: a diver who told the shop they were not coming gave the seat up
   themselves, and the mark is refused on that booking (`not_booked`), because the difference between
@@ -170,7 +170,43 @@
   a promise the reader made and the writer did not keep, and the seat it was broken on is the one
   that most needs it — a staffer's own seat is the one readiness refuses at the dock, so the crew
   list is often the only place a boarding for them can be written at all (issue #1686). It is never
-  a **dive day**, in any of the four readers that count them.
+  a **dive day**, in any of the four readers that count them. The same status, with a reason, is
+  also how a seat is **turned away**.
+- **Turned away** — the desk saw a diver readiness would not board and sent them home (H-135). Its
+  writer, `turnBookingAway` (`src/db/turn-away.ts`), sets `bookings.status = "no_show"`,
+  `bookings.turned_away_at` (the fact) and `bookings.turned_away_reason` (the category), so the seat
+  is released exactly as a **no-show**'s is, and every reader that leaves a no-show out (capacity,
+  recap, tips, dive days) leaves this seat out too. What differs is the statement: seen and refused,
+  not "did not come", and every surface that names a released seat says which (the desk's own group
+  and line, the manifest pill, the dock copy's badge, the diver's story, `bookings.csv`, the trail's
+  `booking_turned_away`, the departure log's seat line, and the crew's catch-up strip when Remove
+  takes the seat off), reading `turned_away_at`. **Any active staff member, on a blocked row
+  only**: the reason is one category from that row's own readiness blockers (`turnAwayReasons`,
+  `src/lib/turn-away.ts`: medical, waiver, card, age, identity, payment), re-read under the seat's
+  lock, and never the evidence: no medical answer or card detail is stored. The desk's door and the
+  writer read one predicate (`turnAwayOffer` / `turnAwayGate`). Open before the boat leaves, unlike
+  "Not here", inside the **arrivals window**; **an arrived (checked-in) diver cannot be turned away
+  from the boat's scheduled start** (`sailed`; the boundary "Not here" opens on, not `hasSailed`'s
+  buffered hour), while a booked row after the start keeps the door. On a
+  **held seat** only "identity" (and "payment" when the seat owes) is offered or accepted, the trail
+  names the booked-as name (`seatName`, as "Not here" does), the matched diver's story says nothing
+  about the seat, and a split clears the category. A turned-away seat **cannot be paid** from the
+  diver's page (checkout and `canPay` take a held seat only); before the day ends that page says
+  only "The shop released your seat on this departure. Talk to the desk."; reminders skip it. Its
+  next day is **the same booking moved** (`moveBooking` books it on the new departure and clears
+  the turn-away; payment and package coverage ride on the row), never a new seat, and **only before
+  the departure's scheduled start**: from it, and always for a party's lead (`leads_party`), the
+  door is Remove (default for dde-3 #4/#5). Releasing the seat (turned away or "Not here")
+  **withdraws any pending checkout** on it, so a late payment lands as paid after close, and checkout
+  recovery skips a seat no longer held. A lead's page keeps the party claim panel. **Removed
+  afterwards** it reads "turned away, then removed": no cancellation window applies, nothing is
+  refunded on its own (`manual`, `turned_away`), and `turned_away_at` stays. **Erasure** clears the
+  category and keeps `turned_away_at`. "Put back on the list" (only before the scheduled start,
+  `turned_away_departed` after it), the rail's reclaim and a move clear both, and a seat back on the
+  boat never carries either (`bookings_turned_away_is_released`). The rail's reclaim is refused for
+  capacity **at the departure checkpoint only** ("Boat full. See the desk.", `boat_full`; default
+  for dde-3 #6); an after-dive head count is never refused, and a boat over shows as the manifest's
+  over-capacity count.
 - **Seat release** — the confirm tap on a **no-show** *is* the release. There is no second tap, no
   timer, no evening sweep and no `seat_released_at` column: `no_show` leaves the statuses that hold
   a seat (**seat held**), so the boat reads one seat lighter the moment the mark lands and the next
@@ -663,7 +699,12 @@
   so the paper itself is the history. Each has its own window — 90 days for the inspection, 60 for
   registration and insurance (`BOAT_PAPER_HORIZON_DAYS`) — inside which a departure on that boat
   names the paper above its pre-departure checklist and Today carries a quiet owner errand
-  (`boat_papers_due`), escalating once it lapses (`boat_safety_expired`).
+  (`boat_papers_due`). Once a paper lapses it reads in danger ink with the boat and the date
+  ("Hull insurance ended Oct 8."), and Today shows it as its own danger row, `boat_papers_lapsed`,
+  labelled "Papers lapsed", to owners and managers only. Hull insurance lapses on its expiry date
+  itself, since the policy's cover ends that day. A paper still good today that lapses before a
+  later departure reads "ends {date}, before this departure" on that departure. A lapsed paper
+  never blocks a departure (H-136). `boat_safety_expired` is the safety kit's row, not the papers'.
 - **Safety kit** — the boat's own emergency equipment kept on the **gear register** as units:
   `o2_kit`, `aed`, `first_aid_kit` and `flares` (roadmap N-08). Each may be assigned **aboard** one
   boat (`gear_items.aboard_boat_id`; any other kind is never aboard), and runs **service clocks**
@@ -755,13 +796,24 @@
   and who recorded the pairing when, since a pairing decided at the dock and one typed in that
   night are different facts (the live manifest's split-team alert is deliberately not restated: it
   is a *reading* of the roll call at one moment, and this document reports recorded facts) — crew
-  and crew counts, and generation metadata. It reports
-  recorded facts with timestamps and
+  and crew counts, and generation metadata. Its timeline also carries:
+  - each **seat or crew change** made once the boat was due out (the scheduled start, or the first
+    departure roll-call mark if earlier), named by the trail and only when it names its subject by
+    record, a **turned away** seat among them, with its category;
+  - a line erased at a person's request, which names nobody.
+
+  It ends with the departure's **incident reports**, as a list (kind, severity, filed or draft, by
+  whom, deleted drafts too), never their contents. It reports recorded facts with timestamps and
   computes no safety judgment; every absence is stated ("Awaiting", "No certification evidence on
-  file") rather than left blank. A SHA-256 **integrity code** over the printed facts sits in the
-  footer — tamper-evidence, not a signature: regenerating the export from unchanged records
-  reproduces the code, so two copies can be checked against each other. Staff-only, one tap from
-  the manifest (`/shop/<slug>/trips/<id>/incident-export`).
+  file") rather than left blank. Evidence that lapses with time, such as a waiver, is stated as it
+  stood when the boat was due out, not when the log was printed. A SHA-256 **integrity code** over
+  the printed facts sits in the footer with its **version**. It is tamper-evidence, not a
+  signature: regenerating the export from unchanged records reproduces the code, so two copies can
+  be checked against each other. Version 2 prints, but does not seal, when the log was made and for
+  whom; version 1 is refused for a log holding anything version 2 added (a late seat or crew line,
+  an incident report) or a line later than the log says it was made (ADR
+  20261016-departure-log-code-v2). Owner only, one tap from
+  the manifest (`/shop/<slug>/trips/<id>/log`).
 - **Incident report** — the shop's own written account of something that went wrong on a
   departure, for an insurer or an authority: when (in the shop's zone) and where, what happened,
   first aid, oxygen (and for how many minutes), whether emergency services were called, the
@@ -771,7 +823,11 @@
   affected, witness or gave aid. A **draft** is edited; filing needs the time, the place, what
   happened, the three yes/no answers, and the handover once emergency services or oxygen were
   involved, and a **filed** report is never
-  edited again: what comes later is an **addendum**, dated and attributed. The departure's crew
+  edited again: what comes later is an **addendum**, dated and attributed. An unfiled draft can be
+  **deleted** (softly; the departure log still lists it), and a second start reopens only an
+  untouched draft, or for a **missing diver** the one report, draft or filed, naming that person
+  as affected since they were last marked back aboard (ADR 20261016-incident-drafts). The
+  departure's crew
   start one and read their own; owners and managers read all of them, on the trip's Details tab
   and the Reports **Safety** tab. Nothing a diver sees, and never a gate. It is not the
   **departure log**, which prints recorded facts and judges nothing; the report is the shop's
@@ -783,7 +839,8 @@
   releases the hold, and a held report cannot be deleted. Only an owner sets or releases it
   ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
 - **Discarded draft** — an **incident report** draft an owner deleted because it should never have
-  been started. Soft-deleted and invisible; a filed report can never be discarded.
+  been started. Soft-deleted: gone from every working list, still listed on the departure log with
+  who deleted it; a filed report can never be discarded.
 - **Incident kind** / **incident severity** — the two closed answers an **incident report** files
   with: its kind (injury or illness, near miss, equipment, missing diver, fatality, other) and how
   serious the writer judged it (minor, moderate, serious). Shown on the report and the Safety page;

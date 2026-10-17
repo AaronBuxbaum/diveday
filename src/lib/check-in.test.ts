@@ -6,6 +6,7 @@ import {
   isBlockedAtCounter,
   isNoShowAtCounter,
   isSettledAtCounter,
+  isTurnedAwayAtCounter,
 } from "./check-in";
 
 const seat = (bookingStatus: string, status: "ready" | "blocked" = "ready") => ({
@@ -94,7 +95,14 @@ describe("counterTally", () => {
       seat("booked", "blocked"),
       seat("booked"),
     ]);
-    expect(tally).toEqual({ expected: 5, here: 2, cantBoard: 2, toCome: 1, notHere: 0 });
+    expect(tally).toEqual({
+      expected: 5,
+      here: 2,
+      cantBoard: 2,
+      toCome: 1,
+      notHere: 0,
+      turnedAway: 0,
+    });
     expect(tally.here + tally.cantBoard + tally.toCome).toBe(tally.expected);
   });
 
@@ -105,6 +113,7 @@ describe("counterTally", () => {
       cantBoard: 1,
       toCome: 0,
       notHere: 0,
+      turnedAway: 0,
     });
   });
 
@@ -115,6 +124,7 @@ describe("counterTally", () => {
       cantBoard: 0,
       toCome: 0,
       notHere: 0,
+      turnedAway: 0,
     });
   });
 
@@ -127,7 +137,14 @@ describe("counterTally", () => {
    */
   it("takes a released seat out of everyone expected and reports it separately", () => {
     const tally = counterTally([seat("checked_in"), seat("booked"), seat("no_show")]);
-    expect(tally).toEqual({ expected: 2, here: 1, cantBoard: 0, toCome: 1, notHere: 1 });
+    expect(tally).toEqual({
+      expected: 2,
+      here: 1,
+      cantBoard: 0,
+      toCome: 1,
+      notHere: 1,
+      turnedAway: 0,
+    });
     expect(tally.here + tally.cantBoard + tally.toCome).toBe(tally.expected);
   });
 
@@ -143,7 +160,48 @@ describe("counterTally", () => {
       cantBoard: 0,
       toCome: 0,
       notHere: 1,
+      turnedAway: 0,
     });
+  });
+});
+
+describe("turned away at the desk", () => {
+  const turnedAway = {
+    bookingStatus: "no_show",
+    readiness: { status: "blocked" },
+    turnedAwayReason: "card",
+    turnedAwayAt: new Date("2026-10-16T07:00:00.000Z"),
+  };
+
+  /**
+   * H-135: the same release as "Not here", a different statement. The desk saw
+   * this diver, so the count that says "not here" must not include them.
+   */
+  it("counts a turned-away seat apart from a diver who never came", () => {
+    const tally = counterTally([seat("checked_in"), seat("no_show"), turnedAway]);
+    expect(tally).toEqual({
+      expected: 1,
+      here: 1,
+      cantBoard: 0,
+      toCome: 0,
+      notHere: 1,
+      turnedAway: 1,
+    });
+  });
+
+  /** Erasure clears the category and keeps the fact (layer 3 review, dde-2 #4). */
+  it("stays turned away when erasure has cleared the category", () => {
+    expect(isTurnedAwayAtCounter({ ...turnedAway, turnedAwayReason: null })).toBe(true);
+    expect(isTurnedAwayAtCounter({ ...turnedAway, turnedAwayAt: null })).toBe(false);
+  });
+
+  it("is a released seat, finished at the counter, and only with a turn-away", () => {
+    expect(isTurnedAwayAtCounter(turnedAway)).toBe(true);
+    expect(isNoShowAtCounter(turnedAway)).toBe(true);
+    expect(counterIsDone(turnedAway)).toBe(true);
+    expect(isTurnedAwayAtCounter(seat("no_show"))).toBe(false);
+    // A reason never makes a held seat turned away.
+    expect(isTurnedAwayAtCounter({ ...turnedAway, bookingStatus: "booked" })).toBe(false);
   });
 });
 

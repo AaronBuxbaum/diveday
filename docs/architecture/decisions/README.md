@@ -396,5 +396,7 @@ script again.
 | 20261015-coverage-and-mutation-testing | Measure the safety files with… |
 | 20261015-incident-draft-discard-and-hold | An owner may delete an… |
 | 20261015-roll-call-records-readiness | A count aboard keeps what… |
+| 20261016-departure-log-code-v2 | The departure log's integrity code,… |
+| 20261016-incident-drafts | Reuse an incident draft only… |
 
 <!-- adr-index:end -->

@@ -24,6 +24,7 @@ export async function departureBoatSafetySection(
   shop: { id: string; timezone: string },
   departure: Pick<TripManifest, "trip" | "summary">,
   t: StaffTranslator,
+  locale: string,
 ): Promise<BoatSafetySection | null> {
   const safety = await departureBoatSafetyFor(db, shop.id, {
     tripId: departure.trip.id,
@@ -32,5 +33,5 @@ export async function departureBoatSafetySection(
     now: nowDate(),
     passengers: { booked: departure.summary.totalDivers, boarded: departure.summary.boarded },
   });
-  return boatSafetySection(t, safety);
+  return boatSafetySection(t, locale, safety);
 }

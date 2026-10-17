@@ -52,6 +52,7 @@
     "materialsNotACourse": "Esta salida no es una sesión de curso, así que no tiene material de estudio.",
     "saved": "Cambios guardados.",
     "cancelled": "Salida cancelada. Ya no aparece en el calendario público.",
+    "cancelUnderway": "Esta salida está en curso o ya zarpó, así que no se canceló.",
     "reinstated": "La salida vuelve a estar en el calendario.",
     "crew": "Tripulación actualizada.",
     "crewConflict": "No se cambió la tripulación. Alguien ya está asignado en este horario, o el curso quedaría por debajo de su ratio de enseñanza.",
@@ -81,6 +82,7 @@
     "bookingRemovedForfeit": "Reserva cancelada. La plaza vuelve a estar disponible. Fue después del plazo de cancelación, así que no era reembolsable.",
     "bookingRemovedRefundManual": "Reserva cancelada. Se debe un reembolso, pero hay que emitirlo a mano (pago en mostrador, o Stripe no está conectado). Reembolsa desde los pagos del buceador.",
     "bookingRemovedRefundFailed": "Reserva cancelada, pero el reembolso automático no se completó. Emítelo desde los pagos del buceador.",
+    "bookingRemovedTurnedAway": "Reserva cancelada. No embarcó por decisión del mostrador, así que no se reembolsó nada. Si el centro se lo debe, reembólsalo a mano.",
     "bookingRemovedRefundReview": "Reserva cancelada. El registro de pago y Stripe no coinciden en lo que se cobró, así que revisa los pagos del buceador antes de emitir cualquier reembolso.",
     "bookingRemovedRefundInProgress": "Reserva cancelada. Ya hay un reembolso en curso para esta plaza.",
     "bookingRemovedRefundReconcile": "Reserva cancelada. Un reembolso anterior llegó a Stripe pero no quedó registrado aquí. Concílialo en Stripe antes de emitir otro.",
@@ -534,6 +536,7 @@
     "groupReady": "Listos",
     "groupCheckedIn": "Registrados",
     "groupNotHere": "No vinieron",
+    "groupTurnedAway": "No pudieron embarcar",
     "groupStillToClear": "Pendientes de resolver",
     "groupSailed": "Zarparon",
     "groupDidNotSail": "No zarparon",
@@ -601,6 +604,8 @@
     "sendNewWaiverMessage": "Envía a {name} una nueva exención por correo. La plaza sigue bloqueada hasta que la firme. La respuesta del médico queda archivada.",
     "refundEligibleUntil": "Reembolsable hasta {date}",
     "removeBooking": "Eliminar reserva",
+    "removeAboard": "{name} zarpó en esta salida, así que la reserva se mantiene. Para devolver el dinero, reembolsa su pedido.",
+    "removeUncounted": "Nadie registró a {name} en el muelle, así que puede que haya ido en el barco. Si no vino, marca No embarcado en el manifiesto y luego elimina la reserva.",
     "moveSeat": "Mover a otra salida",
     "moveSeatTo": "Salida",
     "moveSeatSubmit": "Mover",
@@ -697,7 +702,8 @@
   },
   "rollCall": {
     "errorRefusal": "Eso no se guardó. Revisa tu conexión o vuelve a tocar.",
-    "stillBlocked": "El buceador sigue bloqueado. <tripLink>Abre Salida para resolver el bloqueo</tripLink> y vuelve a intentarlo."
+    "stillBlocked": "El buceador sigue bloqueado. <tripLink>Abre Salida para resolver el bloqueo</tripLink> y vuelve a intentarlo.",
+    "boatFull": "Barco lleno. Pasa por el mostrador."
   },
   "guests": {
     "demandSignal": "Demanda no cubierta",

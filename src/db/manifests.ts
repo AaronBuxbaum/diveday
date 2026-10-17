@@ -26,6 +26,7 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
+import { seatRefusal } from "@/lib/participant-types";
 import {
   type CountedAboardBlocked,
   type ReadinessSnapshot,
@@ -57,6 +58,7 @@ import { lockSeatDeparture } from "./seat-locks";
 import { getShopById } from "./shops";
 import { crewClashes } from "./trips-crew";
 import { liveTrip } from "./trips-live";
+import { heldSeatCounts, sellableCapacity } from "./trips-queries";
 import { getTripWithBooked } from "./trips-record";
 import { getTripRoster } from "./trips-roster";
 import { welcomeCueInputsByBooking } from "./welcome-cues";
@@ -1244,6 +1246,9 @@ export async function getTripManifests(
       // released at the desk. The row stays — `getTripRoster` keeps every
       // non-cancelled booking on purpose — and now says so.
       notHere: booking.status === "no_show",
+      // Seen at the desk and refused (H-135), which the row says apart from a
+      // diver who never came.
+      turnedAway: booking.status === "no_show" && booking.turnedAwayAt !== null,
       buddyTeam: teamByBooking.get(booking.id) ?? null,
     };
   });
@@ -1396,6 +1401,12 @@ export type RecordRollCallOutcome =
         | "booking_unavailable"
         | "staff_not_found"
         | "not_ready"
+        /**
+         * Boarded at departure on a seat the desk turned away and has since
+         * sold: taking it back would put the boat over its capacity (layer 3
+         * re-review, dde-3 #6). After-dive head counts are never refused.
+         */
+        | "boat_full"
         | "invalid_checkpoint"
         | "newer_event_exists"
         /**
@@ -1556,7 +1567,12 @@ async function reclaimReleasedSeat(
   const standing = await standingArrivalStatus(tx, input.shopId, input.tripId, input.bookingId);
   const [updated] = await tx
     .update(bookings)
-    .set({ status: standing === "arrived" ? "checked_in" : "booked" })
+    // A seat back on the boat is not turned away (`bookings_turned_away_is_released`).
+    .set({
+      status: standing === "arrived" ? "checked_in" : "booked",
+      turnedAwayReason: null,
+      turnedAwayAt: null,
+    })
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.status, "no_show")))
     .returning({ id: bookings.id });
   if (!updated) return;
@@ -1705,7 +1721,13 @@ export async function recordRollCall(
         id: bookings.id,
         status: bookings.status,
         personId: bookings.personId,
+        participantType: bookings.participantType,
+        turnedAwayAt: bookings.turnedAwayAt,
         plannedDives: trips.plannedDives,
+        shopId: trips.shopId,
+        boatId: trips.boatId,
+        capacity: trips.capacity,
+        diverCapacity: trips.diverCapacity,
       })
       .from(bookings)
       .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -1791,6 +1813,18 @@ export async function recordRollCall(
         const readiness = await getBookingReadiness(tx, input.shopId, booking.id);
         if (readiness?.status !== "ready") return { ok: false, reason: "not_ready" };
         readinessSnapshot = readinessSnapshotOf(readiness);
+        // A seat the desk turned away and then sold is not the crew's to take
+        // back at the gangway: "Boat full. See the desk." (dde-3 #6). Counted
+        // under the departure lock taken above, as `undoBookingNoShow` counts.
+        // Only here: after a dive the body is on the boat, and the reclaim
+        // below stays unrefusable.
+        if (booking.status === "no_show" && booking.turnedAwayAt !== null) {
+          const held = await heldSeatCounts(tx, input.shopId, input.tripId);
+          const capacity = await sellableCapacity(tx, booking);
+          if (seatRefusal(booking.participantType, { ...booking, capacity }, held)) {
+            return { ok: false, reason: "boat_full" };
+          }
+        }
       } else {
         // The snapshot is a record, so a failed read costs the record and not
         // the count: a savepoint, so even a failed query leaves the transaction

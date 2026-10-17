@@ -348,21 +348,6 @@
         }
       },
       {
-        "why": "merge of the stack top into fourth-review layer r4-1: both sides added to these files",
-        "files": {
-          "src/app/s/[shopSlug]/trips/[id]/actions.ts": "1110 -> 1118",
-          "src/db/seat-claims.test.ts": "1047 -> 1478",
-          "src/lib/notifications/email.test.ts": "1480 -> 1494"
-        }
-      },
-      {
-        "why": "merge of fourth-review layer r4-1 into r4-2: both sides added to these files",
-        "files": {
-          "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": "1057 -> 1072",
-          "src/db/staffing.test.ts": "946 -> 952"
-        }
-      },
-      {
         "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-104, S2, admission/readiness adversarial tests) grew these before it landed",
         "files": {
           "src/app/shop/[shopSlug]/orders/page.test.tsx": "927 -> 929",
@@ -377,6 +362,34 @@
           "src/lib/readiness.test.ts": "1614 -> 1752",
           "src/lib/trip-admission.test.ts": "918 -> 984",
           "src/lib/waivers.test.ts": "1205 -> 1402"
+        }
+      },
+      {
+        "why": "list entries that cannot live in a sibling: export.test.ts column decisions (#2445, #2446, #2425) and the label-maps row for the named buddy alert",
+        "files": {
+          "src/db/export.test.ts": "1670 -> 1673",
+          "src/i18n/label-maps.test.ts": "1327 -> 1334"
+        }
+      },
+      {
+        "why": "safety layer 2 merged onto ready-for-agent: both sides grew incident-reports.test.ts (held-seat naming, discard and hold)",
+        "files": {
+          "src/db/incident-reports.test.ts": "0 -> 1013"
+        }
+      },
+      {
+        "why": "merge of the stack top into fourth-review layer r4-1: both sides added to these files",
+        "files": {
+          "src/app/s/[shopSlug]/trips/[id]/actions.ts": "1110 -> 1118",
+          "src/db/seat-claims.test.ts": "1047 -> 1478",
+          "src/lib/notifications/email.test.ts": "1480 -> 1494"
+        }
+      },
+      {
+        "why": "merge of fourth-review layer r4-1 into r4-2: both sides added to these files",
+        "files": {
+          "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": "1057 -> 1072",
+          "src/db/staffing.test.ts": "946 -> 952"
         }
       },
       {
@@ -403,13 +416,6 @@
         "files": {
           "src/app/s/[shopSlug]/trips/[id]/actions.ts": "1118 -> 1131",
           "src/db/trips-queries.test.ts": "1143 -> 1209"
-        }
-      },
-      {
-        "why": "list entries that cannot live in a sibling: export.test.ts column decisions (#2445, #2446, #2425) and the label-maps row for the named buddy alert",
-        "files": {
-          "src/db/export.test.ts": "1670 -> 1673",
-          "src/i18n/label-maps.test.ts": "1327 -> 1334"
         }
       },
       {
@@ -453,6 +459,7 @@
     "src/db/executed-dives.test.ts": 1085,
     "src/db/export.test.ts": 1675,
     "src/db/import.test.ts": 1077,
+    "src/db/incident-reports.test.ts": 1011,
     "src/db/manifests.test.ts": 3725,
     "src/db/no-show.test.ts": 1165,
     "src/db/notifications.test.ts": 1875,
@@ -480,7 +487,7 @@
     "src/lib/agency-check.test.ts": 930,
     "src/lib/dive-prep.test.ts": 1983,
     "src/lib/import.test.ts": 1459,
-    "src/lib/incident-export.test.ts": 1187,
+    "src/lib/incident-export.test.ts": 1067,
     "src/lib/manifests.test.ts": 1320,
     "src/lib/notifications/email.test.ts": 1494,
     "src/lib/offline-manifest-store.test.ts": 1018,
@@ -533,13 +540,25 @@
         }
       },
       {
+        "why": "safety stack merge onto ready-for-agent: the trip page passes the removed seat (bid, roster) to tripPageNotices",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": "356 -> 358"
+        }
+      },
+      {
         "why": "fourth review layer 3 merged layer 2: both sides grew these files",
         "files": {
           "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": "366 -> 367"
         }
+      },
+      {
+        "why": "Merge of the UX review stack (PR 2654) into safety layer 3: both sides added a prop to the trip page",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": "366 -> 368"
+        }
       }
     ],
-    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 306,
+    "src/app/ready/[token]/page.tsx#DiverReadinessPage": 304,
     "src/app/s/[shopSlug]/page.tsx#SchedulePage": 425,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts#bookSpot": 332,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx#GearUnitPage": 333,
@@ -551,8 +570,8 @@
     "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 310,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 332,
     "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 318,
-    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 372,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 366,
+    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 335,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 368,
     "src/db/checkouts.ts#startBookingCheckout": 303,
     "src/db/export.ts#loadShopExportContext": 338,
     "src/db/reminders.ts#sendDueReminders": 332,
@@ -611,6 +630,12 @@
         "files": {}
       },
       {
+        "why": "safety stack merge onto ready-for-agent: the trip page passes the removed seat (bid, roster) to tripPageNotices",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/page.tsx": "511 -> 513"
+        }
+      },
+      {
         "why": "merge of PR 2652's stack into r4-3: both sides grew the order page (record payment, dispute sheet) and export.test.ts",
         "files": {
           "src/app/shop/[shopSlug]/orders/[id]/page.tsx": "0 -> 401"
@@ -621,12 +646,18 @@
         "files": {
           "src/app/shop/[shopSlug]/trips/[id]/page.tsx": "511 -> 521"
         }
+      },
+      {
+        "why": "Merge of the UX review stack (PR 2654) into safety layer 3: both sides added a prop to the trip page",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/page.tsx": "521 -> 523"
+        }
       }
     ],
     "src/app/onboard/page.tsx": 479,
     "src/app/page.tsx": 581,
     "src/app/pricing/page.tsx": 468,
-    "src/app/ready/[token]/page.tsx": 667,
+    "src/app/ready/[token]/page.tsx": 665,
     "src/app/s/[shopSlug]/page.tsx": 879,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 524,
     "src/app/shop/[shopSlug]/bookings/new/page.tsx": 410,
@@ -645,9 +676,9 @@
     "src/app/shop/[shopSlug]/settings/import/page.tsx": 508,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 789,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 593,
-    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 704,
+    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 646,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 494,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 521
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 523
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

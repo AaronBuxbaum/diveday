@@ -62,7 +62,7 @@ describe("CheckpointSwitch", () => {
       const clicked = fireEvent.click(dive2);
       // The navigation was held back, not refused.
       expect(clicked).toBe(false);
-      expect(screen.getByRole("alert").textContent).toBe("2 divers not marked after dive 1.");
+      expect(screen.getByRole("alert").textContent).toBe("2 people not marked after dive 1.");
       expect(screen.getByRole("link", { name: "Open anyway" })).toHaveAttribute(
         "href",
         "/shop/blue-mantis/trips/trip-1/manifest?checkpoint=after_dive_2",
@@ -98,7 +98,7 @@ describe("CheckpointSwitch", () => {
           t={t}
         />,
       );
-      expect(screen.getByText(/2 divers not marked after dive 1\./)).toHaveClass("text-danger");
+      expect(screen.getByText(/2 people not marked after dive 1\./)).toHaveClass("text-danger");
       expect(screen.getByRole("link", { name: "Back to dive 1" })).toHaveAttribute(
         "href",
         "/shop/blue-mantis/trips/trip-1/manifest?checkpoint=after_dive_1",
@@ -128,7 +128,7 @@ describe("CheckpointSwitch", () => {
         />,
       );
       expect(
-        screen.getByText(/11 divers and 1 crew not marked after dive 1\./),
+        screen.getByText(/11 passengers and 1 crew not marked after dive 1\./),
       ).toBeInTheDocument();
     });
 

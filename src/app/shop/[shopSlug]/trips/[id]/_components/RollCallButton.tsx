@@ -14,7 +14,10 @@ import { textareaClassFor } from "@/components/ui/form";
  * card can settle in place. `not_ready` is the server's fail-closed refusal —
  * readiness is re-checked on the server at board time and can always win.
  */
-export type RollCallResult = { ok: true } | { ok: false; reason: "not_ready" | "error" } | null;
+export type RollCallResult =
+  | { ok: true }
+  | { ok: false; reason: "not_ready" | "boat_full" | "error" }
+  | null;
 
 export type RollCallAction = (prev: RollCallResult, formData: FormData) => Promise<RollCallResult>;
 
@@ -34,6 +37,12 @@ export type RollCallAction = (prev: RollCallResult, formData: FormData) => Promi
 export type RollCallButtonCopy = {
   errorRefusal: string;
   blockedMessage: ReactNode;
+  /**
+   * Boarded at departure on a turned-away seat the desk has since sold
+   * (`boat_full`, dde-3 #6). Absent where the refusal cannot arise: the crew's
+   * own taps.
+   */
+  boatFull?: string;
 };
 
 /**
@@ -256,7 +265,11 @@ export function RollCallButton({
         // controls instead of squeezing in as a third column or, at the
         // default order 0, jumping above them.
         <p role="alert" className="order-3 mt-1 basis-full text-sm font-medium text-danger">
-          {result.reason === "not_ready" ? copy.blockedMessage : copy.errorRefusal}
+          {result.reason === "not_ready"
+            ? copy.blockedMessage
+            : result.reason === "boat_full"
+              ? (copy.boatFull ?? copy.errorRefusal)
+              : copy.errorRefusal}
         </p>
       ) : null}
     </>

@@ -629,6 +629,8 @@ describe("a diver's own cancellation on the departure's trail (UX review 2026-10
     expect((await listTripActivity(db, shop.id, trip.id))[0]).toMatchObject({
       code: "seat_self_refunded",
       params: { actor: entry.person.fullName },
+      // Whose seat, by record, so erasure reaches the line (security review 2026-10-16, F1).
+      subjectPersonId: entry.person.id,
     });
 
     await recordDiverSelfCancel(db, {

@@ -5,6 +5,7 @@ import { type CourseLearningMaterial, readLearningMaterials } from "@/lib/course
 import { seatListPriceCents, withinCancellationWindow } from "@/lib/deposits";
 import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
+import { seatIsHeld } from "@/lib/no-show";
 import { publicAppUrl } from "@/lib/notifications";
 import type { ParticipantType } from "@/lib/participant-types";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
@@ -16,6 +17,7 @@ import { canSayRunningLate, runningLateShown } from "@/lib/running-late";
 import { hasSailed } from "@/lib/trips";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { offerableWelcomeCue, type WelcomeCue, type WelcomeHello } from "@/lib/welcome-cue";
+import { heldAtTheDoor } from "./aboard-at-sea";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
 import { firstActiveIntroCourse, hasActiveRefresherCourse } from "./courses";
@@ -109,7 +111,9 @@ export async function getBookedCard(
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
     .limit(1);
-  if (!row) return null;
+  // A seat the desk released is not one the card may claim (layer 3 review,
+  // dde-1 F2): no card, and the full path answers with its own.
+  if (!row || row.status === "no_show") return null;
   const identityHeld = row.identityUnconfirmedAt !== null;
   return {
     shop: {
@@ -323,6 +327,20 @@ export type ReadyPageData = {
    */
   canCancelBooking: boolean;
   /**
+   * The desk saw this diver and turned them away (H-135), rather than marking
+   * them not here. After the departure the page says the shop could not take
+   * them, never that they did not make it. The category is not carried: the
+   * diver was there, and a bearer link is no place to print it.
+   */
+  turnedAway: boolean;
+  /**
+   * The desk released this seat (turned away, or marked not here). Before
+   * the day is over the page says only that the shop released it and to talk
+   * to the desk, with no category, and draws no checklist, payment or
+   * running-late control (layer 3 review, dde-1 F2).
+   */
+  seatReleased: boolean;
+  /**
    * **"Add a seat"** (UX review 2026-10-11, item 13): this booking may lead a
    * party seat added from the page. The same moment a seat may be released
    * (`canCancelBooking`), never on a held seat, and never on a party member's
@@ -415,6 +433,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       hotelPickupLocation: bookings.hotelPickupLocation,
       pickupTime: bookings.pickupTime,
       status: bookings.status,
+      turnedAwayAt: bookings.turnedAwayAt,
       runningLateAt: bookings.runningLateAt,
       bookingCreatedAt: bookings.createdAt,
       carriedFactsConfirmedAt: bookings.carriedFactsConfirmedAt,
@@ -570,8 +589,16 @@ export async function getReadyPageData(
   // This seat's own price: a snorkeler is never asked for the dive fare
   // (ADR 20261007-participant-types).
   const perDiverPriceCents = seatListPriceCents(trip, trip.course, row.participantType);
+  // **Only a seat the diver still holds is payable** (layer 3 review, dde-2
+  // #1): a seat the desk released may already be resold, and a capture on it
+  // is money for a place the diver no longer has. `startBookingCheckout`
+  // refuses it server-side as well.
   const canPay = Boolean(
-    perDiverPriceCents && !settled && canAcceptPayments(stripeAccount) && publicAppUrl(),
+    seatIsHeld(row.status) &&
+      perDiverPriceCents &&
+      !settled &&
+      canAcceptPayments(stripeAccount) &&
+      publicAppUrl(),
   );
 
   // `captured`, not `settled`: a waived booking has no money to give back, so
@@ -586,7 +613,19 @@ export async function getReadyPageData(
         : "forfeit"
       : "no_policy";
 
-  const canCancelBooking = row.status === "booked" && !hasSailed(trip.startsAt, now);
+  const canCancelBooking =
+    row.status === "booked" &&
+    !hasSailed(trip.startsAt, now) &&
+    // Counted aboard a boat past its time: `selfCancelBooking` refuses it (H-133).
+    !(
+      await heldAtTheDoor(db, {
+        shopId: row.shopId,
+        tripId: row.tripId,
+        startsAt: trip.startsAt,
+        now,
+        bookingIds: [bookingId],
+      })
+    ).has(bookingId);
   const identityHeld = row.identityUnconfirmedAt !== null;
   // **A lead the page could charge pays before adding anyone** (security
   // review of layer 8, D3). The link is shared by design, so without this a
@@ -680,6 +719,8 @@ export async function getReadyPageData(
     owesAtShop: Boolean(perDiverPriceCents) && !settled && !canPay,
     cancelPreview,
     canCancelBooking,
+    turnedAway: row.status === "no_show" && row.turnedAwayAt !== null,
+    seatReleased: row.status === "no_show",
     canAddSeat,
     moveAsk,
     canPayPartySeats,

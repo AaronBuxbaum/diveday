@@ -212,16 +212,17 @@ describe("getDisputeSheet", () => {
     });
     await recordShopActivity(seat.db, { ...base, write: { code: "payment_waived", bookingId } });
     // Trip-level lines carry no booking and no subject, so the sheet cannot
-    // tell whose they are and must not claim them.
+    // tell whose they are and must not claim them. (A roster line always names
+    // its subject now, so these are two lines that still may not.)
     await recordTripActivity(seat.db, {
       ...base,
       tripId: seat.reef.id,
-      entry: { code: "seat_added", diver: seat.entry.person.fullName },
+      entry: { code: "departure_offered", diver: seat.entry.person.fullName },
     });
     await recordTripActivity(seat.db, {
       ...base,
       tripId: seat.reef.id,
-      entry: { code: "booking_removed", diver: seat.entry.person.fullName },
+      entry: { code: "identity_confirmed", diver: seat.entry.person.fullName },
     });
     await recordDiverActivity(seat.db, {
       ...base,

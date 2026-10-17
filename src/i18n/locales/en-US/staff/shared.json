@@ -383,6 +383,7 @@
       "readyBadge": "Ready when saved",
       "blockedBadge": "Blocked when saved",
       "notHereBadge": "Not here when saved",
+      "turnedAwayBadge": "Turned away when saved",
       "statePendingSuffix": "· waiting to send",
       "emergencyContact": "Emergency contact",
       "notOnFile": "Not on file",

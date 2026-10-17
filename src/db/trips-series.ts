@@ -23,6 +23,7 @@ import {
 } from "@/lib/recurrence";
 import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
 import { utcToWallTime, type WallTime, wallTimeToUtc } from "@/lib/zoned";
+import { departureMayBeAtSea } from "./aboard-at-sea";
 import { type BlowoutRefundMode, callDayBlowout } from "./blowouts";
 import type { AppDb, AppTransaction } from "./client";
 import { queryAll } from "./query-helpers";
@@ -905,6 +906,8 @@ export type OffCadenceSeriesTrip = {
  * date would report a perfectly good departure as orphaned. An instance with no
  * slot at all (created before the ledger existed) is left out — there is nothing
  * to judge it against, and guessing would offer to cancel a real departure.
+ * So is one the crew have taken out before its time (`departureMayBeAtSea`,
+ * H-133): a bulk call-off never cancels a boat on the water.
  */
 export async function listOffCadenceSeriesTrips(
   db: AppDb,
@@ -944,12 +947,17 @@ export async function listOffCadenceSeriesTrips(
     pattern: { intervalWeeks: series.intervalWeeks, weekdays: series.weekdayMask },
     endsOn: series.endsOn,
   };
-  return rows
-    .filter(
-      (row): row is typeof row & { occurrenceDate: string } =>
-        row.occurrenceDate !== null && !seriesFiresOn(cadence, row.occurrenceDate),
-    )
-    .map((row) => ({ ...row }));
+  const offCadence = rows.filter(
+    (row): row is typeof row & { occurrenceDate: string } =>
+      row.occurrenceDate !== null && !seriesFiresOn(cadence, row.occurrenceDate),
+  );
+  const ashore: OffCadenceSeriesTrip[] = [];
+  for (const row of offCadence) {
+    const tripId = row.id;
+    if (await departureMayBeAtSea(db, { shopId, tripId, startsAt: row.startsAt, now })) continue;
+    ashore.push({ ...row });
+  }
+  return ashore;
 }
 
 /** What "Cancel every upcoming date" and "Take them off" did. */
@@ -976,7 +984,7 @@ export type SeriesCallOffInput = {
   checkout?: CheckoutProvider;
   /**
    * Whether the refunds the call triggers go back now or wait for a refund
-   * holder (H-123). Absent means now, which is every system caller.
+   * holder (H-139). Absent means now, which is every system caller.
    */
   refunds?: BlowoutRefundMode;
 };
@@ -1022,7 +1030,7 @@ async function callOffSeriesDates(
  * **Each date goes through the blow-out cascade**, exactly as "Cancel every
  * upcoming date" does (`callOffSeriesDates`): it is still reinstatable from its
  * own trip page and every booking's history survives, but its booked divers are
- * told once and their card payments go back (issue #2453; full refunds, H-122).
+ * told once and their card payments go back (issue #2453; full refunds, H-138).
  * Before that this only flipped the status, and a paid diver on a dropped
  * weekday heard nothing and kept being charged.
  *
@@ -1156,7 +1164,7 @@ export async function setSeriesRepeat(
  * staff get a cascade record per date to work. Before 2026-10-12 this only
  * flipped the status: the dates kept their bookings and their money, and
  * nobody but the crew was told. Every date refunds in full, never under its
- * own cancellation window (H-122).
+ * own cancellation window (H-138).
  *
  * Every date is set up before any message is written, so nobody is offered
  * another date of the run being cancelled. Past and already-cancelled dates

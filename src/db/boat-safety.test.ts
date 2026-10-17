@@ -472,6 +472,25 @@ describe("departureBoatSafetyFor", () => {
     ]);
     expect(await read("2026-10-08T12:00:00Z")).toBeNull();
   });
+
+  it("says insurance good today ends before a later departure, not that it ended", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Policy Hull", 14, null, {
+      ...PAPERS_CLEAR,
+      insuranceExpiresOn: "2026-10-15",
+    });
+    const trip = await departure(db, shop.id, boat.id, "2026-10-20T12:00:00Z");
+    const safety = await departureBoatSafetyFor(db, shop.id, {
+      tripId: trip.id,
+      startsAt: trip.startsAt,
+      timeZone: ZONE,
+      now: NOW,
+      passengers: { booked: 2, boarded: 0 },
+    });
+    expect(safety?.notices).toEqual([
+      expect.objectContaining({ code: "paper", expired: true, beforeDeparture: true }),
+    ]);
+  });
 });
 
 describe("the kit record the printed packet reads (fourth review, item 17)", () => {

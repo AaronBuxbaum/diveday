@@ -37,7 +37,7 @@ async function canceledBooking(email: string | null = "nora@example.com") {
   });
   if (!booking.ok) throw new Error(`booking failed: ${booking.reason}`);
   const cancelled = await cancelBooking(db, shop.id, booking.bookingId);
-  expect(cancelled?.previousStatus).toBe("booked");
+  expect(cancelled.ok && cancelled.booking.previousStatus).toBe("booked");
   return { db, shop, trip, bookingId: booking.bookingId };
 }
 
@@ -203,7 +203,7 @@ describe("sendBookingCancelledNotice", () => {
       .set({ status: "checked_in" })
       .where(eq(bookings.id, booking.bookingId));
     const cancelled = await cancelBooking(db, shop.id, booking.bookingId);
-    expect(cancelled?.previousStatus).toBe("checked_in");
+    expect(cancelled.ok && cancelled.booking.previousStatus).toBe("checked_in");
     const seen: Notification[] = [];
 
     const outcome = await sendBookingCancelledNotice(

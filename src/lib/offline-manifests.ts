@@ -360,6 +360,16 @@ export type OfflineManifestPayload = {
            */
           notHere?: boolean;
           /**
+           * **The desk saw this diver and turned them away** (H-135; layer 3
+           * review, dde-1 F3): set only beside `notHere`, which it refines.
+           * Without it the dock copy badged a turned-away diver "Not here", the
+           * opposite statement about a person the desk stood in front of.
+           * Optional and additive, like `notHere` (no record-version bump):
+           * absent reads as the plain write-off, which is what every copy
+           * saved before it said.
+           */
+          turnedAway?: true;
+          /**
            * **The diver's own "running late"** (#2319), as an ISO instant:
            * when they said it, and nothing else — no channel, no message.
            * Already cleared from an arrived or released seat at save time;
@@ -951,6 +961,7 @@ export function serializeManifests(
         bookedAs: diver.bookedAs,
         checkedIn: diver.checkedIn,
         notHere: diver.notHere,
+        ...(diver.notHere && diver.turnedAway ? { turnedAway: true as const } : {}),
         ...(diver.runningLateAt ? { runningLateAt: diver.runningLateAt.toISOString() } : {}),
         // Dates only, and absent when there is nothing to warn about: see the
         // allow-list type above.

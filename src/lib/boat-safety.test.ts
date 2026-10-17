@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BOAT_PAPER_HORIZON_DAYS,
+  BOAT_PAPERS,
   BOAT_SAFETY_HORIZON_DAYS,
   type BoatSafetyNotice,
   boatPaperNotices,
@@ -423,7 +424,7 @@ describe("expiredBoatSafetyNotices", () => {
 });
 
 describe("boatSafetyNoticeTone", () => {
-  it("is danger for missing kit and too many aboard, warning for what has gone wrong, neutral for a heads-up", () => {
+  it("is danger for missing kit, too many aboard and a lapsed paper, warning for what has gone wrong, neutral for a heads-up", () => {
     expect(
       boatSafetyNoticeTone({ code: "over_certificate", passengers: 13, limit: 12, counted: true }),
     ).toBe("danger");
@@ -432,10 +433,110 @@ describe("boatSafetyNoticeTone", () => {
       boatSafetyNoticeTone({ code: "kit_off_service", gearItemId: "a", label: "A", kind: "aed" }),
     ).toBe("warning");
     const paper = { code: "paper", paper: "insurance", dueOn: TODAY, days: 3 } as const;
-    expect(boatSafetyNoticeTone({ ...paper, expired: true })).toBe("warning");
     expect(boatSafetyNoticeTone({ ...paper, expired: false })).toBe("neutral");
+    // A lapsed kit clock is still a warning: kit is replaced, a paper is the
+    // fact that makes a claim uncovered.
+    expect(
+      boatSafetyNoticeTone({
+        code: "kit_clock",
+        gearItemId: "a",
+        label: "Flares",
+        kind: "flares",
+        clock: "expiry",
+        dueOn: TODAY,
+        expired: true,
+        days: 3,
+      }),
+    ).toBe("warning");
     expect(boatSafetyNoticeIsUrgent({ ...paper, expired: false })).toBe(false);
     expect(boatSafetyNoticeIsUrgent({ code: "kit_missing", kind: "aed" })).toBe(true);
+  });
+});
+
+/**
+ * **A lapsed paper reads in danger ink** (decision H-136): hull insurance,
+ * registration or the safety inspection past its date is the one fact that
+ * makes a claim uncovered, so it is drawn as loud as missing oxygen. It is
+ * never a gate: nothing here or downstream refuses a departure for it.
+ */
+describe("a lapsed boat paper (H-136)", () => {
+  it("is danger for each of the three papers, the day after its date and every day after", () => {
+    for (const paper of BOAT_PAPERS) {
+      for (const days of [1, 30]) {
+        expect(
+          boatSafetyNoticeTone({ code: "paper", paper, dueOn: TODAY, expired: true, days }),
+        ).toBe("danger");
+      }
+    }
+  });
+
+  it("lapses insurance on its expiry date: marine cover ends that day", () => {
+    const [notice] = boatPaperNotices(papers({ insuranceExpiresOn: TODAY }), TODAY);
+    expect(notice).toEqual({
+      code: "paper",
+      paper: "insurance",
+      dueOn: TODAY,
+      expired: true,
+      days: 0,
+    });
+    if (!notice) throw new Error("expected the insurance notice");
+    expect(boatSafetyNoticeTone(notice)).toBe("danger");
+  });
+
+  it("keeps registration and inspection neutral on their last good day", () => {
+    const notices = boatPaperNotices(
+      papers({ registrationExpiresOn: TODAY, inspectionDueOn: TODAY }),
+      TODAY,
+    );
+    expect(notices.map((notice) => notice.code === "paper" && notice.expired)).toEqual([
+      false,
+      false,
+    ]);
+    for (const notice of notices) expect(boatSafetyNoticeTone(notice)).toBe("neutral");
+  });
+
+  it("marks a paper good today that lapses before a later departure, and only that one", () => {
+    // Judged on a departure of Nov 20, read on Oct 9.
+    const notices = boatPaperNotices(
+      papers({
+        insuranceExpiresOn: "2026-11-01",
+        registrationExpiresOn: TODAY,
+        inspectionDueOn: "2026-10-01",
+      }),
+      "2026-11-20",
+      TODAY,
+    );
+    const byPaper = Object.fromEntries(
+      notices.flatMap((notice) => (notice.code === "paper" ? [[notice.paper, notice]] : [])),
+    );
+    expect(byPaper.insurance).toMatchObject({ expired: true, beforeDeparture: true });
+    // Registration's last good day is today, so it too lapses before the boat sails.
+    expect(byPaper.registration).toMatchObject({ expired: true, beforeDeparture: true });
+    // The inspection was already overdue today: it has lapsed, not "will".
+    expect(byPaper.inspection).toMatchObject({ expired: true });
+    expect(byPaper.inspection).not.toHaveProperty("beforeDeparture");
+    // Insurance that ends today has ended today, whatever the departure date.
+    const [today] = boatPaperNotices(papers({ insuranceExpiresOn: TODAY }), "2026-11-20", TODAY);
+    expect(today).not.toHaveProperty("beforeDeparture");
+  });
+
+  it("leads the boat's lines after missing kit and the certificate, and refuses nothing", () => {
+    const notices = boatSafetyNotices({
+      boat: { certifiedPassengers: 12, ...papers({ insuranceExpiresOn: "2026-10-08" }) },
+      kit: [],
+      kindsOnRegister: new Set(["aed"]),
+      passengers: { booked: 14, boarded: 0 },
+      onDate: TODAY,
+    });
+    expect(notices.map((notice) => [notice.code, boatSafetyNoticeTone(notice)])).toEqual([
+      ["kit_missing", "danger"],
+      ["over_certificate", "danger"],
+      ["paper", "danger"],
+    ]);
+    // Informs only: the seats a departure may sell are the certificate's,
+    // whatever the papers say.
+    expect(sellableSeats(14, 12)).toBe(12);
+    expect(sellableSeats(14, null)).toBe(14);
   });
 });
 

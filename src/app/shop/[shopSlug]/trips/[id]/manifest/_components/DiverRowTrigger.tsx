@@ -102,7 +102,11 @@ export function DiverRowTrigger({
             nothing here refuses a boarding, and a diver who
             turns up after all is tapped aboard exactly as
             before. */}
-          {diver.notHere ? <Badge tone="neutral">{t("manifest.notHerePill")}</Badge> : null}
+          {diver.notHere ? (
+            <Badge tone="neutral">
+              {diver.turnedAway ? t("manifest.turnedAwayPill") : t("manifest.notHerePill")}
+            </Badge>
+          ) : null}
         </span>
       ) : null}
     </>

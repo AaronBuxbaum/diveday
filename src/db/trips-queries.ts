@@ -18,6 +18,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { sellableSeats } from "@/lib/boat-safety";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { perDiverBookingPriceCents } from "@/lib/courses";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import type { SeatCounts } from "@/lib/participant-types";
 import {
@@ -1047,6 +1048,7 @@ export type WeekBoardEntry = {
   endsAt: Date;
   booked: number;
   capacity: number;
+  /** Per seat, as the booking charges it: a course session's is the course total (H-125). */
   priceCents: number | null;
   /**
    * `sailed` once the boat is back — the departure has *ended*, with the
@@ -1101,6 +1103,7 @@ export type WeekBoardSpan = {
   status: "upcoming" | "sailed";
   booked: number;
   capacity: number;
+  /** Per seat, as the booking charges it: a course session's is the course total (H-125). */
   priceCents: number | null;
   instructorName: string | null;
 };
@@ -1154,10 +1157,18 @@ export async function weekBoard(
       // multi-day course's rows by its days, and a plain count would report a
       // three-day class as three times as booked as it is.
       booked: countDistinct(bookings.id),
+      // A course session is priced at the course total the booking charges,
+      // as the public schedule rows read it (H-125), never the trip row's own.
+      course: {
+        title: courses.title,
+        priceCents: courses.priceCents,
+        eLearningPriceCents: courses.eLearningPriceCents,
+      },
     })
     .from(trips)
     .innerJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
     .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+    .leftJoin(courses, eq(courses.id, trips.courseId))
     .leftJoin(bookings, liveBookingJoin)
     .where(
       and(
@@ -1168,7 +1179,7 @@ export async function weekBoard(
         gt(tripScheduleDays.endsAt, from),
       ),
     )
-    .groupBy(trips.id, diveSites.id)
+    .groupBy(trips.id, diveSites.id, courses.id)
     .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
 
   if (overlapping.length === 0) return { days, spans: [] };
@@ -1195,7 +1206,8 @@ export async function weekBoard(
 
   const spans: WeekBoardSpan[] = [];
   const sailedBefore = new Date(now.getTime() - 60 * 60 * 1000);
-  for (const { trip, diveSiteName, booked } of overlapping) {
+  for (const { trip, diveSiteName, booked, course } of overlapping) {
+    const priceCents = perDiverBookingPriceCents(trip, course);
     // A trip with no meeting rows at all is its own single window — the same
     // reading `tripScheduleDayCounts` callers already take.
     const windows = windowsByTrip.get(trip.id) ?? [trip.startsAt];
@@ -1210,7 +1222,7 @@ export async function weekBoard(
         status: trip.endsAt < sailedBefore ? "sailed" : "upcoming",
         booked,
         capacity: trip.capacity,
-        priceCents: trip.priceCents,
+        priceCents,
         instructorName: null,
       });
       continue;
@@ -1223,7 +1235,7 @@ export async function weekBoard(
       endsAt: trip.endsAt,
       booked,
       capacity: trip.capacity,
-      priceCents: trip.priceCents,
+      priceCents,
       isRehearsal: trip.isRehearsal,
       status: trip.endsAt < sailedBefore ? "sailed" : "upcoming",
       courseId: trip.courseId,

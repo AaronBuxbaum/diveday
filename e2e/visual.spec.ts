@@ -4343,7 +4343,7 @@ for (const scheme of ["light", "dark"] as const) {
         const seeded = await page.request.post("/api/test/seed-trouble-states?uncountedSeat=1");
         expect(seeded.ok()).toBe(true);
         const { uncountedSeat } = (await seeded.json()) as {
-          uncountedSeat?: { tripId: string };
+          uncountedSeat?: { tripId: string; personName: string };
         };
         if (!uncountedSeat) throw new Error("seed-trouble-states left no seat uncounted");
         await page.goto(counterPath("blue-mantis", uncountedSeat.tripId));
@@ -4352,6 +4352,36 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: /^Didn’t sail · \d+$/ }).waitFor();
         await page.getByRole("heading", { name: /^Not counted at the dock · 1$/ }).waitFor();
         await capture(page, "trip-record-uncounted", scheme);
+
+        // Remove on that seat (H-133): held as possibly carried, and told how
+        // to let it go, never that it sailed.
+        const row = page
+          .locator('#roster li[id^="booking-"]')
+          .filter({ hasText: uncountedSeat.personName })
+          .first();
+        await openRosterDetails(row);
+        await row.locator("summary", { hasText: /^\s*Remove booking\s*$/ }).click();
+        await row.getByRole("status").filter({ hasText: "at the dock, so the boat may" }).waitFor();
+        await expect(row.getByRole("button", { name: "Yes, remove booking" })).toHaveCount(0);
+        await capture(page, "trip-remove-uncounted-refused", scheme);
+      });
+
+      // **Remove on a diver marked aboard a boat that has left** (H-133). The
+      // dawn boat boarded its sailed seats and is home, so a sailed row's
+      // Remove opens on why it will not, with nothing to confirm.
+      test(`Remove on a diver marked aboard says why it will not (${scheme})`, async ({ page }) => {
+        const tripId = await seededTripId(page, "blue-mantis", SAILED_TRIP);
+        await page.goto(counterPath("blue-mantis", tripId));
+        await page.getByRole("heading", { name: /^Sailed · \d+$/ }).waitFor();
+        const row = page
+          .locator('#roster li[id^="booking-"]')
+          .filter({ has: page.locator("summary", { hasText: /^\s*Remove booking\s*$/ }) })
+          .first();
+        await openRosterDetails(row);
+        await row.locator("summary", { hasText: /^\s*Remove booking\s*$/ }).click();
+        await row.getByRole("status").filter({ hasText: "sailed on this departure" }).waitFor();
+        await expect(row.getByRole("button", { name: "Yes, remove booking" })).toHaveCount(0);
+        await capture(page, "trip-remove-aboard-refused", scheme);
       });
 
       /**
@@ -4578,6 +4608,56 @@ for (const scheme of ["light", "dark"] as const) {
         await sailedDoor.locator("> summary").click();
         await disclosureSettled(sailedDoor);
         await capture(page, "trip-desk-no-show-sailed", scheme);
+      });
+
+      /**
+       * **"Turned away", open and then recorded** (safety sheet 2026-10-15,
+       * item 6; H-135). Open before the boat leaves, so no departure move:
+       * Odile arrives blocked on the release, the door offers that reason
+       * alone, and the recorded row says it in its own group with the move and
+       * refund doors under it.
+       */
+      test(`the counter's turned-away door renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const title = "Turned Away Two-Tank";
+        await createTrip(page, {
+          title,
+          date: daysFromNow(0),
+          departsAt: "09:45",
+          returnsAt: "12:00",
+          capacity: 1,
+        });
+        const tripId = await seededTripId(page, "blue-mantis", title);
+        await page.goto(`${counterPath("blue-mantis", tripId)}/walk-in`);
+        const findDiver = page.getByRole("searchbox", {
+          name: "Search by name, email, or phone",
+        });
+        await findDiver.fill("Odile Marchand");
+        await findDiver.press("Enter");
+        await page.getByRole("button", { name: "Add Odile Marchand to this boat" }).click();
+        await page.waitForURL(new RegExp(`/trips/${tripId}\\?notice=walkin-added`));
+
+        await page.goto(counterPath("blue-mantis", tripId));
+        await expect(page.locator("[data-check-in-queue]")).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
+        const row = page
+          .locator('#roster li[id^="booking-"]')
+          .filter({ visible: true })
+          .filter({ has: page.getByRole("link", { name: "Odile Marchand", exact: true }) });
+        const door = row
+          .locator("details")
+          .filter({ has: page.getByText("Turn away…", { exact: true }) });
+        await door.locator("> summary").click();
+        await disclosureSettled(door);
+        await capture(page, "trip-desk-turn-away", scheme);
+
+        await row.getByRole("button", { name: "Turn Odile Marchand away" }).click();
+        await expect(page.getByRole("heading", { name: "Turned away · 1" })).toBeVisible();
+        await capture(page, "trip-desk-turned-away", scheme);
       });
 
       // **The home's evening reading** (ADR
@@ -6494,6 +6574,42 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "incident-report-draft", scheme);
       });
 
+      // The one Today line an unfiled report leaves for owners and managers
+      // (safety sheet 2026-10-15, item 3): how many, who started the oldest,
+      // and when, opening the draft. Started here, so the seed stays clean.
+      test(`an unfiled incident report is one line on Today (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        await openTripAbout(page);
+        await page
+          .getByRole("region", { name: "Incident reports" })
+          .getByRole("button", { name: "Report an incident" })
+          .click();
+        await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
+        await page.goto("/shop/blue-mantis");
+        await page.getByText(/1 incident report not filed, started today by /).waitFor();
+        await capture(page, "today-incident-unfiled", scheme);
+      });
+
+      // The log's last section with a report on it (safety sheet 2026-10-15,
+      // item 5): an unfiled draft says so and who started it, and links to it.
+      test(`the departure log lists its incident reports (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        const tripPath = new URL(page.url()).pathname;
+        await openTripAbout(page);
+        await page
+          .getByRole("region", { name: "Incident reports" })
+          .getByRole("button", { name: "Report an incident" })
+          .click();
+        await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
+        await page.goto(`${tripPath}/log`);
+        const section = page.locator("section", {
+          has: page.getByRole("heading", { name: "Incident reports" }),
+        });
+        await section.getByText(/^Draft not filed, started by /).waitFor();
+        await section.scrollIntoViewIfNeeded();
+        await capture(page, "departure-log-incident-reports", scheme);
+      });
+
       // The month's Safety page, its own destination: roll calls, dock marks, card
       // checks written past, crew credentials and the month's incident
       // reports, read from what the shop already records.
@@ -8036,6 +8152,15 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(
           page.getByRole("dialog").getByRole("button", { name: "Not back aboard", exact: true }),
         ).toBeVisible();
+        // The panel the alarm leaves open, with the report's door in it (safety
+        // sheet 2026-10-15, item 2): "Start a missing diver report" under "Mark
+        // back aboard", for the owner signed in here.
+        const startReport = page
+          .getByRole("dialog")
+          .getByRole("button", { name: /^Start a missing diver report — / });
+        await startReport.evaluate((button) => button.scrollIntoView({ block: "center" }));
+        await page.mouse.move(0, 0);
+        await capture(page, "manifest-not-back-aboard-panel", scheme);
         // Closed again for the shot: the alarm this capture is about is what
         // the *list* shows — the pinned danger line and the one red row — and a
         // panel left open would photograph a person's contact card instead.

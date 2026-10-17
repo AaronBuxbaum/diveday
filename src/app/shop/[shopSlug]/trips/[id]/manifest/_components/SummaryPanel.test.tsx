@@ -370,6 +370,7 @@ describe("the panel's chips and the roll call's rows are one jump", () => {
             notesByBooking: new Map(),
             rollCallAction: vi.fn(async () => ({ ok: true }) as const),
             addPrivateNoteAction: vi.fn(async () => undefined) as never,
+            startMissingDiverReport: null,
             rollCallButtonCopy: () => ({
               errorRefusal: "Try again",
               blockedMessage: "Still blocked",
@@ -447,6 +448,7 @@ describe("the panel's chips and the roll call's rows are one jump", () => {
               notesByBooking: new Map(),
               rollCallAction: vi.fn(async () => ({ ok: true }) as const),
               addPrivateNoteAction: vi.fn(async () => undefined) as never,
+              startMissingDiverReport: null,
               rollCallButtonCopy: () => ({
                 errorRefusal: "Try again",
                 blockedMessage: "Still blocked",
