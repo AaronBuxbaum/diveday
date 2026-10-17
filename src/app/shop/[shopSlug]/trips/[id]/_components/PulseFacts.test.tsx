@@ -75,7 +75,7 @@ describe("PulseFacts (UX audit item 23)", () => {
     expect(warning.className).toContain("text-warning-strong");
     expect(warning.className).not.toContain("text-danger");
     // The two neutral facts still fold into one line of their own.
-    expect(screen.getByText("Needs you · 2")).toBeInTheDocument();
+    expect(screen.getByText(label(2))).toBeInTheDocument();
     expect(container.querySelectorAll("details a")).toHaveLength(2);
   });
 
