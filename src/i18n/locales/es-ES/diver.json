@@ -230,8 +230,8 @@
       "boots": "Botines"
     },
     "providedItems": {
-      "scubaUnit": "Equipo de buceo (chaleco, regulador, botella, plomos)",
-      "tanksAndWeights": "Botellas y plomos",
+      "scubaUnit": "Equipo de buceo (chaleco, regulador, tanque, plomos)",
+      "tanksAndWeights": "Tanques y plomos",
       "crewBriefing": "Briefing de la tripulación",
       "instructorBriefing": "Briefing del instructor"
     },
@@ -1301,7 +1301,7 @@
       "rents_drysuit": "Alquilar traje seco"
     },
     "askWhatsIncluded": "Pregunta al centro qué incluye el precio de la salida.",
-    "courseGearIncluded": "Tu equipo de buceo (chaleco, regulador, botella, plomos) va incluido en el curso. Dinos tus tallas para tenerlo listo.",
+    "courseGearIncluded": "Tu equipo de buceo (chaleco, regulador, tanque, plomos) va incluido en el curso. Dinos tus tallas para tenerlo listo.",
     "notSure": "No lo tengo claro: ayúdame a elegir",
     "sizeOnFile": "{size}: registrada por el centro",
     "wetsuitSize": "Talla de neopreno",
@@ -1349,8 +1349,8 @@
     },
     "jargonHintLabel": "Acerca de {item}",
     "jargonHints": {
-      "bcd": "El chaleco inflable que llevas puesto, sujeta tu botella y te permite controlar si flotas o te hundes.",
-      "regulator": "La boquilla y la manguera que te dejan respirar aire de tu botella bajo el agua.",
+      "bcd": "El chaleco inflable que llevas puesto, sujeta tu tanque y te permite controlar si flotas o te hundes.",
+      "regulator": "La boquilla y la manguera que te dejan respirar aire de tu tanque bajo el agua.",
       "drysuit": "Un traje estanco que te mantiene seco en agua fría. En la mayoría de los de alquiler los escarpines van integrados en el traje, así que no te darán un par aparte.",
       "nitrox": "Una mezcla respirable con más oxígeno que permite a buceadores con formación específica pasar algo más de tiempo bajo el agua en algunas inmersiones."
     }
@@ -4180,7 +4180,7 @@
           },
           "item5": {
             "title": "Tallas de alquiler y la lista de carga de la salida",
-            "detail": "Las tallas de cada buceador se convierten en la lista de equipo del barco, con una botella por buceador y por inmersión repartida entre aire y nitrox. {competitor} no sabe la talla de neopreno de un buceador."
+            "detail": "Las tallas de cada buceador se convierten en la lista de equipo del barco, con un tanque por buceador y por inmersión repartida entre aire y nitrox. {competitor} no sabe la talla de neopreno de un buceador."
           },
           "item6": {
             "title": "El aviso de la noche antes y un recuerdo que comparten",

@@ -685,7 +685,7 @@
       "title": "Aún no hay nada en la lista",
       "body": "Agrega la primera línea abajo. La tripulación la ve en el manifiesto de cada salida."
     },
-    "defaultLine": "Equipo de oxígeno a bordo y botella llena",
+    "defaultLine": "Equipo de oxígeno a bordo y tanque lleno",
     "addLabel": "Nueva línea",
     "addPlaceholder": "Chalecos salvavidas contados, uno por persona",
     "addSubmit": "Agregar",

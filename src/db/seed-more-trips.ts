@@ -768,6 +768,9 @@ export async function seedMoreTrips(
       shopId,
       tripId: picklesTrip.id,
       personId: waitlistCandidate.id,
+      // Two seats asked for, so the staff roster's "Party of 2" line and a
+      // party's worth of demand show in the demo (issue #2677).
+      partySize: 2,
       createdAt: nextCreatedAt(),
     });
   }
