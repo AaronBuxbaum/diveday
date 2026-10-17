@@ -6,11 +6,19 @@ import {
   markSeat,
   seatBlockerCodes,
 } from "@/test/training-mark-context";
+import { issueBookingCapability, revokeBookingCapabilities } from "./booking-capabilities";
 import { cancelBooking, setBookingParticipantType } from "./bookings";
-import { recordPaperCourseForm, signCourseForm } from "./course-forms";
+import { getCourseFormsForBooking, recordPaperCourseForm, signCourseForm } from "./course-forms";
 import { subscribeManifestEvents } from "./manifest-events";
 import { getTripManifest } from "./manifests";
-import { activityEvents, bookings, courses, people, tripAssignments } from "./schema";
+import {
+  activityEvents,
+  bookings,
+  courseFormRecords,
+  courses,
+  people,
+  tripAssignments,
+} from "./schema";
 import { clearTrainingDive } from "./training-marks";
 import { changeTripCrew } from "./trips-crew";
 import { moveTrip } from "./trips-schedule";
@@ -315,6 +323,55 @@ describe("training marks — the gates the build review closed (in-memory PGlite
           ),
         );
       expect(line?.actor).toBe(ctx.owner);
+    });
+  });
+
+  describe("a signature from the charter seat's link", () => {
+    type Ctx = Awaited<ReturnType<typeof charterContext>>;
+    const signFrom = (ctx: Ctx, bookingId: string) =>
+      signCourseForm(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId,
+        formVersionId: ctx.form.versionId as string,
+        signerName: ctx.course.fullName,
+        agreed: true,
+      });
+    const recordFor = async (ctx: Ctx) =>
+      (
+        await ctx.db
+          .select({ signedViaBookingId: courseFormRecords.signedViaBookingId })
+          .from(courseFormRecords)
+          .where(eq(courseFormRecords.formId, ctx.form.id))
+      )[0];
+
+    it("records the seat it was signed from, and nothing when signed on the course seat", async () => {
+      const charter = await charterContext();
+      await markSeat(charter);
+      expect(await signFrom(charter, charter.seat.id)).toMatchObject({ ok: true });
+      expect((await recordFor(charter))?.signedViaBookingId).toBe(charter.seat.id);
+
+      const own = await charterContext();
+      await markSeat(own);
+      expect(await signFrom(own, own.course.bookingId)).toMatchObject({ ok: true });
+      expect((await recordFor(own))?.signedViaBookingId).toBeNull();
+    });
+
+    it("is refused once the course seat's links were taken back after the mark", async () => {
+      const ctx = await charterContext();
+      await markSeat(ctx);
+      await issueBookingCapability(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId: ctx.course.bookingId,
+        purpose: "readiness",
+      });
+      await revokeBookingCapabilities(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId: ctx.course.bookingId,
+      });
+      expect(await signFrom(ctx, ctx.seat.id)).toEqual({ ok: false, reason: "unavailable" });
+      expect(await getCourseFormsForBooking(ctx.db, ctx.shop.id, ctx.seat.id)).toBeNull();
+      // The course seat's own route is the shop's to reissue, and still signs.
+      expect(await signFrom(ctx, ctx.course.bookingId)).toMatchObject({ ok: true });
     });
   });
 });

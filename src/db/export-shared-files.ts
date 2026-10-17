@@ -978,6 +978,8 @@ export const COURSE_FORM_RECORDS_CSV = sharedFile<ShopRow<"courseFormRecordRows"
     { header: "form_version", in: "both", value: (row) => row.formVersion },
     { header: "course_title", in: "both", value: (row) => row.courseTitle },
     { header: "trip_id", in: "both", value: (row) => row.tripId },
+    // The charter seat a training-dive signature came through (issue #2275).
+    { header: "signed_via_booking_id", in: "both", value: (row) => row.signedViaBookingId },
     { header: "instructor_names", in: "both", value: (row) => row.instructorNames },
     { header: "paper_signed_on", in: "both", value: (row) => row.paperSignedOn },
     { header: "signed_name", in: "both", value: (row) => row.signedName },

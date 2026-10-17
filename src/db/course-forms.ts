@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import {
   type CalendarDate,
@@ -43,6 +43,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEventsForPerson } from "./manifest-events";
 import {
   activityEvents,
+  bookingCapabilities,
   bookings,
   courseFormRecords,
   courseFormRequirements,
@@ -857,6 +858,8 @@ type Enrollment = {
   /** The seat's booker said "Under 18" (`bookings.minor_declared_at`). */
   minorDeclared: boolean;
   identityHeld: boolean;
+  /** The seat this was reached from when it is not the enrollment's own (a training mark). */
+  viaBookingId: string | null;
   tripId: string;
   tripTitle: string;
   startsAt: Date;
@@ -915,6 +918,7 @@ async function enrollmentRow(db: DbExecutor, shopId: string, bookingId: string) 
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       participantType: bookings.participantType,
       trainingEnrollmentBookingId: bookings.trainingEnrollmentBookingId,
+      trainingMarkedAt: bookings.trainingMarkedAt,
       tripId: trips.id,
       tripTitle: trips.title,
       courseId: trips.courseId,
@@ -959,6 +963,7 @@ async function toEnrollment(
     dateOfBirth: row.dateOfBirth,
     minorDeclared: row.minorDeclaredAt !== null,
     identityHeld: row.identityUnconfirmedAt !== null,
+    viaBookingId: null,
     tripId: row.tripId,
     tripTitle: row.tripTitle,
     startsAt: row.startsAt,
@@ -970,6 +975,33 @@ async function toEnrollment(
       instructorNames: await sessionInstructorNames(db, shopId, row.tripId),
     },
   };
+}
+
+/**
+ * Whether any link to this seat that opens its forms (`readiness`,
+ * `course_forms`) was revoked at or after `since`. A null `since` (no mark
+ * time to measure from) counts as taken back: fail closed.
+ */
+async function linksTakenBackSince(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+  since: Date | null,
+): Promise<boolean> {
+  if (!since) return true;
+  const [row] = await db
+    .select({ id: bookingCapabilities.id })
+    .from(bookingCapabilities)
+    .where(
+      and(
+        eq(bookingCapabilities.shopId, shopId),
+        eq(bookingCapabilities.bookingId, bookingId),
+        inArray(bookingCapabilities.purpose, ["readiness", "course_forms"]),
+        gte(bookingCapabilities.revokedAt, since),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
 }
 
 /**
@@ -1010,10 +1042,15 @@ async function enrollmentFor(
   if (!state?.valid) return null;
   const target = await enrollmentRow(db, shopId, state.enrollmentBookingId);
   if (!target || target.courseId === null || target.personId !== row.personId) return null;
+  // Links the shop took back from the course seat since the mark (a repoint,
+  // a claim, a cancel) are not reopened through the charter's (security
+  // review U2). The course seat's own route stays the shop's to reissue.
+  if (await linksTakenBackSince(db, shopId, target.bookingId, row.trainingMarkedAt)) return null;
   const enrollment = await toEnrollment(db, shopId, target);
   return {
     ...enrollment,
     identityHeld: enrollment.identityHeld || row.identityUnconfirmedAt !== null,
+    viaBookingId: bookingId,
     // Either seat's "Under 18" asks the guardian: one flag for both (fail closed).
     minorDeclared: enrollment.minorDeclared || row.minorDeclaredAt !== null,
   };
@@ -1327,6 +1364,7 @@ async function insertRecord(
       formBody: fillCourseFormText(version.body, input.enrollment.context),
       courseTitle: input.enrollment.context.courseTitle,
       tripId: input.enrollment.tripId,
+      signedViaBookingId: input.enrollment.viaBookingId,
       instructorNames: input.enrollment.context.instructorNames,
       paperSignedOn: input.paperSignedOn,
       signedName: input.signedName,

@@ -1,0 +1,4 @@
+ALTER TABLE "course_form_records" ADD COLUMN "signed_via_booking_id" uuid;--> statement-breakpoint
+CREATE INDEX "course_form_records_signed_via_idx" ON "course_form_records" ("signed_via_booking_id") WHERE "signed_via_booking_id" is not null;--> statement-breakpoint
+ALTER TABLE "course_form_records" ADD CONSTRAINT "course_form_records_signed_via_booking_id_bookings_id_fkey" FOREIGN KEY ("signed_via_booking_id") REFERENCES "bookings"("id");--> statement-breakpoint
+ALTER TABLE "course_form_records" ADD CONSTRAINT "course_form_records_signed_via_other_seat" CHECK ("signed_via_booking_id" is null or "signed_via_booking_id" <> "booking_id");

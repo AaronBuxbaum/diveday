@@ -183,6 +183,15 @@ export const courseFormRecords = pgTable(
     tripId: uuid("trip_id")
       .notNull()
       .references(() => trips.id),
+    /**
+     * **The seat whose link or row the form was signed from**, when it is not
+     * the enrollment's own: a charter seat carrying a training mark (issue
+     * #2275). The record is still the enrollment's (`booking_id`); this keeps
+     * which door it came through, for the shop's export and an audit. Null on
+     * a signature made on the course seat itself. Outside the integrity seal,
+     * whose field set is fixed by version.
+     */
+    signedViaBookingId: uuid("signed_via_booking_id").references(() => bookings.id),
     instructorNames: text("instructor_names").notNull(),
     /**
      * The date written on a paper copy, when the staffer recording it gave one.
@@ -234,6 +243,14 @@ export const courseFormRecords = pgTable(
     ),
     index("course_form_records_shop_booking_idx").on(table.shopId, table.bookingId),
     index("course_form_records_shop_person_idx").on(table.shopId, table.personId),
+    // The foreign key's probe when a booking is deleted.
+    index("course_form_records_signed_via_idx")
+      .on(table.signedViaBookingId)
+      .where(sql`${table.signedViaBookingId} is not null`),
+    check(
+      "course_form_records_signed_via_other_seat",
+      sql`${table.signedViaBookingId} is null or ${table.signedViaBookingId} <> ${table.bookingId}`,
+    ),
     check(
       "course_form_records_signature_method_known",
       sql`${table.signatureMethod} in ('typed_consent', 'in_person_attested', 'in_person_attested_namesake')`,

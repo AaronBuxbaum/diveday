@@ -88,3 +88,12 @@ CR-002 and CR-003 need the same primitive, so this is one decision, not two.
 - **Escape hatch:** if concurrent-link proliferation ever becomes a real cost (many outstanding rows
   per booking), an idle-row cleanup job can prune expired/revoked rows past a retention window —
   purely additive, no verification-path change required.
+
+## Addendum 2026-10-17 (issue #2275)
+
+A charter seat carrying a training mark signs its enrollment's course forms through the charter's
+own `readiness` or `course_forms` link. That link is a second door to the course seat's records,
+so it shuts when the course seat's own links do: if any `readiness` or `course_forms` capability
+on the course seat was revoked at or after the mark, the charter route resolves no enrollment and
+signs nothing. Reissuing the course seat's link is the shop's call, never the charter link's.
+Each record keeps the seat it was signed from (`course_form_records.signed_via_booking_id`).
