@@ -99,7 +99,7 @@ export async function cancelSeriesAction(shopSlug: string, tripId: string, serie
   const s = await requireTripConfig(shopSlug, tripId);
   const db = await getDb();
   const now = nowDate();
-  // An instructor may call a run off; only a refund holder moves the money (H-123).
+  // An instructor may call a run off; only a refund holder moves the money (H-139).
   const refunds = (await canPersonRefund(db, s.user.shopId, s.user.personId)) ? "release" : "queue";
   const result = await cancelFutureSeriesTrips(db, {
     shopId: s.user.shopId,
@@ -223,7 +223,7 @@ export async function updateSeriesCadenceAction(
  * longer fires on off the public schedule. Cancels, never deletes, so each one
  * is reinstatable from its own trip page. Each goes through the blow-out
  * cascade like the run-wide cancel: its divers are told and, for a caller with
- * the refund right, refunded (issue #2453, H-122, H-123).
+ * the refund right, refunded (issue #2453, H-138, H-139).
  */
 export async function cancelOffCadenceSeriesAction(
   shopSlug: string,

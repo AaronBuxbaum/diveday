@@ -537,7 +537,7 @@ const NOTICE_KEYS: Record<
     key: "tripSeries.notices.seriesCancelled",
     countKey: "tripSeries.notices.seriesCancelledCount",
   },
-  // The caller may not refund (H-123): the run is canceled and the divers told,
+  // The caller may not refund (H-139): the run is canceled and the divers told,
   // and the card refunds wait for an owner or manager.
   "series-cancelled-held": {
     form: "series",

@@ -1,4 +1,4 @@
-# H-139: Does a structured, consented shore contact hear the stale roll-call alert?
+# H-143: Does a structured, consented shore contact hear the stale roll-call alert?
 
 - **Status:** Implemented
 - **Human owner:** Product owner
@@ -33,4 +33,4 @@ Whether the shore contact becomes a structured, consented recipient, what the co
 
 ## Unblocks / follow-up
 
-Nothing waits on it. Still open, for whoever asks: a name on the shore contact, and SMS with its own confirmation. See also H-118 and H-138 (a filed report of a missing diver, which does not include the shore contact).
+Nothing waits on it. Still open, for whoever asks: a name on the shore contact, and SMS with its own confirmation. See also H-118 and H-142 (a filed report of a missing diver, which does not include the shore contact).

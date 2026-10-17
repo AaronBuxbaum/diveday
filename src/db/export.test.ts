@@ -540,7 +540,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   booking_checkout_bookings: ["shop_id", "id"],
   incident_reports: [
     "shop_id",
-    // H-138: when this installation told the owners of a filed missing-diver
+    // H-142: when this installation told the owners of a filed missing-diver
     // report; once-per-report send state, like `roll_call_alerted_at`.
     "missing_alerted_at",
     "missing_alert_sent_at",

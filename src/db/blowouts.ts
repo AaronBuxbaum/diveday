@@ -114,7 +114,7 @@ export type CallBlowoutOutcome =
     };
 
 /**
- * What happens to the money when a call-off cancels paid seats (H-123).
+ * What happens to the money when a call-off cancels paid seats (H-139).
  * `release` sends the card captures back at once; `queue` leaves them captured
  * for a refund holder to release, because the person who called it off may not
  * move money (`canRefund`, H-14). A system caller (the head-count sweep) is

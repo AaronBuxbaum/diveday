@@ -557,7 +557,7 @@ export type ShopCancellationRefundOutcome =
   /** Stripe was asked to refund and failed; staff should retry. */
   | { status: "failed" }
   /**
-   * The caller who cancelled may not move money (H-123), so the capture stays
+   * The caller who cancelled may not move money (H-139), so the capture stays
    * where it is and a refund holder releases it
    * ({@link refundBookingsForShopCancelledTrip}). The diver is told it is owed.
    */
@@ -691,7 +691,7 @@ export async function refundBookingOnShopCancellation(
 
 /**
  * What a shop cancellation does with a seat's money when the person who called
- * it off may not refund (H-123): nothing moves, and a captured seat reads
+ * it off may not refund (H-139): nothing moves, and a captured seat reads
  * `queued`. Everything else reads exactly as {@link refundBookingOnShopCancellation}
  * would answer it, so the diver's mail is right for an unpaid seat, a package
  * dive and a seat already refunded. The queue itself is the derivable list of

@@ -586,7 +586,7 @@ export async function fileIncidentReport(
     missingDiver = report.kind === "missing_diver";
     return { ok: true } as const;
   });
-  // A report of a missing diver tells the owners at once (H-138). After the
+  // A report of a missing diver tells the owners at once (H-142). After the
   // commit, and never able to undo it: a failed send is given back and the
   // hourly pass tries again.
   if (filed.ok && missingDiver) {
@@ -835,7 +835,7 @@ export type IncidentReportView = {
   /** Whether this viewer may discard the draft or set or release the hold: owners. */
   mayDecide: boolean;
   /**
-   * For a filed report of a missing diver only (H-138): when every owner's
+   * For a filed report of a missing diver only (H-142): when every owner's
    * email was sent, or `null` while they are not all told yet.
    */
   ownersAlert: { sentAt: Date | null } | null;
