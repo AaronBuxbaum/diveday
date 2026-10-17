@@ -48,7 +48,8 @@ export async function crewAwayByTrip(
   const byTrip = new Map<string, CrewAway[]>();
   if (tripIds.length === 0) return byTrip;
   const blocksIn = (range: { from: string; to: string }) =>
-    listCrewAvailabilityBlocks(db, shopId, range);
+    // Dates only: no surface this feeds prints why somebody is away (#2673).
+    listCrewAvailabilityBlocks(db, shopId, range, "dates_only");
   const rosterRead = db
     .select({
       tripId: trips.id,

@@ -445,13 +445,18 @@ export async function crewMoveConflicts(
     // `trip_schedule_days` comes back in no particular order and a course
     // whose legs are stored out of sequence would otherwise ask about an
     // inverted range and match nothing.
-    listCrewAvailabilityBlocks(db, shopId, {
-      from: shopDayOf(
-        new Date(Math.min(...proposed.map((day) => day.startsAt.getTime()))),
-        timeZone,
-      ),
-      to: shopDayOf(new Date(Math.max(...proposed.map((day) => day.endsAt.getTime()))), timeZone),
-    }),
+    listCrewAvailabilityBlocks(
+      db,
+      shopId,
+      {
+        from: shopDayOf(
+          new Date(Math.min(...proposed.map((day) => day.startsAt.getTime()))),
+          timeZone,
+        ),
+        to: shopDayOf(new Date(Math.max(...proposed.map((day) => day.endsAt.getTime()))), timeZone),
+      },
+      "dates_only",
+    ),
   ]);
 
   // **One line per person per other departure**, deduped on the pair and never

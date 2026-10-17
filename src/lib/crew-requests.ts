@@ -39,6 +39,28 @@ export type AvailabilityBlock = {
   note: string | null;
 };
 
+/**
+ * **Who may read why somebody is away** (issue #2673, decided by Aaron
+ * 2026-10-17): a crew member may write the reason ("hospital appointment"),
+ * which is personal. The person themself and the staff who manage staff
+ * accounts (owners and managers, `canManageStaffAccounts`) read the note;
+ * everyone else reads the dates alone. `"dates_only"` is every read that
+ * prints no note at all (Today, the board, a crew chip, the diver pages).
+ */
+export type AwayNoteReader =
+  | { personId: string | undefined; canManageStaffAccounts: boolean }
+  | "dates_only";
+
+/** The block's note as `reader` may see it: the note, or null. */
+export function awayNoteFor(
+  block: { personId: string; note: string | null },
+  reader: AwayNoteReader,
+): string | null {
+  if (reader === "dates_only" || block.note === null) return null;
+  if (reader.canManageStaffAccounts) return block.note;
+  return reader.personId !== undefined && reader.personId === block.personId ? block.note : null;
+}
+
 /** Where a request stands. `pending` is the only state the owner has to act on. */
 export type CrewRequestState = "pending" | "approved" | "declined";
 

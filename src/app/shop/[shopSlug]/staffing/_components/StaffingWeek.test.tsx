@@ -3,7 +3,12 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ledgerRowBoxClass, ledgerRowRoomClass } from "@/components/ui/ledger";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { AvailabilityBlock, CrewAssignmentRequest } from "@/lib/crew-requests";
+import {
+  type AvailabilityBlock,
+  type AwayNoteReader,
+  awayNoteFor,
+  type CrewAssignmentRequest,
+} from "@/lib/crew-requests";
 import { staffWeek, type WeekGap, type WeekPerson } from "@/lib/staffing-week";
 import { rendersFlush } from "@/test/button-flush";
 import {
@@ -506,6 +511,41 @@ describe("StaffingWeek", () => {
  * through, leaving the surface a shop actually plans the week on showing the
  * same person on both boats as if that were a shift pattern.
  */
+/**
+ * **Why somebody is away is theirs** (issue #2673, decided by Aaron
+ * 2026-10-17). The week is drawn from the blocks the page was sent, and the
+ * reader decides what those carry (`listCrewAvailabilityBlocks` with
+ * `awayNoteFor`): Keiko and an owner or manager read her reason, a colleague
+ * reads that she is away and nothing more.
+ */
+describe("StaffingWeek away note", () => {
+  const AWAY: AvailabilityBlock = {
+    id: "block-keiko",
+    personId: KEIKO.personId,
+    startsOn: THURSDAY,
+    endsOn: THURSDAY,
+    note: "Hospital appointment",
+  };
+  const weekAs = (reader: AwayNoteReader) =>
+    renderWeek({ blocks: [{ ...AWAY, note: awayNoteFor(AWAY, reader) }] });
+
+  it("shows the note to the person themself", () => {
+    weekAs({ personId: KEIKO.personId, canManageStaffAccounts: false });
+    expect(screen.getAllByText(/Hospital appointment/).length).toBeGreaterThan(0);
+  });
+
+  it("shows the note to an owner or manager", () => {
+    weekAs({ personId: "person-owner", canManageStaffAccounts: true });
+    expect(screen.getAllByText(/Hospital appointment/).length).toBeGreaterThan(0);
+  });
+
+  it("shows a colleague that she is away, and not why", () => {
+    weekAs({ personId: "person-colleague", canManageStaffAccounts: false });
+    expect(screen.getAllByText(/Away/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Hospital appointment/)).toBeNull();
+  });
+});
+
 describe("StaffingWeek standing crew clash", () => {
   /** Thursday, Key Largo: the 9:00 AM reef drift and the 10:00 AM wreck. */
   const DRIFT = {

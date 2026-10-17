@@ -79,10 +79,57 @@ describe("crew availability blocks", () => {
     // Scoped to this person: the demo shop seeds a blackout of its own
     // (`seedCrewAway`), which is the point of the reader but not of this test.
     const blocks = (
-      await listCrewAvailabilityBlocks(db, shop.id, { from: "2026-07-20", to: "2026-07-26" })
+      await listCrewAvailabilityBlocks(
+        db,
+        shop.id,
+        { from: "2026-07-20", to: "2026-07-26" },
+        { personId: crew.id, canManageStaffAccounts: false },
+      )
     ).filter((block) => block.personId === crew.id);
     expect(blocks).toHaveLength(1);
     expect(blocks[0]).toMatchObject({ personId: crew.id, startsOn: "2026-07-20", note: "Family" });
+  });
+
+  /**
+   * **Why somebody is away is theirs** (issue #2673, decided by Aaron
+   * 2026-10-17): the person themself and owners and managers read the note;
+   * every other reader is sent the dates alone, and a dates-only read sends
+   * no note to anyone.
+   */
+  it("sends the note to its person and to owners and managers, and the dates alone to anyone else", async () => {
+    const { db, shop, crew, owner } = await context();
+    const saved = await saveCrewAvailabilityBlock(db, {
+      shopId: shop.id,
+      personId: crew.id,
+      actorPersonId: crew.id,
+      canManageRoster: false,
+      startsOn: "2026-08-03",
+      endsOn: "2026-08-04",
+      note: "Hospital appointment",
+    });
+    expect(saved.ok).toBe(true);
+    const staff = await listStaff(db, shop.id);
+    const colleague = staff.find(
+      (row) =>
+        row.person.id !== crew.id && !row.roles.includes("owner") && !row.roles.includes("manager"),
+    )?.person;
+    if (!colleague) throw new Error("demo staff missing a second crew member");
+    const range = { from: "2026-08-01", to: "2026-08-07" };
+    const noteAs = async (reader: Parameters<typeof listCrewAvailabilityBlocks>[3]) => {
+      const blocks = await listCrewAvailabilityBlocks(db, shop.id, range, reader);
+      const mine = blocks.find((block) => block.personId === crew.id);
+      expect(mine).toMatchObject({ startsOn: "2026-08-03", endsOn: "2026-08-04" });
+      return mine?.note;
+    };
+    expect(await noteAs({ personId: crew.id, canManageStaffAccounts: false })).toBe(
+      "Hospital appointment",
+    );
+    expect(await noteAs({ personId: owner.id, canManageStaffAccounts: true })).toBe(
+      "Hospital appointment",
+    );
+    expect(await noteAs({ personId: colleague.id, canManageStaffAccounts: false })).toBeNull();
+    expect(await noteAs({ personId: undefined, canManageStaffAccounts: false })).toBeNull();
+    expect(await noteAs("dates_only")).toBeNull();
   });
 
   it("refuses a crew member writing somebody else's days", async () => {
@@ -101,7 +148,12 @@ describe("crew availability blocks", () => {
     // than asserting the table is empty.)
     expect(
       (
-        await listCrewAvailabilityBlocks(db, shop.id, { from: "2026-07-01", to: "2026-12-31" })
+        await listCrewAvailabilityBlocks(
+          db,
+          shop.id,
+          { from: "2026-07-01", to: "2026-12-31" },
+          "dates_only",
+        )
       ).filter((block) => block.startsOn === "2026-07-20"),
     ).toEqual([]);
   });
@@ -171,9 +223,14 @@ describe("crew availability blocks", () => {
     // Gone from every live read, and still on the row. (Scoped past the shop's
     // own seeded blackout, as above.)
     expect(
-      (await listCrewAvailabilityBlocks(db, shop.id, { from: "2026-07-01", to: "2026-12-31" })).map(
-        (block) => block.id,
-      ),
+      (
+        await listCrewAvailabilityBlocks(
+          db,
+          shop.id,
+          { from: "2026-07-01", to: "2026-12-31" },
+          "dates_only",
+        )
+      ).map((block) => block.id),
     ).not.toContain(saved.id);
     const [row] = await db
       .select()

@@ -4,10 +4,12 @@ import { STAFF_ROLES } from "@/lib/authz";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
-import type {
-  AvailabilityBlock,
-  CrewAssignmentRequest,
-  CrewRequestState,
+import {
+  type AvailabilityBlock,
+  type AwayNoteReader,
+  awayNoteFor,
+  type CrewAssignmentRequest,
+  type CrewRequestState,
 } from "@/lib/crew-requests";
 import { inWaterCrewRole, lapsedRungs, lastDayOfDeparture } from "@/lib/crew-roles";
 import type { AppDb, DbExecutor } from "./client";
@@ -84,6 +86,8 @@ export async function listCrewAvailabilityBlocks(
   db: DbExecutor,
   shopId: string,
   range: { from: string; to: string },
+  /** Who is reading: the note leaves only for the person and owners and managers (#2673). */
+  reader: AwayNoteReader,
 ): Promise<AvailabilityBlock[]> {
   const rows = await db
     .select()
@@ -103,7 +107,7 @@ export async function listCrewAvailabilityBlocks(
     personId: row.personId,
     startsOn: row.startsOn,
     endsOn: row.endsOn,
-    note: row.note,
+    note: awayNoteFor(row, reader),
   }));
 }
 
