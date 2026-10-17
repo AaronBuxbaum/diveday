@@ -203,7 +203,9 @@
     "agencyLine": "{count, plural, one {# certificación por tramitar con {agency}} other {# certificaciones por tramitar con {agency}}}",
     "cardLine": "{card}, certificado el {date}",
     "late": "Lleva más de 30 días esperando",
-    "mark": "Marcar como enviada a {agency}"
+    "mark": "Marcar como enviada a {agency}",
+    "earlier": "{count, plural, one {# certificación anterior al {date}} other {# certificaciones anteriores al {date}}}",
+    "earlierHint": "Son de antes de que existiera esta lista, así que ninguna se marca como atrasada."
   },
   "ladder": {
     "heading": "Siguientes pasos",

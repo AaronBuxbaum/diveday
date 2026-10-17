@@ -183,7 +183,10 @@
   `specialty_certifications`, each with its `*_processed_only_when_issued` check). It records the
   shop's own act and issues nothing: the agency sends its own card. The same tap takes it back, and
   the course page lists every issued card still to process, oldest first and with no lookback, a
-  card waiting more than 30 days saying so. Gates nothing.
+  card waiting more than 30 days saying so. A card issued before the stamp existed
+  (`CARD_PROCESSING_SINCE`, the migration that added it) is listed apart, in one collapsed "N cards
+  certified before {date}" line, and never called late: nothing is backfilled, so a card truly
+  never sent is still there to tick. Gates nothing.
 - **Course ladder** — the Courses page's "N did Discover Scuba in the last 12 months · M went on to Open Water",
   with the names of those who did not and an Invite to the next course's soonest session with a
   seat (`nextCourseFor`, `src/lib/course-ladder.ts`; H-141's one-at-a-time invite under the

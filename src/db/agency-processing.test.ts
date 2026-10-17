@@ -3,10 +3,12 @@ import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
+  CARD_PROCESSING_SINCE,
   cardIsLate,
   issuedCardsForTrip,
   listCardsToProcess,
   setCardProcessed,
+  splitCardsToProcess,
 } from "./agency-processing";
 import {
   certifications,
@@ -249,8 +251,22 @@ describe("agency processing", () => {
   });
 
   it("calls a card late after 30 days, and never before", () => {
-    const now = new Date("2026-10-16T12:00:00Z");
+    const now = new Date(CARD_PROCESSING_SINCE.getTime() + 60 * DAY_MS);
     expect(cardIsLate(new Date(now.getTime() - 30 * DAY_MS), now)).toBe(false);
     expect(cardIsLate(new Date(now.getTime() - 31 * DAY_MS), now)).toBe(true);
+  });
+
+  it("never calls a card from before the processed stamp late, and sets it apart (X2)", () => {
+    const since = CARD_PROCESSING_SINCE.getTime();
+    const now = new Date(since + 400 * DAY_MS);
+    const old = { id: "old", issuedAt: new Date(since - 1) };
+    const atCut = { id: "at-cut", issuedAt: new Date(since) };
+    const recent = { id: "recent", issuedAt: new Date(since + 10 * DAY_MS) };
+    expect(cardIsLate(old.issuedAt, now)).toBe(false);
+    expect(cardIsLate(atCut.issuedAt, now)).toBe(true);
+    expect(splitCardsToProcess([old, atCut, recent])).toEqual({
+      current: [atCut, recent],
+      earlier: [old],
+    });
   });
 });

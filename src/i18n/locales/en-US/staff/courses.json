@@ -203,7 +203,9 @@
     "agencyLine": "{count, plural, one {# card to process with {agency}} other {# cards to process with {agency}}}",
     "cardLine": "{card}, certified {date}",
     "late": "Waiting over 30 days",
-    "mark": "Mark sent to {agency}"
+    "mark": "Mark sent to {agency}",
+    "earlier": "{count, plural, one {# card certified before {date}} other {# cards certified before {date}}}",
+    "earlierHint": "From before this list began, so none is marked late."
   },
   "ladder": {
     "heading": "Next steps",

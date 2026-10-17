@@ -168,7 +168,8 @@ const sessionJoin = (table: CardTable, shopId: string) =>
  * however old, oldest first: the instructor's list of students still to submit
  * to their agency. There is no lookback: a card gets more urgent with age, so
  * an old one is called out (`CARD_TO_PROCESS_LATE_DAYS`), never dropped
- * (dive-domain review F5).
+ * (dive-domain review F5). A card from before the stamp existed is listed
+ * too; the page shows those apart ({@link splitCardsToProcess}).
  */
 export async function listCardsToProcess(db: DbExecutor, shopId: string): Promise<CardToProcess[]> {
   const [levelRows, nitroxRows, specialtyRows] = await queryAll(db, [
@@ -260,7 +261,39 @@ export async function listCardsToProcess(db: DbExecutor, shopId: string): Promis
   );
 }
 
-/** Whether a card has waited past {@link CARD_TO_PROCESS_LATE_DAYS}. */
+/**
+ * When the processed stamp began: the moment of the migration that added it
+ * (`20261016234242_processed-cards-lunch-aboard-and-room-charge`). A card the
+ * shop issued before it has no stamp only because there was nowhere to put
+ * one, and most were sent to the agency long ago. Without a cut every one of
+ * them would land on the list at once, all "Waiting over 30 days", and an
+ * instructor facing hundreds of false late rows learns to ignore the list
+ * (dive-domain second pass, X2). Nothing is backfilled, since that could hide
+ * a card that really was never sent: they stay listed, in their own collapsed
+ * line, and none is called late.
+ */
+export const CARD_PROCESSING_SINCE = new Date("2026-10-16T23:42:42Z");
+
+/** Whether a card was issued before {@link CARD_PROCESSING_SINCE}. */
+export function cardPredatesProcessing(issuedAt: Date): boolean {
+  return issuedAt.getTime() < CARD_PROCESSING_SINCE.getTime();
+}
+
+/**
+ * Whether a card has waited past {@link CARD_TO_PROCESS_LATE_DAYS}. A card
+ * from before the stamp existed is never late: its wait is not known.
+ */
 export function cardIsLate(issuedAt: Date, now: Date): boolean {
+  if (cardPredatesProcessing(issuedAt)) return false;
   return now.getTime() - issuedAt.getTime() > CARD_TO_PROCESS_LATE_DAYS * DAY_MS;
+}
+
+/** The list split at {@link CARD_PROCESSING_SINCE}, each part still oldest first. */
+export function splitCardsToProcess<T extends { issuedAt: Date }>(
+  cards: readonly T[],
+): { current: T[]; earlier: T[] } {
+  const current: T[] = [];
+  const earlier: T[] = [];
+  for (const card of cards) (cardPredatesProcessing(card.issuedAt) ? earlier : current).push(card);
+  return { current, earlier };
 }
