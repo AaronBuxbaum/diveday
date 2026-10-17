@@ -40,6 +40,8 @@ export async function nameDemoNightDeparture(
   startsAt: Date = demoTodayDepartureStart(),
 ): Promise<void> {
   if (!sailsAfterDayBoats(startsAt)) return;
+  // No night gate on purpose (#2574): many shops take open-water divers on
+  // guided night dives, and a real trip can require the night specialty.
   await db
     .update(trips)
     .set({
