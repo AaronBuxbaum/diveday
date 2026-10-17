@@ -69,23 +69,17 @@ type FocusStop = {
 };
 
 /**
- * Start a walk at the top of the document.
+ * Start a walk from wherever the page put focus.
  *
- * Two things need resetting between legs, and neither happens on its own,
- * because a client-side navigation keeps the same `window`:
- *
- * - the previous stop, or the next `followsPrevious` compares against an
- *   element on a page we already left;
- * - focus itself. Following a `<Link>` with Enter leaves focus on the anchor,
- *   and `cacheComponents` keeps the route it belonged to mounted-but-hidden
- *   (ADR 20260801-cache-components-e2e-activity-migration) — so focus sits on
- *   a `display:none` element, and Chromium answers the next Tab by dropping to
- *   the body instead of advancing. Blurring first puts the walk where a fresh
- *   document load would put it.
+ * A client-side navigation keeps the same `window`, so the previous stop has
+ * to be forgotten, or the next `followsPrevious` compares against an element
+ * on a page we already left. Focus itself is the page's: on a cold load it is
+ * on the body, so the first Tab is the skip link; after a client navigation
+ * the staff shell has moved it to the new page's `h1` (`RouteFocus`, #2638),
+ * so the first Tab is the first control after the heading.
  */
 async function beginWalk(page: Page): Promise<void> {
   await page.evaluate(() => {
-    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     (window as unknown as { __kbPrev?: HTMLElement | null }).__kbPrev = null;
   });
 }
@@ -93,21 +87,16 @@ async function beginWalk(page: Page): Promise<void> {
 /**
  * Press Tab (or Shift+Tab) once and describe wherever focus landed.
  *
- * A landing on `<body>` is retried once, but only as a walk's *first* press. Chromium keeps a
- * "sequential focus navigation starting point" that `blur()` does not reset, so the first Tab
- * after following a `<Link>` — whose anchor the client router left mounted-but-hidden — spends
- * itself resetting to the document start instead of advancing. The second press moves. Two in a
- * row is a genuine dead end and still throws.
- *
- * Anywhere later in a walk a landing on `<body>` is a finding, not a quirk: focus was taken away
- * or ran off the end of the page. Retrying it would press Tab again from the document start and
- * report the skip link as "tab order jumped backwards" — the symptom, not the stop it happened
- * after.
+ * A landing on `<body>` is a finding, never a quirk to press past: focus was taken away or ran
+ * off the end of the page. Until #2638 a walk's first press after following a `<Link>` landed
+ * there, because the router left the followed anchor mounted but hidden and Chromium restarted
+ * from the document start; the shell now moves focus to the new page's heading, so that press
+ * advances like any other.
  */
 async function tab(page: Page, direction: "forward" | "back" = "forward"): Promise<FocusStop> {
   const key = direction === "forward" ? "Tab" : "Shift+Tab";
   await page.keyboard.press(key);
-  let stop = await snapshotFocus(page);
+  const stop = await snapshotFocus(page);
   if (!stop) {
     const previous = await page.evaluate(() => {
       const prev = (window as unknown as { __kbPrev?: HTMLElement | null }).__kbPrev;
@@ -117,15 +106,12 @@ async function tab(page: Page, direction: "forward" | "back" = "forward"): Promi
         .trim()
         .slice(0, 60);
     });
-    if (previous !== null) {
-      throw new Error(
-        `${key} moved focus to the document body after "${previous}" — focus was taken away or the tab order ran out mid-walk`,
-      );
-    }
-    await page.keyboard.press(key);
-    stop = await snapshotFocus(page);
+    throw new Error(
+      previous === null
+        ? `${key} moved focus to the document body — the tab order ran out`
+        : `${key} moved focus to the document body after "${previous}" — focus was taken away or the tab order ran out mid-walk`,
+    );
   }
-  if (!stop) throw new Error("Tab moved focus to the document body — the tab order ran out");
   return stop;
 }
 
@@ -371,7 +357,9 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
 
   await page.keyboard.press("Enter");
   await page.waitForURL(/\/bookings\/new$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Add a booking" })).toBeVisible();
+  // A route change puts focus on the new page's heading, so a screen reader
+  // reads the page's name and the next Tab starts below it (#2638).
+  await expect(page.getByRole("heading", { level: 1, name: "Add a booking" })).toBeFocused();
 
   // ── Leg 3. Choose the departure. Every stop between the top of the page and
   // the first departure is checked, which is the part of "keyboard accessible"
@@ -386,14 +374,14 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
   });
   await page.keyboard.press("Enter");
   await page.waitForURL(/\/bookings\/new\/[^/]+$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Add a booking" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Add a booking" })).toBeFocused();
 
   // ── Leg 4. Navigate to Add diver, type the diver in and seat them.
   await beginWalk(page);
   await tabUntil(page, /"Add diver"/, { limit: 25, where: "diver search" });
   await page.keyboard.press("Enter");
   await page.waitForURL(/\/divers\/new\?/);
-  await expect(page.getByRole("heading", { level: 1, name: "Add a diver" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Add a diver" })).toBeFocused();
 
   await beginWalk(page);
   await recordAnnouncements(page);
