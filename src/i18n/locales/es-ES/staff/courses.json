@@ -30,7 +30,7 @@
     "formsAwaitingTextDoor": "Empieza por {title}"
   },
   "edit": {
-    "depthMarkersHint": "<marker>'{depth18}'</marker> se imprime como “18 metros” o “60 pies”, en la unidad del buceador. También <marker>'{depth12}'</marker>, <marker>'{depth21}'</marker>, <marker>'{depth30}'</marker> y <marker>'{depth40}'</marker>; añade <marker>n</marker> para un número sin unidad en un rango. Borra la marca para escribir tú la profundidad.",
+    "depthMarkersHint": "<marker>'{depth18}'</marker> se imprime como “18 metros” o “60 pies”, en la unidad del buceador. También <marker>'{depth12}'</marker>, <marker>'{depth21}'</marker>, <marker>'{depth30}'</marker> y <marker>'{depth40}'</marker>; agrega <marker>n</marker> para un número sin unidad en un rango. Borra la marca para escribir tú la profundidad.",
     "liveAt": "Publicado en",
     "hiddenFromDivers": "Oculto para los buceadores y el selector de sesiones.",
     "hideFromCatalog": "Ocultar del catálogo",
@@ -42,9 +42,9 @@
     "errorFaqIncomplete": "Cada pregunta necesita una respuesta, y cada respuesta una pregunta.",
     "errorMaterialsIncomplete": "Cada material de estudio necesita un nombre.",
     "errorMaterialsLink": "Cada enlace tiene que empezar por https://.",
-    "errorImages": "Puedes mantener hasta ocho fotos en la galería. Elimina una antes de añadir más.",
+    "errorImages": "Puedes mantener hasta ocho fotos en la galería. Elimina una antes de agregar más.",
     "errorUpload": "Esa foto no se subió. Prueba un JPG, PNG o WebP de menos de 5\u00a0MB.",
-    "errorTooManyPhotos": "Añade hasta {max, plural, one {# foto nueva} other {# fotos nuevas}} de galería por guardado. Guarda este lote y añade más después.",
+    "errorTooManyPhotos": "Agrega hasta {max, plural, one {# foto nueva} other {# fotos nuevas}} de galería por guardado. Guarda este lote y agrega más después.",
     "errorDepthPlaceholder": "Una de tus marcas de profundidad está mal escrita, así que no se guardó nada. Escríbela exactamente como '{depth18}': las opciones son '{depth12}', '{depth18}', '{depth21}', '{depth30}' y '{depth40}'. Si prefieres escribir la profundidad con tus propias palabras, borra la marca.",
     "pitchLegend": "La propuesta",
     "subheadLabel": "Subtítulo",
@@ -67,7 +67,7 @@
     "replaceHeroPhoto": "Cambiar foto de portada",
     "galleryPhotosLabel": "Galería",
     "galleryPhotosHint": "(hasta ocho, {max} a la vez)",
-    "addGalleryPhotos": "Añadir fotos",
+    "addGalleryPhotos": "Agregar fotos",
     "removeLabel": "Eliminar",
     "photoCaptionLabel": "Descripción",
     "photoCaptionPlaceholder": "Descríbela",
@@ -144,13 +144,17 @@
       "none": "Aún no hay formularios del curso.",
       "writeLink": "Escribir un formulario del curso",
       "orderLabel": "Orden de {form}",
+      "maxAgeLabel": "Solo alumnos de hasta",
+      "maxAgeAria": "Edad máxima a la que se pide {form}",
+      "invalidAge": "No se guardó. La edad tiene que ser un número entero de 1 a 120, o en blanco para todos.",
+      "medicalAge": "No se guardó. Una declaración médica se pide a todos los alumnos, así que no puede tener edad.",
       "save": "Guardar formularios",
       "saved": "Guardado. Los estudiantes de este curso firman ahora estos formularios.",
       "invalid": "No se guardó. Uno de esos formularios se eliminó; recarga y vuelve a elegir.",
       "notAuthorized": "Solo el personal que configura salidas puede elegir los formularios de un curso.",
       "pasteWording": "Pega el texto de la agencia",
       "awaitingText": "Ningún estudiante lo firma hasta que tenga su texto.",
-      "addImpact": "Un formulario añadido ahora pide firmarlo a {students, plural, one {# estudiante} other {# estudiantes}} de {sessions, plural, one {# sesión próxima} other {# sesiones próximas}}.",
+      "addImpact": "Un formulario agregado ahora pide firmarlo a {students, plural, one {# estudiante} other {# estudiantes}} de {sessions, plural, one {# sesión próxima} other {# sesiones próximas}}.",
       "removeLocked": "Solo el propietario o un gerente puede quitar un formulario de un curso.",
       "removeNotAuthorized": "No se guardó. Solo el propietario o un gerente puede quitar un formulario de un curso."
     }
@@ -172,7 +176,7 @@
     "itemsOverMaxOther": "Máximo {max} elementos por día. Quita una línea antes de guardar.",
     "daysMaxOne": "Máximo {max} día",
     "daysMaxOther": "Máximo {max} días",
-    "addDay": "Añadir día"
+    "addDay": "Agregar día"
   },
   "faq": {
     "questionLabel": "Pregunta {number}",
@@ -180,10 +184,10 @@
     "answerLabel": "Respuesta",
     "answerPlaceholder": "Sí: máscara, aletas, neopreno y botellas entran en el precio del curso.",
     "removeFaq": "Eliminar la pregunta {number}",
-    "addFaq": "Añadir una pregunta",
+    "addFaq": "Agregar una pregunta",
     "faqsMaxOne": "{max} pregunta es el máximo que admite una página de curso.",
     "faqsMaxOther": "{max} preguntas es el máximo que admite una página de curso.",
-    "empty": "Aún no hay preguntas. Añade las que te hacen los buceadores en el mostrador."
+    "empty": "Aún no hay preguntas. Agrega las que te hacen los buceadores en el mostrador."
   },
   "materials": {
     "nameLabel": "Material n.º {number}",
@@ -193,8 +197,8 @@
     "noteLabel": "Nota",
     "notePlaceholder": "Termínalo antes del día 1",
     "remove": "Eliminar el material {number}",
-    "add": "Añadir un material",
+    "add": "Agregar un material",
     "max": "Un curso admite hasta {max, plural, one {# material} other {# materiales}}.",
-    "empty": "Aún no hay nada. Añade el eLearning o la lectura que los alumnos terminan antes del día 1."
+    "empty": "Aún no hay nada. Agrega el eLearning o la lectura que los alumnos terminan antes del día 1."
   }
 }

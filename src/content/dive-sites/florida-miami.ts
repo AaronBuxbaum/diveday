@@ -22,7 +22,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Purpose-built structure on open sand, which means everything that lives here chose to come.",
       difficultyLevel: "beginner",
-      depthRange: "12–14 m (40–45 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 14,
       currentNote: "Open water off Miami; a mild drift is common.",
       divePlan:
@@ -74,7 +74,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schooling grunts over the heads, lobster in the cracks, and a stingray on the sand more often than not.",
       difficultyLevel: "beginner",
-      depthRange: "6–9 m (21–30 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 9,
       currentNote:
         "Usually an easy reef dive, with a mild northerly drift on some days. Use the county mooring buoys rather than anchoring on the reef, and fly a dive flag: Florida law asks boats to keep 300 ft from it in open water and divers to surface within 300 ft of it.",
@@ -112,7 +112,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The name fits: a little of every reef fish Miami has, over a good mix of the corals.",
       difficultyLevel: "beginner",
-      depthRange: "5–9 m (17–30 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 9,
       currentNote:
         "Normally gentle, though a northerly set can turn it into a slow drift. Tie up to a mooring buoy instead of anchoring, and keep the dive flag up for passing boat traffic.",
@@ -146,7 +146,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A buoyed natural reef between Rainbow Reef and RJ's Ledge, busy with schooling tropical fish. Its name comes from a stand of elkhorn coral that local divers say is shaped like a flamingo.",
       marineLife: "Schooling tropicals · blue tangs · grunts · parrotfish · sea fans",
       difficultyLevel: "beginner",
-      depthRange: "7–10 m (22–32 ft)",
+      depthMinMeters: 7,
       maxDepthMeters: 10,
       currentNote:
         "Generally mild, with the occasional northerly drift. Elkhorn coral is a protected species, so keep fins and hands well clear, use the mooring buoys, and fly a dive flag.",
@@ -182,7 +182,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Look under every ledge: lobster antennae and moray heads are the reward.",
       difficultyLevel: "beginner",
-      depthRange: "7–9 m (23–30 ft)",
+      depthMinMeters: 7,
       maxDepthMeters: 9,
       currentNote:
         "Usually easy, with a mild drift on some days. Use the county mooring buoys and keep a dive flag up. Expect more boats and lobster hunters in the summer lobster season.",
@@ -217,7 +217,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Nurse sharks often rest under the ledge, so bring a light and look in without crowding them.",
       difficultyLevel: "beginner",
-      depthRange: "4–7 m (14–22 ft)",
+      depthMinMeters: 4,
       maxDepthMeters: 7,
       currentNote:
         "Shallow and usually relaxed, which makes it a common second dive. The hollows under the ledge are too small to enter. Boats run in and out of Haulover Inlet nearby, so stay close to the flag and surface carefully.",
@@ -252,7 +252,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A buoyed reef off northern Miami Beach where an old, half-buried pipeline and a structure with two big steel I-beams sit among the rock. Its easy layout makes it a regular training site.",
       marineLife: "Hogfish · grunts · sergeant majors · spiny lobster",
       difficultyLevel: "beginner",
-      depthRange: "8–11 m (27–35 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 11,
       currentNote:
         "Usually mild. Use the mooring buoys, fly a dive flag, and watch for boat traffic between Government Cut and Haulover Inlet when you come up.",
@@ -286,7 +286,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A five-ton concrete bar sunk off Second Street in South Beach in May 2000 as a promotion and handed to the county reef program. Small enough to see in a few minutes, and a fun stop for divers and snorkelers.",
       marineLife: "Sergeant majors · porkfish · grunts · small reef fish",
       difficultyLevel: "beginner",
-      depthRange: "5–6 m (15–20 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 6,
       currentNote:
         "Very close to the beach and to Government Cut, so expect swimmers, jet skis and boat traffic. Fly a dive flag: Florida law asks boats to stay 300 ft away in open water and 100 ft in inlets and channels, and divers to stay within that distance of the flag.",
@@ -324,7 +324,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Juvenile reef fish shelter under the hull plates, and the scorpionfish are easy to miss until they move.",
       difficultyLevel: "beginner",
-      depthRange: "3–4 m (10–12 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 4,
       currentNote:
         "Tidal current runs through Bear Cut, so dive it on a high, slack tide. Red day marker 2 is close by; use a county mooring buoy or anchor in sand well clear of the wreck, and watch for other boats and swimmers. A state preserve: nothing may be taken.",
@@ -374,7 +374,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLife: "Reef fish · parrotfish · sergeant majors · grunts · barracuda",
       marineLifeDescription: "The wreck sits on a living reef, so the fish life is the reef's own.",
       difficultyLevel: "beginner",
-      depthRange: "2–6 m (6–20 ft)",
+      depthMinMeters: 2,
       maxDepthMeters: 6,
       currentNote:
         "Very shallow on an exposed outer reef, so wind and surge decide the day. The park puts mooring buoys on the heritage trail sites: tie up to one and never anchor on coral. Taking anything from the wreck is against federal law, and dive operators running trips in the park need a park permit.",
@@ -420,7 +420,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The tower pyramids hold schools of small fish day and night, and lobster tuck in under every barge.",
       difficultyLevel: "beginner",
-      depthRange: "14–18 m (45–60 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 18,
       currentNote:
         "Often run as a drift, since the current here usually sets north. This is where large ships anchor waiting for the port, and boat traffic from Government Cut and Haulover passes close by, so carry a surface marker and come up under the flag.",
@@ -478,7 +478,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Local shops know a resident nurse shark and a large green moray here; lobster fill the boulders.",
       difficultyLevel: "beginner",
-      depthRange: "12–15 m (40–49 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 15,
       currentNote:
         "Part of the Anchorage reef site, where freighters wait at anchor and the current usually sets north. Divers often start here and drift on to the radio towers and nearby wrecks, so carry a surface marker and fly a dive flag.",
@@ -513,7 +513,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 110-foot steel vessel sunk by the county in 1996 in memory of Matthew Lawrence, a Miami diver and underwater video pioneer. It stands about 5 m off the sand a short swim from the Army Tanks.",
       marineLife: "Grunts · snapper · barracuda · lobster · morays",
       difficultyLevel: "beginner",
-      depthRange: "11–15 m (35–50 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 15,
       currentNote:
         "In the Anchorage reef site, with freighters at anchor nearby and a current that usually sets north. Rebar stakes on the sand lead toward the neighboring sites. Stay outside the structure.",
@@ -555,7 +555,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 195-foot steel barge sunk in 1985 that rolled over on the way down and landed upside down. It anchors the Belcher Wreck Trek, with three tugs and two more barges a short swim away.",
       marineLife: "Barracuda · grunts · snapper · lobster · stingrays",
       difficultyLevel: "intermediate",
-      depthRange: "15–18 m (48–60 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 18,
       currentNote:
         "Part of the Key Biscayne reef site, about three miles out, where the current usually sets north and can be strong enough to run as a drift. Fishing boats work these wrecks, so watch for line, carry a surface marker and fly a dive flag. Stay outside the hull.",
@@ -600,7 +600,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Gorgonians sway over the wreckage, so it reads more like a reef than a barge.",
       difficultyLevel: "beginner",
-      depthRange: "9–12 m (30–40 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 12,
       currentNote:
         "The shallowest wreck in the Key Biscayne site, but the same northerly current runs here. Watch for fishing line on the broken steel, and fly a dive flag for passing boats.",
@@ -634,7 +634,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLife: "Stingrays · grunts · snapper · barracuda",
       marineLifeDescription: "Stingrays are regulars on the sand around the hull.",
       difficultyLevel: "intermediate",
-      depthRange: "15–22 m (48–71 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 22,
       currentNote:
         "On the Belcher Wreck Trek in the Key Biscayne reef site. The current usually sets north, fishing boats work the area, and line snags on steel, so carry a cutter and a surface marker. Stay outside the hull.",
@@ -668,7 +668,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A small steel tug built in 1915 and earmarked by the US Navy in 1917 as a possible patrol boat, scuttled here in 1991. She is still largely in one piece, though Hurricane Andrew opened up her midsection.",
       marineLife: "Grunts · snapper · barracuda · lobster",
       difficultyLevel: "intermediate",
-      depthRange: "14–18 m (45–60 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 18,
       currentNote:
         "On the Belcher Wreck Trek, with rebar stakes on the sand linking her to the other Belzona tugs. Expect a northerly current, fishing boats overhead and the odd tangle of line. Stay outside the hull.",
@@ -695,7 +695,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 100-foot tug built in 1953 as the Carinthia, which worked for decades before her engine failed. Sunk in 1991, she is the largest and most intact of the three Belzona tugs.",
       marineLife: "Barracuda · snapper · grunts · goliath grouper",
       difficultyLevel: "advanced",
-      depthRange: "21–30 m (70–100 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 30,
       currentNote:
         "The deepest stop on the Belcher Wreck Trek. The current usually sets north and can be strong at this depth, and fishing line collects on the wreck. Stay outside the hull.",
@@ -725,7 +725,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 120-foot steel deck barge placed in 1998 beside Schurger's Barge, the two making the far end of the Belcher Wreck Trek. Flat and low, it is a home for fish rather than a structure to explore.",
       marineLife: "Grunts · snapper · lobster · stingrays",
       difficultyLevel: "intermediate",
-      depthRange: "18–21 m (61–70 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 21,
       currentNote:
         "In the Key Biscayne reef site, where the current usually sets north. It is the longest swim of the Belcher trek, so watch gas and time, and carry a surface marker in case you come up away from the boat.",
@@ -752,7 +752,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 90-foot steel barge the county sank in 1996, lying with the H.A.V. Parker III barge east of the Belcher Barge. Usually visited as part of the Belcher Wreck Trek.",
       marineLife: "Grunts · snapper · lobster · reef fish",
       difficultyLevel: "intermediate",
-      depthRange: "20–23 m (64–74 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 23,
       currentNote:
         "Expect the usual northerly set of the Key Biscayne reef site, fishing boats overhead and line on the steel. Carry a surface marker, and keep the swim back to the Belcher in your gas plan.",
@@ -781,7 +781,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Fifty years of growth and a dense crowd of fish. Shops like it as a night dive.",
       difficultyLevel: "beginner",
-      depthRange: "12–18 m (40–60 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 18,
       currentNote:
         "In the Key Biscayne reef site, where the current usually sets north. Fishing line collects on the old steel, so carry a cutter, a surface marker and a dive flag. Stay outside the hull.",
@@ -824,7 +824,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLife: "Morays · grunts · barracuda · angelfish",
       marineLifeDescription: "The twisted sections hold more life than the intact ship did.",
       difficultyLevel: "intermediate",
-      depthRange: "16–23 m (54–75 ft)",
+      depthMinMeters: 16,
       maxDepthMeters: 23,
       currentNote:
         "Part of the Key Biscayne wreck field, where the current usually sets north and boats often drift several wrecks in a dive. Watch for fishing line and keep a surface marker ready. Stay outside the wreck.",
@@ -859,7 +859,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 105-foot steel tug built in 1949, sunk in 1989 on camera for a national TV news special about Miami's reefs. She sits upright, and her cabin reaches to within about 9 m of the surface.",
       marineLife: "Barracuda · snapper · jacks · grunts",
       difficultyLevel: "intermediate",
-      depthRange: "9–22 m (30–72 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 22,
       currentNote:
         "In the Key Biscayne wreck field, where the current usually sets north. Rebar stakes run from her bow toward the Paraiso. Fishing boats work these wrecks, so watch for line, and stay outside the hull.",
@@ -898,7 +898,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 165-foot cargo freighter, the GGD Trader, seized by US Customs and sunk in October 2003, named for the dive trade show in Miami that year. She sits upright, and her hold was filled with concrete culverts that add habitat and weight.",
       marineLife: "Barracuda · jacks · snapper · grunts",
       difficultyLevel: "intermediate",
-      depthRange: "14–24 m (46–80 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 24,
       // Below 30 m, but the sand at 24 m is past an Open Water diver's depth and the northward drift is common.
       minimumCertificationLevel: "advanced_open_water",
@@ -937,7 +937,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools of barracuda and jacks hang over the deck, and basket stars open on the structure at night.",
       difficultyLevel: "advanced",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       currentNote:
         "Among the deeper wrecks of the Key Biscayne field, where the current usually sets north and boats often drift from wreck to wreck. Fishing line is common. Stay outside.",
@@ -974,7 +974,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 115-foot steel ship, probably built as an offshore supply vessel and later used for research, sunk by the county in 2000. She lies between the Rio Miami and the Princess Britney, which makes her an easy middle stop on a Key Biscayne wreck drift.",
       marineLife: "Snapper · grunts · barracuda · reef fish",
       difficultyLevel: "intermediate",
-      depthRange: "16–23 m (54–76 ft)",
+      depthMinMeters: 16,
       maxDepthMeters: 23,
       currentNote:
         "In the Key Biscayne wreck field, where the current usually sets north. Rebar stakes link her to the Rio Miami's bow. Watch for fishing line, and stay outside.",
@@ -1005,7 +1005,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big fish over the hull and small ones in it: barracuda and goliaths above, arrow crabs and critters in every seam.",
       difficultyLevel: "advanced",
-      depthRange: "26–33 m (85–110 ft)",
+      depthMinMeters: 26,
       maxDepthMeters: 33,
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -1056,7 +1056,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 165-foot steel freighter seized in Operation River Walk, the 2001 Miami River drug investigation, and sunk in 2002. She sits upright and intact, and because few boats visit her she often has big fish around her.",
       marineLife: "Amberjack · barracuda · jacks · snapper",
       difficultyLevel: "advanced",
-      depthRange: "29–40 m (95–130 ft)",
+      depthMinMeters: 29,
       maxDepthMeters: 40,
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -1095,7 +1095,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 210-foot German freighter, last called Sea Taxi, sunk on 30 December 2009 by and for Miami's dive community and renamed for the daughter of the family who paid for her. She is a sister ship of the Ultra Freeze and the Deep Freeze, and one of the biggest wrecks off Miami.",
       marineLife: "Barracuda · jacks · snapper · corals and sponges",
       difficultyLevel: "advanced",
-      depthRange: "21–34 m (70–110 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 34,
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -1129,7 +1129,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 210-foot hopper barge taken out of the Miami River and sunk in November 2008, a short swim east of the Sheri-Lyn. She sits upright and whole on the sand.",
       marineLife: "Jacks · snapper · lionfish",
       difficultyLevel: "advanced",
-      depthRange: "31–37 m (103–120 ft)",
+      depthMinMeters: 31,
       maxDepthMeters: 37,
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -1161,7 +1161,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The fallen pilot house is usually full of baitfish, and the west side of the deck is thick with sea fans.",
       difficultyLevel: "advanced",
-      depthRange: "24–29 m (80–95 ft)",
+      depthMinMeters: 24,
       maxDepthMeters: 29,
       // Gated below 30 m on purpose: the sand is at 27–29 m, close enough to the line that shops run it as an advanced dive.
       minimumCertificationLevel: "advanced_open_water",
@@ -1204,7 +1204,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 1928 luxury yacht that served the Navy in the Second World War and later spent years as a Miami River restaurant, sunk as a reef in February 1983. Storms have scattered her across the sand, but the wreckage still draws clouds of baitfish and barracuda.",
       marineLife: "Baitfish · barracuda · goliath grouper · stingrays",
       difficultyLevel: "intermediate",
-      depthRange: "20–23 m (65–75 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 23,
       currentNote:
         "The current usually runs north here, so shops may drift on to the Princess Britney, a deeper site with its own gate, only when your trip lists it. Stay with the guide and the marker line between wrecks.",
@@ -1240,7 +1240,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 100-foot inter-island freighter seized by the Coast Guard for people smuggling and sunk in July 1987. Hurricane Andrew threw her onto the neighboring Biscayne wreck, and what is left is a low spread of plates and debris, usually visited on the same dive.",
       marineLife: "Grunts · snapper · lionfish · stingrays",
       difficultyLevel: "intermediate",
-      depthRange: "17–20 m (55–65 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 20,
       currentNote:
         "A low-profile debris field that shops rarely dive on its own; plan it with the Biscayne. A northward current is common.",
@@ -1268,7 +1268,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 1959 German refrigerated freighter, abandoned on the Miami River after a cargo of shrimp rotted in her holds, and sunk in July 1984. She still stands about 45 ft off the sand, with her hull bent by Hurricane Andrew.",
       marineLife: "Amberjack · barracuda · jacks · tarpon · snook",
       difficultyLevel: "advanced",
-      depthRange: "26–40 m (85–130 ft)",
+      depthMinMeters: 26,
       maxDepthMeters: 40,
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -1306,7 +1306,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A Haitian freighter sunk in May 1988 in memory of Mike Kevorkian, who owned Tarpoon Diving Center. Hurricane Andrew broke her up and moved her against the reef, where the pieces are now wrapped in schooling fish.",
       marineLife: "Schooling grunts · snapper · reef fish · lionfish",
       difficultyLevel: "intermediate",
-      depthRange: "15–20 m (50–65 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 20,
       currentNote:
         "Usually run as a drift along the wreckage and the reef beside it, so stay with your buddy and the guide's marker. The wreck lies just inside Biscayne National Park's offshore boundary: take nothing from the wreck and leave goliath grouper and coral alone; fishing and lobstering follow the park's rules.",
@@ -1338,7 +1338,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLife: "Goliath grouper · soft corals · reef fish",
       marineLifeDescription: "A few goliath groupers live on the wreck.",
       difficultyLevel: "intermediate",
-      depthRange: "12–23 m (40–75 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 23,
       currentNote:
         "Gulf Stream water brings good visibility and often a northward current. The Tarpoon lies about 1,200 ft to the north. Carry an SMB and surface under it within 300 ft of your boat's divers-down flag; expect a live-boat pickup if you leave the line.",
@@ -1365,7 +1365,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 175-foot freighter seized after a 1980 Mariel boatlift run and sunk in January 1983, one of the southernmost wrecks dived from Miami. Hurricane Andrew tore off her aft superstructure and folded the hull, and forty years of growth have made the wreck a magnet for big fish and small critters alike.",
       marineLife: "Jacks · snapper · cobia · barracuda · goliath grouper",
       difficultyLevel: "advanced",
-      depthRange: "27–37 m (90–120 ft)",
+      depthMinMeters: 27,
       maxDepthMeters: 37,
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -1402,7 +1402,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 200-foot refrigerated freighter abandoned on the Miami River, stripped of her superstructure and sunk in the mid-1970s, one of the oldest wrecks in the county's program. She sits upright, her stern twisted to port by Hurricane Andrew, with red gorgonians on the steel.",
       marineLife: "Goliath grouper · red gorgonians · jacks",
       difficultyLevel: "advanced",
-      depthRange: "32–40 m (105–130 ft)",
+      depthMinMeters: 32,
       maxDepthMeters: 40,
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -1432,7 +1432,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "An 85-foot steel barge sunk in October 1975 in deep water south of Miami, a few hundred meters from the Almirante. Not to be confused with the shallow Belcher Barge off Key Biscayne.",
       marineLife: "Jacks · snapper · lionfish",
       difficultyLevel: "advanced",
-      depthRange: "34–37 m (110–120 ft)",
+      depthMinMeters: 34,
       maxDepthMeters: 37,
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -1463,7 +1463,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 165-foot steel ship blown up and sunk in April 1995 for the final scene of the film Fair Game. She landed upright in the Pflueger reef site north of Government Cut, with her wheelhouse and twin propellers intact and plenty of growth since.",
       marineLife: "Snapper · barracuda · trunkfish · jacks",
       difficultyLevel: "advanced",
-      depthRange: "27–36 m (90–117 ft)",
+      depthMinMeters: 27,
       maxDepthMeters: 36,
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -1506,7 +1506,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A German-built refrigerated freighter gutted by fire in 1972, stripped of her superstructure and sunk in October 1976. She is one of Miami's oldest wrecks and one of its most popular advanced dives, sister ship to the Ultra Freeze and the Ophelia Brian.",
       marineLife: "Jacks · snapper · grouper · amberjack",
       difficultyLevel: "advanced",
-      depthRange: "34–40 m (110–130 ft)",
+      depthMinMeters: 34,
       maxDepthMeters: 40,
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -1550,7 +1550,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 120-foot freighter sunk in February 1997 in the Pflueger reef site, between the Tortuga and the Betek Ar Pen. She carries less growth than her neighbors and is usually visited as part of a dive on the group.",
       marineLife: "Snapper · jacks · lionfish",
       difficultyLevel: "advanced",
-      depthRange: "28–35 m (92–113 ft)",
+      depthMinMeters: 28,
       maxDepthMeters: 35,
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -1578,7 +1578,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 70-foot former dive boat sunk in June 1997 in the Pflueger reef site, just north of the St. Henry Express. Small enough to circle in a few minutes, so it is usually one stop on a dive across the neighboring wrecks.",
       marineLife: "Snapper · jacks · lionfish",
       difficultyLevel: "advanced",
-      depthRange: "29–34 m (95–110 ft)",
+      depthMinMeters: 29,
       maxDepthMeters: 34,
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -1606,7 +1606,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A big 195-foot steel hopper barge sunk in August 1998 in the Pflueger reef site, just south of the Tortuga. Little is written about her, but she stands nearly 20 ft off the sand.",
       marineLife: "Snapper · jacks · lionfish",
       difficultyLevel: "advanced",
-      depthRange: "29–34 m (93–112 ft)",
+      depthMinMeters: 29,
       maxDepthMeters: 35,
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -1634,7 +1634,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A flat 120-foot hull, perhaps a converted barge, sunk in May 1971 with a crane truck parked on her stern. The wooden deck is long gone, leaving a frame of steel beams, and the truck now lies in the sand beside her.",
       marineLife: "Snapper · jacks · lionfish",
       difficultyLevel: "advanced",
-      depthRange: "37–40 m (120–130 ft)",
+      depthMinMeters: 37,
       maxDepthMeters: 40,
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -1672,7 +1672,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A Second World War landing craft turned cargo ship, seized in a 1978 smuggling case, later sold to the county and sunk in June 1985. She came to rest upside down off Miami Beach and makes an easy, fishy wreck for newer divers.",
       marineLife: "Grunts · snapper · reef fish · lionfish",
       difficultyLevel: "beginner",
-      depthRange: "9–15 m (30–50 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 15,
       currentNote:
         "Shallow and usually gentle, but boat traffic off Miami Beach is heavy: fly a divers-down flag, stay within 300 ft of it, and come up on a marker.",
@@ -1702,7 +1702,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A former Navy tug bought by the county and sunk in November 1990 off Haulover Inlet; the tug towing her to Miami sank on the way, and its crew was rescued. She lies intact with a 45 degree list, at the center of the Sunny Isles reef site.",
       marineLife: "Grunts · snapper · goliath grouper · reef fish",
       difficultyLevel: "intermediate",
-      depthRange: "12–25 m (40–82 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 25,
       // Below 30 m, but the sand and scour hole sit at 25 m, past an Open Water diver's depth.
       minimumCertificationLevel: "advanced_open_water",
@@ -1740,7 +1740,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A small 45-foot steel tug sunk by the county in July 1999 in the Sunny Isles reef site, right beside the C-One. Most divers see her on the same dive as the C-One and the Conception.",
       marineLife: "Grunts · snapper · reef fish",
       difficultyLevel: "intermediate",
-      depthRange: "17–21 m (55–70 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 21,
       currentNote:
         "Rebar stakes lead from here to the C-One and on to the Conception. Haulover Inlet boat traffic is close: stay within 300 ft of your divers-down flag.",
@@ -1769,7 +1769,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLife: "Grunts · snapper · reef fish · lionfish",
       marineLifeDescription: "Fish gather on her most early and late in the day.",
       difficultyLevel: "intermediate",
-      depthRange: "18–22 m (58–71 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 22,
       currentNote:
         "The cargo area has collapsed to a low profile, with the stern lying about 40 ft north of the main section. Haulover Inlet boat traffic is close: stay within 300 ft of your divers-down flag.",
@@ -1795,7 +1795,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A small steel tug sunk in May 1995 in the Sunny Isles reef site, an easy swim from the C-One, the Lady Carmen and the Conception.",
       marineLife: "Grunts · snapper · reef fish",
       difficultyLevel: "intermediate",
-      depthRange: "18–21 m (58–68 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 21,
       currentNote:
         "A small wreck usually seen as part of the Sunny Isles group. Haulover Inlet boat traffic is close: stay within 300 ft of your divers-down flag.",
@@ -1821,7 +1821,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "An 80-foot steel deck barge sunk by the county in 1999 at the south-west edge of the Sunny Isles reef site, close to the Lady Carmen and the C-One.",
       marineLife: "Grunts · snapper · reef fish",
       difficultyLevel: "intermediate",
-      depthRange: "17–20 m (55–65 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 20,
       currentNote:
         "A low barge, best added to a dive on the Sunny Isles wrecks. Haulover Inlet boat traffic is close: stay within 300 ft of your divers-down flag.",
@@ -1848,7 +1848,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 1926 yacht built for ocean research expeditions, later a wartime patrol boat and a freighter, seized for smuggling and sunk in December 1985. Hurricane Andrew broke her into three sections, and her twin propellers, two stacks and wheelhouse make her a favorite with photographers.",
       marineLife: "Snapper · jacks · barracuda · reef fish",
       difficultyLevel: "advanced",
-      depthRange: "19–32 m (62–104 ft)",
+      depthMinMeters: 19,
       maxDepthMeters: 32,
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -1895,7 +1895,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
         "A 137-foot Dutch coastal freighter from 1939, sunk in April 1986. Hurricane Andrew broke her up and moved her into slightly deeper water, and she is now mostly flattened hull plates on the sand.",
       marineLife: "Snapper · jacks · lionfish",
       difficultyLevel: "advanced",
-      depthRange: "35–38 m (115–126 ft)",
+      depthMinMeters: 35,
       maxDepthMeters: 39,
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],
@@ -1930,7 +1930,7 @@ export const FLORIDA_MIAMI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big pelagic fish pass through the open framework, and the struts are covered in orange cup coral.",
       difficultyLevel: "advanced",
-      depthRange: "18–37 m (60–120 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 37,
       minimumCertificationLevel: "advanced_open_water",
       requiredSpecialties: ["deep"],

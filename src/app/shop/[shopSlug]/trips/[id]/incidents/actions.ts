@@ -1,6 +1,7 @@
 "use server";
 
 import { notFound, redirect } from "next/navigation";
+import { z } from "zod";
 import { getDb } from "@/db/client";
 import {
   addIncidentAddendum,
@@ -18,6 +19,7 @@ import {
 } from "@/db/incident-reports";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { formValue, readForm } from "@/lib/form-parse";
 import {
   type IncidentFieldRefusal,
   isIncidentInvolvement,
@@ -87,10 +89,35 @@ function requireIds(...ids: string[]): void {
   if (!ids.every((id) => uuidParam(id))) notFound();
 }
 
-function text(formData: FormData, name: string): string {
-  const value = formData.get(name);
-  return typeof value === "string" ? value : "";
+/** A field read as typed text: `""` when it is absent or a file. */
+function typed() {
+  return formValue().transform((value) => (typeof value === "string" ? value : ""));
 }
+
+const missingDiverForm = z.object({ bookingId: typed(), personId: typed(), checkpoint: typed() });
+
+const incidentDraftForm = z.object({
+  occurredOn: typed(),
+  occurredTime: typed(),
+  diveSiteId: typed(),
+  locationText: typed(),
+  whatHappened: typed(),
+  kind: typed(),
+  severity: typed(),
+  firstAidGiven: typed(),
+  oxygenGiven: typed(),
+  oxygenMinutes: typed(),
+  emergencyServicesCalled: typed(),
+  handoverKind: typed(),
+  handoverDetail: typed(),
+  handedOverOn: typed(),
+  handedOverTime: typed(),
+  followUp: typed(),
+});
+
+const addendumForm = z.object({ body: typed() });
+
+const incidentPersonForm = z.object({ who: typed(), involvement: typed(), outsiderName: typed() });
 
 /** Start a draft on a departure and open it. */
 export async function startIncidentReportAction(shopSlug: string, tripId: string) {
@@ -131,8 +158,8 @@ export async function startMissingDiverReportAction(
 ): Promise<MissingReportState> {
   const { session, shop } = await requireShopSurface(shopSlug);
   const t = staffTranslator(await requestLocale(shop.defaultLocale));
-  const bookingId = text(formData, "bookingId");
-  const personId = text(formData, "personId");
+  const form = readForm(missingDiverForm, formData);
+  const { bookingId, personId } = form;
   const subject: MissingSubject | null = uuidParam(bookingId)
     ? { kind: "diver", bookingId }
     : uuidParam(personId)
@@ -164,7 +191,7 @@ export async function startMissingDiverReportAction(
     }
     return { message: t("incidents.missingDiver.notAllowed") };
   }
-  const checkpoint = manifestCheckpointParam(text(formData, "checkpoint"));
+  const checkpoint = manifestCheckpointParam(form.checkpoint);
   const back = new URLSearchParams({ from: "manifest" });
   if (checkpoint) back.set("checkpoint", checkpoint);
   revalidateAndRedirect(
@@ -183,30 +210,10 @@ export async function saveIncidentDraftAction(
   const { session, shop } = await requireShopSurface(shopSlug);
   requireIds(tripId, reportId);
   const back = reportPath(shopSlug, tripId, reportId);
-  const parsed = parseIncidentDraft(
-    {
-      occurredOn: text(formData, "occurredOn"),
-      occurredTime: text(formData, "occurredTime"),
-      diveSiteId: text(formData, "diveSiteId"),
-      locationText: text(formData, "locationText"),
-      whatHappened: text(formData, "whatHappened"),
-      kind: text(formData, "kind"),
-      severity: text(formData, "severity"),
-      firstAidGiven: text(formData, "firstAidGiven"),
-      oxygenGiven: text(formData, "oxygenGiven"),
-      oxygenMinutes: text(formData, "oxygenMinutes"),
-      emergencyServicesCalled: text(formData, "emergencyServicesCalled"),
-      handoverKind: text(formData, "handoverKind"),
-      handoverDetail: text(formData, "handoverDetail"),
-      handedOverOn: text(formData, "handedOverOn"),
-      handedOverTime: text(formData, "handedOverTime"),
-      followUp: text(formData, "followUp"),
-    },
-    (date, time) => {
-      const wall = parseWallTime(date, time);
-      return wall ? wallTimeToUtc(wall, shop.timezone) : null;
-    },
-  );
+  const parsed = parseIncidentDraft(readForm(incidentDraftForm, formData), (date, time) => {
+    const wall = parseWallTime(date, time);
+    return wall ? wallTimeToUtc(wall, shop.timezone) : null;
+  });
   // A refused field leaves the draft as it was; the staffer's typing is lost
   // with the redirect, so the notice names exactly which answer to fix.
   if (!parsed.ok) {
@@ -249,7 +256,7 @@ export async function addIncidentAddendumAction(
   const { session, shop } = await requireShopSurface(shopSlug);
   requireIds(tripId, reportId);
   const back = reportPath(shopSlug, tripId, reportId);
-  const body = text(formData, "body");
+  const { body } = readForm(addendumForm, formData);
   const result = await addIncidentAddendum(await getDb(), {
     shopId: shop.id,
     reportId,
@@ -273,14 +280,13 @@ export async function addIncidentPersonAction(
   const { session, shop } = await requireShopSurface(shopSlug);
   requireIds(tripId, reportId);
   const back = reportPath(shopSlug, tripId, reportId);
-  const who = text(formData, "who");
-  const involvement = text(formData, "involvement");
+  const { who, involvement, outsiderName } = readForm(incidentPersonForm, formData);
   const [kind, id = ""] = who.split(":");
   let subject: IncidentSubject | null = null;
   if (kind === "booking" && uuidParam(id)) subject = { kind: "booking", bookingId: id };
   else if (kind === "staff" && uuidParam(id)) subject = { kind: "staff", personId: id };
-  else if (kind === "outsider" && text(formData, "outsiderName").trim()) {
-    subject = { kind: "outsider", name: text(formData, "outsiderName") };
+  else if (kind === "outsider" && outsiderName.trim()) {
+    subject = { kind: "outsider", name: outsiderName };
   }
   if (!subject || !isIncidentInvolvement(involvement)) {
     redirect(noticeUrl(back, "nobody-chosen", { form: "people" }));

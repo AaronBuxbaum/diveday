@@ -331,6 +331,17 @@ describe("the words the es-ES README settled", () => {
     });
   });
 
+  describe("adding is agregar (issue #2564)", () => {
+    it("refuses every form of añadir and leaves bañador alone", () => {
+      expect(rules({ k: "Añadir buzo" })).toEqual(["add"]);
+      expect(rules({ k: "Se añadió a la salida" }, STAFF)).toEqual(["add"]);
+      expect(rules({ k: "Añade una nota" })).toEqual(["add"]);
+      expect(rules({ k: "Ya añadido" })).toEqual(["add"]);
+      expect(rules({ k: "Agregar buzo" })).toEqual([]);
+      expect(rules({ k: "Trae bañador y toalla" })).toEqual([]);
+    });
+  });
+
   describe("joining a list is anotarse", () => {
     it("refuses the reflexive apuntarse in every shape the bundles used", () => {
       expect(rules({ k: "Apuntándote…" })).toEqual(["sign-up"]);

@@ -13,7 +13,7 @@ const source = {
   forecastLongitude: -80,
   marineLife: "Parrotfish",
   difficultyLevel: "beginner" as const,
-  depthRange: "6–12 m",
+  depthMinMeters: 6,
   maxDepthMeters: 12,
   currentNote: "Usually gentle.",
   divePlan: "Follow the ridge.",
@@ -68,5 +68,19 @@ describe("dive-site template sync", () => {
     );
     expect(merged.description).toBe(latest.description);
     expect(merged.creatures).toEqual(["blue-tang", "southern-stingray"]);
+  });
+
+  it("never merges a shop's shallow end below a deeper point the template moved", () => {
+    const baseline = diveSiteTemplateSnapshot(source);
+    // The shop edited the shallow end to 10 m; the template then shortened the site to 9 m.
+    const current = diveSiteTemplateSnapshotFromSite({ ...baseline, depthMinMeters: 10 });
+    const latest = diveSiteTemplateSnapshot({ ...source, maxDepthMeters: 9 });
+    const merged = mergedDiveSiteTemplateSnapshot(current, baseline, latest, "preserve-shop-edits");
+    expect(merged.maxDepthMeters).toBe(9);
+    expect(merged.depthMinMeters).toBeNull();
+    // Taken whole, the template's own pair stands.
+    expect(
+      mergedDiveSiteTemplateSnapshot(current, baseline, latest, "replace-template-copy"),
+    ).toMatchObject({ depthMinMeters: 6, maxDepthMeters: 9 });
   });
 });

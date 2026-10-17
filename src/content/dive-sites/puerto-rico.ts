@@ -26,7 +26,7 @@ export const PUERTO_RICO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Fish shelter under the pier. Sea turtles, octopus and squid turn up now and then.",
       difficultyLevel: "intermediate",
-      depthRange: "0–24 m (0–80 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 25,
       currentNote:
         "Boat traffic is listed as a hazard here: keep close to the pilings, carry an SMB and listen for engines. Current is reported as low, under 1 knot. Surf and a rip can run at the entry; check them from the beach before you kit up. Do not swim under the pier decks or the collapsed pier.",
@@ -81,7 +81,7 @@ export const PUERTO_RICO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Healthy reef with a wide cast: fish, lobsters and turtles, with sharks and dolphins reported. Humpback whales pass in winter, sometimes heard underwater.",
       difficultyLevel: "advanced",
-      depthRange: "18–27 m (60–90 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 28,
       currentNote: "Current not documented; ask the crew on the day. Open water: carry an SMB.",
       divePlan:
@@ -138,7 +138,7 @@ export const PUERTO_RICO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sponges and gorgonians crowd the wall, and the water column holds medium-sized fish with the odd barracuda.",
       difficultyLevel: "advanced",
-      depthRange: "17–30 m (55–100 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 30,
       currentNote:
         "Current is reported as low, under 1 knot, but this is open sea and the wall is run as a boat dive: carry an SMB and follow the crew’s plan.",
@@ -191,7 +191,7 @@ export const PUERTO_RICO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Hawksbill and green turtles live along the pilings. Rays, morays and lobsters sit under the structure.",
       difficultyLevel: "beginner",
-      depthRange: "0–12 m (0–40 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 13,
       currentNote:
         "Sheltered; current is reported as low. Visibility can be soft. Entry surface not documented; ask the crew about the shore entry and exit. Nets are listed as a hazard, so keep clear of any line or net.",

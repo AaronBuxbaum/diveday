@@ -113,6 +113,7 @@ export type SignNextCode = Extract<
   ReadinessBlockerCode,
   | "waiver_not_sent"
   | "waiver_lapsed"
+  | "waiver_runs_out"
   | "waiver_pending"
   | "waiver_expired"
   | "medical_review"
@@ -127,6 +128,7 @@ export const SIGN_NEXT_KEYS: Record<SignNextCode, DiverMessageKey> = {
   waiver_not_sent: "thread.next.askForWaiver",
   // Signed once already: the same fresh link an expired one needs.
   waiver_lapsed: "thread.next.freshWaiver",
+  waiver_runs_out: "thread.next.freshWaiver",
   waiver_pending: "thread.next.signWaiver",
   waiver_expired: "thread.next.freshWaiver",
   medical_review: "thread.next.medical",

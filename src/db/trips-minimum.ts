@@ -4,6 +4,7 @@ import { effectiveMinimum, MINIMUM_SEATS_DECISION_HOURS_DEFAULT } from "@/lib/mi
 import type { AppDb } from "./client";
 import { flushUrgentCrewNotices, recordCrewCalledOff } from "./crew-notices";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
+import { publishManifestEvent } from "./manifest-events";
 import { recordSystemTripActivity } from "./operations";
 import { bookings, people, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -226,6 +227,7 @@ export async function cancelDeparturesBelowMinimum(
     if (row) {
       cancelled.push(departure);
       await flushUrgentCrewNotices(db, { shopId: departure.shopId, tripIds: [row.id], now });
+      await publishManifestEvent(db, departure.shopId, row.id);
     }
   }
 

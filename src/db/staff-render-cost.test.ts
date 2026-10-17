@@ -9,7 +9,7 @@ import type { AppDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
 import { hasActiveCourses } from "@/db/courses";
 import { diverCrewWithAway } from "@/db/crew-away-diver";
-import { countSpendableDives } from "@/db/dive-packages";
+import { packageDivesForBooking } from "@/db/dive-packages";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { countGearItems } from "@/db/gear";
 import { getBookingPayment } from "@/db/payments";
@@ -413,8 +413,12 @@ async function readyPageReads(db: AppDb, token: string) {
     diverCrewWithAway(db, data.shop.id, data.detail.trip, data.detail.shop.timezone),
     latestTripStage(db, data.shop.id, data.trip.id),
     getBookingPayment(db, data.shop.id, capability.bookingId),
-    data.trip.course ? getCourseFormsForBooking(db, data.shop.id, capability.bookingId) : null,
-    countSpendableDives(db, data.shop.id, data.person.id),
+    data.asksCourseForms ? getCourseFormsForBooking(db, data.shop.id, capability.bookingId) : null,
+    packageDivesForBooking(db, {
+      shopId: data.shop.id,
+      personId: data.person.id,
+      bookingId: capability.bookingId,
+    }),
   ]);
 }
 
@@ -581,7 +585,10 @@ const CHROME_CEILING = 20;
 // away (`crewAwayByTrip`, the departures' crew, schedule days and days away)
 // and keeps every crew assignment on "Your week" (`readerCrewedTrips`), three
 // statements in the queue's one wave.
-const TODAY_CEILING = 69;
+// 69 → 70 (H-80, issue #2135): a boat on two departures at once is raised on
+// Today beside the crew clash (`boatClashesByTrip`), one batched read in the
+// same wave as the crew's.
+const TODAY_CEILING = 70;
 // 49 → 50: the roster reads each diver's unspent package dives for the payment
 // control (`spendableDivesForTrip`, H-79, issue #1697). The held seat's
 // last-dive-day read beside it (`lastDiveDaysHere`, #1789) skips itself when no
@@ -594,7 +601,11 @@ const TODAY_CEILING = 69;
 // cards (`listAgencyCheckableCards`), one statement in `getTripGuests`' fan-out.
 // 52 → 54: the same read also asks for the divers' pending nitrox and specialty
 // cards (issue #2592), one statement each, in the same wave as the level read.
-const TRIP_CEILING = 54;
+// 54 → 55 (issue #2275): on a departure that is not a course session, the
+// roster reads each diver's course seats a training mark may name
+// (`trainingMarksForRoster`), one statement in the same wave. The marks
+// themselves cost nothing until one is set.
+const TRIP_CEILING = 55;
 
 /**
  * Serial phases, the same way: lower one when a change removes a wait, never
@@ -643,7 +654,15 @@ const PUBLIC_TRIP_CEILING = 20;
 // away on the departure's days (`diverCrewWithAway`), which reads the
 // schedule days and the days away beside the crew. Measured 38; the phases
 // stay 5, since both ride the thread's one wave.
-const READY_CEILING = 38;
+// 38 → 39 (#2687, H-126): a seat that can still be released reads whether an
+// ask to move stands (`hasMoveAsk`, one read), beside the rest of the page's
+// fan-out, so the phases stay 5. The seed's booking ids are random, so which
+// seat the test lands on varies: both a seat past the free window and one not
+// past it must stay inside the ceiling.
+// 39 → 40: the dive-package line reads what this seat itself spends beside
+// what the diver has left (`packageDivesForBooking`, one `queryAll` wave), one
+// statement more than the count it replaced, in the same round trip.
+const READY_CEILING = 40;
 // 10 → 3: the shop, then `readTripPage`'s one wave (issue #2353; code review
 // 2026-10-11, item 2), whose chained reads — the briefings off the dives, the
 // Stripe account and the other boats off the trip — are its third round trip.
@@ -662,6 +681,8 @@ const READY_PHASE_CEILING = 5;
 // The two above them are the capability and the readiness detail, as for one
 // seat.
 const READY_PARTY_PHASE_CEILING = 7;
-// A party of three or six: the single seat's 38, plus the party panel's
+// A party of three or six: the single seat's 40, plus the party panel's
 // own reads and one claim-link mint for every unclaimed seat together.
-const READY_PARTY_CEILING = 40;
+// 40 → 42 (#2687, H-126): the same move-ask read as the single seat's, and
+// the same dive-package read.
+const READY_PARTY_CEILING = 42;

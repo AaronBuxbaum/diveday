@@ -3,9 +3,10 @@ import { identityReasonText } from "@/i18n/identity-check-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
 import { checkDrysuitCard } from "@/lib/drysuit-card";
-import { formatMoneyCents } from "@/lib/format";
+import { formatDateTimeTz, formatMoneyCents } from "@/lib/format";
 import { guardianSignatureOf, guardianSignatureRequired } from "@/lib/guardian";
 import { heldSeatBlockers } from "@/lib/identity-match";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import { paymentSourceLine } from "@/lib/payment-source";
 import { waiverState } from "@/lib/waivers";
@@ -62,6 +63,8 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     elearningChecksOff,
     courseMaterialsDoneByPerson,
     sameNameHeldSeats,
+    sameNamePeople,
+    dependentCharters,
     heldSeatLastDiveDay,
     packageDivesByBooking,
     paymentMarksByBooking,
@@ -81,6 +84,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     setParticipantTypeAction,
     confirmIdentityAction,
     splitIdentityAction,
+    repointIdentityAction,
     sendNewWaiverAction,
     addNoteAction,
     deleteNoteAction,
@@ -274,6 +278,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     ? checkDrysuitCard(
         rentalFitByBooking.get(booking.id)?.divesDry ?? false,
         readinessByBooking.get(booking.id)?.specialtyCertifications ?? [],
+        person.drysuitExperienceSeenAt ?? null,
       )
     : ({ status: "ok" } as const);
   // The namesake refusal (issue #1573) holds its row open for the same
@@ -283,6 +288,22 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   const namesakeRefused = namesakeRefusedBookingId === booking.id;
   const arrivalControl = arrival?.controls.get(booking.id);
   const arrivalBelow = arrival?.below.get(booking.id);
+  // The charter seats sold only on this course seat (issue #2058), said in
+  // its Remove confirm and its move: those seats stay booked, and still need
+  // the card to board.
+  const carried = dependentCharters?.get(booking.id) ?? [];
+  const carriedChartersNote =
+    carried.length > 0
+      ? t("trips.roster.courseSeatCarriesCharters", {
+          name: person.fullName,
+          trips: cachedListFormat(locale, { type: "conjunction" }).format(
+            carried.map(
+              (charter) =>
+                `${charter.title} · ${formatDateTimeTz(charter.startsAt, locale, shopTimezone)}`,
+            ),
+          ),
+        })
+      : undefined;
   const holdOpen =
     keepOpenBookingId === booking.id ||
     namesakeRefused ||
@@ -314,6 +335,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     elearningQueryByBooking,
     elearningChecksOff,
     sameNameHeldSeats,
+    sameNamePeople,
     heldSeatLastDiveDay,
     packageDivesByBooking,
     participantTypeCertBookingId,
@@ -325,6 +347,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     setParticipantTypeAction,
     confirmIdentityAction,
     splitIdentityAction,
+    repointIdentityAction,
     sendNewWaiverAction,
     addNoteAction,
     deleteNoteAction,
@@ -339,6 +362,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     moveSeat: seatMoveForRow(booking, moveSeat),
     // Marked aboard a boat that has left: Remove says so and changes nothing (H-133).
     removeRefusedAboard: aboardAtSea?.get(booking.id) ?? null,
+    carriedChartersNote,
     materialsDone,
     materialsPending,
     readiness,

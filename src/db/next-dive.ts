@@ -1,8 +1,10 @@
 import { nowDate } from "@/lib/clock";
+import { inTrainingBefore } from "@/lib/in-training";
 import type { NextDiveCandidate, NextDivePick } from "@/lib/next-dive";
 import { pickNextDive } from "@/lib/next-dive";
 import { decideTripAdmission } from "@/lib/trip-admission";
 import { readCertificationEvidence } from "./certification-evidence";
+import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb } from "./client";
 import { tripRequirementSummaries } from "./readiness";
 import { getTripLens } from "./trip-lenses";
@@ -35,7 +37,7 @@ export const NEXT_DIVE_CANDIDATE_WINDOW = 12;
  * diver cleared *right now*", and an unsigned waiver for a trip three weeks out
  * is not a reason to stop suggesting it.
  *
- * **The evidence is read once.** Twelve candidates would otherwise mean
+ * **The evidence is read once**, the diver's course seats with it. Twelve candidates would otherwise mean
  * thirty-six certification queries for one keepsake, and the answer is the same
  * every time — it is a fact about the diver, not about the trip.
  *
@@ -77,13 +79,17 @@ export async function nextDiveForBooking(
   const upcoming = trips.filter((trip) => trip.id !== input.justDivedTripId);
   if (upcoming.length === 0) return null;
 
-  const [requirements, evidence, dayLens] = await Promise.all([
+  const [requirements, evidence, courseSeats, dayLens] = await Promise.all([
     tripRequirementSummaries(
       db,
       input.shopId,
       upcoming.map((trip) => trip.id),
     ),
     readCertificationEvidence(db, input.shopId, input.personId),
+    // The diver's course seats, read once like the cards: a departure after a
+    // course they are booked on is suggested exactly as the booking door would
+    // sell it (issue #2058).
+    listCourseSeatsInTraining(db, input.shopId, [input.personId]),
     // One read, and only for a day that wears a lens at all: every candidate
     // the rule can fire on shares this exact row, so there is no per-candidate
     // name to fetch. A lens the shop has since deleted resolves to null and the
@@ -102,7 +108,10 @@ export async function nextDiveForBooking(
       // `getTripSiteRequirement` produce one trip at a time.
       requirement: null,
       siteRequirement,
-      evidence,
+      evidence: {
+        ...evidence,
+        levelsInTraining: inTrainingBefore(courseSeats, trip, now).map((course) => course.level),
+      },
       // A course session's admission rule is the course's own, enforced in the
       // booking transaction. The itinerary's gate must not be read here for the
       // reason `TripAdmissionInput.courseSession` gives in full: continuing

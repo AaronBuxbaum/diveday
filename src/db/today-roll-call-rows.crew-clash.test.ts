@@ -98,25 +98,33 @@ describe("crew clashes on Today (H-80)", () => {
     );
   }
 
-  it("raises crew_clash on both departures, naming the person and the other boat", async () => {
+  // Issue #2211: one person on two boats is one fact, said once, as the
+  // staffing week says it. The row sits on the earlier departure and names the
+  // other, so a shop reads one row where it used to read two.
+  it("raises one crew_clash for the pair, on the earlier departure, naming the other boat", async () => {
     const now = nowDate();
     const hostStartsAt = new Date(now.getTime() + 2 * 24 * HOUR);
-    const { host, mover } = await movedOnto(hostStartsAt, hostStartsAt);
+    const { host, mover } = await movedOnto(hostStartsAt, new Date(hostStartsAt.getTime() - HOUR));
 
     const rows = await clashRows(now, [host.id, mover.id]);
-    expect(rows.map((row) => [row.id, row.kind]).sort()).toEqual(
-      [
-        [`crew-clash:${host.id}`, "crew_clash"],
-        [`crew-clash:${mover.id}`, "crew_clash"],
-      ].sort(),
-    );
-    const onMover = rows.find((row) => row.id === `crew-clash:${mover.id}`);
-    expect(onMover).toMatchObject({
+    expect(rows.map((row) => [row.id, row.kind])).toEqual([
+      [`crew-clash:${mover.id}`, "crew_clash"],
+    ]);
+    expect(rows[0]).toMatchObject({
       aboutDeparture: true,
       urgency: "soon",
       detail: "Kai Clashwell is also rostered on Clash host reef at these hours.",
       href: `/shop/${ctx.shop.slug}/trips/${mover.id}?view=details#crew`,
     });
+  });
+
+  it("still says it once when the two sail at the same minute", async () => {
+    const now = nowDate();
+    const hostStartsAt = new Date(now.getTime() + 2 * 24 * HOUR);
+    const { host, mover } = await movedOnto(hostStartsAt, hostStartsAt);
+    const rows = await clashRows(now, [host.id, mover.id]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.kind).toBe("crew_clash");
   });
 
   it("leaves a crew member handed from one boat to the next alone", async () => {

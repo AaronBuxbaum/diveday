@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray, isNull, type SQL, sql } from "drizzle-orm";
 import type { ActivityEntry } from "@/lib/activity";
 import { STAFF_ROLES } from "@/lib/authz";
+import type { BoatPaperField } from "@/lib/boat-safety";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
@@ -52,17 +53,20 @@ import { livePerson } from "./trips-live";
  *   {@link recordShopActivity} writes with a diver's name carries that diver's
  *   `booking_id`, so the sweep finds it by construction; the one that carries
  *   no name (`order_refunded`) carries the customer as `subject_person_id`
- *   for the same reason.
+ *   for the same reason. Erasing that customer clears the pointer and keeps
+ *   the line and its actor: who refunded is a fact about staff (issue #2315).
  * - every other name on a line — the actor's, joined for the other two trails
  *   — is `people.full_name` read live, which erasure overwrites in place.
- * - a review line names no reviewer, and a plan-change line no diver.
+ * - a review line names no reviewer, and a plan-change line no diver. A
+ *   departure's title can name one; erasure retitles a departure only the
+ *   erased diver's party was booked on (issue #2315).
  *
  * ## Retention
  *
  * The log shows what the trails still hold; it keeps nothing. An
  * `activity_events` line leaves it the night `RETENTION_DAYS` prunes it
- * (`src/lib/retention.ts`); a moderation or plan-change row lives as long as
- * its review or departure does, and so does its line here.
+ * (`src/lib/retention.ts`); a moderation or plan-change row is kept for ever by
+ * decision (issue #2316), and so is its line here.
  */
 
 /** One line of the log, as the reader returns it: codes, ids and names. */
@@ -307,7 +311,8 @@ export type ShopActivityWrite =
         | "payment_waived"
         | "payment_marked_refunded"
         | "payment_balance_written_off"
-        | "party_marked_paid";
+        | "party_marked_paid"
+        | "dashboard_refund_matched";
       bookingId: string;
     }
   | {
@@ -316,7 +321,8 @@ export type ShopActivityWrite =
         | "series_added"
         | "departure_moved"
         | "departure_copied"
-        | "departure_deleted";
+        | "departure_deleted"
+        | "departure_retitled_by_erasure";
       tripId: string;
     }
   | {
@@ -329,6 +335,14 @@ export type ShopActivityWrite =
       provider: string;
       count: number;
       since: string;
+    }
+  | {
+      /** A boat's certificate or paper field, before and after (records review 2). */
+      code: "boat_papers_changed";
+      boat: string;
+      field: BoatPaperField;
+      from: string;
+      to: string;
     }
   | {
       code:
@@ -515,6 +529,23 @@ async function writeShopActivity(
       orderId: null,
       subjectPersonId: null,
       entry: { code: write.code, params: { actor: actor.name } },
+    };
+  } else if (write.code === "boat_papers_changed") {
+    values = {
+      tripId: null,
+      bookingId: null,
+      orderId: null,
+      subjectPersonId: null,
+      entry: {
+        code: write.code,
+        params: {
+          actor: actor.name,
+          boat: write.boat,
+          field: write.field,
+          from: write.from,
+          to: write.to,
+        },
+      },
     };
   } else {
     // A shop-level line about the shop's own settings (the shore contact's

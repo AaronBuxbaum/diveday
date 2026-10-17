@@ -112,6 +112,9 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // "action", like `waiver_expired`: the diver signed once and the readiness
   // page mints the fresh link they sign again on.
   waiver_lapsed: "action",
+  // "action", like `waiver_lapsed`: the readiness page mints the fresh link
+  // the diver signs again on, today, while the old release still stands.
+  waiver_runs_out: "action",
   medical_review: "waiting",
   // "waiting", like the hold it settles: there has never been anything here for
   // the diver to do, and a refusal is the one state where that is most
@@ -124,6 +127,8 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // The student signs it on this very page (ADR 20261008-course-forms).
   course_form_unsigned: "action",
   course_form_guardian_missing: "action",
+  // The shop fixes its own mark; the diver has nothing to do.
+  training_mark_invalid: "waiting",
   certification_missing: "action",
   certification_pending: "waiting",
   // "action", not "waiting": the diver said a level and nobody has seen a card,
@@ -281,6 +286,7 @@ export const REMINDER_ACTION_CODES = [
   // As `waiver_expired`: the reminder links the readiness page, never a
   // waiver token, and that page mints the fresh link.
   "waiver_lapsed",
+  "waiver_runs_out",
   // Signed on the readiness page the reminder links to; no token of its own
   // ever rides in the message (ADR 20261008-course-forms).
   "course_form_unsigned",

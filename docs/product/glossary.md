@@ -92,6 +92,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Identity match key
 - Level vs. specialty
 - Merge (two diver records)
+- Re-point a held seat
 - Remove vs. erase (a diver)
 - Seat left behind
 - Split off a held seat
@@ -119,6 +120,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Payments restricted
 - Payout
 - Sailed / Still to sail
+- Stale package invoice
 - Subscription (DiveDay billing)
 
 ## Operations
@@ -139,6 +141,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Backup destination
 - Blocked / Ready
 - Boarding
+- Boat at departure
 - Boat clash
 - Boat mode
 - Boat papers
@@ -147,9 +150,11 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Buddy team
 - Cancellation window
 - Certificate passenger limit
+- Certificate total-persons limit
 - Check-in
 - Close-out
 - Connected Stripe account
+- Counter hand-off
 - Counter self-registration
 - Course catalog copy
 - Course form
@@ -176,7 +181,6 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Dive day (north star)
 - Dive record
 - Dive site
-- Diver moment
 - Diver seats
 - Dock call time
 - Emergency contact
@@ -264,6 +268,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Sign once
 - Skipped occurrence
 - SMS channel
+- Snorkel-suitable
 - Snorkeler
 - Souls on board
 - Staff invite
@@ -277,6 +282,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Tight turnaround
 - Tip
 - Touch guard
+- Training mark
 - Transactional notification
 - Trip / charter
 - Trip packet
@@ -332,6 +338,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Demand signal
 - Diver profile
 - Dives dry
+- Drysuit experience seen
 - Gear proposal
 - Gear register
 - Gear register groups
@@ -343,6 +350,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Nitrox / EANx
 - Nitrox request
 - Nitrox-compatible course
+- Nitrox-designated regulator
 - Private staff note
 - Ready message
 - Rental catalog
@@ -356,6 +364,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Technician
 - The bench
 - Trip prep list
+- Wetsuit for the day
 - Work done record
 - Work order
 

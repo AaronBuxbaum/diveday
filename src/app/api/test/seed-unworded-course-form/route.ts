@@ -55,6 +55,8 @@ export async function POST(request: Request) {
     shopId: shop.id,
     courseId: course.id,
     formIds: [...current, form.id],
+    // Adding a form asks more students, which any writer may.
+    mayNarrow: false,
   });
   if (!saved.ok) return NextResponse.json({ error: saved.reason }, { status: 409 });
 

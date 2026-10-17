@@ -28,7 +28,6 @@ export const SAINT_BARTHELEMY: DiveSiteTemplate[] = [
         "Most dive sites around the island lie inside the Saint-Barthélemy nature reserve, which sets mooring and group-size limits. Dive on the reserve’s moorings and within its group-size limit.",
       difficultyLevel: "intermediate",
       // Depth: one operator gives 0 to 15 m and one guide gives 25 m; the deeper figure is used.
-      depthRange: "Up to 25 m (82 ft)",
       maxDepthMeters: 25,
       currentNote:
         "Gustavia’s harbor is five minutes away, so listen for engines, carry an SMB and come up the mooring line. Current is not documented; ask the crew on the day.",
@@ -72,7 +71,6 @@ export const SAINT_BARTHELEMY: DiveSiteTemplate[] = [
       conservationNote:
         "Most dive sites around the island lie inside the Saint-Barthélemy nature reserve, which sets mooring and group-size limits. Dive on the reserve’s moorings and within its group-size limit.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 30 m (100 ft)",
       maxDepthMeters: 30,
       currentNote:
         "Gustavia’s harbor is close, so listen for engines, carry an SMB and come up the mooring line. Current is not documented; ask the crew on the day.",
@@ -117,7 +115,6 @@ export const SAINT_BARTHELEMY: DiveSiteTemplate[] = [
       conservationNote:
         "Most dive sites around the island lie inside the Saint-Barthélemy nature reserve, which sets mooring and group-size limits. Dive on the reserve’s moorings and within its group-size limit.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 25 m (80 ft)",
       maxDepthMeters: 25,
       currentNote:
         "Current can run along the wall, and the crew may run it as a drift. Carry an SMB and plan the exit before you go in.",
@@ -163,7 +160,6 @@ export const SAINT_BARTHELEMY: DiveSiteTemplate[] = [
       conservationNote:
         "Most dive sites around the island lie inside the Saint-Barthélemy nature reserve, which sets mooring and group-size limits. Dive on the reserve’s moorings and within its group-size limit.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 20 m (65 ft)",
       maxDepthMeters: 20,
       currentNote:
         "Current is moderate and the site is often run as a drift, so carry an SMB and plan the exit before you go in. Yachts moor off the island; listen for engines. Medical care is far; confirm the boat’s oxygen and plan.",
@@ -209,7 +205,6 @@ export const SAINT_BARTHELEMY: DiveSiteTemplate[] = [
       conservationNote:
         "Most dive sites around the island lie inside the Saint-Barthélemy nature reserve, which sets mooring and group-size limits. Dive on the reserve’s moorings and within its group-size limit.",
       difficultyLevel: "advanced",
-      depthRange: "Up to 25 m (80 ft)",
       maxDepthMeters: 25,
       currentNote:
         "Atlantic side, where conditions can be rougher, so carry an SMB and ask the crew about the swell. The caves, tunnels and arches are overhead; stay out.",

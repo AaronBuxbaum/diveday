@@ -666,8 +666,9 @@
       "title": "Nothing on the list yet",
       "body": "Add the first line below. The crew sees it on every departure’s manifest."
     },
+    "defaultLine": "O2 kit aboard and cylinder full",
     "addLabel": "New line",
-    "addPlaceholder": "Emergency oxygen kit aboard",
+    "addPlaceholder": "Life jackets counted, one per person",
     "addSubmit": "Add",
     "delete": "Delete",
     "moveUp": "Move up",

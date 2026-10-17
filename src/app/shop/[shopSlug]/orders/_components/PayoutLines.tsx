@@ -5,6 +5,7 @@ import { listStuckPaymentOperations } from "@/db/payment-operations";
 import { latestShopPayouts, type ShopPayout } from "@/db/payouts";
 import { listFailedRefunds } from "@/db/refund-failures";
 import { listOwedShopCancellationRefunds } from "@/db/refunds";
+import { listUnattributedRefunds } from "@/db/unattributed-refunds";
 import { payoutSentence } from "@/i18n/payout-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
@@ -27,6 +28,9 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
  * - **Failed refunds**: refunds Stripe accepted and then reported failed
  *   (issue #2291): the money is back in the shop's balance and the diver is
  *   owed it again.
+ * - **Refunds made in Stripe**: a dashboard refund on a party's checkout,
+ *   which names no seat, held until staff pick one (issue #2293). Left out of
+ *   the stuck operations above so it is listed once, with its choices.
  * - **Payouts**: what Stripe last paid into the bank, and a payout that failed
  *   since (ADR 20261012-payouts-reach-diveday). Stored rows only, never a
  *   Stripe call.
@@ -38,18 +42,33 @@ export async function readBackOffice(db: AppDb, shopId: string, visible: boolean
       owedRefunds: [],
       paidAfterClose: [],
       failedRefunds: [],
+      unattributedRefunds: [],
       payouts: { paid: null, failed: null },
     };
   }
-  const [stuckPaymentOperations, owedRefunds, paidAfterClose, failedRefunds, payouts] =
-    await Promise.all([
-      listStuckPaymentOperations(db, shopId),
-      listOwedShopCancellationRefunds(db, shopId),
-      listPaidAfterCloseCheckouts(db, shopId),
-      listFailedRefunds(db, shopId),
-      latestShopPayouts(db, shopId),
-    ]);
-  return { stuckPaymentOperations, owedRefunds, paidAfterClose, failedRefunds, payouts };
+  const [
+    stuckPaymentOperations,
+    owedRefunds,
+    paidAfterClose,
+    failedRefunds,
+    unattributedRefunds,
+    payouts,
+  ] = await Promise.all([
+    listStuckPaymentOperations(db, shopId, undefined, { withoutUnattributedRefunds: true }),
+    listOwedShopCancellationRefunds(db, shopId),
+    listPaidAfterCloseCheckouts(db, shopId),
+    listFailedRefunds(db, shopId),
+    listUnattributedRefunds(db, shopId),
+    latestShopPayouts(db, shopId),
+  ]);
+  return {
+    stuckPaymentOperations,
+    owedRefunds,
+    paidAfterClose,
+    failedRefunds,
+    unattributedRefunds,
+    payouts,
+  };
 }
 
 /**

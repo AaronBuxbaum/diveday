@@ -7,9 +7,12 @@ import { StatusInView } from "@/components/ui/StatusInView";
 import { canPersonManageWaiverTemplates } from "@/db/authz";
 import type { AppDb } from "@/db/client";
 import {
+  COURSE_FORM_MAX_AGE_MAX,
+  COURSE_FORM_MAX_AGE_MIN,
   type CourseFormImpact,
   type CourseFormSummary,
   courseUpcomingEnrollment,
+  listCourseFormAgeBounds,
   listCourseFormRequirements,
   listCourseForms,
 } from "@/db/course-forms";
@@ -27,15 +30,17 @@ export async function loadCourseFormsRequirement(
   input: { shopId: string; courseId: string; personId: string; notice: string | undefined },
   t: StaffTranslator,
 ) {
-  const [forms, required, canWriteForms, addImpact] = await Promise.all([
+  const [forms, required, ageBounds, canWriteForms, addImpact] = await Promise.all([
     listCourseForms(db, input.shopId),
     listCourseFormRequirements(db, input.shopId, input.courseId),
+    listCourseFormAgeBounds(db, input.shopId, input.courseId),
     canPersonManageWaiverTemplates(db, input.shopId, input.personId),
     courseUpcomingEnrollment(db, input.shopId, input.courseId),
   ]);
   return {
     forms,
     required,
+    ageBounds,
     canWriteForms,
     addImpact,
     notice: courseFormsNotice(input.notice, t),
@@ -53,6 +58,12 @@ function courseFormsNotice(
 ): { tone: NoticeTone; text: string } | undefined {
   if (notice === "forms-saved") return { tone: "success", text: t("courses.edit.forms.saved") };
   if (notice === "forms-invalid") return { tone: "danger", text: t("courses.edit.forms.invalid") };
+  if (notice === "forms-invalid-age") {
+    return { tone: "danger", text: t("courses.edit.forms.invalidAge") };
+  }
+  if (notice === "forms-medical-age") {
+    return { tone: "danger", text: t("courses.edit.forms.medicalAge") };
+  }
   if (notice === "forms-not-authorized") {
     return { tone: "danger", text: t("courses.edit.forms.notAuthorized") };
   }
@@ -77,12 +88,17 @@ function courseFormsNotice(
  * owner or manager) sees the course's forms ticked and fixed, still posted,
  * so their save can add and reorder but never drop one. Beside the button,
  * who a form added now would ask to sign, before the tap.
+ *
+ * Under each form, an optional age: the form is then asked only of students
+ * that age or younger on the session's first day (issue #2265), as PADI asks
+ * its youth acknowledgment of 10- and 11-year-olds. Blank asks everyone.
  */
 export function CourseFormsRequirement({
   id,
   label,
   forms,
   required,
+  ageBounds,
   notice,
   action,
   waiversPath,
@@ -95,6 +111,8 @@ export function CourseFormsRequirement({
   forms: readonly CourseFormSummary[];
   /** The ids this course requires now, in order. */
   required: readonly string[];
+  /** The age bound on each required form that has one (issue #2265). */
+  ageBounds?: ReadonlyMap<string, number>;
   notice: { tone: NoticeTone; text: string } | undefined;
   action: (formData: FormData) => Promise<void>;
   /** The waivers page, where forms are written; each form is an anchor on it. */
@@ -164,6 +182,23 @@ export function CourseFormsRequirement({
                         {t("courses.edit.forms.awaitingText")}
                       </p>
                     ) : null}
+                    {/* A medical statement is every student's: no age (G3). */}
+                    {form.medicalScreening ? null : (
+                      <label className="mt-2 flex items-center gap-2 text-sm text-muted">
+                        {t("courses.edit.forms.maxAgeLabel")}
+                        <span className="w-20 shrink-0">
+                          <input
+                            type="number"
+                            name={`maxAge-${form.id}`}
+                            min={COURSE_FORM_MAX_AGE_MIN}
+                            max={COURSE_FORM_MAX_AGE_MAX}
+                            defaultValue={ageBounds?.get(form.id) ?? ""}
+                            aria-label={t("courses.edit.forms.maxAgeAria", { form: form.title })}
+                            className={controlClass}
+                          />
+                        </span>
+                      </label>
+                    )}
                   </div>
                   {/* Sized by its wrapper: `controlClass` is full width. */}
                   <div className="w-20 shrink-0">

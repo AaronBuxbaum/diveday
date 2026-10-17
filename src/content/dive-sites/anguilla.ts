@@ -26,7 +26,6 @@ export const ANGUILLA: DiveSiteTemplate[] = [
       conservationNote:
         "Anguilla’s marine parks and mooring permits protect its dive sites. Use the moorings, never an anchor on the reef.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 21 m (70 ft)",
       maxDepthMeters: 21,
       currentNote:
         "An offshore cay dived in calm weather on the south side; anchoring is not allowed on the north side. Current is not documented; carry an SMB and ask the crew on the day. The caverns are overhead; stay out.",
@@ -69,7 +68,7 @@ export const ANGUILLA: DiveSiteTemplate[] = [
       conservationNote:
         "Anguilla’s marine parks and mooring permits protect its dive sites. Use the moorings, never an anchor on the reef.",
       difficultyLevel: "intermediate",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "An offshore islet in open water. Current is not documented; carry an SMB and ask the crew on the day. The small caves and tunnels are overhead; stay out.",
@@ -113,7 +112,7 @@ export const ANGUILLA: DiveSiteTemplate[] = [
       conservationNote:
         "Anguilla’s marine parks and mooring permits protect its dive sites. Use the moorings, never an anchor on the reef.",
       difficultyLevel: "beginner",
-      depthRange: "5–9 m (15–30 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 9,
       currentNote:
         "Calm and protected from the winter storms. Surge is not documented; ask the crew on the day. No entry hazard is documented; enter as the crew briefs it.",
@@ -153,7 +152,7 @@ export const ANGUILLA: DiveSiteTemplate[] = [
       conservationNote:
         "Anguilla’s marine parks and mooring permits protect its dive sites. Use the moorings, never an anchor on the reef.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote:
         "Sandy Island is a popular day-trip and snorkeling spot, so listen for engines and come up the mooring line. Current is not documented; ask the crew on the day.",
@@ -193,7 +192,6 @@ export const ANGUILLA: DiveSiteTemplate[] = [
       conservationNote:
         "Anguilla’s marine parks and mooring permits protect its dive sites. Use the moorings, never an anchor on the reef. This is part of Anguilla’s underwater heritage: leave everything where it lies, and note that exporting antiquities is against the law.",
       difficultyLevel: "beginner",
-      depthRange: "Up to 18 m (60 ft)",
       maxDepthMeters: 18,
       currentNote:
         "Sandy Island is a popular day-trip and snorkeling spot, so listen for engines and come up the mooring line. Current is not documented; ask the crew on the day.",
@@ -243,7 +241,7 @@ export const ANGUILLA: DiveSiteTemplate[] = [
       conservationNote:
         "Anguilla’s marine parks and mooring permits protect its dive sites. Use the moorings, never an anchor on the reef. This is part of Anguilla’s underwater heritage: leave everything where it lies, and note that exporting antiquities is against the law.",
       difficultyLevel: "intermediate",
-      depthRange: "15–27 m (50–90 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 27,
       currentNote: "Current is not documented; ask the crew on the day.",
       divePlan:

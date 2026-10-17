@@ -612,6 +612,7 @@ describe("who may run each action on the trip page", () => {
     // undone by an owner or manager's merge, and `splitBookingIdentity` writes
     // its trail on the departure and on the matched diver's record.
     "splitDiverIdentityAction",
+    "repointDiverIdentityAction",
     "markRosterWaiverInPersonAction",
     // A course form signed on paper: the release's paper path, on the same
     // terms (ADR 20261008-course-forms). The record names the staffer who

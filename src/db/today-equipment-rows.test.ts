@@ -321,6 +321,8 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
     const today = calendarDateInTimezone(nowDate(), shop.timezone);
     const hull = await createBoat(db, shop.id, "Papers Hull", 12, null, {
       certifiedPassengers: 12,
+      certifiedTotalPersons: null,
+      coiExpiresOn: null,
       inspectionDueOn: null,
       registrationExpiresOn: null,
       insuranceExpiresOn: shiftCalendarDate(today, -2),
@@ -369,6 +371,8 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
     const today = calendarDateInTimezone(nowDate(), shop.timezone);
     const hull = await createBoat(db, shop.id, "Inspection Hull", 12, null, {
       certifiedPassengers: null,
+      certifiedTotalPersons: null,
+      coiExpiresOn: null,
       // 75 days out: inside the inspection's 90-day window.
       inspectionDueOn: shiftCalendarDate(today, 75),
       registrationExpiresOn: null,

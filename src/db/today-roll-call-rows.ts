@@ -1,8 +1,10 @@
 import {
+  boatClashDetailText,
   crewClashDetailText,
   crewClashSailedDetailText,
   openCrewActionText,
   openRollCallActionText,
+  openTripActionText,
   rollCallAlertedText,
   rollCallGapDetailText,
 } from "@/i18n/today-labels";
@@ -17,7 +19,7 @@ import {
 } from "@/lib/today";
 import type { TodayRowsContext } from "./today-rows-context";
 import { at } from "./today-shared";
-import type { CrewClash } from "./trips";
+import type { BoatClash, CrewClash } from "./trips";
 
 /**
  * The rows about who is not accounted for: blocked divers aboard a boat that is out, the open roll calls, and crew rostered on two boats at once. They lead the queue, so they are pushed first.
@@ -122,6 +124,9 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
       .filter((gap) => gap.diveNumber >= 1 && !gap.stale)
       .map((gap) => gap.endsAt.getTime()),
   );
+  type ClashLeg = { clash: CrewClash; startsAt: Date };
+  type SailedLeg = { clash: CrewClash; endsAt: Date };
+  const standings = new Map<string, { ahead: ClashLeg[]; out: SailedLeg[] }>();
   for (const trip of crewClashState.departures) {
     const clashes = crewClashState.clashes.get(trip.id) ?? [];
     if (clashes.length === 0) continue;
@@ -130,8 +135,8 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
       [...(crewClashState.divers.get(trip.id)?.values() ?? [])].some(
         (state) => state === "boarded",
       ) || [...crewAnswered.values()].some((state) => state === "boarded");
-    const ahead: { clash: CrewClash; startsAt: Date }[] = [];
-    const out: { clash: CrewClash; endsAt: Date }[] = [];
+    const ahead: ClashLeg[] = [];
+    const out: SailedLeg[] = [];
     for (const clash of clashes) {
       const standing = crewClashPhase({
         legs: clash.legs,
@@ -147,6 +152,32 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
       }
       if (standing?.phase === "ahead") ahead.push({ clash, startsAt: standing.leg.startsAt });
     }
+    standings.set(trip.id, { ahead, out });
+  }
+  // **Say each clash once** (issue #2211), as the staffing week does through
+  // `sayEachClashOnce`: one person on two boats is one fact, and its row sits
+  // on the earlier departure, naming the other. The later one drops a clash
+  // only when the earlier one is saying it, so a partner outside this queue
+  // (or already past "ahead") never silences the only row that says it.
+  const startOrder = new Map(
+    [...crewClashState.departures]
+      .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime() || a.id.localeCompare(b.id))
+      .map((trip, index) => [trip.id, index]),
+  );
+  const sayAheadOnce = (tripId: string, ahead: readonly ClashLeg[]): ClashLeg[] =>
+    ahead.filter(({ clash }) => {
+      const partner = standings.get(clash.otherTripId);
+      const partnerSaysIt = partner?.ahead.some(
+        (leg) => leg.clash.personId === clash.personId && leg.clash.otherTripId === tripId,
+      );
+      if (!partnerSaysIt) return true;
+      return (startOrder.get(tripId) ?? 0) < (startOrder.get(clash.otherTripId) ?? 0);
+    });
+  for (const trip of crewClashState.departures) {
+    const standing = standings.get(trip.id);
+    if (!standing) continue;
+    const { out } = standing;
+    const ahead = sayAheadOnce(trip.id, standing.ahead);
     const when = at(trip.startsAt, timeZone, locale);
     const departure = { tripId: trip.id, label: `${trip.title} · ${when}` };
     if (out.length > 0) {
@@ -189,5 +220,45 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
         dueAt: sails,
       });
     }
+  }
+}
+
+/**
+ * **One hull on two departures at once** (H-80, issue #2135), said once like
+ * the crew clash (issue #2211): the row sits on the earlier departure and
+ * names the other. A side goes quiet when its own leg has sailed
+ * (`boatClashesByTrip`), so the later departure keeps the row whenever the
+ * earlier one is not saying it. Information only; nothing is gated.
+ */
+export function pushBoatClashRows(actions: TodayAction[], ctx: TodayRowsContext): void {
+  const { shopSlug, timeZone, locale, t, now } = ctx;
+  const { departures, boatClashes } = ctx.wave.crewClashState;
+  const ordered = [...departures].sort(
+    (a, b) => a.startsAt.getTime() - b.startsAt.getTime() || a.id.localeCompare(b.id),
+  );
+  const position = new Map(ordered.map((trip, index) => [trip.id, index]));
+  for (const trip of ordered) {
+    const standing: BoatClash[] = (boatClashes.get(trip.id) ?? []).filter((clash) => {
+      const partnerSaysIt =
+        position.has(clash.otherTripId) &&
+        boatClashes.get(clash.otherTripId)?.some((other) => other.otherTripId === trip.id);
+      if (!partnerSaysIt) return true;
+      return (position.get(trip.id) ?? 0) < (position.get(clash.otherTripId) ?? 0);
+    });
+    if (standing.length === 0) continue;
+    const when = at(trip.startsAt, timeZone, locale);
+    actions.push({
+      id: `boat-clash:${trip.id}`,
+      kind: "boat_clash",
+      urgency: urgencyFor(trip.startsAt, now),
+      subject: trip.title,
+      context: when,
+      departure: { tripId: trip.id, label: `${trip.title} · ${when}` },
+      aboutDeparture: true,
+      detail: boatClashDetailText(t, standing),
+      actionLabel: openTripActionText(t),
+      href: `/shop/${shopSlug}/trips/${trip.id}?view=details`,
+      dueAt: trip.startsAt,
+    });
   }
 }

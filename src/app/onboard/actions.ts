@@ -225,6 +225,7 @@ export async function onboardAction(formData: FormData) {
           ownerEmail: ownerEmail.toLowerCase(),
           shopName,
           shopSlug,
+          ...(createdShop.nameFlaggedAt ? { nameFlagged: true as const } : {}),
         });
       } catch (error) {
         log("onboard.new_account_alert_failed", "error", {

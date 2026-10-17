@@ -29,7 +29,20 @@ describe("parseSmsReply", () => {
   });
 
   it.each(["LATE", "late.", "Running late", "tarde"])("reads %j as running late (J3)", (body) => {
-    expect(parseSmsReply(inbound(body))).toEqual({ kind: "late", phone: "+13055550134" });
+    expect(parseSmsReply(inbound(body))).toEqual({
+      kind: "late",
+      phone: "+13055550134",
+      destinationNumber: "+18335550100",
+    });
+  });
+
+  it("reads a LATE with no destination number as sent to nobody in particular", () => {
+    const raw = JSON.stringify({ originationNumber: "+13055550134", messageBody: "LATE" });
+    expect(parseSmsReply(raw)).toEqual({
+      kind: "late",
+      phone: "+13055550134",
+      destinationNumber: null,
+    });
   });
 
   it("does not read a sentence about lateness as LATE", () => {

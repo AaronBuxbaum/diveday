@@ -5,6 +5,8 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripSitePeek } from "@/db/trips";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import type { DiverTranslator } from "@/i18n/messages";
+import { diveSiteDepthText } from "@/i18n/unit-labels";
+import type { DepthUnit } from "@/lib/depth-units";
 
 /**
  * "Here's what you'll explore" — a small photo/fact grid for a trip's dive
@@ -16,11 +18,14 @@ export function DiveSitesPeek({
   sites,
   heading,
   subheading,
+  depthUnit,
   t,
 }: {
   sites: TripSitePeek[];
   heading: string;
   subheading?: string;
+  /** The shop's own unit: a site's depth is stored in metres and read in this. */
+  depthUnit: DepthUnit;
   /** A site's difficulty is a code now, so this grid needs the words for it. */
   t: DiverTranslator;
 }) {
@@ -51,11 +56,12 @@ export function DiveSitesPeek({
               <h3 className="font-bold text-base">{site.name}</h3>
               {(() => {
                 const difficulty = diveSiteDifficultyLabel(site.difficultyLevel, t);
-                if (!site.depthRange && !difficulty) return null;
+                const depth = diveSiteDepthText(t, site, depthUnit);
+                if (!depth && !difficulty) return null;
                 return (
                   <p className="text-xs font-semibold text-primary mt-0.5">
-                    {site.depthRange ?? ""}
-                    {site.depthRange && difficulty ? " · " : ""}
+                    {depth ?? ""}
+                    {depth && difficulty ? " · " : ""}
                     {difficulty ?? ""}
                   </p>
                 );

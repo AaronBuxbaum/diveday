@@ -1,18 +1,45 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { confirmBookingIdentity, splitBookingIdentity } from "@/db/bookings";
 import { getDb } from "@/db/client";
+import { repointHeldBooking } from "@/db/identity-repoint";
 import { applyPaidRentalKindsToFit } from "@/db/rental-fit";
 import { type IdentityReleaseOutcome, sendReleasesOnceIdentityKnown } from "@/db/waiver-issue";
 import { saveBookingEmergencyContact } from "@/db/waivers";
 import { emergencyContactSchema } from "@/lib/contact";
+import { checkbox, readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { blankableDiverEmailSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { requireRosterBooking, tripPath } from "./roster-booking";
+
+const confirmIdentityForm = z.object({
+  bookingId: text(),
+  heldContact: text(),
+  applyPaidGear: checkbox(),
+});
+
+const splitIdentityForm = z.object({
+  bookingId: text(),
+  email: text(),
+  phone: text(),
+  fullName: text(),
+  dateOfBirth: text(),
+  adultAttested: checkbox("yes"),
+  sameNameSeatIds: text(),
+});
+
+const repointIdentityForm = z.object({
+  bookingId: text(),
+  toPersonId: text(),
+  sameNameSeatIds: text(),
+});
+
+const rosterBookingForm = z.object({ bookingId: text() });
 
 /**
  * Staff confirm a flagged booking is the person it was attached to (H-13),
@@ -31,20 +58,31 @@ export async function confirmDiverIdentityAction(
 ) {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = String(formData.get("bookingId") ?? "");
+  const form = readForm(confirmIdentityForm, formData);
+  const { bookingId } = form;
   if (!uuidParam(bookingId)) redirect(back);
   const db = await getDb();
   await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
+  // Which emergency contact stands, when the seat's and the record's differ
+  // (dive-domain review H3); anything else posted is no answer.
+  const heldContactPosted = form.heldContact;
+  const heldContact =
+    heldContactPosted === "use_held" || heldContactPosted === "keep_record"
+      ? heldContactPosted
+      : undefined;
   const confirmed = await confirmBookingIdentity(db, {
     shopId: s.user.shopId,
     bookingId,
     actorPersonId: s.user.personId,
+    heldContact,
   });
+  if (confirmed === "contact_differs")
+    revalidateAndRedirect(back, noticeUrl(back, "identity-contact-differs", { bid: bookingId }));
   if (!confirmed) revalidateAndRedirect(back, noticeUrl(back, "invalid", { bid: bookingId }));
   // The gear this seat paid for at checkout waited on the booking while it was
   // held (`paid_rental_kinds`); the staffer's tick carries it to the fit, which
   // is a standing record, so it is theirs to decline.
-  if (formData.get("applyPaidGear") === "on") {
+  if (form.applyPaidGear) {
     await applyPaidRentalKindsToFit(db, { shopId: s.user.shopId, bookingId });
   }
   // A held seat was sent no release (issue #2125); now that the desk knows
@@ -70,14 +108,15 @@ export async function splitDiverIdentityAction(
 ) {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = String(formData.get("bookingId") ?? "");
+  const form = readForm(splitIdentityForm, formData);
+  const { bookingId } = form;
   if (!uuidParam(bookingId)) redirect(back);
   const db = await getDb();
   await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
   // Who the new diver is, beyond a name (issue #2081). The email is checked
   // for shape here; whether another record holds it is the writer's call.
-  const email = blankableDiverEmailSchema.safeParse(String(formData.get("email") ?? "").trim());
-  const phone = diverPhoneSchema.safeParse(String(formData.get("phone") ?? ""));
+  const email = blankableDiverEmailSchema.safeParse(form.email.trim());
+  const phone = diverPhoneSchema.safeParse(form.phone);
   if (!email.success || !phone.success) {
     revalidateAndRedirect(
       back,
@@ -90,16 +129,14 @@ export async function splitDiverIdentityAction(
     shopId: s.user.shopId,
     bookingId,
     actorPersonId: s.user.personId,
-    fullName: String(formData.get("fullName") ?? ""),
-    dateOfBirth: String(formData.get("dateOfBirth") ?? ""),
-    adultAttested: formData.get("adultAttested") === "yes",
+    fullName: form.fullName,
+    dateOfBirth: form.dateOfBirth,
+    adultAttested: form.adultAttested,
     email: email.data,
     phone: phone.data,
     // The bookings the ticked box named. Only ids; the writer moves only those
     // that are still the same guess and still movable.
-    sameNameSeatIds: String(formData.get("sameNameSeatIds") ?? "")
-      .split(",")
-      .filter((id) => uuidParam(id)),
+    sameNameSeatIds: form.sameNameSeatIds.split(",").filter((id) => uuidParam(id)),
   });
   if (!split.ok) {
     revalidateAndRedirect(
@@ -119,6 +156,54 @@ export async function splitDiverIdentityAction(
     noticeUrl(back, IDENTITY_RELEASE_NOTICE.split[release], { bid: bookingId }),
   );
 }
+
+/**
+ * Staff answer "another diver on file" to a seat held because two divers share
+ * its name (issue #2129): the seat moves to the namesake the staffer picked and
+ * **stays held**, so "Same person" is still asked of the new match. The write,
+ * its refusals and its trail are `repointHeldBooking`'s; no release goes out,
+ * because nobody is confirmed yet.
+ */
+export async function repointDiverIdentityAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const back = tripPath(shopSlug, tripId);
+  const s = (await requireShopSurface(shopSlug)).session;
+  const form = readForm(repointIdentityForm, formData);
+  const { bookingId, toPersonId } = form;
+  if (!uuidParam(bookingId)) redirect(back);
+  if (!uuidParam(toPersonId))
+    revalidateAndRedirect(back, noticeUrl(back, "invalid", { bid: bookingId }));
+  const db = await getDb();
+  await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
+  const moved = await repointHeldBooking(db, {
+    shopId: s.user.shopId,
+    bookingId,
+    actorPersonId: s.user.personId,
+    toPersonId,
+    sameNameSeatIds: form.sameNameSeatIds.split(",").filter((id) => uuidParam(id)),
+  });
+  revalidateAndRedirect(
+    back,
+    noticeUrl(back, moved.ok ? "identity-repointed" : REPOINT_REFUSAL_NOTICE[moved.reason], {
+      bid: bookingId,
+    }),
+  );
+}
+
+/** Which notice each refused re-point lands on (`repointHeldBooking`). */
+const REPOINT_REFUSAL_NOTICE = {
+  not_held: "invalid",
+  person_unavailable: "identity-repoint-unavailable",
+  medical_hold: "identity-repoint-medical-hold",
+  already_on_departure: "identity-repoint-already-booked",
+  departure_closed: "identity-departure-closed",
+} as const satisfies Record<
+  Extract<Awaited<ReturnType<typeof repointHeldBooking>>, { ok: false }>["reason"],
+  string
+>;
 
 /**
  * Which notice confirm and split land on, by what sending the owed release
@@ -149,6 +234,8 @@ const SPLIT_REFUSAL_NOTICE = {
   date_of_birth_invalid: "identity-split-dob-invalid",
   age_unstated: "identity-split-age-unstated",
   email_in_use: "identity-split-email-in-use",
+  held_contact_conflict: "identity-split-contact-conflict",
+  departure_closed: "identity-departure-closed",
 } as const satisfies Record<
   Extract<Awaited<ReturnType<typeof splitBookingIdentity>>, { ok: false }>["reason"],
   string
@@ -173,7 +260,7 @@ export async function saveRosterEmergencyContactAction(
 ) {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = String(formData.get("bookingId") ?? "");
+  const { bookingId } = readForm(rosterBookingForm, formData);
   const parsed = emergencyContactSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(back, "invalid"));
   const dbi = await getDb();

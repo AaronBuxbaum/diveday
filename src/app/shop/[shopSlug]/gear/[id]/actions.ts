@@ -20,6 +20,7 @@ import {
   GEAR_SERVICE_KINDS,
   type GearItemKind,
   type GearServiceKind,
+  parseWetsuitThicknessMm,
 } from "@/lib/gear";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
@@ -65,6 +66,22 @@ const unitFormSchema = z.object({
    * leaves the unit's hull as it was. "" is Ashore.
    */
   aboardBoatId: z.union([z.uuid(), z.literal("")]).optional(),
+  /**
+   * Only on a regulator's form (issue #2207): "on", or the hidden "off" posted
+   * beside the box. Absent leaves the unit's answer as it was.
+   */
+  nitroxDesignated: z.enum(["on", "off"]).optional(),
+  /**
+   * Only on a wetsuit's form (issue #2206): whole millimetres, or "" for not
+   * said. Absent leaves the unit's answer as it was; a number out of range is
+   * refused rather than stored as not said.
+   */
+  thicknessMm: z
+    .string()
+    .trim()
+    .max(2)
+    .refine((value) => value === "" || parseWetsuitThicknessMm(value) !== null)
+    .optional(),
 });
 
 export async function updateGearItemAction(formData: FormData) {
@@ -72,12 +89,14 @@ export async function updateGearItemAction(formData: FormData) {
   const parsed = unitFormSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) revalidateAndRedirect(unit, noticeUrl(unit, "invalid"));
 
-  const { aboardBoatId, ...fields } = parsed.data;
+  const { aboardBoatId, nitroxDesignated, thicknessMm, ...fields } = parsed.data;
   const outcome = await updateGearItem(await getDb(), {
     shopId: session.user.shopId,
     gearItemId,
     ...fields,
     aboardBoatId: aboardBoatId === undefined ? undefined : aboardBoatId || null,
+    nitroxDesignated: nitroxDesignated === undefined ? undefined : nitroxDesignated === "on",
+    thicknessMm: thicknessMm === undefined ? undefined : parseWetsuitThicknessMm(thicknessMm),
   });
   if (outcome.ok) revalidateAndRedirect(unit, noticeUrl(unit, "updated"));
   // A boat that is not this shop's live hull is a stale or forged select, not

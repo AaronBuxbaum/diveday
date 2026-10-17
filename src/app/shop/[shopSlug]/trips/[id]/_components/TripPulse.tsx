@@ -11,10 +11,14 @@ export type TripPulseFact = {
    * the trip-filtered Orders index. Never the page this strip is already on.
    */
   href: string;
-  /** Marks the facts that hold the boat up; the words already say so too. */
+  /**
+   * `danger` marks the facts that hold the boat up; `warning` one that does
+   * not but should not read as plain work (nitrox with no verified card, issue
+   * #2549). The words already say so too.
+   */
   /** A stable React key when two facts share a door (two Today rows open the prep list). */
   key?: string;
-  tone?: "danger";
+  tone?: "danger" | "warning";
 };
 
 /**
@@ -78,7 +82,11 @@ export function TripPulse({
               key={fact.href}
               href={fact.href}
               className={`inline-flex min-h-11 w-fit items-center text-base font-medium hover:underline ${
-                fact.tone === "danger" ? "text-danger" : "text-primary"
+                fact.tone === "danger"
+                  ? "text-danger"
+                  : fact.tone === "warning"
+                    ? "text-warning-strong"
+                    : "text-primary"
               }`}
             >
               {fact.text}

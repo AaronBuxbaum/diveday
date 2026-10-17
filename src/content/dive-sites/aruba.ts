@@ -27,7 +27,6 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Tube sponges and coral on the steel, with turtles, morays and octopus around the wreck.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 20 m (65 ft)",
       maxDepthMeters: 20,
       currentNote:
         "Not dived as a drift. Dive boats, jet skis and parasail boats work this coast, so carry an SMB and listen for engines.",
@@ -70,7 +69,6 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Stingrays and turtles over the sand, with grunts and goatfish schooling around the wreckage.",
       difficultyLevel: "beginner",
-      depthRange: "8 m (25 ft)",
       maxDepthMeters: 8,
       currentNote:
         "Shallow and open to the sea. Jet skis, parasail boats and dive boats work the Palm Beach coast, so carry an SMB and listen for engines.",
@@ -108,7 +106,6 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Turtles at the cleaning station, stingrays on the sand, and parrotfish and angelfish around the plane remains.",
       difficultyLevel: "beginner",
-      depthRange: "Up to 16 m (50 ft)",
       maxDepthMeters: 16,
       currentNote: "Local operators run their boat dives here as drifts. Carry an SMB.",
       fitTone: "welcoming",
@@ -146,7 +143,7 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Angelfish and schooling fish around the wreck, with barracuda at the stern and the occasional eagle ray.",
       difficultyLevel: "advanced",
-      depthRange: "15–28 m (50–90 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 28,
       currentNote:
         "Barcadera is a working harbor, so listen for ship engines and keep clear of the channel. Current can be strong, and the dive is run as a drift. The bow leans and the structure is weakening. Carry an SMB.",
@@ -188,7 +185,7 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Anemones and octopus on the inner reef and a nurse shark has been seen near the wreck.",
       difficultyLevel: "intermediate",
-      depthRange: "5–34 m (15–110 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 34,
       currentNote:
         "The outer reef falls past the plan's 18 m floor, to 30 m and beyond. Turn inside the bowl and stay on the inner reef and the wreck.",
@@ -234,7 +231,6 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLife: "Elkhorn coral · crabs · octopus · lobster",
       marineLifeDescription: "Elkhorn and sheet coral give cover to crabs, octopus and lobster.",
       difficultyLevel: "advanced",
-      depthRange: "Up to 18 m (60 ft)",
       maxDepthMeters: 18,
       currentNote:
         "A shore drift in open water with a rough entry and exit. Currents can be strong at times. Carry an SMB. The sources do not say where the drift ends, so agree the exit point or a boat pickup before you enter.",
@@ -276,7 +272,7 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Star-coral castles with snapper around them, and rays and turtles on the slope.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "The entry is over a rocky beach, with surf on this exposed southeast coast. A sloping wall reaches 30 m, so hold the plan's depth.",
@@ -318,7 +314,7 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barracuda under the wings, octopus and morays in the wreckage, and soft corals on the reef around the planes.",
       difficultyLevel: "advanced",
-      depthRange: "14–27 m (45–90 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 27,
       currentNote: "Local operators dive the southeast boat sites as drifts. Carry an SMB.",
       divePlan:
@@ -359,7 +355,6 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLife: "Elephant-ear sponges · tube sponges · vase sponges · turtles",
       marineLifeDescription: "Sponges of many shapes on the slope, with turtles passing through.",
       difficultyLevel: "advanced",
-      depthRange: "Up to 28 m (90 ft)",
       maxDepthMeters: 28,
       currentNote: "Dived as a drift. Carry an SMB.",
       divePlan:
@@ -399,7 +394,6 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLife: "Black coral · sea fans · green moray · eagle rays",
       marineLifeDescription: "Black coral and gorgonians on the reef.",
       difficultyLevel: "advanced",
-      depthRange: "Up to 27 m (90 ft)",
       maxDepthMeters: 27,
       currentNote:
         "Barcadera is a working harbor, so listen for ship engines and keep clear of the channel. Dived as a drift. Carry an SMB.",
@@ -441,7 +435,6 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLife: "Brain coral · sea fans",
       marineLifeDescription: "Brain coral heads and big sea fans that sway in the current.",
       difficultyLevel: "advanced",
-      depthRange: "Up to 28 m (90 ft)",
       maxDepthMeters: 28,
       currentNote:
         "Barcadera is a working harbor, so listen for ship engines and keep clear of the channel. Usually dived as a drift together with the Jane Sea, and the sea fans sway with the current. Carry an SMB.",
@@ -481,7 +474,7 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLife: "Barracuda · schooling fish · hard coral",
       marineLifeDescription: "Barracuda and schools of fish over the coral.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote: "A good drift dive. The reef slopes past the plan's floor. Carry an SMB.",
       divePlan:
@@ -515,7 +508,7 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barracuda over coral formations on the slope, with eagle rays now and then.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "The slope runs to great depths, past the plan's floor. Dived as a drift, so carry an SMB.",
@@ -557,7 +550,7 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLife: "Turtles · moray eels · sea fans · coral",
       marineLifeDescription: "Turtles on the ridge and sea fans in the sand around it.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote: "The ridge runs into deep water, past the plan's floor. Carry an SMB.",
       divePlan:
@@ -598,7 +591,6 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLife: "Hard coral · fire coral · queen angelfish",
       marineLifeDescription: "Hard coral over the slope, with fire coral along the edge.",
       difficultyLevel: "advanced",
-      depthRange: "Up to 27 m (90 ft)",
       maxDepthMeters: 27,
       currentNote:
         "A long swim out, and the dive can turn into a drift depending on the current, so agree the exit point or a boat pickup before you enter. Fire coral grows here, so keep your hands off the reef.",
@@ -636,7 +628,7 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A pair of green morays live at the tug, with soft coral on the slope.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "The reef lies in front of the cruise ship terminal, so no diving while a cruise ship is alongside. Check the berthing schedule first, listen for engines and thrusters, and carry an SMB.",
@@ -672,7 +664,6 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A nursery reef with young fish, lobster and the odd frogfish or seahorse.",
       difficultyLevel: "advanced",
-      depthRange: "Up to 24 m (80 ft)",
       maxDepthMeters: 24,
       currentNote:
         "The entry is over rocky ironshore, so step with care. The reef is shallow, and the barge lies deeper and further out across open water. Carry an SMB.",
@@ -714,7 +705,6 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLife: "Grunts · snapper · blue tang · goatfish",
       marineLifeDescription: "Schools of grunts, snapper and goatfish around the hull.",
       difficultyLevel: "advanced",
-      depthRange: "Up to 20 m (65 ft)",
       maxDepthMeters: 20,
       currentNote:
         "Open water off the Palm Beach coast, where jet skis, parasail boats and dive boats work. Carry an SMB and listen for engines.",
@@ -757,7 +747,7 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLife: "Brain coral · star coral · sea fans",
       marineLifeDescription: "Boulder corals and sea fans on the drop-off.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "A good drift dive. The wall falls past 30 m, with one source reporting about 33 m at one point, so the plan's floor is yours to hold. Carry an SMB.",
@@ -797,7 +787,7 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLife: "Green morays · lobster · coral",
       marineLifeDescription: "Large morays and lobsters among the coral spurs.",
       difficultyLevel: "advanced",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote:
         "Local operators run the southeast boat dives as drifts, and the current decides what you see. Carry an SMB.",
@@ -833,7 +823,7 @@ export const ARUBA: DiveSiteTemplate[] = [
       marineLife: "Spotted moray eels · sea fans · brain coral",
       marineLifeDescription: "Spotted morays are common among the big corals.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote: "The slope runs deeper than the plan's floor. Carry an SMB.",
       divePlan:

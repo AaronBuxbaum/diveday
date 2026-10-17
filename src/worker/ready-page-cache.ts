@@ -28,6 +28,15 @@
  *   that names none (a cancelled booking, a departure called off, a dead link)
  *   clears the copy instead of replacing it, and a `?cancelled=` landing
  *   forgets it outright.
+ *
+ * **A residual we accept** (issue #2478, decided 2026-10-16): a staff cancel
+ * or a blow-out (`src/db/blowouts.ts`) reaches the copy only when the diver
+ * next opens the link online. A phone that never does keeps showing the page
+ * until its date. A push could drop the copy, but divers have no push
+ * subscription (web push serves staff manifests, ADR 20260804-manifest-web-push)
+ * and a diver offline at the marina is the one phone a push cannot reach, so
+ * the date above is the bound. The e2e spec `e2e/ready-offline.spec.ts` pins
+ * the two ends: the copy shows offline, and a `?cancelled=` landing clears it.
  */
 
 import { READY_KEEP_UNTIL_META } from "@/lib/ready-offline";

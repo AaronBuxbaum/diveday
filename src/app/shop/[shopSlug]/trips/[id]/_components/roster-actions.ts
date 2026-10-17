@@ -7,6 +7,7 @@ import type { AppDb } from "@/db/client";
 import { markPartyPaidAction, previewPartyPaymentAction } from "../party-payment-actions";
 import {
   confirmDiverIdentityAction,
+  repointDiverIdentityAction,
   saveRosterEmergencyContactAction,
   splitDiverIdentityAction,
 } from "../roster-identity-actions";
@@ -22,7 +23,7 @@ import {
   updateBookingPickupAction,
 } from "../roster-seating-actions";
 import { markRosterWaiverInPersonAction, sendNewWaiverAction } from "../roster-waiver-actions";
-import { courseRosterActions } from "./course-roster-actions";
+import { courseRosterActions, trainingMarkRosterActions } from "./course-roster-actions";
 import { noteRosterActions } from "./note-roster-actions";
 import { seatMoveFor } from "./seat-move";
 
@@ -37,7 +38,7 @@ export async function tripRosterActions({
   shop,
   shopSlug,
   tripId,
-  trip,
+  overview: { trip, canConfigure },
   locale,
   now,
   mayRetireRefusal,
@@ -46,7 +47,8 @@ export async function tripRosterActions({
   shop: { id: string; timezone: string };
   shopSlug: string;
   tripId: string;
-  trip: { startsAt: Date; course: unknown };
+  /** The departure, and whether this staffer may configure it (`canConfigureTrips`). */
+  overview: { trip: { startsAt: Date; course: unknown }; canConfigure: boolean };
   locale: string;
   now: Date;
   mayRetireRefusal: boolean;
@@ -67,10 +69,12 @@ export async function tripRosterActions({
     // at the counter (dive-domain review 2026-10-05).
     confirmDiverIdentityAction: confirmDiverIdentityAction.bind(null, shopSlug, tripId),
     splitDiverIdentityAction: splitDiverIdentityAction.bind(null, shopSlug, tripId),
+    repointDiverIdentityAction: repointDiverIdentityAction.bind(null, shopSlug, tripId),
     sendNewWaiverAction: mayRetireRefusal
       ? sendNewWaiverAction.bind(null, shopSlug, tripId)
       : undefined,
     ...courseRosterActions(Boolean(trip.course), shopSlug, tripId),
+    ...trainingMarkRosterActions(Boolean(trip.course), canConfigure, shopSlug, tripId),
     ...noteRosterActions(shopSlug, tripId),
     saveRosterEmergencyContactAction: saveRosterEmergencyContactAction.bind(null, shopSlug, tripId),
     updateBookingPickupAction: updateBookingPickupAction.bind(null, shopSlug, tripId),

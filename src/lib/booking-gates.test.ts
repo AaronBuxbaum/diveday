@@ -19,9 +19,16 @@ const charter = {
 const course = { ...charter, courseId: "course-1" };
 
 describe("participantTypeRefusal", () => {
-  it("takes only divers on a course session, from either door", () => {
+  it("takes a non-diver on a course session only at a price the shop named, from either door", () => {
+    // Issue #2226: the snorkeling spouse on the Open Water boat is a priced
+    // seat like any other; an unpriced one is refused even to staff, because
+    // on a course session an unpriced seat is how a student would be written
+    // aboard as a rider.
     for (const actor of ["staff", "public"] as const) {
-      expect(participantTypeRefusal({ actor, participantType: "snorkeler", trip: course })).toBe(
+      expect(
+        participantTypeRefusal({ actor, participantType: "snorkeler", trip: course }),
+      ).toBeNull();
+      expect(participantTypeRefusal({ actor, participantType: "rider", trip: course })).toBe(
         "participant_type_unavailable",
       );
       expect(participantTypeRefusal({ actor, participantType: "diver", trip: course })).toBeNull();
@@ -126,12 +133,20 @@ describe("bookingIdentityColumns", () => {
       identityUnconfirmedAt: now,
       identityBookedAs: "Sam Reef",
       identityMatchedBy: "shared_email",
+      heldEmergencyContactName: null,
+      heldEmergencyContactPhone: null,
     });
   });
 
   it("clears every column for a confirmed match, whatever claim rode along", () => {
     expect(
       bookingIdentityColumns(false, { bookedAs: "Sam Reef", matchedBy: "picked_name" }, now),
-    ).toEqual({ identityUnconfirmedAt: null, identityBookedAs: null, identityMatchedBy: null });
+    ).toEqual({
+      identityUnconfirmedAt: null,
+      identityBookedAs: null,
+      identityMatchedBy: null,
+      heldEmergencyContactName: null,
+      heldEmergencyContactPhone: null,
+    });
   });
 });

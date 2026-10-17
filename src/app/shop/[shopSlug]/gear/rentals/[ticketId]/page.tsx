@@ -12,7 +12,12 @@ import { controlClass, Field } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { counterRentalWaiverStandings, getCounterRentalTicket } from "@/db/gear-counter-rentals";
 import { getOrder } from "@/db/orders";
-import { gearItemKindLabel, gearPhaseLabel, gearReturnOutcomeLabel } from "@/i18n/gear-labels";
+import {
+  gearItemKindLabel,
+  gearPhaseLabel,
+  gearReturnOutcomeLabel,
+  tankFillLabel,
+} from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
@@ -31,6 +36,7 @@ import {
   returnCounterRentalAction,
 } from "../actions";
 import { RentalTicketPayment } from "./_components/RentalTicketPayment";
+import { TankGas } from "./_components/TankGas";
 
 export const instant = true;
 
@@ -63,6 +69,10 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey; counted?
   invoiced: { tone: "warning", key: "counterRentals.ticket.notice.invoiced" },
   released: { tone: "success", key: "counterRentals.ticket.notice.released" },
   "not-found": { tone: "warning", key: "counterRentals.ticket.notice.notFound" },
+  "fill-corrected": { tone: "success", key: "counterRentals.ticket.notice.fillCorrected" },
+  "fill-invalid": { tone: "warning", key: "counterRentals.new.notice.fillInvalid" },
+  "fill-not-tank": { tone: "warning", key: "counterRentals.ticket.notice.fillRefused" },
+  "no-nitrox-card": { tone: "warning", key: "counterRentals.new.notice.noNitroxCard" },
   "concern-needs-words": {
     tone: "warning",
     key: "counterRentals.ticket.notice.concernNeedsWords",
@@ -197,6 +207,8 @@ export default async function CounterRentalTicketPage({
                 <span className="text-muted">
                   {gearItemKindLabel(t, unit.kind)}
                   {unit.size ? ` · ${unit.size}` : ""}
+                  {/* The recorded gas prints on the ticket (#2257). */}
+                  {unit.fillO2Percent !== null ? ` · ${tankFillLabel(t, unit.fillO2Percent)}` : ""}
                 </span>
                 <span className="col-start-2 text-sm text-muted sm:col-start-auto print:hidden">
                   {gearPhaseLabel(
@@ -208,6 +220,7 @@ export default async function CounterRentalTicketPage({
               </li>
             ))}
           </ul>
+          <TankGas t={t} ticketId={ticket.ticketId} units={ticket.units} />
         </section>
 
         {onWall.length > 0 || out.length > 0 ? (

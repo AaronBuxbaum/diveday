@@ -421,6 +421,7 @@ const READINESS_BLOCKER_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   identity_unconfirmed: "shared.readiness.blockers.identityUnconfirmed",
   waiver_not_sent: "shared.readiness.blockers.waiverNotSent",
   waiver_lapsed: "shared.readiness.blockers.waiverLapsed",
+  waiver_runs_out: "shared.readiness.blockers.waiverRunsOut",
   waiver_pending: "shared.readiness.blockers.waiverPending",
   waiver_expired: "shared.readiness.blockers.waiverExpired",
   medical_review: "shared.readiness.blockers.medicalReview",
@@ -428,6 +429,7 @@ const READINESS_BLOCKER_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   guardian_signature_missing: "shared.readiness.blockers.guardianSignatureMissing",
   course_form_unsigned: "shared.readiness.blockers.courseFormUnsigned",
   course_form_guardian_missing: "shared.readiness.blockers.courseFormGuardianMissing",
+  training_mark_invalid: "shared.readiness.blockers.trainingMarkInvalid",
   certification_missing: "shared.readiness.blockers.certificationMissing",
   certification_pending: "shared.readiness.blockers.certificationPending",
   certification_self_declared: "shared.readiness.blockers.certificationSelfDeclared",
@@ -457,6 +459,13 @@ export function readinessBlockerText(t: StaffTranslator, blocker: ReadinessBlock
   const params = blocker.params;
   // The form's own title, as the shop wrote it: "which form" is the whole fix.
   if (blocker.code === "course_form_unsigned" || blocker.code === "course_form_guardian_missing") {
+    // Asked only because no birthday is on file: the birthday is a fix too.
+    if (params?.formMaxAge !== undefined) {
+      return t("shared.readiness.blockers.courseFormAgeUnknown", {
+        form: params.formTitle ?? "",
+        maxAge: params.formMaxAge,
+      });
+    }
     return t(key, { form: params?.formTitle ?? "" });
   }
   // Naming the card the diver does hold is what makes "not certified" a fact a

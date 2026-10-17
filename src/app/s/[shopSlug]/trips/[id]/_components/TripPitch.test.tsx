@@ -71,7 +71,6 @@ function briefing(overrides: Partial<DiveBriefing> = {}): DiveBriefing {
       routePoints: null,
     },
     creatures: [],
-    moments: [],
     ...overrides,
   } as unknown as DiveBriefing;
 }

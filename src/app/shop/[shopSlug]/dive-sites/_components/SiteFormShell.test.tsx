@@ -13,6 +13,7 @@ const MESSAGES: Record<DiveSiteFormError, string> = {
   coordinatesIncomplete: "Add both forecast coordinates, or leave both blank.",
   tideStationInvalid: "A NOAA tide station id is seven digits.",
   depthTooDeep: "That maximum depth is deeper than any dive site.",
+  depthRangeInvalid: "The shallowest depth needs a maximum depth, and can’t be deeper than it.",
   images: "One of those image links couldn’t be used.",
   imagesUnconfigured: "Image hosting isn’t set up for this shop yet.",
   planningNoteTooLong: "Keep the planning note under 280 characters.",

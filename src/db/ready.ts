@@ -300,6 +300,12 @@ export type ReadyPageData = {
    */
   participantType: ParticipantType;
   /**
+   * The seat may owe course forms: it is on a course session, or staff marked
+   * it as a training dive for a course seat (issue #2275), whose forms are
+   * then signed on the enrollment.
+   */
+  asksCourseForms: boolean;
+  /**
    * What cancelling right now would do to any payment already captured —
    * shown before the diver commits, mirroring `refundBookingOnCancellation`'s
    * decision without moving any money. Never trust this for the actual
@@ -424,6 +430,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       personId: bookings.personId,
       wantsNitrox: bookings.wantsNitrox,
       participantType: bookings.participantType,
+      trainingEnrollmentBookingId: bookings.trainingEnrollmentBookingId,
       lastDivedBand: bookings.lastDivedBand,
       welcomeSharedAt: bookings.welcomeSharedAt,
       welcomeHello: bookings.welcomeHello,
@@ -497,6 +504,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     nitroxOnFile,
     welcomeInputs,
     fitConfirmation,
+    moveAskStands,
   ] = await Promise.all([
     getTripWithBookedOnce(db, row.shopId, row.tripId),
     reEntryOffersOpen ? hasActiveRefresherCourse(db, row.shopId) : false,
@@ -527,6 +535,15 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     // Read here rather than folded into `getRentalFit`'s row, because the
     // staffer's name comes from a join this page is the only caller of.
     fitConfirmationForDiver(db, row.shopId, row.personId),
+    // Whether an ask to move stands (H-126), read here with the rest rather
+    // than after the cancel check it is used behind: that was two round trips
+    // more for every seat past the free window. A seat that cannot be
+    // released, or whose identity is held, never shows it.
+    row.status === "booked" &&
+    !hasSailed(row.tripStartsAt, now) &&
+    row.identityUnconfirmedAt === null
+      ? hasMoveAsk(db, row.shopId, bookingId, row.tripId)
+      : false,
   ]);
   if (!trip) return null;
   return {
@@ -544,6 +561,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     welcomeInputs,
     fitConfirmation,
     materialsDoneElsewhere,
+    moveAskStands,
   };
 }
 
@@ -578,6 +596,7 @@ export async function getReadyPageData(
     welcomeInputs,
     fitConfirmation,
     materialsDoneElsewhere,
+    moveAskStands,
   } = page;
   // `partly_refunded` settles too, or this page would invite a diver who has
   // already paid — and been handed part of it back — to pay the full price a
@@ -613,6 +632,7 @@ export async function getReadyPageData(
         : "forfeit"
       : "no_policy";
 
+  const identityHeld = row.identityUnconfirmedAt !== null;
   const canCancelBooking =
     row.status === "booked" &&
     !hasSailed(trip.startsAt, now) &&
@@ -626,7 +646,6 @@ export async function getReadyPageData(
         bookingIds: [bookingId],
       })
     ).has(bookingId);
-  const identityHeld = row.identityUnconfirmedAt !== null;
   // **A lead the page could charge pays before adding anyone** (security
   // review of layer 8, D3). The link is shared by design, so without this a
   // holder could add unpaid seats until the boat read full. Settled, or a
@@ -639,11 +658,7 @@ export async function getReadyPageData(
     canCancelBooking &&
     !identityHeld &&
     (cancelPreview === "forfeit" || cancelPreview === "no_policy");
-  const moveAsk: ReadyPageData["moveAsk"] = moveAskable
-    ? (await hasMoveAsk(db, row.shopId, bookingId))
-      ? "asked"
-      : "open"
-    : null;
+  const moveAsk: ReadyPageData["moveAsk"] = moveAskable ? (moveAskStands ? "asked" : "open") : null;
 
   const canPayPartySeats =
     canCancelBooking &&
@@ -694,6 +709,7 @@ export async function getReadyPageData(
     fitConfirmation: identityHeld ? null : fitConfirmation,
     wantsNitrox: row.wantsNitrox,
     participantType: row.participantType,
+    asksCourseForms: Boolean(trip.course) || row.trainingEnrollmentBookingId !== null,
     lastDivedBand: row.lastDivedBand,
     diveIntent: row.diveIntent,
     reEntryAsk: row.reEntryAsk,

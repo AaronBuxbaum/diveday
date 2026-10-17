@@ -104,7 +104,8 @@
   "moneyOut": {
     "refunded": "Refunded {amount} of this month’s payments",
     "discounted": "Discount codes took {amount} off",
-    "fees": "Stripe fees {amount}, on this month’s payouts"
+    "fees": "Stripe fees {amount}, on this month’s payouts",
+    "disputesLost": "Card disputes lost this month took back {amount}"
   },
   "emptySeats": {
     "heading": "Departures that left with empty seats",

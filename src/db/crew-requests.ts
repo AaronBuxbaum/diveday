@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gte, inArray, isNull, lte, ne } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lte, ne } from "drizzle-orm";
 
 import { STAFF_ROLES } from "@/lib/authz";
 import type { CalendarDate } from "@/lib/calendar-date";
@@ -25,6 +25,7 @@ import {
 } from "./schema";
 import { ratingCredentialsByPerson } from "./staff-credentials";
 import { liveTrip } from "./trips-live";
+import { bookedDiversCount } from "./trips-queries";
 
 /**
  * **The crew's own writes on the staffing week** (issue #1235).
@@ -326,7 +327,8 @@ export async function tripRatioGapNeedsInstructor(
   tripId: string,
 ): Promise<boolean> {
   const [row] = await db
-    .select({ course: courses, booked: count(bookings.id) })
+    // The students, its divers (G5 of #2226): a priced rider is a passenger.
+    .select({ course: courses, booked: bookedDiversCount() })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))

@@ -32,6 +32,7 @@ import {
   crewAssignmentRequests,
   crewAvailabilityBlocks,
   customerGearItems,
+  departureBoatSafetySnapshots,
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
@@ -220,6 +221,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   // Events before the shop's own item list they reference.
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
+  await db
+    .delete(departureBoatSafetySnapshots)
+    .where(eq(departureBoatSafetySnapshots.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
   await db.delete(preDepartureChecklistItems).where(eq(preDepartureChecklistItems.shopId, shopId));
   // The close-out trail references people and the shop, so it must clear
@@ -321,6 +325,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
   await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));
+  // Retired (#2330) but still declared: an old row would hold its site's FK.
   await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
   await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
   // A species request points at the site the staffer was writing when they hit

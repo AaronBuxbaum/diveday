@@ -36,9 +36,9 @@ The harness discipline that contains it, which any new capture code must keep:
   attachment the CI log prints. A click stuck on "waiting for element to be visible, enabled and
   stable" with no line after it, a failure screenshot that never arrives, and that verdict are the
   wedge (certifications.spec.ts, run 38783640609); the same click with an answering page is yours.
-- **The literal phrase `wedged, not slow` is load-bearing.** ci.yml's visual job greps the
-  capture log for it: a failed capture step carrying that verdict gets exactly one
-  `--last-failed` rerun, because a proven-wedged browser is the one failure a rerun cannot mask.
+- **The literal phrase `wedged, not slow` is load-bearing.** ci.yml's visual job and the
+  functional `Playwright shard` step (#2633) grep their logs for it: a failed step carrying that
+  verdict gets exactly one `--last-failed` rerun, because a proven-wedged browser is the one failure a rerun cannot mask.
   Any failure without the verdict stays red on the first attempt — this is not a retry policy,
   and `retries: 0` remains the suite's contract. Reword the phrase and the gate silently dies.
 - **Why containment matters this much:** one wedged capture fails its shard, a failed shard

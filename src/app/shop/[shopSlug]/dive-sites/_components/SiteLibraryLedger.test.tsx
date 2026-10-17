@@ -32,6 +32,8 @@ function site(overrides: Partial<Site> = {}): Site {
     difficultyLevel: null,
     locationName: "Key Largo",
     depthRange: null,
+    depthMinMeters: null,
+    maxDepthMeters: null,
     currentNote: null,
     fitTone: null,
     minimumCertificationLevel: null,
@@ -53,6 +55,7 @@ function renderLedger(
   options: {
     catalog?: { href: string; count: number } | null;
     currentTemplateVersion?: Map<string, number>;
+    depthUnit?: "meters" | "feet";
   } = {},
 ) {
   return render(
@@ -61,6 +64,7 @@ function renderLedger(
       shopSlug="blue-mantis"
       t={t}
       diverT={diverT}
+      depthUnit={options.depthUnit ?? "meters"}
       currentTemplateVersion={options.currentTemplateVersion ?? new Map()}
       catalog={options.catalog === undefined ? { href: "/catalog", count: 34 } : options.catalog}
     />,
@@ -223,8 +227,20 @@ describe("the row", () => {
   });
 
   it("reads location, then depth, on one meta line", () => {
-    renderRow({ locationName: "Key Largo", depthRange: "8–12 m" });
+    renderRow({ locationName: "Key Largo", depthMinMeters: 8, maxDepthMeters: 12 });
     expect(screen.getByText("Key Largo · 8–12 m")).toBeInTheDocument();
+  });
+
+  it("reads the depth in the shop's unit, and the shop's note never names the other one", () => {
+    renderRow(
+      { locationName: "Key Largo", depthMinMeters: 8, maxDepthMeters: 12, depthRange: "8–12 m" },
+      { depthUnit: "feet" },
+    );
+    expect(screen.getByText("Key Largo · 26–39 ft")).toBeInTheDocument();
+    cleanup();
+    // With no depth recorded, the shop's words are all there is.
+    renderRow({ locationName: "Key Largo", depthRange: "off the ledge" }, { depthUnit: "feet" });
+    expect(screen.getByText("Key Largo · off the ledge")).toBeInTheDocument();
   });
 
   /**

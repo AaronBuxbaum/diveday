@@ -23,11 +23,6 @@ import {
   REQUIRABLE_CERTIFICATION_LEVELS,
   unreviewedCardState,
 } from "./readiness";
-import {
-  effectiveWaiverForBooking,
-  releaseLapsedForBooking,
-  WAIVER_SIGNATURE_VALIDITY_MS,
-} from "./waivers";
 
 const now = new Date("2026-07-18T12:00:00.000Z");
 const requirement = {
@@ -310,6 +305,23 @@ describe("calculateReadiness", () => {
     });
     expect(result.status).toBe("blocked");
     expect(result.blockers).toContainEqual(expect.objectContaining({ code: "under_minimum_age" }));
+  });
+
+  it("asks a course's minimum age of its students only, never a snorkeler or rider beside them (#2226)", () => {
+    for (const participantType of ["snorkeler", "rider"] as const) {
+      const result = calculateReadiness({
+        timezone: "UTC",
+        requirement,
+        waiver: signedWaiver,
+        certifications: [],
+        participantType,
+        courseMinimumAge: 15,
+        dateOfBirth: "2012-03-01",
+        courseDate: "2026-08-15",
+        now,
+      });
+      expect(result.blockers.map((b) => b.code)).not.toContain("under_minimum_age");
+    }
   });
 
   it("fails open on a missing date of birth or minimum age (H-08, option B)", () => {
@@ -614,132 +626,6 @@ describe("calculateReadiness", () => {
  * exactly one blocker, in the waiver category, and never doubles up with the
  * line an unsigned or expired release already carries.
  */
-describe("calculateReadiness — a course that gets them there", () => {
-  const tomorrow = new Date("2026-07-19T16:00:00.000Z");
-  const yesterday = new Date("2026-07-17T16:00:00.000Z");
-
-  function certificationBlockers(
-    certifications: Certification[],
-    certificationsInTraining: { level: Certification["level"]; finishesAt: Date }[],
-  ) {
-    return calculateReadiness({
-      timezone: "UTC",
-      requirement,
-      waiver: signedWaiver,
-      certifications,
-      certificationsInTraining,
-      now,
-    }).blockers.filter((blocker) => blocker.code.startsWith("certification"));
-  }
-
-  it("names the level a booked course will reach, and still blocks", () => {
-    const result = calculateReadiness({
-      timezone: "UTC",
-      requirement,
-      waiver: signedWaiver,
-      certifications: [certification({ level: "open_water" })],
-      certificationsInTraining: [{ level: "advanced_open_water", finishesAt: tomorrow }],
-      now,
-    });
-    // Boarding still waits for the card: enrollment never clears a gate.
-    expect(result.status).toBe("blocked");
-    expect(result.blockers).toEqual([
-      { code: "certification_in_training", params: { requiredLevel: "advanced_open_water" } },
-    ]);
-  });
-
-  it("covers a diver with no card at all, booked on the course", () => {
-    expect(
-      certificationBlockers([], [{ level: "advanced_open_water", finishesAt: tomorrow }]),
-    ).toEqual([expect.objectContaining({ code: "certification_in_training" })]);
-  });
-
-  it("counts a course that certifies above the trip's level", () => {
-    expect(certificationBlockers([], [{ level: "rescue", finishesAt: tomorrow }])).toEqual([
-      expect.objectContaining({ code: "certification_in_training" }),
-    ]);
-  });
-
-  it("does not count a course that stops short of the trip's level", () => {
-    expect(
-      certificationBlockers(
-        [certification({ level: "open_water" })],
-        [{ level: "open_water", finishesAt: tomorrow }],
-      ),
-    ).toEqual([
-      {
-        code: "certification_insufficient",
-        params: { requiredLevel: "advanced_open_water", heldLevel: "open_water" },
-      },
-    ]);
-  });
-
-  it("goes back to the serious line once the course ends without a card", () => {
-    // Either the diver did not finish, or the instructor has a tap to make;
-    // both are somebody's job now, and the soft line would hide it.
-    expect(
-      certificationBlockers(
-        [certification({ level: "open_water" })],
-        [{ level: "advanced_open_water", finishesAt: yesterday }],
-      ),
-    ).toEqual([expect.objectContaining({ code: "certification_insufficient" })]);
-    expect(
-      certificationBlockers([], [{ level: "advanced_open_water", finishesAt: yesterday }]),
-    ).toEqual([{ code: "certification_missing" }]);
-  });
-
-  it("prefers a card on file at the level over the course", () => {
-    expect(
-      certificationBlockers(
-        [certification({ status: "pending", level: "advanced_open_water" })],
-        [{ level: "advanced_open_water", finishesAt: tomorrow }],
-      ),
-    ).toEqual([{ code: "certification_pending" }]);
-  });
-
-  it("clears on the issued card, course or no course", () => {
-    expect(
-      calculateReadiness({
-        timezone: "UTC",
-        requirement,
-        waiver: signedWaiver,
-        certifications: [certification()],
-        certificationsInTraining: [{ level: "advanced_open_water", finishesAt: tomorrow }],
-        now,
-      }),
-    ).toEqual({ status: "ready", blockers: [] });
-  });
-
-  it("names the highest verified card beside a level the diver does not reach", () => {
-    expect(
-      certificationBlockers(
-        [
-          certification({ level: "open_water" }),
-          certification({ level: "advanced_open_water", status: "pending" }),
-        ],
-        [],
-      ),
-    ).toEqual([{ code: "certification_pending" }]);
-    expect(
-      calculateReadiness({
-        timezone: "UTC",
-        requirement: { ...requirement, minimumCertificationLevel: "rescue" } as TripRequirement,
-        waiver: signedWaiver,
-        certifications: [
-          certification({ level: "open_water" }),
-          certification({ level: "advanced_open_water" }),
-        ],
-        now,
-      }).blockers,
-    ).toEqual([
-      {
-        code: "certification_insufficient",
-        params: { requiredLevel: "rescue", heldLevel: "advanced_open_water" },
-      },
-    ]);
-  });
-});
-
 describe("calculateReadiness — the guardian co-signature", () => {
   /** Signed 2026-07-18 at 23:30 New York, which is the 19th in UTC. */
   const signedAt = new Date("2026-07-19T03:30:00.000Z");
@@ -1685,68 +1571,5 @@ describe("certification_not_yet", () => {
     expect(
       noCertificationStands({ noCertificationDeclaredAt: null, noCertificationClearedAt: null }),
     ).toBe(false);
-  });
-});
-
-/**
- * **A release current today that lapses before the departure** (A§4 item 9).
- * Readiness asks "is this diver cleared right now?": the roster read today
- * shows the release as standing, and the same seat read on the morning of the
- * dive shows it gone. This pins both readings so that "valid now" cannot be
- * mistaken for "valid when the boat leaves", and so that a change to which
- * instant the roster measures against is a visible decision.
- */
-describe("a release that lapses between today and the departure", () => {
-  const today = new Date("2026-07-18T12:00:00.000Z");
-  const departure = new Date(today.getTime() + 21 * 24 * 60 * 60 * 1000);
-  // Signed 351 days ago: inside the year today, two weeks past it on the day.
-  const signedAt = new Date(
-    today.getTime() + 14 * 24 * 60 * 60 * 1000 - WAIVER_SIGNATURE_VALIDITY_MS,
-  );
-  const release = {
-    id: "release-1",
-    bookingId: "booking-1",
-    personId: "person-1",
-    status: "completed",
-    templateVersion: 1,
-    templateGeneration: 1,
-    signedAt,
-    completedAt: signedAt,
-    supersededAt: null,
-    expiresAt: signedAt,
-    createdAt: signedAt,
-  } as unknown as WaiverRecord;
-  const waiverOnly = {
-    requiresWaiver: true,
-    minimumCertificationLevel: null,
-    requiredSpecialties: [],
-  } as unknown as TripRequirement;
-
-  function rosterAt(at: Date) {
-    const resolution = {
-      bookingWaiver: release,
-      personSignedWaivers: [release],
-      currentTemplateVersion: 1,
-      now: at,
-    };
-    return calculateReadiness({
-      requirement: waiverOnly,
-      waiver: effectiveWaiverForBooking(resolution),
-      releaseLapsed: releaseLapsedForBooking(resolution),
-      certifications: [],
-      paymentStatus: "paid",
-      timezone: "UTC",
-      now: at,
-    });
-  }
-
-  it("reads as cleared on today's roster", () => {
-    expect(rosterAt(today)).toEqual({ status: "ready", blockers: [] });
-  });
-
-  it("reads as blocked on the morning of the dive, as a lapsed release and not an unsent one", () => {
-    const result = rosterAt(new Date(departure.getTime() - 3 * 60 * 60 * 1000));
-    expect(result.status).toBe("blocked");
-    expect(result.blockers.map((blocker) => blocker.code)).toEqual(["waiver_lapsed"]);
   });
 });

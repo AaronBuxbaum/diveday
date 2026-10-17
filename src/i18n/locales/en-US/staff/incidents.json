@@ -111,6 +111,7 @@
     "title": "File the report",
     "description": "Filing puts your name and the time on it. After that it does not change.",
     "submit": "File report",
+    "missingDiverWarning": "Filing tells the owners now. Is the diver still missing?",
     "pending": "Filing…",
     "needs": "Before it can be filed, it needs:",
     "gap": {
@@ -126,6 +127,8 @@
     }
   },
   "read": {
+    "ownersAlerted": "Owners alerted",
+    "ownersNotReached": "Not reached yet. Call them.",
     "when": "When",
     "where": "Where",
     "notAnswered": "Not answered",

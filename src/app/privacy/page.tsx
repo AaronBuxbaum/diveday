@@ -219,6 +219,7 @@ async function PrivacyBody({ locale }: { locale: DiverLocale }) {
           ]}
         />
         <p>{p("keep.safety")}</p>
+        <p>{p("keep.history")}</p>
         <LegalTermList items={[{ term: p("keep.reviewTerm"), body: p("keep.reviewBody") }]} />
       </LegalSection>
 

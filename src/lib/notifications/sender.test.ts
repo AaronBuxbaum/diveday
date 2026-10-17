@@ -44,6 +44,17 @@ describe("shopSenderOf (ADR 20260902-sender-standards-for-ses)", () => {
     expect(shopSenderOf({ ...nothing, isDemo: true }, off)).toEqual({ demoShop: true });
   });
 
+  // Issue #2450: a name that could pass for a brand is held for review.
+  it("marks a shop whose name is under review, until a later clearing", () => {
+    const flagged = new Date("2026-10-01T12:00:00.000Z");
+    const held = { ...nothing, nameFlaggedAt: flagged, nameClearedAt: null };
+    expect(shopSenderOf(held, off)).toEqual({ nameUnderReview: true });
+    const cleared = { ...held, nameClearedAt: new Date("2026-10-02T12:00:00.000Z") };
+    expect(shopSenderOf(cleared, off)).toBeUndefined();
+    const reflagged = { ...cleared, nameFlaggedAt: new Date("2026-10-03T12:00:00.000Z") };
+    expect(shopSenderOf(reflagged, off)).toEqual({ nameUnderReview: true });
+  });
+
   // Issue #1288: a typed address is not a proven one. Until the shop opens the
   // link sent to it, diver replies must not be routed there.
   it("withholds Reply-To from an address the shop has not confirmed", () => {

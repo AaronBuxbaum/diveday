@@ -132,6 +132,8 @@ export async function addDiverNote(
 export type DiverActivityCode =
   | "identity_confirmed"
   | "identity_split_off"
+  | "identity_repointed_off"
+  | "identity_repointed_onto"
   | "medical_clearance_opened"
   | "medical_answers_read"
   | "date_of_birth_cleared_as_adult"
@@ -502,7 +504,7 @@ export type SeatChangeCode = Exclude<
 
 type OtherTripActivityEntry =
   | {
-      code: "identity_confirmed" | "identity_split" | "departure_offered";
+      code: "identity_confirmed" | "identity_split" | "identity_repointed" | "departure_offered";
       diver: string;
     }
   | {
@@ -514,6 +516,8 @@ type OtherTripActivityEntry =
       certCheck: "none" | "cleared" | "overridden";
       /** The certification blocker codes the seat stopped facing, comma-joined; empty for none. */
       cleared: string;
+      /** Whether the change was made after the time on the board (issue #2225). */
+      atSea: "yes" | "no";
     }
   | {
       code:

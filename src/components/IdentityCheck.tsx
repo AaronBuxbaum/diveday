@@ -14,6 +14,12 @@ export type IdentityCheckWords = {
   adultAttested: string;
   split: string;
   splitting: string;
+  another: string;
+  anotherLegend: string;
+  anotherNote: string;
+  openRecord: string;
+  repoint: string;
+  repointing: string;
 };
 
 /**
@@ -39,6 +45,10 @@ export type IdentityCheckWords = {
  * record. It starts unticked: two strangers can share a name, and only the
  * staffer can tell.
  *
+ * A seat held because the shop holds more than one diver with its name has a
+ * third answer, "Another diver on file" (issue #2129): the other people with
+ * that name, by name only and never pre-picked, even when there is one.
+ *
  * Nothing from the matched record is printed here: the flag gates disclosure
  * as well as boarding (security review 2026-09-11). Every field starts empty
  * but the name, which is what the seat was booked under.
@@ -52,6 +62,8 @@ export function IdentityCheck({
   asksDateOfBirth,
   maxDateOfBirth,
   sameNameSeats,
+  otherPeople,
+  repointAction,
   className = "",
 }: {
   bookingId: string;
@@ -70,6 +82,15 @@ export function IdentityCheck({
    * posts. Absent, no box is drawn: there is nothing else to move.
    */
   sameNameSeats?: { label: string; bookingIds: ReadonlyArray<string> };
+  /**
+   * **The third answer** (issue #2129, Aaron 2026-10-13, option a): on a seat
+   * held because the shop holds more than one diver with its name, the shop's
+   * other live people with that name, **by name only**, each with a link to
+   * their record for the staffer to check. Picking one moves the seat there
+   * and keeps it held (`repointHeldBooking`). Absent or empty, it is not drawn.
+   */
+  otherPeople?: ReadonlyArray<{ personId: string; fullName: string; href: string }>;
+  repointAction?: (formData: FormData) => void | Promise<void>;
   className?: string;
 }) {
   return (
@@ -141,6 +162,56 @@ export function IdentityCheck({
           </SubmitButton>
         </form>
       </details>
+      {otherPeople && otherPeople.length > 0 && repointAction ? (
+        <details className="group/repoint">
+          <summary
+            className={buttonClass({
+              variant: "secondary",
+              size: "sm",
+              className: "cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+            })}
+          >
+            {words.another}
+          </summary>
+          <form action={repointAction} className="mt-2 flex flex-col gap-3 sm:w-96">
+            <input type="hidden" name="bookingId" value={bookingId} />
+            <fieldset className="flex flex-col gap-1">
+              <legend className="pb-1 text-sm font-semibold">{words.anotherLegend}</legend>
+              {otherPeople.map((other) => (
+                <div key={other.personId} className="flex flex-wrap items-center gap-x-3">
+                  <ChoiceRow type="radio" name="toPersonId" value={other.personId} required>
+                    {other.fullName}
+                  </ChoiceRow>
+                  <a
+                    href={other.href}
+                    target="_blank"
+                    rel="noopener"
+                    className={buttonClass({ variant: "link", size: "sm", flush: true })}
+                  >
+                    {words.openRecord}
+                  </a>
+                </div>
+              ))}
+            </fieldset>
+            {sameNameSeats ? (
+              <ChoiceRow
+                type="checkbox"
+                name="sameNameSeatIds"
+                value={sameNameSeats.bookingIds.join(",")}
+              >
+                {sameNameSeats.label}
+              </ChoiceRow>
+            ) : null}
+            <p className="text-sm text-muted">{words.anotherNote}</p>
+            <SubmitButton
+              pendingLabel={words.repointing}
+              className={buttonClass({ variant: "primary", size: "sm", className: "self-start" })}
+            >
+              {words.repoint}
+            </SubmitButton>
+          </form>
+        </details>
+      ) : null}
     </div>
   );
 }

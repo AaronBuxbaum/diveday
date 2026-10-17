@@ -50,6 +50,8 @@
     "units": {
       "meters": "{value} m",
       "feet": "{value} ft",
+      "metersRange": "{min}–{max} m",
+      "feetRange": "{min}–{max} ft",
       "celsius": "{value}°C",
       "fahrenheit": "{value}°F"
     }
@@ -149,7 +151,6 @@
     "sharedDemoNote": "This is the shared demo: anyone trying it can see what you type here.",
     "theDay": "The day",
     "lookFor": "Look for",
-    "momentsHeading": "Moments from divers",
     "theRoute": "{count, plural, one {The route} other {The routes}}",
     "conditionsWater": "{value} water",
     "conditionsVisibility": "{value} visibility",
@@ -278,6 +279,7 @@
     "requirementNitrox": "a nitrox certification",
     "requirementMarkerNitrox": "Nitrox",
     "requirementNote": "This charter is for divers with {list}.",
+    "requirementAskShop": "Not yet at that level? Ask the shop.",
     "conditionsHoldHeading": "This trip is on a conditions hold",
     "conditionsHoldBody": "Weather is being watched. Existing seats stay held; new bookings are paused for now.",
     "minimumSeatsNotice": "This one runs with at least {minimum, plural, one {# diver} other {# divers}}. If it hasn’t got there by {deadline}, the shop cancels it and emails everyone booked, so you’ll know either way, in time to make another plan.",
@@ -907,6 +909,7 @@
       "waiverPending": "Sign your waiver. It only takes about two minutes.",
       "waiverExpired": "Your waiver link ran out. Grab a fresh one; it only takes about two minutes.",
       "waiverLapsed": "Your signed waiver has lapsed. Grab a fresh link and sign again; it only takes about two minutes.",
+      "waiverRunsOut": "Your signed waiver runs out before the trip. Grab a fresh link and sign again; it only takes about two minutes.",
       "medicalReview": "Thanks for signing. One medical answer needs a closer look. A doctor’s sign-off may be required, and your shop will be in touch about next steps.",
       "guardianSignatureMissing": "A parent or legal guardian also has to sign the waiver. Grab a fresh link and sign it together.",
       "certificationMissing": "Add your certification details to your record.",
@@ -928,7 +931,8 @@
       "paymentDone": "Paid up. Thank you.",
       "certificationMultipleNeeded": "This dive needs more than one certification on file. Share the details for each one it calls for, and your shop will confirm you’re set.",
       "courseFormUnsigned": "Your course has forms for you to sign.",
-      "courseFormGuardianMissing": "A parent or legal guardian has to sign your course forms with you."
+      "courseFormGuardianMissing": "A parent or legal guardian has to sign your course forms with you.",
+      "trainingMarkInvalid": "Your shop needs to check your course details before you’re cleared. They’ll be in touch if anything’s needed."
     },
     "gearAndSetup": "Gear and setup",
     "dockCallLine": "Aim to be at the dock by {time}, {dock} before we sail.",
@@ -1183,13 +1187,13 @@
     "privacyNote": "Only you and the shop see what you enter here. Your organizer just sees that the seat is claimed.",
     "unavailableHeading": "This link isn’t available",
     "unavailableBody": "It may already have been used, replaced with a newer link, or expired. Ask your organizer for a fresh link, or contact the shop.",
+    "sentHeading": "Check your email",
+    "sentBody": "We’ve sent a note to the address you gave. It says what happens next.",
     "expiredBody": "Whoever sent you this link can tell you what’s happened with the seat.",
     "errors": {
       "checkFields": "Check the highlighted fields and try again.",
-      "unable": "This seat can’t be claimed with these details. Contact the shop and they can sort it out.",
       "coursePrerequisite": "This session is a course with its own prerequisites, and the shop needs a verified certification on file before the seat can change hands. Contact the shop and they can sort it out."
     },
-    "claimedNotice": "This seat is yours now, and everything on this page is about you. Your organizer can see it’s claimed.",
     "panelHeading": "Your group’s seats",
     "panelBody": "Send each diver their own link. They add their own details, sign their own waiver, and get their own trip prep. A seat nobody claims stays with you, exactly as booked.",
     "claimedBadge": "Claimed",
@@ -1313,6 +1317,7 @@
       "noDepartures": "No departures to this site on the board right now"
     },
     "terrainMapTitle": "Terrain map of {site}",
+    "mapUnavailable": "The map for {site} is not loading.",
     "openMap": "Open map ↗",
     "landmarkKinds": {
       "navigationMark": "Navigation mark",
@@ -4721,6 +4726,7 @@
         "tokens": "Expired sign-in and reset tokens: 90 days past their own expiry. A live one is never pruned.",
         "push": "Device notification registrations: 30 days.",
         "safety": "Roll calls are kept for as long as the shop uses DiveDay, and incident reports for seven years; if a diver asks to be erased, their identity is removed from both.",
+        "history": "The record of who changed a departure’s plan, and of who published or hid each review, is kept for as long as the shop uses DiveDay. When a diver’s data is erased, the notes in it that name them are removed.",
         "reviewTerm": "Still being decided",
         "reviewBody": "how long a signed waiver and its medical answers should be kept after a diver stops diving with a shop. Today they stay until the shop removes them, because a release is evidence a shop may need years later, and shortening that without advice would be the wrong kind of guess. It is under review with the same counsel reviewing the waiver text, and this page will say the answer when there is one."
       },
@@ -5202,6 +5208,7 @@
       "waiverPending": "Sign your waiver",
       "waiverExpired": "Your waiver link expired. Grab a fresh one; it only takes about two minutes",
       "waiverLapsed": "Your signed waiver has lapsed. Sign it again",
+      "waiverRunsOut": "Your signed waiver runs out before the trip. Sign it again",
       "certificationMissing": "Send us your certification details",
       "certificationInsufficient": "Check your certification level with us",
       "certificationSelfDeclared": "Bring your certification card so we can check it",
@@ -5260,6 +5267,14 @@
       "partyCancelled": "{count, plural, one {The # party seat you booked is canceled with yours.} other {The # party seats you booked are canceled with yours.}}",
       "partyStayed": "{count, plural, one {# party seat stays booked: its diver has already claimed it or checked in.} other {# party seats stay booked: their divers have already claimed them or checked in.}}",
       "findAnother": "See what else is running"
+    },
+    "partyPaymentReceipt": {
+      "subject": "Receipt: {tripTitle}",
+      "body": "Paid by card for {seats} seats on {tripTitle}, {date}: {amount}. Thank you."
+    },
+    "seatAlreadyHeld": {
+      "subject": "You already have a seat on {tripTitle}",
+      "body": "Someone used a seat-claim link for {tripTitle} on {date} with this address. You already hold a seat on it with {shopName}, so nothing changed."
     },
     "tripBlowout": {
       "subject": "Trip canceled: {tripTitle}",
@@ -5617,6 +5632,12 @@
       "shoreSent": "Sent {when}. This is the only message you will get about this departure. DiveDay sends no all-clear; ask {shopName}.",
       "shoreWhy": "You’re getting this because {shopName} lists you as its shore contact for roll-call alerts, and you confirmed it.",
       "shoreStop": "Stop these alerts"
+    },
+    "incidentMissingDiver": {
+      "subject": "{shopName}: missing diver reported on {tripTitle}",
+      "body": "Missing diver on {tripTitle}. Reported {when}. Call the boat first.",
+      "open": "Open the report",
+      "emergency": "Open the emergency reference"
     },
     "shoreAlertStopped": {
       "subject": "{shopName}: the shore contact stopped roll-call alerts",

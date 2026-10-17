@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import { TripDayPlan, TripLookFor, TripMoments, TripSiteNotes } from "./TripDayPlan";
+import { TripDayPlan, TripLookFor, TripSiteNotes } from "./TripDayPlan";
 import type { DiveBriefing } from "./types";
 
 /**
@@ -16,19 +16,50 @@ import type { DiveBriefing } from "./types";
 
 afterEach(cleanup);
 
-const SHOP = { slug: "blue-mantis", timezone: "America/New_York", name: "Blue Mantis Divers" };
+const SHOP = {
+  slug: "blue-mantis",
+  timezone: "America/New_York",
+  name: "Blue Mantis Divers",
+  depthUnit: "meters",
+} as const;
 
 function briefing(overrides: Partial<DiveBriefing> = {}): DiveBriefing {
   return {
     dive: { id: "dive-1", diveNumber: 1, title: "French Reef swim-throughs" },
-    diveSite: { id: "site-1", name: "French Reef", depthRange: "to 12 m" },
+    diveSite: { id: "site-1", name: "French Reef", maxDepthMeters: 12 },
     creatures: [],
-    moments: [],
     ...overrides,
   } as unknown as DiveBriefing;
 }
 
 describe("TripDayPlan", () => {
+  it("writes each dive's depth in the shop's unit, and the shop's note only where none is recorded", () => {
+    render(
+      <TripDayPlan
+        briefings={[
+          briefing({
+            diveSite: {
+              id: "site-1",
+              name: "French Reef",
+              depthMinMeters: 15,
+              maxDepthMeters: 40,
+              depthRange: "15–40 m",
+            },
+          } as unknown as Partial<DiveBriefing>),
+          briefing({
+            dive: { id: "dive-2", diveNumber: 2, title: "Ledge" },
+            diveSite: { id: "site-2", name: "Ledge", depthRange: "shallow ledge to 18" },
+          } as unknown as Partial<DiveBriefing>),
+        ]}
+        shop={{ ...SHOP, depthUnit: "feet" }}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+    expect(screen.getByText("49–131 ft")).toBeInTheDocument();
+    expect(screen.queryByText("15–40 m")).not.toBeInTheDocument();
+    expect(screen.getByText("shallow ledge to 18")).toBeInTheDocument();
+  });
+
   it("lists the dives in plan order with their depths, and no clock", () => {
     render(
       <TripDayPlan
@@ -40,7 +71,7 @@ describe("TripDayPlan", () => {
               diveNumber: 2,
               title: "White Sand Bottom Cave",
             },
-            diveSite: { id: "site-2", name: "White Sand", depthRange: "to 14 m" },
+            diveSite: { id: "site-2", name: "White Sand", maxDepthMeters: 14 },
           } as unknown as DiveBriefing),
         ]}
         shop={SHOP}
@@ -51,7 +82,7 @@ describe("TripDayPlan", () => {
     expect(screen.getByText("The day")).toBeInTheDocument();
     expect(screen.getByText("Dive 1")).toBeInTheDocument();
     expect(screen.getByText("French Reef swim-throughs")).toBeInTheDocument();
-    expect(screen.getByText("to 12 m")).toBeInTheDocument();
+    expect(screen.getByText("12 m")).toBeInTheDocument();
     expect(screen.getByText("Dive 2")).toBeInTheDocument();
     // Time-neutral: a dive plan's clock belongs to the day itself, on the
     // thread. A schedule beside a Book button reads as a promise the crew has
@@ -130,7 +161,7 @@ describe("TripDayPlan's profile", () => {
 
   const wall = briefing({
     dive: { id: "dive-2", diveNumber: 2, title: null },
-    diveSite: { id: "site-2", name: "Spiegel Grove", depthRange: "18–40 m", maxDepthMeters: 40 },
+    diveSite: { id: "site-2", name: "Spiegel Grove", depthMinMeters: 18, maxDepthMeters: 40 },
   } as unknown as Partial<DiveBriefing>);
 
   it("states the time in the water and the gap between two dives", () => {
@@ -178,7 +209,7 @@ describe("TripDayPlan's profile", () => {
   it("leaves a bare run open when the page says a rule follows it", () => {
     const secondDive = briefing({
       dive: { id: "dive-2", diveNumber: 2, title: "White Sand Bottom Cave" },
-      diveSite: { id: "site-2", name: "White Sand", depthRange: "to 14 m" },
+      diveSite: { id: "site-2", name: "White Sand", maxDepthMeters: 14 },
     } as unknown as Partial<DiveBriefing>);
     const { rerender } = render(
       <TripDayPlan
@@ -321,24 +352,17 @@ describe("TripLookFor", () => {
 /**
  * **Every beat's label sits 8px over what it labels** (pixel-craft class 4,
  * K-509). The route and the site notes open `mt-2` under their `GroupLabel`;
- * "Look for" and "Moments from divers" opened `mt-3`, and floated 12–13px
- * above their content on the trip's door and the dive-site page alike. The
+ * "Look for" opened `mt-3`, and floated 12–13px
+ * above its content on the trip's door and the dive-site page alike. The
  * site page's departures stood `mt-8` under beats that stand `mt-6`.
  */
 describe("the day's beats", () => {
   const creatures = [
     { id: "c1", slug: "green-sea-turtle", name: "Green turtle", imageUrl: "/turtle.jpg" },
   ] as unknown as DiveBriefing["creatures"];
-  const moments = [
-    { id: "m1", caption: "A ray disappearing into the blue.", imageUrl: "/dive-sites/ray.jpg" },
-  ] as unknown as DiveBriefing["moments"];
 
   it.each([
     ["Look for", () => <TripLookFor briefings={[briefing({ creatures })]} locale="en-US" />],
-    [
-      "Moments from divers",
-      () => <TripMoments briefings={[briefing({ moments })]} locale="en-US" />,
-    ],
   ])("opens %s's content 8px under its label", (label, Beat) => {
     render(<Beat />);
     const heading = screen.getByRole("heading", { level: 2, name: label });
@@ -354,74 +378,6 @@ describe("the day's beats", () => {
     );
     const departures = page.match(/<section id="departures" className="([^"]*)"/)?.[1];
     expect(departures).toBe("mt-6 scroll-mt-8");
-  });
-});
-
-/**
- * The diver photos a staffer published for the day's sites finally reach the
- * page (they were fetched and rendered nowhere from slice 7c until the
- * 2026-08-28 diver-views design review). Capped, deduplicated by site, silent
- * when there are none.
- */
-describe("TripMoments", () => {
-  const moments = [
-    { id: "m1", caption: "A ray disappearing into the blue.", imageUrl: "/dive-sites/ray.jpg" },
-    { id: "m2", caption: "The winch at 12 m.", imageUrl: null },
-  ] as unknown as DiveBriefing["moments"];
-
-  it("shows each published photo once with its caption, skipping photoless rows", () => {
-    render(
-      // The same site on both tanks: its moments must not double.
-      <TripMoments
-        briefings={[briefing({ moments }), briefing({ moments })]}
-        locale={DEFAULT_DIVER_LOCALE}
-      />,
-    );
-    expect(screen.getByText("Moments from divers")).toBeInTheDocument();
-    expect(screen.getAllByText("A ray disappearing into the blue.")).toHaveLength(1);
-    // A moment with no photo is a caption about nothing here; it stays off.
-    expect(screen.queryByText("The winch at 12 m.")).not.toBeInTheDocument();
-    // The caption is the accessible content; the photo is decorative.
-    expect(screen.getByRole("presentation")).toHaveAttribute("alt", "");
-  });
-
-  /**
-   * **A photo that fills the measure takes the panel's corner** (pixel-craft
-   * class 12, K-510). One moment is the column's full width, beside the hero
-   * and the route card's 20px corners, and drew the two-up grid's 12px inset
-   * corner there; in a pair it is a tile, and keeps it.
-   */
-  it("rounds a lone photo as a panel and a pair as tiles", () => {
-    const photo = (id: string) => ({ id, caption: `Moment ${id}`, imageUrl: `/m/${id}.jpg` });
-    const { rerender } = render(
-      <TripMoments
-        briefings={[briefing({ moments: [photo("a")] } as unknown as Partial<DiveBriefing>)]}
-        locale={DEFAULT_DIVER_LOCALE}
-      />,
-    );
-    // `StoredPhoto` draws the corner on the box round the image.
-    const box = (image: HTMLElement) => image.parentElement;
-    expect(box(screen.getByRole("presentation"))).toHaveClass("rounded-panel");
-    expect(box(screen.getByRole("presentation"))).not.toHaveClass("rounded-inset");
-    rerender(
-      <TripMoments
-        briefings={[
-          briefing({ moments: [photo("a"), photo("b")] } as unknown as Partial<DiveBriefing>),
-        ]}
-        locale={DEFAULT_DIVER_LOCALE}
-      />,
-    );
-    for (const tile of screen.getAllByRole("presentation")) {
-      expect(box(tile)).toHaveClass("rounded-inset");
-      expect(box(tile)).not.toHaveClass("rounded-panel");
-    }
-  });
-
-  it("renders nothing when no site has a published photo", () => {
-    const { container } = render(
-      <TripMoments briefings={[briefing()]} locale={DEFAULT_DIVER_LOCALE} />,
-    );
-    expect(container).toBeEmptyDOMElement();
   });
 });
 

@@ -10,10 +10,12 @@ import {
 import { MAX_CALL_SIGN_LENGTH } from "@/lib/emergency-reference";
 
 /**
- * **The certificate and the three paper dates** (roadmap N-10), under the
- * boat's own line. Captioned, because a date box with only a placeholder says
- * nothing once it holds a date. All four optional: an empty box is a boat the
- * shop has not dated, and nothing reads it as expired.
+ * **The certificate and the paper dates** (roadmap N-10), under the boat's
+ * own line: the passenger limit, the total-persons limit with the crew and the
+ * certificate's own expiry (#2302), then the three dates the boat renews.
+ * Captioned, because a date box with only a placeholder says nothing once it
+ * holds a date. All optional: an empty box is a boat the shop has not dated,
+ * and nothing reads it as expired.
  *
  * The boat's radio identity sits with its papers (fourth review, item 11):
  * call sign and MMSI, the facts the departure's emergency card prints in
@@ -37,10 +39,7 @@ export function BoatPaperFields({
     <div
       className={`grid w-full grid-cols-1 gap-3 sm:basis-full sm:grid-cols-2 ${className}`.trim()}
     >
-      <Field
-        label={t("boats.certifiedPassengersLabel")}
-        description={t("boats.certifiedPassengersHint")}
-      >
+      <Field label={t("boats.certifiedPassengersLabel")}>
         <input
           name="certifiedPassengers"
           type="number"
@@ -52,6 +51,22 @@ export function BoatPaperFields({
           aria-describedby={describedBy}
           className={`${controlClass} tabular-nums`}
         />
+      </Field>
+      <Field label={t("boats.certifiedTotalPersonsLabel")}>
+        <input
+          name="certifiedTotalPersons"
+          type="number"
+          min={1}
+          max={999}
+          inputMode="numeric"
+          defaultValue={boat?.certifiedTotalPersons ?? ""}
+          aria-invalid={invalid || undefined}
+          aria-describedby={describedBy}
+          className={`${controlClass} tabular-nums`}
+        />
+      </Field>
+      <Field label={t("boats.coiExpiresLabel")}>
+        <DateField name="coiExpiresOn" defaultValue={boat?.coiExpiresOn ?? ""} />
       </Field>
       <Field label={t("boats.inspectionDueLabel")}>
         <DateField name="inspectionDueOn" defaultValue={boat?.inspectionDueOn ?? ""} />

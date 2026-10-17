@@ -10,6 +10,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+import { appNowTimestamp } from "./columns";
 import { people, shops, userAccounts } from "./core";
 
 /**
@@ -46,7 +47,7 @@ export const accountTokens = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     usedAt: timestamp("used_at", { withTimezone: true }),
     supersededAt: timestamp("superseded_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [index("account_tokens_account_purpose_idx").on(table.userAccountId, table.purpose)],
 );
@@ -96,8 +97,8 @@ export const accountSessions = pgTable(
     roles: jsonb("roles").notNull().$type<string[]>(),
     /** `people.full_name` at sign-in — the "Hi, {name}" greeting and invite emails read this off the session rather than a fresh join. */
     name: text("name").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     index("account_sessions_user_account_idx").on(table.userAccountId),
@@ -124,8 +125,8 @@ export const accountSecurity = pgTable("account_security", {
   totpSecretKeyId: text("totp_secret_key_id"),
   recoveryCodesKeyId: text("recovery_codes_key_id"),
   lastTotpStep: bigint("last_totp_step", { mode: "number" }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: appNowTimestamp("created_at").notNull(),
+  updatedAt: appNowTimestamp("updated_at").notNull(),
 });
 
 export const securityStepUpPurpose = pgEnum("security_step_up_purpose", [
@@ -148,7 +149,7 @@ export const accountStepUps = pgTable(
     purpose: securityStepUpPurpose("purpose").notNull(),
     verifiedAt: timestamp("verified_at", { withTimezone: true }).notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("account_step_ups_session_purpose_idx").on(
@@ -198,8 +199,8 @@ export const authProviderAccounts = pgTable("auth_provider_accounts", {
   refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true }),
   scope: text("scope"),
   password: text("password"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: appNowTimestamp("created_at").notNull(),
+  updatedAt: appNowTimestamp("updated_at").notNull(),
 });
 
 /**
@@ -213,8 +214,8 @@ export const authVerifications = pgTable("auth_verifications", {
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: appNowTimestamp("created_at").notNull(),
+  updatedAt: appNowTimestamp("updated_at").notNull(),
 });
 
 export type AccountSecurity = typeof accountSecurity.$inferSelect;

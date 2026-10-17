@@ -12,7 +12,7 @@
     "confirmationsResent": "Confirmaciones reenviadas.",
     "errors": {
       "invalid": "No se encontró esa reserva. Abre la salida para revisarla.",
-      "noEmail": "No hay correo registrado. Añade uno desde el listado y vuelve a intentarlo.",
+      "noEmail": "No hay correo registrado. Agrega uno desde el listado y vuelve a intentarlo.",
       "notConfigured": "El correo todavía no está configurado para este centro.",
       "failed": "Sigue sin poder entregarse. Abre la salida para revisar la reserva."
     }
@@ -74,6 +74,7 @@
     "instructorMissing": "El curso necesita instructor",
     "uncrewedCourse": "Sin instructor ni supervisión",
     "uncrewedDeparture": "Sin divemaster",
+    "boatClash": "Barco en dos salidas",
     "crewClash": "Tripulante en dos salidas",
     "crewClashSailed": "Salió con un tripulante en dos salidas",
     "nitroxGate": "Nitrox",
@@ -119,19 +120,21 @@
     "reissueWaiver": "Reemitir exención",
     "reviewMedical": "Revisar informe médico",
     "contactDiver": "Avisar a la persona",
-    "addCard": "Añadir certificación",
+    "addCard": "Agregar certificación",
     "askForCard": "Pedir datos de certificación",
     "verifyCard": "Verificar certificación",
     "reviewCard": "Revisar certificación",
-    "addSpecialty": "Añadir especialidad",
+    "checkCourseResult": "Revisar el resultado del curso",
+    "addSpecialty": "Agregar especialidad",
     "verifySpecialty": "Verificar especialidad",
     "confirmSpecialty": "Confirmar especialidad",
-    "addNitroxCard": "Añadir certificación de nitrox",
+    "addNitroxCard": "Agregar certificación de nitrox",
     "askForNitroxCard": "Pedir certificación de nitrox",
     "verifyNitroxCard": "Verificar certificación de nitrox",
     "takePayment": "Cobrar pago",
     "checkReadiness": "Verificar disponibilidad",
-    "getCourseFormsSigned": "Pedir firmas"
+    "getCourseFormsSigned": "Pedir firmas",
+    "clearTrainingMark": "Quitar marca de formación"
   },
   "blockerGroup": {
     "setRequirements": "Configurar requisitos",
@@ -143,6 +146,7 @@
     "reviewMedicals": "Revisar informes médicos",
     "contactDivers": "Avisar a las personas",
     "reviewCards": "Revisar certificaciones",
+    "checkCourseResults": "Revisar resultados de cursos",
     "askForCards": "Pedir certificaciones",
     "verifyCards": "Verificar certificaciones",
     "reviewSpecialties": "Revisar especialidades",
@@ -153,7 +157,8 @@
     "verifyNitroxCards": "Verificar certificaciones de nitrox",
     "takePayments": "Cobrar pagos",
     "checkReadiness": "Verificar disponibilidad",
-    "getCourseFormsSigned": "Pedir firmas"
+    "getCourseFormsSigned": "Pedir firmas",
+    "clearTrainingMarks": "Quitar marcas de formación"
   },
   "pointingLabel": {
     "trip": "Ver lista",
@@ -179,13 +184,14 @@
     "boatWork": "{work}.",
     "missingSizeNamed": "Le falta una talla de alquiler.",
     "kitUnaskedNamed": "Sin preguntar por su equipo.",
-    "ungatedNitroxNamed": "Quiere nitrox, sin certificación verificada.",
+    "ungatedNitroxNamed": "Quiere nitrox, recibe aire a menos que se verifique una certificación antes de que salga el barco.",
     "highWindAlert": "Previsión de viento de {speed} nudos{hasDirection, select, yes { del {direction}} other {}}{hasGusts, select, yes {, rachas de {gusts} nudos} other {}}.",
     "instructorMissing": "Sin instructor asignado.",
     "uncrewedCourse": "{divers, plural, one {# buceador reservado} other {# buceadores reservados}}, sin instructor.",
     "overRatio": "{booked, plural, one {# reservado} other {# reservados}}, la tripulación cubre {capacity}.",
     "overRatioIntro": "{booked, plural, one {# reservado} other {# reservados}}, la tripulación cubre {capacity} a {perInstructor} por instructor.",
     "uncrewedDeparture": "{divers, plural, one {# buceador reservado} other {# buceadores reservados}}, sin divemaster ni instructor.",
+    "boatClash": "{boat} también está asignado a {departure} a esas horas.",
     "crewClash": "{names} también {count, plural, one {figura} other {figuran}} en la tripulación de {departure} a esas horas.",
     "crewClashSailed": "{names} {count, plural, one {está} other {están}} a bordo pese a figurar también en la tripulación de {departure} a esas horas.",
     "crewClashSailedConfirm": "Confirma quién va a bordo.",
@@ -271,10 +277,12 @@
     "subject": "{count, plural, one {# mensaje espera} other {# mensajes esperan}} respuesta."
   },
   "unitsUnconfirmed": {
-    "subject": "{currency} y {depth}, deducidos de tu zona horaria",
+    "subject": "{currency}, {depth} y {temperature}, elegidos según dónde estás",
     "detail": "Confírmalos.",
     "feet": "pies",
-    "meters": "metros"
+    "meters": "metros",
+    "fahrenheit": "grados Fahrenheit",
+    "celsius": "grados Celsius"
   },
   "gear": {
     "overdueDetail": "{units} {count, plural, one {debía devolverse} other {debían devolverse}} el {dueOn} y {count, plural, one {sigue fuera} other {siguen fuera}}.",
@@ -298,8 +306,8 @@
   },
   "unfinished": {
     "label": "Sin terminar",
-    "addDeparture": "Una salida que empezaste a añadir.",
-    "newDiver": "Un buceador que empezaste a añadir.",
+    "addDeparture": "Una salida que empezaste a agregar.",
+    "newDiver": "Un buceador que empezaste a agregar.",
     "tookACall": "Una llamada que empezaste a anotar.",
     "resume": "Retomar"
   },
@@ -322,6 +330,7 @@
     "waiverPending": "{count, plural, one {Exención sin firmar, enlace enviado.} other {# exenciones sin firmar, enlaces enviados.}}",
     "waiverExpired": "{count, plural, one {El enlace de la exención caducó.} other {# enlaces de exención caducados.}}",
     "waiverLapsed": "{count, plural, one {Exención firmada caducada.} other {# exenciones firmadas caducadas.}}",
+    "waiverRunsOut": "{count, plural, one {Una exención caduca antes de la salida.} other {# exenciones caducan antes de la salida.}}",
     "medicalReview": "{count, plural, one {Una respuesta médica necesita el visto bueno de un médico.} other {# respuestas médicas necesitan el visto bueno de un médico.}}",
     "medicalNotCleared": "{count, plural, one {Un médico no lo autorizó a bucear.} other {# buceadores sin autorización médica para bucear.}}",
     "guardianSignatureMissing": "{count, plural, one {La exención necesita la firma de un tutor.} other {# exenciones necesitan la firma de un tutor.}}",
@@ -341,6 +350,7 @@
     "paymentDue": "{count, plural, one {Pago pendiente.} other {# pagos pendientes.}}",
     "paymentRefunded": "{count, plural, one {Reembolsado, así que vuelve a deber el pago.} other {# buceadores reembolsados, así que vuelven a deber el pago.}}",
     "readinessUnavailable": "{count, plural, one {No se pudo revisar si está listo.} other {No se pudo revisar si están listos # buceadores.}}",
-    "courseFormUnsigned": "{count, plural, one {Formulario del curso sin firmar.} other {# formularios del curso sin firmar.}}"
+    "courseFormUnsigned": "{count, plural, one {Formulario del curso sin firmar.} other {# formularios del curso sin firmar.}}",
+    "trainingMarkInvalid": "{count, plural, one {Marca de formación que ya no corresponde a su plaza del curso.} other {# marcas de formación que ya no corresponden a su plaza del curso.}}"
   }
 }

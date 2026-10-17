@@ -28,7 +28,7 @@ export const CUBA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "More than a hundred species of fish and coral are reported along this reef.",
       difficultyLevel: "beginner",
-      depthRange: "8–15 m (26–49 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 15,
       currentNote:
         "Current is reported as low, under 1 knot. The entry is over a rocky beach, so step carefully, check the surf from the beach before you enter, and ask the crew about the day’s entry and exit.",
@@ -73,7 +73,7 @@ export const CUBA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A coral reef and a drop-off within one entry. The wildlife is not documented in detail; ask the crew what has been showing.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (16–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Current is reported as medium, 1 to 2 knots. Carry an SMB. Do not enter if you cannot make headway against the current at the surface; with more than a gentle current, dive it from a boat. Entry surface not documented; ask the crew about the entry and plan the exit before you enter.",

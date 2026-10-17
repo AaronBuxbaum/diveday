@@ -7,8 +7,10 @@ import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import type { AboardHold } from "@/db/aboard-at-sea";
 import type { SameNameHeldSeat } from "@/db/bookings";
 import type { CourseMaterialsDone } from "@/db/course-materials";
+import type { SameNamePerson } from "@/db/identity-repoint";
 import type { listBookingNotes } from "@/db/operations";
 import type { PaymentMarkFacts } from "@/db/payment-marks";
+import type { TrainingMarkRosterSeat } from "@/db/training-marks";
 import { depthWarningText } from "@/i18n/depth-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
@@ -123,6 +125,14 @@ export type RosterRows = {
   notesByBooking: Map<string, RosterPrivateNote[]>;
   /** What each student's next step already says, so an instructor edits rather than retypes. */
   courseNextStepByBooking?: Map<string, string>;
+  /**
+   * On a departure that is not a course session, each seat's training mark
+   * and the course seats a mark may name (`trainingMarksForRoster`, #2275).
+   */
+  trainingMarks?: {
+    bySeat: ReadonlyMap<string, TrainingMarkRosterSeat>;
+    instructorRostered: boolean;
+  };
   /** What the browser extension searches PADI's eLearning for, per seat (H-106). */
   elearningQueryByBooking?: Map<string, ElearningQuery>;
   /** A PADI course with materials at a shop whose PADI checks are off (H-121). */
@@ -138,6 +148,17 @@ export type RosterRows = {
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
   /** Seats the boat carried or may be carrying: Remove refuses them (H-133). */
   aboardAtSea?: ReadonlyMap<string, AboardHold>;
+  /**
+   * Per held seat held for the same-name reason, the shop's other live people
+   * with that name, by name only (`otherSameNamePeople`, issue #2129).
+   */
+  sameNamePeople?: ReadonlyMap<string, ReadonlyArray<SameNamePerson>>;
+  /**
+   * Per course seat, the charter seats its student was sold only on this
+   * course (`chartersRelyingOnCourseSeats`, issue #2058): named in the seat's
+   * Remove confirm and its move.
+   */
+  dependentCharters?: ReadonlyMap<string, ReadonlyArray<{ title: string; startsAt: Date }>>;
   /**
    * Per held seat, the matched diver's last dive day at this shop, or null for
    * none (issue #1789): the evidence line in the armed "Same person" confirm.
@@ -209,6 +230,8 @@ export type RosterActions = {
   confirmIdentityAction: (formData: FormData) => void;
   /** "Different person": the held seat becomes a new diver (`splitBookingIdentity`). */
   splitIdentityAction: (formData: FormData) => void;
+  /** "Another diver on file": the held seat moves to that namesake, still held (`repointHeldBooking`). */
+  repointIdentityAction: (formData: FormData) => void;
   /**
    * "Send a new waiver" on a seat a physician refused: retires the refusal from
    * the seat and emails a fresh release. Absent for staff who may not
@@ -227,6 +250,9 @@ export type RosterActions = {
   certifyDiverAction?: (formData: FormData) => void;
   /** Record a course form signed on paper (ADR 20261008-course-forms). */
   recordPaperCourseFormAction?: (formData: FormData) => void;
+  /** Mark a charter seat as a training dive, and clear it (issue #2275). */
+  markTrainingDiveAction?: (formData: FormData) => void;
+  clearTrainingDiveAction?: (formData: FormData) => void;
   /**
    * What this student does next, in the instructor's own words (issues #1196,
    * #1205) — present under exactly the same condition as `certifyDiverAction`,

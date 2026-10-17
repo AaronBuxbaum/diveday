@@ -6,6 +6,7 @@ import { shiftInstantByWallTimeDelta, utcToWallTime, wallTimeDeltaMs } from "@/l
 import type { AppDb, DbExecutor } from "./client";
 import { flushUrgentCrewNotices, recordCrewTimeMoved } from "./crew-notices";
 import { rewindowTripGearReservations } from "./gear";
+import { publishManifestEvent } from "./manifest-events";
 import { queryAll } from "./query-helpers";
 import { rearmTripReminders } from "./reminder-rearm";
 import type { Trip } from "./schema";
@@ -242,7 +243,11 @@ export async function moveTrip(
     };
   });
   // Late news goes now, not on the hour (`flushUrgentCrewNotices`).
-  if (moved) await flushUrgentCrewNotices(db, { shopId, tripIds: [tripId], now });
+  if (moved) {
+    await flushUrgentCrewNotices(db, { shopId, tripIds: [tripId], now });
+    // Its manifest, and any charter whose training mark rests on its times.
+    await publishManifestEvent(db, shopId, tripId);
+  }
   return outcome;
 }
 

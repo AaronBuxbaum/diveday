@@ -27,7 +27,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Grenada's Molinere marine protected area, where a park permit is required; the crew arranges it, so confirm the cost on the day. Touch and take nothing.",
       difficultyLevel: "beginner",
-      depthRange: "5–9 m (15–30 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 9,
       currentNote:
         "Snorkelers and tour boats above: ascend on the line or an SMB and look up. Described as calm; no current is documented, so ask the crew on the day.",
@@ -69,7 +69,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Grenada's Molinere marine protected area, where a park permit is required; the crew arranges it, so confirm the cost on the day. Touch and take nothing.",
       difficultyLevel: "intermediate",
-      depthRange: "5–29 m (15–95 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 29,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -111,7 +111,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Grenada's Molinere marine protected area, where a park permit is required; the crew arranges it, so confirm the cost on the day. Touch and take nothing.",
       difficultyLevel: "intermediate",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Sheltered in the bay; current not documented along the wall, so ask the crew on the day.",
@@ -154,7 +154,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Grenada's Molinere marine protected area, where a park permit is required; the crew arranges it, so confirm the cost on the day. Touch and take nothing.",
       difficultyLevel: "advanced",
-      depthRange: "6–37 m (20–120 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 37,
       currentNote:
         "When the tide runs it becomes a gentle drift south toward Dragon Bay. Carry an SMB.",
@@ -196,7 +196,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Creole wrasse stream over the reef in numbers, with moray eels and cleaner fish in the structure.",
       difficultyLevel: "intermediate",
-      depthRange: "6–25 m (20–80 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 25,
       currentNote:
         "Ship traffic from St. George's harbor reaches this reef. No diving while a ship is moving or alongside, listen for engines and carry an SMB. Otherwise no current is documented.",
@@ -236,7 +236,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Nurse sharks are often asleep on the sand, and lobsters and morays sit in the coral thickets.",
       difficultyLevel: "advanced",
-      depthRange: "10–15 m (30–50 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 15,
       currentNote:
         "A consistent current, so the dive is usually run as a drift; its strength is not documented. Carry an SMB.",
@@ -276,7 +276,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Wrasse in the hundreds, with rays, turtles and angelfish working the reef.",
       difficultyLevel: "advanced",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote:
         "A steady current of about 2 knots; this is a drift dive. Carry an SMB and stay with the group.",
@@ -316,7 +316,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Stingrays and nurse sharks rest on the sand or ride the current; conch and lobster work the coral mounds. Sightings are not promised.",
       difficultyLevel: "advanced",
-      depthRange: "10–21 m (35–70 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 21,
       currentNote:
         "Strong and variable, with rougher surface conditions on the Atlantic side. Run as a drift; carry an SMB.",
@@ -358,7 +358,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Jacks and rainbow runners patrol the slope, with lobsters in the coral and turtles and eagle rays passing.",
       difficultyLevel: "advanced",
-      depthRange: "15–30 m (50–100 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 30,
       currentNote: "Run as a drift; current strength is not documented. Carry an SMB.",
       divePlan:
@@ -400,7 +400,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Small animals live in the machinery and crane, and the wreck is also dived at night.",
       difficultyLevel: "intermediate",
-      depthRange: "6–17 m (20–55 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 17,
       currentNote:
         "Ship traffic from St. George's harbor reaches this reef. No diving while a ship is moving or alongside, listen for engines and carry an SMB. Current is minimal on some days and strong enough on others.",
@@ -439,7 +439,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Coral is healthiest on the deeper parts of the wreck, with reef fish around the propeller and deckhouse.",
       difficultyLevel: "intermediate",
-      depthRange: "6–20 m (20–70 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 20,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -472,7 +472,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Jacks and barracuda hang above the hull, and the deeper steel carries black coral, hydroids and sponges.",
       difficultyLevel: "advanced",
-      depthRange: "27–40 m (90–130 ft)",
+      depthMinMeters: 27,
       maxDepthMeters: 40,
       currentNote:
         "Strong tidal current; the boat drops divers up-current of the wreck. Carry an SMB.",
@@ -513,7 +513,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       marineLife: "Nurse shark · reef shark · eagle ray · lobster",
       marineLifeDescription: "Sharks and rays use the hull and the current alongside it.",
       difficultyLevel: "advanced",
-      depthRange: "28–33 m (90–110 ft)",
+      depthMinMeters: 28,
       maxDepthMeters: 33,
       currentNote:
         "Strong current, run as a drift, with rough surface conditions. Carry an SMB. Medical care is far; confirm the boat's oxygen and plan.",
@@ -548,7 +548,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Black gorgonians, hydroids and sponges cover the structure, with seahorses and lobsters on a good day.",
       difficultyLevel: "advanced",
-      depthRange: "16–32 m (55–105 ft)",
+      depthMinMeters: 16,
       maxDepthMeters: 32,
       currentNote:
         "The wreck is near the harbor entrance: no diving while a ship is moving or alongside, listen for engines and carry an SMB. Otherwise described as calm and manageable.",
@@ -588,7 +588,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       marineLife: "Black coral · angelfish · reef fish",
       marineLifeDescription: "Black coral grows near the wreck, with angelfish around the hull.",
       difficultyLevel: "advanced",
-      depthRange: "18–27 m (60–90 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 27,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -623,7 +623,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A young wreck, with cup coral under the hull and angelfish already in residence.",
       difficultyLevel: "advanced",
-      depthRange: "20–33 m (70–110 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 33,
       currentNote:
         "Current not documented; Purple Rain next door is a drift, so ask the crew on the day and carry an SMB.",
@@ -657,7 +657,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       marineLife: "Reef fish · sponges",
       marineLifeDescription: "The hull is growing in, with small fish already using the decks.",
       difficultyLevel: "intermediate",
-      depthRange: "15–23 m (50–75 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 23,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -689,7 +689,7 @@ export const GRENADA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Blue chromis and goatfish work the slope, with shrimp and crabs for a slow look.",
       difficultyLevel: "intermediate",
-      depthRange: "6–27 m (20–90 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 27,
       currentNote:
         "Ship traffic from St. George's harbor reaches this reef. No diving while a ship is moving or alongside, listen for engines and carry an SMB. Otherwise calm conditions are described.",

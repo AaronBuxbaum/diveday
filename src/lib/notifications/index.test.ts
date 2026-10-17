@@ -15,7 +15,7 @@ import {
 
 const sesConfig = {
   region: "us-east-1",
-  from: "DiveDay <noreply@ses.dive.day>",
+  from: "DiveDay <notifications@ses.dive.day>",
   accessKeyId: "AKIA_TEST",
   secretAccessKey: "test-secret",
 };
@@ -387,7 +387,7 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
       // Sent as the shop, on DiveDay's own verified address (ux review
       // 2026-10-11, item 3): only the display name moves, so DMARC still
       // aligns on the DiveDay domain.
-      FromEmailAddress: '"Blue Mantis via DiveDay" <noreply@ses.dive.day>',
+      FromEmailAddress: '"Blue Mantis via DiveDay" <notifications@ses.dive.day>',
       Destination: { ToAddresses: ["delivered+booking@dive.day"] },
       Content: {
         Simple: {
@@ -697,6 +697,23 @@ describe("notificationProviderFromEnvironment (ADR 20260803-ses-sole-email-provi
     expect(command.input.FromEmailAddress).toBe(
       '"Blue Mantis via DiveDay" <notifications@demo.invalid>',
     );
+  });
+
+  it("sends from the compiled production sender when SES_FROM_EMAIL is unset, and nothing when it is set empty", async () => {
+    const credentials = {
+      SES_AWS_REGION: "us-east-1",
+      SES_AWS_ACCESS_KEY_ID: "AKIA_TEST",
+      SES_AWS_SECRET_ACCESS_KEY: "test-secret",
+    };
+    const sesClient = { send: vi.fn().mockResolvedValue({ MessageId: "ses-id" }) };
+    await notify(booking, notificationProviderFromEnvironment(credentials, { client: sesClient }));
+    const command = sesClient.send.mock.calls[0]?.[0] as SendEmailCommand;
+    expect(command.input.FromEmailAddress).toBe(
+      '"Blue Mantis via DiveDay" <notifications@ses.dive.day>',
+    );
+    await expect(
+      notify(booking, notificationProviderFromEnvironment({ ...credentials, SES_FROM_EMAIL: "" })),
+    ).resolves.toEqual({ status: "not_configured" });
   });
 
   it("is disabled when SES config is incomplete", async () => {

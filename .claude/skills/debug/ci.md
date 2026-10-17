@@ -19,9 +19,9 @@ bucket the run — each bucket has a different owner and several need no work:
   generator of the day refused a detached HEAD; that half went away on 2026-08-23 when the keys
   became explicit.) If this signature reappears, look at that job's checkout step, not at any
   test.
-- **A visual capture shard red with `wedged, not slow` in its log** — the known unattributed
-  Chromium renderer wedge; see the e2e-and-visual skill's renderer-wedge section. CI reruns
-  only the failed captures once when that verdict is present; a run that is still red either
+- **A visual capture or Playwright shard red with `wedged, not slow` in its log** — the known
+  unattributed Chromium renderer wedge; see the e2e-and-visual skill's renderer-wedge section. CI
+  reruns only the failed tests once when that verdict is present; a run that is still red either
   wedged twice (rare — re-run and note it) or failed for a second, real reason in the same log.
 - **`reg-suit visual regression` red with "No visual baseline published"** — a consequence,
   not a cause: some visual shard failed, so main published no snapshot. Fix the shard's

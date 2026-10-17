@@ -142,17 +142,17 @@ export function participantPriceCents(
  * The kinds of seat the public form offers on this departure.
  *
  * A diver's seat always. A snorkeler's or a rider's only where the shop has
- * named a price for it (zero included — a rider who comes free), and never on a
- * course session: a training dive is diving, and a student recorded as a rider
- * to get aboard would be a lie in the record the crew reads at the rail.
+ * named a price for it (zero included — a rider who comes free). A course
+ * session is no different (issue #2226): its students are divers, and the
+ * snorkeling spouse aboard is a priced seat of their own.
  *
  * Staff can seat any kind on a charter whether or not it is offered here; this
- * is what the public is sold, not what the boat may carry.
+ * is what the public is sold, not what the boat may carry. On a course session
+ * it is also what staff may seat (`participantTypeRefusal`).
  */
 export function offeredParticipantTypes(
   trip: ParticipantPricing & { courseId?: string | null },
 ): ParticipantType[] {
-  if (trip.courseId) return ["diver"];
   const offered: ParticipantType[] = ["diver"];
   if (trip.snorkelerPriceCents !== null && trip.snorkelerPriceCents !== undefined) {
     offered.push("snorkeler");

@@ -27,7 +27,6 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       conservationNote:
         "On Dutch Sint Maarten each diver pays the Nature Foundation’s dive tag, which the dive shop collects. The fees pay for conservation, research and the moorings.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 17 m (55 ft)",
       maxDepthMeters: 17,
       currentNote:
         "The site lies offshore in open water and is run as a moored dive. The crew sometimes drifts from the wreck along Long Bay Reef, so carry an SMB and stop on the mooring line or an SMB.",
@@ -69,7 +68,6 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       conservationNote:
         "On Dutch Sint Maarten each diver pays the Nature Foundation’s dive tag, which the dive shop collects. The fees pay for conservation, research and the moorings.",
       difficultyLevel: "advanced",
-      depthRange: "Up to 38 m (120 ft)",
       maxDepthMeters: 38,
       currentNote:
         "The site lies offshore in open water. Current is not documented; carry an SMB and ask the crew on the day.",
@@ -113,7 +111,6 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       conservationNote:
         "On Dutch Sint Maarten each diver pays the Nature Foundation’s dive tag, which the dive shop collects. The fees pay for conservation, research and the moorings.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 28 m (90 ft)",
       maxDepthMeters: 28,
       currentNote:
         "The site lies offshore in open water. Current is not documented; carry an SMB and ask the crew on the day.",
@@ -153,7 +150,6 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       conservationNote:
         "On Dutch Sint Maarten each diver pays the Nature Foundation’s dive tag, which the dive shop collects. The fees pay for conservation, research and the moorings.",
       difficultyLevel: "beginner",
-      depthRange: "Up to 6 m (20 ft)",
       maxDepthMeters: 6,
       currentNote:
         "Boats and yachts use the Simpson Bay lagoon and its bridge channel, so listen for engines, carry an SMB and come up the line. Current not documented; ask the crew on the day.",
@@ -193,7 +189,7 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       conservationNote:
         "On Dutch Sint Maarten each diver pays the Nature Foundation’s dive tag, which the dive shop collects. The fees pay for conservation, research and the moorings.",
       difficultyLevel: "beginner",
-      depthRange: "8–17 m (25–55 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 17,
       currentNote:
         "Boats pass in and out of the Simpson Bay lagoon entrance near the site, and cargo ships anchor near it; one anchor dragged the floating bar in 2024. Listen for engines, carry an SMB and come up the mooring line. Current is not documented; ask the crew on the day.",
@@ -234,7 +230,6 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       conservationNote:
         "On Dutch Sint Maarten each diver pays the Nature Foundation’s dive tag, which the dive shop collects. The fees pay for conservation, research and the moorings.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 30 m (100 ft)",
       maxDepthMeters: 30,
       currentNote:
         "The site lies offshore in open water. Current is not documented; carry an SMB and ask the crew on the day.",
@@ -276,7 +271,7 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       conservationNote:
         "On Dutch Sint Maarten each diver pays the Nature Foundation’s dive tag, which the dive shop collects. The fees pay for conservation, research and the moorings.",
       difficultyLevel: "beginner",
-      depthRange: "6–9 m (20–30 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 9,
       currentNote: "Current not documented; ask the crew on the day.",
       fitTone: "welcoming",
@@ -316,7 +311,6 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       conservationNote:
         "Man of War Shoal Marine Park is a no-fishing, no-anchoring zone. Each diver pays the Nature Foundation’s dive tag, which the dive shop collects, and the fees pay for conservation, research and the moorings.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 21 m (70 ft)",
       maxDepthMeters: 21,
       currentNote:
         "Parts of the park are kept open to shipping and Philipsburg’s harbor is close, so listen for engines and carry an SMB. The boat flies the alpha flag. No diving while a ship is maneuvering or alongside. Ascend on the mooring line or an SMB. Current is not documented; ask the crew on the day.",
@@ -357,7 +351,6 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       conservationNote:
         "Man of War Shoal Marine Park is a no-fishing, no-anchoring zone. Each diver pays the Nature Foundation’s dive tag, which the dive shop collects, and the fees pay for conservation, research and the moorings.",
       difficultyLevel: "beginner",
-      depthRange: "Up to 17 m (56 ft)",
       maxDepthMeters: 17,
       currentNote:
         "Parts of the park are kept open to shipping and Philipsburg’s harbor is close, so listen for engines and carry an SMB. The boat flies the alpha flag. No diving while a ship is maneuvering or alongside. Ascend on the mooring line or an SMB. Current is not documented; ask the crew on the day.",
@@ -407,7 +400,7 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       conservationNote:
         "Man of War Shoal Marine Park is a no-fishing, no-anchoring zone. Each diver pays the Nature Foundation’s dive tag, which the dive shop collects, and the fees pay for conservation, research and the moorings. This is a historic wreck site: leave every cannon and artifact where it lies.",
       difficultyLevel: "beginner",
-      depthRange: "5–17 m (15–56 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 17,
       currentNote:
         "Parts of the park are kept open to shipping and Philipsburg’s harbor is close, so listen for engines and carry an SMB. The boat flies the alpha flag. No diving while a ship is maneuvering or alongside. Ascend on the mooring line or an SMB. Current is not documented; ask the crew on the day.",
@@ -456,7 +449,7 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       conservationNote:
         "Man of War Shoal Marine Park is a no-fishing, no-anchoring zone. Each diver pays the Nature Foundation’s dive tag, which the dive shop collects, and the fees pay for conservation, research and the moorings.",
       difficultyLevel: "intermediate",
-      depthRange: "20–23 m (65–75 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 23,
       currentNote:
         "Parts of the park are kept open to shipping and Philipsburg’s harbor is close, so listen for engines and carry an SMB. The boat flies the alpha flag. No diving while a ship is maneuvering or alongside. Ascend on the mooring line or an SMB. The swim-through east of the reef is overhead; stay out of it. Current is not documented; ask the crew on the day.",
@@ -499,7 +492,6 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       conservationNote:
         "Man of War Shoal Marine Park is a no-fishing, no-anchoring zone. Each diver pays the Nature Foundation’s dive tag, which the dive shop collects, and the fees pay for conservation, research and the moorings.",
       difficultyLevel: "beginner",
-      depthRange: "Up to 18 m (60 ft)",
       maxDepthMeters: 18,
       currentNote:
         "Parts of the park are kept open to shipping and Philipsburg’s harbor is close, so listen for engines and carry an SMB. The boat flies the alpha flag. No diving while a ship is maneuvering or alongside. Ascend on the mooring line or an SMB. The coral swim-throughs and arches are overhead; stay out of them. Current is not documented; ask the crew on the day.",
@@ -540,7 +532,6 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       conservationNote:
         "Man of War Shoal Marine Park is a no-fishing, no-anchoring zone. Each diver pays the Nature Foundation’s dive tag, which the dive shop collects, and the fees pay for conservation, research and the moorings.",
       difficultyLevel: "beginner",
-      depthRange: "Up to 16 m (51 ft)",
       maxDepthMeters: 16,
       currentNote:
         "Parts of the park are kept open to shipping and Philipsburg’s harbor is close, so listen for engines and carry an SMB. The boat flies the alpha flag. No diving while a ship is maneuvering or alongside. Ascend on the mooring line or an SMB. Current is not documented; ask the crew on the day.",
@@ -581,7 +572,7 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       conservationNote:
         "Man of War Shoal Marine Park is a no-fishing, no-anchoring zone. Each diver pays the Nature Foundation’s dive tag, which the dive shop collects, and the fees pay for conservation, research and the moorings.",
       difficultyLevel: "beginner",
-      depthRange: "12–19 m (40–62 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 19,
       currentNote:
         "Parts of the park are kept open to shipping and Philipsburg’s harbor is close, so listen for engines and carry an SMB. The boat flies the alpha flag. No diving while a ship is maneuvering or alongside. Ascend on the mooring line or an SMB. The arches and the swim-through are overhead; stay out of them. Current is not documented; ask the crew on the day.",
@@ -626,7 +617,6 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       conservationNote:
         "On Dutch Sint Maarten each diver pays the Nature Foundation’s dive tag, which the dive shop collects. The fees pay for conservation, research and the moorings.",
       difficultyLevel: "advanced",
-      depthRange: "Up to 20 m (65 ft)",
       maxDepthMeters: 20,
       currentNote:
         "East coast, open to Atlantic swell, and dived only when the weather allows. Waves crash over the rocks and surge in the hole, so carry an SMB and ask the crew about the day. The cave and corridors at the back are overhead; stay out.",
@@ -670,7 +660,6 @@ export const SINT_MAARTEN: DiveSiteTemplate[] = [
       conservationNote:
         "On Dutch Sint Maarten each diver pays the Nature Foundation’s dive tag, which the dive shop collects. The fees pay for conservation, research and the moorings.",
       difficultyLevel: "advanced",
-      depthRange: "Up to 25 m (82 ft)",
       maxDepthMeters: 25,
       currentNote:
         "East coast, open to Atlantic swell, and dived only when the weather allows. Carry an SMB and ask the crew about the day. The small swim-through is overhead; stay out.",

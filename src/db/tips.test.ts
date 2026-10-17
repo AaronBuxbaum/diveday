@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeCheckout, recordingCheckout } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
@@ -245,6 +246,7 @@ describe("getLatestTipForBooking", () => {
     const [firstRow] = await db.select().from(tips).where(eq(tips.bookingId, bookingId));
     if (!firstRow) throw new Error("first tip row missing");
     await markTipExpiredBySessionId(db, firstRow.stripeSessionId);
+    advanceClock();
     const second = await startTipCheckout(db, tipInput(bookingId, 1500), provider);
     if (!second.ok) throw new Error("expected ok");
 

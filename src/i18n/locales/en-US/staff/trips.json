@@ -50,6 +50,12 @@
     "nextStepNotACourse": "This departure isn’t a course session, so there is no next step to record.",
     "materialsSaved": "Learning materials updated.",
     "materialsNotACourse": "This departure isn’t a course session, so it has no learning materials.",
+    "trainingMarked": "Marked as a training dive. The course’s forms are now asked on this seat.",
+    "trainingCleared": "Training mark cleared.",
+    "trainingMarkAlready": "This dive is already marked for another course. Clear that mark first.",
+    "trainingMarkInvalid": "That course seat can’t take this dive. It has to be this diver’s own live seat, on a session that runs until the boat leaves.",
+    "trainingMarkOver": "That departure or course session is over, so nothing changed.",
+    "trainingMarkFormsOwed": "Course forms are still owed. A manager or the course’s instructor can clear this mark.",
     "saved": "Changes saved.",
     "cancelled": "Trip canceled. It’s off the public schedule.",
     "cancelUnderway": "This departure is underway or has left, so it wasn’t canceled.",
@@ -109,6 +115,13 @@
     "identitySplitDobInvalid": "That date of birth can’t be right. Check it and try again.",
     "identitySplitEmailInvalid": "That email doesn’t look right. Check it, or leave it blank.",
     "identitySplitEmailInUse": "Another diver already has that email. Use their own, or leave it blank.",
+    "identityRepointed": "Moved to the other diver with that name. Confirm it’s them before they board.",
+    "identityRepointUnavailable": "That diver can’t take this seat. Pick another diver with this name, or use Different person.",
+    "identityRepointMedicalHold": "This seat, or a held seat moving with it, is on a medical hold: a physician referral nobody has answered, or one the physician did not clear. To move it to another diver, cancel this seat and seat them fresh.",
+    "identitySplitContactConflict": "The seats moving together have different emergency contacts. Record the right one on each, then try again.",
+    "identityDepartureClosed": "This departure is over or canceled, so the seat stays where it is. “Same person” still settles it.",
+    "identityContactDiffers": "This seat’s emergency contact isn’t the one on their record. Pick which to keep, then confirm.",
+    "identityRepointAlreadyBooked": "That diver already has a seat on a departure this would move. Check their record before moving it.",
     "newWaiverSent": "New waiver sent. They stay blocked until they sign it.",
     "newWaiverReady": "Ready for a new waiver. Send it from their row; they stay blocked until they sign it.",
     "newWaiverFailed": "The new waiver could not be sent. Check the booking is still on this departure.",
@@ -231,6 +244,7 @@
     "meetingPointLabelLabel": "Meeting point",
     "meetingPointAddressLabel": "Meeting point address",
     "optionalHint": "(optional)",
+    "wetsuitThicknessLabel": "Wetsuit for the day (mm)",
     "dateLabel": "Date",
     "departsLabel": "Departs",
     "returnsLabel": "Returns",
@@ -511,9 +525,13 @@
     "certifySpecialtyGroup": "Specialty",
     "certifying": "Certifying…",
     "checkedInPill": "Checked in",
+    "heldContactChoice": "Emergency contact to keep",
+    "heldContactUseHeld": "{contactName} ({phone}), recorded on this seat",
+    "heldContactKeepRecord": "{contactName} ({phone}), on {name}’s record",
     "applyPaidGear": "Add what they paid for to their fit: {pieces}",
     "confirmIdentityMessage": "Confirm this booking is {name}? They’ll board on {name}’s cards and waiver, and this can’t be undone.",
     "confirmRemoveBooking": "Remove {name} from this trip? If they’re eligible for a refund, it’s issued automatically.",
+    "courseSeatCarriesCharters": "{name} is booked on {trips} because this course gets them to that level. That seat stays booked, and still needs the card to board.",
     "confirmResendWaiver": "Send {name} a new waiver link? Their previous link will stop working.",
     "confirming": "Confirming…",
     "createOrder": "Create order",
@@ -527,6 +545,7 @@
     "editPickup": "Edit pickup",
     "emergencyContactEdit": "Edit emergency contact",
     "emergencyContactHeading": "Emergency contact",
+    "heldEmergencyContactHeading": "Emergency contact for the person on this seat",
     "emergencyContactMissing": "Not on file",
     "emergencyContactNameLabel": "Contact name",
     "emergencyContactOnFile": "{name} · {phone}",
@@ -658,6 +677,18 @@
       "signedOn": "Date on the paper",
       "signedOnHint": "Leave empty if it was signed today.",
       "paperCopy": "I have the signed paper copy"
+    },
+    "trainingMark": {
+      "label": "Training dive",
+      "countsToward": "Counts toward",
+      "option": "{course}, {date}",
+      "mark": "Mark as training dive",
+      "marking": "Marking…",
+      "marked": "Training dive for {course}. Its course forms are asked on this seat.",
+      "noInstructor": "No instructor is on this departure’s crew yet.",
+      "clear": "Clear training mark",
+      "clearing": "Clearing…",
+      "clearedWithFormsOwed": "{hasName, select, yes {Training mark cleared by {name} with course forms unsigned.} other {Training mark cleared with course forms unsigned.}}"
     }
   },
   "offlineManifestManager": {
@@ -745,5 +776,9 @@
     "title": "Practice departure for training day",
     "body": "Nothing about it is sent, charged, shown publicly or counted in reports. It is deleted {days, plural, one {# day} other {# days}} after it comes home, once no later boat counts its dives toward the wait before flying.",
     "kept": "This rehearsal has a roll call, a logged dive or an incident report, so it is not deleted on its own."
+  },
+  "erasedTitle": {
+    "private": "Private charter",
+    "public": "Departure"
   }
 }

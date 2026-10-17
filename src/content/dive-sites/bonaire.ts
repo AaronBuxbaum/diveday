@@ -29,7 +29,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       divePlan:
         "Enter from the cove, follow the slope out from shore, no deeper than 30 m (100 ft), and return along the shallower reef.",
@@ -71,7 +71,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "advanced",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote:
         "Can be strong according to bonaire.com, enough to carry divers away from the exit.",
@@ -116,7 +116,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote:
         "None to moderate, stronger around tide changes. Chop or a north wind makes the entry harder.",
@@ -172,7 +172,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "A drift dive; the current can be stronger than expected. The wall continues below this plan's 30 m floor.",
@@ -214,7 +214,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       divePlan:
         "Descend at the mooring, work along the reef no deeper than 30 m (100 ft), and stay out of the shallow cave.",
@@ -254,7 +254,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "advanced",
-      depthRange: "6–25 m (20–80 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 25,
       currentNote: "Moderate to strong according to bonaire.com.",
       divePlan:
@@ -291,7 +291,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–25 m (20–80 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 25,
       divePlan:
         "Enter from the beach of coral stones, follow the reef out, no deeper than 25 m (80 ft), and return along the shallower coral.",
@@ -327,7 +327,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–25 m (20–80 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 25,
       divePlan:
         "Descend at the mooring, circle the three pillars in about 9 m, and work the slope no deeper than 25 m (80 ft).",
@@ -375,7 +375,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       divePlan:
         "Descend at the mooring, follow the wall no deeper than 30 m (100 ft), and leave gas and time for the climb up the steps.",
@@ -423,7 +423,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       divePlan:
         "Enter from shore, dive south past the mooring, no deeper than 30 m (100 ft), and come back up the reef.",
@@ -465,7 +465,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       divePlan:
         "Cross the rocky entry, follow the coral ridges down the chutes no deeper than 30 m (100 ft), and return along the gorgonians.",
@@ -505,7 +505,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       divePlan:
         "Descend at the mooring, work along the reef no deeper than 30 m (100 ft), and return along the shallower coral.",
@@ -542,7 +542,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–25 m (20–80 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 25,
       divePlan:
         "Use the steel ladder or the boat, work the reef no deeper than 25 m (80 ft), and return along the shallower coral.",
@@ -584,7 +584,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote: "Light according to bonaire.com.",
       divePlan:
@@ -622,7 +622,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "beginner",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       divePlan:
         "Enter over the rocks, work the reef no deeper than 18 m (60 ft), and return through the shallow parrotfish grazing area.",
@@ -662,7 +662,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "beginner",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       divePlan:
         "Enter over the rocks, work the reef no deeper than 18 m (60 ft), and return through the shallows.",
@@ -702,7 +702,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "beginner",
-      depthRange: "6–15 m (20–50 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       divePlan:
         "Descend the wall from about 6 m, turn at 15 m (49 ft), and return along the shallower face. The cave near 18 m is a no-go.",
@@ -737,7 +737,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–23 m (20–75 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 23,
       divePlan:
         "Descend at the mooring, visit the memorial and the small step in the reef, and work the reef no deeper than 23 m (75 ft).",
@@ -780,7 +780,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "beginner",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       divePlan:
         "Swim out to the boat, circle the hull on the outside, and return along the reef, no deeper than 18 m (60 ft).",
@@ -823,7 +823,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "3–30 m (10–100 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 30,
       divePlan:
         "Enter over the rocks, work the reef no deeper than 30 m (100 ft), and return along the shallower coral.",
@@ -864,7 +864,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "beginner",
-      depthRange: "9–18 m (30–60 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       divePlan:
         "Enter from the resort pier area, work the reef no deeper than 18 m (60 ft), and keep clear of the boats at the pier.",
@@ -900,7 +900,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       divePlan:
         "Go down the concrete ramp, work the reef no deeper than 30 m (100 ft), and watch the boats near the small pier on the way back.",
@@ -937,7 +937,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "beginner",
-      depthRange: "6–24 m (20–80 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 24,
       divePlan:
         "Enter from the shore, work the garden-eel sand and the reef no deeper than 18 m (60 ft), and stay outside the tug remains at about 24 m.",
@@ -980,7 +980,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "beginner",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       currentNote:
         "Boats use the marina entrance, so carry an SMB and listen for engines. Current is limited, sometimes strong, according to bonaire.com.",
@@ -1025,7 +1025,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "beginner",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       divePlan:
         "Enter from the resort shore, work the reef no deeper than 18 m (60 ft), and watch for boats when you surface.",
@@ -1062,7 +1062,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "beginner",
-      depthRange: "6–27 m (20–90 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 27,
       divePlan:
         "Enter from the resort, work both arms of the double reef no deeper than 18 m (60 ft), and leave the outer reef at about 27 m alone.",
@@ -1104,7 +1104,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "beginner",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       divePlan:
         "Enter over the rocks, cross the sandy shallows where the rays and turtles rest, no deeper than 18 m (60 ft), and return the same way.",
@@ -1143,7 +1143,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       divePlan:
         "Enter over the rocks in calm wind only, work the reef no deeper than 30 m (100 ft), and return along the shallower coral.",
@@ -1179,7 +1179,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "beginner",
-      depthRange: "5–20 m (15–65 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 20,
       divePlan:
         "Go down the seven steps, work the reef no deeper than 18 m (60 ft), and stay shallow of the edge at 15 to 20 m.",
@@ -1213,7 +1213,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "advanced",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote: "Limited to strong according to bonaire.com.",
       divePlan:
@@ -1250,7 +1250,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "advanced",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote: "Unpredictable according to bonaire.com.",
       divePlan:
@@ -1287,7 +1287,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "8–30 m (25–100 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 30,
       currentNote:
         "Usually minimal on the inner reef and stronger on the outer reef, according to bonaire.com.",
@@ -1324,7 +1324,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote: "Limited according to bonaire.com.",
       divePlan:
@@ -1362,7 +1362,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "advanced",
-      depthRange: "18–40 m (60–130 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 40,
       currentNote:
         "Moderate to strong according to bonaire.com. Carry an SMB, because boats work this area.",
@@ -1414,7 +1414,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote: "Mild to moderate along the outer drop-off, according to bonaire.com.",
       divePlan:
@@ -1451,7 +1451,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote: "Minimal to moderate according to bonaire.com.",
       divePlan:
@@ -1486,7 +1486,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "beginner",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       divePlan:
         "Enter over the rocks, cross the sand to the first reef, and stay on it, no deeper than 18 m (60 ft).",
@@ -1520,7 +1520,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "beginner",
-      depthRange: "9–18 m (30–60 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       divePlan:
         "Enter from shore, navigate by compass to the first reef, and stay on it, no deeper than 18 m (60 ft).",
@@ -1560,7 +1560,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       divePlan:
         "Enter from shore, work the soft coral and sand, no deeper than 30 m (100 ft), and return along the shallower reef.",
@@ -1601,7 +1601,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote:
         "Do not dive when a ship is at the pier. Current can be limited to strong, and it pushes into the pillars, which have sharp edges.",
@@ -1647,7 +1647,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       divePlan:
         "Enter from shore, work the double reef, no deeper than 30 m (100 ft), and navigate by compass.",
@@ -1682,7 +1682,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       divePlan:
         "Enter from shore, find the garden eels in the shallows, work the reef no deeper than 30 m (100 ft), and return the same way.",
@@ -1719,7 +1719,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote: "Variable; strong when the outflow doors are open.",
       divePlan:
@@ -1756,7 +1756,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "advanced",
-      depthRange: "8–30 m (25–100 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 30,
       currentNote: "Strong in places, according to infobonaire.",
       divePlan:
@@ -1792,7 +1792,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "advanced",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote: "Moderate to strong according to bonaire.com.",
       divePlan:
@@ -1835,7 +1835,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       divePlan:
         "Descend at the mooring, follow the drop-off no deeper than 30 m (100 ft), and look for the margates among the gorgonians.",
@@ -1874,7 +1874,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       divePlan:
         "Enter from shore, follow the reef edge no deeper than 30 m (100 ft), and keep your hands off the fire coral.",
@@ -1911,7 +1911,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "advanced",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote: "Moderate to strong according to bonaire.com, mostly at the drop-off.",
       divePlan:
@@ -1953,7 +1953,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "advanced",
-      depthRange: "8–30 m (25–100 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 30,
       currentNote: "Can change or increase during the dive, according to infobonaire.",
       divePlan:
@@ -1989,7 +1989,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "advanced",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote:
         "This area can challenge even the strongest swimmers, according to infobonaire. If the current builds, abort the dive and exit at once.",
@@ -2032,7 +2032,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "advanced",
-      depthRange: "6–25 m (20–80 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 25,
       currentNote: "Unpredictable and strong according to bonaire.com.",
       divePlan:
@@ -2076,7 +2076,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "advanced",
-      depthRange: "6–25 m (20–80 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 25,
       currentNote: "Strong and unpredictable according to the sources.",
       divePlan:
@@ -2120,7 +2120,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       divePlan:
         "Descend at the mooring, work the sandy shallows and the slope no deeper than 30 m (100 ft), and finish near the beach.",
@@ -2156,7 +2156,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "12–40 m (40–130 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 40,
       currentNote:
         "The swim across blue water from the mooring is short but has no reference. The mooring barrel lies at about 43 m, so leave the line at the reef.",
@@ -2203,7 +2203,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "9–35 m (30–115 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 35,
       divePlan:
         "Leave the mooring line at the reef and do not follow it into deep water. Work the reef no deeper than 30 m (100 ft).",
@@ -2249,7 +2249,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       divePlan:
         "Descend at the mooring, work the reef no deeper than 30 m (100 ft), and finish in the schooling fish at the top.",
@@ -2284,7 +2284,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–40 m (20–130 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 40,
       divePlan:
         "Leave the deep mooring at the reef, take the short swim to the coral, and work it no deeper than 30 m (100 ft).",
@@ -2329,7 +2329,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote: "Mild according to bonaire.com.",
       divePlan:
@@ -2370,7 +2370,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       divePlan:
         "Descend at the mooring, look for seahorses in the staghorn shallows, and work the slope no deeper than 30 m (100 ft).",
@@ -2413,7 +2413,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       divePlan:
         "Descend at the mooring beside the rock pile, work the reef no deeper than 30 m (100 ft), and finish in the staghorn.",
@@ -2448,7 +2448,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       divePlan:
         "Descend at the mooring, follow the sand chutes, no deeper than 30 m (100 ft), and look for the tilefish nests under the boat.",
@@ -2483,7 +2483,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "beginner",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       divePlan:
         "Descend at the mooring, see the plaque, work the reef no deeper than 18 m (60 ft), and return the same way.",
@@ -2524,7 +2524,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote: "Mild to none according to bonaire.com.",
       divePlan:
@@ -2560,7 +2560,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       divePlan:
         "Descend at the mooring, drift between the coral hills no deeper than 30 m (100 ft), and keep your buoyancy off the reef.",
@@ -2595,7 +2595,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       divePlan:
         "Descend at the mooring close to shore, work the corals no deeper than 30 m (100 ft), and return along the shallows.",
@@ -2630,7 +2630,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "8–30 m (25–100 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 30,
       divePlan:
         "Descend at the mooring, work the staghorn shallows and the slope no deeper than 30 m (100 ft), and look for seahorses near 15 m.",
@@ -2671,7 +2671,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "advanced",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote: "Strong current is possible, according to bonaire.com.",
       divePlan:
@@ -2707,7 +2707,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "8–30 m (25–100 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 30,
       divePlan:
         "Descend at the mooring, work the wall no deeper than 30 m (100 ft), and stay out of the caves.",
@@ -2741,7 +2741,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "8–30 m (25–100 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 30,
       divePlan:
         "Descend at the mooring, work the coral heads no deeper than 30 m (100 ft), and stay out of the tunnels.",
@@ -2777,7 +2777,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       divePlan:
         "Descend at the mooring, work the slope no deeper than 30 m (100 ft), and finish in the rubble shallows.",
@@ -2812,7 +2812,7 @@ export const BONAIRE: DiveSiteTemplate[] = [
       conservationNote:
         "Marine park rules apply: no gloves, no touching or collecting, and keep your buoyancy off the reef. The STINAPA nature fee tag is required.",
       difficultyLevel: "intermediate",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       divePlan:
         "Descend at the mooring, work the sand and the slope no deeper than 30 m (100 ft), and expect a light current from east to west.",

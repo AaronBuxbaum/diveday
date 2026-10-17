@@ -1,5 +1,8 @@
+import { eq } from "drizzle-orm";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { listBoats } from "@/db/boats";
+import { diveSites, trips } from "@/db/schema";
 import { listTripLenses } from "@/db/trip-lenses";
 import { getTripOverview, listStaff, upcomingTripsWithCounts } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -78,5 +81,24 @@ describe("tripAboutRows (in-memory PGlite)", () => {
     expect(closed.find((row) => row.id === "conditions")?.editorOpen).toBe(false);
     const open = await rowsFor({ form: "conditions", tone: "danger", text: "No." });
     expect(open.find((row) => row.id === "conditions")?.editorOpen).toBe(true);
+  });
+
+  /**
+   * Domain review F8: closing the snorkeler seats does not take the booked
+   * snorkeler (`seed-mixed-boat.ts`) off the reef boat, so the line still says
+   * every planned site is marked not good for snorkeling.
+   */
+  it("warns about a booked snorkeler over unsuitable sites, seats closed", async () => {
+    const { db, shop } = ctx;
+    const reef = (await upcomingTripsWithCounts(db, shop.id, new Date(0))).find((trip) =>
+      trip.title.startsWith("Two-Tank Reef — Molasses"),
+    );
+    if (!reef) throw new Error("demo reef trip missing");
+    await db.update(diveSites).set({ snorkelSuitable: false }).where(eq(diveSites.shopId, shop.id));
+    await db.update(trips).set({ snorkelerPriceCents: null }).where(eq(trips.id, reef.id));
+    const terms = (await rowsFor()).find((row) => row.id === "participant-terms");
+    expect(renderToStaticMarkup(terms?.value)).toContain(
+      "A snorkeler is booked, but every planned site is marked not good for snorkeling.",
+    );
   });
 });

@@ -1,6 +1,6 @@
 import type { DbExecutor } from "./client";
 import { isMarineLifeSlug, marineLifeImage } from "./marine-life-catalog";
-import { type DiveSpecialty, diveSiteCreatures, diveSiteMoments, diveSites } from "./schema";
+import { type DiveSpecialty, diveSiteCreatures, diveSites } from "./schema";
 import { publishedTemplateId } from "./seed-dive-site-catalog";
 import { commonsImage } from "./seed-images";
 
@@ -42,7 +42,8 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "Look along the coral heads for schooling grunts and curious damselfish; rays often cruise the sandy channels.",
         difficultyLevel: "beginner",
-        depthRange: "20–40 ft",
+        snorkelSuitable: true,
+        depthMinMeters: 6.096,
         maxDepthMeters: 12,
         currentNote: "Usually gentle.",
         divePlan:
@@ -123,7 +124,8 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "Expect big silhouettes, moving schools, and changing light along the exterior decks.",
         difficultyLevel: "advanced",
-        depthRange: "60–130 ft",
+        snorkelSuitable: false,
+        depthMinMeters: 18.288,
         maxDepthMeters: 40,
         currentNote: "Open-water current can be strong.",
         divePlan:
@@ -170,7 +172,8 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "A gentle route with lots to notice near the reef and plenty of light for photos.",
         difficultyLevel: "beginner",
-        depthRange: "15–25 ft",
+        snorkelSuitable: true,
+        depthMinMeters: 4.572,
         maxDepthMeters: 8,
         currentNote: "Usually gentle.",
         divePlan:
@@ -218,7 +221,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "The hull is a fish apartment block: look into every gap and something is home.",
         difficultyLevel: "intermediate",
-        depthRange: "25–50 ft",
+        depthMinMeters: 7.62,
         maxDepthMeters: 15,
         currentNote: "Mild, but the site sits in open water.",
         divePlan:
@@ -251,7 +254,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "The overhangs hide sleeping nurse sharks; check the ceilings, not just the sand.",
         difficultyLevel: "beginner",
-        depthRange: "20–45 ft",
+        depthMinMeters: 6.096,
         maxDepthMeters: 14,
         currentNote: "Usually gentle.",
         divePlan:
@@ -298,7 +301,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "A resident goliath grouper often holds near the wheelhouse; look into the blue for jacks working the current.",
         difficultyLevel: "advanced",
-        depthRange: "50–120 ft",
+        depthMinMeters: 15.24,
         maxDepthMeters: 37,
         currentNote: "Can run strong on the surface.",
         divePlan:
@@ -336,7 +339,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "Grazing parrotfish work the coral heads all day; blue tangs move through in loose, easy groups.",
         difficultyLevel: "beginner",
-        depthRange: "15–40 ft",
+        depthMinMeters: 4.572,
         maxDepthMeters: 12,
         currentNote: "Usually gentle.",
         divePlan:
@@ -378,7 +381,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         marineLifeDescription:
           "By day it is a quiet scatter of steel; after dark the ribs fill with soldierfish and squirrelfish, octopus come out to hunt, and tarpon work the edge of your light.",
         difficultyLevel: "beginner",
-        depthRange: "15–25 ft",
+        depthMinMeters: 4.572,
         maxDepthMeters: 8,
         currentNote: "Usually gentle on the inside of the reef; it can run along the outer edge.",
         divePlan:
@@ -489,37 +492,6 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
       : [],
   );
   if (creatureRows.length > 0) await db.insert(diveSiteCreatures).values(creatureRows);
-
-  if (molasses) {
-    await db.insert(diveSiteMoments).values({
-      shopId,
-      diveSiteId: molasses.id,
-      caption: "A quiet moment watching a ray disappear into blue water.",
-      imageUrl: commonsImage("Dasyatis americana NOAA.jpg"),
-      isPublished: true,
-    });
-  }
-  const laterMoments = [
-    spiegel
-      ? {
-          diveSiteId: spiegel.id,
-          caption: "The moment the flight deck resolves out of the blue on the way down.",
-          imageUrl: commonsImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
-          isPublished: true,
-        }
-      : null,
-    christ
-      ? {
-          diveSiteId: christ.id,
-          caption: "25 feet down, hands up, sunlight all the way to the sand.",
-          imageUrl: commonsImage("French Angelfish Pickles Reef 20230713.jpg"),
-          isPublished: true,
-        }
-      : null,
-  ].filter((row) => row !== null);
-  if (laterMoments.length > 0) {
-    await db.insert(diveSiteMoments).values(laterMoments.map((row) => ({ shopId, ...row })));
-  }
 
   /**
    * A dated session for a catalog course, or nothing at all when this shop does

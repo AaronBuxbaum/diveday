@@ -15,6 +15,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { PLAN_CHANGE_REASONS } from "@/lib/plan-change";
+import { appNowTimestamp } from "./columns";
 import { certificationLevel, type diveSpecialty, people, shops } from "./core";
 import { courses } from "./courses";
 import { diveSites } from "./dive-sites";
@@ -105,7 +106,7 @@ export const tripSeries = pgTable(
      * (`rollAllSeriesForward`). Written on every attempt, including a failed one.
      */
     lastRolledAt: timestamp("last_rolled_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("trip_series_shop_idx").on(table.shopId),
@@ -141,7 +142,7 @@ export const tripSeriesSkips = pgTable(
       .references(() => tripSeries.id),
     /** Shop-local calendar date, `YYYY-MM-DD` — the cadence slot being closed. */
     occurrenceDate: text("occurrence_date").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("trip_series_skips_slot_idx").on(table.seriesId, table.occurrenceDate),
@@ -186,15 +187,34 @@ export const boats = pgTable(
      */
     certifiedPassengers: integer("certified_passengers"),
     /**
-     * The boat's three paper clocks, each a shop-local calendar date (no
-     * instant in it): when the next safety inspection is due, when the
-     * registration runs out, and when the hull insurance does. Nullable each,
+     * **Total persons aboard, crew included**, when the certificate prints that
+     * limit too (#2302). Some flag states, Spain among them, print only this
+     * one number. Optional and independent of `certifiedPassengers`: a shop
+     * whose certificate carries only a passenger figure is never asked for it.
+     *
+     * Checked at the manifest, never at the point of sale: the pre-departure
+     * check says when the people booked, or counted aboard, plus the crew pass
+     * it (`boatSafetyNotices`). The booking transaction counts seats exactly
+     * as before (Aaron, 2026-10-13).
+     */
+    certifiedTotalPersons: integer("certified_total_persons"),
+    /**
+     * The boat's paper clocks, each a shop-local calendar date (no instant in
+     * it): when the next safety inspection is due, when the registration runs
+     * out, and when the hull insurance does (and `coiExpiresOn` below). Nullable each,
      * and each informs ahead of time: 90 days for the inspection, 60 for the
      * other two (`src/lib/boat-safety.ts`). Stored on the boat rather than as events because the shop
      * renews a document by typing the next date over the last one; the
      * history of a paper is the paper itself.
      */
     inspectionDueOn: date("inspection_due_on"),
+    /**
+     * When the certificate itself runs out (#2302): a Certificate of Inspection
+     * carries its own expiry, years apart from the annual inspection above,
+     * and either lapsing grounds a passenger vessel. Same shape and same
+     * 90-day horizon as the inspection.
+     */
+    coiExpiresOn: date("coi_expires_on"),
     registrationExpiresOn: date("registration_expires_on"),
     insuranceExpiresOn: date("insurance_expires_on"),
     /**
@@ -209,7 +229,7 @@ export const boats = pgTable(
      */
     callSign: text("call_sign"),
     mmsi: text("mmsi"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /**
      * Deleting a hull stamps this and leaves the row (ADR
      * 20260820-every-delete-is-soft). It has to: `trips.boat_id` is
@@ -235,6 +255,16 @@ export const boats = pgTable(
     ),
     // An MMSI is nine digits; anything else read over the radio is a wrong number.
     check("boats_mmsi_nine_digits", sql`${table.mmsi} is null or ${table.mmsi} ~ '^[0-9]{9}$'`),
+    check(
+      "boats_certified_total_persons_positive",
+      sql`${table.certifiedTotalPersons} is null or ${table.certifiedTotalPersons} between 1 and 999`,
+    ),
+    // Passengers are some of the persons aboard: more passengers than persons
+    // is a typo, refused at save too (`boatSeatsRefusal`).
+    check(
+      "boats_certified_passengers_within_total",
+      sql`${table.certifiedPassengers} is null or ${table.certifiedTotalPersons} is null or ${table.certifiedPassengers} <= ${table.certifiedTotalPersons}`,
+    ),
   ],
 );
 
@@ -265,7 +295,7 @@ export const tripLenses = pgTable(
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     /** Also the rail's order: the order the shop wrote its own vocabulary in. */
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /**
      * Deleting a lens stamps this and leaves the row (ADR
      * 20260820-every-delete-is-soft), because `trips.lens_id` points at it and
@@ -361,6 +391,15 @@ export const trips = pgTable(
      * by a constraint about something else.
      */
     diverCapacity: integer("diver_capacity"),
+    /**
+     * **The wetsuit the boat is running today, in millimetres** (issue #2206;
+     * Aaron 2026-10-13), set on the departure's details beside the dive plan.
+     * Per departure rather than per season because the cold-snap day is the
+     * one that matters. Null is "not said", and then the Gear tab proposes no
+     * wetsuit at all: a staffer picks one, as before. It proposes, it never
+     * gates (`proposeRentalUnits`).
+     */
+    wetsuitThicknessMm: integer("wetsuit_thickness_mm"),
     /** Drives the after-dive roll-call checkpoints; recreational charters are commonly two-tank. */
     plannedDives: integer("planned_dives").notNull().default(2),
     /**
@@ -594,7 +633,7 @@ export const trips = pgTable(
      * Null until then, and for ever on a shop with no confirmed shore contact.
      */
     rollCallShoreAlertedAt: timestamp("roll_call_shore_alerted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("trips_shop_starts_idx").on(table.shopId, table.startsAt),
@@ -655,6 +694,11 @@ export const trips = pgTable(
     check(
       "trips_snorkeler_price_nonnegative",
       sql`${table.snorkelerPriceCents} is null or ${table.snorkelerPriceCents} >= 0`,
+    ),
+    // `WETSUIT_THICKNESS_MM` in src/lib/gear.ts, which the details form reads.
+    check(
+      "trips_wetsuit_thickness_mm_range",
+      sql`${table.wetsuitThicknessMm} is null or ${table.wetsuitThicknessMm} between 1 and 10`,
     ),
     check(
       "trips_rider_price_nonnegative",
@@ -730,7 +774,7 @@ export const tripDives = pgTable(
      * treating it as absent.
      */
     travelMinutes: integer("travel_minutes"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("trip_dives_trip_number_unique").on(table.tripId, table.diveNumber),
@@ -825,8 +869,8 @@ export const executedDives = pgTable(
     recordedByPersonId: uuid("recorded_by_person_id").references(() => people.id),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     // Leads on the person column so deleting a person (a demo shop's cascade,
@@ -883,8 +927,8 @@ export const tripRequirements = pgTable(
     requiresNitrox: boolean("requires_nitrox").notNull().default(false),
     /** Whether a diver must have paid (or a deposit/waiver) to board. */
     requiresPayment: boolean("requires_payment").notNull().default(false),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [index("trip_requirements_shop_idx").on(table.shopId)],
 );
@@ -953,10 +997,10 @@ export const tripSightings = pgTable(
       .notNull()
       .references(() => people.id),
     /** When the first tap landed; `updated_at` moves with every later one. */
-    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
+    recordedAt: appNowTimestamp("recorded_at").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     // The tally's identity: one live row per species per site per departure, so

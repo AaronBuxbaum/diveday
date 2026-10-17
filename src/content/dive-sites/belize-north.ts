@@ -29,7 +29,7 @@ export const BELIZE_NORTH: DiveSiteTemplate[] = [
         "Large groupers, turtles and morays sit among the coral, with eagle rays and nurse sharks working the sand. Southern stingrays turn up on the night dive, which needs a guide.",
       conservationNote: "A marine reserve: look, but do not touch or take anything.",
       difficultyLevel: "intermediate",
-      depthRange: "6–9 m (20–30 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 9,
       currentNote:
         "Boats use the cut, so carry an SMB and listen for engines. Strong tidal current runs through it, hardest in the middle of the channel, and most divers cannot swim against it at peak exchange. Time the dive for slack water and stay close to the channel sides.",
@@ -73,7 +73,6 @@ export const BELIZE_NORTH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Nurse sharks, groupers and turtles turn up along the ridges, snappers gather in schools, and green moray eels live in the crevices.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 21 m (70 ft)",
       maxDepthMeters: 21,
       currentNote:
         "Strong currents reported on the ridges; carry an SMB and ask the crew on the day.",
@@ -117,7 +116,7 @@ export const BELIZE_NORTH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Lobsters sit in the recesses, with moray eels and nurse sharks along the ridges and an occasional eagle ray or turtle.",
       difficultyLevel: "intermediate",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "Current is not documented; ask the crew on the day. The canyons are narrow, so keep clear of the walls.",
@@ -163,7 +162,7 @@ export const BELIZE_NORTH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Snappers school over the spurs, and small blennies live around the mooring line. Do not feed the fish.",
       difficultyLevel: "intermediate",
-      depthRange: "15–33 m (50–109 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 33,
       currentNote: "Current is not documented; ask the crew on the day.",
       divePlan:
@@ -201,7 +200,7 @@ export const BELIZE_NORTH: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Bright, busy coral heads along the canyon sides. Expect reef fish rather than large animals.",
       difficultyLevel: "intermediate",
-      depthRange: "18–21 m (60–70 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 21,
       currentNote: "Current is not documented; ask the crew on the day.",
       fitTone: "demanding",

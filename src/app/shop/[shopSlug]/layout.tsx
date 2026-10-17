@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { RouteFocus, SHOP_MAIN_ID } from "./_components/RouteFocus";
 import {
   ShopChrome,
   ShopChromeSkeleton,
@@ -58,13 +59,19 @@ export default function ShopLayout({
           <ShopSidebarSlot params={params} />
         </Suspense>
         <div
-          id="shop-main-content"
+          id={SHOP_MAIN_ID}
           tabIndex={-1}
           className="min-h-0 min-w-0 flex-1 pb-(--tabbar-h) outline-none print:pb-0"
         >
           {children}
         </div>
       </div>
+      {/* After the page, so an `autoFocus` field the page mounts in the same
+          commit has already taken focus and is left alone. `usePathname`
+          suspends on a route whose param is unknown at build time. */}
+      <Suspense fallback={null}>
+        <RouteFocus />
+      </Suspense>
     </>
   );
 }

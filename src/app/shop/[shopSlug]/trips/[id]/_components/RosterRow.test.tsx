@@ -83,6 +83,7 @@ function contextFor(status: "ready" | "blocked"): RosterRowContext {
       removeBookingAction: noop,
       confirmIdentityAction: noop,
       splitIdentityAction: noop,
+      repointIdentityAction: noop,
       addNoteAction: noop,
       deleteNoteAction: noop,
       saveEmergencyContactAction: noop,

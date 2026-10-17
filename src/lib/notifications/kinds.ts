@@ -876,6 +876,8 @@ const newAccountAlertSchema = z.object({
   ownerEmail: emailAddressSchema,
   shopName: z.string().trim().min(1).max(120),
   shopSlug: z.string().trim().min(1).max(120),
+  /** The name matched the brand and trust-word list: its mail is sent as plain DiveDay until cleared (#2450). */
+  nameFlagged: z.literal(true).optional(),
 });
 
 /**
@@ -1064,7 +1066,7 @@ const passwordChangedSchema = z.object({
  *
  * Both optional, and resolved from the shop row at send time by
  * `src/db/notifications.ts` rather than threaded through every composer:
- * every DiveDay email leaves as `noreply@ses.dive.day` but greets as the
+ * every DiveDay email leaves as `notifications@ses.dive.day` but greets as the
  * shop, so a diver who hits reply should reach the shop's front desk
  * (`shops.contact_email`), and a commercial send — one carrying an
  * `unsubscribeUrl` — has to name the sender's postal address (CAN-SPAM
@@ -1382,6 +1384,55 @@ const courseCertifiedSchema = z.object({
     .optional(),
 });
 
+/**
+ * **What a group's card checkout settled, told to the lead** (#2566). The
+ * booking confirmation goes out before Stripe reports the payment, so it can
+ * never carry the group total; this follows once Stripe says paid. One short
+ * receipt, keyed on the checkout, sent by the webhook on the call that
+ * completes it. The figure is Stripe's own settled total, never the asked
+ * price. Carries no `bookingId` on purpose: the delivery table is per booking
+ * and kind, and this is a receipt for a checkout.
+ */
+const partyPaymentReceiptSchema = z.object({
+  kind: z.literal("party_payment_receipt"),
+  checkoutId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: tripTitleSchema,
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  seats: z.number().int().min(2).max(500),
+  amountCents: z.number().int().min(1).max(100_000_000),
+  currency: z.string().trim().length(3),
+});
+
+/**
+ * **A seat-claim link was used with the address of someone who already holds a
+ * seat on the trip** (#2381, Aaron's option b). The claim page shows the same
+ * neutral landing whether the typed address holds a seat or not, so the only
+ * answer to "is this address on the trip" goes here, to the inbox that owns it.
+ * Carries `heldBookingId`, not `bookingId`, on purpose: it is a note about a
+ * claim attempt, not a delivery tracked on that booking. Not queued; the
+ * sender throttles it per booking.
+ */
+const seatAlreadyHeldSchema = z.object({
+  kind: z.literal("seat_already_held"),
+  heldBookingId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: tripTitleSchema,
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  /** When the claim was tried; keys the send. */
+  requestedAt: z.date(),
+});
+
 const workOrderReadySchema = z.object({
   kind: z.literal("work_order_ready"),
   noticeId: z.uuid(),
@@ -1544,6 +1595,42 @@ const rollCallStaleSchema = z.object({
 });
 
 /**
+ * **A filed incident report of kind "missing diver"** (H-142, decided
+ * 2026-10-16; `sendMissingDiverAlerts`, src/db/missing-diver-alerts.ts). Staff
+ * safety mail to each of the shop's owners at once, once per report: whoever
+ * filed it chose "missing diver" on purpose, so the shop does not wait for the
+ * roll call to go stale.
+ *
+ * **The fact and a link, never the report.** The mail lands in a personal
+ * inbox that may sit on a shared phone: it says that a missing diver was
+ * reported on this departure and when, and links the report behind the staff
+ * sign-in. No name, no severity, no word of what happened (the report is
+ * personal and medical data).
+ *
+ * Not queued (`notificationIsQueueable`): an alert that arrives late says
+ * something the crew already acted on. Carries `incidentReportId`, never
+ * `bookingId`, so the delivery is not tracked against a booking.
+ */
+const incidentMissingDiverSchema = z.object({
+  kind: z.literal("incident_missing_diver"),
+  shopId: z.uuid(),
+  personId: z.uuid(),
+  tripId: z.uuid(),
+  incidentReportId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: tripTitleSchema,
+  /** When it happened, per the report: said in the shop's zone. */
+  reportedAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  reportUrl: z.url().max(2_000),
+  /** The shop's emergency reference, behind the same sign-in. */
+  emergencyUrl: z.url().max(2_000),
+});
+
+/**
  * **The same alert, to the shop's shore contact** (H-118, decided 2026-10-15).
  * Addressed to somebody outside the shop's accounts, so it carries less than
  * the owners' copy: no person, no link behind a staff sign-in, and no name of
@@ -1626,6 +1713,13 @@ export const notificationSenderSchema = z.object({
    */
   demoShop: z.literal(true).optional(),
   /**
+   * The shop's name is flagged for review (`shopNameUnderReview`, issue #2450):
+   * it matched the brand and trust-word list and no human has cleared it, so
+   * the From column carries the plain "DiveDay" name, never "{Shop} via
+   * DiveDay" (`fromAddressFor`). Absent on every other shop's send.
+   */
+  nameUnderReview: z.literal(true).optional(),
+  /**
    * The shop's logo, already resolved to an absolute `https:` URL on DiveDay's
    * own origin or its managed storage (`shopSenderOf`), so the email can lead
    * with the shop's mark (ux review 2026-10-11, item 3). Never a URL the shop
@@ -1664,6 +1758,8 @@ export const notificationSchema = z
     tripMinimumNotMetSchema,
     tripBlowoutSchema,
     bookingCancelledSchema,
+    partyPaymentReceiptSchema,
+    seatAlreadyHeldSchema,
     welcomeSchema,
     emailVerificationSchema,
     contactEmailConfirmationSchema,
@@ -1687,6 +1783,7 @@ export const notificationSchema = z
     stripePaymentsRestrictedSchema,
     rollCallStaleSchema,
     rollCallStaleShoreSchema,
+    incidentMissingDiverSchema,
     shoreAlertConfirmationSchema,
     shoreAlertStoppedSchema,
     departureNoteSchema,
@@ -1805,10 +1902,12 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "desk_after_hours":
     case "roll_call_stale":
     case "roll_call_stale_shore":
+    case "incident_missing_diver":
     case "shore_alert_confirmation":
     case "departure_note":
     case "lost_item_found":
     case "course_certified":
+    case "seat_already_held":
       return false;
     default:
       return true;
@@ -1956,6 +2055,15 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One acknowledgment per submitted request row.
     case "course_inquiry_received":
       return `course-inquiry-received/${notification.courseInquiryId}`;
+    // One receipt per checkout, ever; the webhook sends it only on the call
+    // that completes the checkout.
+    case "party_payment_receipt":
+      return `party-payment-receipt/${notification.checkoutId}`;
+    // One note per held seat per clock hour, however many claims were tried:
+    // the same key for every attempt in the hour, so a limiter outage cannot
+    // turn a loop of claims into a loop of mail (issue #2381).
+    case "seat_already_held":
+      return `seat-already-held/${notification.heldBookingId}/${Math.floor(notification.requestedAt.getTime() / 3_600_000)}`;
     // One send per card written; a level already held writes none.
     case "course_certified":
       return `course-certified/${notification.certificationId}`;
@@ -1981,6 +2089,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One alert per departure per owner; the departure's claim comes first.
     case "roll_call_stale":
       return `roll-call-stale/${notification.tripId}/${notification.personId}`;
+    // One alert per report per owner; the report's claim comes first.
+    case "incident_missing_diver":
+      return `incident-missing-diver/${notification.incidentReportId}/${notification.personId}`;
     // One alert per departure to the shore contact, under the same claim.
     case "roll_call_stale_shore":
       return `roll-call-stale-shore/${notification.tripId}`;

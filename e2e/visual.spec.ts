@@ -2673,9 +2673,9 @@ for (const scheme of ["light", "dark"] as const) {
        * **The same departure with the pitch's door open** (ADR
        * 20260904-reef-all-the-way-down, decision 1).
        *
-       * Five beats moved behind one `<details>` — the route, the rest of the
-       * field guide, the moments strip, the shop's own site prose and the crew
-       * — and a capture of the closed page alone would leave all five as pixels
+       * Four beats moved behind one `<details>` — the route, the rest of the
+       * field guide, the shop's own site prose and the crew — and a capture
+       * of the closed page alone would leave all four as pixels
        * nothing ever looks at again. Nothing is deleted by that slice; this is
        * the baseline that proves it.
        */
@@ -2839,6 +2839,15 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the public dive-site page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis/sites/molasses-reef");
         await page.getByRole("heading", { name: "Next departures here" }).waitFor();
+        // The fleet refuses the maps host (e2e/fixtures.ts), so this capture is
+        // the failed state: the sunken ground, the route alone, and the quiet
+        // line naming the site (issue #2013). The frame asks the maps host
+        // only once it is on screen (`MapFrame`), so bring it there first, or
+        // the state stays "waiting" and the line never shows. Then back to the
+        // top, where every other capture starts.
+        await page.locator("iframe[data-map-state]").first().scrollIntoViewIfNeeded();
+        await page.getByText("is not loading.").waitFor();
+        await page.evaluate(() => window.scrollTo(0, 0));
         await capture(page, "dive-site-page", scheme);
       });
 
@@ -3498,7 +3507,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Your name").fill("Sam Reyes");
         await page.getByLabel("Your email").fill(`claimant-${scheme}@example.com`);
         await page.getByRole("button", { name: "Claim this seat" }).click();
-        await expect(page).toHaveURL(/\/ready\//);
+        // Every claim lands on the static "check your email" page (#2381).
+        await expect(page).toHaveURL(/\/claim\/[^/?#]+\?sent=1$/);
         await page.goto(claimPath ?? "/");
         await page.getByRole("heading", { name: /link isn.t available/ }).waitFor();
         await capture(page, "expired-link-claim", scheme);
@@ -4242,8 +4252,8 @@ for (const scheme of ["light", "dark"] as const) {
        * **A crew member on two of today's boats** (H-80, issue #1776). Each
        * boat shows a full crew list, so the clash is invisible on both until
        * the queue says so. `?crewClash=1` slides a seeded departure onto
-       * today's through `moveTrip`, the one door into the state, and both
-       * stations carry the row.
+       * today's through `moveTrip`, the one door into the state, and the
+       * earlier boat's station carries the one row (issue #2211).
        */
       test(`today names a crew member on two boats at once (${scheme})`, async ({
         page,
@@ -4255,6 +4265,22 @@ for (const scheme of ["light", "dark"] as const) {
         // The destination's own words, not a timing guess.
         await page.getByText("Crew on two departures").first().waitFor();
         await capture(page, "today-crew-clash", scheme);
+      });
+
+      /**
+       * **One hull on two departures at once** (H-80, issue #2135). `?boatClash=1`
+       * slides a seeded departure onto another that shares its boat through
+       * `moveTrip`; Today says it once, on the earlier departure.
+       */
+      test(`today names a boat on two departures at once (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?boatClash=1");
+        expect(seeded.ok()).toBe(true);
+        await page.goto("/shop/blue-mantis");
+        await page.getByText("Boat on two departures").first().waitFor();
+        await capture(page, "today-boat-clash", scheme);
       });
 
       /**
@@ -8952,13 +8978,13 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/dive-sites/new");
         await page.getByLabel("What the route is called").waitFor();
         await page.getByLabel("Name").fill("Turtle Ledge");
-        await page.getByLabel("Depth range").fill("20-45 ft");
+        await page.getByLabel("Depth note").fill("20-45 ft");
         await page.getByText("Unsaved changes in 2 sections").waitFor();
         // **Focus is put back before each width** (issue #2570). The capture
-        // shoots 390 first, where the folded Depth range section is
+        // shoots 390 first, where the folded depth section is
         // `max-lg:hidden`, so the field loses focus there and the 1280 shot
         // showed no ring. A hidden field is left alone.
-        const depth = page.getByLabel("Depth range");
+        const depth = page.getByLabel("Depth note");
         await capture(page, "dive-site-editor-unsaved", scheme, {
           beforeShot: async () => {
             if (await depth.isVisible()) await depth.focus();
@@ -9583,7 +9609,7 @@ for (const scheme of ["light", "dark"] as const) {
       // "This week" is a folded disclosure beside Tomorrow.
       await page.goto(`/shop/${privateShop.slug}`);
       // The row's own words, not a timing guess.
-      await page.getByText(/guessed from your timezone/).waitFor();
+      await page.getByText(/picked for where you are/).waitFor();
       await capture(page, "today-units-unconfirmed", scheme);
     });
 

@@ -50,6 +50,15 @@ const SHOP_FORM_WORDING: Record<string, string> = {
     "",
     "I will keep learning after this course, and refresh my skills with a professional after time away from the water.",
   ].join("\n"),
+  "Youth Diving: Responsibility and Risks Acknowledgment": [
+    "{courseTitle} at {shopName}: for a student aged 11 or under",
+    "",
+    "I have talked with my parent or guardian about the risks of diving, including decompression illness, barotrauma and drowning, and about why I must follow the rules my instructors ({instructorNames}) give me.",
+    "",
+    "I will always dive with an adult, stay within the depth my instructor sets, never hold my breath, and tell an adult straight away if I feel unwell, cold or scared.",
+    "",
+    "My parent or guardian has read this with me and signs it beside me.",
+  ].join("\n"),
   "Continuing Education Administrative Document": [
     "{courseTitle} at {shopName}",
     "",

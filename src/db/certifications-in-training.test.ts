@@ -3,10 +3,15 @@ import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
-import { inTrainingBefore, listCourseSeatsInTraining } from "./certifications-in-training";
+import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb } from "./client";
-import { listTripReadiness, upsertTripRequirements } from "./readiness";
-import { type certificationLevel, certifications, courses, tripAssignments } from "./schema";
+import {
+  getBookingReadiness,
+  getBookingsReadiness,
+  listTripReadiness,
+  upsertTripRequirements,
+} from "./readiness";
+import { type certificationLevel, certifications, courses, tripAssignments, trips } from "./schema";
 import { createTrip, listStaff } from "./trips";
 
 /**
@@ -260,32 +265,56 @@ describe("listCourseSeatsInTraining reads the course's own level (issue #2059)",
   });
 });
 
-describe("inTrainingBefore", () => {
-  const now = new Date("2026-10-04T12:00:00.000Z");
-  const trip = { id: "fun", startsAt: new Date("2026-10-10T13:00:00.000Z") };
-  const seat = (finishesAt: string, tripId = "course") => ({
-    personId: "p",
-    tripId,
-    level: "open_water" as const,
-    finishesAt: new Date(finishesAt),
-  });
+describe("getBookingsReadiness", () => {
+  it("answers each seat exactly as the one-seat read does, in one pass, and never another shop's", async () => {
+    const { db, shop } = ctx;
+    const start = BASE() + 20 * DAY;
+    const ow = await courseSession(db, shop.id, "open-water-diver", start);
+    const student = await book(db, shop.id, ow.id, { name: "Tove Lind" });
+    if (!student.ok) throw new Error(`course booking refused: ${student.reason}`);
+    const fun = await funDive(db, shop.id, "open_water", start + DAY);
+    const seat = await book(db, shop.id, fun.id, student.personId);
+    if (!seat.ok) throw new Error(`fun dive refused: ${seat.reason}`);
 
-  it("counts a course that is still ahead and ends before the trip", () => {
-    expect(inTrainingBefore([seat("2026-10-09T17:00:00.000Z")], trip, now)).toHaveLength(1);
-  });
-
-  it("stops counting a course that has already ended, at the sale as at the rail", () => {
-    // A student who sat two days in May and quit is not in training in October.
-    expect(inTrainingBefore([seat("2026-05-12T17:00:00.000Z")], trip, now)).toEqual([]);
-  });
-
-  it("ignores a course that ends after the trip, and the trip itself", () => {
+    const batched = await getBookingsReadiness(db, shop.id, [student.bookingId, seat.bookingId]);
+    expect(batched.get(student.bookingId)).toEqual(
+      await getBookingReadiness(db, shop.id, student.bookingId),
+    );
+    expect(batched.get(seat.bookingId)).toEqual(
+      await getBookingReadiness(db, shop.id, seat.bookingId),
+    );
+    // Still a blocker in the batch: an enrollment never clears readiness.
+    expect(batched.get(seat.bookingId)?.blockers.map((b) => b.code)).toContain(
+      "certification_in_training",
+    );
     expect(
-      inTrainingBefore(
-        [seat("2026-10-11T17:00:00.000Z"), seat("2026-10-09T17:00:00.000Z", "fun")],
-        trip,
-        now,
-      ),
-    ).toEqual([]);
+      (await getBookingsReadiness(db, "00000000-0000-0000-0000-000000000000", [seat.bookingId]))
+        .size,
+    ).toBe(0);
+  });
+});
+
+describe("a course that ended without a card (issue #2058)", () => {
+  it("names that session on the blocker that still stands, so the record can point at its roster", async () => {
+    const { db, shop } = ctx;
+    const start = BASE() + 30 * DAY;
+    const ow = await courseSession(db, shop.id, "open-water-diver", start);
+    const student = await book(db, shop.id, ow.id, { name: "Ada Brandt" });
+    if (!student.ok) throw new Error(`course booking refused: ${student.reason}`);
+    // The session ran last week, and nobody issued the card.
+    const lastWeek = nowMs() - 7 * DAY;
+    await db
+      .update(trips)
+      .set({ startsAt: new Date(lastWeek), endsAt: new Date(lastWeek + 8 * 60 * 60 * 1000) })
+      .where(eq(trips.id, ow.id));
+    const fun = await funDive(db, shop.id, "open_water", start);
+    const seat = await book(db, shop.id, fun.id, student.personId);
+    if (!seat.ok) throw new Error(`fun dive refused: ${seat.reason}`);
+
+    const readiness = await getBookingReadiness(db, shop.id, seat.bookingId);
+    expect(readiness?.status).toBe("blocked");
+    expect(readiness?.blockers.filter((b) => b.code.startsWith("certification"))).toEqual([
+      { code: "certification_missing", params: { endedCourseTripId: ow.id } },
+    ]);
   });
 });

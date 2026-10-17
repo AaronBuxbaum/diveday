@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   date,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -15,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { PARTICIPANT_TYPES } from "@/lib/participant-types";
 import { TURN_AWAY_REASONS } from "@/lib/turn-away";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { courseInquiries } from "./courses";
 import { trips } from "./trips";
@@ -334,6 +336,18 @@ export const bookings = pgTable(
     /** Why the flag was raised — see {@link identityMatchKind}. Set and cleared with it. */
     identityMatchedBy: identityMatchKind("identity_matched_by"),
     /**
+     * **An emergency contact for the person on a held seat** (issue #2145,
+     * Aaron 2026-10-13, option b). While `identity_unconfirmed_at` is set the
+     * matched record's contact is withheld from the manifest, its sheet and the
+     * crew phone's copy, because it is somebody else's next of kin; the desk
+     * writes the contact for the person in front of them here instead, never on
+     * the matched record. Read only while the seat is held, in place of the
+     * withheld one; copied onto the new record at a split and cleared there and
+     * at a confirm. A pair or nothing (`bookings_held_emergency_contact_pair`).
+     */
+    heldEmergencyContactName: text("held_emergency_contact_name"),
+    heldEmergencyContactPhone: text("held_emergency_contact_phone"),
+    /**
      * **A reschedule notice this seat was skipped for** (#2445). While
      * `identity_unconfirmed_at` is set the reschedule notice does not go (the
      * address may be somebody else's), and nothing re-sends it when staff
@@ -466,9 +480,75 @@ export const bookings = pgTable(
     courseMaterialsDoneByPersonId: uuid("course_materials_done_by_person_id").references(
       () => people.id,
     ),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * **A training mark** (issue #2275, ADR
+     * 20261012-course-forms-on-charters-and-counter): staff said this seat on
+     * an ordinary departure carries a training dive for the course seat named
+     * here (the enrollment). The seat is then asked that course's forms, and
+     * signing them once on the enrollment covers both.
+     *
+     * Only ever a staff act on the departure's Divers tab, never inferred from
+     * a diver's open enrollment or card level (`src/db/training-marks.ts`).
+     * One enrollment per seat: a second mark is refused until this one is
+     * cleared. Checked again at every read (`trainingMarkValidity`): a mark
+     * whose enrollment is canceled, held, moved off a course or ends before
+     * this departure sails raises `training_mark_invalid` until staff clear
+     * it, so a stale mark never quietly relaxes boarding. A training mark is
+     * not "In training": the booking gate never reads it.
+     *
+     * The three columns move together. The foreign key takes the default
+     * action: a hard delete of a marked enrollment fails rather than clearing
+     * the mark in silence.
+     */
+    trainingEnrollmentBookingId: uuid("training_enrollment_booking_id"),
+    trainingMarkedAt: timestamp("training_marked_at", { withTimezone: true }),
+    trainingMarkedByPersonId: uuid("training_marked_by_person_id").references(() => people.id),
+    /**
+     * **Who cleared a training mark that relaxed a boarding block, when, and
+     * why**: its course forms still owed (`forms_owed`), or every form signed
+     * but the mark no longer holding (`mark_invalid`). The manifest names who
+     * did it. A new mark keeps the stamp, so the crew still read the earlier
+     * decision; the next clear replaces it, with null when it relaxed nothing.
+     * All three columns move together.
+     */
+    trainingClearedAt: timestamp("training_cleared_at", { withTimezone: true }),
+    trainingClearedByPersonId: uuid("training_cleared_by_person_id").references(() => people.id),
+    trainingClearedReason: text("training_cleared_reason", {
+      enum: ["forms_owed", "mark_invalid"],
+    }),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
+    // The course seat a mark names is this shop's, in the database and not
+    // only in every reader (security review U6): the key runs over the shop
+    // too, against the (shop_id, id) pair below.
+    foreignKey({
+      name: "bookings_training_enrollment_fk",
+      columns: [table.shopId, table.trainingEnrollmentBookingId],
+      foreignColumns: [table.shopId, table.id],
+    }),
+    uniqueIndex("bookings_shop_id_id_unique").on(table.shopId, table.id),
+    // The charter seats marked as training on one enrollment, and the foreign
+    // key's probe when a booking is deleted.
+    index("bookings_training_enrollment_idx")
+      .on(table.trainingEnrollmentBookingId)
+      .where(sql`${table.trainingEnrollmentBookingId} is not null`),
+    // A mark nobody is recorded as having made is not one boarding may read.
+    check(
+      "bookings_training_mark_attributed",
+      sql`(${table.trainingEnrollmentBookingId} is null) = (${table.trainingMarkedAt} is null)
+        and (${table.trainingMarkedAt} is null) = (${table.trainingMarkedByPersonId} is null)`,
+    ),
+    check(
+      "bookings_training_cleared_attributed",
+      sql`(${table.trainingClearedAt} is null) = (${table.trainingClearedByPersonId} is null)
+        and (${table.trainingClearedAt} is null) = (${table.trainingClearedReason} is null)
+        and (${table.trainingClearedReason} is null or ${table.trainingClearedReason} in ('forms_owed', 'mark_invalid'))`,
+    ),
+    check(
+      "bookings_training_mark_not_self",
+      sql`${table.trainingEnrollmentBookingId} is null or ${table.trainingEnrollmentBookingId} <> ${table.id}`,
+    ),
     // Leads on the person column so deleting a person (a demo shop's cascade,
     // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
     // every shop's rows; a (shop_id, …) composite cannot serve that probe.
@@ -492,6 +572,12 @@ export const bookings = pgTable(
       "bookings_course_next_step_bounded",
       sql`${table.courseNextStep} is null
         or (length(btrim(${table.courseNextStep})) > 0 and length(${table.courseNextStep}) <= 280)`,
+    ),
+    // A name nobody can ring, or a number with nobody to ask for, is not a
+    // contact the crew can use (`readEmergencyContact`'s rule, held here too).
+    check(
+      "bookings_held_emergency_contact_pair",
+      sql`(${table.heldEmergencyContactName} is null) = (${table.heldEmergencyContactPhone} is null)`,
     ),
     // A tick nobody is recorded as having made is not one the roster may show.
     check(
@@ -549,8 +635,8 @@ export const tripHelpRequests = pgTable(
       .references(() => bookings.id, { onDelete: "cascade" }),
     kind: tripHelpRequestKind("kind").notNull(),
     status: tripHelpRequestStatus("status").notNull().default("requested"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
     acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
     handledAt: timestamp("handled_at", { withTimezone: true }),
     resolvedByPersonId: uuid("resolved_by_person_id").references(() => people.id, {
@@ -584,7 +670,7 @@ export const tripWaitlistEntries = pgTable(
     personId: uuid("person_id")
       .notNull()
       .references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     // When staff last invited this diver to grab a freed seat. Null until the
     // first invite; shown as "Invited 2h ago" so two staff don't double-invite.
     invitedAt: timestamp("invited_at", { withTimezone: true }),
@@ -651,7 +737,7 @@ export const tripInvitations = pgTable(
      * does not go, so only mail that went holds the 24-hour window (#2133).
      */
     emailedAt: timestamp("emailed_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("trip_invitations_shop_trip_idx").on(table.shopId, table.tripId, table.createdAt),
@@ -692,7 +778,7 @@ export const lastMinuteListEntries = pgTable(
     availableUntil: date("available_until", { mode: "string" }),
     /** Null while active; set once the diver unsubscribes, so a blast never emails them again. */
     unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("last_minute_list_entries_shop_person_unique").on(table.shopId, table.personId),
@@ -755,7 +841,7 @@ export const tripLastMinutePromos = pgTable(
     /** How many last-minute-list entries the blast email actually went to. */
     recipientCount: integer("recipient_count").notNull().default(0),
     createdByPersonId: uuid("created_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("trip_last_minute_promos_trip_created_idx").on(table.tripId, table.createdAt),
@@ -793,7 +879,7 @@ export const tripLastMinutePromoRecipients = pgTable(
       .notNull()
       .references(() => people.id),
     email: text("email").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("trip_last_minute_promo_recipients_promo_idx").on(table.tripPromoId),
@@ -853,7 +939,7 @@ export const bookingCapabilities = pgTable(
       .references(() => bookings.id),
     purpose: bookingCapabilityPurpose("purpose").notNull(),
     tokenHash: text("token_hash").notNull().unique(),
-    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+    issuedAt: appNowTimestamp("issued_at").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     /**
@@ -862,7 +948,7 @@ export const bookingCapabilities = pgTable(
      * revoked. `token_hash` is still what every lookup matches.
      */
     tokenSealed: text("token_sealed"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // The verify-path lookup: hash the bearer token, find the row.
@@ -921,7 +1007,7 @@ export const bookingReferrals = pgTable(
     referredByBookingId: uuid("referred_by_booking_id")
       .notNull()
       .references(() => bookings.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // The month's count on Reports.

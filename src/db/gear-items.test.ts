@@ -119,6 +119,107 @@ describe("gear items", () => {
     expect(updated).toMatchObject({ ok: true, item: { size: "L", serialNumber: "C-991" } });
   });
 
+  // Issue #2207: only a regulator holds a nitrox answer; an edit that does
+  // not carry the box leaves it; a kind change away from regulator clears it.
+  it("holds a nitrox answer on a regulator only, and keeps it across an edit that does not say", async () => {
+    const { db, shop } = await gearShopContext(ctx);
+    const reg = mustCreate(
+      await createGearItem(db, {
+        shopId: shop.id,
+        kind: "regulator",
+        label: "Reg #nx-1",
+        nitroxDesignated: true,
+      }),
+    );
+    expect(reg.nitroxDesignated).toBe(true);
+
+    const bcd = mustCreate(
+      await createGearItem(db, {
+        shopId: shop.id,
+        kind: "bcd",
+        label: "BCD #nx-forged",
+        nitroxDesignated: true,
+      }),
+    );
+    expect(bcd.nitroxDesignated).toBeNull();
+
+    const untouched = await updateGearItem(db, {
+      shopId: shop.id,
+      gearItemId: reg.id,
+      kind: "regulator",
+      label: "Reg #nx-1",
+    });
+    expect(untouched).toMatchObject({ ok: true, item: { nitroxDesignated: true } });
+
+    const unticked = await updateGearItem(db, {
+      shopId: shop.id,
+      gearItemId: reg.id,
+      kind: "regulator",
+      label: "Reg #nx-1",
+      nitroxDesignated: false,
+    });
+    expect(unticked).toMatchObject({ ok: true, item: { nitroxDesignated: false } });
+
+    await updateGearItem(db, {
+      shopId: shop.id,
+      gearItemId: reg.id,
+      kind: "regulator",
+      label: "Reg #nx-1",
+      nitroxDesignated: true,
+    });
+    const nowAnOctopus = await updateGearItem(db, {
+      shopId: shop.id,
+      gearItemId: reg.id,
+      kind: "other",
+      label: "Reg #nx-1",
+    });
+    expect(nowAnOctopus).toMatchObject({ ok: true, item: { nitroxDesignated: null } });
+  });
+
+  // Issue #2206: only a wetsuit holds a thickness, and the database refuses
+  // one outside 1–10 mm whatever writes it.
+  it("holds a thickness on a wetsuit only, keeps it across an edit that does not say, and refuses one out of range", async () => {
+    const { db, shop } = await gearShopContext(ctx);
+    const suit = mustCreate(
+      await createGearItem(db, {
+        shopId: shop.id,
+        kind: "wetsuit",
+        label: "WS #mm-7",
+        size: "L",
+        thicknessMm: 7,
+      }),
+    );
+    expect(suit.thicknessMm).toBe(7);
+    const bcd = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #mm", thicknessMm: 5 }),
+    );
+    expect(bcd.thicknessMm).toBeNull();
+
+    const untouched = await updateGearItem(db, {
+      shopId: shop.id,
+      gearItemId: suit.id,
+      kind: "wetsuit",
+      label: "WS #mm-7",
+      size: "L",
+    });
+    expect(untouched).toMatchObject({ ok: true, item: { thicknessMm: 7 } });
+    const cleared = await updateGearItem(db, {
+      shopId: shop.id,
+      gearItemId: suit.id,
+      kind: "wetsuit",
+      label: "WS #mm-7",
+      size: "L",
+      thicknessMm: null,
+    });
+    expect(cleared).toMatchObject({ ok: true, item: { thicknessMm: null } });
+
+    await expect(
+      db.transaction((tx) =>
+        tx.execute(sql`update gear_items set thickness_mm = 11 where id = ${suit.id}`),
+      ),
+    ).rejects.toThrow();
+  });
+
   it("refuses a duplicate tag and an empty one — the tag is how a wet hand finds the row", async () => {
     // A database of its own, not the file's shared transaction: the duplicate
     // is refused by the unique index, a violation aborts a wrapping

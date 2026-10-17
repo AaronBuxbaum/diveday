@@ -6,7 +6,11 @@ name: Infra
 #     `cdk synth` (does the app even build a template) and `cdk diff` (what
 #     would change against the deployed stack) as a check, with the diff
 #     posted as a PR comment. It can create and discard a CloudFormation
-#     change set; it can never execute one.
+#     change set; it can never execute one. **The comment is posted by a
+#     second job that holds no AWS credentials** (`comment`): the job that
+#     does hold the diff role runs only first-party actions and this
+#     repository's own commands, and hands the diff text over as an artifact
+#     (issue #2543).
 #   - `workflow_dispatch`: a human clicking "Run workflow" in the Actions tab,
 #     for running either of those two on demand outside a PR, or for actually
 #     deploying. Deploying additionally requires a required reviewer to
@@ -102,9 +106,14 @@ jobs:
     # GitHubActionsCdkDiffRole's trust condition (infra-stack.ts §18) accepts
     # any workflow run in this repo — no `environment:` gate here, because
     # this role can only create and discard a change set, never execute one.
+    #
+    # **No `pull-requests: write` here** (issue #2543). The job that holds the
+    # diff role (which can reach the bucket-wide file-publishing role) must not
+    # also be the one that talks to the pull request, so a third-party action
+    # that posts can never run beside the credentials. It uploads the diff;
+    # `comment` below posts it.
     permissions:
       contents: read
-      pull-requests: write
       id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -148,40 +157,138 @@ jobs:
           aws-region: us-east-1
           role-to-assume: ${{ vars.AWS_CDK_DIFF_ROLE_ARN }}
           role-session-name: gha-cdk-diff
-      - name: Post the diff to the pull request
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        uses: corymhall/cdk-diff-action@ad67041313333f7f2bd26b33f18fb134610a971e # v2.0.9
-        with:
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          # **One resource type, and it is here because the type has no
-          # non-destructive edit at all.** `Budget` -- the nested object holding
-          # the limit and the notifications -- is a Replacement-only property of
-          # `AWS::Budgets::Budget`, so *every* change to the cost guardrail's cap
-          # or thresholds is a WILL_REPLACE, and this action fails the job on any
-          # destructive change by default. Without this line, adjusting the
-          # figure the whole guardrail is built around reds the check every time,
-          # forever, on a replacement that destroys nothing: CloudFormation
-          # creates the new budget before deleting the old one, and a budget
-          # holds no data -- only the cap and the five email notifications, which
-          # the replacement carries over verbatim. The stack deliberately sets no
-          # `budgetName` so the two never collide during that overlap
-          # (docs/engineering/infrastructure-runbook.md S6's troubleshooting
-          # note; ADR 20260802-aws-cost-guardrails).
-          #
-          # Scoped to that one type on purpose. A replacement of a bucket, a
-          # secret, an IAM user or a distribution still fails this job, which is
-          # the whole reason the check is here.
-          allowedDestroyTypes: AWS::Budgets::Budget
+      # **The diff, as text, with this repository's own commands.** The wrapper
+      # (`scripts/infra-cdk.mjs`) is what a workstation operator runs, and
+      # `configure-aws-credentials` above already exported the session, so it
+      # is a quiet passthrough here. `tee` keeps the run log readable while the
+      # file is what the next steps and the artifact read; `shell: bash` is
+      # what turns on `pipefail`, so a failing `cdk diff` still fails the step.
       - name: cdk diff
-        if: github.event_name == 'workflow_dispatch'
-        # The wrapper, not a raw `cdk diff`: matches the command a workstation
-        # operator actually runs, and `scripts/infra-cdk.mjs` is a no-op
-        # passthrough here — `selectDeployProfile` short-circuits because
-        # `configure-aws-credentials` above already exported
-        # AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, and `ensureAwsDeploymentLogin`
-        # (interactive: false, since GitHub Actions sets CI=true) just does a
-        # quiet `aws sts get-caller-identity` that immediately succeeds.
-        run: pnpm infra:diff
+        id: cdk-diff
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        shell: bash
+        run: pnpm infra:diff --no-color 2>&1 | tee cdk-diff.txt
+      # **One resource type, and it is here because the type has no
+      # non-destructive edit at all.** `Budget` -- the nested object holding
+      # the limit and the notifications -- is a Replacement-only property of
+      # `AWS::Budgets::Budget`, so *every* change to the cost guardrail's cap
+      # or thresholds is a replacement, and a check that fails on any
+      # destructive change would red every time, forever, on a replacement that
+      # destroys nothing: CloudFormation creates the new budget before deleting
+      # the old one, and a budget holds no data -- only the cap and the five
+      # email notifications, which the replacement carries over verbatim. The
+      # stack deliberately sets no `budgetName` so the two never collide during
+      # that overlap (docs/engineering/infrastructure-runbook.md S6's
+      # troubleshooting note; ADR 20260802-aws-cost-guardrails).
+      #
+      # Scoped to that one type on purpose. A replacement of a bucket, a
+      # secret, an IAM user or a distribution still fails this job, which is
+      # the whole reason the check is here. This used to be the diff action's
+      # `allowedDestroyTypes`; it is the same rule, read off the diff text by
+      # twelve lines of node in this file instead of by a third-party action
+      # that held the diff role.
+      #
+      # Pull requests only: a dispatched `diff` or `deploy` run reads the diff
+      # in its log and was never failed by it.
+      - name: Find destructive changes
+        id: destructive
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          node --input-type=module - <<'EOF'
+          import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
+          const allowed = new Set(["AWS::Budgets::Budget"]);
+          const ansi = /\u001b\[[0-9;]*m/g;
+          const found = readFileSync("cdk-diff.txt", "utf8")
+            .replace(ansi, "")
+            .split("\n")
+            .map((line) => line.match(/^\[[-~]\] (AWS::\S+) .*\b(destroy|orphan|replace)\s*$/))
+            .filter((match) => match && !allowed.has(match[1]))
+            .map((match) => match[0]);
+          writeFileSync("destructive.txt", found.join("\n"));
+          appendFileSync(process.env.GITHUB_OUTPUT, `found=${found.length > 0}\n`);
+          EOF
+      # `if: always()` so a failed diff still hands over what it printed; the
+      # artifact holds text only, no credential, and nobody but this run reads it.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+        with:
+          name: cdk-diff
+          path: |
+            cdk-diff.txt
+            destructive.txt
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Fail on a destructive change
+        if: steps.destructive.outputs.found == 'true'
+        run: |
+          echo "::error::This pull request replaces or removes an existing resource. The list is in the cdk diff comment; a deliberate removal is deployed by a human with the deploy workflow."
+          cat destructive.txt
+          exit 1
+
+  # **The pull-request comment, from a job with no AWS credentials** (issue
+  # #2543). It reads the diff text the `diff` job uploaded and posts it with the
+  # GitHub CLI and this run's own token, `pull-requests: write` and nothing else:
+  # no `id-token`, no `contents`, no role to assume, and no third-party action.
+  # One sticky comment, found by its marker and edited in place on each push.
+  comment:
+    name: Post the cdk diff
+    needs: diff
+    # `always()` so a red diff (a destructive change) still gets its comment;
+    # skipped when the diff never ran, and for a fork's pull request, which
+    # got no credentials and no diff.
+    if: ${{ always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && needs.diff.result != 'skipped' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          name: cdk-diff
+      - name: Post the diff to the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          marker='<!-- diveday:cdk-diff -->'
+          {
+            echo "$marker"
+            echo "### cdk diff"
+            if [ -s cdk-diff.txt ]; then
+              if [ -s destructive.txt ]; then
+                echo
+                echo "**This replaces or removes an existing resource:**"
+                echo
+                echo '```'
+                sed 's/```/` ` `/g' destructive.txt
+                echo '```'
+              fi
+              echo
+              echo '```'
+              # GitHub caps a comment near 65,000 characters, and a fence inside
+              # the diff would end ours early.
+              head -c 55000 cdk-diff.txt | sed 's/```/` ` `/g'
+              echo
+              echo '```'
+            else
+              echo
+              echo "The diff did not finish. Read [the run]($RUN_URL)."
+            fi
+          } > body.md
+          # --jq runs per page; `first` stops on the first match without a
+          # pipe (a `| head -n 1` under pipefail can SIGPIPE gh). Only the
+          # workflow's own bot comment counts, never a human who pasted the marker.
+          existing=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" \
+            --jq "first(.[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id) // empty" | sed -n 1p)
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$existing" -F body=@body.md > /dev/null
+          else
+            gh api -X POST "repos/$REPO/issues/$PR_NUMBER/comments" -F body=@body.md > /dev/null
+          fi
 
   deploy:
     name: cdk deploy

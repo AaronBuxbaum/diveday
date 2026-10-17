@@ -15,6 +15,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { bookings } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { notificationDeliveryStatus, notificationProviderStatus } from "./notifications";
 
@@ -45,7 +46,7 @@ export const waiverTemplates = pgTable(
     body: text("body").notNull(),
     /** Soft delete, spelled the one way every other entity spells it (ADR 20260820-every-delete-is-soft). */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // A shop has exactly one waiver — versions increment per shop, not per
@@ -72,7 +73,7 @@ export const waiverMaterialityDecisions = pgTable(
     actorPersonId: uuid("actor_person_id")
       .notNull()
       .references(() => people.id),
-    decidedAt: timestamp("decided_at", { withTimezone: true }).notNull().defaultNow(),
+    decidedAt: appNowTimestamp("decided_at").notNull(),
     seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [index("waiver_materiality_decisions_shop_idx").on(table.shopId, table.templateId)],
@@ -425,7 +426,7 @@ export const waiverRecords = pgTable(
     movedFromPersonId: uuid("moved_from_person_id").references(() => people.id),
     movedAt: timestamp("moved_at", { withTimezone: true }),
     movedByPersonId: uuid("moved_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // Leads on the person column so deleting a person (a demo shop's cascade,
@@ -546,7 +547,7 @@ export const waiverDeliveries = pgTable(
     /** The provider's own words for a bounce or failure. */
     detail: text("detail"),
     attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // Current state, not history: a second email on the same link replaces the

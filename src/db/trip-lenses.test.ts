@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { shops, tripLenses, trips } from "./schema";
@@ -35,16 +36,14 @@ function mustCreate(lens: Awaited<ReturnType<typeof createTripLens>>) {
 }
 
 describe("a shop's trip tags", () => {
-  // A fresh database per test, not the file-scoped transaction: the rail's order
-  // is `created_at`, which `defaultNow()` stamps from `now()`, and Postgres
-  // freezes `now()` for a whole transaction. Inside one rolled-back transaction
-  // both writes below would carry the same instant and the order would fall to
-  // the random uuid tiebreak (src/test/db.ts, "When NOT to use this").
+  // The rail's order is `created_at`, which the app clock stamps, and the test
+  // clock is frozen: the second write is a second later, or the order would fall
+  // to the random uuid tiebreak.
   it("writes them, keeps them in the order they were written, and reads one back", async () => {
     const { db, shop } = await seededShopContext();
-    const before = await listTripLenses(db, shop.id);
-
+    advanceClock();
     const drift = mustCreate(await createTripLens(db, shop.id, "Drift days"));
+    advanceClock();
     const blue = mustCreate(await createTripLens(db, shop.id, "Blue water"));
 
     expect(drift.slug).toBe("drift-days");
@@ -52,8 +51,9 @@ describe("a shop's trip tags", () => {
 
     const listed = await listTripLenses(db, shop.id);
     // Insertion order *is* the rail's order — the order the shop wrote its own
-    // vocabulary in, never alphabetical, so the two new words land at the end.
-    expect(listed.slice(before.length).map((lens) => lens.name)).toEqual([
+    // vocabulary in, never alphabetical.
+    const written = new Set([drift.id, blue.id]);
+    expect(listed.filter((lens) => written.has(lens.id)).map((lens) => lens.name)).toEqual([
       "Drift days",
       "Blue water",
     ]);

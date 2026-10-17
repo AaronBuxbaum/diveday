@@ -159,10 +159,19 @@ describe("checkoutSeatTerms", () => {
     });
   });
 
-  it("offers no other seat on a departure that prices none, or on a course session", () => {
+  it("offers no other seat on a departure that prices none", () => {
     const plain = { ...trip, snorkelerPriceCents: null, riderPriceCents: null };
     expect(checkoutSeatTerms(plain, null).otherSeatOffers).toEqual([]);
-    expect(checkoutSeatTerms({ ...trip, courseId: "course-1" }, null).otherSeatOffers).toEqual([]);
+    expect(checkoutSeatTerms({ ...plain, courseId: "course-1" }, null).otherSeatOffers).toEqual([]);
+  });
+
+  // Issue #2226: a course session sells the snorkeler and rider seats it prices.
+  it("offers a course session's priced other seats too", () => {
+    expect(
+      checkoutSeatTerms({ ...trip, courseId: "course-1" }, null).otherSeatOffers.map(
+        (offer) => offer.type,
+      ),
+    ).toEqual(["snorkeler", "rider"]);
   });
 
   it("quotes no deposit on a departure that takes none", () => {

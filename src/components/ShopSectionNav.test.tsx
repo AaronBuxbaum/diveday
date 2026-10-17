@@ -91,4 +91,20 @@ describe.each([
     expect(link(container, "Divers").getAttribute("aria-current")).toBe("page");
     expect(link(container, "Today").hasAttribute("aria-current")).toBe(false);
   });
+
+  // The e2e harness waits on this before clicking a row (#2332).
+  it("says it is hydrated only once React has redrawn it", async () => {
+    location.pathname = root;
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(<Nav {...props} />);
+    document.body.append(container);
+    const nav = () => container.querySelector("nav[data-staff-nav]");
+    expect(nav()?.hasAttribute("data-hydrated")).toBe(false);
+
+    await act(async () => {
+      hydrateRoot(container, <Nav {...props} />);
+    });
+
+    expect(nav()?.getAttribute("data-hydrated")).toBe("true");
+  });
 });

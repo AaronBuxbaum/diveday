@@ -14,6 +14,7 @@ function formEntries(overrides: Record<string, string> = {}): Record<string, unk
     marineLifeDescription: "",
     difficulty: "",
     depthRange: "",
+    minDepth: "",
     maxDepth: "",
     expectedBottomTime: "",
     currentNote: "",
@@ -30,6 +31,24 @@ function formEntries(overrides: Record<string, string> = {}): Record<string, unk
 }
 
 describe("parseDiveSiteForm", () => {
+  // Issue #2214: the select beside difficulty posts yes, no or nothing.
+  it.each([
+    ["yes", true],
+    ["no", false],
+    ["", null],
+    ["n", null],
+  ] as const)("reads snorkel answer %j as %s", (posted, expected) => {
+    const result = parseDiveSiteForm(formEntries({ snorkelSuitable: posted }), "meters");
+    expect(result).toMatchObject({ ok: true, snorkelSuitable: expected });
+  });
+
+  it("reads a form that never carried the snorkel select as not said", () => {
+    expect(parseDiveSiteForm(formEntries(), "meters")).toMatchObject({
+      ok: true,
+      snorkelSuitable: null,
+    });
+  });
+
   it("allows a briefing with no coordinates yet", () => {
     const result = parseDiveSiteForm(
       formEntries({ forecastLatitude: "", forecastLongitude: "" }),
@@ -160,6 +179,36 @@ describe("parseDiveSiteForm", () => {
     const result = parseDiveSiteForm(formEntries({ maxDepth: "60" }), "feet");
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.maxDepthMeters).toBeCloseTo(18.288, 3);
+  });
+
+  it("reads the shallow end in the shop's own unit, beside the deepest point", () => {
+    const result = parseDiveSiteForm(formEntries({ minDepth: "20", maxDepth: "60" }), "feet");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.depthMinMeters).toBeCloseTo(6.096, 3);
+      expect(result.maxDepthMeters).toBeCloseTo(18.288, 3);
+    }
+    const blank = parseDiveSiteForm(formEntries({ maxDepth: "18" }), "meters");
+    expect(blank.ok && blank.depthMinMeters).toBeNull();
+  });
+
+  it("refuses a shallow end that is deeper than the deepest point, or has no deepest point", () => {
+    expect(parseDiveSiteForm(formEntries({ minDepth: "30", maxDepth: "18" }), "meters")).toEqual({
+      ok: false,
+      error: "depthRangeInvalid",
+    });
+    expect(parseDiveSiteForm(formEntries({ minDepth: "6" }), "meters")).toEqual({
+      ok: false,
+      error: "depthRangeInvalid",
+    });
+    // The two ends may meet: a flat sand bottom is one depth.
+    expect(parseDiveSiteForm(formEntries({ minDepth: "18", maxDepth: "18" }), "meters").ok).toBe(
+      true,
+    );
+    expect(parseDiveSiteForm(formEntries({ minDepth: "-1", maxDepth: "18" }), "meters")).toEqual({
+      ok: false,
+      error: "invalid",
+    });
   });
 
   it("still refuses a nameless site as invalid", () => {

@@ -27,7 +27,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "advanced",
-      depthRange: "27–35 m (90–110 ft)",
+      depthMinMeters: 27,
       maxDepthMeters: 35,
       currentNote:
         "Open ocean, washed by the deep currents that feed the pinnacles. The strength changes by the day, so carry an SMB and keep the group together.",
@@ -80,7 +80,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "advanced",
-      depthRange: "24–35 m (80–110 ft)",
+      depthMinMeters: 24,
       maxDepthMeters: 35,
       currentNote:
         "Open ocean, washed by the deep currents that feed the pinnacles. The strength changes by the day, so carry an SMB and keep the group together.",
@@ -133,7 +133,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "advanced",
-      depthRange: "29–35 m (95–110 ft)",
+      depthMinMeters: 29,
       maxDepthMeters: 35,
       currentNote:
         "Open ocean, washed by the deep currents that feed the pinnacles. The strength changes by the day, so carry an SMB and keep the group together.",
@@ -180,7 +180,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "advanced",
-      depthRange: "30–37 m (100–120 ft)",
+      depthMinMeters: 30,
       maxDepthMeters: 37,
       currentNote:
         "Open ocean, washed by the deep currents that feed the pinnacles. The strength changes by the day, so carry an SMB and keep the group together.",
@@ -226,7 +226,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "advanced",
-      depthRange: "27–40 m (90–130 ft)",
+      depthMinMeters: 27,
       maxDepthMeters: 40,
       currentNote:
         "Open ocean, washed by the deep currents that feed the pinnacles. The strength changes by the day, so carry an SMB and keep the group together.",
@@ -272,7 +272,6 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 24 m (80 ft)",
       maxDepthMeters: 24,
       currentNote:
         "Strong currents are reported around the rock. Carry an SMB, plan to drift, and keep the boat’s position in mind on the way up.",
@@ -324,7 +323,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "intermediate",
-      depthRange: "5–22 m (15–70 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 22,
       currentNote:
         "Current is not documented for the Shoals, but the marine park warns of strong currents at Diamond Rock next door. Carry an SMB and ask the crew on the day.",
@@ -376,7 +375,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "beginner",
-      depthRange: "10–18 m (30–55 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       fitTone: "welcoming",
@@ -415,7 +414,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "beginner",
-      depthRange: "7–16 m (25–50 ft)",
+      depthMinMeters: 7,
       maxDepthMeters: 16,
       currentNote:
         "Calm and protected in the lee of the point. Surge is not documented; ask the crew on the day. The small caves and the tunnel through the rock are overhead; stay out.",
@@ -456,7 +455,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "advanced",
-      depthRange: "22–38 m (70–120 ft)",
+      depthMinMeters: 22,
       maxDepthMeters: 38,
       currentNote: "Current not documented; carry an SMB and ask the crew on the day.",
       divePlan:
@@ -507,7 +506,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "advanced",
-      depthRange: "12–35 m (40–110 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 35,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -558,7 +557,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "intermediate",
-      depthRange: "15–30 m (45–100 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 30,
       currentNote:
         "Current not documented; ask the crew on the day. The cave under the overhangs is overhead; stay out.",
@@ -602,7 +601,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "intermediate",
-      depthRange: "12–24 m (40–80 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 24,
       currentNote: "Current not documented; ask the crew on the day.",
       fitTone: "welcoming",
@@ -643,7 +642,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "intermediate",
-      depthRange: "12–24 m (40–80 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 24,
       currentNote:
         "Current not documented; ask the crew on the day. Hot water seeps from vents in the seabed, so keep hands out of the sand.",
@@ -693,7 +692,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "beginner",
-      depthRange: "11–18 m (35–60 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       fitTone: "welcoming",
@@ -740,7 +739,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "advanced",
-      depthRange: "7–30 m (20–100 ft)",
+      depthMinMeters: 7,
       maxDepthMeters: 30,
       currentNote:
         "Fort Bay harbor is close, so listen for engines and carry an SMB. The boat flies the alpha flag. No diving while a ship is maneuvering or alongside. Ascend on the mooring line or an SMB. Current is not documented; ask the crew on the day.",
@@ -784,7 +783,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "intermediate",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "Fort Bay harbor is close, so listen for engines and carry an SMB. The boat flies the alpha flag. No diving while a ship is maneuvering or alongside. Ascend on the mooring line or an SMB. Current is not documented; ask the crew on the day. The archway at the base of the mini-wall is overhead; stay out.",
@@ -828,7 +827,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "advanced",
-      depthRange: "23–38 m (70–120 ft)",
+      depthMinMeters: 23,
       maxDepthMeters: 38,
       currentNote:
         "Fort Bay harbor is close, so listen for engines and carry an SMB. The boat flies the alpha flag. No diving while a ship is maneuvering or alongside. Ascend on the mooring line or an SMB. Current is not documented; ask the crew on the day.",
@@ -873,7 +872,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "intermediate",
-      depthRange: "10–18 m (35–60 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 18,
       currentNote:
         "Atlantic side: the marine park says diving here depends on the weather, and surf can close the site. Current is not documented; ask the crew on the day.",
@@ -915,7 +914,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "intermediate",
-      depthRange: "12–26 m (40–85 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 26,
       currentNote:
         "Atlantic side: the marine park says diving here depends on the weather. Current is not documented; ask the crew on the day.",
@@ -957,7 +956,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "advanced",
-      depthRange: "12–35 m (40–120 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 35,
       currentNote:
         "Atlantic side: the marine park says diving here depends on the weather, and surf can break against the wall above the site. Current is not documented; carry an SMB and ask the crew on the day.",
@@ -1003,7 +1002,7 @@ export const SABA: DiveSiteTemplate[] = [
       conservationNote:
         "Saba National Marine Park circles the island, and dives are made on its numbered moorings. Visitor fees pay for the moorings and the park’s upkeep.",
       difficultyLevel: "intermediate",
-      depthRange: "9–24 m (30–80 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 24,
       currentNote:
         "Dived only on a calm day or with wind from the south. Current is not documented; ask the crew on the day.",

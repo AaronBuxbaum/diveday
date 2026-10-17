@@ -29,7 +29,7 @@ export const MEXICO_CENOTES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Few animals. The sights are stalactites, tree roots in the light and the halocline.",
       difficultyLevel: "intermediate",
-      depthRange: "0–14 m (0–46 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 14,
       currentNote:
         "Still water. A halocline blurs your view where fresh and salt water mix, and fin kicks stir silt, so hold trim and keep kicks short. Fresh water lifts you less than the sea, so check your weighting.",
@@ -65,7 +65,7 @@ export const MEXICO_CENOTES: DiveSiteTemplate[] = [
       marineLife: "Freshwater fish · eels · aquatic plants",
       marineLifeDescription: "Fish and freshwater eels live among the plants and boulders.",
       difficultyLevel: "intermediate",
-      depthRange: "0–14 m (0–46 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 14,
       currentNote:
         "Still water. A halocline near 10 m blurs your view, and fins stir silt, so hold trim. Fresh water lifts you less than the sea, so check your weighting.",
@@ -100,7 +100,7 @@ export const MEXICO_CENOTES: DiveSiteTemplate[] = [
       marineLife: "Freshwater fish · tree roots · fossils",
       marineLifeDescription: "Roots reach into the water, and fossils sit in the walls.",
       difficultyLevel: "intermediate",
-      depthRange: "0–15 m (0–49 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 15,
       currentNote:
         "Still water. The halocline near 10 m blurs your view, and below it the water is warmer. Fins stir silt, so hold trim. Fresh water lifts you less than the sea, so check your weighting.",
@@ -135,7 +135,7 @@ export const MEXICO_CENOTES: DiveSiteTemplate[] = [
       marineLife: "Fossils · limestone formations",
       marineLifeDescription: "Fossil shells, corals and urchin skeletons sit in the walls.",
       difficultyLevel: "intermediate",
-      depthRange: "0–15 m (0–49 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 15,
       currentNote:
         "Still water. The halocline in the deeper areas blurs your view, and fins stir silt, so hold trim. Weight for fresh water, which lifts you less than the sea.",
@@ -170,7 +170,7 @@ export const MEXICO_CENOTES: DiveSiteTemplate[] = [
       marineLife: "Light beams · limestone walls",
       marineLifeDescription: "The animals are few. The sights are the light and the walls.",
       difficultyLevel: "advanced",
-      depthRange: "0–27 m (0–89 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 27,
       currentNote:
         "Still water. The halocline blurs your view, the hydrogen sulfide cloud near 30 m hides what is below, and the cenote goes on far past the plan, so stay well above the cloud. Hydrogen sulfide is toxic, smells of rotten eggs and damages gear; the plan ends above it. Fresh water lifts you less than the sea, so check your weighting. The entrance is steep and narrow.",
@@ -205,7 +205,7 @@ export const MEXICO_CENOTES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Fresh and saltwater fish share the river under the mangroves. Small caves along the sides are overheads: stay out of them.",
       difficultyLevel: "intermediate",
-      depthRange: "0–8 m (0–26 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 8,
       currentNote:
         "Gentle flow, open to daylight throughout. Mangrove roots and rocks line the river, so watch fin tips. The side caves are overheads: stay out of them. Operators name a resident crocodile. Staff check for the crocodile before every dive; no one enters while it is in or near the river; surface only where briefed. Fresh water lifts you less than the sea, so check your weighting.",
@@ -240,7 +240,7 @@ export const MEXICO_CENOTES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Turtles live in the open water at the top. White formations and fossils fill the cavern.",
       difficultyLevel: "intermediate",
-      depthRange: "0–12 m (0–39 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 12,
       currentNote:
         "Still water. Fins stir silt over the decorated passages, so perfect buoyancy matters. Check your weighting for fresh water, which lifts you less than the sea.",
@@ -274,7 +274,7 @@ export const MEXICO_CENOTES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Look up at the entrance for the skull's eyes and mouth, and look in the walls for fossils.",
       difficultyLevel: "intermediate",
-      depthRange: "0–15 m (0–49 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 15,
       currentNote:
         "Still water. Three halocline layers blur your view as you cross them, and fins stir silt. Weight for fresh water, which lifts you less than the sea. The entry is a jump of about 3 m through the roof hole. Tell the guide before you kit up if a jump is a problem for you.",
@@ -310,7 +310,7 @@ export const MEXICO_CENOTES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Fossils sit in the walls, and the algae layer at the surface shapes the light.",
       difficultyLevel: "intermediate",
-      depthRange: "0–18 m (0–59 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 18,
       currentNote:
         "Still water. Silt rises easily from the floor, so hold trim and keep kicks short. Fresh water lifts you less than the sea, so check your weighting.",
@@ -344,7 +344,7 @@ export const MEXICO_CENOTES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Almost no animals in the clear water above the plan. The branches and the sulfide cloud lie below the plan.",
       difficultyLevel: "advanced",
-      depthRange: "0–27 m (0–89 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 27,
       currentNote:
         "Still water. A halocline blurs the view, and the sulfide cloud lies past the plan's floor; the cenote falls away far below the plan's floor, so stay well above the hydrogen sulfide cloud. Fresh water lifts you less than the sea, so check your weighting.",
@@ -379,7 +379,7 @@ export const MEXICO_CENOTES: DiveSiteTemplate[] = [
       marineLife: "Freshwater catfish · limestone formations",
       marineLifeDescription: "Few animals, but columns and stalactites in the lit chamber.",
       difficultyLevel: "intermediate",
-      depthRange: "0–12 m (0–39 ft)",
+      depthMinMeters: 0,
       maxDepthMeters: 12,
       currentNote:
         "Still water. The halocline blurs your view, and fins stir silt over the decoration, so hold trim. Fresh water lifts you less than the sea, so check your weighting.",

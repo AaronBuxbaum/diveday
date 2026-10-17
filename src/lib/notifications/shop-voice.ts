@@ -39,6 +39,8 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "trip_minimum_not_met":
     case "trip_blowout":
     case "booking_cancelled":
+    case "party_payment_receipt":
+    case "seat_already_held":
     case "checkout_recovery":
     case "last_minute_deal":
     case "staff_reply":
@@ -70,6 +72,7 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "desk_after_hours":
     case "stripe_payments_restricted":
     case "roll_call_stale":
+    case "incident_missing_diver":
     case "shore_alert_stopped":
       return null;
   }
@@ -140,6 +143,9 @@ function splitMailbox(value: string): { name: string | null; address: string } {
 export function fromAddressFor(configuredFrom: string, notification: Notification): string {
   const shopName = shopVoiceOf(notification);
   if (!shopName) return configuredFrom;
+  // A name held for review (issue #2450) is not given the From column: it
+  // could pass for a brand or an institution, so the mail is plain DiveDay.
+  if ("sender" in notification && notification.sender?.nameUnderReview) return configuredFrom;
   const { name, address } = splitMailbox(configuredFrom);
   const via = name ?? "DiveDay";
   return `${encodeDisplayName(`${shopName} via ${via}`)} <${address}>`;

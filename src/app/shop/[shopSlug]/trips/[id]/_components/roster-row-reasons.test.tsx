@@ -77,7 +77,7 @@ describe("a diver in a drysuit with no drysuit card", () => {
 
     expect(
       screen.getByText(
-        "Dives dry with no drysuit certification on file. Not a block: ask about their drysuit experience, or plan an orientation before the first dive.",
+        "Dives dry with no drysuit certification on file. Not a block: ask about their drysuit experience (if you have seen them dive dry, record it on their record), or plan an orientation before the first dive.",
       ),
     ).toBeInTheDocument();
     // The advisory is not a blocker, so the seat is still cleared.

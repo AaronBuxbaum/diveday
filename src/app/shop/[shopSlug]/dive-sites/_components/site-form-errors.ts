@@ -19,6 +19,7 @@ export function siteFormErrorMessages(
     coordinatesIncomplete: t("diveSites.form.errorCoordinates"),
     tideStationInvalid: t("diveSites.form.errorTideStation"),
     depthTooDeep: t("diveSites.form.errorDepth"),
+    depthRangeInvalid: t("diveSites.form.errorDepthRange"),
     images: t("diveSites.form.errorImages"),
     imagesUnconfigured: t("diveSites.form.errorImagesUnconfigured"),
     nameTaken: t("diveSites.form.errorNameTaken"),

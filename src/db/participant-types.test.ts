@@ -401,7 +401,7 @@ describe("the gates a non-diver is not asked to clear", () => {
     });
   });
 
-  it("refuses a snorkeler or a rider on a course session", async () => {
+  it("refuses an unpriced snorkeler or rider on a course session", async () => {
     const { db, shop, trip } = await benwood();
     const [course] = await db
       .insert(courses)
@@ -737,25 +737,19 @@ describe("setBookingParticipantType", () => {
     );
   });
 
-  it("refuses every change once the boat is home, and joining the dive once it has left", async () => {
+  it("refuses every change once the boat is home, and lets a seat leave the dive at sea", async () => {
     const { db, shop, trip, roster, staff } = await benwood();
     const ids = { shopId: shop.id, tripId: trip.id, actorPersonId: staff.id };
     await limits(db, trip.id, 8, null);
-    const snorkeler = await seat(db, shop.id, trip.id, "snorkeler");
     const [a, b] = roster;
-    if (!snorkeler.ok || !a || !b) throw new Error("setup failed");
+    if (!a || !b) throw new Error("setup failed");
 
-    // Out on the water: between dives a diver may sit the second one out, but
-    // nobody joins the dive past the dock's check.
+    // Out on the water: between dives a diver may sit the second one out.
     const now = nowDate().getTime();
     await db
       .update(trips)
       .set({ startsAt: new Date(now - 3 * 3_600_000), endsAt: new Date(now + 3 * 3_600_000) })
       .where(eq(trips.id, trip.id));
-    expect(await change(db, ids, snorkeler.bookingId, "diver")).toMatchObject({
-      ok: false,
-      reason: "trip_unavailable",
-    });
     expect(await change(db, ids, a.booking.id, "snorkeler")).toMatchObject({ ok: true });
 
     // Home: the head count is closed and the record stays what it was.
@@ -767,22 +761,7 @@ describe("setBookingParticipantType", () => {
       ok: false,
       reason: "trip_unavailable",
     });
-  });
-
-  it("refuses joining the dive from the departure time, not after the selling grace", async () => {
-    const { db, shop, trip, staff } = await benwood();
-    const ids = { shopId: shop.id, tripId: trip.id, actorPersonId: staff.id };
-    await limits(db, trip.id, 8, null);
-    const snorkeler = await seat(db, shop.id, trip.id, "snorkeler");
-    if (!snorkeler.ok) throw new Error("setup failed");
-    // Ten minutes past the time on the board: still inside `hasSailed`'s
-    // grace for a late booking, and too late to put anyone in the water.
-    const now = nowDate().getTime();
-    await db
-      .update(trips)
-      .set({ startsAt: new Date(now - 10 * 60_000), endsAt: new Date(now + 4 * 3_600_000) })
-      .where(eq(trips.id, trip.id));
-    expect(await change(db, ids, snorkeler.bookingId, "diver")).toMatchObject({
+    expect(await change(db, ids, a.booking.id, "diver", true)).toMatchObject({
       ok: false,
       reason: "trip_unavailable",
     });

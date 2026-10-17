@@ -341,6 +341,7 @@ describe("what left the month's money", () => {
       refundedCents: 7_500,
       discountedCents: 3_300,
       stripeFeesCents: 1_640,
+      disputesLostCents: 0,
     });
     expect(detail.payouts.map((row) => row.status)).toEqual(["paid", "paid", "failed"]);
   });
@@ -357,7 +358,12 @@ describe("what left the month's money", () => {
     await payout(db, other.shopId, { id: "po_other", arrivalDate: MID_JUNE });
 
     const detail = await getMonthMoneyDetail(db, shop.shopId, JUNE, JULY, NOW, SHOP_MONEY);
-    expect(detail.out).toEqual({ refundedCents: 0, discountedCents: 0, stripeFeesCents: null });
+    expect(detail.out).toEqual({
+      refundedCents: 0,
+      discountedCents: 0,
+      stripeFeesCents: null,
+      disputesLostCents: 0,
+    });
     expect(detail.payouts).toHaveLength(1);
   });
 

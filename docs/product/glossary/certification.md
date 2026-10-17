@@ -194,8 +194,9 @@
   ladder — not the **specialty** or **nitrox** tables, which stay one-tap-away from this treatment on
   purpose (see their own entries on why even an *imported* row waits for a staff confirm there).
 - **In training** — a diver with no card at a trip's level yet, holding a seat on a course session
-  that certifies that level (or higher), ends before the trip starts, and has not ended yet. Which
-  courses certify a rung is agency fact, written on each template in `src/content/course-templates.ts`
+  that certifies that level (or higher), ends before the trip starts, and has not ended yet. A
+  **Training mark** (operations glossary) is a different thing and never makes a diver In training.
+  Which courses certify a rung is agency fact, written on each template in `src/content/course-templates.ts`
   (`certifiesLevel`) and copied onto the course (`courses.certifies_level`, issue #2059), so a
   template update carries it and no editor changes it; it matches the importer: SSI Advanced
   Adventurer and SDI Advanced Adventure Diver are the Advanced rung; specialties, refreshers and
@@ -211,7 +212,15 @@
   problem, and only the card the instructor certifies clears it (**Shop-issued certification**).
   Both gates share one window (`inTrainingBefore`): once the course session has ended without a
   card, the diver is read as uncertified again, because a diver who did not finish and an
-  instructor who has not tapped both need somebody to act.
+  instructor who has not tapped both need somebody to act; the blocker then names that session
+  (`endedCourseTripId`, `courseEndedBefore`) and the diver record's fix opens its roster. Every door
+  that asks admission (booking, seat claims, blow-out offers, the next-dive card) reads the same
+  window (`src/lib/in-training.ts`), and Today says "Check the course result". A charter seat sold
+  only on a course seat is named in that course seat's Remove confirm and its move, and only there:
+  a no-show, a type change or the course ending says nothing of it
+  (`chartersRelyingOnCourseSeats`, issue #2058); it stays booked, a warning and never a gate, and
+  boarding asks for the card as for anyone. A self-declared card is never pointed at an ended
+  session: verifying it is the fix (agency review G6).
 - **Self-declared certification** — a level (or a nitrox tick) a **diver typed about themselves** on
   one of the three public forms that ask: the shop-wide last-minute-deal list, a full trip's wait
   list, or — since 2026-08-20 — the trip booking form itself. It lands on the person as a `pending`
@@ -508,10 +517,14 @@
   one is a diver with a booking, a card and a place on the manifest, and nothing about them is
   recorded on `waiver_records`.
 - **Site maximum depth** — `dive_sites.max_depth_meters`, the site's deepest point, stored in
-  **metres always** whatever unit the shop reads. Distinct from `depth_range`, the free-text
-  briefing prose that lives beside it: the number exists solely to be comparable to a
-  certification's depth ceiling. A trip's depth is the deepest site it visits, across the primary
-  site *and* every ordered dive.
+  **metres always** whatever unit the shop reads: the number a certification's depth ceiling is
+  compared against. The **site depth range** is that number plus `dive_sites.depth_min_meters`, the
+  shallow end, also in metres; a shallow end needs the maximum beside it and cannot sit below it.
+  Every briefing prints the range through the shop's depth unit ("15–28 m", "49–92 ft"), so one
+  unit shows on a page and a shop that flips its setting moves every site with it. `depth_range`
+  survives as a free-text **depth note** (the migration cleared it where it could read a range out
+  of it); it is shown only where a site records no depth, so it never names a second unit. A trip's
+  depth is the deepest site it visits, across the primary site *and* every ordered dive.
 - **Depth ceiling** — how deep a certification trains a diver to go: Open Water 18 m/60 ft,
   Advanced Open Water 30 m/100 ft, Rescue 30 m (a skills course, not a deeper one), Divemaster and
   Instructor 40 m — the recreational limit. A verified **Deep** specialty lifts an Open Water diver

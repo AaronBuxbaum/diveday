@@ -1688,10 +1688,9 @@ async function bounceThreeConfirmations(
 /**
  * Give Priya's outstanding release one failed email and one delivered text.
  *
- * Priya is the seed's deliberate waiver holdout (`src/db/seed-bookings.ts`), so
- * her record is the one that offers all four ways of getting a release signed —
- * the same record `diver-profile-paper-waiver` photographs at rest. Issuing here
- * rather than in the seed keeps that calm capture calm.
+ * Priya is the seed's deliberate waiver holdout (`src/db/seed-bookings.ts`), so her record offers
+ * all four ways of getting a release signed, the record `diver-profile-paper-waiver` photographs at
+ * rest. Issuing here keeps that capture calm; it is stamped an hour on, past her seat releases.
  */
 async function markMixedWaiverDelivery(
   db: Awaited<ReturnType<typeof getDb>>,
@@ -1705,8 +1704,9 @@ async function markMixedWaiverDelivery(
   if (!priya) return;
   const issued = await issueWaiverRequest(db, { shopId, personId: priya.id });
   if (!issued.ok) return;
-  // Email first, text second: the record's own latest-attempt columns take the
-  // last write, and "the text got through" is the truer summary of the pair.
+  const createdAt = new Date(nowDate().getTime() + HOUR_MS);
+  await db.update(waiverRecords).set({ createdAt }).where(eq(waiverRecords.id, issued.recordId));
+  // Email first, text second: the latest-attempt columns take the last write.
   await recordWaiverDelivery(db, {
     shopId,
     waiverRecordId: issued.recordId,

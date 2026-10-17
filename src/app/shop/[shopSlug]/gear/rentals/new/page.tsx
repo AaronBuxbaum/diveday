@@ -15,7 +15,7 @@ import {
   counterRentalWaiverStandings,
 } from "@/db/gear-counter-rentals";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
-import { gearItemKindLabel } from "@/i18n/gear-labels";
+import { gearItemKindLabel, tankFillOptions } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { isMinorOnDate } from "@/lib/age";
@@ -219,6 +219,8 @@ export default async function RentOutPage({
       price: priceOf(unit.kind),
       priceAria: t("counterRentals.new.priceAria", { label: unit.label }),
       removeAria: t("counterRentals.new.removeAria", { label: unit.label }),
+      fillAria:
+        unit.kind === "tank" ? t("counterRentals.new.fillAria", { label: unit.label }) : null,
       order: blocked ? 2 : flagged ? 1 : 0,
     };
   };
@@ -370,6 +372,9 @@ export default async function RentOutPage({
                   },
                   submit: t("counterRentals.new.submit"),
                   submitting: t("counterRentals.new.submitting"),
+                  fillLabel: t("counterRentals.new.fillLabel"),
+                  fillOptions: tankFillOptions(t, t("counterRentals.new.fillChoose")),
+                  fillHint: t("counterRentals.new.fillHint"),
                 }}
               />
             )}

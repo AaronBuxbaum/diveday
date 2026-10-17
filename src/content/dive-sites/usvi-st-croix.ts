@@ -28,7 +28,7 @@ export const USVI_ST_CROIX: DiveSiteTemplate[] = [
       conservationNote:
         "Salt River Bay is a national historical park and ecological preserve. Use the moorings provided at the East and West Walls, display a diver-down flag, and collect nothing.",
       difficultyLevel: "advanced",
-      depthRange: "12–24 m (40–80 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 24,
       currentNote:
         "Surge and current, especially where the wall turns the corner into the canyon; the NPS lists strong currents for the park. Carry an SMB.",
@@ -72,7 +72,7 @@ export const USVI_ST_CROIX: DiveSiteTemplate[] = [
       conservationNote:
         "Salt River Bay is a national historical park and ecological preserve. Use the moorings provided at the East and West Walls, display a diver-down flag, and collect nothing.",
       difficultyLevel: "advanced",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote:
         "Choppy at the surface, with surge and current at the corner of the wall; the NPS lists strong currents for the park. Carry an SMB. The swim-throughs and cuts among the pinnacles are overhead: stay out of them.",
@@ -122,7 +122,7 @@ export const USVI_ST_CROIX: DiveSiteTemplate[] = [
       conservationNote:
         "Salt River Bay is a national historical park and ecological preserve. Leave the anchors where they lie, and collect nothing.",
       difficultyLevel: "intermediate",
-      depthRange: "14–23 m (45–75 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 23,
       currentNote:
         "Current can occur here, and the NPS lists strong currents for the park. Open water at the edge of the canyon: carry an SMB.",
@@ -172,7 +172,7 @@ export const USVI_ST_CROIX: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Reef sharks, stingrays and sea turtles are regular, black coral and large deep-water fish live on the wall, and nineteenth-century anchors lie along it.",
       difficultyLevel: "advanced",
-      depthRange: "8–30 m (26–100 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 30,
       currentNote:
         "Boats use the ramp beside the entry: listen for engines and fly a dive flag on the surface swim. Carry an SMB. Some surge and surface swell, especially in the shallows on the swim out to the buoy. Enter from the sand beside the boat ramp; the swim to the buoy is about 100 yards and to the wall about 200 yards. Exit the way you came, along the sand chutes to the buoy and the beach. Visibility runs from 20 to 60 ft.",
@@ -221,7 +221,7 @@ export const USVI_ST_CROIX: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Reef sharks along the wall, large elkhorn corals in the shallows, and schools of tangs, wrasse and triggerfish.",
       difficultyLevel: "advanced",
-      depthRange: "8–30 m (25–100 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 30,
       currentNote:
         "Hard shore entry with no sand channel; surge and wave action make it worse, so go only on calm days, with booties on. Exit by the same route; if the surf has come up, do not dive.",
@@ -264,7 +264,7 @@ export const USVI_ST_CROIX: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Seahorses, frogfish, arrow crabs and batfish among the pilings, with tarpon alongside them.",
       difficultyLevel: "intermediate",
-      depthRange: "6–27 m (20–90 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 27,
       currentNote:
         "No diving while a cruise ship or military vessel is docked at the pier, so check the cruise schedule first. The pier is a working dock: surface well clear of the pilings and boats and carry an SMB. Conditions are usually calm.",
@@ -313,7 +313,7 @@ export const USVI_ST_CROIX: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barracuda, snapper and angelfish around the wrecks, large groupers and stingrays beside the barge, and green and hawksbill turtles near the Northwind.",
       difficultyLevel: "intermediate",
-      depthRange: "5–24 m (15–80 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 24,
       currentNote:
         "A slight current is to be expected. Dive from a boat; do not swim out from shore. The Aegir habitat is overhead; stay outside.",
@@ -366,7 +366,7 @@ export const USVI_ST_CROIX: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A shy seahorse often hides on the back of the Rosaomaira, blackbar soldierfish and mahogany snapper are regular, and southern stingrays rest on the sand around the hulls.",
       difficultyLevel: "advanced",
-      depthRange: "9–36 m (30–117 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 36,
       currentNote:
         "Generally little or no current and calm seas inside the bay, but the surface swim from shore is long and strenuous, so go by boat.",

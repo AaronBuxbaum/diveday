@@ -234,7 +234,9 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     const nitroxAction = after.actions.find((action) => action.id === `nitrox:${reef.id}`);
     // One diver is a row about that person, by name, never "1 diver wants…".
     expect(nitroxAction?.subject).toBe("Priya Sharma");
-    expect(nitroxAction?.detail).toBe("Wants nitrox, no verified card.");
+    expect(nitroxAction?.detail).toBe(
+      "Wants nitrox, gets air unless a card is verified before the boat leaves.",
+    );
   });
 
   it("nudges staff about missing emergency contacts on a near boat, and clears once filled", async () => {

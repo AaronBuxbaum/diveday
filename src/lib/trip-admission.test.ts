@@ -21,7 +21,7 @@ import {
   type TripAdmissionEvidence,
   type TripAdmissionRefusal,
 } from "./trip-admission";
-import { effectiveWaiverForBooking, releaseLapsedForBooking } from "./waivers";
+import { effectiveWaiverForBooking, releaseLapseForBooking, waiverClockInstant } from "./waivers";
 
 function certification(overrides: Partial<Certification> = {}): Certification {
   return {
@@ -925,13 +925,12 @@ describe("decideTripAdmission — participant types (ADR 20261007-participant-ty
  * **A release that lapses before the departure is never a reason to refuse
  * the sale.** Admission takes no release at all: whether a diver's waiver
  * stands is something they can fix before the boat leaves, so it is
- * readiness's question. Here the seat sells three weeks out to a diver whose
- * release readiness clears today and would block on the morning of the dive:
- * admission must admit at both instants, or it refuses someone readiness
- * clears.
+ * readiness's question. The seat sells three weeks out to a diver whose
+ * release readiness blocks today (measured at the departure, #2611): admission
+ * must still admit, or it refuses someone who can re-sign in time.
  */
 describe("decideTripAdmission — a release that lapses before the departure", () => {
-  it("admits the seat while readiness clears it today and blocks it on the day", () => {
+  it("admits the seat while readiness blocks it, today and on the day", () => {
     const today = new Date("2026-07-18T12:00:00.000Z");
     const departure = new Date("2026-08-08T09:00:00.000Z");
     const lapsesOn = new Date("2026-08-01T12:00:00.000Z");
@@ -959,21 +958,30 @@ describe("decideTripAdmission — a release that lapses before the departure", (
         bookingWaiver: release,
         personSignedWaivers: [release],
         currentTemplateVersion: null,
-        now,
       };
       return calculateReadiness({
         timezone: "UTC",
         requirement: { ...source, requiresWaiver: true, requiresPayment: false } as TripRequirement,
         siteRequirement: null,
-        waiver: effectiveWaiverForBooking(resolution),
-        releaseLapsed: releaseLapsedForBooking(resolution),
+        waiver: effectiveWaiverForBooking({
+          ...resolution,
+          now: waiverClockInstant({ now, startsAt: departure, endsAt: null }),
+        }),
+        releaseLapse: releaseLapseForBooking({
+          ...resolution,
+          now,
+          startsAt: departure,
+          endsAt: null,
+        }),
         certifications: [card],
         now,
       });
     };
-    expect(readinessAt(today).status).toBe("ready");
-    // On the day the release has lapsed: blocked, and named as a signature
-    // that ran out rather than one nobody ever sent.
+    const ahead = readinessAt(today);
+    expect(ahead.status).toBe("blocked");
+    // Valid today, so "runs out before the trip", never "lapsed".
+    expect(ahead.blockers).toContainEqual(expect.objectContaining({ code: "waiver_runs_out" }));
+    // On the day: blocked, named as a signature that ran out, not one never sent.
     const onTheDay = readinessAt(departure);
     expect(onTheDay.status).toBe("blocked");
     expect(onTheDay.blockers).toContainEqual(expect.objectContaining({ code: "waiver_lapsed" }));

@@ -557,6 +557,13 @@ describe("an Ask to move", () => {
       senderAuthenticated: true,
     });
     expect(await hasMoveAsk(db, shop.id, bookingId)).toBe(true);
+    // `/ready` passes the departure it already read: the same answer.
+    const [seat] = await db
+      .select({ tripId: bookings.tripId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    if (!seat) throw new Error("seeded booking missing");
+    expect(await hasMoveAsk(db, shop.id, bookingId, seat.tripId)).toBe(true);
     expect(await countUnansweredMessages(db, shop.id)).toBeGreaterThan(0);
 
     const again = await recordMoveAsk(db, { shopId: shop.id, bookingId, now: NOW });

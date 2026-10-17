@@ -33,7 +33,7 @@ export const ANTIGUA_BARBUDA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Rays are most common in the winter months, and a resident turtle may be near the anchor.",
       difficultyLevel: "beginner",
-      depthRange: "4–15 m (13–50 ft)",
+      depthMinMeters: 4,
       maxDepthMeters: 15,
       currentNote:
         "Close to English Harbor; yachts and boats pass, so carry an SMB and listen for engines. The headland often breaks the waves, but check conditions. Current not documented; ask the crew on the day.",
@@ -68,7 +68,7 @@ export const ANTIGUA_BARBUDA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The staghorn garden is worth a slow look, and turtles and nurse sharks use the ledges below it.",
       difficultyLevel: "advanced",
-      depthRange: "12–37 m (40–120 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 37,
       currentNote:
         "An exposed drift dive with no permanent mooring. Local operators dive it rarely, only in good conditions. Carry an SMB. The wall falls to about 37 m.",
@@ -118,7 +118,7 @@ export const ANTIGUA_BARBUDA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Reef sharks and triggerfish patrol the outer wall, and the rock face is dressed in sea fans.",
       difficultyLevel: "advanced",
-      depthRange: "2–25 m (6–80 ft)",
+      depthMinMeters: 2,
       maxDepthMeters: 25,
       currentNote:
         "Exposed to the Atlantic and often run as a drift despite a mooring, so carry an SMB. The rock is awash in swell. The wall continues deeper than the plan, so the floor is the diver's to hold. A split runs through the rock itself; it is overhead, so stay out of it.",
@@ -164,7 +164,6 @@ export const ANTIGUA_BARBUDA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Parrotfish and lobster work the reef. Eagle rays and barracuda cruise farther out, and nurse sharks are reported too.",
       difficultyLevel: "advanced",
-      depthRange: "Up to 26 m (85 ft)",
       maxDepthMeters: 26,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -214,7 +213,7 @@ export const ANTIGUA_BARBUDA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Eagle rays patrol the outer ridges, and turtles are a regular sight. Reef sharks are sometimes reported, not promised. Morays and small reef life tuck into the gaps between the boulders.",
       difficultyLevel: "advanced",
-      depthRange: "4–23 m (13–75 ft)",
+      depthMinMeters: 4,
       maxDepthMeters: 23,
       currentNote:
         "Yachts use the water off English Harbor: carry an SMB, listen for engines, and surface only after the SMB is up. Close to a cliff and open to the Atlantic, with a current whose direction is unpredictable, so local operators usually run it as a drift from the boat. Keep a few meters clear of the cliff foot; surge can move you into the boulders. The water off the headland is often rough and the site is not always diveable.",

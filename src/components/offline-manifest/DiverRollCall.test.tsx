@@ -101,6 +101,41 @@ describe("OfflineDiverRollCall", () => {
     expect(row).not.toContain("Physician said no before");
   });
 
+  it("shows a held seat only the contact the desk recorded for it (H7)", () => {
+    const copy = savedCopy();
+    const [first] = copy.snapshot.manifests[0]?.divers ?? [];
+    if (!first) throw new Error("fixture diver missing");
+    first.identityWithheld = true;
+    first.emergencyContactName = "Pilar Vega";
+    first.emergencyContactPhone = "+34 600 111 222";
+    first.heldEmergencyContact = { name: "Rosa Vega", phone: "+34 600 333 444" };
+    const trip = offlineTripView(copy, "departure");
+    if (!trip) throw new Error("the fixture carries a manifest");
+    const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+    const row = container.querySelector("#offline-roll-call-b-priya")?.textContent ?? "";
+    expect(row).toContain("Rosa Vega");
+    expect(row).not.toContain("Pilar Vega");
+  });
+
+  it("shows no contact on a seat held by its blocker alone (H7)", () => {
+    const copy = savedCopy();
+    const [first] = copy.snapshot.manifests[0]?.divers ?? [];
+    if (!first) throw new Error("fixture diver missing");
+    first.emergencyContactName = "Pilar Vega";
+    first.emergencyContactPhone = "+34 600 111 222";
+    first.heldEmergencyContact = { name: "Rosa Vega", phone: "+34 600 333 444" };
+    first.readiness = {
+      status: "blocked",
+      blockers: [{ code: "identity_unconfirmed", text: "Confirm who this is." }],
+    };
+    const trip = offlineTripView(copy, "departure");
+    if (!trip) throw new Error("the fixture carries a manifest");
+    const { container } = render(<OfflineDiverRollCall view={trip} controls={controls()} />);
+    const row = container.querySelector("#offline-roll-call-b-priya")?.textContent ?? "";
+    expect(row).not.toContain("Pilar Vega");
+    expect(row).not.toContain("Rosa Vega");
+  });
+
   it("never shows a held seat's medical warnings", () => {
     const copy = savedCopy();
     const [first] = copy.snapshot.manifests[0]?.divers ?? [];

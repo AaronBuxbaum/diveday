@@ -26,10 +26,23 @@ export type MedicalClearanceCopy = {
   recording: string;
   confirm: string;
   neverMind: string;
+  /**
+   * The confirmation a letter dated before the latest referral needs, naming the
+   * earlier referral's date (issue #2616); null when there is no such referral,
+   * so the form asks nothing extra.
+   */
+  earlierLetterConfirm: string | null;
 };
 
-export function medicalClearanceCopy(t: StaffTranslator): MedicalClearanceCopy {
+export function medicalClearanceCopy(
+  t: StaffTranslator,
+  /** The earlier referral's signing day, already formatted for the reader, or null. */
+  earlierReferralOn: string | null = null,
+): MedicalClearanceCopy {
   return {
+    earlierLetterConfirm: earlierReferralOn
+      ? t("shared.medicalClearance.earlierLetterConfirm", { date: earlierReferralOn })
+      : null,
     recordClearance: t("shared.medicalClearance.recordClearance"),
     outcomeLegend: t("shared.medicalClearance.outcomeLegend"),
     outcomeCleared: t("shared.medicalClearance.outcomeCleared"),

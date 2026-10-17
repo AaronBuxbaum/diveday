@@ -1,6 +1,8 @@
 "use server";
 
+import { z } from "zod";
 import { AGENCY_CHECKS } from "@/lib/agency-check";
+import { formValue, readForm } from "@/lib/form-parse";
 import { log } from "@/lib/log";
 import { agencyCheckReportContext, PAGE_SHAPE_LOG_EVENT } from "@/lib/page-shape";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -19,6 +21,13 @@ import { requireStaffSession } from "@/lib/session";
  * past a staffer's or a shop's hour's allowance it is dropped unread
  * (`RATE_LIMITS.agencyCheckReportByPerson`, `agencyCheckReportByShop`).
  */
+const agencyCheckReportForm = z.object({
+  agency: formValue(),
+  reason: formValue(),
+  version: formValue(),
+  pageShape: formValue(),
+});
+
 export async function reportAgencyCheckPageAction(formData: FormData): Promise<void> {
   const session = await requireStaffSession();
   const byPerson = await checkRateLimit(
@@ -31,13 +40,9 @@ export async function reportAgencyCheckPageAction(formData: FormData): Promise<v
     RATE_LIMITS.agencyCheckReportByShop,
   );
   if (!byShop.allowed) return;
+  const form = readForm(agencyCheckReportForm, formData);
   const context = agencyCheckReportContext(
-    {
-      agency: formData.get("agency"),
-      reason: formData.get("reason"),
-      version: formData.get("version"),
-      pageShape: formData.get("pageShape") ?? "",
-    },
+    { ...form, pageShape: form.pageShape ?? "" },
     {
       agencies: Object.keys(AGENCY_CHECKS),
       reasons: ["fill_failed", "timeout", "tab_failed", "captcha", "page_changed", "unsupported"],

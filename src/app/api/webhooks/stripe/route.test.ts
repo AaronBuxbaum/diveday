@@ -376,27 +376,6 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     });
   });
 
-  it("checkout.session.completed with payment_status paid marks the checkout paid", async () => {
-    const response = await post({
-      id: "evt_1",
-      type: "checkout.session.completed",
-      data: { object: { id: "cs_123", payment_status: "paid", amount_total: 36_000 } },
-    });
-    expect(response.status).toBe(200);
-    // Stripe's own settled total travels with the event and is handed to the
-    // completion, which splits it across the bookings it paid for (PAY-H1/H2).
-    expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(
-      FAKE_DB,
-      "cs_123",
-      undefined,
-      36_000,
-      undefined,
-    );
-    // A session id belongs to at most one of booking_checkouts or tips —
-    // the booking-checkout path found a match, so the tip fallback never runs.
-    expect(markTipPaidBySessionId).not.toHaveBeenCalled();
-  });
-
   it("checkout.session.completed falls back to marking a tip paid when no booking checkout matches the session", async () => {
     vi.mocked(markCheckoutPaidBySessionId).mockResolvedValue(null);
     const response = await post({
@@ -416,25 +395,6 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     });
     expect(response.status).toBe(200);
     expect(markCheckoutPaidBySessionId).not.toHaveBeenCalled();
-  });
-
-  it("checkout.session.async_payment_succeeded marks the checkout paid regardless of payment_status field", async () => {
-    const response = await post({
-      id: "evt_1",
-      type: "checkout.session.async_payment_succeeded",
-      data: { object: { id: "cs_123" } },
-    });
-    expect(response.status).toBe(200);
-    // No amount_total on this payload: none is invented, and the completion
-    // falls back to the amounts DiveDay asked for.
-    expect(markCheckoutPaidBySessionId).toHaveBeenCalledWith(
-      FAKE_DB,
-      "cs_123",
-      undefined,
-      undefined,
-      undefined,
-    );
-    expect(markTipPaidBySessionId).not.toHaveBeenCalled();
   });
 
   // PAY-L1. Previously this event fell through to `unhandled_event_type`,

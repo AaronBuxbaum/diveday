@@ -182,6 +182,21 @@ async function readSafetyRecordRows(tx: AppTransaction, scope: ShopExportScope) 
 }
 
 /**
+ * What a departure was checked against as it left: the shop's checklist lines
+ * and every tap on them, and the boat's papers and kit at the departure roll
+ * call (`departure_boat_safety_snapshots`, issue 2300).
+ */
+async function readDepartureCheckRows(tx: AppTransaction, scope: ShopExportScope) {
+  const checklistItemRows = await readScoped(tx, "preDepartureChecklistItems", scope);
+  return {
+    checklistItemRows,
+    checklistItemLabel: new Map(checklistItemRows.map((row) => [row.id, row.label])),
+    checklistEventRows: await readScoped(tx, "preDepartureCheckEvents", scope),
+    boatSafetySnapshotRows: await readScoped(tx, "departureBoatSafetySnapshots", scope),
+  };
+}
+
+/**
  * A shop's repeating trips as the bundle carries them: the runs, the dates
  * taken out of each, and each run's standing crew.
  */
@@ -260,8 +275,6 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
       card,
     ]),
   );
-
-  const momentRows = await readScoped(tx, "diveSiteMoments", scope);
 
   const recapPhotoRows = await readScoped(tx, "recapPhotos", scope);
 
@@ -533,10 +546,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const workOrderEventRows = await readScoped(tx, "workOrderEvents", scope);
 
-  const checklistItemRows = await readScoped(tx, "preDepartureChecklistItems", scope);
-  const checklistItemLabel = new Map(checklistItemRows.map((row) => [row.id, row.label]));
-
-  const checklistEventRows = await readScoped(tx, "preDepartureCheckEvents", scope);
+  const departureCheckRows = await readDepartureCheckRows(tx, scope);
 
   const priorVisitRows = await readScoped(tx, "priorVisits", scope);
 
@@ -606,7 +616,6 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     // (ADR 20260813-marine-life-is-diveday-copy) rather than anything this
     // shop uploaded. `dive_site_creatures.csv` still prints the path, which
     // resolves against DiveDay and needs nothing bundled.
-    ...momentRows.map((row) => row.imageUrl),
     ...courseRows.flatMap((row) => [
       row.heroImageUrl,
       ...row.galleryPhotos.map((photo) => photo.url),
@@ -627,7 +636,6 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     siteName,
     creatureRows,
     cardById,
-    momentRows,
     recapPhotoRows,
     tripRecapPhotoRows,
     reviewModerationRows,
@@ -704,9 +712,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     workOrderLineRows,
     workOrderCareRows,
     workOrderEventRows,
-    checklistItemRows,
-    checklistItemLabel,
-    checklistEventRows,
+    ...departureCheckRows,
     priorVisitRows,
     importedPaymentHistoryRows,
     boatRows,
@@ -1277,6 +1283,11 @@ export async function loadShopExportCounts(
       shopId,
     ),
     "pre_departure_check_events.csv": await countShopScoped(db, "preDepartureCheckEvents", shopId),
+    "departure_boat_safety_snapshots.csv": await countShopScoped(
+      db,
+      "departureBoatSafetySnapshots",
+      shopId,
+    ),
     "prior_visits.csv": await countShopScoped(db, "priorVisits", shopId),
     "imported_payment_history.csv": await countShopScoped(db, "importedPaymentHistory", shopId),
     "orders.csv": await countShopScoped(db, "orders", shopId),
@@ -1290,7 +1301,6 @@ export async function loadShopExportCounts(
     "tips.csv": await countShopScoped(db, "tips", shopId),
     "dive_sites.csv": await countShopScoped(db, "diveSites", shopId),
     "dive_site_creatures.csv": await countShopScoped(db, "diveSiteCreatures", shopId),
-    "dive_site_moments.csv": await countShopScoped(db, "diveSiteMoments", shopId),
     "recap_photos.csv": await countShopScoped(db, "recapPhotos", shopId),
     "trip_recap_photos.csv": await countOf(
       db.select({ n: count() }).from(tripRecapPhotos).where(eq(tripRecapPhotos.shopId, shopId)),

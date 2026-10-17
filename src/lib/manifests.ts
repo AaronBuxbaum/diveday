@@ -156,13 +156,31 @@ export type ManifestDiverInput = {
    * (`identityReasonText`) rather than say "might be someone else" with
    * nothing to compare. Absent on a seat that was never held.
    */
-  identityClaim?: { bookedAs: string | null; matchedBy: IdentityMatchKind | null };
+  identityClaim?: {
+    bookedAs: string | null;
+    matchedBy: IdentityMatchKind | null;
+    /**
+     * The emergency contact the desk recorded for the person on this held seat
+     * (`bookings.held_emergency_contact_*`, issue #2145), which
+     * `withholdHeldSeatParticulars` shows in place of the matched record's.
+     * Null when none was recorded; absent on a manifest built by hand.
+     */
+    heldEmergencyContact?: { name: string; phone: string } | null;
+  };
   /**
    * Set only by `withholdHeldSeatParticulars` (`src/lib/held-seat.ts`): this
    * row is a held seat and the matched person's particulars were cleared, so a
    * surface says they wait for confirmation instead of "Not on file".
    */
   identityWithheld?: boolean;
+  /**
+   * Set only by `withholdHeldSeatParticulars`, beside `identityWithheld`: the
+   * contact the desk recorded for the person on this held seat (issue #2145).
+   * Its own field, never `emergencyContact*`, which a withheld row leaves
+   * empty, so no surface can show the matched record's next of kin as the
+   * seat's (dive-domain review H7, security review Y3).
+   */
+  heldEmergencyContact?: { name: string; phone: string } | null;
   /**
    * Set beside `identityWithheld`: withholding dropped at least one blocker
    * measured against the matched person, so the crew line says other holds may
@@ -225,6 +243,20 @@ export type ManifestDiverInput = {
    * at the rail. A person fact, so a held seat drops it with the medical mark.
    */
   riderMedicalHold?: RiderMedicalHold | null;
+  /**
+   * A staffer cleared this seat's training mark in a way that relaxed a
+   * boarding block (issue #2275) — its course forms still owed, or a mark that
+   * no longer held — and the crew sees who decided. Never a blocker.
+   */
+  trainingMarkCleared?: TrainingMarkCleared | null;
+  /**
+   * A training mark that stands on this seat (issue #2275): the course the
+   * dive counts toward, and whether an instructor is on this departure's crew
+   * as the manifest is read — a warning when not, never a blocker. Null on an
+   * unmarked seat and on a mark that no longer stands (`training_mark_invalid`
+   * says that).
+   */
+  trainingDive?: { courseTitle: string; instructorAboard: boolean } | null;
   /**
    * Lodging / hotel location stated by diver on /ready (marker only, not a checkpoint).
    */
@@ -923,6 +955,12 @@ export type TripManifest = {
      */
     certifiedPassengers?: number | null;
     /**
+     * The certificate's total persons, crew included
+     * (`boats.certified_total_persons`, #2302); null for no boat or none
+     * recorded. The head count turns danger past it. Optional like `capacity`.
+     */
+    certifiedTotalPersons?: number | null;
+    /**
      * A rehearsal (ADR 20261012-rehearsal-departures): the paper manifest says
      * so beside souls on board. Optional for the same reason as `capacity`.
      */
@@ -1268,3 +1306,9 @@ export function blockedAtDock(
   }
   return { undecided, aboard };
 }
+
+/** Who cleared a seat's training mark over a boarding block, and which one (issue #2275). */
+export type TrainingMarkCleared = {
+  byName: string | null;
+  reason: "forms_owed" | "mark_invalid";
+};

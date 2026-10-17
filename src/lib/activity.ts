@@ -69,6 +69,16 @@ type ActivityParamShapes = {
   /** The same split, on the record the seat left; `diver` is that record's name. */
   identity_split_off: { actor: string; diver: string };
   /**
+   * …or answered "another diver on file": the held seat moved to the shop's
+   * other record with the same name and **stays held** (issue #2129,
+   * `repointHeldBooking`). On the departure; `diver` is the booked-as name.
+   */
+  identity_repointed: { actor: string; diver: string };
+  /** The same move, on the record the seat left; `diver` is that record's name. */
+  identity_repointed_off: { actor: string; diver: string };
+  /** The same move, on the record the seat now waits on; `diver` is that record's name. */
+  identity_repointed_onto: { actor: string; diver: string };
+  /**
    * Two records were merged into one, on the record kept: `diver` is its name
    * after the merge, `merged` the name the other record carried
    * (`mergeDiverRecords`). The merged record's own lines stay on it.
@@ -119,6 +129,7 @@ type ActivityParamShapes = {
     type: "diver" | "snorkeler" | "rider";
     certCheck: "none" | "cleared" | "overridden";
     cleared: string;
+    atSea: "yes" | "no";
   };
   /**
    * A staffer marked a course form as a medical statement the boarding gate
@@ -127,6 +138,16 @@ type ActivityParamShapes = {
    * is its whole history. `marked` is `yes` when it went on, `no` when it came off.
    */
   course_form_medical_changed: { actor: string; form: string; marked: "yes" | "no" };
+  /**
+   * A staffer marked a seat on an ordinary departure as a training dive for
+   * the diver's course (issue #2275), so the seat is asked the course's forms.
+   */
+  training_dive_marked: { actor: string; diver: string; course: string };
+  /**
+   * …or cleared the mark. `formsOwed` is `yes` when forms were still owed (or
+   * the mark no longer stood): clearing it then relaxed a boarding block.
+   */
+  training_dive_cleared: { actor: string; diver: string; course: string; formsOwed: "yes" | "no" };
   /**
    * …or the crew boarded them anyway, which takes it back at the rail. Its own
    * line rather than the undo above, because it says something the undo does
@@ -207,6 +228,23 @@ type ActivityParamShapes = {
   /** A staffer opened a diver's physician's evaluation. */
   medical_clearance_opened: { actor: string; diver: string };
   /**
+   * A physician's answer was recorded from a letter dated before the referral it
+   * answers (issue #2616): the letter's date, the earlier referral it was written
+   * for (its signing day and id), the later referral's signing day and id, and
+   * which way the physician answered. The ids are the audit; the sentence names
+   * the days.
+   */
+  medical_answered_by_earlier_letter: {
+    actor: string;
+    diver: string;
+    evaluated: string;
+    referred: string;
+    signed: string;
+    referral: string;
+    record: string;
+    outcome: string;
+  };
+  /**
    * The owner queued a connected ledger's earlier checkouts (#2606). Names the
    * provider, how many events went into the queue and the start day; no ids,
    * no diver.
@@ -222,6 +260,8 @@ type ActivityParamShapes = {
   date_of_birth_cleared_as_adult: { actor: string; diver: string };
   /** A staffer downloaded a diver's own record. */
   record_exported: { actor: string; diver: string };
+  drysuit_experience_recorded: { actor: string; diver: string };
+  drysuit_experience_cleared: { actor: string; diver: string };
   /** A staffer opened a seat's dispute sheet, which leaves the shop (#2390). */
   dispute_sheet_printed: { actor: string; diver: string };
   /**
@@ -273,6 +313,11 @@ type ActivityParamShapes = {
    */
   party_marked_paid: { actor: string; diver: string };
   /**
+   * A staffer matched a refund made in the Stripe dashboard on a party's
+   * checkout to this seat (issue #2293). The amount is on the payment trail.
+   */
+  dashboard_refund_matched: { actor: string; diver: string };
+  /**
    * **Who changed the board**: the schedule builder's four acts, which wrote
    * no actor anywhere until the activity log asked. Each is recorded on the
    * departure it changed; a repeating departure is one line, on its first
@@ -283,6 +328,12 @@ type ActivityParamShapes = {
   departure_moved: { actor: string };
   departure_copied: { actor: string };
   departure_deleted: { actor: string };
+  /**
+   * An erasure renamed a departure that carried the erased diver's name
+   * (issue #2315). The actor is the staffer who ran the erasure; the old
+   * title is never kept, because it is the name.
+   */
+  departure_retitled_by_erasure: { actor: string };
   /**
    * The departure came off the board with the rest of its repeating run
    * ("Cancel every upcoming date"), through the blow-out cascade.
@@ -311,6 +362,13 @@ type ActivityParamShapes = {
    * has nothing here to reach.
    */
   shore_alert_contact_set: { actor: string };
+  /**
+   * **A boat's certificate limit or paper date changed** (records review 2):
+   * the staffer, the boat's name, which field (`BOAT_PAPER_FIELDS`) and both
+   * values as written ("none" when not recorded). One line per field.
+   * Shop-level; no diver in it.
+   */
+  boat_papers_changed: { actor: string; boat: string; field: string; from: string; to: string };
   shore_alert_contact_changed: { actor: string };
   shore_alert_contact_cleared: { actor: string };
   /**
@@ -385,12 +443,17 @@ export const ACTIVITY_CODES = [
   "booking_no_show_undo_refused",
   "participant_type_changed",
   "course_form_medical_changed",
+  "training_dive_marked",
+  "training_dive_cleared",
   "booking_no_show_boarded",
   "booking_no_show_missing_after_dive",
   "booking_turned_away",
   "identity_confirmed",
   "identity_split",
   "identity_split_off",
+  "identity_repointed",
+  "identity_repointed_off",
+  "identity_repointed_onto",
   "crew_assigned",
   "crew_removed",
   "blowout_called",
@@ -416,9 +479,12 @@ export const ACTIVITY_CODES = [
   "party_seat_self_cancelled",
   "party_seat_self_refunded",
   "medical_clearance_opened",
+  "medical_answered_by_earlier_letter",
   "medical_answers_read",
   "date_of_birth_cleared_as_adult",
   "record_exported",
+  "drysuit_experience_recorded",
+  "drysuit_experience_cleared",
   "dispute_sheet_printed",
   "integration_backfill_sent",
   "running_late_from_message",
@@ -431,17 +497,20 @@ export const ACTIVITY_CODES = [
   "payment_marked_refunded",
   "payment_balance_written_off",
   "party_marked_paid",
+  "dashboard_refund_matched",
   "departure_added",
   "series_added",
   "departure_moved",
   "departure_copied",
   "departure_deleted",
+  "departure_retitled_by_erasure",
   "series_cancelled",
   "departure_called_off_automatically",
   "review_replied",
   "review_reply_edited",
   "review_reply_deleted",
   "shore_alert_contact_set",
+  "boat_papers_changed",
   "shore_alert_contact_changed",
   "shore_alert_contact_cleared",
   "shore_alert_contact_stopped",

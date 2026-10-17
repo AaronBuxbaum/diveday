@@ -292,6 +292,12 @@ export const tripBoatCertifiedPassengers = () =>
     number | null
   >`(select ${boats.certifiedPassengers} from ${boats} where ${boats.id} = ${trips.boatId} and ${boats.shopId} = ${trips.shopId})`;
 
+/** The same subquery for total persons, crew included (#2302): never a seat ceiling. */
+export const tripBoatCertifiedTotalPersons = () =>
+  sql<
+    number | null
+  >`(select ${boats.certifiedTotalPersons} from ${boats} where ${boats.id} = ${trips.boatId} and ${boats.shopId} = ${trips.shopId})`;
+
 /**
  * `sellableSeats` spelled in SQL, for the one place the number has to be
  * compared inside the query: `hasSpace`'s `having`, which a page of results
@@ -362,6 +368,12 @@ export const liveBookingJoin = and(eq(bookings.tripId, trips.id), seatHeld);
  */
 export const bookedDiversCount = () =>
   sql<number>`count(${bookings.id}) filter (where ${bookings.participantType} = 'diver')`.mapWith(
+    Number,
+  );
+
+/** The snorkelers among the held seats, the same count shape as `bookedDiversCount`. */
+export const bookedSnorkelersCount = () =>
+  sql<number>`count(${bookings.id}) filter (where ${bookings.participantType} = 'snorkeler')`.mapWith(
     Number,
   );
 

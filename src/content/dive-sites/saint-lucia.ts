@@ -30,7 +30,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       conservationNote:
         "Inside the Soufrière Marine Management Area, which charges divers a user fee; confirm the current rate with the crew. Fishing and collecting are controlled here, so touch and take nothing.",
       difficultyLevel: "beginner",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote:
         "Beach entry in front of the resort; No entry hazard is documented. Current not documented; ask the crew on the day.",
@@ -74,7 +74,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       conservationNote:
         "Inside the Soufrière Marine Management Area, which charges divers a user fee; confirm the current rate with the crew. Fishing and collecting are controlled here, so touch and take nothing.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -118,7 +118,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       conservationNote:
         "Inside the Soufrière Marine Management Area, which charges divers a user fee; confirm the current rate with the crew. Fishing and collecting are controlled here, so touch and take nothing.",
       difficultyLevel: "intermediate",
-      depthRange: "12–18 m (40–60 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 18,
       currentNote:
         "Strong at times off the headland, and the site is run as a drift. Carry an SMB.",
@@ -163,7 +163,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       conservationNote:
         "Inside the Soufrière Marine Management Area, which charges divers a user fee; confirm the current rate with the crew. Fishing and collecting are controlled here, so touch and take nothing.",
       difficultyLevel: "advanced",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote: "Reported as strong at times, with a drift along the slope. Carry an SMB.",
       divePlan:
@@ -204,7 +204,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Rays settle in the sand beside the hull, and the young reef growing on the steel draws small fish.",
       difficultyLevel: "intermediate",
-      depthRange: "21–30 m (70–100 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -238,7 +238,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       marineLife: "Green morays · frogfish · jacks · Bermuda chub",
       marineLifeDescription: "A young wreck, already drawing morays, frogfish and schooling jacks.",
       difficultyLevel: "intermediate",
-      depthRange: "15–24 m (50–80 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 24,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -272,7 +272,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Young angelfish and Nassau grouper shelter in the growth, with morays and frogfish tucked into the steel.",
       difficultyLevel: "intermediate",
-      depthRange: "9–20 m (30–65 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 20,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -315,7 +315,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       conservationNote:
         "Inside the Soufrière Marine Management Area, which charges divers a user fee; confirm the current rate with the crew. Fishing and collecting are controlled here, so touch and take nothing.",
       difficultyLevel: "intermediate",
-      depthRange: "5–27 m (15–90 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 27,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -360,7 +360,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       conservationNote:
         "Inside the Soufrière Marine Management Area, which charges divers a user fee; confirm the current rate with the crew. Fishing and collecting are controlled here, so touch and take nothing.",
       difficultyLevel: "intermediate",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -405,7 +405,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       conservationNote:
         "Inside the Soufrière Marine Management Area, which charges divers a user fee; confirm the current rate with the crew. Fishing and collecting are controlled here, so touch and take nothing.",
       difficultyLevel: "advanced",
-      depthRange: "5–30 m (15–100 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 30,
       currentNote:
         "Often strong and sometimes moderate, carrying divers along the slope; some days there is none. Carry an SMB.",
@@ -449,7 +449,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Look under the boulders and along the sand edges. Cleaner shrimp work the shallows.",
       difficultyLevel: "beginner",
-      depthRange: "2–18 m (5–60 ft)",
+      depthMinMeters: 2,
       maxDepthMeters: 18,
       currentNote:
         "Reached by boat or from the beach. No entry hazard is documented. Current not documented; ask the crew on the day.",
@@ -490,7 +490,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       marineLife: "Stingrays · eagle rays · turtles · barrel sponges",
       marineLifeDescription: "The bay is named for its rays. Keep your distance and your hands in.",
       difficultyLevel: "advanced",
-      depthRange: "18–34 m (60–110 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 34,
       currentNote: "Prone to current; drift experience is recommended. Carry an SMB.",
       divePlan:
@@ -534,7 +534,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Rays pass over the boulder field, and the shallows hold small animals.",
       difficultyLevel: "beginner",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote:
         "Reached by a short boat ride, or from the beach in the park on the south side. No entry hazard is documented. Current not documented; ask the crew on the day.",
@@ -576,7 +576,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big lobsters in the trenches; schools hang in the open water beside the rock.",
       difficultyLevel: "intermediate",
-      depthRange: "5–15 m (15–50 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 15,
       currentNote:
         "Strong currents are reported, and the site is a drift in the direction of the tide. Carry an SMB.",
@@ -617,7 +617,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       marineLife: "Octopus · lobsters · trumpetfish · flying gurnards",
       marineLifeDescription: "Sandy patches hold gurnards and the rocks hide octopus and lobsters.",
       difficultyLevel: "beginner",
-      depthRange: "3–12 m (10–40 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 12,
       currentNote:
         "Sandy beach entry; No entry hazard is documented. Current not documented; ask the crew on the day. Some of the rocks hold small overhead spaces; stay out of them.",
@@ -658,7 +658,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Check the sand and the ledges; rays rest in the open and eels in the rock.",
       difficultyLevel: "beginner",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       currentNote:
         "Beach entry is possible; No entry hazard is documented. Current not documented; ask the crew on the day.",
@@ -701,7 +701,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       conservationNote:
         "Inside the Soufrière Marine Management Area, which charges divers a user fee; confirm the current rate with the crew. Fishing and collecting are controlled here, so touch and take nothing.",
       difficultyLevel: "intermediate",
-      depthRange: "3–30 m (10–100 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 30,
       currentNote:
         "Open water between the pinnacles, and boats work the tops: ascend on the SMB, not up a pinnacle. Current not documented; ask the crew on the day. Medical care is far; confirm the boat's oxygen and plan.",
@@ -748,7 +748,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       conservationNote:
         "Inside the Soufrière Marine Management Area, which charges divers a user fee; confirm the current rate with the crew. Fishing and collecting are controlled here, so touch and take nothing.",
       difficultyLevel: "intermediate",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -789,7 +789,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Rays rest on the sand between the coral formations, and snappers hold above the garden.",
       difficultyLevel: "advanced",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "A slight current near the points; the lagoon itself is sheltered. Carry an SMB.",
@@ -831,7 +831,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       marineLife: "Spiny lobsters · tropical reef fish",
       marineLifeDescription: "Lobsters sit in the wreckage and small reef fish gather around it.",
       difficultyLevel: "intermediate",
-      depthRange: "11–14 m (35–45 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 14,
       currentNote:
         "Mouth of Castries Harbor: ships use the entrance. No diving while a ship is moving or alongside, carry an SMB and listen for engines. Current not documented; ask the crew on the day.",
@@ -881,7 +881,7 @@ export const SAINT_LUCIA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Morays sit in the plating, so do not reach into it. Barracuda and jacks hold along the hull.",
       difficultyLevel: "advanced",
-      depthRange: "10–33 m (33–110 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 33,
       currentNote:
         "Strong currents are reported in the area of the wreck. If the current is running at the surface, the crew may call the dive. Open water: carry an SMB.",

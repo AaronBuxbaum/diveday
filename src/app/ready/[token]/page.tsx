@@ -377,7 +377,7 @@ async function DiverReadinessPage({
           toShopCurrency(shop.currency),
         ),
         // Asked whatever `COURSE_FORMS_BLOCK_BOARDING` says: warn-only raises no blocker (#2266).
-        data.trip.course ? getCourseFormsForBooking(db, shop.id, bookingId) : null,
+        data.asksCourseForms ? getCourseFormsForBooking(db, shop.id, bookingId) : null,
         packageDivesForBooking(db, { shopId: shop.id, personId: data.person.id, bookingId }),
       ]);
     const [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage] = tripReads;

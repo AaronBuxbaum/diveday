@@ -210,6 +210,42 @@ const NOTICE_KEYS: Record<
   },
   "identity-confirmed": { form: "roster", tone: "success", key: "trips.notices.identityConfirmed" },
   "identity-split": { form: "roster", tone: "success", key: "trips.notices.identitySplit" },
+  // Moved to the other same-name record and still held (issue #2129).
+  "identity-repointed": {
+    form: "roster",
+    tone: "success",
+    key: "trips.notices.identityRepointed",
+  },
+  "identity-repoint-unavailable": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityRepointUnavailable",
+  },
+  "identity-repoint-medical-hold": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityRepointMedicalHold",
+  },
+  "identity-split-contact-conflict": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identitySplitContactConflict",
+  },
+  "identity-departure-closed": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityDepartureClosed",
+  },
+  "identity-contact-differs": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityContactDiffers",
+  },
+  "identity-repoint-already-booked": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityRepointAlreadyBooked",
+  },
   // The release a held seat was owed, sent once the desk knew who it is. When
   // it reached nobody the row hands it over (`…-waiver-ready`); when it could
   // not be issued the notice is `new-waiver-failed` (issue #2125).
@@ -330,6 +366,25 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "trips.notices.materialsNotACourse",
   },
+  // A training mark on a charter seat (issue #2275), and its refusals.
+  "training-marked": { form: "roster", tone: "success", key: "trips.notices.trainingMarked" },
+  "training-cleared": { form: "roster", tone: "success", key: "trips.notices.trainingCleared" },
+  "training-mark-already": {
+    form: "roster",
+    tone: "warning",
+    key: "trips.notices.trainingMarkAlready",
+  },
+  "training-mark-invalid": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.trainingMarkInvalid",
+  },
+  "training-mark-over": { form: "roster", tone: "danger", key: "trips.notices.trainingMarkOver" },
+  "training-mark-forms-owed": {
+    form: "roster",
+    tone: "warning",
+    key: "trips.notices.trainingMarkFormsOwed",
+  },
   "contact-saved": { form: "roster", tone: "success", key: "trips.notices.contactSaved" },
   "contact-incomplete": { form: "roster", tone: "warning", key: "trips.notices.contactIncomplete" },
   "diver-invalid": { form: "add-diver", tone: "danger", key: "trips.notices.diverInvalid" },
@@ -356,17 +411,19 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "participants.notices.diversFull",
   },
+  // A type change, unlike an add, has a fix on the row: Remove booking and
+  // seat them again (dive-domain review H9).
   "participant-type-unavailable": {
     form: "roster",
     tone: "danger",
-    key: "participants.notices.typeUnavailable",
+    key: "participants.notices.typeChangeUnavailable",
   },
   "participant-type-on-team": {
     form: "roster",
     tone: "danger",
     key: "participants.notices.onBuddyTeam",
   },
-  // Too late: joining after the departure time, or anything once home.
+  // Too late: the departure is home or cancelled.
   "participant-type-closed": {
     form: "roster",
     tone: "danger",

@@ -28,7 +28,7 @@ export const BAHAMAS_BIMINI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Grunts and soldierfish school around the hull. Nurse sharks rest under the stern, so give them room.",
       difficultyLevel: "beginner",
-      depthRange: "5–6 m (15–20 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 6,
       currentNote:
         "Boats use the wreck as a mark and people jump from the deck, so listen for engines, look up before you surface and carry an SMB. Current is reported as low, under 1 knot.",
@@ -84,7 +84,7 @@ export const BAHAMAS_BIMINI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Fish shelter in the gaps between the blocks, and sea fans stand on the stones.",
       difficultyLevel: "beginner",
-      depthRange: "5–8 m (15–26 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 9,
       currentNote:
         "Current is reported as low, under 1 knot. A regular stop for dive and snorkel charters, so listen for engines and carry an SMB.",
@@ -128,7 +128,7 @@ export const BAHAMAS_BIMINI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Octopus, morays and lobsters work the coral heads. Nurse sharks and southern stingrays rest on the sand around it.",
       difficultyLevel: "beginner",
-      depthRange: "8–12 m (25–40 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 13,
       currentNote:
         "Boat traffic from the Alice Town harbor is listed as a hazard here: listen for engines and carry an SMB. Current is reported as low, under 1 knot.",
@@ -176,7 +176,7 @@ export const BAHAMAS_BIMINI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Morays live in the reef; do not feed, touch or corner them. Snappers, groupers and schooling grunts are residents, and stingrays turn up on the sand.",
       difficultyLevel: "intermediate",
-      depthRange: "15–24 m (50–79 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 25,
       currentNote: "Current is reported as low, under 1 knot. Open water, so carry an SMB.",
       divePlan:
@@ -220,7 +220,7 @@ export const BAHAMAS_BIMINI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The slope is thick with coral and sponge. Bluefin tuna pass in spring.",
       difficultyLevel: "advanced",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "Currents can be strong off the wall: a Bimini guide rates Victory Reef advanced for them, and the Gulf Stream runs close. Carry an SMB and make the safety stop on it in open water; the boat picks the group up.",

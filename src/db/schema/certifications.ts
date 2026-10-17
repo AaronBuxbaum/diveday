@@ -9,6 +9,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { appNowTimestamp } from "./columns";
 import {
   certificationAgency,
   certificationLevel,
@@ -220,7 +221,7 @@ export const certifications = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /** Staff member who removed the card, when the removal was accountable. */
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // Leads on the person column so deleting a person (a demo shop's cascade,
@@ -437,7 +438,7 @@ export const specialtyCertifications = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /** Staff member who removed the card, when the removal was accountable. */
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("specialty_certifications_shop_person_idx").on(table.shopId, table.personId),
@@ -548,7 +549,7 @@ export const priorVisits = pgTable(
     dedupeKey: text("dedupe_key").notNull(),
     /** Always set — every row here arrived by import, never by hand. */
     importedAt: timestamp("imported_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("prior_visits_shop_person_idx").on(table.shopId, table.personId, table.visitedOn),
@@ -656,7 +657,7 @@ export const nitroxCertifications = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /** Staff member who removed the card, when the removal was accountable. */
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("nitrox_certifications_shop_person_idx").on(table.shopId, table.personId),

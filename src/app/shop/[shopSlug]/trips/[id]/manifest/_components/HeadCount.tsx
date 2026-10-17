@@ -46,6 +46,7 @@ export function HeadCount({
   t,
   people = false,
   overCertificate = null,
+  overTotalPersons = null,
   className = "",
 }: {
   /** Divers with an *aboard* result at this checkpoint. */
@@ -75,8 +76,15 @@ export function HeadCount({
    * are never in it.
    */
   overCertificate?: { limit: number } | null;
+  /**
+   * More people counted aboard, crew included, than the certificate's total
+   * persons (`personsAboveTotalPersonsAboard`, dive-domain review D2). Same
+   * danger, its own line; it caps no sale.
+   */
+  overTotalPersons?: { limit: number } | null;
   className?: string;
 }) {
+  const over = overCertificate !== null || overTotalPersons !== null;
   // Bounded for the pixels only: an empty glass stands at zero rather than
   // dividing by it, and the water cannot rise past the brim.
   const fraction = out > 0 ? Math.min(1, Math.max(0, aboard / out)) : 0;
@@ -94,7 +102,7 @@ export function HeadCount({
             : t("manifest.aboardOfTotal", { aboard, total: out })
         }
         className={`relative size-20 shrink-0 overflow-hidden rounded-full bg-surface-sunken ${
-          overCertificate ? "border-2 border-danger" : "border border-border"
+          over ? "border-2 border-danger" : "border border-border"
         }`}
       >
         <div
@@ -107,7 +115,7 @@ export function HeadCount({
             and the water is its shape (principle 9). */}
         <span
           className={`absolute inset-0 flex items-center justify-center ${FIGURE_DIAL_CLASS}${
-            overCertificate ? " text-danger" : ""
+            over ? " text-danger" : ""
           }`}
         >
           {aboard}
@@ -137,6 +145,11 @@ export function HeadCount({
         {overCertificate ? (
           <p className="font-bold text-danger">
             {t("manifest.headCountOverCertificate", { limit: overCertificate.limit })}
+          </p>
+        ) : null}
+        {overTotalPersons ? (
+          <p className="font-bold text-danger">
+            {t("manifest.headCountOverTotalPersons", { limit: overTotalPersons.limit })}
           </p>
         ) : null}
         {blockedAboard > 0 ? (

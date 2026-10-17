@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it } from "vitest";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
-import { EditorSection } from "./EditorSection";
+import { EditorSection, sectionPreview } from "./EditorSection";
 
 afterEach(cleanup);
 
@@ -284,5 +284,25 @@ describe("an editor section on a phone", () => {
     expect(header(/Pricing/)).toHaveClass("min-h-12");
     fireEvent.submit(document.querySelector("form") as HTMLFormElement);
     expect(header(/Pricing/)).not.toHaveTextContent("Unsaved");
+  });
+});
+
+describe("sectionPreview with a paired depth", () => {
+  const body = (shallow: string, deep: string) => {
+    const el = document.createElement("div");
+    el.innerHTML = `<input value="Beginner" />
+      <input type="number" value="${shallow}" data-preview-pair="depth" data-preview-one="{value} ft" data-preview-range="{min}–{max} ft" />
+      <input type="number" value="${deep}" data-preview-pair="depth" data-preview-one="{value} ft" data-preview-range="{min}–{max} ft" />`;
+    return el;
+  };
+
+  it("names a range with its unit when both ends are set", () => {
+    expect(sectionPreview(body("20", "130"))).toBe("Beginner · 20–130 ft");
+  });
+  it("names the maximum alone when only it is set", () => {
+    expect(sectionPreview(body("", "130"))).toBe("Beginner · 130 ft");
+  });
+  it("says nothing of depth when neither is set", () => {
+    expect(sectionPreview(body("", ""))).toBe("Beginner");
   });
 });

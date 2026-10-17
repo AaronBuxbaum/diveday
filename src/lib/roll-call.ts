@@ -333,3 +333,21 @@ export function medicalHoldAfterDive(input: {
   if (input.blockerCodes.includes("medical_review")) return "medical_review";
   return null;
 }
+
+/**
+ * **What a cancelled departure's manifest says about its roll call** (#2285),
+ * read off the writers' own gate (`rollCallOpenOnTrip`). `closed`: nobody was
+ * counted before the cancel, so every roll-call write is refused and the page
+ * draws no control that only refuses. `still_counting`: the count had begun,
+ * so it stays open to the end (dive-domain review, 2026-10-09) and the page
+ * says why. Null for a departure that is not cancelled.
+ */
+export type CancelledRollCall = "closed" | "still_counting";
+
+export function cancelledRollCall(input: {
+  cancelled: boolean;
+  rollCallOpen: boolean;
+}): CancelledRollCall | null {
+  if (!input.cancelled) return null;
+  return input.rollCallOpen ? "still_counting" : "closed";
+}

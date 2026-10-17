@@ -43,10 +43,16 @@ const MUST_LEAD = [
 // `booking_payment_events.recorded_by_person_id` attribute a staffer's manual
 // Paid mark. Written once per mark, read by nothing that probes by person, so
 // an index would tax every payment write for a demo-data delete.
-// 109 since the safety build (#2687): `incident_reports.deleted_by_person_id`
-// names who discarded a draft. Written once per discard, read beside its own
-// row on the departure log, never probed by person.
-const UNINDEXED_CEILING = 109;
+// 109: `incident_reports.deleted_by_person_id` names who discarded a draft on
+// the departure log. Set once per discard on a table of a few rows a year, and
+// read by report, never by person.
+// 110: `gear_reservations.fill_recorded_by_person_id` (#2257) names who
+// recorded a counter tank's fill. Written once per fill and read with the
+// reservation, never probed by person.
+// 111-112 with #2275: `bookings.training_marked_by_person_id` and
+// `bookings.training_cleared_by_person_id` attribute a staffer's training
+// mark, for the same reason.
+const UNINDEXED_CEILING = 112;
 
 async function unindexedPeopleForeignKeys(db: AppDb): Promise<string[]> {
   const result = await db.execute(sql`

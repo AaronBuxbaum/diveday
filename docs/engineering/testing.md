@@ -106,6 +106,9 @@ run comments on it, and the first green run closes it. A manual run on another b
 nothing.
 
 **Flakes.** Playwright runs `retries: 0` locally and in CI, so a flake fails the run that meets it.
+One exception, decided 2026-10-16 (#2633): a CI shard, functional or visual, whose failure log
+carries the renderer probe's `wedged, not slow` verdict reruns only its failed tests once with
+`--last-failed`. That verdict proves the browser stopped answering; every other failure stays red.
 A failing or flaky test is part of the work that meets it, even when unrelated: fixed, after
 searching open PRs for a fix in flight, or quarantined; never skipped, never given a wider timeout
 (AGENTS.md, testing review decision 4).

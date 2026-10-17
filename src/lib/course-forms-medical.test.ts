@@ -55,7 +55,11 @@ function signed(form: RequiredCourseForm): CourseFormSignature {
   };
 }
 
-async function readinessWith(blocks: boolean, signatures: CourseFormSignature[]) {
+async function readinessWith(
+  blocks: boolean,
+  signatures: CourseFormSignature[],
+  participantType?: "diver" | "snorkeler" | "rider",
+) {
   vi.resetModules();
   vi.doMock("./course-forms", async (importOriginal) => ({
     ...(await importOriginal<typeof import("./course-forms")>()),
@@ -69,6 +73,7 @@ async function readinessWith(blocks: boolean, signatures: CourseFormSignature[])
     now,
     timezone: "America/New_York",
     dateOfBirth: "1990-01-01",
+    participantType,
     courseForms: {
       shopId: SHOP,
       bookingId: BOOKING,
@@ -97,6 +102,13 @@ describe("medical-screening course forms (#2337)", () => {
     ]);
   });
 
+  it("asks no course form of a snorkeler or rider on the session, medical or not (#2226)", async () => {
+    for (const type of ["snorkeler", "rider"] as const) {
+      const result = await readinessWith(true, [], type);
+      expect(result.blockers.filter((b) => b.code.startsWith("course_form_"))).toEqual([]);
+    }
+  });
+
   it("with the switch off, signing the medical form clears it", async () => {
     const result = await readinessWith(false, [signed(medical)]);
     expect(result).toEqual({ status: "ready", blockers: [] });
@@ -112,5 +124,26 @@ describe("medical-screening course forms (#2337)", () => {
       { ...signed(medical), formVersionId: "medical-v0" },
     ]);
     expect(result.blockers).toHaveLength(1);
+  });
+});
+
+/**
+ * **A medical statement is asked of everyone** (agency review G3 of #2265): an
+ * age bound on a medical-screening form is never honoured, whoever wrote it.
+ */
+describe("a medical-screening form with an age bound", () => {
+  it("is still asked of an adult", async () => {
+    const { outstandingCourseForms } = await import("./course-forms");
+    const bounded = { ...medical, maxAgeYears: 11, sessionFirstDay: "2026-10-20" };
+    expect(
+      outstandingCourseForms({
+        shopId: SHOP,
+        bookingId: BOOKING,
+        personId: PERSON,
+        required: [bounded],
+        signatures: [],
+        signer: { dateOfBirth: "1990-01-01", minorDeclared: false, timezone: "UTC" },
+      }).map((form) => form.formId),
+    ).toEqual([medical.formId]);
   });
 });

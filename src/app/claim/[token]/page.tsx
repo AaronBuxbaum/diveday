@@ -36,7 +36,6 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 const CLAIM_NOTICES: Record<string, { tone: "danger" | "neutral"; key: DiverMessageKey }> = {
   "error-fields": { tone: "danger", key: "seatClaim.errors.checkFields" },
-  "error-unable": { tone: "danger", key: "seatClaim.errors.unable" },
   "error-course": { tone: "danger", key: "seatClaim.errors.coursePrerequisite" },
   "error-rate": { tone: "danger", key: "ready.rateLimited" },
 };
@@ -127,11 +126,22 @@ export default async function SeatClaimPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; sent?: string }>;
 }) {
   await connection();
   const { token } = await params;
-  const { error } = await searchParams;
+  const { error, sent } = await searchParams;
+  // **Where a claim lands, whether or not it took** (issue #2381). A claim that
+  // worked and one for an address that already holds a seat on the trip both
+  // redirect here, so this renders before the token is looked at and says
+  // nothing about either: it cannot tell the visitor whose manifest anything
+  // is on. The answer is the email each of them is sent.
+  if (sent === "1") {
+    const t = diverTranslator(await requestLocale());
+    return (
+      <EntryDone glyph="sent" title={t("seatClaim.sentHeading")} text={t("seatClaim.sentBody")} />
+    );
+  }
   const db = await getDb();
   // Three answers, and which one a dead link gets is the security question on
   // this page (ADR 20260827-first-light, decision 3): `dead` still knows the

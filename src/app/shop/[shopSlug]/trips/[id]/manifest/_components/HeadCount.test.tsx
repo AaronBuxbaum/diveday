@@ -122,4 +122,12 @@ describe("HeadCount over the certificate", () => {
     expect(screen.getByRole("progressbar")).not.toHaveClass("border-danger");
     expect(container.textContent).toBe("12of 12 divers aboard");
   });
+
+  // Dive-domain review D2: total persons counts the crew aboard too.
+  it("turns the figure danger past the certificate's total persons", () => {
+    render(<HeadCount aboard={12} out={12} overTotalPersons={{ limit: 13 }} t={t} />);
+    expect(screen.getByRole("progressbar")).toHaveClass("border-danger");
+    const line = screen.getByText("Certificate allows 13 persons, crew included");
+    expect(line).toHaveClass("text-danger", "font-bold");
+  });
 });

@@ -14,6 +14,7 @@ import { cancelDeparture } from "@/db/aboard-at-sea";
 import { getBoatById } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { flushUrgentCrewNotices } from "@/db/crew-notices";
+import { publishManifestEvent } from "@/db/manifest-events";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getTripRequirements } from "@/db/readiness";
 import { getShopById } from "@/db/shops";
@@ -26,6 +27,8 @@ import {
   updateTrip,
 } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
+import { checkbox, formValue, readForm } from "@/lib/form-parse";
+import { parseWetsuitThicknessMm } from "@/lib/gear";
 import { meetingPointMoved, meetingPointOfRows } from "@/lib/meeting-point";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -80,6 +83,15 @@ const detailsSchema = z.object({
   // The dives went past no-decompression limits: the recap then says nothing
   // about flying (H-84, issue #1555). Nothing else reads it.
   exceedsNoDecoLimits: z.preprocess((value) => value === "on", z.boolean()),
+  // The wetsuit the boat is running today (issue #2206): whole millimetres,
+  // or "" for not said. Only on the form of a shop that rents wetsuits, so
+  // absent leaves the departure's answer alone.
+  wetsuitThicknessMm: z
+    .string()
+    .trim()
+    .max(2)
+    .refine((value) => value === "" || parseWetsuitThicknessMm(value) !== null)
+    .optional(),
   // How many consecutive days this departure meets on (src/lib/trip-days.ts).
   // Absent from an older cached form is one day, the shape every trip had
   // before multi-day existed.
@@ -157,6 +169,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     isPrivate,
     selfGuided,
     exceedsNoDecoLimits,
+    wetsuitThicknessMm,
   } = parsed.data;
   const dbi = await getDb();
   const shopNow = await getShopById(dbi, s.user.shopId);
@@ -251,6 +264,8 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     isPrivate,
     selfGuided,
     exceedsNoDecoLimits,
+    wetsuitThicknessMm:
+      wetsuitThicknessMm === undefined ? undefined : parseWetsuitThicknessMm(wetsuitThicknessMm),
     priceCents: details.patch.priceCents,
     depositCents: details.patch.depositCents,
     cancellationWindowHours: details.patch.cancellationWindowHours,
@@ -342,9 +357,11 @@ function redirectDetailsRefusal(
  * no change (`nextUrl` undefined). `discardUpload` deletes the new file again
  * when the save that would have pointed at it is refused.
  */
+const arrivalPhotoForm = z.object({ arrivalPhoto: formValue(), removeArrivalPhoto: checkbox() });
+
 async function arrivalPhotoChange(formData: FormData, back: string) {
   let uploadedUrl: string | undefined;
-  const arrivalPhoto = formData.get("arrivalPhoto");
+  const { arrivalPhoto, removeArrivalPhoto: remove } = readForm(arrivalPhotoForm, formData);
   if (arrivalPhoto instanceof File && arrivalPhoto.size > 0) {
     const stored = await storeArrivalImage({
       filename: arrivalPhoto.name,
@@ -356,7 +373,6 @@ async function arrivalPhotoChange(formData: FormData, back: string) {
     }
     uploadedUrl = stored.url;
   }
-  const remove = formData.get("removeArrivalPhoto") === "on";
   return {
     nextUrl: uploadedUrl ?? (remove ? null : undefined),
     discardUpload: async () => {
@@ -413,6 +429,7 @@ export async function cancelTripAction(shopSlug: string, tripId: string) {
   }
   // Its crew hear it is off now, not on the hour (ADR 20261009-crew-hear-about-their-boats).
   await flushUrgentCrewNotices(db, { shopId: s.user.shopId, tripIds: [tripId] });
+  await publishManifestEvent(db, s.user.shopId, tripId);
   revalidateAndRedirect(back, noticeUrl(back, "cancelled"));
 }
 

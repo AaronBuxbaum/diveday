@@ -75,6 +75,8 @@ test.describe("as owner", () => {
       "This charter is for divers with Advanced Open Water or higher.",
     );
     await expect(requirement).toBeVisible();
+    // And the way through, beside it: a level is not a refusal (issue #1866).
+    await expect(requirement).toContainText("Not yet at that level? Ask the shop.");
     await expect(page.getByRole("heading", { name: "Who this trip is for" })).toHaveCount(0);
     const partySize = page.getByLabel("Number of divers");
     await expect(partySize).toHaveAttribute("data-hydrated", "true");

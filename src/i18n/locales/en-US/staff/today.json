@@ -74,6 +74,7 @@
     "instructorMissing": "Course needs instructor",
     "uncrewedCourse": "No instructor or crew",
     "uncrewedDeparture": "No divemaster",
+    "boatClash": "Boat on two departures",
     "crewClash": "Crew on two departures",
     "crewClashSailed": "Left with a crew clash",
     "nitroxGate": "Nitrox",
@@ -123,6 +124,7 @@
     "askForCard": "Ask for certification details",
     "verifyCard": "Verify certification",
     "reviewCard": "Review certification",
+    "checkCourseResult": "Check the course result",
     "addSpecialty": "Add specialty",
     "verifySpecialty": "Verify specialty",
     "confirmSpecialty": "Confirm specialty",
@@ -131,7 +133,8 @@
     "verifyNitroxCard": "Verify nitrox certification",
     "takePayment": "Take payment",
     "checkReadiness": "Check readiness",
-    "getCourseFormsSigned": "Get forms signed"
+    "getCourseFormsSigned": "Get forms signed",
+    "clearTrainingMark": "Clear training mark"
   },
   "blockerGroup": {
     "setRequirements": "Set requirements",
@@ -143,6 +146,7 @@
     "reviewMedicals": "Review medicals",
     "contactDivers": "Contact the divers",
     "reviewCards": "Review certifications",
+    "checkCourseResults": "Check course results",
     "askForCards": "Ask for certifications",
     "verifyCards": "Verify certifications",
     "reviewSpecialties": "Review specialties",
@@ -153,7 +157,8 @@
     "verifyNitroxCards": "Verify nitrox certifications",
     "takePayments": "Take payments",
     "checkReadiness": "Check readiness",
-    "getCourseFormsSigned": "Get forms signed"
+    "getCourseFormsSigned": "Get forms signed",
+    "clearTrainingMarks": "Clear training marks"
   },
   "pointingLabel": {
     "trip": "Open roster",
@@ -179,13 +184,14 @@
     "boatWork": "{work}.",
     "missingSizeNamed": "Missing a rental size.",
     "kitUnaskedNamed": "Not asked about kit.",
-    "ungatedNitroxNamed": "Wants nitrox, no verified card.",
+    "ungatedNitroxNamed": "Wants nitrox, gets air unless a card is verified before the boat leaves.",
     "highWindAlert": "Forecast {speed} kt wind{hasDirection, select, yes { from {direction}} other {}}{hasGusts, select, yes {, gusts {gusts} kt} other {}}.",
     "instructorMissing": "No instructor assigned.",
     "uncrewedCourse": "{divers, plural, one {# diver} other {# divers}} booked, no instructor.",
     "overRatio": "{booked} booked, crew covers {capacity}.",
     "overRatioIntro": "{booked} booked, crew covers {capacity} at {perInstructor} per instructor.",
     "uncrewedDeparture": "{divers, plural, one {# diver} other {# divers}} booked, no divemaster or instructor.",
+    "boatClash": "{boat} is also on {departure} at these hours.",
     "crewClash": "{names} {count, plural, one {is} other {are}} also rostered on {departure} at these hours.",
     "crewClashSailed": "{names} {count, plural, one {is} other {are}} out aboard while also rostered on {departure} at these hours.",
     "crewClashSailedConfirm": "Confirm who is aboard.",
@@ -271,10 +277,12 @@
     "subject": "{count, plural, one {# message is} other {# messages are}} waiting on an answer."
   },
   "unitsUnconfirmed": {
-    "subject": "{currency} and {depth}, guessed from your timezone",
+    "subject": "{currency}, {depth} and {temperature}, picked for where you are",
     "detail": "Confirm them.",
     "feet": "feet",
-    "meters": "meters"
+    "meters": "meters",
+    "fahrenheit": "Fahrenheit",
+    "celsius": "Celsius"
   },
   "gear": {
     "overdueDetail": "{units} {count, plural, one {was} other {were}} due back {dueOn} and {count, plural, one {is} other {are}} still out.",
@@ -322,6 +330,7 @@
     "waiverPending": "{count, plural, one {Waiver not signed, link sent.} other {# waivers not signed, links sent.}}",
     "waiverExpired": "{count, plural, one {Waiver link expired.} other {# waiver links expired.}}",
     "waiverLapsed": "{count, plural, one {Signed waiver lapsed.} other {# signed waivers lapsed.}}",
+    "waiverRunsOut": "{count, plural, one {Waiver runs out before the trip.} other {# waivers run out before the trip.}}",
     "medicalReview": "{count, plural, one {Medical answer needs a doctor’s sign-off.} other {# medical answers need a doctor’s sign-off.}}",
     "medicalNotCleared": "{count, plural, one {Not cleared to dive by a physician.} other {# divers not cleared to dive by a physician.}}",
     "guardianSignatureMissing": "{count, plural, one {Waiver needs a guardian’s signature.} other {# waivers need a guardian’s signature.}}",
@@ -341,6 +350,7 @@
     "paymentDue": "{count, plural, one {Payment due.} other {# payments due.}}",
     "paymentRefunded": "{count, plural, one {Refunded, so payment is due again.} other {# divers refunded, so payment is due again.}}",
     "readinessUnavailable": "{count, plural, one {Readiness couldn’t be checked.} other {Readiness couldn’t be checked for # divers.}}",
-    "courseFormUnsigned": "{count, plural, one {Course form not signed.} other {# course forms not signed.}}"
+    "courseFormUnsigned": "{count, plural, one {Course form not signed.} other {# course forms not signed.}}",
+    "trainingMarkInvalid": "{count, plural, one {Training mark no longer fits its course seat.} other {# training marks no longer fit their course seats.}}"
   }
 }

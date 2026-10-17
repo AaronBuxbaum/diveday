@@ -18,11 +18,16 @@ describe("rowReference, from the seat's facts and one drawn block", () => {
     waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
   };
   const block = <p data-testid="emergency-block">Emergency contact</p>;
+  const heldBlock = <p data-testid="held-emergency-block">Emergency contact for this seat</p>;
 
   it("files the emergency-contact block among the seat's reference facts", () => {
     const seat = seatFacts(entry("r", "Rene Marsh"), options);
-    render(rowReference({ ...seat, emergencyContactBlock: block }).reference);
+    render(
+      rowReference({ ...seat, emergencyContactBlock: block, heldEmergencyContactBlock: heldBlock })
+        .reference,
+    );
     expect(screen.getByTestId("emergency-block")).toBeInTheDocument();
+    expect(screen.queryByTestId("held-emergency-block")).toBeNull();
   });
 
   /** A held seat's details are the matched person's, so the block is withheld. */
@@ -32,7 +37,12 @@ describe("rowReference, from the seat's facts and one drawn block", () => {
       "2026-10-01T12:00:00Z",
     );
     const seat = seatFacts(held, options);
-    render(rowReference({ ...seat, emergencyContactBlock: block }).reference);
+    render(
+      rowReference({ ...seat, emergencyContactBlock: block, heldEmergencyContactBlock: heldBlock })
+        .reference,
+    );
     expect(screen.queryByTestId("emergency-block")).toBeNull();
+    // The seat's own contact stands in its place (#2145).
+    expect(screen.getByTestId("held-emergency-block")).toBeInTheDocument();
   });
 });

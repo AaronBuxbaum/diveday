@@ -10,6 +10,8 @@
     "errorRefusal": "That didn’t save. Check your connection and tap again.",
     "openRollCall": "Open roll call"
   },
+  "cancelledRollCallClosed": "This departure is canceled and nobody has been counted aboard, so roll call is closed. If anyone is aboard, reinstate the trip to count them.",
+  "cancelledRollCallStillCounting": "This departure is canceled. Roll call stays open because the count had started.",
   "skipToRollCall": "Skip to roll call",
   "stillToBoardHeading": "Still to board ({count})",
   "notCountedBackHeading": "Not yet counted back aboard ({count})",
@@ -37,6 +39,7 @@
   "headCountBlocked": "{count} blocked",
   "headCountBlockedAboard": "{count, plural, one {# blocked person aboard} other {# blocked people aboard}}",
   "headCountOverCertificate": "{limit, plural, one {Certificate allows # passenger} other {Certificate allows # passengers}}",
+  "headCountOverTotalPersons": "{limit, plural, one {Certificate allows # person, crew included} other {Certificate allows # persons, crew included}}",
   "progressAriaLabel": "Roll-call progress",
   "ofTotalAboard": "of {total, plural, one {# diver} other {# divers}} aboard",
   "allAccountedFor": "Everyone’s accounted for, divers and crew. Ready for the next check.",
@@ -110,6 +113,7 @@
   "age": "Age {age}",
   "minorAge": "Minor · age {age}",
   "emergencyContactLabel": "Emergency contact",
+  "heldEmergencyContactLabel": "Emergency contact, from the desk",
   "crewClashDetail": "Also rostered on {departures} at these hours.",
   "crewClashConfirm": "{count, plural, one {# of the crew is also rostered on another boat at these hours.} other {# of the crew are also rostered on other boats at these hours.}} Confirm who sails.",
   "notOnFile": "Not on file",
@@ -123,6 +127,10 @@
   "medicalClearedByPhysician": "Cleared by physician",
   "medicalWaiverSigned": "Medical waiver signed",
   "medicalEarlierRefusal": "A physician did not clear this person on {date} (earlier waiver)",
+  "trainingMarkCleared": "{hasName, select, yes {Training mark cleared by {name} with course forms unsigned} other {Training mark cleared with course forms unsigned}}",
+  "trainingMarkClearedInvalid": "{hasName, select, yes {Training mark cleared by {name} after it stopped fitting its course seat} other {Training mark cleared after it stopped fitting its course seat}}",
+  "trainingDive": "Training dive for {course}",
+  "trainingDiveNoInstructor": "No instructor is on this boat’s crew",
   "medicalEarlierRefusalChip": "Physician said no before",
   "medicalReferralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file",
   "medicalHoldNotClearedChip": "Not medically cleared",
@@ -277,5 +285,9 @@
     "pushBody": "{title}: {awaiting, plural, one {# person has} other {# people have}} no result after dive {dive}.",
     "pushBodyMissing": "{title}: {missing, plural, one {# person} other {# people}} recorded not back aboard after dive {dive}.",
     "pushBodyBoth": "{title}: {missing, plural, one {# person} other {# people}} recorded not back aboard after dive {dive}; {awaiting, plural, one {# more has} other {# more have}} no result."
+  },
+  "missingDiverAlert": {
+    "pushTitle": "Missing diver reported",
+    "pushBody": "{title}: the crew filed a missing-diver report."
   }
 }
