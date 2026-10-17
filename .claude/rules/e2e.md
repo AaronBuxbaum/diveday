@@ -19,11 +19,12 @@ red run. Each rule names what enforces it; the reasoning and the incidents are i
   20260815-per-test-private-shops).
 - **No timing guesses**: `waitForTimeout`, `networkidle`, spec-level `retries:` and retry loops fail
   `pnpm check:e2e-hygiene` unless the line says `diveday:allow-e2e-hygiene <rule>: <why>`. The suite
-  runs `retries: 0`.
+  runs `retries: 0`; its one exception is CI's single `--last-failed` rerun of a shard whose log
+  says `wedged, not slow` (#2633).
 - **Never navigate straight off a submit**: wait on the action's `?notice=` redirect or on what the
   row shows; reading the field back is not a wait (`check:e2e-hygiene`, `action-race`).
 - **A click lands after React owns the page**: every `goto`/`reload`/`waitForURL` on a fixture page
-  waits for the staff Search trigger's `data-hydrated` (`settleStaffHydration`, `e2e/fixtures.ts`);
+  waits for the staff Search trigger's and section navs' `data-hydrated` (`settleStaffHydration`, `e2e/fixtures.ts`);
   a click after a `waitUntil: "commit"` opt-out fails `check:e2e-hygiene`, `pre-hydration-click`.
 - **An absence assertion pairs with a positive query** of the same string elsewhere in the spec.
   A convention, not a guard (#1403).

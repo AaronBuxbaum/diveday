@@ -45,12 +45,15 @@ test.describe("weather blow-out cascade", () => {
     await openTripMore(page);
     await page.getByRole("link", { name: "Weather blow-out…" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Call a blow-out?" })).toBeVisible();
+    // The tab says what the page is, by its cause once there is one (#2460).
+    await expect(page).toHaveTitle("Call a blow-out? — DiveDay");
     // The confirm names the roster it is about to message.
     await expect(page.getByRole("heading", { name: /divers? will be messaged/ })).toBeVisible();
 
     await page.getByRole("button", { name: "Call the blow-out" }).click();
     await expect(page.getByRole("status")).toContainText("Blow-out called");
     await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
+    await expect(page).toHaveTitle("Blow-out cascade — DiveDay");
 
     // The cascade record: per-diver rows with message, money, offers, and
     // resolution state. With no provider configured every message reads

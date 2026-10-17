@@ -117,6 +117,14 @@ test("a repeating trip is scheduled on two weekdays, stopped, and canceled as on
   ).toBeVisible();
   await moreAgain.getByRole("button", { name: "Yes, cancel every upcoming date" }).click();
   await expect(page.getByText(/Canceled every upcoming date and stopped the repeat/)).toBeVisible();
+
+  // Each date went through the cascade as a run that stopped, and its record
+  // says so in the heading and in the browser tab, not in weather words (#2460).
+  const tripId = new URL(tripUrl).pathname.split("/").pop();
+  await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
+  const runEnded = staff("blowout.record.titleRunEnded");
+  await expect(page.getByRole("heading", { level: 1, name: runEnded })).toBeVisible();
+  await expect(page).toHaveTitle(`${runEnded} — DiveDay`);
 });
 
 test("an open-ended run says it keeps going on the board's last month", async ({ page }) => {
