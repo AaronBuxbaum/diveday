@@ -40,8 +40,8 @@ function pageOwnsFocus(main: HTMLElement): boolean {
 
 function focusHeading(h1: HTMLElement): void {
   if (!h1.hasAttribute("tabindex")) h1.setAttribute("tabindex", "-1");
-  // A heading is not a control: no ring around it. The next Tab starts after it.
-  h1.classList.add("outline-none");
+  // The ring stays: a browser draws :focus-visible on a script's focus only
+  // after keyboard use, so a keyboard user sees where the next Tab starts.
   h1.focus({ preventScroll: true });
 }
 
