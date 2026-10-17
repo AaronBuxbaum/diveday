@@ -65,10 +65,14 @@ export function PrepTanks({ view, showNitrox }: { view: PrepView; showNitrox: bo
             <ShopStat label={t("tripPrep.total")} value={checklist.tanks.total} />
           )}
         </div>
-        {/* What the Nitrox tile counts (seats with a verified card, never
-            cylinders analyzed; dive-domain review of UX item 26) is said once,
-            on the printed day, rather than under every boat's tiles
-            (fifth-loop ideas, item 2). Nothing here logs an analysis. */}
+        {/* What the Nitrox tile counts, beside the tile the crew packs
+            cylinders from: seats that asked and hold a verified card, not
+            cylinders analyzed. The analysis itself is never logged here
+            (dive-domain review of UX item 26). On paper it is said once, in
+            the printed day's header (fifth-loop ideas, item 2). */}
+        {showNitrox ? (
+          <p className="mt-2 text-sm text-muted print:hidden">{t("tripPrep.nitroxCountNote")}</p>
+        ) : null}
         <p className="mt-2 hidden text-base font-semibold tabular-nums print:block">
           {(showNitrox
             ? [
