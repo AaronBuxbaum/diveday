@@ -74,7 +74,9 @@ test.describe("the paper day", () => {
     // forward-looking stations and is still very much on today's sheet — so
     // this is containment, not equality.
     for (const title of stationTitles) {
-      const boat = title.split("\n")[0].trim();
+      // A Needs-you group heading also links its boat and adds the time
+      // after " · "; the boat's title is what the packet prints.
+      const boat = title.split("\n")[0].split(" · ")[0].trim();
       await expect(popup.getByText(boat, { exact: false }).first()).toBeVisible();
     }
 

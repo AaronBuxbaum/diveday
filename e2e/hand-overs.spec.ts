@@ -20,6 +20,9 @@ signedInAsOwner();
 test("a snag noted on the boat check reaches that boat's next crew, who mark it fixed", async ({
   page,
 }) => {
+  // Two departures' manifests, each reached from the board, plus a write on
+  // each: measured 15.7s on CI's runner, past the 15s default.
+  test.setTimeout(30_000);
   // Today's boat sails on Mantis I; the night dive is that hull's next departure.
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, DEMO_TODAY_TRIP_TITLE);

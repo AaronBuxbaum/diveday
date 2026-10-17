@@ -117,7 +117,11 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   // sampled then is the departure layout's, which passes without testing
   // anything.
   await expect(
-    page.getByRole("region", { name: /^Before you leave the dock:/ }).locator("details"),
+    // The checklist's own disclosure, not the snag notes inside its rows.
+    page
+      .getByRole("region", { name: /^Before you leave the dock:/ })
+      .locator("details")
+      .first(),
   ).not.toHaveAttribute("open");
   await expect.poll(async () => Math.abs((await listTop()) - listTopAtDeparture)).toBeLessThan(4);
   await page

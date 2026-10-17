@@ -40,7 +40,8 @@ test("a shop asks to be set up from the pricing page and lands on the thank-you 
 
   await page.getByLabel("Email").fill(`${unique}@example.com`);
   await page.getByRole("button", { name: "Send" }).click();
-  await expect(page).toHaveURL(/\/get-set-up\/sent$/);
+  // The sent page carries what the shop uses today, for its export step.
+  await expect(page).toHaveURL(/\/get-set-up\/sent(?:\?|$)/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Request sent");
   // The demo is the one thing left to do while the reply is on its way.
   await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();
