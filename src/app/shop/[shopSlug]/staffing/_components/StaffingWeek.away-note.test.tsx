@@ -25,17 +25,17 @@ describe("StaffingWeek away note", () => {
     renderWeek({ blocks: [{ ...AWAY, note: awayNoteFor(AWAY, reader) }] });
 
   it("shows the note to the person themself", () => {
-    weekAs({ personId: KEIKO.personId, canManageStaffAccounts: false });
+    weekAs({ personId: KEIKO.personId, canReadCrewAwayNote: false });
     expect(screen.getAllByText(/Hospital appointment/).length).toBeGreaterThan(0);
   });
 
   it("shows the note to an owner or manager", () => {
-    weekAs({ personId: "person-owner", canManageStaffAccounts: true });
+    weekAs({ personId: "person-owner", canReadCrewAwayNote: true });
     expect(screen.getAllByText(/Hospital appointment/).length).toBeGreaterThan(0);
   });
 
   it("shows a colleague that she is away, and not why", () => {
-    weekAs({ personId: "person-colleague", canManageStaffAccounts: false });
+    weekAs({ personId: "person-colleague", canReadCrewAwayNote: false });
     expect(screen.getAllByText(/Away/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Hospital appointment/)).toBeNull();
   });

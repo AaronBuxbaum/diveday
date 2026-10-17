@@ -83,7 +83,7 @@ describe("crew availability blocks", () => {
         db,
         shop.id,
         { from: "2026-07-20", to: "2026-07-26" },
-        { personId: crew.id, canManageStaffAccounts: false },
+        { personId: crew.id, canReadCrewAwayNote: false },
       )
     ).filter((block) => block.personId === crew.id);
     expect(blocks).toHaveLength(1);
@@ -121,14 +121,14 @@ describe("crew availability blocks", () => {
       expect(mine).toMatchObject({ startsOn: "2026-08-03", endsOn: "2026-08-04" });
       return mine?.note;
     };
-    expect(await noteAs({ personId: crew.id, canManageStaffAccounts: false })).toBe(
+    expect(await noteAs({ personId: crew.id, canReadCrewAwayNote: false })).toBe(
       "Hospital appointment",
     );
-    expect(await noteAs({ personId: owner.id, canManageStaffAccounts: true })).toBe(
+    expect(await noteAs({ personId: owner.id, canReadCrewAwayNote: true })).toBe(
       "Hospital appointment",
     );
-    expect(await noteAs({ personId: colleague.id, canManageStaffAccounts: false })).toBeNull();
-    expect(await noteAs({ personId: undefined, canManageStaffAccounts: false })).toBeNull();
+    expect(await noteAs({ personId: colleague.id, canReadCrewAwayNote: false })).toBeNull();
+    expect(await noteAs({ personId: undefined, canReadCrewAwayNote: false })).toBeNull();
     expect(await noteAs("dates_only")).toBeNull();
   });
 

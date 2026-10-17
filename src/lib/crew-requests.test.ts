@@ -154,17 +154,17 @@ describe("who reads why somebody is away (#2673)", () => {
   const noted = block({ personId: "keiko", note: "Hospital appointment" });
 
   it("is the person themself and owners and managers", () => {
-    expect(awayNoteFor(noted, { personId: "keiko", canManageStaffAccounts: false })).toBe(
+    expect(awayNoteFor(noted, { personId: "keiko", canReadCrewAwayNote: false })).toBe(
       "Hospital appointment",
     );
-    expect(awayNoteFor(noted, { personId: "owner", canManageStaffAccounts: true })).toBe(
+    expect(awayNoteFor(noted, { personId: "owner", canReadCrewAwayNote: true })).toBe(
       "Hospital appointment",
     );
   });
 
   it("is nobody else, a reader with no person, or a dates-only read", () => {
-    expect(awayNoteFor(noted, { personId: "marcus", canManageStaffAccounts: false })).toBeNull();
-    expect(awayNoteFor(noted, { personId: undefined, canManageStaffAccounts: false })).toBeNull();
+    expect(awayNoteFor(noted, { personId: "marcus", canReadCrewAwayNote: false })).toBeNull();
+    expect(awayNoteFor(noted, { personId: undefined, canReadCrewAwayNote: false })).toBeNull();
     expect(awayNoteFor(noted, "dates_only")).toBeNull();
   });
 });

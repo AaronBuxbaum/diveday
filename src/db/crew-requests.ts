@@ -1,6 +1,5 @@
 import { and, asc, eq, gte, inArray, isNull, lte, ne } from "drizzle-orm";
-
-import { STAFF_ROLES } from "@/lib/authz";
+import { canManageStaffAccounts, canReadCrewAwayNote, STAFF_ROLES } from "@/lib/authz";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
@@ -12,7 +11,7 @@ import {
   type CrewRequestState,
 } from "@/lib/crew-requests";
 import { inWaterCrewRole, lapsedRungs, lastDayOfDeparture } from "@/lib/crew-roles";
-import { canPersonManageStaffAccounts } from "./authz";
+import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { courseCrewCountsByTrip } from "./course-crew-counts";
 import { recordCrewNotices } from "./crew-notices";
@@ -114,8 +113,9 @@ export async function listCrewAvailabilityBlocks(
 
 /**
  * The staffing week's days away for `personId`, each note only as they may
- * read it (#2673), and whether they manage staff accounts, which the page's
- * add-shift form asks too. One live role read, then the blocks.
+ * read it (#2673, `canReadCrewAwayNote`), and whether they manage staff
+ * accounts, which the page's add-shift form asks too. One live role read,
+ * then the blocks.
  */
 export async function readStaffingWeekAway(
   db: AppDb,
@@ -123,12 +123,12 @@ export async function readStaffingWeekAway(
   range: { from: string; to: string },
   personId: string,
 ): Promise<{ blocks: AvailabilityBlock[]; canManageStaffAccounts: boolean }> {
-  const canManageStaffAccounts = await canPersonManageStaffAccounts(db, shopId, personId);
+  const roles = await loadActiveStaffRoles(db, shopId, personId);
   const blocks = await listCrewAvailabilityBlocks(db, shopId, range, {
     personId,
-    canManageStaffAccounts,
+    canReadCrewAwayNote: roles !== null && canReadCrewAwayNote(roles),
   });
-  return { blocks, canManageStaffAccounts };
+  return { blocks, canManageStaffAccounts: roles !== null && canManageStaffAccounts(roles) };
 }
 
 /** A crew member says they are away for a range of days. */

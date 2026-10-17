@@ -1,4 +1,5 @@
 import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { type AwayNoteReader, awayNoteFor } from "@/lib/crew-requests";
 import { EXPORT_FILE_NOTES } from "@/lib/export";
 import { WEEKDAY_EXPORT_CODES, weekdaysIn } from "@/lib/recurrence";
 import type { ShopExportContext } from "./export";
@@ -39,6 +40,13 @@ import {
 } from "./export-shared-files";
 import type { ExportFileSpec } from "./export-tables";
 import { certificationLevel } from "./schema";
+
+/**
+ * Who reads the away notes the shop export hands over (#2673): only someone
+ * `canExportShopData` admits downloads the bundle, and `authz.test.ts` pins
+ * every such role set as a `canReadCrewAwayNote` reader.
+ */
+const EXPORT_AWAY_NOTE_READER: AwayNoteReader = { personId: undefined, canReadCrewAwayNote: true };
 
 /**
  * **The shop bundle, file by file** (ADR 20260722-full-shop-export): every
@@ -952,7 +960,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         personName.get(row.personId),
         row.startsOn,
         row.endsOn,
-        row.note,
+        awayNoteFor(row, EXPORT_AWAY_NOTE_READER),
         row.createdByPersonId,
         personName.get(row.createdByPersonId),
         row.createdAt,
