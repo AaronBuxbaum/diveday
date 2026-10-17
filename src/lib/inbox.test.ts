@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   INBOUND_BODY_MAX_LENGTH,
   inboundReplyAddress,
+  moveAskAlertDue,
   normalizeEmailAddress,
   normalizePhoneAddress,
   parseInboundReplyToken,
@@ -185,5 +186,24 @@ describe("sesMessageIdFromHeader", () => {
     expect(sesMessageIdFromHeader("<abc@mail.gmail.com>")).toBeNull();
     expect(sesMessageIdFromHeader(null)).toBeNull();
     expect(sesMessageIdFromHeader("")).toBeNull();
+  });
+});
+
+describe("moveAskAlertDue", () => {
+  const startsAt = new Date("2026-10-18T08:00:00Z");
+  const hoursBefore = (hours: number) => new Date(startsAt.getTime() - hours * 3_600_000);
+
+  it("is due within a day of the boat, the boundary included", () => {
+    expect(moveAskAlertDue(startsAt, hoursBefore(1))).toBe(true);
+    expect(moveAskAlertDue(startsAt, hoursBefore(24))).toBe(true);
+  });
+
+  it("is not due farther out", () => {
+    expect(moveAskAlertDue(startsAt, hoursBefore(24.01))).toBe(false);
+    expect(moveAskAlertDue(startsAt, hoursBefore(72))).toBe(false);
+  });
+
+  it("is not due once the boat has left", () => {
+    expect(moveAskAlertDue(startsAt, hoursBefore(-1))).toBe(false);
   });
 });

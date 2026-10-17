@@ -1,6 +1,7 @@
 import { HOUR_MS } from "@/lib/clock";
 import { phoneDigits } from "@/lib/person-fields";
 import { toE164 } from "@/lib/phone";
+import { hasSailed } from "@/lib/trips";
 
 /**
  * The rules of the shop inbox, free of any framework (ADR
@@ -21,6 +22,20 @@ export type InboundChannel = "email" | "sms" | "whatsapp";
  * answer on, so it is never a reply target.
  */
 export type InboxChannel = InboundChannel | "page";
+
+/**
+ * How close to its departure an "Ask to move" also emails owners and managers
+ * (issue #2667, decided by Aaron 2026-10-17): within a day the Inbox may be
+ * read too late; farther out it is enough.
+ */
+export const MOVE_ASK_ALERT_WINDOW_MS = 24 * HOUR_MS;
+
+/** Whether an ask filed `now` about a seat leaving at `startsAt` emails staff. */
+export function moveAskAlertDue(startsAt: Date, now: Date): boolean {
+  return (
+    !hasSailed(startsAt, now) && startsAt.getTime() - now.getTime() <= MOVE_ASK_ALERT_WINDOW_MS
+  );
+}
 
 /** The longest note a diver may add to an "Ask to move" (H-126). */
 export const MOVE_ASK_NOTE_MAX_LENGTH = 500;

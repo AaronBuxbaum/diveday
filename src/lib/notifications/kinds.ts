@@ -1623,6 +1623,38 @@ const stripePaymentsRestrictedSchema = z.object({
 });
 
 /**
+ * **A diver asked to move a seat on a departure leaving within a day** (issue
+ * #2667, decided by Aaron 2026-10-17; `alertStaffToMoveAsk`,
+ * src/db/move-ask-alerts.ts). One email to each owner and manager login, only
+ * when the departure is within 24 hours; farther out the Inbox is enough.
+ * Staff operational mail: no unsubscribe, no postal footer, the same footing
+ * as `stripe_payments_restricted`.
+ *
+ * **The departure and a link, never the diver or their words**, the desk
+ * ping's rule: the mail lands in a personal inbox that may sit on a shared
+ * phone, and who asked and what they wrote stay behind the Inbox's sign-in.
+ *
+ * `askedAt` is the ask's own filing time, so an ask filed anew after it was
+ * answered is a different message. Not queued: after the boat leaves it says
+ * nothing a staffer can act on.
+ */
+const moveAskSoonSchema = z.object({
+  kind: z.literal("move_ask_soon"),
+  shopId: z.uuid(),
+  personId: z.uuid(),
+  messageId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: tripTitleSchema,
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  inboxUrl: z.url().max(2_000),
+  askedAt: z.date(),
+});
+
+/**
  * **A roll call still open after the boat should be home** (batch 6, item 6;
  * `sendStaleRollCallAlerts`, src/db/roll-call-alerts.ts). Staff safety mail
  * to the shop's owners, once per departure.
@@ -1898,6 +1930,7 @@ export const notificationSchema = z
     crewScheduleChangeSchema,
     deskAfterHoursSchema,
     stripePaymentsRestrictedSchema,
+    moveAskSoonSchema,
     rollCallStaleSchema,
     rollCallStaleShoreSchema,
     incidentMissingDiverSchema,
@@ -2024,6 +2057,7 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "gear_service_due":
     case "crew_schedule_change":
     case "desk_after_hours":
+    case "move_ask_soon":
     case "roll_call_stale":
     case "roll_call_stale_shore":
     case "incident_missing_diver":
@@ -2221,6 +2255,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per claim of the person's batching clock.
     case "desk_after_hours":
       return `desk-after-hours/${notification.personId}/${notification.pingedAt.toISOString()}`;
+    // One send per owner or manager per filing of the ask.
+    case "move_ask_soon":
+      return `move-ask-soon/${notification.messageId}/${notification.personId}/${notification.askedAt.toISOString()}`;
     // One send per owner per restriction claim.
     case "stripe_payments_restricted":
       return `stripe-payments-restricted/${notification.personId}/${notification.restrictedAt.toISOString()}`;
